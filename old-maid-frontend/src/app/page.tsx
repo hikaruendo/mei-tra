@@ -39,6 +39,7 @@ export default function Home() {
       console.log('Turn changed to:', playerId);
       setCurrentTurn(playerId);
       setWhoseTurn(playerId);
+      console.log('currentTurn state:', playerId);
     });
 
     socket.on("game-over", ({ loser }) => {
@@ -129,29 +130,31 @@ export default function Home() {
           <h2 className="text-2xl font-bold mb-4">Game Started</h2>
           {whoseTurn && <p>It is {players.find(p => p.id === whoseTurn)?.name}&apos;s turn</p>}
           {players.map((player) => (
-            <div key={player.id} className="mb-2 card-container">
+            <div key={player.id} className={`mb-2 card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
               <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
               <div>
                 {player.hand.map((card, index) => (
                   <span
                     key={index}
-                    className={`card ${selectedCards.includes(card) ? 'selected' : ''}`}
+                    className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
+                    data-value={card.replace(/[♥♣♦♠]/, '')}
                     onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
                   >
+                    <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
                     {card}
                   </span>
                 ))}
               </div>
 
               {/* Discard Pairs Button (Only if the player selects 2 cards) */}
-              {selectedCards.length === 2 && currentTurn === getSocket().id && (
+              {selectedCards.length === 2 && player.id === whoseTurn && (
                 <button onClick={handleDiscardPairs} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
                   Discard Pairs
                 </button>
               )}
 
               {/* Draw Card Button (Only if it's the current player's turn and the opponent has cards) */}
-              {currentTurn === getSocket().id && player.id !== getSocket().id && player.hand.length > 0 && (
+              {getSocket().id === whoseTurn && player.id !== getSocket().id && player.hand.length > 0 && (
                 <button onClick={() => handleDrawCard(player.id)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
                   Draw from {player.name}
                 </button>
@@ -160,7 +163,7 @@ export default function Home() {
           ))}
 
           {/* End Turn Button (Only visible to the current player) */}
-          {currentTurn === getSocket().id && (
+          {getSocket().id === whoseTurn && (
             <button onClick={endTurn} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mt-4">
               End Turn
             </button>

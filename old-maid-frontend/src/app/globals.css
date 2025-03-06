@@ -23,52 +23,180 @@
 
 body {
   /* background: url('/felt.jpg'); */
-  background-color: green;
+  background-color: #4CAF50; /* Green */
   color: var(--foreground);
-  font-family: "Times New Roman", serif;
-}
-
-.card-container {
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  padding: 10px;
-  margin: 5px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease;
 }
 
 main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
   padding: 20px;
+  background-color: rgba(255, 255, 255, 0.1); /* Add a semi-transparent white background */
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.3s ease;
+}
+
+main:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.card-container {
+  background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  margin: 10px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-container:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card-container.current-turn {
+  border: 3px solid #FFD700; /* Gold border */
+  box-shadow: 0 0 15px #FFD700; /* Glowing effect */
 }
 
 .card {
   background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  padding: 10px;
+  border: 1px solid #000;
+  border-radius: 10px;
+  width: 75px;
+  height: 100px;
+  padding: 5px;
   margin: 5px;
   display: inline-block;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  color: black;
-}
-
-.card:hover {
-  background-color: #eee;
-  transition: background-color 0.2s ease-in-out;
-}
-
-.card.selected {
-  background-color: #ccc;
-  transform: scale(1.1);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  font-weight: bold;
+  text-align: left;
+  line-height: 1.2;
+  position: relative;
   transition: transform 0.2s ease-in-out;
 }
 
-.player-name {
-  font-size: 1.2em;
-  font-weight: bold;
+.card:before,
+.card:after {
+  position: absolute;
+  content: attr(data-value);
+  font-size: 12px;
+}
+
+.card:before {
+  top: 5px;
+  left: 5px;
+}
+
+.card:after {
+  bottom: 5px;
+  right: 5px;
+  transform: rotate(180deg);
+}
+
+.card .suit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 7px rgba(0, 0, 0, 0.2);
+}
+
+.card.selected:hover {
+  transform: scale(1.05) translateY(-3px);
+  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.25);
+}
+
+.card.selected {
+  background-color: #a0a0a0;
+  color: white;
+  transform: scale(1.05) translateY(-3px);
+  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.25);
+}
+
+.red-suit {
+  color: red;
+}
+
+.black-suit {
   color: black;
+  font-size: 22px;
+}
+
+.card {
+    color: black;
+}
+
+.card.selected {
+  background-color: #a0a0a0;
+  color: white;
+  transform: scale(1.05) translateY(-3px);
+  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.25);
+}
+
+.red-suit {
+  color: red;
+}
+
+.player-name {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 5px;
 }
 
 .card-count {
-  font-size: 0.8em;
-  color: gray;
+  font-size: 0.9em;
+  color: #555;
+}
+
+button {
+  background-color: #5C6BC0; /* Indigo */
+  color: white;
+  font-weight: 600;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+button:hover {
+  background-color: #3949AB;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.25);
+}
+
+button:disabled {
+  background-color: #9FA8DA;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+input[type="text"] {
+  padding: 12px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus {
+  border-color: #5C6BC0;
+  outline: none;
 }
