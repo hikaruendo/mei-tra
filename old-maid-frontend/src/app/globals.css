@@ -51,8 +51,15 @@ main {
   color: black;
 }
 
+.card:hover {
+  background-color: #eee;
+  transition: background-color 0.2s ease-in-out;
+}
+
 .card.selected {
   background-color: #ccc;
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
 }
 
 .player-name {

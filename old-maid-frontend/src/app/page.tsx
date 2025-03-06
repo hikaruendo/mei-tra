@@ -16,6 +16,7 @@ export default function Home() {
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [currentTurn, setCurrentTurn] = useState<string | null>(null);
+  const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -37,6 +38,7 @@ export default function Home() {
     socket.on('update-turn', (playerId: string) => {
       console.log('Turn changed to:', playerId);
       setCurrentTurn(playerId);
+      setWhoseTurn(playerId);
     });
 
     socket.on("game-over", ({ loser }) => {
@@ -71,8 +73,8 @@ export default function Home() {
   const endTurn = () => {
     const socket = getSocket();
     if (currentTurn !== socket.id) {
-        alert("It's not your turn!");
-        return;
+      alert("It's not your turn!");
+      return;
     }
     socket.emit('end-turn');
   };
@@ -125,6 +127,7 @@ export default function Home() {
       ) : (
         <>
           <h2 className="text-2xl font-bold mb-4">Game Started</h2>
+          {whoseTurn && <p>It is {players.find(p => p.id === whoseTurn)?.name}&apos;s turn</p>}
           {players.map((player) => (
             <div key={player.id} className="mb-2 card-container">
               <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
