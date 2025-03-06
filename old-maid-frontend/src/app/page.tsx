@@ -15,14 +15,7 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
-
-  const handleCardClick = (card: string) => {
-    if (selectedCards.includes(card)) {
-      setSelectedCards(selectedCards.filter((c) => c !== card));
-    } else {
-      setSelectedCards([...selectedCards, card]);
-    }
-  };
+  const [currentTurn, setCurrentTurn] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -40,7 +33,12 @@ export default function Home() {
     socket.on("error-message", (message) => {
       alert(message);
     });
-  
+
+    socket.on('update-turn', (playerId: string) => {
+      console.log('Turn changed to:', playerId);
+      setCurrentTurn(playerId);
+    });
+
     socket.on("game-over", ({ loser }) => {
       alert(`${loser} lost the game!`);
       setGameStarted(false);
@@ -50,6 +48,7 @@ export default function Home() {
       socket.off('update-players');
       socket.off('game-started');
       socket.off("error-message");
+      socket.off('update-turn');
       socket.off("game-over");
     };
   }, []);
@@ -69,12 +68,32 @@ export default function Home() {
     socket.emit('start-game');
   };
 
+  const endTurn = () => {
+    const socket = getSocket();
+    if (currentTurn !== socket.id) {
+        alert("It's not your turn!");
+        return;
+    }
+    socket.emit('end-turn');
+  };
+
   const handleDiscardPairs = () => {
     const socket = getSocket();
+    if (!currentTurn) {
+      alert("Turn system is not working! No turn assigned.");
+      return;
+    }
+
+    if (currentTurn !== socket.id) {
+      alert("It's not your turn!");
+      return;
+    }
+
     if (selectedCards.length === 2) {
       const [card1, card2] = selectedCards;
       const value1 = card1.replace(/[♠♣♥♦]/, '');
       const value2 = card2.replace(/[♠♣♥♦]/, '');
+
       if (value1 === value2 && value1 !== 'JOKER') {
         socket.emit('discard-pairs', selectedCards);
         setSelectedCards([]);
@@ -82,6 +101,17 @@ export default function Home() {
         alert('Selected cards are not a pair!');
       }
     }
+  };
+
+  const handleDrawCard = (fromPlayerId: string) => {
+    const socket = getSocket();
+
+    if (currentTurn !== socket.id) {
+        alert("It's not your turn!");
+        return;
+    }
+
+    socket.emit('draw-card', { fromPlayerId });
   };
 
   return (
@@ -103,17 +133,35 @@ export default function Home() {
                   <span
                     key={index}
                     className={`card ${selectedCards.includes(card) ? 'selected' : ''}`}
-                    onClick={() => handleCardClick(card)}
+                    onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
                   >
                     {card}
                   </span>
                 ))}
               </div>
-              {selectedCards.length === 2 && (
-                <button onClick={handleDiscardPairs} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Discard Pairs</button>
+
+              {/* Discard Pairs Button (Only if the player selects 2 cards) */}
+              {selectedCards.length === 2 && currentTurn === getSocket().id && (
+                <button onClick={handleDiscardPairs} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                  Discard Pairs
+                </button>
+              )}
+
+              {/* Draw Card Button (Only if it's the current player's turn and the opponent has cards) */}
+              {currentTurn === getSocket().id && player.id !== getSocket().id && player.hand.length > 0 && (
+                <button onClick={() => handleDrawCard(player.id)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
+                  Draw from {player.name}
+                </button>
               )}
             </div>
           ))}
+
+          {/* End Turn Button (Only visible to the current player) */}
+          {currentTurn === getSocket().id && (
+            <button onClick={endTurn} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mt-4">
+              End Turn
+            </button>
+          )}
         </>
       )}
     </main>

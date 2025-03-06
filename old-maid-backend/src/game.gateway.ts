@@ -57,6 +57,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.deck = this.generateDeck();
     this.dealCards();
 
+    // Set the first turn correctly
+    this.currentPlayerIndex = 0;
+    this.server.emit('update-turn', this.players[0].id);
+
     this.server.emit('update-players', this.players);
     this.server.emit('game-started', this.players);
   }
@@ -72,36 +76,53 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('discard-pairs')
   handleDiscardPairs(client: Socket, selectedCards: string[]) {
     console.log(`Received discard-pairs from ${client.id}:`, selectedCards);
+
     const player = this.players.find((p) => p.id === client.id);
-    console.log('player', player);
-    if (!player) return;
+    if (!player) {
+      console.log('Player not found for ID:', client.id);
+      return;
+    }
 
-    // Check if the selected cards exist in the player's hand
-    // if (!selectedCards.every((card) => player.hand.includes(card))) {
-    //   client.emit('error-message', 'Invalid card selection.');
-    //   return;
-    // }
+    if (this.players[this.currentPlayerIndex].id !== client.id) {
+      console.log(`Player ${client.id} tried to discard out of turn`);
+      client.emit('error-message', "It's not your turn!");
+      return;
+    }
 
-    // Extract the card values without suits
+    if (!selectedCards.every((card) => player.hand.includes(card))) {
+      client.emit('error-message', 'Invalid card selection.');
+      return;
+    }
+
     const [card1, card2] = selectedCards;
     const value1 = card1.replace(/[♠♣♥♦]/, '');
     const value2 = card2.replace(/[♠♣♥♦]/, '');
 
-    // Check if they form a valid pair
     if (value1 === value2) {
       console.log(`Valid pair found: ${card1} & ${card2}`);
-      // Remove the selected cards from the player's hand
       player.hand = player.hand.filter((card) => !selectedCards.includes(card));
-      console.log('player.hand', player.hand);
+      console.log(`Player ${player.name} new hand:`, player.hand);
 
-      // Notify all players of the updated hands
       this.server.emit('update-players', this.players);
 
-      // Check if the game is over
       this.checkGameOver();
+
+      // 🔹 Only move to the next turn if the player has no more pairs to discard
+      if (!this.hasPairs(player.hand)) {
+        this.nextTurn();
+      }
     } else {
       client.emit('error-message', 'Selected cards do not form a valid pair.');
     }
+  }
+
+  @SubscribeMessage('end-turn')
+  handleEndTurn(client: Socket) {
+    if (this.players[this.currentPlayerIndex].id !== client.id) {
+      console.log(`Player ${client.id} tried to end turn out of order`);
+      return;
+    }
+    this.nextTurn();
   }
 
   @SubscribeMessage('draw-card')
@@ -109,28 +130,65 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const toPlayer = this.players.find((p) => p.id === client.id);
     const fromPlayer = this.players.find((p) => p.id === fromPlayerId);
 
-    if (!toPlayer || !fromPlayer) return;
-
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      console.log('Not your turn');
+    if (!toPlayer || !fromPlayer) {
+      console.log('Invalid draw request');
       return;
     }
 
-    if (fromPlayer && toPlayer && fromPlayer.hand.length > 0) {
-      const randomIndex = Math.floor(Math.random() * fromPlayer.hand.length);
-      const [card] = fromPlayer.hand.splice(randomIndex, 1);
-      toPlayer.hand.push(card);
-      fromPlayer.hand = this.removePairs(fromPlayer.hand);
-      toPlayer.hand = this.removePairs(toPlayer.hand);
-      this.server.emit('update-players', this.players);
-
-      this.nextTurn();
+    if (this.players[this.currentPlayerIndex].id !== client.id) {
+      console.log('Not your turn');
+      client.emit('error-message', "It's not your turn!");
+      return;
     }
+
+    if (fromPlayer.hand.length === 0) {
+      console.log(`Player ${fromPlayer.name} has no cards to draw`);
+      client.emit('error-message', 'This player has no cards left.');
+      return;
+    }
+
+    // 🔹 Randomly pick a card from the opponent's hand
+    const randomIndex = Math.floor(Math.random() * fromPlayer.hand.length);
+    const [drawnCard] = fromPlayer.hand.splice(randomIndex, 1);
+    toPlayer.hand.push(drawnCard);
+
+    console.log(`${toPlayer.name} drew ${drawnCard} from ${fromPlayer.name}`);
+
+    // 🔹 Remove pairs from both hands
+    fromPlayer.hand = this.removePairs(fromPlayer.hand);
+    toPlayer.hand = this.removePairs(toPlayer.hand);
+
+    this.server.emit('update-players', this.players);
+
+    // 🔹 Move to the next player's turn
+    this.nextTurn();
   }
 
-  private nextTurn() {
+  private hasPairs(hand: string[]): boolean {
+    const countMap: Record<string, number> = {};
+
+    hand.forEach((card) => {
+      const value = card.replace(/[♠♣♥♦]/u, '');
+      countMap[value] = (countMap[value] || 0) + 1;
+    });
+
+    return Object.values(countMap).some((count) => count >= 2);
+  }
+
+  private nextTurn(): void {
+    if (this.players.length === 0) {
+      console.log('No players left to take a turn.');
+      return;
+    }
+
     this.currentPlayerIndex =
       (this.currentPlayerIndex + 1) % this.players.length;
+    const currentPlayer = this.players[this.currentPlayerIndex];
+
+    console.log(`Next turn: ${currentPlayer.name} (ID: ${currentPlayer.id})`);
+
+    // Broadcast the new turn to all players
+    this.server.emit('update-turn', currentPlayer.id);
   }
 
   private removePairs(hand: string[]): string[] {
@@ -245,6 +303,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       remainingPlayers[0].hand.includes('JOKER')
     ) {
       this.server.emit('game-over', { loser: remainingPlayers[0].name });
+      console.log(`Game Over! ${remainingPlayers[0].name} lost the game.`);
     }
   }
 }
