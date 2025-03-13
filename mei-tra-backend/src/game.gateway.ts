@@ -13,6 +13,14 @@ interface Player {
   name: string;
   hand: string[];
   team: number;
+  isPasser?: boolean;
+}
+
+interface TeamScore {
+  deal: number;
+  blow: number;
+  play: number;
+  total: number;
 }
 
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -20,7 +28,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   players: Player[] = [];
   deck: string[] = [];
-  currentPlayerIndex: number = 0; // Add this line
+  currentPlayerIndex: number = 0;
+  agari: string | null = null;
+  teamScores: { [key: number]: TeamScore } = {
+    0: { deal: 0, blow: 0, play: 0, total: 0 },
+    1: { deal: 0, blow: 0, play: 0, total: 0 },
+  };
+  gamePhase: 'deal' | 'blow' | 'play' | null = null;
 
   handleConnection(client: Socket) {
     console.log(`Player connected: ${client.id}`);
@@ -57,6 +71,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    // Reset scores and game state
+    this.teamScores = {
+      0: { deal: 0, blow: 0, play: 0, total: 0 },
+      1: { deal: 0, blow: 0, play: 0, total: 0 },
+    };
+    this.agari = null;
+
+    // Start with deal phase
+    this.gamePhase = 'deal';
     this.deck = this.generateDeck();
     this.dealCards();
 
@@ -65,6 +88,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('update-turn', this.players[0].id);
     this.server.emit('update-players', this.players);
     this.server.emit('game-started', this.players);
+    this.server.emit('update-phase', {
+      phase: 'deal',
+      scores: this.teamScores,
+    });
   }
 
   @SubscribeMessage('remove-initial-pairs')
@@ -113,52 +140,145 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('end-turn')
-  handleEndTurn(client: Socket) {
+  @SubscribeMessage('end-phase')
+  handleEndPhase(client: Socket) {
     if (this.players[this.currentPlayerIndex].id !== client.id) {
-      console.log(`Player ${client.id} tried to end turn out of order`);
+      console.log(`Player ${client.id} tried to end phase out of order`);
       return;
     }
-    this.nextTurn();
+
+    if (!this.gamePhase) {
+      client.emit('error-message', 'No active game phase');
+      return;
+    }
+
+    // Calculate phase winner
+    const phaseWinner = this.calculatePhaseWinner();
+    if (phaseWinner !== null) {
+      // Award point to winning team
+      this.teamScores[phaseWinner][this.gamePhase]++;
+      this.teamScores[phaseWinner].total++;
+
+      // Emit updated scores
+      this.server.emit('update-phase', {
+        phase: this.gamePhase,
+        scores: this.teamScores,
+        winner: phaseWinner,
+      });
+
+      // Check if game is over (17 points)
+      if (this.teamScores[phaseWinner].total >= 17) {
+        this.handleGameOver(phaseWinner);
+        return;
+      }
+
+      // Move to next phase
+      switch (this.gamePhase) {
+        case 'deal':
+          this.gamePhase = 'blow';
+          this.deck = this.generateDeck();
+          this.dealCards();
+          break;
+        case 'blow':
+          this.gamePhase = 'play';
+          this.deck = this.generateDeck();
+          this.dealCards();
+          break;
+        case 'play':
+          this.gamePhase = 'deal';
+          this.deck = this.generateDeck();
+          this.dealCards();
+          break;
+      }
+
+      // Reset turn to first player
+      this.currentPlayerIndex = 0;
+      this.server.emit('update-turn', this.players[0].id);
+      this.server.emit('update-phase', {
+        phase: this.gamePhase,
+        scores: this.teamScores,
+      });
+    }
   }
 
-  @SubscribeMessage('draw-card')
-  handleDrawCard(client: Socket, { fromPlayerId }: { fromPlayerId: string }) {
-    const toPlayer = this.players.find((p) => p.id === client.id);
-    const fromPlayer = this.players.find((p) => p.id === fromPlayerId);
-
-    if (!toPlayer || !fromPlayer) {
-      console.log('Invalid draw request');
-      return;
+  private calculatePhaseWinner(): number | null {
+    // For deal phase: team with most pairs
+    if (this.gamePhase === 'deal') {
+      const team0Pairs = this.countTeamPairs(0);
+      const team1Pairs = this.countTeamPairs(1);
+      return team0Pairs > team1Pairs ? 0 : team1Pairs > team0Pairs ? 1 : null;
     }
 
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      console.log('Not your turn');
-      client.emit('error-message', "It's not your turn!");
-      return;
+    // For blow phase: team with most cards
+    if (this.gamePhase === 'blow') {
+      const team0Cards = this.countTeamCards(0);
+      const team1Cards = this.countTeamCards(1);
+      return team0Cards > team1Cards ? 0 : team1Cards > team0Cards ? 1 : null;
     }
 
-    if (fromPlayer.hand.length === 0) {
-      console.log(`Player ${fromPlayer.name} has no cards to draw`);
-      client.emit('error-message', 'This player has no cards left.');
-      return;
+    // For play phase: team with most pairs
+    if (this.gamePhase === 'play') {
+      const team0Pairs = this.countTeamPairs(0);
+      const team1Pairs = this.countTeamPairs(1);
+      return team0Pairs > team1Pairs ? 0 : team1Pairs > team0Pairs ? 1 : null;
     }
 
-    // 🔹 Randomly pick a card from the opponent's hand
-    const randomIndex = Math.floor(Math.random() * fromPlayer.hand.length);
-    const [drawnCard] = fromPlayer.hand.splice(randomIndex, 1);
-    toPlayer.hand.push(drawnCard);
+    return null;
+  }
 
-    console.log(`${toPlayer.name} drew ${drawnCard} from ${fromPlayer.name}`);
+  private countTeamPairs(team: number): number {
+    return this.players
+      .filter((p) => p.team === team)
+      .reduce((total, player) => {
+        const pairs = this.countPairs(player.hand);
+        return total + pairs;
+      }, 0);
+  }
 
-    // 🔹 Remove pairs from both hands
-    fromPlayer.hand = this.removePairs(fromPlayer.hand);
-    toPlayer.hand = this.removePairs(toPlayer.hand);
+  private countTeamCards(team: number): number {
+    return this.players
+      .filter((p) => p.team === team)
+      .reduce((total, player) => total + player.hand.length, 0);
+  }
 
-    this.server.emit('update-players', this.players);
+  private countPairs(hand: string[]): number {
+    const countMap: Record<string, number> = {};
+    hand.forEach((card) => {
+      const value = card.replace(/[♠♣♥♦]/, '');
+      countMap[value] = (countMap[value] || 0) + 1;
+    });
+    return Object.values(countMap).reduce(
+      (total, count) => total + Math.floor(count / 2),
+      0,
+    );
+  }
 
-    // 🔹 Move to the next player's turn
-    this.nextTurn();
+  private handleGameOver(winningTeam: number) {
+    const winningTeamPlayers = this.players.filter(
+      (p) => p.team === winningTeam,
+    );
+    const winningTeamNames = winningTeamPlayers
+      .map((p) => p.name)
+      .join(' and ');
+
+    console.log(`Game Over! Team ${winningTeam} wins!`);
+    this.server.emit('game-over', {
+      winner: `Team ${winningTeam} (${winningTeamNames})`,
+      winningTeam,
+      finalScores: this.teamScores,
+    });
+
+    // Reset game state
+    setTimeout(() => {
+      this.players = [];
+      this.deck = [];
+      this.currentPlayerIndex = 0;
+      this.gamePhase = null;
+      this.teamScores = {
+        0: { deal: 0, blow: 0, play: 0, total: 0 },
+        1: { deal: 0, blow: 0, play: 0, total: 0 },
+      };
+    }, 500);
   }
 
   private hasPairs(hand: string[]): boolean {
@@ -246,40 +366,35 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.deck.sort(() => Math.random() - 0.5);
     console.log('Shuffled deck:', this.deck);
 
-    const numPlayers = this.players.length;
-
     // Ensure players have empty hands before dealing
     this.players.forEach((player) => {
       player.hand = [];
+      player.isPasser = false;
     });
 
-    // Deal cards
-    for (let i = 0; i < this.deck.length; i += 1) {
-      this.players[i % numPlayers].hand.push(this.deck[i]);
+    // Deal exactly 10 cards to each player
+    for (let i = 0; i < 10; i++) {
+      for (let j = 0; j < this.players.length; j++) {
+        this.players[j].hand.push(this.deck[i * this.players.length + j]);
+      }
     }
 
+    // Set the Agari card (remaining card)
+    this.agari = this.deck[40];
+
+    console.log('Agari card:', this.agari);
     console.log(
-      'Players before removing pairs:',
+      'Players after dealing:',
       this.players.map((p) => ({
         name: p.name,
         hand: p.hand,
+        isPasser: p.isPasser,
       })),
     );
 
-    // Remove pairs
-    this.players.forEach((player) => {
-      player.hand = this.removePairs(player.hand);
-      console.log(`Player ${player.name} after removing pairs:`, player.hand);
-    });
-
-    // Ensure no player has an empty hand
-    this.players.forEach((player) => {
-      if (player.hand.length === 0) {
-        console.log(
-          `Warning: Player ${player.name} has no cards after removing pairs.`,
-        );
-      }
-    });
+    // Emit the Agari card to all players
+    this.server.emit('update-agari', { agari: this.agari });
+    this.server.emit('update-players', this.players);
   }
 
   private checkGameOver() {

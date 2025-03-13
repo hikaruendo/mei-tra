@@ -8,6 +8,14 @@ interface Player {
   name: string;
   hand: string[];
   team?: number; // 0 or 1 for team number
+  isPasser?: boolean;
+}
+
+interface TeamScore {
+  deal: number;
+  blow: number;
+  play: number;
+  total: number;
 }
 
 export default function Home() {
@@ -19,6 +27,12 @@ export default function Home() {
   const [currentTurn, setCurrentTurn] = useState<string | null>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
   const [teams, setTeams] = useState<{ team0: Player[], team1: Player[] }>({ team0: [], team1: [] });
+  const [gamePhase, setGamePhase] = useState<'deal' | 'blow' | 'play' | null>(null);
+  const [teamScores, setTeamScores] = useState<{ [key: number]: TeamScore }>({
+    0: { deal: 0, blow: 0, play: 0, total: 0 },
+    1: { deal: 0, blow: 0, play: 0, total: 0 }
+  });
+  const [agari, setAgari] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -37,6 +51,18 @@ export default function Home() {
       setGameStarted(true);
     });
 
+    socket.on('update-phase', ({ phase, scores, winner }) => {
+      setGamePhase(phase);
+      setTeamScores(scores);
+      if (winner !== null) {
+        alert(`Team ${winner} won the ${phase} phase!`);
+      }
+    });
+
+    socket.on('update-agari', ({ agari }) => {
+      setAgari(agari);
+    });
+
     socket.on("error-message", (message) => {
       alert(message);
     });
@@ -48,14 +74,21 @@ export default function Home() {
       console.log('currentTurn state:', playerId);
     });
 
-    socket.on("game-over", ({ winner, winningTeam }) => {
-      alert(`${winner} won the game!`);
+    socket.on("game-over", ({ winner, finalScores }) => {
+      alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
       setGameStarted(false);
+      setGamePhase(null);
+      setTeamScores({
+        0: { deal: 0, blow: 0, play: 0, total: 0 },
+        1: { deal: 0, blow: 0, play: 0, total: 0 }
+      });
     });
 
     return () => {
       socket.off('update-players');
       socket.off('game-started');
+      socket.off('update-phase');
+      socket.off('update-agari');
       socket.off("error-message");
       socket.off('update-turn');
       socket.off("game-over");
@@ -77,13 +110,13 @@ export default function Home() {
     socket.emit('start-game');
   };
 
-  const endTurn = () => {
+  const endPhase = () => {
     const socket = getSocket();
     if (currentTurn !== socket.id) {
       alert("It's not your turn!");
       return;
     }
-    socket.emit('end-turn');
+    socket.emit('end-phase');
   };
 
   const handleDiscardPairs = () => {
@@ -123,6 +156,40 @@ export default function Home() {
     socket.emit('draw-card', { fromPlayerId });
   };
 
+  const renderPlayerHand = (player: Player) => {
+    const isCurrentPlayer = player.id === getSocket().id;
+    
+    if (isCurrentPlayer) {
+      return (
+        <div>
+          {player.hand.map((card, index) => (
+            <span
+              key={index}
+              className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
+              data-value={card.replace(/[♥♣♦♠]/, '')}
+              onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
+            >
+              <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>
+                {card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}
+              </span>
+              {card}
+            </span>
+          ))}
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex gap-2">
+          {Array(player.hand.length).fill('🂠').map((card, index) => (
+            <span key={index} className="card face-down">
+              {card}
+            </span>
+          ))}
+        </div>
+      );
+    }
+  };
+
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-24">
       {!gameStarted ? (
@@ -134,6 +201,34 @@ export default function Home() {
       ) : (
         <>
           <h2 className="text-2xl font-bold mb-4">Game Started</h2>
+          <div className="mb-4">
+            <h3 className="text-xl font-bold">Current Phase: {gamePhase?.toUpperCase()}</h3>
+            <div className="flex justify-center gap-8 mt-2">
+              <div className="text-center">
+                <h4 className="font-bold">Team 0</h4>
+                <p>Deal: {teamScores[0].deal}</p>
+                <p>Blow: {teamScores[0].blow}</p>
+                <p>Play: {teamScores[0].play}</p>
+                <p className="font-bold">Total: {teamScores[0].total}</p>
+              </div>
+              <div className="text-center">
+                <h4 className="font-bold">Team 1</h4>
+                <p>Deal: {teamScores[1].deal}</p>
+                <p>Blow: {teamScores[1].blow}</p>
+                <p>Play: {teamScores[1].play}</p>
+                <p className="font-bold">Total: {teamScores[1].total}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Agari Card */}
+          {agari && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4">Agari Card</h3>
+              <span className="card face-down">🂠</span>
+            </div>
+          )}
+          
           {whoseTurn && <p>It is {players.find(p => p.id === whoseTurn)?.name}&apos;s turn</p>}
           
           {/* Team 1 (Top) */}
@@ -143,19 +238,7 @@ export default function Home() {
               {teams.team1.map((player) => (
                 <div key={player.id} className={`card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
                   <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
-                  <div>
-                    {player.hand.map((card, index) => (
-                      <span
-                        key={index}
-                        className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
-                        data-value={card.replace(/[♥♣♦♠]/, '')}
-                        onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
-                      >
-                        <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
-                        {card}
-                      </span>
-                    ))}
-                  </div>
+                  {renderPlayerHand(player)}
                 </div>
               ))}
             </div>
@@ -168,19 +251,7 @@ export default function Home() {
               {teams.team0.map((player) => (
                 <div key={player.id} className={`card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
                   <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
-                  <div>
-                    {player.hand.map((card, index) => (
-                      <span
-                        key={index}
-                        className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
-                        data-value={card.replace(/[♥♣♦♠]/, '')}
-                        onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
-                      >
-                        <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
-                        {card}
-                      </span>
-                    ))}
-                  </div>
+                  {renderPlayerHand(player)}
                 </div>
               ))}
             </div>
@@ -194,8 +265,8 @@ export default function Home() {
               </button>
             )}
             {getSocket().id === whoseTurn && (
-              <button onClick={endTurn} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                End Turn
+              <button onClick={endPhase} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                End Phase
               </button>
             )}
           </div>
