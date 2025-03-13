@@ -12,6 +12,7 @@ interface Player {
   id: string;
   name: string;
   hand: string[];
+  team: number;
 }
 
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -38,10 +39,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join-game')
   handleJoinGame(client: Socket, name: string) {
     if (this.players.length < 4) {
-      this.players.push({ id: client.id, name, hand: [] });
+      // Assign team based on player order
+      const team = Math.floor(this.players.length / 2);
+      this.players.push({ id: client.id, name, hand: [], team });
       this.server.emit('update-players', this.players);
     } else {
-      client.emit('game-full');
+      client.emit('error-message', 'Game is full!');
     }
   }
 
@@ -49,20 +52,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleStartGame(): void {
     console.log('Game starting...');
 
-    if (this.players.length === 0) {
-      console.log('No players to start the game.');
+    if (this.players.length !== 4) {
+      console.log('Need exactly 4 players to start the game.');
       return;
     }
 
     this.deck = this.generateDeck();
     this.dealCards();
 
-    // Set the first turn correctly
+    // Set the first turn to the first player
     this.currentPlayerIndex = 0;
     this.server.emit('update-turn', this.players[0].id);
     this.server.emit('update-players', this.players);
     this.server.emit('game-started', this.players);
-    this.server.emit('turn', this.players[0].id); // Emit the turn event
   }
 
   @SubscribeMessage('remove-initial-pairs')
@@ -176,30 +178,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // 🔹 Check if the game is over before moving to the next turn
+    // Check if the game is over before moving to the next turn
     this.checkGameOver();
 
-    let nextPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-
-    // 🔹 Skip players who have no cards
-    while (this.players[nextPlayerIndex].hand.length === 0) {
-      nextPlayerIndex = (nextPlayerIndex + 1) % this.players.length;
-
-      // 🔹 If we loop back to the same player, stop rotation
-      if (nextPlayerIndex === this.currentPlayerIndex) {
-        console.log('Only one player left with cards. Stopping turn rotation.');
-        return;
-      }
-    }
-
-    this.currentPlayerIndex = nextPlayerIndex;
+    // Move to the next player
+    this.currentPlayerIndex =
+      (this.currentPlayerIndex + 1) % this.players.length;
     const currentPlayer = this.players[this.currentPlayerIndex];
 
-    console.log(`Next turn: ${currentPlayer.name} (ID: ${currentPlayer.id})`);
+    console.log(
+      `Next turn: ${currentPlayer.name} (Team ${currentPlayer.team})`,
+    );
 
-    // 🔹 Broadcast the new turn to all players
+    // Broadcast the new turn to all players
     this.server.emit('update-turn', currentPlayer.id);
-    this.server.emit('turn', currentPlayer.id); // Emit the turn event
   }
 
   private removePairs(hand: string[]): string[] {
@@ -220,21 +212,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private generateDeck(): string[] {
     const suits = ['♠', '♣', '♥', '♦'];
-    const values = [
-      'A',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      '8',
-      '9',
-      '10',
-      'J',
-      'Q',
-      'K',
-    ];
+    const values = ['5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     const deck: string[] = [];
 
     suits.forEach((suit) =>
@@ -305,25 +283,32 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private checkGameOver() {
-    const remainingPlayers = this.players.filter(
-      (player) => player && player.hand && player.hand.length > 0,
-    );
+    // Check if any team has won (all players in a team have no cards)
+    const team0Players = this.players.filter((p) => p.team === 0);
+    const team1Players = this.players.filter((p) => p.team === 1);
 
-    if (remainingPlayers.length === 1) {
-      const lastPlayer = remainingPlayers[0];
+    const team0Won = team0Players.every((p) => p.hand.length === 0);
+    const team1Won = team1Players.every((p) => p.hand.length === 0);
 
-      if (lastPlayer.hand.includes('JOKER')) {
-        console.log(`Game Over! ${lastPlayer.name} lost the game.`);
+    if (team0Won || team1Won) {
+      const winningTeam = team0Won ? 0 : 1;
+      const winningTeamPlayers = team0Won ? team0Players : team1Players;
+      const winningTeamNames = winningTeamPlayers
+        .map((p) => p.name)
+        .join(' and ');
 
-        this.server.emit('game-over', { loser: lastPlayer.name });
+      console.log(`Game Over! Team ${winningTeam} wins!`);
+      this.server.emit('game-over', {
+        winner: `Team ${winningTeam} (${winningTeamNames})`,
+        winningTeam,
+      });
 
-        // 🔹 Ensure game state is cleared only AFTER the event is emitted
-        setTimeout(() => {
-          this.players = [];
-          this.deck = [];
-          this.currentPlayerIndex = 0;
-        }, 500); // Add a slight delay to prevent race conditions
-      }
+      // Reset game state
+      setTimeout(() => {
+        this.players = [];
+        this.deck = [];
+        this.currentPlayerIndex = 0;
+      }, 500);
     }
   }
 }

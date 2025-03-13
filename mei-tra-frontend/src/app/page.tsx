@@ -7,6 +7,7 @@ interface Player {
   id: string;
   name: string;
   hand: string[];
+  team?: number; // 0 or 1 for team number
 }
 
 export default function Home() {
@@ -17,6 +18,7 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
   const [currentTurn, setCurrentTurn] = useState<string | null>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
+  const [teams, setTeams] = useState<{ team0: Player[], team1: Player[] }>({ team0: [], team1: [] });
 
   useEffect(() => {
     setIsClient(true);
@@ -24,6 +26,10 @@ export default function Home() {
 
     socket.on('update-players', (players: Player[]) => {
       setPlayers(players);
+      // Organize players into teams
+      const team0 = players.filter(p => p.team === 0);
+      const team1 = players.filter(p => p.team === 1);
+      setTeams({ team0, team1 });
     });
 
     socket.on('game-started', (players: Player[]) => {
@@ -42,8 +48,8 @@ export default function Home() {
       console.log('currentTurn state:', playerId);
     });
 
-    socket.on("game-over", ({ loser }) => {
-      alert(`${loser} lost the game!`);
+    socket.on("game-over", ({ winner, winningTeam }) => {
+      alert(`${winner} won the game!`);
       setGameStarted(false);
     });
 
@@ -123,51 +129,76 @@ export default function Home() {
         <>
           <input type="text" placeholder="Enter name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded p-2 mb-4" />
           <button onClick={joinGame} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Join Game</button>
-          <button onClick={startGame} disabled={players.length < 2} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2 disabled:opacity-50">Start Game</button>
+          <button onClick={startGame} disabled={players.length < 4} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2 disabled:opacity-50">Start Game</button>
         </>
       ) : (
         <>
           <h2 className="text-2xl font-bold mb-4">Game Started</h2>
           {whoseTurn && <p>It is {players.find(p => p.id === whoseTurn)?.name}&apos;s turn</p>}
-          {players.map((player) => (
-            <div key={player.id} className={`mb-2 card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
-              <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
-              <div>
-                {player.hand.map((card, index) => (
-                  <span
-                    key={index}
-                    className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
-                    data-value={card.replace(/[♥♣♦♠]/, '')}
-                    onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
-                  >
-                    <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
-                    {card}
-                  </span>
-                ))}
-              </div>
-
-              {/* Discard Pairs Button (Only if the player selects 2 cards) */}
-              {selectedCards.length === 2 && player.id === whoseTurn && (
-                <button onClick={handleDiscardPairs} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                  Discard Pairs
-                </button>
-              )}
-
-              {/* Draw Card Button (Only if it's the current player's turn and the opponent has cards) */}
-              {getSocket().id === whoseTurn && player.id !== getSocket().id && player.hand.length > 0 && (
-                <button onClick={() => handleDrawCard(player.id)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
-                  Draw from {player.name}
-                </button>
-              )}
+          
+          {/* Team 1 (Top) */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold mb-4">Team 1</h3>
+            <div className="flex justify-center gap-4">
+              {teams.team1.map((player) => (
+                <div key={player.id} className={`card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
+                  <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
+                  <div>
+                    {player.hand.map((card, index) => (
+                      <span
+                        key={index}
+                        className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
+                        data-value={card.replace(/[♥♣♦♠]/, '')}
+                        onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
+                      >
+                        <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
+                        {card}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
 
-          {/* End Turn Button (Only visible to the current player) */}
-          {getSocket().id === whoseTurn && (
-            <button onClick={endTurn} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mt-4">
-              End Turn
-            </button>
-          )}
+          {/* Team 0 (Bottom) */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold mb-4">Team 0</h3>
+            <div className="flex justify-center gap-4">
+              {teams.team0.map((player) => (
+                <div key={player.id} className={`card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
+                  <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
+                  <div>
+                    {player.hand.map((card, index) => (
+                      <span
+                        key={index}
+                        className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
+                        data-value={card.replace(/[♥♣♦♠]/, '')}
+                        onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
+                      >
+                        <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
+                        {card}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Game Controls */}
+          <div className="flex gap-4 mt-4">
+            {selectedCards.length === 2 && getSocket().id === whoseTurn && (
+              <button onClick={handleDiscardPairs} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                Discard Pairs
+              </button>
+            )}
+            {getSocket().id === whoseTurn && (
+              <button onClick={endTurn} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                End Turn
+              </button>
+            )}
+          </div>
         </>
       )}
     </main>
