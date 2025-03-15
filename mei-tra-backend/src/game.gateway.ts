@@ -1,7 +1,6 @@
 import {
   WebSocketGateway,
   SubscribeMessage,
-  // MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketServer,
@@ -14,6 +13,7 @@ interface Player {
   hand: string[];
   team: number;
   isPasser?: boolean;
+  hasBroken?: boolean;
 }
 
 interface TeamScore {
@@ -21,6 +21,24 @@ interface TeamScore {
   blow: number;
   play: number;
   total: number;
+}
+
+type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
+
+interface BlowDeclaration {
+  playerId: string;
+  trumpType: TrumpType;
+  numberOfPairs: number;
+  timestamp: number;
+}
+
+interface BlowState {
+  currentTrump: TrumpType | null;
+  currentHighestDeclaration: BlowDeclaration | null;
+  declarations: BlowDeclaration[];
+  lastPasser: string | null;
+  isRoundCancelled: boolean;
+  startingPlayerId: string | null;
 }
 
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -35,6 +53,36 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     1: { deal: 0, blow: 0, play: 0, total: 0 },
   };
   gamePhase: 'deal' | 'blow' | 'play' | null = null;
+  blowState: BlowState = {
+    currentTrump: null,
+    currentHighestDeclaration: null,
+    declarations: [],
+    lastPasser: null,
+    isRoundCancelled: false,
+    startingPlayerId: null,
+  };
+
+  private readonly CARD_STRENGTHS: Record<string, number> = {
+    JOKER: 14, // Strongest
+    A: 13,
+    K: 12,
+    Q: 11,
+    J: 10,
+    '10': 9,
+    '9': 8,
+    '8': 7,
+    '7': 6,
+    '6': 5,
+    '5': 4, // Weakest
+  };
+
+  private readonly TRUMP_STRENGTHS: Record<TrumpType, number> = {
+    tra: 5, // Strongest
+    hel: 4,
+    daya: 3,
+    club: 2,
+    zuppe: 1, // Weakest
+  };
 
   handleConnection(client: Socket) {
     console.log(`Player connected: ${client.id}`);
@@ -91,6 +139,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('update-phase', {
       phase: 'deal',
       scores: this.teamScores,
+      winner: null,
     });
   }
 
@@ -425,5 +474,264 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.currentPlayerIndex = 0;
       }, 500);
     }
+  }
+
+  @SubscribeMessage('start-blow')
+  handleStartBlow(client: Socket) {
+    if (this.players[this.currentPlayerIndex].id !== client.id) {
+      client.emit(
+        'error-message',
+        "It's not your turn to start the blow phase!",
+      );
+      return;
+    }
+
+    // Reset blow state
+    this.blowState = {
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      declarations: [],
+      lastPasser: null,
+      isRoundCancelled: false,
+      startingPlayerId: client.id,
+    };
+
+    // Check for broken hands
+    const hasBrokenHand = this.checkForBrokenHand(client.id);
+    if (hasBrokenHand) {
+      this.handleBrokenHand(client.id);
+      return;
+    }
+
+    // Start the blow phase
+    this.gamePhase = 'blow';
+    this.server.emit('blow-started', {
+      startingPlayer: client.id,
+      players: this.players,
+    });
+  }
+
+  @SubscribeMessage('declare-blow')
+  handleDeclareBlow(
+    client: Socket,
+    declaration: { trumpType: TrumpType; numberOfPairs: number },
+  ) {
+    if (this.players[this.currentPlayerIndex].id !== client.id) {
+      client.emit('error-message', "It's not your turn to declare!");
+      return;
+    }
+
+    const player = this.players.find((p) => p.id === client.id);
+    if (!player) {
+      client.emit('error-message', 'Player not found!');
+      return;
+    }
+
+    // Validate declaration
+    if (!this.isValidDeclaration(declaration)) {
+      client.emit('error-message', 'Invalid declaration!');
+      return;
+    }
+
+    // Add declaration
+    const newDeclaration: BlowDeclaration = {
+      playerId: client.id,
+      trumpType: declaration.trumpType,
+      numberOfPairs: declaration.numberOfPairs,
+      timestamp: Date.now(),
+    };
+
+    this.blowState.declarations.push(newDeclaration);
+    this.blowState.currentHighestDeclaration = newDeclaration;
+
+    // Emit update
+    this.server.emit('blow-updated', {
+      declarations: this.blowState.declarations,
+      currentHighest: this.blowState.currentHighestDeclaration,
+    });
+
+    // Check if this is the fourth declaration
+    if (this.blowState.declarations.length === 4) {
+      // Find the highest declaration
+      const winner = this.findHighestDeclaration();
+
+      // Award point to winning team
+      const winningPlayer = this.players.find((p) => p.id === winner.playerId);
+      if (winningPlayer) {
+        this.teamScores[winningPlayer.team].blow++;
+        this.teamScores[winningPlayer.team].total++;
+
+        // Move to play phase
+        this.gamePhase = 'play';
+
+        // Emit updates
+        this.server.emit('update-phase', {
+          phase: 'play',
+          scores: this.teamScores,
+          winner: winningPlayer.team,
+        });
+
+        // Reset blow state
+        this.blowState = {
+          currentTrump: winner.trumpType, // Set the winning trump type
+          currentHighestDeclaration: null,
+          declarations: [],
+          lastPasser: null,
+          isRoundCancelled: false,
+          startingPlayerId: null,
+        };
+      }
+    } else {
+      // Move to next player
+      this.nextTurn();
+    }
+  }
+
+  private findHighestDeclaration(): BlowDeclaration {
+    return this.blowState.declarations.reduce((highest, current) => {
+      if (!highest) return current;
+
+      // Compare trump strengths
+      const currentTrumpStrength = this.TRUMP_STRENGTHS[current.trumpType];
+      const highestTrumpStrength = this.TRUMP_STRENGTHS[highest.trumpType];
+
+      if (currentTrumpStrength > highestTrumpStrength) {
+        return current;
+      }
+
+      if (currentTrumpStrength === highestTrumpStrength) {
+        // If same trump type, compare number of pairs
+        if (current.numberOfPairs > highest.numberOfPairs) {
+          return current;
+        }
+      }
+
+      return highest;
+    });
+  }
+
+  @SubscribeMessage('pass-blow')
+  handlePassBlow(client: Socket) {
+    if (this.players[this.currentPlayerIndex].id !== client.id) {
+      client.emit('error-message', "It's not your turn to pass!");
+      return;
+    }
+
+    const player = this.players.find((p) => p.id === client.id);
+    if (!player) {
+      client.emit('error-message', 'Player not found!');
+      return;
+    }
+
+    player.isPasser = true;
+    this.blowState.lastPasser = client.id;
+
+    // Check if all players have passed
+    const allPassed = this.players.every((p) => p.isPasser);
+    if (allPassed) {
+      this.handleAllPassed();
+      return;
+    }
+
+    // Emit update
+    this.server.emit('blow-updated', {
+      declarations: this.blowState.declarations,
+      currentHighest: this.blowState.currentHighestDeclaration,
+      lastPasser: this.blowState.lastPasser,
+    });
+
+    // Move to next player
+    this.nextTurn();
+  }
+
+  private isValidDeclaration(declaration: {
+    trumpType: TrumpType;
+    numberOfPairs: number;
+  }): boolean {
+    if (!this.blowState.currentHighestDeclaration) {
+      return true; // First declaration is always valid
+    }
+
+    const currentHighest = this.blowState.currentHighestDeclaration;
+
+    // Check if trump type is stronger
+    if (
+      this.TRUMP_STRENGTHS[declaration.trumpType] >
+      this.TRUMP_STRENGTHS[currentHighest.trumpType]
+    ) {
+      return true;
+    }
+
+    // If same trump type, check number of pairs
+    if (declaration.trumpType === currentHighest.trumpType) {
+      return declaration.numberOfPairs > currentHighest.numberOfPairs;
+    }
+
+    return false;
+  }
+
+  private checkForBrokenHand(playerId: string): boolean {
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return false;
+
+    const hand = player.hand;
+    const hasPictureCards = hand.some((card) =>
+      ['A', 'K', 'Q', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
+    );
+    const queenCount = hand.filter((card) => card.includes('Q')).length;
+
+    return !hasPictureCards || queenCount <= 1;
+  }
+
+  private handleBrokenHand(playerId: string) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    player.hasBroken = true;
+    this.server.emit('hand-broken', {
+      playerId,
+      hand: player.hand,
+    });
+
+    // Find player with most cards to be next dealer
+    const nextDealer = this.players.reduce((prev, current) =>
+      current.hand.length > prev.hand.length ? current : prev,
+    );
+
+    // Reset game state and start new round
+    this.deck = this.generateDeck();
+    this.dealCards();
+    this.currentPlayerIndex = this.players.findIndex(
+      (p) => p.id === nextDealer.id,
+    );
+
+    this.server.emit('round-reset', {
+      nextDealer: nextDealer.id,
+      players: this.players,
+    });
+  }
+
+  private handleAllPassed() {
+    // Round is cancelled
+    this.blowState.isRoundCancelled = true;
+
+    // Find last passer
+    const lastPasser = this.players.find(
+      (p) => p.id === this.blowState.lastPasser,
+    );
+    if (!lastPasser) return;
+
+    // Reset game state and start new round
+    this.deck = this.generateDeck();
+    this.dealCards();
+    this.currentPlayerIndex =
+      (this.players.findIndex((p) => p.id === lastPasser.id) + 1) %
+      this.players.length;
+
+    this.server.emit('round-cancelled', {
+      lastPasser: lastPasser.id,
+      nextDealer: this.players[this.currentPlayerIndex].id,
+      players: this.players,
+    });
   }
 }
