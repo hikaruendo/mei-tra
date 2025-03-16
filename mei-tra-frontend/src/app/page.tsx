@@ -205,29 +205,41 @@ export default function Home() {
     if (isCurrentPlayer) {
       return (
         <div className="flex flex-wrap gap-2">
-          {player.hand.map((card, index) => (
-            <span
-              key={index}
-              className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
-              data-value={card.replace(/[♥♣♦♠]/, '')}
-              onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
-            >
-              <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>
-                {card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}
-              </span>
-              {card}
-            </span>
-          ))}
+          {player.hand.map((card, index) => {
+            const value = card.replace(/[♠♣♥♦]/, '');
+            const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
+            const isRed = suit === '♥' || suit === '♦';
+            
+            return (
+              <div
+                key={index}
+                className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${isRed ? 'red-suit' : 'black-suit'}`}
+                onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
+                style={{ transform: `rotate(${-15 + (index * 3)}deg)` }}
+              >
+                {card === 'JOKER' ? '🃏' : (
+                  <>
+                    {value}
+                    <span className="suit">{suit}</span>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     }
 
     return (
       <div className="flex gap-2">
-        {Array(player.hand.length).fill('🂠').map((card, index) => (
-          <span key={index} className="card face-down">
-            {card}
-          </span>
+        {Array(player.hand.length).fill(null).map((_, index) => (
+          <div
+            key={index}
+            className="card face-down"
+            style={{ transform: `rotate(${-10 + (index * 2)}deg)` }}
+          >
+            🂠
+          </div>
         ))}
       </div>
     );
@@ -303,7 +315,6 @@ export default function Home() {
         gamePhase={gamePhase}
         whoseTurn={whoseTurn}
         selectedCards={selectedCards}
-        handleDiscardPairs={gameActions.handleDiscardPairs}
         endPhase={gameActions.endPhase}
         startBlow={gameActions.startBlow}
         renderBlowControls={() => (

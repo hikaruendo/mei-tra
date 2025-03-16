@@ -6,450 +6,390 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-
-interface Player {
-  id: string;
-  name: string;
-  hand: string[];
-  team: number;
-  isPasser?: boolean;
-  hasBroken?: boolean;
-}
-
-interface TeamScore {
-  deal: number;
-  blow: number;
-  play: number;
-  total: number;
-}
-
-type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
-
-interface BlowDeclaration {
-  playerId: string;
-  trumpType: TrumpType;
-  numberOfPairs: number;
-  timestamp: number;
-}
-
-interface BlowState {
-  currentTrump: TrumpType | null;
-  currentHighestDeclaration: BlowDeclaration | null;
-  declarations: BlowDeclaration[];
-  lastPasser: string | null;
-  isRoundCancelled: boolean;
-  startingPlayerId: string | null;
-}
+import { GameStateService } from './services/game-state.service';
+import { CardService } from './services/card.service';
+import { ScoreService } from './services/score.service';
+import { ChomboService } from './services/chombo.service';
+import { BlowService } from './services/blow.service';
+import { PlayService } from './services/play.service';
+import { TrumpType } from './types/game.types';
+import { ChomboViolation } from './types/game.types';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
-  players: Player[] = [];
-  deck: string[] = [];
-  currentPlayerIndex: number = 0;
-  agari: string | null = null;
-  teamScores: { [key: number]: TeamScore } = {
-    0: { deal: 0, blow: 0, play: 0, total: 0 },
-    1: { deal: 0, blow: 0, play: 0, total: 0 },
-  };
-  gamePhase: 'deal' | 'blow' | 'play' | null = null;
-  blowState: BlowState = {
-    currentTrump: null,
-    currentHighestDeclaration: null,
-    declarations: [],
-    lastPasser: null,
-    isRoundCancelled: false,
-    startingPlayerId: null,
-  };
 
-  private readonly CARD_STRENGTHS: Record<string, number> = {
-    JOKER: 14, // Strongest
-    A: 13,
-    K: 12,
-    Q: 11,
-    J: 10,
-    '10': 9,
-    '9': 8,
-    '8': 7,
-    '7': 6,
-    '6': 5,
-    '5': 4, // Weakest
-  };
-
-  private readonly TRUMP_STRENGTHS: Record<TrumpType, number> = {
-    tra: 5, // Strongest
-    hel: 4,
-    daya: 3,
-    club: 2,
-    zuppe: 1, // Weakest
-  };
+  constructor(
+    private readonly gameState: GameStateService,
+    private readonly cardService: CardService,
+    private readonly scoreService: ScoreService,
+    private readonly chomboService: ChomboService,
+    private readonly blowService: BlowService,
+    private readonly playService: PlayService,
+  ) {}
 
   handleConnection(client: Socket) {
     console.log(`Player connected: ${client.id}`);
-    if (this.deck.length > 0 && this.players.length > 0) {
-      this.dealCards();
-      this.server.emit('update-players', this.players);
+    const state = this.gameState.getState();
+    if (state.deck.length > 0 && state.players.length > 0) {
+      this.server.emit('update-players', state.players);
     }
   }
 
   handleDisconnect(client: Socket) {
-    this.players = this.players.filter((p) => p.id !== client.id);
-    this.server.emit('update-players', this.players);
+    this.gameState.removePlayer(client.id);
+    const state = this.gameState.getState();
+    this.server.emit('update-players', state.players);
     console.log(`Player disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('join-game')
   handleJoinGame(client: Socket, name: string) {
-    if (this.players.length < 4) {
-      // Assign team based on player order
-      const team = Math.floor(this.players.length / 2);
-      this.players.push({ id: client.id, name, hand: [], team });
-      this.server.emit('update-players', this.players);
-    } else {
+    const success = this.gameState.addPlayer(client.id, name);
+    if (!success) {
       client.emit('error-message', 'Game is full!');
+      return;
     }
+    const state = this.gameState.getState();
+    this.server.emit('update-players', state.players);
   }
 
   @SubscribeMessage('start-game')
   handleStartGame(): void {
     console.log('Game starting...');
-
-    if (this.players.length !== 4) {
+    const success = this.gameState.startGame();
+    if (!success) {
       console.log('Need exactly 4 players to start the game.');
       return;
     }
 
-    // Reset scores and game state
-    this.teamScores = {
-      0: { deal: 0, blow: 0, play: 0, total: 0 },
-      1: { deal: 0, blow: 0, play: 0, total: 0 },
-    };
-    this.agari = null;
+    const state = this.gameState.getState();
 
-    // Start with deal phase
-    this.gamePhase = 'deal';
-    this.deck = this.generateDeck();
-    this.dealCards();
+    // Randomly select first dealer
+    const randomDealerIndex = Math.floor(Math.random() * state.players.length);
+    state.currentPlayerIndex = randomDealerIndex;
 
-    // Set the first turn to the first player
-    this.currentPlayerIndex = 0;
-    this.server.emit('update-turn', this.players[0].id);
-    this.server.emit('update-players', this.players);
-    this.server.emit('game-started', this.players);
+    const currentPlayer = state.players[randomDealerIndex];
+    if (!currentPlayer) return;
+
+    this.server.emit('update-turn', currentPlayer.id);
+    this.server.emit('update-players', state.players);
+    this.server.emit('game-started', state.players);
     this.server.emit('update-phase', {
-      phase: 'deal',
-      scores: this.teamScores,
+      phase: state.gamePhase,
+      scores: state.teamScores,
       winner: null,
     });
   }
 
-  @SubscribeMessage('remove-initial-pairs')
-  handleRemoveInitialPairs(): void {
-    this.players.forEach((player) => {
-      player.hand = this.removePairs(player.hand); // ✅ Now correctly passes string[]
-    });
-    this.server.emit('update-players', this.players);
-  }
-
-  @SubscribeMessage('discard-pairs')
-  handleDiscardPairs(client: Socket, selectedCards: string[]) {
-    console.log(`Received discard-pairs from ${client.id}:`, selectedCards);
-
-    const player = this.players.find((p) => p.id === client.id);
-    if (!player) {
-      console.log('Player not found for ID:', client.id);
-      return;
-    }
-
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      console.log(`Player ${client.id} tried to discard out of turn`);
+  @SubscribeMessage('declare-blow')
+  handleDeclareBlow(
+    client: Socket,
+    declaration: { trumpType: TrumpType; numberOfPairs: number },
+  ) {
+    if (!this.gameState.isPlayerTurn(client.id)) {
       client.emit('error-message', "It's not your turn!");
       return;
     }
 
-    if (!selectedCards.every((card) => player.hand.includes(card))) {
-      client.emit('error-message', 'Invalid card selection.');
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) return;
+
+    // Validate declaration
+    if (
+      !this.blowService.isValidDeclaration(
+        declaration,
+        state.blowState.currentHighestDeclaration,
+      )
+    ) {
+      client.emit('error-message', 'Invalid declaration!');
       return;
     }
 
-    const [card1, card2] = selectedCards;
-    const value1 = card1.replace(/[♠♣♥♦]/, '');
-    const value2 = card2.replace(/[♠♣♥♦]/, '');
+    // Add declaration
+    const newDeclaration = this.blowService.createDeclaration(
+      client.id,
+      declaration.trumpType,
+      declaration.numberOfPairs,
+    );
 
-    if (value1 === value2) {
-      console.log(`Valid pair found: ${card1} & ${card2}`);
-      player.hand = player.hand.filter((card) => !selectedCards.includes(card));
-      console.log(`Player ${player.name} new hand:`, player.hand);
+    state.blowState.declarations.push(newDeclaration);
+    state.blowState.currentHighestDeclaration = newDeclaration;
 
-      this.server.emit('update-players', this.players);
+    // Emit update
+    this.server.emit('blow-updated', {
+      declarations: state.blowState.declarations,
+      currentHighest: state.blowState.currentHighestDeclaration,
+    });
 
-      this.checkGameOver();
+    // Check if this is the fourth declaration
+    if (state.blowState.declarations.length === 4) {
+      this.handleFourthDeclaration();
     } else {
-      client.emit('error-message', 'Selected cards do not form a valid pair.');
+      this.gameState.nextTurn();
     }
   }
 
-  @SubscribeMessage('end-phase')
-  handleEndPhase(client: Socket) {
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      console.log(`Player ${client.id} tried to end phase out of order`);
-      return;
-    }
+  private handleFourthDeclaration(): void {
+    const state = this.gameState.getState();
+    const winner = this.blowService.findHighestDeclaration(
+      state.blowState.declarations,
+    );
+    const winningPlayer = state.players.find((p) => p.id === winner.playerId);
+    if (!winningPlayer) return;
 
-    if (!this.gamePhase) {
-      client.emit('error-message', 'No active game phase');
-      return;
-    }
+    // Award point to winning team
+    state.teamScores[winningPlayer.team].blow++;
+    state.teamScores[winningPlayer.team].total++;
 
-    // Calculate phase winner
-    const phaseWinner = this.calculatePhaseWinner();
-    if (phaseWinner !== null) {
-      // Award point to winning team
-      this.teamScores[phaseWinner][this.gamePhase]++;
-      this.teamScores[phaseWinner].total++;
+    // Move to play phase
+    state.gamePhase = 'play';
+    state.blowState.currentTrump = winner.trumpType;
 
-      // Emit updated scores
-      this.server.emit('update-phase', {
-        phase: this.gamePhase,
-        scores: this.teamScores,
-        winner: phaseWinner,
-      });
-
-      // Check if game is over (17 points)
-      if (this.teamScores[phaseWinner].total >= 17) {
-        this.handleGameOver(phaseWinner);
-        return;
-      }
-
-      // Move to next phase
-      switch (this.gamePhase) {
-        case 'deal':
-          this.gamePhase = 'blow';
-          this.deck = this.generateDeck();
-          this.dealCards();
-          break;
-        case 'blow':
-          this.gamePhase = 'play';
-          this.deck = this.generateDeck();
-          this.dealCards();
-          break;
-        case 'play':
-          this.gamePhase = 'deal';
-          this.deck = this.generateDeck();
-          this.dealCards();
-          break;
-      }
-
-      // Reset turn to first player
-      this.currentPlayerIndex = 0;
-      this.server.emit('update-turn', this.players[0].id);
-      this.server.emit('update-phase', {
-        phase: this.gamePhase,
-        scores: this.teamScores,
-      });
-    }
-  }
-
-  private calculatePhaseWinner(): number | null {
-    // For deal phase: team with most pairs
-    if (this.gamePhase === 'deal') {
-      const team0Pairs = this.countTeamPairs(0);
-      const team1Pairs = this.countTeamPairs(1);
-      return team0Pairs > team1Pairs ? 0 : team1Pairs > team0Pairs ? 1 : null;
-    }
-
-    // For blow phase: team with most cards
-    if (this.gamePhase === 'blow') {
-      const team0Cards = this.countTeamCards(0);
-      const team1Cards = this.countTeamCards(1);
-      return team0Cards > team1Cards ? 0 : team1Cards > team0Cards ? 1 : null;
-    }
-
-    // For play phase: team with most pairs
-    if (this.gamePhase === 'play') {
-      const team0Pairs = this.countTeamPairs(0);
-      const team1Pairs = this.countTeamPairs(1);
-      return team0Pairs > team1Pairs ? 0 : team1Pairs > team0Pairs ? 1 : null;
-    }
-
-    return null;
-  }
-
-  private countTeamPairs(team: number): number {
-    return this.players
-      .filter((p) => p.team === team)
-      .reduce((total, player) => {
-        const pairs = this.countPairs(player.hand);
-        return total + pairs;
-      }, 0);
-  }
-
-  private countTeamCards(team: number): number {
-    return this.players
-      .filter((p) => p.team === team)
-      .reduce((total, player) => total + player.hand.length, 0);
-  }
-
-  private countPairs(hand: string[]): number {
-    const countMap: Record<string, number> = {};
-    hand.forEach((card) => {
-      const value = card.replace(/[♠♣♥♦]/, '');
-      countMap[value] = (countMap[value] || 0) + 1;
+    // Emit updates
+    this.server.emit('update-phase', {
+      phase: 'play',
+      scores: state.teamScores,
+      winner: winningPlayer.team,
     });
-    return Object.values(countMap).reduce(
-      (total, count) => total + Math.floor(count / 2),
-      0,
-    );
   }
 
-  private handleGameOver(winningTeam: number) {
-    const winningTeamPlayers = this.players.filter(
-      (p) => p.team === winningTeam,
-    );
-    const winningTeamNames = winningTeamPlayers
-      .map((p) => p.name)
-      .join(' and ');
+  @SubscribeMessage('play-card')
+  handlePlayCard(client: Socket, card: string) {
+    if (!this.gameState.isPlayerTurn(client.id)) {
+      client.emit('error-message', "It's not your turn!");
+      return;
+    }
 
-    console.log(`Game Over! Team ${winningTeam} wins!`);
-    this.server.emit('game-over', {
-      winner: `Team ${winningTeam} (${winningTeamNames})`,
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player || !player.hand.includes(card)) {
+      client.emit('error-message', 'Invalid card selection!');
+      return;
+    }
+
+    const currentField = state.playState.currentField;
+    if (!currentField) {
+      client.emit('error-message', 'No active field!');
+      return;
+    }
+
+    // Validate card play
+    if (
+      !this.playService.isValidCardPlay(
+        player.hand,
+        card,
+        currentField,
+        state.blowState.currentTrump,
+        state.playState.isTanzenRound,
+      )
+    ) {
+      client.emit('error-message', 'Invalid card play!');
+      return;
+    }
+
+    // Play the card
+    player.hand = player.hand.filter((c) => c !== card);
+    currentField.cards.push(card);
+
+    if (currentField.cards.length === 1) {
+      currentField.baseCard = card;
+    }
+
+    // Check for Chombo violations
+    this.chomboService.checkViolations(client.id, 'play-card', {
+      player,
+      field: currentField,
+      card,
+    });
+
+    // Emit card played
+    this.server.emit('card-played', {
+      playerId: client.id,
+      card,
+      field: currentField,
+    });
+
+    // Check if field is complete
+    if (currentField.cards.length === 4) {
+      this.handleFieldComplete();
+    } else {
+      this.gameState.nextTurn();
+    }
+  }
+
+  private handleFieldComplete(): void {
+    const state = this.gameState.getState();
+    const field = this.gameState.completeField();
+    if (!field) return;
+
+    // Determine winner
+    const winner = this.playService.determineFieldWinner(
+      field,
+      state.players,
+      state.blowState.currentTrump,
+    );
+    if (!winner) return;
+
+    // Update state
+    state.playState.lastWinnerId = winner.id;
+    const winnerIndex = state.players.findIndex((p) => p.id === winner.id);
+    if (winnerIndex >= 0) {
+      state.currentPlayerIndex = winnerIndex;
+    }
+
+    // Emit field complete
+    this.server.emit('field-complete', {
+      winner: winner.id,
+      field,
+      players: state.players,
+    });
+
+    // Check if game is over
+    if (state.players.every((p) => p.hand.length === 0)) {
+      const winningTeam = this.playService.determineWinningTeam(
+        state.playState.fields,
+        state.players,
+      );
+      this.handleGameOver(winningTeam);
+      return;
+    }
+
+    // Start new field
+    this.gameState.startField(winner.id);
+  }
+
+  private handleGameOver(winningTeam: number): void {
+    const state = this.gameState.getState();
+    const playPoints = this.scoreService.calculatePlayPoints(
       winningTeam,
-      finalScores: this.teamScores,
-    });
+      state.blowState.currentHighestDeclaration?.numberOfPairs || 0,
+      state.playState.fields.filter(
+        (f) =>
+          state.players.find((p) => p.id === f.dealerId)?.team === winningTeam,
+      ).length,
+    );
 
-    // Reset game state
-    setTimeout(() => {
-      this.players = [];
-      this.deck = [];
-      this.currentPlayerIndex = 0;
-      this.gamePhase = null;
-      this.teamScores = {
-        0: { deal: 0, blow: 0, play: 0, total: 0 },
-        1: { deal: 0, blow: 0, play: 0, total: 0 },
-      };
-    }, 500);
+    // Update team scores
+    if (playPoints > 0) {
+      state.teamScores[winningTeam].play += playPoints;
+      state.teamScores[winningTeam].total += playPoints;
+      state.teamScoreRecords[winningTeam] = this.scoreService.updateTeamScore(
+        winningTeam,
+        playPoints,
+        state.teamScoreRecords[winningTeam],
+      );
+    } else {
+      const opposingTeam = winningTeam === 0 ? 1 : 0;
+      state.teamScores[opposingTeam].play += Math.abs(playPoints);
+      state.teamScores[opposingTeam].total += Math.abs(playPoints);
+      state.teamScoreRecords[opposingTeam] = this.scoreService.updateTeamScore(
+        opposingTeam,
+        Math.abs(playPoints),
+        state.teamScoreRecords[opposingTeam],
+      );
+    }
+
+    // Check if any team has reached 17 points
+    if (state.teamScores[0].total >= 17 || state.teamScores[1].total >= 17) {
+      const finalWinner = state.teamScores[0].total >= 17 ? 0 : 1;
+      const winningTeamPlayers = state.players.filter(
+        (p) => p.team === finalWinner,
+      );
+      const winningTeamNames = winningTeamPlayers
+        .map((p) => p.name)
+        .join(' and ');
+
+      // Emit game over
+      this.server.emit('game-over', {
+        winner: `Team ${finalWinner} (${winningTeamNames})`,
+        winningTeam: finalWinner,
+        finalScores: state.teamScores,
+        scoreRecords: state.teamScoreRecords,
+      });
+
+      // Reset game state after delay
+      setTimeout(() => {
+        this.gameState.resetState();
+      }, 5000);
+    }
   }
 
-  private hasPairs(hand: string[]): boolean {
-    const countMap: Record<string, number> = {};
+  @SubscribeMessage('report-chombo')
+  handleReportChombo(
+    client: Socket,
+    {
+      playerId,
+      violationType,
+    }: { playerId: string; violationType: ChomboViolation['type'] },
+  ) {
+    const state = this.gameState.getState();
+    const reporter = state.players.find((p) => p.id === client.id);
+    const violator = state.players.find((p) => p.id === playerId);
 
-    hand.forEach((card) => {
-      const value = card.replace(/[♠♣♥♦]/u, '');
-      countMap[value] = (countMap[value] || 0) + 1;
-    });
-
-    return Object.values(countMap).some((count) => count >= 2);
-  }
-
-  private nextTurn(): void {
-    if (this.players.length === 0) {
-      console.log('No players left to take a turn.');
+    if (!reporter || !violator) {
+      client.emit('error-message', 'Invalid player!');
       return;
     }
 
-    // Check if the game is over before moving to the next turn
-    this.checkGameOver();
-
-    // Move to the next player
-    this.currentPlayerIndex =
-      (this.currentPlayerIndex + 1) % this.players.length;
-    const currentPlayer = this.players[this.currentPlayerIndex];
-
-    console.log(
-      `Next turn: ${currentPlayer.name} (Team ${currentPlayer.team})`,
+    const violation = this.chomboService.reportViolation(
+      client.id,
+      playerId,
+      violationType,
+      reporter.team,
+      violator.team,
     );
 
-    // Broadcast the new turn to all players
-    this.server.emit('update-turn', currentPlayer.id);
-  }
-
-  private removePairs(hand: string[]): string[] {
-    const countMap: Record<string, number> = {};
-
-    // Count occurrences of each card value (ignoring suits)
-    hand.forEach((card) => {
-      const value = card.replace(/[♠♣♥♦]/u, '');
-      countMap[value] = (countMap[value] || 0) + 1;
-    });
-
-    // Keep only cards that appear an odd number of times
-    return hand.filter((card) => {
-      const value = card.replace(/[♠♣♥♦]/u, '');
-      return countMap[value] % 2 !== 0;
-    });
-  }
-
-  private generateDeck(): string[] {
-    const suits = ['♠', '♣', '♥', '♦'];
-    const values = ['5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    const deck: string[] = [];
-
-    suits.forEach((suit) =>
-      values.forEach((value) => deck.push(`${value}${suit}`)),
-    );
-    deck.push('JOKER');
-
-    // Shuffle the deck
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
-    return deck;
-  }
-
-  private dealCards(): void {
-    console.log('Dealing cards...');
-
-    if (this.players.length === 0) {
-      console.log('No players to deal cards to.');
+    if (!violation) {
+      client.emit(
+        'error-message',
+        'No valid violation found or cannot report own team!',
+      );
       return;
     }
 
-    if (this.deck.length === 0) {
-      this.deck = this.generateDeck();
-      console.log('Deck generated:', this.deck);
-    }
-
-    // Shuffle deck
-    this.deck.sort(() => Math.random() - 0.5);
-    console.log('Shuffled deck:', this.deck);
-
-    // Ensure players have empty hands before dealing
-    this.players.forEach((player) => {
-      player.hand = [];
-      player.isPasser = false;
-    });
-
-    // Deal exactly 10 cards to each player
-    for (let i = 0; i < 10; i++) {
-      for (let j = 0; j < this.players.length; j++) {
-        this.players[j].hand.push(this.deck[i * this.players.length + j]);
-      }
-    }
-
-    // Set the Agari card (remaining card)
-    this.agari = this.deck[40];
-
-    console.log('Agari card:', this.agari);
-    console.log(
-      'Players after dealing:',
-      this.players.map((p) => ({
-        name: p.name,
-        hand: p.hand,
-        isPasser: p.isPasser,
-      })),
+    // Award 5 points to the reporting team
+    state.teamScores[reporter.team].play += 5;
+    state.teamScores[reporter.team].total += 5;
+    state.teamScoreRecords[reporter.team] = this.scoreService.updateTeamScore(
+      reporter.team,
+      5,
+      state.teamScoreRecords[reporter.team],
     );
 
-    // Emit the Agari card to all players
-    this.server.emit('update-agari', { agari: this.agari });
-    this.server.emit('update-players', this.players);
+    // Emit chombo reported
+    this.server.emit('chombo-reported', {
+      reporter: client.id,
+      violator: playerId,
+      violationType,
+      reportingTeam: reporter.team,
+      updatedScores: state.teamScores,
+      scoreRecords: state.teamScoreRecords,
+    });
+
+    // End the round
+    this.handleRoundEnd();
   }
 
-  private checkGameOver() {
-    // Check if any team has won (all players in a team have no cards)
-    const team0Players = this.players.filter((p) => p.team === 0);
-    const team1Players = this.players.filter((p) => p.team === 1);
+  private handleRoundEnd(): void {
+    const state = this.gameState.getState();
+    state.deck = this.cardService.generateDeck();
+    this.gameState.dealCards();
+    this.chomboService.expireViolations();
+
+    // Emit round end
+    this.server.emit('round-ended', {
+      players: state.players,
+      scores: state.teamScores,
+      scoreRecords: state.teamScoreRecords,
+    });
+  }
+
+  private checkGameOver(): void {
+    const state = this.gameState.getState();
+    const team0Players = state.players.filter((p) => p.team === 0);
+    const team1Players = state.players.filter((p) => p.team === 1);
 
     const team0Won = team0Players.every((p) => p.hand.length === 0);
     const team1Won = team1Players.every((p) => p.hand.length === 0);
@@ -461,277 +401,61 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .map((p) => p.name)
         .join(' and ');
 
-      console.log(`Game Over! Team ${winningTeam} wins!`);
       this.server.emit('game-over', {
         winner: `Team ${winningTeam} (${winningTeamNames})`,
         winningTeam,
       });
 
-      // Reset game state
       setTimeout(() => {
-        this.players = [];
-        this.deck = [];
-        this.currentPlayerIndex = 0;
+        this.gameState.resetState();
       }, 500);
     }
   }
 
   @SubscribeMessage('start-blow')
-  handleStartBlow(client: Socket) {
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      client.emit(
-        'error-message',
-        "It's not your turn to start the blow phase!",
-      );
+  handleStartBlow(client: Socket): void {
+    const state = this.gameState.getState();
+    if (state.gamePhase !== 'deal') {
+      client.emit('error-message', 'Cannot start blow phase now!');
       return;
     }
 
-    // Reset blow state
-    this.blowState = {
+    // The first player to blow should be the player to the left of the dealer
+    const dealerIndex = state.currentPlayerIndex;
+    const firstBlowIndex = (dealerIndex + 1) % state.players.length;
+    const firstBlowPlayer = state.players[firstBlowIndex];
+
+    if (!firstBlowPlayer) {
+      client.emit('error-message', 'Cannot determine first player to blow!');
+      return;
+    }
+
+    // Update game phase and state
+    state.gamePhase = 'blow';
+    state.currentPlayerIndex = firstBlowIndex;
+    state.blowState = {
       currentTrump: null,
       currentHighestDeclaration: null,
       declarations: [],
       lastPasser: null,
       isRoundCancelled: false,
-      startingPlayerId: client.id,
+      startingPlayerId: firstBlowPlayer.id,
     };
 
-    // Check for broken hands
-    const hasBrokenHand = this.checkForBrokenHand(client.id);
-    if (hasBrokenHand) {
-      this.handleBrokenHand(client.id);
-      return;
-    }
-
-    // Start the blow phase
-    this.gamePhase = 'blow';
+    // Emit blow phase started
     this.server.emit('blow-started', {
-      startingPlayer: client.id,
-      players: this.players,
-    });
-  }
-
-  @SubscribeMessage('declare-blow')
-  handleDeclareBlow(
-    client: Socket,
-    declaration: { trumpType: TrumpType; numberOfPairs: number },
-  ) {
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      client.emit('error-message', "It's not your turn to declare!");
-      return;
-    }
-
-    const player = this.players.find((p) => p.id === client.id);
-    if (!player) {
-      client.emit('error-message', 'Player not found!');
-      return;
-    }
-
-    // Validate declaration
-    if (!this.isValidDeclaration(declaration)) {
-      client.emit('error-message', 'Invalid declaration!');
-      return;
-    }
-
-    // Add declaration
-    const newDeclaration: BlowDeclaration = {
-      playerId: client.id,
-      trumpType: declaration.trumpType,
-      numberOfPairs: declaration.numberOfPairs,
-      timestamp: Date.now(),
-    };
-
-    this.blowState.declarations.push(newDeclaration);
-    this.blowState.currentHighestDeclaration = newDeclaration;
-
-    // Emit update
-    this.server.emit('blow-updated', {
-      declarations: this.blowState.declarations,
-      currentHighest: this.blowState.currentHighestDeclaration,
+      startingPlayer: firstBlowPlayer.id,
+      players: state.players,
     });
 
-    // Check if this is the fourth declaration
-    if (this.blowState.declarations.length === 4) {
-      // Find the highest declaration
-      const winner = this.findHighestDeclaration();
-
-      // Award point to winning team
-      const winningPlayer = this.players.find((p) => p.id === winner.playerId);
-      if (winningPlayer) {
-        this.teamScores[winningPlayer.team].blow++;
-        this.teamScores[winningPlayer.team].total++;
-
-        // Move to play phase
-        this.gamePhase = 'play';
-
-        // Emit updates
-        this.server.emit('update-phase', {
-          phase: 'play',
-          scores: this.teamScores,
-          winner: winningPlayer.team,
-        });
-
-        // Reset blow state
-        this.blowState = {
-          currentTrump: winner.trumpType, // Set the winning trump type
-          currentHighestDeclaration: null,
-          declarations: [],
-          lastPasser: null,
-          isRoundCancelled: false,
-          startingPlayerId: null,
-        };
-      }
-    } else {
-      // Move to next player
-      this.nextTurn();
-    }
-  }
-
-  private findHighestDeclaration(): BlowDeclaration {
-    return this.blowState.declarations.reduce((highest, current) => {
-      if (!highest) return current;
-
-      // Compare trump strengths
-      const currentTrumpStrength = this.TRUMP_STRENGTHS[current.trumpType];
-      const highestTrumpStrength = this.TRUMP_STRENGTHS[highest.trumpType];
-
-      if (currentTrumpStrength > highestTrumpStrength) {
-        return current;
-      }
-
-      if (currentTrumpStrength === highestTrumpStrength) {
-        // If same trump type, compare number of pairs
-        if (current.numberOfPairs > highest.numberOfPairs) {
-          return current;
-        }
-      }
-
-      return highest;
-    });
-  }
-
-  @SubscribeMessage('pass-blow')
-  handlePassBlow(client: Socket) {
-    if (this.players[this.currentPlayerIndex].id !== client.id) {
-      client.emit('error-message', "It's not your turn to pass!");
-      return;
-    }
-
-    const player = this.players.find((p) => p.id === client.id);
-    if (!player) {
-      client.emit('error-message', 'Player not found!');
-      return;
-    }
-
-    player.isPasser = true;
-    this.blowState.lastPasser = client.id;
-
-    // Check if all players have passed
-    const allPassed = this.players.every((p) => p.isPasser);
-    if (allPassed) {
-      this.handleAllPassed();
-      return;
-    }
-
-    // Emit update
-    this.server.emit('blow-updated', {
-      declarations: this.blowState.declarations,
-      currentHighest: this.blowState.currentHighestDeclaration,
-      lastPasser: this.blowState.lastPasser,
+    // Emit phase update
+    this.server.emit('update-phase', {
+      phase: 'blow',
+      scores: state.teamScores,
+      winner: null,
     });
 
-    // Move to next player
-    this.nextTurn();
-  }
-
-  private isValidDeclaration(declaration: {
-    trumpType: TrumpType;
-    numberOfPairs: number;
-  }): boolean {
-    if (!this.blowState.currentHighestDeclaration) {
-      return true; // First declaration is always valid
-    }
-
-    const currentHighest = this.blowState.currentHighestDeclaration;
-
-    // Check if trump type is stronger
-    if (
-      this.TRUMP_STRENGTHS[declaration.trumpType] >
-      this.TRUMP_STRENGTHS[currentHighest.trumpType]
-    ) {
-      return true;
-    }
-
-    // If same trump type, check number of pairs
-    if (declaration.trumpType === currentHighest.trumpType) {
-      return declaration.numberOfPairs > currentHighest.numberOfPairs;
-    }
-
-    return false;
-  }
-
-  private checkForBrokenHand(playerId: string): boolean {
-    const player = this.players.find((p) => p.id === playerId);
-    if (!player) return false;
-
-    const hand = player.hand;
-    const hasPictureCards = hand.some((card) =>
-      ['A', 'K', 'Q', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
-    );
-    const queenCount = hand.filter((card) => card.includes('Q')).length;
-
-    return !hasPictureCards || queenCount <= 1;
-  }
-
-  private handleBrokenHand(playerId: string) {
-    const player = this.players.find((p) => p.id === playerId);
-    if (!player) return;
-
-    player.hasBroken = true;
-    this.server.emit('hand-broken', {
-      playerId,
-      hand: player.hand,
-    });
-
-    // Find player with most cards to be next dealer
-    const nextDealer = this.players.reduce((prev, current) =>
-      current.hand.length > prev.hand.length ? current : prev,
-    );
-
-    // Reset game state and start new round
-    this.deck = this.generateDeck();
-    this.dealCards();
-    this.currentPlayerIndex = this.players.findIndex(
-      (p) => p.id === nextDealer.id,
-    );
-
-    this.server.emit('round-reset', {
-      nextDealer: nextDealer.id,
-      players: this.players,
-    });
-  }
-
-  private handleAllPassed() {
-    // Round is cancelled
-    this.blowState.isRoundCancelled = true;
-
-    // Find last passer
-    const lastPasser = this.players.find(
-      (p) => p.id === this.blowState.lastPasser,
-    );
-    if (!lastPasser) return;
-
-    // Reset game state and start new round
-    this.deck = this.generateDeck();
-    this.dealCards();
-    this.currentPlayerIndex =
-      (this.players.findIndex((p) => p.id === lastPasser.id) + 1) %
-      this.players.length;
-
-    this.server.emit('round-cancelled', {
-      lastPasser: lastPasser.id,
-      nextDealer: this.players[this.currentPlayerIndex].id,
-      players: this.players,
-    });
+    // Emit turn update
+    this.server.emit('update-turn', firstBlowPlayer.id);
   }
 }
