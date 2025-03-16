@@ -42,7 +42,8 @@ export interface Field {
 
 export interface PlayState {
   currentField: Field | null;
-  neguri: { [playerId: string]: string };
+  negriCard: string | null;
+  neguri: Record<string, string[]>;
   fields: Field[];
   lastWinnerId: string | null;
   isTanzenRound: boolean;

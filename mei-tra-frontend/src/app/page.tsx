@@ -7,6 +7,7 @@ import { GameControls } from './components/GameControls';
 import { ScoreDisplay } from './components/ScoreDisplay';
 import { TeamDisplay } from './components/TeamDisplay';
 import { BlowDeclaration, GamePhase, Player, TeamPlayers, TeamScores, TrumpType } from './types';
+import { PlaySetup } from './components/PlaySetup';
 
 export default function Home() {
   // Player and Game State
@@ -35,6 +36,8 @@ export default function Home() {
 
   // Client-side rendering guard
   const [isClient, setIsClient] = useState(false);
+
+  const [revealedAgari, setRevealedAgari] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -113,7 +116,11 @@ export default function Home() {
         setPlayers(players);
         setWhoseTurn(nextDealer);
         resetBlowState();
-      }
+      },
+      'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
+        setRevealedAgari(agari);
+        alert(message);
+      },
     };
 
     // Register all socket handlers
@@ -205,6 +212,10 @@ export default function Home() {
         return;
       }
       socket.emit('pass-blow');
+    },
+    selectNegri: (card: string) => {
+      const socket = getSocket();
+      socket.emit('select-negri', card);
     }
   };
 
@@ -361,6 +372,14 @@ export default function Home() {
           />
         )}
       />
+
+      {gamePhase === 'play' && revealedAgari && whoseTurn === getSocket().id && (
+        <PlaySetup
+          player={players.find(p => p.id === getSocket().id)!}
+          agariCard={revealedAgari}
+          onSelectNegri={gameActions.selectNegri}
+        />
+      )}
     </main>
   );
 }

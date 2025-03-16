@@ -51,6 +51,7 @@ export class GameStateService {
   private getInitialPlayState(): PlayState {
     return {
       currentField: null,
+      negriCard: null,
       neguri: {},
       fields: [],
       lastWinnerId: null,
