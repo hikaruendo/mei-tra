@@ -10,21 +10,26 @@ export class BlowService {
     declaration: { trumpType: TrumpType; numberOfPairs: number },
     currentHighest: BlowDeclaration | null,
   ): boolean {
-    if (!currentHighest) {
-      return true; // First declaration is always valid
+    // Check minimum pairs requirement
+    if (declaration.numberOfPairs < 6) {
+      return false;
     }
 
-    // Check if trump type is stronger
-    if (
-      this.cardService.getTrumpStrength(declaration.trumpType) >
-      this.cardService.getTrumpStrength(currentHighest.trumpType)
-    ) {
+    if (!currentHighest) {
+      return true; // First declaration is always valid if it meets minimum pairs
+    }
+
+    // If number of pairs is greater, allow the declaration regardless of trump type
+    if (declaration.numberOfPairs > currentHighest.numberOfPairs) {
       return true;
     }
 
-    // If same trump type, check number of pairs
-    if (declaration.trumpType === currentHighest.trumpType) {
-      return declaration.numberOfPairs > currentHighest.numberOfPairs;
+    // If same number of pairs, check if trump type is stronger
+    if (declaration.numberOfPairs === currentHighest.numberOfPairs) {
+      return (
+        this.cardService.getTrumpStrength(declaration.trumpType) >
+        this.cardService.getTrumpStrength(currentHighest.trumpType)
+      );
     }
 
     return false;

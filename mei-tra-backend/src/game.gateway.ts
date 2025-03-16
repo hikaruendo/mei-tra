@@ -72,9 +72,39 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const currentPlayer = state.players[randomDealerIndex];
     if (!currentPlayer) return;
 
+    // Emit initial game state
     this.server.emit('update-turn', currentPlayer.id);
     this.server.emit('update-players', state.players);
     this.server.emit('game-started', state.players);
+
+    // Automatically start blow phase
+    const firstBlowIndex = (randomDealerIndex + 1) % state.players.length;
+    const firstBlowPlayer = state.players[firstBlowIndex];
+
+    if (!firstBlowPlayer) {
+      console.log('Cannot determine first player to blow!');
+      return;
+    }
+
+    // Set up blow phase
+    state.gamePhase = 'blow';
+    state.currentPlayerIndex = firstBlowIndex;
+    state.blowState = {
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      declarations: [],
+      lastPasser: null,
+      isRoundCancelled: false,
+      startingPlayerId: firstBlowPlayer.id,
+    };
+
+    // Emit blow phase started
+    this.server.emit('blow-started', {
+      startingPlayer: firstBlowPlayer.id,
+      players: state.players,
+    });
+
+    // Emit phase update
     this.server.emit('update-phase', {
       phase: state.gamePhase,
       scores: state.teamScores,
@@ -123,11 +153,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       currentHighest: state.blowState.currentHighestDeclaration,
     });
 
-    // Check if this is the fourth declaration
-    if (state.blowState.declarations.length === 4) {
+    // Count total actions (declarations + passes)
+    const totalActions =
+      state.blowState.declarations.length +
+      state.players.filter((p) => p.isPasser).length;
+
+    // If all 4 players have acted (either declared or passed), move to play phase
+    if (totalActions === 4) {
+      console.log('All players have acted');
       this.handleFourthDeclaration();
     } else {
+      console.log('Next turn');
       this.gameState.nextTurn();
+      // Emit turn update to all clients
+      const nextPlayer = state.players[state.currentPlayerIndex];
+      if (nextPlayer) {
+        this.server.emit('update-turn', nextPlayer.id);
+      }
     }
   }
 
@@ -138,10 +180,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
     const winningPlayer = state.players.find((p) => p.id === winner.playerId);
     if (!winningPlayer) return;
-
-    // Award point to winning team
-    state.teamScores[winningPlayer.team].blow++;
-    state.teamScores[winningPlayer.team].total++;
 
     // Move to play phase
     state.gamePhase = 'play';
@@ -457,5 +495,95 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Emit turn update
     this.server.emit('update-turn', firstBlowPlayer.id);
+  }
+
+  @SubscribeMessage('pass-blow')
+  handlePassBlow(client: Socket): void {
+    if (!this.gameState.isPlayerTurn(client.id)) {
+      client.emit('error-message', "It's not your turn!");
+      return;
+    }
+
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) return;
+
+    // Mark player as passed
+    player.isPasser = true;
+    state.blowState.lastPasser = client.id;
+
+    // Emit update
+    this.server.emit('blow-updated', {
+      declarations: state.blowState.declarations,
+      currentHighest: state.blowState.currentHighestDeclaration,
+      lastPasser: client.id,
+    });
+
+    // Count total actions (declarations + passes)
+    const totalActions =
+      state.blowState.declarations.length +
+      state.players.filter((p) => p.isPasser).length;
+
+    // If all 4 players have acted (either declared or passed), move to play phase
+    if (totalActions === 4) {
+      // If no one has declared, start a new round
+      if (state.blowState.declarations.length === 0) {
+        // Reset player pass states
+        state.players.forEach((p) => (p.isPasser = false));
+        state.blowState.lastPasser = null;
+        state.blowState.declarations = [];
+        state.blowState.currentHighestDeclaration = null;
+
+        // Move to next dealer and restart blow phase
+        this.gameState.nextTurn();
+        const nextDealerIndex = state.currentPlayerIndex;
+        const firstBlowIndex = (nextDealerIndex + 1) % state.players.length;
+        const firstBlowPlayer = state.players[firstBlowIndex];
+
+        if (!firstBlowPlayer) return;
+
+        state.currentPlayerIndex = firstBlowIndex;
+        state.blowState.startingPlayerId = firstBlowPlayer.id;
+
+        // Emit round cancelled
+        this.server.emit('round-cancelled', {
+          nextDealer: state.players[nextDealerIndex].id,
+          players: state.players,
+        });
+
+        // Emit turn update
+        this.server.emit('update-turn', firstBlowPlayer.id);
+        return;
+      }
+
+      const winner = state.blowState.currentHighestDeclaration;
+      if (!winner) return;
+
+      const winningPlayer = state.players.find((p) => p.id === winner.playerId);
+      if (!winningPlayer) return;
+
+      // Move to play phase
+      state.gamePhase = 'play';
+      state.blowState.currentTrump = winner.trumpType;
+
+      // Emit updates
+      this.server.emit('update-phase', {
+        phase: 'play',
+        scores: state.teamScores,
+        winner: winningPlayer.team,
+      });
+    } else {
+      // Move to next player
+      this.gameState.nextTurn();
+      // Skip passed players
+      while (state.players[state.currentPlayerIndex].isPasser) {
+        this.gameState.nextTurn();
+      }
+      // Emit turn update
+      const nextPlayer = state.players[state.currentPlayerIndex];
+      if (nextPlayer) {
+        this.server.emit('update-turn', nextPlayer.id);
+      }
+    }
   }
 }

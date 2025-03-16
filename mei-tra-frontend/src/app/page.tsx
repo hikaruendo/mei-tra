@@ -64,6 +64,15 @@ export default function Home() {
       'update-turn': (playerId: string) => {
         console.log('Turn changed to:', playerId);
         setWhoseTurn(playerId);
+        // Add notification for turn change
+        const nextPlayer = players.find(p => p.id === playerId)?.name;
+        if (nextPlayer && gamePhase === 'blow') {
+          const notification = document.createElement('div');
+          notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
+          notification.textContent = `Turn changed to ${nextPlayer}`;
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
@@ -280,6 +289,16 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-24">
+      <style jsx global>{`
+        @keyframes fadeOut {
+          0% { opacity: 1; transform: translateY(0); }
+          90% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-20px); }
+        }
+        .animate-fade-out {
+          animation: fadeOut 3s forwards;
+        }
+      `}</style>
       <h2 className="text-2xl font-bold mb-4">Game Started</h2>
       
       <ScoreDisplay gamePhase={gamePhase} teamScores={teamScores} />
@@ -292,9 +311,19 @@ export default function Home() {
       )}
       
       {whoseTurn && (
-        <p className="mb-4">
-          It is {players.find(p => p.id === whoseTurn)?.name}&apos;s turn
-        </p>
+        <div className="text-center mb-6">
+          <h3 className="text-xl font-bold mb-2">Current Turn</h3>
+          <div className={`inline-block px-6 py-3 rounded-lg ${
+            whoseTurn === getSocket().id 
+              ? 'bg-green-600 text-white animate-pulse'
+              : 'bg-gray-700 text-white'
+          }`}>
+            {whoseTurn === getSocket().id 
+              ? "It's Your Turn!"
+              : `${players.find(p => p.id === whoseTurn)?.name}'s Turn`
+            }
+          </div>
+        </div>
       )}
       
       <TeamDisplay 
@@ -316,7 +345,6 @@ export default function Home() {
         whoseTurn={whoseTurn}
         selectedCards={selectedCards}
         endPhase={gameActions.endPhase}
-        startBlow={gameActions.startBlow}
         renderBlowControls={() => (
           <BlowControls
             isCurrentPlayer={getSocket().id === whoseTurn}
