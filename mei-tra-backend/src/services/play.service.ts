@@ -56,29 +56,42 @@ export class PlayService {
     const cardSuit = card.replace(/[0-9JQKA]/, '');
     const cardValue = card.replace(/[♠♣♥♦]/, '');
 
+    // In Tanzen round, if player has JOKER, they must play it
+    if (isTanzenRound) {
+      const hasJoker = hand.some(
+        (c) => c.replace(/[♠♣♥♦]/, '') === 'JOKER',
+      );
+      if (hasJoker) {
+        // Must play JOKER if you have it in Tanzen round
+        return cardValue === 'JOKER';
+      }
+    }
+
+    // JOKER can be played anytime in non-Tanzen rounds
+    if (cardValue === 'JOKER' && !isTanzenRound) {
+      return true;
+    }
+
     // If player has matching suit, they must play it
     const hasMatchingSuit = hand.some(
       (c) => c.replace(/[0-9JQKA]/, '') === baseSuit,
     );
-    if (hasMatchingSuit && cardSuit !== baseSuit) return false;
+    if (hasMatchingSuit) {
+      // Must play the same suit if player has it
+      return cardSuit === baseSuit;
+    }
 
     // If base card is trump and player only has trump cards, they must play trump
-    if (
-      baseSuit === currentTrump &&
-      hand.every((c) => c.replace(/[0-9JQKA]/, '') === currentTrump) &&
-      cardSuit !== currentTrump
-    ) {
-      return false;
-    }
-
-    // Tanzen (Joker) can be played anytime, except in Tanzen round when player has other cards
-    if (cardValue === 'JOKER') {
-      if (isTanzenRound && hand.length > 1) {
-        return false;
+    if (baseSuit === currentTrump) {
+      const onlyHasTrump = hand.every(
+        (c) => c.replace(/[0-9JQKA]/, '') === currentTrump,
+      );
+      if (onlyHasTrump) {
+        return cardSuit === currentTrump;
       }
-      return true;
     }
 
+    // If player doesn't have any cards that match the rules, they can play any card
     return true;
   }
 
