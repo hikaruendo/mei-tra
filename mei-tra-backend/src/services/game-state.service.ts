@@ -5,6 +5,8 @@ import {
   BlowState,
   PlayState,
   Field,
+  Team,
+  CompletedField,
 } from '../types/game.types';
 import { CardService } from './card.service';
 import { ScoreService } from './score.service';
@@ -34,6 +36,7 @@ export class GameStateService {
       playState: this.getInitialPlayState(),
       teamScoreRecords: this.scoreService.initializeTeamScoreRecords(),
       chomboViolations: [],
+      currentTrump: null,
     };
   }
 
@@ -67,8 +70,7 @@ export class GameStateService {
 
   addPlayer(id: string, name: string): boolean {
     if (this.state.players.length >= 4) return false;
-
-    const team = Math.floor(this.state.players.length / 2);
+    const team = (this.state.players.length % 2) as Team;
     this.state.players.push({ id, name, hand: [], team });
     console.log(
       `Added player ${name} (${id}) to team ${team}. Total players: ${this.state.players.length}`,
@@ -146,13 +148,24 @@ export class GameStateService {
     this.state.playState.isTanzenRound = isTanzenRound;
   }
 
-  completeField(): Field | null {
-    const field = this.state.playState.currentField;
-    if (!field) return null;
+  completeField(field: Field, winnerId: string): CompletedField | null {
+    const state = this.getState();
+    const currentField = state.playState.currentField;
+
+    if (!currentField) {
+      return null;
+    }
 
     field.isComplete = true;
-    this.state.playState.fields.push(field);
-    return field;
+    const completedField: CompletedField = {
+      cards: field.cards,
+      winnerId: winnerId,
+      winnerTeam: state.players.find((p) => p.id === winnerId)?.team || 0,
+      dealerId: field.dealerId,
+    };
+
+    this.state.playState.fields.push(completedField);
+    return completedField;
   }
 
   isGameOver(): boolean {
@@ -164,5 +177,23 @@ export class GameStateService {
   resetState(): void {
     this.initializeState();
     this.chomboService.clearViolations();
+  }
+
+  private handleFieldComplete(field: Field, winnerId: string): void {
+    const winner = this.state.players.find((p) => p.id === winnerId);
+    if (!winner) return;
+
+    const completedField: CompletedField = {
+      cards: field.cards,
+      winnerId: winnerId,
+      winnerTeam: winner.team,
+      dealerId: field.dealerId,
+    };
+
+    this.state.playState.fields.push(completedField);
+  }
+
+  resetCurrentField(): void {
+    this.state.playState.currentField = null;
   }
 }

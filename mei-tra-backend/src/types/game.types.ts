@@ -1,8 +1,10 @@
+export type Team = 0 | 1;
+
 export interface Player {
   id: string;
   name: string;
   hand: string[];
-  team: number;
+  team: Team;
   isPasser?: boolean;
   hasBroken?: boolean;
 }
@@ -40,11 +42,18 @@ export interface Field {
   isComplete: boolean;
 }
 
+export interface CompletedField {
+  cards: string[];
+  winnerId: string;
+  winnerTeam: number;
+  dealerId: string;
+}
+
 export interface PlayState {
   currentField: Field | null;
   negriCard: string | null;
-  neguri: Record<string, string[]>;
-  fields: Field[];
+  neguri: Record<string, string>;
+  fields: CompletedField[];
   lastWinnerId: string | null;
   isTanzenRound: boolean;
   openDeclared: boolean;
@@ -76,13 +85,16 @@ export interface ChomboViolation {
   isExpired: boolean;
 }
 
+export type GamePhase = 'deal' | 'blow' | 'play' | null;
+
 export interface GameState {
   players: Player[];
   deck: string[];
   currentPlayerIndex: number;
   agari: string | null;
   teamScores: { [key: number]: TeamScore };
-  gamePhase: 'deal' | 'blow' | 'play' | null;
+  gamePhase: GamePhase;
+  currentTrump: TrumpType | null;
   blowState: BlowState;
   playState: PlayState;
   teamScoreRecords: { [key: number]: TeamScoreRecord };

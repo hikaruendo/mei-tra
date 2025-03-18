@@ -14,6 +14,8 @@ import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
 import { TrumpType } from './types/game.types';
 import { ChomboViolation } from './types/game.types';
+import { Field } from './types/game.types';
+import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -405,64 +407,60 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('play-card')
-  handlePlayCard(client: Socket, card: string) {
-    if (!this.gameState.isPlayerTurn(client.id)) {
-      client.emit('error-message', "It's not your turn!");
-      return;
-    }
-
+  handlePlayCard(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() card: string,
+  ): void {
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
-    if (!player || !player.hand.includes(card)) {
-      client.emit('error-message', 'Invalid card selection!');
+    if (!player) {
+      console.log('Player not found for client:', client.id);
       return;
     }
 
-    const currentField = state.playState.currentField;
-    if (!currentField) {
-      client.emit('error-message', 'No active field!');
+    // Check if currentField exists
+    if (!state.playState.currentField) {
+      console.error('No current field found in game state');
+      client.emit('error-message', 'Game state error: No current field');
       return;
     }
 
-    // Validate card play
+    // Validate the card play
     if (
       !this.playService.isValidCardPlay(
         player.hand,
         card,
-        currentField,
+        state.playState.currentField,
         state.blowState.currentTrump,
         state.playState.isTanzenRound,
       )
     ) {
-      client.emit('error-message', 'Invalid card play!');
+      console.log('Invalid card play:', { playerId: player.id, card });
+      client.emit('error-message', 'Invalid card play');
       return;
     }
 
-    // Play the card
+    // Remove the card from player's hand first
     player.hand = player.hand.filter((c) => c !== card);
-    currentField.cards.push(card);
 
+    // Then play the card to the field
+    const currentField = state.playState.currentField;
+    currentField.cards.push(card);
     if (currentField.cards.length === 1) {
       currentField.baseCard = card;
     }
 
-    // Check for Chombo violations
-    this.chomboService.checkViolations(client.id, 'play-card', {
-      player,
-      field: currentField,
-      card,
-    });
-
-    // Emit card played
+    // Emit the card played event with updated players
     this.server.emit('card-played', {
-      playerId: client.id,
+      playerId: player.id,
       card,
       field: currentField,
+      players: state.players,
     });
 
     // Check if field is complete
     if (currentField.cards.length === 4) {
-      this.handleFieldComplete();
+      this.handleFieldComplete(currentField);
     } else {
       this.gameState.nextTurn();
       // Emit turn update
@@ -473,45 +471,56 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private handleFieldComplete(): void {
+  private handleFieldComplete(field: Field) {
     const state = this.gameState.getState();
-    const field = this.gameState.completeField();
-    if (!field) return;
-
-    // Determine winner
     const winner = this.playService.determineFieldWinner(
       field,
       state.players,
-      state.blowState.currentTrump,
+      state.currentTrump,
     );
-    if (!winner) return;
 
-    // Update state
-    state.playState.lastWinnerId = winner.id;
-    const winnerIndex = state.players.findIndex((p) => p.id === winner.id);
-    if (winnerIndex >= 0) {
-      state.currentPlayerIndex = winnerIndex;
-    }
-
-    // Emit field complete
-    this.server.emit('field-complete', {
-      winner: winner.id,
-      field,
-      players: state.players,
-    });
-
-    // Check if game is over
-    if (state.players.every((p) => p.hand.length === 0)) {
-      const winningTeam = this.playService.determineWinningTeam(
-        state.playState.fields,
-        state.players,
-      );
-      this.handleGameOver(winningTeam);
+    if (!winner) {
+      console.error('No winner determined for field:', field);
       return;
     }
 
-    // Start new field
-    this.gameState.startField(winner.id);
+    // Remove played cards from players' hands
+    field.cards.forEach((card) => {
+      state.players.forEach((player) => {
+        player.hand = player.hand.filter((c) => c !== card);
+      });
+    });
+
+    // Add the completed field to history
+    const completedField = this.gameState.completeField(field, winner.id);
+    if (!completedField) {
+      console.error('Failed to complete field:', field);
+      return;
+    }
+
+    // Set the winner as the next dealer
+    const winnerIndex = state.players.findIndex((p) => p.id === winner.id);
+    if (winnerIndex !== -1) {
+      state.currentPlayerIndex = winnerIndex;
+    }
+
+    // Create a new field with the winner as the dealer
+    state.playState.currentField = {
+      cards: [],
+      baseCard: '',
+      dealerId: winner.id,
+      isComplete: false,
+    };
+
+    // Emit field complete event with winner information
+    this.server.emit('field-complete', {
+      winnerId: winner.id,
+      field: completedField,
+      nextPlayerId: winner.id, // The winner will be the next player to play
+    });
+
+    // Emit turn update to indicate it's the winner's turn
+    this.server.emit('update-turn', winner.id);
   }
 
   private handleGameOver(winningTeam: number): void {

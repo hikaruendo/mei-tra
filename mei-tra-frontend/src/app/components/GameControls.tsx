@@ -15,7 +15,6 @@ export function GameControls({
   renderBlowControls,
 }: GameControlsProps) {
   const isCurrentPlayerTurn = getSocket().id === whoseTurn;
-  console.log('GameControls render:', { gamePhase, whoseTurn, isCurrentPlayerTurn });
 
   return (
     <div className="flex flex-col items-center gap-4 mt-4 w-full max-w-4xl">

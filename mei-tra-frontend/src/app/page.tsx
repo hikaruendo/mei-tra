@@ -6,7 +6,9 @@ import { BlowControls } from './components/BlowControls';
 import { GameControls } from './components/GameControls';
 import { ScoreDisplay } from './components/ScoreDisplay';
 import { BlowDeclaration, Field, GamePhase, Player, TeamPlayers, TeamScores, TrumpType } from './types';
+import { CompletedField, FieldCompleteEvent, Team } from '@/types/game.types';
 import { PlaySetup } from './components/PlaySetup';
+import { Card } from '../components/Card';
 
 export default function Home() {
   // Player and Game State
@@ -40,6 +42,9 @@ export default function Home() {
   const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
   const [negriCard, setNegriCard] = useState<string | null>(null);
   const [negriPlayerId, setNegriPlayerId] = useState<string | null>(null);
+
+  // Add state for completed fields
+  const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -173,22 +178,19 @@ export default function Home() {
           setCurrentTrump(currentHighestDeclaration.trumpType);
         }
       },
-      'card-played': ({ playerId, card, field }: { playerId: string, card: string, field: Field }) => {
+      'card-played': ({ field, players: updatedPlayers }: { field: Field, players: Player[] }) => {
         setCurrentField(field);
-        // Update player hands
-        setPlayers(players.map(p => 
-          p.id === playerId ? { ...p, hand: p.hand.filter(c => c !== card) } : p
-        ));
+        // Update players with the latest data from server
+        setPlayers(updatedPlayers);
+        // Update teams with the latest data
+        setTeams({
+          team0: updatedPlayers.filter(p => p.team === 0),
+          team1: updatedPlayers.filter(p => p.team === 1)
+        });
       },
-      'field-complete': ({ winner, players }: { winner: string, field: Field, players: Player[] }) => {
-        setCurrentField(null);
-        setPlayers(players);
-        const winnerName = players.find(p => p.id === winner)?.name;
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = `${winnerName} won the field!`;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+      'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
+        setCompletedFields(prev => [...prev, field]);
+        setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });
       }
     };
 
@@ -203,7 +205,7 @@ export default function Home() {
         socket.off(event);
       });
     };
-  }, [gamePhase, players, currentHighestDeclaration]);
+  }, [gamePhase, players, currentHighestDeclaration, whoseTurn]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);
@@ -314,7 +316,7 @@ export default function Home() {
             
             return (
               <div
-                key={index}
+              key={index}
                 className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''}`}
                 onClick={handleCardClick}
                 style={{ transform: `rotate(${-15 + (index * 3)}deg)` }}
@@ -343,6 +345,33 @@ export default function Home() {
           >
             🂠
           </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Add UI component to display completed fields
+  interface CompletedFieldsProps {
+    fields: CompletedField[];
+    playerTeam: Team;
+  }
+
+  const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, playerTeam }) => {
+    return (
+      <div className="completed-fields">
+        {fields.map((field, index) => (
+          field.winnerTeam === playerTeam && (
+            <div key={index} className="completed-field">
+              {field.cards.map((card: string, cardIndex: number) => (
+                <Card 
+                  key={cardIndex}
+                  card={card}
+                  small={true}
+                  className="completed-field-card"
+                />
+              ))}
+            </div>
+          )
         ))}
       </div>
     );
@@ -630,12 +659,33 @@ export default function Home() {
           border: 2px solid #FFD700;
           box-shadow: 0 0 10px #FFD700;
         }
+        .completed-fields {
+          position: absolute;
+          right: 1rem;
+          top: 50%;
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        .completed-field {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.25rem;
+          padding: 0.5rem;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 0.5rem;
+        }
+        .completed-field-card {
+          width: 2rem;
+          height: 3rem;
+        }
       `}</style>
       
       <div className="game-layout">
         <div className="game-info">
-          <ScoreDisplay gamePhase={gamePhase} teamScores={teamScores} />
-          
+      <ScoreDisplay gamePhase={gamePhase} teamScores={teamScores} />
+      
           {whoseTurn && (
             <div className="turn-indicator">
               <div className={`px-4 py-2 rounded-lg ${
@@ -648,9 +698,9 @@ export default function Home() {
                   : `${players.find(p => p.id === whoseTurn)?.name}'s Turn`
                 }
               </div>
-            </div>
-          )}
-
+        </div>
+      )}
+      
           {gamePhase === 'play' && currentTrump && (
             <div className="current-trump">
               <div className="text-lg font-bold text-white">
@@ -823,25 +873,31 @@ export default function Home() {
           />
         )}
 
-        <GameControls 
-          gamePhase={gamePhase}
-          whoseTurn={whoseTurn}
-          selectedCards={selectedCards}
-          renderBlowControls={() => (
-            <BlowControls
-              isCurrentPlayer={getSocket().id === whoseTurn}
-              currentPlayer={players.find(p => p.id === getSocket().id)}
-              selectedTrump={selectedTrump}
-              setSelectedTrump={setSelectedTrump}
-              numberOfPairs={numberOfPairs}
-              setNumberOfPairs={setNumberOfPairs}
-              declareBlow={gameActions.declareBlow}
-              passBlow={gameActions.passBlow}
-              blowDeclarations={blowDeclarations}
-              currentHighestDeclaration={currentHighestDeclaration}
-              players={players}
-            />
-          )}
+      <GameControls 
+        gamePhase={gamePhase}
+        whoseTurn={whoseTurn}
+        selectedCards={selectedCards}
+        renderBlowControls={() => (
+          <BlowControls
+            isCurrentPlayer={getSocket().id === whoseTurn}
+            currentPlayer={players.find(p => p.id === getSocket().id)}
+            selectedTrump={selectedTrump}
+            setSelectedTrump={setSelectedTrump}
+            numberOfPairs={numberOfPairs}
+            setNumberOfPairs={setNumberOfPairs}
+            declareBlow={gameActions.declareBlow}
+            passBlow={gameActions.passBlow}
+            blowDeclarations={blowDeclarations}
+            currentHighestDeclaration={currentHighestDeclaration}
+            players={players}
+          />
+        )}
+      />
+
+        {/* Add Completed Fields component */}
+        <CompletedFields 
+          fields={completedFields} 
+          playerTeam={(players.find(p => p.id === getSocket().id)?.team ?? 0) as Team} 
         />
       </div>
     </main>

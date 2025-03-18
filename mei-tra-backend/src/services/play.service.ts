@@ -42,56 +42,68 @@ export class PlayService {
   }
 
   isValidCardPlay(
-    hand: string[],
+    playerHand: string[],
     card: string,
     field: Field,
     currentTrump: TrumpType | null,
     isTanzenRound: boolean,
   ): boolean {
-    // First card in field
-    if (field.cards.length === 0) return true;
-
-    const baseCard = field.baseCard;
-    const baseSuit = baseCard.replace(/[0-9JQKA]/, '');
-    const cardSuit = card.replace(/[0-9JQKA]/, '');
-    const cardValue = card.replace(/[♠♣♥♦]/, '');
-
-    // In Tanzen round, if player has JOKER, they must play it
-    if (isTanzenRound) {
-      const hasJoker = hand.some(
-        (c) => c.replace(/[♠♣♥♦]/, '') === 'JOKER',
-      );
-      if (hasJoker) {
-        // Must play JOKER if you have it in Tanzen round
-        return cardValue === 'JOKER';
-      }
+    // In Tanzen round, if player has Joker, they must play it
+    if (isTanzenRound && playerHand.includes('JOKER')) {
+      return card === 'JOKER';
     }
 
-    // JOKER can be played anytime in non-Tanzen rounds
-    if (cardValue === 'JOKER' && !isTanzenRound) {
+    console.log('aaaaaaaa');
+
+    // If no cards in field, any card is valid
+    if (field.cards.length === 0) {
       return true;
     }
 
-    // If player has matching suit, they must play it
-    const hasMatchingSuit = hand.some(
-      (c) => c.replace(/[0-9JQKA]/, '') === baseSuit,
-    );
-    if (hasMatchingSuit) {
-      // Must play the same suit if player has it
-      return cardSuit === baseSuit;
+    console.log('bbbbbbbb');
+
+    const baseCard = field.baseCard;
+    const baseSuit = this.cardService.getCardSuit(baseCard);
+    const cardSuit = this.cardService.getCardSuit(card);
+
+    // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
+    if (!currentTrump || currentTrump === 'tra') {
+      if (cardSuit === baseSuit) {
+        return true;
+      }
+
+      console.log('cccccccc');
+
+      return !playerHand.some(
+        (c) => this.cardService.getCardSuit(c) === baseSuit,
+      );
     }
 
-    // If base card is trump and player only has trump cards, they must play trump
-    if (baseSuit === currentTrump) {
-      const onlyHasTrump = hand.every(
-        (c) => c.replace(/[0-9JQKA]/, '') === currentTrump,
-      );
-      if (onlyHasTrump) {
-        return cardSuit === currentTrump;
+    // For other trump types, both primary and secondary Jacks can be played anytime
+    if (this.cardService.isJack(card)) {
+      return true;
+    }
+
+    console.log('dddddddd');
+
+    // Normal suit matching rules
+    if (baseCard) {
+      const baseSuit = this.cardService.getCardSuit(baseCard);
+      const cardSuit = this.cardService.getCardSuit(card);
+
+      // If player has the base suit, they must play it
+      if (baseSuit !== cardSuit) {
+        const hasBaseSuit = playerHand.some(
+          (c) => this.cardService.getCardSuit(c) === baseSuit,
+        );
+        if (hasBaseSuit) {
+          return false;
+        }
       }
     }
 
-    // If player doesn't have any cards that match the rules, they can play any card
+    console.log('eeeeee');
+
     return true;
   }
 
