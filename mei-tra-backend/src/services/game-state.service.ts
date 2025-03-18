@@ -70,6 +70,9 @@ export class GameStateService {
 
     const team = Math.floor(this.state.players.length / 2);
     this.state.players.push({ id, name, hand: [], team });
+    console.log(
+      `Added player ${name} (${id}) to team ${team}. Total players: ${this.state.players.length}`,
+    );
     return true;
   }
 

@@ -31,4 +31,11 @@ export interface TeamPlayers {
 
 export interface TeamScores {
   [key: number]: TeamScore;
+}
+
+export interface Field {
+  cards: string[];
+  baseCard: string;
+  dealerId: string;
+  isComplete: boolean;
 } 

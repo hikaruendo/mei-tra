@@ -6,14 +6,12 @@ interface GameControlsProps {
   gamePhase: GamePhase;
   whoseTurn: string | null;
   selectedCards: string[];
-  endPhase: () => void;
   renderBlowControls: () => JSX.Element | null;
 }
 
 export function GameControls({
   gamePhase,
   whoseTurn,
-  endPhase,
   renderBlowControls,
 }: GameControlsProps) {
   const isCurrentPlayerTurn = getSocket().id === whoseTurn;
@@ -38,15 +36,6 @@ export function GameControls({
           )}
           {renderBlowControls()}
         </div>
-      )}
-
-      {gamePhase === 'play' && isCurrentPlayerTurn && (
-        <button 
-          onClick={endPhase} 
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-        >
-          End Phase
-        </button>
       )}
     </div>
   );

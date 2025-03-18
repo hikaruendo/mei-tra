@@ -31,9 +31,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleConnection(client: Socket) {
     console.log(`Player connected: ${client.id}`);
     const state = this.gameState.getState();
-    if (state.deck.length > 0 && state.players.length > 0) {
-      this.server.emit('update-players', state.players);
-    }
+    this.server.emit('update-players', state.players);
   }
 
   handleDisconnect(client: Socket) {
@@ -55,61 +53,91 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('start-game')
-  handleStartGame(): void {
+  handleStartGame(client: Socket): void {
     console.log('Game starting...');
     const success = this.gameState.startGame();
     if (!success) {
       console.log('Need exactly 4 players to start the game.');
+      client.emit('error-message', 'Need exactly 4 players to start the game.');
       return;
     }
 
     const state = this.gameState.getState();
 
-    // Randomly select first dealer
-    const randomDealerIndex = Math.floor(Math.random() * state.players.length);
-    state.currentPlayerIndex = randomDealerIndex;
+    // For testing: Start directly in play phase
+    // Set up a predetermined winner (first player) with Hearts 6 declaration
+    const winner = state.players[0];
+    if (!winner) return;
 
-    const currentPlayer = state.players[randomDealerIndex];
-    if (!currentPlayer) return;
-
-    // Emit initial game state
-    this.server.emit('update-turn', currentPlayer.id);
-    this.server.emit('update-players', state.players);
-    this.server.emit('game-started', state.players);
-
-    // Automatically start blow phase
-    const firstBlowIndex = (randomDealerIndex + 1) % state.players.length;
-    const firstBlowPlayer = state.players[firstBlowIndex];
-
-    if (!firstBlowPlayer) {
-      console.log('Cannot determine first player to blow!');
-      return;
-    }
-
-    // Set up blow phase
-    state.gamePhase = 'blow';
-    state.currentPlayerIndex = firstBlowIndex;
+    // Set up blow state with winner's declaration
     state.blowState = {
-      currentTrump: null,
-      currentHighestDeclaration: null,
-      declarations: [],
+      currentTrump: 'hel',
+      currentHighestDeclaration: {
+        playerId: winner.id,
+        trumpType: 'hel',
+        numberOfPairs: 6,
+        timestamp: Date.now(),
+      },
+      declarations: [
+        {
+          playerId: winner.id,
+          trumpType: 'hel',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      ],
       lastPasser: null,
       isRoundCancelled: false,
-      startingPlayerId: firstBlowPlayer.id,
+      startingPlayerId: winner.id,
     };
 
-    // Emit blow phase started
-    this.server.emit('blow-started', {
-      startingPlayer: firstBlowPlayer.id,
-      players: state.players,
+    // Move to play phase
+    state.gamePhase = 'play';
+    state.currentPlayerIndex = 0;
+
+    // Set up initial play state
+    state.playState = {
+      currentField: {
+        cards: [],
+        baseCard: '',
+        dealerId: winner.id,
+        isComplete: false,
+      },
+      negriCard: null,
+      neguri: {},
+      fields: [],
+      lastWinnerId: null,
+      isTanzenRound: false,
+      openDeclared: false,
+      openDeclarerId: null,
+    };
+
+    // Emit game started first
+    this.server.emit('game-started', state.players);
+
+    // Then emit phase update
+    this.server.emit('update-phase', {
+      phase: 'play',
+      scores: state.teamScores,
+      winner: winner.team,
     });
 
-    // Emit phase update
-    this.server.emit('update-phase', {
-      phase: state.gamePhase,
-      scores: state.teamScores,
-      winner: null,
+    // Emit Agari card to winner
+    this.server.to(winner.id).emit('reveal-agari', {
+      agari: state.agari,
+      message: 'Select a card from your hand as Negri',
     });
+
+    // TODO: delete after testing
+    if (state.agari) {
+      winner.hand.push(state.agari);
+      console.log("Added Agari card to winner's hand:", state.agari);
+      console.log("Winner's hand after adding Agari:", winner.hand);
+    }
+
+    // Update players and turn
+    this.server.emit('update-players', state.players);
+    this.server.emit('update-turn', winner.id);
   }
 
   @SubscribeMessage('declare-blow')
@@ -264,42 +292,52 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private handleFourthDeclaration(): void {
+    console.log('handleFourthDeclaration called');
     const state = this.gameState.getState();
     const winner = this.blowService.findHighestDeclaration(
       state.blowState.declarations,
     );
     const winningPlayer = state.players.find((p) => p.id === winner.playerId);
-    if (!winningPlayer) return;
+    if (!winningPlayer) {
+      console.log('No winning player found');
+      return;
+    }
+    console.log('Winner found:', winningPlayer.id);
+    console.log("Winner's hand before adding Agari:", winningPlayer.hand);
+
+    // Add Agari card to winner's hand first
+    if (state.agari) {
+      winningPlayer.hand.push(state.agari);
+      console.log("Added Agari card to winner's hand:", state.agari);
+      console.log("Winner's hand after adding Agari:", winningPlayer.hand);
+    }
 
     // Move to play phase
     state.gamePhase = 'play';
     state.blowState.currentTrump = winner.trumpType;
-
-    // Add Agari card to winner's hand
-    if (state.agari) {
-      winningPlayer.hand.push(state.agari);
-    }
 
     // Set current player to the winner for Negri selection
     state.currentPlayerIndex = state.players.findIndex(
       (p) => p.id === winner.playerId,
     );
 
-    // Emit updates
-    this.server.emit('update-phase', {
-      phase: 'play',
-      scores: state.teamScores,
-      winner: winningPlayer.team,
-    });
+    // First update all players about the new state with the Agari card added
+    console.log('Emitting update-players with updated hand');
+    this.server.emit('update-players', state.players);
 
-    // Emit Agari card to winner
+    // Then emit Agari card to winner
+    console.log('Emitting reveal-agari to winner:', winningPlayer.id);
     this.server.to(winningPlayer.id).emit('reveal-agari', {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
     });
 
-    // Update other players about the winner's new hand size
-    this.server.emit('update-players', state.players);
+    // Finally emit phase update
+    this.server.emit('update-phase', {
+      phase: 'play',
+      scores: state.teamScores,
+      winner: winningPlayer.team,
+    });
   }
 
   @SubscribeMessage('select-negri')
@@ -325,7 +363,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Set up play state
     state.playState = {
-      currentField: null,
+      currentField: {
+        cards: [],
+        baseCard: '',
+        dealerId: client.id,
+        isComplete: false,
+      },
       negriCard: card,
       neguri: {},
       fields: [],
@@ -335,13 +378,30 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       openDeclarerId: null,
     };
 
-    // Initialize the first field after setting up play state
-    this.gameState.startField(client.id);
-
     // Remove Negri card from hand
     player.hand = player.hand.filter((c) => c !== card);
 
+    // Start the play phase with the winner of the declaration as the first player
+    const winner = this.blowService.findHighestDeclaration(
+      state.blowState.declarations,
+    );
+    if (!winner) return;
+
+    const winnerIndex = state.players.findIndex(
+      (p) => p.id === winner.playerId,
+    );
+    if (winnerIndex === -1) return;
+
+    state.currentPlayerIndex = winnerIndex;
+
     this.server.emit('update-players', state.players);
+
+    // Emit updates
+    this.server.emit('play-setup-complete', {
+      negriCard: card,
+      startingPlayer: state.players[winnerIndex].id,
+    });
+    this.server.emit('update-turn', state.players[winnerIndex].id);
   }
 
   @SubscribeMessage('play-card')
@@ -405,6 +465,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.handleFieldComplete();
     } else {
       this.gameState.nextTurn();
+      // Emit turn update
+      const nextPlayer = state.players[state.currentPlayerIndex];
+      if (nextPlayer) {
+        this.server.emit('update-turn', nextPlayer.id);
+      }
     }
   }
 
