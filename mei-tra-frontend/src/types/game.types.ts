@@ -50,16 +50,15 @@ export interface TeamScores {
 }
 
 export interface TeamScore {
-  deal: number;
-  blow: number;
-  play: number;
   total: number;
 }
 
+export interface RoundScore {
+  declared: number;
+  actual: number;
+  points: number;
+}
+
 export interface TeamScoreRecord {
-  deal: number;
-  blow: number;
-  play: number;
-  total: number;
-  round: number;
+  roundScores: RoundScore[];
 } 
