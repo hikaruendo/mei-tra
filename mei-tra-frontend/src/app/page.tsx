@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { getSocket } from './socket';
-import { BlowControls } from './components/BlowControls';
-import { GameControls } from './components/GameControls';
-import { ScoreDisplay } from './components/ScoreDisplay';
 import { BlowDeclaration, Field, GamePhase, Player, TeamPlayers, TeamScores, TrumpType } from './types';
-import { CompletedField, FieldCompleteEvent, Team } from '@/types/game.types';
-import { PlaySetup } from './components/PlaySetup';
-import { Card } from '../components/Card';
+import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
+import { GameTable } from '@/components/GameTable/GameTable';
 
 export default function Home() {
   // Player and Game State
@@ -18,15 +14,13 @@ export default function Home() {
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
   const [teams, setTeams] = useState<TeamPlayers>({ team0: [], team1: [] });
-
-  // Card State
-  const [selectedCards, setSelectedCards] = useState<string[]>([]);
-
-  // Score State
   const [teamScores, setTeamScores] = useState<TeamScores>({
     0: { deal: 0, blow: 0, play: 0, total: 0 },
     1: { deal: 0, blow: 0, play: 0, total: 0 }
   });
+
+  // Card State
+  const [selectedCards, setSelectedCards] = useState<string[]>([]);
 
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
@@ -289,92 +283,6 @@ export default function Home() {
       }
       socket.emit('play-card', card);
     }
-  };
-
-  const renderPlayerHand = (player: Player) => {
-    const isCurrentPlayer = player.id === getSocket().id;
-    
-    if (isCurrentPlayer) {
-      return (
-        <div className="flex flex-wrap gap-2">
-          {player.hand.map((card, index) => {
-            const value = card.replace(/[♠♣♥♦]/, '');
-            const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
-            const isRed = suit === '♥' || suit === '♦';
-            const isNegri = card === negriCard;
-            
-            // Different click handler based on game phase
-            const handleCardClick = () => {
-              if (gamePhase === 'play' && whoseTurn === getSocket().id) {
-                gameActions.playCard(card);
-              } else {
-                setSelectedCards(selectedCards.includes(card) 
-                  ? selectedCards.filter((c) => c !== card) 
-                  : [...selectedCards, card]);
-              }
-            };
-            
-            return (
-              <div
-              key={index}
-                className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''}`}
-                onClick={handleCardClick}
-                style={{ transform: `rotate(${-15 + (index * 3)}deg)` }}
-              >
-                {card === 'JOKER' ? '🃏' : (
-                  <>
-                    {value}
-                    <span className="suit">{suit}</span>
-                  </>
-                )}
-                {isNegri && <div className="negri-label">Negri</div>}
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex gap-2">
-        {Array(player.hand.length).fill(null).map((_, index) => (
-          <div
-            key={index}
-            className="card face-down"
-            style={{ transform: `rotate(${-10 + (index * 2)}deg)` }}
-          >
-            🂠
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Add UI component to display completed fields
-  interface CompletedFieldsProps {
-    fields: CompletedField[];
-    playerTeam: Team;
-  }
-
-  const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, playerTeam }) => {
-    return (
-      <div className="completed-fields">
-        {fields.map((field, index) => (
-          field.winnerTeam === playerTeam && (
-            <div key={index} className="completed-field">
-              {field.cards.map((card: string, cardIndex: number) => (
-                <Card 
-                  key={cardIndex}
-                  card={card}
-                  small={true}
-                  className="completed-field-card"
-                />
-              ))}
-            </div>
-          )
-        ))}
-      </div>
-    );
   };
 
   if (!isClient) {
@@ -682,224 +590,28 @@ export default function Home() {
         }
       `}</style>
       
-      <div className="game-layout">
-        <div className="game-info">
-      <ScoreDisplay gamePhase={gamePhase} teamScores={teamScores} />
-      
-          {whoseTurn && (
-            <div className="turn-indicator">
-              <div className={`px-4 py-2 rounded-lg ${
-                whoseTurn === getSocket().id 
-                  ? 'bg-green-600 text-white animate-pulse'
-                  : 'bg-gray-700 text-white'
-              }`}>
-                {whoseTurn === getSocket().id 
-                  ? "It's Your Turn!"
-                  : `${players.find(p => p.id === whoseTurn)?.name}'s Turn`
-                }
-              </div>
-        </div>
-      )}
-      
-          {gamePhase === 'play' && currentTrump && (
-            <div className="current-trump">
-              <div className="text-lg font-bold text-white">
-                {currentTrump === 'tra' && 'Tra (No Trump)'}
-                {currentTrump === 'hel' && 'Hel (Hearts ♥)'}
-                {currentTrump === 'daya' && 'Daya (Diamonds ♦)'}
-                {currentTrump === 'club' && 'Club (Clubs ♣)'}
-                {currentTrump === 'zuppe' && 'Zuppe (Spades ♠)'}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="player-positions">
-          {/* Top player */}
-          <div className="player-position top">
-            {teams.team1[0] && (
-              <div className={`player-info ${whoseTurn === teams.team1[0].id ? 'current-turn' : ''}`}>
-                <div className="player-name">{teams.team1[0].name}</div>
-                <div className="card-count">{teams.team1[0].hand.length} cards</div>
-                {renderPlayerHand(teams.team1[0])}
-                {negriCard && negriPlayerId === teams.team1[0].id && (
-                  <div className="negri-card-display">
-                    <div className="text-sm text-white mb-1">Negri Card</div>
-                    {getSocket().id === negriPlayerId ? (
-                      <div className="card negri-card">
-                        {negriCard === 'JOKER' ? '🃏' : (
-                          <>
-                            {negriCard.replace(/[♠♣♥♦]/, '')}
-                            <span className="suit">{negriCard.match(/[♠♣♥♦]/)?.[0]}</span>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="card face-down negri-card">
-                        🂠
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Right player */}
-          <div className="player-position right">
-            {teams.team0[0] && (
-              <div className={`player-info ${whoseTurn === teams.team0[0].id ? 'current-turn' : ''}`}>
-                <div className="player-name">{teams.team0[0].name}</div>
-                <div className="card-count">{teams.team0[0].hand.length} cards</div>
-                {renderPlayerHand(teams.team0[0])}
-                {negriCard && negriPlayerId === teams.team0[0].id && (
-                  <div className="negri-card-display">
-                    <div className="text-sm text-white mb-1">Negri Card</div>
-                    {getSocket().id === negriPlayerId ? (
-                      <div className="card negri-card">
-                        {negriCard === 'JOKER' ? '🃏' : (
-                          <>
-                            {negriCard.replace(/[♠♣♥♦]/, '')}
-                            <span className="suit">{negriCard.match(/[♠♣♥♦]/)?.[0]}</span>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="card face-down negri-card">
-                        🂠
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Bottom player */}
-          <div className="player-position bottom">
-            {teams.team0[1] && (
-              <div className={`player-info ${whoseTurn === teams.team0[1].id ? 'current-turn' : ''}`}>
-                <div className="player-name">{teams.team0[1].name}</div>
-                <div className="card-count">{teams.team0[1].hand.length} cards</div>
-                {renderPlayerHand(teams.team0[1])}
-                {negriCard && negriPlayerId === teams.team0[1].id && (
-                  <div className="negri-card-display">
-                    <div className="text-sm text-white mb-1">Negri Card</div>
-                    {getSocket().id === negriPlayerId ? (
-                      <div className="card negri-card">
-                        {negriCard === 'JOKER' ? '🃏' : (
-                          <>
-                            {negriCard.replace(/[♠♣♥♦]/, '')}
-                            <span className="suit">{negriCard.match(/[♠♣♥♦]/)?.[0]}</span>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="card face-down negri-card">
-                        🂠
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Left player */}
-          <div className="player-position left">
-            {teams.team1[1] && (
-              <div className={`player-info ${whoseTurn === teams.team1[1].id ? 'current-turn' : ''}`}>
-                <div className="player-name">{teams.team1[1].name}</div>
-                <div className="card-count">{teams.team1[1].hand.length} cards</div>
-                {renderPlayerHand(teams.team1[1])}
-                {negriCard && negriPlayerId === teams.team1[1].id && (
-                  <div className="negri-card-display">
-                    <div className="text-sm text-white mb-1">Negri Card</div>
-                    {getSocket().id === negriPlayerId ? (
-                      <div className="card negri-card">
-                        {negriCard === 'JOKER' ? '🃏' : (
-                          <>
-                            {negriCard.replace(/[♠♣♥♦]/, '')}
-                            <span className="suit">{negriCard.match(/[♠♣♥♦]/)?.[0]}</span>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="card face-down negri-card">
-                        🂠
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Center field */}
-          {currentField && currentField.cards.length > 0 && (
-            <div className="field-container">
-              <div className="flex gap-4 justify-center">
-                {currentField.cards.map((card: string, index: number) => {
-                  const isRed = card.match(/[♥♦]/);
-                  const playerId = players[index % players.length]?.id;
-                  const playerName = players.find(p => p.id === playerId)?.name;
-                  
-                  return (
-                    <div key={index} className="text-center">
-                      <div className="text-white mb-2">{playerName}</div>
-                      <div className={`card ${isRed ? 'red-suit' : 'black-suit'}`}>
-                        {card === 'JOKER' ? '🃏' : (
-                          <>
-                            {card.replace(/[♠♣♥♦]/, '')}
-                            <span className="suit">{card.match(/[♠♣♥♦]/)?.[0]}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {gamePhase === 'play' && revealedAgari && whoseTurn === getSocket().id && (
-          <PlaySetup
-            player={players.find(p => p.id === getSocket().id)!}
-            agariCard={revealedAgari}
-            onSelectNegri={gameActions.selectNegri}
-            onSelectBaseCard={gameActions.playCard}
-            hasSelectedNegri={!!negriCard}
-          />
-        )}
-
-      <GameControls 
-        gamePhase={gamePhase}
+      <GameTable
+        teams={teams}
         whoseTurn={whoseTurn}
+        gamePhase={gamePhase}
+        currentTrump={currentTrump}
+        currentField={currentField}
+        players={players}
+        negriCard={negriCard}
+        negriPlayerId={negriPlayerId}
         selectedCards={selectedCards}
-        renderBlowControls={() => (
-          <BlowControls
-            isCurrentPlayer={getSocket().id === whoseTurn}
-            currentPlayer={players.find(p => p.id === getSocket().id)}
-            selectedTrump={selectedTrump}
-            setSelectedTrump={setSelectedTrump}
-            numberOfPairs={numberOfPairs}
-            setNumberOfPairs={setNumberOfPairs}
-            declareBlow={gameActions.declareBlow}
-            passBlow={gameActions.passBlow}
-            blowDeclarations={blowDeclarations}
-            currentHighestDeclaration={currentHighestDeclaration}
-            players={players}
-          />
-        )}
+        setSelectedCards={setSelectedCards}
+        completedFields={completedFields}
+        revealedAgari={revealedAgari}
+        gameActions={gameActions}
+        blowDeclarations={blowDeclarations}
+        currentHighestDeclaration={currentHighestDeclaration}
+        selectedTrump={selectedTrump}
+        setSelectedTrump={setSelectedTrump}
+        numberOfPairs={numberOfPairs}
+        setNumberOfPairs={setNumberOfPairs}
+        teamScores={teamScores}
       />
-
-        {/* Add Completed Fields component */}
-        <CompletedFields 
-          fields={completedFields} 
-          playerTeam={(players.find(p => p.id === getSocket().id)?.team ?? 0) as Team} 
-        />
-      </div>
     </main>
   );
 }

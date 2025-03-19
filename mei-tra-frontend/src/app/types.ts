@@ -1,8 +1,12 @@
+import { Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration } from '@/types/game.types';
+
+export type { Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration };
+
 export interface Player {
   id: string;
   name: string;
+  team: Team;
   hand: string[];
-  team?: number;
   isPasser?: boolean;
   hasBroken?: boolean;
 }
@@ -14,16 +18,6 @@ export interface TeamScore {
   total: number;
 }
 
-export interface BlowDeclaration {
-  playerId: string;
-  trumpType: TrumpType;
-  numberOfPairs: number;
-  timestamp: number;
-}
-
-export type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
-export type GamePhase = 'deal' | 'blow' | 'play' | null;
-
 export interface TeamPlayers {
   team0: Player[];
   team1: Player[];
@@ -33,9 +27,9 @@ export interface TeamScores {
   [key: number]: TeamScore;
 }
 
-export interface Field {
-  cards: string[];
-  baseCard: string;
-  dealerId: string;
-  isComplete: boolean;
+export interface GameActions {
+  selectNegri: (card: string) => void;
+  playCard: (card: string) => void;
+  declareBlow: () => void;
+  passBlow: () => void;
 } 
