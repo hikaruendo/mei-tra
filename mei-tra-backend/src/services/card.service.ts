@@ -4,10 +4,11 @@ import { Field, TrumpType } from '../types/game.types';
 @Injectable()
 export class CardService {
   private readonly CARD_STRENGTHS: Record<string, number> = {
-    JOKER: 20,
-    A: 13,
-    K: 12,
-    Q: 11,
+    JOKER: 100,
+    A: 14,
+    K: 13,
+    Q: 12,
+    J: 11,
     '10': 10,
     '9': 9,
     '8': 8,
@@ -88,7 +89,10 @@ export class CardService {
     if (field.cards.length === 0) return true;
 
     const baseCard = field.baseCard;
-    const baseSuit = baseCard.replace(/[0-9JQKA]/, '');
+    // If baseCard is a secondary Jack, use the primary Jack's suit as baseSuit
+    const baseSuit = this.isSecondaryJack(baseCard, currentTrump as TrumpType)
+      ? this.getPrimaryJack(currentTrump as TrumpType).replace(/[0-9JQKA]/, '')
+      : baseCard.replace(/[0-9JQKA]/, '');
     const cardSuit = card.replace(/[0-9JQKA]/, '');
     const cardValue = card.replace(/[♠♣♥♦]/, '');
 
@@ -122,7 +126,7 @@ export class CardService {
     const value = card.replace(/[♠♣♥♦]/, '');
     let strength = this.CARD_STRENGTHS[value];
 
-    // Jの強さを特別に処理（とらの場合は除く）
+    // Jの強さを特別に処理（tra の場合は除く）
     if (value === 'J' && trumpSuit && trumpSuit !== 'tra') {
       if (this.isPrimaryJack(card, trumpSuit)) {
         strength = 19; // 正J
@@ -131,15 +135,23 @@ export class CardService {
       }
     }
 
-    // とらの場合はスートによる強さの加算なし
-    if (trumpSuit !== 'tra') {
-      if (suit === trumpSuit) {
-        strength += 100; // Trump cards are stronger
-      } else if (suit === baseSuit) {
-        strength += 50; // Base suit cards are stronger than non-base suit
-      }
+    // Add bonus strength for trump suit cards
+    if (suit === trumpSuit) {
+      strength += 50;
     }
 
+    console.log(
+      'baseSuit:',
+      baseSuit,
+      'trumpSuit:',
+      trumpSuit,
+      'suit:',
+      suit,
+      'value:',
+      value,
+      'strength:',
+      strength,
+    );
     return strength;
   }
 
@@ -194,25 +206,17 @@ export class CardService {
     return card === this.getSecondaryJack(trumpType);
   }
 
-  getCardValue(card: string): number {
-    if (card === 'JOKER') return 20;
-    const value = card.slice(0, -1);
-    switch (value) {
-      case 'J':
-        return 11;
-      case 'Q':
-        return 11;
-      case 'K':
-        return 12;
-      case 'A':
-        return 13;
-      default:
-        return parseInt(value, 10);
-    }
-  }
+  getCardSuit(card: string, trumpType?: TrumpType | null): string {
+    if (card === 'JOKER') return trumpType || '';
 
-  getCardSuit(card: string): string {
-    if (card === 'JOKER') return '';
+    // If it's a Jack and trumpType is provided, check if it's a secondary Jack
+    if (card.startsWith('J') && trumpType) {
+      if (this.isSecondaryJack(card, trumpType)) {
+        // For secondary Jack, return the primary Jack's suit
+        return this.getPrimaryJack(trumpType).replace(/[0-9JQKA]/, '');
+      }
+    }
+
     return card.slice(-1);
   }
 }

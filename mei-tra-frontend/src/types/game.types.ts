@@ -2,7 +2,7 @@ export type Team = 0 | 1;
 
 export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
 
-export type TrumpType = '♠' | '♣' | '♥' | '♦' | 'JOKER';
+export type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
 
 export interface CompletedField {
   cards: string[];

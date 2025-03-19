@@ -67,8 +67,16 @@ export default function Home() {
         setTeamScores(scores);
         
         // Set current trump when transitioning to play phase
-        if (phase === 'play' && currentHighestDeclaration) {
-          setCurrentTrump(currentHighestDeclaration.trumpType);
+        if (phase === 'play') {
+          if (currentHighestDeclaration) {
+            setCurrentTrump(currentHighestDeclaration.trumpType);
+          } else {
+            // If no declaration was made, set to default trump
+            setCurrentTrump('hel');
+          }
+        } else {
+          // Reset current trump when not in play phase
+          setCurrentTrump(null);
         }
         
         // Only show alert for phases other than 'play'

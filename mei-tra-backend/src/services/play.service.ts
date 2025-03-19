@@ -12,11 +12,19 @@ export class PlayService {
     trumpSuit: TrumpType | null,
   ): Player | null {
     const baseCard = field.baseCard;
-    const baseSuit = baseCard.replace(/[0-9JQKA]/, '');
+    const baseSuit = baseCard.startsWith('10')
+      ? baseCard.slice(2)
+      : baseCard.slice(-1);
     let winner: Player | null = null;
     let highestStrength = -1;
 
-    field.cards.forEach((card, index) => {
+    // Find the dealer's index
+    const dealerIndex = players.findIndex((p) => p.id === field.dealerId);
+    if (dealerIndex === -1) return null;
+
+    field.cards.forEach((card, cardIndex) => {
+      // Calculate the player index based on the dealer's position
+      const playerIndex = (dealerIndex + cardIndex) % players.length;
       const strength = this.cardService.getCardStrength(
         card,
         baseSuit,
@@ -24,7 +32,7 @@ export class PlayService {
       );
       if (strength > highestStrength) {
         highestStrength = strength;
-        winner = players[index];
+        winner = players[playerIndex];
       }
     });
 
@@ -53,26 +61,20 @@ export class PlayService {
       return card === 'JOKER';
     }
 
-    console.log('aaaaaaaa');
-
     // If no cards in field, any card is valid
     if (field.cards.length === 0) {
       return true;
     }
 
-    console.log('bbbbbbbb');
-
     const baseCard = field.baseCard;
-    const baseSuit = this.cardService.getCardSuit(baseCard);
-    const cardSuit = this.cardService.getCardSuit(card);
+    const baseSuit = this.cardService.getCardSuit(baseCard, currentTrump);
+    const cardSuit = this.cardService.getCardSuit(card, currentTrump);
 
     // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
     if (!currentTrump || currentTrump === 'tra') {
       if (cardSuit === baseSuit) {
         return true;
       }
-
-      console.log('cccccccc');
 
       return !playerHand.some(
         (c) => this.cardService.getCardSuit(c) === baseSuit,
@@ -84,25 +86,32 @@ export class PlayService {
       return true;
     }
 
-    console.log('dddddddd');
-
     // Normal suit matching rules
     if (baseCard) {
-      const baseSuit = this.cardService.getCardSuit(baseCard);
-      const cardSuit = this.cardService.getCardSuit(card);
+      const baseSuit = this.cardService.getCardSuit(baseCard, currentTrump);
+      const cardSuit = this.cardService.getCardSuit(card, currentTrump);
 
       // If player has the base suit, they must play it
       if (baseSuit !== cardSuit) {
         const hasBaseSuit = playerHand.some(
-          (c) => this.cardService.getCardSuit(c) === baseSuit,
+          (c) => this.cardService.getCardSuit(c, currentTrump) === baseSuit,
         );
         if (hasBaseSuit) {
           return false;
         }
       }
-    }
 
-    console.log('eeeeee');
+      // If currentTrump matches baseSuit, player has no cards of that suit, and has Joker, they must play Joker
+      if (
+        currentTrump === baseSuit &&
+        playerHand.includes('JOKER') &&
+        !playerHand.some(
+          (c) => this.cardService.getCardSuit(c, currentTrump) === baseSuit,
+        )
+      ) {
+        return card === 'JOKER';
+      }
+    }
 
     return true;
   }

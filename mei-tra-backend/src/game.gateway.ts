@@ -476,7 +476,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const winner = this.playService.determineFieldWinner(
       field,
       state.players,
-      state.currentTrump,
+      state.currentTrump || 'hel',
     );
 
     if (!winner) {
