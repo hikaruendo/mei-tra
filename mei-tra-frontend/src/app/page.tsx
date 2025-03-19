@@ -5,6 +5,7 @@ import { getSocket } from './socket';
 import { BlowDeclaration, Field, GamePhase, Player, TeamPlayers, TeamScores, TrumpType } from './types';
 import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
 import { GameTable } from '@/components/GameTable/GameTable';
+import { TeamScore, TeamScoreRecord } from '@/types/game.types';
 
 export default function Home() {
   // Player and Game State
@@ -18,6 +19,7 @@ export default function Home() {
     0: { deal: 0, blow: 0, play: 0, total: 0 },
     1: { deal: 0, blow: 0, play: 0, total: 0 }
   });
+  const [teamScoreRecords, setTeamScoreRecords] = useState<{ [key: number]: TeamScoreRecord }>({});
 
   // Card State
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
@@ -193,6 +195,26 @@ export default function Home() {
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
         setCompletedFields(prev => [...prev, field]);
         setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });
+      },
+      'round-results': ({ roundNumber, scores, scoreRecords }: {
+        roundNumber: number;
+        scores: { [key: number]: TeamScore };
+        scoreRecords: { [key: number]: TeamScoreRecord };
+      }) => {
+        setTeamScores(scores);
+        setTeamScoreRecords(scoreRecords);
+      },
+      'new-round-started': ({ players, scores, scoreRecords }: {
+        players: Player[];
+        scores: { [key: number]: TeamScore };
+        scoreRecords: { [key: number]: TeamScoreRecord };
+      }) => {
+        setPlayers(players);
+        setTeamScores(scores);
+        setTeamScoreRecords(scoreRecords);
+        setGamePhase('deal');
+        setCurrentField(null);
+        setCurrentTrump(null);
       }
     };
 

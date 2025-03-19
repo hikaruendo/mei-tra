@@ -37,6 +37,7 @@ export class GameStateService {
       teamScoreRecords: this.scoreService.initializeTeamScoreRecords(),
       chomboViolations: [],
       currentTrump: null,
+      roundNumber: 1,
     };
   }
 
@@ -170,7 +171,7 @@ export class GameStateService {
 
   isGameOver(): boolean {
     return Object.values(this.state.teamScores).some(
-      // テストで３点にする
+      // TODO: テストで３点にする
       (score) => score.total >= 3,
       // (score) => score.total >= 17,
     );
@@ -211,5 +212,25 @@ export class GameStateService {
 
   resetCurrentField(): void {
     this.state.playState.currentField = null;
+  }
+
+  get roundNumber(): number {
+    return this.state.roundNumber;
+  }
+
+  set roundNumber(value: number) {
+    this.state.roundNumber = value;
+  }
+
+  get currentTurn(): string | null {
+    const currentPlayer = this.state.players[this.state.currentPlayerIndex];
+    return currentPlayer?.id || null;
+  }
+
+  set currentTurn(playerId: string) {
+    const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
+    if (playerIndex !== -1) {
+      this.state.currentPlayerIndex = playerIndex;
+    }
   }
 }

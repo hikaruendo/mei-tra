@@ -99,4 +99,5 @@ export interface GameState {
   playState: PlayState;
   teamScoreRecords: { [key: number]: TeamScoreRecord };
   chomboViolations: ChomboViolation[];
+  roundNumber: number;
 }

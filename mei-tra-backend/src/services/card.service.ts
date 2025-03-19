@@ -135,7 +135,9 @@ export class CardService {
 
     // Get the card's value and suit
     const value = card.startsWith('10') ? '10' : card[0];
-    const suit = card.startsWith('10') ? card.slice(2) : card.slice(1);
+    const suit = card.startsWith('10')
+      ? card.slice(2)
+      : this.getCardSuit(card, trumpType);
 
     // Base strength from the card's value
     let strength = this.CARD_STRENGTHS[value] || 0;

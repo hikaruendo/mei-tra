@@ -47,4 +47,19 @@ export interface TeamScores {
     play: number;
     total: number;
   };
+}
+
+export interface TeamScore {
+  deal: number;
+  blow: number;
+  play: number;
+  total: number;
+}
+
+export interface TeamScoreRecord {
+  deal: number;
+  blow: number;
+  play: number;
+  total: number;
+  round: number;
 } 
