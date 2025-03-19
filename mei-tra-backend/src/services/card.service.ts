@@ -4,7 +4,7 @@ import { Field, TrumpType } from '../types/game.types';
 @Injectable()
 export class CardService {
   private readonly CARD_STRENGTHS: Record<string, number> = {
-    JOKER: 100,
+    JOKER: 150,
     A: 14,
     K: 13,
     Q: 12,
@@ -23,6 +23,14 @@ export class CardService {
     daya: 3,
     club: 2,
     zuppe: 1,
+  };
+
+  private readonly TRUMP_TO_SUIT: Record<TrumpType, string> = {
+    tra: '', // traは特殊なので空文字
+    hel: '♥', // ハート
+    daya: '♦', // ダイヤ
+    club: '♣', // クラブ
+    zuppe: '♠', // スペード
   };
 
   private readonly suits = ['♠', '♣', '♥', '♦'];
@@ -120,24 +128,45 @@ export class CardService {
   getCardStrength(
     card: string,
     baseSuit: string,
-    trumpSuit: TrumpType | null,
+    trumpType: TrumpType | null,
   ): number {
-    const suit = card.replace(/[0-9JQKA]/, '');
-    const value = card.replace(/[♠♣♥♦]/, '');
-    let strength = this.CARD_STRENGTHS[value];
+    console.log('card:', card);
+    if (card === 'JOKER') return this.CARD_STRENGTHS.JOKER;
+
+    // Get the card's value and suit
+    const value = card.startsWith('10') ? '10' : card[0];
+    const suit = card.startsWith('10') ? card.slice(2) : card.slice(1);
+
+    // Base strength from the card's value
+    let strength = this.CARD_STRENGTHS[value] || 0;
 
     // Jの強さを特別に処理（tra の場合は除く）
-    if (value === 'J' && trumpSuit && trumpSuit !== 'tra') {
-      if (this.isPrimaryJack(card, trumpSuit)) {
+    if (value === 'J' && trumpType && trumpType !== 'tra') {
+      if (this.isPrimaryJack(card, trumpType)) {
         strength = 19; // 正J
-      } else if (this.isSecondaryJack(card, trumpSuit)) {
+      } else if (this.isSecondaryJack(card, trumpType)) {
         strength = 18; // 副J
       }
     }
 
-    // Add bonus strength for trump suit cards
+    // If no trump is set or trump is tra, only match base suit
+    if (!trumpType || trumpType === 'tra') {
+      if (suit === baseSuit) {
+        strength += 50; // Base suit bonus
+      }
+      return strength;
+    }
+
+    // Get the trump suit for the current trump type
+    const trumpSuit = this.TRUMP_TO_SUIT[trumpType];
+
+    // Add trump bonus if the card's suit matches the trump suit
     if (suit === trumpSuit) {
-      strength += 50;
+      strength += 100; // Trump suit bonus
+    }
+    // Add base suit bonus if it matches the base suit
+    else if (suit === baseSuit) {
+      strength += 50; // Base suit bonus
     }
 
     console.log(
@@ -152,6 +181,7 @@ export class CardService {
       'strength:',
       strength,
     );
+
     return strength;
   }
 

@@ -170,13 +170,29 @@ export class GameStateService {
 
   isGameOver(): boolean {
     return Object.values(this.state.teamScores).some(
-      (score) => score.total >= 17,
+      // テストで３点にする
+      (score) => score.total >= 3,
+      // (score) => score.total >= 17,
     );
   }
 
   resetState(): void {
     this.initializeState();
-    this.chomboService.clearViolations();
+  }
+
+  resetRoundState(): void {
+    // Keep the current players and scores
+    const players = [...this.state.players];
+    const teamScores = { ...this.state.teamScores };
+    const teamScoreRecords = { ...this.state.teamScoreRecords };
+
+    // Initialize new state
+    this.initializeState();
+
+    // Restore players and scores
+    this.state.players = players;
+    this.state.teamScores = teamScores;
+    this.state.teamScoreRecords = teamScoreRecords;
   }
 
   private handleFieldComplete(field: Field, winnerId: string): void {

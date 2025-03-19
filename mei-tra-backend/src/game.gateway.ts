@@ -498,6 +498,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    // Check if all players have empty hands
+    const allHandsEmpty = state.players.every(
+      (player) => player.hand.length === 0,
+    );
+    if (allHandsEmpty) {
+      // Determine winning team based on fields won
+      const winningTeam = this.playService.determineWinningTeam(
+        state.playState.fields,
+        state.players,
+      );
+      this.handleGameOver(winningTeam);
+      return;
+    }
+
     // Set the winner as the next dealer
     const winnerIndex = state.players.findIndex((p) => p.id === winner.id);
     if (winnerIndex !== -1) {
@@ -555,8 +569,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Check if any team has reached 17 points
-    if (state.teamScores[0].total >= 17 || state.teamScores[1].total >= 17) {
-      const finalWinner = state.teamScores[0].total >= 17 ? 0 : 1;
+    // テストで３点にする
+    if (state.teamScores[0].total >= 3 || state.teamScores[1].total >= 3) {
+      const finalWinner = state.teamScores[0].total >= 3 ? 0 : 1;
       const winningTeamPlayers = state.players.filter(
         (p) => p.team === finalWinner,
       );
@@ -564,7 +579,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .map((p) => p.name)
         .join(' and ');
 
-      // Emit game over
+      // Emit final game over
       this.server.emit('game-over', {
         winner: `Team ${finalWinner} (${winningTeamNames})`,
         winningTeam: finalWinner,
@@ -576,6 +591,36 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       setTimeout(() => {
         this.gameState.resetState();
       }, 5000);
+    } else {
+      // Emit round results
+      this.server.emit('round-complete', {
+        roundWinner: winningTeam,
+        scores: state.teamScores,
+        scoreRecords: state.teamScoreRecords,
+      });
+
+      // Start new round after a short delay
+      setTimeout(() => {
+        // Reset round state but keep scores
+        this.gameState.resetRoundState();
+
+        // Deal new cards
+        this.gameState.dealCards();
+
+        // Emit new round started
+        this.server.emit('new-round-started', {
+          players: state.players,
+          scores: state.teamScores,
+          scoreRecords: state.teamScoreRecords,
+        });
+
+        // Move to deal phase
+        this.server.emit('update-phase', {
+          phase: 'deal',
+          scores: state.teamScores,
+          winner: null,
+        });
+      }, 3000);
     }
   }
 

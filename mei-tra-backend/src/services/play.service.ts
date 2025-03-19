@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Field, Player, TrumpType } from '../types/game.types';
+import { Field, Player, TrumpType, CompletedField } from '../types/game.types';
 import { CardService } from './card.service';
 
 @Injectable()
@@ -116,7 +116,7 @@ export class PlayService {
     return true;
   }
 
-  determineWinningTeam(fields: Field[], players: Player[]): number {
+  determineWinningTeam(fields: CompletedField[], players: Player[]): number {
     const team0Score = fields.filter(
       (f) => players.find((p) => p.id === f.dealerId)?.team === 0,
     ).length;
@@ -126,5 +126,29 @@ export class PlayService {
     ).length;
 
     return team0Score > team1Score ? 0 : 1;
+  }
+
+  calculatePlayPoints(
+    winningTeam: number,
+    declaredPairs: number,
+    wonFields: number,
+  ): number {
+    console.log('declaredPairs:', declaredPairs);
+    console.log('wonFields:', wonFields);
+    // Calculate actual pairs (each field is 4 cards, so divide by 2 for pairs)
+    const actualPairs = Math.floor(wonFields / 2);
+
+    // If no declaration was made (X = 0), just return 0 points
+    if (declaredPairs === 0) {
+      return 0;
+    }
+
+    // Y >= X: 0.5(Y-X) + X - 5
+    if (actualPairs >= declaredPairs) {
+      return 0.5 * (actualPairs - declaredPairs) + declaredPairs - 5;
+    } else {
+      // Y < X: X-Y points to opposing team (return negative to indicate points go to opposing team)
+      return -(declaredPairs - actualPairs);
+    }
   }
 }
