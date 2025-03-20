@@ -127,6 +127,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       startingPlayerId: state.players[0].id,
     };
 
+    console.log('startgame');
+    console.log('state', state);
+
     // 初期状態をクライアントに通知
     this.server.emit('game-started', state.players);
     this.server.emit('update-phase', {
@@ -573,7 +576,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (hasTeamReached) {
       // Find the winning team
       const winningTeamEntry = Object.entries(state.teamScores).find(
-        ([, score]) => score.total >= 17,
+        // TODO: テストのため3
+        ([, score]) => score.total >= 3,
       );
       const finalWinningTeam = winningTeamEntry
         ? (Number(winningTeamEntry[0]) as Team)
@@ -599,26 +603,116 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Start new round after a short delay
       setTimeout(() => {
+        // Store previous dealer index before reset
+        const prevDealerId = state.playState?.currentField?.dealerId;
+        const prevDealerIndex = prevDealerId
+          ? state.players.findIndex((p) => p.id === prevDealerId)
+          : 0;
+
         this.gameState.resetRoundState();
         this.gameState.roundNumber++;
 
-        // Generate new deck and deal cards
-        state.deck = this.cardService.generateDeck();
-        this.gameState.dealCards();
+        // Emit round reset event
+        this.server.emit('round-reset');
 
-        // Emit new round started event
-        this.server.emit('new-round-started', {
-          players: state.players,
-          scores: state.teamScores,
-          scoreRecords: state.teamScoreRecords,
+        // Get fresh state after reset
+        const updatedState = this.gameState.getState();
+
+        // Calculate next dealer
+        const nextDealerIndex =
+          (prevDealerIndex + 1) % updatedState.players.length;
+        const nextDealer = updatedState.players[nextDealerIndex];
+
+        // テスト用の初期状態設定
+        // 各プレイヤーに1枚ずつカードを配る
+        const testCards = ['A♠', 'K♥', 'Q♣', 'J♦'];
+        updatedState.players.forEach((player, index) => {
+          player.hand = [testCards[index]];
         });
 
-        // Set next dealer
-        const nextDealer = state.players.find((p) => p.team === winnerTeam);
-        if (nextDealer) {
-          this.gameState.currentTurn = nextDealer.id;
-          this.server.emit('update-turn', nextDealer.id);
+        // ディーラーチームが5ペア取得済みの状態を作る
+        const dealerTeam = nextDealer.team;
+        const testFields: CompletedField[] = [];
+
+        // 5ペア分のフィールドを作成
+        for (let i = 0; i < 5; i++) {
+          testFields.push({
+            cards: ['5♠', '5♥', '5♣', '5♦'],
+            dealerId: nextDealer.id,
+            winnerId: nextDealer.id,
+            winnerTeam: nextDealer.team,
+          });
         }
+
+        // プレイ状態を設定
+        updatedState.gamePhase = 'play';
+        updatedState.playState = {
+          currentField: {
+            cards: [],
+            baseCard: '',
+            dealerId: nextDealer.id,
+            isComplete: false,
+          },
+          negriCard: null,
+          neguri: {},
+          fields: testFields,
+          lastWinnerId: null,
+          isTanzenRound: false,
+          openDeclared: false,
+          openDeclarerId: null,
+        };
+
+        // ブロー状態を設定（例：ハート6ペアで宣言）
+        updatedState.blowState = {
+          currentTrump: 'hel',
+          currentHighestDeclaration: {
+            playerId: nextDealer.id,
+            trumpType: 'hel',
+            numberOfPairs: 6,
+            timestamp: Date.now(),
+          },
+          declarations: [
+            {
+              playerId: nextDealer.id,
+              trumpType: 'hel',
+              numberOfPairs: 6,
+              timestamp: Date.now(),
+            },
+          ],
+          lastPasser: null,
+          isRoundCancelled: false,
+          startingPlayerId: nextDealer.id,
+        };
+
+        // Update game state with the new state
+        this.gameState.updateState({
+          gamePhase: updatedState.gamePhase,
+          players: updatedState.players,
+          playState: updatedState.playState,
+          blowState: updatedState.blowState,
+        });
+
+        // Always emit update-players event to update player hands
+        console.log(
+          'Emitting update-players event with players:',
+          updatedState.players,
+        );
+        this.server.emit('update-players', updatedState.players);
+        console.log('update-players event emitted');
+
+        // Emit new round started event with all necessary state
+        this.server.emit('new-round-started', {
+          players: updatedState.players,
+          scores: updatedState.teamScores,
+          scoreRecords: updatedState.teamScoreRecords,
+          gamePhase: 'play',
+          currentTurn: nextDealer.id,
+          currentPlayerIndex: nextDealerIndex,
+        });
+
+        // Update turn
+        this.gameState.currentTurn = nextDealer.id;
+        this.server.emit('update-turn', nextDealer.id);
       }, 3000);
     }
   }
@@ -681,8 +775,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private handleRoundEnd(): void {
     const state = this.gameState.getState();
-    state.deck = this.cardService.generateDeck();
-    this.gameState.dealCards();
     this.chomboService.expireViolations();
 
     // Emit round end

@@ -52,6 +52,7 @@ export default function Home() {
 
     const socketHandlers = {
       'update-players': (players: Player[]) => {
+        console.log('update-players event received');
         console.log('Players updated:', players);
         setPlayers(players);
         setTeams({
@@ -138,9 +139,7 @@ export default function Home() {
           p.id === playerId ? { ...p, hasBroken: true, hand } : p
         ));
       },
-      'round-reset': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
-        setPlayers(players);
-        setWhoseTurn(nextDealer);
+      'round-reset': () => {
         resetBlowState();
       },
       'round-cancelled': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
@@ -209,17 +208,26 @@ export default function Home() {
         setTeamScoreRecords(scoreRecords);
         setRoundNumber(roundNumber);
       },
-      'new-round-started': ({ players, scores, scoreRecords }: {
+      'new-round-started': ({ players, scores, scoreRecords, gamePhase, currentTurn, currentPlayerIndex }: {
         players: Player[];
         scores: { [key: number]: TeamScore };
         scoreRecords: { [key: number]: TeamScoreRecord };
+        gamePhase: GamePhase;
+        currentTurn: string;
+        currentPlayerIndex: number;
       }) => {
         setPlayers(players);
         setTeamScores(scores as TeamScores);
         setTeamScoreRecords(scoreRecords);
-        setGamePhase('deal');
+        setGamePhase(gamePhase);
+        setWhoseTurn(currentTurn);
         setCurrentField(null);
         setCurrentTrump(null);
+        setCompletedFields([]);
+        setNegriCard(null);
+        setNegriPlayerId(null);
+        setRevealedAgari(null);
+        resetBlowState();
       }
     };
 

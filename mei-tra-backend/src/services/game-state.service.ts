@@ -69,6 +69,13 @@ export class GameStateService {
     return this.state;
   }
 
+  updateState(newState: Partial<GameState>): void {
+    this.state = {
+      ...this.state,
+      ...newState,
+    };
+  }
+
   addPlayer(id: string, name: string): boolean {
     if (this.state.players.length >= 4) return false;
     const team = (this.state.players.length % 2) as Team;
@@ -194,6 +201,10 @@ export class GameStateService {
     this.state.players = players;
     this.state.teamScores = teamScores;
     this.state.teamScoreRecords = teamScoreRecords;
+
+    // Generate new deck and deal cards
+    this.state.deck = this.cardService.generateDeck();
+    this.dealCards();
   }
 
   private handleFieldComplete(field: Field, winnerId: string): void {

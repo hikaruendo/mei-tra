@@ -40,17 +40,15 @@ export interface BlowDeclaration {
   timestamp: number;
 }
 
-export interface TeamScores {
-  [key: number]: {
-    deal: number;
-    blow: number;
-    play: number;
-    total: number;
-  };
+export interface TeamScore {
+  deal: number;
+  blow: number;
+  play: number;
+  total: number;
 }
 
-export interface TeamScore {
-  total: number;
+export interface TeamScores {
+  [key: number]: TeamScore;
 }
 
 export interface RoundScore {
@@ -61,4 +59,16 @@ export interface RoundScore {
 
 export interface TeamScoreRecord {
   roundScores: RoundScore[];
+}
+
+export interface TeamPlayers {
+  team0: Player[];
+  team1: Player[];
+}
+
+export interface GameActions {
+  selectNegri: (card: string) => void;
+  playCard: (card: string) => void;
+  declareBlow: () => void;
+  passBlow: () => void;
 } 
