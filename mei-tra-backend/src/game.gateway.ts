@@ -79,8 +79,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 5ペア分のフィールドを作成
     for (let i = 0; i < 5; i++) {
+      // プレイヤーの順序に合わせてカードを配置
+      const orderedCards = [
+        '5♠', // 最初のプレイヤー
+        '5♥', // 2番目のプレイヤー
+        '5♣', // 3番目のプレイヤー
+        '5♦', // 4番目のプレイヤー
+      ];
       testFields.push({
-        cards: ['5♠', '5♥', '5♣', '5♦'],
+        cards: orderedCards,
         dealerId: state.players[0].id, // ディーラーチームのプレイヤーをwinnerに
         winnerId: state.players[0].id,
         winnerTeam: state.players[0].team,
@@ -636,8 +643,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // 5ペア分のフィールドを作成
         for (let i = 0; i < 5; i++) {
+          // プレイヤーの順序に合わせてカードを配置
+          const orderedCards = [
+            '5♠', // 最初のプレイヤー
+            '5♥', // 2番目のプレイヤー
+            '5♣', // 3番目のプレイヤー
+            '5♦', // 4番目のプレイヤー
+          ];
           testFields.push({
-            cards: ['5♠', '5♥', '5♣', '5♦'],
+            cards: orderedCards,
             dealerId: nextDealer.id,
             winnerId: nextDealer.id,
             winnerTeam: nextDealer.team,
@@ -703,16 +717,36 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Emit new round started event with all necessary state
         this.server.emit('new-round-started', {
           players: updatedState.players,
-          scores: updatedState.teamScores,
-          scoreRecords: updatedState.teamScoreRecords,
-          gamePhase: 'play',
           currentTurn: nextDealer.id,
-          currentPlayerIndex: nextDealerIndex,
+          gamePhase: 'play',
+          currentField: null,
+          completedFields: [],
+          negriCard: null,
+          negriPlayerId: null,
+          revealedAgari: null,
+          currentTrump: updatedState.blowState.currentTrump,
+          currentHighestDeclaration:
+            updatedState.blowState.currentHighestDeclaration,
+          blowDeclarations: updatedState.blowState.declarations,
         });
 
         // Update turn
         this.gameState.currentTurn = nextDealer.id;
         this.server.emit('update-turn', nextDealer.id);
+
+        // Emit blow state update
+        this.server.emit('blow-updated', {
+          declarations: updatedState.blowState.declarations,
+          currentHighest: updatedState.blowState.currentHighestDeclaration,
+        });
+
+        // Emit phase update with current trump
+        this.server.emit('update-phase', {
+          phase: 'play',
+          scores: updatedState.teamScores,
+          winner: dealerTeam,
+          currentTrump: updatedState.blowState.currentTrump,
+        });
       }, 3000);
     }
   }

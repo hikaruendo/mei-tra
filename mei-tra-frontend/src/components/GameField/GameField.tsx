@@ -14,17 +14,21 @@ export const GameField: React.FC<GameFieldProps> = ({
     return null;
   }
 
+  // ディーラーのインデックスを取得
+  const dealerIndex = players.findIndex(p => p.id === currentField.dealerId);
+  
   return (
     <div className="field-container">
       <div className="flex gap-4 justify-center">
         {currentField.cards.map((card: string, index: number) => {
           const isRed = card.match(/[♥♦]/);
-          const playerId = players[index % players.length]?.id;
-          const playerName = players.find(p => p.id === playerId)?.name;
+          // ディーラーから順番にプレイヤーを決定
+          const playerIndex = (dealerIndex + index) % players.length;
+          const player = players[playerIndex];
           
           return (
             <div key={index} className="text-center">
-              <div className="text-white mb-2">{playerName}</div>
+              <div className="text-white mb-2">{player.name}</div>
               <div className={`card ${isRed ? 'red-suit' : 'black-suit'}`}>
                 {card === 'JOKER' ? '🃏' : (
                   <>

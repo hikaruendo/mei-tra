@@ -208,26 +208,42 @@ export default function Home() {
         setTeamScoreRecords(scoreRecords);
         setRoundNumber(roundNumber);
       },
-      'new-round-started': ({ players, scores, scoreRecords, gamePhase, currentTurn, currentPlayerIndex }: {
+      'new-round-started': ({
+        players,
+        currentTurn,
+        gamePhase,
+        currentField,
+        completedFields,
+        negriCard,
+        negriPlayerId,
+        revealedAgari,
+        currentTrump,
+        currentHighestDeclaration,
+        blowDeclarations,
+      }: {
         players: Player[];
-        scores: { [key: number]: TeamScore };
-        scoreRecords: { [key: number]: TeamScoreRecord };
-        gamePhase: GamePhase;
         currentTurn: string;
-        currentPlayerIndex: number;
+        gamePhase: GamePhase;
+        currentField: Field | null;
+        completedFields: CompletedField[];
+        negriCard: string | null;
+        negriPlayerId: string | null;
+        revealedAgari: string | null;
+        currentTrump: TrumpType | null;
+        currentHighestDeclaration: BlowDeclaration | null;
+        blowDeclarations: BlowDeclaration[];
       }) => {
         setPlayers(players);
-        setTeamScores(scores as TeamScores);
-        setTeamScoreRecords(scoreRecords);
-        setGamePhase(gamePhase);
         setWhoseTurn(currentTurn);
-        setCurrentField(null);
-        setCurrentTrump(null);
-        setCompletedFields([]);
-        setNegriCard(null);
-        setNegriPlayerId(null);
-        setRevealedAgari(null);
-        resetBlowState();
+        setGamePhase(gamePhase);
+        setCurrentField(currentField);
+        setCompletedFields(completedFields);
+        setNegriCard(negriCard);
+        setNegriPlayerId(negriPlayerId);
+        setRevealedAgari(revealedAgari);
+        setCurrentTrump(currentTrump);
+        setCurrentHighestDeclaration(currentHighestDeclaration);
+        setBlowDeclarations(blowDeclarations);
       }
     };
 
