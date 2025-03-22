@@ -1,16 +1,12 @@
 .player-positions {
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  padding: var(--spacing-lg);
   display: grid;
   grid-template-areas:
     ".    top     ."
     "left field right"
     ".    bottom  .";
-  grid-template-columns: 300px minmax(400px, 600px) 300px;
-  grid-template-rows: 200px 1fr 200px;
+  grid-template-columns: 300px 30px 300px;
+  grid-template-rows: 200px 200px 200px;
   gap: var(--spacing-lg);
   justify-content: center;
 }
@@ -88,6 +84,7 @@
 .card-count {
   font-size: var(--font-size-sm);
   color: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
 }
 
 /* Player position base styles */

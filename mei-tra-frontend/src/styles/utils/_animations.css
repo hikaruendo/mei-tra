@@ -50,7 +50,7 @@
 }
 
 /* Utility classes */
-.animate-hover {
+/* .animate-hover {
   animation: hover-lift 0.3s ease;
 }
 
@@ -68,4 +68,4 @@
 
 .animate-select-change {
   animation: selectChange 0.3s ease-out forwards;
-}
+} */

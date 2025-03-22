@@ -119,39 +119,13 @@
   left: 100px;
 }
 
-/* Add tooltip for disabled elements */
-.blow-controls button[disabled]::after,
-select.trump-select[disabled]::after,
-select.pairs-select[disabled]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-}
-
-.blow-controls button[disabled]:hover::after,
-select.trump-select[disabled]:hover::after,
-select.pairs-select[disabled]:hover::after {
-  opacity: 1;
-}
-
 .blow-controls {
   position: fixed;
-  bottom: 20px;
+  bottom: 50%;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;  /* Added to align items vertically */
+  align-items: center;
   gap: 1.5rem;
   z-index: 30;
   background: rgba(139, 69, 19, 0.95);

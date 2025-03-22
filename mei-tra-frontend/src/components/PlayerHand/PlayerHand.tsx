@@ -36,25 +36,23 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   players,
 }) => {
   const getRelativePosition = () => {
-    const isCurrentPlayer = player.id === getSocket().id;
-    const currentPlayerTeam = players.find(p => p.id === getSocket().id)?.team;
-    const isTeammate = player.team === currentPlayerTeam;
-
-    if (isCurrentPlayer) {
-      return 'bottom';
-    }
-
-    if (isTeammate) {
-      return 'top';
-    }
-
-    // For opponents, determine left or right based on their position
-    const currentPlayerIndex = players.findIndex(p => p.id === getSocket().id);
+    const currentPlayerId = getSocket().id;
+    const currentIndex = players.findIndex(p => p.id === currentPlayerId);
     const playerIndex = players.findIndex(p => p.id === player.id);
-    const isLeftOpponent = (playerIndex < currentPlayerIndex && !isTeammate) || 
-                          (playerIndex === players.length - 1 && currentPlayerIndex === 0);
 
-    return isLeftOpponent ? 'left' : 'right';
+    if (player.id === currentPlayerId) return 'bottom';
+
+    const currentTeam = players.find(p => p.id === currentPlayerId)?.team;
+    const isTeammate = player.team === currentTeam;
+
+    if (isTeammate) return 'top';
+
+    const diff = (playerIndex - currentIndex + players.length) % players.length;
+
+    if (diff === 1) return 'right';
+    if (diff === 3) return 'left';
+
+    return 'left'; // fallback
   };
 
   const renderPlayerHand = () => {
@@ -135,4 +133,4 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       </div>
     </div>
   );
-}; 
+};
