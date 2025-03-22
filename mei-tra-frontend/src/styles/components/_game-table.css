@@ -1,0 +1,265 @@
+/* Game layout styles */
+.game-layout {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #004400;
+}
+
+.game-info {
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  z-index: 20;
+  max-width: 300px;
+  border-bottom-right-radius: 8px;
+}
+
+.game-info > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.current-trump {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.turn-indicator {
+  width: 100%;
+}
+
+.turn-indicator > div {
+  width: 100%;
+  text-align: left;
+}
+
+/* Pass button styling */
+.pass-button {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom, #FF9800, #F57C00);
+  color: white;
+  font-size: 1.4rem;
+  font-weight: bold;
+  padding: 1rem 3rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 40;
+}
+
+.pass-button:hover {
+  background: linear-gradient(to bottom, #FB8C00, #EF6C00);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.pass-button:active {
+  transform: translateX(-50%) translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.completed-fields {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.completed-field {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+}
+
+.completed-field-card {
+  width: 2rem;
+  height: 3rem;
+}
+
+/* Game phase specific adjustments */
+.game-phase-blow .player-position.bottom {
+  bottom: 100px;
+}
+
+.game-phase-blow .player-position.top {
+  top: 100px;
+}
+
+.game-phase-blow .player-position.right {
+  right: 100px;
+}
+
+.game-phase-blow .player-position.left {
+  left: 100px;
+}
+
+/* Add tooltip for disabled elements */
+.blow-controls button[disabled]::after,
+select.trump-select[disabled]::after,
+select.pairs-select[disabled]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.blow-controls button[disabled]:hover::after,
+select.trump-select[disabled]:hover::after,
+select.pairs-select[disabled]:hover::after {
+  opacity: 1;
+}
+
+.blow-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;  /* Added to align items vertically */
+  gap: 1.5rem;
+  z-index: 30;
+  background: rgba(139, 69, 19, 0.95);
+  padding: 1.5rem 2.5rem;
+  border-radius: 1rem;
+  border: 2px solid #5C2C0C;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.blow-controls button,
+.blow-controls select {
+  height: 3.5rem;  /* Fixed height for all controls */
+  background: #4CAF50;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0 2rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blow-controls button.pass-button {
+  background: #FF9800;
+}
+
+.blow-controls button.pass-button:hover {
+  background: #F57C00;
+}
+
+.blow-controls button.blow-button {
+  background: #2196F3;
+}
+
+.blow-controls button.blow-button:hover {
+  background: #1976D2;
+}
+
+/* Add animation for active state */
+.blow-controls button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Add pulsing effect for the active button */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.blow-controls button.active {
+  animation: pulse 1.5s infinite;
+  background: #E91E63;
+}
+
+.blow-controls button.active:hover {
+  background: #D81B60;
+}
+
+/* Disabled states */
+.blow-controls button:disabled,
+select.trump-select:disabled,
+select.pairs-select:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Add subtle animation for selection change */
+@keyframes selectChange {
+  0% { transform: scale(0.98); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+select.trump-select,
+select.pairs-select {
+  animation: selectChange 0.3s ease-out forwards;
+}
+
+/* Custom styles for the pairs select */
+.pairs-select-container {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 215, 0, 0.1);
+}
+
+select.pairs-select {
+  background: linear-gradient(to bottom, #FF9800, #F57C00);
+}
+
+select.pairs-select:hover {
+  background: linear-gradient(to bottom, #FB8C00, #EF6C00);
+}
+
+select.pairs-select:focus {
+  background: linear-gradient(to bottom, #F57C00, #EF6C00);
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.4);
+}
+
+select.pairs-select option {
+  background: #F57C00;
+}

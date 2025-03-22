@@ -1,0 +1,109 @@
+/* Card styles */
+.card {
+  width: 60px;
+  height: 84px;
+  margin: 0 -15px;
+  background: white;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.card.selected {
+  transform: translateY(-15px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+  border: 2px solid #4CAF50;
+}
+
+.card.face-down {
+  background: linear-gradient(45deg, #1a237e, #283593);
+  color: white;
+  font-size: 1.5rem;
+}
+
+/* Hover effects */
+.card:hover {
+  transform: translateY(-10px);
+  z-index: 10;
+}
+
+.red-suit {
+  color: #D40000;
+}
+
+.black-suit {
+  color: #212121;
+}
+
+.suit {
+  font-size: 1.4rem;
+}
+
+/* Negri card display styles */
+.negri-card-display {
+  position: absolute;
+  right: -80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem;
+  border-radius: 4px;
+  z-index: 5;
+  min-height: 100px;
+  perspective: 1000px;
+  width: 80px;
+  opacity: 0.8;
+}
+
+.negri-card {
+  border: 1px solid gold;
+  box-shadow: 0 0 5px gold;
+  transform: none !important;
+  margin: 0 -10px;
+  transition: transform 0.2s;
+  cursor: pointer;
+  background: white;
+  color: black;
+  width: 50px;
+  height: 70px;
+  font-size: 1rem;
+}
+
+.negri-card.red-suit {
+  color: #D40000;
+}
+
+.negri-card.black-suit {
+  color: #000000;
+}
+
+.negri-card .suit {
+  font-size: 1.2rem;
+  margin-top: 0.1rem;
+}
+
+.negri-card.face-down {
+  background: #2060AA;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.negri-label {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: gold;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}

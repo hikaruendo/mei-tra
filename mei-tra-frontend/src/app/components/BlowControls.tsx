@@ -73,7 +73,7 @@ export function BlowControls({
         </div>
       </div>
       <div className="blow-controls">
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-16 items-center">
           <div className="flex flex-col">
             <label className="text-white mb-2">Select Trump</label>
             <select 

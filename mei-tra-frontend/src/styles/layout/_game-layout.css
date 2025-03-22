@@ -1,0 +1,230 @@
+.player-positions {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: var(--spacing-lg);
+  display: grid;
+  grid-template-areas:
+    ".    top     ."
+    "left field right"
+    ".    bottom  .";
+  grid-template-columns: 300px minmax(400px, 600px) 300px;
+  grid-template-rows: 200px 1fr 200px;
+  gap: var(--spacing-lg);
+  justify-content: center;
+}
+
+.field-container {
+  grid-area: field;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 400px;
+  max-height: 400px;
+  margin: auto;
+  background: transparent;
+  border-radius: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4;
+}
+
+.hand-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* 3D効果のために必要な遠近法の設定。カードが3D空間で表示されるようにする。値が大きいほど遠近感が強くなる。 */
+  perspective: 1000px;
+  width: 100%;
+}
+
+/* Base card styles */
+.hand-container .card {
+  flex-shrink: 0;
+  margin: 0 var(--card-overlap);
+  transition: var(--transition-card);
+  transform-origin: bottom center;
+  position: relative;
+  cursor: pointer;
+  transform: none !important;
+}
+
+/* Player info styles */
+.player-info-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.player-info-container.current-turn {
+  border: 2px solid var(--color-gold);
+  box-shadow: 0 0 10px var(--color-gold);
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+  background: transparent;
+}
+
+.player-name {
+  font-size: var(--font-size-base);
+  color: var(--color-white);
+  margin-bottom: var(--spacing-xs);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.card-count {
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Player position base styles */
+.player-position {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+}
+
+/* Player position specific styles */
+.player-position.bottom {
+  grid-area: bottom;
+  align-self: center;
+  justify-self: center;
+}
+
+.player-position.top {
+  grid-area: top;
+  align-self: center;
+  justify-self: center;
+}
+
+.player-position.left {
+  grid-area: left;
+  align-self: center;
+  justify-self: center;
+  transform: rotate(90deg) translateX(-50%);
+  transform-origin: left center;
+  width: 400px;
+}
+
+.player-position.right {
+  grid-area: right;
+  align-self: center;
+  justify-self: center;
+  transform: rotate(-90deg) translateX(50%);
+  transform-origin: right center;
+  width: 400px;
+}
+
+
+/* Bottom player specific styles */
+.player-position.bottom .hand-container .card {
+  width: var(--card-width);
+  height: var(--card-height);
+  margin: 0 var(--card-overlap);
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  box-shadow: var(--shadow-card);
+  transform: rotate(calc(var(--card-index, 0) * 3deg - 21deg)) translateY(calc(var(--card-index, 0) * 0.5px));
+}
+
+.player-position.bottom .hand-container .card .rank {
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: var(--spacing-xs);
+}
+
+.player-position.bottom .hand-container .card .suit {
+  font-size: var(--font-size-xxl);
+  line-height: 1;
+}
+
+/* Card states */
+.player-position.bottom .hand-container .card.selected,
+.player-position.bottom .hand-container .card:hover {
+  transform: translateY(-50px) rotate(0deg) scale(1.1) !important;
+  z-index: var(--z-index-card);
+  margin: 0 var(--spacing-md);
+}
+
+.player-position.bottom .hand-container .card.selected {
+  z-index: calc(var(--z-index-card) + 5);
+  box-shadow: var(--shadow-selected);
+  border: 2px solid var(--color-gold);
+}
+
+/* Card colors */
+.player-position.bottom .hand-container .card.red-suit {
+  color: var(--color-card-red);
+}
+
+.player-position.bottom .hand-container .card.black-suit {
+  color: var(--color-card-black);
+}
+
+/* Joker card style */
+.player-position.bottom .hand-container .card.joker .rank {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: var(--font-size-base);
+  letter-spacing: -1px;
+  margin-left: var(--spacing-xs);
+  font-weight: bold;
+  color: purple;
+}
+
+/* Player info rotation for side positions */
+.player-position.left .player-info {
+  transform: rotate(-90deg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.player-position.right .player-info {
+  transform: rotate(90deg);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Card count styles */
+.player-position.right .card-count,
+.player-position.top .card-count,
+.player-position.left .card-count {
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.player-position.bottom .card-count {
+  font-size: var(--font-size-base);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-card);
+}
+
+/* Bottom player name highlight */
+.player-position.bottom .player-name {
+  font-size: var(--font-size-lg);
+  max-width: 200px;
+  color: var(--color-gold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
