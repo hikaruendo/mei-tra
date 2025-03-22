@@ -9,11 +9,6 @@ import { BlowControls } from '@/app/components/BlowControls';
 import { getSocket } from '@/app/socket';
 import { GameInfo } from '../GameInfo/GameInfo';
 
-interface TeamPlayers {
-  team0: Player[];
-  team1: Player[];
-}
-
 interface GameActions {
   selectNegri: (card: string) => void;
   playCard: (card: string) => void;
@@ -22,7 +17,6 @@ interface GameActions {
 }
 
 interface GameTableProps {
-  teams: TeamPlayers;
   whoseTurn: string | null;
   gamePhase: GamePhase | null;
   currentTrump: TrumpType | null;
@@ -45,7 +39,6 @@ interface GameTableProps {
 }
 
 export const GameTable: React.FC<GameTableProps> = ({
-  teams,
   whoseTurn,
   gamePhase,
   currentTrump,
@@ -100,73 +93,21 @@ export const GameTable: React.FC<GameTableProps> = ({
       )}
 
       <div className="player-positions">
-        {/* Top player */}
-        <div className="player-position top">
-          {teams.team1[0] && (
-            <PlayerHand
-              player={teams.team1[0]}
-              isCurrentTurn={whoseTurn === teams.team1[0].id}
-              selectedCards={selectedCards}
-              setSelectedCards={setSelectedCards}
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              gamePhase={gamePhase}
-              whoseTurn={whoseTurn}
-              gameActions={gameActions}
-            />
-          )}
-        </div>
-
-        {/* Right player */}
-        <div className="player-position right">
-          {teams.team0[0] && (
-            <PlayerHand
-              player={teams.team0[0]}
-              isCurrentTurn={whoseTurn === teams.team0[0].id}
-              selectedCards={selectedCards}
-              setSelectedCards={setSelectedCards}
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              gamePhase={gamePhase}
-              whoseTurn={whoseTurn}
-              gameActions={gameActions}
-            />
-          )}
-        </div>
-
-        {/* Bottom player */}
-        <div className="player-position bottom">
-          {teams.team1[1] && (
-            <PlayerHand
-              player={teams.team1[1]}
-              isCurrentTurn={whoseTurn === teams.team1[1].id}
-              selectedCards={selectedCards}
-              setSelectedCards={setSelectedCards}
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              gamePhase={gamePhase}
-              whoseTurn={whoseTurn}
-              gameActions={gameActions}
-            />
-          )}
-        </div>
-
-        {/* Left player */}
-        <div className="player-position left">
-          {teams.team0[1] && (
-            <PlayerHand
-              player={teams.team0[1]}
-              isCurrentTurn={whoseTurn === teams.team0[1].id}
-              selectedCards={selectedCards}
-              setSelectedCards={setSelectedCards}
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              gamePhase={gamePhase}
-              whoseTurn={whoseTurn}
-              gameActions={gameActions}
-            />
-          )}
-        </div>
+        {players.map((player) => (
+          <PlayerHand
+            key={player.id}
+            player={player}
+            isCurrentTurn={whoseTurn === player.id}
+            selectedCards={selectedCards}
+            setSelectedCards={setSelectedCards}
+            negriCard={negriCard}
+            negriPlayerId={negriPlayerId}
+            gamePhase={gamePhase}
+            whoseTurn={whoseTurn}
+            gameActions={gameActions}
+            players={players}
+          />
+        ))}
 
         {/* Center field */}
         <GameField

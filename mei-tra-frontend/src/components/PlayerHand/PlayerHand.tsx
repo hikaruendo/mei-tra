@@ -20,6 +20,7 @@ interface PlayerHandProps {
   gamePhase: GamePhase | null;
   whoseTurn: string | null;
   gameActions: GameActions;
+  players: Player[];
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -32,13 +33,36 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   gamePhase,
   whoseTurn,
   gameActions,
+  players,
 }) => {
+  const getRelativePosition = () => {
+    const isCurrentPlayer = player.id === getSocket().id;
+    const currentPlayerTeam = players.find(p => p.id === getSocket().id)?.team;
+    const isTeammate = player.team === currentPlayerTeam;
+
+    if (isCurrentPlayer) {
+      return 'bottom';
+    }
+
+    if (isTeammate) {
+      return 'top';
+    }
+
+    // For opponents, determine left or right based on their position
+    const currentPlayerIndex = players.findIndex(p => p.id === getSocket().id);
+    const playerIndex = players.findIndex(p => p.id === player.id);
+    const isLeftOpponent = (playerIndex < currentPlayerIndex && !isTeammate) || 
+                          (playerIndex === players.length - 1 && currentPlayerIndex === 0);
+
+    return isLeftOpponent ? 'left' : 'right';
+  };
+
   const renderPlayerHand = () => {
     const isCurrentPlayer = player.id === getSocket().id;
     
     if (isCurrentPlayer) {
       return (
-        <div className="flex flex-wrap gap-2">
+        <div className="hand-container">
           {player.hand.map((card, index) => {
             const value = card.replace(/[♠♣♥♦]/, '');
             const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
@@ -58,7 +82,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                       : [...selectedCards, card]);
                   }
                 }}
-                style={{ transform: `rotate(${-15 + (index * 3)}deg)` }}
+                style={{
+                  transform: `rotate(${-15 + (index * 3)}deg)`,
+                }}
+                data-card-index={index}
               >
                 {card === 'JOKER' ? '🃏' : (
                   <>
@@ -75,7 +102,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
 
     return (
-      <div className="flex gap-2">
+      <div className="hand-container">
         {Array(player.hand.length).fill(null).map((_, index) => (
           <div
             key={index}
@@ -89,17 +116,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     );
   };
 
+  const position = getRelativePosition();
+
   return (
-    <div className={`player-info ${isCurrentTurn ? 'current-turn' : ''}`}>
-      <div className="player-name">{player.name}</div>
-      <div className="card-count">{player.hand.length} cards</div>
-      {renderPlayerHand()}
-      {negriCard && negriPlayerId === player.id && (
-        <NegriCard
-          negriCard={negriCard}
-          negriPlayerId={negriPlayerId}
-        />
-      )}
+    <div className={`player-position ${position} ${isCurrentTurn ? 'current-turn' : ''}`}>
+      <div className="player-info">
+        <div className="player-name">{player.name}</div>
+        <div className="card-count">{player.hand.length} cards</div>
+        {renderPlayerHand()}
+        {negriCard && negriPlayerId === player.id && (
+          <NegriCard
+            negriCard={negriCard}
+            negriPlayerId={negriPlayerId}
+          />
+        )}
+      </div>
     </div>
   );
 }; 

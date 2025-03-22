@@ -362,7 +362,6 @@ export default function Home() {
         ) : (
           <>
             <GameTable
-              teams={teams}
               whoseTurn={whoseTurn}
               gamePhase={gamePhase}
               currentTrump={currentTrump}
