@@ -68,11 +68,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
             const isRed = suit === '♥' || suit === '♦';
             const isNegri = card === negriCard;
+            const isJoker = card === 'JOKER';
             
             return (
               <div
                 key={index}
-                className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''}`}
+                className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''}`}
                 onClick={() => {
                   if (gamePhase === 'play' && whoseTurn === getSocket().id) {
                     gameActions.playCard(card);
@@ -82,15 +83,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                       : [...selectedCards, card]);
                   }
                 }}
-                style={{
-                  transform: `rotate(${-15 + (index * 3)}deg)`,
-                }}
-                data-card-index={index}
+                style={{ '--card-index': index } as React.CSSProperties}
               >
-                {card === 'JOKER' ? '🃏' : (
+                {isJoker ? (
+                  <div className="rank">JOKER</div>
+                ) : (
                   <>
-                    {value}
-                    <span className="suit">{suit}</span>
+                    <div className="rank">{value}</div>
+                    <div className="suit">{suit}</div>
                   </>
                 )}
                 {isNegri && <div className="negri-label">Negri</div>}
@@ -119,10 +119,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const position = getRelativePosition();
 
   return (
-    <div className={`player-position ${position} ${isCurrentTurn ? 'current-turn' : ''}`}>
+    <div className={`player-position ${position}`}>
       <div className="player-info">
-        <div className="player-name">{player.name}</div>
-        <div className="card-count">{player.hand.length} cards</div>
+        <div className={`player-info-container ${isCurrentTurn ? 'current-turn' : ''}`}>
+          <div className="player-name">{player.name}</div>
+          <div className="card-count">{player.hand.length} cards</div>
+        </div>
         {renderPlayerHand()}
         {negriCard && negriPlayerId === player.id && (
           <NegriCard

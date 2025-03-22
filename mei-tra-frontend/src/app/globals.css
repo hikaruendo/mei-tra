@@ -151,7 +151,6 @@ main:hover {
   z-index: 2;
 }
 
-/* Opponent's cards */
 .flex.gap-2 {
   display: flex;
   justify-content: center;
@@ -168,6 +167,22 @@ main:hover {
   margin-left: 0;
 }
 
+.player-info-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.player-info-container.current-turn {
+  border: 2px solid #FFD700;
+  box-shadow: 0 0 10px #FFD700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
 .player-name {
   font-size: 1.3em;
   font-weight: 700;
@@ -178,6 +193,7 @@ main:hover {
 .card-count {
   font-size: 0.9em;
   color: #555;
+  border-radius: 8px;
 }
 
 button {
@@ -285,15 +301,15 @@ input[type="text"]:focus {
   width: 100vw;
   height: 100vh;
   margin: 0;
-  padding: 4rem;
+  padding: 2rem;
   display: grid;
   grid-template-areas:
     ".    top     ."
     "left field right"
     ".    bottom  .";
-  grid-template-columns: 300px 1fr 300px;
-  grid-template-rows: 250px 1fr 250px;
-  gap: 2rem;
+  grid-template-columns: 1fr 600px 1fr;
+  grid-template-rows: 200px 1fr 200px;
+  gap: 1rem;
 }
 
 /* Field container positioning */
@@ -302,10 +318,10 @@ input[type="text"]:focus {
   position: relative;
   width: 100%;
   height: 100%;
-  max-width: 500px;
-  max-height: 500px;
+  max-width: 400px;
+  max-height: 400px;
   margin: auto;
-  background: rgba(139, 69, 19, 0.3);
+  background: transparent;
   border-radius: 1rem;
   display: flex;
   justify-content: center;
@@ -314,190 +330,108 @@ input[type="text"]:focus {
 }
 
 /* Player positions */
+.player-position {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .player-position.bottom {
   grid-area: bottom;
-  align-self: end;
+  align-self: center;
   justify-self: center;
-  width: 800px;
+  width: fit-content;
 }
 
 .player-position.top {
   grid-area: top;
-  align-self: start;
+  align-self: center;
   justify-self: center;
-  width: 600px;
+  width: fit-content;
 }
 
 .player-position.left {
   grid-area: left;
   align-self: center;
-  justify-self: start;
-  width: 250px;
+  justify-self: center;
+  width: fit-content;
 }
 
 .player-position.right {
   grid-area: right;
   align-self: center;
-  justify-self: end;
-  width: 250px;
+  justify-self: center;
+  width: fit-content;
 }
 
 /* Player info styles */
-.player-position.bottom .player-info {
-  background: rgba(139, 69, 19, 0.95);
-  width: 280px;
-  height: 160px;
-  padding: 1rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  margin-bottom: 2rem;
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: transparent;
 }
 
-.player-position.top .player-info {
-  background: rgba(139, 69, 19, 0.8);
-  width: 240px;
-  height: 140px;
-  padding: 1rem;
-  border-radius: 1rem;
-  margin-bottom: 1.5rem;
+.player-name {
+  font-size: 1rem;
+  color: white;
+  margin-bottom: 0.25rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.card-count {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Card styles */
+.card {
+  width: 60px;
+  height: 84px;
+  margin: 0 -15px;
+  background: white;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.card.face-down {
+  background: linear-gradient(45deg, #1a237e, #283593);
+  color: white;
+  font-size: 1.5rem;
+}
+
+/* Hover effects */
+.card:hover {
+  transform: translateY(-10px);
+  z-index: 10;
+}
+
+/* Remove rotations */
+.player-position.left,
+.player-position.right {
+  transform: none;
 }
 
 .player-position.left .player-info,
 .player-position.right .player-info {
-  background: rgba(139, 69, 19, 0.7);
-  width: 160px;
-  height: 120px;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1rem;
+  transform: none;
+  margin-bottom: 0.5rem;
 }
 
-/* Hand container styles */
-.player-position.bottom .hand-container {
-  min-height: 200px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  padding: 0 4rem;
-  transform-style: preserve-3d;
-  perspective: 1000px;
-}
-
-.player-position.top .hand-container {
-  min-height: 160px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 3rem;
-}
-
-.player-position.left .hand-container,
-.player-position.right .hand-container {
-  min-height: 140px;
-  width: 400px;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
-  transform-origin: center center;
-}
-
-/* Card display styles */
-.player-position.bottom .card {
-  margin: 0 -30px;
-  transform-origin: bottom center;
-  width: 80px;
-  height: 112px;
-}
-
-.player-position.top .card {
-  margin: 0 -25px;
-  transform: scale(0.85);
-  width: 70px;
-  height: 98px;
-}
-
-.player-position.left .card,
-.player-position.right .card {
-  margin: 0 -20px;
-  transform: scale(0.75);
-  width: 60px;
-  height: 84px;
-}
-
-/* Fan effect for current player */
-.player-position.bottom .hand-container .card {
-  transform: rotate(calc(var(--card-index, 0) * 3deg - 21deg)) translateY(calc(var(--card-index, 0) * 0.5px));
-}
-
-.player-position.bottom .hand-container .card:hover {
-  transform: translateY(-50px) rotate(0deg) scale(1.1) !important;
-  z-index: 30;
-}
-
-/* Current turn highlight */
-.player-position.current-turn .player-info {
-  border: 2px solid rgba(255, 215, 0, 0.5);
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-}
-
-/* Hover effects */
-.player-position.bottom .hand-container .card:hover {
-  margin: 0 5px;
-}
-
-.player-position.top .hand-container .card:hover {
-  transform: scale(0.95);
-  z-index: 20;
-}
-
-.player-position.left .hand-container .card:hover,
-.player-position.right .hand-container .card:hover {
-  transform: scale(0.85);
-  z-index: 20;
-  margin: 0 -10px;
-}
-
-/* Field container adjustments */
-.field-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  height: 400px;
-  z-index: 4;
-  background: rgba(139, 69, 19, 0.3);
-  border-radius: 1rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 2rem;
-}
-
-/* Card content styling */
-.player-position.bottom .card .rank {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-.player-position.bottom .card .suit {
-  font-size: 2rem;
-  margin-top: 0.2rem;
-}
-
-.player-position.bottom .card.red-suit {
-  color: #D40000;
-}
-
-.player-position.bottom .card.black-suit {
-  color: #000000;
+/* Adjust card fan effect */
+.hand-container .card {
+  transform: none !important;
 }
 
 /* Pass button styling */
@@ -538,14 +472,6 @@ input[type="text"]:focus {
   border: 2px solid #FFD700;
 }
 
-/* Player name and card count adjustments */
-.player-position.right .player-name,
-.player-position.top .player-name,
-.player-position.left .player-name {
-  font-size: 1rem;
-  max-width: 140px;
-}
-
 .player-position.bottom .player-name {
   font-size: 1.2rem;
   max-width: 200px;
@@ -567,104 +493,91 @@ input[type="text"]:focus {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Hover effects */
-.player-position.right .player-info:hover,
-.player-position.top .player-info:hover,
-.player-position.left .player-info:hover {
-  transform: scale(0.95);
-  z-index: 15;
-}
-
-.player-position.bottom .player-info:hover {
-  transform: scale(1.02);
-  z-index: 20;
-}
-
-/* Current turn highlight adjustments */
-.player-position.bottom.current-turn .player-info {
-  border-color: rgba(255, 215, 0, 0.5);
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-}
-
-.player-position.bottom.current-turn .player-info {
-  border-color: #FFD700;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-}
-
 .hand-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 180px;
+  /* 3D効果のために必要な遠近法の設定。カードが3D空間で表示されるようにする。値が大きいほど遠近感が強くなる。 */
   perspective: 1000px;
   width: 100%;
-  margin-top: 2rem;
-  flex-wrap: nowrap;  /* Prevent wrapping */
-  overflow-x: auto;  /* Allow horizontal scrolling if needed */
-  padding: 2rem 4rem;  /* Add padding for better visibility */
 }
 
 .hand-container .card {
-  flex-shrink: 0;  /* Prevent cards from shrinking */
-  margin: 0 -25px;  /* Adjust card overlap */
+  flex-shrink: 0;
+  margin: 0 -25px;
   transition: all 0.3s ease;
   transform-origin: bottom center;
   position: relative;
   cursor: pointer;
 }
 
-/* Adjust hover effect */
-.hand-container .card:hover {
-  transform: translateY(-30px) scale(1.1) !important;
-  z-index: 100;
-  margin: 0 5px;  /* Increase spacing when hovering */
-}
-
-/* Fan effect for current player's hand */
-.player-position.bottom .hand-container {
-  min-height: 200px;
-  padding-bottom: 3rem;  /* Add space for lifted cards */
-}
-
 .player-position.bottom .hand-container .card {
-  transform: rotate(calc(var(--card-index, 0) * 3deg - 21deg)) translateY(calc(var(--card-index, 0) * 0.5px));
-}
-
-.player-position.bottom .hand-container .card:hover {
-  transform: translateY(-50px) rotate(0deg) scale(1.1) !important;
-}
-
-/* Adjust other players' hands */
-.player-position.top .hand-container,
-.player-position.right .hand-container,
-.player-position.left .hand-container {
-  min-height: 120px;
-  padding: 1rem;
-}
-
-.player-position.top .hand-container .card {
-  margin: 0 -20px;
-}
-
-.player-position.right .hand-container .card,
-.player-position.left .hand-container .card {
+  width: 70px;
+  height: 98px;
   margin: 0 -15px;
-}
-
-.card {
-  width: 70px;  /* Increased card size */
-  height: 98px;  /* Increased card size (maintaining aspect ratio) */
   background: white;
-  border-radius: 4px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;  /* Larger font size */
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0.5rem;
+  font-size: 1.4rem;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   position: relative;
-  z-index: 1;
+  cursor: pointer;
+  transform-origin: bottom center;
+  transform: rotate(calc(var(--card-index, 0) * 3deg - 21deg)) translateY(calc(var(--card-index, 0) * 0.5px));
+  transition: all 0.3s ease;
+}
+
+.player-position.bottom .hand-container .card .rank {
+  font-size: 2rem;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+
+.player-position.bottom .hand-container .card .suit {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+/* Joker card style */
+.player-position.bottom .hand-container .card.joker .rank {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 1rem;
+  letter-spacing: -1px;
+  margin-left: 0.2rem;
+  font-weight: bold;
+  color: purple;
+}
+
+/* Red and black suit colors */
+.player-position.bottom .hand-container .card.red-suit {
+  color: #D40000;
+}
+
+.player-position.bottom .hand-container .card.black-suit {
+  color: #000000;
+}
+
+/* Selected card state */
+.player-position.bottom .hand-container .card.selected {
+  transform: translateY(-50px) rotate(0deg) scale(1.1) !important;
+  z-index: 35;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  border: 2px solid #FFD700;
+  margin: 0 10px;
+}
+
+/* Hover effect */
+.player-position.bottom .hand-container .card:hover {
+  transform: translateY(-50px) rotate(0deg) scale(1.1) !important;
+  z-index: 30;
+  margin: 0 10px;
 }
 
 .card.face-down {
@@ -684,11 +597,6 @@ input[type="text"]:focus {
 
 .suit {
   font-size: 1.4rem;
-}
-
-.current-turn {
-  border: 2px solid #FFD700;
-  box-shadow: 0 0 10px #FFD700;
 }
 
 .completed-fields {
@@ -778,13 +686,6 @@ input[type="text"]:focus {
   white-space: nowrap;
 }
 
-/* Add hover effect for better visibility */
-.player-info:hover {
-  z-index: 20;
-  transform: scale(1.05);
-  transition: transform 0.2s ease;
-}
-
 /* Game phase specific adjustments */
 .game-phase-blow .player-position.bottom {
   bottom: 100px;
@@ -800,11 +701,6 @@ input[type="text"]:focus {
 
 .game-phase-blow .player-position.left {
   left: 100px;
-}
-
-.game-phase-blow .player-info {
-  background: rgba(139, 69, 19, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Add tooltip for disabled elements */
