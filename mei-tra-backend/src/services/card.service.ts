@@ -4,17 +4,17 @@ import { Field, TrumpType } from '../types/game.types';
 @Injectable()
 export class CardService {
   private readonly CARD_STRENGTHS: Record<string, number> = {
-    JOKER: 14,
-    A: 13,
-    K: 12,
-    Q: 11,
-    J: 10,
-    '10': 9,
-    '9': 8,
-    '8': 7,
-    '7': 6,
-    '6': 5,
-    '5': 4,
+    JOKER: 150,
+    A: 14,
+    K: 13,
+    Q: 12,
+    J: 11,
+    '10': 10,
+    '9': 9,
+    '8': 8,
+    '7': 7,
+    '6': 6,
+    '5': 5,
   };
 
   private readonly TRUMP_STRENGTHS: Record<TrumpType, number> = {
@@ -25,15 +25,56 @@ export class CardService {
     zuppe: 1,
   };
 
+  private readonly TRUMP_TO_SUIT: Record<TrumpType, string> = {
+    tra: '', // traは特殊なので空文字
+    hel: '♥', // ハート
+    daya: '♦', // ダイヤ
+    club: '♣', // クラブ
+    zuppe: '♠', // スペード
+  };
+
+  private readonly suits = ['♠', '♣', '♥', '♦'];
+  private readonly values = [
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    'J',
+    'Q',
+    'K',
+    'A',
+  ];
+
   generateDeck(): string[] {
-    const suits = ['♠', '♣', '♥', '♦'];
-    const values = ['5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     const deck: string[] = [];
 
-    suits.forEach((suit) =>
-      values.forEach((value) => deck.push(`${value}${suit}`)),
-    );
+    for (const suit of this.suits) {
+      for (const value of this.values.slice(3)) {
+        // Skip 2,3,4
+        deck.push(`${value}${suit}`);
+      }
+    }
+
+    // Add Joker
     deck.push('JOKER');
+
+    return this.shuffleDeck(deck);
+  }
+
+  generateScoringCards(): string[] {
+    const deck: string[] = [];
+
+    for (const suit of this.suits) {
+      for (const value of this.values.slice(0, 3)) {
+        // Only 2,3,4
+        deck.push(`${value}${suit}`);
+      }
+    }
 
     return this.shuffleDeck(deck);
   }
@@ -56,7 +97,10 @@ export class CardService {
     if (field.cards.length === 0) return true;
 
     const baseCard = field.baseCard;
-    const baseSuit = baseCard.replace(/[0-9JQKA]/, '');
+    // If baseCard is a secondary Jack, use the primary Jack's suit as baseSuit
+    const baseSuit = this.isSecondaryJack(baseCard, currentTrump as TrumpType)
+      ? this.getPrimaryJack(currentTrump as TrumpType).replace(/[0-9JQKA]/, '')
+      : baseCard.replace(/[0-9JQKA]/, '');
     const cardSuit = card.replace(/[0-9JQKA]/, '');
     const cardValue = card.replace(/[♠♣♥♦]/, '');
 
@@ -84,22 +128,127 @@ export class CardService {
   getCardStrength(
     card: string,
     baseSuit: string,
-    trumpSuit: TrumpType | null,
+    trumpType: TrumpType | null,
   ): number {
-    const suit = card.replace(/[0-9JQKA]/, '');
-    const value = card.replace(/[♠♣♥♦]/, '');
-    let strength = this.CARD_STRENGTHS[value];
+    console.log('card:', card);
+    if (card === 'JOKER') return this.CARD_STRENGTHS.JOKER;
 
-    if (suit === trumpSuit) {
-      strength += 100; // Trump cards are stronger
-    } else if (suit === baseSuit) {
-      strength += 50; // Base suit cards are stronger than non-base suit
+    // Get the card's value and suit
+    const value = card.startsWith('10') ? '10' : card[0];
+    const suit = card.startsWith('10')
+      ? card.slice(2)
+      : this.getCardSuit(card, trumpType);
+
+    // Base strength from the card's value
+    let strength = this.CARD_STRENGTHS[value] || 0;
+
+    // Jの強さを特別に処理（tra の場合は除く）
+    if (value === 'J' && trumpType && trumpType !== 'tra') {
+      if (this.isPrimaryJack(card, trumpType)) {
+        strength = 19; // 正J
+      } else if (this.isSecondaryJack(card, trumpType)) {
+        strength = 18; // 副J
+      }
     }
+
+    // If no trump is set or trump is tra, only match base suit
+    if (!trumpType || trumpType === 'tra') {
+      if (suit === baseSuit) {
+        strength += 50; // Base suit bonus
+      }
+      return strength;
+    }
+
+    // Get the trump suit for the current trump type
+    const trumpSuit = this.TRUMP_TO_SUIT[trumpType];
+
+    // Add trump bonus if the card's suit matches the trump suit
+    if (suit === trumpSuit) {
+      strength += 100; // Trump suit bonus
+    }
+    // Add base suit bonus if it matches the base suit
+    else if (suit === baseSuit) {
+      strength += 50; // Base suit bonus
+    }
+
+    console.log(
+      'baseSuit:',
+      baseSuit,
+      'trumpSuit:',
+      trumpSuit,
+      'suit:',
+      suit,
+      'value:',
+      value,
+      'strength:',
+      strength,
+    );
 
     return strength;
   }
 
   getTrumpStrength(trumpType: TrumpType): number {
     return this.TRUMP_STRENGTHS[trumpType];
+  }
+
+  // TODO: tra の時はJは普通のカードになる
+  getPrimaryJack(trumpType: TrumpType): string {
+    switch (trumpType) {
+      case 'hel':
+        return 'J♥';
+      case 'daya':
+        return 'J♦';
+      case 'club':
+        return 'J♣';
+      case 'zuppe':
+        return 'J♠';
+      case 'tra':
+        return 'J♥'; // In Tra, Hearts Jack is primary
+      default:
+        return 'J♥';
+    }
+  }
+
+  getSecondaryJack(trumpType: TrumpType): string {
+    switch (trumpType) {
+      case 'hel':
+        return 'J♦';
+      case 'daya':
+        return 'J♥';
+      case 'club':
+        return 'J♠';
+      case 'zuppe':
+        return 'J♣';
+      case 'tra':
+        return 'J♦'; // In Tra, Diamonds Jack is secondary
+      default:
+        return 'J♦';
+    }
+  }
+
+  isJack(card: string): boolean {
+    return card.startsWith('J');
+  }
+
+  isPrimaryJack(card: string, trumpType: TrumpType): boolean {
+    return card === this.getPrimaryJack(trumpType);
+  }
+
+  isSecondaryJack(card: string, trumpType: TrumpType): boolean {
+    return card === this.getSecondaryJack(trumpType);
+  }
+
+  getCardSuit(card: string, trumpType?: TrumpType | null): string {
+    if (card === 'JOKER') return trumpType || '';
+
+    // If it's a Jack and trumpType is provided, check if it's a secondary Jack
+    if (card.startsWith('J') && trumpType) {
+      if (this.isSecondaryJack(card, trumpType)) {
+        // For secondary Jack, return the primary Jack's suit
+        return this.getPrimaryJack(trumpType).replace(/[0-9JQKA]/, '');
+      }
+    }
+
+    return card.slice(-1);
   }
 }

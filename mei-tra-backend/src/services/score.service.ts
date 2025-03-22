@@ -3,18 +3,14 @@ import { TeamScore, TeamScoreRecord } from '../types/game.types';
 
 @Injectable()
 export class ScoreService {
-  calculatePlayPoints(
-    blowingTeam: number,
-    declaredPairs: number,
-    wonFields: number,
-  ): number {
+  calculatePlayPoints(declaredPairs: number, wonFields: number): number {
     const X = declaredPairs;
     const Y = wonFields;
 
     if (Y >= X) {
       return 0.5 * (Y - X) + X - 5;
     } else {
-      return X - Y;
+      return Y - X;
     }
   }
 

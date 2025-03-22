@@ -5,6 +5,8 @@ import {
   BlowState,
   PlayState,
   Field,
+  Team,
+  CompletedField,
 } from '../types/game.types';
 import { CardService } from './card.service';
 import { ScoreService } from './score.service';
@@ -34,6 +36,8 @@ export class GameStateService {
       playState: this.getInitialPlayState(),
       teamScoreRecords: this.scoreService.initializeTeamScoreRecords(),
       chomboViolations: [],
+      currentTrump: null,
+      roundNumber: 1,
     };
   }
 
@@ -65,10 +69,16 @@ export class GameStateService {
     return this.state;
   }
 
+  updateState(newState: Partial<GameState>): void {
+    this.state = {
+      ...this.state,
+      ...newState,
+    };
+  }
+
   addPlayer(id: string, name: string): boolean {
     if (this.state.players.length >= 4) return false;
-
-    const team = Math.floor(this.state.players.length / 2);
+    const team = (this.state.players.length % 2) as Team;
     this.state.players.push({ id, name, hand: [], team });
     console.log(
       `Added player ${name} (${id}) to team ${team}. Total players: ${this.state.players.length}`,
@@ -146,23 +156,92 @@ export class GameStateService {
     this.state.playState.isTanzenRound = isTanzenRound;
   }
 
-  completeField(): Field | null {
-    const field = this.state.playState.currentField;
-    if (!field) return null;
+  completeField(field: Field, winnerId: string): CompletedField | null {
+    const state = this.getState();
+    const currentField = state.playState.currentField;
+
+    if (!currentField) {
+      return null;
+    }
 
     field.isComplete = true;
-    this.state.playState.fields.push(field);
-    return field;
+    const completedField: CompletedField = {
+      cards: field.cards,
+      winnerId: winnerId,
+      winnerTeam: state.players.find((p) => p.id === winnerId)?.team || 0,
+      dealerId: field.dealerId,
+    };
+
+    this.state.playState.fields.push(completedField);
+    return completedField;
   }
 
   isGameOver(): boolean {
     return Object.values(this.state.teamScores).some(
-      (score) => score.total >= 17,
+      // TODO: テストで３点にする
+      (score) => score.total >= 3,
+      // (score) => score.total >= 17,
     );
   }
 
   resetState(): void {
     this.initializeState();
-    this.chomboService.clearViolations();
+  }
+
+  resetRoundState(): void {
+    // Keep the current players and scores
+    const players = [...this.state.players];
+    const teamScores = { ...this.state.teamScores };
+    const teamScoreRecords = { ...this.state.teamScoreRecords };
+
+    // Initialize new state
+    this.initializeState();
+
+    // Restore players and scores
+    this.state.players = players;
+    this.state.teamScores = teamScores;
+    this.state.teamScoreRecords = teamScoreRecords;
+
+    // Generate new deck and deal cards
+    this.state.deck = this.cardService.generateDeck();
+    this.dealCards();
+  }
+
+  private handleFieldComplete(field: Field, winnerId: string): void {
+    const winner = this.state.players.find((p) => p.id === winnerId);
+    if (!winner) return;
+
+    const completedField: CompletedField = {
+      cards: field.cards,
+      winnerId: winnerId,
+      winnerTeam: winner.team,
+      dealerId: field.dealerId,
+    };
+
+    this.state.playState.fields.push(completedField);
+  }
+
+  resetCurrentField(): void {
+    this.state.playState.currentField = null;
+  }
+
+  get roundNumber(): number {
+    return this.state.roundNumber;
+  }
+
+  set roundNumber(value: number) {
+    this.state.roundNumber = value;
+  }
+
+  get currentTurn(): string | null {
+    const currentPlayer = this.state.players[this.state.currentPlayerIndex];
+    return currentPlayer?.id || null;
+  }
+
+  set currentTurn(playerId: string) {
+    const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
+    if (playerIndex !== -1) {
+      this.state.currentPlayerIndex = playerIndex;
+    }
   }
 }
