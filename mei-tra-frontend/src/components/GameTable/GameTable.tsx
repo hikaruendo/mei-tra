@@ -67,7 +67,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   teamScores,
 }) => {
   return (
-    <div className="game-layout">
+    <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
       <GameInfo
         gamePhase={gamePhase}
         currentTrump={currentTrump}
@@ -75,6 +75,29 @@ export const GameTable: React.FC<GameTableProps> = ({
         players={players}
         teamScores={teamScores}
       />
+
+      {gamePhase && (
+        <GameControls 
+          gamePhase={gamePhase}
+          whoseTurn={whoseTurn}
+          selectedCards={selectedCards}
+          renderBlowControls={() => (
+            <BlowControls
+              isCurrentPlayer={getSocket().id === whoseTurn}
+              currentPlayer={players.find(p => p.id === getSocket().id)}
+              selectedTrump={selectedTrump}
+              setSelectedTrump={setSelectedTrump}
+              numberOfPairs={numberOfPairs}
+              setNumberOfPairs={setNumberOfPairs}
+              declareBlow={gameActions.declareBlow}
+              passBlow={gameActions.passBlow}
+              blowDeclarations={blowDeclarations}
+              currentHighestDeclaration={currentHighestDeclaration}
+              players={players}
+            />
+          )}
+        />
+      )}
 
       <div className="player-positions">
         {/* Top player */}
@@ -159,29 +182,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           onSelectNegri={gameActions.selectNegri}
           onSelectBaseCard={gameActions.playCard}
           hasSelectedNegri={!!negriCard}
-        />
-      )}
-
-      {gamePhase && (
-        <GameControls 
-          gamePhase={gamePhase}
-          whoseTurn={whoseTurn}
-          selectedCards={selectedCards}
-          renderBlowControls={() => (
-            <BlowControls
-              isCurrentPlayer={getSocket().id === whoseTurn}
-              currentPlayer={players.find(p => p.id === getSocket().id)}
-              selectedTrump={selectedTrump}
-              setSelectedTrump={setSelectedTrump}
-              numberOfPairs={numberOfPairs}
-              setNumberOfPairs={setNumberOfPairs}
-              declareBlow={gameActions.declareBlow}
-              passBlow={gameActions.passBlow}
-              blowDeclarations={blowDeclarations}
-              currentHighestDeclaration={currentHighestDeclaration}
-              players={players}
-            />
-          )}
         />
       )}
 
