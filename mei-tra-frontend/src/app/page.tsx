@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getSocket } from './socket';
-import { BlowDeclaration, Field, GamePhase, Player, TeamPlayers, TeamScores, TrumpType } from './types';
+import { BlowDeclaration, Field, GamePhase, Player, TeamScores, TrumpType } from './types';
 import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
 import { GameTable } from '@/components/GameTable/GameTable';
 import { TeamScore, TeamScoreRecord } from '@/types/game.types';
@@ -16,7 +16,6 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
-  const [teams, setTeams] = useState<TeamPlayers>({ team0: [], team1: [] });
   const [teamScores, setTeamScores] = useState<TeamScores>({
     0: { deal: 0, blow: 0, play: 0, total: 0 },
     1: { deal: 0, blow: 0, play: 0, total: 0 }
@@ -51,19 +50,11 @@ export default function Home() {
         console.log('update-players event received');
         console.log('Players updated:', players);
         setPlayers(players);
-        setTeams({
-          team0: players.filter(p => p.team === 0),
-          team1: players.filter(p => p.team === 1)
-        });
       },
       'game-started': (players: Player[]) => {
         console.log('Game started with players:', players);
         setPlayers(players);
         setGameStarted(true);
-        setTeams({
-          team0: players.filter(p => p.team === 0),
-          team1: players.filter(p => p.team === 1)
-        });
       },
       'update-phase': ({ phase, scores, winner }: { phase: GamePhase; scores: TeamScores; winner: number | null }) => {
         setGamePhase(phase);
@@ -82,8 +73,8 @@ export default function Home() {
           setCurrentTrump(null);
         }
         
-        // Only show alert for phases other than 'play'
-        if (winner !== null && phase !== 'play') {
+        // Only show alert for phases other than 'play' and when not transitioning to a new round
+        if (winner !== null && phase !== 'play' && phase !== 'blow') {
           alert(`Team ${winner} won the ${phase} phase!`);
         }
       },
@@ -185,11 +176,6 @@ export default function Home() {
         setCurrentField(field);
         // Update players with the latest data from server
         setPlayers(updatedPlayers);
-        // Update teams with the latest data
-        setTeams({
-          team0: updatedPlayers.filter(p => p.team === 0),
-          team1: updatedPlayers.filter(p => p.team === 1)
-        });
       },
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
         setCompletedFields(prev => [...prev, field]);

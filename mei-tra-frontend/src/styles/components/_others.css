@@ -44,6 +44,11 @@ main:hover {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
+.btn-container {
+  display: flex;
+  gap: 10px;
+}
+
 .card-container {
   background-color: transparent;
   border-radius: 8px;
@@ -61,47 +66,6 @@ main:hover {
   border: 2px solid #FFD700;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
   border-radius: 8px;
-}
-
-/* Card fan effect for player's hand */
-.flex.flex-wrap.gap-2 {
-  display: flex;
-  justify-content: center;
-  position: relative;
-  padding: 20px;
-  min-height: 120px;
-}
-
-.flex.flex-wrap.gap-2 .card {
-  position: relative;
-  margin-left: -20px;
-  transform-origin: bottom center;
-  transition: transform 0.3s ease;
-}
-
-.flex.flex-wrap.gap-2 .card:first-child {
-  margin-left: 0;
-}
-
-.flex.flex-wrap.gap-2 .card:hover {
-  transform: translateY(-20px) rotate(0deg);
-  z-index: 2;
-}
-
-.flex.gap-2 {
-  display: flex;
-  justify-content: center;
-  position: relative;
-  padding: 10px;
-}
-
-.flex.gap-2 .card {
-  margin-left: -30px;
-  transform: rotate(0deg);
-}
-
-.flex.gap-2 .card:first-child {
-  margin-left: 0;
 }
 
 button {

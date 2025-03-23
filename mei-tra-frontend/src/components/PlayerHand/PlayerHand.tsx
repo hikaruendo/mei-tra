@@ -120,11 +120,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           <div className="player-name">{player.name}</div>
           <div className="card-count">{player.hand.length} cards</div>
           {isCurrentPlayer && isWinningPlayer && !negriCard && (
-            <div className="flex flex-col items-center justify-center">Select Negri Card</div>
+            <div className="flex flex-col items-center justify-center">Select Negri Card.</div>
           )}
           {isCurrentPlayer && agariCard && isWinningPlayer && (
-            <div className="flex flex-col items-center justify-center space-y-2">
-              <div className="agari-label">Agari Card</div>
+            <div className="agari-card-container">
+              <div className="agari-label">Agari Card is</div>
               <Card card={agariCard} />
             </div>
           )}

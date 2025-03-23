@@ -24,7 +24,7 @@ export const GameJoinForm = ({
         onChange={(e) => onNameChange(e.target.value)} 
         className="border rounded p-2 w-full" 
       />
-      <div className="flex gap-2">
+      <div className="btn-container">
         <button 
           onClick={onJoinGame} 
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
