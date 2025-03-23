@@ -115,7 +115,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     declaration: { trumpType: TrumpType; numberOfPairs: number },
   ) {
     if (!this.gameState.isPlayerTurn(client.id)) {
-      client.emit('error-message', "It's not your turn!");
+      client.emit('error-message', "It's not your turn!3");
       return;
     }
 
@@ -173,7 +173,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('pass-blow')
   handlePassBlow(client: Socket): void {
     if (!this.gameState.isPlayerTurn(client.id)) {
-      client.emit('error-message', "It's not your turn!");
+      client.emit('error-message', "It's not your turn!4");
       return;
     }
 

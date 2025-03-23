@@ -113,29 +113,28 @@ export function BlowControls({
       </div>
 
       {blowDeclarations.length > 0 && (
-        <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl">
-          <div className="blow-declarations text-white">
-            <h4 className="text-lg font-bold mb-2">Current Declarations</h4>
-            <div className="flex flex-col gap-2">
+        <div className="blow-declarations">
+          <h4>Current Declarations</h4>
+          <div className="flex flex-col gap-2">
+            <div className="declaration-items">
               {blowDeclarations.map((declaration, index) => {
                 const player = players.find(p => p.id === declaration.playerId);
                 const isLatestDeclaration = index === blowDeclarations.length - 1;
+                const isHighestDeclaration = currentHighestDeclaration && 
+                  declaration.playerId === currentHighestDeclaration.playerId &&
+                  declaration.trumpType === currentHighestDeclaration.trumpType &&
+                  declaration.numberOfPairs === currentHighestDeclaration.numberOfPairs;
                 return (
                   <div 
                     key={index} 
-                    className={`declaration-item bg-gray-700 p-2 rounded transition-all duration-300 ${
+                    className={`declaration-item ${
                       isLatestDeclaration ? 'animate-slide-in' : ''
-                    }`}
+                    } ${isHighestDeclaration ? 'current-highest' : ''}`}
                   >
                     {player?.name}: {declaration.trumpType.toUpperCase()} {declaration.numberOfPairs} pairs
                   </div>
                 );
               })}
-              {currentHighestDeclaration && (
-                <div className="current-highest font-bold bg-blue-900 p-2 rounded mt-2">
-                  Current Highest: {currentHighestDeclaration.trumpType.toUpperCase()} {currentHighestDeclaration.numberOfPairs} pairs
-                </div>
-              )}
             </div>
           </div>
         </div>

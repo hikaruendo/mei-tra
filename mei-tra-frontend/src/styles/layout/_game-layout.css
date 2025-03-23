@@ -6,7 +6,7 @@
     "left field right"
     ".    bottom  .";
   grid-template-columns: 300px 30px 300px;
-  grid-template-rows: 200px 200px 200px;
+  grid-template-rows: 200px 250px 200px;
   gap: var(--spacing-lg);
   justify-content: center;
 }

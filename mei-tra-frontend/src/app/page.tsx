@@ -285,7 +285,7 @@ export default function Home() {
       }
 
       if (whoseTurn !== socket.id) {
-        alert("It's not your turn!");
+        alert("It's not your turn! 1");
         return;
       }
 
@@ -337,7 +337,7 @@ export default function Home() {
     playCard: (card: string) => {
       const socket = getSocket();
       if (whoseTurn !== socket.id) {
-        alert("It's not your turn!");
+        alert("It's not your turn!2");
         return;
       }
       socket.emit('play-card', card);
