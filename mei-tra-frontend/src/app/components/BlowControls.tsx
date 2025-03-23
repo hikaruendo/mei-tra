@@ -27,18 +27,22 @@ export function BlowControls({
   currentHighestDeclaration,
   players,
 }: BlowControlsProps) {
-  if (currentPlayer?.isPasser) return null;
-
   const currentPlayerName = players.find(p => p.id === currentPlayer?.id)?.name;
 
   const handleDeclare = () => {
+    if (!isCurrentPlayer) return;
     declareBlow();
     // Reset form
     setSelectedTrump(null);
     setNumberOfPairs(0);
   };
 
-  // Simplify to just check current player
+  const handlePass = () => {
+    if (!isCurrentPlayer) return;
+    passBlow();
+  };
+
+  // Disable controls if it's not the current player's turn
   const isDisabled = !isCurrentPlayer;
 
   return (
@@ -101,7 +105,7 @@ export function BlowControls({
 
             <div className="flex flex-col justify-end">
               <button 
-                onClick={passBlow}
+                onClick={handlePass}
                 disabled={isDisabled}
                 className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
               >
@@ -112,33 +116,49 @@ export function BlowControls({
         </div>
       </div>
 
-      {blowDeclarations.length > 0 && (
-        <div className="blow-declarations">
-          <h4>Current Declarations</h4>
-          <div className="flex flex-col gap-2">
-            <div className="declaration-items">
-              {blowDeclarations.map((declaration, index) => {
-                const player = players.find(p => p.id === declaration.playerId);
-                const isLatestDeclaration = index === blowDeclarations.length - 1;
-                const isHighestDeclaration = currentHighestDeclaration && 
-                  declaration.playerId === currentHighestDeclaration.playerId &&
-                  declaration.trumpType === currentHighestDeclaration.trumpType &&
-                  declaration.numberOfPairs === currentHighestDeclaration.numberOfPairs;
+      <div className="blow-declarations">
+        <h4>Current Declarations</h4>
+        <div className="flex flex-col gap-2">
+          <div className="declaration-items">
+            {players.map((player) => {
+              const declaration = blowDeclarations.find(d => d.playerId === player.id);
+              const isLatestDeclaration = declaration && 
+                declaration === blowDeclarations[blowDeclarations.length - 1];
+              const isHighestDeclaration = currentHighestDeclaration && 
+                declaration &&
+                declaration.playerId === currentHighestDeclaration.playerId &&
+                declaration.trumpType === currentHighestDeclaration.trumpType &&
+                declaration.numberOfPairs === currentHighestDeclaration.numberOfPairs;
+
+              if (player.isPasser) {
                 return (
                   <div 
-                    key={index} 
+                    key={`pass-${player.id}`}
+                    className="declaration-item pass-item"
+                  >
+                    {player.name}: Passed
+                  </div>
+                );
+              }
+
+              if (declaration) {
+                return (
+                  <div 
+                    key={declaration.playerId}
                     className={`declaration-item ${
                       isLatestDeclaration ? 'animate-slide-in' : ''
                     } ${isHighestDeclaration ? 'current-highest' : ''}`}
                   >
-                    {player?.name}: {declaration.trumpType.toUpperCase()} {declaration.numberOfPairs} pairs
+                    {player.name}: {declaration.trumpType.toUpperCase()} {declaration.numberOfPairs} pairs
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return null;
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 } 
