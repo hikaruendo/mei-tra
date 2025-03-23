@@ -72,7 +72,6 @@ export const GameTable: React.FC<GameTableProps> = ({
       {gamePhase && (
         <GameControls 
           gamePhase={gamePhase}
-          whoseTurn={whoseTurn}
           selectedCards={selectedCards}
           renderBlowControls={() => (
             <BlowControls
