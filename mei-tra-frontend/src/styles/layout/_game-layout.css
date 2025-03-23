@@ -95,6 +95,14 @@
   color: purple;
 }
 
+.completed-field-card .rank {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 8px;
+  letter-spacing: -1px;
+  color: purple;
+}
+
 .field-container-inner .card:hover {
   transform: translateY(-10px);
   z-index: 10;
