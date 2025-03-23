@@ -186,15 +186,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('pass-blow')
   handlePassBlow(client: Socket): void {
-    const state = this.gameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) return;
-
-    // Check if it's the player's turn
+    // First check if it's the player's turn
     if (!this.gameState.isPlayerTurn(client.id)) {
       client.emit('error-message', "It's not your turn to pass!");
       return;
     }
+
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) return;
 
     // Mark player as passed
     player.isPasser = true;

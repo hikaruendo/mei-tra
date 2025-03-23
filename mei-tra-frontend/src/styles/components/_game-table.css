@@ -463,3 +463,49 @@ select.pairs-select option {
   background: rgba(255, 255, 255, 0.95);
   color: var(--color-text);
 }
+
+.setup-message {
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  animation: pulse 2s infinite;
+}
+
+.player-info .card.player-info {
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  padding: 4px;
+  background-color: rgba(76, 175, 80, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.player-info .card.player-info:hover {
+  background-color: rgba(76, 175, 80, 0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.agari-section {
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.agari-label {
+  color: #4CAF50;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.agari-section .card {
+  transform: scale(0.8);
+  margin: 0 auto;
+}
+

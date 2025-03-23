@@ -19,21 +19,24 @@ export const GameField: React.FC<GameFieldProps> = ({
   
   return (
     <div className="field-container">
-      <div className="flex gap-4 justify-center">
+      <div className="field-container-inner">
         {currentField.cards.map((card: string, index: number) => {
           const isRed = card.match(/[♥♦]/);
+          const isJoker = card === 'JOKER';
           // ディーラーから順番にプレイヤーを決定
           const playerIndex = (dealerIndex + index) % players.length;
           const player = players[playerIndex];
           
           return (
             <div key={index} className="text-center">
-              <div className="text-white mb-2">{player.name}</div>
-              <div className={`card ${isRed ? 'red-suit' : 'black-suit'}`}>
-                {card === 'JOKER' ? '🃏' : (
+              <div className="name">{player.name}</div>
+              <div className={`card ${isRed ? 'red-suit' : 'black-suit'} ${isJoker ? 'joker' : ''}`}>
+                {isJoker ? (
+                  <div className="rank">JOKER</div>
+                ) : (
                   <>
-                    {card.replace(/[♠♣♥♦]/, '')}
-                    <span className="suit">{card.match(/[♠♣♥♦]/)?.[0]}</span>
+                    <div className="rank">{card.replace(/[♠♣♥♦]/, '')}</div>
+                    <div className="suit">{card.match(/[♠♣♥♦]/)?.[0]}</div>
                   </>
                 )}
               </div>
