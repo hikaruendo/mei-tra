@@ -33,7 +33,35 @@ export function PlaySetup({ player, agariCard, onSelectNegri, onSelectBaseCard, 
           <h4 className="text-2xl font-bold text-white mb-4">
             {!hasSelectedNegri ? 'Select Negri Card' : 'Select Base Card'}
           </h4>
-          <div className="flex flex-wrap justify-center gap-4">
+
+          <div className="hand-container">
+            {player.hand.map((card, index) => {
+              const value = card.replace(/[♠♣♥♦]/, '');
+              const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
+              const isRed = suit === '♥' || suit === '♦';
+              const isJoker = card === 'JOKER';
+              
+              return (
+                <div
+                  key={index}
+                  className={`card ${isRed ? 'red-suit' : 'black-suit'} ${isJoker ? 'joker' : ''}`}
+                  onClick={() => hasSelectedNegri ? onSelectBaseCard(card) : onSelectNegri(card)}
+                  style={{ '--card-index': index } as React.CSSProperties}
+                >
+                  {isJoker ? (
+                    <div className="rank">JOKER</div>
+                  ) : (
+                    <>
+                      <div className="rank">{value}</div>
+                      <div className="suit">{suit}</div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* <div className="flex flex-wrap justify-center gap-4">
             {player.hand.map((card, index) => (
               <div
                 key={index}
@@ -43,7 +71,7 @@ export function PlaySetup({ player, agariCard, onSelectNegri, onSelectBaseCard, 
                 <Card card={card} />
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

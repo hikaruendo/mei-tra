@@ -1,39 +1,33 @@
 import React from 'react';
-import { Player, GamePhase } from '@/types/game.types';
+import { Player, GamePhase, GameActions } from '@/types/game.types';
 import { NegriCard } from '../NegriCard/NegriCard';
 import { getSocket } from '@/app/socket';
-
-interface GameActions {
-  selectNegri: (card: string) => void;
-  playCard: (card: string) => void;
-  declareBlow: () => void;
-  passBlow: () => void;
-}
+import { Card } from '../card/Card';
 
 interface PlayerHandProps {
   player: Player;
   isCurrentTurn: boolean;
-  selectedCards: string[];
-  setSelectedCards: (cards: string[]) => void;
   negriCard: string | null;
   negriPlayerId: string | null;
   gamePhase: GamePhase | null;
   whoseTurn: string | null;
   gameActions: GameActions;
   players: Player[];
+  agariCard?: string;
+  currentHighestDeclaration?: { playerId: string };
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
   player,
   isCurrentTurn,
-  selectedCards,
-  setSelectedCards,
   negriCard,
   negriPlayerId,
   gamePhase,
   whoseTurn,
   gameActions,
   players,
+  agariCard,
+  currentHighestDeclaration,
 }) => {
   const getRelativePosition = () => {
     const currentPlayerId = getSocket().id;
@@ -57,6 +51,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   const renderPlayerHand = () => {
     const isCurrentPlayer = player.id === getSocket().id;
+    const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
     
     if (isCurrentPlayer) {
       return (
@@ -71,14 +66,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''}`}
+                className={`card ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''} ${!negriCard && isWinningPlayer ? 'player-info' : ''}`}
                 onClick={() => {
                   if (gamePhase === 'play' && whoseTurn === getSocket().id) {
-                    gameActions.playCard(card);
-                  } else {
-                    setSelectedCards(selectedCards.includes(card) 
-                      ? selectedCards.filter((c) => c !== card) 
-                      : [...selectedCards, card]);
+                    if (!negriCard && isWinningPlayer) {
+                      gameActions.selectNegri(card);
+                    } else {
+                      gameActions.playCard(card);
+                    }
                   }
                 }}
                 style={{ '--card-index': index } as React.CSSProperties}
@@ -115,6 +110,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const position = getRelativePosition();
+  const isCurrentPlayer = player.id === getSocket().id;
+  const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
 
   return (
     <div className={`player-position ${position}`}>
@@ -122,6 +119,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         <div className={`player-info-container ${isCurrentTurn ? 'current-turn' : ''}`}>
           <div className="player-name">{player.name}</div>
           <div className="card-count">{player.hand.length} cards</div>
+          {isCurrentPlayer && isWinningPlayer && !negriCard && (
+            <div className="flex flex-col items-center justify-center">Select Negri Card</div>
+          )}
+          {isCurrentPlayer && agariCard && isWinningPlayer && (
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="agari-label">Agari Card</div>
+              <Card card={agariCard} />
+            </div>
+          )}
+          {isCurrentPlayer && negriCard && (
+            <div className="flex flex-col items-center justify-center">Select Base Card</div>
+          )}
         </div>
         {renderPlayerHand()}
         {negriCard && negriPlayerId === player.id && (

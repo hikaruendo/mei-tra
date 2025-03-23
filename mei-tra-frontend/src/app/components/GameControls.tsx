@@ -3,7 +3,6 @@ import { GamePhase } from '../types';
 
 interface GameControlsProps {
   gamePhase: GamePhase;
-  selectedCards: string[];
   renderBlowControls: () => JSX.Element | null;
 }
 

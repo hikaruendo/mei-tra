@@ -3,7 +3,6 @@ import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclarat
 import { PlayerHand } from '../PlayerHand/PlayerHand';
 import { GameField } from '../GameField/GameField';
 import { CompletedFields } from '../CompletedFields/CompletedFields';
-import { PlaySetup } from '@/app/components/PlaySetup';
 import { GameControls } from '@/app/components/GameControls';
 import { BlowControls } from '@/app/components/BlowControls';
 import { getSocket } from '@/app/socket';
@@ -24,8 +23,6 @@ interface GameTableProps {
   players: Player[];
   negriCard: string | null;
   negriPlayerId: string | null;
-  selectedCards: string[];
-  setSelectedCards: (cards: string[]) => void;
   completedFields: CompletedField[];
   revealedAgari: string | null;
   gameActions: GameActions;
@@ -46,8 +43,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   players,
   negriCard,
   negriPlayerId,
-  selectedCards,
-  setSelectedCards,
   completedFields,
   revealedAgari,
   gameActions,
@@ -72,7 +67,6 @@ export const GameTable: React.FC<GameTableProps> = ({
       {gamePhase && (
         <GameControls 
           gamePhase={gamePhase}
-          selectedCards={selectedCards}
           renderBlowControls={() => (
             <BlowControls
               isCurrentPlayer={getSocket().id === whoseTurn}
@@ -97,14 +91,14 @@ export const GameTable: React.FC<GameTableProps> = ({
             key={player.id}
             player={player}
             isCurrentTurn={whoseTurn === player.id}
-            selectedCards={selectedCards}
-            setSelectedCards={setSelectedCards}
             negriCard={negriCard}
             negriPlayerId={negriPlayerId}
             gamePhase={gamePhase}
             whoseTurn={whoseTurn}
             gameActions={gameActions}
             players={players}
+            agariCard={revealedAgari || undefined}
+            currentHighestDeclaration={currentHighestDeclaration || undefined}
           />
         ))}
 
@@ -114,16 +108,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           players={players}
         />
       </div>
-
-      {gamePhase === 'play' && revealedAgari && whoseTurn === players.find(p => p.id === getSocket().id)?.id && (
-        <PlaySetup
-          player={players.find(p => p.id === getSocket().id)!}
-          agariCard={revealedAgari}
-          onSelectNegri={gameActions.selectNegri}
-          onSelectBaseCard={gameActions.playCard}
-          hasSelectedNegri={!!negriCard}
-        />
-      )}
 
       <CompletedFields 
         fields={completedFields} 

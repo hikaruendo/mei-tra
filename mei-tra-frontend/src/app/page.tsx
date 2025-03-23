@@ -22,10 +22,6 @@ export default function Home() {
     1: { deal: 0, blow: 0, play: 0, total: 0 }
   });
   const [teamScoreRecords, setTeamScoreRecords] = useState<{ [key: number]: TeamScoreRecord }>({});
-
-  // Card State
-  const [selectedCards, setSelectedCards] = useState<string[]>([]);
-
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
   const [currentHighestDeclaration, setCurrentHighestDeclaration] = useState<BlowDeclaration | null>(null);
@@ -277,31 +273,6 @@ export default function Home() {
       console.log('Starting game with players:', players);
       getSocket().emit('start-game');
     },
-    handleDiscardPairs: () => {
-      const socket = getSocket();
-      if (!whoseTurn) {
-        alert("Turn system is not working! No turn assigned.");
-        return;
-      }
-
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn! 1");
-        return;
-      }
-
-      if (selectedCards.length === 2) {
-        const [card1, card2] = selectedCards;
-        const value1 = card1.replace(/[♠♣♥♦]/, '');
-        const value2 = card2.replace(/[♠♣♥♦]/, '');
-
-        if (value1 === value2 && value1 !== 'JOKER') {
-          socket.emit('discard-pairs', selectedCards);
-          setSelectedCards([]);
-        } else {
-          alert('Selected cards are not a pair!');
-        }
-      }
-    },
     startBlow: () => {
       const socket = getSocket();
       if (whoseTurn !== socket.id) {
@@ -325,7 +296,7 @@ export default function Home() {
     passBlow: () => {
       const socket = getSocket();
       if (whoseTurn !== socket.id) {
-        alert("It's not your turn to pass!");
+        alert("It's not your turn to pass!1");
         return;
       }
       socket.emit('pass-blow');
@@ -369,8 +340,6 @@ export default function Home() {
               players={players}
               negriCard={negriCard}
               negriPlayerId={negriPlayerId}
-              selectedCards={selectedCards}
-              setSelectedCards={setSelectedCards}
               completedFields={completedFields}
               revealedAgari={revealedAgari}
               gameActions={gameActions}

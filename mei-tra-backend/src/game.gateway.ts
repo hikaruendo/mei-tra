@@ -151,9 +151,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     // Count total actions (declarations + passes)
-    const totalActions =
-      state.blowState.declarations.length +
-      state.players.filter((p) => p.isPasser).length;
+    const playersWhoHaveActed = new Set<string>();
+
+    // Add players who have declared
+    state.blowState.declarations.forEach((declaration) => {
+      playersWhoHaveActed.add(declaration.playerId);
+    });
+
+    // Add players who have passed
+    state.players.forEach((player) => {
+      if (player.isPasser) {
+        playersWhoHaveActed.add(player.id);
+      }
+    });
+
+    const totalActions = playersWhoHaveActed.size;
+    console.log('Players who have acted:', Array.from(playersWhoHaveActed));
+    console.log('Total actions:', totalActions);
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
@@ -172,14 +186,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('pass-blow')
   handlePassBlow(client: Socket): void {
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) return;
+
+    // Check if it's the player's turn
     if (!this.gameState.isPlayerTurn(client.id)) {
       client.emit('error-message', "It's not your turn to pass!");
       return;
     }
-
-    const state = this.gameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) return;
 
     // Mark player as passed
     player.isPasser = true;
@@ -193,9 +208,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     // Count total actions (declarations + passes)
-    const totalActions =
-      state.blowState.declarations.length +
-      state.players.filter((p) => p.isPasser).length;
+    const playersWhoHaveActed = new Set<string>();
+
+    // Add players who have declared
+    state.blowState.declarations.forEach((declaration) => {
+      playersWhoHaveActed.add(declaration.playerId);
+    });
+
+    // Add players who have passed
+    state.players.forEach((player) => {
+      if (player.isPasser) {
+        playersWhoHaveActed.add(player.id);
+      }
+    });
+
+    const totalActions = playersWhoHaveActed.size;
+    console.log('Players who have acted:', Array.from(playersWhoHaveActed));
+    console.log('Total actions:', totalActions);
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
@@ -245,18 +274,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         scores: state.teamScores,
         winner: winningPlayer.team,
       });
-    } else {
-      // Move to next player
+
+      // Call handleFourthDeclaration to handle the transition to play phase
+      this.handleFourthDeclaration();
+      return;
+    }
+
+    // Move to next player
+    this.gameState.nextTurn();
+    // Skip passed players
+    while (state.players[state.currentPlayerIndex].isPasser) {
       this.gameState.nextTurn();
-      // Skip passed players
-      while (state.players[state.currentPlayerIndex].isPasser) {
-        this.gameState.nextTurn();
-      }
-      // Emit turn update
-      const nextPlayer = state.players[state.currentPlayerIndex];
-      if (nextPlayer) {
-        this.server.emit('update-turn', nextPlayer.id);
-      }
+    }
+    // Emit turn update
+    const nextPlayer = state.players[state.currentPlayerIndex];
+    if (nextPlayer) {
+      this.server.emit('update-turn', nextPlayer.id);
     }
   }
 
@@ -286,9 +319,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     state.blowState.currentTrump = winner.trumpType;
 
     // Set current player to the winner for Negri selection
-    state.currentPlayerIndex = state.players.findIndex(
+    const winnerIndex = state.players.findIndex(
       (p) => p.id === winner.playerId,
     );
+    if (winnerIndex !== -1) {
+      state.currentPlayerIndex = winnerIndex;
+    }
 
     // First update all players about the new state with the Agari card added
     console.log('Emitting update-players with updated hand');
@@ -301,12 +337,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       message: 'Select a card from your hand as Negri',
     });
 
-    // Finally emit phase update
+    // Finally emit phase update and turn update
     this.server.emit('update-phase', {
       phase: 'play',
       scores: state.teamScores,
       winner: winningPlayer.team,
     });
+    this.server.emit('update-turn', winningPlayer.id);
   }
 
   @SubscribeMessage('select-negri')
@@ -350,12 +387,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Remove Negri card from hand
     player.hand = player.hand.filter((c) => c !== card);
 
-    // Start the play phase with the winner of the declaration as the first player
+    // Get the winner of the declaration
     const winner = this.blowService.findHighestDeclaration(
       state.blowState.declarations,
     );
     if (!winner) return;
 
+    // Set the winner as the first player to play
     const winnerIndex = state.players.findIndex(
       (p) => p.id === winner.playerId,
     );
