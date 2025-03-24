@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Base */
 @import '../styles/base/_variables.css';
 @import '../styles/base/_reset.css';

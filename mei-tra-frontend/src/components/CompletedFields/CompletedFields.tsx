@@ -11,19 +11,21 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, player
   return (
     <div className="completed-fields">
       {fields.map((field, index) => (
-        field.winnerTeam === playerTeam && (
-          <div key={index} className="completed-field">
-            {field.cards.map((card: string, cardIndex: number) => (
+        <div key={index} className="completed-field">
+          {field.cards.map((card: string, cardIndex: number) => (
+            field.winnerTeam === playerTeam ? (
               <Card 
                 key={cardIndex}
                 card={card}
                 small={true}
                 className="completed-field-card"
               />
-            ))}
-          </div>
-        )
+            ) : (
+              <div key={cardIndex} className="card face-down">🂠</div>
+            )
+          ))}
+        </div>
       ))}
     </div>
   );
-}; 
+};

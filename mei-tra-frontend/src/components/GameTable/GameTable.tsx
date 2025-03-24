@@ -2,7 +2,6 @@ import React from 'react';
 import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores } from '@/types/game.types';
 import { PlayerHand } from '../PlayerHand/PlayerHand';
 import { GameField } from '../GameField/GameField';
-import { CompletedFields } from '../CompletedFields/CompletedFields';
 import { GameControls } from '@/app/components/GameControls';
 import { BlowControls } from '@/app/components/BlowControls';
 import { getSocket } from '@/app/socket';
@@ -54,6 +53,26 @@ export const GameTable: React.FC<GameTableProps> = ({
   setNumberOfPairs,
   teamScores,
 }) => {
+  const getRelativePosition = (player: Player) => {
+    const currentPlayerId = getSocket().id;
+    const currentIndex = players.findIndex(p => p.id === currentPlayerId);
+    const playerIndex = players.findIndex(p => p.id === player.id);
+
+    if (player.id === currentPlayerId) return 'bottom';
+
+    const currentTeam = players.find(p => p.id === currentPlayerId)?.team;
+    const isTeammate = player.team === currentTeam;
+
+    if (isTeammate) return 'top';
+
+    const diff = (playerIndex - currentIndex + players.length) % players.length;
+
+    if (diff === 1) return 'right';
+    if (diff === 3) return 'left';
+
+    return 'left'; // fallback
+  };
+
   return (
     <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
       <GameInfo
@@ -96,9 +115,11 @@ export const GameTable: React.FC<GameTableProps> = ({
             gamePhase={gamePhase}
             whoseTurn={whoseTurn}
             gameActions={gameActions}
-            players={players}
+            position={getRelativePosition(player)}
             agariCard={revealedAgari || undefined}
             currentHighestDeclaration={currentHighestDeclaration || undefined}
+            completedFields={completedFields}
+            playerTeam={(players.find(p => p.id === getSocket().id)?.team ?? 0) as Team} 
           />
         ))}
 
@@ -108,11 +129,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           players={players}
         />
       </div>
-
-      <CompletedFields 
-        fields={completedFields} 
-        playerTeam={(players.find(p => p.id === getSocket().id)?.team ?? 0) as Team} 
-      />
     </div>
   );
 }; 

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Player, GamePhase, GameActions } from '@/types/game.types';
+import { Player, GamePhase, GameActions, CompletedField, Team } from '@/types/game.types';
 import { NegriCard } from '../NegriCard/NegriCard';
 import { getSocket } from '@/app/socket';
 import { Card } from '../card/Card';
+import { CompletedFields } from '../CompletedFields/CompletedFields';
 
 interface PlayerHandProps {
   player: Player;
@@ -12,9 +13,11 @@ interface PlayerHandProps {
   gamePhase: GamePhase | null;
   whoseTurn: string | null;
   gameActions: GameActions;
-  players: Player[];
+  position: string;
   agariCard?: string;
   currentHighestDeclaration?: { playerId: string };
+  completedFields: CompletedField[];
+  playerTeam: Team;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -25,30 +28,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   gamePhase,
   whoseTurn,
   gameActions,
-  players,
+  position,
   agariCard,
   currentHighestDeclaration,
+  completedFields,
+  playerTeam,
 }) => {
-  const getRelativePosition = () => {
-    const currentPlayerId = getSocket().id;
-    const currentIndex = players.findIndex(p => p.id === currentPlayerId);
-    const playerIndex = players.findIndex(p => p.id === player.id);
-
-    if (player.id === currentPlayerId) return 'bottom';
-
-    const currentTeam = players.find(p => p.id === currentPlayerId)?.team;
-    const isTeammate = player.team === currentTeam;
-
-    if (isTeammate) return 'top';
-
-    const diff = (playerIndex - currentIndex + players.length) % players.length;
-
-    if (diff === 1) return 'right';
-    if (diff === 3) return 'left';
-
-    return 'left'; // fallback
-  };
-
   const renderPlayerHand = () => {
     const isCurrentPlayer = player.id === getSocket().id;
     const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
@@ -109,36 +94,42 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     );
   };
 
-  const position = getRelativePosition();
   const isCurrentPlayer = player.id === getSocket().id;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
 
   return (
     <div className={`player-position ${position}`}>
       <div className="player-info">
-        <div className={`player-info-container ${isCurrentTurn ? 'current-turn' : ''}`}>
-          <div className="player-name">{player.name}</div>
-          <div className="card-count">{player.hand.length} cards</div>
-          {isCurrentPlayer && isWinningPlayer && !negriCard && (
-            <div className="flex flex-col items-center justify-center">Select Negri Card.</div>
+        <div className="player-info-group">
+          {negriCard && negriPlayerId === player.id && (
+            <NegriCard
+              negriCard={negriCard}
+              negriPlayerId={negriPlayerId}
+            />
           )}
-          {isCurrentPlayer && agariCard && isWinningPlayer && (
-            <div className="agari-card-container">
-              <div className="agari-label">Agari Card is</div>
-              <Card card={agariCard} />
+          <div className={`player-info-container ${isCurrentTurn ? 'current-turn' : ''}`}>
+            <div className="player-name">{player.name}</div>
+            <div className="card-count">{player.hand.length} cards</div>
+            {isCurrentPlayer && isWinningPlayer && !negriCard && (
+              <div className="flex flex-col items-center justify-center">Select Negri Card.</div>
+            )}
+            {isCurrentPlayer && agariCard && isWinningPlayer && (
+              <div className="agari-card-container">
+                <div className="agari-label">Agari Card is</div>
+                <Card card={agariCard} />
+              </div>
+            )}
+          </div>
+          {completedFields.some(field => field.winnerId === player.id) && (
+            <div className="completed-fields-container">
+              <CompletedFields 
+                fields={completedFields.filter(field => field.winnerId === player.id)} 
+                playerTeam={playerTeam} 
+              />
             </div>
-          )}
-          {isCurrentPlayer && negriCard && (
-            <div className="flex flex-col items-center justify-center">Select Base Card</div>
           )}
         </div>
         {renderPlayerHand()}
-        {negriCard && negriPlayerId === player.id && (
-          <NegriCard
-            negriCard={negriCard}
-            negriPlayerId={negriPlayerId}
-          />
-        )}
       </div>
     </div>
   );

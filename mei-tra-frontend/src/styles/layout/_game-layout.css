@@ -192,6 +192,40 @@
   gap: 2px;
 }
 
+.player-info-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.completed-fields {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.completed-field {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+}
+
+.completed-field .card {
+  width: 2rem;
+  height: 3rem;
+}
+
+.completed-field .face-down {
+  background: linear-gradient(45deg, #1a237e, #283593);
+  color: white;
+  font-size: 1.5rem;
+}
+
+
 /* Player position base styles */
 .player-position {
   display: flex;
