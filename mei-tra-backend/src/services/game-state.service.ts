@@ -49,6 +49,7 @@ export class GameStateService {
       lastPasser: null,
       isRoundCancelled: false,
       startingPlayerId: null,
+      currentBlowIndex: 0,
     };
   }
 

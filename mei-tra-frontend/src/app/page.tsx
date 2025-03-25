@@ -269,11 +269,14 @@ export default function Home() {
     },
     declareBlow: () => {
       const socket = getSocket();
+      if (whoseTurn !== socket.id) {
+        alert("It's not your turn to declare!");
+        return;
+      }
       if (!selectedTrump || numberOfPairs < 1) {
         alert('Please select a trump type and number of pairs!');
         return;
       }
-
       socket.emit('declare-blow', {
         trumpType: selectedTrump,
         numberOfPairs,

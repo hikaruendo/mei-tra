@@ -14,7 +14,7 @@ export const NegriCard: React.FC<NegriCardProps> = ({
     <div className="negri-card-display mb-2">
       <div className="text-sm text-white">Negri</div>
       {getSocket().id === negriPlayerId ? (
-        <div className="card negri-card">
+        <div className={`card negri-card ${negriCard.match(/[♥♦]/) ? 'red-suit' : ''}`}>
           {negriCard === 'JOKER' ? <div className="rank">JOKER</div> : (
             <>
               {negriCard.replace(/[♠♣♥♦]/, '')}

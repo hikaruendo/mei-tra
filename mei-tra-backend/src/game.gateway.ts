@@ -96,6 +96,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       lastPasser: null,
       isRoundCancelled: false,
       startingPlayerId: state.players[0].id,
+      currentBlowIndex: 0,
     };
 
     // 初期状態をクライアントに通知
@@ -235,6 +236,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         state.blowState.lastPasser = null;
         state.blowState.declarations = [];
         state.blowState.currentHighestDeclaration = null;
+        state.blowState.currentBlowIndex =
+          (state.blowState.currentBlowIndex + 1) % state.players.length;
 
         // Move to next dealer and restart blow phase
         this.gameState.nextTurn();
@@ -576,15 +579,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Check if any team has reached 17 points
     const hasTeamReached = Object.values(state.teamScores).some(
-      (score) => score.total >= 3,
+      (score) => score.total >= 5,
       // (score) => score.total >= 17,
     );
 
     if (hasTeamReached) {
       // Find the winning team
       const winningTeamEntry = Object.entries(state.teamScores).find(
-        // TODO: テストのため3
-        ([, score]) => score.total >= 3,
+        // TODO: テストのため5
+        ([, score]) => score.total >= 5,
       );
       const finalWinningTeam = winningTeamEntry
         ? (Number(winningTeamEntry[0]) as Team)
@@ -660,6 +663,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           lastPasser: null,
           isRoundCancelled: false,
           startingPlayerId: nextDealer.id,
+          currentBlowIndex: state.blowState.currentBlowIndex,
         };
 
         // Update game state with the new state
@@ -786,7 +790,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // The first player to blow should be the player to the left of the dealer
     const dealerIndex = state.currentPlayerIndex;
-    const firstBlowIndex = (dealerIndex + 1) % state.players.length;
+    const firstBlowIndex =
+      (dealerIndex + state.blowState.currentBlowIndex) % state.players.length;
     const firstBlowPlayer = state.players[firstBlowIndex];
 
     if (!firstBlowPlayer) {
@@ -804,6 +809,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       lastPasser: null,
       isRoundCancelled: false,
       startingPlayerId: firstBlowPlayer.id,
+      currentBlowIndex:
+        (state.blowState.currentBlowIndex + 1) % state.players.length, // Increment and wrap around
     };
 
     // Emit blow phase started
