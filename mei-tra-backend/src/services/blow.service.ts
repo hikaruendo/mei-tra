@@ -39,7 +39,14 @@ export class BlowService {
     return declarations.reduce((highest, current) => {
       if (!highest) return current;
 
-      // Compare trump strengths
+      // First compare number of pairs
+      if (current.numberOfPairs !== highest.numberOfPairs) {
+        return current.numberOfPairs > highest.numberOfPairs
+          ? current
+          : highest;
+      }
+
+      // If same number of pairs, compare trump strengths
       const currentTrumpStrength = this.cardService.getTrumpStrength(
         current.trumpType,
       );
@@ -47,18 +54,7 @@ export class BlowService {
         highest.trumpType,
       );
 
-      if (currentTrumpStrength > highestTrumpStrength) {
-        return current;
-      }
-
-      if (currentTrumpStrength === highestTrumpStrength) {
-        // If same trump type, compare number of pairs
-        if (current.numberOfPairs > highest.numberOfPairs) {
-          return current;
-        }
-      }
-
-      return highest;
+      return currentTrumpStrength > highestTrumpStrength ? current : highest;
     });
   }
 

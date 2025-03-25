@@ -478,10 +478,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private handleFieldComplete(field: Field) {
     const state = this.gameState.getState();
+    console.log('state.blowState.currentTrump', state.blowState.currentTrump);
     const winner = this.playService.determineFieldWinner(
       field,
       state.players,
-      state.currentTrump || 'hel',
+      state.blowState.currentTrump,
     );
 
     if (!winner) {

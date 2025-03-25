@@ -51,7 +51,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`card ${isRed ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''} ${!negriCard && isWinningPlayer ? 'player-info' : ''}`}
+                className={`card ${isRed || isNegri ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''} ${!negriCard && isWinningPlayer && gamePhase === 'play' ? 'player-info' : ''}`}
                 onClick={() => {
                   if (gamePhase === 'play' && whoseTurn === getSocket().id) {
                     if (!negriCard && isWinningPlayer) {
