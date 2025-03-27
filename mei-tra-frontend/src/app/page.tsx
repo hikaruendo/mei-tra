@@ -301,6 +301,14 @@ export default function Home() {
         return;
       }
       socket.emit('play-card', card);
+    },
+    selectBaseSuit: (suit: string) => {
+      const socket = getSocket();
+      if (whoseTurn !== socket.id) {
+        alert("It's not your turn to select base suit!11");
+        return;
+      }
+      socket.emit('select-base-suit', suit);
     }
   };
 

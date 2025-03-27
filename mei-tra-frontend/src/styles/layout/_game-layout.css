@@ -14,17 +14,24 @@
 .field-container {
   grid-area: field;
   position: relative;
+  justify-self: center;
   width: 100%;
-  height: 100%;
-  max-width: 400px;
-  max-height: 400px;
-  margin: auto;
+  height: auto;
+  margin: 0 auto;
   background: transparent;
   border-radius: 1rem;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 4;
+}
+
+.field-container-outer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .field-container-inner {
@@ -95,14 +102,6 @@
   color: purple;
 }
 
-.completed-field-card .rank {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  font-size: 8px;
-  letter-spacing: -1px;
-  color: purple;
-}
-
 .field-container-inner .card:hover {
   transform: translateY(-10px);
   z-index: 10;
@@ -121,6 +120,83 @@
 
 .field-container-inner .card .name:first-child {
   margin-left: 0;
+}
+
+.base-suit-selection {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid white;
+  padding: 10px;
+  align-items: center;
+  border-radius: 10px;
+  z-index: 10;
+  /* width: 400px; */
+}
+
+.base-suit-selection h3 {
+  color: white;
+  margin-bottom: 15px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.suit-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.suit-buttons button {
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 32px;
+  cursor: pointer;
+  border: 1px solid white;
+  transition: all 0.3s ease;
+  min-width: 50px;
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.suit-buttons button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.suit-buttons button[onClick*="♥"],
+.suit-buttons button[onClick*="♦"] {
+  color: red;
+}
+
+.suit-buttons button[onClick*="♠"],
+.suit-buttons button[onClick*="♣"] {
+  color: black;
+} 
+
+.suit-buttons button.selected-suit {
+  background: white;
+}
+
+.suit-buttons button.selected-suit.red-suit {
+  color: red;
+}
+
+.suit-buttons button.selected-suit.black-suit {
+  color: black;
+} 
+
+.completed-field-card .rank {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 8px;
+  letter-spacing: -1px;
+  color: purple;
 }
 
 .hand-container {
@@ -254,7 +330,6 @@
   justify-self: center;
   transform: rotate(90deg) translateX(-50%);
   transform-origin: left center;
-  width: 400px;
 }
 
 .player-position.right {
@@ -263,7 +338,6 @@
   justify-self: center;
   transform: rotate(-90deg) translateX(50%);
   transform-origin: right center;
-  width: 400px;
 }
 
 

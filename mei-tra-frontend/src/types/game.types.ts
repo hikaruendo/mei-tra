@@ -13,6 +13,7 @@ export interface CompletedField {
 export interface Field {
   cards: string[];
   baseCard: string;
+  baseSuit?: string;
   dealerId: string;
   isComplete: boolean;
 }
@@ -71,4 +72,5 @@ export interface GameActions {
   playCard: (card: string) => void;
   declareBlow: () => void;
   passBlow: () => void;
+  selectBaseSuit: (suit: string) => void;
 } 

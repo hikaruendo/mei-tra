@@ -470,6 +470,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (currentField.cards.length === 4) {
       this.handleFieldComplete(currentField);
     } else {
+      // If Joker is baseCard and baseSuit is not selected, don't proceed to next turn
+      if (currentField.baseCard === 'JOKER' && !currentField.baseSuit) {
+        return;
+      }
+
       this.gameState.nextTurn();
       // Emit turn update
       const nextPlayer = state.players[state.currentPlayerIndex];
@@ -828,5 +833,32 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Emit turn update
     this.server.emit('update-turn', firstBlowPlayer.id);
+  }
+
+  @SubscribeMessage('select-base-suit')
+  handleSelectBaseSuit(client: Socket, suit: string): void {
+    const state = this.gameState.getState();
+    if (
+      !state.playState.currentField ||
+      state.playState.currentField.baseCard !== 'JOKER'
+    ) {
+      client.emit('error-message', 'Cannot select base suit now!');
+      return;
+    }
+
+    if (state.playState.currentField.dealerId !== client.id) {
+      client.emit('error-message', "It's not your turn to select base suit!");
+      return;
+    }
+
+    state.playState.currentField.baseSuit = suit;
+    this.server.emit('field-updated', state.playState.currentField);
+
+    // Proceed to next turn after base suit selection
+    this.gameState.nextTurn();
+    const nextPlayer = state.players[state.currentPlayerIndex];
+    if (nextPlayer) {
+      this.server.emit('update-turn', nextPlayer.id);
+    }
   }
 }

@@ -38,6 +38,7 @@ export interface BlowState {
 export interface Field {
   cards: string[];
   baseCard: string;
+  baseSuit?: string;
   dealerId: string;
   declaredSuit?: string;
   isComplete: boolean;

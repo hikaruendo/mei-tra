@@ -12,6 +12,7 @@ interface GameActions {
   playCard: (card: string) => void;
   declareBlow: () => void;
   passBlow: () => void;
+  selectBaseSuit: (suit: string) => void;
 }
 
 interface GameTableProps {
@@ -127,6 +128,8 @@ export const GameTable: React.FC<GameTableProps> = ({
         <GameField
           currentField={currentField}
           players={players}
+          onBaseSuitSelect={gameActions.selectBaseSuit}
+          isCurrentPlayer={getSocket().id === whoseTurn}
         />
       </div>
     </div>
