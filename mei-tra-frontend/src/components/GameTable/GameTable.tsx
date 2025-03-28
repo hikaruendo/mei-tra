@@ -77,7 +77,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   return (
     <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
       <GameInfo
-        gamePhase={gamePhase}
         currentTrump={currentTrump}
         whoseTurn={whoseTurn}
         players={players}

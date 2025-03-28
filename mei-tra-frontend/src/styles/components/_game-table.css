@@ -32,35 +32,79 @@
   background: #004400;
 }
 
-/* Game info styles */
-.game-info {
+/* Game Info Component Styles */
+.game-info-container {
   position: fixed;
   top: 0;
   left: 0;
+  background-color: rgba(31, 41, 55, 0.9);
   padding: var(--spacing-md);
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-md);
   z-index: 20;
-  max-width: 300px;
-  border-bottom-right-radius: var(--border-radius-sm);
+  border-bottom-right-radius: var(--border-radius-md);
 }
 
-.game-info > div {
+.game-info-content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  width: 100%;
+  gap: var(--spacing-md);
 }
 
-.current-trump {
-  background: rgba(0, 0, 0, 0.5);
+.game-info-trump {
+  background-color: #9333ea;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  min-width: 200px;
+}
+
+.game-info-trump-text {
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.game-info-current-player {
+  background-color: #22c55e;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  min-width: 200px;
+}
+
+.game-info-current-player-text {
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.game-info-scores {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.game-info-score-team1,
+.game-info-score-team2 {
+  flex: 1;
   padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-sm);
-  text-align: left;
-  width: 100%;
+  border-radius: var(--border-radius-md);
+  text-align: center;
+  min-width: 100px;
+}
+
+.game-info-score-team1 {
+  background-color: #2563eb;
+}
+
+.game-info-score-team2 {
+  background-color: #dc2626;
+}
+
+.game-info-score-text {
+  color: white;
+  font-weight: 500;
+  font-size: 1rem;
 }
 
 /* Turn indicator styles */
