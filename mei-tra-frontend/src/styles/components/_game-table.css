@@ -129,7 +129,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);
-  z-index: 9999;
+  z-index: 99;
   backdrop-filter: blur(8px);
   flex-direction: column;
   background: rgba(255, 255, 255, 0.1);
@@ -188,7 +188,7 @@
   box-shadow: var(--shadow-md);
   width: 100%;
   position: relative;
-  z-index: 9999;
+  z-index: 99;
 }
 
 /* Form controls */
@@ -291,7 +291,7 @@
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: var(--shadow-md);
-  z-index: 10000;
+  z-index: 100;
 }
 
 .blow-declarations h4 {

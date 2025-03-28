@@ -8,6 +8,7 @@ import { GameTable } from '@/components/GameTable/GameTable';
 import { TeamScore, TeamScoreRecord } from '@/types/game.types';
 import { ScoreBoard } from '@/components/ScoreBoard';
 import { GameJoinForm } from '@/components/GameJoinForm';
+import { Notification } from '@/components/Notification/Notification';
 
 export default function Home() {
   // Player and Game State
@@ -40,6 +41,8 @@ export default function Home() {
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
   const [roundNumber, setRoundNumber] = useState(1);
+
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -80,17 +83,15 @@ export default function Home() {
       },
       'error-message': (message: string) => alert(message),
       'update-turn': (playerId: string) => {
-        console.log('Turn changed to:', playerId);
         setWhoseTurn(playerId);
         // Add notification for turn change
-        const nextPlayer = players.find(p => p.id === playerId)?.name;
-        if (nextPlayer && (gamePhase === 'blow' || gamePhase === 'play')) {
-          const notification = document.createElement('div');
-          notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-          notification.textContent = `Turn changed to ${nextPlayer}`;
-          document.body.appendChild(notification);
-          setTimeout(() => notification.remove(), 3000);
-        }
+        // const nextPlayer = players.find(p => p.id === playerId)?.name;
+        // if (nextPlayer && (gamePhase === 'blow' || gamePhase === 'play')) {
+        //   setNotification({
+        //     message: `Turn changed to ${nextPlayer}`,
+        //     type: 'success'
+        //   });
+        // }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
@@ -117,11 +118,10 @@ export default function Home() {
       },
       'hand-broken': ({ playerId, hand }: { playerId: string; hand: string[] }) => {
         const player = players.find(p => p.id === playerId)?.name;
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = `${player} has a broken hand!`;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        setNotification({
+          message: `${player} has a broken hand!`,
+          type: 'error'
+        });
         setPlayers(players.map(p => 
           p.id === playerId ? { ...p, hasBroken: true, hand } : p
         ));
@@ -130,11 +130,10 @@ export default function Home() {
         resetBlowState();
       },
       'round-cancelled': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = 'Round cancelled! All players passed.';
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        setNotification({
+          message: 'Round cancelled! All players passed.',
+          type: 'warning'
+        });
         setPlayers(players);
         setWhoseTurn(nextDealer);
         resetBlowState();
@@ -150,12 +149,10 @@ export default function Home() {
             : p
         ));
         
-        // Create notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        setNotification({
+          message,
+          type: 'success'
+        });
       },
       'play-setup-complete': ({ negriCard, startingPlayer }: { negriCard: string, startingPlayer: string }) => {
         setRevealedAgari(null);
@@ -319,6 +316,13 @@ export default function Home() {
   return (
     <main className="min-h-screen p-8 bg-gray-100">
       <div className="max-w-6xl mx-auto">
+        {notification && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={() => setNotification(null)}
+          />
+        )}
         {!gameStarted ? (
           <GameJoinForm
             name={name}

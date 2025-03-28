@@ -250,6 +250,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         state.currentPlayerIndex = firstBlowIndex;
         state.blowState.startingPlayerId = firstBlowPlayer.id;
 
+        // Regenerate deck and deal cards
+        state.deck = this.cardService.generateDeck();
+        this.gameState.dealCards();
+
         // Emit round cancelled
         this.server.emit('round-cancelled', {
           nextDealer: state.players[nextDealerIndex].id,
