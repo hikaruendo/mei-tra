@@ -210,6 +210,9 @@ export default function Home() {
         // Update players with the latest data from server
         setPlayers(updatedPlayers);
       },
+      'field-updated': (field: Field) => {
+        setCurrentField(field);
+      },
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
         setCompletedFields(prev => [...prev, field]);
         setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });

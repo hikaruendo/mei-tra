@@ -203,7 +203,7 @@ export class CardService {
       case 'zuppe':
         return 'J♠';
       case 'tra':
-        return 'J♥'; // In Tra, Hearts Jack is primary
+        return ''; // In Tra, no primary jack
       default:
         return 'J♥';
     }
@@ -220,7 +220,7 @@ export class CardService {
       case 'zuppe':
         return 'J♣';
       case 'tra':
-        return 'J♦'; // In Tra, Diamonds Jack is secondary
+        return ''; // In Tra, no secondary jack
       default:
         return 'J♦';
     }
@@ -243,7 +243,13 @@ export class CardService {
     trumpType?: TrumpType | null,
     baseSuit?: string,
   ): string {
-    if (card === 'JOKER') return baseSuit || '';
+    if (card === 'JOKER') {
+      // traの場合は、baseSuitが設定されていればそれを使用
+      if (trumpType === 'tra' && baseSuit) {
+        return baseSuit;
+      }
+      return baseSuit || '';
+    }
 
     // Handle 10 case
     if (card.startsWith('10')) {

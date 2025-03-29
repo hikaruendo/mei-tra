@@ -37,9 +37,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const renderPlayerHand = () => {
     const isCurrentPlayer = player.id === getSocket().id;
     const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
-
-    console.log('player.name', player.name);
-    console.log('player.hasBroken', player.hasBroken);
     
     if (isCurrentPlayer) {
       return (
