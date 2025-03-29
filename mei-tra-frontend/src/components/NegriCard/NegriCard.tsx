@@ -11,11 +11,11 @@ export const NegriCard: React.FC<NegriCardProps> = ({
   negriPlayerId,
 }) => {
   return (
-    <div className="negri-card-display">
-      <div className="text-sm text-white mb-1">Negri Card</div>
+    <div className="negri-card-display mb-2">
+      <div className="text-sm text-white">Negri</div>
       {getSocket().id === negriPlayerId ? (
-        <div className="card negri-card">
-          {negriCard === 'JOKER' ? '🃏' : (
+        <div className={`card negri-card ${negriCard.match(/[♥♦]/) ? 'red-suit' : ''}`}>
+          {negriCard === 'JOKER' ? <div className="rank">JOKER</div> : (
             <>
               {negriCard.replace(/[♠♣♥♦]/, '')}
               <span className="suit">{negriCard.match(/[♠♣♥♦]/)?.[0]}</span>

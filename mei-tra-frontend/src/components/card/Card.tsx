@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({
 
   return (
     <div className={`card ${isRed ? 'red-suit' : 'black-suit'} ${small ? 'small' : ''} ${className}`}>
-      {card === 'JOKER' ? '🃏' : (
+      {card === 'JOKER' ? <div className="rank">JOKER</div> : (
         <>
           {value}
           <span className="suit">{suit}</span>

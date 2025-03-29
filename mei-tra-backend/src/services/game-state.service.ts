@@ -49,6 +49,7 @@ export class GameStateService {
       lastPasser: null,
       isRoundCancelled: false,
       startingPlayerId: null,
+      currentBlowIndex: 0,
     };
   }
 
@@ -90,19 +91,6 @@ export class GameStateService {
     this.state.players = this.state.players.filter((p) => p.id !== id);
   }
 
-  startGame(): boolean {
-    if (this.state.players.length !== 4) return false;
-
-    this.state.teamScores = this.scoreService.initializeTeamScores();
-    this.state.agari = null;
-    this.state.gamePhase = 'deal';
-    this.state.deck = this.cardService.generateDeck();
-    this.dealCards();
-    this.state.currentPlayerIndex = 0;
-
-    return true;
-  }
-
   dealCards(): void {
     if (this.state.players.length === 0) return;
 
@@ -110,6 +98,7 @@ export class GameStateService {
     this.state.players.forEach((player) => {
       player.hand = [];
       player.isPasser = false;
+      player.hasBroken = false;
     });
 
     // Deal exactly 10 cards to each player
@@ -123,6 +112,10 @@ export class GameStateService {
 
     // Set the Agari card
     this.state.agari = this.state.deck[40];
+
+    this.state.players.forEach((player) => {
+      this.chomboService.checkForBrokenHand(player);
+    });
   }
 
   nextTurn(): void {
@@ -138,22 +131,6 @@ export class GameStateService {
   isPlayerTurn(playerId: string): boolean {
     const currentPlayer = this.getCurrentPlayer();
     return currentPlayer?.id === playerId;
-  }
-
-  updatePhase(phase: 'deal' | 'blow' | 'play' | null): void {
-    this.state.gamePhase = phase;
-  }
-
-  startField(dealerId: string): void {
-    const isTanzenRound = this.state.players.some((p) => p.hand.length === 2);
-
-    this.state.playState.currentField = {
-      cards: [],
-      baseCard: '',
-      dealerId,
-      isComplete: false,
-    };
-    this.state.playState.isTanzenRound = isTanzenRound;
   }
 
   completeField(field: Field, winnerId: string): CompletedField | null {
@@ -174,14 +151,6 @@ export class GameStateService {
 
     this.state.playState.fields.push(completedField);
     return completedField;
-  }
-
-  isGameOver(): boolean {
-    return Object.values(this.state.teamScores).some(
-      // TODO: テストで３点にする
-      (score) => score.total >= 3,
-      // (score) => score.total >= 17,
-    );
   }
 
   resetState(): void {
@@ -205,24 +174,6 @@ export class GameStateService {
     // Generate new deck and deal cards
     this.state.deck = this.cardService.generateDeck();
     this.dealCards();
-  }
-
-  private handleFieldComplete(field: Field, winnerId: string): void {
-    const winner = this.state.players.find((p) => p.id === winnerId);
-    if (!winner) return;
-
-    const completedField: CompletedField = {
-      cards: field.cards,
-      winnerId: winnerId,
-      winnerTeam: winner.team,
-      dealerId: field.dealerId,
-    };
-
-    this.state.playState.fields.push(completedField);
-  }
-
-  resetCurrentField(): void {
-    this.state.playState.currentField = null;
   }
 
   get roundNumber(): number {

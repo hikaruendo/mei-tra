@@ -12,9 +12,11 @@ export class PlayService {
     trumpSuit: TrumpType | null,
   ): Player | null {
     const baseCard = field.baseCard;
-    const baseSuit = baseCard.startsWith('10')
-      ? baseCard.slice(2)
-      : baseCard.slice(-1);
+    const baseSuit = this.cardService.getCardSuit(
+      baseCard,
+      trumpSuit,
+      field.baseSuit,
+    );
     let winner: Player | null = null;
     let highestStrength = -1;
 
@@ -67,7 +69,11 @@ export class PlayService {
     }
 
     const baseCard = field.baseCard;
-    const baseSuit = this.cardService.getCardSuit(baseCard, currentTrump);
+    const baseSuit = this.cardService.getCardSuit(
+      baseCard,
+      currentTrump,
+      field.baseSuit,
+    );
     const cardSuit = this.cardService.getCardSuit(card, currentTrump);
 
     // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
@@ -88,7 +94,11 @@ export class PlayService {
 
     // Normal suit matching rules
     if (baseCard) {
-      const baseSuit = this.cardService.getCardSuit(baseCard, currentTrump);
+      const baseSuit = this.cardService.getCardSuit(
+        baseCard,
+        currentTrump,
+        field.baseSuit,
+      );
       const cardSuit = this.cardService.getCardSuit(card, currentTrump);
 
       // If player has the base suit, they must play it

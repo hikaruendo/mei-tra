@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { getSocket } from './socket';
-import { BlowDeclaration, Field, GamePhase, Player, TeamPlayers, TeamScores, TrumpType } from './types';
+import { BlowDeclaration, Field, GamePhase, Player, TeamScores, TrumpType } from './types';
 import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
 import { GameTable } from '@/components/GameTable/GameTable';
 import { TeamScore, TeamScoreRecord } from '@/types/game.types';
 import { ScoreBoard } from '@/components/ScoreBoard';
 import { GameJoinForm } from '@/components/GameJoinForm';
+import { Notification } from '@/components/Notification/Notification';
 
 export default function Home() {
   // Player and Game State
@@ -16,16 +17,11 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
-  const [teams, setTeams] = useState<TeamPlayers>({ team0: [], team1: [] });
   const [teamScores, setTeamScores] = useState<TeamScores>({
     0: { deal: 0, blow: 0, play: 0, total: 0 },
     1: { deal: 0, blow: 0, play: 0, total: 0 }
   });
   const [teamScoreRecords, setTeamScoreRecords] = useState<{ [key: number]: TeamScoreRecord }>({});
-
-  // Card State
-  const [selectedCards, setSelectedCards] = useState<string[]>([]);
-
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
   const [currentHighestDeclaration, setCurrentHighestDeclaration] = useState<BlowDeclaration | null>(null);
@@ -46,6 +42,8 @@ export default function Home() {
 
   const [roundNumber, setRoundNumber] = useState(1);
 
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
@@ -55,19 +53,11 @@ export default function Home() {
         console.log('update-players event received');
         console.log('Players updated:', players);
         setPlayers(players);
-        setTeams({
-          team0: players.filter(p => p.team === 0),
-          team1: players.filter(p => p.team === 1)
-        });
       },
       'game-started': (players: Player[]) => {
         console.log('Game started with players:', players);
         setPlayers(players);
         setGameStarted(true);
-        setTeams({
-          team0: players.filter(p => p.team === 0),
-          team1: players.filter(p => p.team === 1)
-        });
       },
       'update-phase': ({ phase, scores, winner }: { phase: GamePhase; scores: TeamScores; winner: number | null }) => {
         setGamePhase(phase);
@@ -86,24 +76,22 @@ export default function Home() {
           setCurrentTrump(null);
         }
         
-        // Only show alert for phases other than 'play'
-        if (winner !== null && phase !== 'play') {
+        // Only show alert for phases other than 'play' and when not transitioning to a new round
+        if (winner !== null && phase !== 'play' && phase !== 'blow') {
           alert(`Team ${winner} won the ${phase} phase!`);
         }
       },
       'error-message': (message: string) => alert(message),
       'update-turn': (playerId: string) => {
-        console.log('Turn changed to:', playerId);
         setWhoseTurn(playerId);
         // Add notification for turn change
-        const nextPlayer = players.find(p => p.id === playerId)?.name;
-        if (nextPlayer && (gamePhase === 'blow' || gamePhase === 'play')) {
-          const notification = document.createElement('div');
-          notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-          notification.textContent = `Turn changed to ${nextPlayer}`;
-          document.body.appendChild(notification);
-          setTimeout(() => notification.remove(), 3000);
-        }
+        // const nextPlayer = players.find(p => p.id === playerId)?.name;
+        // if (nextPlayer && (gamePhase === 'blow' || gamePhase === 'play')) {
+        //   setNotification({
+        //     message: `Turn changed to ${nextPlayer}`,
+        //     type: 'success'
+        //   });
+        // }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
@@ -128,26 +116,23 @@ export default function Home() {
           ));
         }
       },
-      'hand-broken': ({ playerId, hand }: { playerId: string; hand: string[] }) => {
-        const player = players.find(p => p.id === playerId)?.name;
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = `${player} has a broken hand!`;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
-        setPlayers(players.map(p => 
-          p.id === playerId ? { ...p, hasBroken: true, hand } : p
-        ));
+      'broken': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
+        setNotification({
+          message: 'Broken happened, reset the game',
+          type: 'warning'
+        });
+        setPlayers(players);
+        setWhoseTurn(nextDealer);
+        resetBlowState();
       },
       'round-reset': () => {
         resetBlowState();
       },
       'round-cancelled': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = 'Round cancelled! All players passed.';
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        setNotification({
+          message: 'Round cancelled! All players passed.',
+          type: 'warning'
+        });
         setPlayers(players);
         setWhoseTurn(nextDealer);
         resetBlowState();
@@ -163,12 +148,10 @@ export default function Home() {
             : p
         ));
         
-        // Create notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-out';
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        setNotification({
+          message,
+          type: 'success'
+        });
       },
       'play-setup-complete': ({ negriCard, startingPlayer }: { negriCard: string, startingPlayer: string }) => {
         setRevealedAgari(null);
@@ -189,11 +172,6 @@ export default function Home() {
         setCurrentField(field);
         // Update players with the latest data from server
         setPlayers(updatedPlayers);
-        // Update teams with the latest data
-        setTeams({
-          team0: updatedPlayers.filter(p => p.team === 0),
-          team1: updatedPlayers.filter(p => p.team === 1)
-        });
       },
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
         setCompletedFields(prev => [...prev, field]);
@@ -277,46 +255,16 @@ export default function Home() {
       console.log('Starting game with players:', players);
       getSocket().emit('start-game');
     },
-    handleDiscardPairs: () => {
-      const socket = getSocket();
-      if (!whoseTurn) {
-        alert("Turn system is not working! No turn assigned.");
-        return;
-      }
-
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn!");
-        return;
-      }
-
-      if (selectedCards.length === 2) {
-        const [card1, card2] = selectedCards;
-        const value1 = card1.replace(/[♠♣♥♦]/, '');
-        const value2 = card2.replace(/[♠♣♥♦]/, '');
-
-        if (value1 === value2 && value1 !== 'JOKER') {
-          socket.emit('discard-pairs', selectedCards);
-          setSelectedCards([]);
-        } else {
-          alert('Selected cards are not a pair!');
-        }
-      }
-    },
-    startBlow: () => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn to start the blow phase!");
-        return;
-      }
-      socket.emit('start-blow');
-    },
     declareBlow: () => {
       const socket = getSocket();
+      if (whoseTurn !== socket.id) {
+        alert("It's not your turn to declare!");
+        return;
+      }
       if (!selectedTrump || numberOfPairs < 1) {
         alert('Please select a trump type and number of pairs!');
         return;
       }
-
       socket.emit('declare-blow', {
         trumpType: selectedTrump,
         numberOfPairs,
@@ -325,7 +273,7 @@ export default function Home() {
     passBlow: () => {
       const socket = getSocket();
       if (whoseTurn !== socket.id) {
-        alert("It's not your turn to pass!");
+        alert("It's not your turn to pass!1");
         return;
       }
       socket.emit('pass-blow');
@@ -337,10 +285,22 @@ export default function Home() {
     playCard: (card: string) => {
       const socket = getSocket();
       if (whoseTurn !== socket.id) {
-        alert("It's not your turn!");
+        alert("It's not your turn!2");
         return;
       }
       socket.emit('play-card', card);
+    },
+    selectBaseSuit: (suit: string) => {
+      const socket = getSocket();
+      if (whoseTurn !== socket.id) {
+        alert("It's not your turn to select base suit!11");
+        return;
+      }
+      socket.emit('select-base-suit', suit);
+    },
+    revealBrokenHand: (playerId: string) => {
+      const socket = getSocket();
+      socket.emit('reveal-broken-hand', playerId);
     }
   };
 
@@ -351,6 +311,13 @@ export default function Home() {
   return (
     <main className="min-h-screen p-8 bg-gray-100">
       <div className="max-w-6xl mx-auto">
+        {notification && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={() => setNotification(null)}
+          />
+        )}
         {!gameStarted ? (
           <GameJoinForm
             name={name}
@@ -362,7 +329,6 @@ export default function Home() {
         ) : (
           <>
             <GameTable
-              teams={teams}
               whoseTurn={whoseTurn}
               gamePhase={gamePhase}
               currentTrump={currentTrump}
@@ -370,8 +336,6 @@ export default function Home() {
               players={players}
               negriCard={negriCard}
               negriPlayerId={negriPlayerId}
-              selectedCards={selectedCards}
-              setSelectedCards={setSelectedCards}
               completedFields={completedFields}
               revealedAgari={revealedAgari}
               gameActions={gameActions}

@@ -147,4 +147,19 @@ export class ChomboService {
   clearViolations(): void {
     this.violations = [];
   }
+
+  checkForBrokenHand(player: Player): void {
+    const hand = player.hand;
+    const hasPictureCards = hand.some((card) =>
+      ['A', 'K', 'Q', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
+    );
+    const hasPictureButNoQueenCards = hand.some((card) =>
+      ['A', 'K', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
+    );
+    const queenCount = hand.filter((card) => card.includes('Q')).length;
+
+    if (!hasPictureCards || (!hasPictureButNoQueenCards && queenCount == 1)) {
+      player.hasBroken = true;
+    }
+  }
 }

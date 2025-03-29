@@ -32,11 +32,13 @@ export interface BlowState {
   lastPasser: string | null;
   isRoundCancelled: boolean;
   startingPlayerId: string | null;
+  currentBlowIndex: number;
 }
 
 export interface Field {
   cards: string[];
   baseCard: string;
+  baseSuit?: string;
   dealerId: string;
   declaredSuit?: string;
   isComplete: boolean;

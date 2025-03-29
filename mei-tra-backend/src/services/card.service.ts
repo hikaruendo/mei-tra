@@ -238,8 +238,17 @@ export class CardService {
     return card === this.getSecondaryJack(trumpType);
   }
 
-  getCardSuit(card: string, trumpType?: TrumpType | null): string {
-    if (card === 'JOKER') return trumpType || '';
+  getCardSuit(
+    card: string,
+    trumpType?: TrumpType | null,
+    baseSuit?: string,
+  ): string {
+    if (card === 'JOKER') return baseSuit || '';
+
+    // Handle 10 case
+    if (card.startsWith('10')) {
+      return card.slice(2);
+    }
 
     // If it's a Jack and trumpType is provided, check if it's a secondary Jack
     if (card.startsWith('J') && trumpType) {

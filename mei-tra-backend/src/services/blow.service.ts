@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BlowDeclaration, TrumpType, Player } from '../types/game.types';
+import { BlowDeclaration, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 
 @Injectable()
@@ -39,7 +39,14 @@ export class BlowService {
     return declarations.reduce((highest, current) => {
       if (!highest) return current;
 
-      // Compare trump strengths
+      // First compare number of pairs
+      if (current.numberOfPairs !== highest.numberOfPairs) {
+        return current.numberOfPairs > highest.numberOfPairs
+          ? current
+          : highest;
+      }
+
+      // If same number of pairs, compare trump strengths
       const currentTrumpStrength = this.cardService.getTrumpStrength(
         current.trumpType,
       );
@@ -47,29 +54,8 @@ export class BlowService {
         highest.trumpType,
       );
 
-      if (currentTrumpStrength > highestTrumpStrength) {
-        return current;
-      }
-
-      if (currentTrumpStrength === highestTrumpStrength) {
-        // If same trump type, compare number of pairs
-        if (current.numberOfPairs > highest.numberOfPairs) {
-          return current;
-        }
-      }
-
-      return highest;
+      return currentTrumpStrength > highestTrumpStrength ? current : highest;
     });
-  }
-
-  checkForBrokenHand(player: Player): boolean {
-    const hand = player.hand;
-    const hasPictureCards = hand.some((card) =>
-      ['A', 'K', 'Q', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
-    );
-    const queenCount = hand.filter((card) => card.includes('Q')).length;
-
-    return !hasPictureCards || queenCount <= 1;
   }
 
   createDeclaration(
