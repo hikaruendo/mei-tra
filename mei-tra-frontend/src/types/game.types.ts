@@ -73,4 +73,5 @@ export interface GameActions {
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
+  revealBrokenHand: (playerId: string) => void;
 } 

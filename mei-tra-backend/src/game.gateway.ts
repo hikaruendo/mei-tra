@@ -789,56 +789,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  @SubscribeMessage('start-blow')
-  handleStartBlow(client: Socket): void {
-    const state = this.gameState.getState();
-    if (state.gamePhase !== 'deal') {
-      client.emit('error-message', 'Cannot start blow phase now!');
-      return;
-    }
-
-    // The first player to blow should be the player to the left of the dealer
-    const dealerIndex = state.currentPlayerIndex;
-    const firstBlowIndex =
-      (dealerIndex + state.blowState.currentBlowIndex) % state.players.length;
-    const firstBlowPlayer = state.players[firstBlowIndex];
-
-    if (!firstBlowPlayer) {
-      client.emit('error-message', 'Cannot determine first player to blow!');
-      return;
-    }
-
-    // Update game phase and state
-    state.gamePhase = 'blow';
-    state.currentPlayerIndex = firstBlowIndex;
-    state.blowState = {
-      currentTrump: null,
-      currentHighestDeclaration: null,
-      declarations: [],
-      lastPasser: null,
-      isRoundCancelled: false,
-      startingPlayerId: firstBlowPlayer.id,
-      currentBlowIndex:
-        (state.blowState.currentBlowIndex + 1) % state.players.length, // Increment and wrap around
-    };
-
-    // Emit blow phase started
-    this.server.emit('blow-started', {
-      startingPlayer: firstBlowPlayer.id,
-      players: state.players,
-    });
-
-    // Emit phase update
-    this.server.emit('update-phase', {
-      phase: 'blow',
-      scores: state.teamScores,
-      winner: null,
-    });
-
-    // Emit turn update
-    this.server.emit('update-turn', firstBlowPlayer.id);
-  }
-
   @SubscribeMessage('select-base-suit')
   handleSelectBaseSuit(client: Socket, suit: string): void {
     const state = this.gameState.getState();
@@ -864,5 +814,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (nextPlayer) {
       this.server.emit('update-turn', nextPlayer.id);
     }
+  }
+
+  @SubscribeMessage('reveal-broken-hand')
+  handleRevealBrokenHand(playerId: string): void {
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === playerId);
+
+    if (!player) return;
+
+    // Emit the hand-broken event to all players
+    this.server.emit('hand-broken', {
+      playerId: player.id,
+    });
   }
 }

@@ -116,15 +116,12 @@ export default function Home() {
           ));
         }
       },
-      'hand-broken': ({ playerId, hand }: { playerId: string; hand: string[] }) => {
+      'hand-broken': ({ playerId }: { playerId: string; hand: string[] }) => {
         const player = players.find(p => p.id === playerId)?.name;
         setNotification({
           message: `${player} has a broken hand!`,
           type: 'error'
         });
-        setPlayers(players.map(p => 
-          p.id === playerId ? { ...p, hasBroken: true, hand } : p
-        ));
       },
       'round-reset': () => {
         resetBlowState();
@@ -256,14 +253,6 @@ export default function Home() {
       console.log('Starting game with players:', players);
       getSocket().emit('start-game');
     },
-    startBlow: () => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn to start the blow phase!");
-        return;
-      }
-      socket.emit('start-blow');
-    },
     declareBlow: () => {
       const socket = getSocket();
       if (whoseTurn !== socket.id) {
@@ -306,6 +295,10 @@ export default function Home() {
         return;
       }
       socket.emit('select-base-suit', suit);
+    },
+    revealBrokenHand: (playerId: string) => {
+      const socket = getSocket();
+      socket.emit('reveal-broken-hand', playerId);
     }
   };
 

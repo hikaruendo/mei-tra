@@ -113,17 +113,40 @@ export class GameStateService {
       player.isPasser = false;
     });
 
-    // Deal exactly 10 cards to each player
+    // For testing: Give a broken hand to the first player (no picture cards)
+    const brokenHand = [
+      '2♠',
+      '3♠',
+      '4♠',
+      '5♠',
+      '6♠',
+      '7♠',
+      '8♠',
+      '9♠',
+      '10♠',
+      '10♣',
+    ];
+    this.state.players[0].hand = brokenHand;
+
+    // Deal cards to other players
+    let cardIndex = 0;
     for (let i = 0; i < 10; i++) {
-      for (let j = 0; j < this.state.players.length; j++) {
-        this.state.players[j].hand.push(
-          this.state.deck[i * this.state.players.length + j],
-        );
+      for (let j = 1; j < this.state.players.length; j++) {
+        // Skip cards that are in the broken hand
+        while (brokenHand.includes(this.state.deck[cardIndex])) {
+          cardIndex++;
+        }
+        this.state.players[j].hand.push(this.state.deck[cardIndex]);
+        cardIndex++;
       }
     }
 
     // Set the Agari card
     this.state.agari = this.state.deck[40];
+
+    this.state.players.forEach((player) => {
+      this.chomboService.checkForBrokenHand(player);
+    });
   }
 
   nextTurn(): void {

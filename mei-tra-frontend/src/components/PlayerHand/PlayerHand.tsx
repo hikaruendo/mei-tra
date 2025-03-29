@@ -34,11 +34,19 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   completedFields,
   playerTeam,
 }) => {
+  const [isHandRevealed, setIsHandRevealed] = React.useState(false);
+  
+
+  const handleBrokenButtonClick = () => {
+    setIsHandRevealed(true);
+    gameActions.revealBrokenHand(player.id);
+  };
+
   const renderPlayerHand = () => {
     const isCurrentPlayer = player.id === getSocket().id;
     const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
     
-    if (isCurrentPlayer) {
+    if (isCurrentPlayer || isHandRevealed) {
       return (
         <div className="hand-container">
           {player.hand.map((card, index) => {
@@ -118,6 +126,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 <div className="agari-label">Agari Card is</div>
                 <Card card={agariCard} />
               </div>
+            )}
+            {isCurrentPlayer && player.hasBroken && !isHandRevealed && (
+              <button 
+                className="broken-button"
+                onClick={handleBrokenButtonClick}
+              >
+                Reveal Broken Hand
+              </button>
             )}
           </div>
           {completedFields.some(field => field.winnerId === player.id) && (

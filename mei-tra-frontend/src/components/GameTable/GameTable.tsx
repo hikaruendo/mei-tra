@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores } from '@/types/game.types';
+import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
 import { PlayerHand } from '../PlayerHand/PlayerHand';
 import { GameField } from '../GameField/GameField';
 import { GameControls } from '@/app/components/GameControls';
@@ -7,13 +7,6 @@ import { BlowControls } from '@/app/components/BlowControls';
 import { getSocket } from '@/app/socket';
 import { GameInfo } from '../GameInfo/GameInfo';
 
-interface GameActions {
-  selectNegri: (card: string) => void;
-  playCard: (card: string) => void;
-  declareBlow: () => void;
-  passBlow: () => void;
-  selectBaseSuit: (suit: string) => void;
-}
 
 interface GameTableProps {
   whoseTurn: string | null;
