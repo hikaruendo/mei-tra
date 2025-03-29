@@ -24,6 +24,9 @@ export const GameField: React.FC<GameFieldProps> = ({
   // ディーラーのインデックスを取得
   const dealerIndex = players.findIndex(p => p.id === currentField.dealerId);
   
+  // ディーラーが見つからない場合は、最初のプレイヤーをディーラーとする
+  const effectiveDealerIndex = dealerIndex === -1 ? 0 : dealerIndex;
+  
   return (
     <div className={'field-container'}>
       {currentField && (
@@ -33,7 +36,7 @@ export const GameField: React.FC<GameFieldProps> = ({
               const isRed = card.match(/[♥♦]/);
               const isJoker = card === 'JOKER';
               // ディーラーから順番にプレイヤーを決定
-              const playerIndex = (dealerIndex + index) % players.length;
+              const playerIndex = (effectiveDealerIndex + index) % players.length;
               const player = players[playerIndex];
               
               return (

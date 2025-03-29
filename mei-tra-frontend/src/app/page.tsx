@@ -44,15 +44,52 @@ export default function Home() {
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
+  const [reconnectToken, setReconnectToken] = useState<string | null>(null);
+
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
+
+    // Set up reconnection token
+    const savedToken = localStorage.getItem('reconnectToken');
+    if (savedToken) {
+      socket.auth = { reconnectToken: savedToken };
+    }
 
     const socketHandlers = {
       'update-players': (players: Player[]) => {
         console.log('update-players event received');
         console.log('Players updated:', players);
         setPlayers(players);
+      },
+      'game-state': ({
+        players,
+        gamePhase,
+        currentField,
+        currentTurn,
+        blowState,
+        teamScores,
+      }: {
+        players: Player[];
+        gamePhase: GamePhase;
+        currentField: Field | null;
+        currentTurn: string;
+        blowState: {
+          currentTrump: TrumpType | null;
+          currentHighestDeclaration: BlowDeclaration | null;
+          declarations: BlowDeclaration[];
+        };
+        teamScores: TeamScores;
+      }) => {
+        setPlayers(players);
+        setGamePhase(gamePhase);
+        setCurrentField(currentField);
+        setWhoseTurn(currentTurn);
+        setCurrentTrump(blowState.currentTrump);
+        setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
+        setBlowDeclarations(blowState.declarations);
+        setTeamScores(teamScores);
+        setGameStarted(true); // Consider it in-game if state is restored
       },
       'game-started': (players: Player[]) => {
         console.log('Game started with players:', players);
@@ -222,7 +259,11 @@ export default function Home() {
         setCurrentTrump(currentTrump);
         setCurrentHighestDeclaration(currentHighestDeclaration);
         setBlowDeclarations(blowDeclarations);
-      }
+      },
+      'reconnect-token': (token: string) => {
+        setReconnectToken(token);
+        localStorage.setItem('reconnectToken', token);
+      },
     };
 
     // Register all socket handlers
@@ -232,11 +273,11 @@ export default function Home() {
 
     // Cleanup socket handlers
     return () => {
-      Object.keys(socketHandlers).forEach(event => {
-        socket.off(event);
+      Object.keys(socketHandlers).forEach((event) => {
+        socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [gamePhase, players, currentHighestDeclaration, whoseTurn]);
+  }, [name, reconnectToken, currentHighestDeclaration, players]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);
@@ -248,7 +289,13 @@ export default function Home() {
   const gameActions = {
     joinGame: () => {
       if (name.trim()) {
-        getSocket().emit('join-game', name);
+        const socket = getSocket();
+        if (reconnectToken) {
+          socket.auth = { reconnectToken };
+        } else {
+          socket.auth = { name };
+        }
+        socket.connect();
       }
     },
     startGame: () => {

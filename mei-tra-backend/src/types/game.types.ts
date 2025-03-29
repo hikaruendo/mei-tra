@@ -7,6 +7,7 @@ export interface Player {
   team: Team;
   isPasser?: boolean;
   hasBroken?: boolean;
+  reconnectToken?: string;
 }
 
 export interface TeamScore {
@@ -87,7 +88,7 @@ export interface ChomboViolation {
   isExpired: boolean;
 }
 
-export type GamePhase = 'deal' | 'blow' | 'play' | null;
+export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
   players: Player[];

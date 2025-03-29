@@ -33,24 +33,87 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     console.log(`Player connected: ${client.id}`);
-    const state = this.gameState.getState();
-    this.server.emit('update-players', state.players);
+    const token = client.handshake.auth?.reconnectToken as string;
+    const name = client.handshake.auth?.name as string;
+
+    if (!name) {
+      client.disconnect();
+      return;
+    }
+
+    // 同じ名前のプレイヤーが既に存在するかチェック
+    const existingPlayer = this.gameState
+      .getState()
+      .players.find((p) => p.name === name);
+    if (existingPlayer) {
+      // 既存のプレイヤーが切断中（タイマー中）の場合、そのプレイヤーを再利用
+      if (this.gameState.isPlayerDisconnected(name)) {
+        console.log(
+          `Reusing disconnected player ${name} with new socket ID ${client.id}`,
+        );
+        this.gameState.updatePlayerSocketId(existingPlayer.id, client.id);
+        const state = this.gameState.getState();
+        this.server.to(client.id).emit('game-state', {
+          players: state.players,
+          gamePhase: state.gamePhase || 'waiting', // フェーズがnullの場合は'waiting'を送信
+          currentField: state.playState?.currentField,
+          currentTurn:
+            state.currentPlayerIndex !== -1
+              ? state.players[state.currentPlayerIndex].id
+              : null,
+          blowState: state.blowState,
+          teamScores: state.teamScores,
+        });
+        this.server.emit('update-players', state.players);
+        return;
+      }
+      // 既存のプレイヤーがアクティブな場合は接続を拒否
+      client.emit('error-message', 'Player with this name already exists!');
+      client.disconnect();
+      return;
+    }
+
+    // 再接続の場合
+    if (token) {
+      const existingPlayer = this.gameState.findPlayerByReconnectToken(token);
+      if (existingPlayer) {
+        console.log(
+          `Reconnected player ${existingPlayer.name} with new socket ID ${client.id}`,
+        );
+        this.gameState.updatePlayerSocketId(existingPlayer.id, client.id);
+        const state = this.gameState.getState();
+        this.server.to(client.id).emit('game-state', {
+          players: state.players,
+          gamePhase: state.gamePhase || 'waiting', // フェーズがnullの場合は'waiting'を送信
+          currentField: state.playState?.currentField,
+          currentTurn:
+            state.currentPlayerIndex !== -1
+              ? state.players[state.currentPlayerIndex].id
+              : null,
+          blowState: state.blowState,
+          teamScores: state.teamScores,
+        });
+        this.server.emit('update-players', state.players);
+        return;
+      }
+    }
+
+    // 新規プレイヤーとして追加
+    const reconnectToken = this.generateReconnectToken();
+    if (this.gameState.addPlayer(client.id, name, reconnectToken)) {
+      this.server.to(client.id).emit('reconnect-token', reconnectToken);
+      const state = this.gameState.getState();
+      this.server.emit('update-players', state.players);
+    } else {
+      client.emit('error-message', 'Game is full!');
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
-    this.gameState.removePlayer(client.id);
-    const state = this.gameState.getState();
-    this.server.emit('update-players', state.players);
     console.log(`Player disconnected: ${client.id}`);
-  }
-
-  @SubscribeMessage('join-game')
-  handleJoinGame(client: Socket, name: string) {
-    const success = this.gameState.addPlayer(client.id, name);
-    if (!success) {
-      client.emit('error-message', 'Game is full!');
-      return;
-    }
+    // プレイヤーの削除は15秒後に実行される
+    this.gameState.removePlayer(client.id);
     const state = this.gameState.getState();
     this.server.emit('update-players', state.players);
   }
@@ -849,5 +912,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit turn update
     this.server.emit('update-turn', firstBlowPlayer.id);
     return;
+  }
+
+  private generateReconnectToken(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 }
