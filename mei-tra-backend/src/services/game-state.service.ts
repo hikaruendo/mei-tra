@@ -101,12 +101,12 @@ export class GameStateService {
       player.hasBroken = false;
     });
 
-    // Deal cards to other players
-    let cardIndex = 0;
+    // Deal exactly 10 cards to each player
     for (let i = 0; i < 10; i++) {
-      for (let j = 1; j < this.state.players.length; j++) {
-        this.state.players[j].hand.push(this.state.deck[cardIndex]);
-        cardIndex++;
+      for (let j = 0; j < this.state.players.length; j++) {
+        this.state.players[j].hand.push(
+          this.state.deck[i * this.state.players.length + j],
+        );
       }
     }
 
