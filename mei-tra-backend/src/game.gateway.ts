@@ -817,15 +817,37 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('reveal-broken-hand')
-  handleRevealBrokenHand(playerId: string): void {
+  handleRevealBrokenHand(client: Socket, playerId: string): void {
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === playerId);
 
     if (!player) return;
 
-    // Emit the hand-broken event to all players
-    this.server.emit('hand-broken', {
-      playerId: player.id,
+    // Reset player pass states
+    state.blowState.declarations = [];
+    state.blowState.currentHighestDeclaration = null;
+
+    // Move to next dealer and restart blow phase
+    const firstBlowIndex = state.currentPlayerIndex;
+    const firstBlowPlayer = state.players[firstBlowIndex];
+
+    if (!firstBlowPlayer) return;
+
+    state.currentPlayerIndex = firstBlowIndex;
+    state.blowState.startingPlayerId = firstBlowPlayer.id;
+
+    // Regenerate deck and deal cards
+    state.deck = this.cardService.generateDeck();
+    this.gameState.dealCards();
+
+    // Emit round cancelled
+    this.server.emit('broken', {
+      nextDealer: firstBlowPlayer.id,
+      players: state.players,
     });
+
+    // Emit turn update
+    this.server.emit('update-turn', firstBlowPlayer.id);
+    return;
   }
 }

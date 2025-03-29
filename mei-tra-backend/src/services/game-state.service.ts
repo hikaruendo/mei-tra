@@ -91,19 +91,6 @@ export class GameStateService {
     this.state.players = this.state.players.filter((p) => p.id !== id);
   }
 
-  // startGame(): boolean {
-  //   if (this.state.players.length !== 4) return false;
-
-  //   this.state.teamScores = this.scoreService.initializeTeamScores();
-  //   this.state.agari = null;
-  //   this.state.gamePhase = 'deal';
-  //   this.state.deck = this.cardService.generateDeck();
-  //   this.dealCards();
-  //   this.state.currentPlayerIndex = 0;
-
-  //   return true;
-  // }
-
   dealCards(): void {
     if (this.state.players.length === 0) return;
 
@@ -111,31 +98,13 @@ export class GameStateService {
     this.state.players.forEach((player) => {
       player.hand = [];
       player.isPasser = false;
+      player.hasBroken = false;
     });
-
-    // For testing: Give a broken hand to the first player (no picture cards)
-    const brokenHand = [
-      '2♠',
-      '3♠',
-      '4♠',
-      '5♠',
-      '6♠',
-      '7♠',
-      '8♠',
-      '9♠',
-      '10♠',
-      '10♣',
-    ];
-    this.state.players[0].hand = brokenHand;
 
     // Deal cards to other players
     let cardIndex = 0;
     for (let i = 0; i < 10; i++) {
       for (let j = 1; j < this.state.players.length; j++) {
-        // Skip cards that are in the broken hand
-        while (brokenHand.includes(this.state.deck[cardIndex])) {
-          cardIndex++;
-        }
         this.state.players[j].hand.push(this.state.deck[cardIndex]);
         cardIndex++;
       }
@@ -164,22 +133,6 @@ export class GameStateService {
     return currentPlayer?.id === playerId;
   }
 
-  // updatePhase(phase: 'deal' | 'blow' | 'play' | null): void {
-  //   this.state.gamePhase = phase;
-  // }
-
-  // startField(dealerId: string): void {
-  //   const isTanzenRound = this.state.players.some((p) => p.hand.length === 2);
-
-  //   this.state.playState.currentField = {
-  //     cards: [],
-  //     baseCard: '',
-  //     dealerId,
-  //     isComplete: false,
-  //   };
-  //   this.state.playState.isTanzenRound = isTanzenRound;
-  // }
-
   completeField(field: Field, winnerId: string): CompletedField | null {
     const state = this.getState();
     const currentField = state.playState.currentField;
@@ -199,14 +152,6 @@ export class GameStateService {
     this.state.playState.fields.push(completedField);
     return completedField;
   }
-
-  // isGameOver(): boolean {
-  //   return Object.values(this.state.teamScores).some(
-  //     // TODO: テストで３点にする
-  //     (score) => score.total >= 3,
-  //     // (score) => score.total >= 17,
-  //   );
-  // }
 
   resetState(): void {
     this.initializeState();
@@ -230,10 +175,6 @@ export class GameStateService {
     this.state.deck = this.cardService.generateDeck();
     this.dealCards();
   }
-
-  // resetCurrentField(): void {
-  //   this.state.playState.currentField = null;
-  // }
 
   get roundNumber(): number {
     return this.state.roundNumber;

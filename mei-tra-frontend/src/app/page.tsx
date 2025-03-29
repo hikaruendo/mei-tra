@@ -116,12 +116,14 @@ export default function Home() {
           ));
         }
       },
-      'hand-broken': ({ playerId }: { playerId: string; hand: string[] }) => {
-        const player = players.find(p => p.id === playerId)?.name;
+      'broken': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
         setNotification({
-          message: `${player} has a broken hand!`,
-          type: 'error'
+          message: 'Broken happened, reset the game',
+          type: 'warning'
         });
+        setPlayers(players);
+        setWhoseTurn(nextDealer);
+        resetBlowState();
       },
       'round-reset': () => {
         resetBlowState();
