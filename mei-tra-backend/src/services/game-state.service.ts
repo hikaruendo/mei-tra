@@ -91,6 +91,8 @@ export class GameStateService {
       (p) => p.playerId === reconnectToken,
     );
 
+    console.log('existingPlayer', existingPlayer);
+
     if (existingPlayer) {
       // 既存のプレイヤーのsocketIdを更新
       existingPlayer.id = socketId;
@@ -112,6 +114,8 @@ export class GameStateService {
       team: (state.players.length % 2) as Team,
       isPasser: false,
     });
+
+    console.log('playerId', playerId);
 
     // Store token mappings
     const token = reconnectToken || playerId;
@@ -147,22 +151,33 @@ export class GameStateService {
   }
 
   findPlayerByReconnectToken(token: string): Player | null {
+    // First try to find by token in playerIds map
     const playerId = this.playerIds.get(token);
-    if (!playerId) return null;
-    return this.state.players.find((p) => p.id === playerId) || null;
+    if (playerId) {
+      // Look for the player in the player list by playerId,
+      // even if the player's socket id is empty (meaning they disconnected)
+      return this.state.players.find((p) => p.playerId === playerId) || null;
+    }
+
+    // If not found, try to find by playerId directly
+    return this.state.players.find((p) => p.playerId === token) || null;
   }
 
-  updatePlayerSocketId(oldId: string, newId: string): void {
-    const player = this.state.players.find((p) => p.id === oldId);
+  updatePlayerSocketId(playerId: string, newId: string): void {
+    // Find the player by playerId, not by socket id
+    const player = this.state.players.find((p) => p.playerId === playerId);
+
     if (player) {
-      // 再接続タイマーをクリア
-      const timeout = this.disconnectedPlayers.get(oldId);
+      // Cancel reconnection timer if exists
+      const timeout = this.disconnectedPlayers.get(playerId);
       if (timeout) {
         clearTimeout(timeout);
-        this.disconnectedPlayers.delete(oldId);
+        this.disconnectedPlayers.delete(playerId);
       }
 
+      // Update the socket ID
       player.id = newId;
+
       // Update token mappings
       const token = this.reconnectTokens.get(player.playerId);
       if (token) {

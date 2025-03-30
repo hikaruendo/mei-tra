@@ -32,23 +32,27 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   handleConnection(client: Socket) {
-    const token = client.handshake.auth?.reconnectToken as string;
-    const name = client.handshake.auth?.name as string;
+    const auth = client.handshake.auth || {};
+    const token =
+      typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
+    const name = typeof auth.name === 'string' ? auth.name : undefined;
 
-    if (!name) {
+    if (!name && !token) {
       client.disconnect();
       return;
     }
 
-    console.log('handleConnection', token, name);
+    console.log('handleConnection - Token:', token, 'Name:', name);
 
-    // 再接続の場合
     if (token) {
       const existingPlayer = this.gameState.findPlayerByReconnectToken(token);
+      console.log('Existing player found:', existingPlayer?.name);
+
       if (existingPlayer) {
         console.log(
           `Reconnected player ${existingPlayer.name} with new socket ID ${client.id}`,
         );
+        // Use playerId, not socket ID for updating
         this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
         const state = this.gameState.getState();
 
@@ -62,57 +66,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               : null,
           blowState: state.blowState,
           teamScores: state.teamScores,
+          you: existingPlayer.playerId,
         });
         this.server.emit('update-players', state.players);
         return;
       }
-    }
-
-    // 同じ名前のプレイヤーが既に存在するかチェック
-    const existingPlayer = this.gameState
-      .getState()
-      .players.find((p) => p.name === name);
-    if (existingPlayer) {
-      // 既存のプレイヤーが切断中（タイマー中）の場合、そのプレイヤーを再利用
-      if (this.gameState.isPlayerDisconnected(name)) {
-        console.log(
-          `Reusing disconnected player ${name} with new socket ID ${client.id}`,
-        );
-
-        // Cancel scheduled removal
-        const timeout = this.gameState.getDisconnectTimeout(name);
-        if (timeout) {
-          clearTimeout(timeout);
-          this.gameState.clearDisconnectTimeout(name);
-        }
-
-        this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
-        const state = this.gameState.getState();
-
-        this.server.to(client.id).emit('game-state', {
-          players: state.players,
-          gamePhase: state.gamePhase || 'waiting',
-          currentField: state.playState?.currentField,
-          currentTurn:
-            state.currentPlayerIndex !== -1
-              ? state.players[state.currentPlayerIndex].playerId
-              : null,
-          blowState: state.blowState,
-          teamScores: state.teamScores,
-        });
-        this.server.emit('update-players', state.players);
-        return;
-      }
-      // 既存のプレイヤーがアクティブな場合は接続を拒否
-      client.emit('error-message', 'Player with this name already exists!');
-      client.disconnect();
-      return;
     }
 
     // 新規プレイヤーとして追加
-    const reconnectToken = this.generateReconnectToken();
-    if (this.gameState.addPlayer(client.id, name, reconnectToken)) {
-      this.server.to(client.id).emit('reconnect-token', reconnectToken);
+    if (name && this.gameState.addPlayer(client.id, name, token)) {
+      this.server.to(client.id).emit('reconnect-token', token);
       const state = this.gameState.getState();
       this.server.emit('update-players', state.players);
     } else {
@@ -930,9 +893,5 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit turn update
     this.server.emit('update-turn', firstBlowPlayer.playerId);
     return;
-  }
-
-  private generateReconnectToken(): string {
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 }

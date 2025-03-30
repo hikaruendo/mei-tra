@@ -61,19 +61,6 @@ export default function Home() {
       'update-players': (players: Player[]) => {
         console.log('update-players event received');
         console.log('Players updated:', players);
-        
-        // First update currentPlayerId if needed
-        if (!currentPlayerId) {
-          const reconnectToken = localStorage.getItem('reconnectToken');
-          if (reconnectToken) {
-            const currentPlayer = players.find(p => p.playerId === reconnectToken);
-            if (currentPlayer) {
-              setCurrentPlayerId(currentPlayer.playerId);
-            }
-          }
-        }
-        
-        // Then update players state
         setPlayers(players);
       },
       'game-state': ({
@@ -83,6 +70,7 @@ export default function Home() {
         currentTurn,
         blowState,
         teamScores,
+        you,
       }: {
         players: Player[];
         gamePhase: GamePhase;
@@ -94,6 +82,7 @@ export default function Home() {
           declarations: BlowDeclaration[];
         };
         teamScores: TeamScores;
+        you: string;
       }) => {
         setPlayers(players);
         setGamePhase(gamePhase);
@@ -103,15 +92,8 @@ export default function Home() {
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
         setTeamScores(teamScores);
+        setCurrentPlayerId(you);
         setGameStarted(true);
-        // Update currentPlayerId if not set
-        if (!currentPlayerId) {
-          const reconnectToken = localStorage.getItem('reconnectToken');
-          const currentPlayer = players.find(p => p.playerId === reconnectToken);
-          if (currentPlayer) {
-            setCurrentPlayerId(currentPlayer.playerId);
-          }
-        }
       },
       'game-started': (players: Player[]) => {
         console.log('Game started with players:', players);
@@ -143,14 +125,6 @@ export default function Home() {
       'error-message': (message: string) => alert(message),
       'update-turn': (playerId: string) => {
         setWhoseTurn(playerId);
-        // Add notification for turn change
-        // const nextPlayer = players.find(p => p.id === playerId)?.name;
-        // if (nextPlayer && (gamePhase === 'blow' || gamePhase === 'play')) {
-        //   setNotification({
-        //     message: `Turn changed to ${nextPlayer}`,
-        //     type: 'success'
-        //   });
-        // }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
@@ -302,7 +276,7 @@ export default function Home() {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [name, reconnectToken, currentHighestDeclaration, players]);
+  }, [name, currentHighestDeclaration, players]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);

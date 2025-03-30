@@ -8,7 +8,6 @@ export interface Player {
   team: Team;
   isPasser: boolean;
   hasBroken?: boolean;
-  reconnectToken?: string;
 }
 
 export interface TeamScore {
