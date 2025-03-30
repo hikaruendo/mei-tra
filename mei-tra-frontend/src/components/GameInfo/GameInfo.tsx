@@ -14,7 +14,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   players,
   teamScores,
 }) => {
-  const currentPlayer = players.find(p => p.id === whoseTurn)?.name;
+  const currentPlayer = players.find(p => p.playerId === whoseTurn)?.name;
 
   const getTrumpDisplay = () => {
     if (!currentTrump) return '';

@@ -21,20 +21,25 @@ export class PlayService {
     let highestStrength = -1;
 
     // Find the dealer's index
-    const dealerIndex = players.findIndex((p) => p.id === field.dealerId);
+    const dealerIndex = players.findIndex((p) => p.playerId === field.dealerId);
     if (dealerIndex === -1) return null;
 
+    // Ensure that the dealer and player order match updated socket IDs
+    const updatedPlayerOrder = field.cards.map((_, i) => {
+      const index = (dealerIndex + i) % players.length;
+      return players[index];
+    });
+
     field.cards.forEach((card, cardIndex) => {
-      // Calculate the player index based on the dealer's position
-      const playerIndex = (dealerIndex + cardIndex) % players.length;
+      const player = updatedPlayerOrder[cardIndex];
       const strength = this.cardService.getCardStrength(
         card,
         baseSuit,
         trumpSuit,
       );
-      if (strength > highestStrength) {
+      if (strength > highestStrength && player) {
         highestStrength = strength;
-        winner = players[playerIndex];
+        winner = player;
       }
     });
 
@@ -128,11 +133,11 @@ export class PlayService {
 
   determineWinningTeam(fields: CompletedField[], players: Player[]): number {
     const team0Score = fields.filter(
-      (f) => players.find((p) => p.id === f.dealerId)?.team === 0,
+      (f) => players.find((p) => p.playerId === f.dealerId)?.team === 0,
     ).length;
 
     const team1Score = fields.filter(
-      (f) => players.find((p) => p.id === f.dealerId)?.team === 1,
+      (f) => players.find((p) => p.playerId === f.dealerId)?.team === 1,
     ).length;
 
     return team0Score > team1Score ? 0 : 1;

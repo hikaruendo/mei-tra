@@ -82,40 +82,68 @@ export class GameStateService {
     };
   }
 
-  addPlayer(id: string, name: string, reconnectToken: string): boolean {
-    if (this.state.players.length >= 4) return false;
-    const team = (this.state.players.length % 2) as Team;
-    this.state.players.push({ id, name, hand: [], team });
+  addPlayer(socketId: string, name: string, reconnectToken?: string): boolean {
+    const state = this.getState();
+    if (state.players.length >= 4) return false;
 
-    // Store reconnect token
-    this.reconnectTokens.set(id, reconnectToken);
-    this.playerIds.set(reconnectToken, id);
-
-    console.log(
-      `Added player ${name} (${id}) to team ${team}. Total players: ${this.state.players.length}`,
+    // 既存のプレイヤーを探す
+    const existingPlayer = state.players.find(
+      (p) => p.playerId === reconnectToken,
     );
+
+    if (existingPlayer) {
+      // 既存のプレイヤーのsocketIdを更新
+      existingPlayer.id = socketId;
+      // Update token mappings
+      if (reconnectToken) {
+        this.reconnectTokens.set(existingPlayer.playerId, reconnectToken);
+        this.playerIds.set(reconnectToken, existingPlayer.playerId);
+      }
+      return true;
+    }
+
+    // 新しいプレイヤーを追加
+    const playerId = reconnectToken || this.generateReconnectToken(); // 永続的なIDとして使用
+    state.players.push({
+      id: socketId,
+      playerId,
+      name,
+      hand: [],
+      team: (state.players.length % 2) as Team,
+      isPasser: false,
+    });
+
+    // Store token mappings
+    const token = reconnectToken || playerId;
+    this.reconnectTokens.set(playerId, token);
+    this.playerIds.set(token, playerId);
+
     return true;
   }
 
-  removePlayer(id: string): void {
-    const player = this.state.players.find((p) => p.id === id);
+  private generateReconnectToken(): string {
+    return Math.random().toString(36).substring(2, 15);
+  }
+
+  removePlayer(playerId: string) {
+    const player = this.state.players.find((p) => p.playerId === playerId);
     if (!player) return;
 
-    // プレイヤーが切断された場合、一定時間待つ
-    const timeout = setTimeout(() => {
-      // タイムアウト後にプレイヤーを削除
-      this.state.players = this.state.players.filter((p) => p.id !== id);
-      this.disconnectedPlayers.delete(id);
+    const name = player.name;
 
-      // トークンのクリーンアップ
-      const token = this.reconnectTokens.get(id);
-      if (token) {
-        this.reconnectTokens.delete(id);
-        this.playerIds.delete(token);
-      }
-    }, 15000); // 15秒待つ
+    // 15秒間、再接続を待つ
+    this.disconnectedPlayers.set(
+      name,
+      setTimeout(() => {
+        this.disconnectedPlayers.delete(name);
+        this.state.players = this.state.players.filter(
+          (p) => p.playerId !== playerId,
+        );
+      }, 15000),
+    ); // 15秒待ってから削除
 
-    this.disconnectedPlayers.set(id, timeout);
+    // ソケットIDだけ即時クリア（切断状態を示す）
+    player.id = '';
   }
 
   findPlayerByReconnectToken(token: string): Player | null {
@@ -135,12 +163,10 @@ export class GameStateService {
       }
 
       player.id = newId;
-      // トークンのマッピングを更新
-      const token = this.reconnectTokens.get(oldId);
+      // Update token mappings
+      const token = this.reconnectTokens.get(player.playerId);
       if (token) {
-        this.reconnectTokens.delete(oldId);
-        this.reconnectTokens.set(newId, token);
-        this.playerIds.set(token, newId);
+        this.playerIds.set(token, player.playerId);
       }
     }
   }
@@ -184,7 +210,7 @@ export class GameStateService {
 
   isPlayerTurn(playerId: string): boolean {
     const currentPlayer = this.getCurrentPlayer();
-    return currentPlayer?.id === playerId;
+    return currentPlayer?.playerId === playerId;
   }
 
   completeField(field: Field, winnerId: string): CompletedField | null {
@@ -240,19 +266,68 @@ export class GameStateService {
 
   get currentTurn(): string | null {
     const currentPlayer = this.state.players[this.state.currentPlayerIndex];
-    return currentPlayer?.id || null;
+    return currentPlayer?.playerId || null;
   }
 
   set currentTurn(playerId: string) {
-    const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
+    const playerIndex = this.state.players.findIndex(
+      (p) => p.playerId === playerId,
+    );
     if (playerIndex !== -1) {
       this.state.currentPlayerIndex = playerIndex;
     }
   }
 
-  isPlayerDisconnected(playerName: string): boolean {
-    const player = this.state.players.find((p) => p.name === playerName);
-    if (!player) return false;
-    return this.disconnectedPlayers.has(player.id);
+  isPlayerDisconnected(name: string): boolean {
+    return this.disconnectedPlayers.has(name);
+  }
+
+  startGame(): void {
+    const state = this.getState();
+
+    // Initialize game state
+    state.gamePhase = 'blow';
+    state.deck = this.cardService.generateDeck();
+    this.dealCards();
+
+    // Initialize play state
+    state.playState = {
+      currentField: {
+        cards: [],
+        baseCard: '',
+        dealerId: state.players[0].playerId,
+        isComplete: false,
+      },
+      negriCard: null,
+      neguri: {},
+      fields: [],
+      lastWinnerId: null,
+      isTanzenRound: false,
+      openDeclared: false,
+      openDeclarerId: null,
+    };
+
+    // Initialize blow state
+    state.blowState = {
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      declarations: [],
+      lastPasser: null,
+      isRoundCancelled: false,
+      startingPlayerId: null,
+      currentBlowIndex: 0,
+    };
+  }
+
+  getDisconnectTimeout(name: string): NodeJS.Timeout | undefined {
+    return this.disconnectedPlayers.get(name);
+  }
+
+  clearDisconnectTimeout(name: string): void {
+    const timeout = this.disconnectedPlayers.get(name);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.disconnectedPlayers.delete(name);
+    }
   }
 }

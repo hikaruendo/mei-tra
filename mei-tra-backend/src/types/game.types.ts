@@ -2,10 +2,11 @@ export type Team = 0 | 1;
 
 export interface Player {
   id: string;
+  playerId: string;
   name: string;
   hand: string[];
   team: Team;
-  isPasser?: boolean;
+  isPasser: boolean;
   hasBroken?: boolean;
   reconnectToken?: string;
 }

@@ -1,19 +1,22 @@
 import React from 'react';
-import { getSocket } from '@/app/socket';
 
 interface NegriCardProps {
   negriCard: string;
   negriPlayerId: string;
+  currentPlayerId: string;
 }
 
 export const NegriCard: React.FC<NegriCardProps> = ({
   negriCard,
   negriPlayerId,
+  currentPlayerId,
 }) => {
+  const isNegriPlayer = currentPlayerId === negriPlayerId;
+
   return (
     <div className="negri-card-display mb-2">
       <div className="text-sm text-white">Negri</div>
-      {getSocket().id === negriPlayerId ? (
+      {isNegriPlayer ? (
         <div className={`card negri-card ${negriCard.match(/[♥♦]/) ? 'red-suit' : ''}`}>
           {negriCard === 'JOKER' ? <div className="rank">JOKER</div> : (
             <>
@@ -29,4 +32,4 @@ export const NegriCard: React.FC<NegriCardProps> = ({
       )}
     </div>
   );
-}; 
+};

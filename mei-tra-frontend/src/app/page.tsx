@@ -45,6 +45,7 @@ export default function Home() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   const [reconnectToken, setReconnectToken] = useState<string | null>(null);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -60,6 +61,19 @@ export default function Home() {
       'update-players': (players: Player[]) => {
         console.log('update-players event received');
         console.log('Players updated:', players);
+        
+        // First update currentPlayerId if needed
+        if (!currentPlayerId) {
+          const reconnectToken = localStorage.getItem('reconnectToken');
+          if (reconnectToken) {
+            const currentPlayer = players.find(p => p.playerId === reconnectToken);
+            if (currentPlayer) {
+              setCurrentPlayerId(currentPlayer.playerId);
+            }
+          }
+        }
+        
+        // Then update players state
         setPlayers(players);
       },
       'game-state': ({
@@ -89,7 +103,15 @@ export default function Home() {
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
         setTeamScores(teamScores);
-        setGameStarted(true); // Consider it in-game if state is restored
+        setGameStarted(true);
+        // Update currentPlayerId if not set
+        if (!currentPlayerId) {
+          const reconnectToken = localStorage.getItem('reconnectToken');
+          const currentPlayer = players.find(p => p.playerId === reconnectToken);
+          if (currentPlayer) {
+            setCurrentPlayerId(currentPlayer.playerId);
+          }
+        }
       },
       'game-started': (players: Player[]) => {
         console.log('Game started with players:', players);
@@ -149,7 +171,7 @@ export default function Home() {
         setCurrentHighestDeclaration(currentHighest);
         if (lastPasser) {
           setPlayers(players.map(p => 
-            p.id === lastPasser ? { ...p, isPasser: true } : p
+            p.playerId === lastPasser ? { ...p, isPasser: true } : p
           ));
         }
       },
@@ -180,7 +202,7 @@ export default function Home() {
         
         // Add Agari card to player's hand for testing
         setPlayers(players.map(p =>
-          p.id === getSocket().id
+          p.playerId === currentPlayerId
             ? { ...p, hand: [...p.hand, agari] }
             : p
         ));
@@ -196,7 +218,7 @@ export default function Home() {
         setNegriPlayerId(startingPlayer);
         // Remove Negri card from player's hand
         setPlayers(players.map(p => 
-          p.id === getSocket().id 
+          p.playerId === currentPlayerId 
             ? { ...p, hand: p.hand.filter(card => card !== negriCard) }
             : p
         ));
@@ -306,8 +328,7 @@ export default function Home() {
       getSocket().emit('start-game');
     },
     declareBlow: () => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn to declare!");
         return;
       }
@@ -315,42 +336,37 @@ export default function Home() {
         alert('Please select a trump type and number of pairs!');
         return;
       }
-      socket.emit('declare-blow', {
+      getSocket().emit('declare-blow', {
         trumpType: selectedTrump,
         numberOfPairs,
       });
     },
     passBlow: () => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn to pass!1");
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to pass!2");
         return;
       }
-      socket.emit('pass-blow');
+      getSocket().emit('pass-blow');
     },
     selectNegri: (card: string) => {
-      const socket = getSocket();
-      socket.emit('select-negri', card);
+      getSocket().emit('select-negri', card);
     },
     playCard: (card: string) => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn!2");
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn!");
         return;
       }
-      socket.emit('play-card', card);
+      getSocket().emit('play-card', card);
     },
     selectBaseSuit: (suit: string) => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn to select base suit!11");
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to select base suit!");
         return;
       }
-      socket.emit('select-base-suit', suit);
+      getSocket().emit('select-base-suit', suit);
     },
     revealBrokenHand: (playerId: string) => {
-      const socket = getSocket();
-      socket.emit('reveal-broken-hand', playerId);
+      getSocket().emit('reveal-broken-hand', playerId);
     }
   };
 
@@ -396,6 +412,7 @@ export default function Home() {
               numberOfPairs={numberOfPairs}
               setNumberOfPairs={setNumberOfPairs}
               teamScores={teamScores}
+              currentPlayerId={currentPlayerId}
             />
             {teamScores && teamScoreRecords && (
               <div className="mt-4">

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Player, GamePhase, GameActions, CompletedField, Team } from '@/types/game.types';
 import { NegriCard } from '../NegriCard/NegriCard';
-import { getSocket } from '@/app/socket';
 import { Card } from '../card/Card';
 import { CompletedFields } from '../CompletedFields/CompletedFields';
 
@@ -18,6 +17,7 @@ interface PlayerHandProps {
   currentHighestDeclaration?: { playerId: string };
   completedFields: CompletedField[];
   playerTeam: Team;
+  currentPlayerId: string;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -33,10 +33,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentHighestDeclaration,
   completedFields,
   playerTeam,
+  currentPlayerId,
 }) => {
   const renderPlayerHand = () => {
-    const isCurrentPlayer = player.id === getSocket().id;
-    const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
+    const isCurrentPlayer = currentPlayerId === player.playerId;
+    const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
     
     if (isCurrentPlayer) {
       return (
@@ -53,7 +54,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 key={index}
                 className={`card ${isRed || isNegri ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''} ${!negriCard && isWinningPlayer && gamePhase === 'play' ? 'player-info' : ''}`}
                 onClick={() => {
-                  if (gamePhase === 'play' && whoseTurn === getSocket().id) {
+                  if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
                     if (!negriCard && isWinningPlayer) {
                       gameActions.selectNegri(card);
                     } else {
@@ -94,17 +95,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     );
   };
 
-  const isCurrentPlayer = player.id === getSocket().id;
-  const isWinningPlayer = currentHighestDeclaration?.playerId === player.id;
+  const isCurrentPlayer = currentPlayerId === player.playerId;
+  const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
 
   return (
     <div className={`player-position ${position}`}>
       <div className="player-info">
         <div className="player-info-group">
-          {negriCard && negriPlayerId === player.id && (
+          {negriCard && negriPlayerId === player.playerId && (
             <NegriCard
               negriCard={negriCard}
               negriPlayerId={negriPlayerId}
+              currentPlayerId={currentPlayerId}
             />
           )}
           <div className={`player-info-container ${isCurrentTurn ? 'current-turn' : ''}`}>
@@ -122,16 +124,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             {isCurrentPlayer && player.hasBroken && (
               <button 
                 className="broken-button"
-                onClick={() => gameActions.revealBrokenHand(player.id)}
+                onClick={() => gameActions.revealBrokenHand(player.playerId)}
               >
                 Reveal Broken Hand
               </button>
             )}
           </div>
-          {completedFields.some(field => field.winnerId === player.id) && (
+          {completedFields.some(field => field.winnerId === player.playerId) && (
             <div className="completed-fields-container">
               <CompletedFields 
-                fields={completedFields.filter(field => field.winnerId === player.id)} 
+                fields={completedFields.filter(field => field.winnerId === player.playerId)} 
                 playerTeam={playerTeam} 
               />
             </div>
