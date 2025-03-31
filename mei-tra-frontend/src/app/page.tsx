@@ -71,6 +71,8 @@ export default function Home() {
         blowState,
         teamScores,
         you,
+        negriCard,
+        fields,
       }: {
         players: Player[];
         gamePhase: GamePhase;
@@ -83,16 +85,21 @@ export default function Home() {
         };
         teamScores: TeamScores;
         you: string;
+        negriCard: string | null;
+        fields: CompletedField[];
       }) => {
         setPlayers(players);
         setGamePhase(gamePhase);
-        setCurrentField(currentField);
         setWhoseTurn(currentTurn);
+        setCurrentField(currentField);
         setCurrentTrump(blowState.currentTrump);
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
         setTeamScores(teamScores);
         setCurrentPlayerId(you);
+        setNegriCard(negriCard);
+        setCompletedFields(fields);
+        setNegriPlayerId(negriPlayerId);
         setGameStarted(true);
       },
       'game-started': (players: Player[]) => {

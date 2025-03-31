@@ -69,6 +69,10 @@ export const GameTable: React.FC<GameTableProps> = ({
     return 'left'; // fallback
   };
 
+  // TODO: キリがあってもjokerは出せる
+  // TODO: 霧の時のjokerはselcet base suit させない。
+  // TODO: jokerしかきりがない時はjokerを出す
+
   return (
     <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
       <GameInfo

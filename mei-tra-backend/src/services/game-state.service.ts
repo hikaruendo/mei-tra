@@ -139,6 +139,29 @@ export class GameStateService {
     return this.state.players.find((p) => p.playerId === token) || null;
   }
 
+  updatePlayerSocketId(playerId: string, newId: string): void {
+    // Find the player by playerId, not by socket id
+    const player = this.state.players.find((p) => p.playerId === playerId);
+
+    if (player) {
+      // Cancel reconnection timer if exists
+      const timeout = this.disconnectedPlayers.get(playerId);
+      if (timeout) {
+        clearTimeout(timeout);
+        this.disconnectedPlayers.delete(playerId);
+      }
+
+      // Update the socket ID
+      player.id = newId;
+
+      // Update token mappings
+      const token = this.playerIds.get(player.playerId);
+      if (token) {
+        this.playerIds.set(token, player.playerId);
+      }
+    }
+  }
+
   dealCards(): void {
     if (this.state.players.length === 0) return;
 

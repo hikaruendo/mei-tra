@@ -63,6 +63,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
         const state = this.gameState.getState();
 
+        this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
+
         this.server.to(client.id).emit('game-state', {
           players: state.players.map((player) => ({
             ...player,
@@ -78,6 +80,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           blowState: state.blowState,
           teamScores: state.teamScores,
           you: existingPlayer.playerId,
+          negriCard: state.playState?.negriCard,
+          fields: state.playState?.fields,
         });
         this.server.emit('update-players', state.players);
         return;
