@@ -38,8 +38,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const renderPlayerHand = () => {
     const isCurrentPlayer = currentPlayerId === player.playerId;
     const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
-
-    console.log('currentPlayerId', currentPlayerId)
     
     if (isCurrentPlayer) {
       return (

@@ -17,7 +17,6 @@ import { ChomboService } from './chombo.service';
 @Injectable()
 export class GameStateService {
   private state: GameState;
-  private reconnectTokens: Map<string, string> = new Map(); // playerId -> token
   private playerIds: Map<string, string> = new Map(); // token -> playerId
   private disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map(); // 切断されたプレイヤーのタイマーを管理
 
@@ -86,24 +85,6 @@ export class GameStateService {
     const state = this.getState();
     if (state.players.length >= 4) return false;
 
-    // 既存のプレイヤーを探す
-    const existingPlayer = state.players.find(
-      (p) => p.playerId === reconnectToken,
-    );
-
-    console.log('existingPlayer', existingPlayer);
-
-    if (existingPlayer) {
-      // 既存のプレイヤーのsocketIdを更新
-      existingPlayer.id = socketId;
-      // Update token mappings
-      if (reconnectToken) {
-        this.reconnectTokens.set(existingPlayer.playerId, reconnectToken);
-        this.playerIds.set(reconnectToken, existingPlayer.playerId);
-      }
-      return true;
-    }
-
     // 新しいプレイヤーを追加
     const playerId = reconnectToken || this.generateReconnectToken(); // 永続的なIDとして使用
     state.players.push({
@@ -115,11 +96,8 @@ export class GameStateService {
       isPasser: false,
     });
 
-    console.log('playerId', playerId);
-
     // Store token mappings
     const token = reconnectToken || playerId;
-    this.reconnectTokens.set(playerId, token);
     this.playerIds.set(token, playerId);
 
     return true;
@@ -133,13 +111,11 @@ export class GameStateService {
     const player = this.state.players.find((p) => p.playerId === playerId);
     if (!player) return;
 
-    const name = player.name;
-
     // 15秒間、再接続を待つ
     this.disconnectedPlayers.set(
-      name,
+      playerId,
       setTimeout(() => {
-        this.disconnectedPlayers.delete(name);
+        this.disconnectedPlayers.delete(playerId);
         this.state.players = this.state.players.filter(
           (p) => p.playerId !== playerId,
         );
@@ -161,29 +137,6 @@ export class GameStateService {
 
     // If not found, try to find by playerId directly
     return this.state.players.find((p) => p.playerId === token) || null;
-  }
-
-  updatePlayerSocketId(playerId: string, newId: string): void {
-    // Find the player by playerId, not by socket id
-    const player = this.state.players.find((p) => p.playerId === playerId);
-
-    if (player) {
-      // Cancel reconnection timer if exists
-      const timeout = this.disconnectedPlayers.get(playerId);
-      if (timeout) {
-        clearTimeout(timeout);
-        this.disconnectedPlayers.delete(playerId);
-      }
-
-      // Update the socket ID
-      player.id = newId;
-
-      // Update token mappings
-      const token = this.reconnectTokens.get(player.playerId);
-      if (token) {
-        this.playerIds.set(token, player.playerId);
-      }
-    }
   }
 
   dealCards(): void {
@@ -293,10 +246,6 @@ export class GameStateService {
     }
   }
 
-  isPlayerDisconnected(name: string): boolean {
-    return this.disconnectedPlayers.has(name);
-  }
-
   startGame(): void {
     const state = this.getState();
 
@@ -332,17 +281,5 @@ export class GameStateService {
       startingPlayerId: null,
       currentBlowIndex: 0,
     };
-  }
-
-  getDisconnectTimeout(name: string): NodeJS.Timeout | undefined {
-    return this.disconnectedPlayers.get(name);
-  }
-
-  clearDisconnectTimeout(name: string): void {
-    const timeout = this.disconnectedPlayers.get(name);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.disconnectedPlayers.delete(name);
-    }
   }
 }

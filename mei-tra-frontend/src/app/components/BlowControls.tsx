@@ -27,8 +27,6 @@ export function BlowControls({
   currentHighestDeclaration,
   players,
 }: BlowControlsProps) {
-  console.log('playersplayersplayers', players)
-  console.log('currentPlayercurrentPlayer', currentPlayer)
   const currentPlayerName = players.find(p => p.playerId === currentPlayer?.playerId)?.name;
 
   const handleDeclare = () => {

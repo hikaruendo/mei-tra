@@ -98,6 +98,9 @@ export default function Home() {
       'game-started': (players: Player[]) => {
         console.log('Game started with players:', players);
         setPlayers(players);
+        const id = getSocket().id;
+        const index = players.findIndex(p => p.id === id);
+        setCurrentPlayerId(players[index].playerId);
         setGameStarted(true);
       },
       'update-phase': ({ phase, scores, winner }: { phase: GamePhase; scores: TeamScores; winner: number | null }) => {

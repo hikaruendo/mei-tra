@@ -37,27 +37,38 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
     const name = typeof auth.name === 'string' ? auth.name : undefined;
 
-    if (!name && !token) {
+    console.log(
+      'handleConnection - Initial check - Token:',
+      token,
+      'Name:',
+      name,
+    );
+
+    // より厳密なバリデーション
+    if (name === undefined && token === undefined) {
+      console.log(
+        'handleConnection - Invalid connection: No name or token provided',
+      );
       client.disconnect();
       return;
     }
 
-    console.log('handleConnection - Token:', token, 'Name:', name);
-
+    // トークンがある場合は再接続として処理
     if (token) {
       const existingPlayer = this.gameState.findPlayerByReconnectToken(token);
-      console.log('Existing player found:', existingPlayer?.name);
 
       if (existingPlayer) {
         console.log(
           `Reconnected player ${existingPlayer.name} with new socket ID ${client.id}`,
         );
-        // Use playerId, not socket ID for updating
-        this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
         const state = this.gameState.getState();
 
         this.server.to(client.id).emit('game-state', {
-          players: state.players,
+          players: state.players.map((player) => ({
+            ...player,
+            hand:
+              player.playerId === existingPlayer.playerId ? player.hand : [], // 自分の手札のみ表示
+          })),
           gamePhase: state.gamePhase || 'waiting',
           currentField: state.playState?.currentField,
           currentTurn:
@@ -70,16 +81,40 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         this.server.emit('update-players', state.players);
         return;
+      } else {
+        // トークンはあるが既存プレイヤーが見つからない場合
+        console.log(
+          'handleConnection - Invalid token: No existing player found',
+        );
+        client.disconnect();
+        return;
       }
     }
 
     // 新規プレイヤーとして追加
-    if (name && this.gameState.addPlayer(client.id, name, token)) {
-      this.server.to(client.id).emit('reconnect-token', token);
-      const state = this.gameState.getState();
-      this.server.emit('update-players', state.players);
+    if (name) {
+      if (this.gameState.addPlayer(client.id, name, token)) {
+        const state = this.gameState.getState();
+        const newPlayer = state.players.find((p) => p.id === client.id);
+
+        console.log('newPlayer', newPlayer);
+
+        if (newPlayer) {
+          console.log(
+            `Sending reconnect-token to new player ${newPlayer.name}:`,
+            `${newPlayer.playerId}`,
+          );
+          this.server
+            .to(client.id)
+            .emit('reconnect-token', `${newPlayer.playerId}`);
+          this.server.emit('update-players', state.players);
+        }
+      } else {
+        client.emit('error-message', 'Game is full!');
+        client.disconnect();
+      }
     } else {
-      client.emit('error-message', 'Game is full!');
+      client.emit('error-message', 'Invalid connection attempt');
       client.disconnect();
     }
   }
