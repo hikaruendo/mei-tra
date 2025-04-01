@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Field, TrumpType } from '../types/game.types';
+import { TrumpType } from '../types/game.types';
 
 @Injectable()
 export class CardService {
@@ -88,49 +88,11 @@ export class CardService {
     return shuffled;
   }
 
-  isValidCardPlay(
-    hand: string[],
-    card: string,
-    field: Field,
-    currentTrump: TrumpType | null,
-  ): boolean {
-    if (field.cards.length === 0) return true;
-
-    const baseCard = field.baseCard;
-    // If baseCard is a secondary Jack, use the primary Jack's suit as baseSuit
-    const baseSuit = this.isSecondaryJack(baseCard, currentTrump as TrumpType)
-      ? this.getPrimaryJack(currentTrump as TrumpType).replace(/[0-9JQKA]/, '')
-      : baseCard.replace(/[0-9JQKA]/, '');
-    const cardSuit = card.replace(/[0-9JQKA]/, '');
-    const cardValue = card.replace(/[♠♣♥♦]/, '');
-
-    // If player has matching suit, they must play it
-    const hasMatchingSuit = hand.some(
-      (c) => c.replace(/[0-9JQKA]/, '') === baseSuit,
-    );
-    if (hasMatchingSuit && cardSuit !== baseSuit) return false;
-
-    // If base card is trump and player only has trump cards, they must play trump
-    if (
-      baseSuit === currentTrump &&
-      hand.every((c) => c.replace(/[0-9JQKA]/, '') === currentTrump) &&
-      cardSuit !== currentTrump
-    ) {
-      return false;
-    }
-
-    // Tanzen (Joker) can be played anytime
-    if (cardValue === 'JOKER') return true;
-
-    return true;
-  }
-
   getCardStrength(
     card: string,
     baseSuit: string,
     trumpType: TrumpType | null,
   ): number {
-    console.log('card:', card);
     if (card === 'JOKER') return this.CARD_STRENGTHS.JOKER;
 
     // Get the card's value and suit
@@ -191,7 +153,6 @@ export class CardService {
     return this.TRUMP_STRENGTHS[trumpType];
   }
 
-  // TODO: tra の時はJは普通のカードになる
   getPrimaryJack(trumpType: TrumpType): string {
     switch (trumpType) {
       case 'hel':

@@ -510,17 +510,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Validate the card play
-    if (
-      !this.playService.isValidCardPlay(
-        player.hand,
-        card,
-        state.playState.currentField,
-        state.blowState.currentTrump,
-        state.playState.isTanzenRound,
-      )
-    ) {
+    const validationResult = this.playService.isValidCardPlay(
+      player.hand,
+      card,
+      state.playState.currentField,
+      state.blowState.currentTrump,
+      state.playState.isTanzenRound,
+    );
+
+    if (!validationResult.isValid) {
       console.log('Invalid card play:', { playerId: player.playerId, card });
-      client.emit('error-message', 'Invalid card play');
+      client.emit(
+        'error-message',
+        validationResult.message || 'Invalid card play',
+      );
       return;
     }
 

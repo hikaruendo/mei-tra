@@ -12,8 +12,6 @@ import { CardService } from './card.service';
 import { ScoreService } from './score.service';
 import { ChomboService } from './chombo.service';
 
-// TODO: traの時のJの扱い
-
 @Injectable()
 export class GameStateService {
   private state: GameState;

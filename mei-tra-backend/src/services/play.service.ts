@@ -62,15 +62,25 @@ export class PlayService {
     field: Field,
     currentTrump: TrumpType | null,
     isTanzenRound: boolean,
-  ): boolean {
+  ): { isValid: boolean; message?: string } {
     // In Tanzen round, if player has Joker, they must play it
     if (isTanzenRound && playerHand.includes('JOKER')) {
-      return card === 'JOKER';
+      if (card !== 'JOKER') {
+        return {
+          isValid: false,
+          message: 'In Tanzen round, you must play the Joker if you have it.',
+        };
+      }
+      return { isValid: true };
+    }
+
+    if (card === 'JOKER') {
+      return { isValid: true };
     }
 
     // If no cards in field, any card is valid
     if (field.cards.length === 0) {
-      return true;
+      return { isValid: true };
     }
 
     const baseCard = field.baseCard;
@@ -84,17 +94,23 @@ export class PlayService {
     // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
     if (!currentTrump || currentTrump === 'tra') {
       if (cardSuit === baseSuit) {
-        return true;
+        return { isValid: true };
       }
 
-      return !playerHand.some(
-        (c) => this.cardService.getCardSuit(c) === baseSuit,
-      );
+      if (
+        playerHand.some((c) => this.cardService.getCardSuit(c) === baseSuit)
+      ) {
+        return {
+          isValid: false,
+          message: `You must play a card of the same suit (${baseSuit}) as the base card.`,
+        };
+      }
+      return { isValid: true };
     }
 
     // For other trump types, both primary and secondary Jacks can be played anytime
     if (this.cardService.isJack(card)) {
-      return true;
+      return { isValid: true };
     }
 
     // Normal suit matching rules
@@ -112,7 +128,10 @@ export class PlayService {
           (c) => this.cardService.getCardSuit(c, currentTrump) === baseSuit,
         );
         if (hasBaseSuit) {
-          return false;
+          return {
+            isValid: false,
+            message: `You must play a card of the same suit (${baseSuit}) as the base card.`,
+          };
         }
       }
 
@@ -124,11 +143,18 @@ export class PlayService {
           (c) => this.cardService.getCardSuit(c, currentTrump) === baseSuit,
         )
       ) {
-        return card === 'JOKER';
+        if (card !== 'JOKER') {
+          return {
+            isValid: false,
+            message:
+              'You must play the Joker since you have no cards of the trump suit.',
+          };
+        }
+        return { isValid: true };
       }
     }
 
-    return true;
+    return { isValid: true };
   }
 
   determineWinningTeam(fields: CompletedField[], players: Player[]): number {
