@@ -121,7 +121,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 <Card card={agariCard} />
               </div>
             )}
-            {isCurrentPlayer && player.hasBroken && (
+            {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
               <button 
                 className="broken-button"
                 onClick={() => gameActions.revealBrokenHand(player.playerId)}

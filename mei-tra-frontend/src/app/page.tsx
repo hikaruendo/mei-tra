@@ -157,13 +157,13 @@ export default function Home() {
           ));
         }
       },
-      'broken': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
+      'broken': ({ nextPlayerId, players }: { nextPlayerId: string; players: Player[] }) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
         });
         setPlayers(players);
-        setWhoseTurn(nextDealer);
+        setWhoseTurn(nextPlayerId);
         resetBlowState();
       },
       'round-reset': () => {

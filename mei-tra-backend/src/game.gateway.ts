@@ -885,10 +885,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     state.blowState.currentHighestDeclaration = null;
 
     // Move to next dealer and restart blow phase
-    const firstBlowIndex = state.currentPlayerIndex;
+    const firstBlowIndex = state.blowState.currentBlowIndex;
     const firstBlowPlayer = state.players[firstBlowIndex];
-
-    if (!firstBlowPlayer) return;
 
     state.currentPlayerIndex = firstBlowIndex;
 
@@ -898,7 +896,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Emit round cancelled
     this.server.emit('broken', {
-      nextDealer: firstBlowPlayer.playerId,
+      nextPlayerId: firstBlowPlayer.playerId,
       players: state.players,
     });
 

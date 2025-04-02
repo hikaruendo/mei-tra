@@ -73,6 +73,7 @@ export const GameTable: React.FC<GameTableProps> = ({
     <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
       <GameInfo
         currentTrump={currentTrump}
+        numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
         whoseTurn={whoseTurn}
         players={players}
         teamScores={teamScores}

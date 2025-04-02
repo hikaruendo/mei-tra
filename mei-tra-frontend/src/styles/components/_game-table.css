@@ -35,12 +35,12 @@
 /* Game Info Component Styles */
 .game-info-container {
   position: fixed;
-  top: 0;
-  left: 0;
+  bottom: 50px;
+  left: 10px;
   background-color: rgba(31, 41, 55, 0.9);
   padding: var(--spacing-md);
   z-index: 20;
-  border-bottom-right-radius: var(--border-radius-md);
+  border-radius: var(--border-radius-md);
 }
 
 .game-info-content {
