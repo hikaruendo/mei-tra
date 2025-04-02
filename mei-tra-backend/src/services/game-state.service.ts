@@ -50,7 +50,6 @@ export class GameStateService {
       declarations: [],
       lastPasser: null,
       isRoundCancelled: false,
-      startingPlayerId: null,
       currentBlowIndex: 0,
     };
   }
@@ -170,17 +169,13 @@ export class GameStateService {
       player.hasBroken = false;
     });
 
-    // Deal exactly 10 cards to each player
-    for (let i = 0; i < 10; i++) {
-      for (let j = 0; j < this.state.players.length; j++) {
-        this.state.players[j].hand.push(
-          this.state.deck[i * this.state.players.length + j],
-        );
-      }
+    // Deal exactly 1 card to each player for testing
+    for (let i = 0; i < this.state.players.length; i++) {
+      this.state.players[i].hand.push(this.state.deck[i]);
     }
 
     // Set the Agari card
-    this.state.agari = this.state.deck[40];
+    this.state.agari = this.state.deck[this.state.players.length];
 
     this.state.players.forEach((player) => {
       this.chomboService.checkForBrokenHand(player);
@@ -299,7 +294,6 @@ export class GameStateService {
       declarations: [],
       lastPasser: null,
       isRoundCancelled: false,
-      startingPlayerId: null,
       currentBlowIndex: 0,
     };
   }

@@ -148,7 +148,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     updatedState.gamePhase = 'blow'; // Set game phase to blow
     updatedState.blowState = {
       ...updatedState.blowState,
-      startingPlayerId: firstBlowPlayer.playerId,
       currentBlowIndex: firstBlowIndex,
     };
 
@@ -293,7 +292,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (!firstBlowPlayer) return;
 
         state.currentPlayerIndex = firstBlowIndex;
-        state.blowState.startingPlayerId = firstBlowPlayer.playerId;
 
         // Regenerate deck and deal cards
         state.deck = this.cardService.generateDeck();
@@ -688,12 +686,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Start new round after a short delay
       setTimeout(() => {
-        // Store previous dealer index before reset
-        const prevDealerId = state.playState?.currentField?.dealerId;
-        const prevDealerIndex = prevDealerId
-          ? state.players.findIndex((p) => p.playerId === prevDealerId)
-          : 0;
-
         this.gameState.resetRoundState();
         this.gameState.roundNumber++;
 
@@ -703,10 +695,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Get fresh state after reset
         const updatedState = this.gameState.getState();
 
-        // Calculate next dealer
-        const nextDealerIndex =
-          (prevDealerIndex + 1) % updatedState.players.length;
-        const nextDealer = updatedState.players[nextDealerIndex];
+        const nextBlowIndex =
+          (state.blowState.currentBlowIndex + 1) % state.players.length;
+        const nextBlowPlayer = state.players[nextBlowIndex];
 
         // 通常のゲーム初期化
         updatedState.gamePhase = 'blow';
@@ -718,7 +709,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           currentField: {
             cards: [],
             baseCard: '',
-            dealerId: nextDealer.playerId,
+            dealerId: nextBlowPlayer.playerId,
             isComplete: false,
           },
           negriCard: null,
@@ -737,8 +728,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           declarations: [],
           lastPasser: null,
           isRoundCancelled: false,
-          startingPlayerId: nextDealer.playerId,
-          currentBlowIndex: state.blowState.currentBlowIndex,
+          currentBlowIndex: nextBlowIndex,
         };
 
         // Update game state with the new state
@@ -749,17 +739,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           blowState: updatedState.blowState,
         });
 
-        // Always emit update-players event to update player hands
-        // console.log(
-        //   'Emitting update-players event with players:',
-        //   updatedState.players,
-        // );
         this.server.emit('update-players', updatedState.players);
 
         // Emit new round started event with all necessary state
         this.server.emit('new-round-started', {
           players: updatedState.players,
-          currentTurn: nextDealer.playerId,
+          currentTurn: nextBlowPlayer.playerId,
           gamePhase: 'blow',
           currentField: null,
           completedFields: [],
@@ -769,18 +754,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           currentTrump: null,
           currentHighestDeclaration: null,
           blowDeclarations: [],
-          startingPlayerId: nextDealer.playerId,
         });
 
         // Update turn
-        this.gameState.currentTurn = nextDealer.playerId;
-        this.server.emit('update-turn', nextDealer.playerId);
+        this.gameState.currentTurn = nextBlowPlayer.playerId;
+        this.server.emit('update-turn', nextBlowPlayer.playerId);
 
         // Emit phase update with current trump
         this.server.emit('update-phase', {
           phase: 'blow',
           scores: updatedState.teamScores,
-          winner: nextDealer.team,
+          winner: nextBlowPlayer.team,
           currentTrump: null,
         });
       }, 3000);
@@ -907,7 +891,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!firstBlowPlayer) return;
 
     state.currentPlayerIndex = firstBlowIndex;
-    state.blowState.startingPlayerId = firstBlowPlayer.playerId;
 
     // Regenerate deck and deal cards
     state.deck = this.cardService.generateDeck();

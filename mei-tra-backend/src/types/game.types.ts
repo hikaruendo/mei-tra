@@ -18,7 +18,7 @@ export interface TeamScore {
 }
 
 export type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
-
+// TODO: ブロークンの時はそのラウンドの吹き始めからやり直し
 export interface BlowDeclaration {
   playerId: string;
   trumpType: TrumpType;
@@ -32,7 +32,6 @@ export interface BlowState {
   declarations: BlowDeclaration[];
   lastPasser: string | null;
   isRoundCancelled: boolean;
-  startingPlayerId: string | null;
   currentBlowIndex: number;
 }
 
