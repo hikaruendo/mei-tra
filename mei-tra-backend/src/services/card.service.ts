@@ -99,7 +99,7 @@ export class CardService {
     const value = card.startsWith('10') ? '10' : card[0];
     const suit = card.startsWith('10')
       ? card.slice(2)
-      : this.getCardSuit(card, trumpType);
+      : this.getCardSuit(card, trumpType, baseSuit);
 
     // Base strength from the card's value
     let strength = this.CARD_STRENGTHS[value] || 0;
@@ -133,18 +133,18 @@ export class CardService {
       strength += 50; // Base suit bonus
     }
 
-    console.log(
-      'baseSuit:',
-      baseSuit,
-      'trumpSuit:',
-      trumpSuit,
-      'suit:',
-      suit,
-      'value:',
-      value,
-      'strength:',
-      strength,
-    );
+    // console.log(
+    //   'baseSuit:',
+    //   baseSuit,
+    //   'trumpSuit:',
+    //   trumpSuit,
+    //   'suit:',
+    //   suit,
+    //   'value:',
+    //   value,
+    //   'strength:',
+    //   strength,
+    // );
 
     return strength;
   }
@@ -226,5 +226,9 @@ export class CardService {
     }
 
     return card.slice(-1);
+  }
+
+  getTrumpSuit(trumpType: TrumpType): string {
+    return this.TRUMP_TO_SUIT[trumpType];
   }
 }

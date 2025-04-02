@@ -84,12 +84,18 @@ export class PlayService {
     }
 
     const baseCard = field.baseCard;
-    const baseSuit = this.cardService.getCardSuit(
-      baseCard,
-      currentTrump,
-      field.baseSuit,
-    );
-    const cardSuit = this.cardService.getCardSuit(card, currentTrump);
+    // If baseCard is Joker and currentTrump is not 'tra', use currentTrump as baseSuit
+    const trumpSuit =
+      currentTrump && currentTrump !== ('tra' as TrumpType)
+        ? this.cardService.getTrumpSuit(currentTrump)
+        : '';
+    const baseSuit =
+      baseCard === 'JOKER' &&
+      currentTrump &&
+      currentTrump !== ('tra' as TrumpType)
+        ? trumpSuit
+        : this.cardService.getCardSuit(baseCard, currentTrump, field.baseSuit);
+    const cardSuit = this.cardService.getCardSuit(card, currentTrump, baseSuit);
 
     // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
     if (!currentTrump || currentTrump === 'tra') {
@@ -102,26 +108,33 @@ export class PlayService {
       ) {
         return {
           isValid: false,
-          message: `You must play a card of the same suit (${baseSuit}) as the base card.`,
+          message: `You must play a card of suit ${baseSuit} (no trump effect)`,
         };
       }
       return { isValid: true };
     }
 
-    // For other trump types, both primary and secondary Jacks can be played anytime
-    if (this.cardService.isJack(card)) {
+    // Special case: When baseCard is Joker and currentTrump is not 'tra'
+    if (
+      baseCard === 'JOKER' &&
+      currentTrump &&
+      currentTrump !== ('tra' as TrumpType)
+    ) {
+      // If player has trump suit cards, they must play one
+      const hasTrumpSuit = playerHand.some(
+        (c) => this.cardService.getCardSuit(c, currentTrump) === trumpSuit,
+      );
+      if (hasTrumpSuit && cardSuit !== trumpSuit) {
+        return {
+          isValid: false,
+          message: `You must play a ${trumpSuit} card when Joker is the base card`,
+        };
+      }
       return { isValid: true };
     }
 
     // Normal suit matching rules
     if (baseCard) {
-      const baseSuit = this.cardService.getCardSuit(
-        baseCard,
-        currentTrump,
-        field.baseSuit,
-      );
-      const cardSuit = this.cardService.getCardSuit(card, currentTrump);
-
       // If player has the base suit, they must play it
       if (baseSuit !== cardSuit) {
         const hasBaseSuit = playerHand.some(
@@ -130,7 +143,7 @@ export class PlayService {
         if (hasBaseSuit) {
           return {
             isValid: false,
-            message: `You must play a card of the same suit (${baseSuit}) as the base card.`,
+            message: `You must play a card of suit ${baseSuit} (with ${currentTrump} trump effect)`,
           };
         }
       }
@@ -148,6 +161,22 @@ export class PlayService {
             isValid: false,
             message:
               'You must play the Joker since you have no cards of the trump suit.',
+          };
+        }
+        return { isValid: true };
+      }
+
+      // If player has Joker and no trump cards, they must play Joker
+      if (
+        playerHand.includes('JOKER') &&
+        !playerHand.some(
+          (c) => this.cardService.getCardSuit(c, currentTrump) === trumpSuit,
+        )
+      ) {
+        if (card !== 'JOKER') {
+          return {
+            isValid: false,
+            message: `You must play the Joker since you have no ${trumpSuit} cards.`,
           };
         }
         return { isValid: true };

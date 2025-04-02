@@ -37,18 +37,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
     const name = typeof auth.name === 'string' ? auth.name : undefined;
 
-    console.log(
-      'handleConnection - Initial check - Token:',
-      token,
-      'Name:',
-      name,
-    );
-
     // より厳密なバリデーション
     if (name === undefined && token === undefined) {
-      console.log(
-        'handleConnection - Invalid connection: No name or token provided',
-      );
+      // console.log(
+      //   'handleConnection - Invalid connection: No name or token provided',
+      // );
       client.disconnect();
       return;
     }
@@ -58,9 +51,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const existingPlayer = this.gameState.findPlayerByReconnectToken(token);
 
       if (existingPlayer) {
-        console.log(
-          `Reconnected player ${existingPlayer.name} with new socket ID ${client.id}`,
-        );
+        // console.log(
+        //   `Reconnected player ${existingPlayer.name} with new socket ID ${client.id}`,
+        // );
         const state = this.gameState.getState();
 
         this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
@@ -87,9 +80,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       } else {
         // トークンはあるが既存プレイヤーが見つからない場合
-        console.log(
-          'handleConnection - Invalid token: No existing player found',
-        );
+        // console.log(
+        //   'handleConnection - Invalid token: No existing player found',
+        // );
         client.disconnect();
         return;
       }
@@ -101,13 +94,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const state = this.gameState.getState();
         const newPlayer = state.players.find((p) => p.id === client.id);
 
-        console.log('newPlayer', newPlayer);
-
         if (newPlayer) {
-          console.log(
-            `Sending reconnect-token to new player ${newPlayer.name}:`,
-            `${newPlayer.playerId}`,
-          );
+          // console.log(
+          //   `Sending reconnect-token to new player ${newPlayer.name}:`,
+          //   `${newPlayer.playerId}`,
+          // );
           this.server
             .to(client.id)
             .emit('reconnect-token', `${newPlayer.playerId}`);
@@ -124,7 +115,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Player disconnected: ${client.id}`);
     // プレイヤーの削除は15秒後に実行される
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
@@ -228,15 +218,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     const totalActions = playersWhoHaveActed.size;
-    console.log('Players who have acted:', Array.from(playersWhoHaveActed));
-    console.log('Total actions:', totalActions);
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
-      console.log('All players have acted');
       this.handleFourthDeclaration();
     } else {
-      console.log('Next turn');
       this.gameState.nextTurn();
       // Emit turn update to all clients
       const nextPlayer = state.players[state.currentPlayerIndex];
@@ -285,8 +271,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     const totalActions = playersWhoHaveActed.size;
-    console.log('Players who have acted:', Array.from(playersWhoHaveActed));
-    console.log('Total actions:', totalActions);
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
@@ -364,7 +348,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private handleFourthDeclaration(): void {
-    console.log('handleFourthDeclaration called');
     const state = this.gameState.getState();
     const winner = this.blowService.findHighestDeclaration(
       state.blowState.declarations,
@@ -373,17 +356,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (p) => p.playerId === winner.playerId,
     );
     if (!winningPlayer) {
-      console.log('No winning player found');
       return;
     }
-    console.log('Winner found:', winningPlayer.playerId);
-    console.log("Winner's hand before adding Agari:", winningPlayer.hand);
 
     // Add Agari card to winner's hand first
     if (state.agari) {
       winningPlayer.hand.push(state.agari);
-      console.log("Added Agari card to winner's hand:", state.agari);
-      console.log("Winner's hand after adding Agari:", winningPlayer.hand);
     }
 
     // Move to play phase
@@ -399,11 +377,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // First update all players about the new state with the Agari card added
-    console.log('Emitting update-players with updated hand');
     this.server.emit('update-players', state.players);
 
     // Then emit Agari card to winner
-    console.log('Emitting reveal-agari to winner:', winningPlayer.playerId);
+    // console.log('Emitting reveal-agari to winner:', winningPlayer.playerId);
     this.server.to(winningPlayer.id).emit('reveal-agari', {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
@@ -535,6 +512,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     currentField.cards.push(card);
     if (currentField.cards.length === 1) {
       currentField.baseCard = card;
+      // If Joker is played and currentTrump is not 'tra', set baseSuit to currentTrump
+      if (
+        card === 'JOKER' &&
+        state.blowState.currentTrump &&
+        state.blowState.currentTrump !== 'tra'
+      ) {
+        currentField.baseSuit = state.blowState.currentTrump;
+      }
     }
 
     // Emit the card played event with updated players
@@ -549,8 +534,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (currentField.cards.length === 4) {
       this.handleFieldComplete(currentField);
     } else {
-      // If Joker is baseCard and baseSuit is not selected, don't proceed to next turn
-      if (currentField.baseCard === 'JOKER' && !currentField.baseSuit) {
+      // If Joker is baseCard and currentTrump is 'tra' and baseSuit is not selected, don't proceed to next turn
+      if (
+        currentField.baseCard === 'JOKER' &&
+        state.blowState.currentTrump === 'tra' &&
+        !currentField.baseSuit
+      ) {
         return;
       }
 
@@ -565,7 +554,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private handleFieldComplete(field: Field) {
     const state = this.gameState.getState();
-    console.log('state.blowState.currentTrump', state.blowState.currentTrump);
     const winner = this.playService.determineFieldWinner(
       field,
       state.players,
@@ -762,12 +750,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
         // Always emit update-players event to update player hands
-        console.log(
-          'Emitting update-players event with players:',
-          updatedState.players,
-        );
+        // console.log(
+        //   'Emitting update-players event with players:',
+        //   updatedState.players,
+        // );
         this.server.emit('update-players', updatedState.players);
-        console.log('update-players event emitted');
 
         // Emit new round started event with all necessary state
         this.server.emit('new-round-started', {

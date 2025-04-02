@@ -214,7 +214,7 @@ export class GameStateService {
     const completedField: CompletedField = {
       cards: field.cards,
       winnerId: winnerId,
-      winnerTeam: state.players.find((p) => p.id === winnerId)?.team || 0,
+      winnerTeam: state.players.find((p) => p.playerId === winnerId)?.team || 0,
       dealerId: field.dealerId,
     };
 
