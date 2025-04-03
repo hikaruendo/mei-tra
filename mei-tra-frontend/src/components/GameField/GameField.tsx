@@ -6,6 +6,7 @@ interface GameFieldProps {
   players: Player[];
   onBaseSuitSelect: (suit: string) => void;
   isCurrentPlayer: boolean;
+  currentTrump: string;
 }
 
 export const GameField: React.FC<GameFieldProps> = ({
@@ -13,16 +14,21 @@ export const GameField: React.FC<GameFieldProps> = ({
   players,
   onBaseSuitSelect,
   isCurrentPlayer,
+  currentTrump,
 }) => {
   const isJokerBaseCard = currentField?.baseCard === 'JOKER';
-  const needsBaseSuitSelection = isJokerBaseCard && !currentField?.baseSuit && isCurrentPlayer;
+  // ジョーカーかつcurrentTrumpがtraの場合は、ベーススートを選択する必要がある
+  const needsBaseSuitSelection = isJokerBaseCard && currentTrump === 'tra' && !currentField?.baseSuit && isCurrentPlayer;
 
   if (!currentField || currentField.cards.length === 0) {
     return null;
   }
 
   // ディーラーのインデックスを取得
-  const dealerIndex = players.findIndex(p => p.id === currentField.dealerId);
+  const dealerIndex = players.findIndex(p => p.playerId === currentField.dealerId);
+  
+  // ディーラーが見つからない場合は、最初のプレイヤーをディーラーとする
+  const effectiveDealerIndex = dealerIndex === -1 ? 0 : dealerIndex;
   
   return (
     <div className={'field-container'}>
@@ -33,7 +39,7 @@ export const GameField: React.FC<GameFieldProps> = ({
               const isRed = card.match(/[♥♦]/);
               const isJoker = card === 'JOKER';
               // ディーラーから順番にプレイヤーを決定
-              const playerIndex = (dealerIndex + index) % players.length;
+              const playerIndex = (effectiveDealerIndex + index) % players.length;
               const player = players[playerIndex];
               
               return (
@@ -64,7 +70,7 @@ export const GameField: React.FC<GameFieldProps> = ({
                 <button onClick={() => onBaseSuitSelect('♣')}>♣</button>
               </div>
             </div>
-          ) : currentField?.baseSuit && (
+          ) : currentTrump === 'tra' && currentField?.baseSuit && (
             <div className="base-suit-selection">
               <h3>Selected Base Suit</h3>
               <div className="suit-buttons">

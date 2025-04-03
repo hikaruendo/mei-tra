@@ -2,18 +2,21 @@ export type Team = 0 | 1;
 
 export interface Player {
   id: string;
+  playerId: string;
   name: string;
   hand: string[];
   team: Team;
-  isPasser?: boolean;
+  isPasser: boolean;
   hasBroken?: boolean;
 }
 
 export interface TeamScore {
-  deal: number;
-  blow: number;
   play: number;
   total: number;
+}
+
+export interface TeamScores {
+  [key: number]: TeamScore;
 }
 
 export type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
@@ -31,7 +34,6 @@ export interface BlowState {
   declarations: BlowDeclaration[];
   lastPasser: string | null;
   isRoundCancelled: boolean;
-  startingPlayerId: string | null;
   currentBlowIndex: number;
 }
 
@@ -87,7 +89,7 @@ export interface ChomboViolation {
   isExpired: boolean;
 }
 
-export type GamePhase = 'deal' | 'blow' | 'play' | null;
+export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
   players: Player[];

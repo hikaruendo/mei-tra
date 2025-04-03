@@ -44,19 +44,67 @@ export default function Home() {
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
+  const [reconnectToken, setReconnectToken] = useState<string | null>(null);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
+
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
 
+    // Set up reconnection token
+    const savedToken = localStorage.getItem('reconnectToken');
+    if (savedToken) {
+      socket.auth = { reconnectToken: savedToken };
+    }
+
     const socketHandlers = {
       'update-players': (players: Player[]) => {
-        console.log('update-players event received');
-        console.log('Players updated:', players);
         setPlayers(players);
       },
-      'game-started': (players: Player[]) => {
-        console.log('Game started with players:', players);
+      'game-state': ({
+        players,
+        gamePhase,
+        currentField,
+        currentTurn,
+        blowState,
+        teamScores,
+        you,
+        negriCard,
+        fields,
+      }: {
+        players: Player[];
+        gamePhase: GamePhase;
+        currentField: Field | null;
+        currentTurn: string;
+        blowState: {
+          currentTrump: TrumpType | null;
+          currentHighestDeclaration: BlowDeclaration | null;
+          declarations: BlowDeclaration[];
+        };
+        teamScores: TeamScores;
+        you: string;
+        negriCard: string | null;
+        fields: CompletedField[];
+      }) => {
         setPlayers(players);
+        setGamePhase(gamePhase);
+        setWhoseTurn(currentTurn);
+        setCurrentField(currentField);
+        setCurrentTrump(blowState.currentTrump);
+        setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
+        setBlowDeclarations(blowState.declarations);
+        setTeamScores(teamScores);
+        setCurrentPlayerId(you);
+        setNegriCard(negriCard);
+        setCompletedFields(fields);
+        setNegriPlayerId(negriPlayerId);
+        setGameStarted(true);
+      },
+      'game-started': (players: Player[]) => {
+        setPlayers(players);
+        const id = getSocket().id;
+        const index = players.findIndex(p => p.id === id);
+        setCurrentPlayerId(players[index].playerId);
         setGameStarted(true);
       },
       'update-phase': ({ phase, scores, winner }: { phase: GamePhase; scores: TeamScores; winner: number | null }) => {
@@ -84,14 +132,6 @@ export default function Home() {
       'error-message': (message: string) => alert(message),
       'update-turn': (playerId: string) => {
         setWhoseTurn(playerId);
-        // Add notification for turn change
-        // const nextPlayer = players.find(p => p.id === playerId)?.name;
-        // if (nextPlayer && (gamePhase === 'blow' || gamePhase === 'play')) {
-        //   setNotification({
-        //     message: `Turn changed to ${nextPlayer}`,
-        //     type: 'success'
-        //   });
-        // }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
@@ -112,17 +152,17 @@ export default function Home() {
         setCurrentHighestDeclaration(currentHighest);
         if (lastPasser) {
           setPlayers(players.map(p => 
-            p.id === lastPasser ? { ...p, isPasser: true } : p
+            p.playerId === lastPasser ? { ...p, isPasser: true } : p
           ));
         }
       },
-      'broken': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
+      'broken': ({ nextPlayerId, players }: { nextPlayerId: string; players: Player[] }) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
         });
         setPlayers(players);
-        setWhoseTurn(nextDealer);
+        setWhoseTurn(nextPlayerId);
         resetBlowState();
       },
       'round-reset': () => {
@@ -138,12 +178,11 @@ export default function Home() {
         resetBlowState();
       },
       'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
-        console.log('Revealing Agari card:', agari);
         setRevealedAgari(agari);
         
         // Add Agari card to player's hand for testing
         setPlayers(players.map(p =>
-          p.id === getSocket().id
+          p.playerId === currentPlayerId
             ? { ...p, hand: [...p.hand, agari] }
             : p
         ));
@@ -159,7 +198,7 @@ export default function Home() {
         setNegriPlayerId(startingPlayer);
         // Remove Negri card from player's hand
         setPlayers(players.map(p => 
-          p.id === getSocket().id 
+          p.playerId === currentPlayerId 
             ? { ...p, hand: p.hand.filter(card => card !== negriCard) }
             : p
         ));
@@ -172,6 +211,9 @@ export default function Home() {
         setCurrentField(field);
         // Update players with the latest data from server
         setPlayers(updatedPlayers);
+      },
+      'field-updated': (field: Field) => {
+        setCurrentField(field);
       },
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
         setCompletedFields(prev => [...prev, field]);
@@ -222,7 +264,11 @@ export default function Home() {
         setCurrentTrump(currentTrump);
         setCurrentHighestDeclaration(currentHighestDeclaration);
         setBlowDeclarations(blowDeclarations);
-      }
+      },
+      'reconnect-token': (token: string) => {
+        setReconnectToken(token);
+        localStorage.setItem('reconnectToken', token);
+      },
     };
 
     // Register all socket handlers
@@ -232,11 +278,11 @@ export default function Home() {
 
     // Cleanup socket handlers
     return () => {
-      Object.keys(socketHandlers).forEach(event => {
-        socket.off(event);
+      Object.keys(socketHandlers).forEach((event) => {
+        socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [gamePhase, players, currentHighestDeclaration, whoseTurn]);
+  }, [name, currentHighestDeclaration, players]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);
@@ -248,16 +294,20 @@ export default function Home() {
   const gameActions = {
     joinGame: () => {
       if (name.trim()) {
-        getSocket().emit('join-game', name);
+        const socket = getSocket();
+        if (reconnectToken) {
+          socket.auth = { reconnectToken };
+        } else {
+          socket.auth = { name };
+        }
+        socket.connect();
       }
     },
     startGame: () => {
-      console.log('Starting game with players:', players);
       getSocket().emit('start-game');
     },
     declareBlow: () => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn to declare!");
         return;
       }
@@ -265,42 +315,37 @@ export default function Home() {
         alert('Please select a trump type and number of pairs!');
         return;
       }
-      socket.emit('declare-blow', {
+      getSocket().emit('declare-blow', {
         trumpType: selectedTrump,
         numberOfPairs,
       });
     },
     passBlow: () => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn to pass!1");
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to pass!2");
         return;
       }
-      socket.emit('pass-blow');
+      getSocket().emit('pass-blow');
     },
     selectNegri: (card: string) => {
-      const socket = getSocket();
-      socket.emit('select-negri', card);
+      getSocket().emit('select-negri', card);
     },
     playCard: (card: string) => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn!2");
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn!");
         return;
       }
-      socket.emit('play-card', card);
+      getSocket().emit('play-card', card);
     },
     selectBaseSuit: (suit: string) => {
-      const socket = getSocket();
-      if (whoseTurn !== socket.id) {
-        alert("It's not your turn to select base suit!11");
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to select base suit!");
         return;
       }
-      socket.emit('select-base-suit', suit);
+      getSocket().emit('select-base-suit', suit);
     },
     revealBrokenHand: (playerId: string) => {
-      const socket = getSocket();
-      socket.emit('reveal-broken-hand', playerId);
+      getSocket().emit('reveal-broken-hand', playerId);
     }
   };
 
@@ -346,6 +391,7 @@ export default function Home() {
               numberOfPairs={numberOfPairs}
               setNumberOfPairs={setNumberOfPairs}
               teamScores={teamScores}
+              currentPlayerId={currentPlayerId}
             />
             {teamScores && teamScoreRecords && (
               <div className="mt-4">

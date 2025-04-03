@@ -3,6 +3,7 @@ import { Player, TrumpType, TeamScores } from '@/types/game.types';
 
 interface GameInfoProps {
   currentTrump: TrumpType | null;
+  numberOfPairs: number;
   whoseTurn: string | null;
   players: Player[];
   teamScores: TeamScores;
@@ -10,11 +11,12 @@ interface GameInfoProps {
 
 export const GameInfo: React.FC<GameInfoProps> = ({
   currentTrump,
+  numberOfPairs,
   whoseTurn,
   players,
   teamScores,
 }) => {
-  const currentPlayer = players.find(p => p.id === whoseTurn)?.name;
+  const currentPlayer = players.find(p => p.playerId === whoseTurn)?.name;
 
   const getTrumpDisplay = () => {
     if (!currentTrump) return '';
@@ -35,7 +37,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         {currentTrump && (
           <div className="game-info-trump">
             <span className="game-info-trump-text">
-              Trump: {getTrumpDisplay()}
+              Trump: {getTrumpDisplay()} Num: {numberOfPairs}
             </span>
           </div>
         )}
@@ -53,12 +55,12 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         <div className="game-info-scores">
           <div className="game-info-score-team1">
             <span className="game-info-score-text">
-              Team 1: {teamScores[0].total}
+              Team 0: {teamScores[0].total}
             </span>
           </div>
           <div className="game-info-score-team2">
             <span className="game-info-score-text">
-              Team 2: {teamScores[1].total}
+              Team 1: {teamScores[1].total}
             </span>
           </div>
         </div>

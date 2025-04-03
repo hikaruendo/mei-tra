@@ -15,6 +15,8 @@ import { ChomboService } from './chombo.service';
 @Injectable()
 export class GameStateService {
   private state: GameState;
+  private playerIds: Map<string, string> = new Map(); // token -> playerId
+  private disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map(); // 切断されたプレイヤーのタイマーを管理
 
   constructor(
     private readonly cardService: CardService,
@@ -48,7 +50,6 @@ export class GameStateService {
       declarations: [],
       lastPasser: null,
       isRoundCancelled: false,
-      startingPlayerId: null,
       currentBlowIndex: 0,
     };
   }
@@ -77,18 +78,85 @@ export class GameStateService {
     };
   }
 
-  addPlayer(id: string, name: string): boolean {
-    if (this.state.players.length >= 4) return false;
-    const team = (this.state.players.length % 2) as Team;
-    this.state.players.push({ id, name, hand: [], team });
-    console.log(
-      `Added player ${name} (${id}) to team ${team}. Total players: ${this.state.players.length}`,
-    );
+  addPlayer(socketId: string, name: string, reconnectToken?: string): boolean {
+    const state = this.getState();
+    if (state.players.length >= 4) return false;
+
+    // 新しいプレイヤーを追加
+    const playerId = reconnectToken || this.generateReconnectToken(); // 永続的なIDとして使用
+    state.players.push({
+      id: socketId,
+      playerId,
+      name,
+      hand: [],
+      team: (state.players.length % 2) as Team,
+      isPasser: false,
+    });
+
+    // Store token mappings
+    const token = reconnectToken || playerId;
+    this.playerIds.set(token, playerId);
+
     return true;
   }
 
-  removePlayer(id: string): void {
-    this.state.players = this.state.players.filter((p) => p.id !== id);
+  private generateReconnectToken(): string {
+    return Math.random().toString(36).substring(2, 15);
+  }
+
+  removePlayer(playerId: string) {
+    const player = this.state.players.find((p) => p.playerId === playerId);
+    if (!player) return;
+
+    // 15秒間、再接続を待つ
+    this.disconnectedPlayers.set(
+      playerId,
+      setTimeout(() => {
+        this.disconnectedPlayers.delete(playerId);
+        this.state.players = this.state.players.filter(
+          (p) => p.playerId !== playerId,
+        );
+      }, 15000),
+    ); // 15秒待ってから削除
+
+    // ソケットIDだけ即時クリア（切断状態を示す）
+    player.id = '';
+  }
+
+  findPlayerByReconnectToken(token: string): Player | null {
+    // First try to find by token in playerIds map
+    const playerId = this.playerIds.get(token);
+    if (playerId) {
+      // Look for the player in the player list by playerId,
+      // even if the player's socket id is empty (meaning they disconnected)
+      return this.state.players.find((p) => p.playerId === playerId) || null;
+    }
+
+    // If not found, try to find by playerId directly
+    return this.state.players.find((p) => p.playerId === token) || null;
+  }
+
+  updatePlayerSocketId(playerId: string, newId: string): void {
+    // Find the player by playerId, not by socket id
+    const player = this.state.players.find((p) => p.playerId === playerId);
+
+    if (player) {
+      // Cancel reconnection timer if exists
+      const timeout = this.disconnectedPlayers.get(playerId);
+      if (timeout) {
+        clearTimeout(timeout);
+        this.disconnectedPlayers.delete(playerId);
+      }
+
+      // Update the socket ID
+      player.id = newId;
+
+      // Update token mappings
+      const token = this.playerIds.get(player.playerId);
+      if (token) {
+        this.playerIds.set(token, player.playerId);
+      }
+    }
   }
 
   dealCards(): void {
@@ -113,6 +181,14 @@ export class GameStateService {
     // Set the Agari card
     this.state.agari = this.state.deck[40];
 
+    // // Deal exactly 1 card to each player for testing
+    // for (let i = 0; i < this.state.players.length; i++) {
+    //   this.state.players[i].hand.push(this.state.deck[i]);
+    // }
+
+    // // Set the Agari card
+    // this.state.agari = this.state.deck[this.state.players.length];
+
     this.state.players.forEach((player) => {
       this.chomboService.checkForBrokenHand(player);
     });
@@ -130,7 +206,7 @@ export class GameStateService {
 
   isPlayerTurn(playerId: string): boolean {
     const currentPlayer = this.getCurrentPlayer();
-    return currentPlayer?.id === playerId;
+    return currentPlayer?.playerId === playerId;
   }
 
   completeField(field: Field, winnerId: string): CompletedField | null {
@@ -145,7 +221,7 @@ export class GameStateService {
     const completedField: CompletedField = {
       cards: field.cards,
       winnerId: winnerId,
-      winnerTeam: state.players.find((p) => p.id === winnerId)?.team || 0,
+      winnerTeam: state.players.find((p) => p.playerId === winnerId)?.team || 0,
       dealerId: field.dealerId,
     };
 
@@ -186,13 +262,51 @@ export class GameStateService {
 
   get currentTurn(): string | null {
     const currentPlayer = this.state.players[this.state.currentPlayerIndex];
-    return currentPlayer?.id || null;
+    return currentPlayer?.playerId || null;
   }
 
   set currentTurn(playerId: string) {
-    const playerIndex = this.state.players.findIndex((p) => p.id === playerId);
+    const playerIndex = this.state.players.findIndex(
+      (p) => p.playerId === playerId,
+    );
     if (playerIndex !== -1) {
       this.state.currentPlayerIndex = playerIndex;
     }
+  }
+
+  startGame(): void {
+    const state = this.getState();
+
+    // Initialize game state
+    state.gamePhase = 'blow';
+    state.deck = this.cardService.generateDeck();
+    this.dealCards();
+
+    // Initialize play state
+    state.playState = {
+      currentField: {
+        cards: [],
+        baseCard: '',
+        dealerId: state.players[0].playerId,
+        isComplete: false,
+      },
+      negriCard: null,
+      neguri: {},
+      fields: [],
+      lastWinnerId: null,
+      isTanzenRound: false,
+      openDeclared: false,
+      openDeclarerId: null,
+    };
+
+    // Initialize blow state
+    state.blowState = {
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      declarations: [],
+      lastPasser: null,
+      isRoundCancelled: false,
+      currentBlowIndex: 0,
+    };
   }
 }

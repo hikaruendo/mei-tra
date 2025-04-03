@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ChomboViolation, Player, Field } from '../types/game.types';
-import { CardService } from './card.service';
+import { PlayService } from './play.service';
 
 @Injectable()
 export class ChomboService {
   private violations: ChomboViolation[] = [];
 
-  constructor(private readonly cardService: CardService) {}
+  constructor(private readonly playService: PlayService) {}
 
   checkViolations(
     playerId: string,
@@ -84,7 +84,13 @@ export class ChomboService {
   }
 
   private isValidCardPlay(player: Player, field: Field, card: string): boolean {
-    return this.cardService.isValidCardPlay(player.hand, card, field, null);
+    return this.playService.isValidCardPlay(
+      player.hand,
+      card,
+      field,
+      null,
+      false,
+    ).isValid;
   }
 
   recordViolation(

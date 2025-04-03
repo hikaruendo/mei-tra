@@ -4,7 +4,6 @@ import { PlayerHand } from '../PlayerHand/PlayerHand';
 import { GameField } from '../GameField/GameField';
 import { GameControls } from '@/app/components/GameControls';
 import { BlowControls } from '@/app/components/BlowControls';
-import { getSocket } from '@/app/socket';
 import { GameInfo } from '../GameInfo/GameInfo';
 
 
@@ -26,6 +25,7 @@ interface GameTableProps {
   numberOfPairs: number;
   setNumberOfPairs: (pairs: number) => void;
   teamScores: TeamScores;
+  currentPlayerId: string | null;
 }
 
 export const GameTable: React.FC<GameTableProps> = ({
@@ -46,15 +46,17 @@ export const GameTable: React.FC<GameTableProps> = ({
   numberOfPairs,
   setNumberOfPairs,
   teamScores,
+  currentPlayerId,
 }) => {
   const getRelativePosition = (player: Player) => {
-    const currentPlayerId = getSocket().id;
-    const currentIndex = players.findIndex(p => p.id === currentPlayerId);
-    const playerIndex = players.findIndex(p => p.id === player.id);
+    if (!currentPlayerId) return 'bottom';
+    
+    const currentIndex = players.findIndex(p => p.playerId === currentPlayerId);
+    const playerIndex = players.findIndex(p => p.playerId === player.playerId);
 
-    if (player.id === currentPlayerId) return 'bottom';
+    if (player.playerId === currentPlayerId) return 'bottom';
 
-    const currentTeam = players.find(p => p.id === currentPlayerId)?.team;
+    const currentTeam = players.find(p => p.playerId === currentPlayerId)?.team;
     const isTeammate = player.team === currentTeam;
 
     if (isTeammate) return 'top';
@@ -71,6 +73,7 @@ export const GameTable: React.FC<GameTableProps> = ({
     <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
       <GameInfo
         currentTrump={currentTrump}
+        numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
         whoseTurn={whoseTurn}
         players={players}
         teamScores={teamScores}
@@ -81,8 +84,8 @@ export const GameTable: React.FC<GameTableProps> = ({
           gamePhase={gamePhase}
           renderBlowControls={() => (
             <BlowControls
-              isCurrentPlayer={getSocket().id === whoseTurn}
-              currentPlayer={players.find(p => p.id === getSocket().id)}
+              isCurrentPlayer={currentPlayerId === whoseTurn}
+              currentPlayer={players.find(p => p.playerId === currentPlayerId)}
               selectedTrump={selectedTrump}
               setSelectedTrump={setSelectedTrump}
               numberOfPairs={numberOfPairs}
@@ -100,9 +103,9 @@ export const GameTable: React.FC<GameTableProps> = ({
       <div className="player-positions">
         {players.map((player) => (
           <PlayerHand
-            key={player.id}
+            key={player.playerId}
             player={player}
-            isCurrentTurn={whoseTurn === player.id}
+            isCurrentTurn={whoseTurn === player.playerId}
             negriCard={negriCard}
             negriPlayerId={negriPlayerId}
             gamePhase={gamePhase}
@@ -112,7 +115,8 @@ export const GameTable: React.FC<GameTableProps> = ({
             agariCard={revealedAgari || undefined}
             currentHighestDeclaration={currentHighestDeclaration || undefined}
             completedFields={completedFields}
-            playerTeam={(players.find(p => p.id === getSocket().id)?.team ?? 0) as Team} 
+            playerTeam={(players.find(p => p.playerId === currentPlayerId)?.team ?? 0) as Team}
+            currentPlayerId={currentPlayerId || ''}
           />
         ))}
 
@@ -121,7 +125,8 @@ export const GameTable: React.FC<GameTableProps> = ({
           currentField={currentField}
           players={players}
           onBaseSuitSelect={gameActions.selectBaseSuit}
-          isCurrentPlayer={getSocket().id === whoseTurn}
+          isCurrentPlayer={currentPlayerId === whoseTurn}
+          currentTrump={currentTrump || ''}
         />
       </div>
     </div>

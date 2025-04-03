@@ -32,97 +32,133 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   handleConnection(client: Socket) {
-    console.log(`Player connected: ${client.id}`);
-    const state = this.gameState.getState();
-    this.server.emit('update-players', state.players);
+    const auth = client.handshake.auth || {};
+    const token =
+      typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
+    const name = typeof auth.name === 'string' ? auth.name : undefined;
+
+    // より厳密なバリデーション
+    if (name === undefined && token === undefined) {
+      client.disconnect();
+      return;
+    }
+
+    // トークンがある場合は再接続として処理
+    if (token) {
+      const existingPlayer = this.gameState.findPlayerByReconnectToken(token);
+
+      if (existingPlayer) {
+        const state = this.gameState.getState();
+
+        this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
+
+        this.server.to(client.id).emit('game-state', {
+          players: state.players.map((player) => ({
+            ...player,
+            hand:
+              player.playerId === existingPlayer.playerId ? player.hand : [], // 自分の手札のみ表示
+          })),
+          gamePhase: state.gamePhase || 'waiting',
+          currentField: state.playState?.currentField,
+          currentTurn:
+            state.currentPlayerIndex !== -1
+              ? state.players[state.currentPlayerIndex].playerId
+              : null,
+          blowState: state.blowState,
+          teamScores: state.teamScores,
+          you: existingPlayer.playerId,
+          negriCard: state.playState?.negriCard,
+          fields: state.playState?.fields,
+        });
+        this.server.emit('update-players', state.players);
+        return;
+      } else {
+        client.disconnect();
+        return;
+      }
+    }
+
+    // 新規プレイヤーとして追加
+    if (name) {
+      if (this.gameState.addPlayer(client.id, name, token)) {
+        const state = this.gameState.getState();
+        const newPlayer = state.players.find((p) => p.id === client.id);
+
+        if (newPlayer) {
+          this.server
+            .to(client.id)
+            .emit('reconnect-token', `${newPlayer.playerId}`);
+          this.server.emit('update-players', state.players);
+        }
+      } else {
+        client.emit('error-message', 'Game is full!');
+        client.disconnect();
+      }
+    } else {
+      client.emit('error-message', 'Invalid connection attempt');
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
-    this.gameState.removePlayer(client.id);
+    // プレイヤーの削除は15秒後に実行される
     const state = this.gameState.getState();
-    this.server.emit('update-players', state.players);
-    console.log(`Player disconnected: ${client.id}`);
-  }
-
-  @SubscribeMessage('join-game')
-  handleJoinGame(client: Socket, name: string) {
-    const success = this.gameState.addPlayer(client.id, name);
-    if (!success) {
-      client.emit('error-message', 'Game is full!');
-      return;
+    const player = state.players.find((p) => p.id === client.id);
+    if (player) {
+      this.gameState.removePlayer(player.playerId);
+      this.server.emit('update-players', state.players);
     }
-    const state = this.gameState.getState();
-    this.server.emit('update-players', state.players);
   }
 
   @SubscribeMessage('start-game')
-  handleStartGame(client: Socket): void {
-    console.log('Game starting...');
+  handleStartGame(client: Socket) {
     const state = this.gameState.getState();
-
     if (state.players.length !== 4) {
-      console.log('Need exactly 4 players to start the game.');
-      client.emit('error-message', 'Need exactly 4 players to start the game.');
+      client.emit('error-message', 'Game must have exactly 4 players!');
       return;
     }
 
-    // 通常のゲーム初期化
-    state.gamePhase = 'blow';
-    state.deck = this.cardService.generateDeck();
-    this.gameState.dealCards();
+    this.gameState.startGame();
+    const updatedState = this.gameState.getState();
+    if (!updatedState) {
+      client.emit('error-message', 'Failed to start game: Invalid game state');
+      return;
+    }
 
-    // プレイ状態を設定
-    state.playState = {
-      currentField: {
-        cards: [],
-        baseCard: '',
-        dealerId: state.players[0].id,
-        isComplete: false,
-      },
-      negriCard: null,
-      neguri: {},
-      fields: [],
-      lastWinnerId: null,
-      isTanzenRound: false,
-      openDeclared: false,
-      openDeclarerId: null,
+    // Set the first player as the starting player for the first blow phase
+    const firstBlowIndex = 0; // First player starts
+    const firstBlowPlayer = updatedState.players[firstBlowIndex];
+
+    // Update both currentPlayerIndex and blowState
+    updatedState.currentPlayerIndex = firstBlowIndex;
+    updatedState.gamePhase = 'blow'; // Set game phase to blow
+    updatedState.blowState = {
+      ...updatedState.blowState,
+      currentBlowIndex: firstBlowIndex,
     };
 
-    // ブロー状態を設定
-    state.blowState = {
-      currentTrump: null,
-      currentHighestDeclaration: null,
-      declarations: [],
-      lastPasser: null,
-      isRoundCancelled: false,
-      startingPlayerId: state.players[0].id,
-      currentBlowIndex: 0,
-    };
-
-    // 初期状態をクライアントに通知
-    this.server.emit('game-started', state.players);
+    this.server.emit('game-started', updatedState.players);
     this.server.emit('update-phase', {
       phase: 'blow',
-      scores: state.teamScores,
+      scores: updatedState.teamScores,
       winner: null,
     });
-    this.server.emit('update-players', state.players);
-    this.server.emit('update-turn', state.players[0].id);
+    this.server.emit('update-turn', firstBlowPlayer.playerId);
   }
 
   @SubscribeMessage('declare-blow')
   handleDeclareBlow(
     client: Socket,
     declaration: { trumpType: TrumpType; numberOfPairs: number },
-  ) {
-    if (!this.gameState.isPlayerTurn(client.id)) {
-      client.emit('error-message', "It's not your turn to declare!");
-      return;
-    }
-
+  ): void {
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) return;
+
+    if (!this.gameState.isPlayerTurn(player.playerId)) {
+      client.emit('error-message', "It's not your turn to declare!");
+      return;
+    }
 
     // Validate declaration
     if (
@@ -137,7 +173,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Add declaration
     const newDeclaration = this.blowService.createDeclaration(
-      client.id,
+      player.playerId,
       declaration.trumpType,
       declaration.numberOfPairs,
     );
@@ -162,50 +198,46 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Add players who have passed
     state.players.forEach((player) => {
       if (player.isPasser) {
-        playersWhoHaveActed.add(player.id);
+        playersWhoHaveActed.add(player.playerId);
       }
     });
 
     const totalActions = playersWhoHaveActed.size;
-    console.log('Players who have acted:', Array.from(playersWhoHaveActed));
-    console.log('Total actions:', totalActions);
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
-      console.log('All players have acted');
       this.handleFourthDeclaration();
     } else {
-      console.log('Next turn');
       this.gameState.nextTurn();
       // Emit turn update to all clients
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
-        this.server.emit('update-turn', nextPlayer.id);
+        this.server.emit('update-turn', nextPlayer.playerId);
       }
     }
   }
 
   @SubscribeMessage('pass-blow')
   handlePassBlow(client: Socket): void {
-    // First check if it's the player's turn
-    if (!this.gameState.isPlayerTurn(client.id)) {
-      client.emit('error-message', "It's not your turn to pass!");
-      return;
-    }
-
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) return;
 
+    // First check if it's the player's turn
+    if (!this.gameState.isPlayerTurn(player.playerId)) {
+      client.emit('error-message', "It's not your turn to pass!1");
+      return;
+    }
+
     // Mark player as passed
     player.isPasser = true;
-    state.blowState.lastPasser = client.id;
+    state.blowState.lastPasser = player.playerId;
 
     // Emit update
     this.server.emit('blow-updated', {
       declarations: state.blowState.declarations,
       currentHighest: state.blowState.currentHighestDeclaration,
-      lastPasser: client.id,
+      lastPasser: player.playerId,
     });
 
     // Count total actions (declarations + passes)
@@ -219,13 +251,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Add players who have passed
     state.players.forEach((player) => {
       if (player.isPasser) {
-        playersWhoHaveActed.add(player.id);
+        playersWhoHaveActed.add(player.playerId);
       }
     });
 
     const totalActions = playersWhoHaveActed.size;
-    console.log('Players who have acted:', Array.from(playersWhoHaveActed));
-    console.log('Total actions:', totalActions);
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
@@ -248,7 +278,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (!firstBlowPlayer) return;
 
         state.currentPlayerIndex = firstBlowIndex;
-        state.blowState.startingPlayerId = firstBlowPlayer.id;
 
         // Regenerate deck and deal cards
         state.deck = this.cardService.generateDeck();
@@ -256,19 +285,21 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // Emit round cancelled
         this.server.emit('round-cancelled', {
-          nextDealer: state.players[nextDealerIndex].id,
+          nextDealer: firstBlowPlayer.playerId,
           players: state.players,
         });
 
         // Emit turn update
-        this.server.emit('update-turn', firstBlowPlayer.id);
+        this.server.emit('update-turn', firstBlowPlayer.playerId);
         return;
       }
 
       const winner = state.blowState.currentHighestDeclaration;
       if (!winner) return;
 
-      const winningPlayer = state.players.find((p) => p.id === winner.playerId);
+      const winningPlayer = state.players.find(
+        (p) => p.playerId === winner.playerId,
+      );
       if (!winningPlayer) return;
 
       // Move to play phase
@@ -296,29 +327,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit turn update
     const nextPlayer = state.players[state.currentPlayerIndex];
     if (nextPlayer) {
-      this.server.emit('update-turn', nextPlayer.id);
+      this.server.emit('update-turn', nextPlayer.playerId);
     }
   }
 
   private handleFourthDeclaration(): void {
-    console.log('handleFourthDeclaration called');
     const state = this.gameState.getState();
     const winner = this.blowService.findHighestDeclaration(
       state.blowState.declarations,
     );
-    const winningPlayer = state.players.find((p) => p.id === winner.playerId);
+    const winningPlayer = state.players.find(
+      (p) => p.playerId === winner.playerId,
+    );
     if (!winningPlayer) {
-      console.log('No winning player found');
       return;
     }
-    console.log('Winner found:', winningPlayer.id);
-    console.log("Winner's hand before adding Agari:", winningPlayer.hand);
 
     // Add Agari card to winner's hand first
     if (state.agari) {
       winningPlayer.hand.push(state.agari);
-      console.log("Added Agari card to winner's hand:", state.agari);
-      console.log("Winner's hand after adding Agari:", winningPlayer.hand);
     }
 
     // Move to play phase
@@ -327,21 +354,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Set current player to the winner for Negri selection
     const winnerIndex = state.players.findIndex(
-      (p) => p.id === winner.playerId,
+      (p) => p.playerId === winner.playerId,
     );
     if (winnerIndex !== -1) {
       state.currentPlayerIndex = winnerIndex;
     }
 
     // First update all players about the new state with the Agari card added
-    console.log('Emitting update-players with updated hand');
     this.server.emit('update-players', state.players);
 
     // Then emit Agari card to winner
-    console.log('Emitting reveal-agari to winner:', winningPlayer.id);
     this.server.to(winningPlayer.id).emit('reveal-agari', {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
+      playerId: winningPlayer.playerId,
     });
 
     // Finally emit phase update and turn update
@@ -350,7 +376,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       scores: state.teamScores,
       winner: winningPlayer.team,
     });
-    this.server.emit('update-turn', winningPlayer.id);
+    this.server.emit('update-turn', winningPlayer.playerId);
   }
 
   @SubscribeMessage('select-negri')
@@ -363,7 +389,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('error-message', 'Cannot select Negri card now!');
       return;
     }
-    if (!this.gameState.isPlayerTurn(client.id)) {
+    if (!this.gameState.isPlayerTurn(player.playerId)) {
       client.emit('error-message', "It's not your turn to select Negri!");
       return;
     }
@@ -379,7 +405,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       currentField: {
         cards: [],
         baseCard: '',
-        dealerId: client.id,
+        dealerId: player.playerId,
         isComplete: false,
       },
       negriCard: card,
@@ -402,7 +428,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Set the winner as the first player to play
     const winnerIndex = state.players.findIndex(
-      (p) => p.id === winner.playerId,
+      (p) => p.playerId === winner.playerId,
     );
     if (winnerIndex === -1) return;
 
@@ -413,9 +439,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit updates
     this.server.emit('play-setup-complete', {
       negriCard: card,
-      startingPlayer: state.players[winnerIndex].id,
+      startingPlayer: state.players[winnerIndex].playerId,
     });
-    this.server.emit('update-turn', state.players[winnerIndex].id);
+    this.server.emit('update-turn', state.players[winnerIndex].playerId);
   }
 
   @SubscribeMessage('play-card')
@@ -426,7 +452,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) {
-      console.log('Player not found for client:', client.id);
       return;
     }
 
@@ -437,18 +462,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    // Check if it's the player's turn
+    if (!this.gameState.isPlayerTurn(player.playerId)) {
+      client.emit('error-message', "It's not your turn to play!");
+      return;
+    }
+
     // Validate the card play
-    if (
-      !this.playService.isValidCardPlay(
-        player.hand,
-        card,
-        state.playState.currentField,
-        state.blowState.currentTrump,
-        state.playState.isTanzenRound,
-      )
-    ) {
-      console.log('Invalid card play:', { playerId: player.id, card });
-      client.emit('error-message', 'Invalid card play');
+    const validationResult = this.playService.isValidCardPlay(
+      player.hand,
+      card,
+      state.playState.currentField,
+      state.blowState.currentTrump,
+      state.playState.isTanzenRound,
+    );
+
+    if (!validationResult.isValid) {
+      client.emit(
+        'error-message',
+        validationResult.message || 'Invalid card play',
+      );
       return;
     }
 
@@ -460,11 +493,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     currentField.cards.push(card);
     if (currentField.cards.length === 1) {
       currentField.baseCard = card;
+      // If Joker is played and currentTrump is not 'tra', set baseSuit to currentTrump
+      if (
+        card === 'JOKER' &&
+        state.blowState.currentTrump &&
+        state.blowState.currentTrump !== 'tra'
+      ) {
+        currentField.baseSuit = state.blowState.currentTrump;
+      }
     }
 
     // Emit the card played event with updated players
     this.server.emit('card-played', {
-      playerId: player.id,
+      playerId: player.playerId,
       card,
       field: currentField,
       players: state.players,
@@ -474,8 +515,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (currentField.cards.length === 4) {
       this.handleFieldComplete(currentField);
     } else {
-      // If Joker is baseCard and baseSuit is not selected, don't proceed to next turn
-      if (currentField.baseCard === 'JOKER' && !currentField.baseSuit) {
+      // If Joker is baseCard and currentTrump is 'tra' and baseSuit is not selected, don't proceed to next turn
+      if (
+        currentField.baseCard === 'JOKER' &&
+        state.blowState.currentTrump === 'tra' &&
+        !currentField.baseSuit
+      ) {
         return;
       }
 
@@ -483,14 +528,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Emit turn update
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
-        this.server.emit('update-turn', nextPlayer.id);
+        this.server.emit('update-turn', nextPlayer.playerId);
       }
     }
   }
 
   private handleFieldComplete(field: Field) {
     const state = this.gameState.getState();
-    console.log('state.blowState.currentTrump', state.blowState.currentTrump);
     const winner = this.playService.determineFieldWinner(
       field,
       state.players,
@@ -510,7 +554,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     // Add the completed field to history
-    const completedField = this.gameState.completeField(field, winner.id);
+    const completedField = this.gameState.completeField(field, winner.playerId);
     if (!completedField) {
       console.error('Failed to complete field:', field);
       return;
@@ -521,18 +565,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (player) => player.hand.length === 0,
     );
     if (allHandsEmpty) {
-      // Determine winning team based on fields won
-      const winningTeam = this.playService.determineWinningTeam(
-        state.playState.fields,
-        state.players,
-      );
-      console.log('handleGameOverwinningTeam', winningTeam);
-      this.handleGameOver(winningTeam as Team);
+      this.handleGameOver();
       return;
     }
 
     // Set the winner as the next dealer
-    const winnerIndex = state.players.findIndex((p) => p.id === winner.id);
+    const winnerIndex = state.players.findIndex(
+      (p) => p.playerId === winner.playerId,
+    );
     if (winnerIndex !== -1) {
       state.currentPlayerIndex = winnerIndex;
     }
@@ -541,42 +581,58 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     state.playState.currentField = {
       cards: [],
       baseCard: '',
-      dealerId: winner.id,
+      dealerId: winner.playerId,
       isComplete: false,
     };
 
     // Emit field complete event with winner information
     this.server.emit('field-complete', {
-      winnerId: winner.id,
+      winnerId: winner.playerId,
       field: completedField,
-      nextPlayerId: winner.id,
+      nextPlayerId: winner.playerId,
     });
 
     // Emit turn update to indicate it's the winner's turn
-    this.server.emit('update-turn', winner.id);
+    this.server.emit('update-turn', winner.playerId);
   }
 
-  private handleGameOver(winnerTeam: Team) {
+  private handleGameOver() {
     const state = this.gameState.getState();
+
+    if (!state.blowState.currentHighestDeclaration) {
+      console.error('No highest declaration found');
+      return;
+    }
+
+    const declaringTeam = state.players.find(
+      (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
+    )?.team as Team;
+
+    if (!declaringTeam) {
+      console.error(
+        'No declaring team found for player:',
+        state.blowState.currentHighestDeclaration.playerId,
+      );
+      return;
+    }
+
     const playPoints = this.scoreService.calculatePlayPoints(
-      state.playState.fields.filter(
-        (f) =>
-          state.players.find((p) => p.id === f.dealerId)?.team === winnerTeam,
-      ).length,
       state.blowState.currentHighestDeclaration?.numberOfPairs || 0,
+      state.playState.fields.filter((f) => f.winnerTeam === declaringTeam)
+        .length,
     );
 
     // Update team scores
     if (playPoints > 0) {
-      state.teamScores[winnerTeam].play += playPoints;
-      state.teamScores[winnerTeam].total += playPoints;
-      state.teamScoreRecords[winnerTeam] = this.scoreService.updateTeamScore(
-        winnerTeam,
+      state.teamScores[declaringTeam].play += playPoints;
+      state.teamScores[declaringTeam].total += playPoints;
+      state.teamScoreRecords[declaringTeam] = this.scoreService.updateTeamScore(
+        declaringTeam,
         playPoints,
-        state.teamScoreRecords[winnerTeam],
+        state.teamScoreRecords[declaringTeam],
       );
     } else {
-      const opposingTeam = winnerTeam === 0 ? 1 : 0;
+      const opposingTeam = (1 - declaringTeam) as Team;
       state.teamScores[opposingTeam].play += Math.abs(playPoints);
       state.teamScores[opposingTeam].total += Math.abs(playPoints);
       state.teamScoreRecords[opposingTeam] = this.scoreService.updateTeamScore(
@@ -586,21 +642,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
     }
 
-    // Check if any team has reached 17 points
+    // Check if any team has reached 10 points
     const hasTeamReached = Object.values(state.teamScores).some(
-      (score) => score.total >= 5,
-      // (score) => score.total >= 17,
+      (score) => score.total >= 10,
     );
 
     if (hasTeamReached) {
       // Find the winning team
       const winningTeamEntry = Object.entries(state.teamScores).find(
-        // TODO: テストのため5
-        ([, score]) => score.total >= 5,
+        ([, score]) => score.total >= 10,
       );
       const finalWinningTeam = winningTeamEntry
         ? (Number(winningTeamEntry[0]) as Team)
-        : winnerTeam;
+        : declaringTeam;
 
       // Emit final game over event
       this.server.emit('game-over', {
@@ -622,12 +676,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Start new round after a short delay
       setTimeout(() => {
-        // Store previous dealer index before reset
-        const prevDealerId = state.playState?.currentField?.dealerId;
-        const prevDealerIndex = prevDealerId
-          ? state.players.findIndex((p) => p.id === prevDealerId)
-          : 0;
-
         this.gameState.resetRoundState();
         this.gameState.roundNumber++;
 
@@ -637,10 +685,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Get fresh state after reset
         const updatedState = this.gameState.getState();
 
-        // Calculate next dealer
-        const nextDealerIndex =
-          (prevDealerIndex + 1) % updatedState.players.length;
-        const nextDealer = updatedState.players[nextDealerIndex];
+        const nextBlowIndex =
+          (state.blowState.currentBlowIndex + 1) % state.players.length;
+        const nextBlowPlayer = state.players[nextBlowIndex];
 
         // 通常のゲーム初期化
         updatedState.gamePhase = 'blow';
@@ -652,7 +699,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           currentField: {
             cards: [],
             baseCard: '',
-            dealerId: nextDealer.id,
+            dealerId: nextBlowPlayer.playerId,
             isComplete: false,
           },
           negriCard: null,
@@ -671,8 +718,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           declarations: [],
           lastPasser: null,
           isRoundCancelled: false,
-          startingPlayerId: nextDealer.id,
-          currentBlowIndex: state.blowState.currentBlowIndex,
+          currentBlowIndex: nextBlowIndex,
         };
 
         // Update game state with the new state
@@ -683,18 +729,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           blowState: updatedState.blowState,
         });
 
-        // Always emit update-players event to update player hands
-        console.log(
-          'Emitting update-players event with players:',
-          updatedState.players,
-        );
         this.server.emit('update-players', updatedState.players);
-        console.log('update-players event emitted');
 
         // Emit new round started event with all necessary state
         this.server.emit('new-round-started', {
           players: updatedState.players,
-          currentTurn: nextDealer.id,
+          currentTurn: nextBlowPlayer.playerId,
           gamePhase: 'blow',
           currentField: null,
           completedFields: [],
@@ -707,14 +747,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
         // Update turn
-        this.gameState.currentTurn = nextDealer.id;
-        this.server.emit('update-turn', nextDealer.id);
+        this.gameState.currentTurn = nextBlowPlayer.playerId;
+        this.server.emit('update-turn', nextBlowPlayer.playerId);
 
         // Emit phase update with current trump
         this.server.emit('update-phase', {
           phase: 'blow',
           scores: updatedState.teamScores,
-          winner: nextDealer.team,
+          winner: nextBlowPlayer.team,
           currentTrump: null,
         });
       }, 3000);
@@ -731,7 +771,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const state = this.gameState.getState();
     const reporter = state.players.find((p) => p.id === client.id);
-    const violator = state.players.find((p) => p.id === playerId);
+    const violator = state.players.find((p) => p.playerId === playerId);
 
     if (!reporter || !violator) {
       client.emit('error-message', 'Invalid player!');
@@ -739,8 +779,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const violation = this.chomboService.reportViolation(
-      client.id,
-      playerId,
+      reporter.playerId,
+      violator.playerId,
       violationType,
       reporter.team,
       violator.team,
@@ -765,8 +805,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Emit chombo reported
     this.server.emit('chombo-reported', {
-      reporter: client.id,
-      violator: playerId,
+      reporter: reporter.playerId,
+      violator: violator.playerId,
       violationType,
       reportingTeam: reporter.team,
       updatedScores: state.teamScores,
@@ -786,6 +826,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       players: state.players,
       scores: state.teamScores,
       scoreRecords: state.teamScoreRecords,
+      currentTurn:
+        state.currentPlayerIndex !== -1
+          ? state.players[state.currentPlayerIndex].playerId
+          : null,
     });
   }
 
@@ -800,7 +844,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    if (state.playState.currentField.dealerId !== client.id) {
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) return;
+
+    if (state.playState.currentField.dealerId !== player.playerId) {
       client.emit('error-message', "It's not your turn to select base suit!");
       return;
     }
@@ -812,14 +859,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gameState.nextTurn();
     const nextPlayer = state.players[state.currentPlayerIndex];
     if (nextPlayer) {
-      this.server.emit('update-turn', nextPlayer.id);
+      this.server.emit('update-turn', nextPlayer.playerId);
     }
   }
 
   @SubscribeMessage('reveal-broken-hand')
   handleRevealBrokenHand(client: Socket, playerId: string): void {
     const state = this.gameState.getState();
-    const player = state.players.find((p) => p.id === playerId);
+    const player = state.players.find((p) => p.playerId === playerId);
 
     if (!player) return;
 
@@ -828,13 +875,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     state.blowState.currentHighestDeclaration = null;
 
     // Move to next dealer and restart blow phase
-    const firstBlowIndex = state.currentPlayerIndex;
+    const firstBlowIndex = state.blowState.currentBlowIndex;
     const firstBlowPlayer = state.players[firstBlowIndex];
 
-    if (!firstBlowPlayer) return;
-
     state.currentPlayerIndex = firstBlowIndex;
-    state.blowState.startingPlayerId = firstBlowPlayer.id;
 
     // Regenerate deck and deal cards
     state.deck = this.cardService.generateDeck();
@@ -842,12 +886,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Emit round cancelled
     this.server.emit('broken', {
-      nextDealer: firstBlowPlayer.id,
+      nextPlayerId: firstBlowPlayer.playerId,
       players: state.players,
     });
 
     // Emit turn update
-    this.server.emit('update-turn', firstBlowPlayer.id);
+    this.server.emit('update-turn', firstBlowPlayer.playerId);
     return;
   }
 }

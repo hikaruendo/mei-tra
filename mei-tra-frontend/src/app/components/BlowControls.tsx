@@ -27,7 +27,7 @@ export function BlowControls({
   currentHighestDeclaration,
   players,
 }: BlowControlsProps) {
-  const currentPlayerName = players.find(p => p.id === currentPlayer?.id)?.name;
+  const currentPlayerName = players.find(p => p.playerId === currentPlayer?.playerId)?.name;
 
   const handleDeclare = () => {
     if (!isCurrentPlayer) return;
@@ -121,7 +121,7 @@ export function BlowControls({
         <div className="flex flex-col gap-2">
           <div className="declaration-items">
             {players.map((player) => {
-              const declaration = blowDeclarations.find(d => d.playerId === player.id);
+              const declaration = blowDeclarations.find(d => d.playerId === player.playerId);
               const isLatestDeclaration = declaration && 
                 declaration === blowDeclarations[blowDeclarations.length - 1];
               const isHighestDeclaration = currentHighestDeclaration && 
@@ -133,7 +133,7 @@ export function BlowControls({
               if (player.isPasser) {
                 return (
                   <div 
-                    key={`pass-${player.id}`}
+                    key={`pass-${player.playerId}`}
                     className="declaration-item pass-item"
                   >
                     {player.name}: Passed

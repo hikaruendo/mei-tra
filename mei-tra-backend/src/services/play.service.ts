@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Field, Player, TrumpType, CompletedField } from '../types/game.types';
+import { Field, Player, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 
 @Injectable()
@@ -21,20 +21,25 @@ export class PlayService {
     let highestStrength = -1;
 
     // Find the dealer's index
-    const dealerIndex = players.findIndex((p) => p.id === field.dealerId);
+    const dealerIndex = players.findIndex((p) => p.playerId === field.dealerId);
     if (dealerIndex === -1) return null;
 
+    // Ensure that the dealer and player order match updated socket IDs
+    const updatedPlayerOrder = field.cards.map((_, i) => {
+      const index = (dealerIndex + i) % players.length;
+      return players[index];
+    });
+
     field.cards.forEach((card, cardIndex) => {
-      // Calculate the player index based on the dealer's position
-      const playerIndex = (dealerIndex + cardIndex) % players.length;
+      const player = updatedPlayerOrder[cardIndex];
       const strength = this.cardService.getCardStrength(
         card,
         baseSuit,
         trumpSuit,
       );
-      if (strength > highestStrength) {
+      if (strength > highestStrength && player) {
         highestStrength = strength;
-        winner = players[playerIndex];
+        winner = player;
       }
     });
 
@@ -57,57 +62,89 @@ export class PlayService {
     field: Field,
     currentTrump: TrumpType | null,
     isTanzenRound: boolean,
-  ): boolean {
+  ): { isValid: boolean; message?: string } {
     // In Tanzen round, if player has Joker, they must play it
     if (isTanzenRound && playerHand.includes('JOKER')) {
-      return card === 'JOKER';
+      if (card !== 'JOKER') {
+        return {
+          isValid: false,
+          message: 'In Tanzen round, you must play the Joker if you have it.',
+        };
+      }
+      return { isValid: true };
+    }
+
+    if (card === 'JOKER') {
+      return { isValid: true };
     }
 
     // If no cards in field, any card is valid
     if (field.cards.length === 0) {
-      return true;
+      return { isValid: true };
     }
 
     const baseCard = field.baseCard;
-    const baseSuit = this.cardService.getCardSuit(
-      baseCard,
-      currentTrump,
-      field.baseSuit,
-    );
-    const cardSuit = this.cardService.getCardSuit(card, currentTrump);
+    // If baseCard is Joker and currentTrump is not 'tra', use currentTrump as baseSuit
+    const trumpSuit =
+      currentTrump && currentTrump !== ('tra' as TrumpType)
+        ? this.cardService.getTrumpSuit(currentTrump)
+        : '';
+    const baseSuit =
+      baseCard === 'JOKER' &&
+      currentTrump &&
+      currentTrump !== ('tra' as TrumpType)
+        ? trumpSuit
+        : this.cardService.getCardSuit(baseCard, currentTrump, field.baseSuit);
+    const cardSuit = this.cardService.getCardSuit(card, currentTrump, baseSuit);
 
     // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
     if (!currentTrump || currentTrump === 'tra') {
       if (cardSuit === baseSuit) {
-        return true;
+        return { isValid: true };
       }
 
-      return !playerHand.some(
-        (c) => this.cardService.getCardSuit(c) === baseSuit,
-      );
+      if (
+        playerHand.some((c) => this.cardService.getCardSuit(c) === baseSuit)
+      ) {
+        return {
+          isValid: false,
+          message: `You must play a card of suit ${baseSuit}`,
+        };
+      }
+      return { isValid: true };
     }
 
-    // For other trump types, both primary and secondary Jacks can be played anytime
-    if (this.cardService.isJack(card)) {
-      return true;
+    // Special case: When baseCard is Joker and currentTrump is not 'tra'
+    if (
+      baseCard === 'JOKER' &&
+      currentTrump &&
+      currentTrump !== ('tra' as TrumpType)
+    ) {
+      // If player has trump suit cards, they must play one
+      const hasTrumpSuit = playerHand.some(
+        (c) => this.cardService.getCardSuit(c, currentTrump) === trumpSuit,
+      );
+      if (hasTrumpSuit && cardSuit !== trumpSuit) {
+        return {
+          isValid: false,
+          message: `You must play a ${trumpSuit} card when Joker is the base card`,
+        };
+      }
+      return { isValid: true };
     }
 
     // Normal suit matching rules
     if (baseCard) {
-      const baseSuit = this.cardService.getCardSuit(
-        baseCard,
-        currentTrump,
-        field.baseSuit,
-      );
-      const cardSuit = this.cardService.getCardSuit(card, currentTrump);
-
       // If player has the base suit, they must play it
       if (baseSuit !== cardSuit) {
         const hasBaseSuit = playerHand.some(
           (c) => this.cardService.getCardSuit(c, currentTrump) === baseSuit,
         );
         if (hasBaseSuit) {
-          return false;
+          return {
+            isValid: false,
+            message: `You must play a card of suit ${baseSuit}.`,
+          };
         }
       }
 
@@ -119,22 +156,33 @@ export class PlayService {
           (c) => this.cardService.getCardSuit(c, currentTrump) === baseSuit,
         )
       ) {
-        return card === 'JOKER';
+        if (card !== 'JOKER') {
+          return {
+            isValid: false,
+            message:
+              'You must play the Joker since you have no cards of the trump suit.',
+          };
+        }
+        return { isValid: true };
+      }
+
+      // If player has Joker and no trump cards, they must play Joker
+      if (
+        playerHand.includes('JOKER') &&
+        !playerHand.some(
+          (c) => this.cardService.getCardSuit(c, currentTrump) === trumpSuit,
+        )
+      ) {
+        if (card !== 'JOKER') {
+          return {
+            isValid: false,
+            message: `You must play the Joker since you have no ${trumpSuit} cards.`,
+          };
+        }
+        return { isValid: true };
       }
     }
 
-    return true;
-  }
-
-  determineWinningTeam(fields: CompletedField[], players: Player[]): number {
-    const team0Score = fields.filter(
-      (f) => players.find((p) => p.id === f.dealerId)?.team === 0,
-    ).length;
-
-    const team1Score = fields.filter(
-      (f) => players.find((p) => p.id === f.dealerId)?.team === 1,
-    ).length;
-
-    return team0Score > team1Score ? 0 : 1;
+    return { isValid: true };
   }
 }
