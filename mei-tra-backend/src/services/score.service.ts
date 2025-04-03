@@ -74,8 +74,8 @@ export class ScoreService {
 
   initializeTeamScores(): { [key: number]: TeamScore } {
     return {
-      0: { deal: 0, blow: 0, play: 0, total: 0 },
-      1: { deal: 0, blow: 0, play: 0, total: 0 },
+      0: { play: 0, total: 0 },
+      1: { play: 0, total: 0 },
     };
   }
 

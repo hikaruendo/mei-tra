@@ -11,14 +11,16 @@ export interface Player {
 }
 
 export interface TeamScore {
-  deal: number;
-  blow: number;
   play: number;
   total: number;
 }
 
+export interface TeamScores {
+  [key: number]: TeamScore;
+}
+
 export type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
-// TODO: ブロークンの時はそのラウンドの吹き始めからやり直し
+
 export interface BlowDeclaration {
   playerId: string;
   trumpType: TrumpType;

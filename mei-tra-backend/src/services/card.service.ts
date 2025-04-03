@@ -133,19 +133,6 @@ export class CardService {
       strength += 50; // Base suit bonus
     }
 
-    // console.log(
-    //   'baseSuit:',
-    //   baseSuit,
-    //   'trumpSuit:',
-    //   trumpSuit,
-    //   'suit:',
-    //   suit,
-    //   'value:',
-    //   value,
-    //   'strength:',
-    //   strength,
-    // );
-
     return strength;
   }
 

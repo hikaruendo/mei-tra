@@ -101,7 +101,6 @@ export default function Home() {
         setGameStarted(true);
       },
       'game-started': (players: Player[]) => {
-        // console.log('Game started with players:', players);
         setPlayers(players);
         const id = getSocket().id;
         const index = players.findIndex(p => p.id === id);
@@ -179,7 +178,6 @@ export default function Home() {
         resetBlowState();
       },
       'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
-        // console.log('Revealing Agari card:', agari);
         setRevealedAgari(agari);
         
         // Add Agari card to player's hand for testing
@@ -306,7 +304,6 @@ export default function Home() {
       }
     },
     startGame: () => {
-      // console.log('Starting game with players:', players);
       getSocket().emit('start-game');
     },
     declareBlow: () => {

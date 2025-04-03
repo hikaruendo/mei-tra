@@ -39,9 +39,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // より厳密なバリデーション
     if (name === undefined && token === undefined) {
-      // console.log(
-      //   'handleConnection - Invalid connection: No name or token provided',
-      // );
       client.disconnect();
       return;
     }
@@ -51,9 +48,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const existingPlayer = this.gameState.findPlayerByReconnectToken(token);
 
       if (existingPlayer) {
-        // console.log(
-        //   `Reconnected player ${existingPlayer.name} with new socket ID ${client.id}`,
-        // );
         const state = this.gameState.getState();
 
         this.gameState.updatePlayerSocketId(existingPlayer.playerId, client.id);
@@ -79,10 +73,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('update-players', state.players);
         return;
       } else {
-        // トークンはあるが既存プレイヤーが見つからない場合
-        // console.log(
-        //   'handleConnection - Invalid token: No existing player found',
-        // );
         client.disconnect();
         return;
       }
@@ -95,10 +85,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const newPlayer = state.players.find((p) => p.id === client.id);
 
         if (newPlayer) {
-          // console.log(
-          //   `Sending reconnect-token to new player ${newPlayer.name}:`,
-          //   `${newPlayer.playerId}`,
-          // );
           this.server
             .to(client.id)
             .emit('reconnect-token', `${newPlayer.playerId}`);
@@ -378,7 +364,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('update-players', state.players);
 
     // Then emit Agari card to winner
-    // console.log('Emitting reveal-agari to winner:', winningPlayer.playerId);
     this.server.to(winningPlayer.id).emit('reveal-agari', {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
@@ -467,7 +452,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) {
-      console.log('Player not found for client:', client.id);
       return;
     }
 
@@ -494,7 +478,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     if (!validationResult.isValid) {
-      console.log('Invalid card play:', { playerId: player.playerId, card });
       client.emit(
         'error-message',
         validationResult.message || 'Invalid card play',
@@ -582,13 +565,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (player) => player.hand.length === 0,
     );
     if (allHandsEmpty) {
-      // Determine winning team based on fields won
-      const winningTeam = this.playService.determineWinningTeam(
-        state.playState.fields,
-        state.players,
-      );
-      console.log('handleGameOverwinningTeam', winningTeam);
-      this.handleGameOver(winningTeam as Team);
+      this.handleGameOver();
       return;
     }
 
@@ -619,28 +596,43 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('update-turn', winner.playerId);
   }
 
-  private handleGameOver(winnerTeam: Team) {
+  private handleGameOver() {
     const state = this.gameState.getState();
+
+    if (!state.blowState.currentHighestDeclaration) {
+      console.error('No highest declaration found');
+      return;
+    }
+
+    const declaringTeam = state.players.find(
+      (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
+    )?.team as Team;
+
+    if (!declaringTeam) {
+      console.error(
+        'No declaring team found for player:',
+        state.blowState.currentHighestDeclaration.playerId,
+      );
+      return;
+    }
+
     const playPoints = this.scoreService.calculatePlayPoints(
-      state.playState.fields.filter(
-        (f) =>
-          state.players.find((p) => p.playerId === f.dealerId)?.team ===
-          winnerTeam,
-      ).length,
       state.blowState.currentHighestDeclaration?.numberOfPairs || 0,
+      state.playState.fields.filter((f) => f.winnerTeam === declaringTeam)
+        .length,
     );
 
     // Update team scores
     if (playPoints > 0) {
-      state.teamScores[winnerTeam].play += playPoints;
-      state.teamScores[winnerTeam].total += playPoints;
-      state.teamScoreRecords[winnerTeam] = this.scoreService.updateTeamScore(
-        winnerTeam,
+      state.teamScores[declaringTeam].play += playPoints;
+      state.teamScores[declaringTeam].total += playPoints;
+      state.teamScoreRecords[declaringTeam] = this.scoreService.updateTeamScore(
+        declaringTeam,
         playPoints,
-        state.teamScoreRecords[winnerTeam],
+        state.teamScoreRecords[declaringTeam],
       );
     } else {
-      const opposingTeam = winnerTeam === 0 ? 1 : 0;
+      const opposingTeam = (1 - declaringTeam) as Team;
       state.teamScores[opposingTeam].play += Math.abs(playPoints);
       state.teamScores[opposingTeam].total += Math.abs(playPoints);
       state.teamScoreRecords[opposingTeam] = this.scoreService.updateTeamScore(
@@ -650,21 +642,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
     }
 
-    // Check if any team has reached 17 points
+    // Check if any team has reached 10 points
     const hasTeamReached = Object.values(state.teamScores).some(
-      (score) => score.total >= 5,
-      // (score) => score.total >= 17,
+      (score) => score.total >= 10,
     );
 
     if (hasTeamReached) {
       // Find the winning team
       const winningTeamEntry = Object.entries(state.teamScores).find(
-        // TODO: テストのため5
-        ([, score]) => score.total >= 5,
+        ([, score]) => score.total >= 10,
       );
       const finalWinningTeam = winningTeamEntry
         ? (Number(winningTeamEntry[0]) as Team)
-        : winnerTeam;
+        : declaringTeam;
 
       // Emit final game over event
       this.server.emit('game-over', {

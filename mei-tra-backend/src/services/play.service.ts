@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Field, Player, TrumpType, CompletedField } from '../types/game.types';
+import { Field, Player, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 
 @Injectable()
@@ -108,7 +108,7 @@ export class PlayService {
       ) {
         return {
           isValid: false,
-          message: `You must play a card of suit ${baseSuit} (no trump effect)`,
+          message: `You must play a card of suit ${baseSuit}`,
         };
       }
       return { isValid: true };
@@ -143,7 +143,7 @@ export class PlayService {
         if (hasBaseSuit) {
           return {
             isValid: false,
-            message: `You must play a card of suit ${baseSuit} (with ${currentTrump} trump effect)`,
+            message: `You must play a card of suit ${baseSuit}.`,
           };
         }
       }
@@ -184,17 +184,5 @@ export class PlayService {
     }
 
     return { isValid: true };
-  }
-
-  determineWinningTeam(fields: CompletedField[], players: Player[]): number {
-    const team0Score = fields.filter(
-      (f) => players.find((p) => p.playerId === f.dealerId)?.team === 0,
-    ).length;
-
-    const team1Score = fields.filter(
-      (f) => players.find((p) => p.playerId === f.dealerId)?.team === 1,
-    ).length;
-
-    return team0Score > team1Score ? 0 : 1;
   }
 }
