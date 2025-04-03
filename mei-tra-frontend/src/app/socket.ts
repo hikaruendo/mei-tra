@@ -1,11 +1,21 @@
 import { io, Socket } from 'socket.io-client';
 
-// const socket = io('https://mei-tra-backend.fly.dev');
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket && typeof window !== 'undefined') {
-    socket = io("http://localhost:3333");
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const socketUrl = isDevelopment 
+      ? 'http://localhost:3333'
+      : 'https://mei-tra-backend.fly.dev';
+    
+    const reconnectToken = localStorage.getItem('reconnectToken') || '';
+    socket = io(socketUrl, {
+      transports: ['websocket'],
+      auth: {
+        reconnectToken,
+      },
+    });
   }
   return socket!;
 }
