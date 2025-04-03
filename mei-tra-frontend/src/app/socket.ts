@@ -4,10 +4,7 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket && typeof window !== 'undefined') {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const socketUrl = isDevelopment 
-      ? 'http://localhost:3333'
-      : 'https://mei-tra-backend.fly.dev';
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
     
     const reconnectToken = localStorage.getItem('reconnectToken') || '';
     socket = io(socketUrl, {
