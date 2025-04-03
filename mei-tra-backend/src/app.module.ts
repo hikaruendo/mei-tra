@@ -1,16 +1,11 @@
-// import { Module } from '@nestjs/common';
-// import { GameGateway } from './game.gateway';
-
-// @Module({
-//   providers: [GameGateway],
-// })
-// export class AppModule {}
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { GameGateway } from './game.gateway';
+import { AppService } from './app.service';
+import { GameModule } from './game.module';
 
 @Module({
-  controllers: [AppController], // Add the controller
-  providers: [GameGateway],
+  imports: [GameModule],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

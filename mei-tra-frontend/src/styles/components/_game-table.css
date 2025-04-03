@@ -1,0 +1,531 @@
+/* Variables */
+:root {
+  --color-primary: #4CAF50;
+  --color-secondary: #FF9800;
+  --color-accent: #2196F3;
+  --color-text: #2c3e50;
+  --color-text-light: #cccccc;
+  --color-background: rgba(255, 255, 255, 0.95);
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --border-radius-sm: 0.5rem;
+  --border-radius-md: 0.75rem;
+  --border-radius-lg: 1rem;
+  --transition-base: all 0.2s ease;
+  --shadow-sm: 0 2px 4px var(--color-shadow);
+  --shadow-md: 0 4px 12px var(--color-shadow);
+  --shadow-lg: 0 8px 32px var(--color-shadow);
+}
+
+/* Base styles */
+.game-layout {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #004400;
+}
+
+/* Game Info Component Styles */
+.game-info-container {
+  position: fixed;
+  bottom: 50px;
+  left: 10px;
+  background-color: rgba(31, 41, 55, 0.9);
+  padding: var(--spacing-md);
+  z-index: 20;
+  border-radius: var(--border-radius-md);
+}
+
+.game-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.game-info-trump {
+  background-color: #9333ea;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  min-width: 200px;
+}
+
+.game-info-trump-text {
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.game-info-current-player {
+  background-color: #22c55e;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  min-width: 200px;
+}
+
+.game-info-current-player-text {
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.game-info-scores {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.game-info-score-team1,
+.game-info-score-team2 {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  text-align: center;
+  min-width: 100px;
+}
+
+.game-info-score-team1 {
+  background-color: #2563eb;
+}
+
+.game-info-score-team2 {
+  background-color: #dc2626;
+}
+
+.game-info-score-text {
+  color: white;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Turn indicator styles */
+.turn-indicator {
+  width: 100%;
+}
+
+.turn-indicator > div {
+  width: 100%;
+  text-align: left;
+}
+
+/* Pass button styling */
+.pass-button {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom, #FF9800, #F57C00);
+  color: white;
+  font-size: 1.4rem;
+  font-weight: bold;
+  padding: 1rem 3rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 40;
+}
+
+.pass-button:hover {
+  background: linear-gradient(to bottom, #FB8C00, #EF6C00);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.pass-button:active {
+  transform: translateX(-50%) translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Game phase specific adjustments */
+.game-phase-blow .player-position.bottom {
+  bottom: 100px;
+}
+
+.game-phase-blow .player-position.top {
+  top: 100px;
+}
+
+.game-phase-blow .player-position.right {
+  right: 100px;
+}
+
+.game-phase-blow .player-position.left {
+  left: 100px;
+}
+
+/* Blow controls container */
+.blow-controls-container {
+  position: fixed;
+  top: 28%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  z-index: 99;
+  backdrop-filter: blur(8px);
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-lg);
+  min-width: 600px;
+  max-width: 90vw;
+}
+
+/* Blow controls title */
+.blow-controls-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  width: 100%;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.blow-controls-title h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  color: var(--color-text-light);
+  text-shadow: var(--shadow-sm);
+}
+
+.blow-controls-title .inline-block {
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-base);
+  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Blow controls body */
+.blow-controls-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.95);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  position: relative;
+  z-index: 99;
+}
+
+/* Form controls */
+.blow-controls-body select,
+.blow-controls-body input {
+  height: 3rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 500;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: var(--transition-base);
+  min-width: 160px;
+  box-shadow: var(--shadow-sm);
+}
+
+.blow-controls-body select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232c3e50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+  padding-right: 2.5rem;
+}
+
+.blow-controls-body input {
+  width: 120px;
+  text-align: center;
+}
+
+/* Form control states */
+.blow-controls-body select:hover,
+.blow-controls-body input:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-md);
+}
+
+.blow-controls-body select:focus,
+.blow-controls-body input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.blow-controls-body select:disabled,
+.blow-controls-body input:disabled {
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(0, 0, 0, 0.3);
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+/* Form layout */
+.blow-controls-body .flex {
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
+}
+
+.blow-controls-body .flex > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.blow-controls-body .flex > div:last-child {
+  margin-left: auto;
+}
+
+/* Form labels and helper text */
+.blow-controls-body .flex > div label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.blow-controls-body .flex > div span {
+  font-size: 0.75rem;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: var(--spacing-sm);
+}
+
+/* Declarations section */
+.blow-declarations {
+  position: fixed;
+  top: 63%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+}
+
+.blow-declarations h4 {
+  color: var(--color-text);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-md);
+}
+
+.declaration-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.declaration-item {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text);
+  transition: var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.declaration-item:hover {
+  background: rgba(255, 255, 255, 0.98);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.current-highest {
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  color: #1976d2;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes selectChange {
+  0% { transform: scale(0.98); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Blow controls button styling */
+.blow-controls button,
+.blow-controls select {
+  height: 3.5rem;
+  background: #4CAF50;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0 2rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blow-controls button.pass-button {
+  background: #FF9800;
+}
+
+.blow-controls button.pass-button:hover {
+  background: #F57C00;
+}
+
+.blow-controls button.blow-button {
+  background: #2196F3;
+}
+
+.blow-controls button.blow-button:hover {
+  background: #1976D2;
+}
+
+/* Add animation for active state */
+.blow-controls button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Add pulsing effect for the active button */
+.blow-controls button.active {
+  animation: pulse 1.5s infinite;
+  background: #E91E63;
+}
+
+.blow-controls button.active:hover {
+  background: #D81B60;
+}
+
+/* Disabled states */
+.blow-controls button:disabled,
+select.trump-select:disabled,
+select.pairs-select:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Add subtle animation for selection change */
+select.trump-select,
+select.pairs-select {
+  animation: selectChange 0.3s ease-out forwards;
+}
+
+/* Custom styles for the pairs select */
+.pairs-select-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+select.pairs-select {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text);
+}
+
+select.pairs-select:hover {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+select.pairs-select:focus {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.4);
+}
+
+select.pairs-select option {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text);
+}
+
+.setup-message {
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  animation: pulse 2s infinite;
+}
+
+.player-info .card.player-info {
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  padding: 4px;
+  background-color: rgba(76, 175, 80, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.player-info .card.player-info:hover {
+  background-color: rgba(76, 175, 80, 0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.agari-section {
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.agari-label {
+  color: #4CAF50;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.agari-section .card {
+  transform: scale(0.8);
+  margin: 0 auto;
+}
+

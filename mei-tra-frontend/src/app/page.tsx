@@ -2,174 +2,409 @@
 
 import { useEffect, useState } from 'react';
 import { getSocket } from './socket';
-
-interface Player {
-  id: string;
-  name: string;
-  hand: string[];
-}
+import { BlowDeclaration, Field, GamePhase, Player, TeamScores, TrumpType } from './types';
+import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
+import { GameTable } from '@/components/GameTable/GameTable';
+import { TeamScore, TeamScoreRecord } from '@/types/game.types';
+import { ScoreBoard } from '@/components/ScoreBoard';
+import { GameJoinForm } from '@/components/GameJoinForm';
+import { Notification } from '@/components/Notification/Notification';
 
 export default function Home() {
+  // Player and Game State
   const [name, setName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
-  const [selectedCards, setSelectedCards] = useState<string[]>([]);
-  const [isClient, setIsClient] = useState(false);
-  const [currentTurn, setCurrentTurn] = useState<string | null>(null);
+  const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
+  const [teamScores, setTeamScores] = useState<TeamScores>({
+    0: { deal: 0, blow: 0, play: 0, total: 0 },
+    1: { deal: 0, blow: 0, play: 0, total: 0 }
+  });
+  const [teamScoreRecords, setTeamScoreRecords] = useState<{ [key: number]: TeamScoreRecord }>({});
+  // Blow Phase State
+  const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
+  const [currentHighestDeclaration, setCurrentHighestDeclaration] = useState<BlowDeclaration | null>(null);
+  const [selectedTrump, setSelectedTrump] = useState<TrumpType | null>(null);
+  const [numberOfPairs, setNumberOfPairs] = useState<number>(0);
+
+  // Client-side rendering guard
+  const [isClient, setIsClient] = useState(false);
+
+  const [revealedAgari, setRevealedAgari] = useState<string | null>(null);
+  const [currentField, setCurrentField] = useState<Field | null>(null);
+  const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
+  const [negriCard, setNegriCard] = useState<string | null>(null);
+  const [negriPlayerId, setNegriPlayerId] = useState<string | null>(null);
+
+  // Add state for completed fields
+  const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
+
+  const [roundNumber, setRoundNumber] = useState(1);
+
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
+  const [reconnectToken, setReconnectToken] = useState<string | null>(null);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
 
-    socket.on('update-players', (players: Player[]) => {
-      setPlayers(players);
-    });
+    // Set up reconnection token
+    const savedToken = localStorage.getItem('reconnectToken');
+    if (savedToken) {
+      socket.auth = { reconnectToken: savedToken };
+    }
 
-    socket.on('game-started', (players: Player[]) => {
-      setPlayers(players);
-      setGameStarted(true);
-    });
-
-    socket.on("error-message", (message) => {
-      alert(message);
-    });
-
-    socket.on('update-turn', (playerId: string) => {
-      console.log('Turn changed to:', playerId);
-      setCurrentTurn(playerId);
-      setWhoseTurn(playerId);
-      console.log('currentTurn state:', playerId);
-    });
-
-    socket.on("game-over", ({ loser }) => {
-      alert(`${loser} lost the game!`);
-      setGameStarted(false);
-    });
-
-    return () => {
-      socket.off('update-players');
-      socket.off('game-started');
-      socket.off("error-message");
-      socket.off('update-turn');
-      socket.off("game-over");
+    const socketHandlers = {
+      'update-players': (players: Player[]) => {
+        setPlayers(players);
+      },
+      'game-state': ({
+        players,
+        gamePhase,
+        currentField,
+        currentTurn,
+        blowState,
+        teamScores,
+        you,
+        negriCard,
+        fields,
+      }: {
+        players: Player[];
+        gamePhase: GamePhase;
+        currentField: Field | null;
+        currentTurn: string;
+        blowState: {
+          currentTrump: TrumpType | null;
+          currentHighestDeclaration: BlowDeclaration | null;
+          declarations: BlowDeclaration[];
+        };
+        teamScores: TeamScores;
+        you: string;
+        negriCard: string | null;
+        fields: CompletedField[];
+      }) => {
+        setPlayers(players);
+        setGamePhase(gamePhase);
+        setWhoseTurn(currentTurn);
+        setCurrentField(currentField);
+        setCurrentTrump(blowState.currentTrump);
+        setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
+        setBlowDeclarations(blowState.declarations);
+        setTeamScores(teamScores);
+        setCurrentPlayerId(you);
+        setNegriCard(negriCard);
+        setCompletedFields(fields);
+        setNegriPlayerId(negriPlayerId);
+        setGameStarted(true);
+      },
+      'game-started': (players: Player[]) => {
+        setPlayers(players);
+        const id = getSocket().id;
+        const index = players.findIndex(p => p.id === id);
+        setCurrentPlayerId(players[index].playerId);
+        setGameStarted(true);
+      },
+      'update-phase': ({ phase, scores, winner }: { phase: GamePhase; scores: TeamScores; winner: number | null }) => {
+        setGamePhase(phase);
+        setTeamScores(scores);
+        
+        // Set current trump when transitioning to play phase
+        if (phase === 'play') {
+          if (currentHighestDeclaration) {
+            setCurrentTrump(currentHighestDeclaration.trumpType);
+          } else {
+            // If no declaration was made, set to default trump
+            setCurrentTrump('hel');
+          }
+        } else {
+          // Reset current trump when not in play phase
+          setCurrentTrump(null);
+        }
+        
+        // Only show alert for phases other than 'play' and when not transitioning to a new round
+        if (winner !== null && phase !== 'play' && phase !== 'blow') {
+          alert(`Team ${winner} won the ${phase} phase!`);
+        }
+      },
+      'error-message': (message: string) => alert(message),
+      'update-turn': (playerId: string) => {
+        setWhoseTurn(playerId);
+      },
+      'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
+        alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
+        setGameStarted(false);
+        setGamePhase(null);
+        setTeamScores({
+          0: { deal: 0, blow: 0, play: 0, total: 0 },
+          1: { deal: 0, blow: 0, play: 0, total: 0 }
+        });
+      },
+      'blow-started': ({ startingPlayer, players }: { startingPlayer: string; players: Player[] }) => {
+        setGamePhase('blow');
+        setPlayers(players);
+        setWhoseTurn(startingPlayer);
+      },
+      'blow-updated': ({ declarations, currentHighest, lastPasser }: { declarations: BlowDeclaration[]; currentHighest: BlowDeclaration | null; lastPasser: string | null }) => {
+        setBlowDeclarations(declarations);
+        setCurrentHighestDeclaration(currentHighest);
+        if (lastPasser) {
+          setPlayers(players.map(p => 
+            p.playerId === lastPasser ? { ...p, isPasser: true } : p
+          ));
+        }
+      },
+      'broken': ({ nextPlayerId, players }: { nextPlayerId: string; players: Player[] }) => {
+        setNotification({
+          message: 'Broken happened, reset the game',
+          type: 'warning'
+        });
+        setPlayers(players);
+        setWhoseTurn(nextPlayerId);
+        resetBlowState();
+      },
+      'round-reset': () => {
+        resetBlowState();
+      },
+      'round-cancelled': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
+        setNotification({
+          message: 'Round cancelled! All players passed.',
+          type: 'warning'
+        });
+        setPlayers(players);
+        setWhoseTurn(nextDealer);
+        resetBlowState();
+      },
+      'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
+        setRevealedAgari(agari);
+        
+        // Add Agari card to player's hand for testing
+        setPlayers(players.map(p =>
+          p.playerId === currentPlayerId
+            ? { ...p, hand: [...p.hand, agari] }
+            : p
+        ));
+        
+        setNotification({
+          message,
+          type: 'success'
+        });
+      },
+      'play-setup-complete': ({ negriCard, startingPlayer }: { negriCard: string, startingPlayer: string }) => {
+        setRevealedAgari(null);
+        setNegriCard(negriCard);
+        setNegriPlayerId(startingPlayer);
+        // Remove Negri card from player's hand
+        setPlayers(players.map(p => 
+          p.playerId === currentPlayerId 
+            ? { ...p, hand: p.hand.filter(card => card !== negriCard) }
+            : p
+        ));
+        // Get the current trump from the highest declaration
+        if (currentHighestDeclaration) {
+          setCurrentTrump(currentHighestDeclaration.trumpType);
+        }
+      },
+      'card-played': ({ field, players: updatedPlayers }: { field: Field, players: Player[] }) => {
+        setCurrentField(field);
+        // Update players with the latest data from server
+        setPlayers(updatedPlayers);
+      },
+      'field-updated': (field: Field) => {
+        setCurrentField(field);
+      },
+      'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
+        setCompletedFields(prev => [...prev, field]);
+        setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });
+      },
+      'round-results': ({ roundNumber, scores, scoreRecords }: {
+        roundNumber: number;
+        scores: { [key: number]: TeamScore };
+        scoreRecords: { [key: number]: TeamScoreRecord };
+      }) => {
+        setTeamScores(scores as TeamScores);
+        setTeamScoreRecords(scoreRecords);
+        setRoundNumber(roundNumber);
+      },
+      'new-round-started': ({
+        players,
+        currentTurn,
+        gamePhase,
+        currentField,
+        completedFields,
+        negriCard,
+        negriPlayerId,
+        revealedAgari,
+        currentTrump,
+        currentHighestDeclaration,
+        blowDeclarations,
+      }: {
+        players: Player[];
+        currentTurn: string;
+        gamePhase: GamePhase;
+        currentField: Field | null;
+        completedFields: CompletedField[];
+        negriCard: string | null;
+        negriPlayerId: string | null;
+        revealedAgari: string | null;
+        currentTrump: TrumpType | null;
+        currentHighestDeclaration: BlowDeclaration | null;
+        blowDeclarations: BlowDeclaration[];
+      }) => {
+        setPlayers(players);
+        setWhoseTurn(currentTurn);
+        setGamePhase(gamePhase);
+        setCurrentField(currentField);
+        setCompletedFields(completedFields);
+        setNegriCard(negriCard);
+        setNegriPlayerId(negriPlayerId);
+        setRevealedAgari(revealedAgari);
+        setCurrentTrump(currentTrump);
+        setCurrentHighestDeclaration(currentHighestDeclaration);
+        setBlowDeclarations(blowDeclarations);
+      },
+      'reconnect-token': (token: string) => {
+        setReconnectToken(token);
+        localStorage.setItem('reconnectToken', token);
+      },
     };
-  }, []);
 
-  if (!isClient) {
-    return null; // Prevents SSR rendering issues
-  }
+    // Register all socket handlers
+    Object.entries(socketHandlers).forEach(([event, handler]) => {
+      socket.on(event, handler);
+    });
 
-  const joinGame = () => {
-    if (name.trim()) {
-      getSocket().emit('join-game', name);
-    }
+    // Cleanup socket handlers
+    return () => {
+      Object.keys(socketHandlers).forEach((event) => {
+        socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
+      });
+    };
+  }, [name, currentHighestDeclaration, players]);
+
+  const resetBlowState = () => {
+    setBlowDeclarations([]);
+    setCurrentHighestDeclaration(null);
+    setSelectedTrump(null);
+    setNumberOfPairs(0);
   };
 
-  const startGame = () => {
-    const socket = getSocket();
-    socket.emit('start-game');
-  };
-
-  const endTurn = () => {
-    const socket = getSocket();
-    if (currentTurn !== socket.id) {
-      alert("It's not your turn!");
-      return;
-    }
-    socket.emit('end-turn');
-  };
-
-  const handleDiscardPairs = () => {
-    const socket = getSocket();
-    if (!currentTurn) {
-      alert("Turn system is not working! No turn assigned.");
-      return;
-    }
-
-    if (currentTurn !== socket.id) {
-      alert("It's not your turn!");
-      return;
-    }
-
-    if (selectedCards.length === 2) {
-      const [card1, card2] = selectedCards;
-      const value1 = card1.replace(/[♠♣♥♦]/, '');
-      const value2 = card2.replace(/[♠♣♥♦]/, '');
-
-      if (value1 === value2 && value1 !== 'JOKER') {
-        socket.emit('discard-pairs', selectedCards);
-        setSelectedCards([]);
-      } else {
-        alert('Selected cards are not a pair!');
+  const gameActions = {
+    joinGame: () => {
+      if (name.trim()) {
+        const socket = getSocket();
+        if (reconnectToken) {
+          socket.auth = { reconnectToken };
+        } else {
+          socket.auth = { name };
+        }
+        socket.connect();
       }
-    }
-  };
-
-  const handleDrawCard = (fromPlayerId: string) => {
-    const socket = getSocket();
-
-    if (currentTurn !== socket.id) {
+    },
+    startGame: () => {
+      getSocket().emit('start-game');
+    },
+    declareBlow: () => {
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to declare!");
+        return;
+      }
+      if (!selectedTrump || numberOfPairs < 1) {
+        alert('Please select a trump type and number of pairs!');
+        return;
+      }
+      getSocket().emit('declare-blow', {
+        trumpType: selectedTrump,
+        numberOfPairs,
+      });
+    },
+    passBlow: () => {
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to pass!2");
+        return;
+      }
+      getSocket().emit('pass-blow');
+    },
+    selectNegri: (card: string) => {
+      getSocket().emit('select-negri', card);
+    },
+    playCard: (card: string) => {
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn!");
         return;
+      }
+      getSocket().emit('play-card', card);
+    },
+    selectBaseSuit: (suit: string) => {
+      if (!currentPlayerId || whoseTurn !== currentPlayerId) {
+        alert("It's not your turn to select base suit!");
+        return;
+      }
+      getSocket().emit('select-base-suit', suit);
+    },
+    revealBrokenHand: (playerId: string) => {
+      getSocket().emit('reveal-broken-hand', playerId);
     }
-
-    socket.emit('draw-card', { fromPlayerId });
   };
 
+  if (!isClient) {
+    return null;
+  }
+
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-24">
-      {!gameStarted ? (
-        <>
-          <input type="text" placeholder="Enter name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded p-2 mb-4" />
-          <button onClick={joinGame} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Join Game</button>
-          <button onClick={startGame} disabled={players.length < 2} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2 disabled:opacity-50">Start Game</button>
-        </>
-      ) : (
-        <>
-          <h2 className="text-2xl font-bold mb-4">Game Started</h2>
-          {whoseTurn && <p>It is {players.find(p => p.id === whoseTurn)?.name}&apos;s turn</p>}
-          {players.map((player) => (
-            <div key={player.id} className={`mb-2 card-container ${whoseTurn === player.id ? 'current-turn' : ''}`}>
-              <strong className="font-bold player-name">{player.name}</strong> - <span className="card-count">{player.hand.length} cards</span>
-              <div>
-                {player.hand.map((card, index) => (
-                  <span
-                    key={index}
-                    className={`card ${selectedCards.includes(card) ? 'selected' : ''} ${card.includes('♥') || card.includes('♦') ? 'red-suit' : ''}`}
-                    data-value={card.replace(/[♥♣♦♠]/, '')}
-                    onClick={() => setSelectedCards(selectedCards.includes(card) ? selectedCards.filter((c) => c !== card) : [...selectedCards, card])}
-                  >
-                    <span className={`suit ${card.includes('♠') || card.includes('♣') ? 'black-suit' : ''}`}>{card === 'JOKER' ? '🤡' : card.replace(/[^♥♣♦♠]/, '')}</span>
-                    {card}
-                  </span>
-                ))}
+    <main className="min-h-screen p-8 bg-gray-100">
+      <div className="max-w-6xl mx-auto">
+        {notification && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={() => setNotification(null)}
+          />
+        )}
+        {!gameStarted ? (
+          <GameJoinForm
+            name={name}
+            onNameChange={setName}
+            onJoinGame={gameActions.joinGame}
+            onStartGame={gameActions.startGame}
+            playerCount={players.length}
+          />
+        ) : (
+          <>
+            <GameTable
+              whoseTurn={whoseTurn}
+              gamePhase={gamePhase}
+              currentTrump={currentTrump}
+              currentField={currentField}
+              players={players}
+              negriCard={negriCard}
+              negriPlayerId={negriPlayerId}
+              completedFields={completedFields}
+              revealedAgari={revealedAgari}
+              gameActions={gameActions}
+              blowDeclarations={blowDeclarations}
+              currentHighestDeclaration={currentHighestDeclaration}
+              selectedTrump={selectedTrump}
+              setSelectedTrump={setSelectedTrump}
+              numberOfPairs={numberOfPairs}
+              setNumberOfPairs={setNumberOfPairs}
+              teamScores={teamScores}
+              currentPlayerId={currentPlayerId}
+            />
+            {teamScores && teamScoreRecords && (
+              <div className="mt-4">
+                <ScoreBoard
+                  teamScores={teamScores}
+                  teamScoreRecords={teamScoreRecords}
+                  roundNumber={roundNumber}
+                />
               </div>
-
-              {/* Discard Pairs Button (Only if the player selects 2 cards) */}
-              {selectedCards.length === 2 && player.id === whoseTurn && (
-                <button onClick={handleDiscardPairs} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                  Discard Pairs
-                </button>
-              )}
-
-              {/* Draw Card Button (Only if it's the current player's turn and the opponent has cards) */}
-              {getSocket().id === whoseTurn && player.id !== getSocket().id && player.hand.length > 0 && (
-                <button onClick={() => handleDrawCard(player.id)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
-                  Draw from {player.name}
-                </button>
-              )}
-            </div>
-          ))}
-
-          {/* End Turn Button (Only visible to the current player) */}
-          {getSocket().id === whoseTurn && (
-            <button onClick={endTurn} className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mt-4">
-              End Turn
-            </button>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
+      </div>
     </main>
   );
 }
