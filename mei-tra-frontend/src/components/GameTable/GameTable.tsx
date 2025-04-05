@@ -3,7 +3,7 @@ import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclarat
 import { PlayerHand } from '../PlayerHand/PlayerHand';
 import { GameField } from '../GameField/GameField';
 import { GameControls } from '@/app/components/GameControls';
-import { BlowControls } from '@/app/components/BlowControls';
+import { BlowControls } from '@/app/components/BlowControls/BlowControls';
 import { GameInfo } from '../GameInfo/GameInfo';
 
 
