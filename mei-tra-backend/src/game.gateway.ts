@@ -206,9 +206,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
-      setTimeout(() => {
-        this.handleFourthDeclaration();
-      }, 3000);
+      this.handleFourthDeclaration();
     } else {
       this.gameState.nextTurn();
       // Emit turn update to all clients
@@ -296,28 +294,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      const winner = state.blowState.currentHighestDeclaration;
-      if (!winner) return;
-
-      const winningPlayer = state.players.find(
-        (p) => p.playerId === winner.playerId,
-      );
-      if (!winningPlayer) return;
-
-      setTimeout(() => {
-        // Move to play phase
-        state.gamePhase = 'play';
-        state.blowState.currentTrump = winner.trumpType;
-
-        // Emit updates
-        this.server.emit('update-phase', {
-          phase: 'play',
-          scores: state.teamScores,
-          winner: winningPlayer.team,
-        });
-
-        this.handleFourthDeclaration();
-      }, 3000);
+      this.handleFourthDeclaration();
       return;
     }
 
@@ -346,40 +323,42 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Add Agari card to winner's hand first
-    if (state.agari) {
-      winningPlayer.hand.push(state.agari);
-    }
+    setTimeout(() => {
+      // Add Agari card to winner's hand first
+      if (state.agari) {
+        winningPlayer.hand.push(state.agari);
+      }
 
-    // Move to play phase
-    state.gamePhase = 'play';
-    state.blowState.currentTrump = winner.trumpType;
+      // Move to play phase
+      state.gamePhase = 'play';
+      state.blowState.currentTrump = winner.trumpType;
 
-    // Set current player to the winner for Negri selection
-    const winnerIndex = state.players.findIndex(
-      (p) => p.playerId === winner.playerId,
-    );
-    if (winnerIndex !== -1) {
-      state.currentPlayerIndex = winnerIndex;
-    }
+      // Set current player to the winner for Negri selection
+      const winnerIndex = state.players.findIndex(
+        (p) => p.playerId === winner.playerId,
+      );
+      if (winnerIndex !== -1) {
+        state.currentPlayerIndex = winnerIndex;
+      }
 
-    // First update all players about the new state with the Agari card added
-    this.server.emit('update-players', state.players);
+      // First update all players about the new state with the Agari card added
+      this.server.emit('update-players', state.players);
 
-    // Then emit Agari card to winner
-    this.server.to(winningPlayer.id).emit('reveal-agari', {
-      agari: state.agari,
-      message: 'Select a card from your hand as Negri',
-      playerId: winningPlayer.playerId,
-    });
+      // Then emit Agari card to winner
+      this.server.to(winningPlayer.id).emit('reveal-agari', {
+        agari: state.agari,
+        message: 'Select a card from your hand as Negri',
+        playerId: winningPlayer.playerId,
+      });
 
-    // Finally emit phase update and turn update
-    this.server.emit('update-phase', {
-      phase: 'play',
-      scores: state.teamScores,
-      winner: winningPlayer.team,
-    });
-    this.server.emit('update-turn', winningPlayer.playerId);
+      // Finally emit phase update and turn update
+      this.server.emit('update-phase', {
+        phase: 'play',
+        scores: state.teamScores,
+        winner: winningPlayer.team,
+      });
+      this.server.emit('update-turn', winningPlayer.playerId);
+    }, 3000);
   }
 
   @SubscribeMessage('select-negri')
