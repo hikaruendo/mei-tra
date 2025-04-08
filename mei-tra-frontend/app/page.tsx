@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { getSocket } from './socket';
-import { BlowDeclaration, Field, GamePhase, Player, TeamScores, TrumpType } from './types';
-import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
-import { GameTable } from '@/components/GameTable/GameTable';
-import { TeamScore } from '@/types/game.types';
-import { GameJoinForm } from '@/components/GameJoinForm';
-import { Notification } from '@/components/Notification/Notification';
+import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType } from '../types/game.types';
+import { GameJoinForm } from '../components/GameJoinForm';
+import { GameTable } from '../components/GameTable';
+import { Notification } from '../components/Notification';
+
 
 export default function Home() {
   // Player and Game State

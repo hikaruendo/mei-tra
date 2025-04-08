@@ -1,6 +1,6 @@
 'use client';
 
-import { TeamScore, TeamScoreRecord } from '@/types/game.types';
+import { TeamScore, TeamScoreRecord } from '../../types/game.types';
 
 interface ScoreBoardProps {
   teamScores: { [key: number]: TeamScore };

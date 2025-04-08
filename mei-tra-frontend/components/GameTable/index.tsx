@@ -1,11 +1,11 @@
 import React from 'react';
-import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
-import { PlayerHand } from '../PlayerHand/PlayerHand';
-import { GameField } from '../GameField/GameField';
-import { GameControls } from '@/app/components/GameControls';
-import { BlowControls } from '@/app/components/BlowControls/BlowControls';
-import { GameInfo } from '../GameInfo/GameInfo';
+import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
+import { GameField } from '../GameField';
+import { GameInfo } from '../GameInfo';
 import styles from './index.module.css';
+import { PlayerHand } from '../PlayerHand';
+import { GameControls } from '../GameControls';
+import { BlowControls } from '../BlowControls';
 
 interface GameTableProps {
   whoseTurn: string | null;

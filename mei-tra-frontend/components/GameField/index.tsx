@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player, Field } from '@/types/game.types';
+import { Player, Field } from '../../types/game.types';
 import styles from './index.module.css';
 
 interface GameFieldProps {

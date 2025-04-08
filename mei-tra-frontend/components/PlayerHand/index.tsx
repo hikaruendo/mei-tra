@@ -1,8 +1,8 @@
 import React from 'react';
-import { Player, GamePhase, GameActions, CompletedField, Team } from '@/types/game.types';
-import { NegriCard } from '../NegriCard/NegriCard';
-import { Card } from '../card/Card';
-import { CompletedFields } from '../CompletedFields/CompletedFields';
+import { Player, GamePhase, GameActions, CompletedField, Team } from '../../types/game.types';
+import { NegriCard } from '../NegriCard';
+import { Card } from '../Card';
+import { CompletedFields } from '../CompletedFields';
 import styles from './index.module.css';
 
 interface PlayerHandProps {

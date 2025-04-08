@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './index.module.css';
-import { Card } from '../card/Card';
+import { Card } from '../Card';
 interface NegriCardProps {
   negriCard: string;
   negriPlayerId: string;

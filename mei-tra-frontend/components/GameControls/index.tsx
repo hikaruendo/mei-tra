@@ -1,5 +1,5 @@
 import { JSX } from 'react';
-import { GamePhase } from '../types';
+import { GamePhase } from '../../types/game.types';
 
 interface GameControlsProps {
   gamePhase: GamePhase;

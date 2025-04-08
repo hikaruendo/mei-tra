@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player, TrumpType, TeamScores } from '@/types/game.types';
+import { Player, TrumpType, TeamScores } from '../../types/game.types';
 
 interface GameInfoProps {
   currentTrump: TrumpType | null;

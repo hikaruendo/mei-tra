@@ -1,4 +1,4 @@
-import { BlowDeclaration, Player, TrumpType } from '../../types';
+import { BlowDeclaration, Player, TrumpType } from '../../types/game.types';
 import styles from './index.module.css';
 
 interface BlowControlsProps {

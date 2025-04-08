@@ -13,4 +13,4 @@ export type {
   TeamPlayers,
   GameActions,
   FieldCompleteEvent
-} from '@/types/game.types'; 
+} from '../types/game.types'; 
