@@ -209,7 +209,7 @@
   }  
 
   .fieldContainerInner{
-    gap: 0;
+    gap: 0.3rem;
   }
 
   .fieldContent{

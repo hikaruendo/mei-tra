@@ -1,4 +1,5 @@
 import React from 'react';
+import styles from './index.module.css';
 
 interface CardProps {
   card: string;
@@ -16,11 +17,11 @@ export const Card: React.FC<CardProps> = ({
   const isRed = suit === '♥' || suit === '♦';
 
   return (
-    <div className={`card ${isRed ? 'red-suit' : 'black-suit'} ${small ? 'small' : ''} ${className}`}>
-      {card === 'JOKER' ? <div className="rank">JOKER</div> : (
+    <div className={`${styles.card} ${isRed ? styles.redSuit : styles.blackSuit} ${small ? styles.small : ''} ${className}`}>
+      {card === 'JOKER' ? <div className={styles.rank}>JOKER</div> : (
         <>
           {value}
-          <span className="suit">{suit}</span>
+          <span className={styles.suit}>{suit}</span>
         </>
       )}
     </div>

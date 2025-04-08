@@ -5,8 +5,7 @@ import { getSocket } from './socket';
 import { BlowDeclaration, Field, GamePhase, Player, TeamScores, TrumpType } from './types';
 import { CompletedField, FieldCompleteEvent } from '@/types/game.types';
 import { GameTable } from '@/components/GameTable/GameTable';
-import { TeamScore, TeamScoreRecord } from '@/types/game.types';
-import { ScoreBoard } from '@/components/ScoreBoard';
+import { TeamScore } from '@/types/game.types';
 import { GameJoinForm } from '@/components/GameJoinForm';
 import { Notification } from '@/components/Notification/Notification';
 
@@ -21,7 +20,6 @@ export default function Home() {
     0: { deal: 0, blow: 0, play: 0, total: 0 },
     1: { deal: 0, blow: 0, play: 0, total: 0 }
   });
-  const [teamScoreRecords, setTeamScoreRecords] = useState<{ [key: number]: TeamScoreRecord }>({});
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
   const [currentHighestDeclaration, setCurrentHighestDeclaration] = useState<BlowDeclaration | null>(null);
@@ -39,8 +37,6 @@ export default function Home() {
 
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
-
-  const [roundNumber, setRoundNumber] = useState(1);
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
@@ -219,14 +215,10 @@ export default function Home() {
         setCompletedFields(prev => [...prev, field]);
         setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });
       },
-      'round-results': ({ roundNumber, scores, scoreRecords }: {
-        roundNumber: number;
+      'round-results': ({ scores }: {
         scores: { [key: number]: TeamScore };
-        scoreRecords: { [key: number]: TeamScoreRecord };
       }) => {
         setTeamScores(scores as TeamScores);
-        setTeamScoreRecords(scoreRecords);
-        setRoundNumber(roundNumber);
       },
       'new-round-started': ({
         players,
@@ -393,15 +385,6 @@ export default function Home() {
               teamScores={teamScores}
               currentPlayerId={currentPlayerId}
             />
-            {teamScores && teamScoreRecords && (
-              <div className="mt-4">
-                <ScoreBoard
-                  teamScores={teamScores}
-                  teamScoreRecords={teamScoreRecords}
-                  roundNumber={roundNumber}
-                />
-              </div>
-            )}
           </>
         )}
       </div>

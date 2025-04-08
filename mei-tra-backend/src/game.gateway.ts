@@ -206,7 +206,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // If all 4 players have acted (either declared or passed), move to play phase
     if (totalActions === 4) {
-      this.handleFourthDeclaration();
+      setTimeout(() => {
+        this.handleFourthDeclaration();
+      }, 3000);
     } else {
       this.gameState.nextTurn();
       // Emit turn update to all clients
@@ -302,19 +304,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       if (!winningPlayer) return;
 
-      // Move to play phase
-      state.gamePhase = 'play';
-      state.blowState.currentTrump = winner.trumpType;
+      setTimeout(() => {
+        // Move to play phase
+        state.gamePhase = 'play';
+        state.blowState.currentTrump = winner.trumpType;
 
-      // Emit updates
-      this.server.emit('update-phase', {
-        phase: 'play',
-        scores: state.teamScores,
-        winner: winningPlayer.team,
-      });
+        // Emit updates
+        this.server.emit('update-phase', {
+          phase: 'play',
+          scores: state.teamScores,
+          winner: winningPlayer.team,
+        });
 
-      // Call handleFourthDeclaration to handle the transition to play phase
-      this.handleFourthDeclaration();
+        this.handleFourthDeclaration();
+      }, 3000);
       return;
     }
 
@@ -513,7 +516,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Check if field is complete
     if (currentField.cards.length === 4) {
-      this.handleFieldComplete(currentField);
+      setTimeout(() => {
+        this.handleFieldComplete(currentField);
+      }, 3000);
     } else {
       // If Joker is baseCard and currentTrump is 'tra' and baseSuit is not selected, don't proceed to next turn
       if (
@@ -669,9 +674,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       // Emit round results and start new round
       this.server.emit('round-results', {
-        roundNumber: this.gameState.roundNumber,
         scores: state.teamScores,
-        scoreRecords: state.teamScoreRecords,
       });
 
       // Start new round after a short delay

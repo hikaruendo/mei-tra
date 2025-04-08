@@ -107,13 +107,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
             <div className={styles.playerName}>{player.name}</div>
             <div className={styles.cardCount}>{player.hand.length} cards</div>
-            {isCurrentPlayer && isWinningPlayer && !negriCard && (
+            {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
               <div className={styles.selectNegriCard}>Select Negri Card.</div>
             )}
             {isCurrentPlayer && agariCard && isWinningPlayer && (
               <div className={styles.agariCardContainer}>
-                <div className={styles.agariLabel}>Agari Card is</div>
-                <Card card={agariCard} />
+                <div className={styles.agariLabel}>Agari</div>
+                <Card card={agariCard} small />
               </div>
             )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (

@@ -47,14 +47,9 @@ export function BlowControls({
   const isDisabled = !isCurrentPlayer;
 
   return (
-    <div className={styles.container}>
+    <div className={styles.blowControlsContainer}>
       <div className={styles.content}>
         <div className={styles.title}>
-          <h3>
-            {!isCurrentPlayer 
-              ? "Waiting for Your Turn" 
-              : "It's Your Turn to Declare!"}
-          </h3>
           <div className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}>
             Current Turn: {currentPlayerName}
           </div>
@@ -79,8 +74,11 @@ export function BlowControls({
             <input 
               type="number" 
               min="6" 
-              value={numberOfPairs} 
-              onChange={(e) => setNumberOfPairs(parseInt(e.target.value) || 0)}
+              value={numberOfPairs || ''} 
+              onChange={(e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                setNumberOfPairs(value);
+              }}
               className={styles.input}
               placeholder="Pairs"
               disabled={isDisabled}
@@ -107,7 +105,6 @@ export function BlowControls({
         </div>
 
         <div className={styles.declarations}>
-          <h4>Current Declarations</h4>
           <div className={styles.declarationList}>
             {players.map((player) => {
               const declaration = blowDeclarations.find(d => d.playerId === player.playerId);
@@ -150,4 +147,4 @@ export function BlowControls({
       </div>
     </div>
   );
-} 
+}
