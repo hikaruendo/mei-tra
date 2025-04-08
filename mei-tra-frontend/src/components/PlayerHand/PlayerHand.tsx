@@ -3,6 +3,7 @@ import { Player, GamePhase, GameActions, CompletedField, Team } from '@/types/ga
 import { NegriCard } from '../NegriCard/NegriCard';
 import { Card } from '../card/Card';
 import { CompletedFields } from '../CompletedFields/CompletedFields';
+import styles from './index.module.css';
 
 interface PlayerHandProps {
   player: Player;
@@ -41,7 +42,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     
     if (isCurrentPlayer) {
       return (
-        <div className="hand-container">
+        <div className={styles.handContainer}>
           {player.hand.map((card, index) => {
             const value = card.replace(/[♠♣♥♦]/, '');
             const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
@@ -52,7 +53,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`card ${isRed || isNegri ? 'red-suit' : 'black-suit'} ${isNegri ? 'negri-card' : ''} ${isJoker ? 'joker' : ''} ${!negriCard && isWinningPlayer && gamePhase === 'play' ? 'player-info' : ''}`}
+                className={`${styles.card} ${isRed || isNegri ? styles.redSuit : styles.blackSuit} ${isNegri ? styles.negriCard : ''} ${isJoker ? styles.joker : ''}`}
                 onClick={() => {
                   if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
                     if (!negriCard && isWinningPlayer) {
@@ -65,14 +66,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 style={{ '--card-index': index } as React.CSSProperties}
               >
                 {isJoker ? (
-                  <div className="rank">JOKER</div>
+                  <div className={styles.jokerRank}>JOKER</div>
                 ) : (
                   <>
-                    <div className="rank">{value}</div>
-                    <div className="suit">{suit}</div>
+                    <div className={styles.rank }>{value}</div>
+                    <div className={styles.suit}>{suit}</div>
                   </>
                 )}
-                {isNegri && <div className="negri-label">Negri</div>}
+                {isNegri && <div className={styles.negriLabel}>Negri</div>}
               </div>
             );
           })}
@@ -81,15 +82,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
 
     return (
-      <div className="hand-container">
-        {Array(player.hand.length).fill(null).map((_, index) => (
-          <div
-            key={index}
-            className="card face-down"
-            style={{ transform: `rotate(${-10 + (index * 2)}deg)` }}
-          >
-            🂠
-          </div>
+      <div className={styles.otherPlayerHandContainer}>
+        {Array(player.hand.length).fill(null).map((_, cardIndex) => (
+          <div key={cardIndex} className={styles.cardFaceDown}>🂠</div>
         ))}
       </div>
     );
@@ -99,9 +94,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
 
   return (
-    <div className={`player-position ${position}`}>
-      <div className="player-info">
-        <div className="player-info-group">
+    <div className={`${styles.playerPosition} ${styles[position]}`}>
+      <div className={styles.playerInfo}>
+        <div className={styles.playerInfoGroup}>
           {negriCard && negriPlayerId === player.playerId && (
             <NegriCard
               negriCard={negriCard}
@@ -109,21 +104,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               currentPlayerId={currentPlayerId}
             />
           )}
-          <div className={`player-info-container ${isCurrentTurn ? 'current-turn' : ''}`}>
-            <div className="player-name">{player.name}</div>
-            <div className="card-count">{player.hand.length} cards</div>
+          <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
+            <div className={styles.playerName}>{player.name}</div>
+            <div className={styles.cardCount}>{player.hand.length} cards</div>
             {isCurrentPlayer && isWinningPlayer && !negriCard && (
-              <div className="flex flex-col items-center justify-center">Select Negri Card.</div>
+              <div className={styles.selectNegriCard}>Select Negri Card.</div>
             )}
             {isCurrentPlayer && agariCard && isWinningPlayer && (
-              <div className="agari-card-container">
-                <div className="agari-label">Agari Card is</div>
+              <div className={styles.agariCardContainer}>
+                <div className={styles.agariLabel}>Agari Card is</div>
                 <Card card={agariCard} />
               </div>
             )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
               <button 
-                className="broken-button"
+                className={styles.brokenButton}
                 onClick={() => gameActions.revealBrokenHand(player.playerId)}
               >
                 Reveal Broken Hand
@@ -131,7 +126,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             )}
           </div>
           {completedFields.some(field => field.winnerId === player.playerId) && (
-            <div className="completed-fields-container">
+            <div className={styles.completedFieldsContainer}>
               <CompletedFields 
                 fields={completedFields.filter(field => field.winnerId === player.playerId)} 
                 playerTeam={playerTeam} 

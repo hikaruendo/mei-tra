@@ -1,5 +1,6 @@
 import React from 'react';
 import { Player, Field } from '@/types/game.types';
+import styles from './index.module.css';
 
 interface GameFieldProps {
   currentField: Field | null;
@@ -31,10 +32,10 @@ export const GameField: React.FC<GameFieldProps> = ({
   const effectiveDealerIndex = dealerIndex === -1 ? 0 : dealerIndex;
   
   return (
-    <div className={'field-container'}>
+    <div className={styles.fieldContainer}>
       {currentField && (
-        <div className="field-container-outer">
-          <div className="field-container-inner">
+        <div className={styles.fieldContainerOuter}>
+          <div className={styles.fieldContainerInner}>
             {currentField.cards.map((card: string, index: number) => {
               const isRed = card.match(/[♥♦]/);
               const isJoker = card === 'JOKER';
@@ -43,15 +44,15 @@ export const GameField: React.FC<GameFieldProps> = ({
               const player = players[playerIndex];
               
               return (
-                <div key={index} className="text-center">
-                  <div className="name">{player.name}</div>
-                  <div className={`card ${isRed ? 'red-suit' : 'black-suit'} ${isJoker ? 'joker' : ''}`}>
+                <div key={index} className={styles.fieldContent}>
+                  <div className={styles.name}>{player.name}</div>
+                  <div className={`${styles.card} ${isRed ? styles.redSuit : styles.blackSuit} ${isJoker ? styles.joker : ''}`}>
                     {isJoker ? (
-                      <div className="rank">JOKER</div>
+                      <div className={styles.jokerRank}>JOKER</div>
                     ) : (
                       <>
-                        <div className="rank">{card.replace(/[♠♣♥♦]/, '')}</div>
-                        <div className="suit">{card.match(/[♠♣♥♦]/)?.[0]}</div>
+                        <div className={styles.rank}>{card.replace(/[♠♣♥♦]/, '')}</div>
+                        <div className={styles.suit}>{card.match(/[♠♣♥♦]/)?.[0]}</div>
                       </>
                     )}
                   </div>
@@ -61,9 +62,9 @@ export const GameField: React.FC<GameFieldProps> = ({
           </div>
 
           {needsBaseSuitSelection ? (
-            <div className="base-suit-selection">
+            <div className={styles.baseSuitSelection}>
               <h3>Select Base Suit</h3>
-              <div className="suit-buttons">
+              <div className={styles.suitButtons}>
                 <button onClick={() => onBaseSuitSelect('♠')}>♠</button>
                 <button onClick={() => onBaseSuitSelect('♥')}>♥</button>
                 <button onClick={() => onBaseSuitSelect('♦')}>♦</button>
@@ -71,10 +72,10 @@ export const GameField: React.FC<GameFieldProps> = ({
               </div>
             </div>
           ) : currentTrump === 'tra' && currentField?.baseSuit && (
-            <div className="base-suit-selection">
+            <div className={styles.baseSuitSelection}>
               <h3>Selected Base Suit</h3>
-              <div className="suit-buttons">
-                <button disabled className={`selected-suit ${currentField.baseSuit === '♠' ? 'black-suit' : ''} ${currentField.baseSuit === '♥' || currentField.baseSuit === '♦' ? 'red-suit' : ''} ${currentField.baseSuit === '♣' ? 'black-suit' : ''}`}>
+              <div className={styles.suitButtons}>
+                <button disabled className={`${styles.selectedSuit} ${currentField.baseSuit === '♠' ? styles.blackSuit : ''} ${currentField.baseSuit === '♥' || currentField.baseSuit === '♦' ? styles.redSuit : ''} ${currentField.baseSuit === '♣' ? styles.blackSuit : ''}`}>
                   {currentField.baseSuit}
                 </button>
               </div>

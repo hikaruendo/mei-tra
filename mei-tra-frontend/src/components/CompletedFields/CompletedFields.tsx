@@ -1,6 +1,7 @@
 import React from 'react';
 import { CompletedField, Team } from '@/types/game.types';
 import { Card } from '../card/Card';
+import styles from './index.module.css';
 
 interface CompletedFieldsProps {
   fields: CompletedField[];
@@ -9,19 +10,19 @@ interface CompletedFieldsProps {
 
 export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, playerTeam }) => {
   return (
-    <div className="completed-fields">
+    <div className={styles.completedFieldsContainer}>
       {fields.map((field, index) => (
-        <div key={index} className="completed-field">
+        <div key={index} className={styles.completedField}>
           {field.cards.map((card: string, cardIndex: number) => (
             field.winnerTeam === playerTeam ? (
               <Card 
                 key={cardIndex}
                 card={card}
                 small={true}
-                className="completed-field-card"
+                className={styles.completedFieldCard}
               />
             ) : (
-              <div key={cardIndex} className="card face-down">🂠</div>
+              <div key={cardIndex} className={styles.cardFaceDown}>🂠</div>
             )
           ))}
         </div>

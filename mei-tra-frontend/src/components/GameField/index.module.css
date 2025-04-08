@@ -1,0 +1,222 @@
+.fieldContainer{
+  grid-area: field;
+  position: relative;
+  justify-self: center;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  background: transparent;
+  border-radius: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4;
+}
+
+.fieldContainerOuter{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.fieldContainerInner{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fieldContent{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;  /* プレイヤー名とカードの間隔 */
+}
+
+.name{
+  color: white;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.card{
+  position: relative;
+  transition: transform 0.2s ease;
+  width: var(--card-width);
+  height: var(--card-height);
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  box-shadow: var(--shadow-card);
+}
+
+.rank{
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
+.suit{
+  font-size: var(--font-size-xxl);
+  line-height: 1;
+}
+
+.redSuit{
+  color: #D40000;
+}
+
+.blackSuit{
+  color: #212121;
+}
+
+.joker{
+  color: purple;
+}
+
+.jokerRank{
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: var(--font-size-base);
+  letter-spacing: -1px;
+  margin-left: var(--spacing-xs);
+  font-weight: bold;
+  color: purple;
+}
+
+.baseSuitSelection{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid white;
+  padding: 10px;
+  align-items: center;
+  border-radius: 10px;
+  z-index: 10;
+}
+
+.baseSuitSelection h3{
+  color: white;
+  margin-bottom: 15px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.suitButtons{
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.suitButtons button:hover{
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.suitButtons button{
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 32px;
+  cursor: pointer;
+  border: 1px solid white;
+  transition: all 0.3s ease;
+  min-width: 50px;
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.suitButtons button[onClick*="♥"], 
+.suitButtons button[onClick*="♦"]{
+  color: red;
+}
+
+.suitButtons button[onClick*="♠"],
+.suitButtons button[onClick*="♣"]{
+  color: black;
+}
+
+.suitButtons button.selectedSuit{
+  background: white;
+}
+
+.suitButtons button.selectedSuit.redSuit{
+  color: red;
+}
+
+.suitButtons button.selectedSuit.blackSuit{
+  color: black;
+}
+
+.completedFieldCard .rank{
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 8px;
+  letter-spacing: -1px;
+  color: purple;
+}
+
+@media (max-width: 768px) {
+  .card {
+    width: 60px;
+    height: 80px;
+    padding: 0.3rem;
+  }
+
+  .rank{
+    font-size: 1.5rem;
+    line-height: 1;
+    margin-bottom: 0px;
+    letter-spacing: -1px;
+  }
+  
+  .suit{
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .card.selected,
+  .card:hover {
+    transform: translateY(-20px) rotate(0deg) scale(1.1) !important;
+    z-index: var(--z-index-card);
+    margin: 0 var(--spacing-md);
+    transition: all 0.3s ease-in-out;
+  }
+
+  .jokerRank{
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: 14px;
+    letter-spacing: -3px;
+    margin-left: var(--spacing-xs);
+    font-weight: bold;
+    color: purple;
+  }
+
+  .fieldContainer{
+    width: 100%;
+    height: 100%;
+    margin: 100px auto 0;
+  }  
+
+  .fieldContainerInner{
+    gap: 0;
+  }
+
+  .fieldContent{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;  /* プレイヤー名とカードの間隔 */
+  }
+}

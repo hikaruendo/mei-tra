@@ -5,7 +5,7 @@ import { GameField } from '../GameField/GameField';
 import { GameControls } from '@/app/components/GameControls';
 import { BlowControls } from '@/app/components/BlowControls/BlowControls';
 import { GameInfo } from '../GameInfo/GameInfo';
-
+import styles from './index.module.css';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -70,7 +70,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   };
 
   return (
-    <div className={`game-layout ${gamePhase === 'blow' ? 'game-phase-blow' : ''}`}>
+    <div className={`${styles.gameLayout} ${gamePhase === 'blow' ? styles.gamePhaseBlow : ''}`}>
       <GameInfo
         currentTrump={currentTrump}
         numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
@@ -100,7 +100,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      <div className="player-positions">
+      <div className={styles.playerPositions}>
         {players.map((player) => (
           <PlayerHand
             key={player.playerId}

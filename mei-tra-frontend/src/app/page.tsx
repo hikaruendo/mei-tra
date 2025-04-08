@@ -354,8 +354,8 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen p-8 bg-gray-100">
-      <div className="max-w-6xl mx-auto">
+    <main className="">
+      <div className="">
         {notification && (
           <Notification
             message={notification.message}
