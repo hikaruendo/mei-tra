@@ -170,15 +170,7 @@ export default function Home() {
         resetBlowState();
       },
       'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
-        setRevealedAgari(agari);
-        
-        // Add Agari card to player's hand for testing
-        setPlayers(players.map(p =>
-          p.playerId === currentPlayerId
-            ? { ...p, hand: [...p.hand, agari] }
-            : p
-        ));
-        
+        setRevealedAgari(agari);        
         setNotification({
           message,
           type: 'success'
