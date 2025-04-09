@@ -107,10 +107,8 @@ export default function Home() {
         setTeamScores(scores);
         
         // Set current trump when transitioning to play phase
-        if (phase === 'play') {
-          if (currentHighestDeclaration) {
-            setCurrentTrump(currentHighestDeclaration.trumpType);
-          }
+        if (phase === 'play' && currentHighestDeclaration) {
+          setCurrentTrump(currentHighestDeclaration.trumpType);
         } else {
           // Reset current trump when not in play phase
           setCurrentTrump(null);

@@ -323,21 +323,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    // 状態の更新を先に行う
+    if (state.agari) {
+      winningPlayer.hand.push(state.agari);
+    }
+    state.gamePhase = 'play';
+    state.blowState.currentTrump = winner.trumpType;
+    const winnerIndex = state.players.findIndex(
+      (p) => p.playerId === winner.playerId,
+    );
+    if (winnerIndex !== -1) {
+      state.currentPlayerIndex = winnerIndex;
+    }
+
+    // プレイヤー情報の更新を即時送信
+    this.server.emit('update-players', state.players);
+
+    // 3秒後に残りのイベントを送信
     setTimeout(() => {
-      if (state.agari) {
-        winningPlayer.hand.push(state.agari);
-      }
-      state.gamePhase = 'play';
-      state.blowState.currentTrump = winner.trumpType;
-      const winnerIndex = state.players.findIndex(
-        (p) => p.playerId === winner.playerId,
-      );
-      if (winnerIndex !== -1) {
-        state.currentPlayerIndex = winnerIndex;
-      }
-
-      this.server.emit('update-players', state.players);
-
       // アガリカードを勝者に通知
       this.server.to(winningPlayer.id).emit('reveal-agari', {
         agari: state.agari,
@@ -348,7 +351,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 最新の状態を取得してからイベントを送信
       const currentState = this.gameState.getState();
 
-      // フェーズ更新とターン更新を送信
+      // まずターン更新を送信
+      this.server.emit('update-turn', winningPlayer.playerId);
+
+      // その後にフェーズ更新を送信
       this.server.emit('update-phase', {
         phase: 'play',
         scores: currentState.teamScores,
@@ -356,7 +362,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         currentHighestDeclaration:
           currentState.blowState.currentHighestDeclaration,
       });
-      this.server.emit('update-turn', winningPlayer.playerId);
     }, 3000);
   }
 
