@@ -22,8 +22,8 @@ export const GameInfo: React.FC<GameInfoProps> = ({
     if (!currentTrump) return '';
     const trumpMap: Record<TrumpType, string> = {
       'tra': 'Tra',
-      'hel': '♥',
-      'daya': '♦',
+      'herz': '♥',
+      'daiya': '♦',
       'club': '♣',
       'zuppe': '♠'
     };

@@ -102,7 +102,7 @@ export default function Home() {
         setCurrentPlayerId(players[index].playerId);
         setGameStarted(true);
       },
-      'update-phase': ({ phase, scores, winner }: { phase: GamePhase; scores: TeamScores; winner: number | null }) => {
+      'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
         setGamePhase(phase);
         setTeamScores(scores);
         
@@ -110,9 +110,6 @@ export default function Home() {
         if (phase === 'play') {
           if (currentHighestDeclaration) {
             setCurrentTrump(currentHighestDeclaration.trumpType);
-          } else {
-            // If no declaration was made, set to default trump
-            setCurrentTrump('hel');
           }
         } else {
           // Reset current trump when not in play phase

@@ -19,7 +19,7 @@ export interface TeamScores {
   [key: number]: TeamScore;
 }
 
-export type TrumpType = 'tra' | 'hel' | 'daya' | 'club' | 'zuppe';
+export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface BlowDeclaration {
   playerId: string;

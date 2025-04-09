@@ -19,16 +19,16 @@ export class CardService {
 
   private readonly TRUMP_STRENGTHS: Record<TrumpType, number> = {
     tra: 5,
-    hel: 4,
-    daya: 3,
+    herz: 4,
+    daiya: 3,
     club: 2,
     zuppe: 1,
   };
 
   private readonly TRUMP_TO_SUIT: Record<TrumpType, string> = {
     tra: '', // traは特殊なので空文字
-    hel: '♥', // ハート
-    daya: '♦', // ダイヤ
+    herz: '♥', // ハート
+    daiya: '♦', // ダイヤ
     club: '♣', // クラブ
     zuppe: '♠', // スペード
   };
@@ -142,9 +142,9 @@ export class CardService {
 
   getPrimaryJack(trumpType: TrumpType): string {
     switch (trumpType) {
-      case 'hel':
+      case 'herz':
         return 'J♥';
-      case 'daya':
+      case 'daiya':
         return 'J♦';
       case 'club':
         return 'J♣';
@@ -159,9 +159,9 @@ export class CardService {
 
   getSecondaryJack(trumpType: TrumpType): string {
     switch (trumpType) {
-      case 'hel':
+      case 'herz':
         return 'J♦';
-      case 'daya':
+      case 'daiya':
         return 'J♥';
       case 'club':
         return 'J♠';

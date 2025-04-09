@@ -323,39 +323,41 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    // 状態の更新を先に行う
+    if (state.agari) {
+      winningPlayer.hand.push(state.agari);
+    }
+    state.gamePhase = 'play';
+    state.blowState.currentTrump = winner.trumpType;
+    const winnerIndex = state.players.findIndex(
+      (p) => p.playerId === winner.playerId,
+    );
+    if (winnerIndex !== -1) {
+      state.currentPlayerIndex = winnerIndex;
+    }
+
+    // プレイヤー情報の更新を即時送信
+    this.server.emit('update-players', state.players);
+
+    // 3秒後に残りのイベントを送信
     setTimeout(() => {
-      // Add Agari card to winner's hand first
-      if (state.agari) {
-        winningPlayer.hand.push(state.agari);
-      }
-
-      // Move to play phase
-      state.gamePhase = 'play';
-      state.blowState.currentTrump = winner.trumpType;
-
-      // Set current player to the winner for Negri selection
-      const winnerIndex = state.players.findIndex(
-        (p) => p.playerId === winner.playerId,
-      );
-      if (winnerIndex !== -1) {
-        state.currentPlayerIndex = winnerIndex;
-      }
-
-      // First update all players about the new state with the Agari card added
-      this.server.emit('update-players', state.players);
-
-      // Then emit Agari card to winner
+      // アガリカードを勝者に通知
       this.server.to(winningPlayer.id).emit('reveal-agari', {
         agari: state.agari,
         message: 'Select a card from your hand as Negri',
         playerId: winningPlayer.playerId,
       });
 
-      // Finally emit phase update and turn update
+      // 最新の状態を取得してからイベントを送信
+      const currentState = this.gameState.getState();
+
+      // フェーズ更新とターン更新を送信
       this.server.emit('update-phase', {
         phase: 'play',
-        scores: state.teamScores,
+        scores: currentState.teamScores,
         winner: winningPlayer.team,
+        currentHighestDeclaration:
+          currentState.blowState.currentHighestDeclaration,
       });
       this.server.emit('update-turn', winningPlayer.playerId);
     }, 3000);

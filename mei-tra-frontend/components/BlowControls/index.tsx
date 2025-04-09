@@ -65,8 +65,8 @@ export function BlowControls({
             >
               <option value="">Select Trump</option>
               <option value="tra">Tra</option>
-              <option value="hel">Hel (♥)</option>
-              <option value="daya">Daiya (♦)</option>
+              <option value="herz">Herz (♥)</option>
+              <option value="daiya">Daiya (♦)</option>
               <option value="club">Club (♣)</option>
               <option value="zuppe">Zuppe (♠)</option>
             </select>
