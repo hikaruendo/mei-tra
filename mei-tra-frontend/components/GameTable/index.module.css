@@ -15,17 +15,17 @@
     "left field right"
     ".    bottom  .";
   grid-template-columns: 300px 120px 300px;
-  grid-template-rows: 180px 150px 200px;
+  grid-template-rows: 180px 65px 310px;
   gap: var(--spacing-lg);
   justify-content: center;
-  margin-top: 60px;
+  margin-top: 50px;
 }
 
 @media (max-width: 768px) {
   .playerPositions {
     grid-template-columns: 140px 50px 140px;
-    grid-template-rows: 0px 150px 335px;
+    grid-template-rows: 0px 150px 400px;
     gap: var(--spacing-md);
-    margin-top: 150px;
+    margin-top: 140px;
   }
 }

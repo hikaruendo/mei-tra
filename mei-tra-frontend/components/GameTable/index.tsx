@@ -69,13 +69,14 @@ export const GameTable: React.FC<GameTableProps> = ({
     return 'left'; // fallback
   };
 
+  const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
+
   return (
     <div className={`${styles.gameLayout} ${gamePhase === 'blow' ? styles.gamePhaseBlow : ''}`}>
       <GameInfo
         currentTrump={currentTrump}
+        currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
         numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
-        whoseTurn={whoseTurn}
-        players={players}
         teamScores={teamScores}
       />
 
