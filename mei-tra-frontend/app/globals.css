@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base */
+@import '../styles/base/_variables.css';
+@import '../styles/base/_reset.css';
+
+/* Layout */
+@import '../styles/layout/_game-layout.css';
+
+/* Components */
+@import '../styles/components/_cards.css';
+@import '../styles/components/_player-hand.css';
+@import '../styles/components/_game-table.css';
+@import '../styles/components/_others.css';
+
+/* Utils */
+@import '../styles/utils/_animations.css'; 
+
+body {
+  background-color: #1B5E20;
+  color: white;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+main:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}

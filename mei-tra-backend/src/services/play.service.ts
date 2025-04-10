@@ -168,6 +168,7 @@ export class PlayService {
 
       // If player has Joker and no trump cards, they must play Joker
       if (
+        baseSuit === trumpSuit &&
         playerHand.includes('JOKER') &&
         !playerHand.some(
           (c) => this.cardService.getCardSuit(c, currentTrump) === trumpSuit,

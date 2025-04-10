@@ -1,0 +1,346 @@
+.handContainer{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* 3D効果のために必要な遠近法の設定。カードが3D空間で表示されるようにする。値が大きいほど遠近感が強くなる。 */
+  perspective: 1000px;
+  width: 100%;
+  padding: 1rem;
+}
+
+.otherPlayerHandContainer{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* 3D効果のために必要な遠近法の設定。カードが3D空間で表示されるようにする。値が大きいほど遠近感が強くなる。 */
+  perspective: 1000px;
+  width: 100%;
+  padding: 1rem;
+  margin-left: 20px;
+}
+
+.card {
+  flex-shrink: 0;
+  margin: 0 var(--card-overlap);
+  transition: var(--transition-card);
+  transform-origin: bottom center;
+  position: relative;
+  cursor: pointer;
+  transform: none !important;
+  width: var(--card-width);
+  height: var(--card-height);
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  box-shadow: var(--shadow-card);
+}
+
+.cardFaceDown{
+  background: linear-gradient(45deg, #1a237e, #283593);
+  width: 2rem;
+  height: 3rem;
+  font-size: 1.5rem;
+  border-radius: 0.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: -15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.redSuit{
+  color: #D40000;
+}
+
+.blackSuit{
+  color: #212121;
+}
+
+.negriCard{
+  color: #4CAF50;
+}
+
+.joker{
+  color: purple;
+}
+
+.negriLabel{
+  color: #4CAF50;
+}
+
+.jokerRank{
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: var(--font-size-base);
+  letter-spacing: -1px;
+  margin-left: var(--spacing-xs);
+  font-weight: bold;
+  color: purple;
+}
+
+.rank{
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: var(--spacing-xs);
+}
+
+.suit{
+  font-size: var(--font-size-xxl);
+  line-height: 1;
+}
+
+/* Card states */
+.card.selected,
+.card:hover {
+  transform: translateY(-50px) rotate(0deg) scale(1.1) !important;
+  z-index: var(--z-index-card);
+  margin: 0 var(--spacing-md);
+  transition: all 0.3s ease-in-out;
+}
+
+.card.selected {
+  z-index: calc(var(--z-index-card) + 5);
+  box-shadow: var(--shadow-selected);
+  border: 2px solid var(--color-gold);
+  transition: all 0.3s ease-in-out;
+}
+
+/* Joker card style */
+.joker .rank {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: var(--font-size-base);
+  letter-spacing: -1px;
+  margin-left: var(--spacing-xs);
+  font-weight: bold;
+  color: purple;
+}
+
+.playerInfo{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+  background: transparent;
+}
+
+.playerInfoGroup{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.playerInfoContainer{
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: center;
+  justify-content: center;
+  background: #6B3419;
+  border: 1px solid #4A2410;
+  border-radius: 8px;
+  padding: 0.5rem;
+  min-width: 120px;
+  border-radius: var(--radius-md);
+}
+
+.currentTurn{
+  border: 1px solid var(--color-gold);
+  box-shadow: 0 0 8px var(--color-gold);
+}
+
+.playerName{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  font-size: var(--font-size-base);
+  color: var(--color-white);
+} 
+
+.cardCount{
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.selectNegriCard{
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.agariCardContainer{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.agariLabel{
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.completedFieldsContainer{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.brokenButton{
+  position: absolute;
+  top: 46px;
+  right: -86px;
+  background-color: #dc2626;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  &:hover{
+    background-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active{
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.playerPosition{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.playerPosition.top {
+  grid-area: top;
+  align-self: center;
+  justify-self: center;
+}
+
+.playerPosition.bottom {
+  grid-area: bottom;
+  align-self: center;
+  justify-self: center;
+}
+
+.playerPosition.left {
+  grid-area: left;
+  align-self: center;
+  justify-self: center;
+}
+
+.playerPosition.right {
+  grid-area: right;
+  align-self: center;
+  justify-self: center;
+}
+
+@media (max-width: 768px) {
+  .card {
+    width: 60px;
+    height: 80px;
+    padding: 0.3rem;
+  }
+
+  .rank{
+    font-size: 1.5rem;
+    line-height: 1;
+    margin-bottom: 0px;
+    letter-spacing: -1px;
+  }
+  
+  .suit{
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .card.selected,
+  .card:hover {
+    transform: translateY(-20px) rotate(0deg) scale(1.1) !important;
+    z-index: var(--z-index-card);
+    margin: 0 var(--spacing-md);
+    transition: all 0.3s ease-in-out;
+  }
+
+  .jokerRank{
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: 14px;
+    letter-spacing: -3px;
+    margin-left: var(--spacing-xs);
+    font-weight: bold;
+    color: purple;
+  }
+
+  .playerInfoGroup{
+    gap: 30px;
+  }
+
+  .handContainer{
+    padding: 0.5rem;
+  }
+
+  .otherPlayerHandContainer{
+    padding: 0.5rem;
+    margin-left: 15px;
+  }
+
+  .cardFaceDown{
+    width: 1.5rem;
+    height: 2rem;
+    font-size: 1.2rem;
+    border-radius: 0.25rem;
+  }
+  
+  .playerInfoContainer{
+    min-width: 80px;
+    border-radius: var(--radius-md);
+  }
+  
+  .currentTurn{
+    border: 1px solid var(--color-gold);
+    box-shadow: 0 0 8px var(--color-gold);
+  }
+  
+  .playerName{
+    max-width: 80px;
+    font-size: var(--font-size-base);
+    color: var(--color-white);
+  } 
+  
+  .cardCount{
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}

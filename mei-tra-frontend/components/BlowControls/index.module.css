@@ -1,0 +1,177 @@
+.blowControlsContainer {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  z-index: 99;
+  backdrop-filter: blur(8px);
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-lg);
+  max-width: 90vw;
+}
+
+.content {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.title {
+  margin-bottom: 1rem;
+}
+
+.currentTurn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.currentTurn.active {
+  background-color: #059669;
+  color: white;
+}
+
+.currentTurn.inactive {
+  background-color: #374151;
+  color: white;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+}
+
+.controlsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.select {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 4px 8px;
+  background-color: white;
+  color: black;
+  width: 100%;
+}
+
+.input {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 4px 8px;
+  background-color: white;
+  font-size: 16px;
+  color: black;
+  width: 100%;
+  text-indent: 5px;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.button {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.button:disabled {
+  opacity: 0.5;
+}
+
+.declareButton {
+  background-color: #3b82f6;
+}
+
+.declareButton:hover {
+  background-color: #1d4ed8;
+}
+
+.passButton {
+  background-color: #6b7280;
+}
+
+.passButton:hover {
+  background-color: #4b5563;
+}
+
+.declarations {
+  margin-top: 1rem;
+}
+
+.declarationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.declarationItem {
+  background-color: white;
+  color: black;
+  padding: 4px 8px;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.declarationItem.pass {
+  background-color: #6b7280;
+}
+
+.declarationItem.highest {
+  border: 2px solid #facc15;
+  box-shadow: 0 0 10px 0 rgba(250, 204, 21, 0.5);
+}
+
+@media (max-width: 768px) {
+  .blowControlsContainer {
+    top: 25%;
+    padding: 1rem;
+    max-width: 90%;
+  }
+  .select {
+    font-size: 16px;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+} 
+
+.animate-slide-in {
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

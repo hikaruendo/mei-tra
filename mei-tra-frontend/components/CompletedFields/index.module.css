@@ -1,0 +1,38 @@
+.completedFieldsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.completedField {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+}
+
+.completedFieldCard {
+  width: 2rem;
+  height: 3rem;
+}
+
+.cardFaceDown {
+  width: 2rem;
+  height: 3rem;
+  margin: 0 -15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(45deg, #1a237e, #283593);
+  font-size: 1.5rem;
+  border-radius: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .cardFaceDown {
+    display: none;
+  }
+}

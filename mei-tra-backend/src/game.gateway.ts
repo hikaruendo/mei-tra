@@ -294,26 +294,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      const winner = state.blowState.currentHighestDeclaration;
-      if (!winner) return;
-
-      const winningPlayer = state.players.find(
-        (p) => p.playerId === winner.playerId,
-      );
-      if (!winningPlayer) return;
-
-      // Move to play phase
-      state.gamePhase = 'play';
-      state.blowState.currentTrump = winner.trumpType;
-
-      // Emit updates
-      this.server.emit('update-phase', {
-        phase: 'play',
-        scores: state.teamScores,
-        winner: winningPlayer.team,
-      });
-
-      // Call handleFourthDeclaration to handle the transition to play phase
       this.handleFourthDeclaration();
       return;
     }
@@ -343,16 +323,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Add Agari card to winner's hand first
+    // 状態の更新を先に行う
     if (state.agari) {
       winningPlayer.hand.push(state.agari);
     }
-
-    // Move to play phase
     state.gamePhase = 'play';
     state.blowState.currentTrump = winner.trumpType;
-
-    // Set current player to the winner for Negri selection
     const winnerIndex = state.players.findIndex(
       (p) => p.playerId === winner.playerId,
     );
@@ -360,23 +336,33 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       state.currentPlayerIndex = winnerIndex;
     }
 
-    // First update all players about the new state with the Agari card added
+    // プレイヤー情報の更新を即時送信
     this.server.emit('update-players', state.players);
 
-    // Then emit Agari card to winner
-    this.server.to(winningPlayer.id).emit('reveal-agari', {
-      agari: state.agari,
-      message: 'Select a card from your hand as Negri',
-      playerId: winningPlayer.playerId,
-    });
+    // 3秒後に残りのイベントを送信
+    setTimeout(() => {
+      // アガリカードを勝者に通知
+      this.server.to(winningPlayer.id).emit('reveal-agari', {
+        agari: state.agari,
+        message: 'Select a card from your hand as Negri',
+        playerId: winningPlayer.playerId,
+      });
 
-    // Finally emit phase update and turn update
-    this.server.emit('update-phase', {
-      phase: 'play',
-      scores: state.teamScores,
-      winner: winningPlayer.team,
-    });
-    this.server.emit('update-turn', winningPlayer.playerId);
+      // 最新の状態を取得してからイベントを送信
+      const currentState = this.gameState.getState();
+
+      // まずターン更新を送信
+      this.server.emit('update-turn', winningPlayer.playerId);
+
+      // その後にフェーズ更新を送信
+      this.server.emit('update-phase', {
+        phase: 'play',
+        scores: currentState.teamScores,
+        winner: winningPlayer.team,
+        currentHighestDeclaration:
+          currentState.blowState.currentHighestDeclaration,
+      });
+    }, 3000);
   }
 
   @SubscribeMessage('select-negri')
@@ -513,7 +499,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Check if field is complete
     if (currentField.cards.length === 4) {
-      this.handleFieldComplete(currentField);
+      setTimeout(() => {
+        this.handleFieldComplete(currentField);
+      }, 3000);
     } else {
       // If Joker is baseCard and currentTrump is 'tra' and baseSuit is not selected, don't proceed to next turn
       if (
@@ -669,9 +657,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       // Emit round results and start new round
       this.server.emit('round-results', {
-        roundNumber: this.gameState.roundNumber,
         scores: state.teamScores,
-        scoreRecords: state.teamScoreRecords,
       });
 
       // Start new round after a short delay
