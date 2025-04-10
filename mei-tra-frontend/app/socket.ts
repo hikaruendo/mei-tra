@@ -6,7 +6,7 @@ export function getSocket(): Socket {
   if (!socket && typeof window !== 'undefined') {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
     
-    const reconnectToken = localStorage.getItem('reconnectToken') || '';
+    const reconnectToken = sessionStorage.getItem('reconnectToken') || '';
     socket = io(socketUrl, {
       transports: ['websocket'],
       auth: {
