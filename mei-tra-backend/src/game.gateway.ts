@@ -12,11 +12,8 @@ import { ScoreService } from './services/score.service';
 import { ChomboService } from './services/chombo.service';
 import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
-import { TrumpType } from './types/game.types';
-import { ChomboViolation } from './types/game.types';
-import { Field } from './types/game.types';
+import { TrumpType, ChomboViolation, Field, Team } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
-import { Team } from './types/game.types';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -523,6 +520,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private handleFieldComplete(field: Field) {
     const state = this.gameState.getState();
+    console.log('Field complete - Current state:', {
+      field,
+      players: state.players.map((p) => ({
+        id: p.id,
+        playerId: p.playerId,
+        handLength: p.hand.length,
+        hand: p.hand,
+      })),
+      gamePhase: state.gamePhase,
+      currentTrump: state.blowState.currentTrump,
+    });
+
     const winner = this.playService.determineFieldWinner(
       field,
       state.players,
@@ -534,12 +543,41 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Remove played cards from players' hands
+    // Remove played cards from players' hands and verify removal
+    const removedCards = new Set<string>();
+    const cardRemovalLog: Array<{
+      card: string;
+      playerId: string;
+      removedFrom: boolean;
+      initialLength: number;
+      newLength: number;
+    }> = [];
+
     field.cards.forEach((card) => {
       state.players.forEach((player) => {
+        const initialLength = player.hand.length;
         player.hand = player.hand.filter((c) => c !== card);
+        if (player.hand.length < initialLength) {
+          removedCards.add(card);
+          cardRemovalLog.push({
+            card,
+            playerId: player.playerId,
+            removedFrom: true,
+            initialLength,
+            newLength: player.hand.length,
+          });
+        }
       });
     });
+
+    // Verify all cards were removed exactly once
+    if (removedCards.size !== field.cards.length) {
+      console.error('Card removal mismatch:', {
+        removedCards: Array.from(removedCards),
+        fieldCards: field.cards,
+        cardRemovalLog,
+      });
+    }
 
     // Add the completed field to history
     const completedField = this.gameState.completeField(field, winner.playerId);
@@ -552,10 +590,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const allHandsEmpty = state.players.every(
       (player) => player.hand.length === 0,
     );
-    if (allHandsEmpty) {
-      this.handleGameOver();
-      return;
-    }
+
+    console.log('After field complete:', {
+      winner: winner.playerId,
+      allHandsEmpty,
+      playerHands: state.players.map((p) => ({
+        playerId: p.playerId,
+        handLength: p.hand.length,
+      })),
+    });
 
     // Set the winner as the next dealer
     const winnerIndex = state.players.findIndex(
@@ -579,6 +622,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       field: completedField,
       nextPlayerId: winner.playerId,
     });
+
+    // Update all clients with the latest player states
+    this.server.emit('update-players', state.players);
+
+    if (allHandsEmpty) {
+      console.log('All hands empty - Starting game over process');
+      // Handle game over after ensuring all updates are sent
+      setTimeout(() => {
+        this.handleGameOver();
+      }, 1000);
+      return;
+    }
 
     // Emit turn update to indicate it's the winner's turn
     this.server.emit('update-turn', winner.playerId);
