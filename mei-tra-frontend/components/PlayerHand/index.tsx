@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player, GamePhase, GameActions, CompletedField, Team } from '../../types/game.types';
+import { Player, GamePhase, GameActions, CompletedField } from '../../types/game.types';
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
 import { CompletedFields } from '../CompletedFields';
@@ -17,8 +17,8 @@ interface PlayerHandProps {
   agariCard?: string;
   currentHighestDeclaration?: { playerId: string };
   completedFields: CompletedField[];
-  playerTeam: Team;
   currentPlayerId: string;
+  players: Player[];
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -33,8 +33,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   agariCard,
   currentHighestDeclaration,
   completedFields,
-  playerTeam,
   currentPlayerId,
+  players,
 }) => {
   const renderPlayerHand = () => {
     const isCurrentPlayer = currentPlayerId === player.playerId;
@@ -113,7 +113,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             {isCurrentPlayer && agariCard && isWinningPlayer && (
               <div className={styles.agariCardContainer}>
                 <div className={styles.agariLabel}>Agari</div>
-                <Card card={agariCard} small />
+                <Card card={agariCard} />
               </div>
             )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
@@ -125,16 +125,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </button>
             )}
           </div>
-          {completedFields.some(field => field.winnerId === player.playerId) && (
-            <div className={styles.completedFieldsContainer}>
-              <CompletedFields 
-                fields={completedFields.filter(field => field.winnerId === player.playerId)} 
-                playerTeam={playerTeam} 
-              />
-            </div>
-          )}
         </div>
         {renderPlayerHand()}
+        {completedFields.length > 0 && (
+          <CompletedFields 
+            fields={completedFields}
+            players={players}
+          />
+        )}
       </div>
     </div>
   );

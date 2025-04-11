@@ -1,17 +1,31 @@
 .card {
-  width: 60px;
-  height: 84px;
-  margin: 0 -15px;
+  width: 1.8rem;
+  height: 2.5rem;
   background: white;
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  align-items: flex-start;
+  padding: 2px;
+  font-size: 0.75rem;
   transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  margin: 0 -10px;
+}
+
+.card:hover {
+  transform: translateY(-4px) scale(1.1);
+  z-index: 1;
+}
+
+.rank {
+  font-weight: bold;
+  line-height: 1;
+}
+
+.suit {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .redSuit {
@@ -22,21 +36,35 @@
   color: black;
 }
 
-.small {
-  width: 40px;
-  height: 60px;
+.joker {
+  /* background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); */
 }
 
-.rank {
+.jokerRank {
   writing-mode: vertical-rl;
   text-orientation: upright;
-  font-size: 11px;
-  letter-spacing: -3px;
+  font-size: 0.4rem;
+  letter-spacing: -1px;
+  margin-left: 2px;
+  font-weight: bold;
   color: purple;
 }
 
-.suit {
-  font-size: 1.5rem;
-  line-height: 1;
-}
+@media (max-width: 768px) {
+  .card {
+    width: 1.5rem;
+    height: 2.25rem;
+    font-size: 0.8rem;
+    padding: 1px;
+    margin: 0 -8px;
+  }
 
+  .suit {
+    font-size: 1rem;
+  }
+
+  .jokerRank {
+    font-size: 0.4rem;
+    margin-left: 1px;
+  }
+}

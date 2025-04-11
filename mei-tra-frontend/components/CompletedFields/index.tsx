@@ -1,32 +1,34 @@
 import React from 'react';
-import { CompletedField, Team } from '../../types/game.types';
-import { Card } from '../Card';
+import { CompletedField } from '../../types/game.types';
 import styles from './index.module.css';
+import { Card } from '../Card';
 
 interface CompletedFieldsProps {
   fields: CompletedField[];
-  playerTeam: Team;
+  players: { playerId: string; name: string }[];
 }
 
-export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, playerTeam }) => {
+export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, players }) => {
   return (
     <div className={styles.completedFieldsContainer}>
-      {fields.map((field, index) => (
-        <div key={index} className={styles.completedField}>
-          {field.cards.map((card: string, cardIndex: number) => (
-            field.winnerTeam === playerTeam ? (
-              <Card 
-                key={cardIndex}
-                card={card}
-                small={true}
-                className={styles.completedFieldCard}
-              />
-            ) : (
-              <div key={cardIndex} className={styles.cardFaceDown}>🂠</div>
-            )
-          ))}
-        </div>
-      ))}
+      {fields.map((field, index) => {
+        const winnerName = players.find(p => p.playerId === field.winnerId)?.name || 'Unknown';
+        return (
+          <div key={index} className={styles.completedField}>
+            <div className={styles.winnerName}>{winnerName}</div>
+            <div className={styles.cards}>
+              {field.cards.map((card: string, cardIndex: number) => {
+                return (
+                  <Card 
+                    key={cardIndex}
+                    card={card}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
