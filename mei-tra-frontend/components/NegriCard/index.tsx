@@ -20,8 +20,6 @@ export const NegriCard: React.FC<NegriCardProps> = ({
         <div className={styles.negriField}>
           <Card 
             card={negriCard}
-            small={true}
-            className={styles.negriCard}
           />
         </div>
       ) : (

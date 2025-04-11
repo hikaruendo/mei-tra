@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player, Team, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
+import { Player, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
 import { GameField } from '../GameField';
 import { GameInfo } from '../GameInfo';
 import styles from './index.module.css';
@@ -102,24 +102,34 @@ export const GameTable: React.FC<GameTableProps> = ({
       )}
 
       <div className={styles.playerPositions}>
-        {players.map((player) => (
-          <PlayerHand
-            key={player.playerId}
-            player={player}
-            isCurrentTurn={whoseTurn === player.playerId}
-            negriCard={negriCard}
-            negriPlayerId={negriPlayerId}
-            gamePhase={gamePhase}
-            whoseTurn={whoseTurn}
-            gameActions={gameActions}
-            position={getRelativePosition(player)}
-            agariCard={revealedAgari || undefined}
-            currentHighestDeclaration={currentHighestDeclaration || undefined}
-            completedFields={completedFields}
-            playerTeam={(players.find(p => p.playerId === currentPlayerId)?.team ?? 0) as Team}
-            currentPlayerId={currentPlayerId || ''}
-          />
-        ))}
+        {players.map((player) => {
+          const position = getRelativePosition(player);
+          const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
+          
+          // Show all team's completed fields only for bottom player
+          const teamCompletedFields = position === 'bottom' 
+            ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
+            : [];
+            
+          return (
+            <PlayerHand
+              key={player.playerId}
+              player={player}
+              isCurrentTurn={whoseTurn === player.playerId}
+              negriCard={negriCard}
+              negriPlayerId={negriPlayerId}
+              gamePhase={gamePhase}
+              whoseTurn={whoseTurn}
+              gameActions={gameActions}
+              position={position}
+              agariCard={revealedAgari || undefined}
+              currentHighestDeclaration={currentHighestDeclaration || undefined}
+              completedFields={teamCompletedFields}
+              currentPlayerId={currentPlayerId || ''}
+              players={players}
+            />
+          );
+        })}
 
         {/* Center field */}
         <GameField

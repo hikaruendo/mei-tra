@@ -197,13 +197,6 @@
   font-size: 0.9rem;
 }
 
-.completedFieldsContainer{
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
 .brokenButton{
   position: absolute;
   top: 46px;
@@ -264,8 +257,8 @@
 
 @media (max-width: 768px) {
   .card {
-    width: 60px;
-    height: 80px;
+    width: 54px;
+    height: 72px;
     padding: 0.3rem;
   }
 

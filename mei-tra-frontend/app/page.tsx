@@ -47,7 +47,7 @@ export default function Home() {
     const socket = getSocket();
 
     // Set up reconnection token
-    const savedToken = localStorage.getItem('reconnectToken');
+    const savedToken = sessionStorage.getItem('reconnectToken');
     if (savedToken) {
       socket.auth = { reconnectToken: savedToken };
     }
@@ -245,7 +245,7 @@ export default function Home() {
       },
       'reconnect-token': (token: string) => {
         setReconnectToken(token);
-        localStorage.setItem('reconnectToken', token);
+        sessionStorage.setItem('reconnectToken', token);
       },
     };
 
