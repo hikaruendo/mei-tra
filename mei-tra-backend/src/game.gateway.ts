@@ -91,6 +91,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('error-message', 'Game is full!');
         client.disconnect();
       }
+    } else {
+      client.emit('error-message', 'Invalid connection attempt');
+      client.disconnect();
     }
   }
 
