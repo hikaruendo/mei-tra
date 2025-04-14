@@ -189,6 +189,11 @@ export class GameStateService {
     // // Set the Agari card
     // this.state.agari = this.state.deck[this.state.players.length];
 
+    // Sort each player's hand
+    this.state.players.forEach((player) => {
+      player.hand.sort((a, b) => this.cardService.compareCards(a, b));
+    });
+    
     this.state.players.forEach((player) => {
       this.chomboService.checkForBrokenHand(player);
     });
