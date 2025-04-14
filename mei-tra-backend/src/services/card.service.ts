@@ -220,7 +220,7 @@ export class CardService {
   }
 
   compareCards(cardA: string, cardB: string): number {
-    const suitsOrder = ['♠', '♥', '♦', '♣'];
+    const suitsOrder = ['♠', '♦', '♣', '♥'];
     const valuesOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
     const suitA = cardA.slice(-1);
