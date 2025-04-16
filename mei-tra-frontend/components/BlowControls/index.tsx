@@ -43,6 +43,17 @@ export function BlowControls({
     passBlow();
   };
 
+  const getTrumpStrength = (trumpType: TrumpType): number => {
+    const trumpStrengths: Record<TrumpType, number> = {
+      tra: 5,
+      herz: 4,
+      daiya: 3,
+      club: 2,
+      zuppe: 1,
+    };
+    return trumpStrengths[trumpType] || 0;
+  };
+
   // Disable controls if it's not the current player's turn
   const isDisabled = !isCurrentPlayer;
 
@@ -71,18 +82,69 @@ export function BlowControls({
               <option value="zuppe">Zuppe (♠)</option>
             </select>
 
-            <input 
-              type="number" 
-              min="6" 
-              value={numberOfPairs || ''} 
+            <select
+              value={numberOfPairs || ''}
               onChange={(e) => {
                 const value = e.target.value === '' ? 0 : parseInt(e.target.value);
                 setNumberOfPairs(value);
               }}
-              className={styles.input}
-              placeholder="Pairs"
+              className={styles.select}
               disabled={isDisabled}
-            />
+            >
+              <option value="">Select Pairs</option>
+              {(() => {
+                const filteredPairs = [6, 7, 8, 9, 10].filter((pair) => {
+                  if (!currentHighestDeclaration) return true; // 最初の宣言はすべて有効
+
+                  const currentTrumpStrength = currentHighestDeclaration
+                    ? getTrumpStrength(currentHighestDeclaration.trumpType)
+                    : 0;
+                  const selectedTrumpStrength = selectedTrump
+                    ? getTrumpStrength(selectedTrump)
+                    : 0;
+
+                  // ペア数が現在の最高宣言より大きい場合は有効
+                  if (pair > currentHighestDeclaration.numberOfPairs) return true;
+
+                  // ペア数が同じ場合、トランプの強さを比較
+                  if (
+                    pair === currentHighestDeclaration.numberOfPairs &&
+                    selectedTrumpStrength > currentTrumpStrength
+                  ) {
+                    return true;
+                  }
+
+                  return false;
+                });
+
+                // 次に有効な最小値を計算
+                let nextValidPair: number | null = null;
+                if (filteredPairs.length === 0 && currentHighestDeclaration) {
+                  const currentTrumpStrength = getTrumpStrength(currentHighestDeclaration.trumpType);
+                  const selectedTrumpStrength = selectedTrump ? getTrumpStrength(selectedTrump) : 0;
+
+                  nextValidPair =
+                    selectedTrumpStrength > currentTrumpStrength
+                      ? currentHighestDeclaration.numberOfPairs
+                      : currentHighestDeclaration.numberOfPairs + 1;
+                }
+
+                return (
+                  <>
+                    {filteredPairs.map((pair) => (
+                      <option key={pair} value={pair}>
+                        {pair} Pairs
+                      </option>
+                    ))}
+                    {nextValidPair && nextValidPair <= 13 && (
+                      <option key={nextValidPair} value={nextValidPair}>
+                        {nextValidPair} Pairs (Over Call)
+                      </option>
+                    )}
+                  </>
+                );
+              })()}
+            </select>
 
             <div className={styles.buttonGroup}>
               <button 
