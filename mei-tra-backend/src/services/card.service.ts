@@ -221,7 +221,21 @@ export class CardService {
 
   compareCards(cardA: string, cardB: string): number {
     const suitsOrder = ['♠', '♦', '♣', '♥'];
-    const valuesOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const valuesOrder = [
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      'J',
+      'Q',
+      'K',
+      'A',
+    ];
 
     const suitA = cardA.slice(-1);
     const suitB = cardB.slice(-1);
@@ -230,11 +244,11 @@ export class CardService {
     const valueB = cardB.startsWith('10') ? '10' : cardB[0];
 
     // Compare suits
-    const suitComparison = suitsOrder.indexOf(suitA) - suitsOrder.indexOf(suitB);
+    const suitComparison =
+      suitsOrder.indexOf(suitA) - suitsOrder.indexOf(suitB);
     if (suitComparison !== 0) return suitComparison;
 
     // Compare values
     return valuesOrder.indexOf(valueA) - valuesOrder.indexOf(valueB);
   }
-
 }
