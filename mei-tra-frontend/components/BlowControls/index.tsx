@@ -15,6 +15,22 @@ interface BlowControlsProps {
   players: Player[];
 }
 
+// トランプの強さを定義
+const TRUMP_STRENGTHS: Record<TrumpType, number> = {
+  tra: 5,
+  herz: 4,
+  daiya: 3,
+  club: 2,
+  zuppe: 1,
+};
+
+// ペア数の最小値と最大値
+const MIN_PAIRS = 6;
+const MAX_PAIRS = 13;
+
+// 基本のペア数選択肢
+const BASE_PAIR_OPTIONS = [6, 7, 8, 9, 10];
+
 export function BlowControls({
   isCurrentPlayer,
   currentPlayer,
@@ -30,32 +46,94 @@ export function BlowControls({
 }: BlowControlsProps) {
   const currentPlayerName = players.find(p => p.playerId === currentPlayer?.playerId)?.name;
 
+  // 宣言処理
   const handleDeclare = () => {
     if (!isCurrentPlayer) return;
     declareBlow();
-    // Reset form
+    // フォームのリセット
     setSelectedTrump(null);
     setNumberOfPairs(0);
   };
 
+  // パス処理
   const handlePass = () => {
     if (!isCurrentPlayer) return;
     passBlow();
   };
 
+  // トランプの強さを取得
   const getTrumpStrength = (trumpType: TrumpType): number => {
-    const trumpStrengths: Record<TrumpType, number> = {
-      tra: 5,
-      herz: 4,
-      daiya: 3,
-      club: 2,
-      zuppe: 1,
-    };
-    return trumpStrengths[trumpType] || 0;
+    return TRUMP_STRENGTHS[trumpType] || 0;
   };
 
-  // Disable controls if it's not the current player's turn
+  // 有効なペア数選択肢を生成
+  const getValidPairOptions = () => {
+    if (!currentHighestDeclaration) {
+      // 最初の宣言ではすべてのペア数が有効
+      return BASE_PAIR_OPTIONS.map(pair => ({
+        value: pair,
+        label: `${pair} Pairs`
+      }));
+    }
+
+    const currentTrumpStrength = getTrumpStrength(currentHighestDeclaration.trumpType);
+    const selectedTrumpStrength = selectedTrump ? getTrumpStrength(selectedTrump) : 0;
+
+    // 現在の最高宣言を上回る有効なペア数をフィルタリング
+    const validPairs = BASE_PAIR_OPTIONS.filter(pair => {
+      // ペア数が現在の最高宣言より大きい場合は有効
+      if (pair > currentHighestDeclaration.numberOfPairs) return true;
+
+      // ペア数が同じ場合、トランプの強さを比較
+      if (pair === currentHighestDeclaration.numberOfPairs && selectedTrumpStrength > currentTrumpStrength) {
+        return true;
+      }
+
+      return false;
+    });
+
+    // 有効なペア数がない場合はオーバーコールの選択肢を追加
+    if (validPairs.length === 0) {
+      const nextValidPair = selectedTrumpStrength > currentTrumpStrength
+        ? currentHighestDeclaration.numberOfPairs
+        : currentHighestDeclaration.numberOfPairs + 1;
+
+      if (nextValidPair <= MAX_PAIRS) {
+        return [{
+          value: nextValidPair,
+          label: `${nextValidPair} Pairs (Over Call)`
+        }];
+      }
+      
+      return [];
+    }
+
+    return validPairs.map(pair => ({
+      value: pair,
+      label: `${pair} Pairs`
+    }));
+  };
+
+  // 宣言アイテムのクラス名を生成
+  const getDeclarationItemClassName = (declaration?: BlowDeclaration) => {
+    if (!declaration) return '';
+
+    const isLatestDeclaration = declaration === blowDeclarations[blowDeclarations.length - 1];
+    const isHighestDeclaration = currentHighestDeclaration && 
+      declaration.playerId === currentHighestDeclaration.playerId &&
+      declaration.trumpType === currentHighestDeclaration.trumpType &&
+      declaration.numberOfPairs === currentHighestDeclaration.numberOfPairs;
+
+    return `${styles.declarationItem} ${
+      isLatestDeclaration ? styles.animateSlideIn : ''
+    } ${isHighestDeclaration ? styles.highest : ''}`;
+  };
+
+  // コントロールが無効かどうか
   const isDisabled = !isCurrentPlayer;
+  
+  // 有効なペア数選択肢
+  const validPairOptions = getValidPairOptions();
 
   return (
     <div className={styles.blowControlsContainer}>
@@ -68,6 +146,7 @@ export function BlowControls({
       
         <div className={styles.controls}>
           <div className={styles.controlsRow}>
+            {/* トランプ選択 */}
             <select 
               value={selectedTrump || ''} 
               onChange={(e) => setSelectedTrump(e.target.value as TrumpType)}
@@ -82,6 +161,7 @@ export function BlowControls({
               <option value="zuppe">Zuppe (♠)</option>
             </select>
 
+            {/* ペア数選択 */}
             <select
               value={numberOfPairs || ''}
               onChange={(e) => {
@@ -92,64 +172,18 @@ export function BlowControls({
               disabled={isDisabled}
             >
               <option value="">Select Pairs</option>
-              {(() => {
-                const filteredPairs = [6, 7, 8, 9, 10].filter((pair) => {
-                  if (!currentHighestDeclaration) return true; // 最初の宣言はすべて有効
-
-                  const currentTrumpStrength = currentHighestDeclaration
-                    ? getTrumpStrength(currentHighestDeclaration.trumpType)
-                    : 0;
-                  const selectedTrumpStrength = selectedTrump
-                    ? getTrumpStrength(selectedTrump)
-                    : 0;
-
-                  // ペア数が現在の最高宣言より大きい場合は有効
-                  if (pair > currentHighestDeclaration.numberOfPairs) return true;
-
-                  // ペア数が同じ場合、トランプの強さを比較
-                  if (
-                    pair === currentHighestDeclaration.numberOfPairs &&
-                    selectedTrumpStrength > currentTrumpStrength
-                  ) {
-                    return true;
-                  }
-
-                  return false;
-                });
-
-                // 次に有効な最小値を計算
-                let nextValidPair: number | null = null;
-                if (filteredPairs.length === 0 && currentHighestDeclaration) {
-                  const currentTrumpStrength = getTrumpStrength(currentHighestDeclaration.trumpType);
-                  const selectedTrumpStrength = selectedTrump ? getTrumpStrength(selectedTrump) : 0;
-
-                  nextValidPair =
-                    selectedTrumpStrength > currentTrumpStrength
-                      ? currentHighestDeclaration.numberOfPairs
-                      : currentHighestDeclaration.numberOfPairs + 1;
-                }
-
-                return (
-                  <>
-                    {filteredPairs.map((pair) => (
-                      <option key={pair} value={pair}>
-                        {pair} Pairs
-                      </option>
-                    ))}
-                    {nextValidPair && nextValidPair <= 13 && (
-                      <option key={nextValidPair} value={nextValidPair}>
-                        {nextValidPair} Pairs (Over Call)
-                      </option>
-                    )}
-                  </>
-                );
-              })()}
+              {validPairOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
 
+            {/* アクションボタン */}
             <div className={styles.buttonGroup}>
               <button 
                 onClick={handleDeclare}
-                disabled={!selectedTrump || numberOfPairs < 6 || isDisabled}
+                disabled={!selectedTrump || numberOfPairs < MIN_PAIRS || isDisabled}
                 className={`${styles.button} ${styles.declareButton}`}
               >
                 Declare
@@ -166,17 +200,11 @@ export function BlowControls({
           </div>
         </div>
 
+        {/* 宣言リスト */}
         <div className={styles.declarations}>
           <div className={styles.declarationList}>
             {players.map((player) => {
               const declaration = blowDeclarations.find(d => d.playerId === player.playerId);
-              const isLatestDeclaration = declaration && 
-                declaration === blowDeclarations[blowDeclarations.length - 1];
-              const isHighestDeclaration = currentHighestDeclaration && 
-                declaration &&
-                declaration.playerId === currentHighestDeclaration.playerId &&
-                declaration.trumpType === currentHighestDeclaration.trumpType &&
-                declaration.numberOfPairs === currentHighestDeclaration.numberOfPairs;
 
               if (player.isPasser) {
                 return (
@@ -193,9 +221,7 @@ export function BlowControls({
                 return (
                   <div 
                     key={declaration.playerId}
-                    className={`${styles.declarationItem} ${
-                      isLatestDeclaration ? styles.animateSlideIn : ''
-                    } ${isHighestDeclaration ? styles.highest : ''}`}
+                    className={getDeclarationItemClassName(declaration)}
                   >
                     {player.name}: {declaration.trumpType.toUpperCase()} {declaration.numberOfPairs} pairs
                   </div>
