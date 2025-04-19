@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Player, GamePhase, GameActions, CompletedField } from '../../types/game.types';
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
@@ -36,6 +36,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentPlayerId,
   players,
 }) => {
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+
   const renderPlayerHand = () => {
     const isCurrentPlayer = currentPlayerId === player.playerId;
     const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
@@ -49,17 +51,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const isRed = suit === '♥' || suit === '♦';
             const isNegri = card === negriCard;
             const isJoker = card === 'JOKER';
+            const isSelected = card === selectedCard;
             
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isRed || isNegri ? styles.redSuit : styles.blackSuit} ${isNegri ? styles.negriCard : ''} ${isJoker ? styles.joker : ''}`}
+                className={`${styles.card} ${isRed || isNegri ? styles.redSuit : styles.blackSuit} ${isNegri ? styles.negriCard : ''} ${isJoker ? styles.joker : ''} ${isSelected ? styles.selected : ''}`}
                 onClick={() => {
                   if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
                     if (!negriCard && isWinningPlayer) {
                       gameActions.selectNegri(card);
                     } else {
-                      gameActions.playCard(card);
+                      setSelectedCard(card);
                     }
                   }
                 }}
@@ -69,7 +72,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   <div className={styles.jokerRank}>JOKER</div>
                 ) : (
                   <>
-                    <div className={styles.rank }>{value}</div>
+                    <div className={styles.rank}>{value}</div>
                     <div className={styles.suit}>{suit}</div>
                   </>
                 )}
@@ -77,6 +80,25 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </div>
             );
           })}
+          {selectedCard && (
+            <div className={styles.confirmationButtons}>
+              <button 
+                className={styles.cancelButton}
+                onClick={() => setSelectedCard(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className={styles.confirmButton}
+                onClick={() => {
+                  gameActions.playCard(selectedCard);
+                  setSelectedCard(null);
+                }}
+              >
+                Play
+              </button>
+            </div>
+          )}
         </div>
       );
     }

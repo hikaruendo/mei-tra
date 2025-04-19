@@ -108,7 +108,6 @@
 .card.selected {
   z-index: calc(var(--z-index-card) + 5);
   box-shadow: var(--shadow-selected);
-  border: 2px solid var(--color-gold);
   transition: all 0.3s ease-in-out;
 }
 
@@ -255,6 +254,50 @@
   justify-self: center;
 }
 
+.selected {
+  transform: translateY(-10px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.confirmationButtons {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  padding: 8px;
+}
+
+.confirmButton {
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: 2px solid #4A2410;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.confirmButton:hover {
+  background-color: #45a049;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  background-color: #f44336;
+  color: white;
+  border: 2px solid #4A2410;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.cancelButton:hover {
+  background-color: #da190b;
+}
+
 @media (max-width: 768px) {
   .card {
     width: 54px;
@@ -335,5 +378,9 @@
     padding: 0.15rem 0.5rem;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .confirmationButtons {
+    bottom: -25px;
   }
 }
