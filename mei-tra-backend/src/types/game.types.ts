@@ -59,7 +59,6 @@ export interface PlayState {
   neguri: Record<string, string>;
   fields: CompletedField[];
   lastWinnerId: string | null;
-  isTanzenRound: boolean;
   openDeclared: boolean;
   openDeclarerId: string | null;
 }

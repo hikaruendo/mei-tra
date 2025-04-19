@@ -127,6 +127,8 @@ export const GameTable: React.FC<GameTableProps> = ({
               completedFields={teamCompletedFields}
               currentPlayerId={currentPlayerId || ''}
               players={players}
+              currentField={currentField}
+              currentTrump={currentTrump}
             />
           );
         })}

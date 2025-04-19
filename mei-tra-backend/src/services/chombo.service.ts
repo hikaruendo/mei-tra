@@ -30,17 +30,6 @@ export class ChomboService {
         break;
       }
 
-      case 'play-card': {
-        if (
-          context.field &&
-          context.card &&
-          !this.isValidCardPlay(context.player, context.field, context.card)
-        ) {
-          violationType = 'wrong-suit';
-        }
-        break;
-      }
-
       case 'check-four-jack': {
         const jackCount = context.player.hand.filter((c) =>
           c.includes('J'),
@@ -81,16 +70,6 @@ export class ChomboService {
     }
 
     return null;
-  }
-
-  private isValidCardPlay(player: Player, field: Field, card: string): boolean {
-    return this.playService.isValidCardPlay(
-      player.hand,
-      card,
-      field,
-      null,
-      false,
-    ).isValid;
   }
 
   recordViolation(

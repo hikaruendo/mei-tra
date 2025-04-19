@@ -394,7 +394,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       neguri: {},
       fields: [],
       lastWinnerId: null,
-      isTanzenRound: false,
       openDeclared: false,
       openDeclarerId: null,
     };
@@ -454,23 +453,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Check if it's the player's turn
     if (!this.gameState.isPlayerTurn(player.playerId)) {
       client.emit('error-message', "It's not your turn to play!");
-      return;
-    }
-
-    // Validate the card play
-    const validationResult = this.playService.isValidCardPlay(
-      player.hand,
-      card,
-      state.playState.currentField,
-      state.blowState.currentTrump,
-      state.playState.isTanzenRound,
-    );
-
-    if (!validationResult.isValid) {
-      client.emit(
-        'error-message',
-        validationResult.message || 'Invalid card play',
-      );
       return;
     }
 
@@ -712,7 +694,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           neguri: {},
           fields: [],
           lastWinnerId: null,
-          isTanzenRound: false,
           openDeclared: false,
           openDeclarerId: null,
         };
