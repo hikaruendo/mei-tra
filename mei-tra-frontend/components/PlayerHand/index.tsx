@@ -82,7 +82,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 key={index}
                 className={`${styles.card} ${isRed || isNegri ? styles.redSuit : styles.blackSuit} ${isNegri ? styles.negriCard : ''} ${isJoker ? styles.joker : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable}`}
                 onClick={() => {
-                  if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
+                  if (gamePhase === 'play' && whoseTurn === currentPlayerId && isPlayable) {
                     handleCardClick(card);
                   }
                 }}

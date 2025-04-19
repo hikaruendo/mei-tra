@@ -299,13 +299,13 @@
 }
 
 .card.playable {
-  opacity: 1;
   cursor: pointer;
 }
 
 .card.unplayable {
-  opacity: 0.5;
   cursor: not-allowed;
+  background: #f0f0f0;
+  filter: brightness(0.95) contrast(0.9);
 }
 
 @media (max-width: 768px) {
