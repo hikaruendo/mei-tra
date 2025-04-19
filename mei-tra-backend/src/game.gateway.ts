@@ -450,22 +450,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Validate the card play
-    const validationResult = this.playService.isValidCardPlay(
-      player.hand,
-      card,
-      state.playState.currentField,
-      state.blowState.currentTrump,
-    );
-
-    if (!validationResult.isValid) {
-      client.emit(
-        'error-message',
-        validationResult.message || 'Invalid card play',
-      );
-      return;
-    }
-
     // Remove the card from player's hand first
     player.hand = player.hand.filter((c) => c !== card);
 
