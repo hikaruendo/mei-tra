@@ -92,7 +92,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.disconnect();
       }
     } else {
-      client.emit('error-message', 'Invalid connection attempt');
       client.disconnect();
     }
   }
@@ -436,6 +435,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!player) {
       return;
     }
+    if (!player.hand.includes(card)) {
+      console.warn(
+        `[WARN] ${player.name} tried to play a card (${card}) not in hand`,
+      );
+      client.emit('error-message', 'Card already played or invalid!');
+      return;
+    }
 
     // Check if currentField exists
     if (!state.playState.currentField) {
@@ -450,6 +456,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    if (state.playState.currentField.cards.includes(card)) {
+      console.warn(
+        `[WARN] ${player.name} tried to play a duplicate card (${card})`,
+      );
+      client.emit('error-message', 'Card already played on the field!');
+      return;
+    }
+    
     // Remove the card from player's hand first
     player.hand = player.hand.filter((c) => c !== card);
 
@@ -502,17 +516,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private handleFieldComplete(field: Field) {
     const state = this.gameState.getState();
-    console.log('Field complete - Current state:', {
-      field,
-      players: state.players.map((p) => ({
-        id: p.id,
-        playerId: p.playerId,
-        handLength: p.hand.length,
-        hand: p.hand,
-      })),
-      gamePhase: state.gamePhase,
-      currentTrump: state.blowState.currentTrump,
-    });
 
     const winner = this.playService.determineFieldWinner(
       field,
@@ -525,41 +528,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Remove played cards from players' hands and verify removal
-    const removedCards = new Set<string>();
-    const cardRemovalLog: Array<{
-      card: string;
-      playerId: string;
-      removedFrom: boolean;
-      initialLength: number;
-      newLength: number;
-    }> = [];
-
     field.cards.forEach((card) => {
       state.players.forEach((player) => {
-        const initialLength = player.hand.length;
         player.hand = player.hand.filter((c) => c !== card);
-        if (player.hand.length < initialLength) {
-          removedCards.add(card);
-          cardRemovalLog.push({
-            card,
-            playerId: player.playerId,
-            removedFrom: true,
-            initialLength,
-            newLength: player.hand.length,
-          });
-        }
       });
     });
-
-    // Verify all cards were removed exactly once
-    if (removedCards.size !== field.cards.length) {
-      console.error('Card removal mismatch:', {
-        removedCards: Array.from(removedCards),
-        fieldCards: field.cards,
-        cardRemovalLog,
-      });
-    }
 
     // Add the completed field to history
     const completedField = this.gameState.completeField(field, winner.playerId);
@@ -572,15 +545,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const allHandsEmpty = state.players.every(
       (player) => player.hand.length === 0,
     );
-
-    console.log('After field complete:', {
-      winner: winner.playerId,
-      allHandsEmpty,
-      playerHands: state.players.map((p) => ({
-        playerId: p.playerId,
-        handLength: p.hand.length,
-      })),
-    });
 
     // Set the winner as the next dealer
     const winnerIndex = state.players.findIndex(
@@ -609,7 +573,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('update-players', state.players);
 
     if (allHandsEmpty) {
-      console.log('All hands empty - Starting game over process');
       // Handle game over after ensuring all updates are sent
       setTimeout(() => {
         this.handleGameOver();
@@ -623,6 +586,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private handleGameOver() {
     const state = this.gameState.getState();
+
+    console.log('Game over - Current state:', state);
 
     if (!state.blowState.currentHighestDeclaration) {
       console.error('No highest declaration found');
