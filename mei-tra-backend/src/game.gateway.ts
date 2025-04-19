@@ -463,7 +463,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('error-message', 'Card already played on the field!');
       return;
     }
-    
+
     // Remove the card from player's hand first
     player.hand = player.hand.filter((c) => c !== card);
 

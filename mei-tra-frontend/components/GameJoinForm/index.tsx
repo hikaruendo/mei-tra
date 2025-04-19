@@ -1,5 +1,6 @@
 'use client';
 
+import styles from './index.module.css';
 interface GameJoinFormProps {
   name: string;
   onNameChange: (name: string) => void;
@@ -16,27 +17,30 @@ export const GameJoinForm = ({
   playerCount,
 }: GameJoinFormProps) => {
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-lg shadow-md">
+    <div className={styles.gameJoinForm}>
       <input 
         type="text" 
         placeholder="Enter name" 
         value={name} 
         onChange={(e) => onNameChange(e.target.value)} 
-        className="border rounded p-2 w-full" 
+        className={styles.input} 
       />
-      <div className="btn-container">
+      <div className={styles.btnContainer}>
         <button 
           onClick={onJoinGame} 
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          className={styles.joinBtn}
         >
           Join Game
         </button>
         <button 
-          onClick={onStartGame} 
-          disabled={playerCount < 4} 
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          className={styles.startBtn} 
+          onClick={onStartGame}
+          disabled={playerCount < 4}
         >
-          Start Game ({playerCount}/4 players)
+          Start Game
+          <span className={styles.playerCount}>
+            {playerCount}/4 players
+          </span>
         </button>
       </div>
     </div>
