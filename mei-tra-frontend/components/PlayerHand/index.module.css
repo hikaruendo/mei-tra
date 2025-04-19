@@ -298,6 +298,16 @@
   background-color: #da190b;
 }
 
+.card.playable {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.card.unplayable {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .card {
     width: 54px;
