@@ -395,7 +395,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       neguri: {},
       fields: [],
       lastWinnerId: null,
-      isTanzenRound: false,
       openDeclared: false,
       openDeclarerId: null,
     };
@@ -457,7 +456,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       card,
       state.playState.currentField,
       state.blowState.currentTrump,
-      state.playState.isTanzenRound,
     );
 
     if (!validationResult.isValid) {
@@ -747,7 +745,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           neguri: {},
           fields: [],
           lastWinnerId: null,
-          isTanzenRound: false,
           openDeclared: false,
           openDeclarerId: null,
         };

@@ -61,7 +61,6 @@ export class GameStateService {
       neguri: {},
       fields: [],
       lastWinnerId: null,
-      isTanzenRound: false,
       openDeclared: false,
       openDeclarerId: null,
     };
@@ -193,7 +192,7 @@ export class GameStateService {
     this.state.players.forEach((player) => {
       player.hand.sort((a, b) => this.cardService.compareCards(a, b));
     });
-    
+
     this.state.players.forEach((player) => {
       this.chomboService.checkForBrokenHand(player);
     });
@@ -299,7 +298,6 @@ export class GameStateService {
       neguri: {},
       fields: [],
       lastWinnerId: null,
-      isTanzenRound: false,
       openDeclared: false,
       openDeclarerId: null,
     };

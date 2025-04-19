@@ -61,10 +61,9 @@ export class PlayService {
     card: string,
     field: Field,
     currentTrump: TrumpType | null,
-    isTanzenRound: boolean,
   ): { isValid: boolean; message?: string } {
     // In Tanzen round, if player has Joker, they must play it
-    if (isTanzenRound && playerHand.includes('JOKER')) {
+    if (playerHand.length === 2 && playerHand.includes('JOKER')) {
       if (card !== 'JOKER') {
         return {
           isValid: false,
