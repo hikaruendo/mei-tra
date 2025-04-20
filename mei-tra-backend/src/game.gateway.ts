@@ -598,7 +598,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
     )?.team as Team;
 
-    if (!declaringTeam) {
+    if (declaringTeam == null) {
       console.error(
         'No declaring team found for player:',
         state.blowState.currentHighestDeclaration.playerId,
