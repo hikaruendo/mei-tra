@@ -12,12 +12,14 @@ import { ScoreService } from './services/score.service';
 import { ChomboService } from './services/chombo.service';
 import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
+import { RoomService } from './services/room.service';
 import { TrumpType, ChomboViolation, Field, Team } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
+  private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
 
   constructor(
     private readonly gameState: GameStateService,
@@ -26,7 +28,58 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chomboService: ChomboService,
     private readonly blowService: BlowService,
     private readonly playService: PlayService,
+    private readonly roomService: RoomService,
   ) {}
+
+  @SubscribeMessage('create-room')
+  async handleCreateRoom(client: Socket, data: { name: string }) {
+    const auth = client.handshake.auth || {};
+    const name = typeof auth.name === 'string' ? auth.name : undefined;
+    if (!name) {
+      client.emit('error-message', 'Name is required');
+      return;
+    }
+
+    const room = await this.roomService.createNewRoom(data.name, name);
+    this.playerRooms.set(client.id, room.id);
+    void client.join(room.id);
+    client.emit('room-created', room);
+  }
+
+  @SubscribeMessage('join-room')
+  async handleJoinRoom(client: Socket, roomId: string) {
+    const auth = client.handshake.auth || {};
+    const name = typeof auth.name === 'string' ? auth.name : undefined;
+    if (!name) {
+      client.emit('error-message', 'Name is required');
+      return;
+    }
+
+    try {
+      const success = await this.roomService.joinRoom(roomId, name);
+      if (success) {
+        this.playerRooms.set(client.id, roomId);
+        void client.join(roomId);
+        this.server
+          .to(roomId)
+          .emit('player-joined', { playerId: name, roomId });
+      } else {
+        client.emit('error-message', 'Failed to join room');
+      }
+    } catch (error) {
+      console.error('Failed to join room:', error);
+    }
+  }
+
+  @SubscribeMessage('list-rooms')
+  async handleListRooms(client: Socket) {
+    try {
+      const rooms = await this.roomService.listRooms();
+      client.emit('rooms-list', rooms);
+    } catch (error) {
+      console.error('Failed to list rooms:', error);
+    }
+  }
 
   handleConnection(client: Socket) {
     const auth = client.handshake.auth || {};
@@ -97,6 +150,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
+    const roomId = this.playerRooms.get(client.id);
+    if (roomId) {
+      this.playerRooms.delete(client.id);
+      void client.leave(roomId);
+      this.server.to(roomId).emit('player-left', { playerId: client.id });
+    }
     // プレイヤーの削除は15秒後に実行される
     const state = this.gameState.getState();
     const player = state.players.find((p) => p.id === client.id);
