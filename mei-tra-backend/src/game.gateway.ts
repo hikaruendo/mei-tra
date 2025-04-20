@@ -323,6 +323,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (state.agari) {
       winningPlayer.hand.push(state.agari);
     }
+    winningPlayer.hand.sort((a, b) => this.cardService.compareCards(a, b));
     state.gamePhase = 'play';
     state.blowState.currentTrump = winner.trumpType;
     const winnerIndex = state.players.findIndex(
