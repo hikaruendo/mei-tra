@@ -47,22 +47,32 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('join-room')
-  async handleJoinRoom(client: Socket, roomId: string) {
-    const auth = client.handshake.auth || {};
-    const name = typeof auth.name === 'string' ? auth.name : undefined;
-    if (!name) {
-      client.emit('error-message', 'Name is required');
-      return;
-    }
-
+  async handleJoinRoom(
+    client: Socket,
+    data: { roomId: string; playerId: string },
+  ) {
     try {
-      const success = await this.roomService.joinRoom(roomId, name);
+      // 既存のルームから退出
+      const currentRoom = this.playerRooms.get(client.id);
+      if (currentRoom) {
+        void client.leave(currentRoom);
+        this.server.to(currentRoom).emit('player-left', {
+          playerId: data.playerId,
+          roomId: currentRoom,
+        });
+      }
+
+      const success = await this.roomService.joinRoom(
+        data.roomId,
+        data.playerId,
+      );
       if (success) {
-        this.playerRooms.set(client.id, roomId);
-        void client.join(roomId);
-        this.server
-          .to(roomId)
-          .emit('player-joined', { playerId: name, roomId });
+        this.playerRooms.set(client.id, data.roomId);
+        void client.join(data.roomId);
+        this.server.to(data.roomId).emit('player-joined', {
+          playerId: data.playerId,
+          roomId: data.roomId,
+        });
       } else {
         client.emit('error-message', 'Failed to join room');
       }
