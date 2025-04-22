@@ -83,9 +83,11 @@ export const useRoom = () => {
 
     // プレイヤー参加
     socket.on('player-joined', ({ playerId, roomId, isHost }: { playerId: string; roomId: string; isHost: boolean }) => {
-
+      console.log('player-joined event received:', { playerId, roomId, isHost });
+      
       // Update available rooms
       setAvailableRooms(prevRooms => {
+        console.log('Updating available rooms. Current rooms:', prevRooms);
         const updatedRooms = prevRooms.map(room => {
           if (room.id !== roomId) return room;
 
@@ -95,7 +97,7 @@ export const useRoom = () => {
               // 既存プレイヤーはplayerIdで検索
               const gamePlayer = players.find(gp => gp.playerId === p);
               return {
-                id: p, // playerIdをidとして使用
+                id: p,
                 playerId: p,
                 name: gamePlayer?.name || p,
                 hand: [],
@@ -112,7 +114,7 @@ export const useRoom = () => {
           const gamePlayer = players.find(p => p.playerId === playerId);
           // Add new player
           const newPlayer: RoomPlayer = {
-            id: playerId, // playerIdをidとして使用
+            id: playerId,
             playerId,
             name: gamePlayer?.name || playerId,
             hand: [],
@@ -122,97 +124,38 @@ export const useRoom = () => {
             joinedAt: new Date()
           };
 
-          return {
+          const updatedRoom = {
             ...room,
             players: [...existingPlayers, newPlayer]
           };
+
+          console.log('Updated room:', updatedRoom);
+
+          // 現在のルームを更新
+          if (currentRoom?.id === roomId) {
+            console.log('Updating current room:', updatedRoom);
+            setCurrentRoom(updatedRoom);
+          } else if (!currentRoom) {
+            // 新しいルームに参加する場合は、更新されたルーム情報を直接使用
+            console.log('Setting new current room:', updatedRoom);
+            setCurrentRoom(updatedRoom);
+          }
+
+          // 4人揃ったらゲーム開始
+          if (updatedRoom.players.length === 4) {
+            console.log('4 players joined, starting game for room:', updatedRoom.id);
+            // 全員の準備状態をtrueに設定
+            updatedRoom.players.forEach(player => {
+              player.isReady = true;
+            });
+            // ゲーム開始
+            socket.emit('start-game', { roomId: updatedRoom.id });
+          }
+
+          return updatedRoom;
         });
+
         return updatedRooms;
-      });
-
-      setCurrentRoom(prev => {
-        // If we don't have a current room but we're joining one
-        if (!prev) {
-          console.log('prev1', prev);
-          // Find the room in available rooms
-          const room = availableRooms.find(r => r.id === roomId);
-          if (!room) return null;
-
-          // Convert existing players to RoomPlayer objects
-          const existingPlayers = room.players.map((p, index) => {
-            if (typeof p === 'string') {
-              // 既存プレイヤーはplayerIdで検索
-              const gamePlayer = players.find(gp => gp.playerId === p);
-              return {
-                id: p, // playerIdをidとして使用
-                playerId: p,
-                name: gamePlayer?.name || p,
-                hand: [],
-                team: (index % 2) as Team,
-                isReady: false,
-                isHost: room.hostId === p,
-                joinedAt: new Date()
-              } as RoomPlayer;
-            }
-            return p;
-          });
-
-          // 新規プレイヤーはplayerIdで検索
-          const gamePlayer = players.find(p => p.playerId === playerId);
-          // Add new player
-          const newPlayer: RoomPlayer = {
-            id: playerId, // playerIdをidとして使用
-            playerId,
-            name: gamePlayer?.name || playerId,
-            hand: [],
-            team: (existingPlayers.length % 2) as Team,
-            isReady: false,
-            isHost,
-            joinedAt: new Date()
-          };
-
-          const newRoom = {
-            ...room,
-            players: [...existingPlayers, newPlayer]
-          };
-          return newRoom;
-        }
-
-        // If we're already in this room
-        if (prev.id !== roomId) {
-          console.log('prev2', prev);
-          return prev;
-        }
-
-        // 新規プレイヤーはplayerIdで検索
-        const gamePlayer = players.find(p => p.playerId === playerId);
-        const newPlayer: RoomPlayer = {
-          id: playerId, // playerIdをidとして使用
-          playerId,
-          name: gamePlayer?.name || playerId,
-          hand: [],
-          team: (prev.players.length % 2) as Team,
-          isReady: false,
-          isHost,
-          joinedAt: new Date()
-        };
-
-        const updatedRoom = {
-          ...prev,
-          players: [...prev.players, newPlayer]
-        };
-
-        // 4人揃ったらゲーム開始
-        if (updatedRoom.players.length === 4) {
-          // 全員の準備状態をtrueに設定
-          updatedRoom.players.forEach(player => {
-            player.isReady = true;
-          });
-          // ゲーム開始
-          console.log('Emitting start-game event for room:', updatedRoom.id);
-          socket.emit('start-game', { roomId: updatedRoom.id });
-        }
-        return updatedRoom;
       });
     });
 
