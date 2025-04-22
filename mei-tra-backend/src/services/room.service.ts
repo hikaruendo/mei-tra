@@ -62,6 +62,7 @@ export class RoomService implements RoomRepository {
       return false; // or return true if rejoining is allowed
     }
 
+    // Add player to the room
     room.players.push(playerId);
     room.updatedAt = new Date();
     await this.updateRoom(roomId, room);

@@ -40,7 +40,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const room = await this.roomService.createNewRoom(data.name, name);
+    // Get playerId from game state
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) {
+      client.emit('error-message', 'Player not found');
+      return;
+    }
+
+    const room = await this.roomService.createNewRoom(
+      data.name,
+      player.playerId,
+    );
     this.playerRooms.set(client.id, room.id);
     void client.join(room.id);
     client.emit('room-created', room);
@@ -69,10 +80,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (success) {
         this.playerRooms.set(client.id, data.roomId);
         void client.join(data.roomId);
+        const room = await this.roomService.getRoom(data.roomId);
+        const isHost = room?.hostId === data.playerId;
         this.server.to(data.roomId).emit('player-joined', {
           playerId: data.playerId,
           roomId: data.roomId,
+          isHost,
         });
+        // Emit updated rooms list to all clients
+        const rooms = await this.roomService.listRooms();
+        this.server.emit('rooms-list', rooms);
       } else {
         client.emit('error-message', 'Failed to join room');
       }
@@ -176,12 +193,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('start-game')
-  handleStartGame(client: Socket) {
+  async handleStartGame(client: Socket, data: { roomId: string }) {
     const state = this.gameState.getState();
     if (state.players.length !== 4) {
       client.emit('error-message', 'Game must have exactly 4 players!');
       return;
     }
+
+    // Get the room and verify it exists
+    const room = await this.roomService.getRoom(data.roomId);
+    if (!room) {
+      client.emit('error-message', 'Room not found');
+      return;
+    }
+
+    // Update room status
+    await this.roomService.updateRoom(data.roomId, {
+      ...room,
+      status: 'playing',
+    });
 
     this.gameState.startGame();
     const updatedState = this.gameState.getState();
@@ -202,13 +232,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       currentBlowIndex: firstBlowIndex,
     };
 
-    this.server.emit('game-started', updatedState.players);
-    this.server.emit('update-phase', {
+    // Emit events to all clients in the room
+    this.server.to(data.roomId).emit('game-started', updatedState.players);
+    this.server.to(data.roomId).emit('update-phase', {
       phase: 'blow',
       scores: updatedState.teamScores,
       winner: null,
     });
-    this.server.emit('update-turn', firstBlowPlayer.playerId);
+    this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
   }
 
   @SubscribeMessage('declare-blow')
