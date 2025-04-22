@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from '../../types/game.types';
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
@@ -48,6 +48,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     currentField,
     currentTrump,
   );
+
+  useEffect(() => {
+    if (player.hasRequiredBroken) {
+      gameActions.revealBrokenHand(player.playerId);
+    }
+  }, [gamePhase, player.hasRequiredBroken, player.playerId, gameActions]);
+
 
   const handleCardClick = (card: string) => {
     if (gamePhase === 'play' && whoseTurn === currentPlayerId) {

@@ -147,4 +147,15 @@ export class ChomboService {
       player.hasBroken = true;
     }
   }
+
+  checkForRequiredBrokenHand(player: Player): void {
+    const hand = player.hand;
+    const jackCount = hand.filter(
+      (card) => card.includes('J') && card !== 'JOKER',
+    ).length;
+
+    if (jackCount == 4) {
+      player.hasRequiredBroken = true;
+    }
+  }
 }
