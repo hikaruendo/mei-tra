@@ -30,8 +30,11 @@ const getStatusClass = (status: RoomStatus) => {
 };
 
 export const RoomList: React.FC = () => {
-  const { availableRooms, createRoom, joinRoom, error, toggleReady, togglePlayerReady } = useRoom();
+  const { availableRooms, createRoom, joinRoom, error, toggleReady, togglePlayerReady, playerReadyStatus, currentRoom } = useRoom();
   const [newRoomName, setNewRoomName] = useState('');
+
+  // 現在のプレイヤーIDを取得（ルームに参加している場合のみ）
+  const currentPlayerId = currentRoom?.players.find(player => player.isReady !== undefined)?.playerId || '';
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +81,17 @@ export const RoomList: React.FC = () => {
                 <p className={`${styles.status} ${getStatusClass(room.status)}`}>
                   ステータス: {getStatusText(room.status)}
                 </p>
+                {/* プレイヤーの準備状態を表示 */}
+                <div className={styles.playerStatus}>
+                  {room.players.map((player) => (
+                    <div key={player.id} className={styles.playerStatusItem}>
+                      <span className={styles.playerName}>{player.name}</span>
+                      <span className={`${styles.readyStatus} ${playerReadyStatus[player.id] ? styles.ready : ''}`}>
+                        {playerReadyStatus[player.id] ? '準備完了' : '準備中'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
               {room.players.length < room.settings.maxPlayers ? (
                 <button
@@ -92,9 +106,9 @@ export const RoomList: React.FC = () => {
                   onClick={() => {
                     togglePlayerReady();
                   }}
-                  className={styles.readyButton}
+                  className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
                 >
-                  準備する
+                  {playerReadyStatus[currentPlayerId] ? '準備完了' : '準備する'}
                 </button>
               )}
             </div>

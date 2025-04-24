@@ -253,6 +253,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       // ゲーム開始イベントをルームのメンバーにのみ送信
+      this.server.to(data.roomId).emit('room-playing', updatedState.players);
       this.server.to(data.roomId).emit('game-started', updatedState.players);
 
       this.server.to(data.roomId).emit('update-phase', {
@@ -262,9 +263,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
-
-      // 成功レスポンスを返す
-      client.emit('start-game-response', { success: true });
     } catch (error) {
       client.emit('error-message', 'Failed to start game: ' + error);
     }

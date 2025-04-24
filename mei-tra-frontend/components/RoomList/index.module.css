@@ -155,4 +155,43 @@
 
 .readyButton:hover {
   background-color: #45a049;
+}
+
+.playerStatus {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.playerStatusItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.playerName {
+  color: #333;
+}
+
+.readyStatus {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.readyStatus.ready {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.readyButton.ready {
+  background-color: #2e7d32;
+}
+
+.readyButton.ready:hover {
+  background-color: #1b5e20;
 } 
