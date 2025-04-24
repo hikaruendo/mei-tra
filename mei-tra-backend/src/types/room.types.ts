@@ -1,9 +1,24 @@
+export enum RoomStatus {
+  WAITING = 'waiting',
+  READY = 'ready',
+  PLAYING = 'playing',
+  FINISHED = 'finished',
+  ABANDONED = 'abandoned',
+}
+
+export interface RoomPlayer {
+  id: string;
+  isReady: boolean;
+  isHost: boolean;
+  joinedAt: Date;
+}
+
 export interface Room {
   id: string;
   name: string;
   hostId: string;
-  status: 'waiting' | 'playing' | 'finished';
-  players: string[];
+  status: RoomStatus;
+  players: RoomPlayer[];
   settings: RoomSettings;
   createdAt: Date;
   updatedAt: Date;
@@ -13,6 +28,9 @@ export interface RoomSettings {
   maxPlayers: number;
   isPrivate: boolean;
   password: string | null;
+  teamAssignmentMethod: 'random' | 'host-choice';
+  pointsToWin: number;
+  allowSpectators: boolean;
 }
 
 export interface RoomRepository {

@@ -15,6 +15,7 @@ import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
 import { TrumpType, ChomboViolation, Field, Team } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
+import { RoomStatus } from './types/room.types';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -194,52 +195,121 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('start-game')
   async handleStartGame(client: Socket, data: { roomId: string }) {
-    const state = this.gameState.getState();
-    if (state.players.length !== 4) {
-      client.emit('error-message', 'Game must have exactly 4 players!');
-      return;
-    }
-
-    // Get the room and verify it exists
     const room = await this.roomService.getRoom(data.roomId);
     if (!room) {
       client.emit('error-message', 'Room not found');
       return;
     }
 
-    // Update room status
-    await this.roomService.updateRoom(data.roomId, {
-      ...room,
-      status: 'playing',
-    });
-
-    this.gameState.startGame();
-    const updatedState = this.gameState.getState();
-    if (!updatedState) {
-      client.emit('error-message', 'Failed to start game: Invalid game state');
+    // Get playerId from game state
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) {
+      client.emit('error-message', 'Player not found');
       return;
     }
 
-    // Set the first player as the starting player for the first blow phase
-    const firstBlowIndex = 0; // First player starts
-    const firstBlowPlayer = updatedState.players[firstBlowIndex];
+    // ホストチェック
+    if (room.hostId !== player.playerId) {
+      client.emit('error-message', 'Only the host can start the game');
+      return;
+    }
 
-    // Update both currentPlayerIndex and blowState
-    updatedState.currentPlayerIndex = firstBlowIndex;
-    updatedState.gamePhase = 'blow'; // Set game phase to blow
-    updatedState.blowState = {
-      ...updatedState.blowState,
-      currentBlowIndex: firstBlowIndex,
-    };
+    // ゲーム開始条件チェック
+    const { canStart, reason } = await this.roomService.canStartGame(
+      data.roomId,
+    );
+    if (!canStart) {
+      client.emit('error-message', reason || 'Cannot start game');
+      return;
+    }
 
-    // Emit events to all clients in the room
-    this.server.to(data.roomId).emit('game-started', updatedState.players);
-    this.server.to(data.roomId).emit('update-phase', {
-      phase: 'blow',
-      scores: updatedState.teamScores,
-      winner: null,
+    try {
+      // ルームのステータスを更新
+      await this.roomService.updateRoomStatus(data.roomId, RoomStatus.PLAYING);
+
+      // ゲーム開始処理
+      this.gameState.startGame();
+      const updatedState = this.gameState.getState();
+
+      if (!updatedState) {
+        client.emit(
+          'error-message',
+          'Failed to start game: Invalid game state',
+        );
+        return;
+      }
+
+      // Set the first player as the starting player for the first blow phase
+      const firstBlowIndex = 0; // First player starts
+      const firstBlowPlayer = updatedState.players[firstBlowIndex];
+
+      // Update both currentPlayerIndex and blowState
+      updatedState.currentPlayerIndex = firstBlowIndex;
+      updatedState.gamePhase = 'blow';
+      updatedState.blowState = {
+        ...updatedState.blowState,
+        currentBlowIndex: firstBlowIndex,
+      };
+
+      // ゲーム開始イベントをルームのメンバーにのみ送信
+      this.server.to(data.roomId).emit('game-started', updatedState.players);
+
+      this.server.to(data.roomId).emit('update-phase', {
+        phase: 'blow',
+        scores: updatedState.teamScores,
+        winner: null,
+      });
+
+      this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
+
+      // 成功レスポンスを返す
+      client.emit('start-game-response', { success: true });
+    } catch (error) {
+      client.emit('error-message', 'Failed to start game: ' + error);
+    }
+  }
+
+  @SubscribeMessage('toggle-ready')
+  async handleToggleReady(client: Socket, data: { roomId: string }) {
+    const room = await this.roomService.getRoom(data.roomId);
+    if (!room) {
+      client.emit('error-message', 'Room not found');
+      return;
+    }
+
+    // プレイヤーIDを取得
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (!player) {
+      client.emit('error-message', 'Player not found');
+      return;
+    }
+
+    // 準備状態を切り替え
+    const success = await this.roomService.togglePlayerReady(
+      data.roomId,
+      player.playerId,
+    );
+    if (!success) {
+      client.emit('error-message', 'Failed to toggle ready state');
+      return;
+    }
+
+    // 更新されたルーム情報を取得
+    const updatedRoom = await this.roomService.getRoom(data.roomId);
+    if (!updatedRoom) {
+      client.emit('error-message', 'Failed to get updated room info');
+      return;
+    }
+
+    // ルームの全プレイヤーに準備状態の更新を通知
+    this.server.to(data.roomId).emit('player-ready-updated', {
+      playerId: player.playerId,
+      isReady: updatedRoom.players.find((p) => p.id === player.playerId)
+        ?.isReady,
+      roomStatus: updatedRoom.status,
     });
-    this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
   }
 
   @SubscribeMessage('declare-blow')
@@ -687,8 +757,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private handleGameOver() {
     const state = this.gameState.getState();
 
-    console.log('Game over - Current state:', state);
-
     if (!state.blowState.currentHighestDeclaration) {
       console.error('No highest declaration found');
       return;
@@ -980,5 +1048,43 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit turn update
     this.server.emit('update-turn', firstBlowPlayer.playerId);
     return;
+  }
+
+  @SubscribeMessage('toggle-player-ready')
+  async handleTogglePlayerReady(
+    client: Socket,
+    data: { roomId: string; playerId: string },
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        return { success: false, error: 'Room not found' };
+      }
+
+      const player = room.players.find((p) => p.id === data.playerId);
+      if (!player) {
+        return { success: false, error: 'Player not found in room' };
+      }
+
+      // プレイヤーの準備状態を切り替え
+      player.isReady = !player.isReady;
+      room.updatedAt = new Date();
+
+      // 全員が準備完了しているか確認
+      const allReady = room.players.every((p) => p.isReady);
+      if (allReady && room.players.length === room.settings.maxPlayers) {
+        room.status = RoomStatus.READY;
+      } else {
+        room.status = RoomStatus.WAITING;
+      }
+
+      await this.roomService.updateRoom(data.roomId, room);
+      this.server.to(data.roomId).emit('room-updated', room);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to toggle player ready:', error);
+      return { success: false, error: 'Failed to toggle player ready' };
+    }
   }
 }

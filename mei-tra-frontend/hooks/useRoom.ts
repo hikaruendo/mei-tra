@@ -3,6 +3,7 @@ import { getSocket } from '../app/socket';
 import { Room, RoomPlayer } from '../types/room.types';
 import { useGame } from './useGame';
 import { Team } from '../types/game.types';
+import { RoomStatus } from '../types/room.types';
 
 export const useRoom = () => {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -65,15 +66,67 @@ export const useRoom = () => {
   }, [currentRoom, socket]);
 
   // 準備状態の切り替え
-  const toggleReady = useCallback(() => {
+  const togglePlayerReady = useCallback(() => {
+    if (!socket.connected) {
+      console.error('Socket is not connected');
+      setError('Socket is not connected');
+      return;
+    }
+
     if (currentRoom) {
-      socket.emit('toggle-ready', currentRoom.id, (response: { success: boolean; error?: string }) => {
+      const socketId = socket.id;
+
+      const player = players.find((p: { id: string }) => p.id === socketId);
+      if (!player) {
+        setError('Player not found');
+        return;
+      }
+      if (!player.playerId) {
+        setError('Player ID is not set');
+        return;
+      }
+      socket.emit('toggle-player-ready', { 
+        roomId: currentRoom.id,
+        playerId: player.playerId 
+      }, (response: { success: boolean; error?: string }) => {
         if (!response.success) {
           setError(response.error || 'Failed to toggle ready state');
         }
       });
     }
-  }, [currentRoom, socket]);
+  }, [currentRoom, socket, players]);
+
+  // ゲーム開始
+  const toggleReady = useCallback(() => {
+    if (currentRoom) {
+      const socketId = socket.id;
+      const player = players.find((p: { id: string }) => p.id === socketId);
+      if (!player) {
+        setError('Player not found');
+        return;
+      }
+
+      // ホストのみがゲームを開始できる
+      if (currentRoom.hostId !== player.playerId) {
+        setError('Only the host can start the game');
+        return;
+      }
+      
+      // 全員が準備完了しているか確認
+      const allReady = currentRoom.players.every(player => player.isReady);
+      if (!allReady) {
+        setError('All players must be ready to start the game');
+        return;
+      }
+
+      // ゲーム開始
+      socket.emit('start-game', { roomId: currentRoom.id }, (response: { success: boolean; error?: string }) => {
+        if (!response.success) {
+          setError(response.error || 'Failed to start game');
+        }
+      });
+    }
+  }, [currentRoom, socket, players]);
 
   useEffect(() => {
     // ルーム一覧の更新
@@ -81,13 +134,19 @@ export const useRoom = () => {
       setAvailableRooms(rooms);
     });
 
+    // ルーム更新
+    socket.on('room-updated', (room: Room) => {
+      setAvailableRooms(prevRooms => prevRooms.map(r => r.id === room.id ? room : r));
+      if (currentRoom?.id === room.id) {
+        setCurrentRoom(room);
+      }
+    });
+
     // プレイヤー参加
     socket.on('player-joined', ({ playerId, roomId, isHost }: { playerId: string; roomId: string; isHost: boolean }) => {
-      console.log('player-joined event received:', { playerId, roomId, isHost });
       
       // Update available rooms
       setAvailableRooms(prevRooms => {
-        console.log('Updating available rooms. Current rooms:', prevRooms);
         const updatedRooms = prevRooms.map(room => {
           if (room.id !== roomId) return room;
 
@@ -129,27 +188,25 @@ export const useRoom = () => {
             players: [...existingPlayers, newPlayer]
           };
 
-          console.log('Updated room:', updatedRoom);
-
           // 現在のルームを更新
           if (currentRoom?.id === roomId) {
-            console.log('Updating current room:', updatedRoom);
             setCurrentRoom(updatedRoom);
           } else if (!currentRoom) {
             // 新しいルームに参加する場合は、更新されたルーム情報を直接使用
-            console.log('Setting new current room:', updatedRoom);
             setCurrentRoom(updatedRoom);
           }
 
-          // 4人揃ったらゲーム開始
+          // 4人揃ったら準備完了状態に
           if (updatedRoom.players.length === 4) {
-            console.log('4 players joined, starting game for room:', updatedRoom.id);
             // 全員の準備状態をtrueに設定
             updatedRoom.players.forEach(player => {
               player.isReady = true;
             });
-            // ゲーム開始
-            socket.emit('start-game', { roomId: updatedRoom.id });
+            // ルームのステータスをREADYに変更
+            socket.emit('update-room-status', { 
+              roomId: updatedRoom.id, 
+              status: 'ready' 
+            });
           }
 
           return updatedRoom;
@@ -184,9 +241,32 @@ export const useRoom = () => {
       }
     });
 
+    // ゲーム開始
+    socket.on('game-started', (players) => {
+      if (currentRoom) {
+        const updatedRoom = {
+          ...currentRoom,
+          status: RoomStatus.PLAYING,
+          players: players
+        };
+        setCurrentRoom(updatedRoom);
+        setAvailableRooms(prevRooms => 
+          prevRooms.map(room => room.id === currentRoom.id ? updatedRoom : room)
+        );
+      }
+    });
+
     // エラーメッセージ
     socket.on('error-message', (message: string) => {
+      console.error('Received error message:', message);
       setError(message);
+    });
+
+    // 成功レスポンス
+    socket.on('start-game-response', (response: { success: boolean }) => {
+      if (response.success) {
+        setError(null);
+      }
     });
 
     return () => {
@@ -194,6 +274,10 @@ export const useRoom = () => {
       socket.off('player-joined');
       socket.off('player-left');
       socket.off('error-message');
+      socket.off('game-started');
+      socket.off('start-game-response');
+      socket.off('update-phase');
+      socket.off('update-turn');
     };
   }, [currentRoom, socket, players]);
 
@@ -205,6 +289,7 @@ export const useRoom = () => {
     joinRoom,
     leaveRoom,
     toggleReady,
+    togglePlayerReady,
     fetchRooms
   };
 }; 
