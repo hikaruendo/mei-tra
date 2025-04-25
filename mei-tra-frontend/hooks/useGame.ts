@@ -36,6 +36,8 @@ export const useGame = () => {
   const [reconnectToken, setReconnectToken] = useState<string | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
@@ -89,12 +91,28 @@ export const useGame = () => {
         setNegriPlayerId(negriPlayerId);
         setGameStarted(true);
       },
-      'game-started': (players: Player[]) => {
-        setPlayers(players);
-        const id = getSocket().id;
-        const index = players.findIndex(p => p.id === id);
-        setCurrentPlayerId(players[index].playerId);
-        setGameStarted(true);
+      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean }) => {
+        if (data.playerId === currentPlayerId) {
+          setCurrentRoomId(data.roomId);
+        }
+        setPlayers((prev) => {
+          const existingPlayer = prev.find(p => p.playerId === data.playerId);
+          if (existingPlayer) {
+            return prev;
+          }
+          
+          const socketId = getSocket().id;
+          if (!socketId) return prev;
+          
+          return [...prev, {
+            id: socketId,
+            playerId: data.playerId,
+            name: data.playerId,
+            team: 0,
+            hand: [],
+            isHost: data.isHost,
+          }];
+        });
       },
       'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
         setGamePhase(phase);
@@ -276,7 +294,7 @@ export const useGame = () => {
       }
     },
     startGame: () => {
-      getSocket().emit('start-game');
+      // getSocket().emit('start-game');
     },
     declareBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
@@ -288,8 +306,11 @@ export const useGame = () => {
         return;
       }
       getSocket().emit('declare-blow', {
-        trumpType: selectedTrump,
-        numberOfPairs,
+        roomId: currentRoomId,
+        declaration: {
+          trumpType: selectedTrump,
+          numberOfPairs,
+        },
       });
     },
     passBlow: () => {
@@ -297,27 +318,41 @@ export const useGame = () => {
         alert("It's not your turn to pass!2");
         return;
       }
-      getSocket().emit('pass-blow');
+      getSocket().emit('pass-blow', {
+        roomId: currentRoomId,
+      });
     },
     selectNegri: (card: string) => {
-      getSocket().emit('select-negri', card);
+      getSocket().emit('select-negri', {
+        roomId: currentRoomId,
+        card,
+      });
     },
     playCard: (card: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn!");
         return;
       }
-      getSocket().emit('play-card', card);
+      getSocket().emit('play-card', {
+        roomId: currentRoomId,
+        card,
+      });
     },
     selectBaseSuit: (suit: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn to select base suit!");
         return;
       }
-      getSocket().emit('select-base-suit', suit);
+      getSocket().emit('select-base-suit', {
+        roomId: currentRoomId,
+        suit,
+      });
     },
     revealBrokenHand: (playerId: string) => {
-      getSocket().emit('reveal-broken-hand', playerId);
+      getSocket().emit('reveal-broken-hand', {
+        roomId: currentRoomId,
+        playerId,
+      });
     }
   };
 
@@ -348,6 +383,8 @@ export const useGame = () => {
     teamScores,
     currentPlayerId,
     notification,
-    setNotification
+    setNotification,
+    currentRoomId,
+    setCurrentRoomId
   };
 }; 

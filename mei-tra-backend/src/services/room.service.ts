@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { Room, RoomRepository } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
+import { GameStateService } from './game-state.service';
+import { GameStateFactory } from './game-state.factory';
+import { Player } from 'src/types/game.types';
 
 @Injectable()
 export class RoomService implements RoomRepository {
   private rooms: Map<string, Room> = new Map();
+  private roomGameStates: Map<string, GameStateService> = new Map();
+
+  constructor(private readonly gameStateFactory: GameStateFactory) {}
 
   createRoom(room: Room): Promise<Room> {
     this.rooms.set(room.id, room);
@@ -26,6 +32,7 @@ export class RoomService implements RoomRepository {
 
   deleteRoom(roomId: string): Promise<void> {
     this.rooms.delete(roomId);
+    this.roomGameStates.delete(roomId);
     return Promise.resolve();
   }
 
@@ -33,55 +40,61 @@ export class RoomService implements RoomRepository {
     return Promise.resolve(Array.from(this.rooms.values()));
   }
 
-  async createNewRoom(name: string, hostId: string): Promise<Room> {
+  createNewRoom(name: string, hostId: string): Promise<Room> {
     const room: Room = {
       id: this.generateRoomId(),
       name,
       hostId,
       status: RoomStatus.WAITING,
-      players: [
-        {
-          id: hostId,
-          isReady: false,
-          isHost: true,
-          joinedAt: new Date(),
-        },
-      ],
+      players: [],
       settings: {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
         teamAssignmentMethod: 'random',
-        pointsToWin: 100,
-        allowSpectators: false,
+        pointsToWin: 10,
+        allowSpectators: true,
       },
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+    this.rooms.set(room.id, room);
 
-    return this.createRoom(room);
+    // ルームごとに新しいゲーム状態を作成
+    const gameState = this.gameStateFactory.createGameState();
+    this.roomGameStates.set(room.id, gameState);
+
+    return Promise.resolve(room);
   }
 
-  async joinRoom(roomId: string, playerId: string): Promise<boolean> {
+  async joinRoom(roomId: string, player: Player): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room || room.players.length >= room.settings.maxPlayers) {
       return false;
     }
 
     // Check if player already exists in the room
-    if (room.players.some((player) => player.id === playerId)) {
-      return false; // or return true if rejoining is allowed
+    if (room.players.some((p) => p.id === player.playerId)) {
+      return true;
     }
 
     // Add player to the room
     room.players.push({
-      id: playerId,
+      ...player,
       isReady: false,
       isHost: false,
       joinedAt: new Date(),
     });
     room.updatedAt = new Date();
     await this.updateRoom(roomId, room);
+
+    const gameState = this.roomGameStates.get(roomId);
+    if (gameState) {
+      const state = gameState.getState();
+      state.players.push({
+        ...player,
+      });
+    }
     return true;
   }
 
@@ -177,5 +190,44 @@ export class RoomService implements RoomRepository {
     }
 
     return { canStart: true };
+  }
+
+  getRoomGameState(roomId: string): Promise<GameStateService> {
+    const gameState = this.roomGameStates.get(roomId);
+    if (!gameState) {
+      throw new Error('Game state not found for room');
+    }
+    return Promise.resolve(gameState);
+  }
+
+  async handlePlayerReconnection(
+    roomId: string,
+    playerId: string,
+    socketId: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return { success: false, error: 'Room not found' };
+    }
+
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) {
+      return { success: false, error: 'Player not found in room' };
+    }
+
+    // Update player's socket ID
+    player.id = socketId;
+
+    // Update room
+    await this.updateRoom(roomId, room);
+
+    // Get room's game state
+    const roomGameState = await this.getRoomGameState(roomId);
+    if (roomGameState) {
+      // Update player's socket ID in game state
+      roomGameState.updatePlayerSocketId(playerId, socketId);
+    }
+
+    return { success: true };
   }
 }
