@@ -114,6 +114,13 @@ export const useGame = () => {
           }];
         });
       },
+      'game-started': (players: Player[]) => {
+        setPlayers(players);
+        const id = getSocket().id;
+        const index = players.findIndex(p => p.id === id);
+        setCurrentPlayerId(players[index].playerId);
+        setGameStarted(true);
+      },
       'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
         setGamePhase(phase);
         setTeamScores(scores);
