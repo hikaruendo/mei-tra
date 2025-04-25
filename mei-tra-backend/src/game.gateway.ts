@@ -259,9 +259,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.roomService.updateRoomStatus(data.roomId, RoomStatus.PLAYING);
 
       // ゲーム開始処理
-      const roomGameState = await this.roomService.getRoomGameState(
-        data.roomId,
-      );
       roomGameState.startGame();
       const updatedState = roomGameState.getState();
 
@@ -287,7 +284,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // ゲーム開始イベントをルームのメンバーにのみ送信
       this.server.to(data.roomId).emit('room-playing', updatedState.players);
-      this.server.to(data.roomId).emit('game-started', updatedState.players);
+      this.server
+        .to(data.roomId)
+        .emit('game-started', data.roomId, updatedState.players);
 
       this.server.to(data.roomId).emit('update-phase', {
         phase: 'blow',

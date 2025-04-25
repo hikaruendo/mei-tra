@@ -114,11 +114,12 @@ export const useGame = () => {
           }];
         });
       },
-      'game-started': (players: Player[]) => {
+      'game-started': (roomId: string, players: Player[]) => {
         setPlayers(players);
         const id = getSocket().id;
         const index = players.findIndex(p => p.id === id);
         setCurrentPlayerId(players[index].playerId);
+        setCurrentRoomId(roomId);
         setGameStarted(true);
       },
       'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
