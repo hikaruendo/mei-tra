@@ -30,7 +30,7 @@ const getStatusClass = (status: RoomStatus) => {
 };
 
 export const RoomList: React.FC = () => {
-  const { availableRooms, createRoom, joinRoom, error, toggleReady, togglePlayerReady, playerReadyStatus, currentRoom } = useRoom();
+  const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom } = useRoom();
   const [newRoomName, setNewRoomName] = useState('');
 
   // 現在のプレイヤーIDを取得（ルームに参加している場合のみ）
@@ -130,7 +130,7 @@ export const RoomList: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => toggleReady()}
+                onClick={() => startGameRoom()}
                 className={styles.startButton}
               >
                 ゲーム開始
