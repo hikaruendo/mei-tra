@@ -7,6 +7,7 @@ import { ChomboService } from './services/chombo.service';
 import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
+import { GameStateFactory } from './services/game-state.factory';
 
 @Module({
   imports: [],
@@ -19,6 +20,7 @@ import { RoomService } from './services/room.service';
     BlowService,
     PlayService,
     RoomService,
+    GameStateFactory,
   ],
 })
 export class GameModule {}
