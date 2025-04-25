@@ -79,7 +79,6 @@ export class GameStateService {
 
   addPlayer(socketId: string, name: string, reconnectToken?: string): boolean {
     const state = this.getState();
-    if (state.players.length >= 4) return false;
 
     // 新しいプレイヤーを追加
     const playerId = reconnectToken || this.generateReconnectToken(); // 永続的なIDとして使用
