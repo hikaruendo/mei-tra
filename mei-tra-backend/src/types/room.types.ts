@@ -1,3 +1,5 @@
+import { Player } from './game.types';
+
 export enum RoomStatus {
   WAITING = 'waiting',
   READY = 'ready',
@@ -6,8 +8,7 @@ export enum RoomStatus {
   ABANDONED = 'abandoned',
 }
 
-export interface RoomPlayer {
-  id: string;
+export interface RoomPlayer extends Player {
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;
