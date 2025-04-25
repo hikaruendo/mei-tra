@@ -496,6 +496,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (state.agari) {
       winningPlayer.hand.push(state.agari);
     }
+    winningPlayer.hand.sort((a, b) => this.cardService.compareCards(a, b));
     state.gamePhase = 'play';
     state.blowState.currentTrump = winner.trumpType;
     const winnerIndex = state.players.findIndex(
@@ -782,7 +783,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
     )?.team as Team;
 
-    if (!declaringTeam) {
+    if (declaringTeam == null) {
       console.error(
         'No declaring team found for player:',
         state.blowState.currentHighestDeclaration.playerId,
