@@ -87,6 +87,7 @@
   color: white;
   cursor: pointer;
   transition: all 0.3s;
+  border: 1px solid #4A2410;
 }
 
 .button:disabled {

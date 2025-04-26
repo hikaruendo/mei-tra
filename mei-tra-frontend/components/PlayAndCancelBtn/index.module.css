@@ -1,0 +1,38 @@
+.confirmationButtons {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  padding: 8px;
+}
+
+.confirmButton {
+  padding: 8px 16px;
+  background-color: #66BB6A;
+  color: white;
+  border: 2px solid #4A2410;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.confirmButton:hover {
+  background-color: #5CB85C;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  background-color: #D32F2F;
+  color: white;
+  border: 2px solid #4A2410;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.cancelButton:hover {
+  background-color: #B71C1C;
+}
