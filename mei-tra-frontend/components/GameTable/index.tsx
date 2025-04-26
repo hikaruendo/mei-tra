@@ -72,7 +72,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
 
   return (
-    <div className={`${styles.gameLayout} ${gamePhase === 'blow' ? styles.gamePhaseBlow : ''}`}>
+    <>
       <GameInfo
         currentTrump={currentTrump}
         currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
@@ -142,6 +142,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           currentTrump={currentTrump || ''}
         />
       </div>
-    </div>
+    </>
   );
 }; 
