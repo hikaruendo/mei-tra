@@ -1,3 +1,11 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: var(--spacing-md);
+}
+
 .gameJoinForm {
   display: flex;
   flex-direction: column;
@@ -9,7 +17,7 @@
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
   border: 1px solid #4A2410;
   max-width: 400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .input {

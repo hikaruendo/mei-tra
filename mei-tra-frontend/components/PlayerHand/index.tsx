@@ -5,6 +5,7 @@ import { Card } from '../Card';
 import { CompletedFields } from '../CompletedFields';
 import styles from './index.module.css';
 import { useCardValidation } from './hooks/useCardValidation';
+import { PlayAndCancelBtn } from '../PlayAndCancelBtn';
 
 interface PlayerHandProps {
   player: Player;
@@ -42,6 +43,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentTrump,
 }) => {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
 
   const { isValidCardPlay } = useCardValidation(
     player.hand,
@@ -52,7 +54,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const handleCardClick = (card: string) => {
     if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
       if (!negriCard && currentHighestDeclaration?.playerId === player.playerId) {
-        gameActions.selectNegri(card);
+        setSelectedNegriCard(card);
       } else {
         setSelectedCard(card);
       }
@@ -72,7 +74,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const isRed = suit === '♥' || suit === '♦';
             const isNegri = card === negriCard;
             const isJoker = card === 'JOKER';
-            const isSelected = card === selectedCard;
+            const isSelected = card === selectedCard || card === selectedNegriCard;
             
             const validationResult = isValidCardPlay(card);
             const isPlayable = isCurrentPlayer && validationResult.isValid;
@@ -101,23 +103,24 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             );
           })}
           {selectedCard && (
-            <div className={styles.confirmationButtons}>
-              <button 
-                className={styles.cancelButton}
-                onClick={() => setSelectedCard(null)}
-              >
-                Cancel
-              </button>
-              <button 
-                className={styles.confirmButton}
-                onClick={() => {
-                  gameActions.playCard(selectedCard);
-                  setSelectedCard(null);
-                }}
-              >
-                Play
-              </button>
-            </div>
+            <PlayAndCancelBtn
+              setSelectedCard={setSelectedCard}
+              onClick={() => {
+                gameActions.playCard(selectedCard);
+                setSelectedCard(null);
+              }}
+              buttonText="Play"
+            />
+          )}
+          {selectedNegriCard && (
+            <PlayAndCancelBtn
+              setSelectedCard={setSelectedNegriCard}
+              onClick={() => {
+                gameActions.selectNegri(selectedNegriCard);
+                setSelectedNegriCard(null);
+              }}
+              buttonText="Negri"
+            />
           )}
         </div>
       );
