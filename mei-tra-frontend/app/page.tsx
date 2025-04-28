@@ -1,10 +1,9 @@
 'use client';
 
-import { GameJoinForm } from '../components/GameJoinForm';
 import { GameTable } from '../components/GameTable';
 import { Notification } from '../components/Notification';
-import { RoomList } from '../components/RoomList';
 import { useGame } from '../hooks/useGame';
+import GameJoinGroup from '../components/organisms/GameJoinGroup';
 
 export default function Home() {
   const gameState = useGame();
@@ -50,16 +49,11 @@ export default function Home() {
           />
         )}
         {!gameStarted ? (
-          <>
-            <RoomList />
-            <GameJoinForm
-              name={name}
-              onNameChange={setName}
-              onJoinGame={gameActions.joinGame}
-              onStartGame={gameActions.startGame}
-              playerCount={players.length}
-            />
-          </>
+          <GameJoinGroup
+            name={name}
+            onNameChange={setName}
+            onJoinGame={gameActions.joinGame}
+          />
         ) : (
           <>
             <GameTable

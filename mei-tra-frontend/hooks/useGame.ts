@@ -301,9 +301,6 @@ export const useGame = () => {
         socket.connect();
       }
     },
-    startGame: () => {
-      // getSocket().emit('start-game');
-    },
     declareBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn to declare!");

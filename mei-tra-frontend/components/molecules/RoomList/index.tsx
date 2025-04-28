@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useRoom } from '../../hooks/useRoom';
-import { RoomStatus } from '../../types/room.types';
+import { useRoom } from '../../../hooks/useRoom';
+import { RoomStatus } from '../../../types/room.types';
 import styles from './index.module.css';
 
 const getStatusText = (status: RoomStatus) => {
@@ -44,11 +44,6 @@ export const RoomList: React.FC = () => {
     }
   };
 
-  // ルームをステータスごとに分類
-  const waitingRooms = availableRooms.filter(room => room.status === RoomStatus.WAITING);
-  const readyRooms = availableRooms.filter(room => room.status === RoomStatus.READY);
-  const playingRooms = availableRooms.filter(room => room.status === RoomStatus.PLAYING);
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -69,11 +64,9 @@ export const RoomList: React.FC = () => {
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {/* 待機中のルーム */}
       <div className={styles.section}>
-        <h3>待機中のルーム</h3>
         <div className={styles.roomList}>
-          {waitingRooms.map((room) => (
+          {availableRooms.map((room) => (
             <div key={room.id} className={styles.roomItem}>
               <div className={styles.roomInfo}>
                 <h3>{room.name}</h3>
@@ -93,7 +86,7 @@ export const RoomList: React.FC = () => {
                   ))}
                 </div>
               </div>
-              {room.players.length < room.settings.maxPlayers ? (
+              {room.players.length < room.settings.maxPlayers && (
                 <button
                   onClick={() => joinRoom(room.id)}
                   className={styles.joinButton}
@@ -101,7 +94,8 @@ export const RoomList: React.FC = () => {
                 >
                   参加
                 </button>
-              ) : (
+              )}
+              {room.status === RoomStatus.WAITING && (
                 <button
                   onClick={() => {
                     togglePlayerReady();
@@ -111,48 +105,14 @@ export const RoomList: React.FC = () => {
                   {playerReadyStatus[currentPlayerId] ? '準備完了' : '準備する'}
                 </button>
               )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 準備完了のルーム */}
-      <div className={styles.section}>
-        <h3>準備完了のルーム</h3>
-        <div className={styles.roomList}>
-          {readyRooms.map((room) => (
-            <div key={room.id} className={styles.roomItem}>
-              <div className={styles.roomInfo}>
-                <h3>{room.name}</h3>
-                <p>プレイヤー: {room.players.length}/{room.settings.maxPlayers}</p>
-                <p className={`${styles.status} ${getStatusClass(room.status)}`}>
-                  ステータス: {getStatusText(room.status)}
-                </p>
-              </div>
-              <button
-                onClick={() => startGameRoom()}
-                className={styles.startButton}
-              >
-                ゲーム開始
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ゲーム中のルーム */}
-      <div className={styles.section}>
-        <h3>ゲーム中のルーム</h3>
-        <div className={styles.roomList}>
-          {playingRooms.map((room) => (
-            <div key={room.id} className={styles.roomItem}>
-              <div className={styles.roomInfo}>
-                <h3>{room.name}</h3>
-                <p>プレイヤー: {room.players.length}/{room.settings.maxPlayers}</p>
-                <p className={`${styles.status} ${getStatusClass(room.status)}`}>
-                  ステータス: {getStatusText(room.status)}
-                </p>
-              </div>
+              {room.status === RoomStatus.READY && (
+                <button
+                  onClick={() => startGameRoom()}
+                  className={styles.startButton}
+                >
+                  ゲーム開始
+                </button>
+              )}
             </div>
           ))}
         </div>

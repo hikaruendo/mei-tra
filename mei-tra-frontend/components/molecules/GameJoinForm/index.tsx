@@ -1,20 +1,18 @@
 'use client';
 
+import React from 'react';
 import styles from './index.module.css';
+
 interface GameJoinFormProps {
   name: string;
   onNameChange: (name: string) => void;
   onJoinGame: () => void;
-  onStartGame: () => void;
-  playerCount: number;
 }
 
 export const GameJoinForm = ({
   name,
   onNameChange,
   onJoinGame,
-  onStartGame,
-  playerCount,
 }: GameJoinFormProps) => {
   return (
     <div className={styles.container}>
@@ -32,16 +30,6 @@ export const GameJoinForm = ({
             className={styles.joinBtn}
           >
             Join Game
-          </button>
-          <button 
-            className={styles.startBtn} 
-            onClick={onStartGame}
-            disabled={playerCount < 4}
-          >
-            Start Game
-            <span className={styles.playerCount}>
-              {playerCount}/4 players
-            </span>
           </button>
         </div>
       </div>
