@@ -159,20 +159,6 @@
   background-color: #45a049;
 }
 
-.playerStatus {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.playerStatusItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-}
-
 .playerName {
   color: #333;
 }

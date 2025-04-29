@@ -121,12 +121,6 @@ export const useRoom = () => {
       return;
     }
   
-    // ホストのみがゲームを開始できる
-    if (currentRoom.hostId !== player.playerId) {
-      setError('Only the host can start the game');
-      return;
-    }
-  
     // 全員が準備完了しているか確認
     const allReady = currentRoom.players.every(player => player.isReady);
     if (!allReady) {

@@ -233,12 +233,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // ホストチェック
-    if (room.hostId !== player.playerId) {
-      client.emit('error-message', 'Only the host can start the game');
-      return;
-    }
-
     // ゲーム開始条件チェック
     const { canStart, reason } = await this.roomService.canStartGame(
       data.roomId,
@@ -1035,6 +1029,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     await this.roomService.updateRoom(data.roomId, room);
+
     this.server.to(data.roomId).emit('room-updated', room);
 
     return { success: true };
