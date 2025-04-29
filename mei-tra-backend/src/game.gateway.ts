@@ -31,34 +31,61 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   @SubscribeMessage('create-room')
-  async handleCreateRoom(client: Socket, data: { name: string }) {
-    const auth = client.handshake.auth || {};
-    const name = typeof auth.name === 'string' ? auth.name : undefined;
-    if (!name) {
-      client.emit('error-message', 'Name is required');
-      return;
-    }
+  async handleCreateRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { name: string },
+  ) {
+    try {
+      const auth = client.handshake.auth || {};
+      const name = typeof auth.name === 'string' ? auth.name : undefined;
+      if (!name) {
+        client.emit('error-message', 'Name is required');
+        return;
+      }
 
-    // Get playerId from game state
-    const users = this.gameState.getUsers();
-    const user = users.find((p) => p.id === client.id);
-    if (!user) {
-      client.emit('error-message', 'Player not found');
-      return;
-    }
+      // Get playerId from game state
+      const users = this.gameState.getUsers();
+      const user = users.find((p) => p.id === client.id);
+      if (!user) {
+        client.emit('error-message', 'Player not found');
+        return;
+      }
 
-    const room = await this.roomService.createNewRoom(data.name, user.playerId);
-    this.playerRooms.set(client.id, room.id);
-    void client.join(room.id);
+      const room = await this.roomService.createNewRoom(
+        data.name,
+        user.playerId,
+      );
+      if (!room) {
+        client.emit('error-message', 'Failed to create room');
+        return;
+      }
+
+      this.playerRooms.set(client.id, room.id);
+      await client.join(room.id);
+
+      // ルーム一覧を更新
+      const rooms = await this.roomService.listRooms();
+      this.server.emit('rooms-list', rooms);
+
+      // 作成したルームの情報を返す
+      return { success: true, room };
+    } catch (error) {
+      console.error('Error in handleCreateRoom:', error);
+      client.emit('error-message', 'Failed to create room');
+      return { success: false, error: 'Internal server error' };
+    }
   }
 
   @SubscribeMessage('join-room')
-  async handleJoinRoom(client: Socket, data: { roomId: string; user: User }) {
+  async handleJoinRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; user: User },
+  ) {
     try {
       // 既存のルームから退出
       const currentRoom = this.playerRooms.get(client.id);
       if (currentRoom) {
-        void client.leave(currentRoom);
+        await client.leave(currentRoom);
         this.server.to(currentRoom).emit('player-left', {
           playerId: data.user.playerId,
           roomId: currentRoom,
@@ -66,34 +93,88 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const success = await this.roomService.joinRoom(data.roomId, data.user);
-      if (success) {
-        this.playerRooms.set(client.id, data.roomId);
-        void client.join(data.roomId);
-        const room = await this.roomService.getRoom(data.roomId);
-        const isHost = room?.hostId === data.user.playerId;
-
-        // ルーム関連のイベント
-        this.server.to(data.roomId).emit('room-player-joined', {
-          playerId: data.user.playerId,
-          roomId: data.roomId,
-          isHost,
-        });
-
-        // ゲーム関連のイベント
-        this.server.to(data.roomId).emit('game-player-joined', {
-          playerId: data.user.playerId,
-          roomId: data.roomId,
-          isHost,
-        });
-
-        // Emit updated rooms list to all clients
-        const rooms = await this.roomService.listRooms();
-        this.server.emit('rooms-list', rooms);
-      } else {
+      if (!success) {
         client.emit('error-message', 'Failed to join room');
+        return { success: false };
       }
+
+      this.playerRooms.set(client.id, data.roomId);
+      await client.join(data.roomId);
+      const room = await this.roomService.getRoom(data.roomId);
+      const isHost = room?.hostId === data.user.playerId;
+
+      // ルーム関連のイベント
+      this.server.to(data.roomId).emit('room-player-joined', {
+        playerId: data.user.playerId,
+        roomId: data.roomId,
+        isHost,
+      });
+
+      // ゲーム関連のイベント
+      this.server.to(data.roomId).emit('game-player-joined', {
+        playerId: data.user.playerId,
+        roomId: data.roomId,
+        isHost,
+      });
+
+      // ルーム一覧を更新
+      const rooms = await this.roomService.listRooms();
+      this.server.emit('rooms-list', rooms);
+
+      return { success: true, room };
     } catch (error) {
       console.error('Failed to join room:', error);
+      client.emit('error-message', 'Failed to join room');
+      return { success: false, error: 'Internal server error' };
+    }
+  }
+
+  @SubscribeMessage('leave-room')
+  async handleLeaveRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ) {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return;
+      }
+
+      const player = room.players.find((p) => p.id === client.id);
+      if (!player) {
+        client.emit('error-message', 'Player not found in room');
+        return;
+      }
+
+      // ルームからプレイヤーを削除
+      const success = await this.roomService.leaveRoom(
+        data.roomId,
+        player.playerId,
+      );
+      if (!success) {
+        client.emit('error-message', 'Failed to leave room');
+        return;
+      }
+
+      // クライアントをルームから退出
+      await client.leave(data.roomId);
+      this.playerRooms.delete(client.id);
+
+      // 他のプレイヤーに通知
+      this.server.to(data.roomId).emit('player-left', {
+        playerId: player.playerId,
+        roomId: data.roomId,
+      });
+
+      // ルーム一覧を更新
+      const rooms = await this.roomService.listRooms();
+      this.server.emit('rooms-list', rooms);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleLeaveRoom:', error);
+      return { success: false, error: 'Internal server error' };
     }
   }
 
@@ -104,6 +185,59 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('rooms-list', rooms);
     } catch (error) {
       console.error('Failed to list rooms:', error);
+    }
+  }
+
+  @SubscribeMessage('toggle-player-ready')
+  async handleTogglePlayerReady(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; playerId: string },
+  ) {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        return { success: false, error: 'Room not found' };
+      }
+
+      const player = room.players.find((p) => p.playerId === data.playerId);
+      if (!player) {
+        return { success: false, error: 'Player not found in room' };
+      }
+
+      // プレイヤーの準備状態を切り替え
+      player.isReady = !player.isReady;
+      room.updatedAt = new Date();
+
+      // 全員が準備完了しているか確認
+      const allReady = room.players.every((p) => p.isReady);
+      const hasMaxPlayers = room.players.length === room.settings.maxPlayers;
+
+      // ルームのステータスを更新
+      room.status =
+        allReady && hasMaxPlayers ? RoomStatus.READY : RoomStatus.WAITING;
+
+      // ルームの更新を保存
+      const updatedRoom = await this.roomService.updateRoom(data.roomId, room);
+      if (!updatedRoom) {
+        return { success: false, error: 'Failed to update room' };
+      }
+
+      // クライアントに更新を通知
+      this.server.to(data.roomId).emit('player-ready-updated', {
+        playerId: data.playerId,
+        isReady: player.isReady,
+      });
+
+      this.server.to(data.roomId).emit('room-status-updated', {
+        status: room.status,
+      });
+
+      this.server.to(data.roomId).emit('room-updated', updatedRoom);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleTogglePlayerReady:', error);
+      return { success: false, error: 'Internal server error' };
     }
   }
 
@@ -999,39 +1133,5 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit turn update
     this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
     return;
-  }
-
-  @SubscribeMessage('toggle-player-ready')
-  async handleTogglePlayerReady(
-    client: Socket,
-    data: { roomId: string; playerId: string },
-  ): Promise<{ success: boolean; error?: string }> {
-    const room = await this.roomService.getRoom(data.roomId);
-    if (!room) {
-      return { success: false, error: 'Room not found' };
-    }
-
-    const player = room.players.find((p) => p.playerId === data.playerId);
-    if (!player) {
-      return { success: false, error: 'Player not found in room1' };
-    }
-
-    // プレイヤーの準備状態を切り替え
-    player.isReady = !player.isReady;
-    room.updatedAt = new Date();
-
-    // 全員が準備完了しているか確認
-    const allReady = room.players.every((p) => p.isReady);
-    if (allReady && room.players.length === room.settings.maxPlayers) {
-      room.status = RoomStatus.READY;
-    } else {
-      room.status = RoomStatus.WAITING;
-    }
-
-    await this.roomService.updateRoom(data.roomId, room);
-
-    this.server.to(data.roomId).emit('room-updated', room);
-
-    return { success: true };
   }
 }

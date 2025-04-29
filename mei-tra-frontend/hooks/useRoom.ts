@@ -9,15 +9,12 @@ export const useRoom = () => {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [playerReadyStatus, setPlayerReadyStatus] = useState<Record<string, boolean>>({});
   const socket = getSocket();
   const game = useGame();
-  const users = useMemo(() => {
-    return game?.users || [];
-  }, [game?.users]);
-  const players = useMemo(() => {
-    return game?.players || [];
-  }, [game?.players]);
-  const [playerReadyStatus, setPlayerReadyStatus] = useState<Record<string, boolean>>({});
+  
+  const users = useMemo(() => game?.users || [], [game?.users]);
+  const players = useMemo(() => game?.players || [], [game?.players]);
 
   // ルーム一覧の取得
   const fetchRooms = useCallback(() => {
@@ -35,7 +32,7 @@ export const useRoom = () => {
       return;
     }
     socket.emit('create-room', { name });
-  }, [socket, players]);
+  }, [socket]);
 
   // ルーム参加
   const joinRoom = useCallback((roomId: string) => {
@@ -49,62 +46,62 @@ export const useRoom = () => {
       setError('Please enter your name and join the game first');
       return;
     }
-    socket.emit('join-room', { roomId, user });
+    socket.emit('join-room', { roomId, user }, (response: { success: boolean; room?: Room }) => {
+      if (response.success && response.room) {
+        setCurrentRoom(response.room);
+      }
+    });
   }, [socket, users]);
 
   // ルーム退出
-  const leaveRoom = useCallback(() => {
-    if (currentRoom) {
-      socket.emit('leave-room', currentRoom.id, (response: { success: boolean; error?: string }) => {
-        if (response.success) {
-          setCurrentRoom(null);
-        } else {
-          setError(response.error || 'Failed to leave room');
-        }
-      });
+  const leaveRoom = useCallback((roomId: string) => {
+    if (!currentRoom) {
+      setError('No room selected');
+      return;
     }
+    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
+      if (response.success) {
+        setCurrentRoom(null);
+        setPlayerReadyStatus({});
+      } else {
+        setError(response.error || 'Failed to leave room');
+      }
+    });
   }, [currentRoom, socket]);
 
   // 準備状態の切り替え
   const togglePlayerReady = useCallback(() => {
     if (!socket.connected) {
-      console.error('Socket is not connected');
       setError('Socket is not connected');
       return;
     }
 
-    if (currentRoom) {
-      const socketId = socket.id;
-      const player = players.find((p: { id: string }) => p.id === socketId);
-      if (!player) {
-        setError('Player not found2');
-        return;
-      }
-      if (!player.playerId) {
-        setError('Player ID is not set');
-        return;
-      }
-
-      // ローカルの準備状態を即時更新
-      setPlayerReadyStatus(prev => ({
-        ...prev,
-        [player.playerId]: !prev[player.playerId]
-      }));
-
-      socket.emit('toggle-player-ready', { 
-        roomId: currentRoom.id,
-        playerId: player.playerId 
-      }, (response: { success: boolean; error?: string }) => {
-        if (!response.success) {
-          // エラーの場合は準備状態を元に戻す
-          setPlayerReadyStatus(prev => ({
-            ...prev,
-            [player.playerId]: !prev[player.playerId]
-          }));
-          setError(response.error || 'Failed to toggle ready state');
-        }
-      });
+    if (!currentRoom) {
+      setError('No room selected');
+      return;
     }
+
+    const socketId = socket.id;
+    const player = players.find((p: { id: string }) => p.id === socketId);
+    if (!player) {
+      setError('Player not found');
+      return;
+    }
+    if (!player.playerId) {
+      setError('Player ID is not set');
+      return;
+    }
+
+    // ローカルの準備状態を即時更新
+    setPlayerReadyStatus(prev => ({
+      ...prev,
+      [player.playerId]: !prev[player.playerId]
+    }));
+
+    socket.emit('toggle-player-ready', { 
+      roomId: currentRoom.id,
+      playerId: player.playerId 
+    });
   }, [currentRoom, socket, players]);
 
   // ゲーム開始
@@ -117,7 +114,7 @@ export const useRoom = () => {
     const socketId = socket.id;
     const player = players.find(p => p.id === socketId);
     if (!player) {
-      setError('Player not found3');
+      setError('Player not found');
       return;
     }
   
@@ -128,11 +125,7 @@ export const useRoom = () => {
       return;
     }
   
-    socket.emit('start-game', { roomId: currentRoom.id }, (response: { success: boolean; error?: string }) => {
-      if (!response.success) {
-        setError(response.error || 'Failed to start game');
-      }
-    });
+    socket.emit('start-game', { roomId: currentRoom.id });
   }, [currentRoom, socket, players]);
 
   useEffect(() => {
@@ -151,12 +144,10 @@ export const useRoom = () => {
 
     // プレイヤー参加（ルーム関連）
     socket.on('room-player-joined', ({ playerId, roomId, isHost }: { playerId: string; roomId: string; isHost: boolean }) => {
-      // ルームの更新のみを行う
       setAvailableRooms(prevRooms => {
         const updatedRooms = prevRooms.map(room => {
           if (room.id !== roomId) return room;
 
-          // Get existing players as RoomPlayer objects
           const existingPlayers = room.players.map((p, index) => {
             if (typeof p === 'string') {
               return {
@@ -173,7 +164,6 @@ export const useRoom = () => {
             return p;
           });
 
-          // Add new player
           const newPlayer: RoomPlayer = {
             id: playerId,
             playerId,
@@ -190,22 +180,8 @@ export const useRoom = () => {
             players: [...existingPlayers, newPlayer]
           };
 
-          // 現在のルームを更新
           if (currentRoom?.id === roomId) {
             setCurrentRoom(updatedRoom);
-          } else if (!currentRoom) {
-            setCurrentRoom(updatedRoom);
-          }
-
-          // 4人揃ったら準備完了状態に
-          if (updatedRoom.players.length === 4) {
-            updatedRoom.players.forEach(player => {
-              player.isReady = true;
-            });
-            socket.emit('update-room-status', { 
-              roomId: updatedRoom.id, 
-              status: 'ready' 
-            });
           }
 
           return updatedRoom;
@@ -226,7 +202,6 @@ export const useRoom = () => {
         setCurrentRoom(prev => {
           if (!prev) return null;
           const updatedPlayers = prev.players.filter(p => p.id !== playerId);
-          // ホストが退出した場合、新しいホストを設定
           if (prev.hostId === playerId && updatedPlayers.length > 0) {
             const newHost = updatedPlayers[0];
             return {
@@ -268,7 +243,6 @@ export const useRoom = () => {
 
     // エラーメッセージ
     socket.on('error-message', (message: string) => {
-      console.error('Received error message:', message);
       setError(message);
     });
 
@@ -278,6 +252,7 @@ export const useRoom = () => {
       socket.off('player-left');
       socket.off('error-message');
       socket.off('room-playing');
+      socket.off('room-updated');
     };
   }, [currentRoom, socket, players]);
 

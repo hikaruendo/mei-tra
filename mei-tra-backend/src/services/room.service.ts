@@ -209,4 +209,30 @@ export class RoomService implements RoomRepository {
 
     return { success: true };
   }
+
+  async leaveRoom(roomId: string, playerId: string): Promise<boolean> {
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return false;
+    }
+
+    // Remove player from room
+    room.players = room.players.filter((p) => p.id !== playerId);
+    room.updatedAt = new Date();
+
+    // If room is empty, delete it
+    if (room.players.length === 0) {
+      await this.deleteRoom(roomId);
+      return true;
+    }
+
+    // If host left, assign new host
+    if (room.hostId === playerId) {
+      room.hostId = room.players[0].id;
+      room.players[0].isHost = true;
+    }
+
+    await this.updateRoom(roomId, room);
+    return true;
+  }
 }

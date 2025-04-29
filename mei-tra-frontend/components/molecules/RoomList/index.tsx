@@ -31,7 +31,7 @@ const getStatusClass = (status: RoomStatus) => {
 };
 
 export const RoomList: React.FC = () => {
-  const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom } = useRoom();
+  const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom } = useRoom();
   const [newRoomName, setNewRoomName] = useState('');
   const socket = getSocket();
 
@@ -95,6 +95,7 @@ export const RoomList: React.FC = () => {
                 <button
                   onClick={() => togglePlayerReady()}
                   className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
+                  disabled={currentRoom?.id !== room.id}
                 >
                   {playerReadyStatus[currentPlayerId] ? '準備完了' : '準備する'}
                 </button>
@@ -105,6 +106,14 @@ export const RoomList: React.FC = () => {
                   className={styles.startButton}
                 >
                   ゲーム開始
+                </button>
+              )}
+              {currentRoom?.id === room.id && (
+                <button
+                  onClick={() => leaveRoom(room.id)}
+                  className={styles.leaveButton}
+                >
+                  退出
                 </button>
               )}
             </div>
