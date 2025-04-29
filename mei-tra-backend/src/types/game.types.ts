@@ -1,9 +1,12 @@
 export type Team = 0 | 1;
 
-export interface Player {
+export interface User {
   id: string;
   playerId: string;
   name: string;
+}
+
+export interface Player extends User {
   hand: string[];
   team: Team;
   isPasser: boolean;
@@ -74,6 +77,12 @@ export interface TeamScoreRecord {
   rememberedTen: number;
 }
 
+export interface ScoreRecord {
+  points: number;
+  timestamp: Date;
+  reason: string;
+}
+
 export interface ChomboViolation {
   type:
     | 'negri-forget'
@@ -92,15 +101,13 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
   players: Player[];
-  deck: string[];
   currentPlayerIndex: number;
-  agari: string | null;
-  teamScores: { [key: number]: TeamScore };
   gamePhase: GamePhase;
-  currentTrump: TrumpType | null;
+  deck: string[];
+  teamScores: Record<Team, { play: number; total: number }>;
+  teamScoreRecords: Record<Team, ScoreRecord[]>;
   blowState: BlowState;
-  playState: PlayState;
-  teamScoreRecords: { [key: number]: TeamScoreRecord };
-  chomboViolations: ChomboViolation[];
+  playState?: PlayState;
+  agari?: string;
   roundNumber: number;
 }

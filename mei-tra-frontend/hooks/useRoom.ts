@@ -11,6 +11,9 @@ export const useRoom = () => {
   const [error, setError] = useState<string | null>(null);
   const socket = getSocket();
   const game = useGame();
+  const users = useMemo(() => {
+    return game?.users || [];
+  }, [game?.users]);
   const players = useMemo(() => {
     return game?.players || [];
   }, [game?.players]);
@@ -23,7 +26,7 @@ export const useRoom = () => {
 
   useEffect(() => {
     fetchRooms();
-  }, [fetchRooms, players.length]);
+  }, [fetchRooms, users.length]);
 
   // ルーム作成
   const createRoom = useCallback((name: string) => {
@@ -41,13 +44,13 @@ export const useRoom = () => {
       return;
     }
     const socketId = socket.id;
-    const player = players.find((p: { id: string }) => p.id === socketId);
-    if (!player) {
+    const user = users.find((p: { id: string }) => p.id === socketId);
+    if (!user) {
       setError('Please enter your name and join the game first');
       return;
     }
-    socket.emit('join-room', { roomId, player });
-  }, [socket, players]);
+    socket.emit('join-room', { roomId, user });
+  }, [socket, users]);
 
   // ルーム退出
   const leaveRoom = useCallback(() => {

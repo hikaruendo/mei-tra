@@ -12,7 +12,7 @@ import { ScoreService } from './services/score.service';
 import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
-import { TrumpType, Field, Team, Player } from './types/game.types';
+import { TrumpType, Field, Team, User } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { RoomStatus } from './types/room.types';
 
@@ -40,54 +40,48 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Get playerId from game state
-    const state = this.gameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) {
+    const users = this.gameState.getUsers();
+    const user = users.find((p) => p.id === client.id);
+    if (!user) {
       client.emit('error-message', 'Player not found');
       return;
     }
 
-    const room = await this.roomService.createNewRoom(
-      data.name,
-      player.playerId,
-    );
+    const room = await this.roomService.createNewRoom(data.name, user.playerId);
     this.playerRooms.set(client.id, room.id);
     void client.join(room.id);
   }
 
   @SubscribeMessage('join-room')
-  async handleJoinRoom(
-    client: Socket,
-    data: { roomId: string; player: Player },
-  ) {
+  async handleJoinRoom(client: Socket, data: { roomId: string; user: User }) {
     try {
       // 既存のルームから退出
       const currentRoom = this.playerRooms.get(client.id);
       if (currentRoom) {
         void client.leave(currentRoom);
         this.server.to(currentRoom).emit('player-left', {
-          playerId: data.player.playerId,
+          playerId: data.user.playerId,
           roomId: currentRoom,
         });
       }
 
-      const success = await this.roomService.joinRoom(data.roomId, data.player);
+      const success = await this.roomService.joinRoom(data.roomId, data.user);
       if (success) {
         this.playerRooms.set(client.id, data.roomId);
         void client.join(data.roomId);
         const room = await this.roomService.getRoom(data.roomId);
-        const isHost = room?.hostId === data.player.playerId;
+        const isHost = room?.hostId === data.user.playerId;
 
         // ルーム関連のイベント
         this.server.to(data.roomId).emit('room-player-joined', {
-          playerId: data.player.playerId,
+          playerId: data.user.playerId,
           roomId: data.roomId,
           isHost,
         });
 
         // ゲーム関連のイベント
         this.server.to(data.roomId).emit('game-player-joined', {
-          playerId: data.player.playerId,
+          playerId: data.user.playerId,
           roomId: data.roomId,
           isHost,
         });
@@ -186,14 +180,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 新規プレイヤーとして追加
     if (name) {
       if (this.gameState.addPlayer(client.id, name, token)) {
-        const state = this.gameState.getState();
-        const newPlayer = state.players.find((p) => p.id === client.id);
+        const users = this.gameState.getUsers();
+        const newUser = users.find((p) => p.id === client.id);
 
-        if (newPlayer) {
+        if (newUser) {
           this.server
             .to(client.id)
-            .emit('reconnect-token', `${newPlayer.playerId}`);
-          this.server.emit('update-players', state.players);
+            .emit('reconnect-token', `${newUser.playerId}`);
+          this.server.emit('update-users', users);
         }
       } else {
         client.emit('error-message', 'Game is full!');
@@ -626,7 +620,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Check if currentField exists
-    if (!state.playState.currentField) {
+    if (!state.playState?.currentField) {
       console.error('No current field found in game state');
       client.emit('error-message', 'Game state error: No current field');
       return;
@@ -741,12 +735,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Create a new field with the winner as the dealer
-    state.playState.currentField = {
-      cards: [],
-      baseCard: '',
-      dealerId: winner.playerId,
-      isComplete: false,
-    };
+    if (state.playState) {
+      state.playState.currentField = {
+        cards: [],
+        baseCard: '',
+        dealerId: winner.playerId,
+        isComplete: false,
+      };
+    }
 
     // Emit field complete event with winner information
     this.server.to(roomId).emit('field-complete', {
@@ -781,7 +777,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const declaringTeam = state.players.find(
       (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
-    )?.team as Team;
+    )?.team;
 
     if (declaringTeam == null) {
       console.error(
@@ -793,28 +789,34 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const playPoints = this.scoreService.calculatePlayPoints(
       state.blowState.currentHighestDeclaration?.numberOfPairs || 0,
-      state.playState.fields.filter((f) => f.winnerTeam === declaringTeam)
-        .length,
+      state.playState?.fields.filter((f) => f.winnerTeam === declaringTeam)
+        .length || 0,
     );
 
     // Update team scores
     if (playPoints > 0) {
       state.teamScores[declaringTeam].play += playPoints;
       state.teamScores[declaringTeam].total += playPoints;
-      state.teamScoreRecords[declaringTeam] = this.scoreService.updateTeamScore(
-        declaringTeam,
-        playPoints,
-        state.teamScoreRecords[declaringTeam],
-      );
+      state.teamScoreRecords[declaringTeam] = [
+        ...state.teamScoreRecords[declaringTeam],
+        {
+          points: playPoints,
+          timestamp: new Date(),
+          reason: 'Play points',
+        },
+      ];
     } else {
       const opposingTeam = (1 - declaringTeam) as Team;
       state.teamScores[opposingTeam].play += Math.abs(playPoints);
       state.teamScores[opposingTeam].total += Math.abs(playPoints);
-      state.teamScoreRecords[opposingTeam] = this.scoreService.updateTeamScore(
-        opposingTeam,
-        Math.abs(playPoints),
-        state.teamScoreRecords[opposingTeam],
-      );
+      state.teamScoreRecords[opposingTeam] = [
+        ...state.teamScoreRecords[opposingTeam],
+        {
+          points: Math.abs(playPoints),
+          timestamp: new Date(),
+          reason: 'Play points',
+        },
+      ];
     }
 
     // Check if any team has reached 10 points
@@ -941,7 +943,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     if (
-      !state.playState.currentField ||
+      !state.playState?.currentField ||
       state.playState.currentField.baseCard !== 'JOKER'
     ) {
       client.emit('error-message', 'Cannot select base suit now!');

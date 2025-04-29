@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSocket } from '../app/socket';
-import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType } from '../types/game.types';
+import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 
 export const useGame = () => {
   // Player and Game State
@@ -38,6 +38,9 @@ export const useGame = () => {
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
+  const [users, setUsers] = useState<User[]>([]);
+
+
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
@@ -49,6 +52,10 @@ export const useGame = () => {
     }
 
     const socketHandlers = {
+      // ユーザーの更新
+      'update-users': (users: User[]) => {
+        setUsers(users);
+      },
       'update-players': (players: Player[]) => {
         setPlayers(players);
       },
@@ -390,6 +397,7 @@ export const useGame = () => {
     notification,
     setNotification,
     currentRoomId,
-    setCurrentRoomId
+    setCurrentRoomId,
+    users,
   };
 }; 

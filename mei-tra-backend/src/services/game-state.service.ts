@@ -7,20 +7,22 @@ import {
   Field,
   Team,
   CompletedField,
+  TeamScore,
+  ScoreRecord,
+  User,
 } from '../types/game.types';
 import { CardService } from './card.service';
-import { ScoreService } from './score.service';
 import { ChomboService } from './chombo.service';
 
 @Injectable()
 export class GameStateService {
+  private users: User[] = [];
   private state: GameState;
   private playerIds: Map<string, string> = new Map(); // token -> playerId
   private disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map(); // 切断されたプレイヤーのタイマーを管理
 
   constructor(
     private readonly cardService: CardService,
-    private readonly scoreService: ScoreService,
     private readonly chomboService: ChomboService,
   ) {
     this.initializeState();
@@ -31,14 +33,18 @@ export class GameStateService {
       players: [],
       deck: [],
       currentPlayerIndex: 0,
-      agari: null,
-      teamScores: this.scoreService.initializeTeamScores(),
+      agari: undefined,
+      teamScores: {
+        0: { play: 0, total: 0 },
+        1: { play: 0, total: 0 },
+      } as Record<Team, TeamScore>,
       gamePhase: null,
       blowState: this.getInitialBlowState(),
       playState: this.getInitialPlayState(),
-      teamScoreRecords: this.scoreService.initializeTeamScoreRecords(),
-      chomboViolations: [],
-      currentTrump: null,
+      teamScoreRecords: {
+        0: [],
+        1: [],
+      } as Record<Team, ScoreRecord[]>,
       roundNumber: 1,
     };
   }
@@ -70,6 +76,10 @@ export class GameStateService {
     return this.state;
   }
 
+  getUsers(): User[] {
+    return this.users;
+  }
+
   updateState(newState: Partial<GameState>): void {
     this.state = {
       ...this.state,
@@ -78,17 +88,13 @@ export class GameStateService {
   }
 
   addPlayer(socketId: string, name: string, reconnectToken?: string): boolean {
-    const state = this.getState();
-
-    // 新しいプレイヤーを追加
-    const playerId = reconnectToken || this.generateReconnectToken(); // 永続的なIDとして使用
-    state.players.push({
+    // Add new user
+    const playerId = reconnectToken || this.generateReconnectToken();
+    const users = this.getUsers();
+    users.push({
       id: socketId,
       playerId,
       name,
-      hand: [],
-      team: (state.players.length % 2) as Team,
-      isPasser: false,
     });
 
     // Store token mappings
@@ -214,8 +220,11 @@ export class GameStateService {
 
   completeField(field: Field, winnerId: string): CompletedField | null {
     const state = this.getState();
-    const currentField = state.playState.currentField;
+    if (!state.playState) {
+      return null;
+    }
 
+    const currentField = state.playState.currentField;
     if (!currentField) {
       return null;
     }
@@ -228,7 +237,7 @@ export class GameStateService {
       dealerId: field.dealerId,
     };
 
-    this.state.playState.fields.push(completedField);
+    state.playState.fields.push(completedField);
     return completedField;
   }
 

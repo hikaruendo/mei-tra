@@ -3,7 +3,7 @@ import { Room, RoomRepository } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
-import { Player } from 'src/types/game.types';
+import { Player, Team, User } from '../types/game.types';
 
 @Injectable()
 export class RoomService implements RoomRepository {
@@ -67,16 +67,24 @@ export class RoomService implements RoomRepository {
     return Promise.resolve(room);
   }
 
-  async joinRoom(roomId: string, player: Player): Promise<boolean> {
+  async joinRoom(roomId: string, user: User): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room || room.players.length >= room.settings.maxPlayers) {
       return false;
     }
 
     // Check if player already exists in the room
-    if (room.players.some((p) => p.id === player.playerId)) {
+    if (room.players.some((p) => p.id === user.playerId)) {
       return true;
     }
+
+    const player: Player = {
+      ...user,
+      hand: [],
+      team: (room.players.length % 2) as Team,
+      isPasser: false,
+      hasBroken: false,
+    };
 
     // Add player to the room
     room.players.push({
@@ -91,42 +99,13 @@ export class RoomService implements RoomRepository {
     const gameState = this.roomGameStates.get(roomId);
     if (gameState) {
       const state = gameState.getState();
-      state.players.push({
-        ...player,
-      });
+      state.players.push(player);
     }
     return true;
   }
 
   private generateRoomId(): string {
     return Math.random().toString(36).substring(2, 15);
-  }
-
-  async togglePlayerReady(roomId: string, playerId: string): Promise<boolean> {
-    const room = await this.getRoom(roomId);
-    if (!room) {
-      return false;
-    }
-
-    const player = room.players.find((p) => p.id === playerId);
-    if (!player) {
-      return false;
-    }
-
-    // 準備状態を切り替え
-    player.isReady = !player.isReady;
-    room.updatedAt = new Date();
-
-    // 全員が準備完了したらルームのステータスを更新
-    const allReady = room.players.every((p) => p.isReady);
-    if (allReady && room.players.length === room.settings.maxPlayers) {
-      room.status = RoomStatus.READY;
-    } else {
-      room.status = RoomStatus.WAITING;
-    }
-
-    await this.updateRoom(roomId, room);
-    return true;
   }
 
   async updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean> {

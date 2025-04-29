@@ -4,6 +4,12 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
 
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
+export interface User {
+  id: string;
+  playerId: string;
+  name: string;
+}
+
 export interface CompletedField {
   cards: string[];
   winnerId: string;
@@ -25,10 +31,7 @@ export interface FieldCompleteEvent {
   nextPlayerId: string;
 }
 
-export interface Player {
-  id: string;
-  playerId: string;
-  name: string;
+export interface Player extends User {
   team: Team;
   hand: string[];
   isPasser?: boolean;
