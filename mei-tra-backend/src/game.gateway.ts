@@ -30,6 +30,116 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly roomService: RoomService,
   ) {}
 
+  //-------Connection-------
+  handleConnection(client: Socket) {
+    const auth = client.handshake.auth || {};
+    const token =
+      typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
+    const name = typeof auth.name === 'string' ? auth.name : undefined;
+    const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
+
+    // より厳密なバリデーション
+    if (name === undefined && token === undefined) {
+      client.disconnect();
+      return;
+    }
+
+    // トークンがある場合は再接続として処理
+    if (token && roomId) {
+      // ルームのゲーム状態を取得
+      void this.roomService.getRoomGameState(roomId).then((roomGameState) => {
+        if (!roomGameState) {
+          client.disconnect();
+          return;
+        }
+
+        const existingPlayer = roomGameState.findPlayerByReconnectToken(token);
+
+        if (existingPlayer) {
+          // ルームサービスで再接続処理
+          void this.roomService
+            .handlePlayerReconnection(
+              roomId,
+              existingPlayer.playerId,
+              client.id,
+            )
+            .then((result) => {
+              if (!result.success) {
+                client.disconnect();
+                return;
+              }
+
+              const state = roomGameState.getState();
+
+              // ゲーム状態をクライアントに送信
+              this.server.to(client.id).emit('game-state', {
+                players: state.players.map((player) => ({
+                  ...player,
+                  hand:
+                    player.playerId === existingPlayer.playerId
+                      ? player.hand
+                      : [], // 自分の手札のみ表示
+                })),
+                gamePhase: state.gamePhase || 'waiting',
+                currentField: state.playState?.currentField,
+                currentTurn:
+                  state.currentPlayerIndex !== -1
+                    ? state.players[state.currentPlayerIndex].playerId
+                    : null,
+                blowState: state.blowState,
+                teamScores: state.teamScores,
+                you: existingPlayer.playerId,
+                negriCard: state.playState?.negriCard,
+                fields: state.playState?.fields,
+              });
+              this.server.emit('update-players', state.players);
+            });
+        } else {
+          client.disconnect();
+        }
+      });
+      return;
+    }
+
+    // 新規プレイヤーとして追加
+    if (name) {
+      if (this.gameState.addPlayer(client.id, name, token)) {
+        const users = this.gameState.getUsers();
+        const newUser = users.find((p) => p.id === client.id);
+
+        if (newUser) {
+          this.server
+            .to(client.id)
+            .emit('reconnect-token', `${newUser.playerId}`);
+          this.server.emit('update-users', users);
+        }
+      } else {
+        client.emit('error-message', 'Game is full!');
+        client.disconnect();
+      }
+    } else {
+      client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: Socket) {
+    const roomId = this.playerRooms.get(client.id);
+    if (roomId) {
+      this.playerRooms.delete(client.id);
+      void client.leave(roomId);
+      this.server.to(roomId).emit('player-left', { playerId: client.id });
+    }
+    // プレイヤーの削除は15秒後に実行される
+    const state = this.gameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
+    if (player) {
+      this.gameState.removePlayer(player.playerId);
+      this.server.emit('update-players', state.players);
+    }
+  }
+  //-------Connection-------
+
+  //-------Room-------
   @SubscribeMessage('create-room')
   async handleCreateRoom(
     @ConnectedSocket() client: Socket,
@@ -43,7 +153,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      // Get playerId from game state
       const users = this.gameState.getUsers();
       const user = users.find((p) => p.id === client.id);
       if (!user) {
@@ -231,114 +340,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false, error: 'Internal server error' };
     }
   }
+  //-------Room-------
 
-  handleConnection(client: Socket) {
-    const auth = client.handshake.auth || {};
-    const token =
-      typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
-    const name = typeof auth.name === 'string' ? auth.name : undefined;
-    const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
-
-    // より厳密なバリデーション
-    if (name === undefined && token === undefined) {
-      client.disconnect();
-      return;
-    }
-
-    // トークンがある場合は再接続として処理
-    if (token && roomId) {
-      // ルームのゲーム状態を取得
-      void this.roomService.getRoomGameState(roomId).then((roomGameState) => {
-        if (!roomGameState) {
-          client.disconnect();
-          return;
-        }
-
-        const existingPlayer = roomGameState.findPlayerByReconnectToken(token);
-
-        if (existingPlayer) {
-          // ルームサービスで再接続処理
-          void this.roomService
-            .handlePlayerReconnection(
-              roomId,
-              existingPlayer.playerId,
-              client.id,
-            )
-            .then((result) => {
-              if (!result.success) {
-                client.disconnect();
-                return;
-              }
-
-              const state = roomGameState.getState();
-
-              // ゲーム状態をクライアントに送信
-              this.server.to(client.id).emit('game-state', {
-                players: state.players.map((player) => ({
-                  ...player,
-                  hand:
-                    player.playerId === existingPlayer.playerId
-                      ? player.hand
-                      : [], // 自分の手札のみ表示
-                })),
-                gamePhase: state.gamePhase || 'waiting',
-                currentField: state.playState?.currentField,
-                currentTurn:
-                  state.currentPlayerIndex !== -1
-                    ? state.players[state.currentPlayerIndex].playerId
-                    : null,
-                blowState: state.blowState,
-                teamScores: state.teamScores,
-                you: existingPlayer.playerId,
-                negriCard: state.playState?.negriCard,
-                fields: state.playState?.fields,
-              });
-              this.server.emit('update-players', state.players);
-            });
-        } else {
-          client.disconnect();
-        }
-      });
-      return;
-    }
-
-    // 新規プレイヤーとして追加
-    if (name) {
-      if (this.gameState.addPlayer(client.id, name, token)) {
-        const users = this.gameState.getUsers();
-        const newUser = users.find((p) => p.id === client.id);
-
-        if (newUser) {
-          this.server
-            .to(client.id)
-            .emit('reconnect-token', `${newUser.playerId}`);
-          this.server.emit('update-users', users);
-        }
-      } else {
-        client.emit('error-message', 'Game is full!');
-        client.disconnect();
-      }
-    } else {
-      client.disconnect();
-    }
-  }
-
-  handleDisconnect(client: Socket) {
-    const roomId = this.playerRooms.get(client.id);
-    if (roomId) {
-      this.playerRooms.delete(client.id);
-      void client.leave(roomId);
-      this.server.to(roomId).emit('player-left', { playerId: client.id });
-    }
-    // プレイヤーの削除は15秒後に実行される
-    const state = this.gameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (player) {
-      this.gameState.removePlayer(player.playerId);
-      this.server.emit('update-players', state.players);
-    }
-  }
-
+  //-------Game-------
   @SubscribeMessage('start-game')
   async handleStartGame(client: Socket, data: { roomId: string }) {
     const room = await this.roomService.getRoom(data.roomId);
@@ -1125,4 +1129,5 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
     return;
   }
+  //-------Game-------
 }
