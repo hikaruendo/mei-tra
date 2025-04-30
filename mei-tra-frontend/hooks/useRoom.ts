@@ -201,15 +201,15 @@ export const useRoom = () => {
       if (currentRoom?.id === roomId) {
         setCurrentRoom(prev => {
           if (!prev) return null;
-          const updatedPlayers = prev.players.filter(p => p.id !== playerId);
+          const updatedPlayers = prev.players.filter(p => p.playerId !== playerId);
           if (prev.hostId === playerId && updatedPlayers.length > 0) {
             const newHost = updatedPlayers[0];
             return {
               ...prev,
               players: updatedPlayers.map(p => 
-                p.id === newHost.id ? { ...p, isHost: true } : p
+                p.playerId === newHost.playerId ? { ...p, isHost: true } : p
               ),
-              hostId: newHost.id
+              hostId: newHost.playerId
             };
           }
           return {
