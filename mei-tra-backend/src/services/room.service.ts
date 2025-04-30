@@ -3,7 +3,7 @@ import { Room, RoomRepository } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
-import { Player, Team, User } from '../types/game.types';
+import { Player, User } from '../types/game.types';
 
 @Injectable()
 export class RoomService implements RoomRepository {
@@ -69,24 +69,37 @@ export class RoomService implements RoomRepository {
 
   async joinRoom(roomId: string, user: User): Promise<boolean> {
     const room = await this.getRoom(roomId);
-    if (!room || room.players.length >= room.settings.maxPlayers) {
+    if (!room) {
       return false;
     }
 
-    // Check if player already exists in the room
-    if (room.players.some((p) => p.id === user.playerId)) {
+    // Check if room is full
+    if (room.players.length >= room.settings.maxPlayers) {
+      return false;
+    }
+
+    // Check if player is already in the room
+    const existingPlayer = room.players.find(
+      (p) => p.playerId === user.playerId,
+    );
+    if (existingPlayer) {
       return true;
     }
 
+    // Assign team based on current team distribution
+    const team0Count = room.players.filter((p) => p.team === 0).length;
+    const team1Count = room.players.filter((p) => p.team === 1).length;
+    const team = team0Count <= team1Count ? 0 : 1;
+
     const player: Player = {
       ...user,
+      team,
       hand: [],
-      team: (room.players.length % 2) as Team,
       isPasser: false,
       hasBroken: false,
     };
 
-    // Add player to the room
+    // Add player to room
     room.players.push({
       ...player,
       isReady: false,
@@ -94,13 +107,15 @@ export class RoomService implements RoomRepository {
       joinedAt: new Date(),
     });
     room.updatedAt = new Date();
-    await this.updateRoom(roomId, room);
 
+    // Update game state if it exists
     const gameState = this.roomGameStates.get(roomId);
     if (gameState) {
       const state = gameState.getState();
       state.players.push(player);
     }
+
+    await this.updateRoom(roomId, room);
     return true;
   }
 
@@ -217,8 +232,14 @@ export class RoomService implements RoomRepository {
     }
 
     // Remove player from room
-    room.players = room.players.filter((p) => p.id !== playerId);
+    room.players = room.players.filter((p) => p.playerId !== playerId);
     room.updatedAt = new Date();
+
+    const gameState = this.roomGameStates.get(roomId);
+    if (gameState) {
+      const state = gameState.getState();
+      state.players = state.players.filter((p) => p.playerId !== playerId);
+    }
 
     // If room is empty, delete it
     if (room.players.length === 0) {
@@ -228,7 +249,7 @@ export class RoomService implements RoomRepository {
 
     // If host left, assign new host
     if (room.hostId === playerId) {
-      room.hostId = room.players[0].id;
+      room.hostId = room.players[0].playerId;
       room.players[0].isHost = true;
     }
 

@@ -152,6 +152,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         player.playerId,
       );
+      await this.roomService.updateRoom(data.roomId, room);
       if (!success) {
         client.emit('error-message', 'Failed to leave room');
         return;
@@ -221,16 +222,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!updatedRoom) {
         return { success: false, error: 'Failed to update room' };
       }
-
-      // クライアントに更新を通知
-      this.server.to(data.roomId).emit('player-ready-updated', {
-        playerId: data.playerId,
-        isReady: player.isReady,
-      });
-
-      this.server.to(data.roomId).emit('room-status-updated', {
-        status: room.status,
-      });
 
       this.server.to(data.roomId).emit('room-updated', updatedRoom);
 

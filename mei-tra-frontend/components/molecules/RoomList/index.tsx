@@ -83,22 +83,24 @@ export const RoomList: React.FC = () => {
                 </p>
               </div>
               {room.players.length < room.settings.maxPlayers && (
-                <button
-                  onClick={() => joinRoom(room.id)}
-                  className={styles.joinButton}
-                  disabled={room.players.length >= room.settings.maxPlayers}
+                <>
+                  <button
+                    onClick={() => joinRoom(room.id)}
+                    className={styles.joinButton}
+                    disabled={room.players.length >= room.settings.maxPlayers}
                 >
                   参加
                 </button>
-              )}
-              {room.status === RoomStatus.WAITING && (
-                <button
+                  <button
                   onClick={() => togglePlayerReady()}
                   className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
                   disabled={currentRoom?.id !== room.id}
                 >
-                  {playerReadyStatus[currentPlayerId] ? '準備完了' : '準備する'}
-                </button>
+                    {playerReadyStatus[currentPlayerId]
+                      ? '準備完了'
+                      : '準備する'}
+                  </button>
+                </>
               )}
               {room.status === RoomStatus.READY && (
                 <button
