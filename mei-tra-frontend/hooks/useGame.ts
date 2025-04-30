@@ -47,8 +47,9 @@ export const useGame = () => {
 
     // Set up reconnection token
     const savedToken = sessionStorage.getItem('reconnectToken');
+    const savedRoomId = sessionStorage.getItem('roomId');
     if (savedToken) {
-      socket.auth = { reconnectToken: savedToken };
+      socket.auth = { reconnectToken: savedToken, roomId: savedRoomId };
     }
 
     const socketHandlers = {

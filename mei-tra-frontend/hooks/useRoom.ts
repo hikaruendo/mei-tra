@@ -10,7 +10,7 @@ export const useRoom = () => {
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [playerReadyStatus, setPlayerReadyStatus] = useState<Record<string, boolean>>({});
-  const socket = getSocket();
+  const [isClient, setIsClient] = useState(false);
   const game = useGame();
   
   const users = useMemo(() => game?.users || [], [game?.users]);
@@ -18,117 +18,39 @@ export const useRoom = () => {
 
   // ルーム一覧の取得
   const fetchRooms = useCallback(() => {
+    const socket = getSocket();
     socket.emit('list-rooms');
-  }, [socket]);
+  }, []);
 
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms, users.length]);
 
-  // ルーム作成
-  const createRoom = useCallback((name: string) => {
-    if (!socket.id) {
-      setError('Socket not connected');
-      return;
-    }
-    socket.emit('create-room', { name });
-  }, [socket]);
-
-  // ルーム参加
-  const joinRoom = useCallback((roomId: string) => {
-    if (!socket.id) {
-      setError('Socket not connected');
-      return;
-    }
-    const socketId = socket.id;
-    const user = users.find((p: { id: string }) => p.id === socketId);
-    if (!user) {
-      setError('Please enter your name and join the game first');
-      return;
-    }
-    socket.emit('join-room', { roomId, user }, (response: { success: boolean; room?: Room }) => {
-      if (response.success && response.room) {
-        setCurrentRoom(response.room);
-      }
-    });
-  }, [socket, users]);
-
-  // ルーム退出
-  const leaveRoom = useCallback((roomId: string) => {
-    if (!currentRoom) {
-      setError('No room selected');
-      return;
-    }
-    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
-      if (response.success) {
-        setCurrentRoom(null);
-        setPlayerReadyStatus({});
-      } else {
-        setError(response.error || 'Failed to leave room');
-      }
-    });
-  }, [currentRoom, socket]);
-
-  // 準備状態の切り替え
-  const togglePlayerReady = useCallback(() => {
-    if (!socket.connected) {
-      setError('Socket is not connected');
-      return;
-    }
-
-    if (!currentRoom) {
-      setError('No room selected');
-      return;
-    }
-
-    const socketId = socket.id;
-    const player = players.find((p: { id: string }) => p.id === socketId);
-    if (!player) {
-      setError('Player not found');
-      return;
-    }
-    if (!player.playerId) {
-      setError('Player ID is not set');
-      return;
-    }
-
-    // ローカルの準備状態を即時更新
-    setPlayerReadyStatus(prev => ({
-      ...prev,
-      [player.playerId]: !prev[player.playerId]
-    }));
-
-    socket.emit('toggle-player-ready', { 
-      roomId: currentRoom.id,
-      playerId: player.playerId 
-    });
-  }, [currentRoom, socket, players]);
-
-  // ゲーム開始
-  const startGameRoom = useCallback(() => {
-    if (!currentRoom) {
-      setError('No room selected');
-      return;
-    }
-  
-    const socketId = socket.id;
-    const player = players.find(p => p.id === socketId);
-    if (!player) {
-      setError('Player not found');
-      return;
-    }
-  
-    // 全員が準備完了しているか確認
-    const allReady = currentRoom.players.every(player => player.isReady);
-    if (!allReady) {
-      setError('All players must be ready to start the game');
-      return;
-    }
-  
-    socket.emit('start-game', { roomId: currentRoom.id });
-  }, [currentRoom, socket, players]);
-
   useEffect(() => {
+    setIsClient(true);
+    const socket = getSocket();
+
+    // Set up reconnection token
+    const savedRoomId = sessionStorage.getItem('roomId');
+    const savedToken = sessionStorage.getItem('token');
+    if (savedRoomId && savedToken) {
+      // まずルーム一覧を取得して、ルームが存在するか確認
+      socket.emit('list-rooms');
+      socket.once('rooms-list', (rooms: Room[]) => {
+        const roomExists = rooms.some(room => room.id === savedRoomId);
+        if (roomExists) {
+          socket.auth = { 
+            roomId: savedRoomId,
+            token: savedToken
+          };
+        } else {
+          // ルームが存在しない場合は保存された情報をクリア
+          sessionStorage.removeItem('roomId');
+          sessionStorage.removeItem('token');
+        }
+      });
+    }
+    
     // ルーム一覧の更新
     socket.on('rooms-list', (rooms: Room[]) => {
       setAvailableRooms(rooms);
@@ -246,6 +168,10 @@ export const useRoom = () => {
       setError(message);
     });
 
+    socket.on('set-room-id', (roomId: string) => {
+      sessionStorage.setItem('roomId', roomId);
+    });
+
     return () => {
       socket.off('rooms-list');
       socket.off('room-player-joined');
@@ -253,8 +179,132 @@ export const useRoom = () => {
       socket.off('error-message');
       socket.off('room-playing');
       socket.off('room-updated');
+      socket.off('set-room-id');
     };
-  }, [currentRoom, socket, players]);
+  }, [currentRoom]);
+
+  // ルーム作成
+  const createRoom = useCallback((name: string) => {
+    const socket = getSocket();
+    if (!socket.id) {
+      setError('Socket not connected');
+      return;
+    }
+    socket.emit('create-room', { name });
+  }, []);
+
+  // ルーム参加
+  const joinRoom = useCallback((roomId: string) => {
+    const socket = getSocket();
+    if (!socket.id) {
+      setError('Socket not connected');
+      return;
+    }
+    const socketId = socket.id;
+    const user = users.find((p: { id: string }) => p.id === socketId);
+    if (!user) {
+      setError('Please enter your name and join the game first');
+      return;
+    }
+    socket.emit('join-room', { roomId, user }, (response: { success: boolean; room?: Room }) => {
+      if (response.success && response.room) {
+        setCurrentRoom(response.room);
+      }
+    });
+  }, [users]);
+
+  // ルーム退出
+  const leaveRoom = useCallback((roomId: string) => {
+    const socket = getSocket();
+    if (!currentRoom) {
+      setError('No room selected');
+      return;
+    }
+    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
+      if (response.success) {
+        setCurrentRoom(null);
+        setPlayerReadyStatus({});
+      } else {
+        setError(response.error || 'Failed to leave room');
+      }
+    });
+  }, [currentRoom]);
+
+  // 準備状態の切り替え
+  const togglePlayerReady = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) {
+      setError('Socket is not connected');
+      return;
+    }
+
+    if (!currentRoom) {
+      setError('No room selected');
+      return;
+    }
+
+    const socketId = socket.id;
+    const player = players.find((p: { id: string }) => p.id === socketId);
+    if (!player) {
+      setError('Player not found');
+      return;
+    }
+    if (!player.playerId) {
+      setError('Player ID is not set');
+      return;
+    }
+
+    // ローカルの準備状態を即時更新
+    setPlayerReadyStatus(prev => ({
+      ...prev,
+      [player.playerId]: !prev[player.playerId]
+    }));
+
+    socket.emit('toggle-player-ready', { 
+      roomId: currentRoom.id,
+      playerId: player.playerId 
+    });
+  }, [currentRoom, players]);
+
+  // ゲーム開始
+  const startGameRoom = useCallback(() => {
+    const socket = getSocket();
+    if (!currentRoom) {
+      setError('No room selected');
+      return;
+    }
+  
+    const socketId = socket.id;
+    const player = players.find(p => p.id === socketId);
+    if (!player) {
+      setError('Player not found');
+      return;
+    }
+  
+    // 全員が準備完了しているか確認
+    const allReady = currentRoom.players.every(player => player.isReady);
+    if (!allReady) {
+      setError('All players must be ready to start the game');
+      return;
+    }
+  
+    socket.emit('start-game', { roomId: currentRoom.id });
+  }, [currentRoom, players]);
+
+  if (!isClient) {
+    return {
+      currentRoom: null,
+      availableRooms: [],
+      error: null,
+      createRoom: () => {},
+      joinRoom: () => {},
+      leaveRoom: () => {},
+      togglePlayerReady: () => {},
+      startGameRoom: () => {},
+      fetchRooms: () => {},
+      playerReadyStatus: {}
+    };
+  }
 
   return {
     currentRoom,

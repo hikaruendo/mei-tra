@@ -38,19 +38,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const name = typeof auth.name === 'string' ? auth.name : undefined;
     const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
 
-    // より厳密なバリデーション
-    if (name === undefined && token === undefined) {
-      client.disconnect();
-      return;
-    }
-
     // トークンがある場合は再接続として処理
     if (token && roomId) {
       // ルームのゲーム状態を取得
       void this.roomService.getRoomGameState(roomId).then((roomGameState) => {
         if (!roomGameState) {
           client.disconnect();
-          return;
         }
 
         const existingPlayer = roomGameState.findPlayerByReconnectToken(token);
@@ -229,6 +222,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // ルーム一覧を更新
       const rooms = await this.roomService.listRooms();
       this.server.emit('rooms-list', rooms);
+      this.server.to(data.roomId).emit('set-room-id', data.roomId);
 
       return { success: true, room };
     } catch (error) {

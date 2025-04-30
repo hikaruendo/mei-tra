@@ -189,7 +189,7 @@ export class RoomService implements RoomRepository {
   getRoomGameState(roomId: string): Promise<GameStateService> {
     const gameState = this.roomGameStates.get(roomId);
     if (!gameState) {
-      throw new Error('Game state not found for room');
+      throw new Error(`Game state not found for room ${roomId}`);
     }
     return Promise.resolve(gameState);
   }
