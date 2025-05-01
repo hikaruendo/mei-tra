@@ -82,25 +82,31 @@ export const RoomList: React.FC = () => {
                   ステータス: {getStatusText(room.status)}
                 </p>
               </div>
-              {room.players.length < room.settings.maxPlayers && (
+              {/* 参加ボタン: 自分が参加していないルームで、かつ満員でない場合のみ表示 */}
+              {room.players.length < room.settings.maxPlayers && 
+               currentRoom?.id !== room.id && (
                 <button
-                    onClick={() => joinRoom(room.id)}
-                    className={styles.joinButton}
-                    disabled={room.players.length >= room.settings.maxPlayers}
+                  onClick={() => joinRoom(room.id)}
+                  className={styles.joinButton}
                 >
                   参加
                 </button>
               )}
-              <button
-                onClick={() => togglePlayerReady()}
-                className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
-                disabled={currentRoom?.id !== room.id}
-              >
-                {playerReadyStatus[currentPlayerId]
-                  ? '準備完了'
-                  : '準備する'}
-              </button>
-              {room.status === RoomStatus.READY && (
+              {/* 準備ボタン: 自分が参加しているルームのみ表示 */}
+              {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
+                <button
+                  onClick={() => togglePlayerReady()}
+                  className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
+                >
+                  {playerReadyStatus[currentPlayerId]
+                    ? '準備完了'
+                    : '準備する'}
+                </button>
+              )}
+              {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
+              {currentRoom?.id === room.id && 
+               room.status === RoomStatus.READY && 
+               room.hostId === currentPlayerId && (
                 <button
                   onClick={() => startGameRoom()}
                   className={styles.startButton}
@@ -108,7 +114,8 @@ export const RoomList: React.FC = () => {
                   ゲーム開始
                 </button>
               )}
-              {currentRoom?.id === room.id && (
+              {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
+              {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
                 <button
                   onClick={() => leaveRoom(room.id)}
                   className={styles.leaveButton}
