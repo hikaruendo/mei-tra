@@ -29,27 +29,6 @@ export const useRoom = () => {
   useEffect(() => {
     setIsClient(true);
     const socket = getSocket();
-
-    // Set up reconnection token
-    const savedRoomId = sessionStorage.getItem('roomId');
-    const savedToken = sessionStorage.getItem('token');
-    if (savedRoomId && savedToken) {
-      // まずルーム一覧を取得して、ルームが存在するか確認
-      socket.emit('list-rooms');
-      socket.once('rooms-list', (rooms: Room[]) => {
-        const roomExists = rooms.some(room => room.id === savedRoomId);
-        if (roomExists) {
-          socket.auth = { 
-            roomId: savedRoomId,
-            token: savedToken
-          };
-        } else {
-          // ルームが存在しない場合は保存された情報をクリア
-          sessionStorage.removeItem('roomId');
-          sessionStorage.removeItem('token');
-        }
-      });
-    }
     
     // ルーム一覧の更新
     socket.on('rooms-list', (rooms: Room[]) => {

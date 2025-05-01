@@ -45,13 +45,6 @@ export const useGame = () => {
     setIsClient(true);
     const socket = getSocket();
 
-    // Set up reconnection token
-    const savedToken = sessionStorage.getItem('reconnectToken');
-    const savedRoomId = sessionStorage.getItem('roomId');
-    if (savedToken) {
-      socket.auth = { reconnectToken: savedToken, roomId: savedRoomId };
-    }
-
     const socketHandlers = {
       // ユーザーの更新
       'update-users': (users: User[]) => {
