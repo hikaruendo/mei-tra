@@ -63,6 +63,7 @@ export const useGame = () => {
         you,
         negriCard,
         fields,
+        roomId,
       }: {
         players: Player[];
         gamePhase: GamePhase;
@@ -77,6 +78,7 @@ export const useGame = () => {
         you: string;
         negriCard: string | null;
         fields: CompletedField[];
+        roomId: string;
       }) => {
         setPlayers(players);
         setGamePhase(gamePhase);
@@ -90,6 +92,7 @@ export const useGame = () => {
         setNegriCard(negriCard);
         setCompletedFields(fields);
         setNegriPlayerId(negriPlayerId);
+        setCurrentRoomId(roomId);
         setGameStarted(true);
       },
       'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean }) => {

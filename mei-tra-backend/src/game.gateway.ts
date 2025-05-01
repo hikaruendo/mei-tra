@@ -43,7 +43,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // ルームのゲーム状態を取得
       void this.roomService.getRoomGameState(roomId).then((roomGameState) => {
         if (!roomGameState) {
+          client.emit('error-message', 'Game state not found');
           client.disconnect();
+          return;
         }
 
         const existingPlayer = roomGameState.findPlayerByReconnectToken(token);
@@ -58,9 +60,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             )
             .then((result) => {
               if (!result.success) {
+                client.emit('error-message', 'Failed to reconnect');
                 client.disconnect();
                 return;
               }
+
+              // ルームに参加
+              this.playerRooms.set(client.id, roomId);
+              void client.join(roomId);
 
               const state = roomGameState.getState();
 
@@ -84,10 +91,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 you: existingPlayer.playerId,
                 negriCard: state.playState?.negriCard,
                 fields: state.playState?.fields,
+                roomId: roomId,
               });
               this.server.emit('update-players', state.players);
             });
         } else {
+          client.emit('error-message', 'Player not found');
           client.disconnect();
         }
       });
@@ -120,14 +129,27 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (roomId) {
       this.playerRooms.delete(client.id);
       void client.leave(roomId);
-      this.server.to(roomId).emit('player-left', { playerId: client.id });
-    }
-    // プレイヤーの削除は15秒後に実行される
-    const state = this.gameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (player) {
-      this.gameState.removePlayer(player.playerId);
-      this.server.emit('update-players', state.players);
+
+      // Get the player's ID before removing from game state
+      const state = this.gameState.getState();
+      const player = state.players.find((p) => p.id === client.id);
+
+      if (player) {
+        // Notify other players about the disconnection
+        this.server.to(roomId).emit('player-left', {
+          playerId: player.playerId,
+          roomId: roomId,
+        });
+
+        // Set a timeout to remove the player if they don't reconnect
+        const timeout: NodeJS.Timeout = setTimeout(() => {
+          this.gameState.removePlayer(player.playerId);
+          this.server.emit('update-players', this.gameState.getState().players);
+        }, 10000); // 10 seconds timeout
+
+        // Store the timeout ID for potential cancellation on reconnection
+        this.gameState.setDisconnectTimeout(player.playerId, timeout);
+      }
     }
   }
   //-------Connection-------
@@ -721,7 +743,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; card: string },
   ): Promise<void> {
-    // ルームのゲーム状態を取得
     const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.id === client.id);

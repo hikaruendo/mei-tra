@@ -8,6 +8,7 @@ export function getSocket(): Socket {
     
     const reconnectToken = sessionStorage.getItem('reconnectToken') || '';
     const roomId = sessionStorage.getItem('roomId') || '';
+    
     socket = io(socketUrl, {
       transports: ['websocket'],
       auth: {

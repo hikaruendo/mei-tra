@@ -320,4 +320,14 @@ export class GameStateService {
       currentBlowIndex: 0,
     };
   }
+
+  setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {
+    // Clear any existing timeout
+    const existingTimeout = this.disconnectedPlayers.get(playerId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    // Set new timeout
+    this.disconnectedPlayers.set(playerId, timeout);
+  }
 }
