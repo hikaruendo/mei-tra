@@ -93,7 +93,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 fields: state.playState?.fields,
                 roomId: roomId,
               });
-              this.server.emit('update-players', state.players);
+              this.server.to(roomId).emit('update-players', state.players);
             });
         } else {
           client.emit('error-message', 'Player not found');
@@ -124,18 +124,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     const roomId = this.playerRooms.get(client.id);
     if (roomId) {
       this.playerRooms.delete(client.id);
       void client.leave(roomId);
 
-      // Get the player's ID before removing from game state
-      const state = this.gameState.getState();
+      // Get room-specific game state
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
+      const state = roomGameState.getState();
       const player = state.players.find((p) => p.id === client.id);
 
       if (player) {
-        // Notify other players about the disconnection
+        // Notify other players in the same room about the disconnection
         this.server.to(roomId).emit('player-left', {
           playerId: player.playerId,
           roomId: roomId,
@@ -143,12 +144,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // Set a timeout to remove the player if they don't reconnect
         const timeout: NodeJS.Timeout = setTimeout(() => {
-          this.gameState.removePlayer(player.playerId);
-          this.server.emit('update-players', this.gameState.getState().players);
+          roomGameState.removePlayer(player.playerId);
+          this.server
+            .to(roomId)
+            .emit('update-players', roomGameState.getState().players);
         }, 10000); // 10 seconds timeout
 
         // Store the timeout ID for potential cancellation on reconnection
-        this.gameState.setDisconnectTimeout(player.playerId, timeout);
+        roomGameState.setDisconnectTimeout(player.playerId, timeout);
       }
     }
   }
