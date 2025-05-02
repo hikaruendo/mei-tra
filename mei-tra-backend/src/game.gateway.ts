@@ -83,7 +83,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 gamePhase: state.gamePhase || 'waiting',
                 currentField: state.playState?.currentField,
                 currentTurn:
-                  state.currentPlayerIndex !== -1
+                  state.currentPlayerIndex !== -1 &&
+                  state.players[state.currentPlayerIndex]
                     ? state.players[state.currentPlayerIndex].playerId
                     : null,
                 blowState: state.blowState,

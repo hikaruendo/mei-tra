@@ -35,7 +35,8 @@ export default function Home() {
     teamScores,
     currentPlayerId,
     notification,
-    setNotification
+    setNotification,
+    currentRoomId,
   } = gameState;
 
   return (
@@ -75,6 +76,7 @@ export default function Home() {
               setNumberOfPairs={setNumberOfPairs}
               teamScores={teamScores}
               currentPlayerId={currentPlayerId}
+              currentRoomId={currentRoomId}
             />
           </>
         )}
