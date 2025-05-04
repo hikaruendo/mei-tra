@@ -73,58 +73,62 @@ export const RoomList: React.FC = () => {
 
       <div className={styles.section}>
         <div className={styles.roomList}>
-          {availableRooms.map((room) => (
-            <div key={room.id} className={styles.roomItem}>
-              <div className={styles.roomInfo}>
-                <h3>{room.name}</h3>
-                <p>プレイヤー: {room.players.length}/{room.settings.maxPlayers}</p>
-                <p className={`${styles.status} ${getStatusClass(room.status)}`}>
-                  ステータス: {getStatusText(room.status)}
-                </p>
+          {availableRooms.map((room) => {
+            // ダミーを除外した実プレイヤー数
+            const actualPlayerCount = room.players.filter(p => !p.playerId.startsWith('dummy-')).length;
+            return (
+              <div key={room.id} className={styles.roomItem}>
+                <div className={styles.roomInfo}>
+                  <h3>{room.name}</h3>
+                  <p>プレイヤー: {actualPlayerCount}/{room.settings.maxPlayers}</p>
+                  <p className={`${styles.status} ${getStatusClass(room.status)}`}>
+                    ステータス: {getStatusText(room.status)}
+                  </p>
+                </div>
+                {/* 参加ボタン: 自分が参加していないルームで、かつ満員でない場合のみ表示 */}
+                {actualPlayerCount < room.settings.maxPlayers && 
+                 currentRoom?.id !== room.id && (
+                  <button
+                    onClick={() => joinRoom(room.id)}
+                    className={styles.joinButton}
+                  >
+                    参加
+                  </button>
+                )}
+                {/* 準備ボタン: 自分が参加しているルームのみ表示 */}
+                {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
+                  <button
+                    onClick={() => togglePlayerReady()}
+                    className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
+                  >
+                    {playerReadyStatus[currentPlayerId]
+                      ? '準備完了'
+                      : '準備する'}
+                  </button>
+                )}
+                {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
+                {currentRoom?.id === room.id && 
+                 room.status === RoomStatus.READY && 
+                 room.hostId === currentPlayerId && (
+                  <button
+                    onClick={() => startGameRoom()}
+                    className={styles.startButton}
+                  >
+                    ゲーム開始
+                  </button>
+                )}
+                {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
+                {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
+                  <button
+                    onClick={() => leaveRoom(room.id)}
+                    className={styles.leaveButton}
+                  >
+                    退出
+                  </button>
+                )}
               </div>
-              {/* 参加ボタン: 自分が参加していないルームで、かつ満員でない場合のみ表示 */}
-              {room.players.length < room.settings.maxPlayers && 
-               currentRoom?.id !== room.id && (
-                <button
-                  onClick={() => joinRoom(room.id)}
-                  className={styles.joinButton}
-                >
-                  参加
-                </button>
-              )}
-              {/* 準備ボタン: 自分が参加しているルームのみ表示 */}
-              {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
-                <button
-                  onClick={() => togglePlayerReady()}
-                  className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
-                >
-                  {playerReadyStatus[currentPlayerId]
-                    ? '準備完了'
-                    : '準備する'}
-                </button>
-              )}
-              {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
-              {currentRoom?.id === room.id && 
-               room.status === RoomStatus.READY && 
-               room.hostId === currentPlayerId && (
-                <button
-                  onClick={() => startGameRoom()}
-                  className={styles.startButton}
-                >
-                  ゲーム開始
-                </button>
-              )}
-              {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
-              {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
-                <button
-                  onClick={() => leaveRoom(room.id)}
-                  className={styles.leaveButton}
-                >
-                  退出
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

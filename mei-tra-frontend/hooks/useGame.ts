@@ -40,6 +40,7 @@ export const useGame = () => {
 
   const [users, setUsers] = useState<User[]>([]);
 
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -95,9 +96,12 @@ export const useGame = () => {
         setCurrentRoomId(roomId);
         setGameStarted(true);
       },
-      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean }) => {
+      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string }) => {
         if (data.playerId === currentPlayerId) {
           setCurrentRoomId(data.roomId);
+        }
+        if (data.roomStatus === 'playing') {
+          setGameStarted(true);
         }
         setPlayers((prev) => {
           const existingPlayer = prev.find(p => p.playerId === data.playerId);
@@ -271,6 +275,25 @@ export const useGame = () => {
         setReconnectToken(token);
         sessionStorage.setItem('reconnectToken', token);
       },
+      'back-to-lobby': () => {
+        console.log('back-to-lobby event received');
+        setGameStarted(false);
+        setGamePhase(null);
+        setTeamScores({
+          0: { deal: 0, blow: 0, play: 0, total: 0 },
+          1: { deal: 0, blow: 0, play: 0, total: 0 }
+        });
+      },
+      'game-paused': ({ message }: { message: string }) => {
+        setPaused(true);
+        setGameStarted(false);
+        setNotification({ message, type: 'warning' });
+      },
+      'game-resumed': ({ message }: { message: string }) => {
+        setPaused(false);
+        setGameStarted(true);
+        setNotification({ message, type: 'success' });
+      },
     };
 
     // Register all socket handlers
@@ -396,5 +419,6 @@ export const useGame = () => {
     currentRoomId,
     setCurrentRoomId,
     users,
+    paused,
   };
 }; 

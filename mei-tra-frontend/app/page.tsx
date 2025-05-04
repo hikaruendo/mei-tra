@@ -7,7 +7,7 @@ import GameJoinGroup from '../components/organisms/GameJoinGroup';
 
 export default function Home() {
   const gameState = useGame();
-  
+
   if (!gameState) {
     return null;
   }
@@ -37,6 +37,7 @@ export default function Home() {
     notification,
     setNotification,
     currentRoomId,
+    paused,
   } = gameState;
 
   return (
@@ -49,35 +50,42 @@ export default function Home() {
             onClose={() => setNotification(null)}
           />
         )}
-        {!gameStarted ? (
-          <GameJoinGroup
-            name={name}
-            onNameChange={setName}
-            onJoinGame={gameActions.joinGame}
-          />
+        {paused ? (
+          <div className="text-center text-yellow-600 font-bold text-xl my-8">
+            ゲームは一時停止中です。4人揃うと再開します。
+          </div>
         ) : (
           <>
-            <GameTable
-              whoseTurn={whoseTurn}
-              gamePhase={gamePhase}
-              currentTrump={currentTrump}
-              currentField={currentField}
-              players={players}
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              completedFields={completedFields}
-              revealedAgari={revealedAgari}
-              gameActions={gameActions}
-              blowDeclarations={blowDeclarations}
-              currentHighestDeclaration={currentHighestDeclaration}
-              selectedTrump={selectedTrump}
-              setSelectedTrump={setSelectedTrump}
-              numberOfPairs={numberOfPairs}
-              setNumberOfPairs={setNumberOfPairs}
-              teamScores={teamScores}
-              currentPlayerId={currentPlayerId}
-              currentRoomId={currentRoomId}
-            />
+            <div style={{ display: gameStarted ? 'none' : 'block' }}>
+              <GameJoinGroup
+                name={name}
+                onNameChange={setName}
+                onJoinGame={gameActions.joinGame}
+              />
+            </div>
+            <div style={{ display: gameStarted ? 'block' : 'none' }}>
+              <GameTable
+                whoseTurn={whoseTurn}
+                gamePhase={gamePhase}
+                currentTrump={currentTrump}
+                currentField={currentField}
+                players={players}
+                negriCard={negriCard}
+                negriPlayerId={negriPlayerId}
+                completedFields={completedFields}
+                revealedAgari={revealedAgari}
+                gameActions={gameActions}
+                blowDeclarations={blowDeclarations}
+                currentHighestDeclaration={currentHighestDeclaration}
+                selectedTrump={selectedTrump}
+                setSelectedTrump={setSelectedTrump}
+                numberOfPairs={numberOfPairs}
+                setNumberOfPairs={setNumberOfPairs}
+                teamScores={teamScores}
+                currentPlayerId={currentPlayerId}
+                currentRoomId={currentRoomId}
+              />
+            </div>
           </>
         )}
       </div>

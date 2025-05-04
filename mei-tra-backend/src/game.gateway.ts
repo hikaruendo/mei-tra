@@ -230,7 +230,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await client.join(data.roomId);
       const room = await this.roomService.getRoom(data.roomId);
       const isHost = room?.hostId === data.user.playerId;
-
+      const roomStatus = room?.status;
       // ルーム関連のイベント
       this.server.to(data.roomId).emit('room-player-joined', {
         playerId: data.user.playerId,
@@ -243,6 +243,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         playerId: data.user.playerId,
         roomId: data.roomId,
         isHost,
+        roomStatus,
       });
 
       // ルーム一覧を更新
@@ -250,60 +251,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.emit('rooms-list', rooms);
       this.server.to(data.roomId).emit('set-room-id', data.roomId);
 
+      if (room && room.status === RoomStatus.PLAYING) {
+        // 新しいプレイヤーが参加して4人になったらゲーム再開
+        const roomGameState = await this.roomService.getRoomGameState(
+          data.roomId,
+        );
+        const state = roomGameState.getState();
+        const actualPlayerCount = room.players.filter(
+          (p) => !p.playerId.startsWith('dummy-'),
+        ).length;
+        if (room && actualPlayerCount === 4 && state.gamePhase === null) {
+          state.gamePhase = 'blow'; // 必要に応じて直前のフェーズを復元
+          this.server
+            .to(room.id)
+            .emit('game-resumed', { message: 'Game resumed with 4 players.' });
+          this.server.to(room.id).emit('game-state', { ...state });
+        }
+      }
+
       return { success: true, room };
     } catch (error) {
       console.error('Failed to join room:', error);
       client.emit('error-message', 'Failed to join room');
-      return { success: false, error: 'Internal server error' };
-    }
-  }
-
-  @SubscribeMessage('leave-room')
-  async handleLeaveRoom(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
-  ) {
-    try {
-      const room = await this.roomService.getRoom(data.roomId);
-      if (!room) {
-        client.emit('error-message', 'Room not found');
-        return;
-      }
-
-      const player = room.players.find((p) => p.id === client.id);
-      if (!player) {
-        client.emit('error-message', 'Player not found in room');
-        return;
-      }
-
-      // ルームからプレイヤーを削除
-      const success = await this.roomService.leaveRoom(
-        data.roomId,
-        player.playerId,
-      );
-      await this.roomService.updateRoom(data.roomId, room);
-      if (!success) {
-        client.emit('error-message', 'Failed to leave room');
-        return;
-      }
-
-      // クライアントをルームから退出
-      await client.leave(data.roomId);
-      this.playerRooms.delete(client.id);
-
-      // 他のプレイヤーに通知
-      this.server.to(data.roomId).emit('player-left', {
-        playerId: player.playerId,
-        roomId: data.roomId,
-      });
-
-      // ルーム一覧を更新
-      const rooms = await this.roomService.listRooms();
-      this.server.emit('rooms-list', rooms);
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error in handleLeaveRoom:', error);
       return { success: false, error: 'Internal server error' };
     }
   }
@@ -340,7 +309,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 全員が準備完了しているか確認
       const allReady = room.players.every((p) => p.isReady);
-      const hasMaxPlayers = room.players.length === room.settings.maxPlayers;
+      const actualPlayerCount = room.players.filter(
+        (p) => !p.playerId.startsWith('dummy-'),
+      ).length;
+      const hasMaxPlayers = actualPlayerCount === room.settings.maxPlayers;
 
       // ルームのステータスを更新
       room.status =
@@ -357,6 +329,79 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: true };
     } catch (error) {
       console.error('Error in handleTogglePlayerReady:', error);
+      return { success: false, error: 'Internal server error' };
+    }
+  }
+
+  @SubscribeMessage('leave-room')
+  async handleLeaveRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ) {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return;
+      }
+
+      const player = room.players.find((p) => p.id === client.id);
+      if (!player) {
+        client.emit('error-message', 'Player not found in room');
+        return;
+      }
+
+      // ルームからプレイヤーを削除
+      const success = await this.roomService.leaveRoom(
+        data.roomId,
+        player.playerId,
+      );
+
+      await this.roomService.updateRoom(data.roomId, room);
+      if (!success) {
+        client.emit('error-message', 'Failed to leave room');
+        return;
+      }
+
+      // クライアントをルームから退出
+      await client.leave(data.roomId);
+      this.playerRooms.delete(client.id);
+
+      // 他のプレイヤーに通知
+      this.server.to(data.roomId).emit('player-left', {
+        playerId: player.playerId,
+        roomId: data.roomId,
+      });
+
+      // ルーム一覧を更新
+      const rooms = await this.roomService.listRooms();
+      this.server.emit('rooms-list', rooms);
+
+      console.log('back-to-lobby event sent');
+
+      this.server.to(client.id).emit('back-to-lobby');
+
+      this.server.to(room.id).emit('update-players', room.players);
+
+      // --- ここから追加: プレイヤー数が3人以下ならゲームを一時停止 ---
+      const roomGameState = await this.roomService.getRoomGameState(
+        data.roomId,
+      );
+      const state = roomGameState.getState();
+      const actualPlayerCount = room.players.filter(
+        (p) => !p.playerId.startsWith('dummy-'),
+      ).length;
+      if (actualPlayerCount < 4 && state.gamePhase !== null) {
+        state.gamePhase = null;
+        this.server
+          .to(room.id)
+          .emit('game-paused', { message: 'Not enough players. Game paused.' });
+      }
+      // --- ここまで追加 ---
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleLeaveRoom:', error);
       return { success: false, error: 'Internal server error' };
     }
   }
@@ -406,6 +451,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
         return;
       }
+
+      // room.playersのhandも更新
+      room.players.forEach((roomPlayer) => {
+        const statePlayer = updatedState.players.find(
+          (p) => p.playerId === roomPlayer.playerId,
+        );
+        if (statePlayer) {
+          roomPlayer.hand = [...statePlayer.hand];
+        }
+      });
 
       // Set the first player as the starting player for the first blow phase
       const firstBlowIndex = 0; // First player starts

@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSocket } from '../app/socket';
 import { Room, RoomPlayer } from '../types/room.types';
 import { useGame } from './useGame';
-import { Team } from '../types/game.types';
+import { Player, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 
 export const useRoom = () => {
@@ -15,6 +15,11 @@ export const useRoom = () => {
   
   const users = useMemo(() => game?.users || [], [game?.users]);
   const players = useMemo(() => game?.players || [], [game?.players]);
+
+  const currentRoomRef = useRef<Room | null>(null);
+  useEffect(() => {
+    currentRoomRef.current = currentRoom;
+  }, [currentRoom]);
 
   // ルーム一覧の取得
   const fetchRooms = useCallback(() => {
@@ -33,12 +38,21 @@ export const useRoom = () => {
     // ルーム一覧の更新
     socket.on('rooms-list', (rooms: Room[]) => {
       setAvailableRooms(rooms);
+      
+      // FIX: 自分のルームが一覧にある場合は同期
+      if (currentRoomRef.current) {
+        const updatedRoom = rooms.find(r => r.id === currentRoomRef.current?.id);
+        if (updatedRoom) {
+          setCurrentRoom(updatedRoom);
+        }
+      }
     });
 
     // ルーム更新
     socket.on('room-updated', (room: Room) => {
+      console.log('room-updated event received:', room);
       setAvailableRooms(prevRooms => prevRooms.map(r => r.id === room.id ? room : r));
-      if (currentRoom?.id === room.id) {
+      if (currentRoomRef.current?.id === room.id) {
         setCurrentRoom(room);
       }
     });
@@ -65,6 +79,8 @@ export const useRoom = () => {
             return p;
           });
 
+          // 空いている席（ダミープレイヤー）を探す
+          const dummyIndex = existingPlayers.findIndex(p => p.playerId.startsWith('dummy-'));
           const newPlayer: RoomPlayer = {
             id: playerId,
             playerId,
@@ -76,12 +92,19 @@ export const useRoom = () => {
             joinedAt: new Date()
           };
 
+          const updatedPlayers = [...existingPlayers];
+          if (dummyIndex !== -1) {
+            updatedPlayers[dummyIndex] = newPlayer;
+          } else {
+            updatedPlayers.push(newPlayer);
+          }
+
           const updatedRoom = {
             ...room,
-            players: [...existingPlayers, newPlayer]
+            players: updatedPlayers
           };
 
-          if (currentRoom?.id === roomId) {
+          if (currentRoomRef.current?.id === roomId) {
             setCurrentRoom(updatedRoom);
           }
 
@@ -99,25 +122,50 @@ export const useRoom = () => {
 
     // プレイヤー退出
     socket.on('player-left', ({ playerId, roomId }: { playerId: string; roomId: string }) => {
-      if (currentRoom?.id === roomId) {
-        setCurrentRoom(prev => {
-          if (!prev) return null;
-          const updatedPlayers = prev.players.filter(p => p.playerId !== playerId);
-          if (prev.hostId === playerId && updatedPlayers.length > 0) {
-            const newHost = updatedPlayers[0];
+      console.log('player-left event received:', playerId, roomId);
+      if (currentRoomRef.current?.id === roomId) {
+        // FIX: Only set currentRoom to null if the current user is the one who left
+        if (players.find(p => p.playerId === playerId)) {
+          console.log('Current user left the room, setting currentRoom to null');
+          setCurrentRoom(null);
+        } else {
+          setCurrentRoom(prev => {
+            if (!prev) return null;
+            const updatedPlayers = prev.players.map(p => 
+              p.playerId === playerId 
+                ? {
+                    id: `dummy-${prev.players.indexOf(p)}`,
+                    playerId: `dummy-${prev.players.indexOf(p)}`,
+                    name: 'Vacant',
+                    hand: [],
+                    team: 0 as Team,
+                    isReady: false,
+                    isHost: false,
+                    joinedAt: new Date(),
+                    isPasser: false,
+                    hasBroken: false,
+                  }
+                : p
+            );
+            
+            if (prev.hostId === playerId) {
+              const newHost = updatedPlayers.find(p => !p.playerId.startsWith('dummy-'));
+              if (newHost) {
+                return {
+                  ...prev,
+                  players: updatedPlayers.map(p => 
+                    p.playerId === newHost.playerId ? { ...p, isHost: true } : p
+                  ),
+                  hostId: newHost.playerId
+                };
+              }
+            }
             return {
               ...prev,
-              players: updatedPlayers.map(p => 
-                p.playerId === newHost.playerId ? { ...p, isHost: true } : p
-              ),
-              hostId: newHost.playerId
+              players: updatedPlayers
             };
-          }
-          return {
-            ...prev,
-            players: updatedPlayers
-          };
-        });
+          });
+        }
 
         setPlayerReadyStatus(prev => {
           const newStatus = { ...prev };
@@ -128,17 +176,33 @@ export const useRoom = () => {
     });
 
     // ゲーム開始
-    socket.on('room-playing', (players) => {
-      if (currentRoom) {
+    socket.on('room-playing', (players: Player[]) => {
+      console.log('room-playing event received:', players);
+      console.log('current room before update:', currentRoomRef.current);
+      
+      // #ここで手札が更新される
+      if (currentRoomRef.current) {
         const updatedRoom = {
-          ...currentRoom,
+          ...currentRoomRef.current,
           status: RoomStatus.PLAYING,
-          players: players
+          players: currentRoomRef.current.players.map(p => {
+            const updatedPlayer = players.find((rp: Player) => rp.playerId === p.playerId);
+            return updatedPlayer ? { ...p, hand: updatedPlayer.hand } : p;
+          })
         };
+        console.log('updated room to be set:', updatedRoom);
+        
+        // 状態更新を一括で行う
         setCurrentRoom(updatedRoom);
-        setAvailableRooms(prevRooms => 
-          prevRooms.map(room => room.id === currentRoom.id ? updatedRoom : room)
-        );
+        setAvailableRooms(prevRooms => {
+          const newRooms = prevRooms.map(room => 
+            room.id === currentRoomRef.current!.id ? updatedRoom : room
+          );
+          console.log('updated available rooms:', newRooms);
+          return newRooms;
+        });
+      } else {
+        console.log('currentRoom is null when room-playing event received');
       }
     });
 
@@ -160,6 +224,11 @@ export const useRoom = () => {
       socket.off('room-updated');
       socket.off('set-room-id');
     };
+  }, [currentRoom, players]); // FIX: Add players to dependency array
+
+  // currentRoomの変更を監視
+  useEffect(() => {
+    console.log('currentRoom updated:', currentRoom);
   }, [currentRoom]);
 
   // ルーム作成
@@ -194,20 +263,30 @@ export const useRoom = () => {
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
+    console.log('leaveRoom called with currentRoom:', currentRoomRef);
     const socket = getSocket();
-    if (!currentRoom) {
-      setError('No room selected');
-      return;
-    }
+    // if (!currentRoom) {
+    //   console.log('No room selected1111');
+    //   setError('No room selected');
+    //   return;
+    // }
+    
+    // FIX: Store roomId before emitting leave-room
+    const leavingRoomId = roomId;
+    
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
-        setCurrentRoom(null);
-        setPlayerReadyStatus({});
+        console.log('Successfully left room:', leavingRoomId);
+        // // UIの状態を更新（leavingPlayerInfoはplayer-leftイベントで管理）
+        // setCurrentRoom(null);
+        // setPlayerReadyStatus({});
+        // // ルーム一覧からも削除
+        // setAvailableRooms(prevRooms => prevRooms.filter(room => room.id !== leavingRoomId));
       } else {
         setError(response.error || 'Failed to leave room');
       }
     });
-  }, [currentRoom]);
+  }, []);
 
   // 準備状態の切り替え
   const togglePlayerReady = useCallback(() => {
@@ -261,12 +340,12 @@ export const useRoom = () => {
     }
   
     // 全員が準備完了しているか確認
-    const allReady = currentRoom.players.every(player => player.isReady);
-    if (!allReady) {
-      setError('All players must be ready to start the game');
-      return;
-    }
-  
+    // const allReady = currentRoom.players.every(player => player.isReady);
+    // if (!allReady) {
+    //   setError('All players must be ready to start the game');
+    //   return;
+    // }
+
     socket.emit('start-game', { roomId: currentRoom.id });
   }, [currentRoom, players]);
 
@@ -297,4 +376,4 @@ export const useRoom = () => {
     fetchRooms,
     playerReadyStatus
   };
-}; 
+};
