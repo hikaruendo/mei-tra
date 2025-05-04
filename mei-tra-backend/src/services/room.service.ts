@@ -93,6 +93,20 @@ export class RoomService implements RoomRepository {
       return false;
     }
 
+    // hand情報をgameStateから同期
+    const gameState = this.roomGameStates.get(roomId);
+    if (gameState) {
+      const state = gameState.getState();
+      room.players.forEach((roomPlayer) => {
+        const statePlayer = state.players.find(
+          (p) => p.playerId === roomPlayer.playerId,
+        );
+        if (statePlayer) {
+          roomPlayer.hand = [...statePlayer.hand];
+        }
+      });
+    }
+
     // 退出したプレイヤーのindexを記録
     const playerIndex = room.players.findIndex((p) => p.playerId === playerId);
     if (playerIndex !== -1) {
@@ -101,19 +115,11 @@ export class RoomService implements RoomRepository {
         hand: [...room.players[playerIndex].hand],
         team: room.players[playerIndex].team,
       };
-      console.log(
-        `[leaveRoom] playerId=${playerId} left seat=${playerIndex}, hand=${JSON.stringify(room.players[playerIndex].hand)}, team=${room.players[playerIndex].team}`,
-      );
       // プレイヤーをダミーに置き換え
       room.players[playerIndex] = this.createDummyPlayer(playerIndex);
-      console.log(
-        `[leaveRoom] room.players after removal:`,
-        room.players.map((p) => p.playerId),
-      );
     }
     room.updatedAt = new Date();
 
-    const gameState = this.roomGameStates.get(roomId);
     if (gameState) {
       const state = gameState.getState();
       const gsIndex = state.players.findIndex((p) => p.playerId === playerId);

@@ -261,11 +261,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           (p) => !p.playerId.startsWith('dummy-'),
         ).length;
         if (room && actualPlayerCount === 4 && state.gamePhase === null) {
-          state.gamePhase = 'blow'; // 必要に応じて直前のフェーズを復元
           this.server
             .to(room.id)
             .emit('game-resumed', { message: 'Game resumed with 4 players.' });
-          this.server.to(room.id).emit('game-state', { ...state });
+          this.server.to(room.id).emit('game-state', {
+            players: state.players,
+            gamePhase: state.gamePhase,
+            currentField: state.playState?.currentField,
+            currentTurn:
+              state.currentPlayerIndex !== -1 &&
+              state.players[state.currentPlayerIndex]
+                ? state.players[state.currentPlayerIndex].playerId
+                : null,
+            blowState: state.blowState,
+            teamScores: state.teamScores,
+            negriCard: state.playState?.negriCard,
+            fields: state.playState?.fields,
+            roomId: room.id,
+          });
         }
       }
 
@@ -377,13 +390,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rooms = await this.roomService.listRooms();
       this.server.emit('rooms-list', rooms);
 
-      console.log('back-to-lobby event sent');
-
       this.server.to(client.id).emit('back-to-lobby');
 
       this.server.to(room.id).emit('update-players', room.players);
 
-      // --- ここから追加: プレイヤー数が3人以下ならゲームを一時停止 ---
+      // プレイヤー数が3人以下ならゲームを一時停止
       const roomGameState = await this.roomService.getRoomGameState(
         data.roomId,
       );
@@ -392,12 +403,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         (p) => !p.playerId.startsWith('dummy-'),
       ).length;
       if (actualPlayerCount < 4 && state.gamePhase !== null) {
-        state.gamePhase = null;
         this.server
           .to(room.id)
           .emit('game-paused', { message: 'Not enough players. Game paused.' });
       }
-      // --- ここまで追加 ---
 
       return { success: true };
     } catch (error) {
