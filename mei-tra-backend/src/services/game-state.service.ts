@@ -166,6 +166,7 @@ export class GameStateService {
       player.hand = [];
       player.isPasser = false;
       player.hasBroken = false;
+      player.hasRequiredBroken = false;
     });
 
     // Deal exactly 10 cards to each player
@@ -195,6 +196,7 @@ export class GameStateService {
 
     this.state.players.forEach((player) => {
       this.chomboService.checkForBrokenHand(player);
+      this.chomboService.checkForRequiredBrokenHand(player);
     });
   }
 

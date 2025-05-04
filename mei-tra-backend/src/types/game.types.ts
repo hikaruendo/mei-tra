@@ -8,6 +8,7 @@ export interface Player {
   team: Team;
   isPasser: boolean;
   hasBroken?: boolean;
+  hasRequiredBroken?: boolean;
 }
 
 export interface TeamScore {

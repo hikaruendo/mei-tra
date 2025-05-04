@@ -33,6 +33,7 @@ export interface Player {
   hand: string[];
   isPasser?: boolean;
   hasBroken?: boolean;
+  hasRequiredBroken?: boolean;
 }
 
 export interface BlowDeclaration {

@@ -324,6 +324,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       winningPlayer.hand.push(state.agari);
     }
     winningPlayer.hand.sort((a, b) => this.cardService.compareCards(a, b));
+    // ジャックが4枚あるか確認
+    this.chomboService.checkForRequiredBrokenHand(winningPlayer);
+
+    // 強制ブロークン状態の場合の処理
+    if (winningPlayer.hasRequiredBroken) {
+      const client = this.server.sockets.sockets.get(winningPlayer.id);
+      if (client) {
+        this.handleRevealBrokenHand(client, winningPlayer.playerId);
+      } else {
+        console.error(`Socket not found for player: ${winningPlayer.playerId}`);
+      }
+    }
+
     state.gamePhase = 'play';
     state.blowState.currentTrump = winner.trumpType;
     const winnerIndex = state.players.findIndex(
@@ -858,28 +871,39 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!player) return;
 
-    // Reset player pass states
-    state.blowState.declarations = [];
-    state.blowState.currentHighestDeclaration = null;
-
-    // Move to next dealer and restart blow phase
-    const firstBlowIndex = state.blowState.currentBlowIndex;
-    const firstBlowPlayer = state.players[firstBlowIndex];
-
-    state.currentPlayerIndex = firstBlowIndex;
-
-    // Regenerate deck and deal cards
-    state.deck = this.cardService.generateDeck();
-    this.gameState.dealCards();
-
-    // Emit round cancelled
-    this.server.emit('broken', {
-      nextPlayerId: firstBlowPlayer.playerId,
-      players: state.players,
+    // 全員に手札を公開
+    this.server.emit('reveal-hands', {
+      players: state.players.map((p) => ({
+        playerId: p.playerId,
+        hand: p.hand,
+      })),
     });
 
-    // Emit turn update
-    this.server.emit('update-turn', firstBlowPlayer.playerId);
-    return;
+    // 3秒後に次のターンに進む
+    setTimeout(() => {
+      // Reset player pass states
+      state.blowState.declarations = [];
+      state.blowState.currentHighestDeclaration = null;
+
+      // Move to next dealer and restart blow phase
+      const firstBlowIndex = state.blowState.currentBlowIndex;
+      const firstBlowPlayer = state.players[firstBlowIndex];
+
+      state.currentPlayerIndex = firstBlowIndex;
+
+      // Regenerate deck and deal cards
+      state.deck = this.cardService.generateDeck();
+      this.gameState.dealCards();
+
+      // Emit round cancelled
+      this.server.emit('broken', {
+        nextPlayerId: firstBlowPlayer.playerId,
+        players: state.players,
+      });
+
+      // Emit turn update
+      this.server.emit('update-turn', firstBlowPlayer.playerId);
+      return;
+    }, 3000); // 3秒間待機
   }
 }
