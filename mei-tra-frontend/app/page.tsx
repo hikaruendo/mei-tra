@@ -4,6 +4,7 @@ import { GameTable } from '../components/GameTable';
 import { Notification } from '../components/Notification';
 import { useGame } from '../hooks/useGame';
 import GameJoinGroup from '../components/organisms/GameJoinGroup';
+import styles from './index.module.css';
 
 export default function Home() {
   const gameState = useGame();
@@ -51,8 +52,8 @@ export default function Home() {
           />
         )}
         {paused ? (
-          <div className="text-center text-yellow-600 font-bold text-xl my-8">
-            ゲームは一時停止中です。4人揃うと再開します。
+          <div className={styles.paused}>
+            Game is paused. It will resume when 4 players are present.
           </div>
         ) : (
           <>

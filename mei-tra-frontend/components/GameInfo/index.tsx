@@ -60,7 +60,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         }}
         className={styles.leaveButton}
       >
-        退出
+        Leave
       </button>
     </div>
   );

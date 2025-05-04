@@ -7,7 +7,6 @@ interface GameFieldProps {
   players: Player[];
   onBaseSuitSelect: (suit: string) => void;
   isCurrentPlayer: boolean;
-  currentTrump: string;
 }
 
 export const GameField: React.FC<GameFieldProps> = ({
@@ -15,11 +14,10 @@ export const GameField: React.FC<GameFieldProps> = ({
   players,
   onBaseSuitSelect,
   isCurrentPlayer,
-  currentTrump,
 }) => {
   const isJokerBaseCard = currentField?.baseCard === 'JOKER';
-  // ジョーカーかつcurrentTrumpがtraの場合は、ベーススートを選択する必要がある
-  const needsBaseSuitSelection = isJokerBaseCard && currentTrump === 'tra' && !currentField?.baseSuit && isCurrentPlayer;
+  // If it's a Joker, base suit selection is needed
+  const needsBaseSuitSelection = isJokerBaseCard && !currentField?.baseSuit && isCurrentPlayer;
 
   if (!currentField || currentField.cards.length === 0) {
     return null;
@@ -71,9 +69,9 @@ export const GameField: React.FC<GameFieldProps> = ({
                 <button onClick={() => onBaseSuitSelect('♣')}>♣</button>
               </div>
             </div>
-          ) : currentTrump === 'tra' && currentField?.baseSuit && (
+          ) : currentField?.baseSuit && (
             <div className={styles.baseSuitSelection}>
-              <h3>Selected Base Suit</h3>
+              <h3>Suit</h3>
               <div className={styles.suitButtons}>
                 <button disabled className={`${styles.selectedSuit} ${currentField.baseSuit === '♠' ? styles.blackSuit : ''} ${currentField.baseSuit === '♥' || currentField.baseSuit === '♦' ? styles.redSuit : ''} ${currentField.baseSuit === '♣' ? styles.blackSuit : ''}`}>
                   {currentField.baseSuit}

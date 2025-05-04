@@ -7,11 +7,11 @@ import { getSocket } from '../../../app/socket';
 const getStatusText = (status: RoomStatus) => {
   switch (status) {
     case RoomStatus.WAITING:
-      return '待機中';
+      return 'Waiting';
     case RoomStatus.READY:
-      return '準備完了';
+      return 'Ready';
     case RoomStatus.PLAYING:
-      return 'ゲーム中';
+      return 'Playing';
     default:
       return status;
   }
@@ -54,17 +54,17 @@ export const RoomList: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h2>ルーム一覧</h2>
+        <h2>Room List</h2>
         <form onSubmit={handleCreateRoom} className={styles.createForm}>
           <input
             type="text"
             value={newRoomName}
             onChange={(e) => setNewRoomName(e.target.value)}
-            placeholder="ルーム名を入力"
+            placeholder="Enter room name"
             className={styles.input}
           />
           <button type="submit" className={styles.createButton}>
-            ルーム作成
+            Create Room
           </button>
         </form>
       </div>
@@ -80,9 +80,9 @@ export const RoomList: React.FC = () => {
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
                   <h3>{room.name}</h3>
-                  <p>プレイヤー: {actualPlayerCount}/{room.settings.maxPlayers}</p>
+                  <p>Players: {actualPlayerCount}/{room.settings.maxPlayers}</p>
                   <p className={`${styles.status} ${getStatusClass(room.status)}`}>
-                    ステータス: {getStatusText(room.status)}
+                    Status: {getStatusText(room.status)}
                   </p>
                 </div>
                 {/* 参加ボタン: 自分が参加していないルームで、かつ満員でない場合のみ表示 */}
@@ -92,7 +92,7 @@ export const RoomList: React.FC = () => {
                     onClick={() => joinRoom(room.id)}
                     className={styles.joinButton}
                   >
-                    参加
+                    Join
                   </button>
                 )}
                 {/* 準備ボタン: 自分が参加しているルームのみ表示 */}
@@ -102,8 +102,8 @@ export const RoomList: React.FC = () => {
                     className={`${styles.readyButton} ${playerReadyStatus[currentPlayerId] ? styles.ready : ''}`}
                   >
                     {playerReadyStatus[currentPlayerId]
-                      ? '準備完了'
-                      : '準備する'}
+                      ? 'Ready'
+                      : 'Ready Up'}
                   </button>
                 )}
                 {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
@@ -114,7 +114,7 @@ export const RoomList: React.FC = () => {
                     onClick={() => startGameRoom()}
                     className={styles.startButton}
                   >
-                    ゲーム開始
+                    Start Game
                   </button>
                 )}
                 {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
@@ -123,7 +123,7 @@ export const RoomList: React.FC = () => {
                     onClick={() => leaveRoom(room.id)}
                     className={styles.leaveButton}
                   >
-                    退出
+                    Leave
                   </button>
                 )}
               </div>
