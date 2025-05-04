@@ -265,11 +265,6 @@ export const useRoom = () => {
   const leaveRoom = useCallback((roomId: string) => {
     console.log('leaveRoom called with currentRoom:', currentRoomRef);
     const socket = getSocket();
-    // if (!currentRoom) {
-    //   console.log('No room selected1111');
-    //   setError('No room selected');
-    //   return;
-    // }
     
     // FIX: Store roomId before emitting leave-room
     const leavingRoomId = roomId;
@@ -277,11 +272,6 @@ export const useRoom = () => {
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
         console.log('Successfully left room:', leavingRoomId);
-        // // UIの状態を更新（leavingPlayerInfoはplayer-leftイベントで管理）
-        // setCurrentRoom(null);
-        // setPlayerReadyStatus({});
-        // // ルーム一覧からも削除
-        // setAvailableRooms(prevRooms => prevRooms.filter(room => room.id !== leavingRoomId));
       } else {
         setError(response.error || 'Failed to leave room');
       }
@@ -340,11 +330,11 @@ export const useRoom = () => {
     }
   
     // 全員が準備完了しているか確認
-    // const allReady = currentRoom.players.every(player => player.isReady);
-    // if (!allReady) {
-    //   setError('All players must be ready to start the game');
-    //   return;
-    // }
+    const allReady = currentRoom.players.every(player => player.isReady);
+    if (!allReady) {
+      setError('All players must be ready to start the game');
+      return;
+    }
 
     socket.emit('start-game', { roomId: currentRoom.id });
   }, [currentRoom, players]);

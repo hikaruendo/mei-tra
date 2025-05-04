@@ -93,9 +93,16 @@ export class RoomService implements RoomRepository {
       return false;
     }
 
-    // hand情報をgameStateから同期
+    // ゲーム中かどうかで分岐
+    const isGameStarted = room.status === RoomStatus.PLAYING;
     const gameState = this.roomGameStates.get(roomId);
-    if (gameState) {
+
+    if (!gameState) {
+      return false;
+    }
+
+    if (isGameStarted) {
+      // hand情報をgameStateから同期
       const state = gameState.getState();
       room.players.forEach((roomPlayer) => {
         const statePlayer = state.players.find(
@@ -105,26 +112,36 @@ export class RoomService implements RoomRepository {
           roomPlayer.hand = [...statePlayer.hand];
         }
       });
-    }
-
-    // 退出したプレイヤーのindexを記録
-    const playerIndex = room.players.findIndex((p) => p.playerId === playerId);
-    if (playerIndex !== -1) {
-      if (!this.vacantSeats[roomId]) this.vacantSeats[roomId] = {};
-      this.vacantSeats[roomId][playerIndex] = {
-        hand: [...room.players[playerIndex].hand],
-        team: room.players[playerIndex].team,
-      };
-      // プレイヤーをダミーに置き換え
-      room.players[playerIndex] = this.createDummyPlayer(playerIndex);
+      // 退出したプレイヤーのindexを記録
+      const playerIndex = room.players.findIndex(
+        (p) => p.playerId === playerId,
+      );
+      if (playerIndex !== -1) {
+        if (!this.vacantSeats[roomId]) this.vacantSeats[roomId] = {};
+        this.vacantSeats[roomId][playerIndex] = {
+          hand: [...room.players[playerIndex].hand],
+          team: room.players[playerIndex].team,
+        };
+        // プレイヤーをダミーに置き換え
+        room.players[playerIndex] = this.createDummyPlayer(playerIndex);
+      }
+    } else {
+      // ロビー状態なら単純に配列からremove
+      room.players = room.players.filter((p) => p.playerId !== playerId);
+      // gameStateのplayersからも削除
+      const state = gameState.getState();
+      state.players = state.players.filter((p) => p.playerId !== playerId);
     }
     room.updatedAt = new Date();
 
-    if (gameState) {
-      const state = gameState.getState();
-      const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
-      if (gsIndex !== -1) {
-        state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+    if (isGameStarted) {
+      const gameState = this.roomGameStates.get(roomId);
+      if (gameState) {
+        const state = gameState.getState();
+        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+        if (gsIndex !== -1) {
+          state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+        }
       }
     }
 
