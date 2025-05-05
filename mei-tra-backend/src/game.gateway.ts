@@ -15,7 +15,7 @@ import { RoomService } from './services/room.service';
 import { TrumpType, Field, Team, User } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { RoomStatus } from './types/room.types';
-
+import { ChomboService } from './services/chombo.service';
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -27,6 +27,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly scoreService: ScoreService,
     private readonly blowService: BlowService,
     private readonly playService: PlayService,
+    private readonly chomboService: ChomboService,
     private readonly roomService: RoomService,
   ) {}
 
@@ -705,7 +706,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (winningPlayer.hasRequiredBroken) {
       const client = this.server.sockets.sockets.get(winningPlayer.id);
       if (client) {
-        this.handleRevealBrokenHand(client, winningPlayer.playerId);
+        await this.handleRevealBrokenHand(client, {
+          roomId: roomId,
+          playerId: winningPlayer.playerId,
+        });
       } else {
         console.error(`Socket not found for player: ${winningPlayer.playerId}`);
       }
