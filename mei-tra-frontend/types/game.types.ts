@@ -36,6 +36,7 @@ export interface Player extends User {
   hand: string[];
   isPasser?: boolean;
   hasBroken?: boolean;
+  hasRequiredBroken?: boolean;
 }
 
 export interface BlowDeclaration {

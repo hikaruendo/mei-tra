@@ -11,6 +11,7 @@ export interface Player extends User {
   team: Team;
   isPasser: boolean;
   hasBroken?: boolean;
+  hasRequiredBroken?: boolean;
 }
 
 export interface TeamScore {
