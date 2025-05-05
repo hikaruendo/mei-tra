@@ -871,14 +871,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     currentField.cards.push(data.card);
     if (currentField.cards.length === 1) {
       currentField.baseCard = data.card;
-      // If Joker is played and currentTrump is not 'tra', set baseSuit to currentTrump
-      if (
-        data.card === 'JOKER' &&
-        state.blowState.currentTrump &&
-        state.blowState.currentTrump !== 'tra'
-      ) {
-        currentField.baseSuit = state.blowState.currentTrump;
-      }
     }
 
     // Emit the card played event with updated players
@@ -896,11 +888,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }, 3000);
     } else {
       // If Joker is baseCard and currentTrump is 'tra' and baseSuit is not selected, don't proceed to next turn
-      if (
-        currentField.baseCard === 'JOKER' &&
-        state.blowState.currentTrump === 'tra' &&
-        !currentField.baseSuit
-      ) {
+      if (currentField.baseCard === 'JOKER' && !currentField.baseSuit) {
         return;
       }
 
