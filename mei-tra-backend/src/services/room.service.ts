@@ -197,9 +197,6 @@ export class RoomService implements RoomRepository {
       assignedIndex = vacantIndexes[0];
       hand = roomVacant[assignedIndex].hand;
       team = roomVacant[assignedIndex].team;
-      console.log(
-        `[joinRoom] playerId=${user.playerId} joins seat=${assignedIndex}, hand=${JSON.stringify(hand)}, team=${team}`,
-      );
       // 使い終わったら削除
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
@@ -230,10 +227,6 @@ export class RoomService implements RoomRepository {
         isHost: false,
         joinedAt: new Date(),
       };
-      console.log(
-        `[joinRoom] room.players after seat insert:`,
-        room.players.map((p) => p.playerId),
-      );
     } else {
       // ダミープレイヤーの席を探す
       const dummyIndex = room.players.findIndex((p) =>
@@ -254,10 +247,6 @@ export class RoomService implements RoomRepository {
           joinedAt: new Date(),
         });
       }
-      console.log(
-        `[joinRoom] room.players after push:`,
-        room.players.map((p) => p.playerId),
-      );
     }
     room.updatedAt = new Date();
 

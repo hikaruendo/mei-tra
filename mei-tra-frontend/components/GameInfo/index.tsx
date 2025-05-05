@@ -55,7 +55,6 @@ export const GameInfo: React.FC<GameInfoProps> = ({
       </div>
       <button
         onClick={() => {
-          console.log('leaveRoom', currentRoomId);
           leaveRoom(currentRoomId ?? '')
         }}
         className={styles.leaveButton}

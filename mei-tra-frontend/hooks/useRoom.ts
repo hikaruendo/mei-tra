@@ -39,7 +39,7 @@ export const useRoom = () => {
     socket.on('rooms-list', (rooms: Room[]) => {
       setAvailableRooms(rooms);
       
-      // FIX: 自分のルームが一覧にある場合は同期
+      // 自分のルームが一覧にある場合は同期
       if (currentRoomRef.current) {
         const updatedRoom = rooms.find(r => r.id === currentRoomRef.current?.id);
         if (updatedRoom) {
@@ -50,7 +50,6 @@ export const useRoom = () => {
 
     // ルーム更新
     socket.on('room-updated', (room: Room) => {
-      console.log('room-updated event received:', room);
       setAvailableRooms(prevRooms => prevRooms.map(r => r.id === room.id ? room : r));
       if (currentRoomRef.current?.id === room.id) {
         setCurrentRoom(room);
@@ -122,11 +121,9 @@ export const useRoom = () => {
 
     // プレイヤー退出
     socket.on('player-left', ({ playerId, roomId }: { playerId: string; roomId: string }) => {
-      console.log('player-left event received:', playerId, roomId);
       if (currentRoomRef.current?.id === roomId) {
-        // FIX: Only set currentRoom to null if the current user is the one who left
+        // Only set currentRoom to null if the current user is the one who left
         if (players.find(p => p.playerId === playerId)) {
-          console.log('Current user left the room, setting currentRoom to null');
           setCurrentRoom(null);
         } else {
           setCurrentRoom(prev => {
@@ -176,10 +173,7 @@ export const useRoom = () => {
     });
 
     // ゲーム開始
-    socket.on('room-playing', (players: Player[]) => {
-      console.log('room-playing event received:', players);
-      console.log('current room before update:', currentRoomRef.current);
-      
+    socket.on('room-playing', (players: Player[]) => {   
       // #ここで手札が更新される
       if (currentRoomRef.current) {
         const updatedRoom = {
@@ -190,7 +184,6 @@ export const useRoom = () => {
             return updatedPlayer ? { ...p, hand: updatedPlayer.hand } : p;
           })
         };
-        console.log('updated room to be set:', updatedRoom);
         
         // 状態更新を一括で行う
         setCurrentRoom(updatedRoom);
@@ -198,7 +191,6 @@ export const useRoom = () => {
           const newRooms = prevRooms.map(room => 
             room.id === currentRoomRef.current!.id ? updatedRoom : room
           );
-          console.log('updated available rooms:', newRooms);
           return newRooms;
         });
       } else {
@@ -224,12 +216,7 @@ export const useRoom = () => {
       socket.off('room-updated');
       socket.off('set-room-id');
     };
-  }, [currentRoom, players]); // FIX: Add players to dependency array
-
-  // currentRoomの変更を監視
-  useEffect(() => {
-    console.log('currentRoom updated:', currentRoom);
-  }, [currentRoom]);
+  }, [currentRoom, players]);
 
   // ルーム作成
   const createRoom = useCallback((name: string) => {
@@ -263,16 +250,10 @@ export const useRoom = () => {
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
-    console.log('leaveRoom called with currentRoom:', currentRoomRef);
     const socket = getSocket();
     
-    // FIX: Store roomId before emitting leave-room
-    const leavingRoomId = roomId;
-    
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
-      if (response.success) {
-        console.log('Successfully left room:', leavingRoomId);
-      } else {
+      if (!response.success) {
         setError(response.error || 'Failed to leave room');
       }
     });

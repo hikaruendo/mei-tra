@@ -276,7 +276,6 @@ export const useGame = () => {
         sessionStorage.setItem('reconnectToken', token);
       },
       'back-to-lobby': () => {
-        console.log('back-to-lobby event received');
         setGameStarted(false);
         setGamePhase(null);
         setTeamScores({
