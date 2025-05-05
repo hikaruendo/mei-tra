@@ -161,11 +161,18 @@
 
 .playerName{
   white-space: nowrap;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   text-overflow: ellipsis;
   max-width: 100px;
   font-size: var(--font-size-base);
   color: var(--color-white);
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+  &::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
 } 
 
 .cardCount{
