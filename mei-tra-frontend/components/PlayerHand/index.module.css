@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  /* 3D効果のために必要な遠近法の設定。カードが3D空間で表示されるようにする。値が大きいほど遠近感が強くなる。 */
+  /* Perspective setting needed for 3D effect. Cards will be displayed in 3D space. Larger value means stronger perspective. */
   perspective: 1000px;
   width: 100%;
   padding: 1rem;
@@ -12,7 +12,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  /* 3D効果のために必要な遠近法の設定。カードが3D空間で表示されるようにする。値が大きいほど遠近感が強くなる。 */
+  /* Perspective setting needed for 3D effect. Cards will be displayed in 3D space. Larger value means stronger perspective. */
   perspective: 1000px;
   width: 100%;
   padding: 1rem;
@@ -161,11 +161,18 @@
 
 .playerName{
   white-space: nowrap;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   text-overflow: ellipsis;
   max-width: 100px;
   font-size: var(--font-size-base);
   color: var(--color-white);
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+  &::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
 } 
 
 .cardCount{

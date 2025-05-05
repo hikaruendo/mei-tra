@@ -7,10 +7,13 @@ export function getSocket(): Socket {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
     
     const reconnectToken = sessionStorage.getItem('reconnectToken') || '';
+    const roomId = sessionStorage.getItem('roomId') || '';
+    
     socket = io(socketUrl, {
       transports: ['websocket'],
       auth: {
         reconnectToken,
+        roomId,
       },
     });
   }

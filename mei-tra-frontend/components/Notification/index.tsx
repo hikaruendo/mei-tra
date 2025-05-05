@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import styles from './index.module.css';
 
 interface NotificationProps {
   message: string;
@@ -22,7 +23,7 @@ export const Notification = ({ message, type, onClose }: NotificationProps) => {
 
   return (
     <div 
-      className={`notification ${bgColor}`}
+      className={`${styles.notification} ${bgColor}`}
     >
       {message}
     </div>

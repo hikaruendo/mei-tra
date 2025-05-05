@@ -26,6 +26,7 @@ interface GameTableProps {
   setNumberOfPairs: (pairs: number) => void;
   teamScores: TeamScores;
   currentPlayerId: string | null;
+  currentRoomId: string | null;
 }
 
 export const GameTable: React.FC<GameTableProps> = ({
@@ -47,6 +48,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   setNumberOfPairs,
   teamScores,
   currentPlayerId,
+  currentRoomId,
 }) => {
   const getRelativePosition = (player: Player) => {
     if (!currentPlayerId) return 'bottom';
@@ -78,6 +80,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
         numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
         teamScores={teamScores}
+        currentRoomId={currentRoomId}
       />
 
       {gamePhase && (
@@ -139,7 +142,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           players={players}
           onBaseSuitSelect={gameActions.selectBaseSuit}
           isCurrentPlayer={currentPlayerId === whoseTurn}
-          currentTrump={currentTrump || ''}
         />
       </div>
     </>

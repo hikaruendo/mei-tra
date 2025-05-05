@@ -1,12 +1,13 @@
 import React from 'react';
 import { TrumpType, TeamScores } from '../../types/game.types';
 import styles from './index.module.css';
-
+import { useRoom } from '../../hooks/useRoom';
 interface GameInfoProps {
   currentTrump: TrumpType | null;
   currentHighestDeclarationPlayer: string | null;
   numberOfPairs: number;
   teamScores: TeamScores;
+  currentRoomId: string | null;
 }
 
 export const GameInfo: React.FC<GameInfoProps> = ({
@@ -14,7 +15,10 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   currentHighestDeclarationPlayer,
   numberOfPairs,
   teamScores,
+  currentRoomId,
 }) => {
+  const { leaveRoom } = useRoom();
+
   const getTrumpDisplay = () => {
     if (!currentTrump) return '';
     const trumpMap: Record<TrumpType, string> = {
@@ -49,6 +53,14 @@ export const GameInfo: React.FC<GameInfoProps> = ({
           </span>
         </div>
       </div>
+      <button
+        onClick={() => {
+          leaveRoom(currentRoomId ?? '')
+        }}
+        className={styles.leaveButton}
+      >
+        Leave
+      </button>
     </div>
   );
 }; 

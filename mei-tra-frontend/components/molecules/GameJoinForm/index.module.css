@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  /* min-height: 100vh; */
   padding: var(--spacing-md);
 }
 
@@ -77,7 +77,6 @@
 }
 
 .joinBtn {
-  composes: btn;
   background: #6B3419;
   color: white;
   display: flex;
@@ -86,12 +85,27 @@
   gap: 4px;
 }
 
+.joinBtn, .createBtn, .startBtn {
+  flex: 0 1 auto;
+  min-width: 120px;
+  padding: 8px 16px;
+  border: 2px solid #4A2410;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
 .joinBtn:hover {
   background: #8B4513;
 }
 
 .createBtn {
-  composes: btn;
   background: linear-gradient(135deg, #2196F3, #1976D2);
   color: white;
 }
@@ -101,7 +115,6 @@
 }
 
 .startBtn {
-  composes: btn;
   background: #8B4513;
   color: white;
   display: flex;

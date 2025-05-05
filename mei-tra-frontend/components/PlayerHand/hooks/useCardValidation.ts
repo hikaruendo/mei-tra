@@ -62,10 +62,6 @@ const getCardSuit = (
   baseSuit?: string,
 ): string => {
   if (card === 'JOKER') {
-    // traの場合は、baseSuitが設定されていればそれを使用
-    if (trumpType === 'tra' && baseSuit) {
-      return baseSuit;
-    }
     return baseSuit || '';
   }
 
@@ -113,17 +109,8 @@ export const useCardValidation = (
       }
 
       const baseCard = currentField.baseCard;
-      // If baseCard is Joker and currentTrump is not 'tra', use currentTrump as baseSuit
-      const trumpSuit =
-        currentTrump && currentTrump !== 'tra'
-          ? getTrumpSuit(currentTrump)
-          : '';
-      const baseSuit =
-        baseCard === 'JOKER' &&
-        currentTrump &&
-        currentTrump !== 'tra'
-          ? trumpSuit
-          : getCardSuit(baseCard, currentTrump, currentField.baseSuit);
+      // If baseCard is Joker, use the selected baseSuit
+      const baseSuit = baseCard === 'JOKER' ? currentField.baseSuit : getCardSuit(baseCard, currentTrump, currentField.baseSuit);
       const cardSuit = getCardSuit(card, currentTrump, baseSuit);
 
       // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
@@ -132,9 +119,7 @@ export const useCardValidation = (
           return { isValid: true };
         }
 
-        if (
-          playerHand.some((c) => getCardSuit(c) === baseSuit)
-        ) {
+        if (playerHand.some((c) => getCardSuit(c) === baseSuit)) {
           return {
             isValid: false,
             message: `You must play a card of suit ${baseSuit}`,
@@ -143,24 +128,8 @@ export const useCardValidation = (
         return { isValid: true };
       }
 
-      // Special case: When baseCard is Joker and currentTrump is not 'tra'
-      if (
-        baseCard === 'JOKER' &&
-        currentTrump &&
-        (currentTrump as TrumpType) !== 'tra'
-      ) {
-        // If player has trump suit cards, they must play one
-        const hasTrumpSuit = playerHand.some(
-          (c) => getCardSuit(c, currentTrump) === trumpSuit,
-        );
-        if (hasTrumpSuit && cardSuit !== trumpSuit) {
-          return {
-            isValid: false,
-            message: `You must play a ${trumpSuit} card when Joker is the base card`,
-          };
-        }
-        return { isValid: true };
-      }
+      // Get the trump suit for the current trump type
+      const trumpSuit = getTrumpSuit(currentTrump);
 
       // Normal suit matching rules
       if (baseCard) {
