@@ -23,6 +23,7 @@ export interface Room {
   settings: RoomSettings;
   createdAt: Date;
   updatedAt: Date;
+  lastActivityAt: Date;
 }
 
 export interface RoomSettings {
