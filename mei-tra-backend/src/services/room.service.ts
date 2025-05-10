@@ -3,7 +3,7 @@ import { Room, RoomRepository, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
-import { Player, User, Team } from '../types/game.types';
+import { User, Team } from '../types/game.types';
 
 @Injectable()
 export class RoomService implements RoomRepository {
@@ -15,9 +15,51 @@ export class RoomService implements RoomRepository {
     Record<number, { hand: string[]; team: Team }>
   > = {};
 
-  constructor(private readonly gameStateFactory: GameStateFactory) {}
+  private readonly ROOM_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24時間
+  private readonly CLEANUP_INTERVAL = 60 * 60 * 1000; // 1時間
+
+  constructor(private readonly gameStateFactory: GameStateFactory) {
+    // 定期的なクリーンアップを開始
+    this.startCleanupTask();
+  }
+
+  private startCleanupTask() {
+    setInterval(() => {
+      this.cleanupRooms();
+    }, this.CLEANUP_INTERVAL);
+  }
+
+  private cleanupRooms() {
+    const now = new Date();
+    for (const [roomId, room] of this.rooms) {
+      // 以下の条件でルームを削除
+      if (
+        // 1. ゲームが終了して24時間経過
+        (room.status === RoomStatus.FINISHED &&
+          now.getTime() - room.lastActivityAt.getTime() >
+            this.ROOM_EXPIRY_TIME) ||
+        // 2. ゲームが放棄されて24時間経過
+        (room.status === RoomStatus.ABANDONED &&
+          now.getTime() - room.lastActivityAt.getTime() >
+            this.ROOM_EXPIRY_TIME) ||
+        // 3. 最後のアクティビティから24時間経過
+        now.getTime() - room.lastActivityAt.getTime() > this.ROOM_EXPIRY_TIME
+      ) {
+        void this.deleteRoom(roomId);
+      }
+    }
+  }
+
+  private updateRoomActivity(roomId: string) {
+    const room = this.rooms.get(roomId);
+    if (room) {
+      room.lastActivityAt = new Date();
+      this.rooms.set(roomId, room);
+    }
+  }
 
   createRoom(room: Room): Promise<Room> {
+    room.lastActivityAt = new Date();
     this.rooms.set(room.id, room);
     return Promise.resolve(room);
   }
@@ -32,12 +74,14 @@ export class RoomService implements RoomRepository {
 
     const updatedRoom = { ...room, ...updates };
     this.rooms.set(roomId, updatedRoom);
+    this.updateRoomActivity(roomId);
     return Promise.resolve(updatedRoom);
   }
 
   deleteRoom(roomId: string): Promise<void> {
     this.rooms.delete(roomId);
     this.roomGameStates.delete(roomId);
+    delete this.vacantSeats[roomId];
     return Promise.resolve();
   }
 
@@ -62,6 +106,7 @@ export class RoomService implements RoomRepository {
       },
       createdAt: new Date(),
       updatedAt: new Date(),
+      lastActivityAt: new Date(),
     };
     this.rooms.set(room.id, room);
 
@@ -163,6 +208,7 @@ export class RoomService implements RoomRepository {
     }
 
     await this.updateRoom(roomId, room);
+    this.updateRoomActivity(roomId);
     return true;
   }
 
@@ -211,41 +257,29 @@ export class RoomService implements RoomRepository {
       team = (team0Count <= team1Count ? 0 : 1) as Team;
     }
 
-    const player: Player = {
+    const player: RoomPlayer = {
       ...user,
       team,
       hand,
       isPasser: false,
       hasBroken: false,
+      isReady: false,
+      isHost: false,
+      joinedAt: new Date(),
     };
 
     // 空席があればそのindexに挿入、なければpush
     if (assignedIndex !== -1) {
-      room.players[assignedIndex] = {
-        ...player,
-        isReady: false,
-        isHost: false,
-        joinedAt: new Date(),
-      };
+      room.players[assignedIndex] = player;
     } else {
       // ダミープレイヤーの席を探す
       const dummyIndex = room.players.findIndex((p) =>
         p.playerId.startsWith('dummy-'),
       );
       if (dummyIndex !== -1) {
-        room.players[dummyIndex] = {
-          ...player,
-          isReady: false,
-          isHost: false,
-          joinedAt: new Date(),
-        };
+        room.players[dummyIndex] = player;
       } else {
-        room.players.push({
-          ...player,
-          isReady: false,
-          isHost: false,
-          joinedAt: new Date(),
-        });
+        room.players.push(player);
       }
     }
     room.updatedAt = new Date();
@@ -269,11 +303,8 @@ export class RoomService implements RoomRepository {
     }
 
     await this.updateRoom(roomId, room);
+    this.updateRoomActivity(roomId);
     return true;
-  }
-
-  private generateRoomId(): string {
-    return Math.random().toString(36).substring(2, 15);
   }
 
   async updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean> {
@@ -290,6 +321,7 @@ export class RoomService implements RoomRepository {
     room.status = status;
     room.updatedAt = new Date();
     await this.updateRoom(roomId, room);
+    this.updateRoomActivity(roomId);
     return true;
   }
 
@@ -312,10 +344,6 @@ export class RoomService implements RoomRepository {
     return validTransitions[currentStatus].includes(newStatus);
   }
 
-  private countActualPlayers(players: RoomPlayer[]): number {
-    return players.filter((p) => !p.playerId.startsWith('dummy-')).length;
-  }
-
   async canStartGame(
     roomId: string,
   ): Promise<{ canStart: boolean; reason?: string }> {
@@ -324,26 +352,34 @@ export class RoomService implements RoomRepository {
       return { canStart: false, reason: 'Room not found' };
     }
 
-    // ステータスチェック
+    // ルームのステータスがREADYでない場合は開始できない
     if (room.status !== RoomStatus.READY) {
       return { canStart: false, reason: 'Room is not ready' };
     }
 
-    // プレイヤー数チェック（ダミーを除く）
-    const actualPlayerCount = this.countActualPlayers(room.players);
-    if (actualPlayerCount !== room.settings.maxPlayers) {
-      return { canStart: false, reason: 'Not enough players' };
+    // 実際のプレイヤー（ダミーを除く）が4人揃っているか確認
+    const actualPlayers = room.players.filter(
+      (p) => !p.playerId.startsWith('dummy-'),
+    );
+    if (actualPlayers.length !== 4) {
+      return { canStart: false, reason: 'Need exactly 4 players to start' };
     }
 
-    // 全員の準備状態チェック（ダミーを除く）
-    const allReady = room.players
-      .filter((p) => !p.playerId.startsWith('dummy-'))
-      .every((player) => player.isReady);
+    // 全員が準備完了しているか確認
+    const allReady = actualPlayers.every((p) => p.isReady);
     if (!allReady) {
-      return { canStart: false, reason: 'Not all players are ready' };
+      return { canStart: false, reason: 'All players must be ready' };
     }
 
     return { canStart: true };
+  }
+
+  private countActualPlayers(players: RoomPlayer[]): number {
+    return players.filter((p) => !p.playerId.startsWith('dummy-')).length;
+  }
+
+  private generateRoomId(): string {
+    return Math.random().toString(36).substring(2, 15);
   }
 
   getRoomGameState(roomId: string): Promise<GameStateService> {
