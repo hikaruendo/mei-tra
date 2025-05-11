@@ -1,5 +1,5 @@
 import { BlowDeclaration, Player, TrumpType } from '../../types/game.types';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 
 interface BlowControlsProps {
   isCurrentPlayer: boolean;

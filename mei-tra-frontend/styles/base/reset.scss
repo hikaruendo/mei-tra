@@ -1,0 +1,39 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// 基本的なリセットスタイル
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+// リストのスタイルリセット
+ul, ol {
+  list-style: none;
+}
+
+// リンクのスタイルリセット
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+// ボタンのスタイルリセット
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+// 画像のスタイルリセット
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+} 

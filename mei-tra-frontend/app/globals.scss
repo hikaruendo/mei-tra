@@ -1,0 +1,14 @@
+/* Base */
+@use '../styles/base/variables' as *;
+@use '../styles/base/reset' as *;
+
+// 変数
+$font-family-base: Arial, sans-serif;
+$transition-base: 0.3s ease;
+
+body {
+  background-color: var(--color-primary);
+  color: white;
+  font-family: $font-family-base;
+  transition: background-color $transition-base;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Player, Field } from '../../types/game.types';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 
 interface GameFieldProps {
   currentField: Field | null;

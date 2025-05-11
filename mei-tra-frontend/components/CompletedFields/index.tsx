@@ -1,6 +1,6 @@
 import React from 'react';
 import { CompletedField } from '../../types/game.types';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 import { Card } from '../Card';
 
 interface CompletedFieldsProps {

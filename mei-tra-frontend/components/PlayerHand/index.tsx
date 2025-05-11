@@ -3,7 +3,7 @@ import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
 import { CompletedFields } from '../CompletedFields';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '../PlayAndCancelBtn';
 
