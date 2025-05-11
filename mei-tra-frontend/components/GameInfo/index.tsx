@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrumpType, TeamScores } from '../../types/game.types';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 import { useRoom } from '../../hooks/useRoom';
 interface GameInfoProps {
   currentTrump: TrumpType | null;

@@ -2,7 +2,7 @@
 
 import { GameJoinForm } from '../../molecules/GameJoinForm';
 import { RoomList } from '../../molecules/RoomList';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 type GameJoinGroupProps = {
   name: string;
   onNameChange: (name: string) => void;

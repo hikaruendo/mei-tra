@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRoom } from '../../../hooks/useRoom';
 import { RoomStatus } from '../../../types/room.types';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 import { getSocket } from '../../../app/socket';
 
 const getStatusText = (status: RoomStatus) => {

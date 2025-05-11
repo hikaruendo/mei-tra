@@ -2,7 +2,7 @@ import React from 'react';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
 import { GameField } from '../GameField';
 import { GameInfo } from '../GameInfo';
-import styles from './index.module.css';
+import styles from './index.module.scss';
 import { PlayerHand } from '../PlayerHand';
 import { GameControls } from '../GameControls';
 import { BlowControls } from '../BlowControls';
