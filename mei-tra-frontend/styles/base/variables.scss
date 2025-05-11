@@ -1,0 +1,140 @@
+// Colors
+$color-primary: #1B5E20;
+$color-card-red: #D40000;
+$color-card-black: #000000;
+$color-gold: #FFD700;
+$color-white: #ffffff;
+$color-indigo: #5C6BC0;
+$color-indigo-dark: #3949AB;
+$color-indigo-light: #9FA8DA;
+$color-orange: #FF9800;
+$color-orange-dark: #F57C00;
+$color-blue: #2196F3;
+$color-blue-dark: #1976D2;
+$color-pink: #E91E63;
+$color-pink-dark: #D81B60;
+$color-brown: #5C2C0C;
+$color-brown-light: #8B4513;
+
+// Opacity
+$opacity-hover: 0.95;
+$opacity-disabled: 0.5;
+$opacity-overlay: 0.8;
+
+// Spacing
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 2rem;
+$spacing-xl: 3rem;
+
+// Card dimensions
+$card-width: 70px;
+$card-height: 98px;
+$card-overlap: -15px;
+$card-negri-width: 50px;
+$card-negri-height: 70px;
+
+// Font sizes
+$font-size-xs: 0.7rem;
+$font-size-sm: 0.9rem;
+$font-size-base: 1rem;
+$font-size-lg: 1.4rem;
+$font-size-xl: 2rem;
+$font-size-xxl: 2.2rem;
+
+// Shadows
+$shadow-card: 0 2px 4px rgba(0, 0, 0, 0.2);
+$shadow-selected: 0 8px 20px rgba(0, 0, 0, 0.5);
+$shadow-button: 0 4px 6px rgba(0, 0, 0, 0.15);
+$shadow-button-hover: 0 5px 8px rgba(0, 0, 0, 0.25);
+$shadow-controls: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+// Transitions
+$transition-card: all 0.3s ease;
+$transition-button: all 0.3s ease;
+$transition-tooltip: opacity 0.2s ease;
+
+// Border radius
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 1rem;
+
+// Z-index
+$z-index-base: 1;
+$z-index-card: 10;
+$z-index-controls: 30;
+$z-index-overlay: 40;
+$z-index-tooltip: 50;
+
+// CSS Custom Properties (for backward compatibility)
+:root {
+  // Colors
+  --color-primary: #{$color-primary};
+  --color-card-red: #{$color-card-red};
+  --color-card-black: #{$color-card-black};
+  --color-gold: #{$color-gold};
+  --color-white: #{$color-white};
+  --color-indigo: #{$color-indigo};
+  --color-indigo-dark: #{$color-indigo-dark};
+  --color-indigo-light: #{$color-indigo-light};
+  --color-orange: #{$color-orange};
+  --color-orange-dark: #{$color-orange-dark};
+  --color-blue: #{$color-blue};
+  --color-blue-dark: #{$color-blue-dark};
+  --color-pink: #{$color-pink};
+  --color-pink-dark: #{$color-pink-dark};
+  --color-brown: #{$color-brown};
+  --color-brown-light: #{$color-brown-light};
+  
+  // Opacity
+  --opacity-hover: #{$opacity-hover};
+  --opacity-disabled: #{$opacity-disabled};
+  --opacity-overlay: #{$opacity-overlay};
+  
+  // Spacing
+  --spacing-xs: #{$spacing-xs};
+  --spacing-sm: #{$spacing-sm};
+  --spacing-md: #{$spacing-md};
+  --spacing-lg: #{$spacing-lg};
+  --spacing-xl: #{$spacing-xl};
+  
+  // Card dimensions
+  --card-width: #{$card-width};
+  --card-height: #{$card-height};
+  --card-overlap: #{$card-overlap};
+  --card-negri-width: #{$card-negri-width};
+  --card-negri-height: #{$card-negri-height};
+  
+  // Font sizes
+  --font-size-xs: #{$font-size-xs};
+  --font-size-sm: #{$font-size-sm};
+  --font-size-base: #{$font-size-base};
+  --font-size-lg: #{$font-size-lg};
+  --font-size-xl: #{$font-size-xl};
+  --font-size-xxl: #{$font-size-xxl};
+  
+  // Shadows
+  --shadow-card: #{$shadow-card};
+  --shadow-selected: #{$shadow-selected};
+  --shadow-button: #{$shadow-button};
+  --shadow-button-hover: #{$shadow-button-hover};
+  --shadow-controls: #{$shadow-controls};
+  
+  // Transitions
+  --transition-card: #{$transition-card};
+  --transition-button: #{$transition-button};
+  --transition-tooltip: #{$transition-tooltip};
+  
+  // Border radius
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  
+  // Z-index
+  --z-index-base: #{$z-index-base};
+  --z-index-card: #{$z-index-card};
+  --z-index-controls: #{$z-index-controls};
+  --z-index-overlay: #{$z-index-overlay};
+  --z-index-tooltip: #{$z-index-tooltip};
+} 
