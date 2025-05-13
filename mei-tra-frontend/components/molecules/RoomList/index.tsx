@@ -33,6 +33,7 @@ const getStatusClass = (status: RoomStatus) => {
 export const RoomList: React.FC = () => {
   const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom } = useRoom();
   const [newRoomName, setNewRoomName] = useState('');
+  const [pointsToWin, setPointsToWin] = useState(5);
   const socket = getSocket();
 
   // 現在のプレイヤーIDを取得
@@ -46,8 +47,9 @@ export const RoomList: React.FC = () => {
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (newRoomName.trim()) {
-      createRoom(newRoomName.trim());
+      createRoom(newRoomName.trim(), pointsToWin);
       setNewRoomName('');
+      setPointsToWin(5);
     }
   };
 
@@ -62,6 +64,15 @@ export const RoomList: React.FC = () => {
             onChange={(e) => setNewRoomName(e.target.value)}
             placeholder="Enter room name"
             className={styles.input}
+          />
+          <input
+            type="number"
+            min={1}
+            value={pointsToWin}
+            onChange={(e) => setPointsToWin(Number(e.target.value))}
+            placeholder="Points to Win"
+            className={styles.input}
+            style={{ width: 55 }}
           />
           <button type="submit" className={styles.createButton}>
             Create Room

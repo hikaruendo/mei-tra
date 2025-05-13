@@ -197,3 +197,15 @@
   background-color: #e8f5e9;
   color: #2e7d32;
 } 
+
+.pointsToWinContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.pointsToWinText {
+  color: #fff;
+  font-size: 14px;
+}
