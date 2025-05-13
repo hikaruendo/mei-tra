@@ -111,4 +111,5 @@ export interface GameState {
   playState?: PlayState;
   agari?: string;
   roundNumber: number;
+  pointsToWin: number;
 }

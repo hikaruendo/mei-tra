@@ -163,7 +163,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('create-room')
   async handleCreateRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { name: string },
+    @MessageBody() data: { name: string; pointsToWin: number },
   ) {
     try {
       const auth = client.handshake.auth || {};
@@ -183,6 +183,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const room = await this.roomService.createNewRoom(
         data.name,
         user.playerId,
+        data.pointsToWin,
       );
       if (!room) {
         client.emit('error-message', 'Failed to create room');
@@ -461,6 +462,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
         return;
       }
+
+      // ルームの設定からpointsToWinを取得して設定
+      updatedState.pointsToWin = room.settings.pointsToWin;
 
       // room.playersのhandも更新
       room.players.forEach((roomPlayer) => {
@@ -1030,15 +1034,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ];
     }
 
-    // Check if any team has reached 10 points
+    // Check if any team has reached pointsToWin
     const hasTeamReached = Object.values(state.teamScores).some(
-      (score) => score.total >= 10,
+      (score) => score.total >= state.pointsToWin,
     );
 
     if (hasTeamReached) {
       // Find the winning team
       const winningTeamEntry = Object.entries(state.teamScores).find(
-        ([, score]) => score.total >= 10,
+        ([, score]) => score.total >= state.pointsToWin,
       );
       const finalWinningTeam = winningTeamEntry
         ? (Number(winningTeamEntry[0]) as Team)
@@ -1049,6 +1053,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         winner: `Team ${finalWinningTeam}`,
         finalScores: state.teamScores,
       });
+
+      await this.roomService.updateRoomStatus(roomId, RoomStatus.FINISHED);
 
       // Reset game state after a delay
       setTimeout(() => {

@@ -219,13 +219,13 @@ export const useRoom = () => {
   }, [currentRoom, players]);
 
   // ルーム作成
-  const createRoom = useCallback((name: string) => {
+  const createRoom = useCallback((name: string, pointsToWin: number) => {
     const socket = getSocket();
     if (!socket.id) {
       setError('Socket not connected');
       return;
     }
-    socket.emit('create-room', { name });
+    socket.emit('create-room', { name, pointsToWin });
   }, []);
 
   // ルーム参加
