@@ -65,15 +65,19 @@ export const RoomList: React.FC = () => {
             placeholder="Enter room name"
             className={styles.input}
           />
-          <input
-            type="number"
-            min={1}
-            value={pointsToWin}
-            onChange={(e) => setPointsToWin(Number(e.target.value))}
-            placeholder="Points to Win"
-            className={styles.input}
-            style={{ width: 55 }}
-          />
+          <div className={styles.pointsToWinContainer}>
+            <span className={styles.pointsToWinText}>
+              Win Points
+            </span>
+            <input
+              type="number"
+              min={1}
+              value={pointsToWin}
+              onChange={(e) => setPointsToWin(Number(e.target.value))}
+              placeholder="Points to Win"
+              className={styles.pointsToWinInput}
+            />
+          </div>
           <button type="submit" className={styles.createButton}>
             Create Room
           </button>
