@@ -93,6 +93,7 @@ export class RoomService implements RoomRepository {
     name: string,
     hostId: string,
     pointsToWin: number,
+    teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room> {
     const room: Room = {
       id: this.generateRoomId(),
@@ -104,7 +105,7 @@ export class RoomService implements RoomRepository {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random',
+        teamAssignmentMethod,
         pointsToWin,
         allowSpectators: true,
       },

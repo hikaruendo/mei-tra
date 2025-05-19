@@ -219,13 +219,13 @@ export const useRoom = () => {
   }, [currentRoom, players]);
 
   // ルーム作成
-  const createRoom = useCallback((name: string, pointsToWin: number) => {
+  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
     const socket = getSocket();
     if (!socket.id) {
       setError('Socket not connected');
       return;
     }
-    socket.emit('create-room', { name, pointsToWin });
+    socket.emit('create-room', { name, pointsToWin, teamAssignmentMethod });
   }, []);
 
   // ルーム参加
@@ -320,6 +320,16 @@ export const useRoom = () => {
     socket.emit('start-game', { roomId: currentRoom.id });
   }, [currentRoom, players]);
 
+  // プレイヤーのチーム変更
+  const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {
+    const socket = getSocket();
+    return new Promise((resolve) => {
+      socket.emit('change-player-team', { roomId, teamChanges }, (response: { success: boolean }) => {
+        resolve(response.success);
+      });
+    });
+  }, []);
+
   if (!isClient) {
     return {
       currentRoom: null,
@@ -331,7 +341,8 @@ export const useRoom = () => {
       togglePlayerReady: () => {},
       startGameRoom: () => {},
       fetchRooms: () => {},
-      playerReadyStatus: {}
+      playerReadyStatus: {},
+      changePlayerTeam: () => {},
     };
   }
 
@@ -345,6 +356,7 @@ export const useRoom = () => {
     togglePlayerReady,
     startGameRoom,
     fetchRooms,
-    playerReadyStatus
+    playerReadyStatus,
+    changePlayerTeam,
   };
 };
