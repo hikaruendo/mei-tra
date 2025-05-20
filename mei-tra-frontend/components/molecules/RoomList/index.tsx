@@ -36,7 +36,7 @@ export const RoomList: React.FC = () => {
   const [pointsToWin, setPointsToWin] = useState(5);
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
   const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
-  const [setTeamText, setSetTeamText] = useState<string>('Set Team');
+  const [setTeamText, setSetTeamText] = useState<string>('Update Teams');
   const socket = getSocket();
 
   const readyStatus = playerReadyStatus as Record<string, boolean>;
@@ -148,12 +148,11 @@ export const RoomList: React.FC = () => {
                           const result = await changePlayerTeam(room.id, teamChanges);
                           console.log('[RoomList] result:', result);
                           if (result) {
-                            setSetTeamText('Done');
+                            setSetTeamText('Teams Updated');
                             setTeamChanges({}); // 変更をクリア
                           }
                         } catch (error) {
                           console.error('[RoomList] Team change error:', error);
-                          // エラーメッセージはSocket.IOのerror-messageイベントで表示される
                         }
                       }}
                       className={styles.teamButton}
