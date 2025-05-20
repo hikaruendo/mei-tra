@@ -94,6 +94,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 negriCard: state.playState?.negriCard,
                 fields: state.playState?.fields,
                 roomId: roomId,
+                pointsToWin: state.pointsToWin,
               });
               this.server.to(roomId).emit('update-players', state.players);
             });
@@ -286,6 +287,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             negriCard: state.playState?.negriCard,
             fields: state.playState?.fields,
             roomId: room.id,
+            pointsToWin: room.settings.pointsToWin,
           });
         }
       }
@@ -566,7 +568,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(data.roomId).emit('room-playing', updatedState.players);
       this.server
         .to(data.roomId)
-        .emit('game-started', data.roomId, updatedState.players);
+        .emit(
+          'game-started',
+          data.roomId,
+          updatedState.players,
+          updatedState.pointsToWin,
+        );
 
       this.server.to(data.roomId).emit('update-phase', {
         phase: 'blow',

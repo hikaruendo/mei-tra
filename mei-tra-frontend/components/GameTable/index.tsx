@@ -27,6 +27,7 @@ interface GameTableProps {
   teamScores: TeamScores;
   currentPlayerId: string | null;
   currentRoomId: string | null;
+  pointsToWin: number;
 }
 
 // Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
@@ -66,6 +67,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   teamScores,
   currentPlayerId,
   currentRoomId,
+  pointsToWin,
 }) => {
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
 
@@ -81,6 +83,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
         teamScores={teamScores}
         currentRoomId={currentRoomId}
+        pointsToWin={pointsToWin}
       />
 
       {gamePhase && (
@@ -105,26 +108,35 @@ export const GameTable: React.FC<GameTableProps> = ({
       )}
 
       <div className={styles.playerPositions}>
-        {orderedPlayers.map((player, idx) => (
+        {orderedPlayers.map((player, idx) => {
+          const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
+          const position = positions[idx];
+          // Show all team's completed fields only for bottom player
+          const teamCompletedFields = position === 'bottom' 
+            ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
+            : [];
+          
+          return (
           <PlayerHand
             key={player.playerId}
             player={player}
             isCurrentTurn={whoseTurn === player.playerId}
             negriCard={negriCard}
             negriPlayerId={negriPlayerId}
-            gamePhase={gamePhase}
-            whoseTurn={whoseTurn}
-            gameActions={gameActions}
-            position={positions[idx]}
-            agariCard={revealedAgari || undefined}
-            currentHighestDeclaration={currentHighestDeclaration || undefined}
-            completedFields={completedFields.filter(f => f.winnerId === player.playerId)}
-            currentPlayerId={currentPlayerId || ''}
-            players={players}
-            currentField={currentField}
-            currentTrump={currentTrump}
-          />
-        ))}
+              gamePhase={gamePhase}
+              whoseTurn={whoseTurn}
+              gameActions={gameActions}
+              position={position}
+              agariCard={revealedAgari || undefined}
+              currentHighestDeclaration={currentHighestDeclaration || undefined}
+              completedFields={teamCompletedFields}
+              currentPlayerId={currentPlayerId || ''}
+              players={players}
+              currentField={currentField}
+              currentTrump={currentTrump}
+            />
+          )
+        })}
 
         {/* Center field */}
         <GameField
