@@ -105,26 +105,36 @@ export const GameTable: React.FC<GameTableProps> = ({
       )}
 
       <div className={styles.playerPositions}>
-        {orderedPlayers.map((player, idx) => (
-          <PlayerHand
-            key={player.playerId}
-            player={player}
-            isCurrentTurn={whoseTurn === player.playerId}
-            negriCard={negriCard}
-            negriPlayerId={negriPlayerId}
-            gamePhase={gamePhase}
-            whoseTurn={whoseTurn}
-            gameActions={gameActions}
-            position={positions[idx]}
-            agariCard={revealedAgari || undefined}
-            currentHighestDeclaration={currentHighestDeclaration || undefined}
-            completedFields={completedFields.filter(f => f.winnerId === player.playerId)}
-            currentPlayerId={currentPlayerId || ''}
-            players={players}
-            currentField={currentField}
-            currentTrump={currentTrump}
-          />
-        ))}
+        {orderedPlayers.map((player, idx) => {
+          const position = positions[idx];
+          const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
+
+          // Show all team's completed fields only for bottom player
+          const teamCompletedFields = position === 'bottom' 
+            ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
+            : [];
+
+          return (
+            <PlayerHand
+              key={player.playerId}
+              player={player}
+              isCurrentTurn={whoseTurn === player.playerId}
+              negriCard={negriCard}
+              negriPlayerId={negriPlayerId}
+              gamePhase={gamePhase}
+              whoseTurn={whoseTurn}
+              gameActions={gameActions}
+              position={positions[idx]}
+              agariCard={revealedAgari || undefined}
+              currentHighestDeclaration={currentHighestDeclaration || undefined}
+              completedFields={teamCompletedFields}
+              currentPlayerId={currentPlayerId || ''}
+              players={players}
+              currentField={currentField}
+              currentTrump={currentTrump}
+            />
+          )
+        })}
 
         {/* Center field */}
         <GameField
