@@ -42,9 +42,11 @@ function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerI
   // 自分が先頭（bottom）になるように回転
   const selfIdx = order.findIndex(p => p.playerId === currentPlayerId);
   if (selfIdx > 0) {
-    return [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
+    // 反時計回りになるように順序を反転
+    const rotated = [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
+    return [rotated[0], rotated[3], rotated[2], rotated[1]];
   }
-  return order;
+  return [order[0], order[3], order[2], order[1]];
 }
 
 export const GameTable: React.FC<GameTableProps> = ({
