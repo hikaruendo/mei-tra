@@ -37,6 +37,7 @@ export const useGame = () => {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const [pointsToWin, setPointsToWin] = useState<number>(0);
 
   const [users, setUsers] = useState<User[]>([]);
 
@@ -65,6 +66,7 @@ export const useGame = () => {
         negriCard,
         fields,
         roomId,
+        pointsToWin,
       }: {
         players: Player[];
         gamePhase: GamePhase;
@@ -80,6 +82,7 @@ export const useGame = () => {
         negriCard: string | null;
         fields: CompletedField[];
         roomId: string;
+        pointsToWin: number;
       }) => {
         setPlayers(players);
         setGamePhase(gamePhase);
@@ -95,6 +98,7 @@ export const useGame = () => {
         setNegriPlayerId(negriPlayerId);
         setCurrentRoomId(roomId);
         setGameStarted(true);
+        setPointsToWin(pointsToWin);
       },
       'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string }) => {
         if (data.playerId === currentPlayerId) {
@@ -122,12 +126,13 @@ export const useGame = () => {
           }];
         });
       },
-      'game-started': (roomId: string, players: Player[]) => {
+      'game-started': (roomId: string, players: Player[], pointsToWin: number) => {
         setPlayers(players);
         const id = getSocket().id;
         const index = players.findIndex(p => p.id === id);
         setCurrentPlayerId(players[index].playerId);
         setCurrentRoomId(roomId);
+        setPointsToWin(pointsToWin);
         setGameStarted(true);
       },
       'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
@@ -416,7 +421,7 @@ export const useGame = () => {
     notification,
     setNotification,
     currentRoomId,
-    setCurrentRoomId,
+    pointsToWin,
     users,
     paused,
   };

@@ -27,6 +27,7 @@ interface GameTableProps {
   teamScores: TeamScores;
   currentPlayerId: string | null;
   currentRoomId: string | null;
+  pointsToWin: number;
 }
 
 // Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
@@ -66,6 +67,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   teamScores,
   currentPlayerId,
   currentRoomId,
+  pointsToWin,
 }) => {
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
 
@@ -81,6 +83,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
         teamScores={teamScores}
         currentRoomId={currentRoomId}
+        pointsToWin={pointsToWin}
       />
 
       {gamePhase && (

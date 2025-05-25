@@ -39,6 +39,7 @@ export default function Home() {
     setNotification,
     currentRoomId,
     paused,
+    pointsToWin,
   } = gameState;
 
   return (
@@ -85,6 +86,7 @@ export default function Home() {
                 teamScores={teamScores}
                 currentPlayerId={currentPlayerId}
                 currentRoomId={currentRoomId}
+                pointsToWin={pointsToWin}
               />
             </div>
           </>
