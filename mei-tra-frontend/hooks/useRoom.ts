@@ -289,7 +289,7 @@ export const useRoom = () => {
     const socketId = socket.id;
     const player = players.find((p: { id: string }) => p.id === socketId);
     if (!player) {
-      setError('Player not found');
+      setError('Player not found7');
       return;
     }
     if (!player.playerId) {
@@ -320,7 +320,7 @@ export const useRoom = () => {
     const socketId = socket.id;
     const player = players.find(p => p.id === socketId);
     if (!player) {
-      setError('Player not found');
+      setError('Player not found8');
       return;
     }
   
