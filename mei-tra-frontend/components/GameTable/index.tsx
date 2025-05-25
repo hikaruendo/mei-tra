@@ -32,6 +32,16 @@ interface GameTableProps {
 
 // Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
 function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerId: string): Player[] {
+  // If we don't have enough players, return an array with undefined for missing positions
+  if (players.length < 4) {
+    const result: (Player | undefined)[] = new Array(4).fill(undefined);
+    // Fill in the positions we have players for
+    players.forEach((player, index) => {
+      result[index] = player;
+    });
+    return result as Player[];
+  }
+
   const team0 = players.filter(p => p.team === 0);
   const team1 = players.filter(p => p.team === 1);
   const order: Player[] = [];
@@ -71,6 +81,11 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentRoomId,
   pointsToWin,
 }) => {
+  // Add null check for players array
+  if (!players || players.length === 0) {
+    return null;
+  }
+
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
 
   // Consistent table order for all players, self is always bottom
@@ -111,6 +126,8 @@ export const GameTable: React.FC<GameTableProps> = ({
 
       <div className={styles.playerPositions}>
         {orderedPlayers.map((player, idx) => {
+          if (!player) return null;  // Skip if player is undefined
+          
           const position = positions[idx];
           const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
 
