@@ -128,6 +128,18 @@ export const useRoom = () => {
         } else {
           setCurrentRoom(prev => {
             if (!prev) return null;
+
+            // 退出するプレイヤーのチーム情報を保持
+            const leavingPlayer = prev.players.find(p => p.playerId === playerId);
+            const teamAssignments = {
+              ...prev.teamAssignments
+            };
+            
+            // チーム情報が存在する場合のみ追加
+            if (leavingPlayer?.team !== undefined) {
+              teamAssignments[playerId] = leavingPlayer.team;
+            }
+
             const updatedPlayers = prev.players.map(p => 
               p.playerId === playerId 
                 ? {
@@ -153,13 +165,15 @@ export const useRoom = () => {
                   players: updatedPlayers.map(p => 
                     p.playerId === newHost.playerId ? { ...p, isHost: true } : p
                   ),
-                  hostId: newHost.playerId
+                  hostId: newHost.playerId,
+                  teamAssignments
                 };
               }
             }
             return {
               ...prev,
-              players: updatedPlayers
+              players: updatedPlayers,
+              teamAssignments
             };
           });
         }

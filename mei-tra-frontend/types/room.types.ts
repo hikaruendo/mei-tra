@@ -1,4 +1,4 @@
-import { Player } from './game.types';
+import { Player, Team } from './game.types';
 
 export interface Room {
   id: string;
@@ -9,6 +9,9 @@ export interface Room {
   settings: RoomSettings;
   createdAt: Date;
   updatedAt: Date;
+  teamAssignments: {
+    [playerId: string]: Team;
+  };
 }
 
 export interface RoomPlayer extends Player {

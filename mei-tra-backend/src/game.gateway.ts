@@ -127,36 +127,38 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  async handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket): Promise<void> {
     const roomId = this.playerRooms.get(client.id);
-    if (roomId) {
-      this.playerRooms.delete(client.id);
-      void client.leave(roomId);
+    if (!roomId) return;
 
-      // Get room-specific game state
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const state = roomGameState.getState();
-      const player = state.players.find((p) => p.id === client.id);
+    const roomGameState = await this.roomService.getRoomGameState(roomId);
+    const state = roomGameState.getState();
+    const player = state.players.find((p) => p.id === client.id);
 
-      if (player) {
-        // Notify other players in the same room about the disconnection
-        this.server.to(roomId).emit('player-left', {
-          playerId: player.playerId,
-          roomId: roomId,
-        });
+    if (player) {
+      // プレイヤーのチーム情報を保持
+      state.teamAssignments[player.playerId] = player.team;
 
-        // Set a timeout to remove the player if they don't reconnect
-        const timeout: NodeJS.Timeout = setTimeout(() => {
-          roomGameState.removePlayer(player.playerId);
-          this.server
-            .to(roomId)
-            .emit('update-players', roomGameState.getState().players);
-        }, 10000); // 10 seconds timeout
+      // プレイヤーを削除
+      state.players = state.players.filter((p) => p.id !== client.id);
 
-        // Store the timeout ID for potential cancellation on reconnection
-        roomGameState.setDisconnectTimeout(player.playerId, timeout);
+      // プレイヤーが退出したことを通知
+      this.server.to(roomId).emit('player-left', {
+        playerId: player.playerId,
+        roomId,
+      });
+
+      // ルームの状態を更新
+      const room = await this.roomService.getRoom(roomId);
+      if (room) {
+        room.players = room.players.filter(
+          (p) => p.playerId !== player.playerId,
+        );
+        await this.roomService.updateRoom(roomId, room);
       }
     }
+
+    this.playerRooms.delete(client.id);
   }
   //-------Connection-------
 
@@ -1071,9 +1073,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const declaringTeam = state.players.find(
+    // まず現在のプレイヤーからチームを探す
+    let declaringTeam = state.players.find(
       (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
     )?.team;
+
+    // 現在のプレイヤーに見つからない場合は、teamAssignmentsから探す
+    if (declaringTeam == null && state.teamAssignments) {
+      declaringTeam =
+        state.teamAssignments[
+          state.blowState.currentHighestDeclaration.playerId
+        ];
+    }
 
     if (declaringTeam == null) {
       console.error(
@@ -1280,13 +1291,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!player) return;
 
-    // 全員に手札を公開
-    this.server.emit('reveal-hands', {
-      players: state.players.map((p) => ({
-        playerId: p.playerId,
-        hand: p.hand,
-      })),
-    });
+    // TODO: 実装：全員に手札を公開
+    // this.server.emit('reveal-hands', {
+    //   players: state.players.map((p) => ({
+    //     playerId: p.playerId,
+    //     hand: p.hand,
+    //   })),
+    // });
 
     // 3秒後に次のターンに進む
     setTimeout(() => {
