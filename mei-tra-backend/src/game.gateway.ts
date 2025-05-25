@@ -163,7 +163,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('create-room')
   async handleCreateRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { name: string },
+    @MessageBody()
+    data: {
+      name: string;
+      pointsToWin: number;
+      teamAssignmentMethod: 'random' | 'host-choice';
+    },
   ) {
     try {
       const auth = client.handshake.auth || {};
@@ -183,6 +188,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const room = await this.roomService.createNewRoom(
         data.name,
         user.playerId,
+        data.pointsToWin,
+        data.teamAssignmentMethod,
       );
       if (!room) {
         client.emit('error-message', 'Failed to create room');
@@ -415,6 +422,74 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false, error: 'Internal server error' };
     }
   }
+
+  @SubscribeMessage('change-player-team')
+  async handleChangePlayerTeam(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: { roomId: string; teamChanges: { [key: string]: number } },
+  ): Promise<{ success: boolean }> {
+    const { roomId, teamChanges } = data;
+    const room = await this.roomService.getRoom(roomId);
+    if (!room) {
+      client.emit('error-message', 'Room not found');
+      return { success: false };
+    }
+
+    // ホストのみ許可
+    const hostPlayer = room.players.find((p) => p.playerId === room.hostId);
+    if (!hostPlayer) {
+      client.emit('error-message', 'Only the host can change teams');
+      return { success: false };
+    }
+
+    // 変更前のチームの人数をカウント
+    const currentTeamCounts = {
+      0: room.players.filter(
+        (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
+      ).length,
+      1: room.players.filter(
+        (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
+      ).length,
+    };
+
+    // 変更後のチームの人数を計算
+    const newTeamCounts = { ...currentTeamCounts };
+    for (const [playerId, newTeam] of Object.entries(teamChanges)) {
+      const player = room.players.find((p) => p.playerId === playerId);
+      if (!player) {
+        client.emit('error-message', `Player ${playerId} not found`);
+        return { success: false };
+      }
+
+      // 現在のチームから移動する場合、そのチームの人数を減らす
+      if (player.team === 0) newTeamCounts[0]--;
+      if (player.team === 1) newTeamCounts[1]--;
+
+      // 新しいチームの人数を増やす
+      newTeamCounts[newTeam as Team]++;
+    }
+
+    // 各チームが2人以下であることを確認
+    if (newTeamCounts[0] > 2 || newTeamCounts[1] > 2) {
+      client.emit('error-message', 'Each team must have at most 2 players');
+      return { success: false };
+    }
+
+    // すべてのプレイヤーのチームを変更
+    for (const [playerId, newTeam] of Object.entries(teamChanges)) {
+      const player = room.players.find((p) => p.playerId === playerId);
+      if (player) {
+        player.team = newTeam as Team;
+      }
+    }
+
+    room.updatedAt = new Date();
+    await this.roomService.updateRoom(roomId, room);
+    this.server.to(roomId).emit('room-updated', room);
+
+    return { success: true };
+  }
   //-------Room-------
 
   //-------Game-------
@@ -461,6 +536,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
         return;
       }
+
+      // ルームの設定からpointsToWinを取得して設定
+      updatedState.pointsToWin = room.settings.pointsToWin;
 
       // room.playersのhandも更新
       room.players.forEach((roomPlayer) => {
@@ -1030,15 +1108,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ];
     }
 
-    // Check if any team has reached 10 points
+    // Check if any team has reached pointsToWin
     const hasTeamReached = Object.values(state.teamScores).some(
-      (score) => score.total >= 10,
+      (score) => score.total >= state.pointsToWin,
     );
 
     if (hasTeamReached) {
       // Find the winning team
       const winningTeamEntry = Object.entries(state.teamScores).find(
-        ([, score]) => score.total >= 10,
+        ([, score]) => score.total >= state.pointsToWin,
       );
       const finalWinningTeam = winningTeamEntry
         ? (Number(winningTeamEntry[0]) as Team)
@@ -1049,6 +1127,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         winner: `Team ${finalWinningTeam}`,
         finalScores: state.teamScores,
       });
+
+      await this.roomService.updateRoomStatus(roomId, RoomStatus.FINISHED);
 
       // Reset game state after a delay
       setTimeout(() => {

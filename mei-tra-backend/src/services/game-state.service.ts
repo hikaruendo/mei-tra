@@ -46,6 +46,7 @@ export class GameStateService {
         1: [],
       } as Record<Team, ScoreRecord[]>,
       roundNumber: 1,
+      pointsToWin: 10,
     };
   }
 

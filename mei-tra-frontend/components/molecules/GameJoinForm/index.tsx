@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './index.module.scss';
 
 interface GameJoinFormProps {
@@ -14,6 +14,7 @@ export const GameJoinForm = ({
   onNameChange,
   onJoinGame,
 }: GameJoinFormProps) => {
+  const [setText, setSetText] = useState<string>('Join Game');
   return (
     <div className={styles.container}>
       <div className={styles.gameJoinForm}>
@@ -26,10 +27,13 @@ export const GameJoinForm = ({
         />
         <div className={styles.btnContainer}>
           <button 
-            onClick={onJoinGame} 
+            onClick={() => {
+              onJoinGame();
+              setSetText('Joined');
+            }} 
             className={styles.joinBtn}
           >
-            Join Game
+            {setText}
           </button>
         </div>
       </div>

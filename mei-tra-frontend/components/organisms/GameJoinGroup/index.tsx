@@ -12,12 +12,12 @@ type GameJoinGroupProps = {
 export default function GameJoinGroup({ name, onNameChange, onJoinGame }: GameJoinGroupProps) {
   return (
     <div className={styles.container}>
-      <RoomList />
       <GameJoinForm
         name={name}
         onNameChange={onNameChange}
         onJoinGame={onJoinGame}
       />
+      <RoomList />
     </div>
   );
 }

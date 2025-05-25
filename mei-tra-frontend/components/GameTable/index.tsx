@@ -29,6 +29,23 @@ interface GameTableProps {
   currentRoomId: string | null;
 }
 
+// Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
+function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerId: string): Player[] {
+  const team0 = players.filter(p => p.team === 0);
+  const team1 = players.filter(p => p.team === 1);
+  const order: Player[] = [];
+  for (let i = 0; i < 2; i++) {
+    if (team0[i]) order.push(team0[i]);
+    if (team1[i]) order.push(team1[i]);
+  }
+  // 自分が先頭（bottom）になるように回転
+  const selfIdx = order.findIndex(p => p.playerId === currentPlayerId);
+  if (selfIdx > 0) {
+    return [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
+  }
+  return order;
+}
+
 export const GameTable: React.FC<GameTableProps> = ({
   whoseTurn,
   gamePhase,
@@ -50,28 +67,11 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentPlayerId,
   currentRoomId,
 }) => {
-  const getRelativePosition = (player: Player) => {
-    if (!currentPlayerId) return 'bottom';
-    
-    const currentIndex = players.findIndex(p => p.playerId === currentPlayerId);
-    const playerIndex = players.findIndex(p => p.playerId === player.playerId);
-
-    if (player.playerId === currentPlayerId) return 'bottom';
-
-    const currentTeam = players.find(p => p.playerId === currentPlayerId)?.team;
-    const isTeammate = player.team === currentTeam;
-
-    if (isTeammate) return 'top';
-
-    const diff = (playerIndex - currentIndex + players.length) % players.length;
-
-    if (diff === 1) return 'right';
-    if (diff === 3) return 'left';
-
-    return 'left'; // fallback
-  };
-
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
+
+  // Consistent table order for all players, self is always bottom
+  const orderedPlayers = getConsistentTableOrderWithSelfBottom(players, currentPlayerId || '');
+  const positions = ['bottom', 'left', 'top', 'right'];
 
   return (
     <>
@@ -105,36 +105,26 @@ export const GameTable: React.FC<GameTableProps> = ({
       )}
 
       <div className={styles.playerPositions}>
-        {players.map((player) => {
-          const position = getRelativePosition(player);
-          const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
-          
-          // Show all team's completed fields only for bottom player
-          const teamCompletedFields = position === 'bottom' 
-            ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
-            : [];
-            
-          return (
-            <PlayerHand
-              key={player.playerId}
-              player={player}
-              isCurrentTurn={whoseTurn === player.playerId}
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              gamePhase={gamePhase}
-              whoseTurn={whoseTurn}
-              gameActions={gameActions}
-              position={position}
-              agariCard={revealedAgari || undefined}
-              currentHighestDeclaration={currentHighestDeclaration || undefined}
-              completedFields={teamCompletedFields}
-              currentPlayerId={currentPlayerId || ''}
-              players={players}
-              currentField={currentField}
-              currentTrump={currentTrump}
-            />
-          );
-        })}
+        {orderedPlayers.map((player, idx) => (
+          <PlayerHand
+            key={player.playerId}
+            player={player}
+            isCurrentTurn={whoseTurn === player.playerId}
+            negriCard={negriCard}
+            negriPlayerId={negriPlayerId}
+            gamePhase={gamePhase}
+            whoseTurn={whoseTurn}
+            gameActions={gameActions}
+            position={positions[idx]}
+            agariCard={revealedAgari || undefined}
+            currentHighestDeclaration={currentHighestDeclaration || undefined}
+            completedFields={completedFields.filter(f => f.winnerId === player.playerId)}
+            currentPlayerId={currentPlayerId || ''}
+            players={players}
+            currentField={currentField}
+            currentTrump={currentTrump}
+          />
+        ))}
 
         {/* Center field */}
         <GameField

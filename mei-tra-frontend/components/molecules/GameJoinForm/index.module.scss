@@ -44,27 +44,27 @@ $disabled-border: #808080;
 }
 
 @mixin mobile-styles {
-  @media (max-width: 768px) {
-    .gameJoinForm {
-      padding: var(--spacing-md);
-      max-width: 320px;
-    }
-
-    .input {
-      padding: 10px 14px;
-      font-size: 16px;
-    }
-
-    .btn {
-      padding: 8px 12px;
-      font-size: 13px;
-      min-width: 100px;
-    }
-
-    .playerCount {
-      font-size: 11px;
-    }
+@media (max-width: 768px) {
+  .gameJoinForm {
+    padding: var(--spacing-md);
+    max-width: 320px;
   }
+
+  .input {
+    padding: 10px 14px;
+    font-size: 16px;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-width: 100px;
+  }
+
+  .playerCount {
+    font-size: 11px;
+  }
+}
 }
 
 .container {

@@ -89,7 +89,12 @@ export class RoomService implements RoomRepository {
     return Promise.resolve(Array.from(this.rooms.values()));
   }
 
-  createNewRoom(name: string, hostId: string): Promise<Room> {
+  createNewRoom(
+    name: string,
+    hostId: string,
+    pointsToWin: number,
+    teamAssignmentMethod: 'random' | 'host-choice',
+  ): Promise<Room> {
     const room: Room = {
       id: this.generateRoomId(),
       name,
@@ -100,8 +105,8 @@ export class RoomService implements RoomRepository {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random',
-        pointsToWin: 10,
+        teamAssignmentMethod,
+        pointsToWin,
         allowSpectators: true,
       },
       createdAt: new Date(),
