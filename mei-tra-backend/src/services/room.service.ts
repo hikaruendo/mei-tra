@@ -407,7 +407,7 @@ export class RoomService implements RoomRepository {
 
     const player = room.players.find((p) => p.playerId === playerId);
     if (!player) {
-      return { success: false, error: 'Player not found in room' };
+      return { success: false, error: 'Player not found6 in room' };
     }
 
     // Update player's socket ID

@@ -94,11 +94,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 negriCard: state.playState?.negriCard,
                 fields: state.playState?.fields,
                 roomId: roomId,
+                pointsToWin: state.pointsToWin,
               });
               this.server.to(roomId).emit('update-players', state.players);
             });
         } else {
-          client.emit('error-message', 'Player not found');
+          client.emit('error-message', 'Player not found1');
           client.disconnect();
         }
       });
@@ -138,10 +139,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const player = state.players.find((p) => p.id === client.id);
 
       if (player) {
+        // プレイヤーのチーム情報を保持
+        state.teamAssignments[player.playerId] = player.team;
+
         // Notify other players in the same room about the disconnection
         this.server.to(roomId).emit('player-left', {
           playerId: player.playerId,
-          roomId: roomId,
+          roomId,
         });
 
         // Set a timeout to remove the player if they don't reconnect
@@ -181,7 +185,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const users = this.gameState.getUsers();
       const user = users.find((p) => p.id === client.id);
       if (!user) {
-        client.emit('error-message', 'Player not found');
+        client.emit('error-message', 'Player not found2');
         return;
       }
 
@@ -286,6 +290,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             negriCard: state.playState?.negriCard,
             fields: state.playState?.fields,
             roomId: room.id,
+            pointsToWin: room.settings.pointsToWin,
           });
         }
       }
@@ -321,7 +326,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const player = room.players.find((p) => p.playerId === data.playerId);
       if (!player) {
-        return { success: false, error: 'Player not found in room' };
+        return { success: false, error: 'Player not found3 in room' };
       }
 
       // プレイヤーの準備状態を切り替え
@@ -368,7 +373,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const player = room.players.find((p) => p.id === client.id);
       if (!player) {
-        client.emit('error-message', 'Player not found in room');
+        client.emit('error-message', 'Player not found4 in room');
         return;
       }
 
@@ -407,6 +412,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
       );
       const state = roomGameState.getState();
+      // プレイヤーのチーム情報を保持
+      state.teamAssignments[player.playerId] = player.team;
       const actualPlayerCount = room.players.filter(
         (p) => !p.playerId.startsWith('dummy-'),
       ).length;
@@ -508,7 +515,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const player = state.players.find((p) => p.id === client.id);
 
     if (!player) {
-      client.emit('error-message', 'Player not found1');
+      client.emit('error-message', 'Player not found5');
       return;
     }
 
@@ -566,7 +573,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(data.roomId).emit('room-playing', updatedState.players);
       this.server
         .to(data.roomId)
-        .emit('game-started', data.roomId, updatedState.players);
+        .emit(
+          'game-started',
+          data.roomId,
+          updatedState.players,
+          updatedState.pointsToWin,
+        );
 
       this.server.to(data.roomId).emit('update-phase', {
         phase: 'blow',
@@ -1064,9 +1076,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const declaringTeam = state.players.find(
+    // まず現在のプレイヤーからチームを探す
+    let declaringTeam = state.players.find(
       (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
     )?.team;
+
+    console.log('state', state);
+
+    // 現在のプレイヤーに見つからない場合は、teamAssignmentsから探す
+    if (declaringTeam == null && state.teamAssignments) {
+      declaringTeam =
+        state.teamAssignments[
+          state.blowState.currentHighestDeclaration.playerId
+        ];
+    }
 
     if (declaringTeam == null) {
       console.error(
@@ -1273,13 +1296,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!player) return;
 
-    // 全員に手札を公開
-    this.server.emit('reveal-hands', {
-      players: state.players.map((p) => ({
-        playerId: p.playerId,
-        hand: p.hand,
-      })),
-    });
+    // TODO: 全員に手札を公開
+    // this.server.to(data.roomId).emit('reveal-hands', {
+    //   players: state.players.map((p) => ({
+    //     playerId: p.playerId,
+    //     hand: p.hand,
+    //   })),
+    // });
 
     // 3秒後に次のターンに進む
     setTimeout(() => {
@@ -1295,18 +1318,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Regenerate deck and deal cards
       state.deck = this.cardService.generateDeck();
-      this.gameState.dealCards();
+      roomGameState.dealCards();
 
-      // Emit round cancelled
-      this.server.emit('broken', {
+      // Emit broken event
+      this.server.to(data.roomId).emit('broken', {
         nextPlayerId: firstBlowPlayer.playerId,
         players: state.players,
       });
 
       // Emit turn update
-      this.server.emit('update-turn', firstBlowPlayer.playerId);
-      return;
-    }, 3000); // 3秒間待機
+      this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
+    }, 3000);
   }
   //-------Game-------
 }

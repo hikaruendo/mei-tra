@@ -27,10 +27,21 @@ interface GameTableProps {
   teamScores: TeamScores;
   currentPlayerId: string | null;
   currentRoomId: string | null;
+  pointsToWin: number;
 }
 
 // Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
 function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerId: string): Player[] {
+  // If we don't have enough players, return an array with undefined for missing positions
+  if (players.length < 4) {
+    const result: (Player | undefined)[] = new Array(4).fill(undefined);
+    // Fill in the positions we have players for
+    players.forEach((player, index) => {
+      result[index] = player;
+    });
+    return result as Player[];
+  }
+
   const team0 = players.filter(p => p.team === 0);
   const team1 = players.filter(p => p.team === 1);
   const order: Player[] = [];
@@ -41,9 +52,11 @@ function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerI
   // 自分が先頭（bottom）になるように回転
   const selfIdx = order.findIndex(p => p.playerId === currentPlayerId);
   if (selfIdx > 0) {
-    return [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
+    // 反時計回りになるように順序を反転
+    const rotated = [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
+    return [rotated[0], rotated[3], rotated[2], rotated[1]];
   }
-  return order;
+  return [order[0], order[3], order[2], order[1]];
 }
 
 export const GameTable: React.FC<GameTableProps> = ({
@@ -66,7 +79,13 @@ export const GameTable: React.FC<GameTableProps> = ({
   teamScores,
   currentPlayerId,
   currentRoomId,
+  pointsToWin,
 }) => {
+  // Add null check for players array
+  if (!players || players.length === 0) {
+    return null;
+  }
+
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
 
   // Consistent table order for all players, self is always bottom
@@ -81,6 +100,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
         teamScores={teamScores}
         currentRoomId={currentRoomId}
+        pointsToWin={pointsToWin}
       />
 
       {gamePhase && (
@@ -105,26 +125,38 @@ export const GameTable: React.FC<GameTableProps> = ({
       )}
 
       <div className={styles.playerPositions}>
-        {orderedPlayers.map((player, idx) => (
-          <PlayerHand
-            key={player.playerId}
-            player={player}
-            isCurrentTurn={whoseTurn === player.playerId}
-            negriCard={negriCard}
-            negriPlayerId={negriPlayerId}
-            gamePhase={gamePhase}
-            whoseTurn={whoseTurn}
-            gameActions={gameActions}
-            position={positions[idx]}
-            agariCard={revealedAgari || undefined}
-            currentHighestDeclaration={currentHighestDeclaration || undefined}
-            completedFields={completedFields.filter(f => f.winnerId === player.playerId)}
-            currentPlayerId={currentPlayerId || ''}
-            players={players}
-            currentField={currentField}
-            currentTrump={currentTrump}
-          />
-        ))}
+        {orderedPlayers.map((player, idx) => {
+          if (!player) return null;  // Skip if player is undefined
+          
+          const position = positions[idx];
+          const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
+
+          // Show all team's completed fields only for bottom player
+          const teamCompletedFields = position === 'bottom' 
+            ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
+            : [];
+
+          return (
+            <PlayerHand
+              key={player.playerId}
+              player={player}
+              isCurrentTurn={whoseTurn === player.playerId}
+              negriCard={negriCard}
+              negriPlayerId={negriPlayerId}
+              gamePhase={gamePhase}
+              whoseTurn={whoseTurn}
+              gameActions={gameActions}
+              position={positions[idx]}
+              agariCard={revealedAgari || undefined}
+              currentHighestDeclaration={currentHighestDeclaration || undefined}
+              completedFields={teamCompletedFields}
+              currentPlayerId={currentPlayerId || ''}
+              players={players}
+              currentField={currentField}
+              currentTrump={currentTrump}
+            />
+          )
+        })}
 
         {/* Center field */}
         <GameField

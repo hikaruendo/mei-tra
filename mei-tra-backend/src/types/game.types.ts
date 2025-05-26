@@ -112,4 +112,7 @@ export interface GameState {
   agari?: string;
   roundNumber: number;
   pointsToWin: number;
+  teamAssignments: {
+    [playerId: string]: Team;
+  };
 }
