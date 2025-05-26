@@ -1296,8 +1296,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!player) return;
 
-    // TODO: 実装：全員に手札を公開
-    // this.server.emit('reveal-hands', {
+    // TODO: 全員に手札を公開
+    // this.server.to(data.roomId).emit('reveal-hands', {
     //   players: state.players.map((p) => ({
     //     playerId: p.playerId,
     //     hand: p.hand,
@@ -1318,18 +1318,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Regenerate deck and deal cards
       state.deck = this.cardService.generateDeck();
-      this.gameState.dealCards();
+      roomGameState.dealCards();
 
-      // Emit round cancelled
-      this.server.emit('broken', {
+      // Emit broken event
+      this.server.to(data.roomId).emit('broken', {
         nextPlayerId: firstBlowPlayer.playerId,
         players: state.players,
       });
 
       // Emit turn update
-      this.server.emit('update-turn', firstBlowPlayer.playerId);
-      return;
-    }, 3000); // 3秒間待機
+      this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
+    }, 3000);
   }
   //-------Game-------
 }

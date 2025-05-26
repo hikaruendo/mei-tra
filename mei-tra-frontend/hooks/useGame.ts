@@ -188,6 +188,15 @@ export const useGame = () => {
         setWhoseTurn(nextPlayerId);
         resetBlowState();
       },
+      // TODO: 実装
+      // 'reveal-hands': ({ players }: { players: { playerId: string; hand: string[] }[] }) => {
+      //   setPlayers(currentPlayers => 
+      //     currentPlayers.map(p => {
+      //       const revealedPlayer = players.find(rp => rp.playerId === p.playerId);
+      //       return revealedPlayer ? { ...p, hand: revealedPlayer.hand } : p;
+      //     })
+      //   );
+      // },
       'round-reset': () => {
         resetBlowState();
       },
