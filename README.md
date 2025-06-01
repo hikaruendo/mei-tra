@@ -55,4 +55,4 @@ MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
 
 ## 作者
 
-Hikaru Endo 
+Hikaru Endo とその友人
