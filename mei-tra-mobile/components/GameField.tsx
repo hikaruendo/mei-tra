@@ -5,7 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import { Field, CompletedField } from '@shared/types';
+import { Field, CompletedField } from '../types/shared';
 import { Card } from './Card';
 import { useSocketService } from '../services/useSocketService';
 

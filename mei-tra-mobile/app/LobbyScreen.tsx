@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSocketService } from '../services/useSocketService';
-import { Room } from '@shared/types';
+import { Room } from '../types/shared';
 
 interface LobbyScreenProps {
   navigation: any;

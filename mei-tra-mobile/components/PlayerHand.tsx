@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Player } from '@shared/types';
+import { Player } from '../types/shared';
 import { Card } from './Card';
 import { useSocketService } from '../services/useSocketService';
 

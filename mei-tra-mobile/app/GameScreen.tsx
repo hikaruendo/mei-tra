@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSocketService } from '../services/useSocketService';
-import { Player, GamePhase, TeamScores } from '@shared/types';
+import { Player, GamePhase, TeamScores } from '../types/shared';
 import { PlayerHand } from '../components/PlayerHand';
 import { GameField } from '../components/GameField';
 
