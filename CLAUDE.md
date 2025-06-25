@@ -8,6 +8,8 @@ Mei-Tra (明専トランプ) is an online multiplayer card game for 4 players in
 
 - **mei-tra-backend/**: NestJS backend with WebSocket gateway
 - **mei-tra-frontend/**: Next.js frontend with Socket.IO client
+- **mei-tra-mobile/**: React Native mobile app with Expo
+- **shared/**: Common types, utilities, and constants
 - **Live URL**: https://mei-tra-frontend.vercel.app/
 
 ## Development Commands
@@ -35,6 +37,22 @@ npm run build           # Build for production
 npm run lint            # Next.js ESLint
 npm run start           # Start production server
 npm run vercel-build    # Build for Vercel deployment
+```
+
+### Mobile (mei-tra-mobile/)
+```bash
+cd mei-tra-mobile
+npm start               # Start Expo development server
+npm run android         # Run on Android device/emulator
+npm run ios             # Run on iOS device/simulator
+npm run web             # Run in web browser
+```
+
+### Shared (shared/)
+```bash
+cd shared
+npm run build           # Build TypeScript to dist/
+npm run dev             # Build in watch mode
 ```
 
 ## Architecture Overview

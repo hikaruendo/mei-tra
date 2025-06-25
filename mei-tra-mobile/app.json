@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mei-tra-mobile",
+    "name": "Mei-Tra Mobile",
     "slug": "mei-tra-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,17 +15,20 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.meitra.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B5E20"
-      }
+      },
+      "package": "com.meitra.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "scheme": "mei-tra-mobile",
+    "platforms": ["ios", "android"]
   }
 }
-EOF < /dev/null
