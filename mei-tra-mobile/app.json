@@ -21,6 +21,6 @@
       "package": "com.meitra.mobile"
     },
     "scheme": "mei-tra-mobile",
-    "platforms": ["ios", "android"]
+    "platforms": ["ios", "android", "web"]
   }
 }
