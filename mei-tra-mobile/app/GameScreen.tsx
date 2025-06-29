@@ -12,6 +12,10 @@ import { Player, GamePhase, TeamScores, BlowDeclaration, TrumpType } from '../ty
 import { PlayerHand } from '../components/PlayerHand';
 import { GameField } from '../components/GameField';
 import { BlowControls } from '../components/BlowControls';
+import { GameResult } from '../components/GameResult';
+import { NotificationSystem } from '../components/NotificationSystem';
+import { DetailedScoreBoard } from '../components/DetailedScoreBoard';
+import { useNotification } from '../hooks/useNotification';
 
 interface GameScreenProps {
   route: {
@@ -25,6 +29,7 @@ interface GameScreenProps {
 export function GameScreen({ route, navigation }: GameScreenProps) {
   const { roomId } = route.params;
   const { socket } = useSocketService();
+  const { notifications, removeNotification, showInfo, showSuccess, showWarning, showError } = useNotification();
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
@@ -32,6 +37,12 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const [teamScores, setTeamScores] = useState<TeamScores>({});
   const [currentDeclaration, setCurrentDeclaration] = useState<BlowDeclaration | null>(null);
   const [declarations, setDeclarations] = useState<BlowDeclaration[]>([]);
+  const [gameOver, setGameOver] = useState(false);
+  const [winnerTeam, setWinnerTeam] = useState<number | null>(null);
+  const [roundResults, setRoundResults] = useState<any[]>([]);
+  const [currentRound, setCurrentRound] = useState<number>(1);
+  const [roundHistory, setRoundHistory] = useState<any[]>([]);
+  const [showDetailedScores, setShowDetailedScores] = useState(false);
 
   useEffect(() => {
     if (socket) {
@@ -41,6 +52,8 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         setTeamScores(state.teamScores || {});
         setCurrentDeclaration(state.currentDeclaration || null);
         setDeclarations(state.declarations || []);
+        setCurrentRound(state.currentRound || 1);
+        setRoundHistory(state.roundHistory || []);
         
         // Find current player
         const player = state.players.find((p: Player) => p.id === socket.id);
@@ -67,6 +80,47 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         setDeclarations(data.declarations);
       });
 
+      socket.on('round-results', (data: any) => {
+        setRoundResults(data.results || []);
+      });
+
+      socket.on('game-over', (data: any) => {
+        setGameOver(true);
+        setWinnerTeam(data.winnerTeam);
+        setTeamScores(data.finalScores || {});
+      });
+
+      socket.on('game-paused', () => {
+        showWarning('ゲーム一時停止', 'プレイヤーが不足しているため、ゲームが一時停止されました。');
+      });
+
+      socket.on('game-resumed', () => {
+        showSuccess('ゲーム再開', 'プレイヤーが復帰したため、ゲームが再開されました。');
+      });
+
+      socket.on('player-joined', (data: { playerName: string }) => {
+        showInfo('プレイヤー参加', `${data.playerName}がゲームに参加しました`);
+      });
+
+      socket.on('player-left', (data: { playerName: string }) => {
+        showWarning('プレイヤー退出', `${data.playerName}がゲームから退出しました`);
+      });
+
+      socket.on('game-started', () => {
+        showSuccess('ゲーム開始', 'ゲームが開始されました！');
+      });
+
+      socket.on('phase-changed', (data: { phase: GamePhase }) => {
+        const phaseNames = {
+          deal: 'カード配布',
+          blow: 'ブロー宣言',
+          play: 'カードプレイ',
+          waiting: '待機中',
+        };
+        const phaseName = phaseNames[data.phase as keyof typeof phaseNames] || 'ゲーム';
+        showInfo('フェーズ変更', `${phaseName}フェーズに移行しました`);
+      });
+
       socket.on('back-to-lobby', () => {
         navigation.navigate('Lobby');
       });
@@ -77,6 +131,14 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         socket.off('update-players');
         socket.off('blow-started');
         socket.off('blow-updated');
+        socket.off('round-results');
+        socket.off('game-over');
+        socket.off('game-paused');
+        socket.off('game-resumed');
+        socket.off('player-joined');
+        socket.off('player-left');
+        socket.off('game-started');
+        socket.off('phase-changed');
         socket.off('back-to-lobby');
       };
     }
@@ -124,10 +186,32 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
     }
   };
 
+  const handleBackToLobby = () => {
+    setGameOver(false);
+    setWinnerTeam(null);
+    setRoundResults([]);
+    navigation.navigate('Lobby');
+  };
+
+  const handleNewGame = () => {
+    if (socket) {
+      socket.emit('start-new-game', { roomId });
+      setGameOver(false);
+      setWinnerTeam(null);
+      setRoundResults([]);
+    }
+  };
+
   const isCurrentPlayerTurn = currentPlayer && whoseTurn === currentPlayer.playerId;
 
   return (
     <View style={styles.container}>
+      {/* Notification System */}
+      <NotificationSystem
+        notifications={notifications}
+        onDismiss={removeNotification}
+      />
+      
       <View style={styles.header}>
         <Text style={styles.roomId}>Room: {roomId}</Text>
         <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveRoom}>
@@ -149,12 +233,31 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         {/* Team Scores */}
         {Object.keys(teamScores).length > 0 && (
           <View style={styles.scoresSection}>
-            <Text style={styles.sectionTitle}>Team Scores</Text>
-            {Object.entries(teamScores).map(([team, score]) => (
-              <Text key={team} style={styles.scoreText}>
-                Team {team}: {score.total} points
-              </Text>
-            ))}
+            <View style={styles.scoreHeader}>
+              <Text style={styles.sectionTitle}>Team Scores</Text>
+              <TouchableOpacity
+                style={styles.detailButton}
+                onPress={() => setShowDetailedScores(!showDetailedScores)}
+              >
+                <Text style={styles.detailButtonText}>
+                  {showDetailedScores ? '簡易表示' : '詳細表示'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {showDetailedScores ? (
+              <DetailedScoreBoard
+                teamScores={teamScores}
+                currentRound={currentRound}
+                roundHistory={roundHistory}
+              />
+            ) : (
+              Object.entries(teamScores).map(([team, score]) => (
+                <Text key={team} style={styles.scoreText}>
+                  Team {parseInt(team) + 1}: {score.total} points
+                </Text>
+              ))
+            )}
           </View>
         )}
 
@@ -206,6 +309,16 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* Game Result Modal */}
+      <GameResult
+        visible={gameOver}
+        teamScores={teamScores}
+        winnerTeam={winnerTeam}
+        roundResults={roundResults}
+        onBackToLobby={handleBackToLobby}
+        onNewGame={handleNewGame}
+      />
     </View>
   );
 }
@@ -262,11 +375,27 @@ const styles = StyleSheet.create({
   scoresSection: {
     marginBottom: 20,
   },
+  scoreHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   sectionTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+  },
+  detailButton: {
+    backgroundColor: '#388E3C',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  detailButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   scoreText: {
     color: '#E8F5E8',
