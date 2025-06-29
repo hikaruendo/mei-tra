@@ -8,9 +8,10 @@ import {
   Alert,
 } from 'react-native';
 import { useSocketService } from '../services/useSocketService';
-import { Player, GamePhase, TeamScores } from '../types/shared';
+import { Player, GamePhase, TeamScores, BlowDeclaration, TrumpType } from '../types/shared';
 import { PlayerHand } from '../components/PlayerHand';
 import { GameField } from '../components/GameField';
+import { BlowControls } from '../components/BlowControls';
 
 interface GameScreenProps {
   route: {
@@ -29,6 +30,8 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
   const [teamScores, setTeamScores] = useState<TeamScores>({});
+  const [currentDeclaration, setCurrentDeclaration] = useState<BlowDeclaration | null>(null);
+  const [declarations, setDeclarations] = useState<BlowDeclaration[]>([]);
 
   useEffect(() => {
     if (socket) {
@@ -36,6 +39,8 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         setPlayers(state.players);
         setGamePhase(state.gamePhase);
         setTeamScores(state.teamScores || {});
+        setCurrentDeclaration(state.currentDeclaration || null);
+        setDeclarations(state.declarations || []);
         
         // Find current player
         const player = state.players.find((p: Player) => p.id === socket.id);
@@ -52,6 +57,16 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         setCurrentPlayer(player || null);
       });
 
+      socket.on('blow-started', (data: any) => {
+        setCurrentDeclaration(null);
+        setDeclarations([]);
+      });
+
+      socket.on('blow-updated', (data: any) => {
+        setCurrentDeclaration(data.currentDeclaration);
+        setDeclarations(data.declarations);
+      });
+
       socket.on('back-to-lobby', () => {
         navigation.navigate('Lobby');
       });
@@ -60,6 +75,8 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         socket.off('game-state');
         socket.off('update-turn');
         socket.off('update-players');
+        socket.off('blow-started');
+        socket.off('blow-updated');
         socket.off('back-to-lobby');
       };
     }
@@ -88,6 +105,23 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         },
       ]
     );
+  };
+
+  const handleDeclare = (declaration: { trumpType: TrumpType; numberOfPairs: number }) => {
+    if (socket) {
+      socket.emit('declare-blow', {
+        roomId,
+        declaration,
+      });
+    }
+  };
+
+  const handlePass = () => {
+    if (socket) {
+      socket.emit('pass-blow', {
+        roomId,
+      });
+    }
   };
 
   const isCurrentPlayerTurn = currentPlayer && whoseTurn === currentPlayer.playerId;
@@ -139,13 +173,25 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
           ))}
         </View>
 
+        {/* Blow Controls */}
+        {gamePhase === 'blow' && currentPlayer && (
+          <BlowControls
+            onDeclare={handleDeclare}
+            onPass={handlePass}
+            currentDeclaration={currentDeclaration}
+            isMyTurn={isCurrentPlayerTurn}
+            playerName={currentPlayer.name}
+            declarations={declarations}
+          />
+        )}
+
         {/* Game Field */}
-        {gamePhase && gamePhase !== 'waiting' && (
+        {gamePhase && gamePhase !== 'waiting' && gamePhase !== 'blow' && (
           <GameField roomId={roomId} />
         )}
 
         {/* Current Player's Hand */}
-        {currentPlayer && currentPlayer.hand.length > 0 && (
+        {currentPlayer && currentPlayer.hand.length > 0 && gamePhase === 'play' && (
           <PlayerHand 
             player={currentPlayer} 
             roomId={roomId}
