@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useSocketService } from '../services/useSocketService';
 import { Room } from '../types/shared';
+import { NotificationSystem } from '../components/NotificationSystem';
+import { useNotification } from '../hooks/useNotification';
 
 interface LobbyScreenProps {
   navigation: any;
@@ -19,6 +21,7 @@ export function LobbyScreen({ navigation }: LobbyScreenProps) {
   const [playerName, setPlayerName] = useState('');
   const [rooms, setRooms] = useState<Room[]>([]);
   const { socket, isConnected } = useSocketService();
+  const { notifications, removeNotification, showError, showWarning, showSuccess } = useNotification();
 
   useEffect(() => {
     if (socket) {
@@ -30,6 +33,27 @@ export function LobbyScreen({ navigation }: LobbyScreenProps) {
         navigation.navigate('Game', { roomId });
       });
 
+      // Error handling
+      socket.on('error', (data: { message: string }) => {
+        showError('エラー', data.message);
+      });
+
+      socket.on('room-full', () => {
+        showWarning('ルーム満員', 'このルームは満員です');
+      });
+
+      socket.on('room-not-found', () => {
+        showError('ルーム不明', 'ルームが見つかりません');
+      });
+
+      socket.on('join-room-error', (data: { message: string }) => {
+        showError('参加エラー', data.message);
+      });
+
+      socket.on('create-room-error', (data: { message: string }) => {
+        showError('作成エラー', data.message);
+      });
+
       // Request rooms list when connected
       if (isConnected) {
         socket.emit('list-rooms');
@@ -38,32 +62,49 @@ export function LobbyScreen({ navigation }: LobbyScreenProps) {
       return () => {
         socket.off('rooms-list');
         socket.off('room-player-joined');
+        socket.off('error');
+        socket.off('room-full');
+        socket.off('room-not-found');
+        socket.off('join-room-error');
+        socket.off('create-room-error');
       };
     }
   }, [socket, isConnected, navigation]);
 
   const handleCreateRoom = () => {
     if (!playerName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      showWarning('入力エラー', 'プレイヤー名を入力してください');
       return;
     }
 
-    if (socket) {
+    if (!socket || !socket.connected) {
+      showError('接続エラー', 'サーバーに接続されていません');
+      return;
+    }
+
+    try {
       socket.emit('create-room', {
         name: `${playerName}'s Room`,
         pointsToWin: 100,
         teamAssignmentMethod: 'random',
       });
+    } catch (error) {
+      showError('エラー', 'ルーム作成に失敗しました');
     }
   };
 
   const handleJoinRoom = (room: Room) => {
     if (!playerName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      showWarning('入力エラー', 'プレイヤー名を入力してください');
       return;
     }
 
-    if (socket) {
+    if (!socket || !socket.connected) {
+      showError('接続エラー', 'サーバーに接続されていません');
+      return;
+    }
+
+    try {
       socket.emit('join-room', {
         roomId: room.id,
         user: {
@@ -72,6 +113,8 @@ export function LobbyScreen({ navigation }: LobbyScreenProps) {
           name: playerName,
         },
       });
+    } catch (error) {
+      showError('エラー', 'ルーム参加に失敗しました');
     }
   };
 
@@ -90,6 +133,11 @@ export function LobbyScreen({ navigation }: LobbyScreenProps) {
 
   return (
     <View style={styles.container}>
+      <NotificationSystem
+        notifications={notifications}
+        onDismiss={removeNotification}
+      />
+      
       <Text style={styles.title}>Welcome to Mei-Tra</Text>
       
       <View style={styles.nameSection}>

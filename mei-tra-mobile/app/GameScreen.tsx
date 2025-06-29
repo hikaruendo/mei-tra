@@ -121,6 +121,45 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         showInfo('フェーズ変更', `${phaseName}フェーズに移行しました`);
       });
 
+      // Error handling events
+      socket.on('error', (data: { message: string; type?: string }) => {
+        showError('エラー', data.message);
+      });
+
+      socket.on('validation-error', (data: { message: string; field?: string }) => {
+        showWarning('入力エラー', data.message);
+      });
+
+      socket.on('game-error', (data: { message: string; code?: string }) => {
+        showError('ゲームエラー', data.message);
+      });
+
+      socket.on('connection-error', (data: { message: string }) => {
+        showError('接続エラー', data.message);
+      });
+
+      socket.on('room-full', () => {
+        showWarning('ルーム満員', 'ルームの定員が満席です');
+        navigation.navigate('Lobby');
+      });
+
+      socket.on('room-not-found', () => {
+        showError('ルーム不明', 'ルームが見つかりません');
+        navigation.navigate('Lobby');
+      });
+
+      socket.on('invalid-action', (data: { message: string; action?: string }) => {
+        showWarning('無効な操作', data.message || '現在この操作は実行できません');
+      });
+
+      socket.on('network-error', () => {
+        showError('ネットワークエラー', '接続に問題が発生しました。再接続を試行中...');
+      });
+
+      socket.on('server-maintenance', (data: { message: string; estimatedTime?: number }) => {
+        showWarning('メンテナンス', data.message || 'サーバーメンテナンス中です');
+      });
+
       socket.on('back-to-lobby', () => {
         navigation.navigate('Lobby');
       });
@@ -139,14 +178,29 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         socket.off('player-left');
         socket.off('game-started');
         socket.off('phase-changed');
+        socket.off('error');
+        socket.off('validation-error');
+        socket.off('game-error');
+        socket.off('connection-error');
+        socket.off('room-full');
+        socket.off('room-not-found');
+        socket.off('invalid-action');
+        socket.off('network-error');
+        socket.off('server-maintenance');
         socket.off('back-to-lobby');
       };
     }
   }, [socket, navigation]);
 
   const handleStartGame = () => {
-    if (socket) {
-      socket.emit('start-game', { roomId });
+    try {
+      if (socket && socket.connected) {
+        socket.emit('start-game', { roomId });
+      } else {
+        showError('接続エラー', 'サーバーに接続されていません');
+      }
+    } catch (error) {
+      showError('エラー', 'ゲーム開始に失敗しました');
     }
   };
 
@@ -170,19 +224,31 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   };
 
   const handleDeclare = (declaration: { trumpType: TrumpType; numberOfPairs: number }) => {
-    if (socket) {
-      socket.emit('declare-blow', {
-        roomId,
-        declaration,
-      });
+    try {
+      if (socket && socket.connected) {
+        socket.emit('declare-blow', {
+          roomId,
+          declaration,
+        });
+      } else {
+        showError('接続エラー', 'サーバーに接続されていません');
+      }
+    } catch (error) {
+      showError('エラー', 'ブロー宣言に失敗しました');
     }
   };
 
   const handlePass = () => {
-    if (socket) {
-      socket.emit('pass-blow', {
-        roomId,
-      });
+    try {
+      if (socket && socket.connected) {
+        socket.emit('pass-blow', {
+          roomId,
+        });
+      } else {
+        showError('接続エラー', 'サーバーに接続されていません');
+      }
+    } catch (error) {
+      showError('エラー', 'パス操作に失敗しました');
     }
   };
 
@@ -194,11 +260,17 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   };
 
   const handleNewGame = () => {
-    if (socket) {
-      socket.emit('start-new-game', { roomId });
-      setGameOver(false);
-      setWinnerTeam(null);
-      setRoundResults([]);
+    try {
+      if (socket && socket.connected) {
+        socket.emit('start-new-game', { roomId });
+        setGameOver(false);
+        setWinnerTeam(null);
+        setRoundResults([]);
+      } else {
+        showError('接続エラー', 'サーバーに接続されていません');
+      }
+    } catch (error) {
+      showError('エラー', '新しいゲームの開始に失敗しました');
     }
   };
 
