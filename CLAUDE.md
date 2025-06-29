@@ -80,6 +80,15 @@ npm run dev             # Build in watch mode
 - **Real-time Communication**: Socket.IO client with reconnection support
 - **State Management**: Local state with Socket.IO event-driven updates
 
+### Mobile Architecture (React Native + Expo)
+- **React Navigation Stack** for screen management
+- **Component Architecture**:
+  - Mobile-optimized UI components (Card, PlayerHand, GameField)
+  - Touch-friendly interactions with haptic feedback
+  - Responsive design for different screen sizes
+- **Real-time Communication**: Socket.IO client with same backend integration
+- **Development**: Expo development server with QR code scanning for device testing
+
 ### Key Technical Patterns
 
 #### WebSocket Communication
@@ -151,20 +160,28 @@ npm run dev             # Build in watch mode
 ### Environment Configuration
 - **Backend**: Port 3333 (configurable via PORT env var)
 - **Frontend**: Next.js on port 3000 with Turbopack
-- **WebSocket URL**: Configurable via `NEXT_PUBLIC_SOCKET_URL`
+- **Mobile**: Expo development server with device/simulator support
+- **WebSocket URL**: Configurable via `NEXT_PUBLIC_SOCKET_URL` / `EXPO_PUBLIC_SOCKET_URL`
 - **CORS**: Environment-aware (localhost for dev, vercel for prod)
 
 ## Common Development Tasks
 
 When working on game features:
-1. Update game state types in `types/game.types.ts` (both frontend and backend)
+1. Update shared types in `shared/src/types/` (used by all applications)
 2. Implement business logic in appropriate service (`mei-tra-backend/src/services/`)
 3. Add WebSocket event handlers in `game.gateway.ts`
 4. Update frontend components and custom hooks
-5. Run lint on both projects to ensure code quality
+5. Update mobile components if needed (`mei-tra-mobile/components/`)
+6. Run lint on all projects to ensure code quality
 
 When adding new game phases or features:
-1. Extend `GamePhase` type and `GameState` interface
+1. Extend `GamePhase` type and `GameState` interface in shared types
 2. Add corresponding service methods and WebSocket events
-3. Update both frontend and backend event handling
+3. Update frontend, mobile, and backend event handling
 4. Test with multiple connected clients for multiplayer scenarios
+
+When developing mobile features:
+1. Use Expo Go app for testing on physical devices
+2. Ensure SDK compatibility between project and Expo Go app
+3. Test touch interactions and responsive design on different screen sizes
+4. Verify Socket.IO connection works consistently across platforms
