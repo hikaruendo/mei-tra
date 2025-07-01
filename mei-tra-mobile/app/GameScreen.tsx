@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -8,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSocketService } from '../services/useSocketService';
-import { Player, GamePhase, TeamScores, BlowDeclaration, TrumpType } from '../types/shared';
+import { RoomPlayer, GamePhase, TeamScores, BlowDeclaration, TrumpType } from '../types/shared';
 import { PlayerHand } from '../components/PlayerHand';
 import { GameField } from '../components/GameField';
 import { BlowControls } from '../components/BlowControls';
@@ -30,8 +31,8 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const { roomId } = route.params;
   const { socket } = useSocketService();
   const { notifications, removeNotification, showInfo, showSuccess, showWarning, showError } = useNotification();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  const [players, setPlayers] = useState<RoomPlayer[]>([]);
+  const [currentPlayer, setCurrentPlayer] = useState<RoomPlayer | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
   const [teamScores, setTeamScores] = useState<TeamScores>({});
@@ -56,7 +57,7 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         setRoundHistory(state.roundHistory || []);
         
         // Find current player
-        const player = state.players.find((p: Player) => p.id === socket.id);
+        const player = state.players.find((p: RoomPlayer) => p.id === socket.id);
         setCurrentPlayer(player || null);
       });
 
@@ -64,9 +65,9 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         setWhoseTurn(playerId);
       });
 
-      socket.on('update-players', (updatedPlayers: Player[]) => {
+      socket.on('update-players', (updatedPlayers: RoomPlayer[]) => {
         setPlayers(updatedPlayers);
-        const player = updatedPlayers.find((p: Player) => p.id === socket.id);
+        const player = updatedPlayers.find((p: RoomPlayer) => p.id === socket.id);
         setCurrentPlayer(player || null);
       });
 
@@ -191,6 +192,30 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
       };
     }
   }, [socket, navigation]);
+
+  // Handle navigation back button - leave room when navigating away
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        // This will be called when the screen loses focus (user navigates away)
+        if (socket && socket.connected) {
+          socket.emit('leave-room', { roomId });
+        }
+      };
+    }, [socket, roomId])
+  );
+
+  const handleToggleReady = () => {
+    try {
+      if (socket && socket.connected) {
+        socket.emit('toggle-player-ready', { roomId });
+      } else {
+        showError('接続エラー', 'サーバーに接続されていません');
+      }
+    } catch (error) {
+      showError('エラー', '準備状態の変更に失敗しました');
+    }
+  };
 
   const handleStartGame = () => {
     try {
@@ -338,12 +363,29 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
           <Text style={styles.sectionTitle}>Players ({players.length}/4)</Text>
           {players.map((player) => (
             <View key={player.playerId} style={styles.playerItem}>
-              <Text style={styles.playerName}>
-                {player.name} {player.id === socket?.id && '(You)'}
-              </Text>
-              <Text style={styles.playerInfo}>
-                Team {player.team} • Cards: {player.hand.length}
-              </Text>
+              <View style={styles.playerContent}>
+                <Text style={styles.playerName}>
+                  {player.name} {player.id === socket?.id && '(You)'}
+                </Text>
+                <Text style={styles.playerInfo}>
+                  Team {player.team} • Cards: {player.hand.length}
+                  {gamePhase === 'waiting' && (
+                    <Text style={[styles.readyStatus, player.isReady && styles.readyStatusReady]}>
+                      {player.isReady ? ' • Ready' : ' • Not Ready'}
+                    </Text>
+                  )}
+                </Text>
+              </View>
+              {gamePhase === 'waiting' && player.id === socket?.id && (
+                <TouchableOpacity
+                  style={[styles.readyButton, player.isReady && styles.readyButtonActive]}
+                  onPress={handleToggleReady}
+                >
+                  <Text style={styles.readyButtonText}>
+                    {player.isReady ? 'Not Ready' : 'Ready'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </View>
@@ -354,7 +396,7 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
             onDeclare={handleDeclare}
             onPass={handlePass}
             currentDeclaration={currentDeclaration}
-            isMyTurn={isCurrentPlayerTurn}
+            isMyTurn={isCurrentPlayerTurn || false}
             playerName={currentPlayer.name}
             declarations={declarations}
           />
@@ -370,7 +412,7 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
           <PlayerHand 
             player={currentPlayer} 
             roomId={roomId}
-            isMyTurn={isCurrentPlayerTurn}
+            isMyTurn={isCurrentPlayerTurn || false}
           />
         )}
 
@@ -482,6 +524,12 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 6,
     marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  playerContent: {
+    flex: 1,
   },
   playerName: {
     color: '#fff',
@@ -502,6 +550,29 @@ const styles = StyleSheet.create({
   startButtonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  readyStatus: {
+    color: '#FF5722',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  readyStatusReady: {
+    color: '#4CAF50',
+  },
+  readyButton: {
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 10,
+  },
+  readyButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  readyButtonText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: 'bold',
   },
 });

@@ -8,12 +8,12 @@ import {
   Alert,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Player } from '../types/shared';
+import { RoomPlayer } from '../types/shared';
 import { Card } from './Card';
 import { useSocketService } from '../services/useSocketService';
 
 interface PlayerHandProps {
-  player: Player;
+  player: RoomPlayer;
   roomId: string;
   isMyTurn: boolean;
 }
