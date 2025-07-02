@@ -1,0 +1,13 @@
+{
+  "name": "@mei-tra/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for Mei-Tra game",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

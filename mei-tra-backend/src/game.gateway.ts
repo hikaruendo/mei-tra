@@ -248,6 +248,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         playerId: data.user.playerId,
         roomId: data.roomId,
         isHost,
+        room,
       });
 
       // ゲーム関連のイベント
@@ -350,7 +351,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: 'Failed to update room' };
       }
 
-      this.server.to(data.roomId).emit('room-updated', updatedRoom);
+      // 各プレイヤーに準備状態の更新を通知
+      this.server.to(data.roomId).emit('player-ready-updated', {
+        playerId: data.playerId,
+        isReady: player.isReady,
+        room: updatedRoom,
+      });
+
+      // ルーム一覧の更新も送信
+      const rooms = await this.roomService.listRooms();
+      this.server.emit('rooms-list', rooms);
 
       return { success: true };
     } catch (error) {
@@ -403,7 +413,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const rooms = await this.roomService.listRooms();
       this.server.emit('rooms-list', rooms);
 
-      this.server.to(client.id).emit('back-to-lobby');
+      // ルームを離れたプレイヤーに通知
+      this.server.to(client.id).emit('room-left');
 
       this.server.to(room.id).emit('update-players', room.players);
 

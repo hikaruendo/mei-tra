@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Mei-Tra Mobile",
+    "slug": "mei-tra-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1B5E20"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.meitra.mobile"
+    },
+    "android": {
+      "backgroundColor": "#1B5E20",
+      "package": "com.meitra.mobile"
+    },
+    "scheme": "mei-tra-mobile",
+    "platforms": ["ios", "android", "web"]
+  }
+}
