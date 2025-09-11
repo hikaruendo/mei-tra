@@ -8,9 +8,10 @@ import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
+import { RepositoriesModule } from './repositories/repositories.module';
 
 @Module({
-  imports: [],
+  imports: [RepositoriesModule],
   providers: [
     GameGateway,
     GameStateService,
