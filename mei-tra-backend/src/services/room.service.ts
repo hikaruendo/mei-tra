@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { Room, RoomRepository, RoomPlayer } from '../types/room.types';
+import { Injectable, Inject } from '@nestjs/common';
+import { Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
 import { User, Team } from '../types/game.types';
+import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 
 @Injectable()
-export class RoomService implements RoomRepository {
-  private rooms: Map<string, Room> = new Map();
+export class RoomService {
   private roomGameStates: Map<string, GameStateService> = new Map();
   // 退出席情報（ルームIDごとに席番号ベースでhand/teamを保存）
   private vacantSeats: Record<
@@ -18,85 +18,88 @@ export class RoomService implements RoomRepository {
   private readonly ROOM_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24時間
   private readonly CLEANUP_INTERVAL = 60 * 60 * 1000; // 1時間
 
-  constructor(private readonly gameStateFactory: GameStateFactory) {
+  constructor(
+    @Inject('IRoomRepository')
+    private readonly roomRepository: IRoomRepository,
+    private readonly gameStateFactory: GameStateFactory,
+  ) {
     // 定期的なクリーンアップを開始
     this.startCleanupTask();
   }
 
   private startCleanupTask() {
     setInterval(() => {
-      this.cleanupRooms();
+      void this.cleanupRooms();
     }, this.CLEANUP_INTERVAL);
   }
 
-  private cleanupRooms() {
-    const now = new Date();
-    for (const [roomId, room] of this.rooms) {
-      // 以下の条件でルームを削除
-      if (
-        // 1. ゲームが終了して24時間経過
-        (room.status === RoomStatus.FINISHED &&
-          now.getTime() - room.lastActivityAt.getTime() >
-            this.ROOM_EXPIRY_TIME) ||
-        // 2. ゲームが放棄されて24時間経過
-        (room.status === RoomStatus.ABANDONED &&
-          now.getTime() - room.lastActivityAt.getTime() >
-            this.ROOM_EXPIRY_TIME) ||
-        // 3. 最後のアクティビティから24時間経過
-        now.getTime() - room.lastActivityAt.getTime() > this.ROOM_EXPIRY_TIME
-      ) {
-        void this.deleteRoom(roomId);
+  private async cleanupRooms() {
+    try {
+      const now = new Date();
+      const expiryTime = now.getTime() - this.ROOM_EXPIRY_TIME;
+
+      // Find rooms older than expiry time
+      const expiredRooms = await this.roomRepository.findRoomsOlderThan(
+        new Date(expiryTime),
+      );
+
+      for (const room of expiredRooms) {
+        // Check deletion conditions
+        if (
+          room.status === RoomStatus.FINISHED ||
+          room.status === RoomStatus.ABANDONED ||
+          now.getTime() - room.lastActivityAt.getTime() > this.ROOM_EXPIRY_TIME
+        ) {
+          await this.deleteRoom(room.id);
+        }
       }
+    } catch (error) {
+      console.error('Error during room cleanup:', error);
     }
   }
 
   private updateRoomActivity(roomId: string) {
-    const room = this.rooms.get(roomId);
-    if (room) {
-      room.lastActivityAt = new Date();
-      this.rooms.set(roomId, room);
+    return this.roomRepository.updateLastActivity(roomId);
+  }
+
+  async createRoom(room: Room): Promise<Room> {
+    const createdRoom = await this.roomRepository.create(room);
+    return createdRoom;
+  }
+
+  async getRoom(roomId: string): Promise<Room | null> {
+    return this.roomRepository.findById(roomId);
+  }
+
+  async updateRoom(
+    roomId: string,
+    updates: Partial<Room>,
+  ): Promise<Room | null> {
+    const updatedRoom = await this.roomRepository.update(roomId, updates);
+    if (updatedRoom) {
+      await this.updateRoomActivity(roomId);
     }
+    return updatedRoom;
   }
 
-  createRoom(room: Room): Promise<Room> {
-    room.lastActivityAt = new Date();
-    this.rooms.set(room.id, room);
-    return Promise.resolve(room);
-  }
-
-  getRoom(roomId: string): Promise<Room | null> {
-    return Promise.resolve(this.rooms.get(roomId) || null);
-  }
-
-  updateRoom(roomId: string, updates: Partial<Room>): Promise<Room | null> {
-    const room = this.rooms.get(roomId);
-    if (!room) return Promise.resolve(null);
-
-    const updatedRoom = { ...room, ...updates };
-    this.rooms.set(roomId, updatedRoom);
-    this.updateRoomActivity(roomId);
-    return Promise.resolve(updatedRoom);
-  }
-
-  deleteRoom(roomId: string): Promise<void> {
-    this.rooms.delete(roomId);
+  async deleteRoom(roomId: string): Promise<void> {
+    await this.roomRepository.delete(roomId);
     this.roomGameStates.delete(roomId);
     delete this.vacantSeats[roomId];
-    return Promise.resolve();
   }
 
-  listRooms(): Promise<Room[]> {
-    return Promise.resolve(Array.from(this.rooms.values()));
+  async listRooms(): Promise<Room[]> {
+    return this.roomRepository.findAll();
   }
 
-  createNewRoom(
+  async createNewRoom(
     name: string,
     hostId: string,
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room> {
     const room: Room = {
-      id: this.generateRoomId(),
+      id: '', // データベースでUUIDが自動生成される
       name,
       hostId,
       status: RoomStatus.WAITING,
@@ -113,13 +116,16 @@ export class RoomService implements RoomRepository {
       updatedAt: new Date(),
       lastActivityAt: new Date(),
     };
-    this.rooms.set(room.id, room);
+
+    const createdRoom = await this.roomRepository.create(room);
 
     // ルームごとに新しいゲーム状態を作成
     const gameState = this.gameStateFactory.createGameState();
-    this.roomGameStates.set(room.id, gameState);
+    gameState.setRoomId(createdRoom.id);
+    await gameState.loadState(createdRoom.id);
+    this.roomGameStates.set(createdRoom.id, gameState);
 
-    return Promise.resolve(room);
+    return createdRoom;
   }
 
   private createDummyPlayer(index: number): RoomPlayer {
@@ -162,6 +168,7 @@ export class RoomService implements RoomRepository {
           roomPlayer.hand = [...statePlayer.hand];
         }
       });
+
       // 退出したプレイヤーのindexを記録
       const playerIndex = room.players.findIndex(
         (p) => p.playerId === playerId,
@@ -182,7 +189,6 @@ export class RoomService implements RoomRepository {
       const state = gameState.getState();
       state.players = state.players.filter((p) => p.playerId !== playerId);
     }
-    room.updatedAt = new Date();
 
     if (isGameStarted) {
       const gameState = this.roomGameStates.get(roomId);
@@ -213,7 +219,7 @@ export class RoomService implements RoomRepository {
     }
 
     await this.updateRoom(roomId, room);
-    this.updateRoomActivity(roomId);
+    await this.updateRoomActivity(roomId);
     return true;
   }
 
@@ -273,7 +279,13 @@ export class RoomService implements RoomRepository {
       joinedAt: new Date(),
     };
 
-    // 空席があればそのindexに挿入、なければpush
+    // データベースにプレイヤーを追加
+    const addSuccess = await this.roomRepository.addPlayer(roomId, player);
+    if (!addSuccess) {
+      return false;
+    }
+
+    // メモリ上のルームデータを更新
     if (assignedIndex !== -1) {
       room.players[assignedIndex] = player;
     } else {
@@ -287,7 +299,6 @@ export class RoomService implements RoomRepository {
         room.players.push(player);
       }
     }
-    room.updatedAt = new Date();
 
     // Update game state if it exists
     const gameState = this.roomGameStates.get(roomId);
@@ -307,8 +318,6 @@ export class RoomService implements RoomRepository {
       }
     }
 
-    await this.updateRoom(roomId, room);
-    this.updateRoomActivity(roomId);
     return true;
   }
 
@@ -323,11 +332,17 @@ export class RoomService implements RoomRepository {
       return false;
     }
 
-    room.status = status;
-    room.updatedAt = new Date();
-    await this.updateRoom(roomId, room);
-    this.updateRoomActivity(roomId);
-    return true;
+    const updatedRoom = await this.updateRoom(roomId, { status });
+    await this.updateRoomActivity(roomId);
+    return !!updatedRoom;
+  }
+
+  async updatePlayerInRoom(
+    roomId: string,
+    playerId: string,
+    updates: Partial<RoomPlayer>,
+  ): Promise<boolean> {
+    return this.roomRepository.updatePlayer(roomId, playerId, updates);
   }
 
   private isValidStatusTransition(
@@ -383,16 +398,12 @@ export class RoomService implements RoomRepository {
     return players.filter((p) => !p.playerId.startsWith('dummy-')).length;
   }
 
-  private generateRoomId(): string {
-    return Math.random().toString(36).substring(2, 15);
-  }
-
-  getRoomGameState(roomId: string): Promise<GameStateService> {
+  getRoomGameState(roomId: string): GameStateService {
     const gameState = this.roomGameStates.get(roomId);
     if (!gameState) {
       throw new Error(`Game state not found for room ${roomId}`);
     }
-    return Promise.resolve(gameState);
+    return gameState;
   }
 
   async handlePlayerReconnection(
@@ -417,10 +428,10 @@ export class RoomService implements RoomRepository {
     await this.updateRoom(roomId, room);
 
     // Get room's game state
-    const roomGameState = await this.getRoomGameState(roomId);
+    const roomGameState = this.getRoomGameState(roomId);
     if (roomGameState) {
       // Update player's socket ID in game state
-      roomGameState.updatePlayerSocketId(playerId, socketId);
+      void roomGameState.updatePlayerSocketId(playerId, socketId);
     }
 
     return { success: true };
