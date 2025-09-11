@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {
   GameState,
   Player,
@@ -13,6 +13,7 @@ import {
 } from '../types/game.types';
 import { CardService } from './card.service';
 import { ChomboService } from './chombo.service';
+import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
 
 @Injectable()
 export class GameStateService {
@@ -20,12 +21,19 @@ export class GameStateService {
   private state: GameState;
   private playerIds: Map<string, string> = new Map(); // token -> playerId
   private disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map(); // 切断されたプレイヤーのタイマーを管理
+  private roomId: string | null = null;
 
   constructor(
     private readonly cardService: CardService,
     private readonly chomboService: ChomboService,
+    @Inject('IGameStateRepository')
+    private readonly gameStateRepository: IGameStateRepository,
   ) {
     this.initializeState();
+  }
+
+  setRoomId(roomId: string): void {
+    this.roomId = roomId;
   }
 
   private initializeState(): void {
@@ -82,11 +90,50 @@ export class GameStateService {
     return this.users;
   }
 
-  updateState(newState: Partial<GameState>): void {
+  async updateState(newState: Partial<GameState>): Promise<void> {
     this.state = {
       ...this.state,
       ...newState,
     };
+
+    // Persist to database if roomId is set
+    if (this.roomId) {
+      try {
+        await this.gameStateRepository.update(this.roomId, newState);
+      } catch (error) {
+        console.error('Failed to persist game state:', error);
+        // Continue with in-memory operation even if persistence fails
+      }
+    }
+  }
+
+  async loadState(roomId: string): Promise<void> {
+    try {
+      const persistedState =
+        await this.gameStateRepository.findByRoomId(roomId);
+      if (persistedState) {
+        this.state = persistedState;
+        this.roomId = roomId;
+      } else {
+        // Initialize new state for this room
+        this.roomId = roomId;
+        await this.gameStateRepository.create(roomId, this.state);
+      }
+    } catch (error) {
+      console.error('Failed to load game state:', error);
+      // Fall back to in-memory state
+      this.roomId = roomId;
+    }
+  }
+
+  async saveState(): Promise<void> {
+    if (this.roomId) {
+      try {
+        await this.gameStateRepository.update(this.roomId, this.state);
+      } catch (error) {
+        console.error('Failed to save game state:', error);
+      }
+    }
   }
 
   addPlayer(socketId: string, name: string, reconnectToken?: string): boolean {
@@ -142,7 +189,7 @@ export class GameStateService {
     return this.state.players.find((p) => p.playerId === token) || null;
   }
 
-  updatePlayerSocketId(playerId: string, newId: string): void {
+  async updatePlayerSocketId(playerId: string, newId: string): Promise<void> {
     // Find the player by playerId, not by socket id
     const player = this.state.players.find((p) => p.playerId === playerId);
 
@@ -162,10 +209,21 @@ export class GameStateService {
       if (token) {
         this.playerIds.set(token, player.playerId);
       }
+
+      // Persist the player update
+      if (this.roomId) {
+        try {
+          await this.gameStateRepository.updatePlayer(this.roomId, playerId, {
+            id: newId,
+          });
+        } catch (error) {
+          console.error('Failed to persist player socket update:', error);
+        }
+      }
     }
   }
 
-  dealCards(): void {
+  async dealCards(): Promise<void> {
     if (this.state.players.length === 0) return;
 
     // Reset player hands and status
@@ -205,12 +263,27 @@ export class GameStateService {
       this.chomboService.checkForBrokenHand(player);
       this.chomboService.checkForRequiredBrokenHand(player);
     });
+
+    // Persist the updated state
+    await this.saveState();
   }
 
-  nextTurn(): void {
+  async nextTurn(): Promise<void> {
     if (this.state.players.length === 0) return;
     this.state.currentPlayerIndex =
       (this.state.currentPlayerIndex + 1) % this.state.players.length;
+
+    // Persist the turn change
+    if (this.roomId) {
+      try {
+        await this.gameStateRepository.updateCurrentPlayerIndex(
+          this.roomId,
+          this.state.currentPlayerIndex,
+        );
+      } catch (error) {
+        console.error('Failed to persist turn change:', error);
+      }
+    }
   }
 
   getCurrentPlayer(): Player | null {
@@ -222,7 +295,10 @@ export class GameStateService {
     return currentPlayer?.playerId === playerId;
   }
 
-  completeField(field: Field, winnerId: string): CompletedField | null {
+  async completeField(
+    field: Field,
+    winnerId: string,
+  ): Promise<CompletedField | null> {
     const state = this.getState();
     if (!state.playState) {
       return null;
@@ -242,14 +318,28 @@ export class GameStateService {
     };
 
     state.playState.fields.push(completedField);
+
+    // Persist the completed field
+    await this.saveState();
+
     return completedField;
   }
 
-  resetState(): void {
+  async resetState(): Promise<void> {
     this.initializeState();
+
+    // Clear persisted state
+    if (this.roomId) {
+      try {
+        await this.gameStateRepository.delete(this.roomId);
+        await this.gameStateRepository.create(this.roomId, this.state);
+      } catch (error) {
+        console.error('Failed to reset persisted state:', error);
+      }
+    }
   }
 
-  resetRoundState(): void {
+  async resetRoundState(): Promise<void> {
     // Keep the current players and scores
     const players = [...this.state.players];
     const teamScores = { ...this.state.teamScores };
@@ -265,7 +355,7 @@ export class GameStateService {
 
     // Generate new deck and deal cards
     this.state.deck = this.cardService.generateDeck();
-    this.dealCards();
+    await this.dealCards();
   }
 
   get roundNumber(): number {
@@ -274,6 +364,14 @@ export class GameStateService {
 
   set roundNumber(value: number) {
     this.state.roundNumber = value;
+    // Persist round number change
+    if (this.roomId) {
+      this.gameStateRepository
+        .bulkUpdate(this.roomId, { round_number: value })
+        .catch((error) =>
+          console.error('Failed to persist round number:', error),
+        );
+    }
   }
 
   get currentTurn(): string | null {
@@ -287,16 +385,24 @@ export class GameStateService {
     );
     if (playerIndex !== -1) {
       this.state.currentPlayerIndex = playerIndex;
+      // Persist turn change
+      if (this.roomId) {
+        this.gameStateRepository
+          .updateCurrentPlayerIndex(this.roomId, playerIndex)
+          .catch((error) =>
+            console.error('Failed to persist turn change:', error),
+          );
+      }
     }
   }
 
-  startGame(): void {
+  async startGame(): Promise<void> {
     const state = this.getState();
 
     // Initialize game state
     state.gamePhase = 'blow';
     state.deck = this.cardService.generateDeck();
-    this.dealCards();
+    await this.dealCards();
 
     // Initialize play state
     state.playState = {
@@ -323,6 +429,9 @@ export class GameStateService {
       isRoundCancelled: false,
       currentBlowIndex: 0,
     };
+
+    // Persist the game start
+    await this.saveState();
   }
 
   setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {
