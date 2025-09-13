@@ -30,19 +30,48 @@
 ### 必要条件
 - Node.js (v18以上)
 - npm または yarn
+- Docker Desktop（Supabaseローカル環境用）
+- Supabase CLI
 
-### フロントエンド
+#### 初回起動時のみ
 ```bash
-cd mei-tra-frontend
-npm install
-npm run dev
+# Supabaseを起動（1回だけ）
+supabase start
 ```
 
-### バックエンド
+#### 通常の開発作業
 ```bash
+# バックエンド
 cd mei-tra-backend
-npm install
-npm run start:dev
+npm run start:dev  # ファイル変更を自動検知してリロード
+
+# フロントエンド
+cd mei-tra-frontend
+npm run dev  # ファイル変更を自動検知してリロード
+```
+
+#### Supabaseを再起動が必要な場合
+
+以下の場合のみSupabaseの操作が必要：
+
+データベーススキーマを変更した場合
+```bash
+# 新しいマイグレーションファイルを作成した場合
+supabase db reset  # データベースをリセットして最新のスキーマを適用
+# または
+supabase db push   # 現在のマイグレーションを適用
+```
+
+Supabase設定ファイル（supabase/config.toml）を変更した場合
+```bash
+supabase stop
+supabase start
+```
+
+#### 開発終了時
+```bash
+# 開発が終わったらSupabaseを停止（Dockerリソース節約）
+supabase stop
 ```
 
 ## ライセンス

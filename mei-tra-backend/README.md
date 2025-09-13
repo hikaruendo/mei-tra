@@ -23,7 +23,13 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+明専トランプ（Old Maid）のバックエンドAPI。NestJS + Supabase + WebSocketで構築されています。
+
+## 📚 ドキュメント
+
+- **[Supabaseマイグレーションガイド](./SUPABASE_MIGRATION.md)** - Supabase移行の全体概要とトラブルシューティング
+- **[Supabase運用操作手順書](./SUPABASE_OPERATIONS.md)** - 日常運用での具体的な操作手順
+- **[デプロイメントガイド](./DEPLOYMENT.md)** - 本番環境へのデプロイ手順
 
 ## Project setup
 
