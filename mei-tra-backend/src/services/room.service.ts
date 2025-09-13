@@ -179,26 +179,34 @@ export class RoomService {
           hand: [...room.players[playerIndex].hand],
           team: room.players[playerIndex].team,
         };
-        // プレイヤーをダミーに置き換え
-        room.players[playerIndex] = this.createDummyPlayer(playerIndex);
-      }
-    } else {
-      // ロビー状態なら単純に配列からremove
-      room.players = room.players.filter((p) => p.playerId !== playerId);
-      // gameStateのplayersからも削除
-      const state = gameState.getState();
-      state.players = state.players.filter((p) => p.playerId !== playerId);
-    }
 
-    if (isGameStarted) {
-      const gameState = this.roomGameStates.get(roomId);
-      if (gameState) {
-        const state = gameState.getState();
+        // プレイヤーをダミーに置き換え
+        const dummyPlayer = this.createDummyPlayer(playerIndex);
+        room.players[playerIndex] = dummyPlayer;
+
+        // データベースでは元のプレイヤーを削除してダミープレイヤーを追加
+        await this.roomRepository.removePlayer(roomId, playerId);
+        await this.roomRepository.addPlayer(roomId, dummyPlayer);
+
+        // ゲーム状態も同時に更新
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
           state.players[gsIndex] = this.createDummyPlayer(gsIndex);
         }
+
+        // 再接続トークンも削除
+        gameState.removePlayerToken(playerId);
       }
+    } else {
+      // ロビー状態なら単純に配列からremove
+      room.players = room.players.filter((p) => p.playerId !== playerId);
+      // データベースからも削除
+      await this.roomRepository.removePlayer(roomId, playerId);
+      // gameStateのplayersからも削除
+      const state = gameState.getState();
+      state.players = state.players.filter((p) => p.playerId !== playerId);
+      // 再接続トークンも削除
+      gameState.removePlayerToken(playerId);
     }
 
     // If all players are dummies, delete the room
@@ -215,10 +223,16 @@ export class RoomService {
       if (newHost) {
         room.hostId = newHost.playerId;
         newHost.isHost = true;
+        // データベースのホスト情報も更新
+        await this.roomRepository.updatePlayer(roomId, newHost.playerId, {
+          isHost: true,
+        });
+        // ルームのhostIdのみ更新（プレイヤー情報は再取得しない）
+        await this.roomRepository.update(roomId, { hostId: newHost.playerId });
       }
     }
 
-    await this.updateRoom(roomId, room);
+    // アクティビティ時刻のみ更新（プレイヤー情報の再取得を避ける）
     await this.updateRoomActivity(roomId);
     return true;
   }
@@ -249,11 +263,14 @@ export class RoomService {
     let assignedIndex = -1;
     let hand: string[] = [];
     let team: Team = 0 as Team;
+    let replacingDummyId: string | null = null;
 
     if (vacantIndexes.length > 0) {
       assignedIndex = vacantIndexes[0];
       hand = roomVacant[assignedIndex].hand;
       team = roomVacant[assignedIndex].team;
+      // 置き換え対象のダミープレイヤーIDを取得
+      replacingDummyId = room.players[assignedIndex]?.playerId || null;
       // 使い終わったら削除
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
@@ -279,10 +296,20 @@ export class RoomService {
       joinedAt: new Date(),
     };
 
-    // データベースにプレイヤーを追加
-    const addSuccess = await this.roomRepository.addPlayer(roomId, player);
-    if (!addSuccess) {
-      return false;
+    // データベース操作
+    if (replacingDummyId) {
+      // ダミープレイヤーを削除して新しいプレイヤーを追加
+      await this.roomRepository.removePlayer(roomId, replacingDummyId);
+      const addSuccess = await this.roomRepository.addPlayer(roomId, player);
+      if (!addSuccess) {
+        return false;
+      }
+    } else {
+      // 通常の新規追加
+      const addSuccess = await this.roomRepository.addPlayer(roomId, player);
+      if (!addSuccess) {
+        return false;
+      }
     }
 
     // メモリ上のルームデータを更新
@@ -318,6 +345,8 @@ export class RoomService {
       }
     }
 
+    // アクティビティ時刻のみ更新（プレイヤー情報の再取得を避ける）
+    await this.updateRoomActivity(roomId);
     return true;
   }
 
@@ -411,28 +440,25 @@ export class RoomService {
     playerId: string,
     socketId: string,
   ): Promise<{ success: boolean; error?: string }> {
-    const room = await this.getRoom(roomId);
-    if (!room) {
-      return { success: false, error: 'Room not found' };
+    // Get room's game state first (has the most up-to-date player info)
+    const roomGameState = this.getRoomGameState(roomId);
+    if (!roomGameState) {
+      return { success: false, error: 'Game state not found' };
     }
 
-    const player = room.players.find((p) => p.playerId === playerId);
+    const state = roomGameState.getState();
+    const player = state.players.find((p) => p.playerId === playerId);
     if (!player) {
       return { success: false, error: 'Player not found6 in room' };
     }
 
-    // Update player's socket ID
-    player.id = socketId;
+    // Update player's socket ID in game state
+    void roomGameState.updatePlayerSocketId(playerId, socketId);
 
-    // Update room
-    await this.updateRoom(roomId, room);
-
-    // Get room's game state
-    const roomGameState = this.getRoomGameState(roomId);
-    if (roomGameState) {
-      // Update player's socket ID in game state
-      void roomGameState.updatePlayerSocketId(playerId, socketId);
-    }
+    // Update player's socket ID in database directly
+    await this.roomRepository.updatePlayer(roomId, playerId, {
+      id: socketId,
+    });
 
     return { success: true };
   }

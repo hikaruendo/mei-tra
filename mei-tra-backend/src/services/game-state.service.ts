@@ -176,6 +176,17 @@ export class GameStateService {
     player.id = '';
   }
 
+  // プレイヤーの再接続トークンを削除
+  removePlayerToken(playerId: string): void {
+    // playerIdsマップから該当するトークンを検索して削除
+    for (const [token, id] of this.playerIds.entries()) {
+      if (id === playerId) {
+        this.playerIds.delete(token);
+        break;
+      }
+    }
+  }
+
   findPlayerByReconnectToken(token: string): Player | null {
     // First try to find by token in playerIds map
     const playerId = this.playerIds.get(token);

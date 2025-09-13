@@ -100,7 +100,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               this.server.to(roomId).emit('update-players', state.players);
             });
         } else {
-          client.emit('error-message', 'Player not found1');
+          // プレイヤーが見つからない場合、トークンが無効または期限切れ
+          console.warn(
+            `Reconnect token not found or expired: ${token} in room ${roomId}`,
+          );
+          client.emit('error-message', 'Reconnection token expired or invalid');
           client.disconnect();
         }
       } catch (error) {
@@ -400,10 +404,21 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         player.playerId,
       );
 
-      await this.roomService.updateRoom(data.roomId, room);
       if (!success) {
         client.emit('error-message', 'Failed to leave room');
         return;
+      }
+
+      // leaveRoom処理でルームが削除された場合をチェック
+      const roomExists = await this.roomService.getRoom(data.roomId);
+      if (!roomExists) {
+        // ルームが削除された場合
+        this.playerRooms.delete(client.id);
+        await client.leave(data.roomId);
+        this.server.to(client.id).emit('back-to-lobby');
+        const rooms = await this.roomService.listRooms();
+        this.server.emit('rooms-list', rooms);
+        return { success: true };
       }
 
       // クライアントをルームから退出
@@ -422,19 +437,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(client.id).emit('back-to-lobby');
 
-      this.server.to(room.id).emit('update-players', room.players);
-
-      // プレイヤー数が3人以下ならゲームを一時停止
+      // ゲーム状態からプレイヤー情報を取得（メモリ上の最新情報）
       const roomGameState = this.roomService.getRoomGameState(data.roomId);
       const state = roomGameState.getState();
+
       // プレイヤーのチーム情報を保持
       state.teamAssignments[player.playerId] = player.team;
-      const actualPlayerCount = room.players.filter(
+
+      // 最新のプレイヤー情報を送信（ゲーム状態から）
+      this.server.to(data.roomId).emit('update-players', state.players);
+
+      // プレイヤー数が4人未満ならゲームを一時停止
+      const actualPlayerCount = state.players.filter(
         (p) => !p.playerId.startsWith('dummy-'),
       ).length;
       if (actualPlayerCount < 4 && state.gamePhase !== null) {
         this.server
-          .to(room.id)
+          .to(data.roomId)
           .emit('game-paused', { message: 'Not enough players. Game paused.' });
       }
 
