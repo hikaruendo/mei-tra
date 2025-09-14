@@ -9,9 +9,10 @@ import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
 import { RepositoriesModule } from './repositories/repositories.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [RepositoriesModule],
+  imports: [RepositoriesModule, AuthModule],
   providers: [
     GameGateway,
     GameStateService,

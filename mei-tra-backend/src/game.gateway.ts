@@ -16,6 +16,9 @@ import { TrumpType, Field, Team, User } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { RoomStatus } from './types/room.types';
 import { ChomboService } from './services/chombo.service';
+import { AuthService } from './auth/auth.service';
+import { AuthenticatedUser } from './types/user.types';
+
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -29,18 +32,36 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly playService: PlayService,
     private readonly chomboService: ChomboService,
     private readonly roomService: RoomService,
+    private readonly authService: AuthService,
   ) {}
 
   //-------Connection-------
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     const auth = client.handshake.auth || {};
-    const token =
+    const reconnectToken =
       typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
     const name = typeof auth.name === 'string' ? auth.name : undefined;
     const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
+    const supabaseToken =
+      typeof auth.token === 'string' ? auth.token : undefined;
+
+    // Try to authenticate with Supabase token
+    let authenticatedUser: AuthenticatedUser | null = null;
+    if (supabaseToken) {
+      try {
+        authenticatedUser =
+          await this.authService.getUserFromSocketToken(supabaseToken);
+        if (authenticatedUser) {
+          // Store authenticated user in socket data
+          (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
+        }
+      } catch (error) {
+        console.warn('Failed to authenticate user with Supabase token:', error);
+      }
+    }
 
     // トークンがある場合は再接続として処理
-    if (token && roomId) {
+    if (reconnectToken && roomId) {
       try {
         // ルームのゲーム状態を取得
         const roomGameState = this.roomService.getRoomGameState(roomId);
@@ -50,7 +71,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           return;
         }
 
-        const existingPlayer = roomGameState.findPlayerByReconnectToken(token);
+        const existingPlayer =
+          roomGameState.findPlayerByReconnectToken(reconnectToken);
 
         if (existingPlayer) {
           // ルームサービスで再接続処理
@@ -102,7 +124,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         } else {
           // プレイヤーが見つからない場合、トークンが無効または期限切れ
           console.warn(
-            `Reconnect token not found or expired: ${token} in room ${roomId}`,
+            `Reconnect token not found or expired: ${reconnectToken} in room ${roomId}`,
           );
           client.emit('error-message', 'Reconnection token expired or invalid');
           client.disconnect();
@@ -117,7 +139,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 新規プレイヤーとして追加
     if (name) {
-      if (this.gameState.addPlayer(client.id, name, token)) {
+      // Determine display name and player ID
+      const displayName = authenticatedUser?.profile.displayName || name;
+      const userId = authenticatedUser?.id;
+
+      if (
+        this.gameState.addPlayer(
+          client.id,
+          displayName,
+          reconnectToken,
+          userId,
+          !!authenticatedUser,
+        )
+      ) {
         const users = this.gameState.getUsers();
         const newUser = users.find((p) => p.id === client.id);
 
