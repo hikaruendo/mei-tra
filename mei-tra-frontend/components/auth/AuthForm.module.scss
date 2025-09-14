@@ -1,0 +1,155 @@
+// Import variables directly without the global :root declarations
+$color-primary: #1B5E20;
+$color-white: #ffffff;
+$color-blue: #2196F3;
+$color-blue-dark: #1976D2;
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 2rem;
+$font-size-xs: 0.7rem;
+$font-size-sm: 0.9rem;
+$font-size-base: 1rem;
+$font-size-xl: 2rem;
+$radius-md: 8px;
+$radius-lg: 1rem;
+$shadow-button: 0 4px 6px rgba(0, 0, 0, 0.15);
+$shadow-button-hover: 0 5px 8px rgba(0, 0, 0, 0.25);
+$shadow-controls: 0 4px 12px rgba(0, 0, 0, 0.3);
+$transition-button: all 0.3s ease;
+$opacity-disabled: 0.5;
+
+.container {
+  width: 100%;
+  max-width: 28rem; // Equivalent to max-w-md
+  margin: 0 auto;
+}
+
+.card {
+  background-color: $color-white;
+  box-shadow: $shadow-controls;
+  border-radius: $radius-lg;
+  padding: $spacing-lg $spacing-md;
+}
+
+.title {
+  font-size: $font-size-xl;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: $spacing-lg;
+  color: #333;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: $spacing-xs;
+}
+
+.input {
+  margin-top: $spacing-xs;
+  display: block;
+  width: 100%;
+  padding: $spacing-sm $spacing-sm;
+  border: 1px solid #d1d5db;
+  border-radius: $radius-md;
+  box-shadow: $shadow-button;
+  font-size: $font-size-base;
+  transition: $transition-button;
+
+  &:focus {
+    outline: none;
+    border-color: $color-blue;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    opacity: $opacity-disabled;
+    cursor: not-allowed;
+    background-color: #f9fafb;
+  }
+}
+
+.helperText {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: #6b7280;
+}
+
+.error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+}
+
+.submitButton {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: $spacing-sm $spacing-md;
+  border: none;
+  border-radius: $radius-md;
+  box-shadow: $shadow-button;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: $color-white;
+  background-color: $color-blue;
+  cursor: pointer;
+  transition: $transition-button;
+
+  &:hover:not(:disabled) {
+    background-color: $color-blue-dark;
+    box-shadow: $shadow-button-hover;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  }
+
+  &:disabled {
+    opacity: $opacity-disabled;
+    cursor: not-allowed;
+  }
+}
+
+.modeToggle {
+  margin-top: $spacing-md;
+  text-align: center;
+}
+
+.modeToggleButton {
+  font-size: $font-size-sm;
+  color: $color-blue;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: $transition-button;
+
+  &:hover {
+    color: $color-blue-dark;
+    text-decoration: underline;
+  }
+
+  &:focus {
+    outline: none;
+    text-decoration: underline;
+  }
+}
