@@ -136,7 +136,13 @@ export class GameStateService {
     }
   }
 
-  addPlayer(socketId: string, name: string, reconnectToken?: string): boolean {
+  addPlayer(
+    socketId: string,
+    name: string,
+    reconnectToken?: string,
+    userId?: string,
+    isAuthenticated?: boolean,
+  ): boolean {
     // Add new user
     const playerId = reconnectToken || this.generateReconnectToken();
     const users = this.getUsers();
@@ -144,6 +150,8 @@ export class GameStateService {
       id: socketId,
       playerId,
       name,
+      userId,
+      isAuthenticated: isAuthenticated || false,
     });
 
     // Store token mappings

@@ -1,13 +1,15 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
 import { User, Team } from '../types/game.types';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
+import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 
 @Injectable()
 export class RoomService {
+  private readonly logger = new Logger(RoomService.name);
   private roomGameStates: Map<string, GameStateService> = new Map();
   // 退出席情報（ルームIDごとに席番号ベースでhand/teamを保存）
   private vacantSeats: Record<
@@ -21,6 +23,8 @@ export class RoomService {
   constructor(
     @Inject('IRoomRepository')
     private readonly roomRepository: IRoomRepository,
+    @Inject('IUserProfileRepository')
+    private readonly userProfileRepository: IUserProfileRepository,
     private readonly gameStateFactory: GameStateFactory,
   ) {
     // 定期的なクリーンアップを開始
@@ -461,5 +465,46 @@ export class RoomService {
     });
 
     return { success: true };
+  }
+
+  async updateUserGameStats(
+    userId: string,
+    won: boolean,
+    score: number,
+  ): Promise<void> {
+    try {
+      const profile = await this.userProfileRepository.findById(userId);
+      if (!profile) {
+        this.logger.warn(`User profile not found for user ${userId}`);
+        return;
+      }
+
+      const newGamesPlayed = profile.gamesPlayed + 1;
+      const newGamesWon = won ? profile.gamesWon + 1 : profile.gamesWon;
+      const newTotalScore = profile.totalScore + score;
+
+      await this.userProfileRepository.updateGameStats(
+        userId,
+        newGamesPlayed,
+        newGamesWon,
+        newTotalScore,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to update game stats for user ${userId}:`,
+        error,
+      );
+    }
+  }
+
+  async updateUserLastSeen(userId: string): Promise<void> {
+    try {
+      await this.userProfileRepository.updateLastSeen(userId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to update last seen for user ${userId}:`,
+        error,
+      );
+    }
   }
 }
