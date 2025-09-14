@@ -2,9 +2,12 @@
 
 import { GameTable } from '../components/GameTable';
 import { Notification } from '../components/Notification';
+import { Navigation } from '../components/layout/Navigation';
 import { useGame } from '../hooks/useGame';
 import GameJoinGroup from '../components/organisms/GameJoinGroup';
 import styles from './index.module.css';
+
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const gameState = useGame();
@@ -40,11 +43,14 @@ export default function Home() {
     currentRoomId,
     paused,
     pointsToWin,
+    isConnected,
+    isConnecting,
   } = gameState;
 
   return (
-    <main className="">
-      <div className="">
+    <>
+      <Navigation />
+      <main>
         {notification && (
           <Notification
             message={notification.message}
@@ -63,6 +69,8 @@ export default function Home() {
                 name={name}
                 onNameChange={setName}
                 onJoinGame={gameActions.joinGame}
+                isConnected={isConnected}
+                isConnecting={isConnecting}
               />
             </div>
             <div style={{ display: gameStarted ? 'block' : 'none' }}>
@@ -91,7 +99,7 @@ export default function Home() {
             </div>
           </>
         )}
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

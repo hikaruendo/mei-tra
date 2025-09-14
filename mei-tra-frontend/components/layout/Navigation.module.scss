@@ -1,0 +1,74 @@
+$color-white: #ffffff;
+$spacing-md: 1rem;
+$spacing-sm: 0.5rem;
+$spacing-lg: 2rem;
+$spacing-xl: 3rem;
+$font-size-sm: 0.9rem;
+$font-size-xl: 2rem;
+$radius-md: 8px;
+$transition-button: all 0.3s ease;
+
+.navigation {
+  background-color: $color-white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.container {
+  max-width: 80rem; // max-w-7xl
+  margin: 0 auto;
+  padding: 0 $spacing-md;
+
+  @media (min-width: 640px) {
+    padding: 0 $spacing-lg;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 0 $spacing-xl;
+  }
+}
+
+.content {
+  display: flex;
+  justify-content: space-between;
+  height: 4rem; // h-16
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.brandLink {
+  font-size: $font-size-xl;
+  font-weight: bold;
+  color: #111827;
+  text-decoration: none;
+  transition: $transition-button;
+
+  &:hover {
+    color: #374151;
+  }
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.navLink {
+  color: #374151;
+  padding: $spacing-sm $spacing-sm;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  text-decoration: none;
+  transition: $transition-button;
+
+  &:hover {
+    color: #111827;
+    background-color: #f3f4f6;
+  }
+}
