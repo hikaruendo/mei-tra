@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getSocket } from '../app/socket';
+import { useSocket } from './useSocket';
 import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 
 export const useGame = () => {
+  const { socket, isConnected, isConnecting } = useSocket();
+
   // Player and Game State
   const [name, setName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -45,7 +47,7 @@ export const useGame = () => {
 
   useEffect(() => {
     setIsClient(true);
-    const socket = getSocket();
+    if (!socket) return;
 
     const socketHandlers = {
       // ユーザーの更新
@@ -113,7 +115,7 @@ export const useGame = () => {
             return prev;
           }
           
-          const socketId = getSocket().id;
+          const socketId = socket?.id;
           if (!socketId) return prev;
           
           return [...prev, {
@@ -128,7 +130,7 @@ export const useGame = () => {
       },
       'game-started': (roomId: string, players: Player[], pointsToWin: number) => {
         setPlayers(players);
-        const id = getSocket().id;
+        const id = socket?.id;
         const index = players.findIndex(p => p.id === id);
         setCurrentPlayerId(players[index].playerId);
         setCurrentRoomId(roomId);
@@ -320,7 +322,7 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [name, currentHighestDeclaration, players]);
+  }, [socket, name, currentHighestDeclaration, players]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);
@@ -331,8 +333,7 @@ export const useGame = () => {
 
   const gameActions = {
     joinGame: () => {
-      if (name.trim()) {
-        const socket = getSocket();
+      if (name.trim() && socket) {
         if (reconnectToken) {
           socket.auth = { reconnectToken };
         } else {
@@ -350,7 +351,7 @@ export const useGame = () => {
         alert('Please select a trump type and number of pairs!');
         return;
       }
-      getSocket().emit('declare-blow', {
+      socket?.emit('declare-blow', {
         roomId: currentRoomId,
         declaration: {
           trumpType: selectedTrump,
@@ -363,12 +364,12 @@ export const useGame = () => {
         alert("It's not your turn to pass!2");
         return;
       }
-      getSocket().emit('pass-blow', {
+      socket?.emit('pass-blow', {
         roomId: currentRoomId,
       });
     },
     selectNegri: (card: string) => {
-      getSocket().emit('select-negri', {
+      socket?.emit('select-negri', {
         roomId: currentRoomId,
         card,
       });
@@ -378,7 +379,7 @@ export const useGame = () => {
         alert("It's not your turn!");
         return;
       }
-      getSocket().emit('play-card', {
+      socket?.emit('play-card', {
         roomId: currentRoomId,
         card,
       });
@@ -388,13 +389,13 @@ export const useGame = () => {
         alert("It's not your turn to select base suit!");
         return;
       }
-      getSocket().emit('select-base-suit', {
+      socket?.emit('select-base-suit', {
         roomId: currentRoomId,
         suit,
       });
     },
     revealBrokenHand: (playerId: string) => {
-      getSocket().emit('reveal-broken-hand', {
+      socket?.emit('reveal-broken-hand', {
         roomId: currentRoomId,
         playerId,
       });
@@ -433,5 +434,7 @@ export const useGame = () => {
     pointsToWin,
     users,
     paused,
+    isConnected,
+    isConnecting,
   };
 }; 

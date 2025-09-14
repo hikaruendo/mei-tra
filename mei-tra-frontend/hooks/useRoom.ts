@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getSocket } from '../app/socket';
+import { useSocket } from './useSocket';
 import { Room, RoomPlayer } from '../types/room.types';
 import { useGame } from './useGame';
 import { Player, Team } from '../types/game.types';
@@ -12,6 +12,7 @@ export const useRoom = () => {
   const [playerReadyStatus, setPlayerReadyStatus] = useState<Record<string, boolean>>({});
   const [isClient, setIsClient] = useState(false);
   const game = useGame();
+  const { socket } = useSocket();
   
   const users = useMemo(() => game?.users || [], [game?.users]);
   const players = useMemo(() => game?.players || [], [game?.players]);
@@ -23,9 +24,10 @@ export const useRoom = () => {
 
   // ルーム一覧の取得
   const fetchRooms = useCallback(() => {
-    const socket = getSocket();
-    socket.emit('list-rooms');
-  }, []);
+    if (socket) {
+      socket.emit('list-rooms');
+    }
+  }, [socket]);
 
   useEffect(() => {
     fetchRooms();
@@ -33,7 +35,7 @@ export const useRoom = () => {
 
   useEffect(() => {
     setIsClient(true);
-    const socket = getSocket();
+    if (!socket) return;
     
     // ルーム一覧の更新
     socket.on('rooms-list', (rooms: Room[]) => {
@@ -230,22 +232,20 @@ export const useRoom = () => {
       socket.off('room-updated');
       socket.off('set-room-id');
     };
-  }, [currentRoom, players]);
+  }, [socket, currentRoom, players]);
 
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
-    const socket = getSocket();
-    if (!socket.id) {
+    if (!socket?.id) {
       setError('Socket not connected');
       return;
     }
     socket.emit('create-room', { name, pointsToWin, teamAssignmentMethod });
-  }, []);
+  }, [socket]);
 
   // ルーム参加
   const joinRoom = useCallback((roomId: string) => {
-    const socket = getSocket();
-    if (!socket.id) {
+    if (!socket?.id) {
       setError('Socket not connected');
       return;
     }
@@ -260,23 +260,22 @@ export const useRoom = () => {
         setCurrentRoom(response.room);
       }
     });
-  }, [users]);
+  }, [socket, users]);
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
-    const socket = getSocket();
-    
+    if (!socket) return;
+
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (!response.success) {
         setError(response.error || 'Failed to leave room');
       }
     });
-  }, []);
+  }, [socket]);
 
   // 準備状態の切り替え
   const togglePlayerReady = useCallback(() => {
-    const socket = getSocket();
-    if (!socket.connected) {
+    if (!socket?.connected) {
       setError('Socket is not connected');
       return;
     }
@@ -303,27 +302,26 @@ export const useRoom = () => {
       [player.playerId]: !prev[player.playerId]
     }));
 
-    socket.emit('toggle-player-ready', { 
+    socket.emit('toggle-player-ready', {
       roomId: currentRoom.id,
-      playerId: player.playerId 
+      playerId: player.playerId
     });
-  }, [currentRoom, players]);
+  }, [socket, currentRoom, players]);
 
   // ゲーム開始
   const startGameRoom = useCallback(() => {
-    const socket = getSocket();
-    if (!currentRoom) {
-      setError('No room selected');
+    if (!socket || !currentRoom) {
+      setError('Socket not connected or no room selected');
       return;
     }
-  
+
     const socketId = socket.id;
     const player = players.find(p => p.id === socketId);
     if (!player) {
       setError('Player not found8');
       return;
     }
-  
+
     // 全員が準備完了しているか確認
     const allReady = currentRoom.players.every(player => player.isReady);
     if (!allReady) {
@@ -332,17 +330,18 @@ export const useRoom = () => {
     }
 
     socket.emit('start-game', { roomId: currentRoom.id });
-  }, [currentRoom, players]);
+  }, [socket, currentRoom, players]);
 
   // プレイヤーのチーム変更
   const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {
-    const socket = getSocket();
+    if (!socket) return Promise.resolve(false);
+
     return new Promise((resolve) => {
       socket.emit('change-player-team', { roomId, teamChanges }, (response: { success: boolean }) => {
         resolve(response.success);
       });
     });
-  }, []);
+  }, [socket]);
 
   if (!isClient) {
     return {
