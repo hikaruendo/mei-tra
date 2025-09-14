@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return "NestJS WebSocket Server is Running"', () => {
+      expect(appController.getHello()).toBe(
+        'NestJS WebSocket Server is Running',
+      );
     });
   });
 });
