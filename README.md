@@ -43,6 +43,7 @@ supabase start
 ```bash
 # バックエンド
 cd mei-tra-backend
+bash scripts/create-test-users.sh  # テストユーザー作成
 npm run start:dev  # ファイル変更を自動検知してリロード
 
 # フロントエンド
