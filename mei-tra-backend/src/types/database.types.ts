@@ -69,6 +69,7 @@ export interface Database {
           is_ready: boolean;
           is_host: boolean;
           joined_at: string;
+          user_id: string | null;
         };
         Insert: {
           id?: string;
@@ -84,6 +85,7 @@ export interface Database {
           is_ready?: boolean;
           is_host?: boolean;
           joined_at?: string;
+          user_id?: string | null;
         };
         Update: {
           id?: string;
@@ -99,6 +101,7 @@ export interface Database {
           is_ready?: boolean;
           is_host?: boolean;
           joined_at?: string;
+          user_id?: string | null;
         };
       };
       game_states: {
@@ -167,6 +170,59 @@ export interface Database {
           team_assignments?: { [key: string]: number };
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      user_profiles: {
+        Row: {
+          id: string;
+          username: string;
+          display_name: string;
+          avatar_url: string | null;
+          created_at: string;
+          updated_at: string;
+          last_seen_at: string;
+          games_played: number;
+          games_won: number;
+          total_score: number;
+          preferences: {
+            notifications: boolean;
+            sound: boolean;
+            theme: 'light' | 'dark';
+          };
+        };
+        Insert: {
+          id: string;
+          username: string;
+          display_name: string;
+          avatar_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+          games_played?: number;
+          games_won?: number;
+          total_score?: number;
+          preferences?: {
+            notifications?: boolean;
+            sound?: boolean;
+            theme?: 'light' | 'dark';
+          };
+        };
+        Update: {
+          id?: string;
+          username?: string;
+          display_name?: string;
+          avatar_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+          games_played?: number;
+          games_won?: number;
+          total_score?: number;
+          preferences?: {
+            notifications?: boolean;
+            sound?: boolean;
+            theme?: 'light' | 'dark';
+          };
         };
       };
       game_history: {
