@@ -117,3 +117,4 @@ The project uses environment-specific configuration:
 5. Stop Supabase when done: `supabase stop`
 - Use comments sparingly. Only commnet complex code.
 - The database schema is defined in the @mei-tra-backend/database/schema.sql and @mei-tra-backend/supabase/migrations/001_initial_schema.sql file. Reference it anytime you need to understand the structure of data stored in the database.
+- After modifying the code, ensure that lint errors are corrected.
