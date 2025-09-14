@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useRoom } from '../../../hooks/useRoom';
+import { useSocket } from '../../../hooks/useSocket';
 import { RoomStatus } from '../../../types/room.types';
 import styles from './index.module.scss';
-import { getSocket } from '../../../app/socket';
 
 const getStatusText = (status: RoomStatus) => {
   switch (status) {
@@ -30,24 +30,29 @@ const getStatusClass = (status: RoomStatus) => {
   }
 };
 
-export const RoomList: React.FC = () => {
+interface RoomListProps {
+  isConnected?: boolean;
+  isConnecting?: boolean;
+}
+
+export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting }) => {
   const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom, changePlayerTeam } = useRoom();
   const [newRoomName, setNewRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
   const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
   const [setTeamText, setSetTeamText] = useState<string>('Update Teams');
-  const socket = getSocket();
+  const { socket } = useSocket();
 
   const readyStatus = playerReadyStatus as Record<string, boolean>;
 
   // 現在のプレイヤーIDを取得
   const currentPlayerId = useMemo(() => {
     if (!currentRoom) return '';
-    const socketId = socket.id;
+    const socketId = socket?.id;
     const player = currentRoom.players.find(p => p.id === socketId);
     return player?.playerId || '';
-  }, [currentRoom, socket.id]);
+  }, [currentRoom, socket?.id]);
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +100,9 @@ export const RoomList: React.FC = () => {
         </form>
       </div>
 
+      {/* 接続状態の表示 */}
+      {isConnecting && <div className={styles.connecting}>サーバーに接続中...</div>}
+      {!isConnected && !isConnecting && <div className={styles.error}>Socket not connected</div>}
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.section}>
