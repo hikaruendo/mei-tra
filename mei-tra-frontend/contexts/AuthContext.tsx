@@ -44,43 +44,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadingUserRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        loadUserProfile(session.user);
-      } else {
-        setLoading(false);
-      }
-    }).catch((error) => {
-      console.error('[AuthContext] Error getting initial session:', error);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
+    // Listen for auth changes (includes initial session)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
 
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) {
         await loadUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         setLoading(false);
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        await loadUserProfile(session.user);
-      } else if (event === 'INITIAL_SESSION') {
-        if (!session) {
-          setLoading(false);
-        }
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserProfile = async (supabaseUser: User) => {
+  const loadUserProfile = async (supabaseUser: User, retryCount = 0) => {
+    const maxRetries = 3;
+    
     // Prevent duplicate loading for the same user
     if (loadingUserRef.current === supabaseUser.id) {
       console.log('[AuthContext] Already loading profile for user:', supabaseUser.id);
@@ -89,112 +72,155 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadingUserRef.current = supabaseUser.id;
 
-    try {
-      console.log('[AuthContext] Loading profile for user:', supabaseUser.id);
-
-      // Create a timeout promise for preventing infinite loading (warn-only)
-      const TIMEOUT = 'timeout' as const;
-      const timeoutPromise = new Promise<typeof TIMEOUT>((resolve) => {
-        setTimeout(() => resolve(TIMEOUT), 10000);
-      });
-
-      const profilePromise = supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-
-      const result = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ]);
-
-      // Handle timeout without throwing to avoid dev overlay errors
-      if (result === TIMEOUT) {
-        console.warn('[AuthContext] User profile loading timeout. Falling back to basic user.');
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          profile: null,
-        });
-        setLoading(false);
-        return;
-      }
-
-      const { data: profile, error } = result as {
-        data: DatabaseProfile | null;
-        error: PostgrestError | null
-      };
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No profile found - this is expected for new users
-          console.log('[AuthContext] No profile found, creating basic user');
+    const attemptLoad = async (attempt: number): Promise<void> => {
+      try {
+        if (attempt > 0) {
+          console.log(`[AuthContext] Retrying profile load (${attempt}/${maxRetries}) for user:`, supabaseUser.id);
+          // 指数バックオフ: 1秒, 2秒, 4秒
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
         } else {
-          console.error('[AuthContext] Error loading user profile:', error);
+          console.log('[AuthContext] Loading profile for user:', supabaseUser.id);
         }
 
-        // Create a basic user without profile
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          profile: null,
+        // Create a timeout promise for preventing infinite loading
+        const TIMEOUT = 'timeout' as const;
+        const timeoutPromise = new Promise<typeof TIMEOUT>((resolve) => {
+          setTimeout(() => resolve(TIMEOUT), 10000);
         });
-        setLoading(false);
-        return;
-      }
 
-      if (profile) {
-        console.log('[AuthContext] Profile loaded successfully:', profile);
+        const profilePromise = supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
 
-        // Create default preferences if not exist
-        const defaultPreferences = {
-          notifications: true,
-          sound: true,
-          theme: 'light' as const
+        const result = await Promise.race([
+          profilePromise,
+          timeoutPromise
+        ]);
+
+        // Handle timeout
+        if (result === TIMEOUT) {
+          if (attempt < maxRetries) {
+            console.warn(`[AuthContext] Profile loading timeout (attempt ${attempt + 1}/${maxRetries + 1}). Retrying...`);
+            return attemptLoad(attempt + 1);
+          }
+          
+          console.warn('[AuthContext] Profile loading timeout after all retries. Keeping existing profile data.');
+          setUser(prevUser => ({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            profile: prevUser?.profile || null,
+          }));
+          setLoading(false);
+          return;
+        }
+
+        const { data: profile, error } = result as {
+          data: DatabaseProfile | null;
+          error: PostgrestError | null
         };
 
-        const userProfile: UserProfile = {
-          id: profile.id,
-          username: profile.username,
-          displayName: profile.display_name,
-          avatarUrl: profile.avatar_url || undefined,
-          createdAt: new Date(profile.created_at),
-          updatedAt: new Date(profile.updated_at),
-          lastSeenAt: new Date(profile.last_seen_at),
-          gamesPlayed: profile.games_played || 0,
-          gamesWon: profile.games_won || 0,
-          totalScore: profile.total_score || 0,
-          preferences: profile.preferences || defaultPreferences,
-        };
+        if (error) {
+          // Network/connection errors should be retried
+          if ((error.message.includes('network') || 
+               error.message.includes('connection') || 
+               error.message.includes('timeout')) && 
+               attempt < maxRetries) {
+            console.warn(`[AuthContext] Network error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, error.message);
+            return attemptLoad(attempt + 1);
+          }
 
-        setUser({
+          if (error.code === 'PGRST116') {
+            // No profile found - this is expected for new users
+            console.log('[AuthContext] No profile found, creating basic user');
+          } else {
+            console.warn('[AuthContext] Error loading user profile, keeping existing data:', error.message);
+          }
+
+          // Keep existing profile data if available
+          setUser(prevUser => ({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            profile: prevUser?.profile || null,
+          }));
+          setLoading(false);
+          return;
+        }
+
+        if (profile) {
+          console.log('[AuthContext] Profile loaded successfully:', profile);
+
+          // Create default preferences if not exist
+          const defaultPreferences = {
+            notifications: true,
+            sound: true,
+            theme: 'light' as const
+          };
+
+          const userProfile: UserProfile = {
+            id: profile.id,
+            username: profile.username,
+            displayName: profile.display_name,
+            avatarUrl: profile.avatar_url || undefined,
+            createdAt: new Date(profile.created_at),
+            updatedAt: new Date(profile.updated_at),
+            lastSeenAt: new Date(profile.last_seen_at),
+            gamesPlayed: profile.games_played || 0,
+            gamesWon: profile.games_won || 0,
+            totalScore: profile.total_score || 0,
+            preferences: profile.preferences || defaultPreferences,
+          };
+
+          setUser({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            profile: userProfile,
+          });
+          // Mark loading complete on success
+          loadingUserRef.current = null;
+          setLoading(false);
+        } else {
+          // No profile found, keep existing data if available
+          console.log('[AuthContext] No profile data, keeping existing profile if available');
+          setUser(prevUser => ({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            profile: prevUser?.profile || null,
+          }));
+          // Mark loading complete even when profile doesn't exist (normal for new users)
+          loadingUserRef.current = null;
+          setLoading(false);
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Network/connection errors should be retried
+        if ((errorMessage.includes('network') || 
+             errorMessage.includes('connection') || 
+             errorMessage.includes('fetch')) && 
+             attempt < maxRetries) {
+          console.warn(`[AuthContext] Connection error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, errorMessage);
+          return attemptLoad(attempt + 1);
+        }
+
+        console.warn('[AuthContext] Error in loadUserProfile, keeping existing data:', error);
+
+        // Keep existing profile data if available, otherwise create basic user
+        setUser(prevUser => ({
           id: supabaseUser.id,
           email: supabaseUser.email,
-          profile: userProfile,
-        });
-      } else {
-        // No profile found, create basic user
-        console.log('[AuthContext] No profile data, creating basic user');
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          profile: null,
-        });
+          profile: prevUser?.profile || null,
+        }));
+      } finally {
+        if (attempt === maxRetries) {
+          loadingUserRef.current = null;
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('[AuthContext] Error in loadUserProfile:', error);
+    };
 
-      // Always create a basic user even if profile loading fails
-      setUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        profile: null,
-      });
-    } finally {
-      loadingUserRef.current = null;
-      setLoading(false);
-    }
+    await attemptLoad(retryCount);
   };
 
   const signUp = async (data: SignUpData) => {
