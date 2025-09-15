@@ -19,7 +19,16 @@ import { ChomboService } from './services/chombo.service';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+    credentials: true,
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+})
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
@@ -35,8 +44,39 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly authService: AuthService,
   ) {}
 
+  /**
+   * 認証済みユーザーまたはauth.nameから適切な名前を取得するヘルパーメソッド
+   */
+  private getPlayerName(
+    authenticatedUser: AuthenticatedUser | null,
+    auth: Record<string, unknown>,
+  ): string | undefined {
+    if (authenticatedUser) {
+      const name =
+        authenticatedUser.profile?.displayName || authenticatedUser.email;
+      if (name) {
+        console.log('[GameGateway] Using authenticated user name:', name);
+        return name;
+      }
+    }
+
+    const authName = typeof auth.name === 'string' ? auth.name : undefined;
+    if (authName) {
+      console.log('[GameGateway] Using auth.name:', authName);
+    }
+
+    return authName;
+  }
+
   //-------Connection-------
   async handleConnection(client: Socket) {
+    console.log('[Connection] New connection attempt from:', client.id);
+    console.log('[Connection] Transport:', client.conn.transport.name);
+    console.log(
+      '[Connection] User agent:',
+      client.handshake.headers['user-agent'],
+    );
+
     const auth = client.handshake.auth || {};
     const reconnectToken =
       typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
@@ -56,7 +96,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
         }
       } catch (error) {
-        console.warn('Failed to authenticate user with Supabase token:', error);
+        console.warn(
+          '[Auth] Failed to authenticate user with Supabase token:',
+          error,
+        );
       }
     }
 
@@ -138,10 +181,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // 新規プレイヤーとして追加
-    if (name) {
+    // 認証済みユーザーまたは名前がある場合に処理
+    if (name || authenticatedUser) {
       // Determine display name and player ID
-      const displayName = authenticatedUser?.profile.displayName || name;
+      const displayName =
+        authenticatedUser?.profile?.displayName ||
+        authenticatedUser?.email ||
+        name ||
+        'User';
       const userId = authenticatedUser?.id;
+
+      console.log('[Connection] Adding player:', {
+        socketId: client.id,
+        displayName,
+        userId,
+        isAuthenticated: !!authenticatedUser,
+        hasName: !!name,
+        hasAuth: !!authenticatedUser,
+      });
 
       if (
         this.gameState.addPlayer(
@@ -166,11 +223,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.disconnect();
       }
     } else {
-      client.disconnect();
+      // Allow connection to remain open without immediate name/reconnectToken.
+      // The client can later authenticate via 'update-auth' or join with a name.
+      console.log(
+        '[Connection] No name/reconnectToken provided; keeping connection open for auth/join.',
+      );
     }
   }
 
   handleDisconnect(client: Socket) {
+    console.log('[Disconnect] Client disconnected:', client.id);
+    console.log('[Disconnect] Transport was:', client.conn.transport.name);
+
     const roomId = this.playerRooms.get(client.id);
     if (roomId) {
       this.playerRooms.delete(client.id);
@@ -219,8 +283,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       const auth = client.handshake.auth || {};
-      const name = typeof auth.name === 'string' ? auth.name : undefined;
-      if (!name) {
+
+      // 認証済みユーザー情報を取得
+      const authenticatedUser = (client.data as { user?: AuthenticatedUser })
+        .user;
+
+      // 共通ヘルパーメソッドを使用して名前を取得
+      const playerName = this.getPlayerName(authenticatedUser || null, auth);
+
+      if (!playerName) {
+        console.warn('[GameGateway] No name available for room creation', {
+          hasAuthenticatedUser: !!authenticatedUser,
+          authName: auth.name as string | undefined,
+          authKeys: Object.keys(auth),
+        });
         client.emit('error-message', 'Name is required');
         return;
       }
@@ -228,7 +304,21 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const users = this.gameState.getUsers();
       const user = users.find((p) => p.id === client.id);
       if (!user) {
-        client.emit('error-message', 'Player not found2');
+        console.error(
+          '[GameGateway] Player not found in game state for room creation',
+          {
+            clientId: client.id,
+            hasAuthenticatedUser: !!authenticatedUser,
+            totalUsers: users.length,
+            userIds: users.map((u) => u.id),
+            authenticatedUserId: authenticatedUser?.id,
+            authenticatedUserEmail: authenticatedUser?.email,
+          },
+        );
+        client.emit(
+          'error-message',
+          'Player not found in game state. Please reconnect.',
+        );
         return;
       }
 
@@ -275,7 +365,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       }
 
-      const success = await this.roomService.joinRoom(data.roomId, data.user);
+      // Check if user is authenticated and update the user name accordingly
+      const authenticatedUser = (client.data as { user?: AuthenticatedUser })
+        .user;
+      const userToJoin = { ...data.user };
+
+      if (authenticatedUser?.profile?.displayName || authenticatedUser?.email) {
+        // Use authenticated user's display name or email
+        userToJoin.name =
+          authenticatedUser.profile?.displayName ||
+          authenticatedUser.email ||
+          data.user.name;
+        userToJoin.userId = authenticatedUser.id;
+        userToJoin.isAuthenticated = true;
+      }
+
+      const success = await this.roomService.joinRoom(data.roomId, userToJoin);
       if (!success) {
         client.emit('error-message', 'Failed to join room');
         return { success: false };
@@ -583,7 +688,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const player = state.players.find((p) => p.id === client.id);
 
     if (!player) {
-      client.emit('error-message', 'Player not found5');
+      console.error(
+        '[GameGateway] Player not found in game state for game start',
+        {
+          clientId: client.id,
+          roomId: data.roomId,
+          totalPlayers: state.players.length,
+          playerIds: state.players.map((p) => p.id),
+          playerNames: state.players.map((p) => p.name),
+        },
+      );
+      client.emit(
+        'error-message',
+        'Player not found in game state. Please rejoin the room.',
+      );
       return;
     }
 
@@ -1410,6 +1528,146 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })().catch(console.error);
     }, 3000);
     return Promise.resolve();
+  }
+
+  //-------Auth Update-------
+  @SubscribeMessage('update-auth')
+  async handleUpdateAuth(
+    client: Socket,
+    data: { token?: string },
+  ): Promise<void> {
+    try {
+      console.log('[GameGateway] Received update-auth event', {
+        clientId: client.id,
+        hasToken: !!data?.token,
+        tokenLength: data?.token?.length || 0,
+        tokenStart: data?.token ? data.token.substring(0, 20) + '...' : 'null',
+      });
+
+      if (!data?.token) {
+        console.warn('[GameGateway] No token provided in update-auth');
+        client.emit('auth-update-error', 'No token provided');
+        return;
+      }
+
+      console.log(
+        `[GameGateway] Attempting to validate token with length: ${data.token.length}`,
+      );
+
+      // Try to authenticate with the new token
+      let authenticatedUser: AuthenticatedUser | null = null;
+      try {
+        authenticatedUser = await this.authService.getUserFromSocketToken(
+          data.token,
+        );
+      } catch (error: unknown) {
+        const err = error as { message?: string; stack?: string } | undefined;
+        console.error('[GameGateway] Failed to authenticate token:', {
+          error: err?.message,
+          stack: err?.stack,
+          tokenLength: data.token?.length || 0,
+        });
+        client.emit('auth-update-error', 'Invalid token');
+        return;
+      }
+
+      if (!authenticatedUser) {
+        console.warn(
+          '[GameGateway] Token validation failed - AuthService returned null',
+          {
+            tokenLength: data.token?.length || 0,
+            tokenStart: data.token.substring(0, 20) + '...',
+          },
+        );
+        client.emit('auth-update-error', 'Token validation failed');
+        return;
+      }
+
+      // Update socket data with authenticated user
+      (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
+
+      console.log(
+        '[GameGateway] Successfully updated authentication for user:',
+        {
+          userId: authenticatedUser.id,
+          email: authenticatedUser.email,
+          displayName: authenticatedUser.profile?.displayName,
+        },
+      );
+
+      // Notify client of successful auth update
+      client.emit('auth-updated', {
+        userId: authenticatedUser.id,
+        displayName:
+          authenticatedUser.profile?.displayName ||
+          authenticatedUser.email ||
+          'User',
+        username: authenticatedUser.profile?.username,
+      });
+
+      // Ensure the authenticated user exists in the gameState users list
+      const existingUser = this.gameState
+        .getUsers()
+        .find((u) => u.id === client.id);
+      if (!existingUser) {
+        const displayName =
+          authenticatedUser.profile?.displayName ||
+          authenticatedUser.email ||
+          'User';
+        const added = this.gameState.addPlayer(
+          client.id,
+          displayName,
+          undefined,
+          authenticatedUser.id,
+          true,
+        );
+        if (added) {
+          const users = this.gameState.getUsers();
+          const newUser = users.find((p) => p.id === client.id);
+          if (newUser) {
+            // Provide reconnect token for future sessions
+            this.server
+              .to(client.id)
+              .emit('reconnect-token', `${newUser.playerId}`);
+          }
+          this.server.emit('update-users', users);
+        }
+      }
+
+      // If the user is in a room, update their information in the room
+      const roomId = this.playerRooms.get(client.id);
+      if (roomId) {
+        console.log('[GameGateway] Updating user info in room:', roomId);
+
+        // Update user info in the room service if needed
+        const roomGameState = this.roomService.getRoomGameState(roomId);
+        if (roomGameState) {
+          const players = roomGameState.getState().players;
+          const currentPlayer = players.find((p) => p.id === client.id);
+
+          if (currentPlayer) {
+            // Update player's display name and user ID in the room
+            currentPlayer.name =
+              authenticatedUser.profile?.displayName ||
+              authenticatedUser.email ||
+              'User';
+            currentPlayer.userId = authenticatedUser.id;
+
+            // Broadcast updated player list to all clients in the room
+            this.server.to(roomId).emit('update-players', players);
+
+            console.log('[GameGateway] Updated player info in room:', {
+              playerId: currentPlayer.playerId,
+              newName: currentPlayer.name,
+              userId: currentPlayer.userId,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[GameGateway] Error in handleUpdateAuth:', error);
+      client.emit('auth-update-error', 'Internal server error');
+    }
   }
   //-------Game-------
 }
