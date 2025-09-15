@@ -4,3 +4,29 @@
   align-items: center;
   justify-content: center;
 }
+
+.connectionStatus {
+  margin-bottom: 1rem;
+  text-align: center;
+
+  .connecting {
+    color: #f39c12;
+    font-weight: 500;
+    animation: pulse 1.5s ease-in-out infinite alternate;
+  }
+
+  .connected {
+    color: #27ae60;
+    font-weight: 500;
+  }
+
+  .disconnected {
+    color: #e74c3c;
+    font-weight: 500;
+  }
+}
+
+@keyframes pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
