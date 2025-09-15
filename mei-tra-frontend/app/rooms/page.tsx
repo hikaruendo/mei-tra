@@ -3,15 +3,18 @@
 import { Navigation } from '../../components/layout/Navigation';
 import { RoomList } from '../../components/molecules/RoomList';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
+import { useSocket } from '../../hooks/useSocket';
 
 export const dynamic = 'force-dynamic';
 
 export default function RoomsPage() {
+  const { isConnected, isConnecting } = useSocket();
+
   return (
     <ProtectedRoute requireAuth={false}>
       <Navigation />
       <main>
-        <RoomList />
+        <RoomList isConnected={isConnected} isConnecting={isConnecting} />
       </main>
     </ProtectedRoute>
   );

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSocket } from './useSocket';
 import { Room, RoomPlayer } from '../types/room.types';
 import { useGame } from './useGame';
+import { useAuth } from '../contexts/AuthContext';
 import { Player, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 
@@ -13,6 +14,7 @@ export const useRoom = () => {
   const [isClient, setIsClient] = useState(false);
   const game = useGame();
   const { socket } = useSocket();
+  const { user } = useAuth();
   
   const users = useMemo(() => game?.users || [], [game?.users]);
   const players = useMemo(() => game?.players || [], [game?.players]);
@@ -214,6 +216,38 @@ export const useRoom = () => {
       }
     });
 
+    // プレイヤー情報の更新
+    socket.on('update-players', (players: Player[]) => {
+      // 現在参加しているルームのプレイヤー情報を更新
+      if (currentRoomRef.current) {
+        const updatedRoom = {
+          ...currentRoomRef.current,
+          players: currentRoomRef.current.players.map(roomPlayer => {
+            // Socket IDでマッチングして更新されたプレイヤー情報を適用
+            const updatedPlayer = players.find(p => p.id === roomPlayer.id);
+            if (updatedPlayer) {
+              return {
+                ...roomPlayer,
+                name: updatedPlayer.name,
+                userId: updatedPlayer.userId,
+                isAuthenticated: updatedPlayer.isAuthenticated
+              };
+            }
+            return roomPlayer;
+          })
+        };
+
+        setCurrentRoom(updatedRoom);
+
+        // availableRoomsも同じように更新
+        setAvailableRooms(prevRooms =>
+          prevRooms.map(room =>
+            room.id === currentRoomRef.current!.id ? updatedRoom : room
+          )
+        );
+      }
+    });
+
     // エラーメッセージ
     socket.on('error-message', (message: string) => {
       setError(message);
@@ -227,6 +261,7 @@ export const useRoom = () => {
       socket.off('rooms-list');
       socket.off('room-player-joined');
       socket.off('player-left');
+      socket.off('update-players');
       socket.off('error-message');
       socket.off('room-playing');
       socket.off('room-updated');
@@ -240,6 +275,16 @@ export const useRoom = () => {
       setError('Socket not connected');
       return;
     }
+
+    console.log('[useRoom] Creating room:', {
+      name,
+      pointsToWin,
+      teamAssignmentMethod,
+      socketId: socket.id,
+      socketAuth: socket.auth,
+      socketConnected: socket.connected
+    });
+
     socket.emit('create-room', { name, pointsToWin, teamAssignmentMethod });
   }, [socket]);
 
@@ -250,17 +295,44 @@ export const useRoom = () => {
       return;
     }
     const socketId = socket.id;
-    const user = users.find((p: { id: string }) => p.id === socketId);
-    if (!user) {
+    let userToJoin = users.find((p: { id: string }) => p.id === socketId);
+
+    // 認証済みユーザーの場合、認証情報を適切に設定
+    if (user && !userToJoin) {
+      const displayName = user.profile?.displayName || user.email || 'User';
+      userToJoin = {
+        id: socketId,
+        playerId: socketId, // 仮のplayerId、サーバーで適切に処理される
+        name: displayName,
+        userId: user.id,
+        isAuthenticated: true
+      };
+
+      console.log('[useRoom] Creating user object for authenticated user:', {
+        socketId,
+        displayName,
+        userId: user.id
+      });
+    }
+
+    if (!userToJoin) {
       setError('Please enter your name and join the game first');
       return;
     }
-    socket.emit('join-room', { roomId, user }, (response: { success: boolean; room?: Room }) => {
+
+    console.log('[useRoom] Joining room:', {
+      roomId,
+      user: userToJoin,
+      socketId,
+      isAuthenticated: !!user
+    });
+
+    socket.emit('join-room', { roomId, user: userToJoin }, (response: { success: boolean; room?: Room }) => {
       if (response.success && response.room) {
         setCurrentRoom(response.room);
       }
     });
-  }, [socket, users]);
+  }, [socket, users, user]);
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
