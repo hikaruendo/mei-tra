@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSocket } from './useSocket';
+import { useAuth } from '../contexts/AuthContext';
 import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 
 export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
+  const { user } = useAuth();
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -23,6 +25,15 @@ export const useGame = () => {
 
   // Client-side rendering guard
   const [isClient, setIsClient] = useState(false);
+
+  // Loading state details
+  const [loadingState, setLoadingState] = useState<{
+    isLoading: boolean;
+    step: string;
+  }>({
+    isLoading: true,
+    step: '認証状態を確認中...'
+  });
 
   const [revealedAgari, setRevealedAgari] = useState<string | null>(null);
   const [currentField, setCurrentField] = useState<Field | null>(null);
@@ -47,6 +58,30 @@ export const useGame = () => {
 
   useEffect(() => {
     setIsClient(true);
+
+    // Update loading state based on socket status - but don't block UI
+    if (isConnecting) {
+      setLoadingState({
+        isLoading: false, // Don't block UI for socket connection
+        step: 'サーバーに接続中...'
+      });
+    } else if (!socket) {
+      setLoadingState({
+        isLoading: false, // Don't block UI
+        step: 'Socket接続を準備中...'
+      });
+    } else if (!isConnected) {
+      setLoadingState({
+        isLoading: false, // Don't block UI
+        step: '接続を確立中...'
+      });
+    } else {
+      setLoadingState({
+        isLoading: false,
+        step: '準備完了'
+      });
+    }
+
     if (!socket) return;
 
     const socketHandlers = {
@@ -322,7 +357,7 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [socket, name, currentHighestDeclaration, players]);
+  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);
@@ -333,13 +368,26 @@ export const useGame = () => {
 
   const gameActions = {
     joinGame: () => {
+      // 認証済みユーザーの場合、joinGameは不要
+      if (user) {
+        console.warn('[useGame] joinGame called for authenticated user - this should not happen');
+        return;
+      }
+
       if (name.trim() && socket) {
-        if (reconnectToken) {
-          socket.auth = { reconnectToken };
-        } else {
-          socket.auth = { name };
+        // Persist name for initial handshake on future reloads
+        try { sessionStorage.setItem('playerName', name); } catch {}
+
+        // Merge into existing auth to avoid clobbering token or roomId
+        const existingAuth = (socket.auth || {}) as Record<string, unknown>;
+        socket.auth = reconnectToken
+          ? { ...existingAuth, reconnectToken }
+          : { ...existingAuth, name };
+
+        // Connect if not already connecting/connected
+        if (!socket.connected) {
+          socket.connect();
         }
-        socket.connect();
       }
     },
     declareBlow: () => {
@@ -403,10 +451,27 @@ export const useGame = () => {
   };
 
   if (!isClient) {
-    return null;
+    return {
+      isLoading: true,
+      loadingStep: 'クライアントを初期化中...',
+      isConnected: false,
+      isConnecting: false,
+    };
+  }
+
+  // Return loading state information when still loading
+  if (loadingState.isLoading) {
+    return {
+      isLoading: true,
+      loadingStep: loadingState.step,
+      isConnected,
+      isConnecting,
+    };
   }
 
   return {
+    isLoading: false,
+    loadingStep: loadingState.step,
     name,
     setName,
     gameStarted,
