@@ -15,33 +15,65 @@ export class AuthService {
 
   async validateToken(token: string): Promise<AuthenticatedUser | null> {
     try {
+      this.logger.debug(
+        `[AuthService] Validating token with length: ${token?.length || 0}`,
+      );
+
       // Verify JWT token with Supabase
       const { data: user, error } =
         await this.supabase.client.auth.getUser(token);
 
-      if (error || !user.user) {
-        this.logger.warn('Invalid or expired token');
+      if (error) {
+        this.logger.warn(
+          `[AuthService] Supabase auth error: ${error.message}`,
+          {
+            errorCode: error.name,
+            tokenLength: token?.length || 0,
+          },
+        );
         return null;
       }
+
+      if (!user.user) {
+        this.logger.warn('[AuthService] No user data returned from Supabase');
+        return null;
+      }
+
+      this.logger.debug(
+        `[AuthService] Token validated for user: ${user.user.id}`,
+      );
 
       // Get user profile from database
       const profile = await this.userProfileRepository.findById(user.user.id);
 
       if (!profile) {
-        this.logger.warn(`User profile not found for user ${user.user.id}`);
+        this.logger.warn(
+          `[AuthService] User profile not found for user ${user.user.id}`,
+        );
         return null;
       }
 
       // Update last seen timestamp
       await this.userProfileRepository.updateLastSeen(user.user.id);
 
+      this.logger.debug(
+        `[AuthService] Successfully validated user: ${user.user.id} with profile: ${profile.displayName}`,
+      );
+
       return {
         id: user.user.id,
         email: user.user.email,
         profile,
       };
-    } catch (error) {
-      this.logger.error('Error validating token:', error);
+    } catch (error: unknown) {
+      const err = error as { message?: string; stack?: string } | undefined;
+      this.logger.error(
+        `[AuthService] Error validating token: ${err?.message}`,
+        {
+          error: err?.stack,
+          tokenLength: token?.length || 0,
+        },
+      );
       return null;
     }
   }
@@ -88,13 +120,33 @@ export class AuthService {
   ): Promise<AuthenticatedUser | null> {
     try {
       if (!token) {
+        this.logger.warn(
+          '[AuthService] No token provided to getUserFromSocketToken',
+        );
         return null;
       }
 
+      this.logger.debug(
+        `[AuthService] Getting user from socket token, length: ${token.length}`,
+      );
+
       // For WebSocket connections, token might be passed directly
-      return await this.validateToken(token);
-    } catch (error) {
-      this.logger.error('Error getting user from socket token:', error);
+      const result = await this.validateToken(token);
+
+      if (!result) {
+        this.logger.warn('[AuthService] Token validation returned null');
+      }
+
+      return result;
+    } catch (error: unknown) {
+      const err = error as { message?: string; stack?: string } | undefined;
+      this.logger.error(
+        `[AuthService] Error getting user from socket token: ${err?.message}`,
+        {
+          error: err?.stack,
+          tokenLength: token?.length || 0,
+        },
+      );
       return null;
     }
   }
