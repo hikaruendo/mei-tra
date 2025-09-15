@@ -58,13 +58,6 @@ export function UserProfile() {
         </span>
       </div>
 
-      {user.profile && (
-        <div className={styles.stats}>
-          <div className={styles.statsRow}>勝利数: {user.profile.gamesWon}/{user.profile.gamesPlayed}</div>
-          <div className={styles.statsRow}>スコア: {user.profile.totalScore}</div>
-        </div>
-      )}
-
       <button
         onClick={handleSignOut}
         disabled={isSigningOut}

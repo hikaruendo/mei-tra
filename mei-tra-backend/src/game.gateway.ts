@@ -12,7 +12,14 @@ import { ScoreService } from './services/score.service';
 import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
-import { TrumpType, Field, Team, User } from './types/game.types';
+import {
+  TrumpType,
+  Field,
+  Team,
+  User,
+  Player,
+  TeamScores,
+} from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { RoomStatus } from './types/room.types';
 import { ChomboService } from './services/chombo.service';
@@ -1341,6 +1348,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         finalScores: state.teamScores,
       });
 
+      // Update game statistics for authenticated players
+      await this.updatePlayerGameStatistics(
+        state.players,
+        finalWinningTeam,
+        state.teamScores,
+      );
+
       await this.roomService.updateRoomStatus(roomId, RoomStatus.FINISHED);
 
       // Reset game state after a delay
@@ -1669,5 +1683,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('auth-update-error', 'Internal server error');
     }
   }
+
+  private async updatePlayerGameStatistics(
+    players: Player[],
+    winningTeam: Team,
+    teamScores: TeamScores,
+  ): Promise<void> {
+    try {
+      // Filter authenticated players first
+      const authenticatedPlayers = players.filter(
+        (player): player is Player & { userId: string } =>
+          Boolean(player.userId),
+      );
+
+      const updatePromises = authenticatedPlayers.map(async (player) => {
+        const won = player.team === winningTeam;
+        const playerTeamScore = teamScores[player.team];
+        const score = playerTeamScore ? playerTeamScore.total : 0;
+
+        try {
+          await this.roomService.updateUserGameStats(player.userId, won, score);
+          console.log(
+            `[GameGateway] Updated game stats for user ${player.userId}: won=${won}, score=${score}`,
+          );
+        } catch (error) {
+          console.error(
+            `[GameGateway] Failed to update stats for user ${player.userId}:`,
+            error,
+          );
+        }
+      });
+
+      await Promise.allSettled(updatePromises);
+    } catch (error) {
+      console.error(
+        '[GameGateway] Error in updatePlayerGameStatistics:',
+        error,
+      );
+    }
+  }
+
   //-------Game-------
 }
