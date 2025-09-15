@@ -127,6 +127,10 @@ export class RoomService {
     const gameState = this.gameStateFactory.createGameState();
     gameState.setRoomId(createdRoom.id);
     await gameState.loadState(createdRoom.id);
+
+    // Configure game settings with the room's pointsToWin
+    await gameState.configureGameSettings(pointsToWin);
+
     this.roomGameStates.set(createdRoom.id, gameState);
 
     return createdRoom;

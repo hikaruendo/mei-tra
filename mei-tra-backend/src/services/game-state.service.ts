@@ -36,7 +36,7 @@ export class GameStateService {
     this.roomId = roomId;
   }
 
-  private initializeState(): void {
+  private initializeState(pointsToWin: number = 10): void {
     this.state = {
       players: [],
       deck: [],
@@ -54,7 +54,7 @@ export class GameStateService {
         1: [],
       } as Record<Team, ScoreRecord[]>,
       roundNumber: 1,
-      pointsToWin: 10,
+      pointsToWin,
       teamAssignments: {},
     };
   }
@@ -123,6 +123,19 @@ export class GameStateService {
       console.error('Failed to load game state:', error);
       // Fall back to in-memory state
       this.roomId = roomId;
+    }
+  }
+
+  async configureGameSettings(pointsToWin: number): Promise<void> {
+    this.state.pointsToWin = pointsToWin;
+
+    // Persist the updated setting
+    if (this.roomId) {
+      try {
+        await this.gameStateRepository.update(this.roomId, { pointsToWin });
+      } catch (error) {
+        console.error('Failed to persist pointsToWin setting:', error);
+      }
     }
   }
 
@@ -359,13 +372,14 @@ export class GameStateService {
   }
 
   async resetRoundState(): Promise<void> {
-    // Keep the current players and scores
+    // Keep the current players, scores, and game settings
     const players = [...this.state.players];
     const teamScores = { ...this.state.teamScores };
     const teamScoreRecords = { ...this.state.teamScoreRecords };
+    const pointsToWin = this.state.pointsToWin;
 
-    // Initialize new state
-    this.initializeState();
+    // Initialize new state with preserved pointsToWin
+    this.initializeState(pointsToWin);
 
     // Restore players and scores
     this.state.players = players;

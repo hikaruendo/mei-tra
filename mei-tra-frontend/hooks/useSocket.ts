@@ -26,6 +26,13 @@ export function useSocket(): UseSocketReturn {
 
     const initializeSocket = async () => {
       isInitializingRef.current = true;
+      // If a socket already exists and is connected, reflect that immediately
+      if (socketRef.current?.connected) {
+        setIsConnected(true);
+        setIsConnecting(false);
+        isInitializingRef.current = false;
+        return;
+      }
       setIsConnecting(true);
 
       try {
@@ -37,11 +44,7 @@ export function useSocket(): UseSocketReturn {
 
         // Set up connection listeners
         if (socketRef.current) {
-          // Remove existing listeners to prevent duplicates
-          socketRef.current.off('connect');
-          socketRef.current.off('disconnect');
-          socketRef.current.off('connect_error');
-
+          // Add listeners without removing others so multiple hooks can subscribe
           socketRef.current.on('connect', () => {
             setIsConnected(true);
             setIsConnecting(false);
