@@ -5,9 +5,11 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface User {
-  id: string;
-  playerId: string;
+  id: string; // Socket ID
+  playerId: string; // Legacy player identifier
   name: string;
+  userId?: string; // Supabase auth user ID (optional for backward compatibility)
+  isAuthenticated?: boolean; // Whether user is authenticated with Supabase
 }
 
 export interface CompletedField {

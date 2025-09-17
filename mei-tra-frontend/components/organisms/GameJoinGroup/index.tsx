@@ -7,9 +7,11 @@ type GameJoinGroupProps = {
   name: string;
   onNameChange: (name: string) => void;
   onJoinGame: () => void;
+  isConnected?: boolean;
+  isConnecting?: boolean;
 };
 
-export default function GameJoinGroup({ name, onNameChange, onJoinGame }: GameJoinGroupProps) {
+export default function GameJoinGroup({ name, onNameChange, onJoinGame, isConnected, isConnecting }: GameJoinGroupProps) {
   return (
     <div className={styles.container}>
       <GameJoinForm
@@ -17,7 +19,7 @@ export default function GameJoinGroup({ name, onNameChange, onJoinGame }: GameJo
         onNameChange={onNameChange}
         onJoinGame={onJoinGame}
       />
-      <RoomList />
+      <RoomList isConnected={isConnected} isConnecting={isConnecting} />
     </div>
   );
 }

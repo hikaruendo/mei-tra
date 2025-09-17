@@ -1,0 +1,292 @@
+$color-blue: #2196F3;
+$color-blue-dark: #1976D2;
+$color-white: #ffffff;
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 2rem;
+$spacing-xl: 3rem;
+$font-size-sm: 0.9rem;
+$font-size-base: 1rem;
+$font-size-lg: 1.4rem;
+$font-size-xl: 2rem;
+$font-size-xxl: 2.2rem;
+$radius-md: 8px;
+$radius-lg: 1rem;
+$shadow-controls: 0 4px 12px rgba(0, 0, 0, 0.3);
+$transition-button: all 0.3s ease;
+
+.container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+.loadingContainer {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.loadingSpinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid $color-blue;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loadingText {
+  color: #6b7280;
+}
+
+.noAuthContainer {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.noAuthContent {
+  max-width: 28rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.noAuthTitle {
+  font-size: $font-size-xxl;
+  font-weight: bold;
+  color: #111827;
+  text-align: center;
+}
+
+.noAuthDescription {
+  margin-top: $spacing-sm;
+  color: #6b7280;
+  text-align: center;
+}
+
+.noAuthButtonContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.loginButton {
+  background-color: $color-blue;
+  color: $color-white;
+  padding: $spacing-sm $spacing-lg;
+  border: none;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $transition-button;
+
+  &:hover {
+    background-color: $color-blue-dark;
+  }
+}
+
+.mainContainer {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: $spacing-lg $spacing-md;
+
+  @media (min-width: 640px) {
+    padding: $spacing-lg $spacing-lg;
+  }
+
+  @media (min-width: 1024px) {
+    padding: $spacing-lg $spacing-xl;
+  }
+}
+
+.profileCard {
+  background-color: $color-white;
+  box-shadow: $shadow-controls;
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.profileHeader {
+  background: linear-gradient(135deg, $color-blue 0%, $color-blue-dark 100%);
+  padding: $spacing-lg $spacing-md;
+}
+
+.profileHeaderContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+}
+
+.avatarContainer {
+  background-color: $color-white;
+  padding: 4px;
+  border-radius: 50%;
+}
+
+.avatar {
+  width: 5rem;
+  height: 5rem;
+  background-color: #dbeafe;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarText {
+  font-size: $font-size-xl;
+  font-weight: bold;
+  color: $color-blue;
+}
+
+.profileInfo {
+  color: $color-white;
+}
+
+.profileName {
+  font-size: $font-size-xxl;
+  font-weight: bold;
+  margin: 0;
+}
+
+.profileUsername {
+  color: #bfdbfe;
+  font-size: $font-size-lg;
+  margin: $spacing-xs 0;
+}
+
+.profileEmail {
+  color: #93c5fd;
+  font-size: $font-size-sm;
+}
+
+.profileContent {
+  padding: $spacing-lg $spacing-md;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-xl;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statCard {
+  padding: $spacing-lg;
+  border-radius: $radius-lg;
+  text-align: center;
+
+  &.gamesPlayed {
+    background-color: #f9fafb;
+  }
+
+  &.gamesWon {
+    background-color: #f0fdf4;
+  }
+
+  &.winRate {
+    background-color: #eff6ff;
+  }
+
+  &.totalScore {
+    background-color: #faf5ff;
+  }
+}
+
+.statValue {
+  font-size: $font-size-xxl;
+  font-weight: bold;
+  margin-bottom: $spacing-xs;
+
+  &.gamesPlayed {
+    color: #111827;
+  }
+
+  &.gamesWon {
+    color: #059669;
+  }
+
+  &.winRate {
+    color: $color-blue;
+  }
+
+  &.totalScore {
+    color: #7c3aed;
+  }
+}
+
+.statLabel {
+  color: #6b7280;
+  font-size: $font-size-sm;
+}
+
+.accountSection {
+  margin-top: $spacing-xl;
+  border-top: 1px solid #e5e7eb;
+  padding-top: $spacing-xl;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: $spacing-md;
+}
+
+.accountInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.accountRow {
+  display: flex;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+  border-bottom: 1px solid #f3f4f6;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.accountLabel {
+  color: #6b7280;
+}
+
+.accountValue {
+  color: #111827;
+}
+
+.noProfileText {
+  text-align: center;
+  padding: $spacing-xl;
+  color: #6b7280;
+}

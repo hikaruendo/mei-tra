@@ -1,9 +1,11 @@
 export type Team = 0 | 1;
 
 export interface User {
-  id: string;
-  playerId: string;
+  id: string; // Socket ID
+  playerId: string; // Legacy player identifier
   name: string;
+  userId?: string; // Supabase auth user ID (optional for backward compatibility)
+  isAuthenticated?: boolean; // Whether user is authenticated with Supabase
 }
 
 export interface Player extends User {

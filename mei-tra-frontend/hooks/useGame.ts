@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getSocket } from '../app/socket';
+import { useSocket } from './useSocket';
+import { useAuth } from '../contexts/AuthContext';
 import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 
 export const useGame = () => {
+  const { socket, isConnected, isConnecting } = useSocket();
+  const { user } = useAuth();
+
   // Player and Game State
   const [name, setName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -21,6 +25,15 @@ export const useGame = () => {
 
   // Client-side rendering guard
   const [isClient, setIsClient] = useState(false);
+
+  // Loading state details
+  const [loadingState, setLoadingState] = useState<{
+    isLoading: boolean;
+    step: string;
+  }>({
+    isLoading: true,
+    step: '認証状態を確認中...'
+  });
 
   const [revealedAgari, setRevealedAgari] = useState<string | null>(null);
   const [currentField, setCurrentField] = useState<Field | null>(null);
@@ -45,7 +58,31 @@ export const useGame = () => {
 
   useEffect(() => {
     setIsClient(true);
-    const socket = getSocket();
+
+    // Update loading state based on socket status - but don't block UI
+    if (isConnecting) {
+      setLoadingState({
+        isLoading: false, // Don't block UI for socket connection
+        step: 'サーバーに接続中...'
+      });
+    } else if (!socket) {
+      setLoadingState({
+        isLoading: false, // Don't block UI
+        step: 'Socket接続を準備中...'
+      });
+    } else if (!isConnected) {
+      setLoadingState({
+        isLoading: false, // Don't block UI
+        step: '接続を確立中...'
+      });
+    } else {
+      setLoadingState({
+        isLoading: false,
+        step: '準備完了'
+      });
+    }
+
+    if (!socket) return;
 
     const socketHandlers = {
       // ユーザーの更新
@@ -113,7 +150,7 @@ export const useGame = () => {
             return prev;
           }
           
-          const socketId = getSocket().id;
+          const socketId = socket?.id;
           if (!socketId) return prev;
           
           return [...prev, {
@@ -128,7 +165,7 @@ export const useGame = () => {
       },
       'game-started': (roomId: string, players: Player[], pointsToWin: number) => {
         setPlayers(players);
-        const id = getSocket().id;
+        const id = socket?.id;
         const index = players.findIndex(p => p.id === id);
         setCurrentPlayerId(players[index].playerId);
         setCurrentRoomId(roomId);
@@ -320,7 +357,7 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [name, currentHighestDeclaration, players]);
+  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId]);
 
   const resetBlowState = () => {
     setBlowDeclarations([]);
@@ -331,14 +368,26 @@ export const useGame = () => {
 
   const gameActions = {
     joinGame: () => {
-      if (name.trim()) {
-        const socket = getSocket();
-        if (reconnectToken) {
-          socket.auth = { reconnectToken };
-        } else {
-          socket.auth = { name };
+      // 認証済みユーザーの場合、joinGameは不要
+      if (user) {
+        console.warn('[useGame] joinGame called for authenticated user - this should not happen');
+        return;
+      }
+
+      if (name.trim() && socket) {
+        // Persist name for initial handshake on future reloads
+        try { sessionStorage.setItem('playerName', name); } catch {}
+
+        // Merge into existing auth to avoid clobbering token or roomId
+        const existingAuth = (socket.auth || {}) as Record<string, unknown>;
+        socket.auth = reconnectToken
+          ? { ...existingAuth, reconnectToken }
+          : { ...existingAuth, name };
+
+        // Connect if not already connecting/connected
+        if (!socket.connected) {
+          socket.connect();
         }
-        socket.connect();
       }
     },
     declareBlow: () => {
@@ -350,7 +399,7 @@ export const useGame = () => {
         alert('Please select a trump type and number of pairs!');
         return;
       }
-      getSocket().emit('declare-blow', {
+      socket?.emit('declare-blow', {
         roomId: currentRoomId,
         declaration: {
           trumpType: selectedTrump,
@@ -363,12 +412,12 @@ export const useGame = () => {
         alert("It's not your turn to pass!2");
         return;
       }
-      getSocket().emit('pass-blow', {
+      socket?.emit('pass-blow', {
         roomId: currentRoomId,
       });
     },
     selectNegri: (card: string) => {
-      getSocket().emit('select-negri', {
+      socket?.emit('select-negri', {
         roomId: currentRoomId,
         card,
       });
@@ -378,7 +427,7 @@ export const useGame = () => {
         alert("It's not your turn!");
         return;
       }
-      getSocket().emit('play-card', {
+      socket?.emit('play-card', {
         roomId: currentRoomId,
         card,
       });
@@ -388,13 +437,13 @@ export const useGame = () => {
         alert("It's not your turn to select base suit!");
         return;
       }
-      getSocket().emit('select-base-suit', {
+      socket?.emit('select-base-suit', {
         roomId: currentRoomId,
         suit,
       });
     },
     revealBrokenHand: (playerId: string) => {
-      getSocket().emit('reveal-broken-hand', {
+      socket?.emit('reveal-broken-hand', {
         roomId: currentRoomId,
         playerId,
       });
@@ -402,10 +451,27 @@ export const useGame = () => {
   };
 
   if (!isClient) {
-    return null;
+    return {
+      isLoading: true,
+      loadingStep: 'クライアントを初期化中...',
+      isConnected: false,
+      isConnecting: false,
+    };
+  }
+
+  // Return loading state information when still loading
+  if (loadingState.isLoading) {
+    return {
+      isLoading: true,
+      loadingStep: loadingState.step,
+      isConnected,
+      isConnecting,
+    };
   }
 
   return {
+    isLoading: false,
+    loadingStep: loadingState.step,
     name,
     setName,
     gameStarted,
@@ -433,5 +499,7 @@ export const useGame = () => {
     pointsToWin,
     users,
     paused,
+    isConnected,
+    isConnecting,
   };
 }; 
