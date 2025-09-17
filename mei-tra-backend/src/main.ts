@@ -7,8 +7,8 @@ async function bootstrap() {
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'development'
-        ? 'http://localhost:3000'
-        : 'https://mei-tra-frontend.vercel.app',
+        ? process.env.FRONTEND_URL_DEV
+        : process.env.FRONTEND_URL_PROD,
     credentials: true,
   });
 

@@ -6,7 +6,7 @@
 
 明専トランプは、4人2チームで対戦するトランプゲームです。このプロジェクトでは、そのオンライン版を実装しています。
 
-- プレイ可能: https://mei-tra-frontend.vercel.app/
+- プレイ可能: https://meitra.kando1.com/
 - フロントエンド: Next.js
 - バックエンド: NestJS
 - 通信: WebSocket
