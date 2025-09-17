@@ -20,7 +20,10 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     displayName: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +78,71 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMagicLink = async () => {
+    if (!formData.email.trim()) {
+      setError('メールアドレスを入力してください');
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+    setIsSendingMagicLink(true);
+
+    try {
+      const { createClient } = await import('@/lib/supabase');
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: formData.email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccessMessage('ログインリンクをメールで送信しました。メールをご確認ください。');
+      }
+    } catch (err) {
+      console.error('Magic link error:', err);
+      setError('予期しないエラーが発生しました');
+    } finally {
+      setIsSendingMagicLink(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!formData.email.trim()) {
+      setError('メールアドレスを入力してください');
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+    setIsSendingReset(true);
+
+    try {
+      const { createClient } = await import('@/lib/supabase');
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccessMessage('パスワードリセットリンクをメールで送信しました。メールをご確認ください。');
+      }
+    } catch (err) {
+      console.error('Password reset error:', err);
+      setError('予期しないエラーが発生しました');
+    } finally {
+      setIsSendingReset(false);
+    }
   };
 
   return (
@@ -166,6 +234,12 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             </div>
           )}
 
+          {successMessage && (
+            <div className={styles.success}>
+              {successMessage}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isSubmitting || loading}
@@ -174,6 +248,32 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             {isSubmitting ? '処理中...' : mode === 'signin' ? 'ログイン' : '新規登録'}
           </button>
         </form>
+
+        {mode === 'signin' && (
+          <div className={styles.alternativeAuth}>
+            <div className={styles.divider}>
+              <span>または</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleMagicLink}
+              disabled={isSendingMagicLink || !formData.email.trim()}
+              className={styles.magicLinkButton}
+            >
+              {isSendingMagicLink ? '送信中...' : 'メールでログイン'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={isSendingReset || !formData.email.trim()}
+              className={styles.resetButton}
+            >
+              {isSendingReset ? '送信中...' : 'パスワードを忘れた場合'}
+            </button>
+          </div>
+        )}
 
         <div className={styles.modeToggle}>
           <button

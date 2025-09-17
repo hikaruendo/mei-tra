@@ -98,6 +98,15 @@ $opacity-disabled: 0.5;
   font-size: $font-size-sm;
 }
 
+.success {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+}
+
 .submitButton {
   width: 100%;
   display: flex;
@@ -126,6 +135,76 @@ $opacity-disabled: 0.5;
   &:disabled {
     opacity: $opacity-disabled;
     cursor: not-allowed;
+  }
+}
+
+.alternativeAuth {
+  margin-top: $spacing-lg;
+
+  .divider {
+    display: flex;
+    align-items: center;
+    margin: $spacing-lg 0;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    span {
+      padding: 0 $spacing-md;
+      color: #6b7280;
+      font-size: $font-size-sm;
+    }
+  }
+}
+
+.magicLinkButton,
+.resetButton {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  border: 1px solid #d1d5db;
+  border-radius: $radius-md;
+  background: white;
+  color: #374151;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $transition-button;
+
+  &:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+  }
+
+  &:disabled {
+    opacity: $opacity-disabled;
+    cursor: not-allowed;
+    background: #f9fafb;
+  }
+}
+
+.resetButton {
+  color: #6b7280;
+  border: none;
+  background: none;
+
+  &:hover:not(:disabled) {
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
   }
 }
 
