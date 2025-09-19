@@ -114,12 +114,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (reconnectToken && roomId) {
       try {
         // ルームのゲーム状態を取得
-        const roomGameState = this.roomService.getRoomGameState(roomId);
-        if (!roomGameState) {
-          client.emit('error-message', 'Game state not found');
-          client.disconnect();
-          return;
-        }
+        const roomGameState = await this.roomService.getRoomGameState(roomId);
 
         const existingPlayer =
           roomGameState.findPlayerByReconnectToken(reconnectToken);
@@ -317,17 +312,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('error-message', 'Unable to register name');
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log('[Disconnect] Client disconnected:', client.id);
     console.log('[Disconnect] Transport was:', client.conn.transport.name);
 
     const roomId = this.playerRooms.get(client.id);
     if (roomId) {
       this.playerRooms.delete(client.id);
-      void client.leave(roomId);
+      await client.leave(roomId);
 
       // Get room-specific game state
-      const roomGameState = this.roomService.getRoomGameState(roomId);
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
       const player = state.players.find((p) => p.id === client.id);
 
@@ -499,7 +494,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (room && room.status === RoomStatus.PLAYING) {
         // 新しいプレイヤーが参加して4人になったらゲーム再開
-        const roomGameState = this.roomService.getRoomGameState(data.roomId);
+        const roomGameState = await this.roomService.getRoomGameState(
+          data.roomId,
+        );
         const state = roomGameState.getState();
         const actualPlayerCount = room.players.filter(
           (p) => !p.playerId.startsWith('dummy-'),
@@ -663,7 +660,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(client.id).emit('back-to-lobby');
 
       // ゲーム状態からプレイヤー情報を取得（メモリ上の最新情報）
-      const roomGameState = this.roomService.getRoomGameState(data.roomId);
+      const roomGameState = await this.roomService.getRoomGameState(
+        data.roomId,
+      );
       const state = roomGameState.getState();
 
       // プレイヤーのチーム情報を保持
@@ -768,7 +767,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // Get playerId from game state
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
 
     const player = state.players.find((p) => p.id === client.id);
@@ -874,7 +873,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       declaration: { trumpType: TrumpType; numberOfPairs: number };
     },
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) return;
@@ -948,7 +947,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string },
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) return;
@@ -1044,7 +1043,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private async handleFourthDeclaration(roomId: string): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(roomId);
+    const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const winner = this.blowService.findHighestDeclaration(
       state.blowState.declarations,
@@ -1116,28 +1115,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('select-negri')
-  handleSelectNegri(
+  async handleSelectNegri(
     client: Socket,
     data: { roomId: string; card: string },
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.id === client.id);
 
-    if (!player) return Promise.resolve();
+    if (!player) return;
     if (state.gamePhase !== 'play') {
       client.emit('error-message', 'Cannot select Negri card now!');
-      return Promise.resolve();
+      return;
     }
     if (!roomGameState.isPlayerTurn(player.playerId)) {
       client.emit('error-message', "It's not your turn to select Negri!");
-      return Promise.resolve();
+      return;
     }
 
     // Validate the card is in player's hand
     if (!player.hand.includes(data.card)) {
       client.emit('error-message', 'Selected card is not in your hand!');
-      return Promise.resolve();
+      return;
     }
 
     // Set up play state
@@ -1183,7 +1182,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       .to(data.roomId)
       .emit('update-turn', state.players[winnerIndex].playerId);
-    return Promise.resolve();
+    return;
   }
 
   @SubscribeMessage('play-card')
@@ -1191,7 +1190,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; card: string },
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.id === client.id);
     if (!player) {
@@ -1268,7 +1267,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     field: Field,
     roomId: string,
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(roomId);
+    const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
 
     const winner = this.playService.determineFieldWinner(
@@ -1344,7 +1343,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private async handleGameOver(roomId: string): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(roomId);
+    const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
 
     if (!state.blowState.currentHighestDeclaration) {
@@ -1537,7 +1536,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string; suit: string },
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     if (
       !state.playState?.currentField ||
@@ -1569,15 +1568,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('reveal-broken-hand')
-  handleRevealBrokenHand(
+  async handleRevealBrokenHand(
     client: Socket,
     data: { roomId: string; playerId: string },
   ): Promise<void> {
-    const roomGameState = this.roomService.getRoomGameState(data.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.playerId === data.playerId);
 
-    if (!player) return Promise.resolve();
+    if (!player) return;
 
     // TODO: 全員に手札を公開
     // this.server.to(data.roomId).emit('reveal-hands', {
@@ -1620,7 +1619,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       })().catch(console.error);
     }, 3000);
-    return Promise.resolve();
+    return;
   }
 
   //-------Auth Update-------
@@ -1733,7 +1732,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.log('[GameGateway] Updating user info in room:', roomId);
 
         // Update user info in the room service if needed
-        const roomGameState = this.roomService.getRoomGameState(roomId);
+        const roomGameState = await this.roomService.getRoomGameState(roomId);
         if (roomGameState) {
           const players = roomGameState.getState().players;
           const currentPlayer = players.find((p) => p.id === client.id);
