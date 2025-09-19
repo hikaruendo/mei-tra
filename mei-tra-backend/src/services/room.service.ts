@@ -435,10 +435,13 @@ export class RoomService {
     return players.filter((p) => !p.playerId.startsWith('dummy-')).length;
   }
 
-  getRoomGameState(roomId: string): GameStateService {
-    const gameState = this.roomGameStates.get(roomId);
+  async getRoomGameState(roomId: string): Promise<GameStateService> {
+    let gameState = this.roomGameStates.get(roomId);
     if (!gameState) {
-      throw new Error(`Game state not found for room ${roomId}`);
+      gameState = this.gameStateFactory.createGameState();
+      gameState.setRoomId(roomId);
+      await gameState.loadState(roomId);
+      this.roomGameStates.set(roomId, gameState);
     }
     return gameState;
   }
@@ -449,7 +452,7 @@ export class RoomService {
     socketId: string,
   ): Promise<{ success: boolean; error?: string }> {
     // Get room's game state first (has the most up-to-date player info)
-    const roomGameState = this.getRoomGameState(roomId);
+    const roomGameState = await this.getRoomGameState(roomId);
     if (!roomGameState) {
       return { success: false, error: 'Game state not found' };
     }
