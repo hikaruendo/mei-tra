@@ -118,3 +118,6 @@ The project uses environment-specific configuration:
 - Use comments sparingly. Only commnet complex code.
 - The database schema is defined in the @mei-tra-backend/database/schema.sql and @mei-tra-backend/supabase/migrations/001_initial_schema.sql file. Reference it anytime you need to understand the structure of data stored in the database.
 - After modifying the code, ensure that lint errors are corrected.
+- If bug fixes fail three or more times, analyse using Codex CLI.
+- Architecture design consultations via Codex CLI.
+- The standard implementation is Claude Code.
