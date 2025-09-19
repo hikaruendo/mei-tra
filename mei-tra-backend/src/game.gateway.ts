@@ -238,6 +238,85 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('update-name')
+  handleUpdateName(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { name?: string },
+  ) {
+    const trimmedName = data?.name?.trim();
+    if (!trimmedName) {
+      client.emit('name-updated', {
+        success: false,
+        error: 'Name is required',
+      });
+      client.emit('error-message', 'Name is required');
+      return;
+    }
+
+    // Persist name on the handshake auth for debugging/reconnection attempts
+    try {
+      (client.handshake.auth as Record<string, unknown>).name = trimmedName;
+    } catch {
+      // No-op if auth object is frozen
+    }
+
+    const existingUser = this.gameState
+      .getUsers()
+      .find((user) => user.id === client.id);
+
+    if (existingUser) {
+      this.gameState.updateUserName(client.id, trimmedName);
+      existingUser.name = trimmedName;
+      this.server.emit('update-users', this.gameState.getUsers());
+      client.emit('name-updated', {
+        success: true,
+        playerId: existingUser.playerId,
+        name: trimmedName,
+      });
+      return;
+    }
+
+    const handshakeAuth = client.handshake.auth || {};
+    const reconnectToken =
+      typeof handshakeAuth.reconnectToken === 'string'
+        ? handshakeAuth.reconnectToken
+        : undefined;
+
+    const authenticatedUser = (client.data as { user?: AuthenticatedUser })
+      .user;
+
+    if (
+      this.gameState.addPlayer(
+        client.id,
+        trimmedName,
+        reconnectToken,
+        authenticatedUser?.id,
+        !!authenticatedUser,
+      )
+    ) {
+      const users = this.gameState.getUsers();
+      const newUser = users.find((user) => user.id === client.id);
+      if (newUser) {
+        this.server.emit('update-users', users);
+        this.server
+          .to(client.id)
+          .emit('reconnect-token', `${newUser.playerId}`);
+        client.emit('name-updated', {
+          success: true,
+          playerId: newUser.playerId,
+          name: newUser.name,
+        });
+        return;
+      }
+    }
+
+    client.emit('name-updated', {
+      success: false,
+      error: 'Unable to register name',
+    });
+    client.emit('error-message', 'Unable to register name');
+  }
+
   handleDisconnect(client: Socket) {
     console.log('[Disconnect] Client disconnected:', client.id);
     console.log('[Disconnect] Transport was:', client.conn.transport.name);

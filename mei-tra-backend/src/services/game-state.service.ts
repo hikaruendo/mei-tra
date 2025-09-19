@@ -174,6 +174,15 @@ export class GameStateService {
     return true;
   }
 
+  updateUserName(socketId: string, name: string): boolean {
+    const user = this.users.find((u) => u.id === socketId);
+    if (!user) {
+      return false;
+    }
+    user.name = name;
+    return true;
+  }
+
   private generateReconnectToken(): string {
     return Math.random().toString(36).substring(2, 15);
   }

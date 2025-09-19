@@ -89,6 +89,29 @@ export const useGame = () => {
       'update-users': (users: User[]) => {
         setUsers(users);
       },
+      'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
+        if (success && playerId && name) {
+          setUsers((prev) => {
+            const existingIndex = prev.findIndex((u) => u.id === socket?.id || u.playerId === playerId);
+            const baseUser = {
+              id: socket?.id ?? playerId,
+              playerId,
+              name,
+              isAuthenticated: false,
+            };
+
+            if (existingIndex !== -1) {
+              const updated = [...prev];
+              updated[existingIndex] = { ...updated[existingIndex], ...baseUser };
+              return updated;
+            }
+
+            return [...prev, baseUser];
+          });
+        } else if (!success && error) {
+          setNotification({ message: error, type: 'error' });
+        }
+      },
       'update-players': (players: Player[]) => {
         setPlayers(players);
       },
@@ -374,19 +397,26 @@ export const useGame = () => {
         return;
       }
 
-      if (name.trim() && socket) {
+      const trimmedName = name.trim();
+
+      if (trimmedName && socket) {
         // Persist name for initial handshake on future reloads
-        try { sessionStorage.setItem('playerName', name); } catch {}
+        try { sessionStorage.setItem('playerName', trimmedName); } catch {}
 
         // Merge into existing auth to avoid clobbering token or roomId
         const existingAuth = (socket.auth || {}) as Record<string, unknown>;
         socket.auth = reconnectToken
-          ? { ...existingAuth, reconnectToken }
-          : { ...existingAuth, name };
+          ? { ...existingAuth, reconnectToken, name: trimmedName }
+          : { ...existingAuth, name: trimmedName };
 
         // Connect if not already connecting/connected
         if (!socket.connected) {
+          socket.once('connect', () => {
+            socket.emit('update-name', { name: trimmedName });
+          });
           socket.connect();
+        } else {
+          socket.emit('update-name', { name: trimmedName });
         }
       }
     },

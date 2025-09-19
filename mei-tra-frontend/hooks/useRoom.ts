@@ -18,6 +18,7 @@ export const useRoom = () => {
   
   const users = useMemo(() => game?.users || [], [game?.users]);
   const players = useMemo(() => game?.players || [], [game?.players]);
+  const guestName = game?.name || '';
 
   const currentRoomRef = useRef<Room | null>(null);
   useEffect(() => {
@@ -316,8 +317,24 @@ export const useRoom = () => {
     }
 
     if (!userToJoin) {
-      setError('Please enter your name and join the game first');
-      return;
+      if (guestName) {
+        let reconnectToken = '';
+        try {
+          reconnectToken = sessionStorage.getItem('reconnectToken') || '';
+        } catch (error) {
+          console.warn('[useRoom] Failed to read reconnectToken from sessionStorage:', error);
+        }
+
+        userToJoin = {
+          id: socketId,
+          playerId: reconnectToken || socketId,
+          name: guestName,
+          isAuthenticated: false
+        };
+      } else {
+        setError('Please enter your name and join the game first');
+        return;
+      }
     }
 
     console.log('[useRoom] Joining room:', {
@@ -332,7 +349,7 @@ export const useRoom = () => {
         setCurrentRoom(response.room);
       }
     });
-  }, [socket, users, user]);
+  }, [socket, users, user, guestName]);
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
