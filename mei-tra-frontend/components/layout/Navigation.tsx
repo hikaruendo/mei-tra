@@ -26,7 +26,10 @@ export function Navigation() {
               className={styles.brandLink}
               onClick={closeMobileMenu}
             >
-              明専トランプ
+              <svg className={styles.brandLogo} viewBox="0 0 110 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="0" y="26" className={styles.brandTextLarge}>M</text>
+                <text x="28" y="26" className={styles.brandText}>eitra</text>
+              </svg>
             </Link>
           </div>
 

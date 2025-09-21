@@ -41,18 +41,46 @@ $transition-button: all 0.3s ease;
 }
 
 .brandLink {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #111827;
   text-decoration: none;
   transition: $transition-button;
-
-  @media (min-width: 768px) {
-    font-size: $font-size-xl;
-  }
+  display: flex;
+  align-items: center;
 
   &:hover {
-    color: #374151;
+    opacity: 0.8;
+  }
+}
+
+.brandLogo {
+  height: 28px;
+  width: auto;
+
+  @media (min-width: 768px) {
+    height: 32px;
+  }
+}
+
+.brandTextLarge {
+  font-family: 'Playfair Display', 'Georgia', serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  fill: #111827;
+
+  @media (min-width: 768px) {
+    font-size: 30px;
+  }
+}
+
+.brandText {
+  font-family: 'Playfair Display', 'Georgia', serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  fill: #374151;
+
+  @media (min-width: 768px) {
+    font-size: 26px;
   }
 }
 

@@ -76,18 +76,18 @@ export const quickstartSteps: QuickstartStep[] = [
   {
     id: 'welcome',
     title: 'Getting Started',
-    subtitle: 'Welcome to Mei-Tra Trump',
+    subtitle: 'Welcome to Meitra',
     estimatedTime: '2 minutes',
     cards: [
       {
         id: 'game-intro',
         type: 'concept',
-        title: 'What is Mei-Tra Trump?',
+        title: 'What is Meitra?',
         description: 'A strategic 4-player, 2-team card game',
         icon: '🎯',
         content: {
           type: 'text',
-          data: '明専トランプは4人2チーム制の戦略的カードゲームです。**ブロー（宣言）システム**、**特殊なジャック機能**、**詳細なスコアリングシステム**が組み合わさった高度なゲームです。\\n\\n**目標**: 先に10点を獲得したチームが勝利'
+          data: 'Meitraは4人2チーム制の戦略的カードゲームです。**ブロー（宣言）システム**、**特殊なジャック機能**、**詳細なスコアリングシステム**が組み合わさった高度なゲームです。\\n\\n**目標**: 先に10点を獲得したチームが勝利'
         }
       },
       {

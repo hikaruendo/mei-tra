@@ -9,7 +9,7 @@ test.describe('Tutorial Whitepaper', () => {
 
   test('renders hero section and first content area', async ({ page }) => {
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Mei-Tra Trump Tutorial' }),
+      page.getByRole('heading', { level: 1, name: 'Meitra Tutorial' }),
     ).toBeVisible();
     await expect(
       page.getByText('Learn the strategic card game through comprehensive documentation.'),

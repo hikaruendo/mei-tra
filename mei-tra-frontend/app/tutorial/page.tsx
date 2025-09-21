@@ -13,7 +13,7 @@ export default function TutorialPage() {
         <Navigation />
         <main className={styles.main}>
           <header className={styles.header}>
-            <h1>Mei-Tra Trump Tutorial</h1>
+            <h1>Meitra Tutorial</h1>
             <p className={styles.description}>
               Learn the strategic card game through comprehensive documentation.
             </p>

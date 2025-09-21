@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "明専トランプ - オンラインマルチプレイヤーカードゲーム",
-  description: "4人対戦のオンラインカードゲーム「明専トランプ」をプレイしよう",
+  title: "Meitra - オンラインマルチプレイヤーカードゲーム",
+  description: "4人対戦のオンラインカードゲーム「Meitra」をプレイしよう",
 };
 
 export default function RootLayout({
