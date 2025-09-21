@@ -418,7 +418,7 @@ export const tutorialSections: Section[] = [
       },
       {
         type: 'text',
-        content: '### 基本設定\n4人2チーム / 対角がパートナー / 10点先取勝利 / 最低6ペア宣言'
+        content: '### 基本設定\n4人2チーム / 対面がパートナー / 10点先取勝利 / 最低6ペア宣言'
       }
     ]
   }

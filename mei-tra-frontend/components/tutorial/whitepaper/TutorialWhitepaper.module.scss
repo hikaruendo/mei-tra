@@ -8,7 +8,7 @@
 
 .mainContent {
   width: 100%;
-  padding: 0;
+  padding: 0 $spacing-lg;
 
   @media (max-width: 768px) {
     padding: 0;
@@ -17,6 +17,7 @@
 
 .contentWrapper {
   max-width: 900px;
+  width: 100%;
   margin: 0 auto;
   padding: $spacing-md $spacing-lg;
   line-height: 1.7;
