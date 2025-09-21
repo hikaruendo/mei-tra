@@ -75,6 +75,45 @@ supabase start
 supabase stop
 ```
 
+## テスト
+
+### バックエンドテスト
+
+```bash
+cd mei-tra-backend
+
+# ユニットテスト（個別の関数・サービスのテスト）
+npm test                    # 全ユニットテスト実行
+npm run test:watch         # ファイル変更を監視してテスト実行
+npm run test:cov           # カバレッジ付きでテスト実行
+
+# E2Eテスト（アプリケーション全体の統合テスト）
+npm run test:e2e           # WebSocket通信、API呼び出しなど全体テスト
+
+```
+
+### フロントエンドテスト
+
+```bash
+cd mei-tra-frontend
+
+# E2Eテスト（Playwright）
+npx playwright test                              # 全E2Eテスト実行
+npx playwright test __tests__/tutorial.e2e.test.ts  # 特定ファイルのみ実行
+npx playwright test --headed                     # ブラウザ表示で実行
+npx playwright test --debug                     # デバッグモードで実行
+
+# 注意: フロントエンドが起動している必要があります（npm run dev）
+```
+
+### テスト種類の説明
+
+- **ユニットテスト**: 個別の関数やサービスの動作確認（`*.spec.ts`）
+- **E2Eテスト**: アプリケーション全体の統合テスト（`*.e2e-spec.ts`）
+  - WebSocket通信のテスト
+  - API呼び出しのテスト
+  - 実際のユーザー操作の模擬テスト
+
 ## ライセンス
 
 MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
