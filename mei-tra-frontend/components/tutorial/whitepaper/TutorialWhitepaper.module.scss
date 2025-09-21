@@ -1,0 +1,29 @@
+@import '../../../styles/base/variables-modules';
+
+.whitepaperContainer {
+  position: relative;
+  background: $color-white;
+  min-height: 100vh;
+}
+
+.mainContent {
+  width: 100%;
+  padding: 0 $spacing-lg;
+
+  @media (max-width: 768px) {
+    padding: 0;
+  }
+}
+
+.contentWrapper {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: $spacing-md $spacing-lg;
+  line-height: 1.7;
+  color: #374151;
+
+  @media (max-width: 768px) {
+    padding: 0 $spacing-md $spacing-sm;
+  }
+}

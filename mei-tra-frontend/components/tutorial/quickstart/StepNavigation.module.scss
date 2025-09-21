@@ -1,0 +1,133 @@
+@import '../../../styles/base/variables-modules';
+
+.navigationContainer {
+  background: rgba($color-white, 0.95);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-top: $spacing-xl;
+  border: 1px solid rgba($color-blue, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.navigationContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-md;
+  border: 2px solid transparent;
+  font-size: $font-size-base;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  background: transparent;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($color-blue, 0.2);
+  }
+
+  &.previous {
+    color: #6b7280;
+    border-color: #e5e7eb;
+
+    &:hover:not(:disabled) {
+      color: $color-blue;
+      border-color: rgba($color-blue, 0.3);
+      background: rgba($color-blue, 0.05);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &.next {
+    color: #6b7280;
+    border-color: #e5e7eb;
+    opacity: 0.6;
+
+    &.ready {
+      color: $color-white;
+      background: linear-gradient(135deg, $color-blue, #8b5cf6);
+      border-color: transparent;
+      opacity: 1;
+      box-shadow: 0 4px 16px rgba($color-blue, 0.3);
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba($color-blue, 0.4);
+      }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &.complete {
+    color: $color-white;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(#10b981, 0.3);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(#10b981, 0.4);
+    }
+  }
+}
+
+.buttonIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.stepInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm $spacing-md;
+}
+
+.stepCounter {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-blue;
+  background: rgba($color-blue, 0.1);
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+  .navigationContainer {
+    padding: $spacing-md;
+  }
+
+  .navButton {
+    flex: 1;
+    justify-content: center;
+    padding: $spacing-md $spacing-lg;
+  }
+
+  .stepInfo {
+    order: -1;
+    width: 100%;
+  }
+}

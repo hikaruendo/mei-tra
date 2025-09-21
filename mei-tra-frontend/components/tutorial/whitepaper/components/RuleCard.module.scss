@@ -1,0 +1,42 @@
+@import '../../../../styles/base/variables-modules';
+
+.ruleCard {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.ruleTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: $spacing-sm;
+  line-height: 1.4;
+}
+
+.ruleDescription {
+  font-size: $font-size-base;
+  line-height: 1.6;
+  color: #374151;
+  margin-bottom: $spacing-sm;
+}
+
+.ruleExample {
+  background: #f9fafb;
+  border-radius: $radius-sm;
+  padding: $spacing-sm;
+  margin-top: $spacing-sm;
+  border: 1px solid #e5e7eb;
+}
+
+.exampleLabel {
+  font-weight: 600;
+  color: #374151;
+  margin-right: $spacing-sm;
+}
+
+.exampleText {
+  color: #6b7280;
+}

@@ -1,0 +1,77 @@
+@import '../../../../styles/base/variables-modules';
+
+.section {
+  margin-bottom: $spacing-xl;
+  scroll-margin-top: $spacing-lg;
+}
+
+.sectionTitle {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: $spacing-lg;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid #e5e7eb;
+  line-height: 1.2;
+}
+
+.sectionContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.contentBlock {
+  margin-bottom: $spacing-lg;
+}
+
+.textBlock {
+  font-size: $font-size-base;
+  line-height: 1.75;
+  color: #374151;
+
+  p {
+    margin-bottom: $spacing-md;
+  }
+
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: #111827;
+    margin: $spacing-lg 0 $spacing-sm;
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-size: $font-size-base;
+    font-weight: 600;
+    color: #374151;
+    margin: $spacing-md 0 $spacing-sm;
+    line-height: 1.4;
+  }
+
+  strong {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  ul, ol {
+    margin: $spacing-sm 0;
+    padding-left: $spacing-lg;
+  }
+
+  li {
+    margin-bottom: $spacing-xs;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

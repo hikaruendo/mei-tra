@@ -1,0 +1,260 @@
+@import '../../../../styles/base/variables-modules';
+
+.scoreCalculator {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-xl;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: $spacing-sm;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.description {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: $spacing-lg;
+  font-size: $font-size-base;
+  line-height: 1.6;
+}
+
+.calculatorContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.inputSection {
+  display: flex;
+  justify-content: center;
+  gap: $spacing-lg;
+  flex-wrap: wrap;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.label {
+  font-weight: 600;
+  color: #374151;
+  font-size: $font-size-base;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.input {
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid #d1d5db;
+  border-radius: $radius-sm;
+  font-size: $font-size-base;
+  width: 120px;
+  text-align: center;
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #6b7280;
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1);
+  }
+}
+
+.resultSection {
+  display: flex;
+  justify-content: center;
+}
+
+.resultCard {
+  background: #f9fafb;
+  border-radius: $radius-sm;
+  padding: $spacing-lg;
+  border: 1px solid #e5e7eb;
+  min-width: 320px;
+
+  &.success {
+    border-color: #10b981;
+    background: #f0fdf4;
+  }
+
+  &.failure {
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.resultStatus {
+  font-weight: 600;
+  font-size: $font-size-lg;
+  color: #374151;
+}
+
+.resultScore {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  color: white;
+
+  .success & {
+    background: #10b981;
+  }
+
+  .failure & {
+    background: #ef4444;
+  }
+}
+
+.calculation {
+  background: #ffffff;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+}
+
+.formula {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  font-family: monospace;
+  font-size: $font-size-sm;
+  color: #374151;
+
+  span:last-child {
+    font-weight: 700;
+    color: #111827;
+    font-size: $font-size-base;
+  }
+}
+
+.examplesSection {
+  background: #ffffff;
+  border-radius: $radius-sm;
+  padding: $spacing-lg;
+  border: 1px solid #e5e7eb;
+  margin-top: $spacing-lg;
+}
+
+.examplesTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: $spacing-md;
+}
+
+.examplesList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.example {
+  background: #f9fafb;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+}
+
+.exampleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.exampleLabel {
+  font-weight: 500;
+  color: #374151;
+}
+
+.exampleScore {
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: $font-size-sm;
+
+  &.positive {
+    background: #10b981;
+    color: white;
+  }
+
+  &.negative {
+    background: #ef4444;
+    color: white;
+  }
+}
+
+.exampleDetail {
+  font-size: $font-size-sm;
+  color: #6b7280;
+  font-family: monospace;
+}
+
+.tips {
+  background: #ffffff;
+  border-radius: $radius-sm;
+  padding: $spacing-lg;
+  border: 1px solid #e5e7eb;
+  margin-top: $spacing-lg;
+}
+
+.tipsTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: $spacing-md;
+}
+
+.tipsList {
+  margin: 0;
+  padding-left: $spacing-lg;
+
+  li {
+    color: #4b5563;
+    font-size: $font-size-base;
+    line-height: 1.6;
+    margin-bottom: $spacing-xs;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .inputSection {
+    gap: $spacing-md;
+  }
+
+  .resultCard {
+    min-width: 280px;
+  }
+
+  .resultHeader {
+    flex-direction: column;
+    gap: $spacing-xs;
+    text-align: center;
+  }
+
+  .exampleHeader {
+    flex-direction: column;
+    gap: $spacing-xs;
+    align-items: flex-start;
+  }
+}

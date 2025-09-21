@@ -1,0 +1,195 @@
+@import '../../../styles/base/variables-modules';
+
+.card {
+  background: $color-white;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  border: 1px solid rgba($color-blue, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  }
+
+  &.interactive {
+    border-color: rgba(#8b5cf6, 0.2);
+    background: linear-gradient(135deg, rgba($color-white, 0.98), rgba(#8b5cf6, 0.02));
+
+    &:hover {
+      border-color: rgba(#8b5cf6, 0.3);
+      box-shadow: 0 8px 32px rgba(#8b5cf6, 0.15);
+    }
+  }
+
+  &.example {
+    border-color: rgba(#10b981, 0.2);
+    background: linear-gradient(135deg, rgba($color-white, 0.98), rgba(#10b981, 0.02));
+
+    &:hover {
+      border-color: rgba(#10b981, 0.3);
+      box-shadow: 0 8px 32px rgba(#10b981, 0.15);
+    }
+  }
+
+  &.highlight {
+    border-color: rgba(#f59e0b, 0.2);
+    background: linear-gradient(135deg, rgba($color-white, 0.98), rgba(#f59e0b, 0.02));
+
+    &:hover {
+      border-color: rgba(#f59e0b, 0.3);
+      box-shadow: 0 8px 32px rgba(#f59e0b, 0.15);
+    }
+  }
+
+  &.concept {
+    border-color: rgba($color-blue, 0.2);
+    background: linear-gradient(135deg, rgba($color-white, 0.98), rgba($color-blue, 0.02));
+
+    &:hover {
+      border-color: rgba($color-blue, 0.3);
+      box-shadow: 0 8px 32px rgba($color-blue, 0.15);
+    }
+  }
+
+  &.practice {
+    border-color: rgba(#8b5cf6, 0.2);
+    background: linear-gradient(135deg, rgba($color-white, 0.98), rgba(#8b5cf6, 0.02));
+
+    &:hover {
+      border-color: rgba(#8b5cf6, 0.3);
+      box-shadow: 0 8px 32px rgba(#8b5cf6, 0.15);
+    }
+  }
+
+  &.tip {
+    border-color: rgba(#f59e0b, 0.2);
+    background: linear-gradient(135deg, rgba($color-white, 0.98), rgba(#f59e0b, 0.02));
+
+    &:hover {
+      border-color: rgba(#f59e0b, 0.3);
+      box-shadow: 0 8px 32px rgba(#f59e0b, 0.15);
+    }
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.cardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-md;
+  background: linear-gradient(135deg, $color-blue, #8b5cf6);
+  color: $color-white;
+  flex-shrink: 0;
+
+  .interactive & {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  }
+
+  .example & {
+    background: linear-gradient(135deg, #10b981, #059669);
+  }
+
+  .highlight & {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+  }
+
+  .concept & {
+    background: linear-gradient(135deg, $color-blue, $color-blue-dark);
+  }
+
+  .practice & {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  }
+
+  .tip & {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.cardTitleSection {
+  flex: 1;
+}
+
+.cardTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-blue-dark;
+  margin: 0 0 $spacing-xs 0;
+  line-height: 1.3;
+
+  .interactive & {
+    color: #7c3aed;
+  }
+
+  .example & {
+    color: #059669;
+  }
+
+  .highlight & {
+    color: #d97706;
+  }
+
+  .concept & {
+    color: $color-blue-dark;
+  }
+
+  .practice & {
+    color: #7c3aed;
+  }
+
+  .tip & {
+    color: #d97706;
+  }
+}
+
+.cardDescription {
+  font-size: $font-size-sm;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cardContent {
+  .interactive &,
+  .example &,
+  .highlight & {
+    padding-top: $spacing-sm;
+    border-top: 1px solid rgba($color-blue, 0.1);
+  }
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: $spacing-md;
+  }
+
+  .cardHeader {
+    gap: $spacing-sm;
+  }
+
+  .cardIcon {
+    width: 32px;
+    height: 32px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}

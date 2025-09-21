@@ -1,0 +1,48 @@
+@import '../../../../styles/base/variables-modules';
+
+.tipCard {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.tipTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: $spacing-sm;
+  line-height: 1.4;
+}
+
+.tipIcon {
+  display: none;
+}
+
+.tipList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tipItem {
+  color: #4b5563;
+  font-size: $font-size-base;
+  line-height: 1.6;
+  padding: $spacing-sm 0;
+  padding-left: $spacing-lg;
+  position: relative;
+
+  &:before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  &:not(:last-child) {
+    margin-bottom: $spacing-xs;
+  }
+}
