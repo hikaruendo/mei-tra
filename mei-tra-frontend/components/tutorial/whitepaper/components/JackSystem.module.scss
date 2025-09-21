@@ -1,0 +1,215 @@
+@import '../../../../styles/base/variables-modules';
+
+.jackSystem {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-xl;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: $spacing-md;
+  line-height: 1.4;
+}
+
+.explanation {
+  background: #f9fafb;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+  border: 1px solid #e5e7eb;
+
+  p {
+    margin-bottom: $spacing-md;
+    color: #374151;
+    font-size: $font-size-base;
+    line-height: 1.6;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: $spacing-lg;
+
+    li {
+      margin-bottom: $spacing-sm;
+      color: #374151;
+      font-size: $font-size-base;
+      line-height: 1.6;
+
+      strong {
+        color: #111827;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.trumpExamples {
+  display: grid;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-xl;
+}
+
+.trumpExample {
+  background: #ffffff;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.trumpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.trumpIcon {
+  font-size: $font-size-lg;
+}
+
+.trumpLabel {
+  font-size: $font-size-base;
+}
+
+.jackCards {
+  display: flex;
+  justify-content: center;
+  gap: $spacing-lg;
+  padding: $spacing-lg;
+  background: #ffffff;
+}
+
+.jackCard {
+  background: #f9fafb;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  border: 1px solid #d1d5db;
+  min-width: 120px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.jackRank {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: $font-size-xs;
+  font-weight: 600;
+}
+
+.jackStrength {
+  background: #6b7280;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: $font-size-xs;
+  font-weight: 600;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  margin: $spacing-md 0;
+}
+
+.cardSuit {
+  font-size: 2rem;
+}
+
+.cardValue {
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: #333;
+}
+
+.cardLabel {
+  text-align: center;
+  font-size: $font-size-sm;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.strengthOrder {
+  padding: $spacing-md;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  font-size: $font-size-sm;
+  text-align: center;
+
+  span:first-child {
+    font-weight: 600;
+    color: #374151;
+    margin-right: $spacing-sm;
+  }
+}
+
+.orderText {
+  color: #6b7280;
+  font-family: monospace;
+}
+
+.traException {
+  background: #f8fafc;
+  border-radius: $radius-sm;
+  padding: $spacing-lg;
+  border: 1px solid #cbd5e1;
+  margin-top: $spacing-lg;
+}
+
+.exceptionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.exceptionIcon {
+  display: none;
+}
+
+.exceptionTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #374151;
+}
+
+.traException p {
+  margin: 0;
+  color: #4b5563;
+  font-size: $font-size-base;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .jackCards {
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  .jackCard {
+    min-width: 100px;
+  }
+
+  .trumpExamples {
+    gap: $spacing-md;
+  }
+}

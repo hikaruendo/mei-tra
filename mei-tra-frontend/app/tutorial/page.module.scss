@@ -1,0 +1,57 @@
+@import '../../styles/base/variables-modules';
+
+.container {
+  min-height: 100vh;
+  background: #fafafa;
+}
+
+.main {
+  margin-left: 280px;
+  padding: $spacing-lg $spacing-md;
+  min-height: 100vh;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    padding: $spacing-md $spacing-sm;
+  }
+}
+
+.header {
+  padding: $spacing-lg 0 $spacing-md;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: $spacing-lg;
+  max-width: 100%;
+  overflow: hidden;
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 $spacing-sm;
+    line-height: 1.3;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+.description {
+  font-size: $font-size-lg;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: $spacing-lg 0 $spacing-md;
+
+    h1 {
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+  }
+
+  .description {
+    font-size: $font-size-base;
+  }
+}

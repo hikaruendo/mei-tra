@@ -1,0 +1,79 @@
+@import '../../../../styles/base/variables-modules';
+
+.trumpHierarchy {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: $spacing-sm;
+  line-height: 1.4;
+}
+
+.simpleList {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: $spacing-md 0;
+}
+
+.trumpRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.strength {
+  background: #e5e7eb;
+  color: #374151;
+  font-weight: 600;
+  font-size: $font-size-sm;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.trumpName {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  font-size: $font-size-base;
+  color: #374151;
+}
+
+.suit {
+  font-size: $font-size-lg;
+}
+
+.separator {
+  color: #9CA3AF;
+  font-weight: 600;
+  margin: 0 $spacing-xs;
+}
+
+.note {
+  text-align: center;
+  color: #6B7280;
+  font-size: $font-size-sm;
+  margin-top: $spacing-md;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .simpleList {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .separator {
+    display: none;
+  }
+}

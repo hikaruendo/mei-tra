@@ -1,0 +1,70 @@
+@import '../../../../styles/base/variables-modules';
+
+.exampleCard {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.scenario {
+  margin-bottom: $spacing-sm;
+  padding-bottom: $spacing-xs;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scenarioLabel {
+  font-weight: 600;
+  color: #374151;
+  margin-right: $spacing-sm;
+}
+
+.scenarioText {
+  color: #6b7280;
+  font-size: $font-size-base;
+}
+
+.cards {
+  display: flex;
+  gap: $spacing-sm;
+  margin: $spacing-md 0;
+  flex-wrap: wrap;
+}
+
+.card {
+  padding: $spacing-sm $spacing-md;
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: $radius-sm;
+  font-weight: 500;
+  font-size: $font-size-sm;
+  color: #374151;
+}
+
+.declaration {
+  background: #f3f4f6;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  margin: $spacing-md 0;
+  border: 1px solid #e5e7eb;
+}
+
+.declarationLabel {
+  font-weight: 600;
+  color: #374151;
+  margin-right: $spacing-sm;
+}
+
+.declarationValue {
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: #111827;
+}
+
+.explanation {
+  color: #4b5563;
+  line-height: 1.6;
+  margin-top: $spacing-md;
+  font-size: $font-size-base;
+}

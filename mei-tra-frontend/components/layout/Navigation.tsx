@@ -25,6 +25,12 @@ export function Navigation() {
             >
               ルーム一覧
             </Link>
+            <Link
+              href="/tutorial"
+              className={styles.navLink}
+            >
+              チュートリアル
+            </Link>
             <UserProfile />
           </div>
         </div>

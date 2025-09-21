@@ -1,0 +1,152 @@
+@import '../../../../styles/base/variables-modules';
+
+.interactiveDemo {
+  background: #ffffff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: $spacing-sm;
+  line-height: 1.4;
+}
+
+.description {
+  color: #6b7280;
+  margin-bottom: $spacing-md;
+  font-size: $font-size-base;
+  line-height: 1.6;
+}
+
+.demoContent {
+  background: #f9fafb;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  border: 1px solid #e5e7eb;
+}
+
+.scenario {
+  margin-bottom: $spacing-lg;
+}
+
+.currentDeclaration {
+  font-size: $font-size-base;
+  color: #374151;
+  margin-bottom: $spacing-md;
+  padding: $spacing-md;
+  background: white;
+  border-radius: $radius-md;
+  border: 1px solid #e5e7eb;
+
+  strong {
+    color: $color-blue;
+    font-size: $font-size-lg;
+  }
+}
+
+.prompt {
+  font-weight: 600;
+  color: $color-blue-dark;
+  margin-bottom: $spacing-md;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.optionButton {
+  padding: $spacing-md;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: $radius-sm;
+  font-size: $font-size-base;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #9ca3af;
+    background: #f9fafb;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &.correct {
+    background: #10b981;
+    color: white;
+    border-color: #059669;
+  }
+
+  &.incorrect {
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+  }
+}
+
+.feedback {
+  padding: $spacing-md;
+  background: #f3f4f6;
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-md;
+  border: 1px solid #e5e7eb;
+
+  p {
+    margin: 0;
+    color: #374151;
+    font-weight: 500;
+  }
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: $spacing-md;
+}
+
+.nextButton, .resetButton {
+  padding: $spacing-sm $spacing-lg;
+  background: #374151;
+  color: white;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-base;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: #1f2937;
+  }
+}
+
+.resetButton {
+  background: #6b7280;
+
+  &:hover {
+    background: #4b5563;
+  }
+}
+
+@keyframes correctPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes incorrectShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
