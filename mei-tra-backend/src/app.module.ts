@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GameModule } from './game.module';
 import { DatabaseModule } from './database/database.module';
+import { UserProfileController } from './controllers/user-profile.controller';
+import { RepositoriesModule } from './repositories/repositories.module';
 
 @Module({
   imports: [
@@ -13,8 +15,9 @@ import { DatabaseModule } from './database/database.module';
     }),
     DatabaseModule,
     GameModule,
+    RepositoriesModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, UserProfileController],
   providers: [AppService],
 })
 export class AppModule {}
