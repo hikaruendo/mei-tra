@@ -1,0 +1,355 @@
+$color-blue: #2196F3;
+$color-blue-dark: #1976D2;
+$color-blue-light: #E3F2FD;
+$color-white: #ffffff;
+$color-gray-100: #f5f5f5;
+$color-gray-200: #eeeeee;
+$color-gray-300: #e0e0e0;
+$color-gray-400: #bdbdbd;
+$color-gray-500: #9e9e9e;
+$color-gray-600: #757575;
+$color-gray-700: #424242;
+$color-gray-800: #212121;
+$color-red: #f44336;
+$color-green: #4caf50;
+
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+$font-size-sm: 0.875rem;
+$font-size-base: 1rem;
+$font-size-lg: 1.125rem;
+
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-full: 50%;
+
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+$transition-fast: all 0.2s ease;
+$transition-standard: all 0.3s ease;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+  max-width: 600px;
+  margin: 2rem auto;
+}
+
+.formSection {
+  background: $color-white;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-sm;
+  border: 1px solid $color-gray-200;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-gray-800;
+  margin: 0 0 $spacing-lg 0;
+  padding-bottom: $spacing-sm;
+  border-bottom: 2px solid $color-blue-light;
+}
+
+/* Avatar Section */
+.avatarSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-lg;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.avatarContainer {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  border-radius: $radius-full;
+  object-fit: cover;
+  border: 3px solid $color-blue-light;
+  transition: $transition-standard;
+
+  &:hover {
+    border-color: $color-blue;
+  }
+}
+
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: $radius-full;
+  background: linear-gradient(135deg, $color-blue, $color-blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid $color-blue-light;
+  transition: $transition-standard;
+
+  &:hover {
+    border-color: $color-blue;
+  }
+}
+
+.avatarText {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: $color-white;
+}
+
+.uploadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid $color-gray-300;
+  border-top: 2px solid $color-blue;
+  border-radius: $radius-full;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.avatarControls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  width: 100%;
+
+  @media (min-width: 768px) {
+    width: auto;
+  }
+}
+
+.uploadButton {
+  background: $color-blue;
+  color: $color-white;
+  border: none;
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-lg;
+  font-size: $font-size-base;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: $color-blue-dark;
+    transform: translateY(-1px);
+    box-shadow: $shadow-md;
+  }
+
+  &:disabled {
+    background: $color-gray-400;
+    cursor: not-allowed;
+  }
+}
+
+.dropZone {
+  border: 2px dashed $color-gray-300;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  text-align: center;
+  background: $color-gray-100;
+  transition: $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-blue;
+    background: $color-blue-light;
+  }
+
+  p {
+    margin: 0 0 $spacing-xs 0;
+    color: $color-gray-600;
+    font-weight: 500;
+  }
+
+  small {
+    color: $color-gray-500;
+    font-size: $font-size-sm;
+  }
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.uploadProgress {
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-gray-600;
+
+  .sizeInfo {
+    color: $color-green;
+    font-weight: 500;
+    margin-top: $spacing-xs;
+  }
+}
+
+/* Form Inputs */
+.inputGroup {
+  margin-bottom: $spacing-lg;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.label {
+  display: block;
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: $color-gray-700;
+  margin-bottom: $spacing-sm;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  border: 2px solid $color-gray-300;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  transition: $transition-fast;
+  background: $color-white;
+
+  &:focus {
+    outline: none;
+    border-color: $color-blue;
+    box-shadow: 0 0 0 3px rgba($color-blue, 0.1);
+  }
+
+  &:disabled {
+    background: $color-gray-100;
+    color: $color-gray-500;
+    cursor: not-allowed;
+  }
+}
+
+.checkboxGroup {
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  cursor: pointer;
+  font-weight: 500;
+  color: $color-gray-700;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: $color-blue;
+  cursor: pointer;
+}
+
+.checkboxText {
+  user-select: none;
+}
+
+/* Error and Actions */
+.error {
+  background: rgba($color-red, 0.1);
+  color: $color-red;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  border: 1px solid rgba($color-red, 0.3);
+  font-size: $font-size-sm;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: flex-end;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-gray-200;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.cancelButton,
+.saveButton {
+  padding: $spacing-sm $spacing-xl;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition-fast;
+  border: 2px solid transparent;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.cancelButton {
+  background: $color-white;
+  color: $color-gray-600;
+  border-color: $color-gray-300;
+
+  &:hover:not(:disabled) {
+    background: $color-gray-100;
+    border-color: $color-gray-400;
+  }
+}
+
+.saveButton {
+  background: $color-blue;
+  color: $color-white;
+  border-color: $color-blue;
+
+  &:hover:not(:disabled) {
+    background: $color-blue-dark;
+    border-color: $color-blue-dark;
+    transform: translateY(-1px);
+    box-shadow: $shadow-md;
+  }
+}

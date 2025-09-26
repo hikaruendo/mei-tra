@@ -62,6 +62,49 @@ $opacity-disabled: 0.5;
   gap: $spacing-sm;
 }
 
+.avatarContainer {
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid $color-blue;
+}
+
+.avatarPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $color-blue, $color-blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-white;
+  border: 2px solid $color-blue;
+}
+
+.profileLink {
+  text-decoration: none;
+  transition: $transition-button;
+  border-radius: $radius-md;
+  padding: $spacing-xs;
+  margin: -#{$spacing-xs};
+
+  &:hover {
+    background-color: rgba($color-blue, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 .userInfo {
   display: flex;
   flex-direction: column;

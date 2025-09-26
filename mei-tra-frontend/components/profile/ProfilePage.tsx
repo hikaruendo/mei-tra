@@ -2,30 +2,40 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '../auth/AuthModal';
+import { ProfileEditForm } from './ProfileEditForm';
+import { Navigation } from '../layout/Navigation';
 import { useState } from 'react';
+import { UserProfile } from '@/types/user.types';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(user?.profile || null);
 
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loadingContent}>
-          <div className={styles.loadingSpinner}></div>
-          <span className={styles.loadingText}>プロフィールを読み込み中...</span>
+      <>
+        <Navigation />
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingContent}>
+            <div className={styles.loadingSpinner}></div>
+            <span className={styles.loadingText}>プロフィールを読み込み中...</span>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (!user) {
     return (
-      <div className={styles.noAuthContainer}>
-        <div className={styles.noAuthContent}>
-          <div>
-            <h2 className={styles.noAuthTitle}>プロフィール</h2>
+      <>
+        <Navigation />
+        <div className={styles.noAuthContainer}>
+          <div className={styles.noAuthContent}>
+            <div>
+              <h2 className={styles.noAuthTitle}>プロフィール</h2>
             <p className={styles.noAuthDescription}>
               プロフィールを表示するにはログインが必要です
             </p>
@@ -38,31 +48,74 @@ export function ProfilePage() {
               ログイン
             </button>
           </div>
-          <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-          />
+            <AuthModal
+              isOpen={showAuthModal}
+              onClose={() => setShowAuthModal(false)}
+            />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  const profile = user.profile;
+  const profile = currentProfile || user.profile;
   const winRate = profile?.gamesPlayed ? (profile.gamesWon / profile.gamesPlayed * 100).toFixed(1) : '0.0';
 
+  const handleEditSave = (updatedProfile: UserProfile) => {
+    setCurrentProfile(updatedProfile);
+    setIsEditing(false);
+  };
+
+  const handleEditCancel = () => {
+    setIsEditing(false);
+  };
+
+  if (isEditing && profile) {
+    return (
+      <>
+        <Navigation />
+        <div className={styles.container}>
+          <div className={styles.mainContainer}>
+          <div className={styles.profileCard}>
+            <div className={styles.profileHeader}>
+              <h1 className={styles.editTitle}>プロフィール編集</h1>
+            </div>
+            <ProfileEditForm
+              profile={profile}
+              onSave={handleEditSave}
+              onCancel={handleEditCancel}
+            />
+          </div>
+        </div>
+      </div>
+      </>
+    );
+  }
+
   return (
-    <div className={styles.container}>
+    <>
+      <Navigation />
+      <div className={styles.container}>
       <div className={styles.mainContainer}>
         <div className={styles.profileCard}>
           {/* Profile Header */}
           <div className={styles.profileHeader}>
             <div className={styles.profileHeaderContent}>
               <div className={styles.avatarContainer}>
-                <div className={styles.avatar}>
-                  <span className={styles.avatarText}>
-                    {profile?.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || '?'}
-                  </span>
-                </div>
+                {profile?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.avatarUrl}
+                    alt="プロフィール画像"
+                    className={styles.avatarImage}
+                  />
+                ) : (
+                  <div className={styles.avatar}>
+                    <span className={styles.avatarText}>
+                      {profile?.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || '?'}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className={styles.profileInfo}>
                 <h1 className={styles.profileName}>
@@ -74,6 +127,14 @@ export function ProfilePage() {
                 <p className={styles.profileEmail}>
                   {user.email}
                 </p>
+              </div>
+              <div className={styles.headerActions}>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className={styles.editButton}
+                >
+                  編集
+                </button>
               </div>
             </div>
           </div>
@@ -152,5 +213,6 @@ export function ProfilePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
