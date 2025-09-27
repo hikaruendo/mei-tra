@@ -1,4 +1,12 @@
 /** @type {import('next').NextConfig} */
+const normalizeBackendUrl = (url) => {
+  if (!url) return null;
+  const trimmed = url.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+};
+
+const backendBaseUrl = normalizeBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL);
+
 const nextConfig = {
   reactStrictMode: true,
   webpack: (config) => {
@@ -27,8 +35,8 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_BACKEND_URL
-          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/:path*`
+        destination: backendBaseUrl
+          ? `${backendBaseUrl}/api/:path*`
           : 'http://localhost:3333/api/:path*',
       },
     ];

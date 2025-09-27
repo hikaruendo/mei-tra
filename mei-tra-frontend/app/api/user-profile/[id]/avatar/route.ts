@@ -8,8 +8,16 @@ export async function POST(
     const formData = await request.formData();
     const { id } = await params;
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
-      ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user-profile/${id}/avatar`
+    const normalizeBackendUrl = (url: string | undefined) => {
+      if (!url) return null;
+      const trimmed = url.replace(/\/+$/, '');
+      return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+    };
+
+    const backendBaseUrl = normalizeBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL);
+
+    const backendUrl = backendBaseUrl
+      ? `${backendBaseUrl}/api/user-profile/${id}/avatar`
       : `http://localhost:3333/api/user-profile/${id}/avatar`;
 
     const authorization = request.headers.get('authorization');
