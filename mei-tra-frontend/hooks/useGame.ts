@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSocket } from './useSocket';
 import { useAuth } from '../contexts/AuthContext';
 import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
+import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
@@ -217,7 +218,10 @@ export const useGame = () => {
         setWhoseTurn(playerId);
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
-        alert(`${winner} won the game!\n\nFinal Scores:\nTeam 0: ${finalScores[0].total} points\nTeam 1: ${finalScores[1].total} points`);
+        const team0Name = getTeamDisplayName(players, 0) || 'チーム 1';
+        const team1Name = getTeamDisplayName(players, 1) || 'チーム 2';
+        const winnerTeam = winner === 'Team 0' ? team0Name : team1Name;
+        alert(`${winnerTeam} の勝利！\n\n最終スコア:\n${team0Name}: ${finalScores[0].total} ポイント\n${team1Name}: ${finalScores[1].total} ポイント`);
         setGameStarted(false);
         setGamePhase(null);
         setTeamScores({

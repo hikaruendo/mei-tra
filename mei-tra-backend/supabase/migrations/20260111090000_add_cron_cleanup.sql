@@ -25,5 +25,5 @@ $$;
 SELECT cron.schedule(
     'cleanup_game_data_daily',
     '0 3 * * *',
-    $$ CALL public.cleanup_old_game_data(); $$
+    $$ SELECT public.cleanup_old_game_data(); $$
 );
