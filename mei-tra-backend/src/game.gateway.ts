@@ -165,6 +165,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 pointsToWin: state.pointsToWin,
               });
               this.server.to(roomId).emit('update-players', state.players);
+
+              // Issue new reconnect token for future reconnections
+              this.server
+                .to(client.id)
+                .emit('reconnect-token', `${existingPlayer.playerId}`);
+              console.log(
+                `[Reconnection] Issued new token for player: ${existingPlayer.playerId}`,
+              );
             });
         } else {
           // プレイヤーが見つからない場合、トークンが無効または期限切れ

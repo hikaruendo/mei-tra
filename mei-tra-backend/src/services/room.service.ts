@@ -460,7 +460,7 @@ export class RoomService {
     const state = roomGameState.getState();
     const player = state.players.find((p) => p.playerId === playerId);
     if (!player) {
-      return { success: false, error: 'Player not found6 in room' };
+      return { success: false, error: 'Player not found in room' };
     }
 
     // Update player's socket ID in game state

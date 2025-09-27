@@ -20,6 +20,12 @@ export function getSocket(authToken?: string): Socket {
     const roomId = sessionStorage.getItem('roomId') || '';
     const storedName = sessionStorage.getItem('playerName') || '';
 
+    console.log('[Socket] Retrieved from sessionStorage:', {
+      reconnectToken: reconnectToken ? `${reconnectToken.substring(0, 10)}...` : 'none',
+      roomId: roomId || 'none',
+      storedName: storedName || 'none'
+    });
+
     const isSafari = detectSafari();
 
     const socketOptions = {

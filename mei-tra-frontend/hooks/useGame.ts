@@ -346,8 +346,14 @@ export const useGame = () => {
         setBlowDeclarations(blowDeclarations);
       },
       'reconnect-token': (token: string) => {
+        console.log('[useGame] Received new reconnect token:', token);
         setReconnectToken(token);
-        sessionStorage.setItem('reconnectToken', token);
+        try {
+          sessionStorage.setItem('reconnectToken', token);
+          console.log('[useGame] Successfully stored new reconnect token in sessionStorage');
+        } catch (error) {
+          console.error('[useGame] Failed to store reconnect token in sessionStorage:', error);
+        }
       },
       'back-to-lobby': () => {
         setGameStarted(false);
