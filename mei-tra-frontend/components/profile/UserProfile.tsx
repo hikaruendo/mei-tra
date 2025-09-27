@@ -3,6 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '../auth/AuthModal';
 import { useState } from 'react';
+import Link from 'next/link';
 import styles from './UserProfile.module.scss';
 
 export function UserProfile() {
@@ -49,14 +50,31 @@ export function UserProfile() {
 
   return (
     <div className={styles.userContainer}>
-      <div className={styles.userInfo}>
-        <span className={styles.displayName}>
-          {user.profile?.displayName || user.email}
-        </span>
-        <span className={styles.username}>
-          @{user.profile?.username || 'ゲスト'}
-        </span>
+      <div className={styles.avatarContainer}>
+        {user.profile?.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={user.profile.avatarUrl}
+            alt="アバター"
+            className={styles.avatar}
+          />
+        ) : (
+          <div className={styles.avatarPlaceholder}>
+            {(user.profile?.displayName || user.email)?.charAt(0).toUpperCase() || '?'}
+          </div>
+        )}
       </div>
+
+      <Link href="/profile" className={styles.profileLink}>
+        <div className={styles.userInfo}>
+          <span className={styles.displayName}>
+            {user.profile?.displayName || user.email}
+          </span>
+          <span className={styles.username}>
+            @{user.profile?.username || 'ゲスト'}
+          </span>
+        </div>
+      </Link>
 
       <button
         onClick={handleSignOut}
