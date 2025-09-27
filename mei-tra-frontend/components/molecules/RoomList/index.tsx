@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useRoom } from '../../../hooks/useRoom';
 import { useSocket } from '../../../hooks/useSocket';
 import { RoomStatus } from '../../../types/room.types';
+import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
 import styles from './index.module.scss';
 
 const getStatusText = (status: RoomStatus) => {
@@ -137,12 +138,12 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                               }}
                               className={styles.teamSelect}
                             >
-                              <option value={0}>Team 0</option>
-                              <option value={1}>Team 1</option>
+                              <option value={0}>{getTeamOptionLabel(currentRoom?.players || [], 0)}</option>
+                              <option value={1}>{getTeamOptionLabel(currentRoom?.players || [], 1)}</option>
                             </select>
                           </div>
                         ) : (
-                          <span className={styles.teamLabel}>Team {player.team}</span>
+                          <span className={styles.teamLabel}>{getTeamOptionLabel(currentRoom?.players || [], player.team)}</span>
                         )}
                         {player.isHost && <span className={styles.hostLabel}>(Host)</span>}
                       </li>
