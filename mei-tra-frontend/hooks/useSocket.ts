@@ -44,14 +44,20 @@ export function useSocket(): UseSocketReturn {
 
         // Set up connection listeners
         if (socketRef.current) {
-          // Add listeners without removing others so multiple hooks can subscribe
+          // Clear any existing listeners to prevent duplicates
+          socketRef.current.off('connect');
+          socketRef.current.off('disconnect');
+          socketRef.current.off('connect_error');
+
           socketRef.current.on('connect', () => {
+            console.log('[useSocket] Socket connected successfully');
             setIsConnected(true);
             setIsConnecting(false);
             isInitializingRef.current = false;
           });
 
           socketRef.current.on('disconnect', () => {
+            console.log('[useSocket] Socket disconnected');
             setIsConnected(false);
             setIsConnecting(false);
             isInitializingRef.current = false;
@@ -59,12 +65,26 @@ export function useSocket(): UseSocketReturn {
 
           socketRef.current.on('connect_error', (error) => {
             console.error('[useSocket] Connection error:', error);
+            setIsConnected(false);
             setIsConnecting(false);
             isInitializingRef.current = false;
           });
+
+          // Connect the socket if not already connected
+          if (!socketRef.current.connected) {
+            console.log('[useSocket] Attempting to connect socket...');
+            socketRef.current.connect();
+          } else {
+            // Already connected, update state immediately
+            console.log('[useSocket] Socket already connected');
+            setIsConnected(true);
+            setIsConnecting(false);
+            isInitializingRef.current = false;
+          }
         }
       } catch (error) {
         console.error('[useSocket] Error in initializeSocket:', error);
+        setIsConnected(false);
         setIsConnecting(false);
         isInitializingRef.current = false;
       }
