@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const formData = await request.formData();
+    const { id } = await params;
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
-      ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user-profile/${params.id}/avatar`
-      : `http://localhost:3333/api/user-profile/${params.id}/avatar`;
+      ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user-profile/${id}/avatar`
+      : `http://localhost:3333/api/user-profile/${id}/avatar`;
 
     const authorization = request.headers.get('authorization');
     if (!authorization) {
