@@ -3,6 +3,7 @@ import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
 import { CompletedFields } from '../CompletedFields';
+import { PlayerAvatar } from '../PlayerAvatar';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '../PlayAndCancelBtn';
@@ -71,7 +72,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
 
-  const renderPlayerHand = (isCurrentPlayer: boolean) => {    
+  const renderPlayerHand = (isCurrentPlayer: boolean) => {
     if (isCurrentPlayer) {
       return (
         <div className={styles.handContainer}>
@@ -82,10 +83,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const isNegri = card === negriCard;
             const isJoker = card === 'JOKER';
             const isSelected = card === selectedCard || card === selectedNegriCard;
-            
+
             const validationResult = isValidCardPlay(card);
             const isPlayable = isCurrentPlayer && validationResult.isValid;
-            
+
             return (
               <div
                 key={index}
@@ -154,30 +155,36 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             />
           )}
           <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
-            <div className={styles.playerName}>{player.name}</div>
-            <div className={styles.cardCount}>{player.hand.length} cards</div>
+            <div className={styles.playerAvatar}>
+              <PlayerAvatar
+                player={player}
+                size="medium"
+                showName={true}
+              />
+            </div>
+            <div className={styles.cardCount}>{player.hand.length}枚</div>
             {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
-              <div className={styles.selectNegriCard}>Select Negri Card.</div>
+              <div className={styles.selectNegriCard}>ネグリカードを選択してください</div>
             )}
             {isCurrentPlayer && agariCard && isWinningPlayer && (
               <div className={styles.agariCardContainer}>
-                <div className={styles.agariLabel}>Agari</div>
+                <div className={styles.agariLabel}>アガリ</div>
                 <Card card={agariCard} />
               </div>
             )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
-              <button 
+              <button
                 className={styles.brokenButton}
                 onClick={() => gameActions.revealBrokenHand(player.playerId)}
               >
-                Reveal Broken Hand
+                ブロークンハンドを公開
               </button>
             )}
           </div>
         </div>
         {renderPlayerHand(isCurrentPlayer)}
         {completedFields.length > 0 && (
-          <CompletedFields 
+          <CompletedFields
             fields={completedFields}
             players={players}
           />

@@ -146,17 +146,22 @@
   gap: var(--spacing-xs);
   align-items: center;
   justify-content: center;
-  background: #6B3419;
-  border: 1px solid #4A2410;
+  background: rgba(107, 52, 25, 0.9);
+  border: 2px solid #4A2410;
   border-radius: 8px;
-  padding: 0.5rem;
+  padding: 4px;
   min-width: 120px;
-  border-radius: var(--radius-md);
+  backdrop-filter: blur(2px);
+}
+
+.playerAvatar{
+  width: calc(100% - 8px);
 }
 
 .currentTurn{
-  border: 1px solid var(--color-gold);
-  box-shadow: 0 0 8px var(--color-gold);
+  border: 2px solid #FFD700 !important;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6) !important;
+  transition: all 0.3s ease;
 }
 
 .playerName{
@@ -176,12 +181,13 @@
 } 
 
 .cardCount{
-  font-size: var(--font-size-sm);
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(0, 0, 0, 0.2);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .selectNegriCard{

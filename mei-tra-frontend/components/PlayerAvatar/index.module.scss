@@ -1,0 +1,72 @@
+.playerAvatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.avatarContainer {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.avatarImage {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  display: block;
+}
+
+.playerName {
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  color: white;
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+// サイズバリエーション
+.small {
+  .avatarContainer {
+    width: 32px;
+    height: 32px;
+  }
+
+  .playerName {
+    font-size: 12px;
+    max-width: 60px;
+  }
+}
+
+.medium {
+  .avatarContainer {
+    width: 64px;
+    height: 64px;
+  }
+
+  .playerName {
+    font-size: 14px;
+    max-width: 100px;
+  }
+}
+
+.large {
+  .avatarContainer {
+    width: 64px;
+    height: 64px;
+  }
+
+  .playerName {
+    font-size: 16px;
+    max-width: 120px;
+  }
+}
