@@ -49,19 +49,31 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 
   const displayName = profile?.displayName || player.name;
   const sizePixels = getSizePixels();
+  const isDefaultAvatar = imageError || !profile?.avatarUrl;
+  const avatarSrc = getAvatarSrc();
 
   return (
     <div className={`${styles.playerAvatar} ${styles[size]} ${className}`}>
       <div className={styles.avatarContainer}>
-        <Image
-          src={getAvatarSrc()}
-          alt={`${displayName}'s avatar`}
-          width={sizePixels}
-          height={sizePixels}
-          className={styles.avatarImage}
-          onError={handleImageError}
-          priority={false}
-        />
+        {isDefaultAvatar ? (
+          <img
+            src={avatarSrc}
+            alt={`${displayName}'s avatar`}
+            width={sizePixels}
+            height={sizePixels}
+            className={styles.avatarImage}
+          />
+        ) : (
+          <Image
+            src={avatarSrc}
+            alt={`${displayName}'s avatar`}
+            width={sizePixels}
+            height={sizePixels}
+            className={styles.avatarImage}
+            onError={handleImageError}
+            priority={false}
+          />
+        )}
       </div>
       {showName && (
         <div className={styles.playerName}>
