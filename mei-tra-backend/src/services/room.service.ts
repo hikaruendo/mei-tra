@@ -6,9 +6,10 @@ import { GameStateFactory } from './game-state.factory';
 import { User, Team } from '../types/game.types';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
+import { IRoomService } from './interfaces/room-service.interface';
 
 @Injectable()
-export class RoomService {
+export class RoomService implements IRoomService {
   private readonly logger = new Logger(RoomService.name);
   private roomGameStates: Map<string, GameStateService> = new Map();
   // 退出席情報（ルームIDごとに席番号ベースでhand/teamを保存）

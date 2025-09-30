@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrumpType, TeamScores } from '../../types/game.types';
+import { TrumpType, TeamScores, Player } from '../../types/game.types';
 import styles from './index.module.scss';
 import { useRoom } from '../../hooks/useRoom';
 interface GameInfoProps {
@@ -9,6 +9,7 @@ interface GameInfoProps {
   teamScores: TeamScores;
   currentRoomId: string | null;
   pointsToWin: number;
+  players: Player[];
 }
 
 export const GameInfo: React.FC<GameInfoProps> = ({
@@ -18,6 +19,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   currentRoomId,
   pointsToWin,
+  players,
 }) => {
   const { leaveRoom } = useRoom();
 
@@ -31,6 +33,11 @@ export const GameInfo: React.FC<GameInfoProps> = ({
       'zuppe': '♠'
     };
     return trumpMap[currentTrump];
+  };
+
+  const getTeamPlayerNames = (teamNumber: number): string => {
+    const teamPlayers = players.filter(player => player.team === teamNumber);
+    return teamPlayers.map(player => player.name).join(' & ');
   };
 
   return (
@@ -48,10 +55,10 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         {/* Scores */}
         <div className={styles.gameInfoScores}>
           <span className={styles.gameInfoScoreText0}>
-            Team0: {teamScores[0].total}/{pointsToWin}
+            {getTeamPlayerNames(0)}: {teamScores[0].total}/{pointsToWin}
           </span>
           <span className={styles.gameInfoScoreText1}>
-            Team1: {teamScores[1].total}/{pointsToWin}
+            {getTeamPlayerNames(1)}: {teamScores[1].total}/{pointsToWin}
           </span>
         </div>
       </div>

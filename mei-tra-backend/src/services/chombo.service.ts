@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ChomboViolation, Player, Field } from '../types/game.types';
 import { PlayService } from './play.service';
+import { IChomboService } from './interfaces/chombo-service.interface';
 
 @Injectable()
-export class ChomboService {
+export class ChomboService implements IChomboService {
   private violations: ChomboViolation[] = [];
 
   constructor(private readonly playService: PlayService) {}

@@ -5,26 +5,38 @@ import {
   OnGatewayDisconnect,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Inject } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { GameStateService } from './services/game-state.service';
-import { CardService } from './services/card.service';
-import { ScoreService } from './services/score.service';
-import { BlowService } from './services/blow.service';
-import { PlayService } from './services/play.service';
-import { RoomService } from './services/room.service';
-import {
-  TrumpType,
-  Field,
-  Team,
-  User,
-  Player,
-  TeamScores,
-} from './types/game.types';
+import { IGameStateService } from './services/interfaces/game-state-service.interface';
+import { ICardService } from './services/interfaces/card-service.interface';
+import { IScoreService } from './services/interfaces/score-service.interface';
+import { IBlowService } from './services/interfaces/blow-service.interface';
+import { IPlayService } from './services/interfaces/play-service.interface';
+import { IRoomService } from './services/interfaces/room-service.interface';
+import { IChomboService } from './services/interfaces/chombo-service.interface';
+import { TrumpType, User } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
-import { RoomStatus } from './types/room.types';
-import { ChomboService } from './services/chombo.service';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
+import { IJoinRoomUseCase } from './use-cases/interfaces/join-room.use-case.interface';
+import { ICreateRoomUseCase } from './use-cases/interfaces/create-room.use-case.interface';
+import { ILeaveRoomUseCase } from './use-cases/interfaces/leave-room.use-case.interface';
+import { IStartGameUseCase } from './use-cases/interfaces/start-game.use-case.interface';
+import { ITogglePlayerReadyUseCase } from './use-cases/interfaces/toggle-player-ready.use-case.interface';
+import { IChangePlayerTeamUseCase } from './use-cases/interfaces/change-player-team.use-case.interface';
+import { GatewayEvent } from './use-cases/interfaces/gateway-event.interface';
+import {
+  IDeclareBlowUseCase,
+  RevealBrokenRequest,
+} from './use-cases/interfaces/declare-blow.use-case.interface';
+import { IPassBlowUseCase } from './use-cases/interfaces/pass-blow.use-case.interface';
+import { ISelectNegriUseCase } from './use-cases/interfaces/select-negri.use-case.interface';
+import { IPlayCardUseCase } from './use-cases/interfaces/play-card.use-case.interface';
+import { ISelectBaseSuitUseCase } from './use-cases/interfaces/select-base-suit.use-case.interface';
+import { IRevealBrokenHandUseCase } from './use-cases/interfaces/reveal-broken-hand.use-case.interface';
+import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use-case.interface';
+import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
+import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
 
 @WebSocketGateway({
   cors: {
@@ -41,13 +53,50 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
 
   constructor(
-    private readonly gameState: GameStateService,
-    private readonly cardService: CardService,
-    private readonly scoreService: ScoreService,
-    private readonly blowService: BlowService,
-    private readonly playService: PlayService,
-    private readonly chomboService: ChomboService,
-    private readonly roomService: RoomService,
+    @Inject('IGameStateService')
+    private readonly gameState: IGameStateService,
+    @Inject('ICardService')
+    private readonly cardService: ICardService,
+    @Inject('IScoreService')
+    private readonly scoreService: IScoreService,
+    @Inject('IBlowService')
+    private readonly blowService: IBlowService,
+    @Inject('IPlayService')
+    private readonly playService: IPlayService,
+    @Inject('IChomboService')
+    private readonly chomboService: IChomboService,
+    @Inject('IRoomService')
+    private readonly roomService: IRoomService,
+    @Inject('IJoinRoomUseCase')
+    private readonly joinRoomUseCase: IJoinRoomUseCase,
+    @Inject('ICreateRoomUseCase')
+    private readonly createRoomUseCase: ICreateRoomUseCase,
+    @Inject('ILeaveRoomUseCase')
+    private readonly leaveRoomUseCase: ILeaveRoomUseCase,
+    @Inject('IStartGameUseCase')
+    private readonly startGameUseCase: IStartGameUseCase,
+    @Inject('IDeclareBlowUseCase')
+    private readonly declareBlowUseCase: IDeclareBlowUseCase,
+    @Inject('IPassBlowUseCase')
+    private readonly passBlowUseCase: IPassBlowUseCase,
+    @Inject('ISelectNegriUseCase')
+    private readonly selectNegriUseCase: ISelectNegriUseCase,
+    @Inject('IPlayCardUseCase')
+    private readonly playCardUseCase: IPlayCardUseCase,
+    @Inject('ISelectBaseSuitUseCase')
+    private readonly selectBaseSuitUseCase: ISelectBaseSuitUseCase,
+    @Inject('IRevealBrokenHandUseCase')
+    private readonly revealBrokenHandUseCase: IRevealBrokenHandUseCase,
+    @Inject('ICompleteFieldUseCase')
+    private readonly completeFieldUseCase: ICompleteFieldUseCase,
+    @Inject('IProcessGameOverUseCase')
+    private readonly processGameOverUseCase: IProcessGameOverUseCase,
+    @Inject('IUpdateAuthUseCase')
+    private readonly updateAuthUseCase: IUpdateAuthUseCase,
+    @Inject('ITogglePlayerReadyUseCase')
+    private readonly togglePlayerReadyUseCase: ITogglePlayerReadyUseCase,
+    @Inject('IChangePlayerTeamUseCase')
+    private readonly changePlayerTeamUseCase: IChangePlayerTeamUseCase,
     private readonly authService: AuthService,
   ) {}
 
@@ -73,6 +122,87 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     return authName;
+  }
+
+  private dispatchEvents(events?: GatewayEvent[]) {
+    if (!events) {
+      return;
+    }
+
+    events.forEach((event) => {
+      const emit = () => {
+        switch (event.scope) {
+          case 'room':
+            if (event.roomId) {
+              this.server.to(event.roomId).emit(event.event, event.payload);
+            }
+            break;
+          case 'socket':
+            if (event.socketId) {
+              this.server.to(event.socketId).emit(event.event, event.payload);
+            }
+            break;
+          case 'all':
+            this.server.emit(event.event, event.payload);
+            break;
+        }
+      };
+
+      if (event.delayMs && event.delayMs > 0) {
+        setTimeout(emit, event.delayMs);
+      } else {
+        emit();
+      }
+    });
+  }
+
+  private async triggerRevealBrokenHand(request?: RevealBrokenRequest) {
+    if (!request) {
+      return;
+    }
+
+    const clientSocket = this.server.sockets.sockets.get(request.socketId);
+    if (!clientSocket) {
+      console.warn(
+        '[GameGateway] Socket not found when handling required broken hand',
+        request,
+      );
+      return;
+    }
+
+    try {
+      await this.handleRevealBrokenHand(clientSocket, {
+        roomId: request.roomId,
+        playerId: request.playerId,
+      });
+    } catch (error) {
+      console.error('Failed to trigger reveal-broken-hand flow:', error);
+    }
+  }
+
+  private async processFieldCompletionResult(
+    roomId: string,
+    response: Awaited<ReturnType<ICompleteFieldUseCase['execute']>>,
+  ) {
+    if (!response.success) {
+      this.server
+        .to(roomId)
+        .emit('error-message', response.error ?? 'Failed to complete field');
+      return;
+    }
+
+    this.dispatchEvents(response.events);
+    this.dispatchEvents(response.delayedEvents);
+
+    if (response.gameOver) {
+      await this.processGameOverUseCase.execute({
+        roomId,
+        players: response.gameOver.players,
+        winningTeam: response.gameOver.winningTeam,
+        teamScores: response.gameOver.teamScores,
+        resetDelayMs: response.gameOver.resetDelayMs,
+      });
+    }
   }
 
   //-------Connection-------
@@ -379,57 +509,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 共通ヘルパーメソッドを使用して名前を取得
       const playerName = this.getPlayerName(authenticatedUser || null, auth);
+      const result = await this.createRoomUseCase.execute({
+        clientId: client.id,
+        roomName: data.name,
+        pointsToWin: data.pointsToWin,
+        teamAssignmentMethod: data.teamAssignmentMethod,
+        playerName,
+        authenticatedUser,
+      });
 
-      if (!playerName) {
-        console.warn('[GameGateway] No name available for room creation', {
-          hasAuthenticatedUser: !!authenticatedUser,
-          authName: auth.name as string | undefined,
-          authKeys: Object.keys(auth),
-        });
-        client.emit('error-message', 'Name is required');
-        return;
+      if (!result.success || !result.data) {
+        const errorMessage = result.errorMessage || 'Failed to create room';
+        client.emit('error-message', errorMessage);
+        return { success: false, error: errorMessage };
       }
 
-      const users = this.gameState.getUsers();
-      const user = users.find((p) => p.id === client.id);
-      if (!user) {
-        console.error(
-          '[GameGateway] Player not found in game state for room creation',
-          {
-            clientId: client.id,
-            hasAuthenticatedUser: !!authenticatedUser,
-            totalUsers: users.length,
-            userIds: users.map((u) => u.id),
-            authenticatedUserId: authenticatedUser?.id,
-            authenticatedUserEmail: authenticatedUser?.email,
-          },
-        );
-        client.emit(
-          'error-message',
-          'Player not found in game state. Please reconnect.',
-        );
-        return;
-      }
-
-      const room = await this.roomService.createNewRoom(
-        data.name,
-        user.playerId,
-        data.pointsToWin,
-        data.teamAssignmentMethod,
-      );
-      if (!room) {
-        client.emit('error-message', 'Failed to create room');
-        return;
-      }
+      const { room, roomsList } = result.data;
 
       this.playerRooms.set(client.id, room.id);
       await client.join(room.id);
 
-      // ルーム一覧を更新
-      const rooms = await this.roomService.listRooms();
-      this.server.emit('rooms-list', rooms);
+      this.server.emit('rooms-list', roomsList);
 
-      // 作成したルームの情報を返す
       return { success: true, room };
     } catch (error) {
       console.error('Error in handleCreateRoom:', error);
@@ -444,92 +545,62 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; user: User },
   ) {
     try {
-      // 既存のルームから退出
-      const currentRoom = this.playerRooms.get(client.id);
-      if (currentRoom) {
-        await client.leave(currentRoom);
-        this.server.to(currentRoom).emit('player-left', {
-          playerId: data.user.playerId,
-          roomId: currentRoom,
-        });
-      }
-
-      // Check if user is authenticated and update the user name accordingly
+      const currentRoomId = this.playerRooms.get(client.id);
       const authenticatedUser = (client.data as { user?: AuthenticatedUser })
         .user;
-      const userToJoin = { ...data.user };
 
-      if (authenticatedUser?.profile?.displayName || authenticatedUser?.email) {
-        // Use authenticated user's display name or email
-        userToJoin.name =
-          authenticatedUser.profile?.displayName ||
-          authenticatedUser.email ||
-          data.user.name;
-        userToJoin.userId = authenticatedUser.id;
-        userToJoin.isAuthenticated = true;
+      const result = await this.joinRoomUseCase.execute({
+        socketId: client.id,
+        targetRoomId: data.roomId,
+        currentRoomId,
+        user: data.user,
+        authenticatedUser,
+      });
+
+      if (!result.success || !result.data) {
+        const errorMessage = result.errorMessage ?? 'Failed to join room';
+        client.emit('error-message', errorMessage);
+        return { success: false, error: errorMessage };
       }
 
-      const success = await this.roomService.joinRoom(data.roomId, userToJoin);
-      if (!success) {
-        client.emit('error-message', 'Failed to join room');
-        return { success: false };
+      const normalizedUser = result.normalizedUser ?? data.user;
+
+      if (currentRoomId && currentRoomId !== data.roomId) {
+        await client.leave(currentRoomId);
+        this.server.to(currentRoomId).emit('player-left', {
+          playerId:
+            result.previousRoomNotification?.playerId ??
+            normalizedUser.playerId,
+          roomId: currentRoomId,
+        });
       }
 
       this.playerRooms.set(client.id, data.roomId);
       await client.join(data.roomId);
-      const room = await this.roomService.getRoom(data.roomId);
-      const isHost = room?.hostId === data.user.playerId;
-      const roomStatus = room?.status;
-      // ルーム関連のイベント
+
+      const { room, isHost, roomStatus, roomsList, resumeGame } = result.data;
+
       this.server.to(data.roomId).emit('room-player-joined', {
-        playerId: data.user.playerId,
+        playerId: normalizedUser.playerId,
         roomId: data.roomId,
         isHost,
       });
 
-      // ゲーム関連のイベント
       this.server.to(data.roomId).emit('game-player-joined', {
-        playerId: data.user.playerId,
+        playerId: normalizedUser.playerId,
         roomId: data.roomId,
         isHost,
         roomStatus,
       });
 
-      // ルーム一覧を更新
-      const rooms = await this.roomService.listRooms();
-      this.server.emit('rooms-list', rooms);
+      this.server.emit('rooms-list', roomsList);
       this.server.to(data.roomId).emit('set-room-id', data.roomId);
 
-      if (room && room.status === RoomStatus.PLAYING) {
-        // 新しいプレイヤーが参加して4人になったらゲーム再開
-        const roomGameState = await this.roomService.getRoomGameState(
-          data.roomId,
-        );
-        const state = roomGameState.getState();
-        const actualPlayerCount = room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-'),
-        ).length;
-        if (room && actualPlayerCount === 4 && state.gamePhase === null) {
-          this.server
-            .to(room.id)
-            .emit('game-resumed', { message: 'Game resumed with 4 players.' });
-          this.server.to(room.id).emit('game-state', {
-            players: state.players,
-            gamePhase: state.gamePhase,
-            currentField: state.playState?.currentField,
-            currentTurn:
-              state.currentPlayerIndex !== -1 &&
-              state.players[state.currentPlayerIndex]
-                ? state.players[state.currentPlayerIndex].playerId
-                : null,
-            blowState: state.blowState,
-            teamScores: state.teamScores,
-            negriCard: state.playState?.negriCard,
-            fields: state.playState?.fields,
-            roomId: room.id,
-            pointsToWin: room.settings.pointsToWin,
-          });
-        }
+      if (resumeGame) {
+        this.server.to(data.roomId).emit('game-resumed', {
+          message: resumeGame.message,
+        });
+        this.server.to(data.roomId).emit('game-state', resumeGame.gameState);
       }
 
       return { success: true, room };
@@ -556,53 +627,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; playerId: string },
   ) {
     try {
-      const room = await this.roomService.getRoom(data.roomId);
-      if (!room) {
-        return { success: false, error: 'Room not found' };
+      const result = await this.togglePlayerReadyUseCase.execute({
+        roomId: data.roomId,
+        playerId: data.playerId,
+      });
+
+      if (!result.success || !result.updatedRoom) {
+        const error = result.error || 'Failed to toggle ready state';
+        client.emit('error-message', error);
+        return { success: false, error };
       }
 
-      const player = room.players.find((p) => p.playerId === data.playerId);
-      if (!player) {
-        return { success: false, error: 'Player not found3 in room' };
-      }
-
-      // データベースでプレイヤーの準備状態を切り替え
-      const newReadyState = !player.isReady;
-
-      const updateSuccess: boolean = await this.roomService.updatePlayerInRoom(
-        data.roomId,
-        data.playerId,
-        { isReady: newReadyState },
-      );
-
-      if (!updateSuccess) {
-        return { success: false, error: 'Failed to update player ready state' };
-      }
-
-      // メモリ上のプレイヤー状態を更新
-      player.isReady = newReadyState;
-
-      // 全員が準備完了しているか確認
-      const allReady = room.players.every((p) => p.isReady);
-      const actualPlayerCount = room.players.filter(
-        (p) => !p.playerId.startsWith('dummy-'),
-      ).length;
-      const hasMaxPlayers = actualPlayerCount === room.settings.maxPlayers;
-
-      // ルームのステータスを更新
-      const newRoomStatus =
-        allReady && hasMaxPlayers ? RoomStatus.READY : RoomStatus.WAITING;
-
-      // ルームステータスが変更された場合のみデータベースを更新
-      if (room.status !== newRoomStatus) {
-        await this.roomService.updateRoomStatus(data.roomId, newRoomStatus);
-        room.status = newRoomStatus;
-      }
-
-      // 最新のルーム情報を取得してクライアントに送信
-      const updatedRoom = await this.roomService.getRoom(data.roomId);
-      this.server.to(data.roomId).emit('room-updated', updatedRoom);
-
+      this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
       return { success: true };
     } catch (error) {
       console.error('Error in handleTogglePlayerReady:', error);
@@ -616,77 +652,50 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
   ) {
     try {
-      const room = await this.roomService.getRoom(data.roomId);
-      if (!room) {
-        client.emit('error-message', 'Room not found');
-        return;
-      }
-
-      const player = room.players.find((p) => p.id === client.id);
-      if (!player) {
-        client.emit('error-message', 'Player not found4 in room');
-        return;
-      }
-
-      // ルームからプレイヤーを削除
-      const success = await this.roomService.leaveRoom(
-        data.roomId,
-        player.playerId,
-      );
-
-      if (!success) {
-        client.emit('error-message', 'Failed to leave room');
-        return;
-      }
-
-      // leaveRoom処理でルームが削除された場合をチェック
-      const roomExists = await this.roomService.getRoom(data.roomId);
-      if (!roomExists) {
-        // ルームが削除された場合
-        this.playerRooms.delete(client.id);
-        await client.leave(data.roomId);
-        this.server.to(client.id).emit('back-to-lobby');
-        const rooms = await this.roomService.listRooms();
-        this.server.emit('rooms-list', rooms);
-        return { success: true };
-      }
-
-      // クライアントをルームから退出
-      await client.leave(data.roomId);
-      this.playerRooms.delete(client.id);
-
-      // 他のプレイヤーに通知
-      this.server.to(data.roomId).emit('player-left', {
-        playerId: player.playerId,
+      const result = await this.leaveRoomUseCase.execute({
+        clientId: client.id,
         roomId: data.roomId,
       });
 
-      // ルーム一覧を更新
-      const rooms = await this.roomService.listRooms();
-      this.server.emit('rooms-list', rooms);
+      if (!result.success || !result.data) {
+        const errorMessage = result.errorMessage || 'Failed to leave room';
+        client.emit('error-message', errorMessage);
+        return { success: false, error: errorMessage };
+      }
 
+      const {
+        playerId,
+        roomDeleted,
+        roomsList,
+        updatedPlayers,
+        gamePausedMessage,
+      } = result.data;
+
+      await client.leave(data.roomId);
+      this.playerRooms.delete(client.id);
+
+      if (roomDeleted) {
+        this.server.to(client.id).emit('back-to-lobby');
+        this.server.emit('rooms-list', roomsList);
+        return { success: true };
+      }
+
+      this.server.to(data.roomId).emit('player-left', {
+        playerId,
+        roomId: data.roomId,
+      });
+
+      this.server.emit('rooms-list', roomsList);
       this.server.to(client.id).emit('back-to-lobby');
 
-      // ゲーム状態からプレイヤー情報を取得（メモリ上の最新情報）
-      const roomGameState = await this.roomService.getRoomGameState(
-        data.roomId,
-      );
-      const state = roomGameState.getState();
+      if (updatedPlayers) {
+        this.server.to(data.roomId).emit('update-players', updatedPlayers);
+      }
 
-      // プレイヤーのチーム情報を保持
-      state.teamAssignments[player.playerId] = player.team;
-
-      // 最新のプレイヤー情報を送信（ゲーム状態から）
-      this.server.to(data.roomId).emit('update-players', state.players);
-
-      // プレイヤー数が4人未満ならゲームを一時停止
-      const actualPlayerCount = state.players.filter(
-        (p) => !p.playerId.startsWith('dummy-'),
-      ).length;
-      if (actualPlayerCount < 4 && state.gamePhase !== null) {
+      if (gamePausedMessage) {
         this.server
           .to(data.roomId)
-          .emit('game-paused', { message: 'Not enough players. Game paused.' });
+          .emit('game-paused', { message: gamePausedMessage });
       }
 
       return { success: true };
@@ -702,175 +711,53 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody()
     data: { roomId: string; teamChanges: { [key: string]: number } },
   ): Promise<{ success: boolean }> {
-    const { roomId, teamChanges } = data;
-    const room = await this.roomService.getRoom(roomId);
-    if (!room) {
-      client.emit('error-message', 'Room not found');
-      return { success: false };
-    }
+    try {
+      const result = await this.changePlayerTeamUseCase.execute({
+        roomId: data.roomId,
+        teamChanges: data.teamChanges,
+      });
 
-    // ホストのみ許可
-    const hostPlayer = room.players.find((p) => p.playerId === room.hostId);
-    if (!hostPlayer) {
-      client.emit('error-message', 'Only the host can change teams');
-      return { success: false };
-    }
-
-    // 変更前のチームの人数をカウント
-    const currentTeamCounts = {
-      0: room.players.filter(
-        (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
-      ).length,
-      1: room.players.filter(
-        (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
-      ).length,
-    };
-
-    // 変更後のチームの人数を計算
-    const newTeamCounts = { ...currentTeamCounts };
-    for (const [playerId, newTeam] of Object.entries(teamChanges)) {
-      const player = room.players.find((p) => p.playerId === playerId);
-      if (!player) {
-        client.emit('error-message', `Player ${playerId} not found`);
+      if (!result.success || !result.updatedRoom) {
+        const error = result.error || 'Failed to change teams';
+        client.emit('error-message', error);
         return { success: false };
       }
 
-      // 現在のチームから移動する場合、そのチームの人数を減らす
-      if (player.team === 0) newTeamCounts[0]--;
-      if (player.team === 1) newTeamCounts[1]--;
-
-      // 新しいチームの人数を増やす
-      newTeamCounts[newTeam as Team]++;
-    }
-
-    // 各チームが2人以下であることを確認
-    if (newTeamCounts[0] > 2 || newTeamCounts[1] > 2) {
-      client.emit('error-message', 'Each team must have at most 2 players');
+      this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleChangePlayerTeam:', error);
+      client.emit('error-message', 'Internal server error');
       return { success: false };
     }
-
-    // すべてのプレイヤーのチームを変更
-    for (const [playerId, newTeam] of Object.entries(teamChanges)) {
-      const player = room.players.find((p) => p.playerId === playerId);
-      if (player) {
-        player.team = newTeam as Team;
-      }
-    }
-
-    room.updatedAt = new Date();
-    await this.roomService.updateRoom(roomId, room);
-    this.server.to(roomId).emit('room-updated', room);
-
-    return { success: true };
   }
   //-------Room-------
 
   //-------Game-------
   @SubscribeMessage('start-game')
   async handleStartGame(client: Socket, data: { roomId: string }) {
-    const room = await this.roomService.getRoom(data.roomId);
-    if (!room) {
-      client.emit('error-message', 'Room not found');
-      return;
+    const result = await this.startGameUseCase.execute({
+      clientId: client.id,
+      roomId: data.roomId,
+    });
+
+    if (!result.success || !result.data) {
+      const errorMessage = result.errorMessage || 'Failed to start game';
+      client.emit('error-message', errorMessage);
+      return { success: false, error: errorMessage };
     }
 
-    // Get playerId from game state
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
+    const { players, pointsToWin, updatePhase, currentTurnPlayerId } =
+      result.data;
 
-    const player = state.players.find((p) => p.id === client.id);
+    this.server.to(data.roomId).emit('room-playing', players);
+    this.server
+      .to(data.roomId)
+      .emit('game-started', data.roomId, players, pointsToWin);
+    this.server.to(data.roomId).emit('update-phase', updatePhase);
+    this.server.to(data.roomId).emit('update-turn', currentTurnPlayerId);
 
-    if (!player) {
-      console.error(
-        '[GameGateway] Player not found in game state for game start',
-        {
-          clientId: client.id,
-          roomId: data.roomId,
-          totalPlayers: state.players.length,
-          playerIds: state.players.map((p) => p.id),
-          playerNames: state.players.map((p) => p.name),
-        },
-      );
-      client.emit(
-        'error-message',
-        'Player not found in game state. Please rejoin the room.',
-      );
-      return;
-    }
-
-    // ゲーム開始条件チェック
-    const { canStart, reason } = await this.roomService.canStartGame(
-      data.roomId,
-    );
-    if (!canStart) {
-      client.emit('error-message', reason || 'Cannot start game');
-      return;
-    }
-
-    try {
-      // ルームのステータスを更新
-      await this.roomService.updateRoomStatus(data.roomId, RoomStatus.PLAYING);
-
-      // ゲーム開始処理
-      await roomGameState.startGame();
-      const updatedState = roomGameState.getState();
-
-      if (!updatedState) {
-        client.emit(
-          'error-message',
-          'Failed to start game: Invalid game state',
-        );
-        return;
-      }
-
-      // ルームの設定からpointsToWinを取得して設定
-      updatedState.pointsToWin = room.settings.pointsToWin;
-
-      // room.playersのhandも更新
-      room.players.forEach((roomPlayer) => {
-        const statePlayer = updatedState.players.find(
-          (p) => p.playerId === roomPlayer.playerId,
-        );
-        if (statePlayer) {
-          roomPlayer.hand = [...statePlayer.hand];
-        }
-      });
-
-      // Set the first player as the starting player for the first blow phase
-      const firstBlowIndex = 0; // First player starts
-      const firstBlowPlayer = updatedState.players[firstBlowIndex];
-
-      // Update both currentPlayerIndex and blowState
-      updatedState.currentPlayerIndex = firstBlowIndex;
-      updatedState.gamePhase = 'blow';
-      updatedState.blowState = {
-        ...updatedState.blowState,
-        currentBlowIndex: firstBlowIndex,
-      };
-
-      // ゲーム開始イベントをルームのメンバーにのみ送信
-      this.server.to(data.roomId).emit('room-playing', updatedState.players);
-      this.server
-        .to(data.roomId)
-        .emit(
-          'game-started',
-          data.roomId,
-          updatedState.players,
-          updatedState.pointsToWin,
-        );
-
-      this.server.to(data.roomId).emit('update-phase', {
-        phase: 'blow',
-        scores: updatedState.teamScores,
-        winner: null,
-      });
-
-      this.server.to(data.roomId).emit('update-turn', firstBlowPlayer.playerId);
-
-      return { success: true };
-    } catch (error) {
-      client.emit('error-message', 'Failed to start game: ' + error);
-    }
+    return { success: true };
   }
 
   @SubscribeMessage('declare-blow')
@@ -881,72 +768,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       declaration: { trumpType: TrumpType; numberOfPairs: number };
     },
   ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) return;
+    try {
+      const result = await this.declareBlowUseCase.execute({
+        roomId: data.roomId,
+        socketId: client.id,
+        declaration: data.declaration,
+      });
 
-    if (!roomGameState.isPlayerTurn(player.playerId)) {
-      this.server
-        .to(data.roomId)
-        .emit('error-message', "It's not your turn to declare!");
-      return;
-    }
-
-    // Validate declaration
-    if (
-      !this.blowService.isValidDeclaration(
-        data.declaration,
-        state.blowState.currentHighestDeclaration,
-      )
-    ) {
-      this.server.to(data.roomId).emit('error-message', 'Invalid declaration!');
-      return;
-    }
-
-    // Add declaration
-    const newDeclaration = this.blowService.createDeclaration(
-      player.playerId,
-      data.declaration.trumpType,
-      data.declaration.numberOfPairs,
-    );
-
-    state.blowState.declarations.push(newDeclaration);
-    state.blowState.currentHighestDeclaration = newDeclaration;
-
-    // Emit update
-    this.server.to(data.roomId).emit('blow-updated', {
-      declarations: state.blowState.declarations,
-      currentHighest: state.blowState.currentHighestDeclaration,
-    });
-
-    // Count total actions (declarations + passes)
-    const playersWhoHaveActed = new Set<string>();
-
-    // Add players who have declared
-    state.blowState.declarations.forEach((declaration) => {
-      playersWhoHaveActed.add(declaration.playerId);
-    });
-
-    // Add players who have passed
-    state.players.forEach((player) => {
-      if (player.isPasser) {
-        playersWhoHaveActed.add(player.playerId);
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to declare blow');
+        return;
       }
-    });
 
-    const totalActions = playersWhoHaveActed.size;
-
-    // If all 4 players have acted (either declared or passed), move to play phase
-    if (totalActions === 4) {
-      await this.handleFourthDeclaration(data.roomId);
-    } else {
-      await roomGameState.nextTurn();
-      // Emit turn update to all clients
-      const nextPlayer = state.players[state.currentPlayerIndex];
-      if (nextPlayer) {
-        this.server.to(data.roomId).emit('update-turn', nextPlayer.playerId);
-      }
+      this.dispatchEvents(result.events);
+      this.dispatchEvents(result.delayedEvents);
+      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+    } catch (error) {
+      console.error('Error in handleDeclareBlow:', error);
+      client.emit('error-message', 'Failed to declare blow');
     }
   }
 
@@ -955,171 +794,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string },
   ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) return;
+    try {
+      const result = await this.passBlowUseCase.execute({
+        roomId: data.roomId,
+        socketId: client.id,
+      });
 
-    // First check if it's the player's turn
-    if (!roomGameState.isPlayerTurn(player.playerId)) {
-      client.emit('error-message', "It's not your turn to pass!1");
-      return;
-    }
-
-    // Mark player as passed
-    player.isPasser = true;
-    state.blowState.lastPasser = player.playerId;
-
-    // Emit update
-    this.server.to(data.roomId).emit('blow-updated', {
-      declarations: state.blowState.declarations,
-      currentHighest: state.blowState.currentHighestDeclaration,
-      lastPasser: player.playerId,
-    });
-
-    // Count total actions (declarations + passes)
-    const playersWhoHaveActed = new Set<string>();
-
-    // Add players who have declared
-    state.blowState.declarations.forEach((declaration) => {
-      playersWhoHaveActed.add(declaration.playerId);
-    });
-
-    // Add players who have passed
-    state.players.forEach((player) => {
-      if (player.isPasser) {
-        playersWhoHaveActed.add(player.playerId);
-      }
-    });
-
-    const totalActions = playersWhoHaveActed.size;
-
-    // If all 4 players have acted (either declared or passed), move to play phase
-    if (totalActions === 4) {
-      // If no one has declared, start a new round
-      if (state.blowState.declarations.length === 0) {
-        // Reset player pass states
-        state.players.forEach((p) => (p.isPasser = false));
-        state.blowState.lastPasser = null;
-        state.blowState.declarations = [];
-        state.blowState.currentHighestDeclaration = null;
-        state.blowState.currentBlowIndex =
-          (state.blowState.currentBlowIndex + 1) % state.players.length;
-
-        // Move to next dealer and restart blow phase
-        await roomGameState.nextTurn();
-        const nextDealerIndex = state.currentPlayerIndex;
-        const firstBlowIndex = (nextDealerIndex + 1) % state.players.length;
-        const firstBlowPlayer = state.players[firstBlowIndex];
-
-        if (!firstBlowPlayer) return;
-
-        state.currentPlayerIndex = firstBlowIndex;
-
-        // Regenerate deck and deal cards
-        state.deck = this.cardService.generateDeck();
-        await roomGameState.dealCards();
-
-        // Emit round cancelled
-        this.server.to(data.roomId).emit('round-cancelled', {
-          nextDealer: firstBlowPlayer.playerId,
-          players: state.players,
-        });
-
-        // Emit turn update
-        this.server
-          .to(data.roomId)
-          .emit('update-turn', firstBlowPlayer.playerId);
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to pass blow');
         return;
       }
 
-      await this.handleFourthDeclaration(data.roomId);
-      return;
+      this.dispatchEvents(result.events);
+      this.dispatchEvents(result.delayedEvents);
+      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+    } catch (error) {
+      console.error('Error in handlePassBlow:', error);
+      client.emit('error-message', 'Failed to pass blow');
     }
-
-    // Move to next player
-    await roomGameState.nextTurn();
-    // Skip passed players
-    while (state.players[state.currentPlayerIndex].isPasser) {
-      await roomGameState.nextTurn();
-    }
-    // Emit turn update
-    const nextPlayer = state.players[state.currentPlayerIndex];
-    if (nextPlayer) {
-      this.server.to(data.roomId).emit('update-turn', nextPlayer.playerId);
-    }
-  }
-
-  private async handleFourthDeclaration(roomId: string): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const state = roomGameState.getState();
-    const winner = this.blowService.findHighestDeclaration(
-      state.blowState.declarations,
-    );
-    const winningPlayer = state.players.find(
-      (p) => p.playerId === winner.playerId,
-    );
-    if (!winningPlayer) {
-      return;
-    }
-
-    // 状態の更新を先に行う
-    if (state.agari) {
-      winningPlayer.hand.push(state.agari);
-    }
-    winningPlayer.hand.sort((a, b) => this.cardService.compareCards(a, b));
-    // ジャックが4枚あるか確認
-    this.chomboService.checkForRequiredBrokenHand(winningPlayer);
-
-    // 強制ブロークン状態の場合の処理
-    if (winningPlayer.hasRequiredBroken) {
-      const client = this.server.sockets.sockets.get(winningPlayer.id);
-      if (client) {
-        await this.handleRevealBrokenHand(client, {
-          roomId: roomId,
-          playerId: winningPlayer.playerId,
-        });
-      } else {
-        console.error(`Socket not found for player: ${winningPlayer.playerId}`);
-      }
-    }
-
-    state.gamePhase = 'play';
-    state.blowState.currentTrump = winner.trumpType;
-    const winnerIndex = state.players.findIndex(
-      (p) => p.playerId === winner.playerId,
-    );
-    if (winnerIndex !== -1) {
-      state.currentPlayerIndex = winnerIndex;
-    }
-
-    // プレイヤー情報の更新を即時送信
-    this.server.to(roomId).emit('update-players', state.players);
-
-    // 3秒後に残りのイベントを送信
-    setTimeout(() => {
-      // アガリカードを勝者に通知
-      this.server.to(winningPlayer.id).emit('reveal-agari', {
-        agari: state.agari,
-        message: 'Select a card from your hand as Negri',
-        playerId: winningPlayer.playerId,
-      });
-
-      // 最新の状態を取得してからイベントを送信
-      const currentState = roomGameState.getState();
-
-      // まずターン更新を送信
-      this.server.to(roomId).emit('update-turn', winningPlayer.playerId);
-
-      // その後にフェーズ更新を送信
-      this.server.to(roomId).emit('update-phase', {
-        phase: 'play',
-        scores: currentState.teamScores,
-        winner: winningPlayer.team,
-        currentHighestDeclaration:
-          currentState.blowState.currentHighestDeclaration,
-      });
-    }, 3000);
   }
 
   @SubscribeMessage('select-negri')
@@ -1127,70 +819,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string; card: string },
   ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
+    try {
+      const result = await this.selectNegriUseCase.execute({
+        roomId: data.roomId,
+        socketId: client.id,
+        card: data.card,
+      });
 
-    if (!player) return;
-    if (state.gamePhase !== 'play') {
-      client.emit('error-message', 'Cannot select Negri card now!');
-      return;
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to select Negri');
+        return;
+      }
+
+      this.dispatchEvents(result.events);
+    } catch (error) {
+      console.error('Error in handleSelectNegri:', error);
+      client.emit('error-message', 'Failed to select Negri');
     }
-    if (!roomGameState.isPlayerTurn(player.playerId)) {
-      client.emit('error-message', "It's not your turn to select Negri!");
-      return;
-    }
-
-    // Validate the card is in player's hand
-    if (!player.hand.includes(data.card)) {
-      client.emit('error-message', 'Selected card is not in your hand!');
-      return;
-    }
-
-    // Set up play state
-    state.playState = {
-      currentField: {
-        cards: [],
-        baseCard: '',
-        dealerId: player.playerId,
-        isComplete: false,
-      },
-      negriCard: data.card,
-      neguri: {},
-      fields: [],
-      lastWinnerId: null,
-      openDeclared: false,
-      openDeclarerId: null,
-    };
-
-    // Remove Negri card from hand
-    player.hand = player.hand.filter((c) => c !== data.card);
-
-    // Get the winner of the declaration
-    const winner = this.blowService.findHighestDeclaration(
-      state.blowState.declarations,
-    );
-    if (!winner) return Promise.resolve();
-
-    // Set the winner as the first player to play
-    const winnerIndex = state.players.findIndex(
-      (p) => p.playerId === winner.playerId,
-    );
-    if (winnerIndex === -1) return Promise.resolve();
-
-    state.currentPlayerIndex = winnerIndex;
-
-    this.server.to(data.roomId).emit('update-players', state.players);
-
-    // Emit updates
-    this.server.to(data.roomId).emit('play-setup-complete', {
-      negriCard: data.card,
-      startingPlayer: state.players[winnerIndex].playerId,
-    });
-    this.server
-      .to(data.roomId)
-      .emit('update-turn', state.players[winnerIndex].playerId);
-    return;
   }
 
   @SubscribeMessage('play-card')
@@ -1198,344 +843,42 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; card: string },
   ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) {
-      return;
-    }
-    if (!player.hand.includes(data.card)) {
-      console.warn(
-        `[WARN] ${player.name} tried to play a card (${data.card}) not in hand`,
-      );
-      client.emit('error-message', 'Card already played or invalid!');
-      return;
-    }
+    try {
+      const result = await this.playCardUseCase.execute({
+        roomId: data.roomId,
+        socketId: client.id,
+        card: data.card,
+      });
 
-    // Check if currentField exists
-    if (!state.playState?.currentField) {
-      console.error('No current field found in game state');
-      client.emit('error-message', 'Game state error: No current field');
-      return;
-    }
-
-    // Check if it's the player's turn
-    if (!roomGameState.isPlayerTurn(player.playerId)) {
-      client.emit('error-message', "It's not your turn to play!");
-      return;
-    }
-
-    if (state.playState.currentField.cards.includes(data.card)) {
-      console.warn(
-        `[WARN] ${player.name} tried to play a duplicate card (${data.card})`,
-      );
-      client.emit('error-message', 'Card already played on the field!');
-      return;
-    }
-
-    // Remove the card from player's hand first
-    player.hand = player.hand.filter((c) => c !== data.card);
-
-    // Then play the card to the field
-    const currentField = state.playState.currentField;
-    currentField.cards.push(data.card);
-    if (currentField.cards.length === 1) {
-      currentField.baseCard = data.card;
-    }
-
-    // Emit the card played event with updated players
-    this.server.to(data.roomId).emit('card-played', {
-      playerId: player.playerId,
-      card: data.card,
-      field: currentField,
-      players: state.players,
-    });
-
-    // Check if field is complete
-    if (currentField.cards.length === 4) {
-      setTimeout(() => {
-        void this.handleFieldComplete(currentField, data.roomId);
-      }, 3000);
-    } else {
-      // If Joker is baseCard and currentTrump is 'tra' and baseSuit is not selected, don't proceed to next turn
-      if (currentField.baseCard === 'JOKER' && !currentField.baseSuit) {
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to play card');
         return;
       }
 
-      await roomGameState.nextTurn();
-      // Emit turn update
-      const nextPlayer = state.players[state.currentPlayerIndex];
-      if (nextPlayer) {
-        this.server.to(data.roomId).emit('update-turn', nextPlayer.playerId);
+      this.dispatchEvents(result.events);
+
+      if (result.completeFieldTrigger) {
+        const trigger = result.completeFieldTrigger;
+        setTimeout(() => {
+          void this.completeFieldUseCase
+            .execute({
+              roomId: trigger.roomId,
+              field: trigger.field,
+            })
+            .then((response) =>
+              this.processFieldCompletionResult(trigger.roomId, response),
+            )
+            .catch((error) => {
+              console.error('Error completing field:', error);
+              this.server
+                .to(trigger.roomId)
+                .emit('error-message', 'Failed to complete field');
+            });
+        }, trigger.delayMs);
       }
-    }
-  }
-
-  private async handleFieldComplete(
-    field: Field,
-    roomId: string,
-  ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const state = roomGameState.getState();
-
-    const winner = this.playService.determineFieldWinner(
-      field,
-      state.players,
-      state.blowState.currentTrump,
-    );
-
-    if (!winner) {
-      console.error('No winner determined for field:', field);
-      return;
-    }
-
-    field.cards.forEach((card) => {
-      state.players.forEach((player) => {
-        player.hand = player.hand.filter((c) => c !== card);
-      });
-    });
-
-    // Add the completed field to history
-    const completedField = await roomGameState.completeField(
-      field,
-      winner.playerId,
-    );
-    if (!completedField) {
-      console.error('Failed to complete field:', field);
-      return;
-    }
-
-    // Check if all players have empty hands (round end)
-    const allHandsEmpty = state.players.every(
-      (player) => player.hand.length === 0,
-    );
-
-    // Set the winner as the next dealer
-    const winnerIndex = state.players.findIndex(
-      (p) => p.playerId === winner.playerId,
-    );
-    if (winnerIndex !== -1) {
-      state.currentPlayerIndex = winnerIndex;
-    }
-
-    // Create a new field with the winner as the dealer
-    if (state.playState) {
-      state.playState.currentField = {
-        cards: [],
-        baseCard: '',
-        dealerId: winner.playerId,
-        isComplete: false,
-      };
-    }
-
-    // Emit field complete event with winner information
-    this.server.to(roomId).emit('field-complete', {
-      winnerId: winner.playerId,
-      field: completedField,
-      nextPlayerId: winner.playerId,
-    });
-
-    // Update all clients with the latest player states
-    this.server.to(roomId).emit('update-players', state.players);
-
-    if (allHandsEmpty) {
-      // Handle game over after ensuring all updates are sent
-      setTimeout(() => {
-        void this.handleGameOver(roomId);
-      }, 1000);
-      return;
-    }
-
-    // Emit turn update to indicate it's the winner's turn
-    this.server.to(roomId).emit('update-turn', winner.playerId);
-  }
-
-  private async handleGameOver(roomId: string): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const state = roomGameState.getState();
-
-    if (!state.blowState.currentHighestDeclaration) {
-      console.error('No highest declaration found');
-      return;
-    }
-
-    // まず現在のプレイヤーからチームを探す
-    let declaringTeam = state.players.find(
-      (p) => p.playerId === state.blowState.currentHighestDeclaration?.playerId,
-    )?.team;
-
-    console.log('state', state);
-
-    // 現在のプレイヤーに見つからない場合は、teamAssignmentsから探す
-    if (declaringTeam == null && state.teamAssignments) {
-      declaringTeam =
-        state.teamAssignments[
-          state.blowState.currentHighestDeclaration.playerId
-        ];
-    }
-
-    if (declaringTeam == null) {
-      console.error(
-        'No declaring team found for player:',
-        state.blowState.currentHighestDeclaration.playerId,
-      );
-      return;
-    }
-
-    const playPoints = this.scoreService.calculatePlayPoints(
-      state.blowState.currentHighestDeclaration?.numberOfPairs || 0,
-      state.playState?.fields.filter((f) => f.winnerTeam === declaringTeam)
-        .length || 0,
-    );
-
-    // Update team scores
-    if (playPoints > 0) {
-      state.teamScores[declaringTeam].play += playPoints;
-      state.teamScores[declaringTeam].total += playPoints;
-      state.teamScoreRecords[declaringTeam] = [
-        ...state.teamScoreRecords[declaringTeam],
-        {
-          points: playPoints,
-          timestamp: new Date(),
-          reason: 'Play points',
-        },
-      ];
-    } else {
-      const opposingTeam = (1 - declaringTeam) as Team;
-      state.teamScores[opposingTeam].play += Math.abs(playPoints);
-      state.teamScores[opposingTeam].total += Math.abs(playPoints);
-      state.teamScoreRecords[opposingTeam] = [
-        ...state.teamScoreRecords[opposingTeam],
-        {
-          points: Math.abs(playPoints),
-          timestamp: new Date(),
-          reason: 'Play points',
-        },
-      ];
-    }
-
-    // Check if any team has reached pointsToWin
-    const hasTeamReached = Object.values(state.teamScores).some(
-      (score) => score.total >= state.pointsToWin,
-    );
-
-    if (hasTeamReached) {
-      // Find the winning team
-      const winningTeamEntry = Object.entries(state.teamScores).find(
-        ([, score]) => score.total >= state.pointsToWin,
-      );
-      const finalWinningTeam = winningTeamEntry
-        ? (Number(winningTeamEntry[0]) as Team)
-        : declaringTeam;
-
-      // Emit final game over event
-      this.server.to(roomId).emit('game-over', {
-        winner: `Team ${finalWinningTeam}`,
-        finalScores: state.teamScores,
-      });
-
-      // Update game statistics for authenticated players
-      await this.updatePlayerGameStatistics(
-        state.players,
-        finalWinningTeam,
-        state.teamScores,
-      );
-
-      await this.roomService.updateRoomStatus(roomId, RoomStatus.FINISHED);
-
-      // Reset game state after a delay
-      setTimeout(() => {
-        void roomGameState.resetState();
-      }, 5000);
-    } else {
-      // Emit round results and start new round
-      this.server.to(roomId).emit('round-results', {
-        scores: state.teamScores,
-      });
-
-      // Start new round after a short delay
-      setTimeout(() => {
-        void roomGameState.resetRoundState();
-        roomGameState.roundNumber++;
-
-        // Emit round reset event
-        this.server.to(roomId).emit('round-reset');
-
-        // Get fresh state after reset
-        const updatedState = roomGameState.getState();
-
-        const nextBlowIndex =
-          (state.blowState.currentBlowIndex + 1) % state.players.length;
-        const nextBlowPlayer = state.players[nextBlowIndex];
-
-        // 通常のゲーム初期化
-        updatedState.gamePhase = 'blow';
-        updatedState.deck = this.cardService.generateDeck();
-        void roomGameState.dealCards();
-
-        // プレイ状態を設定
-        updatedState.playState = {
-          currentField: {
-            cards: [],
-            baseCard: '',
-            dealerId: nextBlowPlayer.playerId,
-            isComplete: false,
-          },
-          negriCard: null,
-          neguri: {},
-          fields: [],
-          lastWinnerId: null,
-          openDeclared: false,
-          openDeclarerId: null,
-        };
-
-        // ブロー状態を設定
-        updatedState.blowState = {
-          currentTrump: null,
-          currentHighestDeclaration: null,
-          declarations: [],
-          lastPasser: null,
-          isRoundCancelled: false,
-          currentBlowIndex: nextBlowIndex,
-        };
-
-        // Update game state with the new state
-        void roomGameState.updateState({
-          gamePhase: updatedState.gamePhase,
-          players: updatedState.players,
-          playState: updatedState.playState,
-          blowState: updatedState.blowState,
-        });
-
-        this.server.to(roomId).emit('update-players', updatedState.players);
-
-        // Emit new round started event with all necessary state
-        this.server.to(roomId).emit('new-round-started', {
-          players: updatedState.players,
-          currentTurn: nextBlowPlayer.playerId,
-          gamePhase: 'blow',
-          currentField: null,
-          completedFields: [],
-          negriCard: null,
-          negriPlayerId: null,
-          revealedAgari: null,
-          currentTrump: null,
-          currentHighestDeclaration: null,
-          blowDeclarations: [],
-        });
-
-        // Update turn
-        roomGameState.currentTurn = nextBlowPlayer.playerId;
-        this.server.to(roomId).emit('update-turn', nextBlowPlayer.playerId);
-
-        // Emit phase update with current trump
-        this.server.to(roomId).emit('update-phase', {
-          phase: 'blow',
-          scores: updatedState.teamScores,
-          winner: nextBlowPlayer.team,
-          currentTrump: null,
-        });
-      }, 3000);
+    } catch (error) {
+      console.error('Error in handlePlayCard:', error);
+      client.emit('error-message', 'Failed to play card');
     }
   }
 
@@ -1544,34 +887,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string; suit: string },
   ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
-    if (
-      !state.playState?.currentField ||
-      state.playState.currentField.baseCard !== 'JOKER'
-    ) {
-      client.emit('error-message', 'Cannot select base suit now!');
-      return;
-    }
+    try {
+      const result = await this.selectBaseSuitUseCase.execute({
+        roomId: data.roomId,
+        socketId: client.id,
+        suit: data.suit,
+      });
 
-    const player = state.players.find((p) => p.id === client.id);
-    if (!player) return;
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Cannot select base suit');
+        return;
+      }
 
-    if (state.playState.currentField.dealerId !== player.playerId) {
-      client.emit('error-message', "It's not your turn to select base suit!");
-      return;
-    }
-
-    state.playState.currentField.baseSuit = data.suit;
-    this.server
-      .to(data.roomId)
-      .emit('field-updated', state.playState.currentField);
-
-    // Proceed to next turn after base suit selection
-    await roomGameState.nextTurn();
-    const nextPlayer = state.players[state.currentPlayerIndex];
-    if (nextPlayer) {
-      this.server.to(data.roomId).emit('update-turn', nextPlayer.playerId);
+      this.dispatchEvents(result.events);
+    } catch (error) {
+      console.error('Error in handleSelectBaseSuit:', error);
+      client.emit('error-message', 'Failed to select base suit');
     }
   }
 
@@ -1580,54 +911,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string; playerId: string },
   ): Promise<void> {
-    const roomGameState = await this.roomService.getRoomGameState(data.roomId);
-    const state = roomGameState.getState();
-    const player = state.players.find((p) => p.playerId === data.playerId);
+    try {
+      const preparation = await this.revealBrokenHandUseCase.prepare({
+        roomId: data.roomId,
+        socketId: client.id,
+        playerId: data.playerId,
+      });
 
-    if (!player) return;
+      if (!preparation.success || !preparation.followUp) {
+        client.emit(
+          'error-message',
+          preparation.error ?? 'Failed to process broken hand',
+        );
+        return;
+      }
 
-    // TODO: 全員に手札を公開
-    // this.server.to(data.roomId).emit('reveal-hands', {
-    //   players: state.players.map((p) => ({
-    //     playerId: p.playerId,
-    //     hand: p.hand,
-    //   })),
-    // });
+      const delay = preparation.delayMs ?? 0;
+      const followUp = preparation.followUp;
+      setTimeout(() => {
+        void this.revealBrokenHandUseCase
+          .finalize(followUp)
+          .then((completion) => {
+            if (!completion.success) {
+              console.error(
+                'Failed to finalize broken hand sequence:',
+                completion.error,
+              );
+              return;
+            }
 
-    // 3秒後に次のターンに進む
-    setTimeout(() => {
-      (async () => {
-        try {
-          // Reset player pass states
-          state.blowState.declarations = [];
-          state.blowState.currentHighestDeclaration = null;
-
-          // Move to next dealer and restart blow phase
-          const firstBlowIndex = state.blowState.currentBlowIndex;
-          const firstBlowPlayer = state.players[firstBlowIndex];
-
-          state.currentPlayerIndex = firstBlowIndex;
-
-          // Regenerate deck and deal cards
-          state.deck = this.cardService.generateDeck();
-          await roomGameState.dealCards();
-
-          // Emit broken event
-          this.server.to(data.roomId).emit('broken', {
-            nextPlayerId: firstBlowPlayer.playerId,
-            players: state.players,
-          });
-
-          // Emit turn update
-          this.server
-            .to(data.roomId)
-            .emit('update-turn', firstBlowPlayer.playerId);
-        } catch (error) {
-          console.error('Error in broken hand timeout:', error);
-        }
-      })().catch(console.error);
-    }, 3000);
-    return;
+            this.dispatchEvents(completion.events);
+          })
+          .catch((error) =>
+            console.error('Error finalizing broken hand sequence:', error),
+          );
+      }, delay);
+    } catch (error) {
+      console.error('Error in handleRevealBrokenHand:', error);
+      client.emit('error-message', 'Failed to process broken hand');
+    }
   }
 
   //-------Auth Update-------
@@ -1637,175 +959,33 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { token?: string },
   ): Promise<void> {
     try {
-      console.log('[GameGateway] Received update-auth event', {
-        clientId: client.id,
-        hasToken: !!data?.token,
-        tokenLength: data?.token?.length || 0,
-        tokenStart: data?.token ? data.token.substring(0, 20) + '...' : 'null',
+      const result = await this.updateAuthUseCase.execute({
+        socketId: client.id,
+        token: data?.token,
+        currentRoomId: this.playerRooms.get(client.id),
+        handshakeName:
+          typeof client.handshake.auth?.name === 'string'
+            ? client.handshake.auth?.name
+            : undefined,
       });
 
-      if (!data?.token) {
-        console.warn('[GameGateway] No token provided in update-auth');
-        client.emit('auth-update-error', 'No token provided');
+      if (!result.success || !result.authenticatedUser) {
+        client.emit(
+          'auth-update-error',
+          result.error ?? 'Authentication failed',
+        );
         return;
       }
 
-      console.log(
-        `[GameGateway] Attempting to validate token with length: ${data.token.length}`,
-      );
+      (client.data as { user?: AuthenticatedUser }).user =
+        result.authenticatedUser;
 
-      // Try to authenticate with the new token
-      let authenticatedUser: AuthenticatedUser | null = null;
-      try {
-        authenticatedUser = await this.authService.getUserFromSocketToken(
-          data.token,
-        );
-      } catch (error: unknown) {
-        const err = error as { message?: string; stack?: string } | undefined;
-        console.error('[GameGateway] Failed to authenticate token:', {
-          error: err?.message,
-          stack: err?.stack,
-          tokenLength: data.token?.length || 0,
-        });
-        client.emit('auth-update-error', 'Invalid token');
-        return;
-      }
-
-      if (!authenticatedUser) {
-        console.warn(
-          '[GameGateway] Token validation failed - AuthService returned null',
-          {
-            tokenLength: data.token?.length || 0,
-            tokenStart: data.token.substring(0, 20) + '...',
-          },
-        );
-        client.emit('auth-update-error', 'Token validation failed');
-        return;
-      }
-
-      // Update socket data with authenticated user
-      (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
-
-      console.log(
-        '[GameGateway] Successfully updated authentication for user:',
-        {
-          userId: authenticatedUser.id,
-          email: authenticatedUser.email,
-          displayName: authenticatedUser.profile?.displayName,
-        },
-      );
-
-      // Notify client of successful auth update
-      client.emit('auth-updated', {
-        userId: authenticatedUser.id,
-        displayName:
-          authenticatedUser.profile?.displayName ||
-          authenticatedUser.email ||
-          'User',
-        username: authenticatedUser.profile?.username,
-      });
-
-      // Ensure the authenticated user exists in the gameState users list
-      const existingUser = this.gameState
-        .getUsers()
-        .find((u) => u.id === client.id);
-      if (!existingUser) {
-        const displayName =
-          authenticatedUser.profile?.displayName ||
-          authenticatedUser.email ||
-          'User';
-        const added = this.gameState.addPlayer(
-          client.id,
-          displayName,
-          undefined,
-          authenticatedUser.id,
-          true,
-        );
-        if (added) {
-          const users = this.gameState.getUsers();
-          const newUser = users.find((p) => p.id === client.id);
-          if (newUser) {
-            // Provide reconnect token for future sessions
-            this.server
-              .to(client.id)
-              .emit('reconnect-token', `${newUser.playerId}`);
-          }
-          this.server.emit('update-users', users);
-        }
-      }
-
-      // If the user is in a room, update their information in the room
-      const roomId = this.playerRooms.get(client.id);
-      if (roomId) {
-        console.log('[GameGateway] Updating user info in room:', roomId);
-
-        // Update user info in the room service if needed
-        const roomGameState = await this.roomService.getRoomGameState(roomId);
-        if (roomGameState) {
-          const players = roomGameState.getState().players;
-          const currentPlayer = players.find((p) => p.id === client.id);
-
-          if (currentPlayer) {
-            // Update player's display name and user ID in the room
-            currentPlayer.name =
-              authenticatedUser.profile?.displayName ||
-              authenticatedUser.email ||
-              'User';
-            currentPlayer.userId = authenticatedUser.id;
-
-            // Broadcast updated player list to all clients in the room
-            this.server.to(roomId).emit('update-players', players);
-
-            console.log('[GameGateway] Updated player info in room:', {
-              playerId: currentPlayer.playerId,
-              newName: currentPlayer.name,
-              userId: currentPlayer.userId,
-            });
-          }
-        }
-      }
+      this.dispatchEvents(result.clientEvents);
+      this.dispatchEvents(result.broadcastEvents);
+      this.dispatchEvents(result.roomEvents);
     } catch (error) {
       console.error('[GameGateway] Error in handleUpdateAuth:', error);
       client.emit('auth-update-error', 'Internal server error');
-    }
-  }
-
-  private async updatePlayerGameStatistics(
-    players: Player[],
-    winningTeam: Team,
-    teamScores: TeamScores,
-  ): Promise<void> {
-    try {
-      // Filter authenticated players first
-      const authenticatedPlayers = players.filter(
-        (player): player is Player & { userId: string } =>
-          Boolean(player.userId),
-      );
-
-      const updatePromises = authenticatedPlayers.map(async (player) => {
-        const won = player.team === winningTeam;
-        const playerTeamScore = teamScores[player.team];
-        const score = playerTeamScore ? playerTeamScore.total : 0;
-
-        try {
-          await this.roomService.updateUserGameStats(player.userId, won, score);
-          console.log(
-            `[GameGateway] Updated game stats for user ${player.userId}: won=${won}, score=${score}`,
-          );
-        } catch (error) {
-          console.error(
-            `[GameGateway] Failed to update stats for user ${player.userId}:`,
-            error,
-          );
-        }
-      });
-
-      await Promise.allSettled(updatePromises);
-    } catch (error) {
-      console.error(
-        '[GameGateway] Error in updatePlayerGameStatistics:',
-        error,
-      );
     }
   }
 }

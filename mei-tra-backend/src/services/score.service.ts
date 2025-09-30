@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { TeamScore, TeamScoreRecord } from '../types/game.types';
+import { IScoreService } from './interfaces/score-service.interface';
 
 @Injectable()
-export class ScoreService {
+export class ScoreService implements IScoreService {
   calculatePlayPoints(declaredPairs: number, wonFields: number): number {
     const X = declaredPairs;
     const Y = wonFields;
