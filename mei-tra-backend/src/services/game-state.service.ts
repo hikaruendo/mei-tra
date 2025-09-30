@@ -14,9 +14,10 @@ import {
 import { CardService } from './card.service';
 import { ChomboService } from './chombo.service';
 import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
+import { IGameStateService } from './interfaces/game-state-service.interface';
 
 @Injectable()
-export class GameStateService {
+export class GameStateService implements IGameStateService {
   private users: User[] = [];
   private state: GameState;
   private playerIds: Map<string, string> = new Map(); // token -> playerId

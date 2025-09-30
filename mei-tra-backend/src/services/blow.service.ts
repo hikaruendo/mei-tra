@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { BlowDeclaration, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
+import { IBlowService } from './interfaces/blow-service.interface';
 
 @Injectable()
-export class BlowService {
+export class BlowService implements IBlowService {
   constructor(private readonly cardService: CardService) {}
 
   isValidDeclaration(

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Field, Player, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
+import { IPlayService } from './interfaces/play-service.interface';
 
 @Injectable()
-export class PlayService {
+export class PlayService implements IPlayService {
   constructor(private readonly cardService: CardService) {}
 
   determineFieldWinner(

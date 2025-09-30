@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { TrumpType } from '../types/game.types';
+import { ICardService } from './interfaces/card-service.interface';
 
 @Injectable()
-export class CardService {
+export class CardService implements ICardService {
   private readonly CARD_STRENGTHS: Record<string, number> = {
     JOKER: 150,
     A: 14,
