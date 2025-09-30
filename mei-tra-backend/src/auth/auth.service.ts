@@ -43,14 +43,27 @@ export class AuthService {
         `[AuthService] Token validated for user: ${user.user.id}`,
       );
 
-      // Get user profile from database
-      const profile = await this.userProfileRepository.findById(user.user.id);
+      // Get user profile from database, create if missing
+      let profile = await this.userProfileRepository.findById(user.user.id);
 
       if (!profile) {
         this.logger.warn(
-          `[AuthService] User profile not found for user ${user.user.id}`,
+          `[AuthService] User profile not found for user ${user.user.id}, creating default profile`,
         );
-        return null;
+
+        // Create profile using existing method
+        try {
+          profile = await this.createOrUpdateUserProfile(
+            user.user.id,
+            user.user.email,
+            user.user.user_metadata,
+          );
+        } catch {
+          this.logger.error(
+            `[AuthService] Failed to create profile for user ${user.user.id}`,
+          );
+          return null;
+        }
       }
 
       // Update last seen timestamp
