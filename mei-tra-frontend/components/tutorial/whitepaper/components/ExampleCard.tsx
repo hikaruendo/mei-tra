@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import styles from './ExampleCard.module.scss';
 
 interface ExampleCardProps {
@@ -12,10 +13,12 @@ interface ExampleCardProps {
 }
 
 export function ExampleCard({ example }: ExampleCardProps) {
+  const t = useTranslations('common');
+
   return (
     <div className={styles.exampleCard}>
       <div className={styles.scenario}>
-        <span className={styles.scenarioLabel}>シナリオ:</span>
+        <span className={styles.scenarioLabel}>{t('scenario')}</span>
         <span className={styles.scenarioText}>{example.scenario}</span>
       </div>
 
@@ -31,7 +34,7 @@ export function ExampleCard({ example }: ExampleCardProps) {
 
       {example.declaration && (
         <div className={styles.declaration}>
-          <span className={styles.declarationLabel}>宣言:</span>
+          <span className={styles.declarationLabel}>{t('declaration')}</span>
           <span className={styles.declarationValue}>{example.declaration}</span>
         </div>
       )}

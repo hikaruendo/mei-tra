@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import styles from './TrumpHierarchy.module.scss';
 
 interface TrumpHierarchyProps {
@@ -15,16 +16,7 @@ interface TrumpHierarchyProps {
 }
 
 export function TrumpHierarchy({ data }: TrumpHierarchyProps) {
-  const getSuitIcon = (type: string) => {
-    switch (type) {
-      case 'tra': return '🃏';
-      case 'herz': return '♥';
-      case 'daiya': return '♦';
-      case 'club': return '♣';
-      case 'zuppe': return '♠';
-      default: return '';
-    }
-  };
+  const t = useTranslations('tutorial.blow');
 
   return (
     <div className={styles.trumpHierarchy}>
@@ -34,13 +26,12 @@ export function TrumpHierarchy({ data }: TrumpHierarchyProps) {
         {data.trumps.map((trump, index) => (
           <div key={trump.type} className={styles.trumpRow}>
             <span className={styles.strength}>{trump.strength}</span>
-            <div
+            <span
               className={styles.trumpName}
               style={{ color: trump.color }}
             >
-              <span className={styles.suit}>{getSuitIcon(trump.type)}</span>
-              <span>{trump.label}</span>
-            </div>
+              {trump.label}
+            </span>
             {index < data.trumps.length - 1 && (
               <span className={styles.separator}>&gt;</span>
             )}
@@ -49,7 +40,7 @@ export function TrumpHierarchy({ data }: TrumpHierarchyProps) {
       </div>
 
       <p className={styles.note}>
-        同じペア数では、より強いトランプの宣言が上位となります
+        {t('hierarchyNote')}
       </p>
     </div>
   );
