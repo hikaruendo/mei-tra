@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useSocket } from '../../../hooks/useSocket';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
 import styles from './index.module.scss';
 
-const getStatusText = (status: RoomStatus) => {
+const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
   switch (status) {
     case RoomStatus.WAITING:
-      return 'Waiting';
+      return t('room.statusWaiting');
     case RoomStatus.READY:
-      return 'Ready';
+      return t('room.statusReady');
     case RoomStatus.PLAYING:
-      return 'Playing';
+      return t('room.statusPlaying');
     default:
       return status;
   }
@@ -37,12 +38,13 @@ interface RoomListProps {
 }
 
 export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting }) => {
+  const t = useTranslations();
   const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom, changePlayerTeam } = useRoom();
   const [newRoomName, setNewRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
   const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
-  const [setTeamText, setSetTeamText] = useState<string>('Update Teams');
+  const [setTeamText, setSetTeamText] = useState<string>(t('room.updateTeams'));
   const { socket } = useSocket();
 
   const readyStatus = playerReadyStatus as Record<string, boolean>;
@@ -68,13 +70,13 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h2>Room List</h2>
+        <h2>{t('room.title')}</h2>
         <form onSubmit={handleCreateRoom} className={styles.createForm}>
           <input
             type="text"
             value={newRoomName}
             onChange={(e) => setNewRoomName(e.target.value)}
-            placeholder="Enter room name"
+            placeholder={t('room.roomName')}
             className={styles.input}
           />
           <input
@@ -82,7 +84,7 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
             min={1}
             value={pointsToWin}
             onChange={(e) => setPointsToWin(Number(e.target.value))}
-            placeholder="Points to Win"
+            placeholder={t('room.pointsToWin')}
             className={styles.input}
             style={{ width: 50 }}
           />
@@ -92,18 +94,18 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
             className={styles.input}
             style={{ width: 100 }}
           >
-            <option value="random">Auto</option>
-            <option value="host-choice">Manual</option>
+            <option value="random">{t('room.teamAuto')}</option>
+            <option value="host-choice">{t('room.teamManual')}</option>
           </select>
           <button type="submit" className={styles.createButton}>
-            Create Room
+            {t('room.create')}
           </button>
         </form>
       </div>
 
       {/* 接続状態の表示 */}
-      {isConnecting && <div className={styles.connecting}>サーバーに接続中...</div>}
-      {!isConnected && !isConnecting && <div className={styles.error}>Socket not connected</div>}
+      {isConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
+      {!isConnected && !isConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.section}>
@@ -115,9 +117,9 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
                   <h3>{room.name}</h3>
-                  <p>Players: {actualPlayerCount}/{room.settings.maxPlayers}</p>
+                  <p>{t('room.players')}: {actualPlayerCount}/{room.settings.maxPlayers}</p>
                   <p className={`${styles.status} ${getStatusClass(room.status)}`}>
-                    Status: {getStatusText(room.status)}
+                    {t('room.status')}: {getStatusText(room.status, t)}
                   </p>
                   {/* プレイヤーリストとチーム選択UI */}
                   <ul className={styles.playerList}>
@@ -145,7 +147,7 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                         ) : (
                           <span className={styles.teamLabel}>{getTeamOptionLabel(currentRoom?.players || [], player.team)}</span>
                         )}
-                        {player.isHost && <span className={styles.hostLabel}>(Host)</span>}
+                        {player.isHost && <span className={styles.hostLabel}>{t('room.host')}</span>}
                       </li>
                     ))}
                   </ul>
@@ -157,7 +159,7 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                           const result = await changePlayerTeam(room.id, teamChanges);
                           console.log('[RoomList] result:', result);
                           if (result) {
-                            setSetTeamText('Teams Updated');
+                            setSetTeamText(t('room.teamsUpdated'));
                             setTeamChanges({}); // 変更をクリア
                           }
                         } catch (error) {
@@ -172,13 +174,13 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                   )}
                 </div>
                 {/* 参加ボタン: 自分が参加していないルームで、かつ満員でない場合のみ表示 */}
-                {actualPlayerCount < room.settings.maxPlayers && 
+                {actualPlayerCount < room.settings.maxPlayers &&
                  currentRoom?.id !== room.id && (
                   <button
                     onClick={() => joinRoom(room.id)}
                     className={styles.joinButton}
                   >
-                    Join
+                    {t('room.join')}
                   </button>
                 )}
                 {/* 準備ボタン: 自分が参加しているルームのみ表示 */}
@@ -187,18 +189,18 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                     onClick={() => togglePlayerReady()}
                     className={`${styles.readyButton} ${readyStatus[currentPlayerId] ? styles.ready : ''}`}
                   >
-                    {readyStatus[currentPlayerId] ? 'Ready' : 'Ready Up'}
+                    {readyStatus[currentPlayerId] ? t('common.ready') : t('common.readyUp')}
                   </button>
                 )}
                 {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
-                {currentRoom?.id === room.id && 
-                 room.status === RoomStatus.READY && 
+                {currentRoom?.id === room.id &&
+                 room.status === RoomStatus.READY &&
                  room.hostId === currentPlayerId && (
                   <button
                     onClick={() => startGameRoom()}
                     className={styles.startButton}
                   >
-                    Start Game
+                    {t('room.start')}
                   </button>
                 )}
                 {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
@@ -207,7 +209,7 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                     onClick={() => leaveRoom(room.id)}
                     className={styles.leaveButton}
                   >
-                    Leave
+                    {t('common.leave')}
                   </button>
                 )}
               </div>

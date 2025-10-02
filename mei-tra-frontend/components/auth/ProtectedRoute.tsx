@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from './AuthModal';
 import { useState, useEffect } from 'react';
@@ -17,6 +18,7 @@ export function ProtectedRoute({
   fallback
 }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
+  const t = useTranslations('auth');
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function ProtectedRoute({
       <div className={styles.loadingContainer}>
         <div className={styles.loadingContent}>
           <div className={styles.loadingSpinner}></div>
-          <span className={styles.loadingText}>認証状態を確認中...</span>
+          <span className={styles.loadingText}>{t('checkingAuth')}</span>
         </div>
       </div>
     );
@@ -45,9 +47,9 @@ export function ProtectedRoute({
       <div className={styles.authRequiredContainer}>
         <div className={styles.authRequiredContent}>
           <div className={styles.authRequiredMessage}>
-            <h2 className={styles.authRequiredTitle}>認証が必要です</h2>
+            <h2 className={styles.authRequiredTitle}>{t('authRequired')}</h2>
             <p className={styles.authRequiredDescription}>
-              このページにアクセスするにはログインが必要です
+              {t('authRequiredDescription')}
             </p>
           </div>
           <div className={styles.authButtonContainer}>
@@ -55,7 +57,7 @@ export function ProtectedRoute({
               onClick={() => setShowAuthModal(true)}
               className={styles.authButton}
             >
-              ログイン
+              {t('login')}
             </button>
           </div>
           <AuthModal
