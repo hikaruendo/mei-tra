@@ -1,9 +1,9 @@
 'use client';
 
-import { Navigation } from '../../components/layout/Navigation';
-import { RoomList } from '../../components/molecules/RoomList';
-import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
-import { useSocket } from '../../hooks/useSocket';
+import { Navigation } from '@/components/layout/Navigation';
+import { RoomList } from '@/components/molecules/RoomList';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useSocket } from '@/hooks/useSocket';
 
 export const dynamic = 'force-dynamic';
 

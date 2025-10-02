@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../../lib/supabase';
+import { createClient } from '@/lib/supabase';
 import styles from './page.module.scss';
 
 export default function AuthCallbackPage() {
