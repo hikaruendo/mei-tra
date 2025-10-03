@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { BlowDeclaration, Player, TrumpType } from '../../types/game.types';
 import styles from './index.module.scss';
 
@@ -44,6 +45,7 @@ export function BlowControls({
   currentHighestDeclaration,
   players,
 }: BlowControlsProps) {
+  const t = useTranslations('blowControls');
   const currentPlayerName = players.find(p => p.playerId === currentPlayer?.playerId)?.name;
 
   // 宣言処理
@@ -72,7 +74,7 @@ export function BlowControls({
       // 最初の宣言ではすべてのペア数が有効
       return BASE_PAIR_OPTIONS.map(pair => ({
         value: pair,
-        label: `${pair} Pairs`
+        label: `${pair} ${t('pairs')}`
       }));
     }
 
@@ -101,16 +103,16 @@ export function BlowControls({
       if (nextValidPair <= MAX_PAIRS) {
         return [{
           value: nextValidPair,
-          label: `${nextValidPair} Pairs (Over Call)`
+          label: `${nextValidPair} ${t('overCall')}`
         }];
       }
-      
+
       return [];
     }
 
     return validPairs.map(pair => ({
       value: pair,
-      label: `${pair} Pairs`
+      label: `${pair} ${t('pairs')}`
     }));
   };
 
@@ -140,25 +142,25 @@ export function BlowControls({
       <div className={styles.content}>
         <div className={styles.title}>
           <div className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}>
-            Current Turn: {currentPlayerName}
+            {t('currentTurn')} {currentPlayerName}
           </div>
         </div>
-      
+
         <div className={styles.controls}>
           <div className={styles.controlsRow}>
             {/* トランプ選択 */}
-            <select 
-              value={selectedTrump || ''} 
+            <select
+              value={selectedTrump || ''}
               onChange={(e) => setSelectedTrump(e.target.value as TrumpType)}
               className={styles.select}
               disabled={isDisabled}
             >
-              <option value="">Select Trump</option>
-              <option value="tra">Tra</option>
-              <option value="herz">Herz (♥)</option>
-              <option value="daiya">Daiya (♦)</option>
-              <option value="club">Club (♣)</option>
-              <option value="zuppe">Zuppe (♠)</option>
+              <option value="">{t('selectTrump')}</option>
+              <option value="tra">{t('tra')}</option>
+              <option value="herz">{t('herz')}</option>
+              <option value="daiya">{t('daiya')}</option>
+              <option value="club">{t('club')}</option>
+              <option value="zuppe">{t('zuppe')}</option>
             </select>
 
             {/* ペア数選択 */}
@@ -171,7 +173,7 @@ export function BlowControls({
               className={styles.select}
               disabled={isDisabled}
             >
-              <option value="">Select Pairs</option>
+              <option value="">{t('selectPairs')}</option>
               {validPairOptions.map(({ value, label }) => (
                 <option key={value} value={value}>
                   {label}
@@ -181,20 +183,20 @@ export function BlowControls({
 
             {/* アクションボタン */}
             <div className={styles.buttonGroup}>
-              <button 
+              <button
                 onClick={handleDeclare}
                 disabled={!selectedTrump || numberOfPairs < MIN_PAIRS || isDisabled}
                 className={`${styles.button} ${styles.declareButton}`}
               >
-                Declare
+                {t('declare')}
               </button>
 
-              <button 
+              <button
                 onClick={handlePass}
                 disabled={isDisabled}
                 className={`${styles.button} ${styles.passButton}`}
               >
-                Pass
+                {t('pass')}
               </button>
             </div>
           </div>
@@ -208,11 +210,11 @@ export function BlowControls({
 
               if (player.isPasser) {
                 return (
-                  <div 
+                  <div
                     key={`pass-${player.playerId}`}
                     className={`${styles.declarationItem} ${styles.pass}`}
                   >
-                    {player.name}: Passed
+                    {player.name}: {t('passed')}
                   </div>
                 );
               }

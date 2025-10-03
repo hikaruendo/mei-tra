@@ -2,6 +2,7 @@ import React from 'react';
 import { TrumpType, TeamScores, Player } from '../../types/game.types';
 import styles from './index.module.scss';
 import { useRoom } from '../../hooks/useRoom';
+import { useTranslations } from 'next-intl';
 interface GameInfoProps {
   currentTrump: TrumpType | null;
   currentHighestDeclarationPlayer: string | null;
@@ -21,6 +22,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   pointsToWin,
   players,
 }) => {
+  const t = useTranslations();
   const { leaveRoom } = useRoom();
 
   const getTrumpDisplay = () => {
@@ -68,7 +70,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         }}
         className={styles.leaveButton}
       >
-        Leave
+        {t('common.leave')}
       </button>
     </div>
   );

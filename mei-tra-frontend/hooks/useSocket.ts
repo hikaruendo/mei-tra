@@ -143,12 +143,9 @@ export function useSocket(): UseSocketReturn {
             });
 
             socketRef.current.on('auth-update-error', (error) => {
-              console.error('[useSocket] Auth update failed:', error);
-              console.error('[useSocket] Error details:', {
-                error,
-                tokenLength: token?.length,
-                socketConnected: socketRef.current?.connected
-              });
+              // Only log warning instead of error - this is not critical
+              console.warn('[useSocket] Auth update failed (non-critical):', error);
+              // Don't log sensitive token information
               isUpdatingAuthRef.current = false; // Reset flag on error
             });
           } else {

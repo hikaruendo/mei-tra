@@ -21,7 +21,7 @@ export default function Home() {
   if (!gameState) {
     return (
       <>
-        <Navigation />
+        <Navigation gameStarted={false} />
         <main>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
@@ -67,7 +67,7 @@ export default function Home() {
   if (!gameActions || !setName || !setSelectedTrump || !setNumberOfPairs || !setNotification) {
     return (
       <>
-        <Navigation />
+        <Navigation gameStarted={false} />
         <main>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
@@ -82,7 +82,7 @@ export default function Home() {
 
   return (
     <>
-      <Navigation />
+      <Navigation gameStarted={gameStarted} />
       <main>
         {notification && (
           <Notification

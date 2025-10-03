@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from '../../types/game.types';
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
@@ -43,6 +44,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentField,
   currentTrump,
 }) => {
+  const t = useTranslations('playerHand');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
 
@@ -106,7 +108,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     <div className={styles.suit}>{suit}</div>
                   </>
                 )}
-                {isNegri && <div className={styles.negriLabel}>Negri</div>}
+                {isNegri && <div className={styles.negriLabel}>{t('negri')}</div>}
               </div>
             );
           })}
@@ -117,7 +119,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 gameActions.playCard(selectedCard);
                 setSelectedCard(null);
               }}
-              buttonText="Play"
+              buttonText={t('play')}
             />
           )}
           {selectedNegriCard && (
@@ -127,7 +129,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 gameActions.selectNegri(selectedNegriCard);
                 setSelectedNegriCard(null);
               }}
-              buttonText="Negri"
+              buttonText={t('negri')}
             />
           )}
         </div>
@@ -162,13 +164,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 showName={true}
               />
             </div>
-            <div className={styles.cardCount}>{player.hand.length}枚</div>
+            <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>
             {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
-              <div className={styles.selectNegriCard}>ネグリカードを選択してください</div>
+              <div className={styles.selectNegriCard}>{t('selectNegri')}</div>
             )}
             {isCurrentPlayer && agariCard && isWinningPlayer && (
               <div className={styles.agariCardContainer}>
-                <div className={styles.agariLabel}>アガリ</div>
+                <div className={styles.agariLabel}>{t('agari')}</div>
                 <Card card={agariCard} />
               </div>
             )}
@@ -177,7 +179,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 className={styles.brokenButton}
                 onClick={() => gameActions.revealBrokenHand(player.playerId)}
               >
-                ブロークンハンドを公開
+                {t('revealBroken')}
               </button>
             )}
           </div>

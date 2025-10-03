@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import styles from './index.module.scss';
 
 interface PlayAndCancelBtnProps {
@@ -12,13 +13,15 @@ export const PlayAndCancelBtn: React.FC<PlayAndCancelBtnProps> = ({
   onClick,
   buttonText,
 }) => {
-    return (
+  const t = useTranslations('common');
+
+  return (
       <div className={styles.confirmationButtons}>
-        <button 
+        <button
           className={styles.cancelButton}
           onClick={() => setSelectedCard(null)}
         >
-          Cancel
+          {t('cancel')}
         </button>
         <button 
           className={styles.confirmButton}

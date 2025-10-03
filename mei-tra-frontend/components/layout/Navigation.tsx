@@ -6,7 +6,11 @@ import { usePathname, useRouter, Link } from '@/i18n/routing';
 import { UserProfile } from '../profile/UserProfile';
 import styles from './Navigation.module.scss';
 
-export function Navigation() {
+interface NavigationProps {
+  gameStarted?: boolean;
+}
+
+export function Navigation({ gameStarted = false }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const t = useTranslations('nav');
   const locale = useLocale();
@@ -25,6 +29,9 @@ export function Navigation() {
     const newLocale = locale === 'ja' ? 'en' : 'ja';
     router.replace(pathname, { locale: newLocale });
   };
+
+  // Hide language switcher only when game is started on home page
+  const shouldHideLangSwitcher = pathname === '/' && gameStarted;
 
   return (
     <nav className={styles.navigation}>
@@ -57,13 +64,15 @@ export function Navigation() {
             >
               {t('tutorial')}
             </Link>
-            <button
-              onClick={switchLocale}
-              className={styles.langSwitcher}
-              aria-label="Switch language"
-            >
-              {locale === 'ja' ? 'EN' : 'JA'}
-            </button>
+            {!shouldHideLangSwitcher && (
+              <button
+                onClick={switchLocale}
+                className={styles.langSwitcher}
+                aria-label="Switch language"
+              >
+                {locale === 'ja' ? 'EN' : 'JA'}
+              </button>
+            )}
             <UserProfile />
           </div>
 
@@ -105,15 +114,17 @@ export function Navigation() {
           >
             {t('tutorial')}
           </Link>
-          <button
-            onClick={() => {
-              switchLocale();
-              closeMobileMenu();
-            }}
-            className={styles.langSwitcherMobile}
-          >
-            {locale === 'ja' ? 'English' : '日本語'}
-          </button>
+          {!shouldHideLangSwitcher && (
+            <button
+              onClick={() => {
+                switchLocale();
+                closeMobileMenu();
+              }}
+              className={styles.langSwitcherMobile}
+            >
+              {locale === 'ja' ? 'English' : '日本語'}
+            </button>
+          )}
           <div className={styles.mobileUserProfile}>
             <UserProfile />
           </div>
