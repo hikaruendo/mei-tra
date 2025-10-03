@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useSocket } from '../../../hooks/useSocket';
+import { useGame } from '../../../hooks/useGame';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
 import styles from './index.module.scss';
@@ -40,6 +41,7 @@ interface RoomListProps {
 export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting }) => {
   const t = useTranslations();
   const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom, changePlayerTeam } = useRoom();
+  const game = useGame();
   const [newRoomName, setNewRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
@@ -48,14 +50,15 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
   const { socket } = useSocket();
 
   const readyStatus = playerReadyStatus as Record<string, boolean>;
+  const players = useMemo(() => game?.players || [], [game?.players]);
 
   // 現在のプレイヤーIDを取得
   const currentPlayerId = useMemo(() => {
-    if (!currentRoom) return '';
     const socketId = socket?.id;
-    const player = currentRoom.players.find(p => p.id === socketId);
+    if (!socketId) return '';
+    const player = players.find(p => p.id === socketId);
     return player?.playerId || '';
-  }, [currentRoom, socket?.id]);
+  }, [players, socket?.id]);
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
