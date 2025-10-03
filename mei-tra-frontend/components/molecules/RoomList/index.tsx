@@ -5,6 +5,7 @@ import { useSocket } from '../../../hooks/useSocket';
 import { useGame } from '../../../hooks/useGame';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
+import { ConfirmModal } from '../ConfirmModal';
 import styles from './index.module.scss';
 
 const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
@@ -48,6 +49,8 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
   const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
   const [setTeamText, setSetTeamText] = useState<string>(t('room.updateTeams'));
   const { socket } = useSocket();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [roomToLeave, setRoomToLeave] = useState<string | null>(null);
 
   const readyStatus = playerReadyStatus as Record<string, boolean>;
   const players = useMemo(() => game?.players || [], [game?.players]);
@@ -68,6 +71,24 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
       setPointsToWin(5);
       setTeamAssignmentMethod('random');
     }
+  };
+
+  const handleLeaveClick = (roomId: string) => {
+    setRoomToLeave(roomId);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmLeave = () => {
+    if (roomToLeave) {
+      leaveRoom(roomToLeave);
+    }
+    setShowConfirmModal(false);
+    setRoomToLeave(null);
+  };
+
+  const handleCancelLeave = () => {
+    setShowConfirmModal(false);
+    setRoomToLeave(null);
   };
 
   return (
@@ -209,7 +230,7 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                 {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
                 {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
                   <button
-                    onClick={() => leaveRoom(room.id)}
+                    onClick={() => handleLeaveClick(room.id)}
                     className={styles.leaveButton}
                   >
                     {t('common.leave')}
@@ -220,6 +241,16 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
           })}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title={t('room.leaveConfirm.title')}
+        message={t('room.leaveConfirm.message')}
+        onConfirm={handleConfirmLeave}
+        onCancel={handleCancelLeave}
+        confirmText={t('common.leave')}
+        cancelText={t('common.cancel')}
+      />
     </div>
   );
 }; 

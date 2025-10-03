@@ -91,7 +91,11 @@
     "notConnected": "Socket not connected",
     "host": "(Host)",
     "updateTeams": "Update Teams",
-    "teamsUpdated": "Teams Updated"
+    "teamsUpdated": "Teams Updated",
+    "leaveConfirm": {
+      "title": "Leave Room",
+      "message": "Are you sure you want to leave this room?"
+    }
   },
   "game": {
     "initializing": "Initializing game...",

@@ -91,7 +91,11 @@
     "notConnected": "ソケット未接続",
     "host": "(ホスト)",
     "updateTeams": "チーム更新",
-    "teamsUpdated": "チーム更新完了"
+    "teamsUpdated": "チーム更新完了",
+    "leaveConfirm": {
+      "title": "ルームから退出",
+      "message": "本当にこのルームから退出しますか？"
+    }
   },
   "game": {
     "initializing": "ゲームを初期化中...",
