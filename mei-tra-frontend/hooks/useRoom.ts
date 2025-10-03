@@ -356,7 +356,15 @@ export const useRoom = () => {
     if (!socket) return;
 
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
-      if (!response.success) {
+      if (response.success) {
+        // Clear reconnection data from sessionStorage to allow fresh rejoin
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('reconnectToken');
+          sessionStorage.removeItem('roomId');
+          sessionStorage.removeItem('playerName');
+          console.log('[useRoom] Cleared reconnection data from sessionStorage');
+        }
+      } else {
         setError(response.error || 'Failed to leave room');
       }
     });
