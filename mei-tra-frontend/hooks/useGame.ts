@@ -167,16 +167,18 @@ export const useGame = () => {
         }
         if (data.roomStatus === 'playing') {
           setGameStarted(true);
+          // ゲーム中の場合、プレイヤー配列は'game-state'イベントで更新されるため、ここでは更新しない
+          return;
         }
         setPlayers((prev) => {
           const existingPlayer = prev.find(p => p.playerId === data.playerId);
           if (existingPlayer) {
             return prev;
           }
-          
+
           const socketId = socket?.id;
           if (!socketId) return prev;
-          
+
           return [...prev, {
             id: socketId,
             playerId: data.playerId,
@@ -213,7 +215,9 @@ export const useGame = () => {
           alert(`Team ${winner} won the ${phase} phase!`);
         }
       },
-      'error-message': (message: string) => alert(message),
+      'error-message': (message: string) => {
+        setNotification({ message, type: 'error' });
+      },
       'update-turn': (playerId: string) => {
         setWhoseTurn(playerId);
       },
@@ -376,6 +380,13 @@ export const useGame = () => {
         setPaused(false);
         setGameStarted(true);
         setNotification({ message, type: 'success' });
+      },
+      'player-converted-to-dummy': ({ playerId, message }: { playerId: string; message: string }) => {
+        console.log('[useGame] Player converted to dummy:', playerId, message);
+        setNotification({
+          message: `プレイヤー ${playerId} が長時間切断のため、ダミープレイヤーに変換されました`,
+          type: 'warning'
+        });
       },
     };
 
