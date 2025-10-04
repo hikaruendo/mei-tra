@@ -167,16 +167,18 @@ export const useGame = () => {
         }
         if (data.roomStatus === 'playing') {
           setGameStarted(true);
+          // ゲーム中の場合、プレイヤー配列は'game-state'イベントで更新されるため、ここでは更新しない
+          return;
         }
         setPlayers((prev) => {
           const existingPlayer = prev.find(p => p.playerId === data.playerId);
           if (existingPlayer) {
             return prev;
           }
-          
+
           const socketId = socket?.id;
           if (!socketId) return prev;
-          
+
           return [...prev, {
             id: socketId,
             playerId: data.playerId,
@@ -213,7 +215,9 @@ export const useGame = () => {
           alert(`Team ${winner} won the ${phase} phase!`);
         }
       },
-      'error-message': (message: string) => alert(message),
+      'error-message': (message: string) => {
+        setNotification({ message, type: 'error' });
+      },
       'update-turn': (playerId: string) => {
         setWhoseTurn(playerId);
       },
@@ -350,13 +354,19 @@ export const useGame = () => {
         setBlowDeclarations(blowDeclarations);
       },
       'reconnect-token': (token: string) => {
-        console.log('[useGame] Received new reconnect token:', token);
-        setReconnectToken(token);
-        try {
-          sessionStorage.setItem('reconnectToken', token);
-          console.log('[useGame] Successfully stored new reconnect token in sessionStorage');
-        } catch (error) {
-          console.error('[useGame] Failed to store reconnect token in sessionStorage:', error);
+        // Only store reconnectToken for guest users
+        // Authenticated users don't need it (they use userId)
+        if (!user) {
+          console.log('[useGame] Received new reconnect token for guest user:', token);
+          setReconnectToken(token);
+          try {
+            sessionStorage.setItem('reconnectToken', token);
+            console.log('[useGame] Successfully stored reconnect token in sessionStorage');
+          } catch (error) {
+            console.error('[useGame] Failed to store reconnect token in sessionStorage:', error);
+          }
+        } else {
+          console.log('[useGame] Skipped reconnectToken storage for authenticated user (using userId)');
         }
       },
       'back-to-lobby': () => {
@@ -376,6 +386,13 @@ export const useGame = () => {
         setPaused(false);
         setGameStarted(true);
         setNotification({ message, type: 'success' });
+      },
+      'player-converted-to-dummy': ({ playerId, message }: { playerId: string; message: string }) => {
+        console.log('[useGame] Player converted to dummy:', playerId, message);
+        setNotification({
+          message: `プレイヤー ${playerId} が長時間切断のため、ダミープレイヤーに変換されました`,
+          type: 'warning'
+        });
       },
     };
 

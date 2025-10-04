@@ -24,10 +24,16 @@ export interface IRoomService {
   ): Promise<boolean>;
   canStartGame(roomId: string): Promise<{ canStart: boolean; reason?: string }>;
   getRoomGameState(roomId: string): Promise<GameStateService>;
+  convertPlayerToDummy(roomId: string, playerId: string): Promise<boolean>;
+  restorePlayerFromVacantSeat(
+    roomId: string,
+    playerId: string,
+  ): Promise<boolean>;
   handlePlayerReconnection(
     roomId: string,
     playerId: string,
     socketId: string,
+    userId?: string,
   ): Promise<{ success: boolean; error?: string }>;
   updateUserGameStats(
     userId: string,

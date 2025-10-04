@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { AuthForm } from './AuthForm';
 import styles from './AuthModal.module.scss';
 
@@ -12,6 +13,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, initialMode = 'signin', onSuccess }: AuthModalProps) {
+  const t = useTranslations('auth');
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signin', onSuccess }
       <div className={styles.modal}>
         <div className={styles.header}>
           <h2 className={styles.title}>
-            {mode === 'signin' ? 'ログイン' : '新規登録'}
+            {mode === 'signin' ? t('login') : t('signup')}
           </h2>
           <button
             onClick={onClose}

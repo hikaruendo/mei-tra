@@ -101,8 +101,7 @@ export class GameStateService implements IGameStateService {
     if (this.roomId) {
       try {
         await this.gameStateRepository.update(this.roomId, newState);
-      } catch (error) {
-        console.error('Failed to persist game state:', error);
+      } catch {
         // Continue with in-memory operation even if persistence fails
       }
     }
@@ -115,13 +114,22 @@ export class GameStateService implements IGameStateService {
       if (persistedState) {
         this.state = persistedState;
         this.roomId = roomId;
+
+        // Rebuild playerIds map from persisted players
+        // This is necessary because playerIds map is not persisted to database
+        this.playerIds.clear();
+        this.state.players.forEach((player) => {
+          if (player.playerId) {
+            // Use playerId as both token and playerId for simplicity
+            this.playerIds.set(player.playerId, player.playerId);
+          }
+        });
       } else {
         // Initialize new state for this room
         this.roomId = roomId;
         await this.gameStateRepository.create(roomId, this.state);
       }
-    } catch (error) {
-      console.error('Failed to load game state:', error);
+    } catch {
       // Fall back to in-memory state
       this.roomId = roomId;
     }
@@ -134,8 +142,8 @@ export class GameStateService implements IGameStateService {
     if (this.roomId) {
       try {
         await this.gameStateRepository.update(this.roomId, { pointsToWin });
-      } catch (error) {
-        console.error('Failed to persist pointsToWin setting:', error);
+      } catch {
+        // Silent fail
       }
     }
   }
@@ -144,8 +152,8 @@ export class GameStateService implements IGameStateService {
     if (this.roomId) {
       try {
         await this.gameStateRepository.update(this.roomId, this.state);
-      } catch (error) {
-        console.error('Failed to save game state:', error);
+      } catch {
+        // Silent fail
       }
     }
   }
@@ -207,6 +215,11 @@ export class GameStateService implements IGameStateService {
     player.id = '';
   }
 
+  // プレイヤーの再接続トークンを登録
+  registerPlayerToken(token: string, playerId: string): void {
+    this.playerIds.set(token, playerId);
+  }
+
   // プレイヤーの再接続トークンを削除
   removePlayerToken(playerId: string): void {
     // playerIdsマップから該当するトークンを検索して削除
@@ -216,6 +229,12 @@ export class GameStateService implements IGameStateService {
         break;
       }
     }
+  }
+
+  findPlayerByUserId(userId: string): Player | null {
+    // Find player by their Supabase userId
+    // This works even if the player is disconnected (empty socket id)
+    return this.state.players.find((p) => p.userId === userId) || null;
   }
 
   findPlayerByReconnectToken(token: string): Player | null {
@@ -231,7 +250,11 @@ export class GameStateService implements IGameStateService {
     return this.state.players.find((p) => p.playerId === token) || null;
   }
 
-  async updatePlayerSocketId(playerId: string, newId: string): Promise<void> {
+  async updatePlayerSocketId(
+    playerId: string,
+    newId: string,
+    userId?: string,
+  ): Promise<void> {
     // Find the player by playerId, not by socket id
     const player = this.state.players.find((p) => p.playerId === playerId);
 
@@ -246,6 +269,14 @@ export class GameStateService implements IGameStateService {
       // Update the socket ID
       player.id = newId;
 
+      // Update userId if provided (for authenticated users)
+      if (userId) {
+        player.userId = userId;
+        console.log(
+          `[GameState] Updated player ${playerId} with userId: ${userId}`,
+        );
+      }
+
       // Update token mappings
       const token = this.playerIds.get(player.playerId);
       if (token) {
@@ -255,9 +286,15 @@ export class GameStateService implements IGameStateService {
       // Persist the player update
       if (this.roomId) {
         try {
-          await this.gameStateRepository.updatePlayer(this.roomId, playerId, {
-            id: newId,
-          });
+          const updates: { id: string; userId?: string } = { id: newId };
+          if (userId) {
+            updates.userId = userId;
+          }
+          await this.gameStateRepository.updatePlayer(
+            this.roomId,
+            playerId,
+            updates,
+          );
         } catch (error) {
           console.error('Failed to persist player socket update:', error);
         }

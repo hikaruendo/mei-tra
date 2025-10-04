@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { SignInData, SignUpData } from '@/types/user.types';
 import styles from './AuthForm.module.scss';
@@ -13,6 +14,7 @@ interface AuthFormProps {
 
 export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const { signIn, signUp, loading } = useAuth();
+  const t = useTranslations('auth');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -45,11 +47,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       } else {
         // Validate signup data
         if (!formData.username.trim()) {
-          setError('ユーザー名を入力してください');
+          setError(t('usernameRequired'));
           return;
         }
         if (!formData.displayName.trim()) {
-          setError('表示名を入力してください');
+          setError(t('displayNameRequired'));
           return;
         }
 
@@ -65,11 +67,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
         } else {
           setError(null);
           // Show success message for email verification
-          alert('確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。');
+          alert(t('confirmEmailSent'));
         }
       }
     } catch {
-      setError('予期しないエラーが発生しました');
+      setError(t('unexpectedError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -82,7 +84,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
 
   const handleMagicLink = async () => {
     if (!formData.email.trim()) {
-      setError('メールアドレスを入力してください');
+      setError(t('emailRequired'));
       return;
     }
 
@@ -104,11 +106,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       if (error) {
         setError(error.message);
       } else {
-        setSuccessMessage('ログインリンクをメールで送信しました。メールをご確認ください。');
+        setSuccessMessage(t('magicLinkSent'));
       }
     } catch (err) {
       console.error('Magic link error:', err);
-      setError('予期しないエラーが発生しました');
+      setError(t('unexpectedError'));
     } finally {
       setIsSendingMagicLink(false);
     }
@@ -116,7 +118,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
 
   const handlePasswordReset = async () => {
     if (!formData.email.trim()) {
-      setError('メールアドレスを入力してください');
+      setError(t('emailRequired'));
       return;
     }
 
@@ -135,11 +137,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       if (error) {
         setError(error.message);
       } else {
-        setSuccessMessage('パスワードリセットリンクをメールで送信しました。メールをご確認ください。');
+        setSuccessMessage(t('passwordResetSent'));
       }
     } catch (err) {
       console.error('Password reset error:', err);
-      setError('予期しないエラーが発生しました');
+      setError(t('unexpectedError'));
     } finally {
       setIsSendingReset(false);
     }
@@ -149,13 +151,13 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     <div className={styles.container}>
       <div className={styles.card}>
         <h2 className={styles.title}>
-          {mode === 'signin' ? 'ログイン' : '新規登録'}
+          {mode === 'signin' ? t('login') : t('signup')}
         </h2>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
             <label htmlFor="email" className={styles.label}>
-              メールアドレス
+              {t('email')}
             </label>
             <input
               id="email"
@@ -171,7 +173,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
 
           <div className={styles.fieldGroup}>
             <label htmlFor="password" className={styles.label}>
-              パスワード
+              {t('password')}
             </label>
             <input
               id="password"
@@ -190,7 +192,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             <>
               <div className={styles.fieldGroup}>
                 <label htmlFor="username" className={styles.label}>
-                  ユーザー名
+                  {t('username')}
                 </label>
                 <input
                   id="username"
@@ -205,13 +207,13 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
                   disabled={isSubmitting}
                 />
                 <p className={styles.helperText}>
-                  3-50文字の英数字と_のみ使用可能
+                  {t('usernameHelper')}
                 </p>
               </div>
 
               <div className={styles.fieldGroup}>
                 <label htmlFor="displayName" className={styles.label}>
-                  表示名
+                  {t('displayName')}
                 </label>
                 <input
                   id="displayName"
@@ -245,14 +247,14 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             disabled={isSubmitting || loading}
             className={styles.submitButton}
           >
-            {isSubmitting ? '処理中...' : mode === 'signin' ? 'ログイン' : '新規登録'}
+            {isSubmitting ? t('processing') : mode === 'signin' ? t('login') : t('signup')}
           </button>
         </form>
 
         {mode === 'signin' && (
           <div className={styles.alternativeAuth}>
             <div className={styles.divider}>
-              <span>または</span>
+              <span>{t('or')}</span>
             </div>
 
             <button
@@ -261,7 +263,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
               disabled={isSendingMagicLink || !formData.email.trim()}
               className={styles.magicLinkButton}
             >
-              {isSendingMagicLink ? '送信中...' : 'メールでログイン'}
+              {isSendingMagicLink ? t('sending') : t('loginWithEmail')}
             </button>
 
             <button
@@ -270,7 +272,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
               disabled={isSendingReset || !formData.email.trim()}
               className={styles.resetButton}
             >
-              {isSendingReset ? '送信中...' : 'パスワードを忘れた場合'}
+              {isSendingReset ? t('sending') : t('forgotPassword')}
             </button>
           </div>
         )}
@@ -281,10 +283,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             onClick={() => onModeChange?.(mode === 'signin' ? 'signup' : 'signin')}
             className={styles.modeToggleButton}
           >
-            {mode === 'signin'
-              ? 'アカウントをお持ちでない方は新規登録'
-              : 'すでにアカウントをお持ちの方はログイン'
-            }
+            {mode === 'signin' ? t('noAccount') : t('hasAccount')}
           </button>
         </div>
       </div>

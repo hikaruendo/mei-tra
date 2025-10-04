@@ -12,18 +12,11 @@ export class PlayService implements IPlayService {
     players: Player[],
     trumpSuit: TrumpType | null,
   ): Player | null {
-    console.log('Determining field winner with:', {
-      field,
-      players: players.map((p) => ({ id: p.playerId, name: p.name })),
-      trumpSuit,
-    });
-
     // 有効なプレイヤー（ダミーでないプレイヤー）のみをフィルタリング
     const validPlayers = players.filter(
       (p) => !p.playerId.startsWith('dummy-'),
     );
     if (validPlayers.length === 0) {
-      console.log('No valid players found');
       return null;
     }
 
@@ -33,8 +26,6 @@ export class PlayService implements IPlayService {
       trumpSuit,
       field.baseSuit,
     );
-
-    console.log('Base card and suit:', { baseCard, baseSuit });
 
     let winner: Player | null = null;
     let highestStrength = -1;
@@ -46,7 +37,6 @@ export class PlayService implements IPlayService {
 
     // ディーラーが見つからない場合、最初の有効なプレイヤーをディーラーとする
     if (dealerIndex === -1) {
-      console.log('Dealer not found, using first valid player as dealer');
       dealerIndex = 0;
       field.dealerId = validPlayers[0].playerId;
     }
@@ -57,16 +47,10 @@ export class PlayService implements IPlayService {
       return validPlayers[index];
     });
 
-    console.log(
-      'Updated player order:',
-      updatedPlayerOrder.map((p) => ({ id: p.playerId, name: p.name })),
-    );
-
     // 各カードの強度を計算して勝者を決定
     field.cards.forEach((card, cardIndex) => {
       const player = updatedPlayerOrder[cardIndex];
       if (!player) {
-        console.log(`No player found for card at index ${cardIndex}`);
         return;
       }
 
@@ -76,21 +60,11 @@ export class PlayService implements IPlayService {
         trumpSuit,
       );
 
-      console.log(
-        `Card ${card} played by ${player.name} has strength ${strength}`,
-      );
-
       if (strength > highestStrength) {
         highestStrength = strength;
         winner = player;
       }
     });
-
-    if (winner) {
-      console.log(`Winner determined with strength ${highestStrength}`);
-    } else {
-      console.log('No winner could be determined');
-    }
 
     return winner;
   }

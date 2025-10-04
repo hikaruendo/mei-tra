@@ -42,19 +42,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const loadingUserRef = useRef<string | null>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Listen for auth changes (includes initial session)
+    // Initialize auth immediately on mount
+    const initializeAuth = async () => {
+      console.log('[AuthContext] Initializing auth...');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      setSession(session);
+
+      if (session?.user) {
+        await loadUserProfile(session.user);
+      } else {
+        setLoading(false);
+      }
+
+      initializedRef.current = true;
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes (skip INITIAL_SESSION as we handled it above)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Skip INITIAL_SESSION event as we already initialized
+      if (event === 'INITIAL_SESSION') {
+        return;
+      }
+
+      console.log('[AuthContext] Auth state changed:', event);
       setSession(session);
 
-      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) {
+      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
         await loadUserProfile(session.user);
       } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         setLoading(false);
+        // Clear profile cache on sign out
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('auth_profile_cache');
+        }
       }
     });
 
@@ -63,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (supabaseUser: User, retryCount = 0) => {
     const maxRetries = 3;
-    
+
     // Prevent duplicate loading for the same user
     if (loadingUserRef.current === supabaseUser.id) {
       console.log('[AuthContext] Already loading profile for user:', supabaseUser.id);
@@ -71,6 +100,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     loadingUserRef.current = supabaseUser.id;
+
+    // Check cache first (browser only)
+    if (typeof window !== 'undefined' && retryCount === 0) {
+      const cacheKey = 'auth_profile_cache';
+      const cached = sessionStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          const { profile, userId, timestamp } = JSON.parse(cached);
+          const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+          // Use cache if it's for the same user and not expired
+          if (userId === supabaseUser.id && Date.now() - timestamp < CACHE_DURATION) {
+            console.log('[AuthContext] Using cached profile');
+            setUser({
+              id: supabaseUser.id,
+              email: supabaseUser.email,
+              profile,
+            });
+            setLoading(false);
+
+            // Refresh profile in background
+            setTimeout(() => {
+              console.log('[AuthContext] Refreshing profile in background');
+              loadUserProfile(supabaseUser, -1); // -1 to skip cache check
+            }, 0);
+
+            return;
+          }
+        } catch (e) {
+          console.warn('[AuthContext] Failed to parse cached profile:', e);
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+    }
 
     const attemptLoad = async (attempt: number): Promise<void> => {
       try {
@@ -177,6 +241,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: supabaseUser.email,
             profile: userProfile,
           });
+
+          // Cache the profile (browser only)
+          if (typeof window !== 'undefined' && retryCount >= 0) {
+            try {
+              sessionStorage.setItem('auth_profile_cache', JSON.stringify({
+                profile: userProfile,
+                userId: supabaseUser.id,
+                timestamp: Date.now(),
+              }));
+            } catch (e) {
+              console.warn('[AuthContext] Failed to cache profile:', e);
+            }
+          }
+
           // Mark loading complete on success
           loadingUserRef.current = null;
           setLoading(false);

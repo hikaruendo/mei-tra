@@ -3,9 +3,16 @@ import { SupabaseService } from '../database/supabase.service';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { AuthenticatedUser, UserProfile } from '../types/user.types';
 
+interface CachedTokenValidation {
+  user: AuthenticatedUser;
+  expiresAt: number;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly tokenCache = new Map<string, CachedTokenValidation>();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private readonly supabase: SupabaseService,
@@ -15,6 +22,15 @@ export class AuthService {
 
   async validateToken(token: string): Promise<AuthenticatedUser | null> {
     try {
+      // Check cache first
+      const cached = this.tokenCache.get(token);
+      if (cached && cached.expiresAt > Date.now()) {
+        this.logger.debug(
+          `[AuthService] Using cached token for user: ${cached.user.id}`,
+        );
+        return cached.user;
+      }
+
       this.logger.debug(
         `[AuthService] Validating token with length: ${token?.length || 0}`,
       );
@@ -31,11 +47,14 @@ export class AuthService {
             tokenLength: token?.length || 0,
           },
         );
+        // Remove from cache if validation failed
+        this.tokenCache.delete(token);
         return null;
       }
 
       if (!user.user) {
         this.logger.warn('[AuthService] No user data returned from Supabase');
+        this.tokenCache.delete(token);
         return null;
       }
 
@@ -73,11 +92,22 @@ export class AuthService {
         `[AuthService] Successfully validated user: ${user.user.id} with profile: ${profile.displayName}`,
       );
 
-      return {
+      const authenticatedUser: AuthenticatedUser = {
         id: user.user.id,
         email: user.user.email,
         profile,
       };
+
+      // Cache the result
+      this.tokenCache.set(token, {
+        user: authenticatedUser,
+        expiresAt: Date.now() + this.CACHE_TTL_MS,
+      });
+
+      // Clean up expired cache entries periodically
+      this.cleanupExpiredCache();
+
+      return authenticatedUser;
     } catch (error: unknown) {
       const err = error as { message?: string; stack?: string } | undefined;
       this.logger.error(
@@ -88,6 +118,15 @@ export class AuthService {
         },
       );
       return null;
+    }
+  }
+
+  private cleanupExpiredCache(): void {
+    const now = Date.now();
+    for (const [token, cached] of this.tokenCache.entries()) {
+      if (cached.expiresAt <= now) {
+        this.tokenCache.delete(token);
+      }
     }
   }
 

@@ -38,7 +38,7 @@ export function useSocket(): UseSocketReturn {
       try {
         // Initialize socket immediately without waiting for auth token
         if (!socketRef.current) {
-          // Start with no token initially
+          // Start with no token initially - will update via update-auth event
           socketRef.current = getSocket(undefined);
         }
 
@@ -91,7 +91,7 @@ export function useSocket(): UseSocketReturn {
     };
 
     initializeSocket();
-  }, []); // Remove all dependencies to initialize immediately
+  }, []); // Initialize once on mount
 
   // Separate effect to update auth token when available
   useEffect(() => {
@@ -143,12 +143,9 @@ export function useSocket(): UseSocketReturn {
             });
 
             socketRef.current.on('auth-update-error', (error) => {
-              console.error('[useSocket] Auth update failed:', error);
-              console.error('[useSocket] Error details:', {
-                error,
-                tokenLength: token?.length,
-                socketConnected: socketRef.current?.connected
-              });
+              // Only log warning instead of error - this is not critical
+              console.warn('[useSocket] Auth update failed (non-critical):', error);
+              // Don't log sensitive token information
               isUpdatingAuthRef.current = false; // Reset flag on error
             });
           } else {

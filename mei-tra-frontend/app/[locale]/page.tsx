@@ -1,17 +1,19 @@
 'use client';
 
-import { GameTable } from '../components/GameTable';
-import { Notification } from '../components/Notification';
-import { Navigation } from '../components/layout/Navigation';
-import { useGame } from '../hooks/useGame';
-import { useAuth } from '../contexts/AuthContext';
-import GameJoinGroup from '../components/organisms/GameJoinGroup';
-import { RoomList } from '../components/molecules/RoomList';
+import { useTranslations } from 'next-intl';
+import { GameTable } from '../../components/GameTable';
+import { Notification } from '../../components/Notification';
+import { Navigation } from '../../components/layout/Navigation';
+import { useGame } from '../../hooks/useGame';
+import { useAuth } from '../../contexts/AuthContext';
+import GameJoinGroup from '../../components/organisms/GameJoinGroup';
+import { RoomList } from '../../components/molecules/RoomList';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
+  const t = useTranslations('game');
   const gameState = useGame();
   const { user, loading: authLoading } = useAuth();
 
@@ -19,11 +21,11 @@ export default function Home() {
   if (!gameState) {
     return (
       <>
-        <Navigation />
+        <Navigation gameStarted={false} />
         <main>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
-            <span className={styles.loadingText}>ゲームを初期化中...</span>
+            <span className={styles.loadingText}>{t('initializing')}</span>
           </div>
         </main>
       </>
@@ -65,12 +67,12 @@ export default function Home() {
   if (!gameActions || !setName || !setSelectedTrump || !setNumberOfPairs || !setNotification) {
     return (
       <>
-        <Navigation />
+        <Navigation gameStarted={false} />
         <main>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
             <span className={styles.loadingText}>
-              ゲームアクションを初期化中...
+              {t('initializingActions')}
             </span>
           </div>
         </main>
@@ -80,7 +82,7 @@ export default function Home() {
 
   return (
     <>
-      <Navigation />
+      <Navigation gameStarted={gameStarted} />
       <main>
         {notification && (
           <Notification
@@ -91,7 +93,7 @@ export default function Home() {
         )}
         {paused ? (
           <div className={styles.paused}>
-            Game is paused. It will resume when 4 players are present.
+            {t('paused')}
           </div>
         ) : (
           <>

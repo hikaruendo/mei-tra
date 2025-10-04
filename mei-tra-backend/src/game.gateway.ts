@@ -15,6 +15,7 @@ import { IPlayService } from './services/interfaces/play-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { IChomboService } from './services/interfaces/chombo-service.interface';
 import { TrumpType, User } from './types/game.types';
+import { RoomStatus } from './types/room.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
@@ -111,16 +112,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const name =
         authenticatedUser.profile?.displayName || authenticatedUser.email;
       if (name) {
-        console.log('[GameGateway] Using authenticated user name:', name);
         return name;
       }
     }
 
     const authName = typeof auth.name === 'string' ? auth.name : undefined;
-    if (authName) {
-      console.log('[GameGateway] Using auth.name:', authName);
-    }
-
     return authName;
   }
 
@@ -207,16 +203,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //-------Connection-------
   async handleConnection(client: Socket) {
-    console.log('[Connection] New connection attempt from:', client.id);
-    console.log('[Connection] Transport:', client.conn.transport.name);
-    console.log(
-      '[Connection] User agent:',
-      client.handshake.headers['user-agent'],
-    );
-
     const auth = client.handshake.auth || {};
     const reconnectToken =
-      typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
+      typeof auth.reconnectToken === 'string' && auth.reconnectToken
+        ? auth.reconnectToken
+        : undefined;
     const name = typeof auth.name === 'string' ? auth.name : undefined;
     const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
     const supabaseToken =
@@ -240,14 +231,66 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    // トークンがある場合は再接続として処理
-    if (reconnectToken && roomId) {
+    // 再接続処理（優先順位: userId > reconnectToken）
+    if (roomId) {
       try {
+        console.log('[Reconnection] Attempting reconnection with:', {
+          roomId,
+          hasAuthToken: !!supabaseToken,
+          userId: authenticatedUser?.id || 'none',
+          hasReconnectToken: !!reconnectToken,
+          socketId: client.id,
+        });
+
         // ルームのゲーム状態を取得
         const roomGameState = await this.roomService.getRoomGameState(roomId);
 
-        const existingPlayer =
-          roomGameState.findPlayerByReconnectToken(reconnectToken);
+        let existingPlayer: Awaited<
+          ReturnType<typeof roomGameState.findPlayerByUserId>
+        > = null;
+
+        // 優先度1: ログインユーザーはuserIdで検索
+        if (authenticatedUser?.id) {
+          existingPlayer = roomGameState.findPlayerByUserId(
+            authenticatedUser.id,
+          );
+          if (existingPlayer) {
+            console.log(
+              `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
+            );
+          } else {
+            console.log(
+              `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}`,
+            );
+          }
+        }
+
+        // 優先度2: reconnectTokenで検索（ゲストユーザー用）
+        if (!existingPlayer && reconnectToken) {
+          existingPlayer =
+            roomGameState.findPlayerByReconnectToken(reconnectToken);
+          if (existingPlayer) {
+            console.log(
+              `[Reconnection] ✓ Found player by reconnectToken: ${reconnectToken}, playerId: ${existingPlayer.playerId}`,
+            );
+          } else {
+            console.log(
+              `[Reconnection] ✗ No player found by reconnectToken: ${reconnectToken}`,
+            );
+          }
+
+          // Try to restore from vacant seat if not found
+          if (!existingPlayer) {
+            const restored = await this.roomService.restorePlayerFromVacantSeat(
+              roomId,
+              reconnectToken,
+            );
+            if (restored) {
+              existingPlayer =
+                roomGameState.findPlayerByReconnectToken(reconnectToken);
+            }
+          }
+        }
 
         if (existingPlayer) {
           // ルームサービスで再接続処理
@@ -256,6 +299,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               roomId,
               existingPlayer.playerId,
               client.id,
+              authenticatedUser?.id, // Pass userId for authenticated users
             )
             .then((result) => {
               if (!result.success) {
@@ -296,19 +340,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               });
               this.server.to(roomId).emit('update-players', state.players);
 
-              // Issue new reconnect token for future reconnections
+              // Always issue reconnect token as fallback
+              // Even authenticated users need it when authToken isn't ready on reload
               this.server
                 .to(client.id)
                 .emit('reconnect-token', `${existingPlayer.playerId}`);
-              console.log(
-                `[Reconnection] Issued new token for player: ${existingPlayer.playerId}`,
-              );
+
+              if (authenticatedUser) {
+                console.log(
+                  `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
+                );
+              } else {
+                console.log(
+                  `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
+                );
+              }
             });
         } else {
           // プレイヤーが見つからない場合、トークンが無効または期限切れ
-          console.warn(
-            `Reconnect token not found or expired: ${reconnectToken} in room ${roomId}`,
-          );
           client.emit('error-message', 'Reconnection token expired or invalid');
           client.disconnect();
         }
@@ -331,15 +380,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         'User';
       const userId = authenticatedUser?.id;
 
-      console.log('[Connection] Adding player:', {
-        socketId: client.id,
-        displayName,
-        userId,
-        isAuthenticated: !!authenticatedUser,
-        hasName: !!name,
-        hasAuth: !!authenticatedUser,
-      });
-
       if (
         this.gameState.addPlayer(
           client.id,
@@ -353,9 +393,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const newUser = users.find((p) => p.id === client.id);
 
         if (newUser) {
-          this.server
-            .to(client.id)
-            .emit('reconnect-token', `${newUser.playerId}`);
+          // Issue reconnect token only for guest users
+          if (!authenticatedUser) {
+            this.server
+              .to(client.id)
+              .emit('reconnect-token', `${newUser.playerId}`);
+          }
           this.server.emit('update-users', users);
         }
       } else {
@@ -365,9 +408,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       // Allow connection to remain open without immediate name/reconnectToken.
       // The client can later authenticate via 'update-auth' or join with a name.
-      console.log(
-        '[Connection] No name/reconnectToken provided; keeping connection open for auth/join.',
-      );
     }
   }
 
@@ -431,9 +471,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const newUser = users.find((user) => user.id === client.id);
       if (newUser) {
         this.server.emit('update-users', users);
-        this.server
-          .to(client.id)
-          .emit('reconnect-token', `${newUser.playerId}`);
+        // Issue reconnect token only for guest users
+        if (!authenticatedUser) {
+          this.server
+            .to(client.id)
+            .emit('reconnect-token', `${newUser.playerId}`);
+        }
         client.emit('name-updated', {
           success: true,
           playerId: newUser.playerId,
@@ -451,9 +494,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: Socket) {
-    console.log('[Disconnect] Client disconnected:', client.id);
-    console.log('[Disconnect] Transport was:', client.conn.transport.name);
-
     const roomId = this.playerRooms.get(client.id);
     if (roomId) {
       this.playerRooms.delete(client.id);
@@ -468,22 +508,67 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // プレイヤーのチーム情報を保持
         state.teamAssignments[player.playerId] = player.team;
 
+        // ソケットIDをクリア（切断状態を示す）
+        player.id = '';
+
         // Notify other players in the same room about the disconnection
         this.server.to(roomId).emit('player-left', {
           playerId: player.playerId,
           roomId,
         });
 
-        // Set a timeout to remove the player if they don't reconnect
-        const timeout: NodeJS.Timeout = setTimeout(() => {
-          roomGameState.removePlayer(player.playerId);
-          this.server
-            .to(roomId)
-            .emit('update-players', roomGameState.getState().players);
-        }, 10000); // 10 seconds timeout
+        // プレイ中の場合は長めのタイムアウト(5分)を設定
+        // プレイヤーとトークンを保持しつつ、長時間放置されたらダミーに変換
+        if (state.gamePhase === 'play' || state.gamePhase === 'blow') {
+          const timeout: NodeJS.Timeout = setTimeout(
+            () => {
+              void (async () => {
+                try {
+                  const room = await this.roomService.getRoom(roomId);
+                  if (room?.status === RoomStatus.PLAYING) {
+                    const converted: boolean =
+                      await this.roomService.convertPlayerToDummy(
+                        roomId,
+                        player.playerId,
+                      );
+                    if (converted) {
+                      this.server.to(roomId).emit('player-converted-to-dummy', {
+                        playerId: player.playerId,
+                        message:
+                          'Player disconnected for too long - converted to dummy',
+                      });
+                      this.server
+                        .to(roomId)
+                        .emit(
+                          'update-players',
+                          roomGameState.getState().players,
+                        );
+                    }
+                  }
+                } catch (error) {
+                  console.error(
+                    '[Disconnect] Error converting player to dummy:',
+                    error,
+                  );
+                }
+              })();
+            },
+            5 * 60 * 1000,
+          ); // 5 minutes
 
-        // Store the timeout ID for potential cancellation on reconnection
-        roomGameState.setDisconnectTimeout(player.playerId, timeout);
+          roomGameState.setDisconnectTimeout(player.playerId, timeout);
+        } else {
+          // ロビー状態の場合のみタイムアウトを設定
+          const timeout: NodeJS.Timeout = setTimeout(() => {
+            roomGameState.removePlayer(player.playerId);
+            this.server
+              .to(roomId)
+              .emit('update-players', roomGameState.getState().players);
+          }, 10000); // 10 seconds timeout
+
+          // Store the timeout ID for potential cancellation on reconnection
+          roomGameState.setDisconnectTimeout(player.playerId, timeout);
+        }
       }
     }
   }

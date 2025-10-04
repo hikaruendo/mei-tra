@@ -1,12 +1,21 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { usePathname, useRouter, Link } from '@/i18n/routing';
 import { UserProfile } from '../profile/UserProfile';
 import styles from './Navigation.module.scss';
 
-export function Navigation() {
+interface NavigationProps {
+  gameStarted?: boolean;
+}
+
+export function Navigation({ gameStarted = false }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const t = useTranslations('nav');
+  const locale = useLocale();
+  const pathname = usePathname();
+  const router = useRouter();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -15,6 +24,14 @@ export function Navigation() {
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  const switchLocale = () => {
+    const newLocale = locale === 'ja' ? 'en' : 'ja';
+    router.replace(pathname, { locale: newLocale });
+  };
+
+  // Hide language switcher only when game is started on home page
+  const shouldHideLangSwitcher = pathname === '/' && gameStarted;
 
   return (
     <nav className={styles.navigation}>
@@ -39,14 +56,23 @@ export function Navigation() {
               href="/rooms"
               className={styles.navLink}
             >
-              ルーム一覧
+              {t('rooms')}
             </Link>
             <Link
               href="/tutorial"
               className={styles.navLink}
             >
-              チュートリアル
+              {t('tutorial')}
             </Link>
+            {!shouldHideLangSwitcher && (
+              <button
+                onClick={switchLocale}
+                className={styles.langSwitcher}
+                aria-label="Switch language"
+              >
+                {locale === 'ja' ? 'EN' : 'JA'}
+              </button>
+            )}
             <UserProfile />
           </div>
 
@@ -54,7 +80,7 @@ export function Navigation() {
           <button
             className={`${styles.mobileMenuButton} ${isMobileMenuOpen ? styles.active : ''}`}
             onClick={toggleMobileMenu}
-            aria-label="メニュー"
+            aria-label={t('menu')}
           >
             <span></span>
             <span></span>
@@ -79,15 +105,26 @@ export function Navigation() {
             className={styles.mobileNavLink}
             onClick={closeMobileMenu}
           >
-            ルーム一覧
+            {t('rooms')}
           </Link>
           <Link
             href="/tutorial"
             className={styles.mobileNavLink}
             onClick={closeMobileMenu}
           >
-            チュートリアル
+            {t('tutorial')}
           </Link>
+          {!shouldHideLangSwitcher && (
+            <button
+              onClick={() => {
+                switchLocale();
+                closeMobileMenu();
+              }}
+              className={styles.langSwitcherMobile}
+            >
+              {locale === 'ja' ? 'English' : '日本語'}
+            </button>
+          )}
           <div className={styles.mobileUserProfile}>
             <UserProfile />
           </div>

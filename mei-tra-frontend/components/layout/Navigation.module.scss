@@ -235,3 +235,41 @@ $transition-button: all 0.3s ease;
   border-top: 1px solid #e5e7eb;
   margin-top: $spacing-md;
 }
+
+// Language Switcher
+.langSwitcher {
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid #d1d5db;
+  border-radius: $radius-md;
+  background-color: $color-white;
+  color: #374151;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition-button;
+
+  &:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+  }
+}
+
+.langSwitcherMobile {
+  display: block;
+  padding: $spacing-md;
+  background-color: #f9fafb;
+  color: #374151;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: $radius-md;
+  transition: $transition-button;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+  }
+}

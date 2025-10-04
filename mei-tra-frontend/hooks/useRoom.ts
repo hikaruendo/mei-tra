@@ -356,7 +356,16 @@ export const useRoom = () => {
     if (!socket) return;
 
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
-      if (!response.success) {
+      if (response.success) {
+        // reconnectTokenは保持（同じplayerIdで再joinできるようにする）
+        // 他のプレイヤーが席を取ったら、その時点でトークンは無効になる
+        if (typeof window !== 'undefined') {
+          // sessionStorage.removeItem('reconnectToken');  // ← 保持
+          sessionStorage.removeItem('roomId');
+          // sessionStorage.removeItem('playerName');  // ← 名前も保持
+          console.log('[useRoom] Cleared room data (kept reconnectToken and playerName for rejoin)');
+        }
+      } else {
         setError(response.error || 'Failed to leave room');
       }
     });
