@@ -340,18 +340,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               });
               this.server.to(roomId).emit('update-players', state.players);
 
-              // Issue reconnect token only for guest users
-              // Authenticated users don't need it (they use userId)
-              if (!authenticatedUser) {
-                this.server
-                  .to(client.id)
-                  .emit('reconnect-token', `${existingPlayer.playerId}`);
+              // Always issue reconnect token as fallback
+              // Even authenticated users need it when authToken isn't ready on reload
+              this.server
+                .to(client.id)
+                .emit('reconnect-token', `${existingPlayer.playerId}`);
+
+              if (authenticatedUser) {
                 console.log(
-                  `[Reconnection] Issued new token for guest player: ${existingPlayer.playerId}`,
+                  `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
                 );
               } else {
                 console.log(
-                  `[Reconnection] Skipped token for authenticated user: ${authenticatedUser.id}`,
+                  `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
                 );
               }
             });
