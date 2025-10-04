@@ -38,7 +38,7 @@ export function useSocket(): UseSocketReturn {
       try {
         // Initialize socket immediately without waiting for auth token
         if (!socketRef.current) {
-          // Start with no token initially
+          // Start with no token initially - will update via update-auth event
           socketRef.current = getSocket(undefined);
         }
 
@@ -91,7 +91,7 @@ export function useSocket(): UseSocketReturn {
     };
 
     initializeSocket();
-  }, []); // Remove all dependencies to initialize immediately
+  }, []); // Initialize once on mount
 
   // Separate effect to update auth token when available
   useEffect(() => {

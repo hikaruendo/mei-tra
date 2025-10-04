@@ -205,7 +205,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     const auth = client.handshake.auth || {};
     const reconnectToken =
-      typeof auth.reconnectToken === 'string' ? auth.reconnectToken : undefined;
+      typeof auth.reconnectToken === 'string' && auth.reconnectToken
+        ? auth.reconnectToken
+        : undefined;
     const name = typeof auth.name === 'string' ? auth.name : undefined;
     const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
     const supabaseToken =
@@ -232,6 +234,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 再接続処理（優先順位: userId > reconnectToken）
     if (roomId) {
       try {
+        console.log('[Reconnection] Attempting reconnection with:', {
+          roomId,
+          hasAuthToken: !!supabaseToken,
+          userId: authenticatedUser?.id || 'none',
+          hasReconnectToken: !!reconnectToken,
+          socketId: client.id,
+        });
+
         // ルームのゲーム状態を取得
         const roomGameState = await this.roomService.getRoomGameState(roomId);
 
@@ -246,7 +256,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           );
           if (existingPlayer) {
             console.log(
-              `[Reconnection] Found player by userId: ${authenticatedUser.id}`,
+              `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
+            );
+          } else {
+            console.log(
+              `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}`,
             );
           }
         }
@@ -257,7 +271,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             roomGameState.findPlayerByReconnectToken(reconnectToken);
           if (existingPlayer) {
             console.log(
-              `[Reconnection] Found player by reconnectToken: ${reconnectToken}`,
+              `[Reconnection] ✓ Found player by reconnectToken: ${reconnectToken}, playerId: ${existingPlayer.playerId}`,
+            );
+          } else {
+            console.log(
+              `[Reconnection] ✗ No player found by reconnectToken: ${reconnectToken}`,
             );
           }
 
@@ -281,6 +299,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               roomId,
               existingPlayer.playerId,
               client.id,
+              authenticatedUser?.id, // Pass userId for authenticated users
             )
             .then((result) => {
               if (!result.success) {

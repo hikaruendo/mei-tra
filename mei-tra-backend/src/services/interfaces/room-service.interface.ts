@@ -33,6 +33,7 @@ export interface IRoomService {
     roomId: string,
     playerId: string,
     socketId: string,
+    userId?: string,
   ): Promise<{ success: boolean; error?: string }>;
   updateUserGameStats(
     userId: string,

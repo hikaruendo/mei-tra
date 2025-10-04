@@ -250,7 +250,11 @@ export class GameStateService implements IGameStateService {
     return this.state.players.find((p) => p.playerId === token) || null;
   }
 
-  async updatePlayerSocketId(playerId: string, newId: string): Promise<void> {
+  async updatePlayerSocketId(
+    playerId: string,
+    newId: string,
+    userId?: string,
+  ): Promise<void> {
     // Find the player by playerId, not by socket id
     const player = this.state.players.find((p) => p.playerId === playerId);
 
@@ -265,6 +269,14 @@ export class GameStateService implements IGameStateService {
       // Update the socket ID
       player.id = newId;
 
+      // Update userId if provided (for authenticated users)
+      if (userId) {
+        player.userId = userId;
+        console.log(
+          `[GameState] Updated player ${playerId} with userId: ${userId}`,
+        );
+      }
+
       // Update token mappings
       const token = this.playerIds.get(player.playerId);
       if (token) {
@@ -274,9 +286,15 @@ export class GameStateService implements IGameStateService {
       // Persist the player update
       if (this.roomId) {
         try {
-          await this.gameStateRepository.updatePlayer(this.roomId, playerId, {
-            id: newId,
-          });
+          const updates: { id: string; userId?: string } = { id: newId };
+          if (userId) {
+            updates.userId = userId;
+          }
+          await this.gameStateRepository.updatePlayer(
+            this.roomId,
+            playerId,
+            updates,
+          );
         } catch (error) {
           console.error('Failed to persist player socket update:', error);
         }

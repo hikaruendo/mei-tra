@@ -34,7 +34,7 @@ export function getSocket(authToken?: string): Socket {
     const socketOptions = {
       transports: isSafari ? ['polling', 'websocket'] : ['websocket', 'polling'],
       auth: {
-        reconnectToken,
+        ...(reconnectToken ? { reconnectToken } : {}), // Only include if non-empty
         roomId,
         token: authToken,
         ...(storedName ? { name: storedName } : {}),

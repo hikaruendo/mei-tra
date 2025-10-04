@@ -703,6 +703,7 @@ export class RoomService implements IRoomService {
     roomId: string,
     playerId: string,
     socketId: string,
+    userId?: string,
   ): Promise<{ success: boolean; error?: string }> {
     // Get room's game state first (has the most up-to-date player info)
     const roomGameState = await this.getRoomGameState(roomId);
@@ -716,13 +717,23 @@ export class RoomService implements IRoomService {
       return { success: false, error: 'Player not found in room' };
     }
 
-    // Update player's socket ID in game state
-    void roomGameState.updatePlayerSocketId(playerId, socketId);
-
-    // Update player's socket ID in database directly
-    await this.roomRepository.updatePlayer(roomId, playerId, {
-      id: socketId,
+    // Log reconnection details
+    console.log(`[RoomService] Player reconnection:`, {
+      playerId,
+      socketId,
+      userId: userId || 'none (guest)',
+      hadUserId: !!player.userId,
     });
+
+    // Update player's socket ID and userId in game state
+    void roomGameState.updatePlayerSocketId(playerId, socketId, userId);
+
+    // Update player's socket ID and userId in database directly
+    const updates: { id: string; userId?: string } = { id: socketId };
+    if (userId) {
+      updates.userId = userId;
+    }
+    await this.roomRepository.updatePlayer(roomId, playerId, updates);
 
     return { success: true };
   }
