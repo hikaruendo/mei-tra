@@ -15,6 +15,7 @@ import { IPlayService } from './services/interfaces/play-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { IChomboService } from './services/interfaces/chombo-service.interface';
 import { TrumpType, User } from './types/game.types';
+import { RoomStatus } from './types/room.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
@@ -246,8 +247,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // ルームのゲーム状態を取得
         const roomGameState = await this.roomService.getRoomGameState(roomId);
 
-        const existingPlayer =
+        let existingPlayer =
           roomGameState.findPlayerByReconnectToken(reconnectToken);
+
+        if (!existingPlayer) {
+          const restored = await this.roomService.restorePlayerFromVacantSeat(
+            roomId,
+            reconnectToken,
+          );
+          if (restored) {
+            existingPlayer =
+              roomGameState.findPlayerByReconnectToken(reconnectToken);
+          }
+        }
 
         if (existingPlayer) {
           // ルームサービスで再接続処理
@@ -468,22 +480,71 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // プレイヤーのチーム情報を保持
         state.teamAssignments[player.playerId] = player.team;
 
+        // ソケットIDをクリア（切断状態を示す）
+        player.id = '';
+
         // Notify other players in the same room about the disconnection
         this.server.to(roomId).emit('player-left', {
           playerId: player.playerId,
           roomId,
         });
 
-        // Set a timeout to remove the player if they don't reconnect
-        const timeout: NodeJS.Timeout = setTimeout(() => {
-          roomGameState.removePlayer(player.playerId);
-          this.server
-            .to(roomId)
-            .emit('update-players', roomGameState.getState().players);
-        }, 10000); // 10 seconds timeout
+        // プレイ中の場合は長めのタイムアウト(5分)を設定
+        // プレイヤーとトークンを保持しつつ、長時間放置されたらダミーに変換
+        if (state.gamePhase === 'play' || state.gamePhase === 'blow') {
+          console.log(
+            `[Disconnect] Player ${player.playerId} disconnected during gameplay. Setting 5-minute timeout for dummy conversion.`,
+          );
 
-        // Store the timeout ID for potential cancellation on reconnection
-        roomGameState.setDisconnectTimeout(player.playerId, timeout);
+          const timeout: NodeJS.Timeout = setTimeout(
+            () => {
+              void (async () => {
+                try {
+                  const room = await this.roomService.getRoom(roomId);
+                  if (room?.status === RoomStatus.PLAYING) {
+                    const converted: boolean =
+                      await this.roomService.convertPlayerToDummy(
+                        roomId,
+                        player.playerId,
+                      );
+                    if (converted) {
+                      this.server.to(roomId).emit('player-converted-to-dummy', {
+                        playerId: player.playerId,
+                        message:
+                          'Player disconnected for too long - converted to dummy',
+                      });
+                      this.server
+                        .to(roomId)
+                        .emit(
+                          'update-players',
+                          roomGameState.getState().players,
+                        );
+                    }
+                  }
+                } catch (error) {
+                  console.error(
+                    '[Disconnect] Error converting player to dummy:',
+                    error,
+                  );
+                }
+              })();
+            },
+            5 * 60 * 1000,
+          ); // 5 minutes
+
+          roomGameState.setDisconnectTimeout(player.playerId, timeout);
+        } else {
+          // ロビー状態の場合のみタイムアウトを設定
+          const timeout: NodeJS.Timeout = setTimeout(() => {
+            roomGameState.removePlayer(player.playerId);
+            this.server
+              .to(roomId)
+              .emit('update-players', roomGameState.getState().players);
+          }, 10000); // 10 seconds timeout
+
+          // Store the timeout ID for potential cancellation on reconnection
+          roomGameState.setDisconnectTimeout(player.playerId, timeout);
+        }
       }
     }
   }

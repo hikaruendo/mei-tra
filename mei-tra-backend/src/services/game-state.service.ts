@@ -115,6 +115,20 @@ export class GameStateService implements IGameStateService {
       if (persistedState) {
         this.state = persistedState;
         this.roomId = roomId;
+
+        // Rebuild playerIds map from persisted players
+        // This is necessary because playerIds map is not persisted to database
+        this.playerIds.clear();
+        this.state.players.forEach((player) => {
+          if (player.playerId) {
+            // Use playerId as both token and playerId for simplicity
+            this.playerIds.set(player.playerId, player.playerId);
+          }
+        });
+        console.log(
+          `[GameState] Rebuilt playerIds map for room ${roomId}:`,
+          Array.from(this.playerIds.keys()),
+        );
       } else {
         // Initialize new state for this room
         this.roomId = roomId;
@@ -207,12 +221,21 @@ export class GameStateService implements IGameStateService {
     player.id = '';
   }
 
+  // プレイヤーの再接続トークンを登録
+  registerPlayerToken(token: string, playerId: string): void {
+    this.playerIds.set(token, playerId);
+    console.log(`[GameState] Registered player token: ${token} -> ${playerId}`);
+  }
+
   // プレイヤーの再接続トークンを削除
   removePlayerToken(playerId: string): void {
     // playerIdsマップから該当するトークンを検索して削除
     for (const [token, id] of this.playerIds.entries()) {
       if (id === playerId) {
         this.playerIds.delete(token);
+        console.log(
+          `[GameState] Removed player token: ${token} -> ${playerId}`,
+        );
         break;
       }
     }

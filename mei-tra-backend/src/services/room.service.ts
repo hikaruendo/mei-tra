@@ -3,7 +3,7 @@ import { Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
-import { User, Team } from '../types/game.types';
+import { User, Team, Player } from '../types/game.types';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';
@@ -12,10 +12,16 @@ import { IRoomService } from './interfaces/room-service.interface';
 export class RoomService implements IRoomService {
   private readonly logger = new Logger(RoomService.name);
   private roomGameStates: Map<string, GameStateService> = new Map();
-  // 退出席情報（ルームIDごとに席番号ベースでhand/teamを保存）
+  // 退出席情報（ルームIDごとに席番号ベースで元プレイヤーのスナップショットを保存）
   private vacantSeats: Record<
     string,
-    Record<number, { hand: string[]; team: Team }>
+    Record<
+      number,
+      {
+        roomPlayer: RoomPlayer;
+        gamePlayer?: Player;
+      }
+    >
   > = {};
 
   private readonly ROOM_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24時間
@@ -152,6 +158,72 @@ export class RoomService implements IRoomService {
     } as RoomPlayer;
   }
 
+  private cloneRoomPlayer(player: RoomPlayer): RoomPlayer {
+    return {
+      ...player,
+      id: '',
+      hand: [...player.hand],
+      joinedAt: new Date(player.joinedAt),
+    };
+  }
+
+  private cloneGamePlayer(player: Player): Player {
+    return {
+      ...player,
+      id: '',
+      hand: [...player.hand],
+    };
+  }
+
+  /**
+   * プレイヤーをダミーに変換（タイムアウト時など）
+   * reconnectTokenは保持したまま、席をvacantにする
+   */
+  async convertPlayerToDummy(
+    roomId: string,
+    playerId: string,
+  ): Promise<boolean> {
+    const room = await this.getRoom(roomId);
+    if (!room) return false;
+
+    const playerIndex = room.players.findIndex((p) => p.playerId === playerId);
+    if (playerIndex === -1) return false;
+
+    // hand/teamなどをvacantSeatsに保存
+    if (!this.vacantSeats[roomId]) this.vacantSeats[roomId] = {};
+
+    const gameState = this.roomGameStates.get(roomId);
+    const state = gameState?.getState();
+    const gsIndex = state
+      ? state.players.findIndex((p) => p.playerId === playerId)
+      : -1;
+
+    this.vacantSeats[roomId][playerIndex] = {
+      roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
+      gamePlayer:
+        gsIndex !== -1 && state
+          ? this.cloneGamePlayer(state.players[gsIndex])
+          : undefined,
+    };
+
+    // ダミープレイヤーに置き換え
+    const dummyPlayer = this.createDummyPlayer(playerIndex);
+    room.players[playerIndex] = dummyPlayer;
+
+    await this.roomRepository.removePlayer(roomId, playerId);
+    await this.roomRepository.addPlayer(roomId, dummyPlayer);
+
+    // ゲーム状態も更新
+    if (gameState) {
+      if (gsIndex !== -1 && state) {
+        state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+      }
+      // reconnectTokenは保持（removePlayerTokenを呼ばない）
+    }
+
+    return true;
+  }
+
   async leaveRoom(roomId: string, playerId: string): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
@@ -184,12 +256,18 @@ export class RoomService implements IRoomService {
       );
       if (playerIndex !== -1) {
         if (!this.vacantSeats[roomId]) this.vacantSeats[roomId] = {};
+
+        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+
         this.vacantSeats[roomId][playerIndex] = {
-          hand: [...room.players[playerIndex].hand],
-          team: room.players[playerIndex].team,
+          roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
+          gamePlayer:
+            gsIndex !== -1
+              ? this.cloneGamePlayer(state.players[gsIndex])
+              : undefined,
         };
 
-        // プレイヤーをダミーに置き換え
+        // プレイヤーをダミーに置き換え（他のプレイヤーが参加可能にする）
         const dummyPlayer = this.createDummyPlayer(playerIndex);
         room.players[playerIndex] = dummyPlayer;
 
@@ -198,13 +276,13 @@ export class RoomService implements IRoomService {
         await this.roomRepository.addPlayer(roomId, dummyPlayer);
 
         // ゲーム状態も同時に更新
-        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
           state.players[gsIndex] = this.createDummyPlayer(gsIndex);
         }
 
-        // 再接続トークンも削除
-        gameState.removePlayerToken(playerId);
+        // 再接続トークンは保持（同じplayerIdで再join可能にする）
+        // 他のプレイヤーがこの席を取ったら、その時点でトークンを削除
+        // gameState.removePlayerToken(playerId);  // ← 削除しない
       }
     } else {
       // ロビー状態なら単純に配列からremove
@@ -273,16 +351,60 @@ export class RoomService implements IRoomService {
     let hand: string[] = [];
     let team: Team = 0 as Team;
     let replacingDummyId: string | null = null;
+    let restoredSeatData: {
+      roomPlayer: RoomPlayer;
+      gamePlayer?: Player;
+    } | null = null;
 
-    if (vacantIndexes.length > 0) {
-      assignedIndex = vacantIndexes[0];
-      hand = roomVacant[assignedIndex].hand;
-      team = roomVacant[assignedIndex].team;
-      // 置き換え対象のダミープレイヤーIDを取得
+    // まず、user.playerIdと一致するvacantSeatがあるかチェック（同じプレイヤーの復帰）
+    const matchingVacantIndex = vacantIndexes.find(
+      (idx) => roomVacant[idx]?.roomPlayer.playerId === user.playerId,
+    );
+
+    if (matchingVacantIndex !== undefined) {
+      // 同じplayerIdで復帰 → 元の席・hand・teamを復元
+      assignedIndex = matchingVacantIndex;
+      const seatData = roomVacant[assignedIndex];
+      const seatRoomPlayer = seatData?.roomPlayer;
+      const seatGamePlayer = seatData?.gamePlayer;
+
+      hand = seatGamePlayer
+        ? [...seatGamePlayer.hand]
+        : seatRoomPlayer
+          ? [...seatRoomPlayer.hand]
+          : [];
+      team = seatRoomPlayer ? seatRoomPlayer.team : team;
       replacingDummyId = room.players[assignedIndex]?.playerId || null;
-      // 使い終わったら削除
+      restoredSeatData = seatData ?? null;
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
+      console.log(
+        `[joinRoom] Player ${user.playerId} rejoining their previous seat (index ${assignedIndex})`,
+      );
+    } else if (vacantIndexes.length > 0) {
+      // 別のplayerIdで新規参加 → 最初のvacant seatを使用
+      assignedIndex = vacantIndexes[0];
+      const seatData = roomVacant[assignedIndex];
+      const seatRoomPlayer = seatData?.roomPlayer;
+      hand = seatRoomPlayer ? [...seatRoomPlayer.hand] : [];
+      team = seatRoomPlayer ? seatRoomPlayer.team : team;
+      // 元のplayerIdのトークンを削除（別の人が席を取った）
+      const originalPlayerId = seatRoomPlayer?.playerId;
+      if (originalPlayerId) {
+        const gs = this.roomGameStates.get(roomId);
+        if (gs) {
+          gs.removePlayerToken(originalPlayerId);
+          console.log(
+            `[joinRoom] Removed token for original player ${originalPlayerId} - seat taken by ${user.playerId}`,
+          );
+        }
+      }
+      replacingDummyId = room.players[assignedIndex]?.playerId || null;
+      delete roomVacant[assignedIndex];
+      if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
+      console.log(
+        `[joinRoom] Player ${user.playerId} taking vacant seat (index ${assignedIndex})`,
+      );
     } else {
       // チーム自動割り当て
       const team0Count = room.players.filter(
@@ -294,15 +416,29 @@ export class RoomService implements IRoomService {
       team = (team0Count <= team1Count ? 0 : 1) as Team;
     }
 
+    const seatRoomSnapshot = restoredSeatData?.roomPlayer;
+    const seatGameSnapshot = restoredSeatData?.gamePlayer;
+
     const player: RoomPlayer = {
+      ...(seatRoomSnapshot ?? {}),
       ...user,
+      id: user.id,
+      playerId: user.playerId,
       team,
       hand,
-      isPasser: false,
-      hasBroken: false,
-      isReady: false,
-      isHost: false,
-      joinedAt: new Date(),
+      isPasser:
+        seatGameSnapshot?.isPasser ?? seatRoomSnapshot?.isPasser ?? false,
+      hasBroken:
+        seatGameSnapshot?.hasBroken ?? seatRoomSnapshot?.hasBroken ?? false,
+      hasRequiredBroken:
+        seatGameSnapshot?.hasRequiredBroken ??
+        seatRoomSnapshot?.hasRequiredBroken ??
+        false,
+      isReady: seatRoomSnapshot?.isReady ?? false,
+      isHost: seatRoomSnapshot?.isHost ?? false,
+      joinedAt: seatRoomSnapshot?.joinedAt
+        ? new Date(seatRoomSnapshot.joinedAt)
+        : new Date(),
     };
 
     // データベース操作
@@ -352,9 +488,134 @@ export class RoomService implements IRoomService {
           state.players.push(player);
         }
       }
+
+      // Register player token for reconnection
+      // Use playerId as both token and playerId for consistency
+      gameState.registerPlayerToken(player.playerId, player.playerId);
     }
 
     // アクティビティ時刻のみ更新（プレイヤー情報の再取得を避ける）
+    await this.updateRoomActivity(roomId);
+    return true;
+  }
+
+  async restorePlayerFromVacantSeat(
+    roomId: string,
+    playerId: string,
+  ): Promise<boolean> {
+    const vacantSeatsForRoom = this.vacantSeats[roomId];
+    if (!vacantSeatsForRoom) {
+      return false;
+    }
+
+    const vacancyEntry = Object.entries(vacantSeatsForRoom).find(
+      ([, data]) => data.roomPlayer.playerId === playerId,
+    );
+
+    if (!vacancyEntry) {
+      return false;
+    }
+
+    const [seatIndexKey, seatData] = vacancyEntry;
+    const seatIndex = Number(seatIndexKey);
+
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return false;
+    }
+
+    const currentSeatPlayer = room.players[seatIndex];
+    if (
+      !currentSeatPlayer ||
+      !currentSeatPlayer.playerId.startsWith('dummy-')
+    ) {
+      return false;
+    }
+
+    const dummyPlayerId = currentSeatPlayer.playerId;
+    const restoredRoomPlayer: RoomPlayer = {
+      ...seatData.roomPlayer,
+      id: '',
+      playerId,
+      hand: [...seatData.roomPlayer.hand],
+      joinedAt: new Date(seatData.roomPlayer.joinedAt),
+    };
+
+    room.players[seatIndex] = restoredRoomPlayer;
+
+    await this.roomRepository.removePlayer(roomId, dummyPlayerId);
+    const addSuccess = await this.roomRepository.addPlayer(
+      roomId,
+      restoredRoomPlayer,
+    );
+
+    if (!addSuccess) {
+      // 追加に失敗した場合はダミーを戻しておく
+      await this.roomRepository.addPlayer(roomId, currentSeatPlayer);
+      room.players[seatIndex] = currentSeatPlayer;
+      return false;
+    }
+
+    const gameState = await this.getRoomGameState(roomId);
+    const state = gameState.getState();
+    const gsIndex = state.players.findIndex(
+      (p) => p.playerId === dummyPlayerId || p.playerId === playerId,
+    );
+
+    const restoredGamePlayerBase: Player = seatData.gamePlayer
+      ? {
+          ...seatData.gamePlayer,
+          id: '',
+          playerId,
+          hand: [...seatData.gamePlayer.hand],
+        }
+      : {
+          id: '',
+          playerId,
+          name: restoredRoomPlayer.name,
+          team: restoredRoomPlayer.team,
+          hand: [...restoredRoomPlayer.hand],
+          isPasser: restoredRoomPlayer.isPasser,
+          hasBroken: restoredRoomPlayer.hasBroken,
+          hasRequiredBroken: restoredRoomPlayer.hasRequiredBroken,
+        };
+
+    if (gsIndex !== -1) {
+      state.players[gsIndex] = {
+        ...restoredGamePlayerBase,
+        id: '',
+        playerId,
+        name: restoredRoomPlayer.name,
+        team: restoredRoomPlayer.team,
+        hand: [...restoredRoomPlayer.hand],
+        isPasser:
+          restoredGamePlayerBase.isPasser ??
+          restoredRoomPlayer.isPasser ??
+          false,
+        hasBroken:
+          restoredGamePlayerBase.hasBroken ??
+          restoredRoomPlayer.hasBroken ??
+          false,
+        hasRequiredBroken:
+          restoredGamePlayerBase.hasRequiredBroken ??
+          restoredRoomPlayer.hasRequiredBroken ??
+          false,
+      };
+    } else {
+      state.players.push({
+        ...restoredGamePlayerBase,
+        id: '',
+      });
+    }
+
+    gameState.registerPlayerToken(playerId, playerId);
+    state.teamAssignments[playerId] = restoredRoomPlayer.team;
+
+    delete vacantSeatsForRoom[seatIndex];
+    if (Object.keys(vacantSeatsForRoom).length === 0) {
+      delete this.vacantSeats[roomId];
+    }
+
     await this.updateRoomActivity(roomId);
     return true;
   }
