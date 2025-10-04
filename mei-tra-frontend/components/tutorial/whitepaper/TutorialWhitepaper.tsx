@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Sidebar } from './components/Sidebar';
 import { ContentSection } from './components/ContentSection';
 import { Section } from './content/tutorialContent';
@@ -9,17 +9,107 @@ import styles from './TutorialWhitepaper.module.scss';
 
 export function TutorialWhitepaper() {
   const t = useTranslations('tutorial');
+  const locale = useLocale();
 
   // Build tutorial sections from translations
-  const tutorialSections: Section[] = useMemo(() => [
+  const tutorialSections: Section[] = useMemo(() => {
+    const overviewContent = [];
+
+    // Add Bridge note only for English locale
+    if (locale === 'en' && t('overview.bridgeNote')) {
+      overviewContent.push({ type: 'text' as const, content: t('overview.bridgeNote') });
+    }
+
+    overviewContent.push(
+      { type: 'text' as const, content: t('overview.description') },
+      { type: 'rule' as const, content: { title: t('overview.objective'), description: t('overview.objectiveDesc'), example: t('overview.objectiveExample') } },
+      { type: 'rule' as const, content: { title: t('overview.gameFlow'), description: t('overview.gameFlowDesc'), example: t('overview.gameFlowExample') } }
+    );
+
+    return [
+    // Add comprehensive game introduction for English locale only
+    ...(locale === 'en' ? [{
+      id: 'game-intro',
+      title: t('gameIntro.title'),
+      content: [
+        { type: 'text' as const, content: `**${t('gameIntro.subtitle')}**\n\n${t('gameIntro.description')}` },
+        { type: 'text' as const, content: `**${t('gameIntro.keyFeatures')}**\n\n• ${t('gameIntro.feature1')}\n\n• ${t('gameIntro.feature2')}\n\n• ${t('gameIntro.feature3')}\n\n• ${t('gameIntro.feature4')}\n\n• ${t('gameIntro.feature5')}` },
+        { type: 'text' as const, content: `**${t('gameIntro.howToPlay')}**` },
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.setup'),
+          description: t('gameIntro.setupDesc'),
+          example: ''
+        }},
+        { type: 'text' as const, content: `**${t('gameIntro.gameFlow')}**` },
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.phase1Title'),
+          description: t('gameIntro.phase1Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.phase2Title'),
+          description: t('gameIntro.phase2Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.phase3Title'),
+          description: t('gameIntro.phase3Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.phase4Title'),
+          description: t('gameIntro.phase4Desc'),
+          example: ''
+        }},
+        { type: 'text' as const, content: `**${t('gameIntro.uniqueMechanics')}**` },
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.mechanic1Title'),
+          description: t('gameIntro.mechanic1Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.mechanic2Title'),
+          description: t('gameIntro.mechanic2Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.mechanic3Title'),
+          description: t('gameIntro.mechanic3Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.mechanic4Title'),
+          description: t('gameIntro.mechanic4Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.mechanic5Title'),
+          description: t('gameIntro.mechanic5Desc'),
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.bridgeComparison'),
+          description: t('gameIntro.bridgeComparisonDesc'),
+          example: ''
+        }},
+        { type: 'text' as const, content: `**${t('gameIntro.scoringSystem')}**` },
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.scoringFormula'),
+          description: `${t('gameIntro.scoringExample1')}\n${t('gameIntro.scoringExample2')}\n\n${t('gameIntro.scoringNote')}`,
+          example: ''
+        }},
+        { type: 'rule' as const, content: {
+          title: t('gameIntro.culturalNote'),
+          description: t('gameIntro.culturalNoteDesc'),
+          example: ''
+        }},
+        { type: 'text' as const, content: `**${t('gameIntro.readyToPlay')}**\n\n${t('gameIntro.readyToPlayDesc')}` }
+      ]
+    }] : []),
     {
       id: 'overview',
       title: t('overview.title'),
-      content: [
-        { type: 'text', content: t('overview.description') },
-        { type: 'rule', content: { title: t('overview.objective'), description: t('overview.objectiveDesc'), example: t('overview.objectiveExample') } },
-        { type: 'rule', content: { title: t('overview.gameFlow'), description: t('overview.gameFlowDesc'), example: t('overview.gameFlowExample') } }
-      ]
+      content: overviewContent
     },
     {
       id: 'cards',
@@ -121,7 +211,8 @@ export function TutorialWhitepaper() {
         { type: 'text', content: t('reference.settings') }
       ]
     }
-  ], [t]);
+  ];
+  }, [t, locale]);
 
   const [activeSection, setActiveSection] = useState('overview');
 
