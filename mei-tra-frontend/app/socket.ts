@@ -16,12 +16,15 @@ export function getSocket(authToken?: string): Socket {
   if (!socket && typeof window !== 'undefined') {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
 
-    const reconnectToken = sessionStorage.getItem('reconnectToken') || '';
+    // Authenticated users don't need reconnectToken (use userId instead)
+    const isAuthenticated = !!authToken;
+    const reconnectToken = isAuthenticated ? '' : (sessionStorage.getItem('reconnectToken') || '');
     const roomId = sessionStorage.getItem('roomId') || '';
     const storedName = sessionStorage.getItem('playerName') || '';
 
     console.log('[Socket] Retrieved from sessionStorage:', {
-      reconnectToken: reconnectToken ? `${reconnectToken.substring(0, 10)}...` : 'none',
+      isAuthenticated,
+      reconnectToken: !isAuthenticated && reconnectToken ? `${reconnectToken.substring(0, 10)}...` : 'none (using userId)',
       roomId: roomId || 'none',
       storedName: storedName || 'none'
     });

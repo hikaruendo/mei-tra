@@ -121,3 +121,4 @@ The project uses environment-specific configuration:
 - If bug fixes fail three or more times, analyse using Codex CLI.
 - Architecture design consultations via Codex CLI.
 - The standard implementation is Claude Code.
+- Confirm to fix lint and ts error after you change codes

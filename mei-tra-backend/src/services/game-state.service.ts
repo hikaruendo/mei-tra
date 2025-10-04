@@ -231,6 +231,12 @@ export class GameStateService implements IGameStateService {
     }
   }
 
+  findPlayerByUserId(userId: string): Player | null {
+    // Find player by their Supabase userId
+    // This works even if the player is disconnected (empty socket id)
+    return this.state.players.find((p) => p.userId === userId) || null;
+  }
+
   findPlayerByReconnectToken(token: string): Player | null {
     // First try to find by token in playerIds map
     const playerId = this.playerIds.get(token);

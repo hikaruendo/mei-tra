@@ -354,13 +354,19 @@ export const useGame = () => {
         setBlowDeclarations(blowDeclarations);
       },
       'reconnect-token': (token: string) => {
-        console.log('[useGame] Received new reconnect token:', token);
-        setReconnectToken(token);
-        try {
-          sessionStorage.setItem('reconnectToken', token);
-          console.log('[useGame] Successfully stored new reconnect token in sessionStorage');
-        } catch (error) {
-          console.error('[useGame] Failed to store reconnect token in sessionStorage:', error);
+        // Only store reconnectToken for guest users
+        // Authenticated users don't need it (they use userId)
+        if (!user) {
+          console.log('[useGame] Received new reconnect token for guest user:', token);
+          setReconnectToken(token);
+          try {
+            sessionStorage.setItem('reconnectToken', token);
+            console.log('[useGame] Successfully stored reconnect token in sessionStorage');
+          } catch (error) {
+            console.error('[useGame] Failed to store reconnect token in sessionStorage:', error);
+          }
+        } else {
+          console.log('[useGame] Skipped reconnectToken storage for authenticated user (using userId)');
         }
       },
       'back-to-lobby': () => {

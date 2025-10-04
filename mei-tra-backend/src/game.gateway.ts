@@ -229,23 +229,48 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    // トークンがある場合は再接続として処理
-    if (reconnectToken && roomId) {
+    // 再接続処理（優先順位: userId > reconnectToken）
+    if (roomId) {
       try {
         // ルームのゲーム状態を取得
         const roomGameState = await this.roomService.getRoomGameState(roomId);
 
-        let existingPlayer =
-          roomGameState.findPlayerByReconnectToken(reconnectToken);
+        let existingPlayer: Awaited<
+          ReturnType<typeof roomGameState.findPlayerByUserId>
+        > = null;
 
-        if (!existingPlayer) {
-          const restored = await this.roomService.restorePlayerFromVacantSeat(
-            roomId,
-            reconnectToken,
+        // 優先度1: ログインユーザーはuserIdで検索
+        if (authenticatedUser?.id) {
+          existingPlayer = roomGameState.findPlayerByUserId(
+            authenticatedUser.id,
           );
-          if (restored) {
-            existingPlayer =
-              roomGameState.findPlayerByReconnectToken(reconnectToken);
+          if (existingPlayer) {
+            console.log(
+              `[Reconnection] Found player by userId: ${authenticatedUser.id}`,
+            );
+          }
+        }
+
+        // 優先度2: reconnectTokenで検索（ゲストユーザー用）
+        if (!existingPlayer && reconnectToken) {
+          existingPlayer =
+            roomGameState.findPlayerByReconnectToken(reconnectToken);
+          if (existingPlayer) {
+            console.log(
+              `[Reconnection] Found player by reconnectToken: ${reconnectToken}`,
+            );
+          }
+
+          // Try to restore from vacant seat if not found
+          if (!existingPlayer) {
+            const restored = await this.roomService.restorePlayerFromVacantSeat(
+              roomId,
+              reconnectToken,
+            );
+            if (restored) {
+              existingPlayer =
+                roomGameState.findPlayerByReconnectToken(reconnectToken);
+            }
           }
         }
 
@@ -296,10 +321,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               });
               this.server.to(roomId).emit('update-players', state.players);
 
-              // Issue new reconnect token for future reconnections
-              this.server
-                .to(client.id)
-                .emit('reconnect-token', `${existingPlayer.playerId}`);
+              // Issue reconnect token only for guest users
+              // Authenticated users don't need it (they use userId)
+              if (!authenticatedUser) {
+                this.server
+                  .to(client.id)
+                  .emit('reconnect-token', `${existingPlayer.playerId}`);
+                console.log(
+                  `[Reconnection] Issued new token for guest player: ${existingPlayer.playerId}`,
+                );
+              } else {
+                console.log(
+                  `[Reconnection] Skipped token for authenticated user: ${authenticatedUser.id}`,
+                );
+              }
             });
         } else {
           // プレイヤーが見つからない場合、トークンが無効または期限切れ
@@ -338,9 +373,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const newUser = users.find((p) => p.id === client.id);
 
         if (newUser) {
-          this.server
-            .to(client.id)
-            .emit('reconnect-token', `${newUser.playerId}`);
+          // Issue reconnect token only for guest users
+          if (!authenticatedUser) {
+            this.server
+              .to(client.id)
+              .emit('reconnect-token', `${newUser.playerId}`);
+          }
           this.server.emit('update-users', users);
         }
       } else {
@@ -413,9 +451,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const newUser = users.find((user) => user.id === client.id);
       if (newUser) {
         this.server.emit('update-users', users);
-        this.server
-          .to(client.id)
-          .emit('reconnect-token', `${newUser.playerId}`);
+        // Issue reconnect token only for guest users
+        if (!authenticatedUser) {
+          this.server
+            .to(client.id)
+            .emit('reconnect-token', `${newUser.playerId}`);
+        }
         client.emit('name-updated', {
           success: true,
           playerId: newUser.playerId,
