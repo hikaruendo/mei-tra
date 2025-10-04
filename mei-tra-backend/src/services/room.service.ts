@@ -153,7 +153,7 @@ export class RoomService implements IRoomService {
       isReady: false,
       isHost: false,
       joinedAt: new Date(),
-      isPasser: false,
+      isPasser: true, // Auto-pass dummy players so blow phase can continue
       hasBroken: false,
     } as RoomPlayer;
   }
