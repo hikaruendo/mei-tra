@@ -36,6 +36,7 @@ describe('Game Use Cases', () => {
       updateRoom: jest.fn(),
       deleteRoom: jest.fn(),
       handlePlayerReconnection: jest.fn(),
+      restorePlayerFromVacantSeat: jest.fn(),
       updateUserGameStats: jest.fn(),
       updateUserLastSeen: jest.fn(),
     };
@@ -355,6 +356,82 @@ describe('Game Use Cases', () => {
       expect(result.success).toBe(true);
       expect(result.data?.roomDeleted).toBe(true);
       expect(result.data?.roomsList).toEqual([]);
+    });
+
+    it('replaces player with dummy during play and removes reconnection token', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new LeaveRoomUseCase(roomService);
+
+      const playingRoom: Room = {
+        ...baseRoom,
+        status: RoomStatus.PLAYING,
+        players: [
+          ...baseRoom.players,
+          {
+            id: 'socket-2',
+            playerId: 'player-2',
+            name: 'Player 2',
+            team: 1 as const,
+            hand: ['H2', 'D3'],
+            isPasser: false,
+            hasBroken: false,
+            isReady: true,
+            isHost: false,
+            joinedAt: new Date(),
+          },
+        ] as RoomPlayer[],
+      };
+
+      const statePlayers: Player[] = [
+        {
+          id: '',
+          playerId: 'dummy-0',
+          name: 'Vacant',
+          team: 0 as const,
+          hand: [],
+          isPasser: false,
+        },
+        {
+          id: 'socket-2',
+          playerId: 'player-2',
+          name: 'Player 2',
+          team: 1 as const,
+          hand: ['H2', 'D3'],
+          isPasser: false,
+        },
+      ];
+
+      const state = {
+        players: statePlayers,
+        teamAssignments: { 'player-1': 0 } as Record<string, number>,
+        gamePhase: 'play' as GamePhase,
+      };
+
+      const gameStateMock = {
+        getState: jest.fn(() => state),
+      } as unknown as GameStateService;
+
+      roomService.getRoom
+        .mockResolvedValueOnce(playingRoom)
+        .mockResolvedValueOnce(playingRoom);
+      roomService.leaveRoom.mockResolvedValue(true);
+      roomService.listRooms.mockResolvedValue([playingRoom]);
+      roomService.getRoomGameState.mockResolvedValue(gameStateMock);
+
+      const result = await useCase.execute({
+        clientId: 'socket-1',
+        roomId: playingRoom.id,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.updatedPlayers).toEqual(statePlayers);
+
+      // Verify leaveRoom was called (which replaces with dummy and removes token)
+      const leaveRoomMock = roomService.leaveRoom as jest.Mock;
+      expect(leaveRoomMock).toHaveBeenCalledWith(playingRoom.id, 'player-1');
+
+      // Verify dummy player is in the list
+      expect(statePlayers[0].playerId).toContain('dummy-');
     });
   });
 
