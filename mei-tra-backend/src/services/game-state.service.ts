@@ -101,8 +101,7 @@ export class GameStateService implements IGameStateService {
     if (this.roomId) {
       try {
         await this.gameStateRepository.update(this.roomId, newState);
-      } catch (error) {
-        console.error('Failed to persist game state:', error);
+      } catch {
         // Continue with in-memory operation even if persistence fails
       }
     }
@@ -125,17 +124,12 @@ export class GameStateService implements IGameStateService {
             this.playerIds.set(player.playerId, player.playerId);
           }
         });
-        console.log(
-          `[GameState] Rebuilt playerIds map for room ${roomId}:`,
-          Array.from(this.playerIds.keys()),
-        );
       } else {
         // Initialize new state for this room
         this.roomId = roomId;
         await this.gameStateRepository.create(roomId, this.state);
       }
-    } catch (error) {
-      console.error('Failed to load game state:', error);
+    } catch {
       // Fall back to in-memory state
       this.roomId = roomId;
     }
@@ -148,8 +142,8 @@ export class GameStateService implements IGameStateService {
     if (this.roomId) {
       try {
         await this.gameStateRepository.update(this.roomId, { pointsToWin });
-      } catch (error) {
-        console.error('Failed to persist pointsToWin setting:', error);
+      } catch {
+        // Silent fail
       }
     }
   }
@@ -158,8 +152,8 @@ export class GameStateService implements IGameStateService {
     if (this.roomId) {
       try {
         await this.gameStateRepository.update(this.roomId, this.state);
-      } catch (error) {
-        console.error('Failed to save game state:', error);
+      } catch {
+        // Silent fail
       }
     }
   }
@@ -224,7 +218,6 @@ export class GameStateService implements IGameStateService {
   // プレイヤーの再接続トークンを登録
   registerPlayerToken(token: string, playerId: string): void {
     this.playerIds.set(token, playerId);
-    console.log(`[GameState] Registered player token: ${token} -> ${playerId}`);
   }
 
   // プレイヤーの再接続トークンを削除
@@ -233,9 +226,6 @@ export class GameStateService implements IGameStateService {
     for (const [token, id] of this.playerIds.entries()) {
       if (id === playerId) {
         this.playerIds.delete(token);
-        console.log(
-          `[GameState] Removed player token: ${token} -> ${playerId}`,
-        );
         break;
       }
     }

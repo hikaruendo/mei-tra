@@ -378,9 +378,6 @@ export class RoomService implements IRoomService {
       restoredSeatData = seatData ?? null;
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
-      console.log(
-        `[joinRoom] Player ${user.playerId} rejoining their previous seat (index ${assignedIndex})`,
-      );
     } else if (vacantIndexes.length > 0) {
       // 別のplayerIdで新規参加 → 最初のvacant seatを使用
       assignedIndex = vacantIndexes[0];
@@ -394,17 +391,11 @@ export class RoomService implements IRoomService {
         const gs = this.roomGameStates.get(roomId);
         if (gs) {
           gs.removePlayerToken(originalPlayerId);
-          console.log(
-            `[joinRoom] Removed token for original player ${originalPlayerId} - seat taken by ${user.playerId}`,
-          );
         }
       }
       replacingDummyId = room.players[assignedIndex]?.playerId || null;
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
-      console.log(
-        `[joinRoom] Player ${user.playerId} taking vacant seat (index ${assignedIndex})`,
-      );
     } else {
       // チーム自動割り当て
       const team0Count = room.players.filter(
