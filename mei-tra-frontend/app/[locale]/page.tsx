@@ -8,6 +8,7 @@ import { useGame } from '../../hooks/useGame';
 import { useAuth } from '../../contexts/AuthContext';
 import GameJoinGroup from '../../components/organisms/GameJoinGroup';
 import { RoomList } from '../../components/molecules/RoomList';
+import { ChatDock } from '../../components/social/ChatDock';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -135,6 +136,9 @@ export default function Home() {
                 currentRoomId={currentRoomId}
                 pointsToWin={pointsToWin}
               />
+              {currentRoomId && (
+                <ChatDock roomId={currentRoomId} />
+              )}
             </div>
           </>
         )}
