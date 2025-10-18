@@ -332,12 +332,13 @@ describe('Reconnection Token Management', () => {
 
       userProfileRepository = {
         findById: jest.fn(),
+        findByUsername: jest.fn(),
+        findByUserIds: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
-        updateGameStats: jest.fn(),
-        updateLastSeen: jest.fn(),
-        findByUsername: jest.fn(),
         delete: jest.fn(),
+        updateLastSeen: jest.fn(),
+        updateGameStats: jest.fn(),
         searchByUsername: jest.fn(),
       } as jest.Mocked<IUserProfileRepository>;
 
