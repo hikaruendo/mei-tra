@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { GameModule } from './game.module';
 import { SocialModule } from './social.module';
 import { UserProfileController } from './controllers/user-profile.controller';
+import { DatabaseModule } from './database/database.module';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { APP_FILTER } from '@nestjs/core';
@@ -18,6 +19,7 @@ import { APP_FILTER } from '@nestjs/core';
       envFilePath: ['.env.development', '.env.local', '.env'],
     }),
     ScheduleModule.forRoot(),
+    DatabaseModule,
     GameModule,
     SocialModule,
     RepositoriesModule,
