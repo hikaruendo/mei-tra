@@ -114,6 +114,12 @@ npx playwright test --debug                     # デバッグモードで実行
   - API呼び出しのテスト
   - 実際のユーザー操作の模擬テスト
 
+### codex
+Web検索を有効化
+```bash
+codex --search
+```
+
 ## ライセンス
 
 MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
