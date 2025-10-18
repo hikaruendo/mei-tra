@@ -39,7 +39,7 @@ interface DatabaseUserProfileResponse {
 }
 
 export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormProps) {
-  const { user } = useAuth();
+  const { user, refreshUserProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -236,6 +236,9 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       };
 
       onSave(finalProfile);
+
+      // Refresh user profile in AuthContext to update avatar in header
+      await refreshUserProfile();
     } catch (error) {
       setError(error instanceof Error ? error.message : '保存に失敗しました');
     } finally {

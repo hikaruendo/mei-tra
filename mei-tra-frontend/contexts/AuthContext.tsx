@@ -33,6 +33,7 @@ interface AuthContextType {
   signOut: () => Promise<{ error: AuthError | null }>;
   getAccessToken: () => Promise<string | null>;
   refreshSession: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -356,6 +357,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const refreshUserProfile = useCallback(async () => {
+    if (!session?.user) {
+      console.warn('[AuthContext] No session available for profile refresh');
+      return;
+    }
+
+    console.log('[AuthContext] Refreshing user profile...');
+
+    // Clear cache to force fresh data
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth_profile_cache');
+    }
+
+    // Load fresh profile, skipping cache (retryCount = -1)
+    await loadUserProfile(session.user, -1);
+  }, [session]);
+
   const value: AuthContextType = {
     user,
     session,
@@ -365,6 +383,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     getAccessToken,
     refreshSession,
+    refreshUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
