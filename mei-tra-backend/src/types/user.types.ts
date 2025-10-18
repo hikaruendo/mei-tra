@@ -42,6 +42,15 @@ export interface AuthenticatedUser {
   profile: UserProfile;
 }
 
+// Lightweight DTO for chat features
+export interface ChatProfileDto {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string;
+  rankTier?: string;
+  countryCode?: string;
+}
+
 // Database row type for user_profiles table
 export interface UserProfileRow {
   id: string;

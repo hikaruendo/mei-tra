@@ -3,7 +3,6 @@ import { DatabaseModule } from '../database/database.module';
 import { SupabaseRoomRepository } from './implementations/supabase-room.repository';
 import { SupabaseGameStateRepository } from './implementations/supabase-game-state.repository';
 import { SupabaseUserProfileRepository } from './implementations/supabase-user-profile.repository';
-import { SupabaseProfileRepository } from './implementations/supabase-profile.repository';
 import { SupabaseChatRoomRepository } from './implementations/supabase-chat-room.repository';
 import { SupabaseChatMessageRepository } from './implementations/supabase-chat-message.repository';
 import { SupabaseService } from '../database/supabase.service';
@@ -29,10 +28,6 @@ import { SupabaseService } from '../database/supabase.service';
       useClass: SupabaseUserProfileRepository,
     },
     {
-      provide: 'IProfileRepository',
-      useClass: SupabaseProfileRepository,
-    },
-    {
       provide: 'IChatRoomRepository',
       useClass: SupabaseChatRoomRepository,
     },
@@ -46,7 +41,6 @@ import { SupabaseService } from '../database/supabase.service';
     'IRoomRepository',
     'IGameStateRepository',
     'IUserProfileRepository',
-    'IProfileRepository',
     'IChatRoomRepository',
     'IChatMessageRepository',
   ],

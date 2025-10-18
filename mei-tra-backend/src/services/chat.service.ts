@@ -6,7 +6,7 @@ import {
   ChatRoomId,
   UserId,
 } from '../types/social.types';
-import { IProfileRepository } from '../repositories/interfaces/profile.repository.interface';
+import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IChatRoomRepository } from '../repositories/interfaces/chat-room.repository.interface';
 import { IChatMessageRepository } from '../repositories/interfaces/chat-message.repository.interface';
 import { ChatMessageEvent, BasicProfile } from '../types/social-events.types';
@@ -37,8 +37,8 @@ export interface CreateRoomDto {
 @Injectable()
 export class ChatService {
   constructor(
-    @Inject('IProfileRepository')
-    private readonly profileRepository: IProfileRepository,
+    @Inject('IUserProfileRepository')
+    private readonly profileRepository: IUserProfileRepository,
     @Inject('IChatRoomRepository')
     private readonly chatRoomRepository: IChatRoomRepository,
     @Inject('IChatMessageRepository')
@@ -54,7 +54,7 @@ export class ChatService {
       throw new Error('Chat room not found');
     }
 
-    const profile = await this.profileRepository.findByUserId(userId);
+    const profile = await this.profileRepository.findById(userId.getValue());
     if (!profile) {
       throw new Error('User profile not found');
     }
@@ -72,11 +72,11 @@ export class ChatService {
     const savedMessage = await this.chatMessageRepository.create(message);
 
     const basicProfile: BasicProfile = {
-      userId: profile.getUserId().getValue(),
-      displayName: profile.getDisplayName() || 'Unknown',
-      avatarUrl: profile.getAvatarUrl(),
-      countryCode: profile.getCountryCode(),
-      rankTier: profile.getRankTier(),
+      userId: profile.id,
+      displayName: profile.displayName || 'Unknown',
+      avatarUrl: profile.avatarUrl,
+      countryCode: undefined,
+      rankTier: 'bronze',
     };
 
     return {
@@ -116,8 +116,8 @@ export class ChatService {
     const uniqueSenderIds = Array.from(
       new Set(
         messages
-          .map((msg) => msg.getSenderId())
-          .filter((id): id is UserId => id != null),
+          .map((msg) => msg.getSenderId()?.getValue())
+          .filter((id): id is string => id != null),
       ),
     );
 
@@ -127,12 +127,12 @@ export class ChatService {
     // Create a Map for O(1) profile lookup
     const profileMap = new Map<string, BasicProfile>();
     profiles.forEach((profile) => {
-      profileMap.set(profile.getUserId().getValue(), {
-        userId: profile.getUserId().getValue(),
-        displayName: profile.getDisplayName() || 'Unknown',
-        avatarUrl: profile.getAvatarUrl(),
-        countryCode: profile.getCountryCode(),
-        rankTier: profile.getRankTier(),
+      profileMap.set(profile.userId, {
+        userId: profile.userId,
+        displayName: profile.displayName || 'Unknown',
+        avatarUrl: profile.avatarUrl,
+        countryCode: profile.countryCode,
+        rankTier: profile.rankTier || 'bronze',
       });
     });
 

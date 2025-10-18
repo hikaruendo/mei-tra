@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GameModule } from './game.module';
+import { SocialModule } from './social.module';
 import { DatabaseModule } from './database/database.module';
 import { UserProfileController } from './controllers/user-profile.controller';
 import { RepositoriesModule } from './repositories/repositories.module';
@@ -18,6 +19,7 @@ import { APP_FILTER } from '@nestjs/core';
     }),
     DatabaseModule,
     GameModule,
+    SocialModule,
     RepositoriesModule,
   ],
   controllers: [AppController, UserProfileController],
