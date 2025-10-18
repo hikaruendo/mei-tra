@@ -25,7 +25,113 @@
 
 明専トランプ（Old Maid）のバックエンドAPI。NestJS + Supabase + WebSocketで構築されています。
 
-## 📚 ドキュメント
+## NestJSモジュールシステム
+
+このプロジェクトはNestJSのモジュールシステムを活用し、依存性注入(DI)とクリーンアーキテクチャを実現しています。
+
+### モジュール階層
+
+```
+AppModule (ルート)
+│
+├── ConfigModule.forRoot() (グローバル)
+├── ScheduleModule.forRoot() (グローバル)
+│
+├── RepositoriesModule
+│   └── DatabaseModule
+│       └── ConfigModule.forFeature(supabaseConfig)
+│
+├── AuthModule
+│   └── RepositoriesModule (共有)
+│
+├── SocialModule
+│   └── RepositoriesModule (共有)
+│
+└── GameModule
+    ├── RepositoriesModule (共有)
+    ├── AuthModule (共有)
+    └── SocialModule (共有)
+```
+
+### モジュールの役割
+
+#### **DatabaseModule** (最下層)
+- Supabaseクライアントの初期化と提供
+- `SupabaseService`をエクスポート
+
+#### **RepositoriesModule** (データアクセス層)
+- リポジトリパターンの実装
+- インターフェースと実装の分離（依存性の逆転）
+- エクスポート:
+  - `IRoomRepository`
+  - `IGameStateRepository`
+  - `IUserProfileRepository`
+  - `IChatRoomRepository`
+  - `IChatMessageRepository`
+
+#### **機能モジュール**
+- **AuthModule**: 認証・認可機能
+- **SocialModule**: チャット機能（WebSocket）
+- **GameModule**: ゲームロジック（WebSocket）
+
+### 依存性注入 (DI) の仕組み
+
+```typescript
+// RepositoriesModuleで定義
+{
+  provide: 'IRoomRepository',      // インターフェース（抽象）
+  useClass: SupabaseRoomRepository // 実装（具象）
+}
+
+// サービスで使用
+constructor(
+  @Inject('IRoomRepository')
+  private roomRepository: IRoomRepository,
+) {}
+```
+
+**利点**:
+- テスト時にモックへ簡単に差し替え可能
+- 実装を変更しても呼び出し側は影響を受けない
+- インターフェースに依存することで疎結合を実現
+
+### シングルトンパターン
+
+NestJSは同じモジュールを複数箇所でインポートしても**インスタンスは1つだけ**作成します。
+
+```typescript
+// AppModuleとGameModuleの両方でSocialModuleをインポート
+// → SocialModuleのインスタンスは1つだけ（メモリ効率が良い）
+```
+
+### forRoot() vs forFeature()
+
+#### `forRoot()` - グローバル初期化
+```typescript
+// AppModuleで1回だけ呼ぶ
+ScheduleModule.forRoot()
+ConfigModule.forRoot({ isGlobal: true })
+```
+- アプリケーション全体で共有される設定
+- ルートモジュールでのみ使用
+
+#### `forFeature()` - 機能ごとの設定
+```typescript
+// 各機能モジュールで必要に応じて呼ぶ
+ConfigModule.forFeature(supabaseConfig)
+```
+- モジュール固有の設定を追加
+- 複数のモジュールで異なる設定を持てる
+
+### このアーキテクチャの利点
+
+1. **モジュール性**: 機能ごとに分離され、理解・変更が容易
+2. **再利用性**: 同じモジュールを複数箇所で使用可能
+3. **テスト容易性**: DIによりモックへの差し替えが簡単
+4. **依存関係の明確化**: `imports`を見れば依存関係が一目瞭然
+5. **スケーラビリティ**: 大規模アプリケーションでも破綻しない設計
+
+## ドキュメント
 
 - **[Supabaseマイグレーションガイド](./SUPABASE_MIGRATION.md)** - Supabase移行の全体概要とトラブルシューティング
 - **[Supabase運用操作手順書](./SUPABASE_OPERATIONS.md)** - 日常運用での具体的な操作手順

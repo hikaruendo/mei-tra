@@ -10,6 +10,7 @@ import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { AuthModule } from './auth/auth.module';
+import { SocialModule } from './social.module';
 import { JoinRoomUseCase } from './use-cases/join-room.use-case';
 import { CreateRoomUseCase } from './use-cases/create-room.use-case';
 import { LeaveRoomUseCase } from './use-cases/leave-room.use-case';
@@ -27,7 +28,7 @@ import { ProcessGameOverUseCase } from './use-cases/process-game-over.use-case';
 import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
 
 @Module({
-  imports: [RepositoriesModule, AuthModule],
+  imports: [RepositoriesModule, AuthModule, SocialModule],
   providers: [
     GameGateway,
     GameStateService,

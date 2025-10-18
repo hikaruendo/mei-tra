@@ -8,6 +8,7 @@ import {
   CreateUserProfileDto,
   UpdateUserProfileDto,
   UserPreferences,
+  ChatProfileDto,
 } from '../../types/user.types';
 
 @Injectable()
@@ -200,6 +201,39 @@ export class SupabaseUserProfileRepository implements IUserProfileRepository {
       }
     } catch (error) {
       this.logger.error(`Failed to update game stats for user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async findByUserIds(userIds: string[]): Promise<ChatProfileDto[]> {
+    try {
+      if (userIds.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await this.supabase
+        .from('user_profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', userIds);
+
+      if (error) {
+        this.logger.error('Failed to find users by ids:', error);
+        throw error;
+      }
+
+      return (
+        data?.map(
+          (row: { id: string; display_name: string; avatar_url?: string }) => ({
+            userId: row.id,
+            displayName: row.display_name,
+            avatarUrl: row.avatar_url || undefined,
+            rankTier: undefined,
+            countryCode: undefined,
+          }),
+        ) || []
+      );
+    } catch (error) {
+      this.logger.error('Failed to find users by ids:', error);
       throw error;
     }
   }

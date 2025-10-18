@@ -183,7 +183,7 @@
       "setupDesc": "Meitra uses a modified 53-card deck: cards 5 through Ace in all four suits (♠♥♦♣), plus one JOKER. Cards 2, 3, and 4 are excluded from play but used separately as score markers.",
       "gameFlow": "Game Flow Overview",
       "phase1Title": "1. Deal Phase",
-      "phase1Desc": "Each player receives 13 cards. One card remains face-down as the 'hidden card.'",
+      "phase1Desc": "Each player receives 10 cards. One card remains face-down as the 'hidden card.'",
       "phase2Title": "2. Blow Phase (Bidding)",
       "phase2Desc": "Players take turns declaring how many 'pairs' (tricks) they can win out of 10, and which suit will be trump. Like Bridge's auction, higher bids override lower ones. Minimum bid: 6 pairs.",
       "phase3Title": "3. Play Phase (Trick-taking)",

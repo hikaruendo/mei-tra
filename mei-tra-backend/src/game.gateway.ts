@@ -38,6 +38,7 @@ import { IRevealBrokenHandUseCase } from './use-cases/interfaces/reveal-broken-h
 import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use-case.interface';
 import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
 import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
+import { ChatService } from './services/chat.service';
 
 @WebSocketGateway({
   cors: {
@@ -99,6 +100,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject('IChangePlayerTeamUseCase')
     private readonly changePlayerTeamUseCase: IChangePlayerTeamUseCase,
     private readonly authService: AuthService,
+    private readonly chatService: ChatService,
   ) {}
 
   /**
@@ -613,6 +615,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.playerRooms.set(client.id, room.id);
       await client.join(room.id);
+
+      // Create corresponding chat room for the game room
+      try {
+        await this.chatService.createRoom({
+          id: room.id,
+          scope: 'table',
+          name: `Game: ${room.name}`,
+          ownerId: authenticatedUser?.id,
+          visibility: 'private',
+          messageTtlHours: 24,
+        });
+        console.log(`[GameGateway] Chat room created for game room ${room.id}`);
+      } catch (error: unknown) {
+        console.error(
+          `[GameGateway] Failed to create chat room:`,
+          error instanceof Error ? error.message : error,
+        );
+        // Don't fail the game room creation if chat room creation fails
+      }
 
       this.server.emit('rooms-list', roomsList);
 
