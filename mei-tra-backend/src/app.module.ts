@@ -1,10 +1,10 @@
 import { Module, Type } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GameModule } from './game.module';
 import { SocialModule } from './social.module';
-import { DatabaseModule } from './database/database.module';
 import { UserProfileController } from './controllers/user-profile.controller';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
@@ -17,7 +17,7 @@ import { APP_FILTER } from '@nestjs/core';
       isGlobal: true,
       envFilePath: ['.env.development', '.env.local', '.env'],
     }),
-    DatabaseModule,
+    ScheduleModule.forRoot(),
     GameModule,
     SocialModule,
     RepositoriesModule,
