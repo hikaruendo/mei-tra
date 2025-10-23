@@ -119,10 +119,10 @@ export function ProfilePage() {
               </div>
               <div className={styles.profileInfo}>
                 <h1 className={styles.profileName}>
-                  {profile?.displayName || 'ゲストユーザー'}
+                  {profile?.displayName || user?.email || 'User'}
                 </h1>
                 <p className={styles.profileUsername}>
-                  @{profile?.username || 'guest'}
+                  @{profile?.username || user?.id.substring(0, 8) || 'unknown'}
                 </p>
                 <p className={styles.profileEmail}>
                   {user.email}

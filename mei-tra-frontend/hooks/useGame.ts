@@ -46,8 +46,6 @@ export const useGame = () => {
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
-
-  const [reconnectToken, setReconnectToken] = useState<string | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -353,22 +351,6 @@ export const useGame = () => {
         setCurrentHighestDeclaration(currentHighestDeclaration);
         setBlowDeclarations(blowDeclarations);
       },
-      'reconnect-token': (token: string) => {
-        // Only store reconnectToken for guest users
-        // Authenticated users don't need it (they use userId)
-        if (!user) {
-          console.log('[useGame] Received new reconnect token for guest user:', token);
-          setReconnectToken(token);
-          try {
-            sessionStorage.setItem('reconnectToken', token);
-            console.log('[useGame] Successfully stored reconnect token in sessionStorage');
-          } catch (error) {
-            console.error('[useGame] Failed to store reconnect token in sessionStorage:', error);
-          }
-        } else {
-          console.log('[useGame] Skipped reconnectToken storage for authenticated user (using userId)');
-        }
-      },
       'back-to-lobby': () => {
         setGameStarted(false);
         setGamePhase(null);
@@ -417,36 +399,6 @@ export const useGame = () => {
   };
 
   const gameActions = {
-    joinGame: () => {
-      // 認証済みユーザーの場合、joinGameは不要
-      if (user) {
-        console.warn('[useGame] joinGame called for authenticated user - this should not happen');
-        return;
-      }
-
-      const trimmedName = name.trim();
-
-      if (trimmedName && socket) {
-        // Persist name for initial handshake on future reloads
-        try { sessionStorage.setItem('playerName', trimmedName); } catch {}
-
-        // Merge into existing auth to avoid clobbering token or roomId
-        const existingAuth = (socket.auth || {}) as Record<string, unknown>;
-        socket.auth = reconnectToken
-          ? { ...existingAuth, reconnectToken, name: trimmedName }
-          : { ...existingAuth, name: trimmedName };
-
-        // Connect if not already connecting/connected
-        if (!socket.connected) {
-          socket.once('connect', () => {
-            socket.emit('update-name', { name: trimmedName });
-          });
-          socket.connect();
-        } else {
-          socket.emit('update-name', { name: trimmedName });
-        }
-      }
-    },
     declareBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         alert("It's not your turn to declare!");

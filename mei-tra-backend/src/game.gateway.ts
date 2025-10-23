@@ -206,92 +206,65 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //-------Connection-------
   async handleConnection(client: Socket) {
     const auth = client.handshake.auth || {};
-    const reconnectToken =
-      typeof auth.reconnectToken === 'string' && auth.reconnectToken
-        ? auth.reconnectToken
-        : undefined;
-    const name = typeof auth.name === 'string' ? auth.name : undefined;
     const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
     const supabaseToken =
       typeof auth.token === 'string' ? auth.token : undefined;
 
-    // Try to authenticate with Supabase token
+    // Authentication required
     let authenticatedUser: AuthenticatedUser | null = null;
-    if (supabaseToken) {
-      try {
-        authenticatedUser =
-          await this.authService.getUserFromSocketToken(supabaseToken);
-        if (authenticatedUser) {
-          // Store authenticated user in socket data
-          (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
-        }
-      } catch (error) {
-        console.warn(
-          '[Auth] Failed to authenticate user with Supabase token:',
-          error,
-        );
-      }
+    if (!supabaseToken) {
+      console.warn('[Auth] No authentication token provided');
+      client.emit('error', { message: 'Authentication required' });
+      client.disconnect();
+      return;
     }
 
-    // 再接続処理（優先順位: userId > reconnectToken）
-    if (roomId) {
+    try {
+      authenticatedUser =
+        await this.authService.getUserFromSocketToken(supabaseToken);
+      if (authenticatedUser) {
+        // Store authenticated user in socket data
+        (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
+      } else {
+        console.warn('[Auth] Invalid authentication token');
+        client.emit('error', { message: 'Invalid authentication token' });
+        client.disconnect();
+        return;
+      }
+    } catch (error) {
+      console.warn(
+        '[Auth] Failed to authenticate user with Supabase token:',
+        error,
+      );
+      client.emit('error', { message: 'Authentication failed' });
+      client.disconnect();
+      return;
+    }
+
+    // 再接続処理
+    if (roomId && authenticatedUser) {
       try {
         console.log('[Reconnection] Attempting reconnection with:', {
           roomId,
-          hasAuthToken: !!supabaseToken,
-          userId: authenticatedUser?.id || 'none',
-          hasReconnectToken: !!reconnectToken,
+          userId: authenticatedUser.id,
           socketId: client.id,
         });
 
         // ルームのゲーム状態を取得
         const roomGameState = await this.roomService.getRoomGameState(roomId);
 
-        let existingPlayer: Awaited<
-          ReturnType<typeof roomGameState.findPlayerByUserId>
-        > = null;
-
-        // 優先度1: ログインユーザーはuserIdで検索
-        if (authenticatedUser?.id) {
-          existingPlayer = roomGameState.findPlayerByUserId(
-            authenticatedUser.id,
+        // ログインユーザーはuserIdで検索
+        const existingPlayer = roomGameState.findPlayerByUserId(
+          authenticatedUser.id,
+        );
+        if (existingPlayer) {
+          console.log(
+            `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
           );
-          if (existingPlayer) {
-            console.log(
-              `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
-            );
-          } else {
-            console.log(
-              `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}`,
-            );
-          }
-        }
-
-        // 優先度2: reconnectTokenで検索（ゲストユーザー用）
-        if (!existingPlayer && reconnectToken) {
-          existingPlayer =
-            roomGameState.findPlayerByReconnectToken(reconnectToken);
-          if (existingPlayer) {
-            console.log(
-              `[Reconnection] ✓ Found player by reconnectToken: ${reconnectToken}, playerId: ${existingPlayer.playerId}`,
-            );
-          } else {
-            console.log(
-              `[Reconnection] ✗ No player found by reconnectToken: ${reconnectToken}`,
-            );
-          }
-
-          // Try to restore from vacant seat if not found
-          if (!existingPlayer) {
-            const restored = await this.roomService.restorePlayerFromVacantSeat(
-              roomId,
-              reconnectToken,
-            );
-            if (restored) {
-              existingPlayer =
-                roomGameState.findPlayerByReconnectToken(reconnectToken);
-            }
-          }
+        } else {
+          console.log(
+            `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}`,
+          );
         }
 
         if (existingPlayer) {
@@ -371,128 +344,37 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // 新規プレイヤーとして追加
-    // 認証済みユーザーまたは名前がある場合に処理
-    if (name || authenticatedUser) {
-      // Determine display name and player ID
-      const displayName =
-        authenticatedUser?.profile?.displayName ||
-        authenticatedUser?.email ||
-        name ||
-        'User';
-      const userId = authenticatedUser?.id;
-
-      if (
-        this.gameState.addPlayer(
-          client.id,
-          displayName,
-          reconnectToken,
-          userId,
-          !!authenticatedUser,
-        )
-      ) {
-        const users = this.gameState.getUsers();
-        const newUser = users.find((p) => p.id === client.id);
-
-        if (newUser) {
-          // Issue reconnect token only for guest users
-          if (!authenticatedUser) {
-            this.server
-              .to(client.id)
-              .emit('reconnect-token', `${newUser.playerId}`);
-          }
-          this.server.emit('update-users', users);
-        }
-      } else {
-        client.emit('error-message', 'Game is full!');
-        client.disconnect();
-      }
-    } else {
-      // Allow connection to remain open without immediate name/reconnectToken.
-      // The client can later authenticate via 'update-auth' or join with a name.
-    }
-  }
-
-  @SubscribeMessage('update-name')
-  handleUpdateName(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { name?: string },
-  ) {
-    const trimmedName = data?.name?.trim();
-    if (!trimmedName) {
-      client.emit('name-updated', {
-        success: false,
-        error: 'Name is required',
-      });
-      client.emit('error-message', 'Name is required');
-      return;
-    }
-
-    // Persist name on the handshake auth for debugging/reconnection attempts
-    try {
-      (client.handshake.auth as Record<string, unknown>).name = trimmedName;
-    } catch {
-      // No-op if auth object is frozen
-    }
-
-    const existingUser = this.gameState
-      .getUsers()
-      .find((user) => user.id === client.id);
-
-    if (existingUser) {
-      this.gameState.updateUserName(client.id, trimmedName);
-      existingUser.name = trimmedName;
-      this.server.emit('update-users', this.gameState.getUsers());
-      client.emit('name-updated', {
-        success: true,
-        playerId: existingUser.playerId,
-        name: trimmedName,
-      });
-      return;
-    }
-
-    const handshakeAuth = client.handshake.auth || {};
-    const reconnectToken =
-      typeof handshakeAuth.reconnectToken === 'string'
-        ? handshakeAuth.reconnectToken
-        : undefined;
-
-    const authenticatedUser = (client.data as { user?: AuthenticatedUser })
-      .user;
+    // 新規認証済みプレイヤーとして追加
+    const displayName =
+      authenticatedUser.profile?.displayName ||
+      authenticatedUser.email ||
+      'User';
+    const userId = authenticatedUser.id;
 
     if (
       this.gameState.addPlayer(
         client.id,
-        trimmedName,
-        reconnectToken,
-        authenticatedUser?.id,
-        !!authenticatedUser,
+        displayName,
+        userId,
+        true, // Always authenticated
       )
     ) {
       const users = this.gameState.getUsers();
-      const newUser = users.find((user) => user.id === client.id);
-      if (newUser) {
-        this.server.emit('update-users', users);
-        // Issue reconnect token only for guest users
-        if (!authenticatedUser) {
-          this.server
-            .to(client.id)
-            .emit('reconnect-token', `${newUser.playerId}`);
-        }
-        client.emit('name-updated', {
-          success: true,
-          playerId: newUser.playerId,
-          name: newUser.name,
-        });
-        return;
-      }
+      this.server.emit('update-users', users);
+    } else {
+      client.emit('error-message', 'Game is full!');
+      client.disconnect();
     }
+  }
 
+  @SubscribeMessage('update-name')
+  handleUpdateName(@ConnectedSocket() client: Socket) {
+    // Name updates not supported for authenticated users
+    // Display name comes from profile
     client.emit('name-updated', {
       success: false,
-      error: 'Unable to register name',
+      error: 'Name updates not supported. Please update your profile.',
     });
-    client.emit('error-message', 'Unable to register name');
   }
 
   async handleDisconnect(client: Socket) {

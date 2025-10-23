@@ -11,7 +11,7 @@ export default function RoomsPage() {
   const { isConnected, isConnecting } = useSocket();
 
   return (
-    <ProtectedRoute requireAuth={false}>
+    <ProtectedRoute requireAuth={true}>
       <Navigation />
       <main>
         <RoomList isConnected={isConnected} isConnecting={isConnecting} />

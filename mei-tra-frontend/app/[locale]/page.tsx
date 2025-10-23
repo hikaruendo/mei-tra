@@ -5,8 +5,7 @@ import { GameTable } from '../../components/GameTable';
 import { Notification } from '../../components/Notification';
 import { Navigation } from '../../components/layout/Navigation';
 import { useGame } from '../../hooks/useGame';
-import { useAuth } from '../../contexts/AuthContext';
-import GameJoinGroup from '../../components/organisms/GameJoinGroup';
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import { RoomList } from '../../components/molecules/RoomList';
 import { ChatDock } from '../../components/social/ChatDock';
 import styles from './index.module.css';
@@ -16,7 +15,6 @@ export const dynamic = 'force-dynamic';
 export default function Home() {
   const t = useTranslations('game');
   const gameState = useGame();
-  const { user, loading: authLoading } = useAuth();
 
   // Always show UI - only show loading overlay if truly necessary
   if (!gameState) {
@@ -34,8 +32,6 @@ export default function Home() {
   }
 
   const {
-    name = '',
-    setName,
     gameStarted = false,
     gamePhase = null,
     whoseTurn = null,
@@ -65,7 +61,7 @@ export default function Home() {
   } = gameState;
 
   // Type guard to ensure gameActions exists
-  if (!gameActions || !setName || !setSelectedTrump || !setNumberOfPairs || !setNotification) {
+  if (!gameActions || !setSelectedTrump || !setNumberOfPairs || !setNotification) {
     return (
       <>
         <Navigation gameStarted={false} />
@@ -82,7 +78,7 @@ export default function Home() {
   }
 
   return (
-    <>
+    <ProtectedRoute requireAuth={true}>
       <Navigation gameStarted={gameStarted} />
       <main>
         {notification && (
@@ -99,19 +95,7 @@ export default function Home() {
         ) : (
           <>
             <div style={{ display: gameStarted ? 'none' : 'block' }}>
-              {user && !authLoading ? (
-                // 認証済みユーザー: ルーム一覧のみ表示
-                <RoomList isConnected={isConnected} isConnecting={isConnecting} />
-              ) : (
-                // 未認証ユーザー: 従来のjoinGame フォームを表示
-                <GameJoinGroup
-                  name={name}
-                  onNameChange={setName}
-                  onJoinGame={gameActions.joinGame}
-                  isConnected={isConnected}
-                  isConnecting={isConnecting}
-                />
-              )}
+              <RoomList isConnected={isConnected} isConnecting={isConnecting} />
             </div>
             <div style={{ display: gameStarted ? 'block' : 'none' }}>
               <GameTable
@@ -143,6 +127,6 @@ export default function Home() {
           </>
         )}
       </main>
-    </>
+    </ProtectedRoute>
   );
 }
