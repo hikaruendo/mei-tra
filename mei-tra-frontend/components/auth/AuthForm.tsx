@@ -65,9 +65,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
         if (error) {
           setError(error.message);
         } else {
-          setError(null);
-          // Show success message for email verification
-          alert(t('confirmEmailSent'));
+          onSuccess?.();
         }
       }
     } catch {
