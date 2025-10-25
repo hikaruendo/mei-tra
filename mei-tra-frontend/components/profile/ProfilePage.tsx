@@ -6,10 +6,12 @@ import { ProfileEditForm } from './ProfileEditForm';
 import { Navigation } from '../layout/Navigation';
 import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
+import { useTranslations } from 'next-intl';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {
   const { user, loading } = useAuth();
+  const t = useTranslations('profile');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(user?.profile || null);
@@ -21,7 +23,7 @@ export function ProfilePage() {
         <div className={styles.loadingContainer}>
           <div className={styles.loadingContent}>
             <div className={styles.loadingSpinner}></div>
-            <span className={styles.loadingText}>プロフィールを読み込み中...</span>
+            <span className={styles.loadingText}>{t('loading')}</span>
           </div>
         </div>
       </>
@@ -35,9 +37,9 @@ export function ProfilePage() {
         <div className={styles.noAuthContainer}>
           <div className={styles.noAuthContent}>
             <div>
-              <h2 className={styles.noAuthTitle}>プロフィール</h2>
+              <h2 className={styles.noAuthTitle}>{t('title')}</h2>
             <p className={styles.noAuthDescription}>
-              プロフィールを表示するにはログインが必要です
+              {t('loginRequired')}
             </p>
           </div>
           <div className={styles.noAuthButtonContainer}>
@@ -45,7 +47,7 @@ export function ProfilePage() {
               onClick={() => setShowAuthModal(true)}
               className={styles.loginButton}
             >
-              ログイン
+              {t('loginButton')}
             </button>
           </div>
             <AuthModal
@@ -78,7 +80,7 @@ export function ProfilePage() {
           <div className={styles.mainContainer}>
           <div className={styles.profileCard}>
             <div className={styles.profileHeader}>
-              <h1 className={styles.editTitle}>プロフィール編集</h1>
+              <h1 className={styles.editTitle}>{t('edit')}</h1>
             </div>
             <ProfileEditForm
               profile={profile}
@@ -106,7 +108,7 @@ export function ProfilePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profile.avatarUrl}
-                    alt="プロフィール画像"
+                    alt={t('profileImage')}
                     className={styles.avatarImage}
                   />
                 ) : (
@@ -133,7 +135,7 @@ export function ProfilePage() {
                   onClick={() => setIsEditing(true)}
                   className={styles.editButton}
                 >
-                  編集
+                  {t('editButton')}
                 </button>
               </div>
             </div>
@@ -148,7 +150,7 @@ export function ProfilePage() {
                   <div className={`${styles.statValue} ${styles.gamesPlayed}`}>
                     {profile.gamesPlayed}
                   </div>
-                  <div className={styles.statLabel}>プレイしたゲーム数</div>
+                  <div className={styles.statLabel}>{t('gamesPlayed')}</div>
                 </div>
 
                 {/* Games Won */}
@@ -156,7 +158,7 @@ export function ProfilePage() {
                   <div className={`${styles.statValue} ${styles.gamesWon}`}>
                     {profile.gamesWon}
                   </div>
-                  <div className={styles.statLabel}>勝利数</div>
+                  <div className={styles.statLabel}>{t('wins')}</div>
                 </div>
 
                 {/* Win Rate */}
@@ -164,7 +166,7 @@ export function ProfilePage() {
                   <div className={`${styles.statValue} ${styles.winRate}`}>
                     {winRate}%
                   </div>
-                  <div className={styles.statLabel}>勝率</div>
+                  <div className={styles.statLabel}>{t('winRate')}</div>
                 </div>
 
                 {/* Total Score */}
@@ -172,31 +174,31 @@ export function ProfilePage() {
                   <div className={`${styles.statValue} ${styles.totalScore}`}>
                     {profile.totalScore}
                   </div>
-                  <div className={styles.statLabel}>総スコア</div>
+                  <div className={styles.statLabel}>{t('totalScore')}</div>
                 </div>
               </div>
             ) : (
               <div className={styles.noProfileText}>
-                プロフィール情報を読み込んでいます...
+                {t('loadingProfile')}
               </div>
             )}
 
             {/* Account Information */}
             <div className={styles.accountSection}>
               <h3 className={styles.sectionTitle}>
-                アカウント情報
+                {t('accountInfo')}
               </h3>
               <div className={styles.accountInfo}>
                 {profile && (
                   <>
                     <div className={styles.accountRow}>
-                      <span className={styles.accountLabel}>参加日</span>
+                      <span className={styles.accountLabel}>{t('joinDate')}</span>
                       <span className={styles.accountValue}>
                         {new Date(profile.createdAt).toLocaleDateString('ja-JP')}
                       </span>
                     </div>
                     <div className={styles.accountRow}>
-                      <span className={styles.accountLabel}>最終ログイン</span>
+                      <span className={styles.accountLabel}>{t('lastLogin')}</span>
                       <span className={styles.accountValue}>
                         {new Date(profile.lastSeenAt).toLocaleDateString('ja-JP')}
                       </span>
@@ -204,7 +206,7 @@ export function ProfilePage() {
                   </>
                 )}
                 <div className={styles.accountRow}>
-                  <span className={styles.accountLabel}>メールアドレス</span>
+                  <span className={styles.accountLabel}>{t('emailAddress')}</span>
                   <span className={styles.accountValue}>{user.email}</span>
                 </div>
               </div>

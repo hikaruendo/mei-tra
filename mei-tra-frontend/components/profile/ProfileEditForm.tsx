@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserProfile, UserPreferences } from '@/types/user.types';
 import { supabase } from '@/lib/supabase';
+import { useTranslations } from 'next-intl';
 import {
   optimizeImage,
   validateImageFile,
@@ -40,6 +41,7 @@ interface DatabaseUserProfileResponse {
 
 export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormProps) {
   const { user, refreshUserProfile } = useAuth();
+  const t = useTranslations('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -96,19 +98,19 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
   const handleAvatarSelect = useCallback(async (file: File) => {
     setError(null);
     setIsUploading(true);
-    setUploadProgress({ message: '画像を処理中...' });
+    setUploadProgress({ message: t('imageProcessing') });
 
     try {
       // バリデーション
       const validation = validateImageFile(file);
       if (!validation.isValid) {
-        setError(validation.error || '無効なファイルです');
+        setError(validation.error || t('invalidFile'));
         return;
       }
 
       setUploadProgress({
         original: file.size,
-        message: '画像を最適化中...'
+        message: t('optimizing')
       });
 
       // 画像を最適化
@@ -117,7 +119,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       setUploadProgress({
         original: optimized.originalSize,
         optimized: optimized.optimizedSize,
-        message: '最適化完了',
+        message: t('optimized'),
       });
 
       // 前のプレビューをクリーンアップ
@@ -128,11 +130,11 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       setAvatarFile(optimized.file);
       setAvatarPreview(optimized.preview);
     } catch (error) {
-      setError(error instanceof Error ? error.message : '画像の処理に失敗しました');
+      setError(error instanceof Error ? error.message : t('imageProcessingFailed'));
     } finally {
       setIsUploading(false);
     }
-  }, [avatarPreview]);
+  }, [avatarPreview, t]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -169,7 +171,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'アバターのアップロードに失敗しました');
+      throw new Error(errorData.message || t('uploadFailed'));
     }
 
     const result = await response.json();
@@ -177,7 +179,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
   };
 
   const updateProfile = async (): Promise<DatabaseUserProfileResponse> => {
-    if (!user) throw new Error('ユーザーが見つかりません');
+    if (!user) throw new Error(t('userNotFound'));
 
     const { data, error } = await supabase
       .from('user_profiles')
@@ -202,11 +204,11 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
     try {
       // バリデーション
       if (!formData.username.trim()) {
-        setError('ユーザー名を入力してください');
+        setError(t('enterUsername'));
         return;
       }
       if (!formData.displayName.trim()) {
-        setError('表示名を入力してください');
+        setError(t('enterDisplayName'));
         return;
       }
 
@@ -240,7 +242,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       // Refresh user profile in AuthContext to update avatar in header
       await refreshUserProfile();
     } catch (error) {
-      setError(error instanceof Error ? error.message : '保存に失敗しました');
+      setError(error instanceof Error ? error.message : t('saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -251,7 +253,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.formSection}>
-        <h3 className={styles.sectionTitle}>プロフィール画像</h3>
+        <h3 className={styles.sectionTitle}>{t('profileImage')}</h3>
 
         <div className={styles.avatarSection}>
           <div className={styles.avatarContainer}>
@@ -259,7 +261,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={currentAvatarUrl}
-                alt="プロフィール画像"
+                alt={t('profileImage')}
                 className={styles.avatarImage}
               />
             ) : (
@@ -283,7 +285,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               disabled={isUploading || isSaving}
               className={styles.uploadButton}
             >
-              {isUploading ? '処理中...' : '画像を選択'}
+              {isUploading ? t('processing') : t('selectImage')}
             </button>
 
             <div
@@ -291,7 +293,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               onDrop={handleDrop}
               onDragOver={handleDragOver}
             >
-              <p>ここに画像をドラッグ&ドロップ</p>
+              <p>{t('dragDrop')}</p>
               <small>JPEG, PNG, WebP (最大2MB)</small>
             </div>
 
@@ -318,11 +320,11 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       </div>
 
       <div className={styles.formSection}>
-        <h3 className={styles.sectionTitle}>基本情報</h3>
+        <h3 className={styles.sectionTitle}>{t('basicInfo')}</h3>
 
         <div className={styles.inputGroup}>
           <label htmlFor="username" className={styles.label}>
-            ユーザー名
+            {t('username')}
           </label>
           <input
             type="text"
@@ -338,7 +340,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
         <div className={styles.inputGroup}>
           <label htmlFor="displayName" className={styles.label}>
-            表示名
+            {t('displayName')}
           </label>
           <input
             type="text"
@@ -354,7 +356,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       </div>
 
       <div className={styles.formSection}>
-        <h3 className={styles.sectionTitle}>設定</h3>
+        <h3 className={styles.sectionTitle}>{t('settings')}</h3>
 
         <div className={styles.checkboxGroup}>
           <label className={styles.checkboxLabel}>
@@ -366,7 +368,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               disabled={isSaving}
               className={styles.checkbox}
             />
-            <span className={styles.checkboxText}>通知を受け取る</span>
+            <span className={styles.checkboxText}>{t('notifications')}</span>
           </label>
         </div>
 
@@ -380,13 +382,13 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               disabled={isSaving}
               className={styles.checkbox}
             />
-            <span className={styles.checkboxText}>効果音を有効にする</span>
+            <span className={styles.checkboxText}>{t('soundEffects')}</span>
           </label>
         </div>
 
         <div className={styles.inputGroup}>
           <label htmlFor="theme" className={styles.label}>
-            テーマ
+            {t('theme')}
           </label>
           <select
             id="theme"
@@ -396,8 +398,8 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             disabled={isSaving}
             className={styles.select}
           >
-            <option value="light">ライト</option>
-            <option value="dark">ダーク</option>
+            <option value="light">{t('light')}</option>
+            <option value="dark">{t('dark')}</option>
           </select>
         </div>
       </div>
@@ -415,14 +417,14 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
           disabled={isSaving}
           className={styles.cancelButton}
         >
-          キャンセル
+          {t('cancel')}
         </button>
         <button
           type="submit"
           disabled={isSaving || isUploading}
           className={styles.saveButton}
         >
-          {isSaving ? '保存中...' : '保存'}
+          {isSaving ? t('saving') : t('save')}
         </button>
       </div>
     </form>
