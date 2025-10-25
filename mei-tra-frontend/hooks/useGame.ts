@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSocket } from './useSocket';
-import { useAuth } from '../contexts/AuthContext';
 import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
-  const { user } = useAuth();
 
   // Player and Game State
   const [name, setName] = useState('');
