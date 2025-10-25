@@ -161,12 +161,11 @@ export class GameStateService implements IGameStateService {
   addPlayer(
     socketId: string,
     name: string,
-    reconnectToken?: string,
     userId?: string,
     isAuthenticated?: boolean,
   ): boolean {
-    // Add new user
-    const playerId = reconnectToken || this.generateReconnectToken();
+    // Add new user - use userId as playerId for authenticated users
+    const playerId = userId || this.generateReconnectToken();
     const users = this.getUsers();
     users.push({
       id: socketId,
@@ -176,9 +175,10 @@ export class GameStateService implements IGameStateService {
       isAuthenticated: isAuthenticated || false,
     });
 
-    // Store token mappings
-    const token = reconnectToken || playerId;
-    this.playerIds.set(token, playerId);
+    // Store userId mapping
+    if (userId) {
+      this.playerIds.set(userId, playerId);
+    }
 
     return true;
   }

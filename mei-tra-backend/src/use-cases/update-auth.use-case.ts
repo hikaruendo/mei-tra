@@ -34,27 +34,17 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         return { success: false, error: 'Token validation failed' };
       }
 
-      const { clientEvents, broadcastEvents, reconnectToken } =
-        this.ensureUserRegistered(
-          request.socketId,
-          authenticatedUser,
-          request.handshakeName,
-        );
+      const { clientEvents, broadcastEvents } = this.ensureUserRegistered(
+        request.socketId,
+        authenticatedUser,
+        request.handshakeName,
+      );
 
       const roomEvents = await this.syncRoomPlayer(
         request.currentRoomId,
         request.socketId,
         authenticatedUser,
       );
-
-      if (reconnectToken) {
-        clientEvents.push({
-          scope: 'socket',
-          socketId: request.socketId,
-          event: 'reconnect-token',
-          payload: reconnectToken,
-        });
-      }
 
       return {
         success: true,
@@ -76,7 +66,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
   ): {
     clientEvents: GatewayEvent[];
     broadcastEvents: GatewayEvent[];
-    reconnectToken?: string;
   } {
     const displayName =
       authenticatedUser.profile?.displayName ||
@@ -99,23 +88,17 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     const users = this.gameState.getUsers();
     const existingUser = users.find((user) => user.id === socketId);
-    let reconnectToken: string | undefined;
 
     if (!existingUser) {
       const added = this.gameState.addPlayer(
         socketId,
         displayName,
-        undefined,
         authenticatedUser.id,
         true,
       );
 
       if (added) {
         const updatedUsers = this.gameState.getUsers();
-        const newUser = updatedUsers.find((user) => user.id === socketId);
-        if (newUser) {
-          reconnectToken = `${newUser.playerId}`;
-        }
         return {
           clientEvents,
           broadcastEvents: [
@@ -125,7 +108,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
               payload: updatedUsers,
             },
           ],
-          reconnectToken,
         };
       }
     }

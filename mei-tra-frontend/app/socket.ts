@@ -16,17 +16,12 @@ export function getSocket(authToken?: string): Socket {
   if (!socket && typeof window !== 'undefined') {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
 
-    // Authenticated users don't need reconnectToken (use userId instead)
-    const isAuthenticated = !!authToken;
-    const reconnectToken = isAuthenticated ? '' : (sessionStorage.getItem('reconnectToken') || '');
+    // Only authenticated users can connect
     const roomId = sessionStorage.getItem('roomId') || '';
-    const storedName = sessionStorage.getItem('playerName') || '';
 
     console.log('[Socket] Retrieved from sessionStorage:', {
-      isAuthenticated,
-      reconnectToken: !isAuthenticated && reconnectToken ? `${reconnectToken.substring(0, 10)}...` : 'none (using userId)',
       roomId: roomId || 'none',
-      storedName: storedName || 'none'
+      hasAuthToken: !!authToken
     });
 
     const isSafari = detectSafari();
@@ -34,10 +29,8 @@ export function getSocket(authToken?: string): Socket {
     const socketOptions = {
       transports: isSafari ? ['polling', 'websocket'] : ['websocket', 'polling'],
       auth: {
-        ...(reconnectToken ? { reconnectToken } : {}), // Only include if non-empty
         roomId,
         token: authToken,
-        ...(storedName ? { name: storedName } : {}),
       },
       reconnection: true,
       reconnectionAttempts: 5,

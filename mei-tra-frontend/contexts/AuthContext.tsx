@@ -340,13 +340,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (!session) return null;
-
+    // Always fetch the latest session directly from Supabase
+    // Don't rely on React state which may be stale during registration
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) return null;
 
     return data.session.access_token;
-  }, [session]);
+  }, []); // No dependencies - always get fresh session
 
   const refreshSession = useCallback(async () => {
     const { data, error } = await supabase.auth.refreshSession();

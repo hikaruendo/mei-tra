@@ -18,7 +18,6 @@ export const useRoom = () => {
   
   const users = useMemo(() => game?.users || [], [game?.users]);
   const players = useMemo(() => game?.players || [], [game?.players]);
-  const guestName = game?.name || '';
 
   const currentRoomRef = useRef<Room | null>(null);
   useEffect(() => {
@@ -317,24 +316,8 @@ export const useRoom = () => {
     }
 
     if (!userToJoin) {
-      if (guestName) {
-        let reconnectToken = '';
-        try {
-          reconnectToken = sessionStorage.getItem('reconnectToken') || '';
-        } catch (error) {
-          console.warn('[useRoom] Failed to read reconnectToken from sessionStorage:', error);
-        }
-
-        userToJoin = {
-          id: socketId,
-          playerId: reconnectToken || socketId,
-          name: guestName,
-          isAuthenticated: false
-        };
-      } else {
-        setError('Please enter your name and join the game first');
-        return;
-      }
+      setError('Authentication required to join a room');
+      return;
     }
 
     console.log('[useRoom] Joining room:', {
@@ -349,7 +332,7 @@ export const useRoom = () => {
         setCurrentRoom(response.room);
       }
     });
-  }, [socket, users, user, guestName]);
+  }, [socket, users, user]);
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
@@ -357,13 +340,9 @@ export const useRoom = () => {
 
     socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
-        // reconnectTokenは保持（同じplayerIdで再joinできるようにする）
-        // 他のプレイヤーが席を取ったら、その時点でトークンは無効になる
         if (typeof window !== 'undefined') {
-          // sessionStorage.removeItem('reconnectToken');  // ← 保持
           sessionStorage.removeItem('roomId');
-          // sessionStorage.removeItem('playerName');  // ← 名前も保持
-          console.log('[useRoom] Cleared room data (kept reconnectToken and playerName for rejoin)');
+          console.log('[useRoom] Cleared room data');
         }
       } else {
         setError(response.error || 'Failed to leave room');

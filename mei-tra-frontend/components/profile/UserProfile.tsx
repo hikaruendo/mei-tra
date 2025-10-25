@@ -71,7 +71,7 @@ export function UserProfile() {
             {user.profile?.displayName || user.email}
           </span>
           <span className={styles.username}>
-            @{user.profile?.username || 'ゲスト'}
+            @{user.profile?.username || user.id.substring(0, 8)}
           </span>
         </div>
       </Link>

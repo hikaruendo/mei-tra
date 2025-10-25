@@ -41,6 +41,14 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
+      // Prevent playing on a field that is being completed
+      if (state.playState.currentField.isComplete) {
+        return {
+          success: false,
+          error: 'Current field is being completed, please wait',
+        };
+      }
+
       if (!roomGameState.isPlayerTurn(player.playerId)) {
         return { success: false, error: "It's not your turn to play" };
       }
@@ -76,6 +84,9 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       ];
 
       if (currentField.cards.length === 4) {
+        // Mark field as complete immediately to prevent 5th card
+        currentField.isComplete = true;
+
         await roomGameState.saveState();
         const trigger: CompleteFieldTrigger = {
           roomId,
