@@ -85,7 +85,7 @@
 - [ ] 本番プロジェクトにリンクされていることを確認
   ```bash
   supabase projects list
-  # mei-tra (dutyqqxcwnkftjqnooba) に ● マークがあるか確認
+  # mei-tra (プロジェクトID) に ● マークがあるか確認
   ```
 - [ ] デプロイ実行
   ```bash
