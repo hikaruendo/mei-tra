@@ -8,6 +8,8 @@ import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
+import { ComPlayerService } from './services/com-player.service';
+import { ComAutoPlayService } from './services/com-autoplay.service';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social.module';
@@ -26,6 +28,7 @@ import { RevealBrokenHandUseCase } from './use-cases/reveal-broken-hand.use-case
 import { CompleteFieldUseCase } from './use-cases/complete-field.use-case';
 import { ProcessGameOverUseCase } from './use-cases/process-game-over.use-case';
 import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
+import { ComAutoPlayUseCase } from './use-cases/com-autoplay.use-case';
 
 @Module({
   imports: [RepositoriesModule, AuthModule, SocialModule],
@@ -67,6 +70,16 @@ import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
       useExisting: RoomService,
     },
     GameStateFactory,
+    ComPlayerService,
+    {
+      provide: 'IComPlayerService',
+      useExisting: ComPlayerService,
+    },
+    ComAutoPlayService,
+    {
+      provide: 'IComAutoPlayService',
+      useExisting: ComAutoPlayService,
+    },
     {
       provide: 'IJoinRoomUseCase',
       useClass: JoinRoomUseCase,
@@ -126,6 +139,10 @@ import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
     {
       provide: 'IUpdateAuthUseCase',
       useClass: UpdateAuthUseCase,
+    },
+    {
+      provide: 'IComAutoPlayUseCase',
+      useClass: ComAutoPlayUseCase,
     },
   ],
 })

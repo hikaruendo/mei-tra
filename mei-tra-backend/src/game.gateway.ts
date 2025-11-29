@@ -39,6 +39,9 @@ import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use
 import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
 import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
 import { ChatService } from './services/chat.service';
+import { IComPlayerService } from './services/interfaces/com-player-service.interface';
+import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.interface';
+import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 
 @WebSocketGateway({
   cors: {
@@ -101,6 +104,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly changePlayerTeamUseCase: IChangePlayerTeamUseCase,
     private readonly authService: AuthService,
     private readonly chatService: ChatService,
+    @Inject('IComPlayerService')
+    private readonly comPlayerService: IComPlayerService,
+    @Inject('IComAutoPlayService')
+    private readonly comAutoPlayService: IComAutoPlayService,
+    @Inject('IComAutoPlayUseCase')
+    private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
   ) {}
 
   /**
@@ -200,7 +209,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
       });
+    } else {
+      this.triggerComAutoPlayIfNeeded(roomId);
     }
+  }
+
+  private triggerComAutoPlayIfNeeded(roomId: string): void {
+    // Non-blocking: fire and forget
+    void this.runComAutoPlayLoop(roomId);
+  }
+
+  private async runComAutoPlayLoop(roomId: string): Promise<void> {
+    let iteration = 0;
+    const MAX_ITERATIONS = 10; // Safety limit: max 10 consecutive COM plays
+
+    while (iteration < MAX_ITERATIONS) {
+      const result = await this.comAutoPlayUseCase.execute({ roomId });
+
+      if (!result.success) {
+        console.error(`COM auto-play failed: ${result.error}`);
+        return;
+      }
+
+      // イベント配信
+      this.dispatchEvents(result.events);
+
+      if (!result.shouldContinue) {
+        return; // Stop the loop - no more COM players
+      }
+
+      iteration++;
+
+      // Non-blocking wait - yields to event loop
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    // Safety: log if we hit the iteration limit
+    console.error(
+      `[GameGateway] COM auto-play loop exceeded ${MAX_ITERATIONS} iterations for room ${roomId}. Possible infinite loop prevented.`,
+    );
   }
 
   //-------Connection-------
@@ -724,6 +771,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //-------Game-------
   @SubscribeMessage('start-game')
   async handleStartGame(client: Socket, data: { roomId: string }) {
+    await this.roomService.fillVacantSeatsWithCOM(data.roomId);
+
     const result = await this.startGameUseCase.execute({
       clientId: client.id,
       roomId: data.roomId,
@@ -744,6 +793,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('game-started', data.roomId, players, pointsToWin);
     this.server.to(data.roomId).emit('update-phase', updatePhase);
     this.server.to(data.roomId).emit('update-turn', currentTurnPlayerId);
+
+    this.triggerComAutoPlayIfNeeded(data.roomId);
 
     return { success: true };
   }
@@ -771,6 +822,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
       await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleDeclareBlow:', error);
       client.emit('error-message', 'Failed to declare blow');
@@ -796,6 +848,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
       await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handlePassBlow:', error);
       client.emit('error-message', 'Failed to pass blow');
@@ -863,6 +916,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 .emit('error-message', 'Failed to complete field');
             });
         }, trigger.delayMs);
+      } else {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
       }
     } catch (error) {
       console.error('Error in handlePlayCard:', error);
