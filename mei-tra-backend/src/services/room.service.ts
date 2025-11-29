@@ -7,6 +7,7 @@ import { User, Team, Player } from '../types/game.types';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';
+import { IComPlayerService } from './interfaces/com-player-service.interface';
 
 @Injectable()
 export class RoomService implements IRoomService {
@@ -33,6 +34,8 @@ export class RoomService implements IRoomService {
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository,
     private readonly gameStateFactory: GameStateFactory,
+    @Inject('IComPlayerService')
+    private readonly comPlayerService: IComPlayerService,
   ) {
     // 定期的なクリーンアップを開始
     this.startCleanupTask();
@@ -173,6 +176,31 @@ export class RoomService implements IRoomService {
       id: '',
       hand: [...player.hand],
     };
+  }
+
+  async fillVacantSeatsWithCOM(roomId: string): Promise<void> {
+    const room = await this.getRoom(roomId);
+    if (!room || room.players.length >= 4) return;
+
+    const comCount = 4 - room.players.length;
+    const existingTeam0Count = room.players.filter((p) => p.team === 0).length;
+
+    for (let i = 0; i < comCount; i++) {
+      const team =
+        existingTeam0Count + Math.floor(i / 2) < 2 ? (0 as Team) : (1 as Team);
+      const comPlayer = this.comPlayerService.createComPlayer(
+        room.players.length,
+        team,
+      ) as RoomPlayer;
+
+      comPlayer.isReady = true;
+      comPlayer.isHost = false;
+      comPlayer.joinedAt = new Date();
+
+      room.players.push(comPlayer);
+    }
+
+    await this.updateRoom(roomId, { players: room.players });
   }
 
   /**
