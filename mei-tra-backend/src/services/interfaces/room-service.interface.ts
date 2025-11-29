@@ -41,4 +41,5 @@ export interface IRoomService {
     score: number,
   ): Promise<void>;
   updateUserLastSeen(userId: string): Promise<void>;
+  fillVacantSeatsWithCOM(roomId: string): Promise<void>;
 }
