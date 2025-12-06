@@ -52,6 +52,12 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [roomToLeave, setRoomToLeave] = useState<string | null>(null);
 
+  const fillWithCom = (roomId: string) => {
+    if (socket) {
+      socket.emit('fill-with-com', { roomId });
+    }
+  };
+
   const readyStatus = playerReadyStatus as Record<string, boolean>;
   const players = useMemo(() => game?.players || [], [game?.players]);
 
@@ -214,6 +220,18 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
                     className={`${styles.readyButton} ${readyStatus[currentPlayerId] ? styles.ready : ''}`}
                   >
                     {readyStatus[currentPlayerId] ? t('common.ready') : t('common.readyUp')}
+                  </button>
+                )}
+                {/* COM追加ボタン: 自分がホストで、空席がある場合のみ表示 */}
+                {currentRoom?.id === room.id &&
+                 room.status !== RoomStatus.PLAYING &&
+                 room.hostId === currentPlayerId &&
+                 actualPlayerCount < room.settings.maxPlayers && (
+                  <button
+                    onClick={() => fillWithCom(room.id)}
+                    className={styles.comButton}
+                  >
+                    {t('room.fillWithCom')}
                   </button>
                 )}
                 {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
