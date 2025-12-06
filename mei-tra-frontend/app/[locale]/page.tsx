@@ -121,7 +121,7 @@ export default function Home() {
                 pointsToWin={pointsToWin}
               />
               {currentRoomId && (
-                <ChatDock roomId={currentRoomId} />
+                <ChatDock roomId={currentRoomId} gameStarted={gameStarted} />
               )}
             </div>
           </>

@@ -8,9 +8,10 @@ import styles from './ChatDock.module.scss';
 
 interface ChatDockProps {
   roomId: string;
+  gameStarted?: boolean;
 }
 
-export function ChatDock({ roomId }: ChatDockProps) {
+export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -25,6 +26,13 @@ export function ChatDock({ roomId }: ChatDockProps) {
       };
     }
   }, [isConnected, roomId, joinRoom, leaveRoom]);
+
+  // Auto-minimize chat when game starts
+  useEffect(() => {
+    if (gameStarted) {
+      setIsMinimized(true);
+    }
+  }, [gameStarted]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
