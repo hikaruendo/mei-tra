@@ -325,7 +325,7 @@ export class GameStateService implements IGameStateService {
     // Set the Agari card
     this.state.agari = this.state.deck[40];
 
-    // // Deal exactly 1 card to each player for testing
+    // // For Test: Deal exactly 1 card to each player for testing
     // for (let i = 0; i < this.state.players.length; i++) {
     //   this.state.players[i].hand.push(this.state.deck[i]);
     // }
@@ -367,6 +367,49 @@ export class GameStateService implements IGameStateService {
 
   getCurrentPlayer(): Player | null {
     return this.state.players[this.state.currentPlayerIndex] || null;
+  }
+
+  private arrangePlayersForSeatOrder(): void {
+    if (this.state.players.length <= 1) {
+      return;
+    }
+
+    const currentPlayerId =
+      this.state.players[this.state.currentPlayerIndex]?.playerId || null;
+
+    const team0 = this.state.players.filter((player) => player.team === 0);
+    const team1 = this.state.players.filter((player) => player.team === 1);
+
+    if (team0.length === 0 || team1.length === 0) {
+      return;
+    }
+
+    const maxTeamSize = Math.max(team0.length, team1.length);
+    const ordered: Player[] = [];
+
+    for (let i = 0; i < maxTeamSize; i++) {
+      if (team0[i]) {
+        ordered.push(team0[i]);
+      }
+      if (team1[i]) {
+        ordered.push(team1[i]);
+      }
+    }
+
+    if (ordered.length !== this.state.players.length) {
+      return;
+    }
+
+    this.state.players = ordered;
+
+    if (currentPlayerId) {
+      const newIndex = this.state.players.findIndex(
+        (player) => player.playerId === currentPlayerId,
+      );
+      this.state.currentPlayerIndex = newIndex === -1 ? 0 : newIndex;
+    } else {
+      this.state.currentPlayerIndex = 0;
+    }
   }
 
   isPlayerTurn(playerId: string): boolean {
@@ -478,6 +521,9 @@ export class GameStateService implements IGameStateService {
 
   async startGame(): Promise<void> {
     const state = this.getState();
+
+    // Arrange seats so partners sit opposite and turns follow seat order
+    this.arrangePlayersForSeatOrder();
 
     // Initialize game state
     state.gamePhase = 'blow';

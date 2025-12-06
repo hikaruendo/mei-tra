@@ -184,12 +184,14 @@ export class RoomService implements IRoomService {
 
     const comCount = 4 - room.players.length;
     const existingTeam0Count = room.players.filter((p) => p.team === 0).length;
+    const team0Needed = Math.max(0, 2 - existingTeam0Count);
+    const startingPlayerCount = room.players.length; // Capture initial count
 
     for (let i = 0; i < comCount; i++) {
-      const team =
-        existingTeam0Count + Math.floor(i / 2) < 2 ? (0 as Team) : (1 as Team);
+      // Fill team 0 first until it has 2 players, then fill team 1
+      const team = i < team0Needed ? (0 as Team) : (1 as Team);
       const comPlayer = this.comPlayerService.createComPlayer(
-        room.players.length,
+        startingPlayerCount + i, // Use initial count, not current length
         team,
       ) as RoomPlayer;
 
@@ -197,10 +199,19 @@ export class RoomService implements IRoomService {
       comPlayer.isHost = false;
       comPlayer.joinedAt = new Date();
 
+      await this.roomRepository.addPlayer(roomId, comPlayer);
+
+      // Also add to game state if it exists
+      const gameState = this.roomGameStates.get(roomId);
+      if (gameState) {
+        const state = gameState.getState();
+        state.players.push(comPlayer);
+        gameState.registerPlayerToken(comPlayer.playerId, comPlayer.playerId);
+      }
+
+      // Update in-memory room
       room.players.push(comPlayer);
     }
-
-    await this.updateRoom(roomId, { players: room.players });
   }
 
   /**
@@ -695,12 +706,12 @@ export class RoomService implements IRoomService {
       return { canStart: false, reason: 'Room is not ready' };
     }
 
-    // 実際のプレイヤー（ダミーを除く）が4人揃っているか確認
+    // 実際のプレイヤー（ダミーとCOMを除く）が1人以上いるか確認
     const actualPlayers = room.players.filter(
-      (p) => !p.playerId.startsWith('dummy-'),
+      (p) => !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-'),
     );
-    if (actualPlayers.length !== 4) {
-      return { canStart: false, reason: 'Need exactly 4 players to start' };
+    if (actualPlayers.length === 0) {
+      return { canStart: false, reason: 'Need at least 1 player to start' };
     }
 
     // 全員が準備完了しているか確認

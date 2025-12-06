@@ -67,6 +67,11 @@ export class StartGameUseCase implements IStartGameUseCase {
         }
       });
 
+      // Reset all players' isPasser flag at blow phase start
+      updatedState.players.forEach((p) => {
+        p.isPasser = false;
+      });
+
       const firstBlowIndex = 0;
       const firstBlowPlayer = updatedState.players[firstBlowIndex];
 

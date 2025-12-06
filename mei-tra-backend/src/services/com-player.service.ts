@@ -17,7 +17,7 @@ export class ComPlayerService implements IComPlayerService {
       name: `COM ${seatIndex + 1}`,
       hand: [],
       team,
-      isPasser: true,
+      isPasser: false,
       isCOM: true,
       hasBroken: false,
       hasRequiredBroken: false,
