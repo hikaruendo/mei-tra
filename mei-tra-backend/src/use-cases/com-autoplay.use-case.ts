@@ -16,6 +16,13 @@ import {
 } from './interfaces/pass-blow.use-case.interface';
 import { Player } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
+import { GatewayEvent } from './interfaces/gateway-event.interface';
+import { CompleteFieldTrigger } from './interfaces/play-card.use-case.interface';
+
+type ResponseWithDelayed<T> = T & {
+  delayedEvents?: GatewayEvent[];
+  completeFieldTrigger?: CompleteFieldTrigger;
+};
 
 @Injectable()
 export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
@@ -49,7 +56,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       if (phase === 'play') {
         return await this.handleComPlayPhase(roomId, currentPlayer, gameState);
       } else if (phase === 'blow') {
-        return await this.handleComBlowPhase(roomId, currentPlayer);
+        return await this.handleComBlowPhase(roomId, currentPlayer, gameState);
       }
 
       return { success: true, events: [], shouldContinue: false };
@@ -84,16 +91,24 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       card: bestCard,
     });
 
-    const events = result.events ?? [];
+    const {
+      events = [],
+      delayedEvents = [],
+      completeFieldTrigger,
+    } = result as ResponseWithDelayed<PlayCardResponse>;
 
-    // フィールド完了チェック - turn-updated または field-cleared イベントがあれば継続
-    const shouldContinue = events.some(
-      (e) => e.event === 'turn-updated' || e.event === 'field-cleared',
-    );
+    // Continue if server advanced the turn or completed a field
+    const shouldContinue =
+      !completeFieldTrigger &&
+      events.some(
+        (e) => e.event === 'update-turn' || e.event === 'field-complete',
+      );
 
     return {
       success: result.success,
       events,
+      delayedEvents,
+      completeFieldTrigger,
       shouldContinue,
       error: result.error,
     };
@@ -102,6 +117,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
   private async handleComBlowPhase(
     roomId: string,
     comPlayer: Player,
+    gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
     // COMは常にパス
     const result: PassBlowResponse = await this.passBlowUseCase.execute({
@@ -109,14 +125,21 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       socketId: comPlayer.id,
     });
 
-    const events = result.events ?? [];
+    const { events = [], delayedEvents = [] } =
+      result as ResponseWithDelayed<PassBlowResponse>;
 
-    // turn-updatedイベントがあれば次のCOMターンを継続
-    const shouldContinue = events.some((e) => e.event === 'turn-updated');
+    const nextPlayer = gameState.getCurrentPlayer();
+    const state = gameState.getState();
+    const shouldContinue =
+      state.gamePhase === 'blow' &&
+      !!nextPlayer &&
+      this.comPlayerService.isComPlayer(nextPlayer);
 
     return {
       success: result.success,
       events,
+      delayedEvents,
+      revealBrokenRequest: result.revealBrokenRequest,
       shouldContinue,
       error: result.error,
     };

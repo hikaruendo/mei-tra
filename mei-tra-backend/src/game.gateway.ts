@@ -231,8 +231,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      // イベント配信
+      // イベント配信（遅延含む）
       this.dispatchEvents(result.events);
+      this.dispatchEvents(result.delayedEvents);
+      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+
+      if (result.completeFieldTrigger) {
+        const trigger = result.completeFieldTrigger;
+        setTimeout(() => {
+          void this.completeFieldUseCase
+            .execute({ roomId: trigger.roomId, field: trigger.field })
+            .then((response) =>
+              this.processFieldCompletionResult(trigger.roomId, response),
+            )
+            .catch((error) => {
+              console.error('Error completing field:', error);
+              this.server
+                .to(trigger.roomId)
+                .emit('error-message', 'Failed to complete field');
+            });
+        }, trigger.delayMs);
+        return; // Wait for completion result before continuing loop
+      }
 
       if (!result.shouldContinue) {
         return; // Stop the loop - no more COM players
@@ -766,13 +786,38 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false };
     }
   }
+
+  @SubscribeMessage('fill-with-com')
+  async handleFillWithCom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ): Promise<{ success: boolean }> {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return { success: false };
+      }
+
+      await this.roomService.fillVacantSeatsWithCOM(data.roomId);
+
+      const updatedRoom = await this.roomService.getRoom(data.roomId);
+      if (updatedRoom) {
+        this.server.to(data.roomId).emit('room-updated', updatedRoom);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleFillWithCom:', error);
+      client.emit('error-message', 'Failed to fill with COM players');
+      return { success: false };
+    }
+  }
   //-------Room-------
 
   //-------Game-------
   @SubscribeMessage('start-game')
   async handleStartGame(client: Socket, data: { roomId: string }) {
-    await this.roomService.fillVacantSeatsWithCOM(data.roomId);
-
     const result = await this.startGameUseCase.execute({
       clientId: client.id,
       roomId: data.roomId,
@@ -943,6 +988,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.dispatchEvents(result.events);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleSelectBaseSuit:', error);
       client.emit('error-message', 'Failed to select base suit');
