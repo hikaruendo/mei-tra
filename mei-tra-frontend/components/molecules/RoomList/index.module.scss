@@ -200,6 +200,20 @@
   background-color: #1b5e20;
 }
 
+.comButton {
+  padding: 8px 16px;
+  background-color: #9C27B0;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.comButton:hover {
+  background-color: #7B1FA2;
+}
+
 .leaveButton {
   padding: 8px 16px;
   background-color: #f44336;

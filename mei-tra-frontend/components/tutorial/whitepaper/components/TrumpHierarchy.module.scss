@@ -1,4 +1,4 @@
-@import '../../../../styles/base/variables-modules';
+@use '../../../../styles/base/variables-modules' as *;
 
 .trumpHierarchy {
   background: #ffffff;
