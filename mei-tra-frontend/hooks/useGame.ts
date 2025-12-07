@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from './useSocket';
 import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
+  const gameOverShownRef = useRef<string | null>(null);
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -186,6 +187,8 @@ export const useGame = () => {
         });
       },
       'game-started': (roomId: string, players: Player[], pointsToWin: number) => {
+        gameOverShownRef.current = null;
+        resetBlowState({ preservePlayers: true });
         setPlayers(players);
         const id = socket?.id;
         const index = players.findIndex(p => p.id === id);
@@ -193,6 +196,7 @@ export const useGame = () => {
         setCurrentRoomId(roomId);
         setPointsToWin(pointsToWin);
         setGameStarted(true);
+        setGamePhase('blow');
       },
       'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
         setGamePhase(phase);
@@ -218,6 +222,13 @@ export const useGame = () => {
         setWhoseTurn(playerId);
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
+        // Prevent showing alert multiple times for the same game
+        const gameOverKey = `${winner}-${finalScores[0].total}-${finalScores[1].total}`;
+        if (gameOverShownRef.current === gameOverKey) {
+          return;
+        }
+        gameOverShownRef.current = gameOverKey;
+
         const team0Name = getTeamDisplayName(players, 0) || 'チーム 1';
         const team1Name = getTeamDisplayName(players, 1) || 'チーム 2';
         const winnerTeam = winner === 'Team 0' ? team0Name : team1Name;
@@ -228,29 +239,30 @@ export const useGame = () => {
           0: { deal: 0, blow: 0, play: 0, total: 0 },
           1: { deal: 0, blow: 0, play: 0, total: 0 }
         });
+
+        // Keep ref set until the next game starts (game-started handler clears it)
       },
       'blow-started': ({ startingPlayer, players }: { startingPlayer: string; players: Player[] }) => {
         setGamePhase('blow');
         setPlayers(players);
         setWhoseTurn(startingPlayer);
       },
-      'blow-updated': ({ declarations, currentHighest, lastPasser }: { declarations: BlowDeclaration[]; currentHighest: BlowDeclaration | null; lastPasser: string | null }) => {
+      'blow-updated': ({ declarations, currentHighest }: { declarations: BlowDeclaration[]; currentHighest: BlowDeclaration | null }) => {
         setBlowDeclarations(declarations);
         setCurrentHighestDeclaration(currentHighest);
-        if (lastPasser) {
-          setPlayers(players.map(p => 
-            p.playerId === lastPasser ? { ...p, isPasser: true } : p
-          ));
-        }
+        // Note: Player state updates (including isPasser) are handled by 'update-players' event
+        // This prevents race conditions and ensures consistency across all blow phase operations
       },
-      'broken': ({ nextPlayerId, players }: { nextPlayerId: string; players: Player[] }) => {
+      'broken': ({ nextPlayerId, players, gamePhase }: { nextPlayerId: string; players: Player[]; gamePhase?: GamePhase }) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
         });
+        resetBlowState({ preservePlayers: true });
         setPlayers(players);
         setWhoseTurn(nextPlayerId);
-        resetBlowState();
+        setGamePhase(gamePhase ?? 'blow');
+        setCurrentTrump(null);
       },
       // TODO: 実装
       // 'reveal-hands': ({ players }: { players: { playerId: string; hand: string[] }[] }) => {
@@ -264,14 +276,17 @@ export const useGame = () => {
       'round-reset': () => {
         resetBlowState();
       },
-      'round-cancelled': ({ nextDealer, players }: { nextDealer: string; players: Player[] }) => {
+      'round-cancelled': ({ nextDealer, players, currentTrump, currentHighestDeclaration, blowDeclarations }: { nextDealer: string; players: Player[]; currentTrump?: TrumpType | null; currentHighestDeclaration?: BlowDeclaration | null; blowDeclarations?: BlowDeclaration[] }) => {
         setNotification({
           message: 'Round cancelled! All players passed.',
           type: 'warning'
         });
+        resetBlowState({ preservePlayers: true });
         setPlayers(players);
         setWhoseTurn(nextDealer);
-        resetBlowState();
+        setCurrentTrump(currentTrump ?? null);
+        setCurrentHighestDeclaration(currentHighestDeclaration ?? null);
+        setBlowDeclarations(blowDeclarations ?? []);
       },
       'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
         setRevealedAgari(agari);        
@@ -350,6 +365,7 @@ export const useGame = () => {
         setBlowDeclarations(blowDeclarations);
       },
       'back-to-lobby': () => {
+        gameOverShownRef.current = null;
         setGameStarted(false);
         setGamePhase(null);
         setTeamScores({
@@ -389,11 +405,19 @@ export const useGame = () => {
     };
   }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId]);
 
-  const resetBlowState = () => {
+  const resetBlowState = (options?: { preservePlayers?: boolean }) => {
     setBlowDeclarations([]);
     setCurrentHighestDeclaration(null);
     setSelectedTrump(null);
     setNumberOfPairs(0);
+    setNegriCard(null);
+    setNegriPlayerId(null);
+    setCurrentField(null);
+    setCompletedFields([]);
+    setRevealedAgari(null);
+    if (!options?.preservePlayers) {
+      setPlayers(prev => prev.map(player => ({ ...player, isPasser: false })));
+    }
   };
 
   const gameActions = {
