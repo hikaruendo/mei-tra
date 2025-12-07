@@ -125,6 +125,28 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
 
       // Not all players have acted yet - continue to next player
       await roomGameState.nextTurn();
+
+      // Skip players who have already acted (passed or declared)
+      let attempts = 0;
+      const maxAttempts = state.players.length;
+      while (attempts < maxAttempts) {
+        const currentPlayer = state.players[state.currentPlayerIndex];
+        const hasDeclared = state.blowState.declarations.some(
+          (d) => d.playerId === currentPlayer.playerId,
+        );
+        const hasActed = hasDeclared || currentPlayer.isPasser;
+
+        if (!hasActed) {
+          break; // Found a player who hasn't acted yet
+        }
+
+        await roomGameState.nextTurn();
+        attempts++;
+      }
+
+      // Save the final turn state after skipping
+      await roomGameState.saveState();
+
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
         events.push({
