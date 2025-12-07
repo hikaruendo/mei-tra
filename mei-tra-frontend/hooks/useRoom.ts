@@ -1,23 +1,26 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSocket } from './useSocket';
 import { Room, RoomPlayer } from '../types/room.types';
-import { useGame } from './useGame';
 import { useAuth } from '../contexts/AuthContext';
-import { Player, Team } from '../types/game.types';
+import { Player, Team, User } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 
-export const useRoom = () => {
+interface UseRoomOptions {
+  users?: User[];
+  currentPlayerId?: string | null;
+}
+
+export const useRoom = (options: UseRoomOptions = {}) => {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [playerReadyStatus, setPlayerReadyStatus] = useState<Record<string, boolean>>({});
   const [isClient, setIsClient] = useState(false);
-  const game = useGame();
   const { socket } = useSocket();
   const { user } = useAuth();
-  
-  const users = useMemo(() => game?.users || [], [game?.users]);
-  const players = useMemo(() => game?.players || [], [game?.players]);
+
+  const users = useMemo(() => options.users ?? [], [options.users]);
+  const currentPlayerId = options.currentPlayerId ?? null;
 
   const currentRoomRef = useRef<Room | null>(null);
   useEffect(() => {
@@ -125,69 +128,70 @@ export const useRoom = () => {
 
     // プレイヤー退出
     socket.on('player-left', ({ playerId, roomId }: { playerId: string; roomId: string }) => {
-      if (currentRoomRef.current?.id === roomId) {
-        // Only set currentRoom to null if the current user is the one who left
-        if (players.find(p => p.playerId === playerId)) {
-          setCurrentRoom(null);
-        } else {
-          setCurrentRoom(prev => {
-            if (!prev) return null;
+      if (currentRoomRef.current?.id !== roomId) {
+        return;
+      }
 
-            // 退出するプレイヤーのチーム情報を保持
-            const leavingPlayer = prev.players.find(p => p.playerId === playerId);
-            const teamAssignments = {
-              ...prev.teamAssignments
-            };
-            
-            // チーム情報が存在する場合のみ追加
-            if (leavingPlayer?.team !== undefined) {
-              teamAssignments[playerId] = leavingPlayer.team;
+      if (currentPlayerId && currentPlayerId === playerId) {
+        setCurrentRoom(null);
+      } else {
+        setCurrentRoom(prev => {
+          if (!prev) return null;
+
+          // 退出するプレイヤーのチーム情報を保持
+          const leavingPlayer = prev.players.find(p => p.playerId === playerId);
+          const teamAssignments = {
+            ...prev.teamAssignments
+          };
+          
+          // チーム情報が存在する場合のみ追加
+          if (leavingPlayer?.team !== undefined) {
+            teamAssignments[playerId] = leavingPlayer.team;
+          }
+
+          const updatedPlayers = prev.players.map(p => 
+            p.playerId === playerId 
+              ? {
+                  id: `dummy-${prev.players.indexOf(p)}`,
+                  playerId: `dummy-${prev.players.indexOf(p)}`,
+                  name: 'Vacant',
+                  hand: [],
+                  team: 0 as Team,
+                  isReady: false,
+                  isHost: false,
+                  joinedAt: new Date(),
+                  isPasser: false,
+                  hasBroken: false,
+                }
+              : p
+          );
+          
+          if (prev.hostId === playerId) {
+            const newHost = updatedPlayers.find(p => !p.playerId.startsWith('dummy-'));
+            if (newHost) {
+              return {
+                ...prev,
+                players: updatedPlayers.map(p => 
+                  p.playerId === newHost.playerId ? { ...p, isHost: true } : p
+                ),
+                hostId: newHost.playerId,
+                teamAssignments
+              };
             }
-
-            const updatedPlayers = prev.players.map(p => 
-              p.playerId === playerId 
-                ? {
-                    id: `dummy-${prev.players.indexOf(p)}`,
-                    playerId: `dummy-${prev.players.indexOf(p)}`,
-                    name: 'Vacant',
-                    hand: [],
-                    team: 0 as Team,
-                    isReady: false,
-                    isHost: false,
-                    joinedAt: new Date(),
-                    isPasser: false,
-                    hasBroken: false,
-                  }
-                : p
-            );
-            
-            if (prev.hostId === playerId) {
-              const newHost = updatedPlayers.find(p => !p.playerId.startsWith('dummy-'));
-              if (newHost) {
-                return {
-                  ...prev,
-                  players: updatedPlayers.map(p => 
-                    p.playerId === newHost.playerId ? { ...p, isHost: true } : p
-                  ),
-                  hostId: newHost.playerId,
-                  teamAssignments
-                };
-              }
-            }
-            return {
-              ...prev,
-              players: updatedPlayers,
-              teamAssignments
-            };
-          });
-        }
-
-        setPlayerReadyStatus(prev => {
-          const newStatus = { ...prev };
-          delete newStatus[playerId];
-          return newStatus;
+          }
+          return {
+            ...prev,
+            players: updatedPlayers,
+            teamAssignments
+          };
         });
       }
+
+      setPlayerReadyStatus(prev => {
+        const newStatus = { ...prev };
+        delete newStatus[playerId];
+        return newStatus;
+      });
     });
 
     // ゲーム開始
@@ -267,7 +271,7 @@ export const useRoom = () => {
       socket.off('room-updated');
       socket.off('set-room-id');
     };
-  }, [socket, currentRoom, players]);
+  }, [socket, currentRoom, currentPlayerId]);
 
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
@@ -363,7 +367,7 @@ export const useRoom = () => {
     }
 
     const socketId = socket.id;
-    const player = players.find((p: { id: string }) => p.id === socketId);
+    const player = currentRoom.players.find((p: { id: string }) => p.id === socketId);
     if (!player) {
       setError('Player not found7');
       return;
@@ -383,7 +387,7 @@ export const useRoom = () => {
       roomId: currentRoom.id,
       playerId: player.playerId
     });
-  }, [socket, currentRoom, players]);
+  }, [socket, currentRoom]);
 
   // ゲーム開始
   const startGameRoom = useCallback(() => {
@@ -393,7 +397,7 @@ export const useRoom = () => {
     }
 
     const socketId = socket.id;
-    const player = players.find(p => p.id === socketId);
+    const player = currentRoom.players.find(p => p.id === socketId);
     if (!player) {
       setError('Player not found8');
       return;
@@ -407,7 +411,7 @@ export const useRoom = () => {
     }
 
     socket.emit('start-game', { roomId: currentRoom.id });
-  }, [socket, currentRoom, players]);
+  }, [socket, currentRoom]);
 
   // プレイヤーのチーム変更
   const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {

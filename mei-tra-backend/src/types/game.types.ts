@@ -12,6 +12,7 @@ export interface Player extends User {
   hand: string[];
   team: Team;
   isPasser: boolean;
+  isCOM?: boolean;
   hasBroken?: boolean;
   hasRequiredBroken?: boolean;
 }

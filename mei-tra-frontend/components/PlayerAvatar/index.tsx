@@ -74,6 +74,11 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
             priority={false}
           />
         )}
+        {player.isCOM && (
+          <div className={styles.comBadge}>
+            <span className={styles.comIcon}>🤖</span>
+          </div>
+        )}
       </div>
       {showName && (
         <div className={styles.playerName}>

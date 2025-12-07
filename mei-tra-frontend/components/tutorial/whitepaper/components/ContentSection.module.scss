@@ -1,4 +1,4 @@
-@import '../../../../styles/base/variables-modules';
+@use '../../../../styles/base/variables-modules' as *;
 
 .section {
   margin-bottom: $spacing-xl;

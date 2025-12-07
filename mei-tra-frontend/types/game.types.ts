@@ -37,6 +37,7 @@ export interface Player extends User {
   team: Team;
   hand: string[];
   isPasser?: boolean;
+  isCOM?: boolean;
   hasBroken?: boolean;
   hasRequiredBroken?: boolean;
 }

@@ -65,6 +65,18 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       state.blowState.declarations = [];
       state.blowState.currentHighestDeclaration = null;
+      state.blowState.lastPasser = null;
+      state.gamePhase = 'blow';
+
+      state.playState = {
+        currentField: null,
+        negriCard: null,
+        neguri: {},
+        fields: [],
+        lastWinnerId: null,
+        openDeclared: false,
+        openDeclarerId: null,
+      };
 
       const firstBlowIndex = state.blowState.currentBlowIndex;
       const firstBlowPlayer = state.players[firstBlowIndex];
@@ -82,6 +94,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           payload: {
             nextPlayerId: firstBlowPlayer.playerId,
             players: state.players,
+            gamePhase: 'blow',
           },
         });
         events.push({

@@ -92,6 +92,7 @@
     "host": "(Host)",
     "updateTeams": "Update Teams",
     "teamsUpdated": "Teams Updated",
+    "fillWithCom": "Add COM",
     "leaveConfirm": {
       "title": "Leave Room",
       "message": "Are you sure you want to leave this room?"

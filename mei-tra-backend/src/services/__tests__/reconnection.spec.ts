@@ -9,6 +9,7 @@ import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';
 import { PlayService } from '../play.service';
+import { IComPlayerService } from '../interfaces/com-player-service.interface';
 
 describe('Reconnection Token Management', () => {
   describe('GameStateService', () => {
@@ -358,6 +359,11 @@ describe('Reconnection Token Management', () => {
       const cardService = new CardService();
       const playService = new PlayService(cardService);
       const chomboService = new ChomboService(playService);
+      const comPlayerService: jest.Mocked<IComPlayerService> = {
+        createComPlayer: jest.fn(),
+        selectBestCard: jest.fn(),
+        isComPlayer: jest.fn(),
+      };
       gameStateFactory = new GameStateFactory(
         cardService,
         chomboService,
@@ -368,6 +374,7 @@ describe('Reconnection Token Management', () => {
         roomRepository,
         userProfileRepository,
         gameStateFactory,
+        comPlayerService,
       );
     });
 

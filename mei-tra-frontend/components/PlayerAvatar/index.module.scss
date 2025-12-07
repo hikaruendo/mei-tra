@@ -15,6 +15,24 @@
   aspect-ratio: 1;
 }
 
+.comBadge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.comIcon {
+  font-size: 32px;
+  line-height: 1;
+  display: block;
+}
+
 .avatarImage {
   width: 100% !important;
   height: 100% !important;
@@ -45,6 +63,14 @@
     font-size: 12px;
     max-width: 60px;
   }
+
+  .comBadge {
+    inset: 0;
+  }
+
+  .comIcon {
+    font-size: 18px;
+  }
 }
 
 .medium {
@@ -57,6 +83,14 @@
     font-size: 14px;
     max-width: 100px;
   }
+
+  .comBadge {
+    inset: 0;
+  }
+
+  .comIcon {
+    font-size: 32px;
+  }
 }
 
 .large {
@@ -68,5 +102,13 @@
   .playerName {
     font-size: 16px;
     max-width: 120px;
+  }
+
+  .comBadge {
+    inset: 0;
+  }
+
+  .comIcon {
+    font-size: 36px;
   }
 }

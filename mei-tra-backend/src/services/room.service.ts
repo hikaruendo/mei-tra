@@ -7,6 +7,7 @@ import { User, Team, Player } from '../types/game.types';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';
+import { IComPlayerService } from './interfaces/com-player-service.interface';
 
 @Injectable()
 export class RoomService implements IRoomService {
@@ -33,6 +34,8 @@ export class RoomService implements IRoomService {
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository,
     private readonly gameStateFactory: GameStateFactory,
+    @Inject('IComPlayerService')
+    private readonly comPlayerService: IComPlayerService,
   ) {
     // 定期的なクリーンアップを開始
     this.startCleanupTask();
@@ -173,6 +176,42 @@ export class RoomService implements IRoomService {
       id: '',
       hand: [...player.hand],
     };
+  }
+
+  async fillVacantSeatsWithCOM(roomId: string): Promise<void> {
+    const room = await this.getRoom(roomId);
+    if (!room || room.players.length >= 4) return;
+
+    const comCount = 4 - room.players.length;
+    const existingTeam0Count = room.players.filter((p) => p.team === 0).length;
+    const team0Needed = Math.max(0, 2 - existingTeam0Count);
+    const startingPlayerCount = room.players.length; // Capture initial count
+
+    for (let i = 0; i < comCount; i++) {
+      // Fill team 0 first until it has 2 players, then fill team 1
+      const team = i < team0Needed ? (0 as Team) : (1 as Team);
+      const comPlayer = this.comPlayerService.createComPlayer(
+        startingPlayerCount + i, // Use initial count, not current length
+        team,
+      ) as RoomPlayer;
+
+      comPlayer.isReady = true;
+      comPlayer.isHost = false;
+      comPlayer.joinedAt = new Date();
+
+      await this.roomRepository.addPlayer(roomId, comPlayer);
+
+      // Also add to game state if it exists
+      const gameState = this.roomGameStates.get(roomId);
+      if (gameState) {
+        const state = gameState.getState();
+        state.players.push(comPlayer);
+        gameState.registerPlayerToken(comPlayer.playerId, comPlayer.playerId);
+      }
+
+      // Update in-memory room
+      room.players.push(comPlayer);
+    }
   }
 
   /**
@@ -667,12 +706,12 @@ export class RoomService implements IRoomService {
       return { canStart: false, reason: 'Room is not ready' };
     }
 
-    // 実際のプレイヤー（ダミーを除く）が4人揃っているか確認
+    // 実際のプレイヤー（ダミーとCOMを除く）が1人以上いるか確認
     const actualPlayers = room.players.filter(
-      (p) => !p.playerId.startsWith('dummy-'),
+      (p) => !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-'),
     );
-    if (actualPlayers.length !== 4) {
-      return { canStart: false, reason: 'Need exactly 4 players to start' };
+    if (actualPlayers.length === 0) {
+      return { canStart: false, reason: 'Need at least 1 player to start' };
     }
 
     // 全員が準備完了しているか確認

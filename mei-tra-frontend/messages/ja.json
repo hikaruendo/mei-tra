@@ -92,6 +92,7 @@
     "host": "(ホスト)",
     "updateTeams": "チーム更新",
     "teamsUpdated": "チーム更新完了",
+    "fillWithCom": "COM追加",
     "leaveConfirm": {
       "title": "ルームから退出",
       "message": "本当にこのルームから退出しますか？"

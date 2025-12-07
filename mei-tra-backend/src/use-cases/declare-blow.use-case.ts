@@ -9,8 +9,10 @@ import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
-import { GameState } from '../types/game.types';
-import { transitionToPlayPhase } from './blow-phase-transition.helper';
+import {
+  transitionToPlayPhase,
+  TransitionResult,
+} from './blow-phase-transition.helper';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -38,6 +40,25 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         return { success: false, error: "It's not your turn to declare" };
       }
 
+      // Check if player has already declared in this blow phase
+      const alreadyDeclared = state.blowState.declarations.some(
+        (d) => d.playerId === player.playerId,
+      );
+      if (alreadyDeclared) {
+        return {
+          success: false,
+          error: 'You have already declared in this blow phase',
+        };
+      }
+
+      // Check if player has already passed in this blow phase
+      if (player.isPasser) {
+        return {
+          success: false,
+          error: 'You have already passed in this blow phase',
+        };
+      }
+
       if (
         !this.blowService.isValidDeclaration(
           declaration,
@@ -55,7 +76,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
 
       state.blowState.declarations.push(newDeclaration);
       state.blowState.currentHighestDeclaration = newDeclaration;
-      player.isPasser = false;
 
       const events: GatewayEvent[] = [
         {
@@ -68,12 +88,25 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
             lastPasser: state.blowState.lastPasser,
           },
         },
+        {
+          scope: 'room',
+          roomId,
+          event: 'update-players',
+          payload: state.players,
+        },
       ];
 
-      const playersWhoHaveActed = this.collectPlayersWhoActed(state);
+      // Calculate how many players have acted (declared or passed)
+      const actedCount = state.players.filter((p) => {
+        const hasDeclared = state.blowState.declarations.some(
+          (d) => d.playerId === p.playerId,
+        );
+        return hasDeclared || p.isPasser;
+      }).length;
 
-      if (playersWhoHaveActed.size === 4) {
-        const transition = await transitionToPlayPhase({
+      // If all players have acted, transition to play phase
+      if (actedCount === state.players.length) {
+        const transition: TransitionResult = await transitionToPlayPhase({
           roomId,
           roomGameState,
           state,
@@ -81,16 +114,39 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           cardService: this.cardService,
           chomboService: this.chomboService,
         });
-        events.push(...transition.events);
+
         return {
           success: true,
-          events,
+          events: [...events, ...transition.events],
           delayedEvents: transition.delayedEvents,
           revealBrokenRequest: transition.revealBrokenRequest,
         };
       }
 
+      // Not all players have acted yet - continue to next player
       await roomGameState.nextTurn();
+
+      // Skip players who have already acted (passed or declared)
+      let attempts = 0;
+      const maxAttempts = state.players.length;
+      while (attempts < maxAttempts) {
+        const currentPlayer = state.players[state.currentPlayerIndex];
+        const hasDeclared = state.blowState.declarations.some(
+          (d) => d.playerId === currentPlayer.playerId,
+        );
+        const hasActed = hasDeclared || currentPlayer.isPasser;
+
+        if (!hasActed) {
+          break; // Found a player who hasn't acted yet
+        }
+
+        await roomGameState.nextTurn();
+        attempts++;
+      }
+
+      // Save the final turn state after skipping
+      await roomGameState.saveState();
+
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
         events.push({
@@ -109,16 +165,5 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       );
       return { success: false, error: 'Internal server error' };
     }
-  }
-
-  private collectPlayersWhoActed(state: GameState): Set<string> {
-    const acted = new Set<string>();
-    state.blowState.declarations.forEach((decl) => acted.add(decl.playerId));
-    state.players.forEach((p) => {
-      if (p.isPasser) {
-        acted.add(p.playerId);
-      }
-    });
-    return acted;
   }
 }

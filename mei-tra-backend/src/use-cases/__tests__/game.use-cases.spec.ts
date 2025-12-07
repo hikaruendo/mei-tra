@@ -1221,7 +1221,6 @@ describe('Game Use Cases', () => {
       expect(gameState.addPlayer).toHaveBeenCalledWith(
         'socket-1',
         'User Display',
-        undefined,
         'user-1',
         true,
       );
@@ -1229,10 +1228,10 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'update-users',
       );
       expect(updateUsersEvent).toBeDefined();
-      const reconnectEvent = result.clientEvents?.find(
-        (evt) => evt.event === 'reconnect-token',
+      const authUpdatedEvent = result.clientEvents?.find(
+        (evt) => evt.event === 'auth-updated',
       );
-      expect(reconnectEvent).toBeDefined();
+      expect(authUpdatedEvent).toBeDefined();
     });
 
     it('returns error when token is missing', async () => {

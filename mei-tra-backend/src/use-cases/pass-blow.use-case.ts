@@ -42,6 +42,25 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         return { success: false, error: "It's not your turn to pass" };
       }
 
+      // Check if player has already passed in this blow phase
+      if (player.isPasser) {
+        return {
+          success: false,
+          error: 'You have already passed in this blow phase',
+        };
+      }
+
+      // Check if player has already declared in this blow phase
+      const alreadyDeclared = state.blowState.declarations.some(
+        (d) => d.playerId === player.playerId,
+      );
+      if (alreadyDeclared) {
+        return {
+          success: false,
+          error: 'You have already declared in this blow phase',
+        };
+      }
+
       player.isPasser = true;
       state.blowState.lastPasser = player.playerId;
 
@@ -56,21 +75,38 @@ export class PassBlowUseCase implements IPassBlowUseCase {
             lastPasser: player.playerId,
           },
         },
+        {
+          scope: 'room',
+          roomId,
+          event: 'update-players',
+          payload: state.players,
+        },
       ];
 
-      const playersWhoHaveActed = this.collectPlayersWhoActed(state);
+      // Calculate how many players have acted (declared or passed)
+      const actedCount = state.players.filter((p) => {
+        const hasDeclared = state.blowState.declarations.some(
+          (d) => d.playerId === p.playerId,
+        );
+        return hasDeclared || p.isPasser;
+      }).length;
 
-      if (playersWhoHaveActed.size === 4) {
-        if (state.blowState.declarations.length === 0) {
-          const resetResult = await this.handleNoDeclarations(
-            roomId,
-            roomGameState,
-            state,
-          );
-          events.push(...resetResult.events);
-          return { success: true, events }; // delayed events handled inside as none
-        }
+      const totalPlayers = state.players.length;
+      const hasDeclarations = state.blowState.declarations.length > 0;
 
+      // 1. All players acted & no declarations → redeal
+      if (actedCount === totalPlayers && !hasDeclarations) {
+        const resetResult = await this.handleNoDeclarations(
+          roomId,
+          roomGameState,
+          state,
+        );
+        events.push(...resetResult.events);
+        return { success: true, events };
+      }
+
+      // 2. All players acted & have declarations → transition to play phase
+      if (actedCount === totalPlayers && hasDeclarations) {
         const transition: TransitionResult = await transitionToPlayPhase({
           roomId,
           roomGameState,
@@ -88,10 +124,29 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         };
       }
 
+      // 3. Not all players have acted yet → continue to next player
       await roomGameState.nextTurn();
-      while (state.players[state.currentPlayerIndex].isPasser) {
+
+      // Skip players who have already acted (passed or declared)
+      let attempts = 0;
+      const maxAttempts = state.players.length;
+      while (attempts < maxAttempts) {
+        const currentPlayer = state.players[state.currentPlayerIndex];
+        const hasDeclared = state.blowState.declarations.some(
+          (d) => d.playerId === currentPlayer.playerId,
+        );
+        const hasActed = hasDeclared || currentPlayer.isPasser;
+
+        if (!hasActed) {
+          break; // Found a player who hasn't acted yet
+        }
+
         await roomGameState.nextTurn();
+        attempts++;
       }
+
+      // Save the final turn state after skipping
+      await roomGameState.saveState();
 
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
@@ -111,17 +166,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       );
       return { success: false, error: 'Internal server error' };
     }
-  }
-
-  private collectPlayersWhoActed(state: GameState): Set<string> {
-    const acted = new Set<string>();
-    state.blowState.declarations.forEach((decl) => acted.add(decl.playerId));
-    state.players.forEach((p) => {
-      if (p.isPasser) {
-        acted.add(p.playerId);
-      }
-    });
-    return acted;
   }
 
   private async handleNoDeclarations(
@@ -151,6 +195,22 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     await roomGameState.saveState();
 
     const events: GatewayEvent[] = [
+      {
+        scope: 'room',
+        roomId,
+        event: 'update-players',
+        payload: state.players,
+      },
+      {
+        scope: 'room',
+        roomId,
+        event: 'blow-updated',
+        payload: {
+          declarations: [],
+          currentHighest: null,
+          lastPasser: null,
+        },
+      },
       {
         scope: 'room',
         roomId,

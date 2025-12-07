@@ -17,6 +17,7 @@ export interface PlayCardResponse {
   success: boolean;
   error?: string;
   events?: GatewayEvent[];
+  delayedEvents?: GatewayEvent[];
   completeFieldTrigger?: CompleteFieldTrigger;
 }
 

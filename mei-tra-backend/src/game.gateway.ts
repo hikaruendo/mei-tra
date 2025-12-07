@@ -39,6 +39,9 @@ import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use
 import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
 import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
 import { ChatService } from './services/chat.service';
+import { IComPlayerService } from './services/interfaces/com-player-service.interface';
+import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.interface';
+import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 
 @WebSocketGateway({
   cors: {
@@ -101,6 +104,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly changePlayerTeamUseCase: IChangePlayerTeamUseCase,
     private readonly authService: AuthService,
     private readonly chatService: ChatService,
+    @Inject('IComPlayerService')
+    private readonly comPlayerService: IComPlayerService,
+    @Inject('IComAutoPlayService')
+    private readonly comAutoPlayService: IComAutoPlayService,
+    @Inject('IComAutoPlayUseCase')
+    private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
   ) {}
 
   /**
@@ -192,6 +201,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.dispatchEvents(response.events);
     this.dispatchEvents(response.delayedEvents);
 
+    const delayedEvents = response.delayedEvents ?? [];
+    const maxDelay = delayedEvents.reduce(
+      (max, event) => Math.max(max, event.delayMs ?? 0),
+      0,
+    );
+
+    const scheduleAutoPlay = () => this.triggerComAutoPlayIfNeeded(roomId);
+
     if (response.gameOver) {
       await this.processGameOverUseCase.execute({
         roomId,
@@ -200,7 +217,87 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
       });
+
+      const resetDelay = response.gameOver.resetDelayMs ?? 0;
+      setTimeout(() => {
+        void (async () => {
+          try {
+            await this.roomService.updateRoomStatus(
+              roomId,
+              RoomStatus.FINISHED,
+            );
+            const updatedRoom = await this.roomService.getRoom(roomId);
+            if (updatedRoom) {
+              this.server.to(roomId).emit('room-updated', updatedRoom);
+            }
+            const roomsList = await this.roomService.listRooms();
+            this.server.emit('rooms-list', roomsList);
+          } catch (error) {
+            console.error('Failed to reset room after game over:', error);
+          }
+        })();
+      }, resetDelay);
+    } else if (maxDelay > 0) {
+      setTimeout(scheduleAutoPlay, maxDelay + 100);
+    } else {
+      scheduleAutoPlay();
     }
+  }
+
+  private triggerComAutoPlayIfNeeded(roomId: string): void {
+    // Non-blocking: fire and forget
+    void this.runComAutoPlayLoop(roomId);
+  }
+
+  private async runComAutoPlayLoop(roomId: string): Promise<void> {
+    let iteration = 0;
+    const MAX_ITERATIONS = 10; // Safety limit: max 10 consecutive COM plays
+
+    while (iteration < MAX_ITERATIONS) {
+      const result = await this.comAutoPlayUseCase.execute({ roomId });
+
+      if (!result.success) {
+        console.error(`COM auto-play failed: ${result.error}`);
+        return;
+      }
+
+      // イベント配信（遅延含む）
+      this.dispatchEvents(result.events);
+      this.dispatchEvents(result.delayedEvents);
+      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+
+      if (result.completeFieldTrigger) {
+        const trigger = result.completeFieldTrigger;
+        setTimeout(() => {
+          void this.completeFieldUseCase
+            .execute({ roomId: trigger.roomId, field: trigger.field })
+            .then((response) =>
+              this.processFieldCompletionResult(trigger.roomId, response),
+            )
+            .catch((error) => {
+              console.error('Error completing field:', error);
+              this.server
+                .to(trigger.roomId)
+                .emit('error-message', 'Failed to complete field');
+            });
+        }, trigger.delayMs);
+        return; // Wait for completion result before continuing loop
+      }
+
+      if (!result.shouldContinue) {
+        return; // Stop the loop - no more COM players
+      }
+
+      iteration++;
+
+      // Non-blocking wait - yields to event loop
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    // Safety: log if we hit the iteration limit
+    console.error(
+      `[GameGateway] COM auto-play loop exceeded ${MAX_ITERATIONS} iterations for room ${roomId}. Possible infinite loop prevented.`,
+    );
   }
 
   //-------Connection-------
@@ -719,6 +816,33 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false };
     }
   }
+
+  @SubscribeMessage('fill-with-com')
+  async handleFillWithCom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ): Promise<{ success: boolean }> {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return { success: false };
+      }
+
+      await this.roomService.fillVacantSeatsWithCOM(data.roomId);
+
+      const updatedRoom = await this.roomService.getRoom(data.roomId);
+      if (updatedRoom) {
+        this.server.to(data.roomId).emit('room-updated', updatedRoom);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleFillWithCom:', error);
+      client.emit('error-message', 'Failed to fill with COM players');
+      return { success: false };
+    }
+  }
   //-------Room-------
 
   //-------Game-------
@@ -744,6 +868,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('game-started', data.roomId, players, pointsToWin);
     this.server.to(data.roomId).emit('update-phase', updatePhase);
     this.server.to(data.roomId).emit('update-turn', currentTurnPlayerId);
+
+    this.triggerComAutoPlayIfNeeded(data.roomId);
 
     return { success: true };
   }
@@ -771,6 +897,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
       await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleDeclareBlow:', error);
       client.emit('error-message', 'Failed to declare blow');
@@ -796,6 +923,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
       await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handlePassBlow:', error);
       client.emit('error-message', 'Failed to pass blow');
@@ -863,6 +991,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 .emit('error-message', 'Failed to complete field');
             });
         }, trigger.delayMs);
+      } else {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
       }
     } catch (error) {
       console.error('Error in handlePlayCard:', error);
@@ -888,6 +1018,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.dispatchEvents(result.events);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleSelectBaseSuit:', error);
       client.emit('error-message', 'Failed to select base suit');
@@ -929,6 +1060,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
 
             this.dispatchEvents(completion.events);
+            this.triggerComAutoPlayIfNeeded(data.roomId);
           })
           .catch((error) =>
             console.error('Error finalizing broken hand sequence:', error),
