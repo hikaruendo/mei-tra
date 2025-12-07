@@ -4,7 +4,7 @@ import styles from './index.module.scss';
 
 interface BlowControlsProps {
   isCurrentPlayer: boolean;
-  currentPlayer: Player | undefined;
+  whoseTurn: string | null;
   selectedTrump: TrumpType | null;
   setSelectedTrump: (trump: TrumpType | null) => void;
   numberOfPairs: number;
@@ -34,7 +34,7 @@ const BASE_PAIR_OPTIONS = [6, 7, 8, 9, 10];
 
 export function BlowControls({
   isCurrentPlayer,
-  currentPlayer,
+  whoseTurn,
   selectedTrump,
   setSelectedTrump,
   numberOfPairs,
@@ -46,7 +46,7 @@ export function BlowControls({
   players,
 }: BlowControlsProps) {
   const t = useTranslations('blowControls');
-  const currentPlayerName = players.find(p => p.playerId === currentPlayer?.playerId)?.name;
+  const currentPlayerName = players.find(p => p.playerId === whoseTurn)?.name;
 
   // 宣言処理
   const handleDeclare = () => {

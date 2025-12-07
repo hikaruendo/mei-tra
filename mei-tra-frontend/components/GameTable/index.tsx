@@ -110,7 +110,7 @@ export const GameTable: React.FC<GameTableProps> = ({
           renderBlowControls={() => (
             <BlowControls
               isCurrentPlayer={currentPlayerId === whoseTurn}
-              currentPlayer={players.find(p => p.playerId === currentPlayerId)}
+              whoseTurn={whoseTurn}
               selectedTrump={selectedTrump}
               setSelectedTrump={setSelectedTrump}
               numberOfPairs={numberOfPairs}
