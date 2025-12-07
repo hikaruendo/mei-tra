@@ -217,6 +217,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
       });
+
+      const resetDelay = response.gameOver.resetDelayMs ?? 0;
+      setTimeout(() => {
+        void (async () => {
+          try {
+            await this.roomService.updateRoomStatus(
+              roomId,
+              RoomStatus.FINISHED,
+            );
+            const updatedRoom = await this.roomService.getRoom(roomId);
+            if (updatedRoom) {
+              this.server.to(roomId).emit('room-updated', updatedRoom);
+            }
+            const roomsList = await this.roomService.listRooms();
+            this.server.emit('rooms-list', roomsList);
+          } catch (error) {
+            console.error('Failed to reset room after game over:', error);
+          }
+        })();
+      }, resetDelay);
     } else if (maxDelay > 0) {
       setTimeout(scheduleAutoPlay, maxDelay + 100);
     } else {

@@ -58,6 +58,7 @@ export default function Home() {
     pointsToWin = 0,
     isConnected = false,
     isConnecting = false,
+    users = [],
   } = gameState;
 
   // Type guard to ensure gameActions exists
@@ -95,7 +96,13 @@ export default function Home() {
         ) : (
           <>
             <div style={{ display: gameStarted ? 'none' : 'block' }}>
-              <RoomList isConnected={isConnected} isConnecting={isConnecting} />
+              <RoomList
+                isConnected={isConnected}
+                isConnecting={isConnecting}
+                players={players}
+                users={users}
+                currentPlayerId={currentPlayerId}
+              />
             </div>
             <div style={{ display: gameStarted ? 'block' : 'none' }}>
               <GameTable

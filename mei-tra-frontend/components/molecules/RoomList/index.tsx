@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useSocket } from '../../../hooks/useSocket';
-import { useGame } from '../../../hooks/useGame';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
 import { ConfirmModal } from '../ConfirmModal';
+import { Player, User } from '../../../types/game.types';
 import styles from './index.module.scss';
 
 const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
@@ -37,12 +37,21 @@ const getStatusClass = (status: RoomStatus) => {
 interface RoomListProps {
   isConnected?: boolean;
   isConnecting?: boolean;
+  players?: Player[];
+  users?: User[];
+  currentPlayerId?: string | null;
 }
 
-export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting }) => {
+export const RoomList: React.FC<RoomListProps> = ({
+  isConnected,
+  isConnecting,
+  players = [],
+  users = [],
+  currentPlayerId: currentPlayerIdProp = null,
+}) => {
   const t = useTranslations();
-  const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom, changePlayerTeam } = useRoom();
-  const game = useGame();
+  const memoizedUsers = useMemo(() => users, [users]);
+  const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom, changePlayerTeam } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
@@ -59,15 +68,17 @@ export const RoomList: React.FC<RoomListProps> = ({ isConnected, isConnecting })
   };
 
   const readyStatus = playerReadyStatus as Record<string, boolean>;
-  const players = useMemo(() => game?.players || [], [game?.players]);
 
   // 現在のプレイヤーIDを取得
   const currentPlayerId = useMemo(() => {
+    if (currentPlayerIdProp) {
+      return currentPlayerIdProp;
+    }
     const socketId = socket?.id;
     if (!socketId) return '';
     const player = players.find(p => p.id === socketId);
     return player?.playerId || '';
-  }, [players, socket?.id]);
+  }, [currentPlayerIdProp, players, socket?.id]);
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
