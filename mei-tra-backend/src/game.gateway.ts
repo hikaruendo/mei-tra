@@ -201,6 +201,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.dispatchEvents(response.events);
     this.dispatchEvents(response.delayedEvents);
 
+    const delayedEvents = response.delayedEvents ?? [];
+    const maxDelay = delayedEvents.reduce(
+      (max, event) => Math.max(max, event.delayMs ?? 0),
+      0,
+    );
+
+    const scheduleAutoPlay = () => this.triggerComAutoPlayIfNeeded(roomId);
+
     if (response.gameOver) {
       await this.processGameOverUseCase.execute({
         roomId,
@@ -209,8 +217,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
       });
+    } else if (maxDelay > 0) {
+      setTimeout(scheduleAutoPlay, maxDelay + 100);
     } else {
-      this.triggerComAutoPlayIfNeeded(roomId);
+      scheduleAutoPlay();
     }
   }
 
@@ -1030,6 +1040,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
 
             this.dispatchEvents(completion.events);
+            this.triggerComAutoPlayIfNeeded(data.roomId);
           })
           .catch((error) =>
             console.error('Error finalizing broken hand sequence:', error),
