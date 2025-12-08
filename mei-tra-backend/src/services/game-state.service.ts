@@ -313,25 +313,25 @@ export class GameStateService implements IGameStateService {
       player.hasRequiredBroken = false;
     });
 
-    // // Deal exactly 10 cards to each player
-    // for (let i = 0; i < 10; i++) {
-    //   for (let j = 0; j < this.state.players.length; j++) {
-    //     this.state.players[j].hand.push(
-    //       this.state.deck[i * this.state.players.length + j],
-    //     );
-    //   }
-    // }
-
-    // // Set the Agari card
-    // this.state.agari = this.state.deck[40];
-
-    // For Test: Deal exactly 1 card to each player for testing
-    for (let i = 0; i < this.state.players.length; i++) {
-      this.state.players[i].hand.push(this.state.deck[i]);
+    // Deal exactly 10 cards to each player
+    for (let i = 0; i < 10; i++) {
+      for (let j = 0; j < this.state.players.length; j++) {
+        this.state.players[j].hand.push(
+          this.state.deck[i * this.state.players.length + j],
+        );
+      }
     }
 
     // Set the Agari card
-    this.state.agari = this.state.deck[this.state.players.length];
+    this.state.agari = this.state.deck[40];
+
+    // // For Test: Deal exactly 1 card to each player for testing
+    // for (let i = 0; i < this.state.players.length; i++) {
+    //   this.state.players[i].hand.push(this.state.deck[i]);
+    // }
+
+    // // Set the Agari card
+    // this.state.agari = this.state.deck[this.state.players.length];
 
     // Sort each player's hand
     this.state.players.forEach((player) => {
