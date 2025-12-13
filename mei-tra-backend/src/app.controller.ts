@@ -1,9 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
-import { ActivityTrackerService } from './services/activity-tracker.service';
+import { Controller, Get, Inject } from '@nestjs/common';
+import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
+import { HealthResponse } from './types/activity.types';
 
 @Controller()
 export class AppController {
-  constructor(private readonly activityTracker: ActivityTrackerService) {}
+  constructor(
+    @Inject('IActivityTrackerService')
+    private readonly activityTracker: IActivityTrackerService,
+  ) {}
 
   @Get()
   getHello(): string {
@@ -11,19 +15,14 @@ export class AppController {
   }
 
   @Get('health')
-  getHealth() {
+  getHealth(): HealthResponse {
     const activityStatus = this.activityTracker.getStatus();
 
     return {
       status: 'ok',
       timestamp: Date.now(),
       uptime: process.uptime(),
-      activity: {
-        lastActivityTimestamp: activityStatus.lastActivity,
-        lastActivityAgo: activityStatus.lastActivityAgo,
-        activeConnections: activityStatus.activeConnections,
-        isIdle: activityStatus.isIdle,
-      },
+      activity: activityStatus,
     };
   }
 }

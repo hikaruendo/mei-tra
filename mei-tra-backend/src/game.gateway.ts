@@ -42,7 +42,7 @@ import { ChatService } from './services/chat.service';
 import { IComPlayerService } from './services/interfaces/com-player-service.interface';
 import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.interface';
 import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
-import { ActivityTrackerService } from './services/activity-tracker.service';
+import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 
 @WebSocketGateway({
   cors: {
@@ -111,7 +111,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly comAutoPlayService: IComAutoPlayService,
     @Inject('IComAutoPlayUseCase')
     private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
-    private readonly activityTracker: ActivityTrackerService,
+    @Inject('IActivityTrackerService')
+    private readonly activityTracker: IActivityTrackerService,
   ) {}
 
   /**

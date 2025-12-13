@@ -36,6 +36,10 @@ import { ActivityTrackerService } from './services/activity-tracker.service';
   providers: [
     GameGateway,
     ActivityTrackerService,
+    {
+      provide: 'IActivityTrackerService',
+      useExisting: ActivityTrackerService,
+    },
     GameStateService,
     {
       provide: 'IGameStateService',
@@ -147,5 +151,6 @@ import { ActivityTrackerService } from './services/activity-tracker.service';
       useClass: ComAutoPlayUseCase,
     },
   ],
+  exports: ['IActivityTrackerService'],
 })
 export class GameModule {}

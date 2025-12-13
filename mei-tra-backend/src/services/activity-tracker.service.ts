@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ActivityStatus } from '../types/activity.types';
+import { IActivityTrackerService } from './interfaces/activity-tracker-service.interface';
 
 @Injectable()
-export class ActivityTrackerService {
+export class ActivityTrackerService implements IActivityTrackerService {
+  private readonly IDLE_THRESHOLD_MS = 30 * 60 * 1000; // 30分
   private lastActivityTimestamp: number = Date.now();
   private activeConnections: number = 0;
 
@@ -18,7 +21,7 @@ export class ActivityTrackerService {
     this.activeConnections = Math.max(0, this.activeConnections - 1);
   }
 
-  getStatus() {
+  getStatus(): ActivityStatus {
     return {
       lastActivity: this.lastActivityTimestamp,
       lastActivityAgo: Date.now() - this.lastActivityTimestamp,
@@ -27,8 +30,9 @@ export class ActivityTrackerService {
     };
   }
 
-  isIdle(idleThresholdMs: number = 30 * 60 * 1000): boolean {
+  isIdle(idleThresholdMs?: number): boolean {
+    const threshold = idleThresholdMs ?? this.IDLE_THRESHOLD_MS;
     const idleTime = Date.now() - this.lastActivityTimestamp;
-    return idleTime > idleThresholdMs && this.activeConnections === 0;
+    return idleTime > threshold && this.activeConnections === 0;
   }
 }
