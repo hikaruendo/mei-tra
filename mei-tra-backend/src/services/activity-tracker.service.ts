@@ -14,7 +14,6 @@ export class ActivityTrackerService implements IActivityTrackerService {
 
   incrementConnections(): void {
     this.activeConnections++;
-    this.recordActivity();
   }
 
   decrementConnections(): void {
