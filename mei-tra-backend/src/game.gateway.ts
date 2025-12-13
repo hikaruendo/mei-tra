@@ -42,6 +42,7 @@ import { ChatService } from './services/chat.service';
 import { IComPlayerService } from './services/interfaces/com-player-service.interface';
 import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.interface';
 import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
+import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 
 @WebSocketGateway({
   cors: {
@@ -110,6 +111,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly comAutoPlayService: IComAutoPlayService,
     @Inject('IComAutoPlayUseCase')
     private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
+    @Inject('IActivityTrackerService')
+    private readonly activityTracker: IActivityTrackerService,
   ) {}
 
   /**
@@ -302,6 +305,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //-------Connection-------
   async handleConnection(client: Socket) {
+    this.activityTracker.incrementConnections();
+
     const auth = client.handshake.auth || {};
     const roomId = typeof auth.roomId === 'string' ? auth.roomId : undefined;
     const supabaseToken =
@@ -475,6 +480,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: Socket) {
+    this.activityTracker.decrementConnections();
+
     const roomId = this.playerRooms.get(client.id);
     if (roomId) {
       this.playerRooms.delete(client.id);
@@ -566,6 +573,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       teamAssignmentMethod: 'random' | 'host-choice';
     },
   ) {
+    this.activityTracker.recordActivity();
+
     try {
       const auth = client.handshake.auth || {};
 
@@ -629,6 +638,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; user: User },
   ) {
+    this.activityTracker.recordActivity();
+
     try {
       const currentRoomId = this.playerRooms.get(client.id);
       const authenticatedUser = (client.data as { user?: AuthenticatedUser })
@@ -848,6 +859,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //-------Game-------
   @SubscribeMessage('start-game')
   async handleStartGame(client: Socket, data: { roomId: string }) {
+    this.activityTracker.recordActivity();
+
     const result = await this.startGameUseCase.execute({
       clientId: client.id,
       roomId: data.roomId,
@@ -882,6 +895,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       declaration: { trumpType: TrumpType; numberOfPairs: number };
     },
   ): Promise<void> {
+    this.activityTracker.recordActivity();
+
     try {
       const result = await this.declareBlowUseCase.execute({
         roomId: data.roomId,
@@ -909,6 +924,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     data: { roomId: string },
   ): Promise<void> {
+    this.activityTracker.recordActivity();
+
     try {
       const result = await this.passBlowUseCase.execute({
         roomId: data.roomId,
@@ -959,6 +976,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; card: string },
   ): Promise<void> {
+    this.activityTracker.recordActivity();
+
     try {
       const result = await this.playCardUseCase.execute({
         roomId: data.roomId,

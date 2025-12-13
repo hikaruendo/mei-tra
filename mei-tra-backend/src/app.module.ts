@@ -2,6 +2,7 @@ import { Module, Type } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
+import { HealthController } from './controllers/health.controller';
 import { AppService } from './app.service';
 import { GameModule } from './game.module';
 import { SocialModule } from './social.module';
@@ -24,7 +25,7 @@ import { APP_FILTER } from '@nestjs/core';
     SocialModule,
     RepositoriesModule,
   ],
-  controllers: [AppController, UserProfileController],
+  controllers: [AppController, HealthController, UserProfileController],
   providers: [
     {
       provide: APP_FILTER,
