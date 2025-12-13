@@ -1,0 +1,35 @@
+name: Auto Scale Backend
+
+on:
+  schedule:
+    # 5分ごとに実行
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  auto-scale:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run auto-scaling script
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          cd mei-tra-backend/scripts
+          chmod +x auto-scale.sh
+          ./auto-scale.sh
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Auto-scaling failed!"
+          # オプション: DiscordやSlackに通知

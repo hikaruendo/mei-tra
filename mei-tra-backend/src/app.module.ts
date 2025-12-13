@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { APP_FILTER } from '@nestjs/core';
+import { ActivityTrackerService } from './services/activity-tracker.service';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { APP_FILTER } from '@nestjs/core';
       useClass: SentryGlobalFilter as unknown as Type<unknown>,
     },
     AppService,
+    ActivityTrackerService,
   ],
 })
 export class AppModule {}

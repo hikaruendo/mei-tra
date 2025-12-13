@@ -29,11 +29,13 @@ import { CompleteFieldUseCase } from './use-cases/complete-field.use-case';
 import { ProcessGameOverUseCase } from './use-cases/process-game-over.use-case';
 import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
 import { ComAutoPlayUseCase } from './use-cases/com-autoplay.use-case';
+import { ActivityTrackerService } from './services/activity-tracker.service';
 
 @Module({
   imports: [RepositoriesModule, AuthModule, SocialModule],
   providers: [
     GameGateway,
+    ActivityTrackerService,
     GameStateService,
     {
       provide: 'IGameStateService',
