@@ -10,7 +10,7 @@ import { HealthResponse } from '../types/activity.types';
 
 @Controller('health')
 export class HealthController {
-  private static readonly IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+  private static readonly IDLE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
   constructor(
     @Inject('IActivityTrackerService')
