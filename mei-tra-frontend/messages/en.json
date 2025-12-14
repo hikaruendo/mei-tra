@@ -96,6 +96,12 @@
     "leaveConfirm": {
       "title": "Leave Room",
       "message": "Are you sure you want to leave this room?"
+    },
+    "backendStatus": {
+      "ok": "Server Running",
+      "degraded": "Server Idle",
+      "error": "Server Starting...",
+      "starting": "Server is starting up. Please wait."
     }
   },
   "game": {

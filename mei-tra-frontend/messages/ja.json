@@ -96,6 +96,12 @@
     "leaveConfirm": {
       "title": "ルームから退出",
       "message": "本当にこのルームから退出しますか？"
+    },
+    "backendStatus": {
+      "ok": "サーバー稼働中",
+      "degraded": "サーバーアイドル中",
+      "error": "サーバー起動中...",
+      "starting": "サーバーを起動しています。しばらくお待ちください。"
     }
   },
   "game": {

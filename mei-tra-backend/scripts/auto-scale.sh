@@ -11,7 +11,7 @@ BACKEND_URL="https://mei-tra-backend.fly.dev"
 IDLE_THRESHOLD_MINUTES=30
 
 # ヘルスチェックでアクティビティ状態を取得
-HEALTH_RESPONSE=$(curl -s -m 10 "$BACKEND_URL/health" || echo '{"status":"error"}')
+HEALTH_RESPONSE=$(curl -s -m 10 "$BACKEND_URL/api/health" || echo '{"status":"error"}')
 
 # JSONパース（jqを使用）
 LAST_ACTIVITY_AGO=$(echo "$HEALTH_RESPONSE" | jq -r '.activity.lastActivityAgo // 999999999')

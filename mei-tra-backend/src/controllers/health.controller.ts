@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpStatus,
-  Inject,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { IActivityTrackerService } from '../services/interfaces/activity-tracker-service.interface';
 import { HealthResponse } from '../types/activity.types';
 
@@ -33,13 +27,6 @@ export class HealthController {
         isIdle: idle,
       },
     };
-
-    if (response.status !== 'ok') {
-      throw new ServiceUnavailableException({
-        ...response,
-        httpStatus: HttpStatus.SERVICE_UNAVAILABLE,
-      });
-    }
 
     return response;
   }
