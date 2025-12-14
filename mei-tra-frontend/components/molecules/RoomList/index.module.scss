@@ -318,3 +318,42 @@
   color: #f90;
   margin-left: 4px;
 }
+
+.backendStatus {
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.status-ok {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-degraded {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.status-error {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.startingMessage {
+  padding: 15px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

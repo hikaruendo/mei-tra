@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useSocket } from '../../../hooks/useSocket';
+import { useBackendStatus } from '../../../hooks/useBackendStatus';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
 import { ConfirmModal } from '../ConfirmModal';
@@ -60,6 +61,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   const { socket } = useSocket();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [roomToLeave, setRoomToLeave] = useState<string | null>(null);
+  const { backendStatus, isLoading } = useBackendStatus();
 
   const fillWithCom = (roomId: string) => {
     if (socket) {
@@ -138,11 +140,29 @@ export const RoomList: React.FC<RoomListProps> = ({
             <option value="random">{t('room.teamAuto')}</option>
             <option value="host-choice">{t('room.teamManual')}</option>
           </select>
-          <button type="submit" className={styles.createButton}>
+          <button
+            type="submit"
+            className={styles.createButton}
+            disabled={backendStatus.isStarting}
+          >
             {t('room.create')}
           </button>
         </form>
       </div>
+
+      {/* バックエンドステータスの表示 */}
+      {!isLoading && (
+        <div className={`${styles.backendStatus} ${styles[`status-${backendStatus.status}`]}`}>
+          {backendStatus.status === 'ok' && t('room.backendStatus.ok')}
+          {backendStatus.status === 'degraded' && t('room.backendStatus.degraded')}
+          {backendStatus.status === 'error' && t('room.backendStatus.error')}
+        </div>
+      )}
+      {backendStatus.isStarting && (
+        <div className={styles.startingMessage}>
+          {t('room.backendStatus.starting')}
+        </div>
+      )}
 
       {/* 接続状態の表示 */}
       {isConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
@@ -208,7 +228,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                         }
                       }}
                       className={styles.teamButton}
-                      disabled={Object.keys(teamChanges).length === 0}
+                      disabled={Object.keys(teamChanges).length === 0 || backendStatus.isStarting}
                     >
                       {setTeamText}
                     </button>
@@ -220,6 +240,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <button
                     onClick={() => joinRoom(room.id)}
                     className={styles.joinButton}
+                    disabled={backendStatus.isStarting}
                   >
                     {t('room.join')}
                   </button>
@@ -229,6 +250,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <button
                     onClick={() => togglePlayerReady()}
                     className={`${styles.readyButton} ${readyStatus[currentPlayerId] ? styles.ready : ''}`}
+                    disabled={backendStatus.isStarting}
                   >
                     {readyStatus[currentPlayerId] ? t('common.ready') : t('common.readyUp')}
                   </button>
@@ -241,6 +263,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <button
                     onClick={() => fillWithCom(room.id)}
                     className={styles.comButton}
+                    disabled={backendStatus.isStarting}
                   >
                     {t('room.fillWithCom')}
                   </button>
@@ -252,6 +275,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <button
                     onClick={() => startGameRoom()}
                     className={styles.startButton}
+                    disabled={backendStatus.isStarting}
                   >
                     {t('room.start')}
                   </button>
@@ -261,6 +285,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <button
                     onClick={() => handleLeaveClick(room.id)}
                     className={styles.leaveButton}
+                    disabled={backendStatus.isStarting}
                   >
                     {t('common.leave')}
                   </button>
