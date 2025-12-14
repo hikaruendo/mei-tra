@@ -59,6 +59,11 @@
   background-color: #45a049;
 }
 
+.createButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .error {
   color: #f44336;
   margin-bottom: 20px;
@@ -178,6 +183,11 @@
   background-color: #F57C00;
 }
 
+.startButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .readyButton {
   padding: 8px 16px;
   background-color: #4CAF50;
@@ -200,6 +210,11 @@
   background-color: #1b5e20;
 }
 
+.readyButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .comButton {
   padding: 8px 16px;
   background-color: #9C27B0;
@@ -214,6 +229,11 @@
   background-color: #7B1FA2;
 }
 
+.comButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .leaveButton {
   padding: 8px 16px;
   background-color: #f44336;
@@ -226,6 +246,11 @@
 
 .leaveButton:hover {
   background-color: #d32f2f;
+}
+
+.leaveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .playerName {
@@ -351,9 +376,4 @@
   text-align: center;
   margin-bottom: 15px;
   font-size: 14px;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
