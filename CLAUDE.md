@@ -13,6 +13,17 @@ This is an online multiplayer card game called "明専トランプ (Mei-Tra)" - 
 
 ## Development Commands
 
+### Initial Setup
+
+```bash
+# First time only: Start Supabase
+supabase start
+
+# Create test users for development
+cd mei-tra-backend
+bash scripts/create-test-users.sh
+```
+
 ### Backend (mei-tra-backend/)
 ```bash
 # Development with local Supabase
@@ -20,11 +31,15 @@ supabase start                    # Start local Supabase environment
 npm run start:dev                # Start backend in development mode
 supabase stop                    # Stop local Supabase when done
 
+# Database migrations
+supabase db reset                # Reset database and apply latest schema
+supabase db push                 # Apply current migrations
+
 # Testing
 npm test                         # Run unit tests
 npm run test:watch              # Run tests in watch mode
 npm run test:cov                # Run tests with coverage
-npm run test:e2e                # Run end-to-end tests
+npm run test:e2e                # Run end-to-end tests (WebSocket, API integration)
 
 # Code quality
 npm run lint                    # Lint and fix TypeScript
@@ -41,6 +56,12 @@ npm run dev                     # Start development server with Turbopack
 npm run build                   # Build for production
 npm run start                   # Start production server
 npm run lint                    # Lint code
+
+# E2E Testing (Playwright) - requires frontend to be running
+npx playwright test                              # Run all E2E tests
+npx playwright test __tests__/tutorial.e2e.test.ts  # Run specific test file
+npx playwright test --headed                     # Run with browser UI
+npx playwright test --debug                     # Run in debug mode
 ```
 
 ## Architecture
@@ -140,12 +161,60 @@ Real-time communication using Socket.IO with **two separate gateways**:
 - Broadcast to multiple clients simultaneously
 - Example: `SocialGateway` for chat, `GameGateway` for game events
 
+### Backend Health Monitoring & Autoscaling System
+
+The backend includes a sophisticated health monitoring and autoscaling system designed for cost optimization on Fly.io:
+
+#### Activity Tracking (`ActivityTrackerService`)
+- **Idle Threshold**: 30 minutes (1,800,000ms) - consistent across all components
+- **Activity Recording**: Only records **game actions**, NOT WebSocket connection maintenance
+  - Game actions: room creation, join, start game, card play, blow declarations
+  - `incrementConnections()` deliberately does NOT call `recordActivity()`
+- **Idle Detection**: `isIdle()` returns true when `lastActivityAgo > 30min AND activeConnections === 0`
+
+#### Health Endpoint (`/api/health`)
+- **Controller**: `HealthController` at `/api/health` (note: `/health` is 404 due to `setGlobalPrefix('api')`)
+- **Response Format**:
+  ```typescript
+  {
+    status: 'ok' | 'degraded',  // 'degraded' when idle
+    timestamp: number,
+    uptime: number,
+    activity: {
+      lastActivity: number,
+      lastActivityAgo: number,
+      activeConnections: number,
+      isIdle: boolean
+    }
+  }
+  ```
+- **Always returns 200 OK** - status is in the response body, not HTTP status code
+- **IMPORTANT**: Never throws 503 errors; monitoring tools should read `status` field
+
+#### GitHub Actions Autoscaling (`.github/workflows/auto-scale.yml`)
+- **Runs every 5 minutes** via cron schedule
+- **Script**: `mei-tra-backend/scripts/auto-scale.sh`
+- **Scaling Logic**:
+  ```bash
+  if [ "$IS_IDLE" = "true" ] && [ "$ACTIVE_CONNECTIONS" -eq 0 ]; then
+    fly scale count 0 --min 0  # Scale to standby (cost-efficient)
+  else
+    fly scale count 1 --min 1  # Scale to active (fast response)
+  fi
+  ```
+
+#### Frontend Status Display
+- **Hook**: `useBackendStatus()` polls `/api/backend-status` every 10 seconds
+- **UI Feedback**: Displays server status (Running/Idle/Starting) in `RoomList`
+- **Button States**: All action buttons disabled when `backendStatus.isStarting === true`
+
 ### Deployment Strategy
 
 **Cost Optimization on Fly.io**:
 - **Production Mode**: `min_machines_running = 1` (always-on for active gaming)
-- **Standby Mode**: `min_machines_running = 0` (scale-to-zero when idle)
-- Use deployment scripts to switch between modes based on usage
+- **Standby Mode**: `min_machines_running = 0` (scale-to-zero when idle, auto-start on first request)
+- **Autoscaling**: GitHub Actions automatically adjusts based on activity (runs every 5 minutes)
+- Use deployment scripts to manually override: `npm run deploy:production` or `npm run deploy:standby`
 
 ## Environment Configuration
 
@@ -188,6 +257,22 @@ The project uses environment-specific configuration:
   - Example: `Component.tsx` + `Component.module.scss`
 - **Import pattern**: `import styles from './Component.module.scss';`
 - **Class usage**: `className={styles.className}` or `className={\`\${styles.base} \${styles.modifier}\`}`
+
+### SCSS Modules Constraints:
+- **No global selectors**: `button:disabled` will fail - use `.myButton:disabled` instead
+- **Pure selectors required**: Every selector must contain at least one local class or ID
+- **Example fix**:
+  ```scss
+  // ❌ WRONG - will cause build error
+  button:disabled {
+    opacity: 0.6;
+  }
+
+  // ✅ CORRECT - scoped to local class
+  .createButton:disabled {
+    opacity: 0.6;
+  }
+  ```
 
 ### Example:
 ```tsx

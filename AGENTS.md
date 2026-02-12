@@ -1,21 +1,27 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Core web client lives in `mei-tra-frontend` (Next.js) with routes under `app/`, shared React components in `components/`, and styling in `styles/` or co-located CSS modules. The NestJS gateway and Socket.IO hub sit in `mei-tra-backend/src`, with database seeds and scripts in `scripts/` and Supabase assets in `supabase/`. Cross-cutting TypeScript models, constants, and utilities are centralized in `shared/` to keep frontend and backend types aligned. Static assets for legacy pages remain under top-level `public/`, while workflow automation resides in `.github/workflows/`.
+- `mei-tra-frontend/` hosts the Next.js app (App Router). Routes live under `app/`, shared React components in `components/`, styles in `styles/`, and hooks/utilities in `hooks/` / `lib/`. Static assets sit in `public/`.
+- `mei-tra-backend/` contains the NestJS gateway plus Socket.IO hub (`src/`). Scripts for Fly.io and Supabase maintenance live in `scripts/`. Database resources are under `supabase/`.
+- Shared TypeScript models/constants are stored in `shared/` to keep frontend/backends aligned. Legacy assets remain at the repo root `public/`. Mobile experiments live in `mei-tra-mobile/`.
 
 ## Build, Test, and Development Commands
-- `cd mei-tra-frontend && npm run dev` spins up the Next.js client with Turbopack hot reload. Use `npm run build` before shipping to confirm production bundles.  
-- `cd mei-tra-backend && npm run start:dev` launches the NestJS server with file watching; pair with `bash scripts/create-test-users.sh` after a fresh Supabase reset.  
-- Supabase needs to be running (`supabase start`) for any end-to-end flows; stop it after sessions with `supabase stop`.
+- Frontend: `cd mei-tra-frontend && npm run dev` (Turbopack dev server), `npm run build` (Next production build), `npm run lint` (ESLint), `npm run test` (Jest/RTL) when applicable.
+- Backend: `cd mei-tra-backend && npm run start:dev` (Nest hot reload), `npm run build` (tsc), `npm run lint` (ESLint + Prettier), `npm test` and `npm run test:cov` for core game logic.
+- Supabase workflows rely on `supabase start/stop` from the repo root. Run `bash scripts/create-test-users.sh` after reseeding.
 
 ## Coding Style & Naming Conventions
-Both codebases rely on TypeScript with 2-space indentation and semicolons. Prefer PascalCase for React components and Nest providers, camelCase for functions and variables, and UPPER_SNAKE_CASE for shared constants. Run `npm run lint` in each package before committing; backend contributors should apply `npm run format` to enforce Prettier across `src/` and `test/`.
+- TypeScript with 2-space indentation and semicolons. Prefer PascalCase for React components/providers, camelCase for functions/variables, UPPER_SNAKE_CASE for shared constants.
+- Frontend linting: `eslint` + `eslint-config-next`. Backend uses `eslint` + `prettier`. Keep hooks under `hooks/` with `useX` names and colocate CSS modules next to components when possible.
 
 ## Testing Guidelines
-Backend unit and integration specs live beside features as `*.spec.ts` and execute via `npm test`; aim to extend coverage rather than modifying generated snapshots. Use `npm run test:cov` when touching core game logic to ensure regressions surface. Frontend lacks automated tests today—add Playwright or React Testing Library coverage when fixing bugs that affect UI flows.
+- Backend specs live alongside source as `*.spec.ts`. Use `npm test` or `npm run test:cov` before touching scoring/gameplay code. Avoid rewriting generated snapshots.
+- Frontend currently lacks enforced tests; add Jest or Playwright coverage when fixing UI regressions. Store tests under `__tests__/` mirroring the component path.
 
 ## Commit & Pull Request Guidelines
-Existing history favors short, present-tense summaries (English or Japanese) such as "ui fix" or "点数調整"; follow that style while staying descriptive. Group related changes per commit and reference issue IDs when available. For pull requests, include a concise summary, testing notes (`npm test`, manual steps), and screenshots or screen recordings for UI-facing work. Because `main` deploys automatically to Fly.io, merge only after backend build, lint, and tests pass locally.
+- History favors concise, present-tense summaries (English or Japanese), e.g., `"ui fix"`, `"点数調整"`. Reference issue IDs where applicable.
+- Pull requests should include: short summary, validation steps (`npm test`, manual steps), and screenshots/screencasts for UI changes. `main` auto-deploys via `.github/workflows/deploy.yml`, so ensure build/lint/test pass locally before merging.
 
-## Environment & Deployment Notes
-Fly.io deploys trigger from pushes to `main` using `.github/workflows/deploy.yml`; verify `.env` values in Fly secrets rather than committing credentials. When altering database schema, regenerate migrations under `mei-tra-backend/supabase/` and run `supabase db reset` to confirm they apply cleanly.
+## Additional Notes
+- Fly.io autoscaling is managed via `.github/workflows/auto-scale.yml`; ensure `FLY_API_TOKEN` stays in repository secrets.
+- Activity tracking and health checks live in `mei-tra-backend/src/controllers/health.controller.ts`—update them when changing connection logic.

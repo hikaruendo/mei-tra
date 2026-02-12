@@ -18,6 +18,9 @@ export function useSocket(): UseSocketReturn {
   const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    let managedSocket: Socket | null = null;
+
     // Wait for auth to complete before initializing socket
     if (isInitializingRef.current || loading) {
       return;
@@ -28,23 +31,29 @@ export function useSocket(): UseSocketReturn {
 
       // If a socket already exists and is connected, reflect that immediately
       if (socketRef.current?.connected) {
-        setIsConnected(true);
-        setIsConnecting(false);
+        if (isMounted) {
+          setIsConnected(true);
+          setIsConnecting(false);
+        }
         isInitializingRef.current = false;
         return;
       }
 
-      setIsConnecting(true);
+      if (isMounted) {
+        setIsConnecting(true);
+      }
 
       try {
         // Get auth token first - authentication is required
         console.log('[useSocket] Getting auth token before connection...');
-        const token = await getAccessToken();
+        const token = authTokenRef.current ?? await getAccessToken();
 
         if (!token) {
           console.error('[useSocket] No auth token available - cannot connect');
-          setIsConnected(false);
-          setIsConnecting(false);
+          if (isMounted) {
+            setIsConnected(false);
+            setIsConnecting(false);
+          }
           isInitializingRef.current = false;
           return;
         }
@@ -56,56 +65,93 @@ export function useSocket(): UseSocketReturn {
         if (!socketRef.current) {
           socketRef.current = getSocket(token);
         }
+        managedSocket = socketRef.current;
 
         // Set up connection listeners
-        if (socketRef.current) {
-          // Clear any existing listeners to prevent duplicates
-          socketRef.current.off('connect');
-          socketRef.current.off('disconnect');
-          socketRef.current.off('connect_error');
-
-          socketRef.current.on('connect', () => {
+        if (managedSocket) {
+          const handleConnect = () => {
             console.log('[useSocket] Socket connected successfully');
+            if (!isMounted) return;
             setIsConnected(true);
             setIsConnecting(false);
             isInitializingRef.current = false;
-          });
+          };
 
-          socketRef.current.on('disconnect', () => {
+          const handleDisconnect = () => {
             console.log('[useSocket] Socket disconnected');
+            if (!isMounted) return;
             setIsConnected(false);
-            setIsConnecting(false);
+            setIsConnecting(true);
             isInitializingRef.current = false;
-          });
+          };
 
-          socketRef.current.on('connect_error', (error) => {
+          const handleConnectError = (error: Error) => {
             console.error('[useSocket] Connection error:', error);
+            if (!isMounted) return;
+            setIsConnected(false);
+            // Backend cold start中も再接続を継続する
+            setIsConnecting(true);
+            isInitializingRef.current = false;
+          };
+
+          const handleReconnectAttempt = () => {
+            if (!isMounted) return;
+            setIsConnecting(true);
+          };
+
+          const handleReconnectFailed = () => {
+            if (!isMounted) return;
             setIsConnected(false);
             setIsConnecting(false);
-            isInitializingRef.current = false;
-          });
+          };
+
+          managedSocket.on('connect', handleConnect);
+          managedSocket.on('disconnect', handleDisconnect);
+          managedSocket.on('connect_error', handleConnectError);
+          managedSocket.io.on('reconnect_attempt', handleReconnectAttempt);
+          managedSocket.io.on('reconnect_failed', handleReconnectFailed);
 
           // Connect the socket if not already connected
-          if (!socketRef.current.connected) {
+          if (!managedSocket.connected) {
             console.log('[useSocket] Attempting to connect socket with auth token...');
-            socketRef.current.connect();
+            managedSocket.connect();
           } else {
             // Already connected, update state immediately
             console.log('[useSocket] Socket already connected');
-            setIsConnected(true);
-            setIsConnecting(false);
+            if (isMounted) {
+              setIsConnected(true);
+              setIsConnecting(false);
+            }
             isInitializingRef.current = false;
           }
+
+          return () => {
+            managedSocket?.off('connect', handleConnect);
+            managedSocket?.off('disconnect', handleDisconnect);
+            managedSocket?.off('connect_error', handleConnectError);
+            managedSocket?.io.off('reconnect_attempt', handleReconnectAttempt);
+            managedSocket?.io.off('reconnect_failed', handleReconnectFailed);
+          };
         }
       } catch (error) {
         console.error('[useSocket] Error in initializeSocket:', error);
-        setIsConnected(false);
-        setIsConnecting(false);
+        if (isMounted) {
+          setIsConnected(false);
+          setIsConnecting(false);
+        }
         isInitializingRef.current = false;
       }
     };
 
-    initializeSocket();
+    let cleanupHandlers: (() => void) | undefined;
+    initializeSocket().then((cleanup) => {
+      cleanupHandlers = cleanup;
+    });
+
+    return () => {
+      isMounted = false;
+      cleanupHandlers?.();
+    };
   }, [loading, getAccessToken]); // Wait for auth loading to complete
 
   // Note: Auth token is now provided at connection time, so no need for separate update-auth effect

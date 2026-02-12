@@ -22,7 +22,8 @@ export async function GET() {
     ) || 'http://localhost:3333';
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  // Fly cold start can take several seconds; keep probe long enough to avoid false 503.
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(`${backendBaseUrl}/api/health`, {
