@@ -8,7 +8,6 @@ fi
 
 APP_NAME="mei-tra-backend"
 BACKEND_URL="https://mei-tra-backend.fly.dev"
-IDLE_THRESHOLD_MINUTES=30
 
 # ヘルスチェックでアクティビティ状態を取得
 HEALTH_RESPONSE=$(curl -s -m 10 "$BACKEND_URL/api/health" || echo '{"status":"error"}')
@@ -23,25 +22,21 @@ echo "  Last activity: $((LAST_ACTIVITY_AGO / 60000)) minutes ago"
 echo "  Active connections: $ACTIVE_CONNECTIONS"
 echo "  Is idle: $IS_IDLE"
 
-# 現在のmin_machines_runningを取得
-CURRENT_MIN=$(fly scale show -a "$APP_NAME" -j | jq -r '.Groups[0].MinMachines // 0')
+# Fly configurationを確認（count=0だと自動起動できないため、countは常に1以上を維持）
+SCALE_JSON=$(fly scale show -a "$APP_NAME" -j)
+CURRENT_MIN=$(echo "$SCALE_JSON" | jq -r '.Groups[0].MinMachines // 0')
+CURRENT_COUNT=$(echo "$SCALE_JSON" | jq -r '.Groups[0].Count // 0')
 echo "Current min_machines_running: $CURRENT_MIN"
+echo "Current machine count: $CURRENT_COUNT"
 
-# スケーリング判定
-if [ "$IS_IDLE" = "true" ] && [ "$ACTIVE_CONNECTIONS" -eq 0 ]; then
-  if [ "$CURRENT_MIN" -ne 0 ]; then
-    echo "Scaling down to 0..."
-    fly scale count 0 --min 0 -a "$APP_NAME" -y
-    echo "✅ Scaled to min=0 (standby mode)"
-  else
-    echo "Already at min=0"
-  fi
+# コストを抑えるためmin=0を維持しつつ、count=1で停止マシンを確保する
+TARGET_MIN=0
+TARGET_COUNT=1
+
+if [ "$CURRENT_MIN" -ne "$TARGET_MIN" ] || [ "$CURRENT_COUNT" -lt "$TARGET_COUNT" ]; then
+  echo "Applying target scale: count=$TARGET_COUNT, min=$TARGET_MIN"
+  fly scale count "$TARGET_COUNT" --min "$TARGET_MIN" -a "$APP_NAME" -y
+  echo "✅ Scale updated (cold-start compatible mode)"
 else
-  if [ "$CURRENT_MIN" -eq 0 ]; then
-    echo "Activity detected, scaling up to 1..."
-    fly scale count 1 --min 1 -a "$APP_NAME" -y
-    echo "✅ Scaled to min=1 (active mode)"
-  else
-    echo "Already at min=1"
-  fi
+  echo "Scale already correct (count=1, min=0)"
 fi
