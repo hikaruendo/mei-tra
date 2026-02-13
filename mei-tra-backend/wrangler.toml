@@ -1,0 +1,16 @@
+name = "meitra-backend"
+main = "workers/api/src/index.ts"
+compatibility_date = "2026-02-13"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "ROOM_STATE"
+class_name = "RoomStateObject"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RoomStateObject"]
+
+[[r2_buckets]]
+binding = "AVATAR_BUCKET"
+bucket_name = "meitra-avatars"
