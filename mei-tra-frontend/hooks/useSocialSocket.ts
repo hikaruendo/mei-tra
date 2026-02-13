@@ -2,13 +2,16 @@ import { useEffect, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 import { useAuth } from './useAuth';
 import { useSocialSocketContext } from '../contexts/SocialSocketContext';
+import { CloudflareSocialSocket } from '../lib/cloudflareSocialSocket';
 import {
   ChatMessageEvent,
   ChatTypingEvent,
 } from '../types/social.types';
 
+type SocialSocket = Socket | CloudflareSocialSocket;
+
 export interface UseSocialSocketReturn {
-  socket: Socket | null;
+  socket: SocialSocket | null;
   isConnected: boolean;
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;

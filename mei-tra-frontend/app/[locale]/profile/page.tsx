@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ProfilePage } from '@/components/profile/ProfilePage';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export default function Profile() {
   return (

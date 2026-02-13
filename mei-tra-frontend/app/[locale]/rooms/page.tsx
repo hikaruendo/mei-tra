@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useSocket } from '@/hooks/useSocket';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export default function RoomsPage() {
   const { isConnected, isConnecting } = useSocket();

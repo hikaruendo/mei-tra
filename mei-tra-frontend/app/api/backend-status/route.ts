@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 interface HealthResponse {
   status: 'ok' | 'degraded';
@@ -47,14 +48,21 @@ export async function GET() {
 
     const data: HealthResponse = await response.json();
 
+    const activity = data.activity ?? {
+      isIdle: data.status !== 'ok',
+      lastActivityAgo: 0,
+      activeConnections: 0,
+    };
+
     return NextResponse.json({
       status: data.status,
-      isIdle: data.activity.isIdle,
+      isIdle: activity.isIdle,
       isStarting: false,
-      lastActivityAgo: data.activity.lastActivityAgo,
-      activeConnections: data.activity.activeConnections,
+      lastActivityAgo: activity.lastActivityAgo ?? 0,
+      activeConnections: activity.activeConnections ?? 0,
     });
   } catch (error) {
+    console.error('[backend-status] health check failed', error);
     clearTimeout(timeoutId);
 
     if ((error as Error).name === 'AbortError') {
