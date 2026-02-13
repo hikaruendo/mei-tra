@@ -7,6 +7,8 @@ import { TutorialWhitepaper } from '@/components/tutorial/whitepaper/TutorialWhi
 
 import styles from './page.module.scss';
 
+export const runtime = 'edge';
+
 export default function TutorialPage() {
   const t = useTranslations('tutorial');
 

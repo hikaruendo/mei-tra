@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import styles from './page.module.scss';
 
+export const runtime = 'edge';
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

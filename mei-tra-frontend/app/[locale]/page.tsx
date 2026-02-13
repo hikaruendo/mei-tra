@@ -11,6 +11,7 @@ import { ChatDock } from '../../components/social/ChatDock';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export default function Home() {
   const t = useTranslations('game');

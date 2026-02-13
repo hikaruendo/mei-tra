@@ -17,6 +17,10 @@ const nextConfig = {
     config.resolve.fallback = { fs: false, path: false };
     return config;
   },
+  output: 'export',
+  experimental: {
+    optimizeCss: true,
+  },
   images: {
     remotePatterns: [
       {
