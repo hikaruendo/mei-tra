@@ -2,8 +2,8 @@ name: Auto Scale Backend
 
 on:
   schedule:
-    # 5分ごとに実行
-    - cron: '*/5 * * * *'
+    # 1時間ごとに実行（コスト削減のため不要なwake-upを避ける）
+    - cron: '0 * * * *'
   workflow_dispatch: # 手動実行も可能
 
 jobs:
