@@ -7,21 +7,8 @@ if [ -z "$FLY_API_TOKEN" ]; then
 fi
 
 APP_NAME="mei-tra-backend"
-BACKEND_URL="https://mei-tra-backend.fly.dev"
 
-# ヘルスチェックでアクティビティ状態を取得
-HEALTH_RESPONSE=$(curl -s -m 10 "$BACKEND_URL/api/health" || echo '{"status":"error"}')
-
-# JSONパース（jqを使用）
-LAST_ACTIVITY_AGO=$(echo "$HEALTH_RESPONSE" | jq -r '.activity.lastActivityAgo // 999999999')
-IS_IDLE=$(echo "$HEALTH_RESPONSE" | jq -r '.activity.isIdle // true')
-ACTIVE_CONNECTIONS=$(echo "$HEALTH_RESPONSE" | jq -r '.activity.activeConnections // 0')
-
-echo "Health check result:"
-echo "  Last activity: $((LAST_ACTIVITY_AGO / 60000)) minutes ago"
-echo "  Active connections: $ACTIVE_CONNECTIONS"
-echo "  Is idle: $IS_IDLE"
-
+# Health endpointを叩くと停止中Machineを起動してしまうため、Fly APIのみ参照する。
 # Fly configurationを確認（count=0だと自動起動できないため、countは常に1以上を維持）
 SCALE_JSON=$(fly scale show -a "$APP_NAME" -j)
 CURRENT_MIN=$(echo "$SCALE_JSON" | jq -r '.Groups[0].MinMachines // 0')
