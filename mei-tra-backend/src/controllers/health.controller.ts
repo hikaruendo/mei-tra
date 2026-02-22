@@ -18,6 +18,7 @@ export class HealthController {
       HealthController.IDLE_THRESHOLD_MS,
     );
 
+    const mem = process.memoryUsage();
     const response: HealthResponse = {
       status: idle ? 'degraded' : 'ok',
       timestamp: Date.now(),
@@ -25,6 +26,11 @@ export class HealthController {
       activity: {
         ...activity,
         isIdle: idle,
+      },
+      memory: {
+        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+        rss: Math.round(mem.rss / 1024 / 1024),
       },
     };
 

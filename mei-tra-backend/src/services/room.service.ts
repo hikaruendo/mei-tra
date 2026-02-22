@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
@@ -10,7 +10,7 @@ import { IRoomService } from './interfaces/room-service.interface';
 import { IComPlayerService } from './interfaces/com-player-service.interface';
 
 @Injectable()
-export class RoomService implements IRoomService {
+export class RoomService implements IRoomService, OnModuleDestroy {
   private readonly logger = new Logger(RoomService.name);
   private roomGameStates: Map<string, GameStateService> = new Map();
   // 退出席情報（ルームIDごとに席番号ベースで元プレイヤーのスナップショットを保存）
@@ -25,8 +25,9 @@ export class RoomService implements IRoomService {
     >
   > = {};
 
-  private readonly ROOM_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24時間
-  private readonly CLEANUP_INTERVAL = 60 * 60 * 1000; // 1時間
+  private readonly ROOM_EXPIRY_TIME = 6 * 60 * 60 * 1000; // 6時間
+  private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30分
+  private cleanupIntervalId: ReturnType<typeof setInterval>;
 
   constructor(
     @Inject('IRoomRepository')
@@ -41,8 +42,12 @@ export class RoomService implements IRoomService {
     this.startCleanupTask();
   }
 
+  onModuleDestroy() {
+    clearInterval(this.cleanupIntervalId);
+  }
+
   private startCleanupTask() {
-    setInterval(() => {
+    this.cleanupIntervalId = setInterval(() => {
       void this.cleanupRooms();
     }, this.CLEANUP_INTERVAL);
   }
