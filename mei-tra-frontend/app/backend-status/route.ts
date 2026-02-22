@@ -45,7 +45,20 @@ export async function GET() {
       );
     }
 
-    const data: HealthResponse = await response.json();
+    let data: HealthResponse;
+    try {
+      const text = await response.text();
+      data = JSON.parse(text) as HealthResponse;
+    } catch {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Backend returned invalid response',
+          isStarting: true,
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({
       status: data.status,

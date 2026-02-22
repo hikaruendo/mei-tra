@@ -242,7 +242,14 @@
     "initializingActions": "Initializing game actions...",
     "paused": "Game is paused. It will resume when 4 players are present.",
     "yourTurn": "Your turn",
-    "waiting": "Waiting..."
+    "waiting": "Waiting...",
+    "orderButton": "Order",
+    "trumpFormat": "Trump: {suit} ({symbol})",
+    "suitHerz": "Heart",
+    "suitDaiya": "Diamond",
+    "suitClub": "Club",
+    "suitZuppe": "Spade",
+    "suitTra": "Tra"
   },
   "gamePhase": {
     "deal": "Deal",

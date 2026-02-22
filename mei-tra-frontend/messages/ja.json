@@ -242,7 +242,14 @@
     "initializingActions": "ゲームアクションを初期化中...",
     "paused": "ゲームが一時停止しています。4人のプレイヤーが揃うと再開します。",
     "yourTurn": "あなたのターンです",
-    "waiting": "待機中..."
+    "waiting": "待機中...",
+    "orderButton": "強さ順",
+    "trumpFormat": "キリ：{suit}（{symbol}）",
+    "suitHerz": "ハート",
+    "suitDaiya": "ダイヤ",
+    "suitClub": "クラブ",
+    "suitZuppe": "スペード",
+    "suitTra": "トラ"
   },
   "gamePhase": {
     "deal": "配布",

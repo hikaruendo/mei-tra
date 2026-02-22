@@ -8,7 +8,7 @@ import { Navigation } from '../../components/layout/Navigation';
 import { useGame } from '../../hooks/useGame';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import { RoomList } from '../../components/molecules/RoomList';
-import { ChatDock } from '../../components/social/ChatDock';
+import { GameDock } from '../../components/game/GameDock';
 import { LandingPage } from '../../components/landing/LandingPage';
 import { AuthModal } from '../../components/auth/AuthModal';
 import { useAuth } from '../../hooks/useAuth';
@@ -171,7 +171,11 @@ export default function Home() {
                 pointsToWin={pointsToWin}
               />
               {currentRoomId && (
-                <ChatDock roomId={currentRoomId} gameStarted={gameStarted} />
+                <GameDock
+                  roomId={currentRoomId}
+                  gameStarted={gameStarted}
+                  currentTrump={currentTrump}
+                />
               )}
             </div>
           </>

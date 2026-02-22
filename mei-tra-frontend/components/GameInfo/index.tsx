@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TrumpType, TeamScores, Player } from '../../types/game.types';
+import { getTrumpDisplay } from '../../lib/utils/trumpDisplay';
 import styles from './index.module.scss';
 import { useRoom } from '../../hooks/useRoom';
 import { useTranslations } from 'next-intl';
@@ -26,18 +27,6 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   const t = useTranslations();
   const { leaveRoom } = useRoom();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-  const getTrumpDisplay = () => {
-    if (!currentTrump) return '';
-    const trumpMap: Record<TrumpType, string> = {
-      'tra': 'Tra',
-      'herz': '♥',
-      'daiya': '♦',
-      'club': '♣',
-      'zuppe': '♠'
-    };
-    return trumpMap[currentTrump];
-  };
 
   const getTeamPlayerNames = (teamNumber: number): string => {
     const teamPlayers = players
@@ -66,7 +55,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
           {currentTrump && (
             <div className={styles.gameInfoTrump}>
               <span className={styles.gameInfoTrumpText}>
-                👑 {currentHighestDeclarationPlayer} : {getTrumpDisplay()}{numberOfPairs}
+                👑 {currentHighestDeclarationPlayer} : {getTrumpDisplay(currentTrump)}{numberOfPairs}
               </span>
             </div>
           )}
