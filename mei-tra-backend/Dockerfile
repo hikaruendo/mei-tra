@@ -34,9 +34,13 @@ RUN npm run build
 # Final stage for app image
 FROM base
 
-# Copy built application
-COPY --from=build /app /app
+# Copy only built output and package files
+COPY --from=build /app/dist /app/dist
+COPY --from=build /app/package.json /app/package-lock.json /app/
 
-# Start the server by default, this can be overwritten at runtime
+# Install production dependencies only
+RUN npm ci --omit=dev
+
+# Start the server with explicit heap size limit
 EXPOSE 3333
-CMD [ "npm", "run", "start" ]
+CMD [ "node", "--max-old-space-size=384", "dist/main.js" ]

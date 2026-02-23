@@ -1,4 +1,10 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { SupabaseService } from '../database/supabase.service';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { AuthenticatedUser, UserProfile } from '../types/user.types';
@@ -9,16 +15,29 @@ interface CachedTokenValidation {
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AuthService.name);
   private readonly tokenCache = new Map<string, CachedTokenValidation>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_CACHE_SIZE = 100;
+  private cleanupInterval: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly supabase: SupabaseService,
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository,
   ) {}
+
+  onModuleInit() {
+    this.cleanupInterval = setInterval(
+      () => this.cleanupExpiredCache(),
+      5 * 60 * 1000,
+    );
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.cleanupInterval);
+  }
 
   async validateToken(token: string): Promise<AuthenticatedUser | null> {
     try {
@@ -104,6 +123,11 @@ export class AuthService {
         expiresAt: Date.now() + this.CACHE_TTL_MS,
       });
 
+      // Evict oldest entries if cache exceeds max size
+      if (this.tokenCache.size > this.MAX_CACHE_SIZE) {
+        this.evictOldestEntries();
+      }
+
       // Clean up expired cache entries periodically
       this.cleanupExpiredCache();
 
@@ -127,6 +151,19 @@ export class AuthService {
       if (cached.expiresAt <= now) {
         this.tokenCache.delete(token);
       }
+    }
+  }
+
+  private evictOldestEntries(): void {
+    const entriesToRemove = this.tokenCache.size - this.MAX_CACHE_SIZE;
+    if (entriesToRemove <= 0) return;
+
+    const entries = [...this.tokenCache.entries()].sort(
+      (a, b) => a[1].expiresAt - b[1].expiresAt,
+    );
+
+    for (let i = 0; i < entriesToRemove; i++) {
+      this.tokenCache.delete(entries[i][0]);
     }
   }
 
