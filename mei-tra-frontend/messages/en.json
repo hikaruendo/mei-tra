@@ -18,6 +18,137 @@
     "tutorial": "Tutorial",
     "menu": "Menu"
   },
+  "landing": {
+    "hero": {
+      "label": "Online Card Game",
+      "titleLeading": "Meisen Trump, ",
+      "titleHighlight": "online",
+      "titleTrailing": ".",
+      "description": "A strategic 4-player, 2-team card game. Anytime, anywhere.",
+      "loginCta": "Login",
+      "signupCta": "Get Started Free",
+      "metrics": [
+        { "value": "2,400+", "label": "Matches played" },
+        { "value": "98%", "label": "Uptime" },
+        { "value": "24/7", "label": "Monitoring" }
+      ]
+    },
+    "screenshot": {
+      "placeholder": "Game Screen Preview",
+      "caption": "Play with friends in real time. Full rule engine from Blow to scoring."
+    },
+    "features": {
+      "eyebrow": "Features",
+      "title": "Built for focus",
+      "description": "Everything you need. Nothing you don't.",
+      "items": [
+        {
+          "badge": "01",
+          "title": "Instant Matching",
+          "description": "Create or join a room in seconds. Zero wait time."
+        },
+        {
+          "badge": "02",
+          "title": "Authentic Rules",
+          "description": "Negri, Broken, Chombo. Every rule codified."
+        },
+        {
+          "badge": "03",
+          "title": "Auto Score Tracking",
+          "description": "Declarations and highlights saved automatically."
+        },
+        {
+          "badge": "04",
+          "title": "Any Device",
+          "description": "Desktop, tablet, mobile. Same experience."
+        }
+      ]
+    },
+    "community": {
+      "eyebrow": "How It Works",
+      "title": "Learn, play, share",
+      "description": "From beginners to alumni. Three steps to keep the culture alive.",
+      "steps": [
+        {
+          "step": "01",
+          "title": "Learn the Rules",
+          "description": "Interactive tutorial to master the basics in minutes."
+        },
+        {
+          "step": "02",
+          "title": "Play in Real Time",
+          "description": "In-game chat brings the club room feel online."
+        },
+        {
+          "step": "03",
+          "title": "Share Results",
+          "description": "Auto-generated summaries for post-game review."
+        }
+      ]
+    },
+    "testimonials": {
+      "eyebrow": "Community",
+      "title": "What players say",
+      "items": [
+        {
+          "quote": "Never thought I could play Meisen Trump after graduating. Weekly matches are now a ritual.",
+          "name": "Alumni, Class of 2019",
+          "role": "Weekend player"
+        },
+        {
+          "quote": "Complex rules, but the tutorial made it click. Was playing within minutes.",
+          "name": "New Member",
+          "role": "Beginner"
+        },
+        {
+          "quote": "Feels like the club room, even online. The chat feature is surprisingly useful.",
+          "name": "Active Member",
+          "role": "Daily player"
+        }
+      ]
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Frequently asked questions",
+      "items": [
+        {
+          "question": "What is Meisen Trump?",
+          "answer": "A 4-player, 2-team trick-taking card game with unique mechanics like Blow declarations, the Jack system, and Chombo violations."
+        },
+        {
+          "question": "Can beginners play?",
+          "answer": "Yes. The interactive tutorial covers the basics in just a few minutes."
+        },
+        {
+          "question": "How many players?",
+          "answer": "4 players in 2 teams. Partners sit opposite each other. You can add COM players if needed."
+        },
+        {
+          "question": "Is it free?",
+          "answer": "Completely free. Just create an account and start playing."
+        },
+        {
+          "question": "Does it work on mobile?",
+          "answer": "Yes. Desktop, tablet, and mobile are all supported. Browser-only, no app required."
+        }
+      ]
+    },
+    "cta": {
+      "eyebrow": "Ready?",
+      "title": "Start your next game.",
+      "description": "Free to sign up. First match in under five minutes.",
+      "login": "Login",
+      "signup": "Register Free",
+      "product": "kando1.com"
+    },
+    "footer": {
+      "links": [
+        { "label": "kando1.com", "href": "https://kando1.com" },
+        { "label": "Tutorial", "href": "/en/tutorial" }
+      ],
+      "copyright": "\u00a9 2025 Mei-Tra. All rights reserved."
+    }
+  },
   "auth": {
     "login": "Login",
     "signup": "Sign Up",

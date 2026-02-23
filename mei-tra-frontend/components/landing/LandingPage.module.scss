@@ -1,0 +1,566 @@
+$lp-bg: #000000;
+$lp-card: #111111;
+$lp-accent: #ffffff;
+$lp-accent-strong: #e5e5e5;
+$lp-text: #ededed;
+$lp-muted: #888888;
+$lp-line: rgba(255, 255, 255, 0.06);
+$lp-radius-xl: 32px;
+$lp-radius-lg: 24px;
+$lp-radius-md: 16px;
+$lp-content-width: min(1200px, 100%);
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing {
+  width: 100%;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 50%),
+    $lp-bg;
+  color: $lp-text;
+  font-family: 'Noto Sans JP', 'Hiragino Sans', system-ui, -apple-system, BlinkMacSystemFont,
+    sans-serif;
+  line-height: 1.6;
+  padding: 48px 0 0;
+}
+
+// ── Hero ──
+
+.hero {
+  width: $lp-content-width;
+  margin: 0 auto;
+  padding: 64px 40px 72px;
+  border-radius: $lp-radius-xl;
+  background: linear-gradient(135deg, rgba(17, 17, 17, 0.95), rgba(0, 0, 0, 0.95));
+  border: 1px solid $lp-line;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease both;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.04), transparent 40%),
+      radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.02), transparent 30%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.heroLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+  color: $lp-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.heroTitle {
+  font-size: clamp(2.8rem, 6vw, 4.4rem);
+  line-height: 1.15;
+  margin: 24px 0 16px;
+  color: $lp-accent;
+  font-weight: 700;
+
+  span {
+    color: $lp-accent;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.15);
+    margin: 0 8px;
+  }
+}
+
+.heroDescription {
+  font-size: 1.1rem;
+  color: $lp-muted;
+  margin-bottom: 32px;
+  max-width: 640px;
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.primaryCta,
+.secondaryCta {
+  border-radius: 999px;
+  padding: 14px 28px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease,
+    border-color 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primaryCta {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.15);
+  }
+}
+
+.secondaryCta {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: $lp-text;
+  background: transparent;
+
+  &:hover {
+    border-color: #fff;
+  }
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.metric {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 20px;
+  border-radius: $lp-radius-md;
+  border: 1px solid $lp-line;
+
+  strong {
+    font-size: 1.8rem;
+    display: block;
+    margin-bottom: 4px;
+    color: $lp-accent;
+  }
+
+  span {
+    color: $lp-muted;
+    font-size: 0.9rem;
+  }
+}
+
+// ── Shared section ──
+
+.section {
+  width: $lp-content-width;
+  margin: 80px auto 0;
+  padding: 0 40px;
+  animation: fadeInUp 0.6s ease both;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.sectionEyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $lp-muted;
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.sectionTitle {
+  font-size: 1.8rem;
+  margin: 0;
+  color: $lp-accent;
+}
+
+.sectionDescription {
+  color: $lp-muted;
+  max-width: 520px;
+  margin: 0;
+}
+
+// ── Screenshot ──
+
+.screenshotSection {
+  width: $lp-content-width;
+  margin: 80px auto 0;
+  padding: 0 40px;
+  animation: fadeInUp 0.6s ease both;
+  text-align: center;
+}
+
+.screenshotFrame {
+  max-width: 900px;
+  margin: 0 auto;
+  border-radius: $lp-radius-lg;
+  border: 1px solid $lp-line;
+  overflow: hidden;
+  background: $lp-card;
+}
+
+.screenshotPlaceholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $lp-muted;
+  font-size: 1.1rem;
+}
+
+.screenshotCaption {
+  margin-top: 16px;
+  color: $lp-muted;
+  font-size: 0.95rem;
+}
+
+// ── Features ──
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+.featureCard {
+  background: $lp-card;
+  border: 1px solid $lp-line;
+  border-radius: $lp-radius-lg;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: $lp-accent;
+  }
+
+  p {
+    margin: 0;
+    color: $lp-muted;
+  }
+}
+
+.featureBadge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: $lp-accent;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+// ── Timeline / Community ──
+
+.timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.timelineCard {
+  background: $lp-card;
+  border: 1px solid $lp-line;
+  border-radius: $lp-radius-lg;
+  padding: 24px;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  h3 {
+    margin: 8px 0;
+    font-size: 1.2rem;
+    color: $lp-accent;
+  }
+
+  p {
+    margin: 0;
+    color: $lp-muted;
+  }
+}
+
+.timelineStep {
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $lp-muted;
+}
+
+// ── Testimonials ──
+
+.testimonialGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.testimonialCard {
+  background: $lp-card;
+  border: 1px solid $lp-line;
+  border-radius: $lp-radius-lg;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+.testimonialQuote {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: $lp-text;
+  margin: 0;
+  font-style: italic;
+}
+
+.testimonialAuthor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.testimonialName {
+  font-weight: 600;
+  color: $lp-accent;
+  font-size: 0.95rem;
+}
+
+.testimonialRole {
+  color: $lp-muted;
+  font-size: 0.85rem;
+}
+
+// ── FAQ ──
+
+.faqList {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.faqItem {
+  border-bottom: 1px solid $lp-line;
+
+  &:first-child {
+    border-top: 1px solid $lp-line;
+  }
+}
+
+.faqSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: $lp-text;
+  list-style: none;
+  user-select: none;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: $lp-accent;
+  }
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: '';
+  }
+}
+
+.faqIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  position: relative;
+  margin-left: 16px;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    background: $lp-muted;
+    transition: transform 0.2s ease;
+  }
+
+  &::before {
+    width: 20px;
+    height: 2px;
+    top: 9px;
+    left: 0;
+  }
+
+  &::after {
+    width: 2px;
+    height: 20px;
+    top: 0;
+    left: 9px;
+  }
+}
+
+.faqItem[open] .faqIcon::after {
+  transform: rotate(90deg);
+}
+
+.faqAnswer {
+  padding: 0 0 20px;
+  color: $lp-muted;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+// ── CTA (final) ──
+
+.ctaSection {
+  width: $lp-content-width;
+  margin: 80px auto 0;
+  padding: 64px 40px;
+  text-align: center;
+  animation: fadeInUp 0.6s ease both;
+}
+
+.ctaSectionTitle {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 0 0 12px;
+  color: $lp-accent;
+  font-weight: 700;
+}
+
+.ctaSectionDescription {
+  color: $lp-muted;
+  max-width: 520px;
+  margin: 0 auto 32px;
+  font-size: 1.05rem;
+}
+
+.ctaSectionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Footer ──
+
+.footer {
+  width: $lp-content-width;
+  margin: 80px auto 0;
+  padding: 40px 40px;
+  border-top: 1px solid $lp-line;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: fadeInUp 0.6s ease both;
+}
+
+.footerLinks {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footerLink {
+  color: $lp-muted;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: $lp-accent;
+  }
+}
+
+.footerCopy {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+// ── Responsive ──
+
+@media (max-width: 768px) {
+  .landing {
+    padding: 24px 0 0;
+  }
+
+  .hero,
+  .section,
+  .screenshotSection,
+  .ctaSection,
+  .footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .hero {
+    border-radius: $lp-radius-lg;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ctaSectionRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
