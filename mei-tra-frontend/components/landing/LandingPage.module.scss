@@ -164,6 +164,12 @@ $lp-content-width: min(1200px, 100%);
   }
 }
 
+.metricPrefix {
+  font-size: 0.75em;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
 // ── Shared section ──
 
 .section {

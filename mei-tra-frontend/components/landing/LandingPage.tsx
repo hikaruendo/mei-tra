@@ -12,6 +12,7 @@ interface LandingPageProps {
 type LandingMetric = {
   value: string;
   label: string;
+  prefix?: string;
 };
 
 type LandingFeature = {
@@ -78,7 +79,10 @@ export function LandingPage({
         <div className={styles.metrics}>
           {metrics.map((metric) => (
             <div key={metric.label} className={styles.metric}>
-              <strong>{metric.value}</strong>
+              <strong>
+                {metric.prefix && <span className={styles.metricPrefix}>{metric.prefix}</span>}
+                {metric.value}
+              </strong>
               <span>{metric.label}</span>
             </div>
           ))}
@@ -208,8 +212,9 @@ export function LandingPage({
               key={link.label}
               className={styles.footerLink}
               href={link.href}
-              target="_blank"
-              rel="noreferrer"
+              {...(link.href.startsWith('/')
+                ? {}
+                : { target: '_blank', rel: 'noreferrer' })}
             >
               {link.label}
             </a>
