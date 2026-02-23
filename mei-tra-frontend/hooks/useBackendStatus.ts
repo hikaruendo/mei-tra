@@ -21,12 +21,17 @@ export const useBackendStatus = () => {
 
   const checkBackendStatus = useCallback(async () => {
     try {
-      const response = await fetch('/api/backend-status', {
+      const response = await fetch('/backend-status', {
         cache: 'no-store',
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData: { isStarting?: boolean } = {};
+        try {
+          errorData = await response.json();
+        } catch {
+          // Response is not JSON (e.g. HTML error page)
+        }
         setBackendStatus({
           status: 'error',
           isIdle: false,
@@ -35,11 +40,27 @@ export const useBackendStatus = () => {
         return;
       }
 
-      const data = await response.json();
+      let data: {
+        status?: string;
+        isIdle?: boolean;
+        isStarting?: boolean;
+        lastActivityAgo?: number;
+        activeConnections?: number;
+      };
+      try {
+        data = await response.json();
+      } catch {
+        setBackendStatus({
+          status: 'error',
+          isIdle: false,
+          isStarting: true,
+        });
+        return;
+      }
       setBackendStatus({
-        status: data.status,
-        isIdle: data.isIdle,
-        isStarting: data.isStarting,
+        status: (data.status as BackendStatus['status']) ?? 'error',
+        isIdle: data.isIdle ?? false,
+        isStarting: data.isStarting ?? false,
         lastActivityAgo: data.lastActivityAgo,
         activeConnections: data.activeConnections,
       });

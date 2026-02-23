@@ -18,6 +18,139 @@
     "tutorial": "Tutorial",
     "menu": "Menu"
   },
+  "landing": {
+    "hero": {
+      "label": "Online Card Game",
+      "titleLeading": "Meisen Trump, ",
+      "titleHighlight": "online",
+      "titleTrailing": ".",
+      "description": "A strategic 4-player, 2-team card game. Anytime, anywhere.",
+      "loginCta": "Login",
+      "signupCta": "Get Started Free",
+      "metrics": [
+        { "prefix": "planned ", "value": "2,400+", "label": "Matches played" },
+        { "value": "98%", "label": "Uptime" },
+        { "value": "24/7", "label": "Monitoring" }
+      ]
+    },
+    "screenshot": {
+      "placeholder": "Game Screen Preview",
+      "caption": "Play with friends in real time. Full rule engine from Blow to scoring."
+    },
+    "features": {
+      "eyebrow": "Features",
+      "title": "Built for focus",
+      "description": "Everything you need. Nothing you don't.",
+      "items": [
+        {
+          "badge": "01",
+          "title": "Instant Matching",
+          "description": "Create or join a room in seconds. Zero wait time."
+        },
+        {
+          "badge": "02",
+          "title": "Authentic Rules",
+          "description": "Negri, Broken. Faithfully recreated."
+        },
+        {
+          "badge": "03",
+          "title": "Auto Score Tracking",
+          "description": "Scores tallied per round. Live until the game ends."
+        },
+        {
+          "badge": "04",
+          "title": "Any Device",
+          "description": "Desktop, tablet, mobile. Same experience."
+        }
+      ]
+    },
+    "community": {
+      "eyebrow": "How It Works",
+      "title": "Learn, play, share",
+      "description": "From beginners to alumni. Three steps to keep the culture alive.",
+      "steps": [
+        {
+          "step": "01",
+          "title": "Learn the Rules",
+          "description": "Interactive tutorial to master the basics in minutes."
+        },
+        {
+          "step": "02",
+          "title": "Play in Real Time",
+          "description": "In-game chat brings the club room feel online."
+        },
+        {
+          "step": "03",
+          "title": "Share Results",
+          "description": "Auto-generated summaries for post-game review."
+        }
+      ]
+    },
+    "testimonials": {
+      "eyebrow": "Community",
+      "title": "What players say",
+      "items": [
+        {
+          "quote": "Never thought I could play Meisen Trump after graduating. Weekly matches are now a ritual.",
+          "name": "Alumni, Class of 2019",
+          "role": "Weekend player"
+        },
+        {
+          "quote": "Complex rules, but the tutorial made it click. Was playing within minutes.",
+          "name": "New Member",
+          "role": "Beginner"
+        },
+        {
+          "quote": "Feels like the club room, even online. The chat feature is surprisingly useful.",
+          "name": "Active Member",
+          "role": "Daily player"
+        }
+      ]
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Frequently asked questions",
+      "items": [
+        {
+          "question": "What is Meisen Trump?",
+          "answer": "A 4-player, 2-team trick-taking card game with unique mechanics like Blow declarations and the Jack system."
+        },
+        {
+          "question": "Can beginners play?",
+          "answer": "Yes. The interactive tutorial covers the basics in just a few minutes."
+        },
+        {
+          "question": "How many players?",
+          "answer": "4 players in 2 teams. Partners sit opposite each other. You can add COM players if needed."
+        },
+        {
+          "question": "Is it free?",
+          "answer": "Completely free. Just create an account and start playing."
+        },
+        {
+          "question": "Does it work on mobile?",
+          "answer": "Yes. Desktop, tablet, and mobile are all supported. Browser-only, no app required."
+        }
+      ]
+    },
+    "cta": {
+      "eyebrow": "Ready?",
+      "title": "Start your next game.",
+      "description": "Free to sign up. First match in under five minutes.",
+      "login": "Login",
+      "signup": "Register Free",
+      "product": "Operating Company"
+    },
+    "footer": {
+      "links": [
+        { "label": "Operating Company", "href": "https://kando1.com" },
+        { "label": "Terms of Service", "href": "/en/terms" },
+        { "label": "Privacy Policy", "href": "/en/privacy" },
+        { "label": "Tutorial", "href": "/en/tutorial" }
+      ],
+      "copyright": "\u00a9 2025 Mei-Tra. All rights reserved."
+    }
+  },
   "auth": {
     "login": "Login",
     "signup": "Sign Up",
@@ -109,7 +242,14 @@
     "initializingActions": "Initializing game actions...",
     "paused": "Game is paused. It will resume when 4 players are present.",
     "yourTurn": "Your turn",
-    "waiting": "Waiting..."
+    "waiting": "Waiting...",
+    "orderButton": "Order",
+    "trumpFormat": "Trump: {suit} ({symbol})",
+    "suitHerz": "Heart",
+    "suitDaiya": "Diamond",
+    "suitClub": "Club",
+    "suitZuppe": "Spade",
+    "suitTra": "Tra"
   },
   "gamePhase": {
     "deal": "Deal",
@@ -155,6 +295,9 @@
   },
   "completedFields": {
     "unknown": "Unknown"
+  },
+  "chatDock": {
+    "title": "Chat"
   },
   "playerHand": {
     "cards": "cards",
@@ -431,7 +574,7 @@
     "imageProcessing": "Processing image...",
     "imageProcessingFailed": "Failed to process image",
     "basicInfo": "Basic Information",
-    "settings": "Settings (Not Yet Implemented)",
+    "settings": "Settings (TBD)",
     "notifications": "Enable notifications",
     "soundEffects": "Enable sound effects",
     "theme": "Theme",
@@ -450,6 +593,88 @@
     "loggedIn": "Login",
     "loggingOut": "Logging out...",
     "logout": "Logout"
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "updated": "Last updated: February 2025",
+    "backToTop": "Back to top",
+    "section1": {
+      "title": "Article 1 (Application)",
+      "p1": "These Terms of Service (\"Terms\") govern the use of the Mei-Tra online card game service (\"Service\"). All users (\"Users\") who use the Service are deemed to have agreed to these Terms.",
+      "p2": "The Service is a web application that allows users to play \"Mei-Tra,\" a 4-player, 2-team card game, online."
+    },
+    "section2": {
+      "title": "Article 2 (Registration)",
+      "p1": "To use the Service, you must create an account by registering your email address, password, username, and display name. The information you provide must be accurate and up to date.",
+      "p2": "The operator may suspend or delete accounts that are found to contain false information or to have been registered improperly."
+    },
+    "section3": {
+      "title": "Article 3 (Prohibited Conduct)",
+      "item1": "Defamation, harassment, or threats toward other users",
+      "item2": "Cheating, unfair game manipulation, or unauthorized access to systems",
+      "item3": "Conduct that interferes with the operation of the Service",
+      "item4": "Impersonation of third parties",
+      "item5": "Conduct that violates laws or public order and morals",
+      "item6": "Any other conduct deemed inappropriate by the operator"
+    },
+    "section4": {
+      "title": "Article 4 (Account Management)",
+      "p1": "Users are responsible for managing their own account information. The operator is not liable for any damage resulting from password leakage or unauthorized use by third parties.",
+      "p2": "Transfer, lending, or sale of accounts is prohibited."
+    },
+    "section5": {
+      "title": "Article 5 (Disclaimer)",
+      "p1": "The Service is provided as is. The operator does not warrant the accuracy, completeness, or usefulness of the Service. Game results, score records, and other data may be lost due to technical issues, and the operator is not liable for such losses."
+    },
+    "section6": {
+      "title": "Article 6 (Service Changes and Termination)",
+      "p1": "The operator may modify, temporarily suspend, or terminate the Service without prior notice.",
+      "p2": "The operator is not liable for any damage to users resulting from such changes."
+    },
+    "section7": {
+      "title": "Article 7 (Governing Law and Jurisdiction)",
+      "p1": "These Terms are governed by the laws of Japan. Any disputes arising from the Service shall be subject to the exclusive jurisdiction of the court with jurisdiction over the operator's principal place of business."
+    },
+    "section8": {
+      "title": "Article 8 (Amendment of Terms)",
+      "p1": "The operator may amend these Terms as necessary. Amended Terms take effect upon posting on the Service. Use of the Service after amendment constitutes acceptance of the amended Terms."
+    }
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: February 2025",
+    "backToTop": "Back to top",
+    "section1": {
+      "title": "1. Introduction",
+      "p1": "The Mei-Tra online card game service (\"Service\") values the protection of users' personal information. This Privacy Policy explains the information we collect and use through the Service.",
+      "p2": "By using the Service, you are deemed to have agreed to this Policy."
+    },
+    "section2": {
+      "title": "2. Information We Collect",
+      "p1": "The Service collects and uses the following information.",
+      "item1": "Account information: Email address, password (stored encrypted), username, display name",
+      "item2": "Game usage data: Room participation history, match results, chat messages",
+      "item3": "Technical data: IP address, browser type, device information, connection logs",
+      "item4": "Profile images: Uploaded avatar images"
+    },
+    "section3": {
+      "title": "3. Purpose of Use",
+      "p1": "Collected information is used for providing and operating the Service, user authentication, preventing misuse, service improvement, and responding to inquiries.",
+      "p2": "In-game chat and display names are visible to other players in the same room."
+    },
+    "section4": {
+      "title": "4. Third-Party Sharing",
+      "p1": "The Service uses Supabase (Supabase Inc.) for authentication, database, and hosting. These service providers process information only for the purpose of providing the Service.",
+      "p2": "We do not share personal information with third parties without user consent, except when required by law."
+    },
+    "section5": {
+      "title": "5. Data Retention and Deletion",
+      "p1": "When an account is deleted or after a period of inactivity, we may delete associated data. Deleted data cannot be recovered."
+    },
+    "section6": {
+      "title": "6. Contact",
+      "p1": "For inquiries regarding this Policy, please contact the operating company at https://kando1.com."
+    }
   },
   "notification": {
     "success": "Success",

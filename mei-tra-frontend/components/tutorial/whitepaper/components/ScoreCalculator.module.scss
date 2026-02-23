@@ -1,17 +1,17 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .scoreCalculator {
-  background: #ffffff;
+  background: #111;
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: $spacing-md;
 }
 
 .title {
   font-size: $font-size-xl;
   font-weight: 600;
-  color: #111827;
+  color: #ededed;
   margin-bottom: $spacing-sm;
   text-align: center;
   line-height: 1.4;
@@ -19,7 +19,7 @@
 
 .description {
   text-align: center;
-  color: #6b7280;
+  color: #888;
   margin-bottom: $spacing-lg;
   font-size: $font-size-base;
   line-height: 1.6;
@@ -46,7 +46,7 @@
 
 .label {
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
   font-size: $font-size-base;
   display: flex;
   flex-direction: column;
@@ -55,17 +55,19 @@
 
 .input {
   padding: $spacing-sm $spacing-md;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: $radius-sm;
   font-size: $font-size-base;
   width: 120px;
   text-align: center;
   transition: border-color 0.15s ease;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ededed;
 
   &:focus {
     outline: none;
-    border-color: #6b7280;
-    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -75,20 +77,20 @@
 }
 
 .resultCard {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-lg;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   min-width: 320px;
 
   &.success {
     border-color: #10b981;
-    background: #f0fdf4;
+    background: rgba(16, 185, 129, 0.1);
   }
 
   &.failure {
     border-color: #ef4444;
-    background: #fef2f2;
+    background: rgba(239, 68, 68, 0.1);
   }
 }
 
@@ -102,7 +104,7 @@
 .resultStatus {
   font-weight: 600;
   font-size: $font-size-lg;
-  color: #374151;
+  color: #ededed;
 }
 
 .resultScore {
@@ -122,10 +124,10 @@
 }
 
 .calculation {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .formula {
@@ -134,27 +136,27 @@
   gap: $spacing-xs;
   font-family: monospace;
   font-size: $font-size-sm;
-  color: #374151;
+  color: #888;
 
   span:last-child {
     font-weight: 700;
-    color: #111827;
+    color: #ededed;
     font-size: $font-size-base;
   }
 }
 
 .examplesSection {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-lg;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-top: $spacing-lg;
 }
 
 .examplesTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
   margin-bottom: $spacing-md;
 }
 
@@ -165,10 +167,10 @@
 }
 
 .example {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .exampleHeader {
@@ -180,7 +182,7 @@
 
 .exampleLabel {
   font-weight: 500;
-  color: #374151;
+  color: #ededed;
 }
 
 .exampleScore {
@@ -202,22 +204,22 @@
 
 .exampleDetail {
   font-size: $font-size-sm;
-  color: #6b7280;
+  color: #888;
   font-family: monospace;
 }
 
 .tips {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-lg;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-top: $spacing-lg;
 }
 
 .tipsTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
   margin-bottom: $spacing-md;
 }
 
@@ -226,7 +228,7 @@
   padding-left: $spacing-lg;
 
   li {
-    color: #4b5563;
+    color: #888;
     font-size: $font-size-base;
     line-height: 1.6;
     margin-bottom: $spacing-xs;

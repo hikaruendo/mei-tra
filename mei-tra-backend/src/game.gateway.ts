@@ -344,6 +344,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // 再接続処理
+    let reconnected = false;
     if (roomId && authenticatedUser) {
       try {
         console.log('[Reconnection] Attempting reconnection with:', {
@@ -363,87 +364,81 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           console.log(
             `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
           );
+
+          // ルームサービスで再接続処理
+          const result = await this.roomService.handlePlayerReconnection(
+            roomId,
+            existingPlayer.playerId,
+            client.id,
+            authenticatedUser?.id, // Pass userId for authenticated users
+          );
+
+          if (!result.success) {
+            client.emit('error-message', 'Failed to reconnect');
+            // フォールスルーしてロビー接続へ
+          } else {
+            // ルームに参加
+            this.playerRooms.set(client.id, roomId);
+            void client.join(roomId);
+
+            const state = roomGameState.getState();
+
+            // ゲーム状態をクライアントに送信
+            this.server.to(client.id).emit('game-state', {
+              players: state.players.map((player) => ({
+                ...player,
+                hand:
+                  player.playerId === existingPlayer.playerId
+                    ? player.hand
+                    : [], // 自分の手札のみ表示
+              })),
+              gamePhase: state.gamePhase || 'waiting',
+              currentField: state.playState?.currentField,
+              currentTurn:
+                state.currentPlayerIndex !== -1 &&
+                state.players[state.currentPlayerIndex]
+                  ? state.players[state.currentPlayerIndex].playerId
+                  : null,
+              blowState: state.blowState,
+              teamScores: state.teamScores,
+              you: existingPlayer.playerId,
+              negriCard: state.playState?.negriCard,
+              fields: state.playState?.fields,
+              roomId: roomId,
+              pointsToWin: state.pointsToWin,
+            });
+            this.server.to(roomId).emit('update-players', state.players);
+
+            // Always issue reconnect token as fallback
+            // Even authenticated users need it when authToken isn't ready on reload
+            this.server
+              .to(client.id)
+              .emit('reconnect-token', `${existingPlayer.playerId}`);
+
+            if (authenticatedUser) {
+              console.log(
+                `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
+              );
+            } else {
+              console.log(
+                `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
+              );
+            }
+
+            reconnected = true;
+          }
         } else {
           console.log(
-            `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}`,
+            `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}, treating as new lobby connection`,
           );
         }
-
-        if (existingPlayer) {
-          // ルームサービスで再接続処理
-          void this.roomService
-            .handlePlayerReconnection(
-              roomId,
-              existingPlayer.playerId,
-              client.id,
-              authenticatedUser?.id, // Pass userId for authenticated users
-            )
-            .then((result) => {
-              if (!result.success) {
-                client.emit('error-message', 'Failed to reconnect');
-                client.disconnect();
-                return;
-              }
-
-              // ルームに参加
-              this.playerRooms.set(client.id, roomId);
-              void client.join(roomId);
-
-              const state = roomGameState.getState();
-
-              // ゲーム状態をクライアントに送信
-              this.server.to(client.id).emit('game-state', {
-                players: state.players.map((player) => ({
-                  ...player,
-                  hand:
-                    player.playerId === existingPlayer.playerId
-                      ? player.hand
-                      : [], // 自分の手札のみ表示
-                })),
-                gamePhase: state.gamePhase || 'waiting',
-                currentField: state.playState?.currentField,
-                currentTurn:
-                  state.currentPlayerIndex !== -1 &&
-                  state.players[state.currentPlayerIndex]
-                    ? state.players[state.currentPlayerIndex].playerId
-                    : null,
-                blowState: state.blowState,
-                teamScores: state.teamScores,
-                you: existingPlayer.playerId,
-                negriCard: state.playState?.negriCard,
-                fields: state.playState?.fields,
-                roomId: roomId,
-                pointsToWin: state.pointsToWin,
-              });
-              this.server.to(roomId).emit('update-players', state.players);
-
-              // Always issue reconnect token as fallback
-              // Even authenticated users need it when authToken isn't ready on reload
-              this.server
-                .to(client.id)
-                .emit('reconnect-token', `${existingPlayer.playerId}`);
-
-              if (authenticatedUser) {
-                console.log(
-                  `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
-                );
-              } else {
-                console.log(
-                  `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
-                );
-              }
-            });
-        } else {
-          // プレイヤーが見つからない場合、トークンが無効または期限切れ
-          client.emit('error-message', 'Reconnection token expired or invalid');
-          client.disconnect();
-        }
       } catch (error) {
-        console.error('Error in handlePlayerReconnection:', error);
-        client.emit('error-message', 'Game state not found');
-        client.disconnect();
+        console.log(
+          '[Reconnection] Game state not found, treating as new lobby connection:',
+          error,
+        );
       }
-      return;
+      if (reconnected) return;
     }
 
     // 新規認証済みプレイヤーとして追加

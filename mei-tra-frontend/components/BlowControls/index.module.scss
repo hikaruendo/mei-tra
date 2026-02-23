@@ -9,10 +9,10 @@
   z-index: 99;
   backdrop-filter: blur(8px);
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(6, 40, 20, 0.85);
   padding: var(--spacing-xl);
   border-radius: var(--border-radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   box-shadow: var(--shadow-lg);
   max-width: 90vw;
 }
@@ -39,8 +39,8 @@
 }
 
 .currentTurn.inactive {
-  background-color: #374151;
-  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #888;
 }
 
 .controls {
@@ -55,21 +55,21 @@
 }
 
 .select {
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(16, 185, 129, 0.15);
   border-radius: 0.25rem;
   padding: 4px 8px;
-  background-color: white;
-  color: black;
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #ededed;
   width: 100%;
 }
 
 .input {
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(16, 185, 129, 0.15);
   border-radius: 0.25rem;
   padding: 4px 8px;
-  background-color: white;
+  background-color: rgba(16, 185, 129, 0.08);
   font-size: 16px;
-  color: black;
+  color: #ededed;
   width: 100%;
   text-indent: 5px;
 }
@@ -84,10 +84,10 @@
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
   font-weight: bold;
-  color: white;
+  color: #000;
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid #4A2410;
+  border: 1px solid rgba(16, 185, 129, 0.15);
 }
 
 .button:disabled {
@@ -95,19 +95,23 @@
 }
 
 .declareButton {
-  background-color: #3b82f6;
+  background-color: #fff;
+  color: #000;
 }
 
 .declareButton:hover {
-  background-color: #1d4ed8;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
 .passButton {
-  background-color: #6b7280;
+  background-color: transparent;
+  color: #ededed;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .passButton:hover {
-  background-color: #4b5563;
+  border-color: rgba(16, 185, 129, 0.5);
 }
 
 .declarations {
@@ -123,15 +127,16 @@
 }
 
 .declarationItem {
-  background-color: white;
-  color: black;
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #ededed;
   padding: 4px 8px;
   border-radius: 0.25rem;
   font-size: 0.875rem;
 }
 
 .declarationItem.pass {
-  background-color: #6b7280;
+  background-color: rgba(16, 185, 129, 0.05);
+  color: #888;
 }
 
 .declarationItem.highest {
@@ -160,7 +165,7 @@
   100% {
     opacity: 1;
   }
-} 
+}
 
 .animate-slide-in {
   animation: slideIn 0.5s ease-out;

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { usePathname, useRouter, Link } from '@/i18n/routing';
+import Image from 'next/image';
 import { UserProfile } from '../profile/UserProfile';
 import styles from './Navigation.module.scss';
 
@@ -43,10 +44,15 @@ export function Navigation({ gameStarted = false }: NavigationProps) {
               className={styles.brandLink}
               onClick={closeMobileMenu}
             >
-              <svg className={styles.brandLogo} viewBox="0 0 110 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <text x="0" y="26" className={styles.brandTextLarge}>M</text>
-                <text x="28" y="26" className={styles.brandText}>eitra</text>
-              </svg>
+              <Image
+                src="/meitra2.webp"
+                alt="Meitra"
+                width={48}
+                height={48}
+                className={styles.brandLogo}
+                priority
+              />
+              <span className={styles.brandName}>Meitra</span>
             </Link>
           </div>
 

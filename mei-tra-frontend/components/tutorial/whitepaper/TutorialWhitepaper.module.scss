@@ -2,7 +2,7 @@
 
 .whitepaperContainer {
   position: relative;
-  background: $color-white;
+  background: #000;
   min-height: 100vh;
 }
 
@@ -21,7 +21,7 @@
   margin: 0 auto;
   padding: $spacing-md $spacing-lg;
   line-height: 1.7;
-  color: #374151;
+  color: #ededed;
 
   @media (max-width: 768px) {
     padding: 0 $spacing-md $spacing-sm;

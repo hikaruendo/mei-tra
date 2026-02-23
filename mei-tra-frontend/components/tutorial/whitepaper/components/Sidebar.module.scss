@@ -6,8 +6,8 @@
   top: 70px;
   width: 280px;
   height: calc(100vh - 70px);
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
+  background: #111;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   overflow-y: auto;
   z-index: 100;
   box-sizing: border-box;
@@ -24,10 +24,10 @@
 .sidebarTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #111827;
+  color: #ededed;
   margin-bottom: $spacing-lg;
   padding-bottom: $spacing-md;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .sectionList {
@@ -46,19 +46,19 @@
   border: none;
   border-radius: $radius-sm;
   font-size: $font-size-sm;
-  color: #6b7280;
+  color: #888;
   cursor: pointer;
   transition: all 0.15s ease;
   font-weight: 500;
 
   &:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ededed;
   }
 
   &.active {
-    background: #f3f4f6;
-    color: #111827;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ededed;
     font-weight: 600;
   }
 }

@@ -23,6 +23,7 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
+  app.enableShutdownHooks();
   await app.listen(process.env.PORT ?? 3333, '0.0.0.0');
 }
 void bootstrap();

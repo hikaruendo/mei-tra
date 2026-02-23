@@ -9,13 +9,13 @@ $radius-md: 8px;
 $transition-button: all 0.3s ease;
 
 .navigation {
-  background-color: $color-white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid #e5e7eb;
+  background-color: #000;
+  box-shadow: 0 1px 3px rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .container {
-  max-width: 80rem; // max-w-7xl
+  max-width: 80rem;
   margin: 0 auto;
   padding: 0 $spacing-md;
 
@@ -31,7 +31,7 @@ $transition-button: all 0.3s ease;
 .content {
   display: flex;
   justify-content: space-between;
-  height: 4rem; // h-16
+  height: 4rem;
   align-items: center;
 }
 
@@ -52,35 +52,26 @@ $transition-button: all 0.3s ease;
 }
 
 .brandLogo {
-  height: 28px;
-  width: auto;
+  height: 48px;
+  width: 48px;
+  object-fit: contain;
 
   @media (min-width: 768px) {
-    height: 32px;
+    height: 48px;
+    width: 48px;
   }
 }
 
-.brandTextLarge {
+.brandName {
+  margin-left: 6px;
   font-family: 'Playfair Display', 'Georgia', serif;
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   letter-spacing: 0.5px;
-  fill: #111827;
+  color: #ededed;
 
   @media (min-width: 768px) {
-    font-size: 30px;
-  }
-}
-
-.brandText {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  fill: #374151;
-
-  @media (min-width: 768px) {
-    font-size: 26px;
+    font-size: 24px;
   }
 }
 
@@ -96,7 +87,7 @@ $transition-button: all 0.3s ease;
 }
 
 .navLink {
-  color: #374151;
+  color: #888;
   padding: $spacing-sm $spacing-sm;
   border-radius: $radius-md;
   font-size: $font-size-sm;
@@ -105,8 +96,8 @@ $transition-button: all 0.3s ease;
   transition: $transition-button;
 
   &:hover {
-    color: #111827;
-    background-color: #f3f4f6;
+    color: #ededed;
+    background-color: rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -133,7 +124,7 @@ $transition-button: all 0.3s ease;
     display: block;
     width: 24px;
     height: 2px;
-    background-color: #374151;
+    background-color: #ededed;
     transition: all 0.3s ease;
     position: absolute;
     left: 0;
@@ -176,7 +167,7 @@ $transition-button: all 0.3s ease;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   z-index: 999;
 
   @media (min-width: 768px) {
@@ -191,8 +182,8 @@ $transition-button: all 0.3s ease;
   right: -300px;
   width: 280px;
   height: 100vh;
-  background-color: $color-white;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  background-color: #111;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.3);
   transition: right 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
@@ -216,7 +207,7 @@ $transition-button: all 0.3s ease;
 .mobileNavLink {
   display: block;
   padding: $spacing-md;
-  color: #374151;
+  color: #888;
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
@@ -225,51 +216,53 @@ $transition-button: all 0.3s ease;
   min-height: 44px;
 
   &:hover {
-    background-color: #f3f4f6;
-    color: #111827;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #ededed;
   }
 }
 
 .mobileUserProfile {
   padding: $spacing-md;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   margin-top: $spacing-md;
 }
 
 // Language Switcher
 .langSwitcher {
   padding: $spacing-sm $spacing-md;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: $radius-md;
-  background-color: $color-white;
-  color: #374151;
+  background-color: transparent;
+  color: #888;
   font-size: $font-size-sm;
   font-weight: 600;
   cursor: pointer;
   transition: $transition-button;
 
   &:hover {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ededed;
   }
 }
 
 .langSwitcherMobile {
   display: block;
   padding: $spacing-md;
-  background-color: #f9fafb;
-  color: #374151;
+  background-color: rgba(255, 255, 255, 0.03);
+  color: #888;
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
   border-radius: $radius-md;
   transition: $transition-button;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
   text-align: left;
 
   &:hover {
-    background-color: #f3f4f6;
-    border-color: #d1d5db;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ededed;
   }
 }

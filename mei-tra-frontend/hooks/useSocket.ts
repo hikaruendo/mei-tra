@@ -10,7 +10,7 @@ export interface UseSocketReturn {
 }
 
 export function useSocket(): UseSocketReturn {
-  const { getAccessToken, loading } = useAuth();
+  const { getAccessToken, loading, user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const authTokenRef = useRef<string | null>(null);
   const isInitializingRef = useRef<boolean>(false);
@@ -21,8 +21,8 @@ export function useSocket(): UseSocketReturn {
     let isMounted = true;
     let managedSocket: Socket | null = null;
 
-    // Wait for auth to complete before initializing socket
-    if (isInitializingRef.current || loading) {
+    // Wait for auth to complete before initializing socket, skip if not logged in
+    if (isInitializingRef.current || loading || !user) {
       return;
     }
 
@@ -152,7 +152,7 @@ export function useSocket(): UseSocketReturn {
       isMounted = false;
       cleanupHandlers?.();
     };
-  }, [loading, getAccessToken]); // Wait for auth loading to complete
+  }, [loading, user, getAccessToken]); // Wait for auth loading to complete
 
   // Note: Auth token is now provided at connection time, so no need for separate update-auth effect
   // The token is already included in the initial socket connection

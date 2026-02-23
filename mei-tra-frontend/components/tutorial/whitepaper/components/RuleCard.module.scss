@@ -1,17 +1,17 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .ruleCard {
-  background: #ffffff;
+  background: #111;
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: $spacing-md;
 }
 
 .ruleTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #111827;
+  color: #ededed;
   margin-bottom: $spacing-sm;
   line-height: 1.4;
 }
@@ -19,24 +19,24 @@
 .ruleDescription {
   font-size: $font-size-base;
   line-height: 1.6;
-  color: #374151;
+  color: #888;
   margin-bottom: $spacing-sm;
 }
 
 .ruleExample {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-sm;
   margin-top: $spacing-sm;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .exampleLabel {
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
   margin-right: $spacing-sm;
 }
 
 .exampleText {
-  color: #6b7280;
+  color: #888;
 }

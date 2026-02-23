@@ -240,6 +240,9 @@ export const useGame = () => {
           1: { deal: 0, blow: 0, play: 0, total: 0 }
         });
 
+        // ゲーム終了後、古いroomIdでの再接続ループを防ぐ
+        sessionStorage.removeItem('roomId');
+
         // Keep ref set until the next game starts (game-started handler clears it)
       },
       'blow-started': ({ startingPlayer, players }: { startingPlayer: string; players: Player[] }) => {

@@ -148,10 +148,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h2 className={styles.title}>
-          {mode === 'signin' ? t('login') : t('signup')}
-        </h2>
-
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
             <label htmlFor="email" className={styles.label}>

@@ -1,0 +1,118 @@
+.dock {
+  position: relative;
+}
+
+.orderButton {
+  background-color: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  min-height: 2.25rem;
+  min-width: 5.5rem;
+  font-size: 0.875rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #059669;
+  }
+}
+
+.panel {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 18rem;
+  max-width: 24rem;
+  background-color: #0d1f14;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.panelTitle {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #e5e7eb;
+  }
+}
+
+.content {
+  padding: 1rem;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+  margin-bottom: 0.75rem;
+}
+
+.section {
+  &:not(:last-child) {
+    margin-bottom: 1rem;
+  }
+}
+
+.strengthLabel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-bottom: 0.25rem;
+}
+
+.strengthRow {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #d1d5db;
+}
+
+.strengthItem {
+  white-space: normal;
+}
+
+.traNote {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  border-radius: 0.375rem;
+}
+
+.traNoteTitle {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  margin-bottom: 0.25rem;
+}
+
+.traNoteDesc {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.genericSection {
+  margin-top: 0.5rem;
+}

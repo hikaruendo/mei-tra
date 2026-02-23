@@ -1,20 +1,20 @@
-// 変数
-$form-bg: #6B3419;
-$form-border: #4A2410;
-$input-bg: rgba(255, 255, 255, 0.9);
-$input-focus-bg: white;
-$btn-base: #D4A373;
-$btn-hover: #E6CCB2;
-$join-btn-bg: #6B3419;
-$join-btn-hover: #8B4513;
-$create-btn-gradient: linear-gradient(135deg, #2196F3, #1976D2);
-$create-btn-hover-gradient: linear-gradient(135deg, #1976D2, #1565C0);
-$start-btn-bg: #8B4513;
-$start-btn-hover: #6B3419;
-$disabled-bg: #A9A9A9;
-$disabled-border: #808080;
+// Variables
+$form-bg: #111;
+$form-border: rgba(255, 255, 255, 0.1);
+$input-bg: rgba(255, 255, 255, 0.05);
+$input-focus-bg: rgba(255, 255, 255, 0.08);
+$btn-base: rgba(255, 255, 255, 0.05);
+$btn-hover: rgba(255, 255, 255, 0.1);
+$join-btn-bg: transparent;
+$join-btn-hover: rgba(255, 255, 255, 0.05);
+$create-btn-bg: #fff;
+$create-btn-hover: rgba(255, 255, 255, 0.9);
+$start-btn-bg: transparent;
+$start-btn-hover: rgba(255, 255, 255, 0.05);
+$disabled-bg: rgba(255, 255, 255, 0.03);
+$disabled-border: rgba(255, 255, 255, 0.06);
 
-// ミックスイン
+// Mixins
 @mixin flex-center {
   display: flex;
   justify-content: center;
@@ -31,7 +31,7 @@ $disabled-border: #808080;
   flex: 0 1 auto;
   min-width: 120px;
   padding: 8px 16px;
-  border: 2px solid $form-border;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -78,8 +78,8 @@ $disabled-border: #808080;
   padding: var(--spacing-lg);
   background: $form-bg;
   border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid $form-border;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   max-width: 400px;
   width: 100%;
 }
@@ -87,22 +87,22 @@ $disabled-border: #808080;
 .input {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid $form-border;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   background: $input-bg;
-  color: $form-border;
+  color: #ededed;
   font-size: 18px;
   transition: all 0.3s ease;
   outline: none;
 
   &::placeholder {
-    color: rgba(74, 36, 16, 0.6);
+    color: #888;
   }
 
   &:focus {
-    border-color: $join-btn-hover;
+    border-color: rgba(255, 255, 255, 0.3);
     background: $input-focus-bg;
-    box-shadow: 0 0 0 4px rgba(74, 36, 16, 0.1);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -117,10 +117,11 @@ $disabled-border: #808080;
 .btn {
   @include button-base;
   background: $btn-base;
-  color: $form-border;
+  color: #ededed;
 
   &:hover {
     background: $btn-hover;
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
   &:active {
@@ -133,20 +134,23 @@ $disabled-border: #808080;
   @include flex-column;
   gap: 4px;
   background: $join-btn-bg;
-  color: white;
+  color: #ededed;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   &:hover {
+    border-color: #fff;
     background: $join-btn-hover;
   }
 }
 
 .createBtn {
   @include button-base;
-  background: $create-btn-gradient;
-  color: white;
+  background: $create-btn-bg;
+  color: #000;
 
   &:hover {
-    background: $create-btn-hover-gradient;
+    background: $create-btn-hover;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -155,17 +159,19 @@ $disabled-border: #808080;
   @include flex-column;
   gap: 4px;
   background: $start-btn-bg;
-  color: white;
+  color: #ededed;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   &:hover {
     background: $start-btn-hover;
+    border-color: #fff;
   }
 
   &:disabled {
     background: $disabled-bg;
     border-color: $disabled-border;
     cursor: not-allowed;
-    opacity: 0.8;
+    opacity: 0.5;
   }
 }
 

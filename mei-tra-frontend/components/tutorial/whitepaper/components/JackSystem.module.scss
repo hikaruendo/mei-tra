@@ -1,31 +1,31 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .jackSystem {
-  background: #ffffff;
+  background: #111;
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: $spacing-md;
 }
 
 .title {
   font-size: $font-size-xl;
   font-weight: 600;
-  color: #111827;
+  color: #ededed;
   margin-bottom: $spacing-md;
   line-height: 1.4;
 }
 
 .explanation {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-md;
   margin-bottom: $spacing-lg;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 
   p {
     margin-bottom: $spacing-md;
-    color: #374151;
+    color: #ededed;
     font-size: $font-size-base;
     line-height: 1.6;
   }
@@ -36,12 +36,12 @@
 
     li {
       margin-bottom: $spacing-sm;
-      color: #374151;
+      color: #ededed;
       font-size: $font-size-base;
       line-height: 1.6;
 
       strong {
-        color: #111827;
+        color: #fff;
         font-weight: 600;
       }
     }
@@ -55,10 +55,10 @@
 }
 
 .trumpExample {
-  background: #ffffff;
+  background: #111;
   border-radius: $radius-sm;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .trumpHeader {
@@ -67,10 +67,10 @@
   justify-content: center;
   gap: $spacing-sm;
   padding: $spacing-md;
-  background: #f3f4f6;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.03);
+  color: #ededed;
   font-weight: 600;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .trumpIcon {
@@ -86,14 +86,14 @@
   justify-content: center;
   gap: $spacing-lg;
   padding: $spacing-lg;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .jackCard {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-md;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   min-width: 120px;
 }
 
@@ -105,8 +105,8 @@
 }
 
 .jackRank {
-  background: #e5e7eb;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ededed;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: $font-size-xs;
@@ -114,8 +114,8 @@
 }
 
 .jackStrength {
-  background: #6b7280;
-  color: white;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ededed;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: $font-size-xs;
@@ -137,40 +137,40 @@
 .cardValue {
   font-size: $font-size-lg;
   font-weight: 700;
-  color: #333;
+  color: #ededed;
 }
 
 .cardLabel {
   text-align: center;
   font-size: $font-size-sm;
-  color: #6b7280;
+  color: #888;
   font-weight: 500;
 }
 
 .strengthOrder {
   padding: $spacing-md;
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   font-size: $font-size-sm;
   text-align: center;
 
   span:first-child {
     font-weight: 600;
-    color: #374151;
+    color: #ededed;
     margin-right: $spacing-sm;
   }
 }
 
 .orderText {
-  color: #6b7280;
+  color: #888;
   font-family: monospace;
 }
 
 .traException {
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-lg;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-top: $spacing-lg;
 }
 
@@ -188,12 +188,12 @@
 .exceptionTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
 }
 
 .traException p {
   margin: 0;
-  color: #4b5563;
+  color: #888;
   font-size: $font-size-base;
   line-height: 1.6;
 }

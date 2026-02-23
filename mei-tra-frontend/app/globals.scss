@@ -7,8 +7,8 @@ $font-family-base: Arial, sans-serif;
 $transition-base: 0.3s ease;
 
 body {
-  background-color: var(--color-primary);
-  color: white;
+  background-color: #000000;
+  color: #ededed;
   font-family: $font-family-base;
   transition: background-color $transition-base;
 }

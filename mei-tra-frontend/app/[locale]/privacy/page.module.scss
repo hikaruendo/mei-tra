@@ -1,0 +1,90 @@
+@use '../../../styles/base/variables-modules' as *;
+
+.container {
+  min-height: 100vh;
+  background: #000;
+}
+
+.main {
+  margin: 0 auto;
+  padding: $spacing-lg $spacing-md;
+  min-height: 100vh;
+  max-width: 48rem;
+
+  @media (max-width: 768px) {
+    padding: $spacing-md $spacing-sm;
+  }
+}
+
+.header {
+  padding: $spacing-lg 0 $spacing-md;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: $spacing-lg;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ededed;
+    margin: 0 0 $spacing-xs;
+  }
+}
+
+.updated {
+  font-size: $font-size-sm;
+  color: #888;
+  margin: 0;
+}
+
+.content {
+  line-height: 1.8;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.section {
+  margin-bottom: $spacing-lg;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ededed;
+    margin: 0 0 $spacing-sm;
+  }
+
+  p {
+    margin: 0 0 $spacing-sm;
+    color: #ccc;
+    font-size: 0.9375rem;
+  }
+
+  ul {
+    margin: 0 0 $spacing-sm;
+    padding-left: 1.5rem;
+    color: #ccc;
+    font-size: 0.9375rem;
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+  }
+}
+
+.back {
+  margin-top: $spacing-xl;
+  padding-top: $spacing-lg;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+  a {
+    color: #888;
+    text-decoration: none;
+
+    &:hover {
+      color: #ededed;
+      text-decoration: underline;
+    }
+  }
+}
