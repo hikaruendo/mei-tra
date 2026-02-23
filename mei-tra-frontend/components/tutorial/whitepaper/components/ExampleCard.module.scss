@@ -1,27 +1,27 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .exampleCard {
-  background: #ffffff;
+  background: #111;
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: $spacing-md;
 }
 
 .scenario {
   margin-bottom: $spacing-sm;
   padding-bottom: $spacing-xs;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .scenarioLabel {
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
   margin-right: $spacing-sm;
 }
 
 .scenarioText {
-  color: #6b7280;
+  color: #888;
   font-size: $font-size-base;
 }
 
@@ -34,36 +34,36 @@
 
 .card {
   padding: $spacing-sm $spacing-md;
-  background: #f9fafb;
-  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: $radius-sm;
   font-weight: 500;
   font-size: $font-size-sm;
-  color: #374151;
+  color: #ededed;
 }
 
 .declaration {
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-md;
   margin: $spacing-md 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .declarationLabel {
   font-weight: 600;
-  color: #374151;
+  color: #ededed;
   margin-right: $spacing-sm;
 }
 
 .declarationValue {
   font-size: $font-size-base;
   font-weight: 600;
-  color: #111827;
+  color: #fff;
 }
 
 .explanation {
-  color: #4b5563;
+  color: #888;
   line-height: 1.6;
   margin-top: $spacing-md;
   font-size: $font-size-base;

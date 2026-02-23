@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GameTable } from '../../components/GameTable';
 import { Notification } from '../../components/Notification';
@@ -8,13 +9,55 @@ import { useGame } from '../../hooks/useGame';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import { RoomList } from '../../components/molecules/RoomList';
 import { ChatDock } from '../../components/social/ChatDock';
+import { LandingPage } from '../../components/landing/LandingPage';
+import { AuthModal } from '../../components/auth/AuthModal';
+import { useAuth } from '../../hooks/useAuth';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const t = useTranslations('game');
+  const { user, loading: authLoading } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const gameState = useGame();
+
+  const openAuthModal = (mode: 'signin' | 'signup') => {
+    setAuthMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  if (authLoading) {
+    return (
+      <>
+        <Navigation gameStarted={false} />
+        <main>
+          <div className={styles.loadingContainer}>
+            <div className={styles.loadingSpinner}></div>
+            <span className={styles.loadingText}>{t('initializing')}</span>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <Navigation gameStarted={false} />
+        <LandingPage
+          onLoginClick={() => openAuthModal('signin')}
+          onSignupClick={() => openAuthModal('signup')}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialMode={authMode}
+        />
+      </>
+    );
+  }
 
   // Always show UI - only show loading overlay if truly necessary
   if (!gameState) {

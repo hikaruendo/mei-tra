@@ -1,33 +1,33 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .interactiveDemo {
-  background: #ffffff;
+  background: #111;
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: $spacing-md;
 }
 
 .title {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #111827;
+  color: #ededed;
   margin-bottom: $spacing-sm;
   line-height: 1.4;
 }
 
 .description {
-  color: #6b7280;
+  color: #888;
   margin-bottom: $spacing-md;
   font-size: $font-size-base;
   line-height: 1.6;
 }
 
 .demoContent {
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   padding: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .scenario {
@@ -36,22 +36,22 @@
 
 .currentDeclaration {
   font-size: $font-size-base;
-  color: #374151;
+  color: #ededed;
   margin-bottom: $spacing-md;
   padding: $spacing-md;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 
   strong {
-    color: $color-blue;
+    color: #fff;
     font-size: $font-size-lg;
   }
 }
 
 .prompt {
   font-weight: 600;
-  color: $color-blue-dark;
+  color: #ededed;
   margin-bottom: $spacing-md;
 }
 
@@ -64,18 +64,18 @@
 
 .optionButton {
   padding: $spacing-md;
-  background: white;
-  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: $radius-sm;
   font-size: $font-size-base;
   font-weight: 500;
-  color: #374151;
+  color: #ededed;
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
-    border-color: #9ca3af;
-    background: #f9fafb;
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.06);
   }
 
   &:disabled {
@@ -97,14 +97,14 @@
 
 .feedback {
   padding: $spacing-md;
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: $radius-sm;
   margin-bottom: $spacing-md;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 
   p {
     margin: 0;
-    color: #374151;
+    color: #ededed;
     font-weight: 500;
   }
 }
@@ -117,8 +117,8 @@
 
 .nextButton, .resetButton {
   padding: $spacing-sm $spacing-lg;
-  background: #374151;
-  color: white;
+  background: #fff;
+  color: #000;
   border: none;
   border-radius: $radius-sm;
   font-size: $font-size-base;
@@ -127,15 +127,19 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background: #1f2937;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
   }
 }
 
 .resetButton {
-  background: #6b7280;
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   &:hover {
-    background: #4b5563;
+    border-color: #fff;
+    color: #ededed;
+    box-shadow: none;
   }
 }
 

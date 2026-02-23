@@ -1,13 +1,9 @@
 .systemMessage {
   text-align: center;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #888;
   font-style: italic;
   padding: 0.25rem 0;
-
-  @media (prefers-color-scheme: dark) {
-    color: #9ca3af;
-  }
 }
 
 .message {
@@ -29,11 +25,11 @@
   width: 2rem;
   height: 2rem;
   border-radius: 9999px;
-  background-color: #3b82f6;
+  background-color: rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #ededed;
   font-size: 0.875rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -52,30 +48,18 @@
 
 .senderName {
   font-weight: 500;
-  color: #111827;
+  color: #ededed;
   font-size: 0.875rem;
-
-  @media (prefers-color-scheme: dark) {
-    color: white;
-  }
 }
 
 .timestamp {
   font-size: 0.75rem;
-  color: #6b7280;
-
-  @media (prefers-color-scheme: dark) {
-    color: #9ca3af;
-  }
+  color: #888;
 }
 
 .text {
-  color: #374151;
+  color: #d1d5db;
   font-size: 0.875rem;
   margin-top: 0.25rem;
   word-break: break-word;
-
-  @media (prefers-color-scheme: dark) {
-    color: #d1d5db;
-  }
 }

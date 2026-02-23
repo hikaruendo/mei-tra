@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: #fafafa;
+  background: #000;
 }
 
 .main {
@@ -18,7 +18,7 @@
 
 .header {
   padding: $spacing-lg 0 $spacing-md;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: $spacing-lg;
   max-width: 100%;
   overflow: hidden;
@@ -26,7 +26,7 @@
   h1 {
     font-size: 2.25rem;
     font-weight: 700;
-    color: #111827;
+    color: #ededed;
     margin: 0 0 $spacing-sm;
     line-height: 1.3;
     word-wrap: break-word;
@@ -36,7 +36,7 @@
 
 .description {
   font-size: $font-size-lg;
-  color: #6b7280;
+  color: #888;
   margin: 0;
   line-height: 1.5;
 }

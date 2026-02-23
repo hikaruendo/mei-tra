@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,25 +12,26 @@
 }
 
 .modal {
-  background: white;
+  background: #111;
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   max-width: 400px;
   width: 90%;
   max-height: 90vh;
   overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .header {
   padding: 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .title {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: #ededed;
 }
 
 .content {
@@ -40,7 +41,7 @@
 .message {
   margin: 0;
   font-size: 1rem;
-  color: #374151;
+  color: #888;
   line-height: 1.5;
 }
 
@@ -49,7 +50,7 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .cancelButton,
@@ -64,19 +65,21 @@
 }
 
 .cancelButton {
-  background: #f3f4f6;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   &:hover {
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ededed;
   }
 }
 
 .confirmButton {
-  background: #3b82f6;
-  color: white;
+  background: #fff;
+  color: #000;
 
   &:hover {
-    background: #2563eb;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
   }
 }

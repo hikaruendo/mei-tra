@@ -8,10 +8,10 @@
 .sectionTitle {
   font-size: 1.875rem;
   font-weight: 700;
-  color: #111827;
+  color: #ededed;
   margin-bottom: $spacing-lg;
   padding-bottom: $spacing-md;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   line-height: 1.2;
 }
 
@@ -28,7 +28,7 @@
 .textBlock {
   font-size: $font-size-base;
   line-height: 1.75;
-  color: #374151;
+  color: #ededed;
 
   p {
     margin-bottom: $spacing-md;
@@ -37,7 +37,7 @@
   h3 {
     font-size: $font-size-lg;
     font-weight: 600;
-    color: #111827;
+    color: #ededed;
     margin: $spacing-lg 0 $spacing-sm;
     line-height: 1.4;
   }
@@ -45,14 +45,14 @@
   h4 {
     font-size: $font-size-base;
     font-weight: 600;
-    color: #374151;
+    color: #ededed;
     margin: $spacing-md 0 $spacing-sm;
     line-height: 1.4;
   }
 
   strong {
     font-weight: 600;
-    color: #111827;
+    color: #fff;
   }
 
   ul, ol {

@@ -9,7 +9,7 @@ $transition-button: all 0.3s ease;
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,10 +18,11 @@ $transition-button: all 0.3s ease;
 }
 
 .modal {
-  background-color: $color-white;
+  background-color: #111;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: $radius-lg;
-  box-shadow: $shadow-controls;
-  max-width: 28rem; // Equivalent to max-w-md
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  max-width: 28rem;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -32,20 +33,20 @@ $transition-button: all 0.3s ease;
   justify-content: space-between;
   align-items: center;
   padding: $spacing-md;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .title {
   font-size: $font-size-xl;
   font-weight: bold;
-  color: #111827;
+  color: #ededed;
   margin: 0;
 }
 
 .closeButton {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: #888;
   font-size: 1.5rem;
   font-weight: bold;
   cursor: pointer;
@@ -53,12 +54,12 @@ $transition-button: all 0.3s ease;
   transition: $transition-button;
 
   &:hover {
-    color: #6b7280;
+    color: #ededed;
   }
 
   &:focus {
     outline: none;
-    color: #6b7280;
+    color: #ededed;
   }
 }
 

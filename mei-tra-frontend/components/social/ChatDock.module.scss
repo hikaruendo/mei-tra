@@ -5,21 +5,18 @@
   z-index: 50;
   width: 24rem;
   height: 32rem;
-  background-color: #ffffff;
+  background-color: #111;
   border-radius: 0.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 
   @media (max-width: 768px) {
     width: 20rem;
     height: 28rem;
     bottom: 0.5rem;
     right: 0.5rem;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background-color: #1f2937;
   }
 }
 
@@ -31,17 +28,18 @@
 }
 
 .minimizedButton {
-  background-color: #2563eb;
-  color: white;
+  background-color: #fff;
+  color: #000;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  font-weight: 500;
 
   &:hover {
-    background-color: #1d4ed8;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -50,11 +48,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-
-  @media (prefers-color-scheme: dark) {
-    border-bottom-color: #374151;
-  }
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .headerLeft {
@@ -80,31 +74,19 @@
 .headerTitle {
   font-weight: 600;
   font-size: 0.875rem;
-  color: #111827;
-
-  @media (prefers-color-scheme: dark) {
-    color: white;
-  }
+  color: #ededed;
 }
 
 .minimizeButton {
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: #888;
   transition: color 0.2s;
   padding: 0;
 
   &:hover {
-    color: #374151;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    color: #9ca3af;
-
-    &:hover {
-      color: #e5e7eb;
-    }
+    color: #ededed;
   }
 }
 
@@ -124,20 +106,12 @@
 
 .emptyState {
   text-align: center;
-  color: #6b7280;
+  color: #888;
   margin-top: 2rem;
-
-  @media (prefers-color-scheme: dark) {
-    color: #9ca3af;
-  }
 }
 
 .typingIndicator {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #888;
   font-style: italic;
-
-  @media (prefers-color-scheme: dark) {
-    color: #9ca3af;
-  }
 }

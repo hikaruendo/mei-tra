@@ -146,8 +146,8 @@
   gap: var(--spacing-xs);
   align-items: center;
   justify-content: center;
-  background: rgba(107, 52, 25, 0.9);
-  border: 2px solid #4A2410;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 4px;
   min-width: 120px;
@@ -178,7 +178,7 @@
   &::-webkit-scrollbar {
     display: none;  /* Chrome, Safari, Opera */
   }
-} 
+}
 
 .cardCount{
   font-size: 11px;
@@ -278,8 +278,8 @@
 
 .card.unplayable {
   cursor: not-allowed;
-  background: #f0f0f0;
-  filter: brightness(0.95) contrast(0.9);
+  background: rgba(255, 255, 255, 0.05);
+  filter: brightness(0.7) contrast(0.9);
 }
 
 @media (max-width: 768px) {
@@ -295,7 +295,7 @@
     margin-bottom: 0px;
     letter-spacing: -1px;
   }
-  
+
   .suit{
     font-size: 1.8rem;
     line-height: 1;
@@ -338,23 +338,23 @@
     font-size: 1.2rem;
     border-radius: 0.25rem;
   }
-  
+
   .playerInfoContainer{
     min-width: 80px;
     border-radius: var(--radius-md);
   }
-  
+
   .currentTurn{
     border: 1px solid var(--color-gold);
     box-shadow: 0 0 8px var(--color-gold);
   }
-  
+
   .playerName{
     max-width: 80px;
     font-size: var(--font-size-base);
     color: var(--color-white);
-  } 
-  
+  }
+
   .cardCount{
     font-size: 14px;
     color: rgba(255, 255, 255, 0.9);
