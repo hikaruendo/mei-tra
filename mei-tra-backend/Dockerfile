@@ -43,4 +43,4 @@ RUN npm ci --omit=dev
 
 # Start the server with explicit heap size limit
 EXPOSE 3333
-CMD [ "node", "--max-old-space-size=384", "dist/main.js" ]
+CMD [ "node", "--max-old-space-size=320", "dist/src/main.js" ]
