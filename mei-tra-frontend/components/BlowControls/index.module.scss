@@ -9,10 +9,10 @@
   z-index: 99;
   backdrop-filter: blur(8px);
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(6, 40, 20, 0.85);
   padding: var(--spacing-xl);
   border-radius: var(--border-radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   box-shadow: var(--shadow-lg);
   max-width: 90vw;
 }
@@ -55,19 +55,19 @@
 }
 
 .select {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   border-radius: 0.25rem;
   padding: 4px 8px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(16, 185, 129, 0.08);
   color: #ededed;
   width: 100%;
 }
 
 .input {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   border-radius: 0.25rem;
   padding: 4px 8px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(16, 185, 129, 0.08);
   font-size: 16px;
   color: #ededed;
   width: 100%;
@@ -87,7 +87,7 @@
   color: #000;
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.15);
 }
 
 .button:disabled {
@@ -107,11 +107,11 @@
 .passButton {
   background-color: transparent;
   color: #ededed;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .passButton:hover {
-  border-color: #fff;
+  border-color: rgba(16, 185, 129, 0.5);
 }
 
 .declarations {
@@ -127,7 +127,7 @@
 }
 
 .declarationItem {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(16, 185, 129, 0.08);
   color: #ededed;
   padding: 4px 8px;
   border-radius: 0.25rem;
@@ -135,7 +135,7 @@
 }
 
 .declarationItem.pass {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(16, 185, 129, 0.05);
   color: #888;
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSocialSocket, useChatMessages } from '../../hooks/useSocialSocket';
 import { ChatMessage } from './ChatMessage';
 import { ChatComposer } from './ChatComposer';
@@ -12,6 +13,7 @@ interface ChatDockProps {
 }
 
 export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
+  const t = useTranslations('chatDock');
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +51,7 @@ export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
           onClick={() => setIsMinimized(false)}
           className={styles.minimizedButton}
         >
-          Chat {messages.length > 0 && `(${messages.length})`}
+          {t('title')} {messages.length > 0 && `(${messages.length})`}
         </button>
       </div>
     );
@@ -61,7 +63,7 @@ export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={`${styles.statusIndicator} ${isConnected ? styles.connected : styles.disconnected}`} />
-          <h3 className={styles.headerTitle}>Chat</h3>
+          <h3 className={styles.headerTitle}>{t('title')}</h3>
         </div>
         <button
           onClick={() => setIsMinimized(true)}

@@ -296,6 +296,9 @@
   "completedFields": {
     "unknown": "不明"
   },
+  "chatDock": {
+    "title": "チャット"
+  },
   "playerHand": {
     "cards": "枚",
     "selectNegri": "ネグリカードを選択してください",

@@ -147,7 +147,7 @@ export default function Home() {
                 currentPlayerId={currentPlayerId}
               />
             </div>
-            <div style={{ display: gameStarted ? 'block' : 'none' }}>
+            <div className={gameStarted ? styles.gameWrapper : undefined} style={{ display: gameStarted ? 'block' : 'none' }}>
               <GameTable
                 whoseTurn={whoseTurn}
                 gamePhase={gamePhase}

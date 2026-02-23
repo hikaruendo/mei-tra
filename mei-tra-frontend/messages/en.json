@@ -296,6 +296,9 @@
   "completedFields": {
     "unknown": "Unknown"
   },
+  "chatDock": {
+    "title": "Chat"
+  },
   "playerHand": {
     "cards": "cards",
     "selectNegri": "Please select your Negri card",
@@ -571,7 +574,7 @@
     "imageProcessing": "Processing image...",
     "imageProcessingFailed": "Failed to process image",
     "basicInfo": "Basic Information",
-    "settings": "Settings (Not Yet Implemented)",
+    "settings": "Settings (TBD)",
     "notifications": "Enable notifications",
     "soundEffects": "Enable sound effects",
     "theme": "Theme",

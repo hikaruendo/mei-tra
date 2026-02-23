@@ -52,35 +52,26 @@ $transition-button: all 0.3s ease;
 }
 
 .brandLogo {
-  height: 28px;
-  width: auto;
+  height: 48px;
+  width: 48px;
+  object-fit: contain;
 
   @media (min-width: 768px) {
-    height: 32px;
+    height: 48px;
+    width: 48px;
   }
 }
 
-.brandTextLarge {
+.brandName {
+  margin-left: 6px;
   font-family: 'Playfair Display', 'Georgia', serif;
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   letter-spacing: 0.5px;
-  fill: #ededed;
+  color: #ededed;
 
   @media (min-width: 768px) {
-    font-size: 30px;
-  }
-}
-
-.brandText {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  fill: #888;
-
-  @media (min-width: 768px) {
-    font-size: 26px;
+    font-size: 24px;
   }
 }
 

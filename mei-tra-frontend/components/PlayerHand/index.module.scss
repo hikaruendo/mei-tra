@@ -146,8 +146,8 @@
   gap: var(--spacing-xs);
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   border-radius: 8px;
   padding: 4px;
   min-width: 120px;
@@ -278,8 +278,8 @@
 
 .card.unplayable {
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.05);
-  filter: brightness(0.7) contrast(0.9);
+  background: #c0c0c0;
+  filter: grayscale(0.7);
 }
 
 @media (max-width: 768px) {
