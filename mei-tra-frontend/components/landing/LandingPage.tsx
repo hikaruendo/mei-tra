@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import styles from './LandingPage.module.scss';
 
@@ -92,9 +93,14 @@ export function LandingPage({
       {/* 2. Screenshot */}
       <section className={styles.screenshotSection}>
         <div className={styles.screenshotFrame}>
-          <div className={styles.screenshotPlaceholder}>
-            {t('screenshot.placeholder')}
-          </div>
+          <Image
+            src="/demo.png"
+            alt={t('screenshot.caption')}
+            width={1366}
+            height={878}
+            className={styles.screenshotImage}
+            priority
+          />
         </div>
         <p className={styles.screenshotCaption}>{t('screenshot.caption')}</p>
       </section>
