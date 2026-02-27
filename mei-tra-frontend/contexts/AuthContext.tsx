@@ -1,28 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { User, Session, AuthError, PostgrestError } from '@supabase/supabase-js';
+import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { AuthUser, SignUpData, SignInData, UserProfile } from '@/types/user.types';
-
-// Database profile interface matching user_profiles table structure
-interface DatabaseProfile {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
-  last_seen_at: string;
-  games_played: number;
-  games_won: number;
-  total_score: number;
-  preferences: {
-    notifications: boolean;
-    sound: boolean;
-    theme: 'light' | 'dark';
-  };
-}
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -45,54 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadingUserRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
 
-  useEffect(() => {
-    // Initialize auth immediately on mount
-    const initializeAuth = async () => {
-      console.log('[AuthContext] Initializing auth...');
-      const { data: { session } } = await supabase.auth.getSession();
-
-      setSession(session);
-
-      if (session?.user) {
-        await loadUserProfile(session.user);
-      } else {
-        setLoading(false);
-      }
-
-      initializedRef.current = true;
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes (skip INITIAL_SESSION as we handled it above)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Skip INITIAL_SESSION event as we already initialized
-      if (event === 'INITIAL_SESSION') {
-        return;
-      }
-
-      console.log('[AuthContext] Auth state changed:', event);
-      setSession(session);
-
-      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
-        await loadUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT' || !session) {
-        setUser(null);
-        setLoading(false);
-        // Clear profile cache on sign out
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('auth_profile_cache');
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const loadUserProfile = async (supabaseUser: User, retryCount = 0) => {
-    const maxRetries = 3;
+  const loadUserProfile = useCallback(async (supabaseUser: User, retryCount = 0) => {
+    const maxRetries = 2;
+    const PROFILE_TIMEOUT = 5000;
 
     // Prevent duplicate loading for the same user
     if (loadingUserRef.current === supabaseUser.id) {
@@ -120,12 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: supabaseUser.email,
               profile,
             });
-            setLoading(false);
 
-            // Refresh profile in background
+            // Refresh profile in background (skip cache with retryCount = -1)
+            loadingUserRef.current = null;
             setTimeout(() => {
               console.log('[AuthContext] Refreshing profile in background');
-              loadUserProfile(supabaseUser, -1); // -1 to skip cache check
+              loadUserProfileRef.current(supabaseUser, -1);
             }, 0);
 
             return;
@@ -138,59 +74,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const attemptLoad = async (attempt: number): Promise<void> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), PROFILE_TIMEOUT);
+
       try {
         if (attempt > 0) {
           console.log(`[AuthContext] Retrying profile load (${attempt}/${maxRetries}) for user:`, supabaseUser.id);
-          // 指数バックオフ: 1秒, 2秒, 4秒
+          // 指数バックオフ: 1秒, 2秒
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
         } else {
           console.log('[AuthContext] Loading profile for user:', supabaseUser.id);
         }
 
-        // Create a timeout promise for preventing infinite loading
-        const TIMEOUT = 'timeout' as const;
-        const timeoutPromise = new Promise<typeof TIMEOUT>((resolve) => {
-          setTimeout(() => resolve(TIMEOUT), 10000);
-        });
-
-        const profilePromise = supabase
+        const { data: profile, error } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', supabaseUser.id)
+          .abortSignal(controller.signal)
           .single();
 
-        const result = await Promise.race([
-          profilePromise,
-          timeoutPromise
-        ]);
-
-        // Handle timeout
-        if (result === TIMEOUT) {
-          if (attempt < maxRetries) {
-            console.warn(`[AuthContext] Profile loading timeout (attempt ${attempt + 1}/${maxRetries + 1}). Retrying...`);
-            return attemptLoad(attempt + 1);
-          }
-          
-          console.warn('[AuthContext] Profile loading timeout after all retries. Keeping existing profile data.');
-          setUser(prevUser => ({
-            id: supabaseUser.id,
-            email: supabaseUser.email,
-            profile: prevUser?.profile || null,
-          }));
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile, error } = result as {
-          data: DatabaseProfile | null;
-          error: PostgrestError | null
-        };
+        clearTimeout(timeoutId);
 
         if (error) {
           // Network/connection errors should be retried
-          if ((error.message.includes('network') || 
-               error.message.includes('connection') || 
-               error.message.includes('timeout')) && 
+          if ((error.message.includes('network') ||
+               error.message.includes('connection') ||
+               error.message.includes('timeout')) &&
                attempt < maxRetries) {
             console.warn(`[AuthContext] Network error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, error.message);
             return attemptLoad(attempt + 1);
@@ -203,20 +112,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.warn('[AuthContext] Error loading user profile, keeping existing data:', error.message);
           }
 
-          // Keep existing profile data if available
-          setUser(prevUser => ({
-            id: supabaseUser.id,
-            email: supabaseUser.email,
-            profile: prevUser?.profile || null,
-          }));
-          setLoading(false);
+          loadingUserRef.current = null;
           return;
         }
 
         if (profile) {
-          console.log('[AuthContext] Profile loaded successfully:', profile);
+          console.log('[AuthContext] Profile loaded successfully');
 
-          // Create default preferences if not exist
           const defaultPreferences = {
             notifications: true,
             sound: true,
@@ -255,52 +157,111 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.warn('[AuthContext] Failed to cache profile:', e);
             }
           }
-
-          // Mark loading complete on success
-          loadingUserRef.current = null;
-          setLoading(false);
         } else {
-          // No profile found, keep existing data if available
-          console.log('[AuthContext] No profile data, keeping existing profile if available');
-          setUser(prevUser => ({
-            id: supabaseUser.id,
-            email: supabaseUser.email,
-            profile: prevUser?.profile || null,
-          }));
-          // Mark loading complete even when profile doesn't exist (normal for new users)
-          loadingUserRef.current = null;
-          setLoading(false);
+          console.log('[AuthContext] No profile data returned');
         }
+
+        loadingUserRef.current = null;
       } catch (error: unknown) {
+        clearTimeout(timeoutId);
+
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
+        const isAbort = error instanceof DOMException && error.name === 'AbortError';
+
+        if (isAbort) {
+          if (attempt < maxRetries) {
+            console.warn(`[AuthContext] Profile loading timeout (attempt ${attempt + 1}/${maxRetries + 1}). Retrying...`);
+            return attemptLoad(attempt + 1);
+          }
+          console.warn('[AuthContext] Profile loading timeout after all retries.');
+          loadingUserRef.current = null;
+          return;
+        }
+
         // Network/connection errors should be retried
-        if ((errorMessage.includes('network') || 
-             errorMessage.includes('connection') || 
-             errorMessage.includes('fetch')) && 
+        if ((errorMessage.includes('network') ||
+             errorMessage.includes('connection') ||
+             errorMessage.includes('fetch')) &&
              attempt < maxRetries) {
           console.warn(`[AuthContext] Connection error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, errorMessage);
           return attemptLoad(attempt + 1);
         }
 
-        console.warn('[AuthContext] Error in loadUserProfile, keeping existing data:', error);
-
-        // Keep existing profile data if available, otherwise create basic user
-        setUser(prevUser => ({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          profile: prevUser?.profile || null,
-        }));
-      } finally {
-        if (attempt === maxRetries) {
-          loadingUserRef.current = null;
-          setLoading(false);
-        }
+        console.warn('[AuthContext] Error in loadUserProfile:', error);
+        loadingUserRef.current = null;
       }
     };
 
     await attemptLoad(retryCount);
-  };
+  }, []);
+
+  // Ref to allow recursive calls from setTimeout without stale closures
+  const loadUserProfileRef = useRef(loadUserProfile);
+  loadUserProfileRef.current = loadUserProfile;
+
+  useEffect(() => {
+    // Initialize auth immediately on mount
+    const initializeAuth = async () => {
+      console.log('[AuthContext] Initializing auth...');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      setSession(session);
+
+      if (session?.user) {
+        // Set basic user info immediately so UI can render
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          profile: null,
+        });
+        setLoading(false);
+
+        // Load profile in background (don't await)
+        loadUserProfile(session.user);
+      } else {
+        setLoading(false);
+      }
+
+      initializedRef.current = true;
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes (skip INITIAL_SESSION as we handled it above)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Skip INITIAL_SESSION event as we already initialized
+      if (event === 'INITIAL_SESSION') {
+        return;
+      }
+
+      console.log('[AuthContext] Auth state changed:', event);
+      setSession(session);
+
+      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+        // Preserve existing profile if available, set loading false immediately
+        setUser(prev => ({
+          id: session.user.id,
+          email: session.user.email,
+          profile: prev?.profile || null,
+        }));
+        setLoading(false);
+
+        // Load profile in background (don't await)
+        loadUserProfile(session.user);
+      } else if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
+        setLoading(false);
+        // Clear profile cache on sign out
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('auth_profile_cache');
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [loadUserProfile]);
 
   const signUp = async (data: SignUpData) => {
     try {
@@ -372,7 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Load fresh profile, skipping cache (retryCount = -1)
     await loadUserProfile(session.user, -1);
-  }, [session]);
+  }, [session, loadUserProfile]);
 
   const value: AuthContextType = {
     user,
