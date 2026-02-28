@@ -227,11 +227,12 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         const updatedRoom = {
           ...currentRoomRef.current,
           players: currentRoomRef.current.players.map(roomPlayer => {
-            // Socket IDでマッチングして更新されたプレイヤー情報を適用
-            const updatedPlayer = players.find(p => p.id === roomPlayer.id);
+            // playerIdでマッチングして更新されたプレイヤー情報を適用（再接続でsocket IDが変わるため）
+            const updatedPlayer = players.find(p => p.playerId === roomPlayer.playerId);
             if (updatedPlayer) {
               return {
                 ...roomPlayer,
+                id: updatedPlayer.id, // socket IDを最新に更新
                 name: updatedPlayer.name,
                 userId: updatedPlayer.userId,
                 isAuthenticated: updatedPlayer.isAuthenticated
@@ -367,7 +368,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     const socketId = socket.id;
-    const player = currentRoom.players.find((p: { id: string }) => p.id === socketId);
+    // playerIdまたはsocket ID、userIdでマッチング（再接続でsocket IDが変わるため）
+    const player = currentRoom.players.find((p) => p.id === socketId || (user && p.userId === user.id));
     if (!player) {
       setError('Player not found7');
       return;
@@ -387,7 +389,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       roomId: currentRoom.id,
       playerId: player.playerId
     });
-  }, [socket, currentRoom]);
+  }, [socket, currentRoom, user]);
 
   // ゲーム開始
   const startGameRoom = useCallback(() => {
@@ -397,7 +399,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     const socketId = socket.id;
-    const player = currentRoom.players.find(p => p.id === socketId);
+    // playerIdまたはsocket ID、userIdでマッチング（再接続でsocket IDが変わるため）
+    const player = currentRoom.players.find(p => p.id === socketId || (user && p.userId === user.id));
     if (!player) {
       setError('Player not found8');
       return;
@@ -411,7 +414,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     socket.emit('start-game', { roomId: currentRoom.id });
-  }, [socket, currentRoom]);
+  }, [socket, currentRoom, user]);
 
   // プレイヤーのチーム変更
   const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {
