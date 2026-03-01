@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import styles from './LandingPage.module.scss';
 
 interface LandingPageProps {
@@ -50,6 +50,7 @@ export function LandingPage({
   productUrl = 'https://kando1.com',
 }: LandingPageProps) {
   const t = useTranslations('landing');
+  const locale = useLocale();
 
   const metrics = t.raw('hero.metrics') as LandingMetric[];
   const features = t.raw('features.items') as LandingFeature[];
@@ -94,7 +95,7 @@ export function LandingPage({
       <section className={styles.screenshotSection}>
         <div className={styles.screenshotFrame}>
           <Image
-            src="/demo.png"
+            src={locale === 'ja' ? '/demo-ja.png' : '/demo-en.png'}
             alt={t('screenshot.caption')}
             width={1366}
             height={878}
