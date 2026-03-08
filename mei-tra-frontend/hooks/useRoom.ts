@@ -413,7 +413,10 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    socket.emit('start-game', { roomId: currentRoom.id });
+    socket.emit('start-game', {
+      roomId: currentRoom.id,
+      playerId: player.playerId
+    });
   }, [socket, currentRoom, user]);
 
   // プレイヤーのチーム変更

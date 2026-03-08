@@ -510,7 +510,7 @@ describe('Game Use Cases', () => {
       roomService.updateRoomStatus.mockResolvedValue(true);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
+        playerId: 'player-1',
         roomId: room.id,
       });
 
@@ -551,7 +551,7 @@ describe('Game Use Cases', () => {
       });
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
+        playerId: 'player-1',
         roomId: 'room-1',
       });
 
