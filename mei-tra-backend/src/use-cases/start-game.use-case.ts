@@ -17,7 +17,7 @@ export class StartGameUseCase implements IStartGameUseCase {
 
   async execute(request: StartGameRequest): Promise<StartGameResponse> {
     try {
-      const { roomId, clientId } = request;
+      const { roomId, playerId } = request;
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
@@ -30,16 +30,24 @@ export class StartGameUseCase implements IStartGameUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
-      const player = state.players.find((p) => p.id === clientId);
+      const player = state.players.find((p) => p.playerId === playerId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
-          clientId,
+          playerId,
           roomId,
         });
         return {
           success: false,
           errorMessage:
             'Player not found in game state. Please rejoin the room.',
+        };
+      }
+
+      // Authorization check: verify the requesting player is the host
+      if (room.hostId !== playerId) {
+        return {
+          success: false,
+          errorMessage: 'Only the host can start the game',
         };
       }
 

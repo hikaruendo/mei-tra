@@ -19,6 +19,7 @@ import { LeaveRoomUseCase } from './use-cases/leave-room.use-case';
 import { StartGameUseCase } from './use-cases/start-game.use-case';
 import { TogglePlayerReadyUseCase } from './use-cases/toggle-player-ready.use-case';
 import { ChangePlayerTeamUseCase } from './use-cases/change-player-team.use-case';
+import { FillWithComUseCase } from './use-cases/fill-with-com.use-case';
 import { DeclareBlowUseCase } from './use-cases/declare-blow.use-case';
 import { PassBlowUseCase } from './use-cases/pass-blow.use-case';
 import { SelectNegriUseCase } from './use-cases/select-negri.use-case';
@@ -109,6 +110,10 @@ import { ActivityTrackerService } from './services/activity-tracker.service';
     {
       provide: 'IChangePlayerTeamUseCase',
       useClass: ChangePlayerTeamUseCase,
+    },
+    {
+      provide: 'IFillWithComUseCase',
+      useClass: FillWithComUseCase,
     },
     {
       provide: 'IDeclareBlowUseCase',

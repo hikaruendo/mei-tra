@@ -343,7 +343,18 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   const leaveRoom = useCallback((roomId: string) => {
     if (!socket) return;
 
-    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
+    // Find current player to get playerId
+    const socketId = socket.id;
+    const room = availableRooms.find(r => r.id === roomId) || currentRoom;
+    const player = room?.players.find((p) => p.id === socketId || (user && p.userId === user.id));
+
+    if (!player?.playerId) {
+      console.error('[useRoom] Cannot leave room: player not found');
+      setError('Player not found in room');
+      return;
+    }
+
+    socket.emit('leave-room', { roomId, playerId: player.playerId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('roomId');
@@ -353,7 +364,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         setError(response.error || 'Failed to leave room');
       }
     });
-  }, [socket]);
+  }, [socket, currentRoom, availableRooms, user]);
 
   // 準備状態の切り替え
   const togglePlayerReady = useCallback(() => {
@@ -413,19 +424,32 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    socket.emit('start-game', { roomId: currentRoom.id });
+    socket.emit('start-game', {
+      roomId: currentRoom.id,
+      playerId: player.playerId
+    });
   }, [socket, currentRoom, user]);
 
   // プレイヤーのチーム変更
   const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {
     if (!socket) return Promise.resolve(false);
 
+    // Find current player to get playerId
+    const socketId = socket.id;
+    const room = availableRooms.find(r => r.id === roomId) || currentRoom;
+    const player = room?.players.find((p) => p.id === socketId || (user && p.userId === user.id));
+
+    if (!player?.playerId) {
+      console.error('[useRoom] Cannot change team: player not found');
+      return Promise.resolve(false);
+    }
+
     return new Promise((resolve) => {
-      socket.emit('change-player-team', { roomId, teamChanges }, (response: { success: boolean }) => {
+      socket.emit('change-player-team', { roomId, playerId: player.playerId, teamChanges }, (response: { success: boolean }) => {
         resolve(response.success);
       });
     });
-  }, [socket]);
+  }, [socket, currentRoom, availableRooms, user]);
 
   if (!isClient) {
     return {

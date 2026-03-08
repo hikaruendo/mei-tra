@@ -1,7 +1,7 @@
 import { Player, TeamScores, GamePhase } from '../../types/game.types';
 
 export interface StartGameRequest {
-  clientId: string;
+  playerId: string;
   roomId: string;
 }
 

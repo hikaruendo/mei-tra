@@ -19,14 +19,22 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
     request: ChangePlayerTeamRequest,
   ): Promise<ChangePlayerTeamResponse> {
     try {
-      const { roomId, teamChanges } = request;
+      const { roomId, playerId, teamChanges } = request;
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return { success: false, error: 'Room not found' };
       }
 
-      const hostPlayer = room.players.find((p) => p.playerId === room.hostId);
-      if (!hostPlayer) {
+      // Find the requesting player
+      const requestingPlayer = room.players.find(
+        (p) => p.playerId === playerId,
+      );
+      if (!requestingPlayer) {
+        return { success: false, error: 'Player not found in room' };
+      }
+
+      // Verify that the requesting player is the host
+      if (room.hostId !== playerId) {
         return { success: false, error: 'Only the host can change teams' };
       }
 

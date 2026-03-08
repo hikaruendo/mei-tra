@@ -25,6 +25,7 @@ import { ILeaveRoomUseCase } from './use-cases/interfaces/leave-room.use-case.in
 import { IStartGameUseCase } from './use-cases/interfaces/start-game.use-case.interface';
 import { ITogglePlayerReadyUseCase } from './use-cases/interfaces/toggle-player-ready.use-case.interface';
 import { IChangePlayerTeamUseCase } from './use-cases/interfaces/change-player-team.use-case.interface';
+import { IFillWithComUseCase } from './use-cases/interfaces/fill-with-com.use-case.interface';
 import { GatewayEvent } from './use-cases/interfaces/gateway-event.interface';
 import {
   IDeclareBlowUseCase,
@@ -103,6 +104,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly togglePlayerReadyUseCase: ITogglePlayerReadyUseCase,
     @Inject('IChangePlayerTeamUseCase')
     private readonly changePlayerTeamUseCase: IChangePlayerTeamUseCase,
+    @Inject('IFillWithComUseCase')
+    private readonly fillWithComUseCase: IFillWithComUseCase,
     private readonly authService: AuthService,
     private readonly chatService: ChatService,
     @Inject('IComPlayerService')
@@ -740,11 +743,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('leave-room')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ) {
     try {
       const result = await this.leaveRoomUseCase.execute({
-        clientId: client.id,
+        playerId: data.playerId,
         roomId: data.roomId,
       });
 
@@ -800,11 +803,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleChangePlayerTeam(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    data: { roomId: string; teamChanges: { [key: string]: number } },
+    data: {
+      roomId: string;
+      playerId: string;
+      teamChanges: { [key: string]: number };
+    },
   ): Promise<{ success: boolean }> {
     try {
       const result = await this.changePlayerTeamUseCase.execute({
         roomId: data.roomId,
+        playerId: data.playerId,
         teamChanges: data.teamChanges,
       });
 
@@ -826,22 +834,21 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('fill-with-com')
   async handleFillWithCom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ): Promise<{ success: boolean }> {
     try {
-      const room = await this.roomService.getRoom(data.roomId);
-      if (!room) {
-        client.emit('error-message', 'Room not found');
+      const result = await this.fillWithComUseCase.execute({
+        roomId: data.roomId,
+        playerId: data.playerId,
+      });
+
+      if (!result.success || !result.updatedRoom) {
+        const error = result.error || 'Failed to fill with COM players';
+        client.emit('error-message', error);
         return { success: false };
       }
 
-      await this.roomService.fillVacantSeatsWithCOM(data.roomId);
-
-      const updatedRoom = await this.roomService.getRoom(data.roomId);
-      if (updatedRoom) {
-        this.server.to(data.roomId).emit('room-updated', updatedRoom);
-      }
-
+      this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
       return { success: true };
     } catch (error) {
       console.error('Error in handleFillWithCom:', error);
@@ -853,11 +860,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //-------Game-------
   @SubscribeMessage('start-game')
-  async handleStartGame(client: Socket, data: { roomId: string }) {
+  async handleStartGame(
+    client: Socket,
+    data: { roomId: string; playerId: string },
+  ) {
     this.activityTracker.recordActivity();
 
     const result = await this.startGameUseCase.execute({
-      clientId: client.id,
+      playerId: data.playerId,
       roomId: data.roomId,
     });
 

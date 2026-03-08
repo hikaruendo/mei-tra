@@ -159,6 +159,19 @@ export const useGame = () => {
         setPointsToWin(pointsToWin);
       },
       'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string }) => {
+        // Initialize currentPlayerId if this is our own join event
+        const socketId = socket?.id;
+        if (socketId && !currentPlayerId) {
+          // Try to find ourselves in the users list
+          const currentUser = users.find(u => u.id === socketId);
+          if (currentUser?.playerId) {
+            setCurrentPlayerId(currentUser.playerId);
+          } else {
+            // Fallback: use the playerId from the event
+            setCurrentPlayerId(data.playerId);
+          }
+        }
+
         if (data.playerId === currentPlayerId) {
           setCurrentRoomId(data.roomId);
         }
@@ -173,7 +186,6 @@ export const useGame = () => {
             return prev;
           }
 
-          const socketId = socket?.id;
           if (!socketId) return prev;
 
           return [...prev, {
@@ -192,7 +204,22 @@ export const useGame = () => {
         setPlayers(players);
         const id = socket?.id;
         const index = players.findIndex(p => p.id === id);
-        setCurrentPlayerId(players[index].playerId);
+
+        // Defensive check: fallback to userId if socket ID not found
+        if (index === -1) {
+          console.error('[useGame] Player not found in game-started', { socketId: id });
+          // Try to find by userId as fallback using the users list
+          const currentUser = users.find(u => u.id === id);
+          if (currentUser) {
+            const userIndex = players.findIndex(p => p.userId === currentUser.userId);
+            if (userIndex !== -1) {
+              setCurrentPlayerId(players[userIndex].playerId);
+            }
+          }
+        } else {
+          setCurrentPlayerId(players[index].playerId);
+        }
+
         setCurrentRoomId(roomId);
         setPointsToWin(pointsToWin);
         setGameStarted(true);

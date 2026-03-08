@@ -63,9 +63,9 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [roomToLeave, setRoomToLeave] = useState<string | null>(null);
   const { backendStatus, isLoading } = useBackendStatus();
 
-  const fillWithCom = (roomId: string) => {
+  const fillWithCom = (roomId: string, playerId: string) => {
     if (socket) {
-      socket.emit('fill-with-com', { roomId });
+      socket.emit('fill-with-com', { roomId, playerId });
     }
   };
 
@@ -261,7 +261,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                  room.hostId === currentPlayerId &&
                  actualPlayerCount < room.settings.maxPlayers && (
                   <button
-                    onClick={() => fillWithCom(room.id)}
+                    onClick={() => fillWithCom(room.id, currentPlayerId)}
                     className={styles.comButton}
                     disabled={backendStatus.isStarting}
                   >
