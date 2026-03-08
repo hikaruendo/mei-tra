@@ -17,7 +17,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
 
   async execute(request: LeaveRoomRequest): Promise<LeaveRoomResponse> {
     try {
-      const { clientId, roomId } = request;
+      const { playerId, roomId } = request;
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
@@ -27,7 +27,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         };
       }
 
-      const player = room.players.find((p) => p.id === clientId);
+      const player = room.players.find((p) => p.playerId === playerId);
       if (!player) {
         return {
           success: false,
@@ -35,7 +35,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         };
       }
 
-      const success = await this.roomService.leaveRoom(roomId, player.playerId);
+      const success = await this.roomService.leaveRoom(roomId, playerId);
       if (!success) {
         return {
           success: false,

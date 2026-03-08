@@ -283,7 +283,7 @@ describe('Game Use Cases', () => {
       roomService.getRoom.mockResolvedValue(null);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
+        playerId: 'player-1',
         roomId: 'missing',
       });
 
@@ -324,7 +324,7 @@ describe('Game Use Cases', () => {
       roomService.getRoomGameState.mockResolvedValue(gameStateMock);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
+        playerId: 'player-1',
         roomId: room.id,
       });
 
@@ -349,7 +349,7 @@ describe('Game Use Cases', () => {
       roomService.listRooms.mockResolvedValue([]);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
+        playerId: 'player-1',
         roomId: room.id,
       });
 
@@ -419,7 +419,7 @@ describe('Game Use Cases', () => {
       roomService.getRoomGameState.mockResolvedValue(gameStateMock);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
+        playerId: 'player-1',
         roomId: playingRoom.id,
       });
 
@@ -623,6 +623,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: room.id,
+        playerId: 'player-1', // Host player
         teamChanges: {
           'player-2': 0,
           'player-3': 0,
@@ -646,6 +647,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: room.id,
+        playerId: 'player-1', // Host player
         teamChanges: {
           'player-2': 0,
         },

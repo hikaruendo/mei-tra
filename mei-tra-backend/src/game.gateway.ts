@@ -743,11 +743,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('leave-room')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ) {
     try {
       const result = await this.leaveRoomUseCase.execute({
-        clientId: client.id,
+        playerId: data.playerId,
         roomId: data.roomId,
       });
 
@@ -803,11 +803,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleChangePlayerTeam(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    data: { roomId: string; teamChanges: { [key: string]: number } },
+    data: {
+      roomId: string;
+      playerId: string;
+      teamChanges: { [key: string]: number };
+    },
   ): Promise<{ success: boolean }> {
     try {
       const result = await this.changePlayerTeamUseCase.execute({
         roomId: data.roomId,
+        playerId: data.playerId,
         teamChanges: data.teamChanges,
       });
 

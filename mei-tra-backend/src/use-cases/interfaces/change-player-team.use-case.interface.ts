@@ -2,6 +2,7 @@ import { Room } from '../../types/room.types';
 
 export interface ChangePlayerTeamRequest {
   roomId: string;
+  playerId: string;
   teamChanges: { [playerId: string]: number };
 }
 

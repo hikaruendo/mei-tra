@@ -2,7 +2,7 @@ import { Room } from '../../types/room.types';
 import { Player } from '../../types/game.types';
 
 export interface LeaveRoomRequest {
-  clientId: string;
+  playerId: string;
   roomId: string;
 }
 
