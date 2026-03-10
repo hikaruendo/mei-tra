@@ -10,12 +10,25 @@ import styles from './ChatDock.module.scss';
 interface ChatDockProps {
   roomId: string;
   gameStarted?: boolean;
+  gamePhase?: string | null;
 }
 
-export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
+export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockProps) {
   const t = useTranslations('chatDock');
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isMinimized) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (chatRef.current && !chatRef.current.contains(e.target as Node)) {
+        setIsMinimized(true);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isMinimized]);
 
   const { isConnected, joinRoom, leaveRoom, sendMessage } = useSocialSocket();
   const { messages, typingUsers } = useChatMessages(roomId);
@@ -35,6 +48,13 @@ export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
       setIsMinimized(true);
     }
   }, [gameStarted]);
+
+  // Auto-minimize chat on mobile during blow phase to prevent overlap with BlowControls
+  useEffect(() => {
+    if (gamePhase === 'blow' && window.innerWidth <= 768) {
+      setIsMinimized(true);
+    }
+  }, [gamePhase]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,7 +78,7 @@ export function ChatDock({ roomId, gameStarted = false }: ChatDockProps) {
   }
 
   return (
-    <div className={styles.chatDock}>
+    <div className={styles.chatDock} ref={chatRef}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>

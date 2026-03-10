@@ -175,6 +175,7 @@ export default function Home() {
                   roomId={currentRoomId}
                   gameStarted={gameStarted}
                   currentTrump={currentTrump}
+                  gamePhase={gamePhase}
                 />
               )}
             </div>
