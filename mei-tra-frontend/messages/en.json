@@ -28,7 +28,7 @@
       "loginCta": "Log In",
       "signupCta": "Play Free",
       "metrics": [
-        { "value": "100+ years", "label": "Passed down at Kyushu Tech" },
+        { "value": "100+ years", "label": "Passed down through student clubs" },
         { "value": "4P · 2 Teams", "label": "Core format" },
         { "value": "Free", "label": "Browser only, no install" }
       ]
@@ -91,9 +91,9 @@
       "title": "Why 100+ years?",
       "items": [
         {
-          "quote": "Meisen Trump started at Meiji Senmon Gakko (now Kyushu Institute of Technology) in the early 1900s. Pre-war students created it. Post-war students kept it going.",
+          "quote": "Born in a student clubroom in the early 1900s. Pre-war students created it. Post-war students kept it going.",
           "name": "Origin",
-          "role": "Early 1900s, Kyushu Tech"
+          "role": "Early 1900s, Japan"
         },
         {
           "quote": "You declare how many tricks you'll win, then you have to deliver. Miss your bid and you go negative. That gap between confidence and result is what makes people come back.",
