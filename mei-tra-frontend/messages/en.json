@@ -20,22 +20,22 @@
   },
   "landing": {
     "hero": {
-      "label": "Online Card Game",
-      "titleLeading": "Meisen Trump, ",
-      "titleHighlight": "online",
-      "titleTrailing": ".",
-      "description": "A strategic 4-player, 2-team card game. Anytime, anywhere.",
-      "loginCta": "Login",
-      "signupCta": "Get Started Free",
+      "label": "Since early 1900s",
+      "titleLeading": "Meisen Trump. ",
+      "titleHighlight": "A century old.",
+      "titleTrailing": " Now in your browser.",
+      "description": "A 4-player, 2-team trick-taking game with real depth—bidding, Jack hierarchy, and penalty calls. Play solo against AI or with four people in real time.",
+      "loginCta": "Log In",
+      "signupCta": "Play Free",
       "metrics": [
-        { "prefix": "planned ", "value": "2,400+", "label": "Matches played" },
-        { "value": "98%", "label": "Uptime" },
-        { "value": "24/7", "label": "Monitoring" }
+        { "value": "100+ years", "label": "Passed down at Kyushu Tech" },
+        { "value": "4P · 2 Teams", "label": "Core format" },
+        { "value": "Free", "label": "Browser only, no install" }
       ]
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
-      "caption": "Play with friends in real time. Full rule engine from Blow to scoring."
+      "caption": "Four players, real time. Blow declarations, Jack hierarchy, Broken hands—full rules, nothing cut."
     },
     "features": {
       "eyebrow": "Features",
@@ -44,66 +44,66 @@
       "items": [
         {
           "badge": "01",
-          "title": "Instant Matching",
+          "title": "Instant Rooms",
           "description": "Create or join a room in seconds. Zero wait time."
         },
         {
           "badge": "02",
-          "title": "Authentic Rules",
-          "description": "Negri, Broken. Faithfully recreated."
+          "title": "Full Rule Engine",
+          "description": "Blow declarations, the Jack hierarchy, Broken hands. The complete Meisen Trump rules, nothing simplified."
         },
         {
           "badge": "03",
-          "title": "Auto Score Tracking",
-          "description": "Scores tallied per round. Live until the game ends."
+          "title": "Live Score Tracking",
+          "description": "Scores tallied after each round. Running total until someone hits the target."
         },
         {
           "badge": "04",
-          "title": "Any Device",
-          "description": "Desktop, tablet, mobile. Same experience."
+          "title": "Play Solo or with Four",
+          "description": "No friends online? Add a COM player. The AI fills the seat so you can play immediately."
         }
       ]
     },
     "community": {
       "eyebrow": "How It Works",
-      "title": "Learn, play, share",
-      "description": "From beginners to alumni. Three steps to keep the culture alive.",
+      "title": "Learn, play, come back",
+      "description": "Account to first hand in under five minutes.",
       "steps": [
         {
           "step": "01",
           "title": "Learn the Rules",
-          "description": "Interactive tutorial to master the basics in minutes."
+          "description": "The interactive tutorial walks you through Blow declarations, Jacks, and scoring—step by step, at your pace."
         },
         {
           "step": "02",
           "title": "Play in Real Time",
-          "description": "In-game chat brings the club room feel online."
+          "description": "Four players, live. Chat built in. The club room atmosphere, minus the commute."
         },
         {
           "step": "03",
-          "title": "Share Results",
-          "description": "Auto-generated summaries for post-game review."
+          "title": "Review and Return",
+          "description": "Auto-generated score summary after every game. See where the round turned, plan the next bid."
         }
       ]
     },
     "testimonials": {
-      "eyebrow": "Community",
-      "title": "What players say",
+      "eyebrow": "History",
+      "title": "Why 100+ years?",
       "items": [
         {
-          "quote": "Never thought I could play Meisen Trump after graduating. Weekly matches are now a ritual.",
-          "name": "Alumni, Class of 2019",
-          "role": "Weekend player"
+          "quote": "Meisen Trump started at Meiji Senmon Gakko (now Kyushu Institute of Technology) in the early 1900s. Pre-war students created it. Post-war students kept it going.",
+          "name": "Origin",
+          "role": "Early 1900s, Kyushu Tech"
         },
         {
-          "quote": "Complex rules, but the tutorial made it click. Was playing within minutes.",
-          "name": "New Member",
-          "role": "Beginner"
+          "quote": "You declare how many tricks you'll win, then you have to deliver. Miss your bid and you go negative. That gap between confidence and result is what makes people come back.",
+          "name": "The core loop",
+          "role": "Why it stuck for 100 years"
         },
         {
-          "quote": "Feels like the club room, even online. The chat feature is surprisingly useful.",
-          "name": "Active Member",
-          "role": "Daily player"
+          "quote": "The rules haven't changed. The medium has. Full trick-taking mechanics, browser-based, no download.",
+          "name": "2025",
+          "role": "Online, unchanged"
         }
       ]
     },
@@ -113,32 +113,32 @@
       "items": [
         {
           "question": "What is Meisen Trump?",
-          "answer": "A 4-player, 2-team trick-taking card game with unique mechanics like Blow declarations and the Jack system."
+          "answer": "A 4-player, 2-team trick-taking card game from Kyushu Institute of Technology. It centers on Blow declarations—bidding how many tricks you'll win and which suit is trump—and has been passed down through student clubs for over 100 years."
         },
         {
-          "question": "Can beginners play?",
-          "answer": "Yes. The interactive tutorial covers the basics in just a few minutes."
+          "question": "Can I play alone?",
+          "answer": "Yes. Add a COM player and the AI fills the empty seat. It's useful for practicing before playing against real opponents, or when you can't get four people together."
+        },
+        {
+          "question": "Is it hard to learn?",
+          "answer": "The rules have real depth, but the interactive tutorial walks you through everything in order. Most players are ready for their first game within minutes."
         },
         {
           "question": "How many players?",
-          "answer": "4 players in 2 teams. Partners sit opposite each other. You can add COM players if needed."
+          "answer": "4 players in 2 teams. Partners sit opposite each other. If you can't fill all four seats, COM players take the empty spots."
         },
         {
           "question": "Is it free?",
-          "answer": "Completely free. Just create an account and start playing."
-        },
-        {
-          "question": "Does it work on mobile?",
-          "answer": "Yes. Desktop, tablet, and mobile are all supported. Browser-only, no app required."
+          "answer": "Completely free. Create an account and start playing. No app to install—works in any browser."
         }
       ]
     },
     "cta": {
       "eyebrow": "Ready?",
-      "title": "Start your next game.",
-      "description": "Free to sign up. First match in under five minutes.",
-      "login": "Login",
-      "signup": "Register Free",
+      "title": "Your first hand is waiting.",
+      "description": "Free to sign up. Tutorial to first game in five minutes.",
+      "login": "Log In",
+      "signup": "Play Free",
       "product": "Operating Company"
     },
     "footer": {
@@ -148,7 +148,7 @@
         { "label": "Privacy Policy", "href": "/en/privacy" },
         { "label": "Tutorial", "href": "/en/tutorial" }
       ],
-      "copyright": "\u00a9 2025 Mei-Tra. All rights reserved."
+      "copyright": "\u00a9 2026 Mei-Tra. All rights reserved."
     }
   },
   "auth": {
