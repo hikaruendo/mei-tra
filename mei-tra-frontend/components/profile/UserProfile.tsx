@@ -4,12 +4,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '../auth/AuthModal';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import styles from './UserProfile.module.scss';
 
 export function UserProfile() {
   const { user, signOut, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const t = useTranslations('profile');
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -81,7 +83,7 @@ export function UserProfile() {
         disabled={isSigningOut}
         className={styles.signOutButton}
       >
-        {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
+        {isSigningOut ? t('loggingOut') : t('logout')}
       </button>
     </div>
   );
