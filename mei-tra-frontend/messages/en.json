@@ -72,7 +72,7 @@
         {
           "step": "01",
           "title": "Learn the Rules",
-          "description": "The interactive tutorial walks you through Blow declarations, Jacks, and scoring—step by step, at your pace."
+          "description": "The rules guide covers Blow declarations, scoring, and edge cases. Most players are ready to start within minutes."
         },
         {
           "step": "02",
@@ -121,7 +121,7 @@
         },
         {
           "question": "Is it hard to learn?",
-          "answer": "The rules have real depth, but the interactive tutorial walks you through everything in order. Most players are ready for their first game within minutes."
+          "answer": "The rules have real depth, but most players pick it up quickly by jumping in with COM. Most are ready for their first real game within minutes."
         },
         {
           "question": "How many players?",
@@ -136,7 +136,7 @@
     "cta": {
       "eyebrow": "Ready?",
       "title": "Your first hand is waiting.",
-      "description": "Free to sign up. Tutorial to first game in five minutes.",
+      "description": "Free to sign up. First hand in under five minutes.",
       "login": "Log In",
       "signup": "Play Free",
       "product": "Operating Company"
