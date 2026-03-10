@@ -9,13 +9,14 @@ interface GameDockProps {
   roomId: string;
   gameStarted: boolean;
   currentTrump: TrumpType | null;
+  gamePhase?: string | null;
 }
 
-export function GameDock({ roomId, gameStarted, currentTrump }: GameDockProps) {
+export function GameDock({ roomId, gameStarted, currentTrump, gamePhase }: GameDockProps) {
   return (
     <div className={styles.container}>
       <StrengthOrderDock currentTrump={currentTrump} />
-      <ChatDock roomId={roomId} gameStarted={gameStarted} />
+      <ChatDock roomId={roomId} gameStarted={gameStarted} gamePhase={gamePhase} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import type { TrumpType } from '../../types/game.types';
 import {
@@ -23,7 +23,19 @@ interface StrengthOrderDockProps {
 
 export function StrengthOrderDock({ currentTrump }: StrengthOrderDockProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const dockRef = useRef<HTMLDivElement>(null);
   const tJack = useTranslations('tutorial.jack');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dockRef.current && !dockRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isOpen]);
   const tGame = useTranslations('game');
   const tCommon = useTranslations('common');
 
@@ -39,7 +51,7 @@ export function StrengthOrderDock({ currentTrump }: StrengthOrderDockProps) {
       : null;
 
   return (
-    <div className={styles.dock}>
+    <div className={styles.dock} ref={dockRef}>
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
