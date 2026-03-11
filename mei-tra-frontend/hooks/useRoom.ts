@@ -318,7 +318,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     const displayName = user.profile?.displayName || user.email || 'User';
     const userToJoin = {
       id: socket.id ?? '',
-      playerId: socket.id ?? '',
+      playerId: user.id,  // Supabase userId — must match room.hostId set during createRoom
       name: displayName,
       userId: user.id,
       isAuthenticated: true
