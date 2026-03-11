@@ -161,7 +161,7 @@ export default function Home() {
 
             {/* ② GameTable: 部屋に入っている（待機中 or ゲーム中） */}
             {currentRoomId && (
-              <div className={gameStarted ? styles.gameWrapper : undefined}>
+              <div className={styles.gameWrapper}>
                 <GameTable
                   whoseTurn={whoseTurn}
                   gamePhase={gamePhase}

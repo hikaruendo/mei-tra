@@ -121,7 +121,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      <div className={`${styles.playerPositions} ${isWaiting ? styles.waitingPositions : ''}`}>
+      <div className={styles.playerPositions}>
         {orderedPlayers.map((player, idx) => {
           const resolvedPlayer = player ?? (isWaiting ? createCOMSlot(idx) : null);
           if (!resolvedPlayer) return null;

@@ -6,13 +6,9 @@
     "left field right"
     ".    bottom  .";
   grid-template-columns: 300px 120px 300px;
-  grid-template-rows: 180px 65px 400px;
+  grid-template-rows: 180px auto 400px;
   gap: var(--spacing-lg);
   justify-content: center;
-}
-
-.waitingPositions {
-  grid-template-rows: 180px 120px 220px;
 }
 
 .waitingCenter {
@@ -62,7 +58,7 @@
 @media (max-width: 768px) {
   .playerPositions {
     grid-template-columns: 140px 75px 140px;
-    grid-template-rows: 0px 150px 435px;
+    grid-template-rows: 0px auto 435px;
     gap: var(--spacing-md);
     margin-top: 90px;
   }
