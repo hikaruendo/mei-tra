@@ -27,6 +27,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     currentRoomRef.current = currentRoom;
   }, [currentRoom]);
 
+  // Ref to track a room ID we need to restore after locale-switch auto-rejoin
+  const autoRejoinRoomIdRef = useRef<string | null>(null);
+
   // ルーム一覧の取得
   const fetchRooms = useCallback(() => {
     if (socket) {
@@ -45,12 +48,19 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // ルーム一覧の更新
     socket.on('rooms-list', (rooms: Room[]) => {
       setAvailableRooms(rooms);
-      
+
       // 自分のルームが一覧にある場合は同期
       if (currentRoomRef.current) {
         const updatedRoom = rooms.find(r => r.id === currentRoomRef.current?.id);
         if (updatedRoom) {
           setCurrentRoom(updatedRoom);
+        }
+      } else if (autoRejoinRoomIdRef.current) {
+        // ロケール切替後の自動再参加: rooms-listが届いたら currentRoom を復元する
+        const room = rooms.find(r => r.id === autoRejoinRoomIdRef.current);
+        if (room) {
+          setCurrentRoom(room);
+          autoRejoinRoomIdRef.current = null;
         }
       }
     });
@@ -264,6 +274,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.on('set-room-id', (roomId: string) => {
       sessionStorage.setItem('roomId', roomId);
+      // socket.id を一緒に保存しておく（ロケール切替検出用）
+      if (socket.id) sessionStorage.setItem('socketId', socket.id);
     });
 
     // 退出後にcurrentRoomをクリアしてJoinボタンを再表示する
@@ -284,6 +296,19 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       socket.off('back-to-lobby');
     };
   }, [socket, currentRoom, currentPlayerId]);
+
+  // ロケール切替後の自動再参加
+  // socket.id がセッションと一致する場合（= ページリロードではなくロケール切替）、自動的に参加し直す
+  useEffect(() => {
+    if (!socket?.id || !isClient || !user) return;
+    const savedRoomId = sessionStorage.getItem('roomId');
+    const savedSocketId = sessionStorage.getItem('socketId');
+    if (!savedRoomId || !savedSocketId || socket.id !== savedSocketId) return;
+    autoRejoinRoomIdRef.current = savedRoomId;
+    joinRoom(savedRoomId);
+    // joinRoom は意図的に deps から除外（初回マウント時の1回のみ実行が目的）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket?.id, isClient, user?.id]);
 
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {

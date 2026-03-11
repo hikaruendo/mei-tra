@@ -693,6 +693,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomStatus,
         isSelf: true,
         team: joiningTeam,
+        name: normalizedUser.name,
       });
 
       // Broadcast to other room members (not the joining client) so they see the new player.
@@ -702,6 +703,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isHost,
         roomStatus,
         team: joiningTeam,
+        name: normalizedUser.name,
       });
 
       // Notify the joining client about each player already in the room.
@@ -719,6 +721,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               isHost: existingPlayer.isHost,
               roomStatus,
               team: existingPlayer.team,
+              name: existingPlayer.name,
             });
           }
         }
