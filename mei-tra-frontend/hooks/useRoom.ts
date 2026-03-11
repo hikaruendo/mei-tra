@@ -266,6 +266,12 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       sessionStorage.setItem('roomId', roomId);
     });
 
+    // 退出後にcurrentRoomをクリアしてJoinボタンを再表示する
+    socket.on('back-to-lobby', () => {
+      setCurrentRoom(null);
+      sessionStorage.removeItem('roomId');
+    });
+
     return () => {
       socket.off('rooms-list');
       socket.off('room-player-joined');
@@ -275,6 +281,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       socket.off('room-playing');
       socket.off('room-updated');
       socket.off('set-room-id');
+      socket.off('back-to-lobby');
     };
   }, [socket, currentRoom, currentPlayerId]);
 
