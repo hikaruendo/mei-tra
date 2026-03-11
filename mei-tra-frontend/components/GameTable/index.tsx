@@ -76,6 +76,16 @@ export const GameTable: React.FC<GameTableProps> = ({
   const orderedPlayers = getConsistentTableOrderWithSelfBottom(players, currentPlayerId || '');
   const positions = ['bottom', 'left', 'top', 'right'];
 
+  // During waiting, fill undefined slots with COM placeholders
+  const createCOMSlot = (idx: number): Player => ({
+    id: `com-${idx}`,
+    playerId: `com-${idx}`,
+    name: 'COM',
+    team: (idx % 2) as Player['team'],
+    hand: [],
+    isCOM: true,
+  });
+
   return (
     <>
       {!isWaiting && (
@@ -111,9 +121,11 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      <div className={styles.playerPositions}>
+      <div className={`${styles.playerPositions} ${isWaiting ? styles.waitingPositions : ''}`}>
         {orderedPlayers.map((player, idx) => {
-          if (!player) return null;
+          const resolvedPlayer = player ?? (isWaiting ? createCOMSlot(idx) : null);
+          if (!resolvedPlayer) return null;
+          const player_ = resolvedPlayer;
 
           const position = positions[idx];
           const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
@@ -125,9 +137,9 @@ export const GameTable: React.FC<GameTableProps> = ({
 
           return (
             <PlayerHand
-              key={player.playerId}
-              player={player}
-              isCurrentTurn={whoseTurn === player.playerId}
+              key={player_.playerId}
+              player={player_}
+              isCurrentTurn={whoseTurn === player_.playerId}
               negriCard={negriCard}
               negriPlayerId={negriPlayerId}
               gamePhase={gamePhase}

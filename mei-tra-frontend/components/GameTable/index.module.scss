@@ -11,6 +11,10 @@
   justify-content: center;
 }
 
+.waitingPositions {
+  grid-template-rows: 180px 120px 220px;
+}
+
 .waitingCenter {
   grid-area: field;
   display: flex;
