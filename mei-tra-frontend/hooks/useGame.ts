@@ -52,6 +52,8 @@ export const useGame = () => {
   const [pointsToWin, setPointsToWin] = useState<number>(0);
 
   const [users, setUsers] = useState<User[]>([]);
+  // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
+  const usersRef = useRef<User[]>([]);
 
   const [paused, setPaused] = useState(false);
 
@@ -86,6 +88,7 @@ export const useGame = () => {
     const socketHandlers = {
       // ユーザーの更新
       'update-users': (users: User[]) => {
+        usersRef.current = users;
         setUsers(users);
       },
       'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
@@ -183,8 +186,9 @@ export const useGame = () => {
             return prev;
           }
 
-          // Look up display name from users list by playerId (not socket.id)
-          const knownUser = users.find(u => u.playerId === data.playerId);
+          // Look up display name from users list by playerId (not socket.id).
+          // Use usersRef.current to avoid stale closure — users state may be empty at handler registration time.
+          const knownUser = usersRef.current.find(u => u.playerId === data.playerId);
 
           return [...prev, {
             id: data.playerId,
