@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { Player } from '../../types/game.types';
 import { PlayerAvatar } from '../PlayerAvatar';
+import { getConsistentTableOrderWithSelfBottom } from '../../lib/utils/tableOrder';
 import styles from './index.module.scss';
 
 interface PreGameTableProps {
@@ -36,16 +37,14 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
 }) => {
   const tRoot = useTranslations();
 
-  // Build 4 slots: current player at bottom, others fill left/top/right, empties become COM
-  const currentPlayer = players.find(p => p.playerId === currentPlayerId) ?? createEmptySlot(0);
-  const others = players.filter(p => p.playerId !== currentPlayerId);
+  // Build 4 slots using same ordering logic as GameTable:
+  // Team0/Team1 interleaved, rotated so self is at bottom.
+  // Undefined entries (empty seats) become COM placeholders.
+  const ordered = currentPlayerId
+    ? getConsistentTableOrderWithSelfBottom(players, currentPlayerId)
+    : new Array(4).fill(undefined);
 
-  const slots: Player[] = [
-    currentPlayer,
-    others[0] ?? createEmptySlot(1),
-    others[1] ?? createEmptySlot(2),
-    others[2] ?? createEmptySlot(3),
-  ];
+  const slots: Player[] = ordered.map((p, idx) => p ?? createEmptySlot(idx));
 
   return (
     <div className={styles.playerPositions}>

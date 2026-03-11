@@ -6,6 +6,7 @@ import styles from './index.module.scss';
 import { PlayerHand } from '../PlayerHand';
 import { GameControls } from '../GameControls';
 import { BlowControls } from '../BlowControls';
+import { getConsistentTableOrderWithSelfBottom } from '../../lib/utils/tableOrder';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -30,34 +31,6 @@ interface GameTableProps {
   pointsToWin: number;
 }
 
-// Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
-function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerId: string): Player[] {
-  // If we don't have enough players, return an array with undefined for missing positions
-  if (players.length < 4) {
-    const result: (Player | undefined)[] = new Array(4).fill(undefined);
-    // Fill in the positions we have players for
-    players.forEach((player, index) => {
-      result[index] = player;
-    });
-    return result as Player[];
-  }
-
-  const team0 = players.filter(p => p.team === 0);
-  const team1 = players.filter(p => p.team === 1);
-  const order: Player[] = [];
-  for (let i = 0; i < 2; i++) {
-    if (team0[i]) order.push(team0[i]);
-    if (team1[i]) order.push(team1[i]);
-  }
-  // 自分が先頭（bottom）になるように回転
-  const selfIdx = order.findIndex(p => p.playerId === currentPlayerId);
-  if (selfIdx > 0) {
-    // 反時計回りになるように順序を反転
-    const rotated = [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
-    return [rotated[0], rotated[3], rotated[2], rotated[1]];
-  }
-  return [order[0], order[3], order[2], order[1]];
-}
 
 export const GameTable: React.FC<GameTableProps> = ({
   whoseTurn,
