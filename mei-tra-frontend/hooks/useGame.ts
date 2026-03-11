@@ -94,9 +94,9 @@ export const useGame = () => {
       'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
         if (success && playerId && name) {
           setUsers((prev) => {
-            const existingIndex = prev.findIndex((u) => u.id === socket?.id || u.playerId === playerId);
+            const existingIndex = prev.findIndex((u) => u.playerId === playerId);
             const baseUser = {
-              id: socket?.id ?? playerId,
+              id: playerId,
               playerId,
               name,
               isAuthenticated: false,

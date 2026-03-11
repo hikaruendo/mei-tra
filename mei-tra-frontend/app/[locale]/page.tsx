@@ -133,7 +133,7 @@ export default function Home() {
 
   return (
     <ProtectedRoute requireAuth={true}>
-      <Navigation gameStarted={gameStarted} />
+      <Navigation gameStarted={gameStarted} inRoom={!!currentRoomId} />
       <main>
         {notification && (
           <Notification
@@ -153,7 +153,6 @@ export default function Home() {
               <RoomList
                 isConnected={isConnected}
                 isConnecting={isConnecting}
-                players={players}
                 users={users}
                 currentPlayerId={currentPlayerId}
               />

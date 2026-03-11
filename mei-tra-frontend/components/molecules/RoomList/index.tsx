@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
-import { useSocket } from '../../../hooks/useSocket';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
-import { Player, User } from '../../../types/game.types';
+import { User } from '../../../types/game.types';
 import styles from './index.module.scss';
 
 const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
@@ -37,7 +36,6 @@ const getStatusClass = (status: RoomStatus) => {
 interface RoomListProps {
   isConnected?: boolean;
   isConnecting?: boolean;
-  players?: Player[];
   users?: User[];
   currentPlayerId?: string | null;
 }
@@ -45,7 +43,6 @@ interface RoomListProps {
 export const RoomList: React.FC<RoomListProps> = ({
   isConnected,
   isConnecting,
-  players = [],
   users = [],
   currentPlayerId: currentPlayerIdProp = null,
 }) => {
@@ -57,19 +54,10 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
   const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
   const [setTeamText, setSetTeamText] = useState<string>(t('room.updateTeams'));
-  const { socket } = useSocket();
   const { backendStatus, isLoading } = useBackendStatus();
 
-  // 現在のプレイヤーIDを取得
-  const currentPlayerId = useMemo(() => {
-    if (currentPlayerIdProp) {
-      return currentPlayerIdProp;
-    }
-    const socketId = socket?.id;
-    if (!socketId) return '';
-    const player = players.find(p => p.id === socketId);
-    return player?.playerId || '';
-  }, [currentPlayerIdProp, players, socket?.id]);
+  // 現在のプレイヤーIDを取得（useGame から渡される playerId を使用）
+  const currentPlayerId = currentPlayerIdProp ?? '';
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
