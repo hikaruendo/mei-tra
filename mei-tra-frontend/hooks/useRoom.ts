@@ -85,6 +85,10 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             return p;
           });
 
+          // 既存プレイヤーチェック（重複防止）
+          const alreadyInRoom = existingPlayers.some(p => p.playerId === playerId);
+          if (alreadyInRoom) return room;
+
           // 空いている席（ダミープレイヤー）を探す
           const dummyIndex = existingPlayers.findIndex(p => p.playerId.startsWith('dummy-'));
           const newPlayer: RoomPlayer = {
