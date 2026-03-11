@@ -687,6 +687,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomStatus,
       });
 
+      // Send the full player list to the joining client so they can see
+      // players already in the room (game-player-joined only carries one player at a time)
+      if (!resumeGame) {
+        client.emit('update-players', room.players);
+      }
+
       this.server.emit('rooms-list', roomsList);
       this.server.to(data.roomId).emit('set-room-id', data.roomId);
 
