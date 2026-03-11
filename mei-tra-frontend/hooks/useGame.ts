@@ -160,18 +160,10 @@ export const useGame = () => {
         setPointsToWin(pointsToWin);
       },
       'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string }) => {
-        // Initialize currentPlayerId if this is our own join event
-        const socketId = socket?.id;
-        if (socketId && !currentPlayerId) {
-          // Try to find ourselves in the users list
-          const currentUser = users.find(u => u.id === socketId);
-          if (currentUser?.playerId) {
-            setCurrentPlayerId(currentUser.playerId);
-          } else {
-            // Fallback: use the playerId from the event
-            setCurrentPlayerId(data.playerId);
-          }
-          // This is our own join: set room and host status immediately
+        // Initialize currentPlayerId if this is our own join event.
+        // Use data.playerId directly — socket.id is unreliable across reconnections.
+        if (!currentPlayerId) {
+          setCurrentPlayerId(data.playerId);
           setCurrentRoomId(data.roomId);
           setIsHost(data.isHost);
         }
@@ -191,12 +183,13 @@ export const useGame = () => {
             return prev;
           }
 
-          if (!socketId) return prev;
+          // Look up display name from users list by playerId (not socket.id)
+          const knownUser = users.find(u => u.playerId === data.playerId);
 
           return [...prev, {
-            id: socketId,
+            id: data.playerId,
             playerId: data.playerId,
-            name: data.playerId,
+            name: knownUser?.name || data.playerId,
             team: 0,
             hand: [],
             isHost: data.isHost,
@@ -207,22 +200,18 @@ export const useGame = () => {
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
         setPlayers(players);
-        const id = socket?.id;
-        const index = players.findIndex(p => p.id === id);
 
-        // Defensive check: fallback to userId if socket ID not found
-        if (index === -1) {
-          console.error('[useGame] Player not found in game-started', { socketId: id });
-          // Try to find by userId as fallback using the users list
-          const currentUser = users.find(u => u.id === id);
-          if (currentUser) {
-            const userIndex = players.findIndex(p => p.userId === currentUser.userId);
-            if (userIndex !== -1) {
-              setCurrentPlayerId(players[userIndex].playerId);
-            }
-          }
-        } else {
+        // Identify self by playerId (stable across reconnections), not socket.id
+        const index = players.findIndex(p => p.playerId === currentPlayerId);
+        if (index !== -1) {
           setCurrentPlayerId(players[index].playerId);
+        } else {
+          // Fallback: match by userId for authenticated users
+          console.error('[useGame] Player not found in game-started by playerId', { currentPlayerId });
+          const userIndex = players.findIndex(p => p.userId && users.find(u => u.userId === p.userId && u.playerId === currentPlayerId));
+          if (userIndex !== -1) {
+            setCurrentPlayerId(players[userIndex].playerId);
+          }
         }
 
         setCurrentRoomId(roomId);
