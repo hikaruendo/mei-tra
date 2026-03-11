@@ -5,7 +5,6 @@ import { useSocket } from '../../../hooks/useSocket';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
 import { RoomStatus } from '../../../types/room.types';
 import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
-import { ConfirmModal } from '../ConfirmModal';
 import { Player, User } from '../../../types/game.types';
 import styles from './index.module.scss';
 
@@ -52,24 +51,14 @@ export const RoomList: React.FC<RoomListProps> = ({
 }) => {
   const t = useTranslations();
   const memoizedUsers = useMemo(() => users, [users]);
-  const { availableRooms, createRoom, joinRoom, error, startGameRoom, togglePlayerReady, playerReadyStatus, currentRoom, leaveRoom, changePlayerTeam } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
+  const { availableRooms, createRoom, joinRoom, error, currentRoom, changePlayerTeam } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
   const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
   const [setTeamText, setSetTeamText] = useState<string>(t('room.updateTeams'));
   const { socket } = useSocket();
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [roomToLeave, setRoomToLeave] = useState<string | null>(null);
   const { backendStatus, isLoading } = useBackendStatus();
-
-  const fillWithCom = (roomId: string, playerId: string) => {
-    if (socket) {
-      socket.emit('fill-with-com', { roomId, playerId });
-    }
-  };
-
-  const readyStatus = playerReadyStatus as Record<string, boolean>;
 
   // 現在のプレイヤーIDを取得
   const currentPlayerId = useMemo(() => {
@@ -90,24 +79,6 @@ export const RoomList: React.FC<RoomListProps> = ({
       setPointsToWin(5);
       setTeamAssignmentMethod('random');
     }
-  };
-
-  const handleLeaveClick = (roomId: string) => {
-    setRoomToLeave(roomId);
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmLeave = () => {
-    if (roomToLeave) {
-      leaveRoom(roomToLeave);
-    }
-    setShowConfirmModal(false);
-    setRoomToLeave(null);
-  };
-
-  const handleCancelLeave = () => {
-    setShowConfirmModal(false);
-    setRoomToLeave(null);
   };
 
   return (
@@ -245,66 +216,12 @@ export const RoomList: React.FC<RoomListProps> = ({
                     {t('room.join')}
                   </button>
                 )}
-                {/* 準備ボタン: 自分が参加しているルームのみ表示 */}
-                {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
-                  <button
-                    onClick={() => togglePlayerReady()}
-                    className={`${styles.readyButton} ${readyStatus[currentPlayerId] ? styles.ready : ''}`}
-                    disabled={backendStatus.isStarting}
-                  >
-                    {readyStatus[currentPlayerId] ? t('common.ready') : t('common.readyUp')}
-                  </button>
-                )}
-                {/* COM追加ボタン: 自分がホストで、空席がある場合のみ表示 */}
-                {currentRoom?.id === room.id &&
-                 room.status !== RoomStatus.PLAYING &&
-                 room.hostId === currentPlayerId &&
-                 actualPlayerCount < room.settings.maxPlayers && (
-                  <button
-                    onClick={() => fillWithCom(room.id, currentPlayerId)}
-                    className={styles.comButton}
-                    disabled={backendStatus.isStarting}
-                  >
-                    {t('room.fillWithCom')}
-                  </button>
-                )}
-                {/* ゲーム開始ボタン: 自分がホストで、全員準備完了している場合のみ表示 */}
-                {currentRoom?.id === room.id &&
-                 room.status === RoomStatus.READY &&
-                 room.hostId === currentPlayerId && (
-                  <button
-                    onClick={() => startGameRoom()}
-                    className={styles.startButton}
-                    disabled={backendStatus.isStarting}
-                  >
-                    {t('room.start')}
-                  </button>
-                )}
-                {/* 退出ボタン: 自分が参加しているルームのみ表示 */}
-                {currentRoom?.id === room.id && room.status !== RoomStatus.PLAYING && (
-                  <button
-                    onClick={() => handleLeaveClick(room.id)}
-                    className={styles.leaveButton}
-                    disabled={backendStatus.isStarting}
-                  >
-                    {t('common.leave')}
-                  </button>
-                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        title={t('room.leaveConfirm.title')}
-        message={t('room.leaveConfirm.message')}
-        onConfirm={handleConfirmLeave}
-        onCancel={handleCancelLeave}
-        confirmText={t('common.leave')}
-        cancelText={t('common.cancel')}
-      />
     </div>
   );
 }; 

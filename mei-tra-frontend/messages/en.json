@@ -226,6 +226,7 @@
     "updateTeams": "Update Teams",
     "teamsUpdated": "Teams Updated",
     "fillWithCom": "Add COM",
+    "waitingForHost": "Waiting for the host to start...",
     "leaveConfirm": {
       "title": "Leave Room",
       "message": "Are you sure you want to leave this room?"

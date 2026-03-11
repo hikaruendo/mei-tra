@@ -12,16 +12,19 @@ import { GameDock } from '../../components/game/GameDock';
 import { LandingPage } from '../../components/landing/LandingPage';
 import { AuthModal } from '../../components/auth/AuthModal';
 import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const t = useTranslations('game');
+  const tRoot = useTranslations();
   const { user, loading: authLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const gameState = useGame();
+  const { socket } = useSocket();
 
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -97,6 +100,8 @@ export default function Home() {
     notification,
     setNotification,
     currentRoomId = null,
+    isHost = false,
+    startGame,
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -121,6 +126,12 @@ export default function Home() {
     );
   }
 
+  const handleLeaveRoom = () => {
+    if (socket && currentRoomId && currentPlayerId) {
+      socket.emit('leave-room', { roomId: currentRoomId, playerId: currentPlayerId });
+    }
+  };
+
   return (
     <ProtectedRoute requireAuth={true}>
       <Navigation gameStarted={gameStarted} />
@@ -138,7 +149,8 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <div style={{ display: gameStarted ? 'none' : 'block' }}>
+            {/* ① RoomList: 部屋に入っていない && ゲーム未開始 */}
+            <div style={{ display: (!currentRoomId && !gameStarted) ? 'block' : 'none' }}>
               <RoomList
                 isConnected={isConnected}
                 isConnecting={isConnecting}
@@ -147,6 +159,24 @@ export default function Home() {
                 currentPlayerId={currentPlayerId}
               />
             </div>
+
+            {/* ② プレゲームエリア: 部屋に入っている && ゲーム未開始 */}
+            {currentRoomId && !gameStarted && (
+              <div className={styles.preGameArea}>
+                {isHost ? (
+                  <button className={styles.startButton} onClick={startGame}>
+                    {tRoot('room.start')}
+                  </button>
+                ) : (
+                  <p className={styles.waitingMessage}>{tRoot('room.waitingForHost')}</p>
+                )}
+                <button className={styles.leaveButton} onClick={handleLeaveRoom}>
+                  {tRoot('common.leave')}
+                </button>
+              </div>
+            )}
+
+            {/* ③ GameTable: ゲーム開始後 */}
             <div className={gameStarted ? styles.gameWrapper : undefined} style={{ display: gameStarted ? 'block' : 'none' }}>
               <GameTable
                 whoseTurn={whoseTurn}

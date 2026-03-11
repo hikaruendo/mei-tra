@@ -417,13 +417,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    // 全員が準備完了しているか確認
-    const allReady = currentRoom.players.every(player => player.isReady);
-    if (!allReady) {
-      setError('All players must be ready to start the game');
-      return;
-    }
-
     socket.emit('start-game', {
       roomId: currentRoom.id,
       playerId: player.playerId

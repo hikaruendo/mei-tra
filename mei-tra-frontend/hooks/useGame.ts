@@ -48,6 +48,7 @@ export const useGame = () => {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
 
   const [users, setUsers] = useState<User[]>([]);
@@ -170,10 +171,14 @@ export const useGame = () => {
             // Fallback: use the playerId from the event
             setCurrentPlayerId(data.playerId);
           }
+          // This is our own join: set room and host status immediately
+          setCurrentRoomId(data.roomId);
+          setIsHost(data.isHost);
         }
 
         if (data.playerId === currentPlayerId) {
           setCurrentRoomId(data.roomId);
+          setIsHost(data.isHost);
         }
         if (data.roomStatus === 'playing') {
           setGameStarted(true);
@@ -420,6 +425,12 @@ export const useGame = () => {
           type: 'warning'
         });
       },
+      'player-left': ({ playerId }: { playerId: string; roomId: string }) => {
+        if (playerId === currentPlayerId) {
+          setCurrentRoomId(null);
+          setIsHost(false);
+        }
+      },
     };
 
     // Register all socket handlers
@@ -448,6 +459,11 @@ export const useGame = () => {
     if (!options?.preservePlayers) {
       setPlayers(prev => prev.map(player => ({ ...player, isPasser: false })));
     }
+  };
+
+  const startGame = () => {
+    if (!currentRoomId || !currentPlayerId) return;
+    socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
   };
 
   const gameActions = {
@@ -557,6 +573,8 @@ export const useGame = () => {
     notification,
     setNotification,
     currentRoomId,
+    isHost,
+    startGame,
     pointsToWin,
     users,
     paused,
