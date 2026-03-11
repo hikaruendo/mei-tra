@@ -162,7 +162,7 @@ export const useGame = () => {
         setGameStarted(true);
         setPointsToWin(pointsToWin);
       },
-      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean }) => {
+      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean; team?: number }) => {
         // isSelf: true means the backend confirmed "this is YOUR player ID".
         // Only set currentPlayerId from this explicit self-identification event.
         if (data.isSelf) {
@@ -194,7 +194,7 @@ export const useGame = () => {
             id: data.playerId,
             playerId: data.playerId,
             name: knownUser?.name || data.playerId,
-            team: 0,
+            team: (data.team ?? 0) as Player['team'],
             hand: [],
             isHost: data.isHost,
           }];

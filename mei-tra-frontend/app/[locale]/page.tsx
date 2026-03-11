@@ -8,7 +8,6 @@ import { Navigation } from '../../components/layout/Navigation';
 import { useGame } from '../../hooks/useGame';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import { RoomList } from '../../components/molecules/RoomList';
-import { PreGameTable } from '../../components/PreGameTable';
 import { GameDock } from '../../components/game/GameDock';
 import { LandingPage } from '../../components/landing/LandingPage';
 import { AuthModal } from '../../components/auth/AuthModal';
@@ -160,50 +159,45 @@ export default function Home() {
               />
             </div>
 
-            {/* ② プレゲームエリア: 部屋に入っている && ゲーム未開始 */}
-            {currentRoomId && !gameStarted && (
-              <PreGameTable
-                players={players}
-                currentPlayerId={currentPlayerId}
-                isHost={isHost}
-                onStart={startGame}
-                onLeave={handleLeaveRoom}
-              />
-            )}
-
-            {/* ③ GameTable: ゲーム開始後 */}
-            <div className={gameStarted ? styles.gameWrapper : undefined} style={{ display: gameStarted ? 'block' : 'none' }}>
-              <GameTable
-                whoseTurn={whoseTurn}
-                gamePhase={gamePhase}
-                currentTrump={currentTrump}
-                currentField={currentField}
-                players={players}
-                negriCard={negriCard}
-                negriPlayerId={negriPlayerId}
-                completedFields={completedFields}
-                revealedAgari={revealedAgari}
-                gameActions={gameActions}
-                blowDeclarations={blowDeclarations}
-                currentHighestDeclaration={currentHighestDeclaration}
-                selectedTrump={selectedTrump}
-                setSelectedTrump={setSelectedTrump}
-                numberOfPairs={numberOfPairs}
-                setNumberOfPairs={setNumberOfPairs}
-                teamScores={teamScores}
-                currentPlayerId={currentPlayerId}
-                currentRoomId={currentRoomId}
-                pointsToWin={pointsToWin}
-              />
-              {currentRoomId && (
-                <GameDock
-                  roomId={currentRoomId}
-                  gameStarted={gameStarted}
-                  currentTrump={currentTrump}
+            {/* ② GameTable: 部屋に入っている（待機中 or ゲーム中） */}
+            {currentRoomId && (
+              <div className={gameStarted ? styles.gameWrapper : undefined}>
+                <GameTable
+                  whoseTurn={whoseTurn}
                   gamePhase={gamePhase}
+                  currentTrump={currentTrump}
+                  currentField={currentField}
+                  players={players}
+                  negriCard={negriCard}
+                  negriPlayerId={negriPlayerId}
+                  completedFields={completedFields}
+                  revealedAgari={revealedAgari}
+                  gameActions={gameActions}
+                  blowDeclarations={blowDeclarations}
+                  currentHighestDeclaration={currentHighestDeclaration}
+                  selectedTrump={selectedTrump}
+                  setSelectedTrump={setSelectedTrump}
+                  numberOfPairs={numberOfPairs}
+                  setNumberOfPairs={setNumberOfPairs}
+                  teamScores={teamScores}
+                  currentPlayerId={currentPlayerId}
+                  currentRoomId={currentRoomId}
+                  pointsToWin={pointsToWin}
+                  isWaiting={!gameStarted}
+                  isHost={isHost}
+                  onStart={startGame}
+                  onLeave={handleLeaveRoom}
                 />
-              )}
-            </div>
+                {gameStarted && (
+                  <GameDock
+                    roomId={currentRoomId}
+                    gameStarted={gameStarted}
+                    currentTrump={currentTrump}
+                    gamePhase={gamePhase}
+                  />
+                )}
+              </div>
+            )}
           </>
         )}
       </main>

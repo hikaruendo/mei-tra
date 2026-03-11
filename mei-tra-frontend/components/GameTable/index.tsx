@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
 import { GameField } from '../GameField';
 import { GameInfo } from '../GameInfo';
@@ -29,6 +30,11 @@ interface GameTableProps {
   currentPlayerId: string | null;
   currentRoomId: string | null;
   pointsToWin: number;
+  // Waiting-room props (shown before game starts)
+  isWaiting?: boolean;
+  isHost?: boolean;
+  onStart?: () => void;
+  onLeave?: () => void;
 }
 
 
@@ -53,8 +59,13 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentPlayerId,
   currentRoomId,
   pointsToWin,
+  isWaiting = false,
+  isHost = false,
+  onStart,
+  onLeave,
 }) => {
-  // Add null check for players array
+  const tRoot = useTranslations();
+
   if (!players || players.length === 0) {
     return null;
   }
@@ -67,18 +78,20 @@ export const GameTable: React.FC<GameTableProps> = ({
 
   return (
     <>
-      <GameInfo
-        currentTrump={currentTrump}
-        currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
-        numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
-        teamScores={teamScores}
-        currentRoomId={currentRoomId}
-        pointsToWin={pointsToWin}
-        players={players}
-      />
+      {!isWaiting && (
+        <GameInfo
+          currentTrump={currentTrump}
+          currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
+          numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
+          teamScores={teamScores}
+          currentRoomId={currentRoomId}
+          pointsToWin={pointsToWin}
+          players={players}
+        />
+      )}
 
       {gamePhase && (
-        <GameControls 
+        <GameControls
           gamePhase={gamePhase}
           renderBlowControls={() => (
             <BlowControls
@@ -100,13 +113,13 @@ export const GameTable: React.FC<GameTableProps> = ({
 
       <div className={styles.playerPositions}>
         {orderedPlayers.map((player, idx) => {
-          if (!player) return null;  // Skip if player is undefined
-          
+          if (!player) return null;
+
           const position = positions[idx];
           const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
 
           // Show all team's completed fields only for bottom player
-          const teamCompletedFields = position === 'bottom' 
+          const teamCompletedFields = position === 'bottom'
             ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
             : [];
 
@@ -129,17 +142,32 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentField={currentField}
               currentTrump={currentTrump}
             />
-          )
+          );
         })}
 
-        {/* Center field */}
-        <GameField
-          currentField={currentField}
-          players={players}
-          onBaseSuitSelect={gameActions.selectBaseSuit}
-          isCurrentPlayer={currentPlayerId === whoseTurn}
-        />
+        {isWaiting ? (
+          // Waiting room: show Start/Leave controls in the center field area
+          <div className={styles.waitingCenter}>
+            {isHost ? (
+              <button className={styles.startButton} onClick={onStart}>
+                {tRoot('room.start')}
+              </button>
+            ) : (
+              <p className={styles.waitingText}>{tRoot('room.waitingForHost')}</p>
+            )}
+            <button className={styles.leaveButton} onClick={onLeave}>
+              {tRoot('common.leave')}
+            </button>
+          </div>
+        ) : (
+          <GameField
+            currentField={currentField}
+            players={players}
+            onBaseSuitSelect={gameActions.selectBaseSuit}
+            isCurrentPlayer={currentPlayerId === whoseTurn}
+          />
+        )}
       </div>
     </>
   );
-}; 
+};
