@@ -396,6 +396,9 @@ export const useGame = () => {
         gameOverShownRef.current = null;
         setGameStarted(false);
         setGamePhase(null);
+        setCurrentRoomId(null);
+        setIsHost(false);
+        setPlayers([]);
         setTeamScores({
           0: { deal: 0, blow: 0, play: 0, total: 0 },
           1: { deal: 0, blow: 0, play: 0, total: 0 }
