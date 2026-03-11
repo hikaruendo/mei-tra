@@ -57,7 +57,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   setNumberOfPairs,
   teamScores,
   currentPlayerId,
-  currentRoomId,
   pointsToWin,
   isWaiting = false,
   isHost = false,
@@ -94,9 +93,9 @@ export const GameTable: React.FC<GameTableProps> = ({
           currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
           numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
           teamScores={teamScores}
-          currentRoomId={currentRoomId}
           pointsToWin={pointsToWin}
           players={players}
+          onLeave={onLeave}
         />
       )}
 
