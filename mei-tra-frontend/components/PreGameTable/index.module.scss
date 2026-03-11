@@ -1,0 +1,95 @@
+.playerPositions {
+  position: relative;
+  display: grid;
+  grid-template-areas:
+    ".    top    ."
+    "left center right"
+    ".    bottom .";
+  grid-template-columns: 300px 180px 300px;
+  grid-template-rows: 180px auto 250px;
+  gap: 16px;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.playerSeat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top {
+  grid-area: top;
+  align-self: center;
+  justify-self: center;
+}
+
+.bottom {
+  grid-area: bottom;
+  align-self: center;
+  justify-self: center;
+}
+
+.left {
+  grid-area: left;
+  align-self: center;
+  justify-self: center;
+}
+
+.right {
+  grid-area: right;
+  align-self: center;
+  justify-self: center;
+}
+
+.center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.startButton {
+  padding: 0.875rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #43a047;
+  }
+}
+
+.waitingText {
+  font-size: 1rem;
+  color: #aaa;
+  text-align: center;
+}
+
+.leaveButton {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  background-color: transparent;
+  color: #888;
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+@media (max-width: 768px) {
+  .playerPositions {
+    grid-template-columns: 140px 120px 140px;
+    grid-template-rows: 140px auto 200px;
+    margin-top: 10px;
+  }
+}

@@ -8,6 +8,7 @@ import { Navigation } from '../../components/layout/Navigation';
 import { useGame } from '../../hooks/useGame';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import { RoomList } from '../../components/molecules/RoomList';
+import { PreGameTable } from '../../components/PreGameTable';
 import { GameDock } from '../../components/game/GameDock';
 import { LandingPage } from '../../components/landing/LandingPage';
 import { AuthModal } from '../../components/auth/AuthModal';
@@ -19,7 +20,6 @@ export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const t = useTranslations('game');
-  const tRoot = useTranslations();
   const { user, loading: authLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -162,18 +162,13 @@ export default function Home() {
 
             {/* ② プレゲームエリア: 部屋に入っている && ゲーム未開始 */}
             {currentRoomId && !gameStarted && (
-              <div className={styles.preGameArea}>
-                {isHost ? (
-                  <button className={styles.startButton} onClick={startGame}>
-                    {tRoot('room.start')}
-                  </button>
-                ) : (
-                  <p className={styles.waitingMessage}>{tRoot('room.waitingForHost')}</p>
-                )}
-                <button className={styles.leaveButton} onClick={handleLeaveRoom}>
-                  {tRoot('common.leave')}
-                </button>
-              </div>
+              <PreGameTable
+                players={players}
+                currentPlayerId={currentPlayerId}
+                isHost={isHost}
+                onStart={startGame}
+                onLeave={handleLeaveRoom}
+              />
             )}
 
             {/* ③ GameTable: ゲーム開始後 */}
