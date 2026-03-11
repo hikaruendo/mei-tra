@@ -162,10 +162,10 @@ export const useGame = () => {
         setGameStarted(true);
         setPointsToWin(pointsToWin);
       },
-      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string }) => {
-        // Initialize currentPlayerId if this is our own join event.
-        // Use data.playerId directly — socket.id is unreliable across reconnections.
-        if (!currentPlayerId) {
+      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean }) => {
+        // isSelf: true means the backend confirmed "this is YOUR player ID".
+        // Only set currentPlayerId from this explicit self-identification event.
+        if (data.isSelf) {
           setCurrentPlayerId(data.playerId);
           setCurrentRoomId(data.roomId);
           setIsHost(data.isHost);

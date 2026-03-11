@@ -680,7 +680,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isHost,
       });
 
-      this.server.to(data.roomId).emit('game-player-joined', {
+      // Send self-identification FIRST directly to the joining client.
+      // isSelf: true tells the frontend "this is YOUR player ID".
+      // This must arrive before the existing-player loop events.
+      client.emit('game-player-joined', {
+        playerId: normalizedUser.playerId,
+        roomId: data.roomId,
+        isHost,
+        roomStatus,
+        isSelf: true,
+      });
+
+      // Broadcast to other room members (not the joining client) so they see the new player.
+      this.server.to(data.roomId).except(client.id).emit('game-player-joined', {
         playerId: normalizedUser.playerId,
         roomId: data.roomId,
         isHost,
