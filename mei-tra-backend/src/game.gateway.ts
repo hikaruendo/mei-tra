@@ -687,10 +687,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomStatus,
       });
 
-      // Send the full player list to the joining client so they can see
-      // players already in the room (game-player-joined only carries one player at a time)
+      // Notify the joining client about each player already in the room.
+      // game-player-joined only carries one player at a time, so we loop.
+      // usersRef in useGame resolves display names, so this reuses existing logic.
       if (!resumeGame) {
-        client.emit('update-players', room.players);
+        for (const existingPlayer of room.players) {
+          if (
+            existingPlayer.playerId !== normalizedUser.playerId &&
+            !existingPlayer.playerId.startsWith('dummy-')
+          ) {
+            client.emit('game-player-joined', {
+              playerId: existingPlayer.playerId,
+              roomId: data.roomId,
+              isHost: existingPlayer.isHost,
+              roomStatus,
+            });
+          }
+        }
       }
 
       this.server.emit('rooms-list', roomsList);
