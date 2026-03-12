@@ -151,12 +151,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return createdRoom;
   }
 
-  private createDummyPlayer(index: number): RoomPlayer {
+  private createDummyPlayer(index: number, hand: string[] = []): RoomPlayer {
     return {
       id: `dummy-${index}`,
       playerId: `dummy-${index}`,
-      name: 'Vacant',
-      hand: [],
+      name: 'COM',
+      isCOM: true,
+      hand,
       team: 0 as Team,
       isReady: false,
       isHost: false,
@@ -250,17 +251,22 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           : undefined,
     };
 
-    // ダミープレイヤーに置き換え
-    const dummyPlayer = this.createDummyPlayer(playerIndex);
+    // ダミープレイヤーに置き換え（手札を引き継いでCOMが続行できるようにする）
+    const originalHand = room.players[playerIndex].hand ?? [];
+    const dummyPlayer = this.createDummyPlayer(playerIndex, [...originalHand]);
+    dummyPlayer.team = room.players[playerIndex].team;
     room.players[playerIndex] = dummyPlayer;
 
     await this.roomRepository.removePlayer(roomId, playerId);
     await this.roomRepository.addPlayer(roomId, dummyPlayer);
 
-    // ゲーム状態も更新
+    // ゲーム状態も更新（手札を引き継ぐ）
     if (gameState) {
       if (gsIndex !== -1 && state) {
-        state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+        const originalGameHand = state.players[gsIndex].hand ?? [];
+        const dummyGamePlayer = this.createDummyPlayer(gsIndex, [...originalGameHand]);
+        dummyGamePlayer.team = state.players[gsIndex].team;
+        state.players[gsIndex] = dummyGamePlayer;
       }
       // reconnectTokenは保持（removePlayerTokenを呼ばない）
     }
@@ -311,17 +317,22 @@ export class RoomService implements IRoomService, OnModuleDestroy {
               : undefined,
         };
 
-        // プレイヤーをダミーに置き換え（他のプレイヤーが参加可能にする）
-        const dummyPlayer = this.createDummyPlayer(playerIndex);
+        // プレイヤーをダミーに置き換え（手札を引き継いでCOMが続行できるようにする）
+        const originalHand = room.players[playerIndex].hand ?? [];
+        const dummyPlayer = this.createDummyPlayer(playerIndex, [...originalHand]);
+        dummyPlayer.team = room.players[playerIndex].team;
         room.players[playerIndex] = dummyPlayer;
 
         // データベースでは元のプレイヤーを削除してダミープレイヤーを追加
         await this.roomRepository.removePlayer(roomId, playerId);
         await this.roomRepository.addPlayer(roomId, dummyPlayer);
 
-        // ゲーム状態も同時に更新
+        // ゲーム状態も同時に更新（手札を引き継ぐ）
         if (gsIndex !== -1) {
-          state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+          const originalGameHand = state.players[gsIndex].hand ?? [];
+          const dummyGamePlayer = this.createDummyPlayer(gsIndex, [...originalGameHand]);
+          dummyGamePlayer.team = state.players[gsIndex].team;
+          state.players[gsIndex] = dummyGamePlayer;
         }
 
         // 再接続トークンは保持（同じplayerIdで再join可能にする）
