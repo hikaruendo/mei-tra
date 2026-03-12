@@ -329,14 +329,25 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // gameState.removePlayerToken(playerId);  // ← 削除しない
       }
     } else {
-      // ロビー状態なら単純に配列からremove
-      room.players = room.players.filter((p) => p.playerId !== playerId);
-      // データベースからも削除
-      await this.roomRepository.removePlayer(roomId, playerId);
-      // gameStateのplayersからも削除
-      const state = gameState.getState();
-      state.players = state.players.filter((p) => p.playerId !== playerId);
-      // 再接続トークンも削除
+      // ロビー状態: 退室プレイヤーをdummyに置き換え（空席を常時dummyで維持）
+      const playerIndex = room.players.findIndex(
+        (p) => p.playerId === playerId,
+      );
+      if (playerIndex !== -1) {
+        const dummy = this.createDummyPlayer(playerIndex);
+        room.players[playerIndex] = dummy;
+        await this.roomRepository.removePlayer(roomId, playerId);
+        await this.roomRepository.addPlayer(roomId, dummy);
+
+        const state = gameState.getState();
+        const gsIndex = state.players.findIndex(
+          (p) => p.playerId === playerId,
+        );
+        if (gsIndex !== -1) {
+          state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+        }
+      }
+      // 再接続トークンを削除
       gameState.removePlayerToken(playerId);
     }
 
@@ -706,11 +717,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return { canStart: false, reason: 'Room not found' };
     }
 
-    // ルームのステータスがREADYでない場合は開始できない
-    if (room.status !== RoomStatus.READY) {
-      return { canStart: false, reason: 'Room is not ready' };
-    }
-
     // 実際のプレイヤー（ダミーとCOMを除く）が1人以上いるか確認
     const actualPlayers = room.players.filter(
       (p) => !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-'),
@@ -719,7 +725,20 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return { canStart: false, reason: 'Need at least 1 player to start' };
     }
 
-    // 全員が準備完了しているか確認
+    const hasDummies = room.players.some((p) =>
+      p.playerId.startsWith('dummy-'),
+    );
+
+    if (hasDummies) {
+      // dummyがいる場合: ホストが開始ボタンを押せばすぐ開始（READY不要）
+      return { canStart: true };
+    }
+
+    // 全員人間の場合: 全員が準備完了かつREADYステータスが必要
+    if (room.status !== RoomStatus.READY) {
+      return { canStart: false, reason: 'Room is not ready' };
+    }
+
     const allReady = actualPlayers.every((p) => p.isReady);
     if (!allReady) {
       return { canStart: false, reason: 'All players must be ready' };

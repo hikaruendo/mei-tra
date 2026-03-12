@@ -44,7 +44,11 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
     ? getConsistentTableOrderWithSelfBottom(players, currentPlayerId)
     : new Array(4).fill(undefined);
 
-  const slots: Player[] = ordered.map((p, idx) => p ?? createEmptySlot(idx));
+  const slots: Player[] = ordered.map((p, idx) => {
+    if (!p) return createEmptySlot(idx);
+    if (p.playerId.startsWith('dummy-')) return { ...p, name: 'COM', isCOM: true };
+    return p;
+  });
 
   return (
     <div className={styles.playerPositions}>
