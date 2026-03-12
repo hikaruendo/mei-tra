@@ -59,7 +59,7 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
           <PlayerAvatar player={player} size="medium" showName={true} />
           {!player.isCOM && (
             <span className={`${styles.teamBadge} ${styles[`team${player.team}`]}`}>
-              {tRoot('room.team')} {player.team + 1}
+              {tRoot('scoreBoard.team')} {player.team + 1}
             </span>
           )}
         </div>
