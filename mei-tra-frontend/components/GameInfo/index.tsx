@@ -28,7 +28,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
 
   const getTeamPlayerNames = (teamNumber: number): string => {
     const teamPlayers = players
-      .filter(player => player.team === teamNumber && !player.playerId.startsWith('dummy-'));
+      .filter(player => player.team === teamNumber && !player.isCOM);
     return teamPlayers.map(player => player.name).join(' & ');
   };
 

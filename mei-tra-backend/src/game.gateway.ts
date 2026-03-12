@@ -867,9 +867,67 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
+
+      // Sync useGame.ts players state with updated team assignments
+      const realPlayers = result.updatedRoom.players.filter((p) => !p.isCOM);
+      this.server.to(data.roomId).emit('update-players', realPlayers);
+
       return { success: true };
     } catch (error) {
       console.error('Error in handleChangePlayerTeam:', error);
+      client.emit('error-message', 'Internal server error');
+      return { success: false };
+    }
+  }
+
+  @SubscribeMessage('shuffle-teams')
+  async handleShuffleTeams(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; playerId: string },
+  ): Promise<{ success: boolean }> {
+    try {
+      let room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return { success: false };
+      }
+      if (room.hostId !== data.playerId) {
+        client.emit('error-message', 'Only the host can shuffle teams');
+        return { success: false };
+      }
+
+      // Auto-fill empty slots with COM before shuffling so 2:2 splits are possible
+      if (room.players.length < 4) {
+        const fillResult = await this.fillWithComUseCase.execute({
+          roomId: data.roomId,
+          playerId: data.playerId,
+        });
+        if (fillResult.success && fillResult.updatedRoom) {
+          room = fillResult.updatedRoom;
+        }
+      }
+
+      // Fisher-Yates shuffle all players (real + COM)
+      const shuffled = [...room.players];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const half = Math.floor(shuffled.length / 2);
+      shuffled.forEach((p, idx) => {
+        p.team = (idx < half ? 0 : 1) as import('./types/game.types').Team;
+      });
+
+      room.updatedAt = new Date();
+      await this.roomService.updateRoom(data.roomId, room);
+
+      this.server.to(data.roomId).emit('room-updated', room);
+      const realPlayers = room.players.filter((p) => !p.isCOM);
+      this.server.to(data.roomId).emit('update-players', realPlayers);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleShuffleTeams:', error);
       client.emit('error-message', 'Internal server error');
       return { success: false };
     }

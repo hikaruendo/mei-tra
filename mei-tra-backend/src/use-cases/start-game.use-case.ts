@@ -93,7 +93,9 @@ export class StartGameUseCase implements IStartGameUseCase {
         p.isPasser = false;
       });
 
-      const firstBlowIndex = 0;
+      const firstBlowIndex = Math.floor(
+        Math.random() * updatedState.players.length,
+      );
       const firstBlowPlayer = updatedState.players[firstBlowIndex];
 
       updatedState.currentPlayerIndex = firstBlowIndex;

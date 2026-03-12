@@ -39,12 +39,8 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       }
 
       const currentTeamCounts = {
-        0: room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
-        ).length,
-        1: room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
-        ).length,
+        0: room.players.filter((p) => !p.isCOM && p.team === 0).length,
+        1: room.players.filter((p) => !p.isCOM && p.team === 1).length,
       } as Record<Team, number>;
 
       const newTeamCounts = { ...currentTeamCounts };
