@@ -830,6 +830,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
           .to(data.roomId)
           .emit('game-paused', { message: gamePausedMessage });
+      } else if (!roomDeleted) {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
       }
 
       return { success: true };
