@@ -30,6 +30,16 @@ export class StartGameUseCase implements IStartGameUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
+      // ゲームステートにプレイヤーが不足している場合（サーバー再起動後など）、
+      // ルームのプレイヤー情報で補完する
+      const missingPlayers = room.players.filter(
+        (rp) => !state.players.some((sp) => sp.playerId === rp.playerId),
+      );
+      for (const mp of missingPlayers) {
+        state.players.push(mp);
+        roomGameState.registerPlayerToken(mp.playerId, mp.playerId);
+      }
+
       const player = state.players.find((p) => p.playerId === playerId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
@@ -58,6 +68,9 @@ export class StartGameUseCase implements IStartGameUseCase {
           errorMessage: reason || 'Cannot start game',
         };
       }
+
+      // 空席をCOMで埋めてからゲーム開始
+      await this.roomService.fillVacantSeatsWithCOM(roomId);
 
       await this.roomService.updateRoomStatus(roomId, RoomStatus.PLAYING);
       await roomGameState.startGame();

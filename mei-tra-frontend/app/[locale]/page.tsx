@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GameTable } from '../../components/GameTable';
+import { PreGameTable } from '../../components/PreGameTable';
 import { Notification } from '../../components/Notification';
 import { Navigation } from '../../components/layout/Navigation';
 import { useGame } from '../../hooks/useGame';
@@ -158,9 +159,18 @@ export default function Home() {
               />
             </div>
 
-            {/* ② GameTable: 部屋に入っている（待機中 or ゲーム中） */}
+            {/* ② PreGameTable: 待機中 / GameTable: ゲーム中 */}
             {currentRoomId && (
               <div className={styles.gameWrapper}>
+                {!gameStarted ? (
+                  <PreGameTable
+                    players={players}
+                    currentPlayerId={currentPlayerId}
+                    isHost={isHost}
+                    onStart={startGame}
+                    onLeave={handleLeaveRoom}
+                  />
+                ) : (
                 <GameTable
                   whoseTurn={whoseTurn}
                   gamePhase={gamePhase}
@@ -182,11 +192,9 @@ export default function Home() {
                   currentPlayerId={currentPlayerId}
                   currentRoomId={currentRoomId}
                   pointsToWin={pointsToWin}
-                  isWaiting={!gameStarted}
-                  isHost={isHost}
-                  onStart={startGame}
                   onLeave={handleLeaveRoom}
                 />
+                )}
                 {gameStarted && (
                   <GameDock
                     roomId={currentRoomId}

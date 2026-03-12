@@ -725,12 +725,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return { canStart: false, reason: 'Need at least 1 player to start' };
     }
 
+    // 空席がある場合（dummyまたは実プレイヤー不足）: ホストがすぐ開始できる（残席にCOMが入る）
     const hasDummies = room.players.some((p) =>
       p.playerId.startsWith('dummy-'),
     );
+    const hasVacantSeats = actualPlayers.length < room.settings.maxPlayers;
 
-    if (hasDummies) {
-      // dummyがいる場合: ホストが開始ボタンを押せばすぐ開始（READY不要）
+    if (hasDummies || hasVacantSeats) {
       return { canStart: true };
     }
 
