@@ -462,6 +462,31 @@ export const useGame = () => {
     socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
   };
 
+  const shuffleTeams = () => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    const realPlayers = players.filter(
+      p => !p.isCOM && !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-'),
+    );
+    if (realPlayers.length < 4) return;
+    // Fisher-Yates shuffle
+    const shuffled = [...realPlayers];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const teamChanges: { [playerId: string]: number } = {
+      [shuffled[0].playerId]: 0,
+      [shuffled[1].playerId]: 0,
+      [shuffled[2].playerId]: 1,
+      [shuffled[3].playerId]: 1,
+    };
+    socket.emit('change-player-team', {
+      roomId: currentRoomId,
+      playerId: currentPlayerId,
+      teamChanges,
+    });
+  };
+
   const gameActions = {
     declareBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
@@ -571,6 +596,7 @@ export const useGame = () => {
     currentRoomId,
     isHost,
     startGame,
+    shuffleTeams,
     pointsToWin,
     users,
     paused,

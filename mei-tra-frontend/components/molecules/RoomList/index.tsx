@@ -3,7 +3,6 @@ import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
 import { RoomStatus } from '../../../types/room.types';
-import { getTeamOptionLabel } from '../../../lib/utils/teamUtils';
 import { User } from '../../../types/game.types';
 import styles from './index.module.scss';
 
@@ -48,24 +47,17 @@ export const RoomList: React.FC<RoomListProps> = ({
 }) => {
   const t = useTranslations();
   const memoizedUsers = useMemo(() => users, [users]);
-  const { availableRooms, createRoom, joinRoom, error, currentRoom, changePlayerTeam } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
+  const { availableRooms, createRoom, joinRoom, error, currentRoom } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
-  const [teamAssignmentMethod, setTeamAssignmentMethod] = useState<'random' | 'host-choice'>('random');
-  const [teamChanges, setTeamChanges] = useState<{ [key: string]: number }>({});
-  const [setTeamText, setSetTeamText] = useState<string>(t('room.updateTeams'));
   const { backendStatus, isLoading } = useBackendStatus();
-
-  // 現在のプレイヤーIDを取得（useGame から渡される playerId を使用）
-  const currentPlayerId = currentPlayerIdProp ?? '';
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (newRoomName.trim()) {
-      createRoom(newRoomName.trim(), pointsToWin, teamAssignmentMethod);
+      createRoom(newRoomName.trim(), pointsToWin, 'random');
       setNewRoomName('');
       setPointsToWin(5);
-      setTeamAssignmentMethod('random');
     }
   };
 
@@ -81,24 +73,16 @@ export const RoomList: React.FC<RoomListProps> = ({
             placeholder={t('room.roomName')}
             className={styles.input}
           />
-          <input
-            type="number"
-            min={1}
-            value={pointsToWin}
-            onChange={(e) => setPointsToWin(Number(e.target.value))}
-            placeholder={t('room.pointsToWin')}
-            className={styles.input}
-            style={{ width: 50 }}
-          />
-          <select
-            value={teamAssignmentMethod}
-            onChange={e => setTeamAssignmentMethod(e.target.value as 'random' | 'host-choice')}
-            className={styles.input}
-            style={{ width: 100 }}
-          >
-            <option value="random">{t('room.teamAuto')}</option>
-            <option value="host-choice">{t('room.teamManual')}</option>
-          </select>
+          <div className={styles.pointsToWinContainer}>
+            <span className={styles.pointsToWinText}>{t('room.pointsToWin')}</span>
+            <input
+              type="number"
+              min={1}
+              value={pointsToWin}
+              onChange={(e) => setPointsToWin(Number(e.target.value))}
+              className={styles.pointsToWinInput}
+            />
+          </div>
           <button
             type="submit"
             className={styles.createButton}
@@ -131,7 +115,6 @@ export const RoomList: React.FC<RoomListProps> = ({
       <div className={styles.section}>
         <div className={styles.roomList}>
           {availableRooms.map((room) => {
-            // ダミー・COMを除外した実プレイヤー数
             const actualPlayerCount = room.players.filter(
               p => !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-') && !p.isCOM
             ).length;
@@ -143,62 +126,15 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <p className={`${styles.status} ${getStatusClass(room.status)}`}>
                     {t('room.status')}: {getStatusText(room.status, t)}
                   </p>
-                  {/* プレイヤーリストとチーム選択UI */}
                   <ul className={styles.playerList}>
                     {room.players.map((player) => (
                       <li key={player.playerId} className={styles.playerItem}>
                         <span className={styles.playerName}>{player.name}</span>
-                        {/* チーム選択UI: ホストかつ手動割り当て時のみ */}
-                        {room.settings.teamAssignmentMethod === 'host-choice' && room.hostId === currentPlayerId ? (
-                          <div className={styles.teamSelectContainer}>
-                            <select
-                              value={teamChanges[player.playerId] ?? player.team}
-                              onChange={e => {
-                                const newTeam = Number(e.target.value);
-                                setTeamChanges(prev => ({
-                                  ...prev,
-                                  [player.playerId]: newTeam
-                                }));
-                              }}
-                              className={styles.teamSelect}
-                            >
-                              <option value={0}>{getTeamOptionLabel(currentRoom?.players || [], 0)}</option>
-                              <option value={1}>{getTeamOptionLabel(currentRoom?.players || [], 1)}</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <span className={styles.teamLabel}>{getTeamOptionLabel(currentRoom?.players || [], player.team)}</span>
-                        )}
                         {player.isHost && <span className={styles.hostLabel}>{t('room.host')}</span>}
                       </li>
                     ))}
                   </ul>
-                  {/* チーム設定ボタン: ホストかつ手動割り当て時のみ */}
-                  {room.settings.teamAssignmentMethod === 'host-choice' && room.hostId === currentPlayerId && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          const result = await changePlayerTeam(room.id, teamChanges);
-                          console.log('[RoomList] result:', result);
-                          if (result) {
-                            setSetTeamText(t('room.teamsUpdated'));
-                            setTeamChanges({}); // 変更をクリア
-                          }
-                        } catch (error) {
-                          console.error('[RoomList] Team change error:', error);
-                        }
-                      }}
-                      className={styles.teamButton}
-                      disabled={Object.keys(teamChanges).length === 0 || backendStatus.isStarting}
-                    >
-                      {setTeamText}
-                    </button>
-                  )}
                 </div>
-                {/* 参加ボタン:
-               - WAITINGルーム: 空きあり（実プレイヤー < 定員）
-               - PLAYINGルーム: COMが存在する（途中参加でCOMを引き継ぐ）
-          */}
                 {(() => {
                   const isPlayingRoom = room.status === RoomStatus.PLAYING;
                   const hasComSeat = room.players.some(
@@ -228,4 +164,4 @@ export const RoomList: React.FC<RoomListProps> = ({
 
     </div>
   );
-}; 
+};

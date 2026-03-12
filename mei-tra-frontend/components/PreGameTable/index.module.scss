@@ -68,6 +68,40 @@
   }
 }
 
+.shuffleButton {
+  padding: 0.6rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background-color: #6b5ce7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #5a4dd0;
+  }
+}
+
+.teamBadge {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.team0 {
+  background: rgba(45, 106, 159, 0.85);
+  color: #c8e6ff;
+}
+
+.team1 {
+  background: rgba(159, 58, 45, 0.85);
+  color: #ffd5d0;
+}
+
 .waitingText {
   font-size: 1rem;
   color: #aaa;

@@ -302,24 +302,22 @@
 
 .pointsToWinContainer {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .pointsToWinInput {
   @extend .input;
-  width: 55px;
-  height: 20px;
-
-  @media (max-width: 768px) {
-    height: 35px;
-  }
+  width: 50px;
+  flex: none;
 }
 
 .pointsToWinText {
-  color: #888;
-  font-size: 11px;
+  color: #aaa;
+  font-size: 13px;
   line-height: 1;
 }
 

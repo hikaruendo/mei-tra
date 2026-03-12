@@ -13,6 +13,7 @@ interface PreGameTableProps {
   isHost: boolean;
   onStart: () => void;
   onLeave: () => void;
+  shuffleTeams?: () => void;
 }
 
 const positions = ['bottom', 'left', 'top', 'right'] as const;
@@ -34,12 +35,10 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
   isHost,
   onStart,
   onLeave,
+  shuffleTeams,
 }) => {
   const tRoot = useTranslations();
 
-  // Build 4 slots using same ordering logic as GameTable:
-  // Team0/Team1 interleaved, rotated so self is at bottom.
-  // Undefined entries (empty seats) become COM placeholders.
   const ordered = currentPlayerId
     ? getConsistentTableOrderWithSelfBottom(players, currentPlayerId)
     : new Array(4).fill(undefined);
@@ -58,14 +57,26 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
           className={`${styles.playerSeat} ${styles[positions[idx]]}`}
         >
           <PlayerAvatar player={player} size="medium" showName={true} />
+          {!player.isCOM && (
+            <span className={`${styles.teamBadge} ${styles[`team${player.team}`]}`}>
+              {tRoot('room.team')} {player.team + 1}
+            </span>
+          )}
         </div>
       ))}
 
       <div className={styles.center}>
         {isHost ? (
-          <button className={styles.startButton} onClick={onStart}>
-            {tRoot('room.start')}
-          </button>
+          <>
+            {shuffleTeams && (
+              <button className={styles.shuffleButton} onClick={shuffleTeams}>
+                {tRoot('room.shuffleTeams')}
+              </button>
+            )}
+            <button className={styles.startButton} onClick={onStart}>
+              {tRoot('room.start')}
+            </button>
+          </>
         ) : (
           <p className={styles.waitingText}>{tRoot('room.waitingForHost')}</p>
         )}

@@ -102,6 +102,7 @@ export default function Home() {
     currentRoomId = null,
     isHost = false,
     startGame,
+    shuffleTeams,
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -169,6 +170,7 @@ export default function Home() {
                     isHost={isHost}
                     onStart={startGame}
                     onLeave={handleLeaveRoom}
+                    shuffleTeams={shuffleTeams}
                   />
                 ) : (
                 <GameTable
