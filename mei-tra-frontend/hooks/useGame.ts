@@ -154,7 +154,7 @@ export const useGame = () => {
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
         setTeamScores(teamScores);
-        setCurrentPlayerId(you);
+        if (you !== undefined) setCurrentPlayerId(you);
         setNegriCard(negriCard);
         setCompletedFields(fields);
         setNegriPlayerId(negriPlayerId);

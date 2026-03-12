@@ -131,8 +131,10 @@ export const RoomList: React.FC<RoomListProps> = ({
       <div className={styles.section}>
         <div className={styles.roomList}>
           {availableRooms.map((room) => {
-            // ダミーを除外した実プレイヤー数
-            const actualPlayerCount = room.players.filter(p => !p.playerId.startsWith('dummy-')).length;
+            // ダミー・COMを除外した実プレイヤー数
+            const actualPlayerCount = room.players.filter(
+              p => !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-') && !p.isCOM
+            ).length;
             return (
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
@@ -200,7 +202,10 @@ export const RoomList: React.FC<RoomListProps> = ({
                 {(() => {
                   const isPlayingRoom = room.status === RoomStatus.PLAYING;
                   const hasComSeat = room.players.some(
-                    (p) => p.isCOM || p.playerId.startsWith('dummy-'),
+                    (p) =>
+                      p.isCOM ||
+                      p.playerId.startsWith('dummy-') ||
+                      p.playerId.startsWith('com-'),
                   );
                   const canJoin =
                     (!isPlayingRoom && actualPlayerCount < room.settings.maxPlayers) ||

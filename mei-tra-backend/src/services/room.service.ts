@@ -451,6 +451,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const roomVacant = this.vacantSeats[roomId] || {};
     const vacantIndexes = Object.keys(roomVacant).map(Number);
     let assignedIndex = -1;
+    let gsAssignedIndex = -1; // ゲームステート内のインデックス（DBと順序が異なる場合がある）
     let hand: string[] = [];
     let team: Team = 0 as Team;
     let replacingDummyId: string | null = null;
@@ -504,21 +505,41 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const gs = this.roomGameStates.get(roomId);
       if (gs && gs.getState().gamePhase !== null) {
         const comIdx = room.players.findIndex(
-          (p) => p.isCOM || p.playerId.startsWith('dummy-'),
+          (p) =>
+            p.isCOM ||
+            p.playerId.startsWith('dummy-') ||
+            p.playerId.startsWith('com-'),
         );
         if (comIdx !== -1) {
-          hand = [...(room.players[comIdx].hand ?? [])];
+          const comPlayerId = room.players[comIdx].playerId;
           team = room.players[comIdx].team;
+          replacingDummyId = comPlayerId;
+          assignedIndex = comIdx; // DB room.players のインデックス
+
+          // ゲームステートのインデックスは playerId で検索（DB とメモリで順序が異なる場合がある）
+          const state = gs.getState();
+          gsAssignedIndex = state.players.findIndex(
+            (p) => p.playerId === comPlayerId,
+          );
+          const gsPlayer =
+            gsAssignedIndex !== -1 ? state.players[gsAssignedIndex] : null;
+          hand = gsPlayer
+            ? [...(gsPlayer.hand ?? [])]
+            : [...(room.players[comIdx].hand ?? [])];
         }
       }
 
       // 手札が空のまま（ロビー or COMなし）→ チーム自動割り当て
       if (hand.length === 0) {
+        const isComPlayer = (p: RoomPlayer) =>
+          p.isCOM ||
+          p.playerId.startsWith('dummy-') ||
+          p.playerId.startsWith('com-');
         const team0Count = room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
+          (p) => !isComPlayer(p) && p.team === 0,
         ).length;
         const team1Count = room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
+          (p) => !isComPlayer(p) && p.team === 1,
         ).length;
         team = (team0Count <= team1Count ? 0 : 1) as Team;
       }
@@ -584,8 +605,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const gameState = this.roomGameStates.get(roomId);
     if (gameState) {
       const state = gameState.getState();
-      if (assignedIndex !== -1) {
-        state.players[assignedIndex] = player;
+      // gsAssignedIndex はCOM引き継ぎ時にplayerIdで検索した正確なインデックス
+      const effectiveGsIndex =
+        gsAssignedIndex !== -1 ? gsAssignedIndex : assignedIndex;
+      if (effectiveGsIndex !== -1) {
+        state.players[effectiveGsIndex] = player;
       } else {
         const dummyIndex = state.players.findIndex((p) =>
           p.playerId.startsWith('dummy-'),
@@ -815,7 +839,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   }
 
   private countActualPlayers(players: RoomPlayer[]): number {
-    return players.filter((p) => !p.playerId.startsWith('dummy-')).length;
+    return players.filter(
+      (p) =>
+        !p.isCOM &&
+        !p.playerId.startsWith('dummy-') &&
+        !p.playerId.startsWith('com-'),
+    ).length;
   }
 
   async getRoomGameState(roomId: string): Promise<GameStateService> {
