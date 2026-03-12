@@ -193,17 +193,28 @@ export const RoomList: React.FC<RoomListProps> = ({
                     </button>
                   )}
                 </div>
-                {/* 参加ボタン: 自分が参加していないルームで、かつ満員でない場合のみ表示 */}
-                {actualPlayerCount < room.settings.maxPlayers &&
-                 currentRoom?.id !== room.id && (
-                  <button
-                    onClick={() => joinRoom(room.id)}
-                    className={styles.joinButton}
-                    disabled={backendStatus.isStarting}
-                  >
-                    {t('room.join')}
-                  </button>
-                )}
+                {/* 参加ボタン:
+               - WAITINGルーム: 空きあり（実プレイヤー < 定員）
+               - PLAYINGルーム: COMが存在する（途中参加でCOMを引き継ぐ）
+          */}
+                {(() => {
+                  const isPlayingRoom = room.status === RoomStatus.PLAYING;
+                  const hasComSeat = room.players.some(
+                    (p) => p.isCOM || p.playerId.startsWith('dummy-'),
+                  );
+                  const canJoin =
+                    (!isPlayingRoom && actualPlayerCount < room.settings.maxPlayers) ||
+                    (isPlayingRoom && hasComSeat);
+                  return canJoin && currentRoom?.id !== room.id && (
+                    <button
+                      onClick={() => joinRoom(room.id)}
+                      className={styles.joinButton}
+                      disabled={backendStatus.isStarting}
+                    >
+                      {t('room.join')}
+                    </button>
+                  );
+                })()}
               </div>
             );
           })}

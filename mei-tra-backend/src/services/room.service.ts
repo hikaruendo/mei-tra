@@ -500,14 +500,28 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
     } else {
-      // チーム自動割り当て
-      const team0Count = room.players.filter(
-        (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
-      ).length;
-      const team1Count = room.players.filter(
-        (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
-      ).length;
-      team = (team0Count <= team1Count ? 0 : 1) as Team;
+      // ゲーム中（gamePhase !== null）かつ vacantSeats なし → COMの手札・チームを引き継ぐ
+      const gs = this.roomGameStates.get(roomId);
+      if (gs && gs.getState().gamePhase !== null) {
+        const comIdx = room.players.findIndex(
+          (p) => p.isCOM || p.playerId.startsWith('dummy-'),
+        );
+        if (comIdx !== -1) {
+          hand = [...(room.players[comIdx].hand ?? [])];
+          team = room.players[comIdx].team;
+        }
+      }
+
+      // 手札が空のまま（ロビー or COMなし）→ チーム自動割り当て
+      if (hand.length === 0) {
+        const team0Count = room.players.filter(
+          (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
+        ).length;
+        const team1Count = room.players.filter(
+          (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
+        ).length;
+        team = (team0Count <= team1Count ? 0 : 1) as Team;
+      }
     }
 
     const seatRoomSnapshot = restoredSeatData?.roomPlayer;
@@ -743,7 +757,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     newStatus: RoomStatus,
   ): boolean {
     const validTransitions: Record<RoomStatus, RoomStatus[]> = {
-      [RoomStatus.WAITING]: [RoomStatus.READY, RoomStatus.ABANDONED],
+      [RoomStatus.WAITING]: [
+        RoomStatus.READY,
+        RoomStatus.PLAYING,
+        RoomStatus.ABANDONED,
+      ],
       [RoomStatus.READY]: [
         RoomStatus.PLAYING,
         RoomStatus.WAITING,
