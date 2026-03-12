@@ -7,6 +7,9 @@ import { Player } from '../../types/game.types';
  *
  * Works with any number of players (including <4 during waiting):
  * undefined fills missing slots — callers may substitute COM placeholders.
+ *
+ * Uses loop-based interleaving (same logic as backend arrangePlayersForSeatOrder)
+ * to handle any team distribution robustly without producing undefined gaps.
  */
 export function getConsistentTableOrderWithSelfBottom(
   players: Player[],
@@ -15,13 +18,15 @@ export function getConsistentTableOrderWithSelfBottom(
   const team0 = players.filter(p => p.team === 0);
   const team1 = players.filter(p => p.team === 1);
 
-  // Interleave: [T0[0], T1[0], T0[1], T1[1]]
-  const order: (Player | undefined)[] = [
-    team0[0],
-    team1[0],
-    team0[1],
-    team1[1],
-  ];
+  // Interleave T0 and T1 using a loop, matching backend arrangePlayersForSeatOrder logic.
+  // This handles any distribution (e.g. 2:2, 3:1, 1:3) without undefined gaps.
+  const order: (Player | undefined)[] = [];
+  const maxLen = Math.max(team0.length, team1.length, 1);
+  for (let i = 0; i < maxLen; i++) {
+    if (team0[i]) order.push(team0[i]);
+    if (team1[i]) order.push(team1[i]);
+  }
+  while (order.length < 4) order.push(undefined);
 
   // Rotate so self is at front (index 0 = bottom)
   const selfIdx = order.findIndex(p => p?.playerId === currentPlayerId);

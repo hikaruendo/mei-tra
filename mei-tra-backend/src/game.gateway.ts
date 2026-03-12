@@ -683,7 +683,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Send self-identification FIRST directly to the joining client.
       // isSelf: true tells the frontend "this is YOUR player ID".
       // This must arrive before the existing-player loop events.
-      const joiningPlayer = room.players.find(p => p.playerId === normalizedUser.playerId);
+      const joiningPlayer = room.players.find(
+        (p) => p.playerId === normalizedUser.playerId,
+      );
       const joiningTeam = joiningPlayer?.team ?? 0;
 
       client.emit('game-player-joined', {

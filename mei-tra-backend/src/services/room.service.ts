@@ -151,10 +151,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return createdRoom;
   }
 
-  private createDummyPlayer(index: number, hand: string[] = []): RoomPlayer {
+  private createDummyPlayer(
+    index: number | string,
+    hand: string[] = [],
+  ): RoomPlayer {
+    const idStr = String(index);
     return {
-      id: `dummy-${index}`,
-      playerId: `dummy-${index}`,
+      id: `dummy-${idStr}`,
+      playerId: `dummy-${idStr}`,
       name: 'COM',
       isCOM: true,
       hand,
@@ -186,9 +190,30 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async fillVacantSeatsWithCOM(roomId: string): Promise<void> {
     const room = await this.getRoom(roomId);
-    if (!room || room.players.length >= 4) return;
+    if (!room) return;
 
-    const comCount = 4 - room.players.length;
+    const gameState = this.roomGameStates.get(roomId);
+
+    // ロビーフェーズで作られた team:0 デフォルトのダミーを削除し、
+    // 正しくチーム配分された COM ボットで置き換えることで 2:2 を保証する
+    const lobbyDummies = room.players.filter((p) =>
+      p.playerId.startsWith('dummy-'),
+    );
+    for (const dummy of lobbyDummies) {
+      await this.roomRepository.removePlayer(roomId, dummy.playerId);
+      room.players = room.players.filter((p) => p.playerId !== dummy.playerId);
+      if (gameState) {
+        const state = gameState.getState();
+        state.players = state.players.filter(
+          (p) => p.playerId !== dummy.playerId,
+        );
+      }
+    }
+
+    const maxPlayers = room.settings?.maxPlayers ?? 4;
+    if (room.players.length >= maxPlayers) return;
+
+    const comCount = maxPlayers - room.players.length;
     const existingTeam0Count = room.players.filter((p) => p.team === 0).length;
     const team0Needed = Math.max(0, 2 - existingTeam0Count);
     const startingPlayerCount = room.players.length; // Capture initial count
@@ -208,7 +233,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       await this.roomRepository.addPlayer(roomId, comPlayer);
 
       // Also add to game state if it exists
-      const gameState = this.roomGameStates.get(roomId);
       if (gameState) {
         const state = gameState.getState();
         state.players.push(comPlayer);
@@ -264,7 +288,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (gameState) {
       if (gsIndex !== -1 && state) {
         const originalGameHand = state.players[gsIndex].hand ?? [];
-        const dummyGamePlayer = this.createDummyPlayer(gsIndex, [...originalGameHand]);
+        const dummyGamePlayer = this.createDummyPlayer(gsIndex, [
+          ...originalGameHand,
+        ]);
         dummyGamePlayer.team = state.players[gsIndex].team;
         state.players[gsIndex] = dummyGamePlayer;
       }
@@ -280,13 +306,17 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return false;
     }
 
-    // ゲーム中かどうかで分岐
-    const isGameStarted = room.status === RoomStatus.PLAYING;
-    const gameState = this.roomGameStates.get(roomId);
+    // getRoomGameState を使うことで、サーバー再起動/ホットリロード後でも
+    // DBからゲーム状態を復元してleaveを継続できるようにする
+    const gameState = await this.getRoomGameState(roomId);
 
-    if (!gameState) {
-      return false;
-    }
+    // ゲーム中かどうかで分岐:
+    // room.status が正しく PLAYING に更新されていない場合（WAITING→PLAYING遷移が
+    // RoomStatus の状態機械では READY を経由する必要があり、直接遷移できないケース）でも
+    // インメモリの gameStarted フラグを見ることでゲーム中を正しく判定できる
+    const isGameStarted =
+      room.status === RoomStatus.PLAYING ||
+      gameState.getState().gamePhase !== null;
 
     if (isGameStarted) {
       // hand情報をgameStateから同期
@@ -318,8 +348,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         };
 
         // プレイヤーをダミーに置き換え（手札を引き継いでCOMが続行できるようにする）
+        // タイムスタンプ付きIDで既存ダミーとのID衝突を防ぐ
+        const uniqueIdx = `left-${Date.now()}`;
         const originalHand = room.players[playerIndex].hand ?? [];
-        const dummyPlayer = this.createDummyPlayer(playerIndex, [...originalHand]);
+        const dummyPlayer = this.createDummyPlayer(uniqueIdx, [
+          ...originalHand,
+        ]);
         dummyPlayer.team = room.players[playerIndex].team;
         room.players[playerIndex] = dummyPlayer;
 
@@ -330,7 +364,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // ゲーム状態も同時に更新（手札を引き継ぐ）
         if (gsIndex !== -1) {
           const originalGameHand = state.players[gsIndex].hand ?? [];
-          const dummyGamePlayer = this.createDummyPlayer(gsIndex, [...originalGameHand]);
+          const dummyGamePlayer = this.createDummyPlayer(uniqueIdx, [
+            ...originalGameHand,
+          ]);
           dummyGamePlayer.team = state.players[gsIndex].team;
           state.players[gsIndex] = dummyGamePlayer;
         }
@@ -351,9 +387,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         await this.roomRepository.addPlayer(roomId, dummy);
 
         const state = gameState.getState();
-        const gsIndex = state.players.findIndex(
-          (p) => p.playerId === playerId,
-        );
+        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
           state.players[gsIndex] = this.createDummyPlayer(gsIndex);
         }
@@ -361,6 +395,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       // 再接続トークンを削除
       gameState.removePlayerToken(playerId);
     }
+
+    // ゲーム状態をDBに保存（ダミープレイヤーへの置き換えを永続化）
+    await gameState.saveState();
 
     // If all players are dummies, delete the room
     if (room.players.every((p) => p.playerId.startsWith('dummy-'))) {
