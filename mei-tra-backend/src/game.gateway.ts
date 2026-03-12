@@ -597,7 +597,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      const { room, roomsList } = result.data;
+      const { room } = result.data;
 
       this.playerRooms.set(client.id, room.id);
       await client.join(room.id);
@@ -621,6 +621,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Don't fail the game room creation if chat room creation fails
       }
 
+      const roomsList = result.data.roomsList;
       this.server.emit('rooms-list', roomsList);
 
       return { success: true, room };
@@ -711,12 +712,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Notify the joining client about each player already in the room.
       // game-player-joined only carries one player at a time, so we loop.
       // usersRef in useGame resolves display names, so this reuses existing logic.
+      // COM placeholder players (isCOM:true, isReady:false) are also included
+      // so that useGame.ts's players array contains them for shuffleTeams.
       if (!resumeGame) {
         for (const existingPlayer of room.players) {
-          if (
-            existingPlayer.playerId !== normalizedUser.playerId &&
-            !existingPlayer.playerId.startsWith('dummy-')
-          ) {
+          if (existingPlayer.playerId !== normalizedUser.playerId) {
             client.emit('game-player-joined', {
               playerId: existingPlayer.playerId,
               roomId: data.roomId,
@@ -724,7 +724,43 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               roomStatus,
               team: existingPlayer.team,
               name: existingPlayer.name,
+              isCOM: existingPlayer.isCOM ?? false,
+              isReady: existingPlayer.isReady ?? false,
             });
+          }
+        }
+      }
+
+      // 待機中ルームに参加した場合、残席をCOMプレースホルダーで埋める
+      if (!resumeGame && roomStatus === RoomStatus.WAITING) {
+        // 追加前のCOM IDを記録して、新規追加分のみ通知する
+        const existingCOMIds = new Set(
+          room.players
+            .filter((p) => p.isCOM && !p.isReady)
+            .map((p) => p.playerId),
+        );
+        await this.roomService.initCOMPlaceholders(data.roomId);
+        const updatedRoom = await this.roomService.getRoom(data.roomId);
+        if (updatedRoom) {
+          this.server.to(data.roomId).emit('room-updated', updatedRoom);
+          // 新規に追加されたCOMプレースホルダーのみ通知（既存分は上のループで送信済み）
+          for (const comPlayer of updatedRoom.players) {
+            if (
+              comPlayer.isCOM &&
+              !comPlayer.isReady &&
+              !existingCOMIds.has(comPlayer.playerId)
+            ) {
+              this.server.to(data.roomId).emit('game-player-joined', {
+                playerId: comPlayer.playerId,
+                roomId: data.roomId,
+                isHost: false,
+                roomStatus,
+                team: comPlayer.team,
+                name: comPlayer.name,
+                isCOM: true,
+                isReady: false,
+              });
+            }
           }
         }
       }
@@ -867,6 +903,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
+      this.server
+        .to(data.roomId)
+        .emit('update-players', result.updatedRoom.players);
       return { success: true };
     } catch (error) {
       console.error('Error in handleChangePlayerTeam:', error);

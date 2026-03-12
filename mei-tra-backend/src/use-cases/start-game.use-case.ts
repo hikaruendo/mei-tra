@@ -69,6 +69,17 @@ export class StartGameUseCase implements IStartGameUseCase {
         };
       }
 
+      // Sync team assignments from DB (source of truth) to in-memory state.players.
+      // changePlayerTeamUseCase only persists to DB, so state.players may have stale teams.
+      state.players.forEach((sp) => {
+        const roomPlayer = room.players.find(
+          (rp) => rp.playerId === sp.playerId,
+        );
+        if (roomPlayer) {
+          sp.team = roomPlayer.team;
+        }
+      });
+
       // 空席をCOMで埋めてからゲーム開始
       await this.roomService.fillVacantSeatsWithCOM(roomId);
 
@@ -93,14 +104,9 @@ export class StartGameUseCase implements IStartGameUseCase {
         p.isPasser = false;
       });
 
-      const firstBlowIndex = 0;
-      const firstBlowPlayer = updatedState.players[firstBlowIndex];
-
-      updatedState.currentPlayerIndex = firstBlowIndex;
-      updatedState.blowState = {
-        ...updatedState.blowState,
-        currentBlowIndex: firstBlowIndex,
-      };
+      // firstBlowIndex is randomized inside roomGameState.startGame()
+      const firstBlowPlayer =
+        updatedState.players[updatedState.blowState.currentBlowIndex];
 
       return {
         success: true,

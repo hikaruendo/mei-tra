@@ -42,29 +42,31 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     setIsClient(true);
     if (!socket) return;
 
-    // ルーム一覧の更新
-    socket.on('rooms-list', (rooms: Room[]) => {
-      setAvailableRooms(rooms);
+    // Named handlers so cleanup only removes THIS hook's listeners (not useGame.ts's).
+    // All handlers read currentRoomRef.current (ref, always fresh) so currentRoom is
+    // NOT needed in the dependency array — removing it prevents unnecessary re-runs.
 
-      // 自分のルームが一覧にある場合は同期
+    // ルーム一覧の更新
+    const handleRoomsList = (rooms: Room[]) => {
+      setAvailableRooms(rooms);
       if (currentRoomRef.current) {
         const updatedRoom = rooms.find(r => r.id === currentRoomRef.current?.id);
         if (updatedRoom) {
           setCurrentRoom(updatedRoom);
         }
       }
-    });
+    };
 
     // ルーム更新
-    socket.on('room-updated', (room: Room) => {
+    const handleRoomUpdated = (room: Room) => {
       setAvailableRooms(prevRooms => prevRooms.map(r => r.id === room.id ? room : r));
       if (currentRoomRef.current?.id === room.id) {
         setCurrentRoom(room);
       }
-    });
+    };
 
     // プレイヤー参加（ルーム関連）
-    socket.on('room-player-joined', ({ playerId, roomId, isHost }: { playerId: string; roomId: string; isHost: boolean }) => {
+    const handleRoomPlayerJoined = ({ playerId, roomId, isHost }: { playerId: string; roomId: string; isHost: boolean }) => {
       setAvailableRooms(prevRooms => {
         const updatedRooms = prevRooms.map(room => {
           if (room.id !== roomId) return room;
@@ -89,8 +91,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           const alreadyInRoom = existingPlayers.some(p => p.playerId === playerId);
           if (alreadyInRoom) return room;
 
-          // 空いている席（ダミープレイヤー）を探す
-          const dummyIndex = existingPlayers.findIndex(p => p.playerId.startsWith('dummy-'));
+          // 空いている席（COMプレースホルダー）を探す
+          const dummyIndex = existingPlayers.findIndex(p => p.isCOM === true && !p.isReady);
           const newPlayer: RoomPlayer = {
             id: playerId,
             playerId,
@@ -128,10 +130,10 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         ...prev,
         [playerId]: false
       }));
-    });
+    };
 
     // プレイヤー退出
-    socket.on('player-left', ({ playerId, roomId }: { playerId: string; roomId: string }) => {
+    const handlePlayerLeft = ({ playerId, roomId }: { playerId: string; roomId: string }) => {
       if (currentRoomRef.current?.id !== roomId) {
         return;
       }
@@ -156,22 +158,23 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           const updatedPlayers = prev.players.map(p =>
             p.playerId === playerId
               ? {
-                  id: `dummy-${prev.players.indexOf(p)}`,
-                  playerId: `dummy-${prev.players.indexOf(p)}`,
-                  name: 'Vacant',
+                  id: `com-${prev.players.indexOf(p)}`,
+                  playerId: `com-${prev.players.indexOf(p)}`,
+                  name: 'COM',
                   hand: [],
                   team: 0 as Team,
                   isReady: false,
                   isHost: false,
+                  isCOM: true,
                   joinedAt: new Date(),
-                  isPasser: false,
+                  isPasser: true,
                   hasBroken: false,
                 }
               : p
           );
 
           if (prev.hostId === playerId) {
-            const newHost = updatedPlayers.find(p => !p.playerId.startsWith('dummy-'));
+            const newHost = updatedPlayers.find(p => !p.isCOM);
             if (newHost) {
               return {
                 ...prev,
@@ -196,11 +199,10 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         delete newStatus[playerId];
         return newStatus;
       });
-    });
+    };
 
     // ゲーム開始
-    socket.on('room-playing', (players: Player[]) => {
-      // #ここで手札が更新される
+    const handleRoomPlaying = (players: Player[]) => {
       if (currentRoomRef.current) {
         const updatedRoom = {
           ...currentRoomRef.current,
@@ -211,7 +213,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           })
         };
 
-        // 状態更新を一括で行う
         setCurrentRoom(updatedRoom);
         setAvailableRooms(prevRooms => {
           const newRooms = prevRooms.map(room =>
@@ -222,21 +223,20 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       } else {
         console.log('currentRoom is null when room-playing event received');
       }
-    });
+    };
 
-    // プレイヤー情報の更新
-    socket.on('update-players', (players: Player[]) => {
-      // 現在参加しているルームのプレイヤー情報を更新
+    // プレイヤー情報の更新（currentRoom の team 等を同期する）
+    const handleUpdatePlayers = (players: Player[]) => {
       if (currentRoomRef.current) {
         const updatedRoom = {
           ...currentRoomRef.current,
           players: currentRoomRef.current.players.map(roomPlayer => {
-            // playerIdでマッチングして更新されたプレイヤー情報を適用（再接続でsocket IDが変わるため）
             const updatedPlayer = players.find(p => p.playerId === roomPlayer.playerId);
             if (updatedPlayer) {
               return {
                 ...roomPlayer,
-                id: updatedPlayer.id, // socket IDを最新に更新
+                id: updatedPlayer.id,
+                team: updatedPlayer.team,
                 name: updatedPlayer.name,
                 userId: updatedPlayer.userId,
                 isAuthenticated: updatedPlayer.isAuthenticated
@@ -247,43 +247,51 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         };
 
         setCurrentRoom(updatedRoom);
-
-        // availableRoomsも同じように更新
         setAvailableRooms(prevRooms =>
           prevRooms.map(room =>
             room.id === currentRoomRef.current!.id ? updatedRoom : room
           )
         );
       }
-    });
+    };
 
     // エラーメッセージ
-    socket.on('error-message', (message: string) => {
+    const handleErrorMessage = (message: string) => {
       setError(message);
-    });
+    };
 
-    socket.on('set-room-id', (roomId: string) => {
+    const handleSetRoomId = (roomId: string) => {
       sessionStorage.setItem('roomId', roomId);
-    });
+    };
 
     // 退出後にcurrentRoomをクリアしてJoinボタンを再表示する
-    socket.on('back-to-lobby', () => {
+    const handleBackToLobby = () => {
       setCurrentRoom(null);
       sessionStorage.removeItem('roomId');
-    });
+    };
+
+    socket.on('rooms-list', handleRoomsList);
+    socket.on('room-updated', handleRoomUpdated);
+    socket.on('room-player-joined', handleRoomPlayerJoined);
+    socket.on('player-left', handlePlayerLeft);
+    socket.on('room-playing', handleRoomPlaying);
+    socket.on('update-players', handleUpdatePlayers);
+    socket.on('error-message', handleErrorMessage);
+    socket.on('set-room-id', handleSetRoomId);
+    socket.on('back-to-lobby', handleBackToLobby);
 
     return () => {
-      socket.off('rooms-list');
-      socket.off('room-player-joined');
-      socket.off('player-left');
-      socket.off('update-players');
-      socket.off('error-message');
-      socket.off('room-playing');
-      socket.off('room-updated');
-      socket.off('set-room-id');
-      socket.off('back-to-lobby');
+      socket.off('rooms-list', handleRoomsList);
+      socket.off('room-updated', handleRoomUpdated);
+      socket.off('room-player-joined', handleRoomPlayerJoined);
+      socket.off('player-left', handlePlayerLeft);
+      socket.off('room-playing', handleRoomPlaying);
+      socket.off('update-players', handleUpdatePlayers);
+      socket.off('error-message', handleErrorMessage);
+      socket.off('set-room-id', handleSetRoomId);
+      socket.off('back-to-lobby', handleBackToLobby);
     };
-  }, [socket, currentRoom, currentPlayerId]);
+  }, [socket, currentPlayerId]);
 
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
@@ -418,6 +426,18 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     });
   }, [socket, currentRoom, user]);
 
+  // COM追加（残席をCOMで埋める）
+  const fillWithCOM = useCallback((roomId: string) => {
+    if (!socket) return;
+    const room = availableRooms.find(r => r.id === roomId) || currentRoom;
+    const player = room?.players.find(p => user && p.userId === user.id);
+    if (!player?.playerId) {
+      console.error('[useRoom] Cannot fill with COM: player not found');
+      return;
+    }
+    socket.emit('fill-with-com', { roomId, playerId: player.playerId });
+  }, [socket, currentRoom, availableRooms, user]);
+
   // プレイヤーのチーム変更
   const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {
     if (!socket) return Promise.resolve(false);
@@ -451,6 +471,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       fetchRooms: () => {},
       playerReadyStatus: {},
       changePlayerTeam: () => {},
+      fillWithCOM: () => {},
     };
   }
 
@@ -466,5 +487,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     fetchRooms,
     playerReadyStatus,
     changePlayerTeam,
+    fillWithCOM,
   };
 };

@@ -258,7 +258,8 @@
       "error": "Server Starting...",
       "starting": "Server is starting up. Please wait."
     },
-    "shuffleTeams": "Shuffle"
+    "shuffleTeams": "Shuffle",
+    "fillWithCOM": "Add COM"
   },
   "game": {
     "initializing": "Initializing game...",

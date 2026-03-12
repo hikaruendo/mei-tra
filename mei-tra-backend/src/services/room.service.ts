@@ -151,14 +151,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return createdRoom;
   }
 
-  private createDummyPlayer(
+  private createCOMPlaceholder(
     index: number | string,
     hand: string[] = [],
   ): RoomPlayer {
     const idStr = String(index);
     return {
-      id: `dummy-${idStr}`,
-      playerId: `dummy-${idStr}`,
+      id: `com-${idStr}`,
+      playerId: `com-${idStr}`,
       name: 'COM',
       isCOM: true,
       hand,
@@ -166,9 +166,26 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       isReady: false,
       isHost: false,
       joinedAt: new Date(),
-      isPasser: true, // Auto-pass dummy players so blow phase can continue
+      isPasser: true, // Auto-pass placeholder COM players so blow phase can continue
       hasBroken: false,
     } as RoomPlayer;
+  }
+
+  async initCOMPlaceholders(roomId: string): Promise<void> {
+    const room = await this.getRoom(roomId);
+    if (!room) return;
+    const CAPACITY = room.settings?.maxPlayers ?? 4;
+    const actualCount = room.players.filter((p) => !p.isCOM).length;
+    const placeholderCount = room.players.filter(
+      (p) => p.isCOM && !p.isReady,
+    ).length;
+    const slotsToFill = CAPACITY - actualCount - placeholderCount;
+    for (let i = 0; i < slotsToFill; i++) {
+      const idx = actualCount + placeholderCount + i;
+      const placeholder = this.createCOMPlaceholder(idx);
+      await this.roomRepository.addPlayer(roomId, placeholder);
+      room.players.push(placeholder);
+    }
   }
 
   private cloneRoomPlayer(player: RoomPlayer): RoomPlayer {
@@ -194,11 +211,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     const gameState = this.roomGameStates.get(roomId);
 
-    // ロビーフェーズで作られた team:0 デフォルトのダミーを削除し、
+    // ロビーフェーズで作られた COM プレースホルダーを削除し、
     // 正しくチーム配分された COM ボットで置き換えることで 2:2 を保証する
-    const lobbyDummies = room.players.filter((p) =>
-      p.playerId.startsWith('dummy-'),
-    );
+    const lobbyDummies = room.players.filter((p) => p.isCOM === true);
     for (const dummy of lobbyDummies) {
       await this.roomRepository.removePlayer(roomId, dummy.playerId);
       room.players = room.players.filter((p) => p.playerId !== dummy.playerId);
@@ -277,7 +292,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     // ダミープレイヤーに置き換え（手札を引き継いでCOMが続行できるようにする）
     const originalHand = room.players[playerIndex].hand ?? [];
-    const dummyPlayer = this.createDummyPlayer(playerIndex, [...originalHand]);
+    const dummyPlayer = this.createCOMPlaceholder(playerIndex, [
+      ...originalHand,
+    ]);
     dummyPlayer.team = room.players[playerIndex].team;
     room.players[playerIndex] = dummyPlayer;
 
@@ -288,7 +305,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (gameState) {
       if (gsIndex !== -1 && state) {
         const originalGameHand = state.players[gsIndex].hand ?? [];
-        const dummyGamePlayer = this.createDummyPlayer(gsIndex, [
+        const dummyGamePlayer = this.createCOMPlaceholder(gsIndex, [
           ...originalGameHand,
         ]);
         dummyGamePlayer.team = state.players[gsIndex].team;
@@ -351,7 +368,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // タイムスタンプ付きIDで既存ダミーとのID衝突を防ぐ
         const uniqueIdx = `left-${Date.now()}`;
         const originalHand = room.players[playerIndex].hand ?? [];
-        const dummyPlayer = this.createDummyPlayer(uniqueIdx, [
+        const dummyPlayer = this.createCOMPlaceholder(uniqueIdx, [
           ...originalHand,
         ]);
         dummyPlayer.team = room.players[playerIndex].team;
@@ -364,7 +381,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // ゲーム状態も同時に更新（手札を引き継ぐ）
         if (gsIndex !== -1) {
           const originalGameHand = state.players[gsIndex].hand ?? [];
-          const dummyGamePlayer = this.createDummyPlayer(uniqueIdx, [
+          const dummyGamePlayer = this.createCOMPlaceholder(uniqueIdx, [
             ...originalGameHand,
           ]);
           dummyGamePlayer.team = state.players[gsIndex].team;
@@ -381,7 +398,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         (p) => p.playerId === playerId,
       );
       if (playerIndex !== -1) {
-        const dummy = this.createDummyPlayer(playerIndex);
+        const dummy = this.createCOMPlaceholder(playerIndex);
         room.players[playerIndex] = dummy;
         await this.roomRepository.removePlayer(roomId, playerId);
         await this.roomRepository.addPlayer(roomId, dummy);
@@ -389,7 +406,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         const state = gameState.getState();
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
-          state.players[gsIndex] = this.createDummyPlayer(gsIndex);
+          state.players[gsIndex] = this.createCOMPlaceholder(gsIndex);
         }
       }
       // 再接続トークンを削除
@@ -399,17 +416,15 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     // ゲーム状態をDBに保存（ダミープレイヤーへの置き換えを永続化）
     await gameState.saveState();
 
-    // If all players are dummies, delete the room
-    if (room.players.every((p) => p.playerId.startsWith('dummy-'))) {
+    // If all players are COM placeholders (no human players), delete the room
+    if (room.players.every((p) => p.isCOM === true)) {
       await this.deleteRoom(roomId);
       return true;
     }
 
     // If host left, assign new host
     if (room.hostId === playerId) {
-      const newHost = room.players.find(
-        (p) => !p.playerId.startsWith('dummy-'),
-      );
+      const newHost = room.players.find((p) => !p.isCOM);
       if (newHost) {
         room.hostId = newHost.playerId;
         newHost.isHost = true;
@@ -504,12 +519,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       // ゲーム中（gamePhase !== null）かつ vacantSeats なし → COMの手札・チームを引き継ぐ
       const gs = this.roomGameStates.get(roomId);
       if (gs && gs.getState().gamePhase !== null) {
-        const comIdx = room.players.findIndex(
-          (p) =>
-            p.isCOM ||
-            p.playerId.startsWith('dummy-') ||
-            p.playerId.startsWith('com-'),
-        );
+        const comIdx = room.players.findIndex((p) => p.isCOM === true);
         if (comIdx !== -1) {
           const comPlayerId = room.players[comIdx].playerId;
           team = room.players[comIdx].team;
@@ -531,15 +541,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
       // 手札が空のまま（ロビー or COMなし）→ チーム自動割り当て
       if (hand.length === 0) {
-        const isComPlayer = (p: RoomPlayer) =>
-          p.isCOM ||
-          p.playerId.startsWith('dummy-') ||
-          p.playerId.startsWith('com-');
         const team0Count = room.players.filter(
-          (p) => !isComPlayer(p) && p.team === 0,
+          (p) => !p.isCOM && p.team === 0,
         ).length;
         const team1Count = room.players.filter(
-          (p) => !isComPlayer(p) && p.team === 1,
+          (p) => !p.isCOM && p.team === 1,
         ).length;
         team = (team0Count <= team1Count ? 0 : 1) as Team;
       }
@@ -591,8 +597,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       room.players[assignedIndex] = player;
     } else {
       // ダミープレイヤーの席を探す
-      const dummyIndex = room.players.findIndex((p) =>
-        p.playerId.startsWith('dummy-'),
+      const dummyIndex = room.players.findIndex(
+        (p) => p.isCOM === true && !p.isReady,
       );
       if (dummyIndex !== -1) {
         room.players[dummyIndex] = player;
@@ -611,9 +617,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       if (effectiveGsIndex !== -1) {
         state.players[effectiveGsIndex] = player;
       } else {
-        const dummyIndex = state.players.findIndex((p) =>
-          p.playerId.startsWith('dummy-'),
-        );
+        const dummyIndex = state.players.findIndex((p) => p.isCOM === true);
         if (dummyIndex !== -1) {
           state.players[dummyIndex] = player;
         } else {
@@ -657,10 +661,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     const currentSeatPlayer = room.players[seatIndex];
-    if (
-      !currentSeatPlayer ||
-      !currentSeatPlayer.playerId.startsWith('dummy-')
-    ) {
+    if (!currentSeatPlayer || !currentSeatPlayer.isCOM) {
       return false;
     }
 
@@ -807,21 +808,19 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return { canStart: false, reason: 'Room not found' };
     }
 
-    // 実際のプレイヤー（ダミーとCOMを除く）が1人以上いるか確認
-    const actualPlayers = room.players.filter(
-      (p) => !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-'),
-    );
+    // 実際のプレイヤー（COMを除く）が1人以上いるか確認
+    const actualPlayers = room.players.filter((p) => !p.isCOM);
     if (actualPlayers.length === 0) {
       return { canStart: false, reason: 'Need at least 1 player to start' };
     }
 
-    // 空席がある場合（dummyまたは実プレイヤー不足）: ホストがすぐ開始できる（残席にCOMが入る）
-    const hasDummies = room.players.some((p) =>
-      p.playerId.startsWith('dummy-'),
+    // 空席がある場合（COMプレースホルダーまたは実プレイヤー不足）: ホストがすぐ開始できる（残席にCOMが入る）
+    const hasCOMPlaceholders = room.players.some(
+      (p) => p.isCOM === true && !p.isReady,
     );
     const hasVacantSeats = actualPlayers.length < room.settings.maxPlayers;
 
-    if (hasDummies || hasVacantSeats) {
+    if (hasCOMPlaceholders || hasVacantSeats) {
       return { canStart: true };
     }
 
@@ -839,12 +838,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   }
 
   private countActualPlayers(players: RoomPlayer[]): number {
-    return players.filter(
-      (p) =>
-        !p.isCOM &&
-        !p.playerId.startsWith('dummy-') &&
-        !p.playerId.startsWith('com-'),
-    ).length;
+    return players.filter((p) => !p.isCOM).length;
   }
 
   async getRoomGameState(roomId: string): Promise<GameStateService> {

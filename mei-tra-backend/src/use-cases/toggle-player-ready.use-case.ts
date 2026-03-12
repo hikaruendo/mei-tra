@@ -46,9 +46,7 @@ export class TogglePlayerReadyUseCase implements ITogglePlayerReadyUseCase {
 
       player.isReady = newReadyState;
 
-      const actualPlayerCount = room.players.filter(
-        (p) => !p.playerId.startsWith('dummy-'),
-      ).length;
+      const actualPlayerCount = room.players.filter((p) => !p.isCOM).length;
       const hasMaxPlayers = actualPlayerCount === room.settings.maxPlayers;
       const allReady = room.players.every((p) => p.isReady);
 

@@ -46,6 +46,7 @@ CREATE TABLE room_players (
     has_required_broken BOOLEAN DEFAULT FALSE,
     is_ready BOOLEAN DEFAULT FALSE,
     is_host BOOLEAN DEFAULT FALSE,
+    is_com BOOLEAN DEFAULT FALSE,
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(room_id, player_id)
 );

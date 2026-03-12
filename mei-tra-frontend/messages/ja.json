@@ -258,7 +258,8 @@
       "error": "サーバー起動中...",
       "starting": "サーバーを起動しています。しばらくお待ちください。"
     },
-    "shuffleTeams": "シャッフル"
+    "shuffleTeams": "シャッフル",
+    "fillWithCOM": "COM追加"
   },
   "game": {
     "initializing": "ゲームを初期化中...",

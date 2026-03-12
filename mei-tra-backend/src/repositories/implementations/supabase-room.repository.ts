@@ -305,6 +305,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         has_required_broken: player.hasRequiredBroken,
         is_ready: player.isReady,
         is_host: player.isHost,
+        is_com: player.isCOM ?? false,
         joined_at: player.joinedAt.toISOString(),
       });
 
@@ -451,6 +452,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       has_required_broken: player.hasRequiredBroken,
       is_ready: player.isReady,
       is_host: player.isHost,
+      is_com: player.isCOM ?? false,
       joined_at: player.joinedAt.toISOString(),
     }));
 
@@ -489,6 +491,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       hasRequiredBroken: dbPlayer.has_required_broken,
       isReady: dbPlayer.is_ready,
       isHost: dbPlayer.is_host,
+      isCOM: (dbPlayer as any).is_com ?? false,
       joinedAt: new Date(dbPlayer.joined_at),
     }));
   }

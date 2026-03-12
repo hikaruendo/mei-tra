@@ -45,7 +45,7 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
 
   const slots: Player[] = ordered.map((p, idx) => {
     if (!p) return createEmptySlot(idx);
-    if (p.playerId.startsWith('dummy-')) return { ...p, name: 'COM', isCOM: true };
+    if (p.isCOM && !p.isReady) return { ...p, name: 'COM' };
     return p;
   });
 

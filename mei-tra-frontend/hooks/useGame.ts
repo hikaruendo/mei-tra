@@ -464,12 +464,11 @@ export const useGame = () => {
 
   const shuffleTeams = () => {
     if (!socket || !currentRoomId || !currentPlayerId) return;
-    const realPlayers = players.filter(
-      p => !p.isCOM && !p.playerId.startsWith('dummy-') && !p.playerId.startsWith('com-'),
-    );
-    if (realPlayers.length < 2) return;
-    // Fisher-Yates shuffle
-    const shuffled = [...realPlayers];
+    // Shuffle all current players (humans + COMs) for all team combinations
+    const activePlayers = [...players];
+    if (activePlayers.length < 2) return;
+    // Fisher-Yates shuffle over all active players (humans + COMs)
+    const shuffled = [...activePlayers];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];

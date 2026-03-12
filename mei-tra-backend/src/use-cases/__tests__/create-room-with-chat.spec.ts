@@ -33,6 +33,7 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       updateUserGameStats: jest.fn(),
       updateUserLastSeen: jest.fn(),
       fillVacantSeatsWithCOM: jest.fn(),
+      initCOMPlaceholders: jest.fn(),
     } as jest.Mocked<IRoomService>;
 
     gameStateService = {
