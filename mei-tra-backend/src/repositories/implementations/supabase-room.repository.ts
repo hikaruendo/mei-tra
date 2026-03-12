@@ -491,11 +491,10 @@ export class SupabaseRoomRepository implements IRoomRepository {
       hasRequiredBroken: dbPlayer.has_required_broken,
       isReady: dbPlayer.is_ready,
       isHost: dbPlayer.is_host,
-      isCOM: (dbPlayer as any).is_com ?? false,
-      joinedAt: new Date(dbPlayer.joined_at),
       isCOM:
         dbPlayer.player_id.startsWith('dummy-') ||
         dbPlayer.player_id.startsWith('com-'),
+      joinedAt: new Date(dbPlayer.joined_at),
     }));
   }
 }
