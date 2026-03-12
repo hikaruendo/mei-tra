@@ -9,6 +9,6 @@ export const config = {
     '/',
     '/(ja|en)/:path*',
     // Match all pathnames except for API routes, static files, etc.
-    '/((?!api|backend-status|_next|_vercel|.*\\..*).*)'
+    '/((?!api|_next|_vercel|.*\\..*).*)'
   ]
 };
