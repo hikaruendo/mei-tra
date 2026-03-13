@@ -18,10 +18,13 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
   async execute(request: PlayCardRequest): Promise<PlayCardResponse> {
     try {
-      const { roomId, socketId, card } = request;
+      const { roomId, userId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.id === socketId);
+      // userId for real players, playerId as fallback for COM players
+      const player = state.players.find(
+        (p) => p.userId === userId || p.playerId === userId,
+      );
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };

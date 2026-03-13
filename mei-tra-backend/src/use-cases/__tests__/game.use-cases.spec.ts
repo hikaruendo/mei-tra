@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { JoinRoomUseCase } from '../join-room.use-case';
 import { CreateRoomUseCase } from '../create-room.use-case';
 import { LeaveRoomUseCase } from '../leave-room.use-case';
@@ -220,46 +221,34 @@ describe('Game Use Cases', () => {
   describe('CreateRoomUseCase', () => {
     it('requires player name', async () => {
       const roomService = createRoomServiceMock();
-      const gameStateService = createGameStateServiceMock();
-      const useCase = new CreateRoomUseCase(roomService, gameStateService);
+      const useCase = new CreateRoomUseCase(roomService);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
         roomName: 'Room',
         pointsToWin: 30,
         teamAssignmentMethod: 'random',
+        authenticatedUser: { id: 'user-1' } as any,
       });
 
       expect(result.success).toBe(false);
       expect(result.errorMessage).toBe('Name is required');
     });
 
-    it('creates a room when host is found', async () => {
+    it('creates a room when authenticated user is present', async () => {
       const roomService = createRoomServiceMock();
-      const gameStateService = createGameStateServiceMock();
-      const useCase = new CreateRoomUseCase(roomService, gameStateService);
+      const useCase = new CreateRoomUseCase(roomService);
 
       const room: Room = { ...baseRoom };
 
-      gameStateService.getUsers.mockReturnValue([
-        {
-          id: 'socket-1',
-          playerId: 'player-1',
-          name: 'Host',
-          team: 0 as const,
-          hand: [],
-          isPasser: false,
-        } as unknown as Player,
-      ]);
       roomService.createNewRoom.mockResolvedValue(room);
       roomService.listRooms.mockResolvedValue([room]);
 
       const result = await useCase.execute({
-        clientId: 'socket-1',
         roomName: 'Room',
         pointsToWin: 30,
         teamAssignmentMethod: 'random',
         playerName: 'Host',
+        authenticatedUser: { id: 'player-1' } as any,
       });
 
       expect(result.success).toBe(true);
@@ -685,6 +674,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-1',
             playerId: 'player-1',
+            userId: 'user-1',
             name: 'Player 1',
             hand: ['C1', 'C2'],
             team: 0,
@@ -693,6 +683,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-2',
             playerId: 'player-2',
+            userId: 'user-2',
             name: 'Player 2',
             hand: ['D1', 'D2'],
             team: 1,
@@ -722,7 +713,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: 'room-1',
-        socketId: 'socket-1',
+        userId: 'user-1',
         card: 'C1',
       });
 
@@ -755,6 +746,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-1',
             playerId: 'player-1',
+            userId: 'user-1',
             name: 'Player 1',
             hand: ['C4'],
             team: 0,
@@ -781,7 +773,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: 'room-1',
-        socketId: 'socket-1',
+        userId: 'user-1',
         card: 'C4',
       });
 
@@ -805,6 +797,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-1',
             playerId: 'player-1',
+            userId: 'user-1',
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -813,6 +806,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-2',
             playerId: 'player-2',
+            userId: 'user-2',
             name: 'Player 2',
             hand: ['D1'],
             team: 1,
@@ -843,7 +837,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: 'room-1',
-        socketId: 'socket-1',
+        userId: 'user-1',
         suit: '♠',
       });
 
@@ -879,6 +873,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-1',
             playerId: 'player-1',
+            userId: 'user-1',
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -887,6 +882,7 @@ describe('Game Use Cases', () => {
           {
             id: 'socket-2',
             playerId: 'player-2',
+            userId: 'user-2',
             name: 'Player 2',
             hand: ['D1'],
             team: 1,
@@ -918,7 +914,7 @@ describe('Game Use Cases', () => {
 
       const preparation = await useCase.prepare({
         roomId: 'room-1',
-        socketId: 'socket-1',
+        userId: 'user-1',
         playerId: 'player-1',
       });
 

@@ -3,7 +3,7 @@ import { TrumpType } from '../../types/game.types';
 
 export interface DeclareBlowRequest {
   roomId: string;
-  socketId: string;
+  userId: string;
   declaration: {
     trumpType: TrumpType;
     numberOfPairs: number;
@@ -13,7 +13,7 @@ export interface DeclareBlowRequest {
 export interface RevealBrokenRequest {
   roomId: string;
   playerId: string;
-  socketId: string;
+  userId: string;
 }
 
 export interface DeclareBlowResponse {

@@ -174,7 +174,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const clientSocket = this.server.sockets.sockets.get(request.socketId);
+    const clientSocket = [...this.server.sockets.sockets.values()].find(
+      (s) =>
+        (s.data as { user?: AuthenticatedUser }).user?.id === request.userId,
+    );
     if (!clientSocket) {
       console.warn(
         '[GameGateway] Socket not found when handling required broken hand',
@@ -606,7 +609,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 共通ヘルパーメソッドを使用して名前を取得
       const playerName = this.getPlayerName(authenticatedUser || null, auth);
       const result = await this.createRoomUseCase.execute({
-        clientId: client.id,
         roomName: data.name,
         pointsToWin: data.pointsToWin,
         teamAssignmentMethod: data.teamAssignmentMethod,
@@ -1043,9 +1045,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.declareBlowUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         declaration: data.declaration,
       });
 
@@ -1072,9 +1075,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.passBlowUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
       });
 
       if (!result.success) {
@@ -1098,9 +1102,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; card: string },
   ): Promise<void> {
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.selectNegriUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         card: data.card,
       });
 
@@ -1124,9 +1129,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.playCardUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         card: data.card,
       });
 
@@ -1170,9 +1176,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; suit: string },
   ): Promise<void> {
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.selectBaseSuitUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         suit: data.suit,
       });
 
@@ -1195,9 +1202,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; playerId: string },
   ): Promise<void> {
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const preparation = await this.revealBrokenHandUseCase.prepare({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         playerId: data.playerId,
       });
 
