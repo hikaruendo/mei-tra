@@ -12,9 +12,7 @@ export class PlayService implements IPlayService {
     players: Player[],
     trumpSuit: TrumpType | null,
   ): Player | null {
-    // COMでないプレイヤーのみをフィルタリング
-    const validPlayers = players.filter((p) => !p.isCOM);
-    if (validPlayers.length === 0) {
+    if (players.length === 0) {
       return null;
     }
 
@@ -29,20 +27,19 @@ export class PlayService implements IPlayService {
     let highestStrength = -1;
 
     // ディーラーのインデックスを取得
-    let dealerIndex = validPlayers.findIndex(
-      (p) => p.playerId === field.dealerId,
-    );
+    let dealerIndex = players.findIndex((p) => p.playerId === field.dealerId);
 
     // ディーラーが見つからない場合、最初の有効なプレイヤーをディーラーとする
     if (dealerIndex === -1) {
       dealerIndex = 0;
-      field.dealerId = validPlayers[0].playerId;
+      field.dealerId = players[0].playerId;
     }
 
-    // プレイヤーの順序を更新（有効なプレイヤーのみ）
+    // field.cards is stored in actual play order, so winner attribution must use
+    // the full seat order, including COM players.
     const updatedPlayerOrder = field.cards.map((_, i) => {
-      const index = (dealerIndex + i) % validPlayers.length;
-      return validPlayers[index];
+      const index = (dealerIndex + i) % players.length;
+      return players[index];
     });
 
     // 各カードの強度を計算して勝者を決定

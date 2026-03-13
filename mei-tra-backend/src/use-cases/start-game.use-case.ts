@@ -30,15 +30,44 @@ export class StartGameUseCase implements IStartGameUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
-      // ゲームステートにプレイヤーが不足している場合（サーバー再起動後など）、
-      // ルームのプレイヤー情報で補完する
-      const missingPlayers = room.players.filter(
-        (rp) => !state.players.some((sp) => sp.playerId === rp.playerId),
+      // Waiting-room seat order is driven by room.players, so rebuild the in-memory
+      // players array from that source before starting. This keeps the play order
+      // aligned with the shuffled seat arrangement instead of any stale game-state order.
+      const existingPlayers = new Map(
+        state.players.map((statePlayer) => [statePlayer.playerId, statePlayer]),
       );
-      for (const mp of missingPlayers) {
-        state.players.push(mp);
-        roomGameState.registerPlayerToken(mp.playerId, mp.playerId);
-      }
+      state.players = room.players.map((roomPlayer) => {
+        const existingPlayer = existingPlayers.get(roomPlayer.playerId);
+
+        if (!existingPlayer) {
+          if (typeof roomGameState.registerPlayerToken === 'function') {
+            roomGameState.registerPlayerToken(
+              roomPlayer.playerId,
+              roomPlayer.playerId,
+            );
+          }
+          return {
+            ...roomPlayer,
+            hand: [...roomPlayer.hand],
+            isPasser: roomPlayer.isPasser ?? false,
+            hasBroken: roomPlayer.hasBroken ?? false,
+            hasRequiredBroken: roomPlayer.hasRequiredBroken ?? false,
+          };
+        }
+
+        return {
+          ...existingPlayer,
+          ...roomPlayer,
+          hand: [...existingPlayer.hand],
+          isPasser: existingPlayer.isPasser,
+          hasBroken: existingPlayer.hasBroken,
+          hasRequiredBroken: existingPlayer.hasRequiredBroken,
+        };
+      });
+
+      state.teamAssignments = Object.fromEntries(
+        state.players.map((player) => [player.playerId, player.team]),
+      );
 
       const player = state.players.find((p) => p.playerId === playerId);
       if (!player) {
@@ -68,17 +97,6 @@ export class StartGameUseCase implements IStartGameUseCase {
           errorMessage: reason || 'Cannot start game',
         };
       }
-
-      // Sync team assignments from DB (source of truth) to in-memory state.players.
-      // changePlayerTeamUseCase only persists to DB, so state.players may have stale teams.
-      state.players.forEach((sp) => {
-        const roomPlayer = room.players.find(
-          (rp) => rp.playerId === sp.playerId,
-        );
-        if (roomPlayer) {
-          sp.team = roomPlayer.team;
-        }
-      });
 
       // 空席をCOMで埋めてからゲーム開始
       await this.roomService.fillVacantSeatsWithCOM(roomId);
