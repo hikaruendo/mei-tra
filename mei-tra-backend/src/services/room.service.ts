@@ -182,7 +182,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const slotsToFill = CAPACITY - actualCount - placeholderCount;
     for (let i = 0; i < slotsToFill; i++) {
       const idx = actualCount + placeholderCount + i;
+      // Balance teams: assign to whichever team has fewer players
+      const team0Count = room.players.filter((p) => p.team === 0).length;
+      const team1Count = room.players.filter((p) => p.team === 1).length;
+      const team = (team0Count <= team1Count ? 0 : 1) as Team;
       const placeholder = this.createCOMPlaceholder(idx);
+      placeholder.team = team;
       await this.roomRepository.addPlayer(roomId, placeholder);
       room.players.push(placeholder);
     }
