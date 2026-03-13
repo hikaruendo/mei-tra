@@ -27,9 +27,8 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const getTeamPlayerNames = (teamNumber: number): string => {
-    const teamPlayers = players
-      .filter(player => player.team === teamNumber && !player.isCOM);
-    return teamPlayers.map(player => player.name).join(' & ');
+    const teamPlayers = players.filter(player => player.team === teamNumber);
+    return teamPlayers.map(player => player.isCOM ? 'com' : player.name).join(' & ');
   };
 
   const handleLeaveClick = () => {
