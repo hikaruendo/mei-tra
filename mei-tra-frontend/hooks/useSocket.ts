@@ -150,6 +150,10 @@ export function useSocket(): UseSocketReturn {
 
     return () => {
       isMounted = false;
+      // Reset so the next effect invocation (e.g. React Strict Mode re-mount) can re-initialize.
+      // Without this, if Strict Mode cleanup runs before initializeSocket() resolves, the
+      // isInitializingRef stays true and blocks all future runs.
+      isInitializingRef.current = false;
       cleanupHandlers?.();
     };
   }, [loading, user, getAccessToken]); // Wait for auth loading to complete

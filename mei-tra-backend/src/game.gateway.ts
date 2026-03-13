@@ -743,25 +743,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const updatedRoom = await this.roomService.getRoom(data.roomId);
         if (updatedRoom) {
           this.server.to(data.roomId).emit('room-updated', updatedRoom);
-          // 新規に追加されたCOMプレースホルダーのみ通知（既存分は上のループで送信済み）
-          for (const comPlayer of updatedRoom.players) {
-            if (
-              comPlayer.isCOM &&
-              !comPlayer.isReady &&
-              !existingCOMIds.has(comPlayer.playerId)
-            ) {
-              this.server.to(data.roomId).emit('game-player-joined', {
-                playerId: comPlayer.playerId,
-                roomId: data.roomId,
-                isHost: false,
-                roomStatus,
-                team: comPlayer.team,
-                name: comPlayer.name,
-                isCOM: true,
-                isReady: false,
-              });
-            }
-          }
+          // update-players で全プレイヤー(real + COM)を同期し、staleなCOMゴーストを排除する
+          this.server
+            .to(data.roomId)
+            .emit('update-players', updatedRoom.players);
         }
       }
 
@@ -904,9 +889,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
 
-      // Sync useGame.ts players state with updated team assignments
-      const realPlayers = result.updatedRoom.players.filter((p) => !p.isCOM);
-      this.server.to(data.roomId).emit('update-players', realPlayers);
+      // Sync all clients with full player list (real + COM) to keep team display consistent
+      this.server
+        .to(data.roomId)
+        .emit('update-players', result.updatedRoom.players);
 
       return { success: true };
     } catch (error) {
@@ -958,8 +944,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.roomService.updateRoom(data.roomId, room);
 
       this.server.to(data.roomId).emit('room-updated', room);
-      const realPlayers = room.players.filter((p) => !p.isCOM);
-      this.server.to(data.roomId).emit('update-players', realPlayers);
+      this.server.to(data.roomId).emit('update-players', room.players);
 
       return { success: true };
     } catch (error) {

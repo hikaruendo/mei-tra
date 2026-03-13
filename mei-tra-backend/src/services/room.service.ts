@@ -554,6 +554,18 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         ).length;
         team = (team0Count <= team1Count ? 0 : 1) as Team;
       }
+
+      // 待機中ルームでvacantSeatsなし → COMプレースホルダーを置換する
+      // (DBとin-memoryを一致させるためreplacingDummyIdとassignedIndexをここで設定)
+      if (!replacingDummyId && assignedIndex === -1) {
+        const waitingCOMIndex = room.players.findIndex(
+          (p) => p.isCOM === true && !p.isReady,
+        );
+        if (waitingCOMIndex !== -1) {
+          replacingDummyId = room.players[waitingCOMIndex].playerId;
+          assignedIndex = waitingCOMIndex;
+        }
+      }
     }
 
     const seatRoomSnapshot = restoredSeatData?.roomPlayer;
