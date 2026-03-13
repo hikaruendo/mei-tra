@@ -19,7 +19,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
     request: SelectBaseSuitRequest,
   ): Promise<SelectBaseSuitResponse> {
     try {
-      const { roomId, socketId, suit } = request;
+      const { roomId, userId, suit } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
@@ -30,7 +30,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
         return { success: false, error: 'Cannot select base suit now' };
       }
 
-      const player = state.players.find((p) => p.id === socketId);
+      const player = state.players.find((p) => p.userId === userId);
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
       }

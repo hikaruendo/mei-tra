@@ -38,7 +38,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
+        // Exclude Next.js internal API routes (backend-status) from the backend proxy
+        source: '/api/:path((?!backend-status).*)',
         destination: backendBaseUrl
           ? `${backendBaseUrl}/api/:path*`
           : 'http://localhost:3333/api/:path*',

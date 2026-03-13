@@ -16,21 +16,18 @@ export function getSocket(authToken?: string): Socket {
   if (!socket && typeof window !== 'undefined') {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
 
-    // Only authenticated users can connect
-    const roomId = sessionStorage.getItem('roomId') || '';
-
-    console.log('[Socket] Retrieved from sessionStorage:', {
-      roomId: roomId || 'none',
-      hasAuthToken: !!authToken
-    });
-
     const isSafari = detectSafari();
 
     const socketOptions = {
       transports: isSafari ? ['polling', 'websocket'] : ['websocket', 'polling'],
-      auth: {
-        roomId,
-        token: authToken,
+      // Use callback so roomId is read from sessionStorage on every reconnection attempt.
+      // This ensures that after a server restart, the socket reconnects with the correct
+      // roomId (set in sessionStorage when the player joined a room), allowing the server
+      // to re-add the socket to the correct socket.io room and receive room broadcasts.
+      auth: (cb: (data: { roomId: string; token?: string }) => void) => {
+        const currentRoomId = sessionStorage.getItem('roomId') || '';
+        console.log('[Socket] Auth callback — roomId from sessionStorage:', currentRoomId || 'none');
+        cb({ roomId: currentRoomId, token: authToken });
       },
       autoConnect: false,
       reconnection: true,
@@ -50,6 +47,7 @@ export function getSocket(authToken?: string): Socket {
     console.log('[Socket] Browser:', isSafari ? 'Safari/iOS' : 'Other');
     console.log('[Socket] Transports:', socketOptions.transports);
     console.log('[Socket] Auth token:', authToken ? 'present' : 'none');
+    console.log('[Socket] Auth roomId will be read dynamically from sessionStorage on each connect');
 
     socket.on('connect', () => {
       console.log('[Socket] Connected successfully with transport:', socket?.io.engine.transport.name);

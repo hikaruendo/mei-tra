@@ -48,9 +48,12 @@ export const useGame = () => {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
 
   const [users, setUsers] = useState<User[]>([]);
+  // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
+  const usersRef = useRef<User[]>([]);
 
   const [paused, setPaused] = useState(false);
 
@@ -85,14 +88,15 @@ export const useGame = () => {
     const socketHandlers = {
       // ユーザーの更新
       'update-users': (users: User[]) => {
+        usersRef.current = users;
         setUsers(users);
       },
       'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
         if (success && playerId && name) {
           setUsers((prev) => {
-            const existingIndex = prev.findIndex((u) => u.id === socket?.id || u.playerId === playerId);
+            const existingIndex = prev.findIndex((u) => u.playerId === playerId);
             const baseUser = {
-              id: socket?.id ?? playerId,
+              id: playerId,
               playerId,
               name,
               isAuthenticated: false,
@@ -150,7 +154,7 @@ export const useGame = () => {
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
         setTeamScores(teamScores);
-        setCurrentPlayerId(you);
+        if (you !== undefined) setCurrentPlayerId(you);
         setNegriCard(negriCard);
         setCompletedFields(fields);
         setNegriPlayerId(negriPlayerId);
@@ -158,22 +162,18 @@ export const useGame = () => {
         setGameStarted(true);
         setPointsToWin(pointsToWin);
       },
-      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string }) => {
-        // Initialize currentPlayerId if this is our own join event
-        const socketId = socket?.id;
-        if (socketId && !currentPlayerId) {
-          // Try to find ourselves in the users list
-          const currentUser = users.find(u => u.id === socketId);
-          if (currentUser?.playerId) {
-            setCurrentPlayerId(currentUser.playerId);
-          } else {
-            // Fallback: use the playerId from the event
-            setCurrentPlayerId(data.playerId);
-          }
+      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean; team?: number; name?: string }) => {
+        // isSelf: true means the backend confirmed "this is YOUR player ID".
+        // Only set currentPlayerId from this explicit self-identification event.
+        if (data.isSelf) {
+          setCurrentPlayerId(data.playerId);
+          setCurrentRoomId(data.roomId);
+          setIsHost(data.isHost);
         }
 
         if (data.playerId === currentPlayerId) {
           setCurrentRoomId(data.roomId);
+          setIsHost(data.isHost);
         }
         if (data.roomStatus === 'playing') {
           setGameStarted(true);
@@ -186,13 +186,15 @@ export const useGame = () => {
             return prev;
           }
 
-          if (!socketId) return prev;
+          // Look up display name from users list by playerId (not socket.id).
+          // Use usersRef.current to avoid stale closure — users state may be empty at handler registration time.
+          const knownUser = usersRef.current.find(u => u.playerId === data.playerId);
 
           return [...prev, {
-            id: socketId,
+            id: data.playerId,
             playerId: data.playerId,
-            name: data.playerId,
-            team: 0,
+            name: data.name || knownUser?.name || data.playerId,
+            team: (data.team ?? 0) as Player['team'],
             hand: [],
             isHost: data.isHost,
           }];
@@ -202,22 +204,18 @@ export const useGame = () => {
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
         setPlayers(players);
-        const id = socket?.id;
-        const index = players.findIndex(p => p.id === id);
 
-        // Defensive check: fallback to userId if socket ID not found
-        if (index === -1) {
-          console.error('[useGame] Player not found in game-started', { socketId: id });
-          // Try to find by userId as fallback using the users list
-          const currentUser = users.find(u => u.id === id);
-          if (currentUser) {
-            const userIndex = players.findIndex(p => p.userId === currentUser.userId);
-            if (userIndex !== -1) {
-              setCurrentPlayerId(players[userIndex].playerId);
-            }
-          }
-        } else {
+        // Identify self by playerId (stable across reconnections), not socket.id
+        const index = players.findIndex(p => p.playerId === currentPlayerId);
+        if (index !== -1) {
           setCurrentPlayerId(players[index].playerId);
+        } else {
+          // Fallback: match by userId for authenticated users
+          console.error('[useGame] Player not found in game-started by playerId', { currentPlayerId });
+          const userIndex = players.findIndex(p => p.userId && users.find(u => u.userId === p.userId && u.playerId === currentPlayerId));
+          if (userIndex !== -1) {
+            setCurrentPlayerId(players[userIndex].playerId);
+          }
         }
 
         setCurrentRoomId(roomId);
@@ -398,10 +396,15 @@ export const useGame = () => {
         gameOverShownRef.current = null;
         setGameStarted(false);
         setGamePhase(null);
+        setCurrentRoomId(null);
+        setIsHost(false);
+        setPlayers([]);
         setTeamScores({
           0: { deal: 0, blow: 0, play: 0, total: 0 },
           1: { deal: 0, blow: 0, play: 0, total: 0 }
         });
+        // Clear stored roomId so socket reconnects don't attempt to rejoin the old room
+        sessionStorage.removeItem('roomId');
       },
       'game-paused': ({ message }: { message: string }) => {
         setPaused(true);
@@ -419,6 +422,12 @@ export const useGame = () => {
           message: `プレイヤー ${playerId} が長時間切断のため、ダミープレイヤーに変換されました`,
           type: 'warning'
         });
+      },
+      'player-left': ({ playerId }: { playerId: string; roomId: string }) => {
+        if (playerId === currentPlayerId) {
+          setCurrentRoomId(null);
+          setIsHost(false);
+        }
       },
     };
 
@@ -448,6 +457,35 @@ export const useGame = () => {
     if (!options?.preservePlayers) {
       setPlayers(prev => prev.map(player => ({ ...player, isPasser: false })));
     }
+  };
+
+  const startGame = () => {
+    if (!currentRoomId || !currentPlayerId) return;
+    socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
+  };
+
+  const shuffleTeams = () => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    // Shuffle all current players (humans + COMs) for all team combinations
+    const activePlayers = [...players];
+    if (activePlayers.length < 2) return;
+    // Fisher-Yates shuffle over all active players (humans + COMs)
+    const shuffled = [...activePlayers];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    // First half → team 0, second half → team 1
+    const half = Math.ceil(shuffled.length / 2);
+    const teamChanges: { [playerId: string]: number } = {};
+    shuffled.forEach((p, idx) => {
+      teamChanges[p.playerId] = idx < half ? 0 : 1;
+    });
+    socket.emit('change-player-team', {
+      roomId: currentRoomId,
+      playerId: currentPlayerId,
+      teamChanges,
+    });
   };
 
   const gameActions = {
@@ -557,6 +595,9 @@ export const useGame = () => {
     notification,
     setNotification,
     currentRoomId,
+    isHost,
+    startGame,
+    shuffleTeams,
     pointsToWin,
     users,
     paused,

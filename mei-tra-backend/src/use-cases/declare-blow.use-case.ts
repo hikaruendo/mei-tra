@@ -27,10 +27,10 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
 
   async execute(request: DeclareBlowRequest): Promise<DeclareBlowResponse> {
     try {
-      const { roomId, socketId, declaration } = request;
+      const { roomId, userId, declaration } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.id === socketId);
+      const player = state.players.find((p) => p.userId === userId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };

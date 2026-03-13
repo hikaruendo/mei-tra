@@ -2,7 +2,7 @@ import { GatewayEvent } from './gateway-event.interface';
 
 export interface RevealBrokenHandRequest {
   roomId: string;
-  socketId: string;
+  userId: string;
   playerId: string;
 }
 

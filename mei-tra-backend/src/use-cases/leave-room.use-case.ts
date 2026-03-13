@@ -65,22 +65,19 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
       // Preserve team assignment for returning players
       state.teamAssignments[player.playerId] = player.team;
 
-      const actualPlayerCount = state.players.filter(
-        (p) => !p.playerId.startsWith('dummy-'),
-      ).length;
-
-      const gamePausedMessage =
-        actualPlayerCount < roomExists.settings.maxPlayers &&
-        state.gamePhase !== null
-          ? 'Not enough players. Game paused.'
-          : undefined;
+      // state.players is empty during waiting room (populated only at startGame).
+      // Fall back to the room's real (non-COM) players in that case.
+      const updatedPlayers =
+        state.players.length > 0
+          ? state.players
+          : (roomExists?.players.filter((p) => !p.isCOM) ?? []);
 
       return {
         success: true,
         data: {
           ...baseResponse,
-          updatedPlayers: state.players,
-          gamePausedMessage,
+          updatedPlayers,
+          // dummyが空席を引き継ぐためゲームは継続 (gamePausedMessage は送らない)
         },
       };
     } catch (error) {

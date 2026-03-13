@@ -12,7 +12,7 @@ export interface ComAutoPlayResponse {
   revealBrokenRequest?: {
     roomId: string;
     playerId: string;
-    socketId: string;
+    userId: string;
   };
   completeFieldTrigger?: CompleteFieldTrigger;
   shouldContinue: boolean;

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { TrumpType, TeamScores, Player } from '../../types/game.types';
 import { getTrumpDisplay } from '../../lib/utils/trumpDisplay';
 import styles from './index.module.scss';
-import { useRoom } from '../../hooks/useRoom';
 import { useTranslations } from 'next-intl';
 import { ConfirmModal } from '../molecules/ConfirmModal';
 interface GameInfoProps {
@@ -10,9 +9,9 @@ interface GameInfoProps {
   currentHighestDeclarationPlayer: string | null;
   numberOfPairs: number;
   teamScores: TeamScores;
-  currentRoomId: string | null;
   pointsToWin: number;
   players: Player[];
+  onLeave?: () => void;
 }
 
 export const GameInfo: React.FC<GameInfoProps> = ({
@@ -20,18 +19,16 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   currentHighestDeclarationPlayer,
   numberOfPairs,
   teamScores,
-  currentRoomId,
   pointsToWin,
   players,
+  onLeave,
 }) => {
   const t = useTranslations();
-  const { leaveRoom } = useRoom();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const getTeamPlayerNames = (teamNumber: number): string => {
-    const teamPlayers = players
-      .filter(player => player.team === teamNumber && !player.playerId.startsWith('dummy-'));
-    return teamPlayers.map(player => player.name).join(' & ');
+    const teamPlayers = players.filter(player => player.team === teamNumber);
+    return teamPlayers.map(player => player.isCOM ? 'com' : player.name).join(' & ');
   };
 
   const handleLeaveClick = () => {
@@ -39,7 +36,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   };
 
   const handleConfirmLeave = () => {
-    leaveRoom(currentRoomId ?? '');
+    onLeave?.();
     setShowConfirmModal(false);
   };
 

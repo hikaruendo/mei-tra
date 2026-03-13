@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+
 import { CreateRoomUseCase } from '../create-room.use-case';
 import { ChatService } from '../../services/chat.service';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
@@ -10,7 +10,6 @@ import { ChatRoom, ChatRoomId } from '../../types/social.types';
 describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
   let createRoomUseCase: CreateRoomUseCase;
   let roomService: jest.Mocked<IRoomService>;
-  let gameStateService: jest.Mocked<any>;
   let chatService: jest.Mocked<ChatService>;
 
   beforeEach(() => {
@@ -33,16 +32,8 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       updateUserGameStats: jest.fn(),
       updateUserLastSeen: jest.fn(),
       fillVacantSeatsWithCOM: jest.fn(),
+      initCOMPlaceholders: jest.fn(),
     } as jest.Mocked<IRoomService>;
-
-    gameStateService = {
-      getUsers: jest.fn().mockReturnValue([
-        { id: 'socket-1', playerId: 'user-123' },
-        { id: 'socket-2', playerId: 'user-456' },
-        { id: 'socket-3', playerId: 'user-789' },
-        { id: 'socket-4', playerId: 'user-abc' },
-      ]),
-    };
 
     chatService = {
       createRoom: jest.fn(),
@@ -52,7 +43,7 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       listRooms: jest.fn(),
     } as unknown as jest.Mocked<ChatService>;
 
-    createRoomUseCase = new CreateRoomUseCase(roomService, gameStateService);
+    createRoomUseCase = new CreateRoomUseCase(roomService);
   });
 
   describe('Chat Room Auto-creation Integration', () => {
@@ -93,7 +84,6 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       chatService.createRoom.mockResolvedValue(mockChatRoom);
 
       const result = await createRoomUseCase.execute({
-        clientId: 'socket-1',
         roomName: 'Test Game Room',
         pointsToWin: 10,
         teamAssignmentMethod: 'random',
@@ -147,7 +137,6 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       chatService.createRoom.mockResolvedValue(mockChatRoom);
 
       const result = await createRoomUseCase.execute({
-        clientId: 'socket-2',
         roomName: 'Custom Room',
         pointsToWin: 15,
         teamAssignmentMethod: 'host-choice',
@@ -190,7 +179,6 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       );
 
       const result = await createRoomUseCase.execute({
-        clientId: 'socket-3',
         roomName: 'Resilient Room',
         pointsToWin: 10,
         teamAssignmentMethod: 'random',
@@ -337,7 +325,6 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       chatService.createRoom.mockResolvedValue(mockChatRoom);
 
       const gameRoomResult = await createRoomUseCase.execute({
-        clientId: 'socket-4',
         roomName: 'Consistency Test',
         pointsToWin: 10,
         teamAssignmentMethod: 'random',

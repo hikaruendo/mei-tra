@@ -87,7 +87,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
     const result: PlayCardResponse = await this.playCardUseCase.execute({
       roomId,
-      socketId: comPlayer.id,
+      userId: comPlayer.userId ?? comPlayer.playerId,
       card: bestCard,
     });
 
@@ -122,7 +122,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     // COMは常にパス
     const result: PassBlowResponse = await this.passBlowUseCase.execute({
       roomId,
-      socketId: comPlayer.id,
+      userId: comPlayer.userId ?? comPlayer.playerId,
     });
 
     const { events = [], delayedEvents = [] } =

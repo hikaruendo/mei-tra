@@ -22,10 +22,10 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
     request: RevealBrokenHandRequest,
   ): Promise<RevealBrokenHandPreparation> {
     try {
-      const { roomId, socketId, playerId } = request;
+      const { roomId, userId, playerId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.id === socketId);
+      const player = state.players.find((p) => p.userId === userId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };

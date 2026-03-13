@@ -164,7 +164,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 showName={true}
               />
             </div>
-            <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>
+            {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
             {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
               <div className={styles.selectNegriCard}>{t('selectNegri')}</div>
             )}

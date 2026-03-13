@@ -112,24 +112,18 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     roomId: string,
     room: JoinRoomSuccess['room'],
   ): Promise<ResumeGamePayload | undefined> {
-    if (room.status !== RoomStatus.PLAYING) {
-      return undefined;
-    }
-
-    const actualPlayerCount = room.players.filter(
-      (p) => !p.playerId.startsWith('dummy-'),
-    ).length;
-
-    if (actualPlayerCount !== room.settings.maxPlayers) {
-      return undefined;
-    }
-
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
 
-    if (state.gamePhase !== null) {
+    // room.status の fallback（WAITING→PLAYING 状態遷移バグがある既存ルームも考慮）
+    const isPlaying =
+      room.status === RoomStatus.PLAYING || state.gamePhase !== null;
+    if (!isPlaying) {
       return undefined;
     }
+
+    // COMが残っていても、ゲーム中フェーズ（blow/play）でも game-state を送る
+    // （プレイ中ルームへの途中参加・COM引き継ぎに対応）
 
     const currentTurn =
       state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
@@ -137,7 +131,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         : null;
 
     return {
-      message: 'Game resumed with 4 players.',
+      message: 'Joined active game.',
       gameState: {
         players: state.players,
         gamePhase: state.gamePhase,

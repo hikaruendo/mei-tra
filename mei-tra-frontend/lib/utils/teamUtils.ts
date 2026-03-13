@@ -5,7 +5,7 @@ import { Player } from '../../types/game.types';
  */
 export const getTeamDisplayName = (players: Player[], teamNumber: 0 | 1): string => {
   const teamPlayers = players
-    .filter(p => p.team === teamNumber && !p.playerId.startsWith('dummy-'))
+    .filter(p => p.team === teamNumber && !p.isCOM)
     .map(p => p.name);
 
   if (teamPlayers.length === 0) {
@@ -29,7 +29,7 @@ export const getWinningTeamName = (players: Player[], winningTeam: 0 | 1): strin
  */
 export const getTeamOptionLabel = (players: Player[], teamNumber: 0 | 1): string => {
   const teamPlayers = players
-    .filter(p => p.team === teamNumber && !p.playerId.startsWith('dummy-'));
+    .filter(p => p.team === teamNumber && !p.isCOM);
 
   if (teamPlayers.length === 0) {
     return `チーム ${teamNumber + 1}`;

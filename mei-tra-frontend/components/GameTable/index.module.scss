@@ -6,15 +6,59 @@
     "left field right"
     ".    bottom  .";
   grid-template-columns: 300px 120px 300px;
-  grid-template-rows: 180px 65px 400px;
+  grid-template-rows: 180px auto 400px;
   gap: var(--spacing-lg);
   justify-content: center;
+}
+
+.waitingCenter {
+  grid-area: field;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.startButton {
+  padding: 0.875rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #43a047;
+  }
+}
+
+.waitingText {
+  font-size: 1rem;
+  color: #aaa;
+  text-align: center;
+}
+
+.leaveButton {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  background-color: transparent;
+  color: #888;
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
 }
 
 @media (max-width: 768px) {
   .playerPositions {
     grid-template-columns: 140px 75px 140px;
-    grid-template-rows: 0px 150px 435px;
+    grid-template-rows: 0px auto 435px;
     gap: var(--spacing-md);
     margin-top: 90px;
   }

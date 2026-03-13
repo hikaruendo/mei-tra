@@ -39,12 +39,8 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       }
 
       const currentTeamCounts = {
-        0: room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-') && p.team === 0,
-        ).length,
-        1: room.players.filter(
-          (p) => !p.playerId.startsWith('dummy-') && p.team === 1,
-        ).length,
+        0: room.players.filter((p) => !p.isCOM && p.team === 0).length,
+        1: room.players.filter((p) => !p.isCOM && p.team === 1).length,
       } as Record<Team, number>;
 
       const newTeamCounts = { ...currentTeamCounts };
@@ -70,19 +66,24 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
         };
       }
 
-      for (const [playerId, newTeam] of Object.entries(teamChanges)) {
-        const player = room.players.find((p) => p.playerId === playerId);
-        if (player) {
-          player.team = newTeam as Team;
-        }
+      // Persist each team change to room_players table via updatePlayerInRoom.
+      // updateRoom() only saves rooms-table columns (name/hostId/status) and would
+      // return stale team values fetched from room_players.
+      for (const [pid, newTeam] of Object.entries(teamChanges)) {
+        await this.roomService.updatePlayerInRoom(roomId, pid, {
+          team: newTeam as Team,
+        });
       }
 
-      room.updatedAt = new Date();
-      await this.roomService.updateRoom(roomId, room);
+      // Re-fetch room so updatedRoom.players reflects the persisted team changes.
+      const updatedRoom = await this.roomService.getRoom(roomId);
+      if (!updatedRoom) {
+        return { success: false, error: 'Failed to retrieve updated room' };
+      }
 
       return {
         success: true,
-        updatedRoom: room,
+        updatedRoom,
       };
     } catch (error) {
       this.logger.error(

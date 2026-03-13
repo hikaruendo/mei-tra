@@ -19,10 +19,10 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
 
   async execute(request: SelectNegriRequest): Promise<SelectNegriResponse> {
     try {
-      const { roomId, socketId, card } = request;
+      const { roomId, userId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.id === socketId);
+      const player = state.players.find((p) => p.userId === userId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
