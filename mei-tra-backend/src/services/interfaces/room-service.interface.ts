@@ -42,4 +42,5 @@ export interface IRoomService {
   ): Promise<void>;
   updateUserLastSeen(userId: string): Promise<void>;
   fillVacantSeatsWithCOM(roomId: string): Promise<void>;
+  initCOMPlaceholders(roomId: string): Promise<void>;
 }

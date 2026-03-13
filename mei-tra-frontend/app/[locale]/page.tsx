@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GameTable } from '../../components/GameTable';
+import { PreGameTable } from '../../components/PreGameTable';
 import { Notification } from '../../components/Notification';
 import { Navigation } from '../../components/layout/Navigation';
 import { useGame } from '../../hooks/useGame';
@@ -12,6 +13,7 @@ import { GameDock } from '../../components/game/GameDock';
 import { LandingPage } from '../../components/landing/LandingPage';
 import { AuthModal } from '../../components/auth/AuthModal';
 import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +24,7 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const gameState = useGame();
+  const { socket } = useSocket();
 
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -97,6 +100,9 @@ export default function Home() {
     notification,
     setNotification,
     currentRoomId = null,
+    isHost = false,
+    startGame,
+    shuffleTeams,
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -121,9 +127,15 @@ export default function Home() {
     );
   }
 
+  const handleLeaveRoom = () => {
+    if (socket && currentRoomId && currentPlayerId) {
+      socket.emit('leave-room', { roomId: currentRoomId, playerId: currentPlayerId });
+    }
+  };
+
   return (
     <ProtectedRoute requireAuth={true}>
-      <Navigation gameStarted={gameStarted} />
+      <Navigation gameStarted={gameStarted} inRoom={!!currentRoomId} />
       <main>
         {notification && (
           <Notification
@@ -138,47 +150,63 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <div style={{ display: gameStarted ? 'none' : 'block' }}>
+            {/* ① RoomList: 部屋に入っていない && ゲーム未開始 */}
+            <div style={{ display: (!currentRoomId && !gameStarted) ? 'block' : 'none' }}>
               <RoomList
                 isConnected={isConnected}
                 isConnecting={isConnecting}
-                players={players}
                 users={users}
                 currentPlayerId={currentPlayerId}
               />
             </div>
-            <div className={gameStarted ? styles.gameWrapper : undefined} style={{ display: gameStarted ? 'block' : 'none' }}>
-              <GameTable
-                whoseTurn={whoseTurn}
-                gamePhase={gamePhase}
-                currentTrump={currentTrump}
-                currentField={currentField}
-                players={players}
-                negriCard={negriCard}
-                negriPlayerId={negriPlayerId}
-                completedFields={completedFields}
-                revealedAgari={revealedAgari}
-                gameActions={gameActions}
-                blowDeclarations={blowDeclarations}
-                currentHighestDeclaration={currentHighestDeclaration}
-                selectedTrump={selectedTrump}
-                setSelectedTrump={setSelectedTrump}
-                numberOfPairs={numberOfPairs}
-                setNumberOfPairs={setNumberOfPairs}
-                teamScores={teamScores}
-                currentPlayerId={currentPlayerId}
-                currentRoomId={currentRoomId}
-                pointsToWin={pointsToWin}
-              />
-              {currentRoomId && (
-                <GameDock
-                  roomId={currentRoomId}
-                  gameStarted={gameStarted}
-                  currentTrump={currentTrump}
+
+            {/* ② PreGameTable: 待機中 / GameTable: ゲーム中 */}
+            {currentRoomId && (
+              <div className={styles.gameWrapper}>
+                {!gameStarted ? (
+                  <PreGameTable
+                    players={players}
+                    currentPlayerId={currentPlayerId}
+                    isHost={isHost}
+                    onStart={startGame}
+                    onLeave={handleLeaveRoom}
+                    shuffleTeams={shuffleTeams}
+                  />
+                ) : (
+                <GameTable
+                  whoseTurn={whoseTurn}
                   gamePhase={gamePhase}
+                  currentTrump={currentTrump}
+                  currentField={currentField}
+                  players={players}
+                  negriCard={negriCard}
+                  negriPlayerId={negriPlayerId}
+                  completedFields={completedFields}
+                  revealedAgari={revealedAgari}
+                  gameActions={gameActions}
+                  blowDeclarations={blowDeclarations}
+                  currentHighestDeclaration={currentHighestDeclaration}
+                  selectedTrump={selectedTrump}
+                  setSelectedTrump={setSelectedTrump}
+                  numberOfPairs={numberOfPairs}
+                  setNumberOfPairs={setNumberOfPairs}
+                  teamScores={teamScores}
+                  currentPlayerId={currentPlayerId}
+                  currentRoomId={currentRoomId}
+                  pointsToWin={pointsToWin}
+                  onLeave={handleLeaveRoom}
                 />
-              )}
-            </div>
+                )}
+                {gameStarted && (
+                  <GameDock
+                    roomId={currentRoomId}
+                    gameStarted={gameStarted}
+                    currentTrump={currentTrump}
+                    gamePhase={gamePhase}
+                  />
+                )}
+              </div>
+            )}
           </>
         )}
       </main>

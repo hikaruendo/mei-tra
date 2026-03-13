@@ -12,10 +12,8 @@ export class PlayService implements IPlayService {
     players: Player[],
     trumpSuit: TrumpType | null,
   ): Player | null {
-    // 有効なプレイヤー（ダミーでないプレイヤー）のみをフィルタリング
-    const validPlayers = players.filter(
-      (p) => !p.playerId.startsWith('dummy-'),
-    );
+    // COMでないプレイヤーのみをフィルタリング
+    const validPlayers = players.filter((p) => !p.isCOM);
     if (validPlayers.length === 0) {
       return null;
     }

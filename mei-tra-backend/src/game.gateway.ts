@@ -174,7 +174,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const clientSocket = this.server.sockets.sockets.get(request.socketId);
+    const clientSocket = [...this.server.sockets.sockets.values()].find(
+      (s) =>
+        (s.data as { user?: AuthenticatedUser }).user?.id === request.userId,
+    );
     if (!clientSocket) {
       console.warn(
         '[GameGateway] Socket not found when handling required broken hand',
@@ -441,7 +444,30 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           error,
         );
       }
-      if (reconnected) return;
+      if (reconnected) {
+        // Even on successful reconnection, keep gameState.users in sync with the
+        // new socket ID. Without this, actions like create-room (which look up the
+        // user by socket.id) would fail after the player leaves and tries to create
+        // a new room, because the old socket ID is no longer valid.
+        const displayName =
+          authenticatedUser.profile?.displayName ||
+          authenticatedUser.email ||
+          'User';
+        const existingUser = this.gameState
+          .getUsers()
+          .find((u) => u.userId === authenticatedUser.id);
+        if (existingUser) {
+          existingUser.id = client.id;
+        } else {
+          this.gameState.addPlayer(
+            client.id,
+            displayName,
+            authenticatedUser.id,
+            true,
+          );
+        }
+        return;
+      }
     }
 
     // 新規認証済みプレイヤーとして追加
@@ -583,7 +609,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 共通ヘルパーメソッドを使用して名前を取得
       const playerName = this.getPlayerName(authenticatedUser || null, auth);
       const result = await this.createRoomUseCase.execute({
-        clientId: client.id,
         roomName: data.name,
         pointsToWin: data.pointsToWin,
         teamAssignmentMethod: data.teamAssignmentMethod,
@@ -597,7 +622,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      const { room, roomsList } = result.data;
+      const { room } = result.data;
 
       this.playerRooms.set(client.id, room.id);
       await client.join(room.id);
@@ -621,6 +646,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Don't fail the game room creation if chat room creation fails
       }
 
+      const roomsList = result.data.roomsList;
       this.server.emit('rooms-list', roomsList);
 
       return { success: true, room };
@@ -680,12 +706,68 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isHost,
       });
 
-      this.server.to(data.roomId).emit('game-player-joined', {
+      // Send self-identification FIRST directly to the joining client.
+      // isSelf: true tells the frontend "this is YOUR player ID".
+      // This must arrive before the existing-player loop events.
+      const joiningPlayer = room.players.find(
+        (p) => p.playerId === normalizedUser.playerId,
+      );
+      const joiningTeam = joiningPlayer?.team ?? 0;
+
+      client.emit('game-player-joined', {
         playerId: normalizedUser.playerId,
         roomId: data.roomId,
         isHost,
         roomStatus,
+        isSelf: true,
+        team: joiningTeam,
+        name: normalizedUser.name,
       });
+
+      // Broadcast to other room members (not the joining client) so they see the new player.
+      this.server.to(data.roomId).except(client.id).emit('game-player-joined', {
+        playerId: normalizedUser.playerId,
+        roomId: data.roomId,
+        isHost,
+        roomStatus,
+        team: joiningTeam,
+        name: normalizedUser.name,
+      });
+
+      // Notify the joining client about each player already in the room.
+      // game-player-joined only carries one player at a time, so we loop.
+      // usersRef in useGame resolves display names, so this reuses existing logic.
+      // COM placeholder players (isCOM:true, isReady:false) are also included
+      // so that useGame.ts's players array contains them for shuffleTeams.
+      if (!resumeGame) {
+        for (const existingPlayer of room.players) {
+          if (existingPlayer.playerId !== normalizedUser.playerId) {
+            client.emit('game-player-joined', {
+              playerId: existingPlayer.playerId,
+              roomId: data.roomId,
+              isHost: existingPlayer.isHost,
+              roomStatus,
+              team: existingPlayer.team,
+              name: existingPlayer.name,
+              isCOM: existingPlayer.isCOM ?? false,
+              isReady: existingPlayer.isReady ?? false,
+            });
+          }
+        }
+      }
+
+      // 待機中ルームに参加した場合、残席をCOMプレースホルダーで埋める
+      if (!resumeGame && roomStatus === RoomStatus.WAITING) {
+        await this.roomService.initCOMPlaceholders(data.roomId);
+        const updatedRoom = await this.roomService.getRoom(data.roomId);
+        if (updatedRoom) {
+          this.server.to(data.roomId).emit('room-updated', updatedRoom);
+          // update-players で全プレイヤー(real + COM)を同期し、staleなCOMゴーストを排除する
+          this.server
+            .to(data.roomId)
+            .emit('update-players', updatedRoom.players);
+        }
+      }
 
       this.server.emit('rooms-list', roomsList);
       this.server.to(data.roomId).emit('set-room-id', data.roomId);
@@ -790,6 +872,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
           .to(data.roomId)
           .emit('game-paused', { message: gamePausedMessage });
+      } else if (!roomDeleted) {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
       }
 
       return { success: true };
@@ -823,9 +907,67 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
+
+      // Sync all clients with full player list (real + COM) to keep team display consistent
+      this.server
+        .to(data.roomId)
+        .emit('update-players', result.updatedRoom.players);
+
       return { success: true };
     } catch (error) {
       console.error('Error in handleChangePlayerTeam:', error);
+      client.emit('error-message', 'Internal server error');
+      return { success: false };
+    }
+  }
+
+  @SubscribeMessage('shuffle-teams')
+  async handleShuffleTeams(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; playerId: string },
+  ): Promise<{ success: boolean }> {
+    try {
+      let room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return { success: false };
+      }
+      if (room.hostId !== data.playerId) {
+        client.emit('error-message', 'Only the host can shuffle teams');
+        return { success: false };
+      }
+
+      // Auto-fill empty slots with COM before shuffling so 2:2 splits are possible
+      if (room.players.length < 4) {
+        const fillResult = await this.fillWithComUseCase.execute({
+          roomId: data.roomId,
+          playerId: data.playerId,
+        });
+        if (fillResult.success && fillResult.updatedRoom) {
+          room = fillResult.updatedRoom;
+        }
+      }
+
+      // Fisher-Yates shuffle all players (real + COM)
+      const shuffled = [...room.players];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const half = Math.floor(shuffled.length / 2);
+      shuffled.forEach((p, idx) => {
+        p.team = (idx < half ? 0 : 1) as import('./types/game.types').Team;
+      });
+
+      room.updatedAt = new Date();
+      await this.roomService.updateRoom(data.roomId, room);
+
+      this.server.to(data.roomId).emit('room-updated', room);
+      this.server.to(data.roomId).emit('update-players', room.players);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleShuffleTeams:', error);
       client.emit('error-message', 'Internal server error');
       return { success: false };
     }
@@ -903,9 +1045,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.declareBlowUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         declaration: data.declaration,
       });
 
@@ -932,9 +1075,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.passBlowUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
       });
 
       if (!result.success) {
@@ -958,9 +1102,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; card: string },
   ): Promise<void> {
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.selectNegriUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         card: data.card,
       });
 
@@ -984,9 +1129,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.playCardUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         card: data.card,
       });
 
@@ -1030,9 +1176,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; suit: string },
   ): Promise<void> {
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const result = await this.selectBaseSuitUseCase.execute({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         suit: data.suit,
       });
 
@@ -1055,9 +1202,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; playerId: string },
   ): Promise<void> {
     try {
+      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
       const preparation = await this.revealBrokenHandUseCase.prepare({
         roomId: data.roomId,
-        socketId: client.id,
+        userId: userId ?? client.id,
         playerId: data.playerId,
       });
 

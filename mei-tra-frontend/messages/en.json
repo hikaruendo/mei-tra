@@ -28,9 +28,18 @@
       "loginCta": "Log In",
       "signupCta": "Play Free",
       "metrics": [
-        { "value": "100+ years", "label": "Passed down through student clubs" },
-        { "value": "4P · 2 Teams", "label": "Core format" },
-        { "value": "Free", "label": "Browser only, no install" }
+        {
+          "value": "100+ years",
+          "label": "Passed down through student clubs"
+        },
+        {
+          "value": "4P · 2 Teams",
+          "label": "Core format"
+        },
+        {
+          "value": "Free",
+          "label": "Browser only, no install"
+        }
       ]
     },
     "screenshot": {
@@ -143,12 +152,24 @@
     },
     "footer": {
       "links": [
-        { "label": "Operating Company", "href": "https://kando1.com" },
-        { "label": "Terms of Service", "href": "/en/terms" },
-        { "label": "Privacy Policy", "href": "/en/privacy" },
-        { "label": "Tutorial", "href": "/en/tutorial" }
+        {
+          "label": "Operating Company",
+          "href": "https://kando1.com"
+        },
+        {
+          "label": "Terms of Service",
+          "href": "/en/terms"
+        },
+        {
+          "label": "Privacy Policy",
+          "href": "/en/privacy"
+        },
+        {
+          "label": "Tutorial",
+          "href": "/en/tutorial"
+        }
       ],
-      "copyright": "\u00a9 2026 Mei-Tra. All rights reserved."
+      "copyright": "© 2026 Mei-Tra. All rights reserved."
     }
   },
   "auth": {
@@ -226,6 +247,7 @@
     "updateTeams": "Update Teams",
     "teamsUpdated": "Teams Updated",
     "fillWithCom": "Add COM",
+    "waitingForHost": "Waiting for the host to start...",
     "leaveConfirm": {
       "title": "Leave Room",
       "message": "Are you sure you want to leave this room?"
@@ -235,7 +257,9 @@
       "degraded": "Server Idle",
       "error": "Server Starting...",
       "starting": "Server is starting up. Please wait."
-    }
+    },
+    "shuffleTeams": "Shuffle",
+    "fillWithCOM": "Add COM"
   },
   "game": {
     "initializing": "Initializing game...",

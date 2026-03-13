@@ -2,7 +2,6 @@ import { AuthenticatedUser } from '../../types/user.types';
 import { Room } from '../../types/room.types';
 
 export interface CreateRoomRequest {
-  clientId: string;
   roomName: string;
   pointsToWin: number;
   teamAssignmentMethod: 'random' | 'host-choice';

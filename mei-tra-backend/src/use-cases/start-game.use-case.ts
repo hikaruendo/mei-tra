@@ -30,6 +30,16 @@ export class StartGameUseCase implements IStartGameUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
+      // ゲームステートにプレイヤーが不足している場合（サーバー再起動後など）、
+      // ルームのプレイヤー情報で補完する
+      const missingPlayers = room.players.filter(
+        (rp) => !state.players.some((sp) => sp.playerId === rp.playerId),
+      );
+      for (const mp of missingPlayers) {
+        state.players.push(mp);
+        roomGameState.registerPlayerToken(mp.playerId, mp.playerId);
+      }
+
       const player = state.players.find((p) => p.playerId === playerId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
@@ -59,6 +69,20 @@ export class StartGameUseCase implements IStartGameUseCase {
         };
       }
 
+      // Sync team assignments from DB (source of truth) to in-memory state.players.
+      // changePlayerTeamUseCase only persists to DB, so state.players may have stale teams.
+      state.players.forEach((sp) => {
+        const roomPlayer = room.players.find(
+          (rp) => rp.playerId === sp.playerId,
+        );
+        if (roomPlayer) {
+          sp.team = roomPlayer.team;
+        }
+      });
+
+      // 空席をCOMで埋めてからゲーム開始
+      await this.roomService.fillVacantSeatsWithCOM(roomId);
+
       await this.roomService.updateRoomStatus(roomId, RoomStatus.PLAYING);
       await roomGameState.startGame();
 
@@ -80,14 +104,9 @@ export class StartGameUseCase implements IStartGameUseCase {
         p.isPasser = false;
       });
 
-      const firstBlowIndex = 0;
-      const firstBlowPlayer = updatedState.players[firstBlowIndex];
-
-      updatedState.currentPlayerIndex = firstBlowIndex;
-      updatedState.blowState = {
-        ...updatedState.blowState,
-        currentBlowIndex: firstBlowIndex,
-      };
+      // firstBlowIndex is randomized inside roomGameState.startGame()
+      const firstBlowPlayer =
+        updatedState.players[updatedState.blowState.currentBlowIndex];
 
       return {
         success: true,

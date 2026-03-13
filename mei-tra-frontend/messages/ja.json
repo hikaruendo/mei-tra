@@ -28,9 +28,18 @@
       "loginCta": "ログイン",
       "signupCta": "無料で始める",
       "metrics": [
-        { "value": "100年以上", "label": "受け継がれてきた歴史" },
-        { "value": "4人2チーム", "label": "プレイヤー構成" },
-        { "value": "無料", "label": "ブラウザだけで動く" }
+        {
+          "value": "100年以上",
+          "label": "受け継がれてきた歴史"
+        },
+        {
+          "value": "4人2チーム",
+          "label": "プレイヤー構成"
+        },
+        {
+          "value": "無料",
+          "label": "ブラウザだけで動く"
+        }
       ]
     },
     "screenshot": {
@@ -143,12 +152,24 @@
     },
     "footer": {
       "links": [
-        { "label": "運営会社", "href": "https://kando1.com" },
-        { "label": "利用規約", "href": "/ja/terms" },
-        { "label": "プライバシーポリシー", "href": "/ja/privacy" },
-        { "label": "チュートリアル", "href": "/ja/tutorial" }
+        {
+          "label": "運営会社",
+          "href": "https://kando1.com"
+        },
+        {
+          "label": "利用規約",
+          "href": "/ja/terms"
+        },
+        {
+          "label": "プライバシーポリシー",
+          "href": "/ja/privacy"
+        },
+        {
+          "label": "チュートリアル",
+          "href": "/ja/tutorial"
+        }
       ],
-      "copyright": "\u00a9 2026 Mei-Tra. All rights reserved."
+      "copyright": "© 2026 Mei-Tra. All rights reserved."
     }
   },
   "auth": {
@@ -226,6 +247,7 @@
     "updateTeams": "チーム更新",
     "teamsUpdated": "チーム更新完了",
     "fillWithCom": "COM追加",
+    "waitingForHost": "ホストの開始を待っています...",
     "leaveConfirm": {
       "title": "ルームから退出",
       "message": "本当にこのルームから退出しますか？"
@@ -235,7 +257,9 @@
       "degraded": "サーバーアイドル中",
       "error": "サーバー起動中...",
       "starting": "サーバーを起動しています。しばらくお待ちください。"
-    }
+    },
+    "shuffleTeams": "シャッフル",
+    "fillWithCOM": "COM追加"
   },
   "game": {
     "initializing": "ゲームを初期化中...",

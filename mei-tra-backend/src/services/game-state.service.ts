@@ -546,6 +546,10 @@ export class GameStateService implements IGameStateService {
       openDeclarerId: null,
     };
 
+    // Randomize the first blow player
+    const firstBlowIndex = Math.floor(Math.random() * state.players.length);
+    state.currentPlayerIndex = firstBlowIndex;
+
     // Initialize blow state
     state.blowState = {
       currentTrump: null,
@@ -553,7 +557,7 @@ export class GameStateService implements IGameStateService {
       declarations: [],
       lastPasser: null,
       isRoundCancelled: false,
-      currentBlowIndex: 0,
+      currentBlowIndex: firstBlowIndex,
     };
 
     // Persist the game start

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
 import { GameField } from '../GameField';
 import { GameInfo } from '../GameInfo';
@@ -6,6 +7,7 @@ import styles from './index.module.scss';
 import { PlayerHand } from '../PlayerHand';
 import { GameControls } from '../GameControls';
 import { BlowControls } from '../BlowControls';
+import { getConsistentTableOrderWithSelfBottom } from '../../lib/utils/tableOrder';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -28,36 +30,13 @@ interface GameTableProps {
   currentPlayerId: string | null;
   currentRoomId: string | null;
   pointsToWin: number;
+  // Waiting-room props (shown before game starts)
+  isWaiting?: boolean;
+  isHost?: boolean;
+  onStart?: () => void;
+  onLeave?: () => void;
 }
 
-// Utility: Get consistent table order (Team0, Team1, Team0, Team1), rotated so self is bottom
-function getConsistentTableOrderWithSelfBottom(players: Player[], currentPlayerId: string): Player[] {
-  // If we don't have enough players, return an array with undefined for missing positions
-  if (players.length < 4) {
-    const result: (Player | undefined)[] = new Array(4).fill(undefined);
-    // Fill in the positions we have players for
-    players.forEach((player, index) => {
-      result[index] = player;
-    });
-    return result as Player[];
-  }
-
-  const team0 = players.filter(p => p.team === 0);
-  const team1 = players.filter(p => p.team === 1);
-  const order: Player[] = [];
-  for (let i = 0; i < 2; i++) {
-    if (team0[i]) order.push(team0[i]);
-    if (team1[i]) order.push(team1[i]);
-  }
-  // 自分が先頭（bottom）になるように回転
-  const selfIdx = order.findIndex(p => p.playerId === currentPlayerId);
-  if (selfIdx > 0) {
-    // 反時計回りになるように順序を反転
-    const rotated = [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
-    return [rotated[0], rotated[3], rotated[2], rotated[1]];
-  }
-  return [order[0], order[3], order[2], order[1]];
-}
 
 export const GameTable: React.FC<GameTableProps> = ({
   whoseTurn,
@@ -78,10 +57,14 @@ export const GameTable: React.FC<GameTableProps> = ({
   setNumberOfPairs,
   teamScores,
   currentPlayerId,
-  currentRoomId,
   pointsToWin,
+  isWaiting = false,
+  isHost = false,
+  onStart,
+  onLeave,
 }) => {
-  // Add null check for players array
+  const tRoot = useTranslations();
+
   if (!players || players.length === 0) {
     return null;
   }
@@ -92,20 +75,32 @@ export const GameTable: React.FC<GameTableProps> = ({
   const orderedPlayers = getConsistentTableOrderWithSelfBottom(players, currentPlayerId || '');
   const positions = ['bottom', 'left', 'top', 'right'];
 
+  // During waiting, fill undefined slots with COM placeholders
+  const createCOMSlot = (idx: number): Player => ({
+    id: `com-${idx}`,
+    playerId: `com-${idx}`,
+    name: 'COM',
+    team: (idx % 2) as Player['team'],
+    hand: [],
+    isCOM: true,
+  });
+
   return (
     <>
-      <GameInfo
-        currentTrump={currentTrump}
-        currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
-        numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
-        teamScores={teamScores}
-        currentRoomId={currentRoomId}
-        pointsToWin={pointsToWin}
-        players={players}
-      />
+      {!isWaiting && (
+        <GameInfo
+          currentTrump={currentTrump}
+          currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
+          numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
+          teamScores={teamScores}
+          pointsToWin={pointsToWin}
+          players={players}
+          onLeave={onLeave}
+        />
+      )}
 
       {gamePhase && (
-        <GameControls 
+        <GameControls
           gamePhase={gamePhase}
           renderBlowControls={() => (
             <BlowControls
@@ -127,21 +122,23 @@ export const GameTable: React.FC<GameTableProps> = ({
 
       <div className={styles.playerPositions}>
         {orderedPlayers.map((player, idx) => {
-          if (!player) return null;  // Skip if player is undefined
-          
+          const resolvedPlayer = player ?? (isWaiting ? createCOMSlot(idx) : null);
+          if (!resolvedPlayer) return null;
+          const player_ = resolvedPlayer;
+
           const position = positions[idx];
           const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
 
           // Show all team's completed fields only for bottom player
-          const teamCompletedFields = position === 'bottom' 
+          const teamCompletedFields = position === 'bottom'
             ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
             : [];
 
           return (
             <PlayerHand
-              key={player.playerId}
-              player={player}
-              isCurrentTurn={whoseTurn === player.playerId}
+              key={player_.playerId}
+              player={player_}
+              isCurrentTurn={whoseTurn === player_.playerId}
               negriCard={negriCard}
               negriPlayerId={negriPlayerId}
               gamePhase={gamePhase}
@@ -156,17 +153,32 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentField={currentField}
               currentTrump={currentTrump}
             />
-          )
+          );
         })}
 
-        {/* Center field */}
-        <GameField
-          currentField={currentField}
-          players={players}
-          onBaseSuitSelect={gameActions.selectBaseSuit}
-          isCurrentPlayer={currentPlayerId === whoseTurn}
-        />
+        {isWaiting ? (
+          // Waiting room: show Start/Leave controls in the center field area
+          <div className={styles.waitingCenter}>
+            {isHost ? (
+              <button className={styles.startButton} onClick={onStart}>
+                {tRoot('room.start')}
+              </button>
+            ) : (
+              <p className={styles.waitingText}>{tRoot('room.waitingForHost')}</p>
+            )}
+            <button className={styles.leaveButton} onClick={onLeave}>
+              {tRoot('common.leave')}
+            </button>
+          </div>
+        ) : (
+          <GameField
+            currentField={currentField}
+            players={players}
+            onBaseSuitSelect={gameActions.selectBaseSuit}
+            isCurrentPlayer={currentPlayerId === whoseTurn}
+          />
+        )}
       </div>
     </>
   );
-}; 
+};

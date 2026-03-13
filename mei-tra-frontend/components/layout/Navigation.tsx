@@ -9,9 +9,10 @@ import styles from './Navigation.module.scss';
 
 interface NavigationProps {
   gameStarted?: boolean;
+  inRoom?: boolean;
 }
 
-export function Navigation({ gameStarted = false }: NavigationProps) {
+export function Navigation({ gameStarted = false, inRoom = false }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const t = useTranslations('nav');
   const locale = useLocale();
@@ -31,8 +32,9 @@ export function Navigation({ gameStarted = false }: NavigationProps) {
     router.replace(pathname, { locale: newLocale });
   };
 
-  // Hide language switcher only when game is started on home page
-  const shouldHideLangSwitcher = pathname === '/' && gameStarted;
+  // ホームページでルーム入室中（待機・プレイ問わず）は言語切替を非表示にする
+  // ロケール切替によるページリマウントで接続が切断されるのを防ぐため
+  const shouldHideLangSwitcher = pathname === '/' && (gameStarted || inRoom);
 
   return (
     <nav className={styles.navigation}>

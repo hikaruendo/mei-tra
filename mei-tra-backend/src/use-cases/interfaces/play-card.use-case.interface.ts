@@ -3,7 +3,7 @@ import { Field } from '../../types/game.types';
 
 export interface PlayCardRequest {
   roomId: string;
-  socketId: string;
+  userId: string;
   card: string;
 }
 

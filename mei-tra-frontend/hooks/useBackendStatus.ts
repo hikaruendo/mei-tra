@@ -21,7 +21,7 @@ export const useBackendStatus = () => {
 
   const checkBackendStatus = useCallback(async () => {
     try {
-      const response = await fetch('/backend-status', {
+      const response = await fetch('/api/backend-status', {
         cache: 'no-store',
       });
 

@@ -11,7 +11,7 @@ export interface TransitionResult {
   revealBrokenRequest?: {
     roomId: string;
     playerId: string;
-    socketId: string;
+    userId: string;
   };
 }
 
@@ -104,7 +104,7 @@ export async function transitionToPlayPhase({
     ? {
         roomId,
         playerId: winningPlayer.playerId,
-        socketId: winningPlayer.id,
+        userId: winningPlayer.userId ?? '',
       }
     : undefined;
 
