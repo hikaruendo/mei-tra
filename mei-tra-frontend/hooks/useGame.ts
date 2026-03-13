@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from './useSocket';
-import { BlowDeclaration, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
+import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
@@ -19,6 +19,7 @@ export const useGame = () => {
   });
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
+  const [blowActionHistory, setBlowActionHistory] = useState<BlowAction[]>([]);
   const [currentHighestDeclaration, setCurrentHighestDeclaration] = useState<BlowDeclaration | null>(null);
   const [selectedTrump, setSelectedTrump] = useState<TrumpType | null>(null);
   const [numberOfPairs, setNumberOfPairs] = useState<number>(0);
@@ -134,11 +135,7 @@ export const useGame = () => {
         gamePhase: GamePhase;
         currentField: Field | null;
         currentTurn: string;
-        blowState: {
-          currentTrump: TrumpType | null;
-          currentHighestDeclaration: BlowDeclaration | null;
-          declarations: BlowDeclaration[];
-        };
+        blowState: BlowState;
         teamScores: TeamScores;
         you: string;
         negriCard: string | null;
@@ -153,6 +150,7 @@ export const useGame = () => {
         setCurrentTrump(blowState.currentTrump);
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
+        setBlowActionHistory(blowState.actionHistory ?? []);
         setTeamScores(teamScores);
         if (you !== undefined) setCurrentPlayerId(you);
         setNegriCard(negriCard);
@@ -275,8 +273,9 @@ export const useGame = () => {
         setPlayers(players);
         setWhoseTurn(startingPlayer);
       },
-      'blow-updated': ({ declarations, currentHighest }: { declarations: BlowDeclaration[]; currentHighest: BlowDeclaration | null }) => {
+      'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclaration[]; actionHistory?: BlowAction[]; currentHighest: BlowDeclaration | null }) => {
         setBlowDeclarations(declarations);
+        setBlowActionHistory(actionHistory ?? []);
         setCurrentHighestDeclaration(currentHighest);
         // Note: Player state updates (including isPasser) are handled by 'update-players' event
         // This prevents race conditions and ensures consistency across all blow phase operations
@@ -304,7 +303,7 @@ export const useGame = () => {
       'round-reset': () => {
         resetBlowState();
       },
-      'round-cancelled': ({ nextDealer, players, currentTrump, currentHighestDeclaration, blowDeclarations }: { nextDealer: string; players: Player[]; currentTrump?: TrumpType | null; currentHighestDeclaration?: BlowDeclaration | null; blowDeclarations?: BlowDeclaration[] }) => {
+      'round-cancelled': ({ nextDealer, players, currentTrump, currentHighestDeclaration, blowDeclarations, actionHistory }: { nextDealer: string; players: Player[]; currentTrump?: TrumpType | null; currentHighestDeclaration?: BlowDeclaration | null; blowDeclarations?: BlowDeclaration[]; actionHistory?: BlowAction[] }) => {
         setNotification({
           message: 'Round cancelled! All players passed.',
           type: 'warning'
@@ -315,6 +314,7 @@ export const useGame = () => {
         setCurrentTrump(currentTrump ?? null);
         setCurrentHighestDeclaration(currentHighestDeclaration ?? null);
         setBlowDeclarations(blowDeclarations ?? []);
+        setBlowActionHistory(actionHistory ?? []);
       },
       'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
         setRevealedAgari(agari);        
@@ -416,10 +416,10 @@ export const useGame = () => {
         setGameStarted(true);
         setNotification({ message, type: 'success' });
       },
-      'player-converted-to-dummy': ({ playerId, message }: { playerId: string; message: string }) => {
-        console.log('[useGame] Player converted to dummy:', playerId, message);
+      'player-converted-to-com': ({ playerId, message }: { playerId: string; message: string }) => {
+        console.log('[useGame] Player converted to COM:', playerId, message);
         setNotification({
-          message: `プレイヤー ${playerId} が長時間切断のため、ダミープレイヤーに変換されました`,
+          message: `プレイヤー ${playerId} が長時間切断のため、COMプレイヤーに変換されました`,
           type: 'warning'
         });
       },
@@ -446,6 +446,7 @@ export const useGame = () => {
 
   const resetBlowState = (options?: { preservePlayers?: boolean }) => {
     setBlowDeclarations([]);
+    setBlowActionHistory([]);
     setCurrentHighestDeclaration(null);
     setSelectedTrump(null);
     setNumberOfPairs(0);
@@ -585,6 +586,7 @@ export const useGame = () => {
     revealedAgari,
     gameActions,
     blowDeclarations,
+    blowActionHistory,
     currentHighestDeclaration,
     selectedTrump,
     setSelectedTrump,

@@ -7,5 +7,6 @@ export interface IComPlayerService {
     field: Field | null,
     trump: TrumpType | null,
   ): string;
+  selectBaseSuit(hand: string[], trump: TrumpType | null): string;
   isComPlayer(player: Player | { isCOM?: boolean; playerId: string }): boolean;
 }

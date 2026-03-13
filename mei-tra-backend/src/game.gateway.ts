@@ -530,7 +530,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
         // プレイ中の場合は長めのタイムアウト(5分)を設定
-        // プレイヤーとトークンを保持しつつ、長時間放置されたらダミーに変換
+        // プレイヤーとトークンを保持しつつ、長時間放置されたらCOMに変換
         if (state.gamePhase === 'play' || state.gamePhase === 'blow') {
           const timeout: NodeJS.Timeout = setTimeout(
             () => {
@@ -539,15 +539,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                   const room = await this.roomService.getRoom(roomId);
                   if (room?.status === RoomStatus.PLAYING) {
                     const converted: boolean =
-                      await this.roomService.convertPlayerToDummy(
+                      await this.roomService.convertPlayerToCOM(
                         roomId,
                         player.playerId,
                       );
                     if (converted) {
-                      this.server.to(roomId).emit('player-converted-to-dummy', {
+                      this.server.to(roomId).emit('player-converted-to-com', {
                         playerId: player.playerId,
                         message:
-                          'Player disconnected for too long - converted to dummy',
+                          'Player disconnected for too long - converted to COM',
                       });
                       this.server
                         .to(roomId)
@@ -559,7 +559,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                   }
                 } catch (error) {
                   console.error(
-                    '[Disconnect] Error converting player to dummy:',
+                    '[Disconnect] Error converting player to COM:',
                     error,
                   );
                 }
@@ -773,10 +773,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(data.roomId).emit('set-room-id', data.roomId);
 
       if (resumeGame) {
-        this.server.to(data.roomId).emit('game-resumed', {
+        const maskedGameStateForJoiner = {
+          ...resumeGame.gameState,
+          players: resumeGame.gameState.players.map((player) => ({
+            ...player,
+            hand:
+              player.playerId === normalizedUser.playerId ? player.hand : [],
+          })),
+          you: normalizedUser.playerId,
+        };
+
+        this.server.to(client.id).emit('game-resumed', {
           message: resumeGame.message,
         });
-        this.server.to(data.roomId).emit('game-state', resumeGame.gameState);
+        this.server.to(client.id).emit('game-state', maskedGameStateForJoiner);
+        this.server
+          .to(data.roomId)
+          .except(client.id)
+          .emit('update-players', resumeGame.gameState.players);
       }
 
       return { success: true, room };

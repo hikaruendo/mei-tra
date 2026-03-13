@@ -77,7 +77,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         data: {
           ...baseResponse,
           updatedPlayers,
-          // dummyが空席を引き継ぐためゲームは継続 (gamePausedMessage は送らない)
+          // COMが空席を引き継ぐためゲームは継続 (gamePausedMessage は送らない)
         },
       };
     } catch (error) {

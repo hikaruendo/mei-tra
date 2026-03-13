@@ -97,6 +97,41 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       completeFieldTrigger,
     } = result as ResponseWithDelayed<PlayCardResponse>;
 
+    const updatedState = gameState.getState();
+    const updatedField = updatedState.playState?.currentField ?? null;
+    if (
+      result.success &&
+      updatedField &&
+      updatedField.baseCard === 'JOKER' &&
+      !updatedField.baseSuit &&
+      updatedField.dealerId === comPlayer.playerId
+    ) {
+      updatedField.baseSuit = this.comPlayerService.selectBaseSuit(
+        comPlayer.hand,
+        updatedState.blowState?.currentTrump ?? null,
+      );
+
+      events.push({
+        scope: 'room',
+        roomId,
+        event: 'field-updated',
+        payload: updatedField,
+      });
+
+      await gameState.nextTurn();
+      const nextPlayer = updatedState.players[updatedState.currentPlayerIndex];
+      if (nextPlayer) {
+        events.push({
+          scope: 'room',
+          roomId,
+          event: 'update-turn',
+          payload: nextPlayer.playerId,
+        });
+      }
+
+      await gameState.saveState();
+    }
+
     // Continue if server advanced the turn or completed a field
     const shouldContinue =
       !completeFieldTrigger &&
