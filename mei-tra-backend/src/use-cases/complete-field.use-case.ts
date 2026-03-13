@@ -285,6 +285,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentTrump: null,
       currentHighestDeclaration: null,
       declarations: [],
+      actionHistory: [],
       lastPasser: null,
       isRoundCancelled: false,
       currentBlowIndex: nextBlowIndex,

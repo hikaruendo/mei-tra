@@ -64,7 +64,13 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         };
       }
 
+      state.blowState.actionHistory ??= [];
       player.isPasser = true;
+      state.blowState.actionHistory.push({
+        type: 'pass',
+        playerId: player.playerId,
+        timestamp: Date.now(),
+      });
       state.blowState.lastPasser = player.playerId;
 
       const events: GatewayEvent[] = [
@@ -74,6 +80,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           event: 'blow-updated',
           payload: {
             declarations: state.blowState.declarations,
+            actionHistory: state.blowState.actionHistory,
             currentHighest: state.blowState.currentHighestDeclaration,
             lastPasser: player.playerId,
           },
@@ -179,6 +186,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.players.forEach((p) => (p.isPasser = false));
     state.blowState.lastPasser = null;
     state.blowState.declarations = [];
+    state.blowState.actionHistory = [];
     state.blowState.currentHighestDeclaration = null;
     state.blowState.currentBlowIndex =
       (state.blowState.currentBlowIndex + 1) % state.players.length;
@@ -210,6 +218,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         event: 'blow-updated',
         payload: {
           declarations: [],
+          actionHistory: [],
           currentHighest: null,
           lastPasser: null,
         },

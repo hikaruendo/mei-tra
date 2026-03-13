@@ -74,7 +74,15 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         declaration.numberOfPairs,
       );
 
+      state.blowState.actionHistory ??= [];
       state.blowState.declarations.push(newDeclaration);
+      state.blowState.actionHistory.push({
+        type: 'declare',
+        playerId: player.playerId,
+        trumpType: declaration.trumpType,
+        numberOfPairs: declaration.numberOfPairs,
+        timestamp: newDeclaration.timestamp,
+      });
       state.blowState.currentHighestDeclaration = newDeclaration;
 
       const events: GatewayEvent[] = [
@@ -84,6 +92,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           event: 'blow-updated',
           payload: {
             declarations: state.blowState.declarations,
+            actionHistory: state.blowState.actionHistory,
             currentHighest: state.blowState.currentHighestDeclaration,
             lastPasser: state.blowState.lastPasser,
           },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { Player, GamePhase, TrumpType, Field, CompletedField, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
+import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions } from '../../types/game.types';
 import { GameField } from '../GameField';
 import { GameInfo } from '../GameInfo';
 import styles from './index.module.scss';
@@ -21,6 +21,7 @@ interface GameTableProps {
   revealedAgari: string | null;
   gameActions: GameActions;
   blowDeclarations: BlowDeclaration[];
+  blowActionHistory: BlowAction[];
   currentHighestDeclaration: BlowDeclaration | null;
   selectedTrump: TrumpType | null;
   setSelectedTrump: (trump: TrumpType | null) => void;
@@ -50,6 +51,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   revealedAgari,
   gameActions,
   blowDeclarations,
+  blowActionHistory,
   currentHighestDeclaration,
   selectedTrump,
   setSelectedTrump,
@@ -113,6 +115,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               declareBlow={gameActions.declareBlow}
               passBlow={gameActions.passBlow}
               blowDeclarations={blowDeclarations}
+              blowActionHistory={blowActionHistory}
               currentHighestDeclaration={currentHighestDeclaration}
               players={players}
             />
