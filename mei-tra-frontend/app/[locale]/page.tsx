@@ -90,6 +90,7 @@ export default function Home() {
     revealedAgari = null,
     gameActions,
     blowDeclarations = [],
+    blowActionHistory = [],
     currentHighestDeclaration = null,
     selectedTrump = null,
     setSelectedTrump,
@@ -185,6 +186,7 @@ export default function Home() {
                   revealedAgari={revealedAgari}
                   gameActions={gameActions}
                   blowDeclarations={blowDeclarations}
+                  blowActionHistory={blowActionHistory}
                   currentHighestDeclaration={currentHighestDeclaration}
                   selectedTrump={selectedTrump}
                   setSelectedTrump={setSelectedTrump}

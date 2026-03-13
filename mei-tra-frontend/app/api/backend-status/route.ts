@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
 
-const BACKEND_HEALTH_URL = process.env.NEXT_PUBLIC_BACKEND_URL
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/\/+$/, '').replace(/\/api$/, '')}/api/health`
-  : 'http://localhost:3333/api/health';
+function getBackendHealthUrl() {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (!backendUrl) {
+    return 'http://localhost:3333/api/health';
+  }
+
+  return `${backendUrl.replace(/\/+$/, '').replace(/\/api$/, '')}/api/health`;
+}
 
 export async function GET() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
   try {
-    const response = await fetch(BACKEND_HEALTH_URL, {
+    const response = await fetch(getBackendHealthUrl(), {
       cache: 'no-store',
-      signal: AbortSignal.timeout(5000),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -35,5 +43,7 @@ export async function GET() {
       { status: 'error', isIdle: false, isStarting: true },
       { status: 200 }
     );
+  } finally {
+    clearTimeout(timeout);
   }
 }

@@ -28,7 +28,7 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       canStartGame: jest.fn(),
       handlePlayerReconnection: jest.fn(),
       restorePlayerFromVacantSeat: jest.fn(),
-      convertPlayerToDummy: jest.fn(),
+      convertPlayerToCOM: jest.fn(),
       updateUserGameStats: jest.fn(),
       updateUserLastSeen: jest.fn(),
       fillVacantSeatsWithCOM: jest.fn(),

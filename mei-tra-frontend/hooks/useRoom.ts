@@ -92,7 +92,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           if (alreadyInRoom) return room;
 
           // 空いている席（COMプレースホルダー）を探す
-          const dummyIndex = existingPlayers.findIndex(p => p.isCOM === true && !p.isReady);
+          const comIndex = existingPlayers.findIndex(p => p.isCOM === true && !p.isReady);
           const newPlayer: RoomPlayer = {
             id: playerId,
             playerId,
@@ -105,8 +105,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           };
 
           const updatedPlayers = [...existingPlayers];
-          if (dummyIndex !== -1) {
-            updatedPlayers[dummyIndex] = newPlayer;
+          if (comIndex !== -1) {
+            updatedPlayers[comIndex] = newPlayer;
           } else {
             updatedPlayers.push(newPlayer);
           }

@@ -64,6 +64,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       state.blowState.declarations = [];
+      state.blowState.actionHistory = [];
       state.blowState.currentHighestDeclaration = null;
       state.blowState.lastPasser = null;
       state.gamePhase = 'blow';

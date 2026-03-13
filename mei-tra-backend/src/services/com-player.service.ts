@@ -66,6 +66,58 @@ export class ComPlayerService implements IComPlayerService {
     return bestCard;
   }
 
+  selectBaseSuit(hand: string[], trump: TrumpType | null): string {
+    const suitStats = new Map<
+      string,
+      {
+        count: number;
+        bestStrength: number;
+      }
+    >();
+
+    for (const card of hand) {
+      if (card === 'JOKER') {
+        continue;
+      }
+
+      const suit = this.cardService.getCardSuit(card, trump, undefined);
+      if (!suit) {
+        continue;
+      }
+
+      const strength = this.cardService.getCardStrength(card, suit, trump);
+      const stats = suitStats.get(suit) ?? { count: 0, bestStrength: -1 };
+      suitStats.set(suit, {
+        count: stats.count + 1,
+        bestStrength: Math.max(stats.bestStrength, strength),
+      });
+    }
+
+    const preferredSuits = ['♠', '♥', '♦', '♣'];
+    let selectedSuit = preferredSuits[0];
+    let selectedCount = -1;
+    let selectedStrength = -1;
+
+    for (const suit of preferredSuits) {
+      const stats = suitStats.get(suit);
+      if (!stats) {
+        continue;
+      }
+
+      if (
+        stats.count > selectedCount ||
+        (stats.count === selectedCount &&
+          stats.bestStrength > selectedStrength)
+      ) {
+        selectedSuit = suit;
+        selectedCount = stats.count;
+        selectedStrength = stats.bestStrength;
+      }
+    }
+
+    return selectedSuit;
+  }
+
   isComPlayer(player: Player | { isCOM?: boolean; playerId: string }): boolean {
     return player.isCOM === true || player.playerId.startsWith('com-');
   }

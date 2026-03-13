@@ -49,6 +49,24 @@ export interface BlowDeclaration {
   timestamp: number;
 }
 
+export interface BlowAction {
+  type: 'declare' | 'pass';
+  playerId: string;
+  trumpType?: TrumpType;
+  numberOfPairs?: number;
+  timestamp: number;
+}
+
+export interface BlowState {
+  currentTrump: TrumpType | null;
+  currentHighestDeclaration: BlowDeclaration | null;
+  declarations: BlowDeclaration[];
+  actionHistory: BlowAction[];
+  lastPasser: string | null;
+  isRoundCancelled: boolean;
+  currentBlowIndex: number;
+}
+
 export interface TeamScore {
   deal: number;
   blow: number;
