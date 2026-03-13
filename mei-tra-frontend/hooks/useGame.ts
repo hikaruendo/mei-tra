@@ -403,6 +403,8 @@ export const useGame = () => {
           0: { deal: 0, blow: 0, play: 0, total: 0 },
           1: { deal: 0, blow: 0, play: 0, total: 0 }
         });
+        // Clear stored roomId so socket reconnects don't attempt to rejoin the old room
+        sessionStorage.removeItem('roomId');
       },
       'game-paused': ({ message }: { message: string }) => {
         setPaused(true);

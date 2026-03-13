@@ -441,7 +441,30 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           error,
         );
       }
-      if (reconnected) return;
+      if (reconnected) {
+        // Even on successful reconnection, keep gameState.users in sync with the
+        // new socket ID. Without this, actions like create-room (which look up the
+        // user by socket.id) would fail after the player leaves and tries to create
+        // a new room, because the old socket ID is no longer valid.
+        const displayName =
+          authenticatedUser.profile?.displayName ||
+          authenticatedUser.email ||
+          'User';
+        const existingUser = this.gameState
+          .getUsers()
+          .find((u) => u.userId === authenticatedUser.id);
+        if (existingUser) {
+          existingUser.id = client.id;
+        } else {
+          this.gameState.addPlayer(
+            client.id,
+            displayName,
+            authenticatedUser.id,
+            true,
+          );
+        }
+        return;
+      }
     }
 
     // 新規認証済みプレイヤーとして追加
@@ -733,12 +756,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 待機中ルームに参加した場合、残席をCOMプレースホルダーで埋める
       if (!resumeGame && roomStatus === RoomStatus.WAITING) {
-        // 追加前のCOM IDを記録して、新規追加分のみ通知する
-        const existingCOMIds = new Set(
-          room.players
-            .filter((p) => p.isCOM && !p.isReady)
-            .map((p) => p.playerId),
-        );
         await this.roomService.initCOMPlaceholders(data.roomId);
         const updatedRoom = await this.roomService.getRoom(data.roomId);
         if (updatedRoom) {
