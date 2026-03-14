@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { TrumpType, TeamScores, Player } from '../../types/game.types';
+import {
+  TrumpType,
+  TeamScores,
+  Player,
+  GamePhase,
+} from '../../types/game.types';
 import { getTrumpDisplay } from '../../lib/utils/trumpDisplay';
 import styles from './index.module.scss';
 import { useTranslations } from 'next-intl';
@@ -11,6 +16,7 @@ interface GameInfoProps {
   teamScores: TeamScores;
   pointsToWin: number;
   players: Player[];
+  gamePhase?: GamePhase;
   onLeave?: () => void;
 }
 
@@ -21,6 +27,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   pointsToWin,
   players,
+  gamePhase,
   onLeave,
 }) => {
   const t = useTranslations();
@@ -67,12 +74,11 @@ export const GameInfo: React.FC<GameInfoProps> = ({
             </span>
           </div>
         </div>
-        <button
-          onClick={handleLeaveClick}
-          className={styles.leaveButton}
-        >
-          {t('common.leave')}
-        </button>
+        {gamePhase !== 'blow' && (
+          <button onClick={handleLeaveClick} className={styles.leaveButton}>
+            {t('common.leave')}
+          </button>
+        )}
       </div>
 
       <ConfirmModal

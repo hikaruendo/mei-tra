@@ -22,7 +22,9 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       const { roomId, userId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.userId === userId);
+      const player = state.players.find(
+        (p) => p.userId === userId || p.playerId === userId,
+      );
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };

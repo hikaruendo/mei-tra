@@ -172,6 +172,22 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     } as RoomPlayer;
   }
 
+  private createActiveCOMReplacement(
+    index: number | string,
+    sourcePlayer: Pick<
+      Player,
+      'team' | 'isPasser' | 'hasBroken' | 'hasRequiredBroken'
+    >,
+    hand: string[] = [],
+  ): RoomPlayer {
+    const comPlayer = this.createCOMPlaceholder(index, hand);
+    comPlayer.team = sourcePlayer.team;
+    comPlayer.isPasser = sourcePlayer.isPasser;
+    comPlayer.hasBroken = sourcePlayer.hasBroken ?? false;
+    comPlayer.hasRequiredBroken = sourcePlayer.hasRequiredBroken ?? false;
+    return comPlayer;
+  }
+
   async initCOMPlaceholders(roomId: string): Promise<void> {
     const room = await this.getRoom(roomId);
     if (!room) return;
@@ -366,8 +382,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     // COMプレイヤーに置き換え（手札を引き継いでCOMが続行できるようにする）
     const originalHand = room.players[playerIndex].hand ?? [];
-    const comPlayer = this.createCOMPlaceholder(playerIndex, [...originalHand]);
-    comPlayer.team = room.players[playerIndex].team;
+    const uniqueIdx = `timeout-${playerIndex}-${Date.now()}`;
+    const comPlayer = this.createActiveCOMReplacement(
+      uniqueIdx,
+      room.players[playerIndex],
+      [...originalHand],
+    );
 
     this.vacantSeats[roomId][playerIndex] = {
       roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
@@ -387,10 +407,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (gameState) {
       if (gsIndex !== -1 && state) {
         const originalGameHand = state.players[gsIndex].hand ?? [];
-        const comGamePlayer = this.createCOMPlaceholder(gsIndex, [
-          ...originalGameHand,
-        ]);
-        comGamePlayer.team = state.players[gsIndex].team;
+        const comGamePlayer = this.createActiveCOMReplacement(
+          uniqueIdx,
+          state.players[gsIndex],
+          [...originalGameHand],
+        );
         state.players[gsIndex] = comGamePlayer;
         this.remapGameStatePlayerIdReferences(
           state,
@@ -451,10 +472,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // タイムスタンプ付きIDで既存COMとのID衝突を防ぐ
         const uniqueIdx = `left-${Date.now()}`;
         const originalHand = room.players[playerIndex].hand ?? [];
-        const comPlayer = this.createCOMPlaceholder(uniqueIdx, [
-          ...originalHand,
-        ]);
-        comPlayer.team = room.players[playerIndex].team;
+        const comPlayer = this.createActiveCOMReplacement(
+          uniqueIdx,
+          room.players[playerIndex],
+          [...originalHand],
+        );
 
         this.vacantSeats[roomId][playerIndex] = {
           roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
@@ -474,10 +496,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // ゲーム状態も同時に更新（手札を引き継ぐ）
         if (gsIndex !== -1) {
           const originalGameHand = state.players[gsIndex].hand ?? [];
-          const comGamePlayer = this.createCOMPlaceholder(uniqueIdx, [
-            ...originalGameHand,
-          ]);
-          comGamePlayer.team = state.players[gsIndex].team;
+          const comGamePlayer = this.createActiveCOMReplacement(
+            uniqueIdx,
+            state.players[gsIndex],
+            [...originalGameHand],
+          );
           state.players[gsIndex] = comGamePlayer;
           this.remapGameStatePlayerIdReferences(
             state,

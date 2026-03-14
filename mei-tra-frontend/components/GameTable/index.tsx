@@ -7,7 +7,7 @@ import styles from './index.module.scss';
 import { PlayerHand } from '../PlayerHand';
 import { GameControls } from '../GameControls';
 import { BlowControls } from '../BlowControls';
-import { getConsistentTableOrderWithSelfBottom } from '../../lib/utils/tableOrder';
+import { getSeatOrderWithSelfBottom } from '../../lib/utils/tableOrder';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -74,7 +74,10 @@ export const GameTable: React.FC<GameTableProps> = ({
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
 
   // Consistent table order for all players, self is always bottom
-  const orderedPlayers = getConsistentTableOrderWithSelfBottom(players, currentPlayerId || '');
+  const orderedPlayers = getSeatOrderWithSelfBottom(
+    players,
+    currentPlayerId || '',
+  );
   const positions = ['bottom', 'left', 'top', 'right'];
 
   // During waiting, fill undefined slots with COM placeholders
@@ -97,6 +100,7 @@ export const GameTable: React.FC<GameTableProps> = ({
           teamScores={teamScores}
           pointsToWin={pointsToWin}
           players={players}
+          gamePhase={gamePhase}
           onLeave={onLeave}
         />
       )}

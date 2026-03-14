@@ -14,6 +14,10 @@ import {
   IPassBlowUseCase,
   PassBlowResponse,
 } from './interfaces/pass-blow.use-case.interface';
+import {
+  ISelectNegriUseCase,
+  SelectNegriResponse,
+} from './interfaces/select-negri.use-case.interface';
 import { Player } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
@@ -35,6 +39,8 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     private readonly playCardUseCase: IPlayCardUseCase,
     @Inject('IPassBlowUseCase')
     private readonly passBlowUseCase: IPassBlowUseCase,
+    @Inject('ISelectNegriUseCase')
+    private readonly selectNegriUseCase: ISelectNegriUseCase,
   ) {}
 
   async execute(request: ComAutoPlayRequest): Promise<ComAutoPlayResponse> {
@@ -76,6 +82,44 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
     const state = gameState.getState();
+
+    if (
+      state.playState?.negriCard == null &&
+      state.blowState.currentHighestDeclaration?.playerId === comPlayer.playerId
+    ) {
+      const negriCard = comPlayer.hand[0];
+
+      if (!negriCard) {
+        return {
+          success: false,
+          events: [],
+          shouldContinue: false,
+          error: 'COM has no card available to select as Negri',
+        };
+      }
+
+      const negriResult: SelectNegriResponse =
+        await this.selectNegriUseCase.execute({
+          roomId,
+          userId: comPlayer.userId ?? comPlayer.playerId,
+          card: negriCard,
+        });
+
+      const negriEvents = negriResult.events ?? [];
+      const nextPlayer = gameState.getCurrentPlayer();
+      const shouldContinue =
+        negriResult.success &&
+        !!nextPlayer &&
+        this.comPlayerService.isComPlayer(nextPlayer);
+
+      return {
+        success: negriResult.success,
+        events: negriEvents,
+        shouldContinue,
+        error: negriResult.error,
+      };
+    }
+
     const currentField = state.playState?.currentField ?? null;
     const currentTrump = state.blowState?.currentTrump ?? null;
 
