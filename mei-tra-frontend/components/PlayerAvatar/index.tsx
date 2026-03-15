@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Player } from '../../types/game.types';
 import { getPlayerProfile, getDefaultAvatarUrl, PlayerProfile } from '../../lib/utils/profileUtils';
+import { PlayerIdentityChip } from '../PlayerIdentityChip';
 import styles from './index.module.scss';
 
 interface PlayerAvatarProps {
@@ -81,9 +82,11 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
         )}
       </div>
       {showName && (
-        <div className={styles.playerName}>
-          {displayName}
-        </div>
+        <PlayerIdentityChip
+          name={displayName}
+          team={player.team}
+          className={styles.playerName}
+        />
       )}
     </div>
   );
