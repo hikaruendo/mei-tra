@@ -8,6 +8,7 @@ import { TogglePlayerReadyUseCase } from '../toggle-player-ready.use-case';
 import { ChangePlayerTeamUseCase } from '../change-player-team.use-case';
 import { PlayCardUseCase } from '../play-card.use-case';
 import { SelectBaseSuitUseCase } from '../select-base-suit.use-case';
+import { SelectNegriUseCase } from '../select-negri.use-case';
 import { RevealBrokenHandUseCase } from '../reveal-broken-hand.use-case';
 import { CompleteFieldUseCase } from '../complete-field.use-case';
 import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
@@ -953,11 +954,15 @@ describe('Game Use Cases', () => {
       const passBlowUseCase = {
         execute: jest.fn(),
       };
+      const selectNegriUseCase = {
+        execute: jest.fn(),
+      };
       const useCase = new ComAutoPlayUseCase(
         roomService,
         comPlayerService as never,
         playCardUseCase as never,
         passBlowUseCase as never,
+        selectNegriUseCase as never,
       );
 
       const comPlayer: Player = {
@@ -1050,6 +1055,202 @@ describe('Game Use Cases', () => {
       ).toBe('player-2');
       expect(result.shouldContinue).toBe(true);
       expect(roomGameState.nextTurn).toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalled();
+    });
+
+    it('auto-selects negri when the blow winner has become COM', async () => {
+      const roomService = createRoomServiceMock();
+      const comPlayerService = {
+        createComPlayer: jest.fn(),
+        selectBestCard: jest.fn(),
+        selectBaseSuit: jest.fn(),
+        isComPlayer: jest.fn(() => true),
+      };
+      const playCardUseCase = {
+        execute: jest.fn(),
+      };
+      const passBlowUseCase = {
+        execute: jest.fn(),
+      };
+      const selectNegriUseCase = {
+        execute: jest.fn(),
+      };
+      const useCase = new ComAutoPlayUseCase(
+        roomService,
+        comPlayerService as never,
+        playCardUseCase as never,
+        passBlowUseCase as never,
+        selectNegriUseCase as never,
+      );
+
+      const comPlayer: Player = {
+        id: 'com-timeout-1',
+        playerId: 'com-timeout-1',
+        name: 'COM',
+        hand: ['6♥', 'A♠'],
+        team: 0,
+        isPasser: false,
+        isCOM: true,
+      };
+
+      const state = {
+        players: [
+          comPlayer,
+          {
+            id: 'socket-2',
+            playerId: 'player-2',
+            userId: 'user-2',
+            name: 'Player 2',
+            hand: ['7♠'],
+            team: 1 as const,
+            isPasser: true,
+          },
+        ],
+        currentPlayerIndex: 0,
+        gamePhase: 'play' as GamePhase,
+        blowState: {
+          currentTrump: 'herz' as const,
+          currentHighestDeclaration: {
+            playerId: 'com-timeout-1',
+            trumpType: 'herz' as const,
+            numberOfPairs: 6,
+            timestamp: Date.now(),
+          },
+        },
+        playState: {
+          currentField: {
+            cards: [],
+            baseCard: '',
+            dealerId: 'com-timeout-1',
+            isComplete: false,
+          },
+          negriCard: null,
+        },
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        getCurrentPlayer: jest.fn(() => state.players[state.currentPlayerIndex]),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      (selectNegriUseCase.execute as jest.Mock).mockResolvedValue({
+        success: true,
+        events: [
+          {
+            scope: 'room',
+            roomId: 'room-1',
+            event: 'play-setup-complete',
+            payload: {
+              negriCard: '6♥',
+              startingPlayer: 'com-timeout-1',
+            },
+          },
+        ],
+      });
+
+      const result = await useCase.execute({ roomId: 'room-1' });
+
+      expect(result.success).toBe(true);
+      expect(selectNegriUseCase.execute).toHaveBeenCalledWith({
+        roomId: 'room-1',
+        userId: 'com-timeout-1',
+        card: '6♥',
+      });
+      expect(playCardUseCase.execute).not.toHaveBeenCalled();
+      expect(result.events).toEqual([
+        {
+          scope: 'room',
+          roomId: 'room-1',
+          event: 'play-setup-complete',
+          payload: {
+            negriCard: '6♥',
+            startingPlayer: 'com-timeout-1',
+          },
+        },
+      ]);
+      expect(result.shouldContinue).toBe(true);
+    });
+  });
+
+  describe('SelectNegriUseCase', () => {
+    it('accepts COM playerId when the blow winner has no userId', async () => {
+      const roomService = createRoomServiceMock();
+      const blowService = {
+        findHighestDeclaration: jest.fn(() => ({
+          playerId: 'com-timeout-1',
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        })),
+      };
+      const useCase = new SelectNegriUseCase(
+        roomService,
+        blowService as never,
+      );
+
+      const state = {
+        players: [
+          {
+            id: 'com-timeout-1',
+            playerId: 'com-timeout-1',
+            name: 'COM',
+            hand: ['6♥', 'A♠'],
+            team: 0 as const,
+            isPasser: false,
+            isCOM: true,
+          },
+          {
+            id: 'socket-2',
+            playerId: 'player-2',
+            userId: 'user-2',
+            name: 'Player 2',
+            hand: ['7♠'],
+            team: 1 as const,
+            isPasser: false,
+          },
+        ],
+        gamePhase: 'play' as GamePhase,
+        currentPlayerIndex: 0,
+        blowState: {
+          declarations: [
+            {
+              playerId: 'com-timeout-1',
+              trumpType: 'herz' as const,
+              numberOfPairs: 6,
+              timestamp: Date.now(),
+            },
+          ],
+        },
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        userId: 'com-timeout-1',
+        card: '6♥',
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.players[0].hand).toEqual(['A♠']);
+      expect(result.events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            event: 'play-setup-complete',
+            payload: expect.objectContaining({
+              negriCard: '6♥',
+              startingPlayer: 'com-timeout-1',
+            }),
+          }),
+        ]),
+      );
       expect(roomGameState.saveState).toHaveBeenCalled();
     });
   });

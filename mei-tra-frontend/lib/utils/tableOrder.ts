@@ -1,25 +1,17 @@
 import { Player } from '../../types/game.types';
 
 /**
- * Returns 4 entries in consistent table order (Team0, Team1, Team0, Team1),
- * rotated so the current player is at index 0 (bottom position).
+ * Returns 4 entries in waiting-room order, grouped by team and rotated so the
+ * current player is at index 0 (bottom position).
  * Positions mapping: [0]=bottom, [1]=left, [2]=top, [3]=right
- *
- * Works with any number of players (including <4 during waiting):
- * undefined fills missing slots — callers may substitute COM placeholders.
- *
- * Uses loop-based interleaving (same logic as backend arrangePlayersForSeatOrder)
- * to handle any team distribution robustly without producing undefined gaps.
  */
 export function getConsistentTableOrderWithSelfBottom(
   players: Player[],
   currentPlayerId: string,
 ): (Player | undefined)[] {
-  const team0 = players.filter(p => p.team === 0);
-  const team1 = players.filter(p => p.team === 1);
+  const team0 = players.filter((p) => p.team === 0);
+  const team1 = players.filter((p) => p.team === 1);
 
-  // Interleave T0 and T1 using a loop, matching backend arrangePlayersForSeatOrder logic.
-  // This handles any distribution (e.g. 2:2, 3:1, 1:3) without undefined gaps.
   const order: (Player | undefined)[] = [];
   const maxLen = Math.max(team0.length, team1.length, 1);
   for (let i = 0; i < maxLen; i++) {
@@ -28,8 +20,31 @@ export function getConsistentTableOrderWithSelfBottom(
   }
   while (order.length < 4) order.push(undefined);
 
-  // Rotate so self is at front (index 0 = bottom)
-  const selfIdx = order.findIndex(p => p?.playerId === currentPlayerId);
+  const selfIdx = order.findIndex((p) => p?.playerId === currentPlayerId);
+  if (selfIdx > 0) {
+    const rotated = [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
+    return [rotated[0], rotated[3], rotated[2], rotated[1]];
+  }
+  return [order[0], order[3], order[2], order[1]];
+}
+
+/**
+ * Returns 4 entries in persisted seat order, rotated so the current player is
+ * at index 0 (bottom position).
+ *
+ * Game play should trust the server's seat order so COM replacement/rejoin
+ * does not drift from the authoritative turn order.
+ */
+export function getSeatOrderWithSelfBottom(
+  players: Player[],
+  currentPlayerId: string,
+): (Player | undefined)[] {
+  const order: (Player | undefined)[] = [...players.slice(0, 4)];
+  while (order.length < 4) {
+    order.push(undefined);
+  }
+
+  const selfIdx = order.findIndex((p) => p?.playerId === currentPlayerId);
   if (selfIdx > 0) {
     const rotated = [...order.slice(selfIdx), ...order.slice(0, selfIdx)];
     return [rotated[0], rotated[3], rotated[2], rotated[1]];

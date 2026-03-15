@@ -328,11 +328,13 @@ export const useGame = () => {
         setNegriCard(negriCard);
         setNegriPlayerId(startingPlayer);
         // Remove Negri card from player's hand
-        setPlayers(players.map(p => 
-          p.playerId === currentPlayerId 
-            ? { ...p, hand: p.hand.filter(card => card !== negriCard) }
-            : p
-        ));
+        setPlayers((prev) =>
+          prev.map((p) =>
+            p.playerId === currentPlayerId
+              ? { ...p, hand: p.hand.filter((card) => card !== negriCard) }
+              : p,
+          ),
+        );
         // Get the current trump from the highest declaration
         if (currentHighestDeclaration) {
           setCurrentTrump(currentHighestDeclaration.trumpType);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, Field } from '../../types/game.types';
+import { PlayerIdentityChip } from '../PlayerIdentityChip';
 import styles from './index.module.scss';
 
 interface GameFieldProps {
@@ -43,7 +44,16 @@ export const GameField: React.FC<GameFieldProps> = ({
               
               return (
                 <div key={index} className={styles.fieldContent}>
-                  <div className={styles.name}>{player?.name ?? t('unknown')}</div>
+                  {player ? (
+                    <PlayerIdentityChip
+                      name={player.name}
+                      team={player.team}
+                      size="compact"
+                      className={styles.name}
+                    />
+                  ) : (
+                    <div className={styles.nameFallback}>{t('unknown')}</div>
+                  )}
                   <div className={`${styles.card} ${isRed ? styles.redSuit : styles.blackSuit} ${isJoker ? styles.joker : ''}`}>
                     {isJoker ? (
                       <div className={styles.jokerRank}>JOKER</div>

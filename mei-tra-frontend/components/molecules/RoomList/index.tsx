@@ -125,8 +125,11 @@ export const RoomList: React.FC<RoomListProps> = ({
                     {t('room.status')}: {getStatusText(room.status, t)}
                   </p>
                   <ul className={styles.playerList}>
-                    {room.players.map((player) => (
-                      <li key={player.playerId} className={styles.playerItem}>
+                    {room.players.map((player, index) => (
+                      <li
+                        key={`${player.playerId}-${index}`}
+                        className={styles.playerItem}
+                      >
                         <span className={styles.playerName}>{player.name}</span>
                         {player.isHost && <span className={styles.hostLabel}>{t('room.host')}</span>}
                       </li>

@@ -36,8 +36,12 @@
 }
 
 .name{
-  color: white;
-  font-size: 0.9rem;
+  max-width: 96px;
+}
+
+.nameFallback {
+  color: #ffffff;
+  font-size: 0.85rem;
   text-align: center;
   line-height: 1;
 }

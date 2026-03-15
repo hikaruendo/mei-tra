@@ -158,11 +158,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           const updatedPlayers = prev.players.map(p =>
             p.playerId === playerId
               ? {
-                  id: `com-${prev.players.indexOf(p)}`,
-                  playerId: `com-${prev.players.indexOf(p)}`,
+                  id: `com-disconnected-${playerId}`,
+                  playerId: `com-disconnected-${playerId}`,
                   name: 'COM',
                   hand: [],
-                  team: 0 as Team,
+                  team: (p.team ?? 0) as Team,
                   isReady: false,
                   isHost: false,
                   isCOM: true,

@@ -555,6 +555,179 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().teamAssignments[comPlayerId]).toBe(0);
       });
 
+      it('should remap current blow state references to the COM player', async () => {
+        const roomId = 'room-123';
+        const playerId = 'player-1';
+
+        const player: RoomPlayer = {
+          id: 'socket-1',
+          playerId,
+          name: 'Test Player',
+          team: 0,
+          hand: ['JOKER', '9♣'],
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+
+        const room: Room = {
+          ...baseRoom,
+          players: [player],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+        roomRepository.removePlayer.mockResolvedValue(true);
+        roomRepository.addPlayer.mockResolvedValue(true);
+
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().players = [
+          {
+            id: player.id,
+            playerId,
+            name: player.name,
+            team: player.team,
+            hand: [...player.hand],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ];
+        gameState.getState().blowState = {
+          currentTrump: null,
+          currentHighestDeclaration: {
+            playerId,
+            trumpType: 'tra',
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+          declarations: [
+            {
+              playerId,
+              trumpType: 'tra',
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+          ],
+          actionHistory: [
+            {
+              type: 'declare',
+              playerId,
+              trumpType: 'tra',
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+            {
+              type: 'pass',
+              playerId,
+              timestamp: 2,
+            },
+          ],
+          lastPasser: playerId,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        };
+
+        const result = await roomService.convertPlayerToCOM(roomId, playerId);
+
+        expect(result).toBe(true);
+        const comPlayerId = gameState.getState().players[0].playerId;
+        expect(comPlayerId).toContain('com-');
+        expect(
+          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+        ).toBe(comPlayerId);
+        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+          comPlayerId,
+        );
+        expect(
+          gameState.getState().blowState.actionHistory.map(
+            (action) => action.playerId,
+          ),
+        ).toEqual([comPlayerId, comPlayerId]);
+        expect(gameState.getState().blowState.lastPasser).toBe(comPlayerId);
+      });
+
+      it('should generate a unique COM id when another COM already has the same seat index id', async () => {
+        const roomId = 'room-123';
+        const playerId = 'player-1';
+        const existingComId = 'com-timeout-1-old';
+
+        const existingCom: RoomPlayer = {
+          id: existingComId,
+          playerId: existingComId,
+          name: 'COM',
+          team: 1,
+          hand: ['7♣'],
+          isCOM: true,
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+
+        const player: RoomPlayer = {
+          id: 'socket-1',
+          playerId,
+          name: 'Test Player',
+          team: 0,
+          hand: ['JOKER', '9♣'],
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+
+        const room: Room = {
+          ...baseRoom,
+          players: [existingCom, player],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+        roomRepository.removePlayer.mockResolvedValue(true);
+        roomRepository.addPlayer.mockResolvedValue(true);
+
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().players = [
+          {
+            id: existingCom.id,
+            playerId: existingCom.playerId,
+            name: existingCom.name,
+            team: existingCom.team,
+            hand: [...existingCom.hand],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+            isCOM: true,
+          },
+          {
+            id: player.id,
+            playerId,
+            name: player.name,
+            team: player.team,
+            hand: [...player.hand],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ];
+
+        const result = await roomService.convertPlayerToCOM(roomId, playerId);
+
+        expect(result).toBe(true);
+        const convertedPlayerId = room.players[1].playerId;
+        expect(convertedPlayerId).toMatch(/^com-timeout-1-/);
+        expect(convertedPlayerId).not.toBe(existingCom.playerId);
+        expect(new Set(room.players.map((p) => p.playerId)).size).toBe(
+          room.players.length,
+        );
+      });
+
       it('should return false if room not found', async () => {
         roomRepository.findById.mockResolvedValue(null);
 
@@ -983,6 +1156,135 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().teamAssignments[playerId]).toBe(0);
       });
 
+      it('should remap blow state references from COM back to the player on rejoin', async () => {
+        const roomId = 'room-123';
+        const playerId = 'player-1';
+        const user = {
+          id: 'socket-new',
+          playerId,
+          name: 'Test Player',
+        };
+
+        const targetCom: RoomPlayer = {
+          id: 'com-target',
+          playerId: 'com-target',
+          name: 'COM',
+          team: 0,
+          hand: ['H2', 'D3'],
+          isCOM: true,
+          isPasser: true,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date('2026-03-13T10:01:00.000Z'),
+        };
+
+        const room: Room = {
+          ...baseRoom,
+          players: [targetCom],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+        roomRepository.removePlayer.mockResolvedValue(true);
+        roomRepository.addPlayer.mockResolvedValue(true);
+
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().players = [
+          {
+            id: targetCom.id,
+            playerId: targetCom.playerId,
+            name: targetCom.name,
+            team: targetCom.team,
+            hand: ['H2', 'D3'],
+            isPasser: true,
+            hasBroken: false,
+            hasRequiredBroken: false,
+            isCOM: true,
+          },
+        ];
+        gameState.getState().blowState = {
+          currentTrump: null,
+          currentHighestDeclaration: {
+            playerId: targetCom.playerId,
+            trumpType: 'club',
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+          declarations: [
+            {
+              playerId: targetCom.playerId,
+              trumpType: 'club',
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+          ],
+          actionHistory: [
+            {
+              type: 'declare',
+              playerId: targetCom.playerId,
+              trumpType: 'club',
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+            {
+              type: 'pass',
+              playerId: targetCom.playerId,
+              timestamp: 2,
+            },
+          ],
+          lastPasser: targetCom.playerId,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        (roomService as any)['vacantSeats'][roomId] = {
+          0: {
+            roomPlayer: {
+              id: '',
+              playerId,
+              name: 'Test Player',
+              team: 0,
+              hand: ['H2', 'D3'],
+              isPasser: true,
+              hasBroken: false,
+              hasRequiredBroken: false,
+              isReady: true,
+              isHost: false,
+              joinedAt: new Date(),
+            },
+            gamePlayer: {
+              id: '',
+              playerId,
+              name: 'Test Player',
+              team: 0,
+              hand: ['H2', 'D3'],
+              isPasser: true,
+              hasBroken: false,
+              hasRequiredBroken: false,
+            },
+            replacementPlayerId: targetCom.playerId,
+          },
+        };
+
+        const result = await roomService.joinRoom(roomId, user);
+
+        expect(result).toBe(true);
+        expect(
+          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+        ).toBe(playerId);
+        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+          playerId,
+        );
+        expect(
+          gameState.getState().blowState.actionHistory.map(
+            (action) => action.playerId,
+          ),
+        ).toEqual([playerId, playerId]);
+        expect(gameState.getState().blowState.lastPasser).toBe(playerId);
+      });
+
       it('should allow different player to take vacant seat and remove original token', async () => {
         const roomId = 'room-123';
         const originalPlayerId = 'player-1';
@@ -1209,6 +1511,57 @@ describe('Reconnection Token Management', () => {
         expect(tokenMap.has(playerId)).toBe(true);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         expect(tokenMap.get(playerId)).toBe(playerId);
+      });
+
+      it('should preserve blow-phase acted state when replacing a leaving player with COM', async () => {
+        const roomId = 'room-123';
+        const playerId = 'player-1';
+
+        const player: RoomPlayer = {
+          id: 'socket-1',
+          playerId,
+          name: 'Test Player',
+          team: 0,
+          hand: ['H2', 'D3'],
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        };
+
+        const room: Room = {
+          ...baseRoom,
+          status: RoomStatus.PLAYING,
+          players: [player],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+        roomRepository.removePlayer.mockResolvedValue(true);
+        roomRepository.addPlayer.mockResolvedValue(true);
+
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().gamePhase = 'blow';
+        gameState.getState().players = [
+          {
+            id: player.id,
+            playerId,
+            name: player.name,
+            team: player.team,
+            hand: [...player.hand],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ];
+
+        await roomService.leaveRoom(roomId, playerId);
+
+        expect(room.players[0].isCOM).toBe(true);
+        expect(room.players[0].isPasser).toBe(false);
+        expect(gameState.getState().players[0].isCOM).toBe(true);
+        expect(gameState.getState().players[0].isPasser).toBe(false);
       });
     });
 
