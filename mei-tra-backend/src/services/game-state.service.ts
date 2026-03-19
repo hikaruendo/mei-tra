@@ -306,6 +306,22 @@ export class GameStateService implements IGameStateService {
   async dealCards(): Promise<void> {
     if (this.state.players.length === 0) return;
 
+    // Validate deck exists and has correct size
+    if (!this.state.deck || this.state.deck.length !== 41) {
+      throw new Error(
+        `Invalid deck: expected 41 cards, got ${this.state.deck?.length || 0}`,
+      );
+    }
+
+    // Validate all players have initialized hand arrays
+    for (const player of this.state.players) {
+      if (!Array.isArray(player.hand)) {
+        throw new Error(
+          `Player ${player.playerId} has invalid hand: ${typeof player.hand}`,
+        );
+      }
+    }
+
     // Reset player hands and status
     this.state.players.forEach((player) => {
       player.hand = [];

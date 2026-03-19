@@ -136,13 +136,26 @@ export class ChomboService implements IChomboService {
 
   checkForBrokenHand(player: Player): void {
     const hand = player.hand;
-    const hasPictureCards = hand.some((card) =>
+
+    // Defensive check: filter out undefined cards
+    const validCards = hand.filter(
+      (card): card is string => card !== undefined,
+    );
+
+    if (validCards.length !== hand.length) {
+      // Log warning if undefined cards detected
+      console.warn(
+        `Player ${player.playerId} has ${hand.length - validCards.length} undefined cards`,
+      );
+    }
+
+    const hasPictureCards = validCards.some((card) =>
       ['A', 'K', 'Q', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
     );
-    const hasPictureButNoQueenCards = hand.some((card) =>
+    const hasPictureButNoQueenCards = validCards.some((card) =>
       ['A', 'K', 'J'].includes(card.replace(/[♠♣♥♦]/, '')),
     );
-    const queenCount = hand.filter((card) => card.includes('Q')).length;
+    const queenCount = validCards.filter((card) => card.includes('Q')).length;
 
     if (!hasPictureCards || (!hasPictureButNoQueenCards && queenCount == 1)) {
       player.hasBroken = true;
@@ -151,7 +164,13 @@ export class ChomboService implements IChomboService {
 
   checkForRequiredBrokenHand(player: Player): void {
     const hand = player.hand;
-    const jackCount = hand.filter(
+
+    // Defensive check: filter out undefined cards
+    const validCards = hand.filter(
+      (card): card is string => card !== undefined,
+    );
+
+    const jackCount = validCards.filter(
       (card) => card.includes('J') && card !== 'JOKER',
     ).length;
 

@@ -313,18 +313,25 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     // ロビーフェーズで作られた COM プレースホルダーを削除し、
     // 正しくチーム配分された COM ボットで置き換えることで 2:2 を保証する
     const lobbyComPlaceholders = room.players.filter((p) => p.isCOM === true);
-    for (const comPlaceholder of lobbyComPlaceholders) {
-      await this.roomRepository.removePlayer(roomId, comPlaceholder.playerId);
-      room.players = room.players.filter(
-        (p) => p.playerId !== comPlaceholder.playerId,
-      );
-      if (gameState) {
-        const state = gameState.getState();
-        state.players = state.players.filter(
+
+    // Wait for all deletions to complete before proceeding
+    const deletionPromises = lobbyComPlaceholders.map(
+      async (comPlaceholder) => {
+        await this.roomRepository.removePlayer(roomId, comPlaceholder.playerId);
+        room.players = room.players.filter(
           (p) => p.playerId !== comPlaceholder.playerId,
         );
-      }
-    }
+        if (gameState) {
+          const state = gameState.getState();
+          state.players = state.players.filter(
+            (p) => p.playerId !== comPlaceholder.playerId,
+          );
+        }
+      },
+    );
+
+    // Ensure all deletions complete before adding new players
+    await Promise.all(deletionPromises);
 
     const maxPlayers = room.settings?.maxPlayers ?? 4;
     if (room.players.length >= maxPlayers) return;
@@ -346,9 +353,17 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       comPlayer.isHost = false;
       comPlayer.joinedAt = new Date();
 
-      await this.roomRepository.addPlayer(roomId, comPlayer);
+      // Check return value of addPlayer
+      const addResult = await this.roomRepository.addPlayer(roomId, comPlayer);
 
-      // Also add to game state if it exists
+      if (!addResult) {
+        this.logger.error(
+          `Failed to add COM player ${comPlayer.playerId} to room ${roomId}`,
+        );
+        throw new Error(`Failed to add COM player ${comPlayer.playerId}`);
+      }
+
+      // Only add to memory if DB operation succeeded
       if (gameState) {
         const state = gameState.getState();
         state.players.push(comPlayer);
