@@ -5,15 +5,12 @@ import { Field, Player } from '../../types/game.types';
 describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
-  const makePlayer = (
-    playerId: string,
-    isCOM = false,
-  ): Player => ({
+  const makePlayer = (playerId: string, isCOM = false): Player => ({
     id: playerId,
     playerId,
     name: playerId,
     hand: [],
-    team: (isCOM ? 1 : 0) as 0 | 1,
+    team: isCOM ? 1 : 0,
     isPasser: false,
     isCOM,
   });

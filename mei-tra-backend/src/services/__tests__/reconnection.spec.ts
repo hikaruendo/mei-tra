@@ -549,7 +549,9 @@ describe('Reconnection Token Management', () => {
           comPlayerId,
         );
         expect(gameState.getState().playState?.lastWinnerId).toBe(comPlayerId);
-        expect(gameState.getState().playState?.openDeclarerId).toBe(comPlayerId);
+        expect(gameState.getState().playState?.openDeclarerId).toBe(
+          comPlayerId,
+        );
         expect(gameState.getState().playState?.neguri[comPlayerId]).toBe('9♣');
         expect(gameState.getState().teamAssignments[playerId]).toBeUndefined();
         expect(gameState.getState().teamAssignments[comPlayerId]).toBe(0);
@@ -642,9 +644,9 @@ describe('Reconnection Token Management', () => {
           comPlayerId,
         );
         expect(
-          gameState.getState().blowState.actionHistory.map(
-            (action) => action.playerId,
-          ),
+          gameState
+            .getState()
+            .blowState.actionHistory.map((action) => action.playerId),
         ).toEqual([comPlayerId, comPlayerId]);
         expect(gameState.getState().blowState.lastPasser).toBe(comPlayerId);
       });
@@ -1278,9 +1280,9 @@ describe('Reconnection Token Management', () => {
           playerId,
         );
         expect(
-          gameState.getState().blowState.actionHistory.map(
-            (action) => action.playerId,
-          ),
+          gameState
+            .getState()
+            .blowState.actionHistory.map((action) => action.playerId),
         ).toEqual([playerId, playerId]);
         expect(gameState.getState().blowState.lastPasser).toBe(playerId);
       });
