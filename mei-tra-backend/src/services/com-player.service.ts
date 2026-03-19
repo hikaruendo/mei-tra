@@ -106,8 +106,7 @@ export class ComPlayerService implements IComPlayerService {
 
       if (
         stats.count > selectedCount ||
-        (stats.count === selectedCount &&
-          stats.bestStrength > selectedStrength)
+        (stats.count === selectedCount && stats.bestStrength > selectedStrength)
       ) {
         selectedSuit = suit;
         selectedCount = stats.count;

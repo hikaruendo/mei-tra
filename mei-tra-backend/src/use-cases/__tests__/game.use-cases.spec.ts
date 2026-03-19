@@ -20,7 +20,13 @@ import { AuthenticatedUser } from '../../types/user.types';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IGameStateService } from '../../services/interfaces/game-state-service.interface';
 import { GameStateService } from '../../services/game-state.service';
-import { GamePhase, Player, TeamScores, Field } from '../../types/game.types';
+import {
+  GamePhase,
+  Player,
+  TeamScores,
+  Field,
+  Team,
+} from '../../types/game.types';
 import { ICardService } from '../../services/interfaces/card-service.interface';
 import { IPlayService } from '../../services/interfaces/play-service.interface';
 import { IScoreService } from '../../services/interfaces/score-service.interface';
@@ -149,9 +155,17 @@ describe('Game Use Cases', () => {
       const room: Room = { ...baseRoom };
       const roomsList = [room];
 
+      const gameStateMock = {
+        getState: jest.fn(() => ({
+          players: [],
+          gamePhase: null,
+        })),
+      } as unknown as GameStateService;
+
       roomService.joinRoom.mockResolvedValue(true);
       roomService.getRoom.mockResolvedValue(room);
       roomService.listRooms.mockResolvedValue(roomsList);
+      roomService.getRoomGameState.mockResolvedValue(gameStateMock);
 
       const authenticatedUser = {
         id: 'user-1',
@@ -322,7 +336,7 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual(statePlayers);
-      expect(result.data?.gamePausedMessage).toBeDefined();
+      // gamePausedMessage is no longer sent (COM takes over vacant seats)
 
       const leaveRoomMock = roomService.leaveRoom as jest.Mock;
       expect(leaveRoomMock).toHaveBeenCalledWith(room.id, 'player-1');
@@ -622,7 +636,7 @@ describe('Game Use Cases', () => {
       };
 
       const registerPlayerTokenMock = jest.fn();
-      const startGameMock = jest.fn(async () => {
+      const startGameMock = jest.fn(() => {
         state.players = [
           state.players[0],
           state.players[1],
@@ -788,7 +802,16 @@ describe('Game Use Cases', () => {
         players: baseRoom.players.map((p) => ({ ...p })) as RoomPlayer[],
       };
 
-      roomService.getRoom.mockResolvedValue(room);
+      const updatedRoom = {
+        ...room,
+        players: room.players.map((p) =>
+          p.playerId === 'player-2' ? { ...p, team: 0 as Team } : p,
+        ),
+      };
+
+      roomService.getRoom
+        .mockResolvedValueOnce(room)
+        .mockResolvedValueOnce(updatedRoom);
 
       const result = await useCase.execute({
         roomId: room.id,
@@ -800,8 +823,11 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(true);
 
-      const updateRoomMock = roomService.updateRoom as jest.Mock;
-      expect(updateRoomMock).toHaveBeenCalled();
+      const updatePlayerInRoomMock =
+        roomService.updatePlayerInRoom as jest.Mock;
+      expect(updatePlayerInRoomMock).toHaveBeenCalledWith(room.id, 'player-2', {
+        team: 0,
+      });
       expect(
         result.updatedRoom?.players.find((p) => p.playerId === 'player-2')
           ?.team,
@@ -1016,7 +1042,9 @@ describe('Game Use Cases', () => {
 
       const roomGameState = {
         getState: jest.fn(() => state),
-        getCurrentPlayer: jest.fn(() => state.players[state.currentPlayerIndex]),
+        getCurrentPlayer: jest.fn(
+          () => state.players[state.currentPlayerIndex],
+        ),
         nextTurn: jest.fn(() => {
           state.currentPlayerIndex = 1;
         }),
@@ -1024,7 +1052,7 @@ describe('Game Use Cases', () => {
       } as unknown as GameStateService;
 
       roomService.getRoomGameState.mockResolvedValue(roomGameState);
-      (playCardUseCase.execute as jest.Mock).mockResolvedValue({
+      playCardUseCase.execute.mockResolvedValue({
         success: true,
         events: [
           {
@@ -1130,11 +1158,13 @@ describe('Game Use Cases', () => {
 
       const roomGameState = {
         getState: jest.fn(() => state),
-        getCurrentPlayer: jest.fn(() => state.players[state.currentPlayerIndex]),
+        getCurrentPlayer: jest.fn(
+          () => state.players[state.currentPlayerIndex],
+        ),
       } as unknown as GameStateService;
 
       roomService.getRoomGameState.mockResolvedValue(roomGameState);
-      (selectNegriUseCase.execute as jest.Mock).mockResolvedValue({
+      selectNegriUseCase.execute.mockResolvedValue({
         success: true,
         events: [
           {
@@ -1184,10 +1214,7 @@ describe('Game Use Cases', () => {
           timestamp: Date.now(),
         })),
       };
-      const useCase = new SelectNegriUseCase(
-        roomService,
-        blowService as never,
-      );
+      const useCase = new SelectNegriUseCase(roomService, blowService as never);
 
       const state = {
         players: [
