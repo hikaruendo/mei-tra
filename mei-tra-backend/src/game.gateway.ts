@@ -623,10 +623,58 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
+      if (!authenticatedUser) {
+        client.emit('error-message', 'Authentication required to create room');
+        return {
+          success: false,
+          error: 'Authentication required to create room',
+        };
+      }
+
       const { room } = result.data;
+      const hostUser: User = {
+        id: client.id,
+        playerId: authenticatedUser.id,
+        name: playerName || authenticatedUser.email || 'User',
+        userId: authenticatedUser.id,
+        isAuthenticated: true,
+      };
+
+      const joined = await this.roomService.joinRoom(room.id, hostUser);
+      if (!joined) {
+        client.emit('error-message', 'Failed to join created room');
+        return { success: false, error: 'Failed to join created room' };
+      }
+
+      const updatedRoom = await this.roomService.getRoom(room.id);
+      if (!updatedRoom) {
+        client.emit('error-message', 'Failed to load created room');
+        return { success: false, error: 'Failed to load created room' };
+      }
+
+      const hostPlayer = updatedRoom.players.find(
+        (player) => player.playerId === hostUser.playerId,
+      );
+      if (!hostPlayer) {
+        client.emit('error-message', 'Host player not found in created room');
+        return {
+          success: false,
+          error: 'Host player not found in created room',
+        };
+      }
 
       this.playerRooms.set(client.id, room.id);
       await client.join(room.id);
+      client.emit('game-player-joined', {
+        playerId: hostPlayer.playerId,
+        roomId: room.id,
+        isHost: true,
+        roomStatus: updatedRoom.status,
+        isSelf: true,
+        team: hostPlayer.team,
+        name: hostPlayer.name,
+      });
+      client.emit('set-room-id', room.id);
 
       // Create corresponding chat room for the game room
       try {
@@ -647,10 +695,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Don't fail the game room creation if chat room creation fails
       }
 
-      const roomsList = result.data.roomsList;
+      const roomsList = await this.roomService.listRooms();
       this.server.emit('rooms-list', roomsList);
 
-      return { success: true, room };
+      return { success: true, room: updatedRoom };
     } catch (error) {
       console.error('Error in handleCreateRoom:', error);
       client.emit('error-message', 'Failed to create room');
