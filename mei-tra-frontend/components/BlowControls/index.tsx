@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { BlowAction, BlowDeclaration, Player, TrumpType } from '../../types/game.types';
 import styles from './index.module.scss';
@@ -31,7 +32,10 @@ const MIN_PAIRS = 6;
 const MAX_PAIRS = 13;
 
 // 基本のペア数選択肢
-const BASE_PAIR_OPTIONS = [6, 7, 8, 9, 10];
+const BASE_PAIR_OPTIONS = Array.from(
+  { length: MAX_PAIRS - MIN_PAIRS + 1 },
+  (_, index) => MIN_PAIRS + index,
+);
 
 export function BlowControls({
   isCurrentPlayer,
@@ -69,6 +73,32 @@ export function BlowControls({
   // トランプの強さを取得
   const getTrumpStrength = (trumpType: TrumpType): number => {
     return TRUMP_STRENGTHS[trumpType] || 0;
+  };
+
+  const isDeclarationValid = (
+    trumpType: TrumpType,
+    pairs: number,
+  ): boolean => {
+    if (pairs < MIN_PAIRS) {
+      return false;
+    }
+
+    if (!currentHighestDeclaration) {
+      return true;
+    }
+
+    if (pairs > currentHighestDeclaration.numberOfPairs) {
+      return true;
+    }
+
+    if (pairs < currentHighestDeclaration.numberOfPairs) {
+      return false;
+    }
+
+    return (
+      getTrumpStrength(trumpType) >
+      getTrumpStrength(currentHighestDeclaration.trumpType)
+    );
   };
 
   // 有効なペア数選択肢を生成
@@ -136,6 +166,20 @@ export function BlowControls({
 
   // コントロールが無効かどうか
   const isDisabled = !isCurrentPlayer;
+  const isSelectedDeclarationValid =
+    selectedTrump !== null &&
+    isDeclarationValid(selectedTrump, numberOfPairs);
+
+  useEffect(() => {
+    if (selectedTrump && numberOfPairs > 0 && !isSelectedDeclarationValid) {
+      setNumberOfPairs(0);
+    }
+  }, [
+    selectedTrump,
+    numberOfPairs,
+    isSelectedDeclarationValid,
+    setNumberOfPairs,
+  ]);
   
   // 有効なペア数選択肢
   const validPairOptions = getValidPairOptions();
@@ -191,7 +235,7 @@ export function BlowControls({
             <div className={styles.buttonGroup}>
               <button
                 onClick={handleDeclare}
-                disabled={!selectedTrump || numberOfPairs < MIN_PAIRS || isDisabled}
+                disabled={!isSelectedDeclarationValid || isDisabled}
                 className={`${styles.button} ${styles.declareButton}`}
               >
                 {t('declare')}

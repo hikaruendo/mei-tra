@@ -5,7 +5,7 @@ import {
   OnGatewayDisconnect,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Inject } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { ICardService } from './services/interfaces/card-service.interface';
@@ -57,6 +57,7 @@ import { IActivityTrackerService } from './services/interfaces/activity-tracker-
 })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
+  private readonly logger = new Logger(GameGateway.name);
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
 
   constructor(
@@ -1067,6 +1068,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
+        this.logger.warn(
+          `declare-blow rejected room=${data.roomId} user=${userId ?? client.id} reason=${result.error ?? 'unknown'} declaration=${JSON.stringify(data.declaration)}`,
+        );
         client.emit('error-message', result.error ?? 'Failed to declare blow');
         return;
       }
@@ -1096,6 +1100,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
+        this.logger.warn(
+          `pass-blow rejected room=${data.roomId} user=${userId ?? client.id} reason=${result.error ?? 'unknown'}`,
+        );
         client.emit('error-message', result.error ?? 'Failed to pass blow');
         return;
       }
