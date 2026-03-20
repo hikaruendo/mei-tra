@@ -5,7 +5,7 @@ import {
   OnGatewayDisconnect,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Inject } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { ICardService } from './services/interfaces/card-service.interface';
@@ -57,6 +57,7 @@ import { IActivityTrackerService } from './services/interfaces/activity-tracker-
 })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
+  private readonly logger = new Logger(GameGateway.name);
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
 
   constructor(
@@ -622,10 +623,58 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
+      if (!authenticatedUser) {
+        client.emit('error-message', 'Authentication required to create room');
+        return {
+          success: false,
+          error: 'Authentication required to create room',
+        };
+      }
+
       const { room } = result.data;
+      const hostUser: User = {
+        id: client.id,
+        playerId: authenticatedUser.id,
+        name: playerName || authenticatedUser.email || 'User',
+        userId: authenticatedUser.id,
+        isAuthenticated: true,
+      };
+
+      const joined = await this.roomService.joinRoom(room.id, hostUser);
+      if (!joined) {
+        client.emit('error-message', 'Failed to join created room');
+        return { success: false, error: 'Failed to join created room' };
+      }
+
+      const updatedRoom = await this.roomService.getRoom(room.id);
+      if (!updatedRoom) {
+        client.emit('error-message', 'Failed to load created room');
+        return { success: false, error: 'Failed to load created room' };
+      }
+
+      const hostPlayer = updatedRoom.players.find(
+        (player) => player.playerId === hostUser.playerId,
+      );
+      if (!hostPlayer) {
+        client.emit('error-message', 'Host player not found in created room');
+        return {
+          success: false,
+          error: 'Host player not found in created room',
+        };
+      }
 
       this.playerRooms.set(client.id, room.id);
       await client.join(room.id);
+      client.emit('game-player-joined', {
+        playerId: hostPlayer.playerId,
+        roomId: room.id,
+        isHost: true,
+        roomStatus: updatedRoom.status,
+        isSelf: true,
+        team: hostPlayer.team,
+        name: hostPlayer.name,
+      });
+      client.emit('set-room-id', room.id);
 
       // Create corresponding chat room for the game room
       try {
@@ -646,10 +695,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Don't fail the game room creation if chat room creation fails
       }
 
-      const roomsList = result.data.roomsList;
+      const roomsList = await this.roomService.listRooms();
       this.server.emit('rooms-list', roomsList);
 
-      return { success: true, room };
+      return { success: true, room: updatedRoom };
     } catch (error) {
       console.error('Error in handleCreateRoom:', error);
       client.emit('error-message', 'Failed to create room');
@@ -1067,6 +1116,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
+        this.logger.warn(
+          `declare-blow rejected room=${data.roomId} user=${userId ?? client.id} reason=${result.error ?? 'unknown'} declaration=${JSON.stringify(data.declaration)}`,
+        );
         client.emit('error-message', result.error ?? 'Failed to declare blow');
         return;
       }
@@ -1096,6 +1148,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
+        this.logger.warn(
+          `pass-blow rejected room=${data.roomId} user=${userId ?? client.id} reason=${result.error ?? 'unknown'}`,
+        );
         client.emit('error-message', result.error ?? 'Failed to pass blow');
         return;
       }

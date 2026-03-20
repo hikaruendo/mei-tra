@@ -307,7 +307,18 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       socketConnected: socket.connected
     });
 
-    socket.emit('create-room', { name, pointsToWin, teamAssignmentMethod });
+    socket.emit(
+      'create-room',
+      { name, pointsToWin, teamAssignmentMethod },
+      (response: { success: boolean; room?: Room; error?: string }) => {
+        if (response.success && response.room) {
+          setCurrentRoom(response.room);
+          return;
+        }
+
+        setError(response.error || 'Failed to create room');
+      },
+    );
   }, [socket]);
 
   // ルーム参加

@@ -297,6 +297,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         room_id: roomId,
         player_id: player.playerId,
         socket_id: player.id,
+        user_id: player.userId ?? null,
         name: player.name,
         hand: player.hand,
         team: player.team,
@@ -352,6 +353,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       const updateData: Partial<RoomPlayerUpdate> = {};
 
       if (updates.id) updateData.socket_id = updates.id;
+      if (updates.userId !== undefined) updateData.user_id = updates.userId;
       if (updates.name) updateData.name = updates.name;
       if (updates.hand) updateData.hand = updates.hand;
       if (updates.team !== undefined) updateData.team = updates.team;
@@ -444,6 +446,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       room_id: roomId,
       player_id: player.playerId,
       socket_id: player.id,
+      user_id: player.userId ?? null,
       name: player.name,
       hand: player.hand,
       team: player.team,
@@ -483,6 +486,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     return dbPlayers.map((dbPlayer) => ({
       id: dbPlayer.socket_id || '',
       playerId: dbPlayer.player_id,
+      userId: dbPlayer.user_id ?? undefined,
       name: dbPlayer.name,
       hand: dbPlayer.hand,
       team: dbPlayer.team as 0 | 1,
