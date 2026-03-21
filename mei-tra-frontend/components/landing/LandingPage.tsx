@@ -58,9 +58,25 @@ export function LandingPage({
   const testimonials = t.raw('testimonials.items') as LandingTestimonial[];
   const faqItems = t.raw('faq.items') as LandingFaqItem[];
   const footerLinks = t.raw('footer.links') as LandingFooterLink[];
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  };
 
   return (
     <main className={styles.landing}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {/* 1. Hero */}
       <section className={styles.hero}>
         <span className={styles.heroLabel}>{t('hero.label')}</span>
@@ -168,12 +184,7 @@ export function LandingPage({
       </section>
 
       {/* 6. FAQ */}
-      <section
-        className={styles.section}
-        id="faq"
-        itemScope
-        itemType="https://schema.org/FAQPage"
-      >
+      <section className={styles.section} id="faq">
         <div className={styles.sectionHeader}>
           <div>
             <p className={styles.sectionEyebrow}>{t('faq.eyebrow')}</p>
@@ -182,25 +193,13 @@ export function LandingPage({
         </div>
         <div className={styles.faqList}>
           {faqItems.map((item) => (
-            <details
-              key={item.question}
-              className={styles.faqItem}
-              itemScope
-              itemProp="mainEntity"
-              itemType="https://schema.org/Question"
-            >
+            <details key={item.question} className={styles.faqItem}>
               <summary className={styles.faqSummary}>
-                <span itemProp="name">{item.question}</span>
+                <span>{item.question}</span>
                 <span className={styles.faqIcon} />
               </summary>
-              <div
-                itemScope
-                itemProp="acceptedAnswer"
-                itemType="https://schema.org/Answer"
-              >
-                <p className={styles.faqAnswer} itemProp="text">
-                  {item.answer}
-                </p>
+              <div>
+                <p className={styles.faqAnswer}>{item.answer}</p>
               </div>
             </details>
           ))}

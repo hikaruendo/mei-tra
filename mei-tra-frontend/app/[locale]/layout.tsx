@@ -3,8 +3,6 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
-import jaMessages from '@/messages/ja.json';
-import enMessages from '@/messages/en.json';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://meitra.kando1.com';
 
@@ -56,10 +54,6 @@ export async function generateMetadata({
 }
 
 function getJsonLd(locale: string) {
-  const msgs = locale === 'ja' ? jaMessages : enMessages;
-  const faqItems = (msgs as Record<string, Record<string, unknown>>).landing as Record<string, unknown>;
-  const faq = faqItems.faq as { items: { question: string; answer: string }[] };
-
   const webApplication = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
@@ -79,19 +73,6 @@ function getJsonLd(locale: string) {
     inLanguage: ['ja', 'en'],
   };
 
-  const faqPage = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faq.items.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
-    })),
-  };
-
   const organization = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -100,7 +81,7 @@ function getJsonLd(locale: string) {
     logo: `${SITE_URL}/meitra2.webp`,
   };
 
-  return [webApplication, faqPage, organization];
+  return [webApplication, organization];
 }
 
 export default async function LocaleLayout({
