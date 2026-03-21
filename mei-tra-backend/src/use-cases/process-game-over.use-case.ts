@@ -14,7 +14,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
   ) {}
 
   async execute(request: ProcessGameOverRequest): Promise<void> {
-    const { roomId, players, winningTeam, teamScores, resetDelayMs } = request;
+    const { players, winningTeam, teamScores } = request;
 
     const authenticatedPlayers = players.filter(
       (player): player is typeof player & { userId: string } =>
@@ -40,17 +40,5 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
     });
 
     await Promise.allSettled(updatePromises);
-
-    setTimeout(() => {
-      void this.roomService
-        .getRoomGameState(roomId)
-        .then((gameState) => gameState.resetState())
-        .catch((error) =>
-          this.logger.error(
-            'Failed to reset game state after game over:',
-            error,
-          ),
-        );
-    }, resetDelayMs);
   }
 }

@@ -7,7 +7,7 @@
   position: relative;
   width: 100%;
   padding: 0.25rem 0 5rem;
-  min-height: 176px;
+  min-height: 160px;
   overflow: visible;
 }
 
@@ -143,6 +143,10 @@
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
+}
+
+.playerInfoGroup > :nth-child(2) {
+  margin-left: 0.25rem;
 }
 
 .playerInfoContainer{
@@ -293,7 +297,7 @@
   grid-area: top;
   align-self: start;
   justify-self: center;
-  margin-top: -0.85rem;
+  margin-top: -1.45rem;
 }
 
 .playerPosition.bottom {
@@ -301,21 +305,21 @@
   align-self: end;
   justify-self: stretch;
   width: 100%;
-  margin-top: -0.65rem;
+  margin-top: -1.4rem;
 }
 
 .playerPosition.left {
   grid-area: left;
   align-self: start;
   justify-self: center;
-  margin-top: -0.1rem;
+  margin-top: -0.7rem;
 }
 
 .playerPosition.right {
   grid-area: right;
   align-self: start;
   justify-self: center;
-  margin-top: -0.1rem;
+  margin-top: -0.7rem;
 }
 
 .selected {
@@ -342,35 +346,40 @@
 .playerPosition.top .playerInfoContainer,
 .playerPosition.left .playerInfoContainer,
 .playerPosition.right .playerInfoContainer {
-  min-width: 88px;
-  padding: 0.2rem;
+  min-width: 82px;
+  padding: 0.16rem;
   background: rgba(16, 185, 129, 0.05);
 }
 
 .playerPosition.top .playerName,
 .playerPosition.left .playerName,
 .playerPosition.right .playerName {
-  max-width: 82px;
-  font-size: 0.8rem;
+  max-width: 76px;
+  font-size: 0.76rem;
 }
 
 .playerPosition.top .cardCount,
 .playerPosition.left .cardCount,
 .playerPosition.right .cardCount {
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .playerPosition.bottom .playerInfo {
   align-items: center;
   row-gap: 0.1rem;
+  padding-top: 0.1rem;
 }
 
-.playerPosition.bottom .playerInfoGroup {
-  width: 100%;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 0.7rem;
-}
+  .playerPosition.bottom .playerInfoGroup {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .playerPosition.bottom .playerInfoGroup > :nth-child(2) {
+    margin-left: 0.35rem;
+  }
 
 .playerPosition.bottom .playerInfoContainer {
   min-width: 94px;

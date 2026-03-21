@@ -227,30 +227,38 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
       });
-
-      const resetDelay = response.gameOver.resetDelayMs ?? 0;
+      const closeDelay = response.gameOver.resetDelayMs ?? 0;
       setTimeout(() => {
-        void (async () => {
-          try {
-            await this.roomService.updateRoomStatus(
-              roomId,
-              RoomStatus.FINISHED,
-            );
-            const updatedRoom = await this.roomService.getRoom(roomId);
-            if (updatedRoom) {
-              this.server.to(roomId).emit('room-updated', updatedRoom);
-            }
-            const roomsList = await this.roomService.listRooms();
-            this.server.emit('rooms-list', roomsList);
-          } catch (error) {
-            console.error('Failed to reset room after game over:', error);
-          }
-        })();
-      }, resetDelay);
+        void this.closeFinishedRoom(roomId);
+      }, closeDelay);
     } else if (maxDelay > 0) {
       setTimeout(scheduleAutoPlay, maxDelay + 100);
     } else {
       scheduleAutoPlay();
+    }
+  }
+
+  private async closeFinishedRoom(roomId: string): Promise<void> {
+    try {
+      const socketIds = Array.from(
+        this.server.sockets.adapter.rooms.get(roomId) ?? [],
+      );
+
+      for (const socketId of socketIds) {
+        const socket = this.server.sockets.sockets.get(socketId);
+        this.playerRooms.delete(socketId);
+
+        if (socket) {
+          await socket.leave(roomId);
+          this.server.to(socketId).emit('back-to-lobby');
+        }
+      }
+
+      await this.roomService.deleteRoom(roomId);
+      const roomsList = await this.roomService.listRooms();
+      this.server.emit('rooms-list', roomsList);
+    } catch (error) {
+      console.error('Failed to close finished room:', error);
     }
   }
 
