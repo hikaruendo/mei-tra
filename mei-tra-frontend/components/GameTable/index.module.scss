@@ -5,14 +5,14 @@
     ".    top     ."
     "left field right"
     ".    bottom  .";
-  grid-template-columns: 300px 120px 300px;
-  grid-template-rows: minmax(120px, auto) auto minmax(250px, auto);
-  gap: 1rem;
+  grid-template-columns: 240px minmax(360px, 480px) 240px;
+  grid-template-rows: auto minmax(260px, 320px) auto;
+  gap: 0.4rem 1.2rem;
   justify-content: center;
   align-items: start;
   flex: 1;
   min-height: 0;
-  padding: 0 1rem 1.5rem;
+  padding: 0 1.5rem 1.25rem;
 }
 
 .waitingCenter {

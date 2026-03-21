@@ -4,7 +4,7 @@
   justify-self: center;
   width: 100%;
   height: auto;
-  margin: -47px 0 auto;
+  margin: -8px 0 auto;
   background: transparent;
   border-radius: 1rem;
   display: flex;
@@ -18,13 +18,18 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: min(100%, 320px);
+  aspect-ratio: 1 / 1;
+  padding: 0.4rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at center, rgba(132, 204, 22, 0.22) 0%, rgba(132, 204, 22, 0.12) 34%, rgba(132, 204, 22, 0.05) 56%, rgba(10, 26, 15, 0) 78%);
 }
 
 .fieldContainerInner{
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .fieldContent{
