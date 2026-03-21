@@ -29,11 +29,12 @@ const TRUMP_STRENGTHS: Record<TrumpType, number> = {
 
 // ペア数の最小値と最大値
 const MIN_PAIRS = 6;
+const DEFAULT_MAX_PAIRS = 10;
 const MAX_PAIRS = 13;
 
 // 基本のペア数選択肢
-const BASE_PAIR_OPTIONS = Array.from(
-  { length: MAX_PAIRS - MIN_PAIRS + 1 },
+const DEFAULT_PAIR_OPTIONS = Array.from(
+  { length: DEFAULT_MAX_PAIRS - MIN_PAIRS + 1 },
   (_, index) => MIN_PAIRS + index,
 );
 
@@ -79,12 +80,16 @@ export function BlowControls({
     trumpType: TrumpType,
     pairs: number,
   ): boolean => {
-    if (pairs < MIN_PAIRS) {
+    if (pairs < MIN_PAIRS || pairs > MAX_PAIRS) {
       return false;
     }
 
     if (!currentHighestDeclaration) {
-      return true;
+      return pairs <= DEFAULT_MAX_PAIRS;
+    }
+
+    if (currentHighestDeclaration.numberOfPairs >= DEFAULT_MAX_PAIRS) {
+      return pairs === currentHighestDeclaration.numberOfPairs + 1;
     }
 
     if (pairs > currentHighestDeclaration.numberOfPairs) {
@@ -104,18 +109,29 @@ export function BlowControls({
   // 有効なペア数選択肢を生成
   const getValidPairOptions = () => {
     if (!currentHighestDeclaration) {
-      // 最初の宣言ではすべてのペア数が有効
-      return BASE_PAIR_OPTIONS.map(pair => ({
+      return DEFAULT_PAIR_OPTIONS.map(pair => ({
         value: pair,
         label: `${pair} ${t('pairs')}`
       }));
     }
 
+    if (currentHighestDeclaration.numberOfPairs >= DEFAULT_MAX_PAIRS) {
+      const nextPair = currentHighestDeclaration.numberOfPairs + 1;
+
+      if (nextPair > MAX_PAIRS) {
+        return [];
+      }
+
+      return [{
+        value: nextPair,
+        label: `${nextPair} ${t('pairs')}`
+      }];
+    }
+
     const currentTrumpStrength = getTrumpStrength(currentHighestDeclaration.trumpType);
     const selectedTrumpStrength = selectedTrump ? getTrumpStrength(selectedTrump) : 0;
 
-    // 現在の最高宣言を上回る有効なペア数をフィルタリング
-    const validPairs = BASE_PAIR_OPTIONS.filter(pair => {
+    const validPairs = DEFAULT_PAIR_OPTIONS.filter(pair => {
       // ペア数が現在の最高宣言より大きい場合は有効
       if (pair > currentHighestDeclaration.numberOfPairs) return true;
 
@@ -127,13 +143,12 @@ export function BlowControls({
       return false;
     });
 
-    // 有効なペア数がない場合はオーバーコールの選択肢を追加
     if (validPairs.length === 0) {
       const nextValidPair = selectedTrumpStrength > currentTrumpStrength
         ? currentHighestDeclaration.numberOfPairs
         : currentHighestDeclaration.numberOfPairs + 1;
 
-      if (nextValidPair <= MAX_PAIRS) {
+      if (nextValidPair <= DEFAULT_MAX_PAIRS) {
         return [{
           value: nextValidPair,
           label: `${nextValidPair} ${t('overCall')}`

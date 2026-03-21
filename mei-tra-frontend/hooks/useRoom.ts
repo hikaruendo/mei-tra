@@ -49,8 +49,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // ルーム一覧の更新
     const handleRoomsList = (rooms: Room[]) => {
       setAvailableRooms(rooms);
-      if (currentRoomRef.current) {
-        const updatedRoom = rooms.find(r => r.id === currentRoomRef.current?.id);
+      const storedRoomId =
+        typeof window !== 'undefined' ? sessionStorage.getItem('roomId') : null;
+      const targetRoomId = currentRoomRef.current?.id ?? storedRoomId;
+      if (targetRoomId) {
+        const updatedRoom = rooms.find(r => r.id === targetRoomId);
         if (updatedRoom) {
           setCurrentRoom(updatedRoom);
         }
@@ -60,7 +63,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // ルーム更新
     const handleRoomUpdated = (room: Room) => {
       setAvailableRooms(prevRooms => prevRooms.map(r => r.id === room.id ? room : r));
-      if (currentRoomRef.current?.id === room.id) {
+      const storedRoomId =
+        typeof window !== 'undefined' ? sessionStorage.getItem('roomId') : null;
+      if (currentRoomRef.current?.id === room.id || storedRoomId === room.id) {
         setCurrentRoom(room);
       }
     };

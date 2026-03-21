@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from './useSocket';
+import { useAuth } from './useAuth';
 import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
+  const { user } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
 
   // Player and Game State
@@ -117,6 +119,15 @@ export const useGame = () => {
       },
       'update-players': (players: Player[]) => {
         setPlayers(players);
+        if (!currentPlayerId && user?.id) {
+          const selfPlayer = players.find((player) => player.userId === user.id);
+          if (selfPlayer) {
+            setCurrentPlayerId(selfPlayer.playerId);
+          }
+        }
+      },
+      'set-room-id': (roomId: string) => {
+        setCurrentRoomId(roomId);
       },
       'game-state': ({
         players,
@@ -444,7 +455,7 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId]);
+  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId, user?.id]);
 
   const resetBlowState = (options?: { preservePlayers?: boolean }) => {
     setBlowDeclarations([]);

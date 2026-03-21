@@ -227,30 +227,38 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
       });
-
-      const resetDelay = response.gameOver.resetDelayMs ?? 0;
+      const closeDelay = response.gameOver.resetDelayMs ?? 0;
       setTimeout(() => {
-        void (async () => {
-          try {
-            await this.roomService.updateRoomStatus(
-              roomId,
-              RoomStatus.FINISHED,
-            );
-            const updatedRoom = await this.roomService.getRoom(roomId);
-            if (updatedRoom) {
-              this.server.to(roomId).emit('room-updated', updatedRoom);
-            }
-            const roomsList = await this.roomService.listRooms();
-            this.server.emit('rooms-list', roomsList);
-          } catch (error) {
-            console.error('Failed to reset room after game over:', error);
-          }
-        })();
-      }, resetDelay);
+        void this.closeFinishedRoom(roomId);
+      }, closeDelay);
     } else if (maxDelay > 0) {
       setTimeout(scheduleAutoPlay, maxDelay + 100);
     } else {
       scheduleAutoPlay();
+    }
+  }
+
+  private async closeFinishedRoom(roomId: string): Promise<void> {
+    try {
+      const socketIds = Array.from(
+        this.server.sockets.adapter.rooms.get(roomId) ?? [],
+      );
+
+      for (const socketId of socketIds) {
+        const socket = this.server.sockets.sockets.get(socketId);
+        this.playerRooms.delete(socketId);
+
+        if (socket) {
+          await socket.leave(roomId);
+          this.server.to(socketId).emit('back-to-lobby');
+        }
+      }
+
+      await this.roomService.deleteRoom(roomId);
+      const roomsList = await this.roomService.listRooms();
+      this.server.emit('rooms-list', roomsList);
+    } catch (error) {
+      console.error('Failed to close finished room:', error);
     }
   }
 
@@ -362,82 +370,139 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // ルームのゲーム状態を取得
         const roomGameState = await this.roomService.getRoomGameState(roomId);
+        const room = await this.roomService.getRoom(roomId);
+        if (!room) {
+          throw new Error(`Room ${roomId} not found during reconnection`);
+        }
+        const state = roomGameState.getState();
+        const isActiveGame =
+          room.status === RoomStatus.PLAYING &&
+          state.gamePhase !== null &&
+          state.gamePhase !== 'waiting';
 
-        // ログインユーザーはuserIdで検索
-        const existingPlayer = roomGameState.findPlayerByUserId(
-          authenticatedUser.id,
-        );
-        if (existingPlayer) {
-          console.log(
-            `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
+        if (!isActiveGame) {
+          await this.roomService.initCOMPlaceholders(roomId);
+          const updatedRoom = await this.roomService.getRoom(roomId);
+          if (!updatedRoom) {
+            throw new Error(`Room ${roomId} not found after COM init`);
+          }
+
+          const existingWaitingPlayer = updatedRoom.players.find(
+            (player) =>
+              player.userId === authenticatedUser.id ||
+              player.playerId === authenticatedUser.id,
           );
 
-          // ルームサービスで再接続処理
-          const result = await this.roomService.handlePlayerReconnection(
-            roomId,
-            existingPlayer.playerId,
-            client.id,
-            authenticatedUser?.id, // Pass userId for authenticated users
-          );
+          if (existingWaitingPlayer) {
+            const result = await this.roomService.handlePlayerReconnection(
+              roomId,
+              existingWaitingPlayer.playerId,
+              client.id,
+              authenticatedUser.id,
+            );
 
-          if (!result.success) {
-            client.emit('error-message', 'Failed to reconnect');
-            // フォールスルーしてロビー接続へ
-          } else {
-            // ルームに参加
-            this.playerRooms.set(client.id, roomId);
-            void client.join(roomId);
-
-            const state = roomGameState.getState();
-
-            // ゲーム状態をクライアントに送信
-            this.server.to(client.id).emit('game-state', {
-              players: state.players.map((player) => ({
-                ...player,
-                hand:
-                  player.playerId === existingPlayer.playerId
-                    ? player.hand
-                    : [], // 自分の手札のみ表示
-              })),
-              gamePhase: state.gamePhase || 'waiting',
-              currentField: state.playState?.currentField,
-              currentTurn:
-                state.currentPlayerIndex !== -1 &&
-                state.players[state.currentPlayerIndex]
-                  ? state.players[state.currentPlayerIndex].playerId
-                  : null,
-              blowState: state.blowState,
-              teamScores: state.teamScores,
-              you: existingPlayer.playerId,
-              negriCard: state.playState?.negriCard,
-              fields: state.playState?.fields,
-              roomId: roomId,
-              pointsToWin: state.pointsToWin,
-            });
-            this.server.to(roomId).emit('update-players', state.players);
-
-            // Always issue reconnect token as fallback
-            // Even authenticated users need it when authToken isn't ready on reload
-            this.server
-              .to(client.id)
-              .emit('reconnect-token', `${existingPlayer.playerId}`);
-
-            if (authenticatedUser) {
-              console.log(
-                `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
-              );
+            if (!result.success) {
+              client.emit('error-message', 'Failed to reconnect');
             } else {
-              console.log(
-                `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
-              );
-            }
+              this.playerRooms.set(client.id, roomId);
+              void client.join(roomId);
 
-            reconnected = true;
+              this.server.to(client.id).emit('game-player-joined', {
+                playerId: existingWaitingPlayer.playerId,
+                roomId,
+                isHost: updatedRoom.hostId === existingWaitingPlayer.playerId,
+                roomStatus: updatedRoom.status,
+                isSelf: true,
+                team: existingWaitingPlayer.team,
+                name: existingWaitingPlayer.name,
+              });
+              this.server.to(client.id).emit('set-room-id', roomId);
+              this.server.to(client.id).emit('room-updated', updatedRoom);
+              this.server
+                .to(client.id)
+                .emit('update-players', updatedRoom.players);
+              this.server
+                .to(client.id)
+                .emit('rooms-list', await this.roomService.listRooms());
+
+              reconnected = true;
+            }
           }
         } else {
-          console.log(
-            `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}, treating as new lobby connection`,
+          // ログインユーザーはuserIdで検索
+          const existingPlayer = roomGameState.findPlayerByUserId(
+            authenticatedUser.id,
           );
+          if (existingPlayer) {
+            console.log(
+              `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
+            );
+
+            // ルームサービスで再接続処理
+            const result = await this.roomService.handlePlayerReconnection(
+              roomId,
+              existingPlayer.playerId,
+              client.id,
+              authenticatedUser?.id, // Pass userId for authenticated users
+            );
+
+            if (!result.success) {
+              client.emit('error-message', 'Failed to reconnect');
+              // フォールスルーしてロビー接続へ
+            } else {
+              // ルームに参加
+              this.playerRooms.set(client.id, roomId);
+              void client.join(roomId);
+
+              // ゲーム状態をクライアントに送信
+              this.server.to(client.id).emit('game-state', {
+                players: state.players.map((player) => ({
+                  ...player,
+                  hand:
+                    player.playerId === existingPlayer.playerId
+                      ? player.hand
+                      : [], // 自分の手札のみ表示
+                })),
+                gamePhase: state.gamePhase || 'waiting',
+                currentField: state.playState?.currentField,
+                currentTurn:
+                  state.currentPlayerIndex !== -1 &&
+                  state.players[state.currentPlayerIndex]
+                    ? state.players[state.currentPlayerIndex].playerId
+                    : null,
+                blowState: state.blowState,
+                teamScores: state.teamScores,
+                you: existingPlayer.playerId,
+                negriCard: state.playState?.negriCard,
+                fields: state.playState?.fields,
+                roomId: roomId,
+                pointsToWin: state.pointsToWin,
+              });
+              this.server.to(roomId).emit('update-players', state.players);
+
+              // Always issue reconnect token as fallback
+              // Even authenticated users need it when authToken isn't ready on reload
+              this.server
+                .to(client.id)
+                .emit('reconnect-token', `${existingPlayer.playerId}`);
+
+              if (authenticatedUser) {
+                console.log(
+                  `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
+                );
+              } else {
+                console.log(
+                  `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
+                );
+              }
+
+              reconnected = true;
+            }
+          } else {
+            console.log(
+              `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}, treating as new lobby connection`,
+            );
+          }
         }
       } catch (error) {
         console.log(
@@ -646,6 +711,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: 'Failed to join created room' };
       }
 
+      await this.roomService.initCOMPlaceholders(room.id);
+
       const updatedRoom = await this.roomService.getRoom(room.id);
       if (!updatedRoom) {
         client.emit('error-message', 'Failed to load created room');
@@ -675,6 +742,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         name: hostPlayer.name,
       });
       client.emit('set-room-id', room.id);
+      client.emit('update-players', updatedRoom.players);
+      client.emit('room-updated', updatedRoom);
 
       // Create corresponding chat room for the game room
       try {

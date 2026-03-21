@@ -1,15 +1,19 @@
 .composer {
   padding: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .form {
   display: flex;
   gap: 0.5rem;
+  max-width: 100%;
 }
 
 .input {
   flex: 1;
+  min-width: 0;
   padding: 0.5rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.5rem;
@@ -35,6 +39,7 @@
 }
 
 .sendButton {
+  flex-shrink: 0;
   padding: 0.5rem 1rem;
   background-color: #fff;
   color: #000;
