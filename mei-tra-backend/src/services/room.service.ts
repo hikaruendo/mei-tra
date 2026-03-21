@@ -191,6 +191,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   async initCOMPlaceholders(roomId: string): Promise<void> {
     const room = await this.getRoom(roomId);
     if (!room) return;
+    const gameState = await this.getRoomGameState(roomId);
+    const state = gameState.getState();
     const CAPACITY = room.settings?.maxPlayers ?? 4;
     const actualCount = room.players.filter((p) => !p.isCOM).length;
     const placeholderCount = room.players.filter(
@@ -207,6 +209,15 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       placeholder.team = team;
       await this.roomRepository.addPlayer(roomId, placeholder);
       room.players.push(placeholder);
+      state.players.push({
+        ...placeholder,
+        hand: [...placeholder.hand],
+        isPasser: placeholder.isPasser ?? false,
+        hasBroken: placeholder.hasBroken ?? false,
+        hasRequiredBroken: placeholder.hasRequiredBroken ?? false,
+      });
+      state.teamAssignments[placeholder.playerId] = placeholder.team;
+      gameState.registerPlayerToken(placeholder.playerId, placeholder.playerId);
     }
   }
 

@@ -85,6 +85,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const isNegri = card === negriCard;
             const isJoker = card === 'JOKER';
             const isSelected = card === selectedCard || card === selectedNegriCard;
+            const distanceFromCenter = index - (player.hand.length - 1) / 2;
+            const maxDistance = Math.max((player.hand.length - 1) / 2, 1);
+            const normalizedDistance = distanceFromCenter / maxDistance;
+            const cardRotation = normalizedDistance * 15;
+            const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * 18;
 
             const validationResult = isValidCardPlay(card);
             const isPlayable = isCurrentPlayer && validationResult.isValid;
@@ -98,7 +103,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     handleCardClick(card);
                   }
                 }}
-                style={{ '--card-index': index } as React.CSSProperties}
+                style={{
+                  '--card-index': index,
+                  '--card-total': player.hand.length,
+                  '--card-rotation': `${cardRotation}deg`,
+                  '--card-translate-y': `${cardLift}px`,
+                } as React.CSSProperties}
               >
                 {isJoker ? (
                   <div className={styles.jokerRank}>JOKER</div>
@@ -139,7 +149,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     return (
       <div className={styles.otherPlayerHandContainer}>
         {Array(player.hand.length).fill(null).map((_, cardIndex) => (
-          <div key={cardIndex} className={styles.cardFaceDown}>🂠</div>
+          <div
+            key={cardIndex}
+            className={styles.cardFaceDown}
+            style={{
+              '--card-index': cardIndex,
+              '--card-total': player.hand.length,
+            } as React.CSSProperties}
+          >
+            🂠
+          </div>
         ))}
       </div>
     );

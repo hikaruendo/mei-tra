@@ -35,7 +35,7 @@ export default function Home() {
     return (
       <>
         <Navigation gameStarted={false} />
-        <main>
+        <main className={styles.main}>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
             <span className={styles.loadingText}>{t('initializing')}</span>
@@ -67,7 +67,7 @@ export default function Home() {
     return (
       <>
         <Navigation gameStarted={false} />
-        <main>
+        <main className={styles.main}>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
             <span className={styles.loadingText}>{t('initializing')}</span>
@@ -116,7 +116,7 @@ export default function Home() {
     return (
       <>
         <Navigation gameStarted={false} />
-        <main>
+        <main className={styles.main}>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
             <span className={styles.loadingText}>
@@ -137,7 +137,7 @@ export default function Home() {
   return (
     <ProtectedRoute requireAuth={true}>
       <Navigation gameStarted={gameStarted} inRoom={!!currentRoomId} />
-      <main>
+      <main className={styles.main}>
         {notification && (
           <Notification
             message={notification.message}

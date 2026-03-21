@@ -4,6 +4,7 @@
   align-items: center;
   /* Perspective setting needed for 3D effect. Cards will be displayed in 3D space. Larger value means stronger perspective. */
   perspective: 1000px;
+  position: relative;
   width: 100%;
   padding: 1rem;
 }
@@ -283,6 +284,36 @@
 }
 
 @media (max-width: 768px) {
+  .playerPosition.top,
+  .playerPosition.bottom,
+  .playerPosition.left,
+  .playerPosition.right {
+    align-self: center;
+  }
+
+  .playerPosition.top {
+    align-self: start;
+    padding-top: 0;
+    margin-top: -1rem;
+  }
+
+  .playerPosition.left,
+  .playerPosition.right {
+    align-self: start;
+    margin-top: -0.2rem;
+  }
+
+  .playerPosition.bottom {
+    align-self: end;
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .playerInfo {
+    padding: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
   .card {
     width: 54px;
     height: 72px;
@@ -320,28 +351,39 @@
   }
 
   .playerInfoGroup{
-    gap: 30px;
+    gap: 0.5rem;
   }
 
   .handContainer{
-    padding: 0.5rem;
+    padding: 0.5rem 0 0;
+    flex-wrap: nowrap;
+    row-gap: 0;
+    overflow: visible;
   }
 
   .otherPlayerHandContainer{
-    padding: 0.5rem;
-    margin-left: 15px;
+    padding: 0.1rem 0 0;
+    margin-left: 0;
+    min-height: 1.75rem;
+    align-items: flex-end;
+    overflow: visible;
   }
 
   .cardFaceDown{
-    width: 1.5rem;
-    height: 2rem;
-    font-size: 1.2rem;
+    width: 1.25rem;
+    height: 1.8rem;
+    font-size: 1rem;
     border-radius: 0.25rem;
+    margin-left: -0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    transform-origin: bottom center;
+    transform: none;
   }
 
   .playerInfoContainer{
-    min-width: 80px;
+    min-width: 72px;
     border-radius: var(--radius-md);
+    padding: 0.2rem;
   }
 
   .currentTurn{
@@ -350,18 +392,107 @@
   }
 
   .playerName{
-    max-width: 80px;
-    font-size: var(--font-size-base);
+    max-width: 72px;
+    font-size: 0.8rem;
     color: var(--color-white);
   }
 
   .cardCount{
-    font-size: 14px;
+    font-size: 12px;
     color: rgba(255, 255, 255, 0.9);
     background: rgba(0, 0, 0, 0.2);
     padding: 0.15rem 0.5rem;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .playerPosition.top .playerInfo,
+  .playerPosition.left .playerInfo,
+  .playerPosition.right .playerInfo {
+    margin-bottom: 0;
+  }
+
+  .playerPosition.top .playerInfoContainer,
+  .playerPosition.left .playerInfoContainer,
+  .playerPosition.right .playerInfoContainer {
+    min-width: 62px;
+    padding: 0.1rem;
+    background: rgba(16, 185, 129, 0.05);
+    transform: scale(0.88);
+    transform-origin: center top;
+  }
+
+  .playerPosition.top .playerName,
+  .playerPosition.left .playerName,
+  .playerPosition.right .playerName {
+    max-width: 58px;
+    font-size: 0.68rem;
+  }
+
+  .playerPosition.top .cardCount,
+  .playerPosition.left .cardCount,
+  .playerPosition.right .cardCount {
+    font-size: 10px;
+  }
+
+  .playerPosition.bottom .playerInfo {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 0.2rem 0.4rem;
+    margin-bottom: 0;
+    margin-top: 0.35rem;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.05rem;
+  }
+
+  .playerPosition.bottom .playerInfoGroup {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .playerPosition.bottom .playerInfoContainer {
+    min-width: 84px;
+    padding: 0.22rem;
+  }
+
+  .playerPosition.bottom .playerName {
+    max-width: 80px;
+    font-size: 0.78rem;
+  }
+
+  .playerPosition.bottom .handContainer {
+    width: 100%;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0 0 4.35rem;
+    margin-top: -1.3rem;
+    overflow-x: visible;
+    overflow-y: visible;
+    min-height: 154px;
+  }
+
+  .playerPosition.bottom .card {
+    width: 63px;
+    height: 92px;
+    margin: 0 -1.02rem;
+    padding: 0.24rem;
+    z-index: calc(var(--card-index, 0) + 1);
+    transform-origin: bottom center;
+    transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .playerPosition.bottom .card.selected,
+  .playerPosition.bottom .card:hover {
+    z-index: calc(var(--card-index, 0) + 1) !important;
+    transform: translateY(calc(var(--card-translate-y, 0px) - 26px)) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
+    margin: 0 -0.72rem;
+    box-shadow: 0 18px 28px rgba(0, 0, 0, 0.34);
   }
 
   .confirmationButtons {
