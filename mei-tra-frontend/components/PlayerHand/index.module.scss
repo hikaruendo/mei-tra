@@ -191,23 +191,64 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.selectNegriCard{
-  font-size: var(--font-size-sm);
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.agariCardContainer{
+.statusPanel{
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0.35rem;
+  min-width: 92px;
+  min-height: 102px;
+  padding: 0.45rem 0.55rem;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  background:
+    linear-gradient(180deg, rgba(8, 32, 23, 0.96) 0%, rgba(5, 19, 14, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 22px rgba(0, 0, 0, 0.28);
 }
 
-.agariLabel{
-  color: #4CAF50;
-  font-weight: bold;
-  font-size: 0.9rem;
+.agariStatusPanel{
+  margin-left: 0.35rem;
+}
+
+.statusHeader{
+  min-width: 3.4rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 204, 21, 0.34);
+  background: rgba(15, 23, 42, 0.55);
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.statusMessage{
+  font-size: 0.78rem;
+  color: rgba(241, 245, 249, 0.9);
+  max-width: 92px;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.statusCardFrame{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 58px;
+  padding: 0.2rem 0.3rem;
+  border-radius: 10px;
+  background: radial-gradient(circle at center, rgba(34, 197, 94, 0.16) 0%, rgba(15, 23, 42, 0) 78%);
+}
+
+.statusCardFrame > *{
+  transform: scale(1.45);
+  transform-origin: center;
 }
 
 .brokenButton{
@@ -307,6 +348,7 @@
     align-self: end;
     justify-self: stretch;
     width: 100%;
+    margin-top: -0.85rem;
   }
 
   .playerInfo {
@@ -450,13 +492,40 @@
   .playerPosition.bottom .playerInfoGroup {
     width: 100%;
     justify-content: flex-start;
-    align-items: flex-start;
-    gap: 0;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .playerPosition.bottom .playerInfoContainer {
     min-width: 84px;
     padding: 0.22rem;
+  }
+
+  .playerPosition.bottom .statusPanel {
+    align-self: center;
+    margin-top: -0.35rem;
+    min-width: 84px;
+    min-height: 92px;
+    padding: 0.38rem 0.45rem;
+  }
+
+  .playerPosition.bottom .agariStatusPanel {
+    margin-left: 0.5rem;
+  }
+
+  .playerPosition.bottom .statusHeader {
+    min-width: 3rem;
+    font-size: 0.68rem;
+  }
+
+  .playerPosition.bottom .statusMessage {
+    max-width: 80px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+
+  .playerPosition.bottom .statusCardFrame > * {
+    transform: scale(1.32);
   }
 
   .playerPosition.bottom .playerName {

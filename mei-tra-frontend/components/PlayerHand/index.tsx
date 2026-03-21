@@ -168,13 +168,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     <div className={`${styles.playerPosition} ${styles[position]}`}>
       <div className={styles.playerInfo}>
         <div className={styles.playerInfoGroup}>
-          {negriCard && negriPlayerId === player.playerId && (
-            <NegriCard
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
-              currentPlayerId={currentPlayerId}
-            />
-          )}
           <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
             <div className={styles.playerAvatar}>
               <PlayerAvatar
@@ -184,15 +177,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               />
             </div>
             {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
-            {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
-              <div className={styles.selectNegriCard}>{t('selectNegri')}</div>
-            )}
-            {isCurrentPlayer && agariCard && isWinningPlayer && (
-              <div className={styles.agariCardContainer}>
-                <div className={styles.agariLabel}>{t('agari')}</div>
-                <Card card={agariCard} />
-              </div>
-            )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
               <button
                 className={styles.brokenButton}
@@ -202,6 +186,27 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </button>
             )}
           </div>
+          {negriCard && negriPlayerId === player.playerId && (
+            <NegriCard
+              negriCard={negriCard}
+              negriPlayerId={negriPlayerId}
+              currentPlayerId={currentPlayerId}
+            />
+          )}
+          {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
+            <div className={styles.statusPanel}>
+              <div className={styles.statusHeader}>{t('negri')}</div>
+              <div className={styles.statusMessage}>{t('selectNegri')}</div>
+            </div>
+          )}
+          {isCurrentPlayer && agariCard && isWinningPlayer && (
+            <div className={`${styles.statusPanel} ${styles.agariStatusPanel}`}>
+              <div className={styles.statusHeader}>{t('agari')}</div>
+              <div className={styles.statusCardFrame}>
+                <Card card={agariCard} />
+              </div>
+            </div>
+          )}
         </div>
         {renderPlayerHand(isCurrentPlayer)}
         {completedFields.length > 0 && (
