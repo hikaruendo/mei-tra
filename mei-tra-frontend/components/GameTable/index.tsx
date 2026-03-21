@@ -100,7 +100,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           teamScores={teamScores}
           pointsToWin={pointsToWin}
           players={players}
-          gamePhase={gamePhase}
           onLeave={onLeave}
         />
       )}
