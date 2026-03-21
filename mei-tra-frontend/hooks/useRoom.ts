@@ -27,6 +27,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     currentRoomRef.current = currentRoom;
   }, [currentRoom]);
 
+  const clearStoredRoomState = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('roomId');
+    }
+    setCurrentRoom(null);
+  }, []);
+
   // ルーム一覧の取得
   const fetchRooms = useCallback(() => {
     if (socket) {
@@ -56,6 +63,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         const updatedRoom = rooms.find(r => r.id === targetRoomId);
         if (updatedRoom) {
           setCurrentRoom(updatedRoom);
+        } else if (storedRoomId === targetRoomId) {
+          clearStoredRoomState();
         }
       }
     };
@@ -271,8 +280,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     // 退出後にcurrentRoomをクリアしてJoinボタンを再表示する
     const handleBackToLobby = () => {
-      setCurrentRoom(null);
-      sessionStorage.removeItem('roomId');
+      clearStoredRoomState();
     };
 
     socket.on('rooms-list', handleRoomsList);
@@ -296,7 +304,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       socket.off('set-room-id', handleSetRoomId);
       socket.off('back-to-lobby', handleBackToLobby);
     };
-  }, [socket, currentPlayerId]);
+  }, [socket, currentPlayerId, clearStoredRoomState]);
 
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {

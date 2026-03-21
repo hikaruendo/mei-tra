@@ -262,6 +262,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  private async sendBackToLobby(
+    client: Socket,
+    reason: string,
+    roomId?: string,
+  ): Promise<void> {
+    console.warn(
+      `[Reconnection] Sending back-to-lobby for socket=${client.id} room=${roomId ?? 'none'} reason=${reason}`,
+    );
+    client.emit('back-to-lobby');
+    client.emit('error-message', reason);
+    client.emit('rooms-list', await this.roomService.listRooms());
+  }
+
   private triggerComAutoPlayIfNeeded(roomId: string): void {
     // Non-blocking: fire and forget
     void this.runComAutoPlayLoop(roomId);
@@ -427,6 +440,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
               reconnected = true;
             }
+          } else {
+            console.warn(
+              `[Reconnection] ✗ No waiting-room player found by userId: ${authenticatedUser.id} in room ${roomId}`,
+            );
+            await this.sendBackToLobby(
+              client,
+              'Your previous room session is no longer valid. Please join or create a room again.',
+              roomId,
+            );
+            return;
           }
         } else {
           // ログインユーザーはuserIdで検索
@@ -502,6 +525,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             console.log(
               `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}, treating as new lobby connection`,
             );
+            await this.sendBackToLobby(
+              client,
+              'Your previous room session is no longer valid. Please join or create a room again.',
+              roomId,
+            );
+            return;
           }
         }
       } catch (error) {
@@ -509,6 +538,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           '[Reconnection] Game state not found, treating as new lobby connection:',
           error,
         );
+        await this.sendBackToLobby(
+          client,
+          'Your previous room session is no longer available. Please join or create a room again.',
+          roomId,
+        );
+        return;
       }
       if (reconnected) {
         // Even on successful reconnection, keep gameState.users in sync with the
