@@ -23,8 +23,13 @@ export async function generateMetadata({
   const description = locale === 'ja' ? jaDescription : enDescription;
   const path = locale === 'ja' ? '/' : `/${locale}`;
   const url = new URL(path, SITE_URL).toString();
+  const socialImage =
+    locale === 'ja'
+      ? new URL('/demo-ja.png', SITE_URL).toString()
+      : new URL('/demo-en.png', SITE_URL).toString();
 
   return {
+    metadataBase: new URL(SITE_URL),
     title,
     description,
     keywords: locale === 'ja'
@@ -44,11 +49,20 @@ export async function generateMetadata({
       siteName: 'Mei-Tra',
       locale: locale === 'ja' ? 'ja_JP' : 'en_US',
       type: 'website',
+      images: [
+        {
+          url: socialImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [socialImage],
     },
   };
 }
