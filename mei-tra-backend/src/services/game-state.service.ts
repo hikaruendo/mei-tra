@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   GameState,
   Player,
@@ -18,6 +18,7 @@ import { IGameStateService } from './interfaces/game-state-service.interface';
 
 @Injectable()
 export class GameStateService implements IGameStateService {
+  private readonly logger = new Logger(GameStateService.name);
   private users: User[] = [];
   private state: GameState;
   private playerIds: Map<string, string> = new Map(); // token -> playerId
@@ -84,7 +85,74 @@ export class GameStateService implements IGameStateService {
     };
   }
 
+  private sanitizePlayers(): boolean {
+    const rawPlayers = Array.isArray(this.state.players)
+      ? this.state.players
+      : [];
+    const sanitizedPlayers: Player[] = [];
+    let changed = !Array.isArray(this.state.players);
+
+    for (const rawPlayer of rawPlayers) {
+      if (
+        !rawPlayer ||
+        typeof rawPlayer.playerId !== 'string' ||
+        typeof rawPlayer.name !== 'string'
+      ) {
+        changed = true;
+        continue;
+      }
+
+      const normalizedPlayer: Player = {
+        ...rawPlayer,
+        id: typeof rawPlayer.id === 'string' ? rawPlayer.id : '',
+        hand: Array.isArray(rawPlayer.hand) ? rawPlayer.hand : [],
+        isPasser: rawPlayer.isPasser ?? false,
+        hasBroken: rawPlayer.hasBroken ?? false,
+        hasRequiredBroken: rawPlayer.hasRequiredBroken ?? false,
+      };
+
+      if (
+        normalizedPlayer.id !== rawPlayer.id ||
+        normalizedPlayer.hand !== rawPlayer.hand ||
+        normalizedPlayer.isPasser !== rawPlayer.isPasser ||
+        normalizedPlayer.hasBroken !== rawPlayer.hasBroken ||
+        normalizedPlayer.hasRequiredBroken !== rawPlayer.hasRequiredBroken
+      ) {
+        changed = true;
+      }
+
+      sanitizedPlayers.push(normalizedPlayer);
+    }
+
+    if (changed) {
+      this.state.players = sanitizedPlayers;
+
+      const roomLabel = this.roomId ?? 'unknown-room';
+      this.logger.warn(
+        `Sanitized malformed players in game state for ${roomLabel}`,
+      );
+    }
+
+    const normalizedIndex =
+      this.state.players.length === 0
+        ? 0
+        : Number.isInteger(this.state.currentPlayerIndex)
+          ? Math.min(
+              Math.max(this.state.currentPlayerIndex, 0),
+              this.state.players.length - 1,
+            )
+          : 0;
+
+    if (normalizedIndex !== this.state.currentPlayerIndex) {
+      this.state.currentPlayerIndex = normalizedIndex;
+      changed = true;
+    }
+
+    return changed;
+  }
+
   getState(): GameState {
+    this.sanitizePlayers();
     return this.state;
   }
 
@@ -115,6 +183,18 @@ export class GameStateService implements IGameStateService {
       if (persistedState) {
         this.state = persistedState;
         this.roomId = roomId;
+
+        const sanitized = this.sanitizePlayers();
+        if (sanitized) {
+          try {
+            await this.gameStateRepository.update(roomId, {
+              players: this.state.players,
+              currentPlayerIndex: this.state.currentPlayerIndex,
+            });
+          } catch {
+            // Continue with in-memory operation even if persistence fails
+          }
+        }
 
         // Rebuild playerIds map from persisted players
         // This is necessary because playerIds map is not persisted to database
