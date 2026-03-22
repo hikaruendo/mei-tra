@@ -50,11 +50,22 @@ export function getSocket(authToken?: string): Socket {
     console.log('[Socket] Auth roomId will be read dynamically from sessionStorage on each connect');
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected successfully with transport:', socket?.io.engine.transport.name);
+      console.log('[Socket] Connected successfully with transport:', socket?.io.engine.transport.name, {
+        socketId: socket?.id ?? null,
+        storedRoomId: sessionStorage.getItem('roomId') || null,
+      });
     });
 
     socket.on('connect_error', (error) => {
       console.error('[Socket] Connection error:', error.message);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[Socket] Disconnected:', {
+        reason,
+        socketId: socket?.id ?? null,
+        storedRoomId: sessionStorage.getItem('roomId') || null,
+      });
     });
   }
   return socket!;

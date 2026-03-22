@@ -406,6 +406,14 @@ export const useGame = () => {
         setBlowDeclarations(blowDeclarations);
       },
       'back-to-lobby': () => {
+        console.warn('[useGame] back-to-lobby received', {
+          currentRoomId,
+          currentPlayerId,
+          storedRoomId:
+            typeof window !== 'undefined'
+              ? sessionStorage.getItem('roomId')
+              : null,
+        });
         gameOverShownRef.current = null;
         setGameStarted(false);
         setGamePhase(null);

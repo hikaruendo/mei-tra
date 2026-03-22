@@ -77,8 +77,15 @@ export function useSocket(): UseSocketReturn {
             isInitializingRef.current = false;
           };
 
-          const handleDisconnect = () => {
-            console.log('[useSocket] Socket disconnected');
+          const handleDisconnect = (reason: string) => {
+            console.warn('[useSocket] Socket disconnected', {
+              reason,
+              socketId: managedSocket?.id ?? null,
+              storedRoomId:
+                typeof window !== 'undefined'
+                  ? sessionStorage.getItem('roomId')
+                  : null,
+            });
             if (!isMounted) return;
             setIsConnected(false);
             setIsConnecting(true);
@@ -94,12 +101,25 @@ export function useSocket(): UseSocketReturn {
             isInitializingRef.current = false;
           };
 
-          const handleReconnectAttempt = () => {
+          const handleReconnectAttempt = (attempt: number) => {
+            console.log('[useSocket] Reconnect attempt', {
+              attempt,
+              storedRoomId:
+                typeof window !== 'undefined'
+                  ? sessionStorage.getItem('roomId')
+                  : null,
+            });
             if (!isMounted) return;
             setIsConnecting(true);
           };
 
           const handleReconnectFailed = () => {
+            console.error('[useSocket] Reconnect failed', {
+              storedRoomId:
+                typeof window !== 'undefined'
+                  ? sessionStorage.getItem('roomId')
+                  : null,
+            });
             if (!isMounted) return;
             setIsConnected(false);
             setIsConnecting(false);

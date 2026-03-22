@@ -271,15 +271,36 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     // エラーメッセージ
     const handleErrorMessage = (message: string) => {
+      console.warn('[useRoom] error-message received:', {
+        message,
+        socketId: socket.id,
+        currentRoomId: currentRoomRef.current?.id ?? null,
+        storedRoomId:
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('roomId')
+            : null,
+      });
       setError(message);
     };
 
     const handleSetRoomId = (roomId: string) => {
+      console.log('[useRoom] set-room-id received:', {
+        roomId,
+        socketId: socket.id,
+      });
       sessionStorage.setItem('roomId', roomId);
     };
 
     // 退出後にcurrentRoomをクリアしてJoinボタンを再表示する
     const handleBackToLobby = () => {
+      console.warn('[useRoom] back-to-lobby received:', {
+        socketId: socket.id,
+        currentRoomId: currentRoomRef.current?.id ?? null,
+        storedRoomId:
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('roomId')
+            : null,
+      });
       clearStoredRoomState();
     };
 
@@ -309,6 +330,14 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
     if (!socket?.connected) {
+      console.error('[useRoom] Cannot create room: socket not connected', {
+        socketPresent: !!socket,
+        socketId: socket?.id ?? null,
+        storedRoomId:
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('roomId')
+            : null,
+      });
       setError('Socket not connected');
       return;
     }
@@ -317,13 +346,24 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       name,
       pointsToWin,
       teamAssignmentMethod,
-      socketConnected: socket.connected
+      socketConnected: socket.connected,
+      socketId: socket.id,
+      storedRoomId:
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem('roomId')
+          : null,
     });
 
     socket.emit(
       'create-room',
       { name, pointsToWin, teamAssignmentMethod },
       (response: { success: boolean; room?: Room; error?: string }) => {
+        console.log('[useRoom] create-room ack:', {
+          success: response.success,
+          roomId: response.room?.id ?? null,
+          error: response.error ?? null,
+          socketId: socket.id,
+        });
         if (response.success && response.room) {
           setCurrentRoom(response.room);
           return;
