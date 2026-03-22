@@ -80,7 +80,7 @@ export function useSocket(): UseSocketReturn {
           const handleDisconnect = (reason: string) => {
             console.warn('[useSocket] Socket disconnected', {
               reason,
-              socketId: managedSocket.id ?? null,
+              socketId: managedSocket?.id ?? null,
               storedRoomId:
                 typeof window !== 'undefined'
                   ? sessionStorage.getItem('roomId')
