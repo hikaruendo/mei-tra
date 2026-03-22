@@ -14,7 +14,7 @@ import { IBlowService } from './services/interfaces/blow-service.interface';
 import { IPlayService } from './services/interfaces/play-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { IChomboService } from './services/interfaces/chombo-service.interface';
-import { TrumpType, User } from './types/game.types';
+import { Player, TrumpType, User } from './types/game.types';
 import { RoomStatus } from './types/room.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { AuthService } from './auth/auth.service';
@@ -612,10 +612,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.playerRooms.delete(client.id);
       await client.leave(roomId);
 
-      // Get room-specific game state
+      // Guard against malformed persisted state during disconnect cleanup.
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.id === client.id);
+      const rawPlayers = Array.isArray(state?.players) ? state.players : [];
+      const players = rawPlayers.filter((player): player is Player =>
+        Boolean(player),
+      );
+
+      if (players.length !== rawPlayers.length) {
+        this.logger.warn(
+          `Dropping malformed players from room ${roomId} during disconnect cleanup`,
+        );
+        state.players = players;
+        await roomGameState.saveState();
+      }
+
+      const player = players.find((p) => p.id === client.id);
 
       if (player) {
         // プレイヤーのチーム情報を保持

@@ -806,6 +806,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         (p) => p.playerId === replacementPlayerId,
       );
     }
+    if (gsAssignedIndex === -1 && replacingComId) {
+      gsAssignedIndex = state.players.findIndex(
+        (p) => p.playerId === replacingComId,
+      );
+    }
     const currentSeatGamePlayer =
       replacingComId != null
         ? state.players.find((p) => p.playerId === replacingComId)
@@ -823,11 +828,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       currentSeatGamePlayer?.hasRequiredBroken ??
       player.hasRequiredBroken ??
       false;
-    // gsAssignedIndex はCOM引き継ぎ時にplayerIdで検索した正確なインデックス
-    const effectiveGsIndex =
-      gsAssignedIndex !== -1 ? gsAssignedIndex : assignedIndex;
-    if (effectiveGsIndex !== -1) {
-      state.players[effectiveGsIndex] = player;
+    if (gsAssignedIndex !== -1) {
+      state.players[gsAssignedIndex] = player;
     } else {
       const comIndex = state.players.findIndex((p) => p.isCOM === true);
       if (comIndex !== -1) {
