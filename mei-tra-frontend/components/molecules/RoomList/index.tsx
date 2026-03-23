@@ -54,8 +54,9 @@ export const RoomList: React.FC<RoomListProps> = ({
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
+    createRoom(newRoomName, pointsToWin, 'random');
+
     if (newRoomName.trim()) {
-      createRoom(newRoomName.trim(), pointsToWin, 'random');
       setNewRoomName('');
       setPointsToWin(5);
     }
@@ -86,7 +87,7 @@ export const RoomList: React.FC<RoomListProps> = ({
           <button
             type="submit"
             className={styles.createButton}
-            disabled={backendStatus.isStarting}
+            disabled={backendStatus.isStarting || !newRoomName.trim()}
           >
             {t('room.create')}
           </button>
