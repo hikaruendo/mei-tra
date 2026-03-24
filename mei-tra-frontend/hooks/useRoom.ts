@@ -329,6 +329,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
   // ルーム作成
   const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      setError('Room name is required');
+      return;
+    }
+
     if (!socket?.connected) {
       console.error('[useRoom] Cannot create room: socket not connected', {
         socketPresent: !!socket,
@@ -343,7 +350,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     console.log('[useRoom] Creating room:', {
-      name,
+      name: trimmedName,
       pointsToWin,
       teamAssignmentMethod,
       socketConnected: socket.connected,
@@ -356,7 +363,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.emit(
       'create-room',
-      { name, pointsToWin, teamAssignmentMethod },
+      { name: trimmedName, pointsToWin, teamAssignmentMethod },
       (response: { success: boolean; room?: Room; error?: string }) => {
         console.log('[useRoom] create-room ack:', {
           success: response.success,

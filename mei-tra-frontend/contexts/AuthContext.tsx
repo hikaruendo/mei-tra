@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { disconnectSocket } from '@/app/socket';
 import { AuthUser, SignUpData, SignInData, UserProfile } from '@/types/user.types';
 
 interface AuthContextType {
@@ -25,6 +26,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadingUserRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
+
+  const clearClientAuthState = useCallback(() => {
+    disconnectSocket();
+    setSession(null);
+    setUser(null);
+    setLoading(false);
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth_profile_cache');
+      sessionStorage.removeItem('roomId');
+    }
+  }, []);
 
   const loadUserProfile = useCallback(async (supabaseUser: User, retryCount = 0) => {
     const maxRetries = 2;
@@ -251,17 +264,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Load profile in background (don't await)
         loadUserProfile(session.user);
       } else if (event === 'SIGNED_OUT' || !session) {
-        setUser(null);
-        setLoading(false);
-        // Clear profile cache on sign out
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('auth_profile_cache');
-        }
+        clearClientAuthState();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [loadUserProfile]);
+  }, [clearClientAuthState, loadUserProfile]);
 
   const signUp = async (data: SignUpData) => {
     try {
@@ -272,6 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             username: data.username,
             display_name: data.displayName,
+            locale: data.locale || 'ja',
           },
         },
       });
@@ -296,8 +305,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+    if (error) {
+      clearClientAuthState();
+      return { error: null };
+    }
+
+    clearClientAuthState();
+    return { error: null };
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
