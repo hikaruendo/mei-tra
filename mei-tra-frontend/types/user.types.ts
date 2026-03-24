@@ -29,6 +29,7 @@ export interface SignUpData {
   password: string;
   username: string;
   displayName: string;
+  locale?: 'ja' | 'en';
 }
 
 export interface SignInData {

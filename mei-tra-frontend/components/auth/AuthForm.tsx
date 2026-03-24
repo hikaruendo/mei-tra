@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { SignInData, SignUpData } from '@/types/user.types';
 import styles from './AuthForm.module.scss';
@@ -15,6 +15,7 @@ interface AuthFormProps {
 export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const { signIn, signUp, loading } = useAuth();
   const t = useTranslations('auth');
+  const locale = useLocale();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -60,6 +61,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
           password: formData.password,
           username: formData.username,
           displayName: formData.displayName,
+          locale: locale === 'en' ? 'en' : 'ja',
         } as SignUpData);
 
         if (error) {

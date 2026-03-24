@@ -280,6 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             username: data.username,
             display_name: data.displayName,
+            locale: data.locale || 'ja',
           },
         },
       });
