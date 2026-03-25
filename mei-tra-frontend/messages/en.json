@@ -241,7 +241,7 @@
     "start": "Start Game",
     "roomName": "Enter room name",
     "search": "Search by room name",
-    "defaultRoomName": "Untitled Room",
+    "defaultRoomName": "{name}'s Room",
     "pointsToWin": "Points to Win",
     "teamAssignment": "Team Assignment",
     "teamAuto": "Auto",

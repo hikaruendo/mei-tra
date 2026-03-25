@@ -241,7 +241,7 @@
     "start": "ゲーム開始",
     "roomName": "ルーム名を入力",
     "search": "ルーム名で検索",
-    "defaultRoomName": "名無しルーム",
+    "defaultRoomName": "{name}'s Room",
     "pointsToWin": "勝利点数",
     "teamAssignment": "チーム分け",
     "teamAuto": "自動",

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
+import { useAuth } from '../../../hooks/useAuth';
 import { RoomStatus } from '../../../types/room.types';
 import { User } from '../../../types/game.types';
 import styles from './index.module.scss';
@@ -46,6 +47,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   currentPlayerId: currentPlayerIdProp = null,
 }) => {
   const t = useTranslations();
+  const { user } = useAuth();
   const memoizedUsers = useMemo(() => users, [users]);
   const { availableRooms, createRoom, joinRoom, error, currentRoom } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
@@ -67,7 +69,12 @@ export const RoomList: React.FC<RoomListProps> = ({
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    const fallbackRoomName = t('room.defaultRoomName');
+    const hostDisplayName =
+      user?.profile?.displayName?.trim() ||
+      user?.profile?.username?.trim() ||
+      user?.email?.split('@')[0]?.trim() ||
+      'Host';
+    const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
     createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random');
 
     setNewRoomName('');
