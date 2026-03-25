@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
+import { useAuth } from '../../../hooks/useAuth';
 import { RoomStatus } from '../../../types/room.types';
 import { User } from '../../../types/game.types';
 import styles from './index.module.scss';
@@ -46,20 +47,38 @@ export const RoomList: React.FC<RoomListProps> = ({
   currentPlayerId: currentPlayerIdProp = null,
 }) => {
   const t = useTranslations();
+  const { user } = useAuth();
   const memoizedUsers = useMemo(() => users, [users]);
   const { availableRooms, createRoom, joinRoom, error, currentRoom } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const { backendStatus, isLoading } = useBackendStatus();
 
+  const filteredRooms = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return availableRooms;
+    }
+
+    return availableRooms.filter((room) =>
+      room.name.toLowerCase().includes(normalizedQuery)
+    );
+  }, [availableRooms, searchQuery]);
+
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    createRoom(newRoomName, pointsToWin, 'random');
+    const hostDisplayName =
+      user?.profile?.displayName?.trim() ||
+      user?.profile?.username?.trim() ||
+      user?.email?.split('@')[0]?.trim() ||
+      'Host';
+    const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
+    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random');
 
-    if (newRoomName.trim()) {
-      setNewRoomName('');
-      setPointsToWin(5);
-    }
+    setNewRoomName('');
+    setPointsToWin(5);
   };
 
   return (
@@ -87,7 +106,7 @@ export const RoomList: React.FC<RoomListProps> = ({
           <button
             type="submit"
             className={styles.createButton}
-            disabled={backendStatus.isStarting || !newRoomName.trim()}
+            disabled={backendStatus.isStarting}
           >
             {t('room.create')}
           </button>
@@ -114,8 +133,17 @@ export const RoomList: React.FC<RoomListProps> = ({
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.section}>
+        <div className={styles.searchRow}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('room.search')}
+            className={styles.searchInput}
+          />
+        </div>
         <div className={styles.roomList}>
-          {availableRooms.map((room) => {
+          {filteredRooms.map((room) => {
             const actualPlayerCount = room.players.filter(p => !p.isCOM).length;
             return (
               <div key={room.id} className={styles.roomItem}>
@@ -157,6 +185,11 @@ export const RoomList: React.FC<RoomListProps> = ({
             );
           })}
         </div>
+        {filteredRooms.length === 0 && (
+          <div className={styles.emptyState}>
+            {searchQuery.trim() ? t('room.noSearchResults') : t('room.noRooms')}
+          </div>
+        )}
       </div>
 
     </div>

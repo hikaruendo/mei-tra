@@ -56,6 +56,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // ルーム一覧の更新
     const handleRoomsList = (rooms: Room[]) => {
       setAvailableRooms(rooms);
+      setError(null);
       const storedRoomId =
         typeof window !== 'undefined' ? sessionStorage.getItem('roomId') : null;
       const targetRoomId = currentRoomRef.current?.id ?? storedRoomId;
@@ -280,6 +281,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             ? sessionStorage.getItem('roomId')
             : null,
       });
+
+      if (message === 'Failed to reconnect') {
+        return;
+      }
+
       setError(message);
     };
 
@@ -301,6 +307,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             ? sessionStorage.getItem('roomId')
             : null,
       });
+      setError(null);
       clearStoredRoomState();
     };
 

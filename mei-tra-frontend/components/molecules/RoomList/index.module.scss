@@ -101,6 +101,31 @@
   margin-bottom: 30px;
 }
 
+.searchRow {
+  margin-bottom: 16px;
+}
+
+.searchInput {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ededed;
+
+  &::placeholder {
+    color: #666;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  }
+}
+
 .section h3 {
   margin-bottom: 15px;
   color: #ededed;
@@ -115,6 +140,16 @@
   @media (min-width: 640px) {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
+}
+
+.emptyState {
+  margin-top: 16px;
+  padding: 24px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #888;
+  text-align: center;
 }
 
 .roomItem {

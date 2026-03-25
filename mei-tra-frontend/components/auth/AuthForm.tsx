@@ -31,6 +31,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setIsSubmitting(true);
 
     try {
@@ -67,7 +68,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
         if (error) {
           setError(error.message);
         } else {
-          onSuccess?.();
+          setSuccessMessage(t('confirmEmailSent'));
+          setFormData(prev => ({
+            ...prev,
+            password: '',
+          }));
         }
       }
     } catch {
