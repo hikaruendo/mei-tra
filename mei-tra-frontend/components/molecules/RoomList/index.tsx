@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '../../../hooks/useRoom';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
@@ -38,6 +38,7 @@ interface RoomListProps {
   isConnecting?: boolean;
   users?: User[];
   currentPlayerId?: string | null;
+  onRoomEntered?: (roomId: string) => void;
 }
 
 export const RoomList: React.FC<RoomListProps> = ({
@@ -45,6 +46,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   isConnecting,
   users = [],
   currentPlayerId: currentPlayerIdProp = null,
+  onRoomEntered,
 }) => {
   const t = useTranslations();
   const { user } = useAuth();
@@ -66,6 +68,14 @@ export const RoomList: React.FC<RoomListProps> = ({
       room.name.toLowerCase().includes(normalizedQuery)
     );
   }, [availableRooms, searchQuery]);
+
+  useEffect(() => {
+    if (!currentRoom?.id || !onRoomEntered) {
+      return;
+    }
+
+    onRoomEntered(currentRoom.id);
+  }, [currentRoom?.id, onRoomEntered]);
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();

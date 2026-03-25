@@ -379,6 +379,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           socketId: socket.id,
         });
         if (response.success && response.room) {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('roomId', response.room.id);
+          }
           setCurrentRoom(response.room);
           return;
         }
@@ -418,6 +421,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.emit('join-room', { roomId, user: userToJoin }, (response: { success: boolean; room?: Room }) => {
       if (response.success && response.room) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('roomId', response.room.id);
+        }
         setCurrentRoom(response.room);
       }
     });
