@@ -12,3 +12,8 @@ body {
   font-family: $font-family-base;
   transition: background-color $transition-base;
 }
+
+html[data-theme='light'] body {
+  background-color: #f5f7fb;
+  color: #111827;
+}

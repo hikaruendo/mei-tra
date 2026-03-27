@@ -266,3 +266,46 @@ $transition-button: all 0.3s ease;
     color: #ededed;
   }
 }
+
+:global(html[data-theme='light']) {
+  .navigation {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .brandName {
+    color: #111827;
+  }
+
+  .navLink,
+  .langSwitcher,
+  .langSwitcherMobile {
+    color: #4b5563;
+  }
+
+  .navLink:hover,
+  .langSwitcher:hover,
+  .langSwitcherMobile:hover {
+    color: #111827;
+    background-color: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .mobileOverlay {
+    background-color: rgba(15, 23, 42, 0.3);
+  }
+
+  .mobileMenu {
+    background-color: #ffffff;
+    box-shadow: -2px 0 8px rgba(15, 23, 42, 0.1);
+  }
+
+  .mobileUserProfile {
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .mobileMenuButton span {
+    background-color: #111827;
+  }
+}

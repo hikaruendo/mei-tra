@@ -450,3 +450,49 @@
   margin-bottom: 15px;
   font-size: 14px;
 }
+
+:global(html[data-theme='light']) {
+  .input,
+  .searchInput {
+    background: #ffffff;
+    color: #111827;
+    border-color: rgba(15, 23, 42, 0.12);
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+
+    &:focus {
+      border-color: rgba(15, 23, 42, 0.2);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+    }
+  }
+
+  .roomItem,
+  .emptyState {
+    background-color: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  }
+
+  .section h3,
+  .roomInfo h3 {
+    color: #111827;
+  }
+
+  .roomInfo p,
+  .emptyState {
+    color: #4b5563;
+  }
+
+  .createButton,
+  .joinButton {
+    background-color: #111827;
+    color: #ffffff;
+  }
+
+  .createButton:hover,
+  .joinButton:hover {
+    box-shadow: 0 0 20px rgba(15, 23, 42, 0.15);
+  }
+}

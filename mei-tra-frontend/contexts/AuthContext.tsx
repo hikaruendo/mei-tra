@@ -27,6 +27,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadingUserRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
 
+  const applyTheme = useCallback((theme: 'light' | 'dark') => {
+    if (typeof window === 'undefined') return;
+
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, []);
+
   const clearClientAuthState = useCallback(() => {
     disconnectSocket();
     setSession(null);
@@ -135,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const defaultPreferences = {
             notifications: true,
             sound: true,
-            theme: 'light' as const
+            theme: 'dark' as const
           };
 
           const userProfile: UserProfile = {
@@ -211,6 +218,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Ref to allow recursive calls from setTimeout without stale closures
   const loadUserProfileRef = useRef(loadUserProfile);
   loadUserProfileRef.current = loadUserProfile;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const storedTheme = localStorage.getItem('theme');
+    document.documentElement.setAttribute(
+      'data-theme',
+      storedTheme === 'light' ? 'light' : 'dark',
+    );
+  }, []);
+
+  useEffect(() => {
+    const theme = user?.profile?.preferences?.theme;
+
+    if (theme === 'light' || theme === 'dark') {
+      applyTheme(theme);
+      return;
+    }
+
+    if (!user) {
+      applyTheme('dark');
+    }
+  }, [applyTheme, user]);
 
   useEffect(() => {
     // Initialize auth immediately on mount

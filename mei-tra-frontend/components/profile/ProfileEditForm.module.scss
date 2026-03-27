@@ -343,3 +343,66 @@ $transition-standard: all 0.3s ease;
     transform: translateY(-1px);
   }
 }
+
+:global(html[data-theme='light']) {
+  .formSection {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  }
+
+  .sectionTitle {
+    color: #111827;
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .avatarImage,
+  .avatarPlaceholder {
+    border-color: rgba(15, 23, 42, 0.1);
+  }
+
+  .avatarPlaceholder {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  }
+
+  .avatarText {
+    color: #1e3a8a;
+  }
+
+  .uploadButton,
+  .saveButton {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+  }
+
+  .dropZone {
+    border-color: rgba(15, 23, 42, 0.12);
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  .dropZone:hover {
+    border-color: rgba(15, 23, 42, 0.2);
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .dropZone p,
+  .label,
+  .uploadProgress {
+    color: #4b5563;
+  }
+
+  .dropZone small,
+  .cancelButton {
+    color: #6b7280;
+  }
+
+  .cancelButton {
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .cancelButton:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.16);
+  }
+}
