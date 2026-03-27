@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from '../../types/game.types';
 import { NegriCard } from '../NegriCard';
@@ -47,19 +47,35 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const t = useTranslations('playerHand');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
+  const autoRevealAttemptedRef = useRef(false);
 
   const { isValidCardPlay } = useCardValidation(
     player.hand,
     currentField,
     currentTrump,
   );
+  const isCurrentPlayer = currentPlayerId === player.playerId;
+  const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
 
   useEffect(() => {
-    if (player.hasRequiredBroken) {
-      gameActions.revealBrokenHand(player.playerId);
+    if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
+      autoRevealAttemptedRef.current = false;
+      return;
     }
-  }, [gamePhase, player.hasRequiredBroken, player.playerId, gameActions]);
 
+    if (autoRevealAttemptedRef.current) {
+      return;
+    }
+
+    autoRevealAttemptedRef.current = true;
+    gameActions.revealBrokenHand(player.playerId);
+  }, [
+    gamePhase,
+    gameActions,
+    isCurrentPlayer,
+    player.hasRequiredBroken,
+    player.playerId,
+  ]);
 
   const handleCardClick = (card: string) => {
     if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
@@ -70,9 +86,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       }
     }
   };
-
-  const isCurrentPlayer = currentPlayerId === player.playerId;
-  const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
 
   const renderPlayerHand = (isCurrentPlayer: boolean) => {
     if (isCurrentPlayer) {

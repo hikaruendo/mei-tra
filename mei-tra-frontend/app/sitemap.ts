@@ -19,13 +19,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${SITE_URL}/tutorial`,
+      url: `${SITE_URL}/docs`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: `${SITE_URL}/en/tutorial`,
+      url: `${SITE_URL}/en/docs`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.7,

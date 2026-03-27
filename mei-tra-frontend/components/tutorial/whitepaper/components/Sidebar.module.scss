@@ -3,9 +3,9 @@
 .sidebar {
   position: fixed;
   left: 0;
-  top: 70px;
+  top: 0;
   width: 280px;
-  height: calc(100vh - 70px);
+  height: 100vh;
   background: #111;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   overflow-y: auto;
@@ -18,7 +18,7 @@
 }
 
 .sidebarContent {
-  padding: $spacing-xl $spacing-lg;
+  padding: calc(70px + #{$spacing-xl}) $spacing-lg $spacing-xl;
 }
 
 .sidebarTitle {
@@ -60,5 +60,27 @@
     background: rgba(255, 255, 255, 0.06);
     color: #ededed;
     font-weight: 600;
+  }
+}
+
+:global(html[data-theme='light']) {
+  .sidebar {
+    background: #f6f8fb;
+    border-right-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .sidebarTitle {
+    color: #111827;
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .sectionLink {
+    color: #4b5563;
+  }
+
+  .sectionLink:hover,
+  .sectionLink.active {
+    background: rgba(15, 23, 42, 0.05);
+    color: #111827;
   }
 }

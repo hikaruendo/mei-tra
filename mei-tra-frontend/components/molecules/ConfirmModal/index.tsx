@@ -8,9 +8,10 @@ interface ConfirmModalProps {
   title: string;
   message: string;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   confirmText?: string;
   cancelText?: string;
+  showCancelButton?: boolean;
 }
 
 export function ConfirmModal({
@@ -21,6 +22,7 @@ export function ConfirmModal({
   onCancel,
   confirmText,
   cancelText,
+  showCancelButton = true,
 }: ConfirmModalProps) {
   const t = useTranslations('common');
 
@@ -38,12 +40,14 @@ export function ConfirmModal({
         </div>
 
         <div className={styles.actions}>
-          <button
-            onClick={onCancel}
-            className={styles.cancelButton}
-          >
-            {cancelText || t('cancel')}
-          </button>
+          {showCancelButton && onCancel && (
+            <button
+              onClick={onCancel}
+              className={styles.cancelButton}
+            >
+              {cancelText || t('cancel')}
+            </button>
+          )}
           <button
             onClick={onConfirm}
             className={styles.confirmButton}

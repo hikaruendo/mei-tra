@@ -47,6 +47,13 @@
   flex-direction: column;
 }
 
+:global(html[data-theme='light']) .gameWrapper {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(236, 253, 245, 0.18) 0%, rgba(187, 247, 208, 0.12) 16%, rgba(74, 222, 128, 0.08) 32%, rgba(10, 40, 27, 0) 52%),
+    radial-gradient(circle at center, rgba(110, 231, 183, 0.08) 0%, rgba(10, 40, 27, 0) 48%),
+    linear-gradient(180deg, #18462f 0%, #133b28 18%, #0f2f20 100%);
+}
+
 @media (max-width: 768px) {
   .main {
     min-height: calc(100dvh - 4rem);

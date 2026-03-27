@@ -347,3 +347,103 @@ $transition-button: all 0.3s ease;
   margin: 0;
   text-align: center;
 }
+
+:global(html[data-theme='light']) {
+  .container,
+  .loadingContainer,
+  .noAuthContainer {
+    background-color: #eef2f6;
+  }
+
+  .loadingSpinner {
+    border-color: #111827;
+    border-top-color: transparent;
+  }
+
+  .loadingText,
+  .noAuthDescription,
+  .profileUsername {
+    color: #4b5563;
+  }
+
+  .noAuthTitle,
+  .profileName,
+  .profileInfo,
+  .editTitle {
+    color: #111827;
+  }
+
+  .profileEmail {
+    color: #6b7280;
+  }
+
+  .loginButton {
+    background-color: #111827;
+    color: #ffffff;
+  }
+
+  .profileCard {
+    background-color: #f6f8fb;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .profileHeader {
+    background: linear-gradient(135deg, #f8fafc 0%, #e8eef7 100%);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .avatarContainer {
+    background-color: rgba(15, 23, 42, 0.04);
+  }
+
+  .avatar {
+    background: linear-gradient(135deg, #e5e7eb, #cbd5e1);
+  }
+
+  .avatarText {
+    color: #334155;
+    text-shadow: none;
+  }
+
+  .statCard.gamesPlayed {
+    background-color: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .statCard.gamesWon,
+  .statCard.winRate,
+  .statCard.totalScore {
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .statValue.gamesPlayed,
+  .sectionTitle,
+  .accountValue {
+    color: #111827;
+  }
+
+  .statLabel,
+  .accountLabel,
+  .noProfileText {
+    color: #4b5563;
+  }
+
+  .accountSection {
+    border-top-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .accountRow {
+    border-bottom-color: rgba(15, 23, 42, 0.06);
+  }
+
+  .editButton {
+    background-color: rgba(15, 23, 42, 0.05);
+    color: #111827;
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .editButton:hover {
+    background-color: rgba(15, 23, 42, 0.08);
+    border-color: rgba(15, 23, 42, 0.16);
+  }
+}

@@ -343,3 +343,99 @@ $transition-standard: all 0.3s ease;
     transform: translateY(-1px);
   }
 }
+
+:global(html[data-theme='light']) {
+  .formSection {
+    background: #f6f8fb;
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  }
+
+  .sectionTitle {
+    color: #111827;
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .avatarImage,
+  .avatarPlaceholder {
+    border-color: rgba(15, 23, 42, 0.1);
+  }
+
+  .avatarPlaceholder {
+    background: linear-gradient(135deg, #e5e7eb, #cbd5e1);
+  }
+
+  .avatarText {
+    color: #334155;
+  }
+
+  .uploadButton,
+  .saveButton {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+  }
+
+  .dropZone {
+    border-color: rgba(15, 23, 42, 0.12);
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  .dropZone:hover {
+    border-color: rgba(15, 23, 42, 0.2);
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .dropZone p,
+  .label,
+  .uploadProgress {
+    color: #4b5563;
+  }
+
+  .input,
+  .select {
+    background: #f8fafc;
+    color: #111827;
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .input:focus,
+  .select:focus {
+    border-color: rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .input:disabled,
+  .select:disabled {
+    background: rgba(15, 23, 42, 0.03);
+    color: #6b7280;
+  }
+
+  .select option {
+    background: #f8fafc;
+    color: #111827;
+  }
+
+  .checkboxLabel,
+  .checkboxText {
+    color: #111827;
+  }
+
+  .checkbox {
+    accent-color: #111827;
+  }
+
+  .dropZone small,
+  .cancelButton {
+    color: #6b7280;
+  }
+
+  .cancelButton {
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .cancelButton:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.16);
+  }
+}

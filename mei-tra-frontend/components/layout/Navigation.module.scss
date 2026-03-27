@@ -86,6 +86,41 @@ $transition-button: all 0.3s ease;
   }
 }
 
+.themeToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.themeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  transition: $transition-button;
+
+  &:hover {
+    color: #ededed;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.activeThemeButton {
+  color: #ededed;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .navLink {
   color: #888;
   padding: $spacing-sm $spacing-sm;
@@ -227,6 +262,12 @@ $transition-button: all 0.3s ease;
   margin-top: $spacing-md;
 }
 
+.mobileThemeRow {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
 // Language Switcher
 .langSwitcher {
   padding: $spacing-sm $spacing-md;
@@ -264,5 +305,65 @@ $transition-button: all 0.3s ease;
     background-color: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.1);
     color: #ededed;
+  }
+}
+
+:global(html[data-theme='light']) {
+  .navigation {
+    background-color: #eef2f6;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .brandLogo {
+    filter: brightness(0) saturate(100%);
+  }
+
+  .brandName {
+    color: #111827;
+  }
+
+  .navLink,
+  .langSwitcher,
+  .langSwitcherMobile,
+  .themeButton {
+    color: #4b5563;
+  }
+
+  .navLink:hover,
+  .langSwitcher:hover,
+  .langSwitcherMobile:hover,
+  .themeButton:hover {
+    color: #111827;
+    background-color: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .themeToggle {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(148, 163, 184, 0.22);
+  }
+
+  .activeThemeButton {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  }
+
+  .mobileOverlay {
+    background-color: rgba(15, 23, 42, 0.3);
+  }
+
+  .mobileMenu {
+    background-color: #eef2f6;
+    box-shadow: -2px 0 8px rgba(15, 23, 42, 0.1);
+  }
+
+  .mobileUserProfile {
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .mobileMenuButton span {
+    background-color: #111827;
   }
 }

@@ -4,7 +4,7 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
 test.describe('Tutorial Whitepaper', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/tutorial`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/docs`, { waitUntil: 'networkidle' });
   });
 
   test('renders hero section and first content area', async ({ page }) => {

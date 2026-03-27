@@ -15,8 +15,12 @@
   },
   "nav": {
     "rooms": "Rooms",
-    "tutorial": "Tutorial",
-    "menu": "Menu"
+    "tutorial": "Docs",
+    "menu": "Menu",
+    "themeLabel": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark"
   },
   "landing": {
     "hero": {
@@ -165,8 +169,8 @@
           "href": "/en/privacy"
         },
         {
-          "label": "Tutorial",
-          "href": "/en/tutorial"
+          "label": "Docs",
+          "href": "/en/docs"
         },
         {
           "label": "Discord",
@@ -280,6 +284,25 @@
     "yourTurn": "Your turn",
     "waiting": "Waiting...",
     "orderButton": "Order",
+    "phaseResult": "Team {team} won the {phase} phase",
+    "phaseNames": {
+      "deal": "deal",
+      "blow": "blow",
+      "play": "play",
+      "waiting": "waiting"
+    },
+    "errors": {
+      "notYourTurnDeclare": "It's not your turn to declare",
+      "selectTrumpAndPairs": "Please select a trump type and number of pairs",
+      "notYourTurnPass": "It's not your turn to pass",
+      "notYourTurnPlay": "It's not your turn",
+      "notYourTurnBaseSuit": "It's not your turn to select a base suit"
+    },
+    "gameOver": {
+      "title": "Game Over",
+      "teamFallback": "Team {teamNumber}",
+      "message": "{winnerTeam} wins!\n\nFinal score\n{team0Name}: {team0Score} points\n{team1Name}: {team1Score} points"
+    },
     "trumpFormat": "Trump: {suit} ({symbol})",
     "suitHerz": "Heart",
     "suitDaiya": "Diamond",

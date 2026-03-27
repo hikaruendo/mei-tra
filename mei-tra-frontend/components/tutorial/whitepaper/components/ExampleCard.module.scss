@@ -68,3 +68,35 @@
   margin-top: $spacing-md;
   font-size: $font-size-base;
 }
+
+:global(html[data-theme='light']) {
+  .exampleCard {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .scenario {
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .scenarioLabel,
+  .declarationLabel {
+    color: #111827;
+  }
+
+  .scenarioText,
+  .explanation {
+    color: #4b5563;
+  }
+
+  .card,
+  .declaration {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #111827;
+  }
+
+  .declarationValue {
+    color: #111827;
+  }
+}

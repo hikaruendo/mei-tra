@@ -78,23 +78,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
     }
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-
-    if (name.startsWith('preferences.')) {
-      const prefKey = name.split('.')[1] as keyof UserPreferences;
-      setFormData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          [prefKey]: value,
-        },
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-  };
-
   const handleAvatarSelect = useCallback(async (file: File) => {
     setError(null);
     setIsUploading(true);
@@ -250,6 +233,10 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
   const currentAvatarUrl = avatarPreview || profile.avatarUrl;
 
+  const handleCancel = () => {
+    onCancel();
+  };
+
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.formSection}>
@@ -353,6 +340,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             required
           />
         </div>
+
       </div>
 
       <div className={styles.formSection}>
@@ -385,23 +373,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             <span className={styles.checkboxText}>{t('soundEffects')}</span>
           </label>
         </div>
-
-        <div className={styles.inputGroup}>
-          <label htmlFor="theme" className={styles.label}>
-            {t('theme')}
-          </label>
-          <select
-            id="theme"
-            name="preferences.theme"
-            value={formData.preferences.theme}
-            onChange={handleSelectChange}
-            disabled={isSaving}
-            className={styles.select}
-          >
-            <option value="light">{t('light')}</option>
-            <option value="dark">{t('dark')}</option>
-          </select>
-        </div>
       </div>
 
       {error && (
@@ -413,7 +384,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       <div className={styles.actions}>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancel}
           disabled={isSaving}
           className={styles.cancelButton}
         >

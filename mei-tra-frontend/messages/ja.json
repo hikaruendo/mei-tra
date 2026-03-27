@@ -15,8 +15,12 @@
   },
   "nav": {
     "rooms": "ルーム一覧",
-    "tutorial": "チュートリアル",
-    "menu": "メニュー"
+    "tutorial": "ドキュメント",
+    "menu": "メニュー",
+    "themeLabel": "テーマ",
+    "themeSystem": "システム",
+    "themeLight": "ライト",
+    "themeDark": "ダーク"
   },
   "landing": {
     "hero": {
@@ -165,8 +169,8 @@
           "href": "/ja/privacy"
         },
         {
-          "label": "チュートリアル",
-          "href": "/ja/tutorial"
+          "label": "ドキュメント",
+          "href": "/ja/docs"
         },
         {
           "label": "Discord",
@@ -280,6 +284,25 @@
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
     "orderButton": "強さ順",
+    "phaseResult": "チーム {team} が {phase} フェーズに勝利しました",
+    "phaseNames": {
+      "deal": "配布",
+      "blow": "宣言",
+      "play": "プレイ",
+      "waiting": "待機"
+    },
+    "errors": {
+      "notYourTurnDeclare": "宣言するターンではありません",
+      "selectTrumpAndPairs": "トランプとペア数を選択してください",
+      "notYourTurnPass": "パスするターンではありません",
+      "notYourTurnPlay": "あなたのターンではありません",
+      "notYourTurnBaseSuit": "ベーススートを選択するターンではありません"
+    },
+    "gameOver": {
+      "title": "ゲーム終了",
+      "teamFallback": "チーム {teamNumber}",
+      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{team0Name}: {team0Score} ポイント\n{team1Name}: {team1Score} ポイント"
+    },
     "trumpFormat": "キリ：{suit}（{symbol}）",
     "suitHerz": "ハート",
     "suitDaiya": "ダイヤ",

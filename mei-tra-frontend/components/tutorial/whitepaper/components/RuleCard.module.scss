@@ -40,3 +40,25 @@
 .exampleText {
   color: #888;
 }
+
+:global(html[data-theme='light']) {
+  .ruleCard {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .ruleTitle,
+  .exampleLabel {
+    color: #111827;
+  }
+
+  .ruleDescription,
+  .exampleText {
+    color: #4b5563;
+  }
+
+  .ruleExample {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+}

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
+  const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
@@ -48,6 +50,7 @@ export const useGame = () => {
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [gameOverModal, setGameOverModal] = useState<{ title: string; message: string } | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -246,7 +249,10 @@ export const useGame = () => {
         
         // Only show alert for phases other than 'play' and when not transitioning to a new round
         if (winner !== null && phase !== 'play' && phase !== 'blow') {
-          alert(`Team ${winner} won the ${phase} phase!`);
+          setNotification({
+            message: t('phaseResult', { team: winner, phase: t(`phaseNames.${phase}` as 'phaseNames.deal') }),
+            type: 'success',
+          });
         }
       },
       'error-message': (message: string) => {
@@ -263,10 +269,19 @@ export const useGame = () => {
         }
         gameOverShownRef.current = gameOverKey;
 
-        const team0Name = getTeamDisplayName(players, 0) || 'チーム 1';
-        const team1Name = getTeamDisplayName(players, 1) || 'チーム 2';
+        const team0Name = getTeamDisplayName(players, 0) || t('gameOver.teamFallback', { teamNumber: 1 });
+        const team1Name = getTeamDisplayName(players, 1) || t('gameOver.teamFallback', { teamNumber: 2 });
         const winnerTeam = winner === 'Team 0' ? team0Name : team1Name;
-        alert(`${winnerTeam} の勝利！\n\n最終スコア:\n${team0Name}: ${finalScores[0].total} ポイント\n${team1Name}: ${finalScores[1].total} ポイント`);
+        setGameOverModal({
+          title: t('gameOver.title'),
+          message: t('gameOver.message', {
+            winnerTeam,
+            team0Name,
+            team0Score: finalScores[0].total,
+            team1Name,
+            team1Score: finalScores[1].total,
+          }),
+        });
         setGameStarted(false);
         setGamePhase(null);
         setTeamScores({
@@ -513,11 +528,11 @@ export const useGame = () => {
   const gameActions = {
     declareBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn to declare!");
+        setNotification({ message: t('errors.notYourTurnDeclare'), type: 'error' });
         return;
       }
       if (!selectedTrump || numberOfPairs < 1) {
-        alert('Please select a trump type and number of pairs!');
+        setNotification({ message: t('errors.selectTrumpAndPairs'), type: 'error' });
         return;
       }
       socket?.emit('declare-blow', {
@@ -530,7 +545,7 @@ export const useGame = () => {
     },
     passBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn to pass!2");
+        setNotification({ message: t('errors.notYourTurnPass'), type: 'error' });
         return;
       }
       socket?.emit('pass-blow', {
@@ -545,7 +560,7 @@ export const useGame = () => {
     },
     playCard: (card: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn!");
+        setNotification({ message: t('errors.notYourTurnPlay'), type: 'error' });
         return;
       }
       socket?.emit('play-card', {
@@ -555,7 +570,7 @@ export const useGame = () => {
     },
     selectBaseSuit: (suit: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn to select base suit!");
+        setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });
         return;
       }
       socket?.emit('select-base-suit', {
@@ -571,12 +586,18 @@ export const useGame = () => {
     }
   };
 
+  const closeGameOverModal = () => {
+    setGameOverModal(null);
+  };
+
   if (!isClient) {
     return {
       isLoading: true,
       loadingStep: 'クライアントを初期化中...',
       isConnected: false,
       isConnecting: false,
+      gameOverModal: null,
+      closeGameOverModal: () => {},
     };
   }
 
@@ -587,6 +608,8 @@ export const useGame = () => {
       loadingStep: loadingState.step,
       isConnected,
       isConnecting,
+      gameOverModal: null,
+      closeGameOverModal: () => {},
     };
   }
 
@@ -617,6 +640,8 @@ export const useGame = () => {
     currentPlayerId,
     notification,
     setNotification,
+    gameOverModal,
+    closeGameOverModal,
     currentRoomId,
     isHost,
     startGame,

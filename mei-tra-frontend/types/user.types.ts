@@ -15,7 +15,7 @@ export interface UserProfile {
 export interface UserPreferences {
   notifications: boolean;
   sound: boolean;
-  theme: 'light' | 'dark';
+  theme: 'system' | 'light' | 'dark';
 }
 
 export interface AuthUser {

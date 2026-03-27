@@ -153,3 +153,47 @@ $opacity-disabled: 0.5;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
   }
 }
+
+:global(html[data-theme='light']) {
+  .loadingSpinner {
+    border-color: #111827;
+    border-top-color: transparent;
+  }
+
+  .profileLink:hover {
+    background-color: rgba(15, 23, 42, 0.05);
+  }
+
+  .avatar {
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .avatarPlaceholder {
+    background: linear-gradient(135deg, #d1d5db, #9ca3af);
+    color: #111827;
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .displayName {
+    color: #111827;
+  }
+
+  .username,
+  .stats,
+  .loadingText {
+    color: #4b5563;
+  }
+
+  .signOutButton {
+    background-color: rgba(15, 23, 42, 0.06);
+    color: #111827;
+  }
+
+  .signOutButton:hover:not(:disabled) {
+    background-color: rgba(15, 23, 42, 0.1);
+  }
+
+  .signOutButton:focus {
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.12);
+  }
+}

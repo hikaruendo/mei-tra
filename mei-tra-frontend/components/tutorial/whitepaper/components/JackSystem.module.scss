@@ -213,3 +213,55 @@
     gap: $spacing-md;
   }
 }
+
+:global(html[data-theme='light']) {
+  .jackSystem,
+  .trumpExample {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .title,
+  .trumpHeader,
+  .jackRank,
+  .jackStrength,
+  .cardValue,
+  .strengthOrder span:first-child,
+  .exceptionTitle {
+    color: #111827;
+  }
+
+  .explanation,
+  .trumpHeader,
+  .jackCards,
+  .strengthOrder,
+  .traException {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .explanation p,
+  .explanation ul li,
+  .explanation ul li strong {
+    color: #374151;
+  }
+
+  .cardLabel,
+  .orderText,
+  .traException p {
+    color: #4b5563;
+  }
+
+  .jackCard {
+    background: #f8fafc;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .jackRank {
+    background: rgba(15, 23, 42, 0.06);
+  }
+
+  .jackStrength {
+    background: rgba(15, 23, 42, 0.1);
+  }
+}
