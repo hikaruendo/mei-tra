@@ -143,6 +143,65 @@
   }
 }
 
+:global(html[data-theme='light']) {
+  .interactiveDemo {
+    background: #f6f8fb;
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  }
+
+  .title,
+  .currentDeclaration,
+  .prompt,
+  .feedback p {
+    color: #111827;
+  }
+
+  .description {
+    color: #4b5563;
+  }
+
+  .demoContent,
+  .currentDeclaration,
+  .feedback,
+  .optionButton {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .currentDeclaration strong {
+    color: #111827;
+  }
+
+  .optionButton {
+    color: #111827;
+  }
+
+  .optionButton:hover:not(:disabled) {
+    border-color: rgba(15, 23, 42, 0.18);
+    background: rgba(15, 23, 42, 0.05);
+  }
+
+  .nextButton {
+    background: #111827;
+    color: #ffffff;
+  }
+
+  .nextButton:hover {
+    box-shadow: 0 0 15px rgba(15, 23, 42, 0.15);
+  }
+
+  .resetButton {
+    color: #4b5563;
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .resetButton:hover {
+    border-color: rgba(15, 23, 42, 0.18);
+    color: #111827;
+  }
+}
+
 @keyframes correctPulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }

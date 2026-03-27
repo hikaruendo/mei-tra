@@ -61,6 +61,13 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
     message?: string;
   }>({});
 
+  const applyThemePreview = (theme: 'light' | 'dark') => {
+    if (typeof window === 'undefined') return;
+
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
 
@@ -83,6 +90,9 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
     if (name.startsWith('preferences.')) {
       const prefKey = name.split('.')[1] as keyof UserPreferences;
+      if (prefKey === 'theme' && (value === 'light' || value === 'dark')) {
+        applyThemePreview(value);
+      }
       setFormData(prev => ({
         ...prev,
         preferences: {
@@ -250,6 +260,11 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
   const currentAvatarUrl = avatarPreview || profile.avatarUrl;
 
+  const handleCancel = () => {
+    applyThemePreview(profile.preferences.theme);
+    onCancel();
+  };
+
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.formSection}>
@@ -353,6 +368,23 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             required
           />
         </div>
+
+        <div className={styles.inputGroup}>
+          <label htmlFor="theme" className={styles.label}>
+            {t('theme')}
+          </label>
+          <select
+            id="theme"
+            name="preferences.theme"
+            value={formData.preferences.theme}
+            onChange={handleSelectChange}
+            disabled={isSaving}
+            className={styles.select}
+          >
+            <option value="light">{t('light')}</option>
+            <option value="dark">{t('dark')}</option>
+          </select>
+        </div>
       </div>
 
       <div className={styles.formSection}>
@@ -385,23 +417,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             <span className={styles.checkboxText}>{t('soundEffects')}</span>
           </label>
         </div>
-
-        <div className={styles.inputGroup}>
-          <label htmlFor="theme" className={styles.label}>
-            {t('theme')}
-          </label>
-          <select
-            id="theme"
-            name="preferences.theme"
-            value={formData.preferences.theme}
-            onChange={handleSelectChange}
-            disabled={isSaving}
-            className={styles.select}
-          >
-            <option value="light">{t('light')}</option>
-            <option value="dark">{t('dark')}</option>
-          </select>
-        </div>
       </div>
 
       {error && (
@@ -413,7 +428,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       <div className={styles.actions}>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancel}
           disabled={isSaving}
           className={styles.cancelButton}
         >

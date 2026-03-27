@@ -260,3 +260,49 @@
     align-items: flex-start;
   }
 }
+
+:global(html[data-theme='light']) {
+  .scoreCalculator {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .title,
+  .label,
+  .resultStatus,
+  .examplesTitle,
+  .exampleLabel,
+  .tipsTitle {
+    color: #111827;
+  }
+
+  .description,
+  .formula,
+  .exampleDetail,
+  .tipsList li {
+    color: #4b5563;
+  }
+
+  .input,
+  .resultCard,
+  .calculation,
+  .examplesSection,
+  .example,
+  .tips {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .input {
+    color: #111827;
+  }
+
+  .input:focus {
+    border-color: rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .formula span:last-child {
+    color: #111827;
+  }
+}

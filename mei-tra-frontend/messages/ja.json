@@ -280,6 +280,11 @@
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
     "orderButton": "強さ順",
+    "gameOver": {
+      "title": "ゲーム終了",
+      "teamFallback": "チーム {teamNumber}",
+      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{team0Name}: {team0Score} ポイント\n{team1Name}: {team1Score} ポイント"
+    },
     "trumpFormat": "キリ：{suit}（{symbol}）",
     "suitHerz": "ハート",
     "suitDaiya": "ダイヤ",

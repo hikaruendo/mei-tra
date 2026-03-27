@@ -69,3 +69,25 @@
     margin-left: auto;
   }
 }
+
+:global(html[data-theme='light']) {
+  .gameInfoContainer {
+    background: transparent;
+  }
+
+  .gameInfoTrumpText,
+  .gameInfoScoreText0,
+  .gameInfoScoreText1 {
+    color: rgba(248, 250, 252, 0.96);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  }
+
+  .leaveButton {
+    color: #ffffff;
+    background-color: #111827;
+
+    &:hover {
+      box-shadow: 0 0 15px rgba(15, 23, 42, 0.16);
+    }
+  }
+}

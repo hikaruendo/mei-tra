@@ -7,51 +7,17 @@
 
 .main {
   margin-left: 280px;
-  padding: $spacing-lg $spacing-md;
+  padding: $spacing-xl $spacing-md $spacing-lg;
   min-height: 100vh;
 
   @media (max-width: 768px) {
     margin-left: 0;
-    padding: $spacing-md $spacing-sm;
+    padding: $spacing-lg $spacing-sm $spacing-md;
   }
 }
 
-.header {
-  padding: $spacing-lg 0 $spacing-md;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: $spacing-lg;
-  max-width: 100%;
-  overflow: hidden;
-
-  h1 {
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: #ededed;
-    margin: 0 0 $spacing-sm;
-    line-height: 1.3;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-}
-
-.description {
-  font-size: $font-size-lg;
-  color: #888;
-  margin: 0;
-  line-height: 1.5;
-}
-
-@media (max-width: 768px) {
-  .header {
-    padding: $spacing-lg 0 $spacing-md;
-
-    h1 {
-      font-size: 1.75rem;
-      line-height: 1.2;
-    }
-  }
-
-  .description {
-    font-size: $font-size-base;
+:global(html[data-theme='light']) {
+  .container {
+    background: #eef2f6;
   }
 }

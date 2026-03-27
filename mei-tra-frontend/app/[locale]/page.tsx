@@ -12,6 +12,7 @@ import { RoomList } from '../../components/molecules/RoomList';
 import { GameDock } from '../../components/game/GameDock';
 import { LandingPage } from '../../components/landing/LandingPage';
 import { AuthModal } from '../../components/auth/AuthModal';
+import { ConfirmModal } from '../../components/molecules/ConfirmModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useSocket } from '../../hooks/useSocket';
 import styles from './index.module.css';
@@ -20,6 +21,7 @@ export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const t = useTranslations('game');
+  const commonT = useTranslations('common');
   const { user, loading: authLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -100,6 +102,8 @@ export default function Home() {
     currentPlayerId = null,
     notification,
     setNotification,
+    gameOverModal = null,
+    closeGameOverModal = () => {},
     currentRoomId = null,
     isHost = false,
     startGame,
@@ -143,6 +147,17 @@ export default function Home() {
             message={notification.message}
             type={notification.type}
             onClose={() => setNotification(null)}
+          />
+        )}
+        {gameOverModal && (
+          <ConfirmModal
+            isOpen={true}
+            title={gameOverModal.title}
+            message={gameOverModal.message}
+            onConfirm={closeGameOverModal}
+            onCancel={closeGameOverModal}
+            confirmText={commonT('close')}
+            showCancelButton={false}
           />
         )}
         {paused ? (

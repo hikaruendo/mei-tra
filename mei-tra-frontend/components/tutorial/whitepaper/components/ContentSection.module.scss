@@ -65,6 +65,44 @@
   }
 }
 
+:global(html[data-theme='light']) {
+  .section {
+    background: #f6f8fb;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: $radius-md;
+    padding: $spacing-xl;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    margin-bottom: $spacing-lg;
+  }
+
+  .sectionTitle {
+    color: #111827;
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+    margin-bottom: $spacing-xl;
+  }
+
+  .textBlock {
+    color: #374151;
+  }
+
+  .textBlock h3,
+  .textBlock h4 {
+    color: #111827;
+  }
+
+  .textBlock strong {
+    color: #111827;
+  }
+}
+
+@media (max-width: 768px) {
+  :global(html[data-theme='light']) {
+    .section {
+      padding: $spacing-lg;
+    }
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

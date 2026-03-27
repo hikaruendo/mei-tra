@@ -77,3 +77,25 @@
     display: none;
   }
 }
+
+:global(html[data-theme='light']) {
+  .trumpHierarchy {
+    background: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .title,
+  .strength,
+  .trumpName {
+    color: #111827;
+  }
+
+  .strength {
+    background: rgba(15, 23, 42, 0.06);
+  }
+
+  .separator,
+  .note {
+    color: #4b5563;
+  }
+}

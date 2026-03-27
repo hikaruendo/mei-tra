@@ -346,7 +346,7 @@ $transition-standard: all 0.3s ease;
 
 :global(html[data-theme='light']) {
   .formSection {
-    background: #ffffff;
+    background: #f6f8fb;
     border-color: rgba(15, 23, 42, 0.08);
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
   }
@@ -362,11 +362,11 @@ $transition-standard: all 0.3s ease;
   }
 
   .avatarPlaceholder {
-    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    background: linear-gradient(135deg, #e5e7eb, #cbd5e1);
   }
 
   .avatarText {
-    color: #1e3a8a;
+    color: #334155;
   }
 
   .uploadButton,
@@ -390,6 +390,39 @@ $transition-standard: all 0.3s ease;
   .label,
   .uploadProgress {
     color: #4b5563;
+  }
+
+  .input,
+  .select {
+    background: #f8fafc;
+    color: #111827;
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .input:focus,
+  .select:focus {
+    border-color: rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .input:disabled,
+  .select:disabled {
+    background: rgba(15, 23, 42, 0.03);
+    color: #6b7280;
+  }
+
+  .select option {
+    background: #f8fafc;
+    color: #111827;
+  }
+
+  .checkboxLabel,
+  .checkboxText {
+    color: #111827;
+  }
+
+  .checkbox {
+    accent-color: #111827;
   }
 
   .dropZone small,

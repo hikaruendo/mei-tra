@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
+  const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
@@ -48,6 +50,7 @@ export const useGame = () => {
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [gameOverModal, setGameOverModal] = useState<{ title: string; message: string } | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -263,10 +266,19 @@ export const useGame = () => {
         }
         gameOverShownRef.current = gameOverKey;
 
-        const team0Name = getTeamDisplayName(players, 0) || 'チーム 1';
-        const team1Name = getTeamDisplayName(players, 1) || 'チーム 2';
+        const team0Name = getTeamDisplayName(players, 0) || t('gameOver.teamFallback', { teamNumber: 1 });
+        const team1Name = getTeamDisplayName(players, 1) || t('gameOver.teamFallback', { teamNumber: 2 });
         const winnerTeam = winner === 'Team 0' ? team0Name : team1Name;
-        alert(`${winnerTeam} の勝利！\n\n最終スコア:\n${team0Name}: ${finalScores[0].total} ポイント\n${team1Name}: ${finalScores[1].total} ポイント`);
+        setGameOverModal({
+          title: t('gameOver.title'),
+          message: t('gameOver.message', {
+            winnerTeam,
+            team0Name,
+            team0Score: finalScores[0].total,
+            team1Name,
+            team1Score: finalScores[1].total,
+          }),
+        });
         setGameStarted(false);
         setGamePhase(null);
         setTeamScores({
@@ -571,12 +583,18 @@ export const useGame = () => {
     }
   };
 
+  const closeGameOverModal = () => {
+    setGameOverModal(null);
+  };
+
   if (!isClient) {
     return {
       isLoading: true,
       loadingStep: 'クライアントを初期化中...',
       isConnected: false,
       isConnecting: false,
+      gameOverModal: null,
+      closeGameOverModal: () => {},
     };
   }
 
@@ -587,6 +605,8 @@ export const useGame = () => {
       loadingStep: loadingState.step,
       isConnected,
       isConnecting,
+      gameOverModal: null,
+      closeGameOverModal: () => {},
     };
   }
 
@@ -617,6 +637,8 @@ export const useGame = () => {
     currentPlayerId,
     notification,
     setNotification,
+    gameOverModal,
+    closeGameOverModal,
     currentRoomId,
     isHost,
     startGame,
