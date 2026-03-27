@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { disconnectSocket } from '@/app/socket';
-import { AuthUser, SignUpData, SignInData, UserProfile } from '@/types/user.types';
+import { AuthUser, SignUpData, SignInData, UserProfile, UserPreferences } from '@/types/user.types';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -16,6 +16,7 @@ interface AuthContextType {
   getAccessToken: () => Promise<string | null>;
   refreshSession: () => Promise<void>;
   refreshUserProfile: () => Promise<void>;
+  setThemePreference: (theme: UserPreferences['theme']) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,12 +28,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadingUserRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
 
-  const applyTheme = useCallback((theme: 'light' | 'dark') => {
+  const resolveTheme = useCallback((theme: UserPreferences['theme']) => {
+    if (typeof window === 'undefined') return 'dark';
+
+    if (theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    return theme;
+  }, []);
+
+  const applyTheme = useCallback((theme: UserPreferences['theme']) => {
     if (typeof window === 'undefined') return;
 
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', resolveTheme(theme));
     localStorage.setItem('theme', theme);
-  }, []);
+  }, [resolveTheme]);
 
   const clearClientAuthState = useCallback(() => {
     disconnectSocket();
@@ -223,24 +234,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return;
 
     const storedTheme = localStorage.getItem('theme');
-    document.documentElement.setAttribute(
-      'data-theme',
-      storedTheme === 'light' ? 'light' : 'dark',
+    applyTheme(
+      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
+        ? storedTheme
+        : 'dark',
     );
-  }, []);
+  }, [applyTheme]);
 
   useEffect(() => {
     const theme = user?.profile?.preferences?.theme;
 
-    if (theme === 'light' || theme === 'dark') {
+    if (theme === 'light' || theme === 'dark' || theme === 'system') {
       applyTheme(theme);
       return;
     }
 
     if (!user) {
-      applyTheme('dark');
+      const storedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
+      applyTheme(
+        storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
+          ? storedTheme
+          : 'dark',
+      );
     }
   }, [applyTheme, user]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const preference = user?.profile?.preferences?.theme ?? localStorage.getItem('theme');
+    if (preference !== 'system') return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => applyTheme('system');
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [applyTheme, user?.profile?.preferences?.theme]);
 
   useEffect(() => {
     // Initialize auth immediately on mount
@@ -381,6 +411,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadUserProfile(session.user, -1);
   }, [session, loadUserProfile]);
 
+  const setThemePreference = useCallback(async (theme: UserPreferences['theme']) => {
+    applyTheme(theme);
+
+    setUser((prev) => {
+      if (!prev?.profile) return prev;
+
+      const updatedProfile = {
+        ...prev.profile,
+        preferences: {
+          ...prev.profile.preferences,
+          theme,
+        },
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('auth_profile_cache', JSON.stringify({
+            profile: updatedProfile,
+            userId: prev.id,
+            timestamp: Date.now(),
+          }));
+        } catch {}
+      }
+
+      return {
+        ...prev,
+        profile: updatedProfile,
+      };
+    });
+
+    if (!user?.id) return;
+
+    const currentPreferences = user.profile?.preferences ?? {
+      notifications: true,
+      sound: true,
+      theme: 'dark' as const,
+    };
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({
+        preferences: {
+          ...currentPreferences,
+          theme,
+        },
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      console.warn('[AuthContext] Failed to persist theme preference:', error.message);
+    }
+  }, [applyTheme, user]);
+
   const value: AuthContextType = {
     user,
     session,
@@ -391,6 +474,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getAccessToken,
     refreshSession,
     refreshUserProfile,
+    setThemePreference,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -249,7 +249,10 @@ export const useGame = () => {
         
         // Only show alert for phases other than 'play' and when not transitioning to a new round
         if (winner !== null && phase !== 'play' && phase !== 'blow') {
-          alert(`Team ${winner} won the ${phase} phase!`);
+          setNotification({
+            message: t('phaseResult', { team: winner, phase: t(`phaseNames.${phase}` as 'phaseNames.deal') }),
+            type: 'success',
+          });
         }
       },
       'error-message': (message: string) => {
@@ -525,11 +528,11 @@ export const useGame = () => {
   const gameActions = {
     declareBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn to declare!");
+        setNotification({ message: t('errors.notYourTurnDeclare'), type: 'error' });
         return;
       }
       if (!selectedTrump || numberOfPairs < 1) {
-        alert('Please select a trump type and number of pairs!');
+        setNotification({ message: t('errors.selectTrumpAndPairs'), type: 'error' });
         return;
       }
       socket?.emit('declare-blow', {
@@ -542,7 +545,7 @@ export const useGame = () => {
     },
     passBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn to pass!2");
+        setNotification({ message: t('errors.notYourTurnPass'), type: 'error' });
         return;
       }
       socket?.emit('pass-blow', {
@@ -557,7 +560,7 @@ export const useGame = () => {
     },
     playCard: (card: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn!");
+        setNotification({ message: t('errors.notYourTurnPlay'), type: 'error' });
         return;
       }
       socket?.emit('play-card', {
@@ -567,7 +570,7 @@ export const useGame = () => {
     },
     selectBaseSuit: (suit: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
-        alert("It's not your turn to select base suit!");
+        setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });
         return;
       }
       socket?.emit('select-base-suit', {

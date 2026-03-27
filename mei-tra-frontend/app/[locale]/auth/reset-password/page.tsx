@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { ConfirmModal } from '../../../../components/molecules/ConfirmModal';
 import styles from './page.module.scss';
 
 export default function ResetPasswordPage() {
@@ -12,6 +13,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -57,9 +59,7 @@ export default function ResetPasswordPage() {
         console.error('Password update error:', error);
         setError('パスワードの更新に失敗しました。もう一度お試しください。');
       } else {
-        // Password updated successfully
-        alert('パスワードが更新されました。ログインページに移動します。');
-        router.push('/auth/login');
+        setShowSuccessModal(true);
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -96,6 +96,15 @@ export default function ResetPasswordPage() {
 
   return (
     <div className={styles.container}>
+      <ConfirmModal
+        isOpen={showSuccessModal}
+        title="パスワード更新完了"
+        message="パスワードが更新されました。ログインページに移動します。"
+        onConfirm={() => router.push('/auth/login')}
+        onCancel={() => router.push('/auth/login')}
+        confirmText="ログインへ"
+        showCancelButton={false}
+      />
       <div className={styles.card}>
         <h2>新しいパスワード設定</h2>
         <p>アカウントの新しいパスワードを入力してください。</p>

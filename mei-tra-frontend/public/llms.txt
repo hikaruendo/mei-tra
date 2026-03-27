@@ -11,7 +11,7 @@
 
 ## ルール・ドキュメント
 
-- [ルール解説・チュートリアル](https://meitra.kando1.com/tutorial): 明専トランプの完全ルール解説
+- [ルール解説・ドキュメント](https://meitra.kando1.com/docs): 明専トランプの完全ルール解説
 - [トップページ](https://meitra.kando1.com): ゲーム概要、FAQ、プレイヤーの声
 
 ## Optional

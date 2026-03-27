@@ -28,6 +28,12 @@
   }
 }
 
+:global(html[data-theme='dark']) {
+  .contentWrapper {
+    color: #e5e7eb;
+  }
+}
+
 :global(html[data-theme='light']) {
   .whitepaperContainer {
     background: #eef2f6;
