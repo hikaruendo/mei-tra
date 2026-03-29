@@ -24,26 +24,25 @@ import { ChatTypingEvent } from './types/social-events.types';
 export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(SocialGateway.name);
-  private readonly userRooms: Map<string, Set<string>> = new Map();
+  private readonly socketRooms: Map<
+    string,
+    { userId?: string; rooms: Set<string> }
+  > = new Map();
 
   constructor(private readonly chatService: ChatService) {}
 
   handleConnection(client: Socket) {
     this.logger.log(`Social client connected: ${client.id}`);
     const userId = client.handshake.auth?.userId as string;
-    if (userId) {
-      if (!this.userRooms.has(userId)) {
-        this.userRooms.set(userId, new Set());
-      }
-    }
+    this.socketRooms.set(client.id, {
+      userId,
+      rooms: new Set<string>(),
+    });
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Social client disconnected: ${client.id}`);
-    const userId = client.handshake.auth?.userId as string;
-    if (userId) {
-      this.userRooms.delete(userId);
-    }
+    this.socketRooms.delete(client.id);
   }
 
   @SubscribeMessage('chat:join-room')
@@ -52,11 +51,19 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; userId: string },
   ): Promise<void> {
     try {
-      await client.join(data.roomId);
-      const userRooms = this.userRooms.get(data.userId);
-      if (userRooms) {
-        userRooms.add(data.roomId);
+      const socketState = this.socketRooms.get(client.id) ?? {
+        userId: data.userId,
+        rooms: new Set<string>(),
+      };
+      this.socketRooms.set(client.id, socketState);
+
+      if (socketState.rooms.has(data.roomId)) {
+        client.emit('chat:joined', { roomId: data.roomId, success: true });
+        return;
       }
+
+      await client.join(data.roomId);
+      socketState.rooms.add(data.roomId);
       this.logger.log(
         `User ${data.userId} joined chat room ${data.roomId} via socket ${client.id}`,
       );
@@ -73,11 +80,14 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; userId: string },
   ): Promise<void> {
     try {
-      await client.leave(data.roomId);
-      const userRooms = this.userRooms.get(data.userId);
-      if (userRooms) {
-        userRooms.delete(data.roomId);
+      const socketState = this.socketRooms.get(client.id);
+      if (!socketState?.rooms.has(data.roomId)) {
+        client.emit('chat:left', { roomId: data.roomId, success: true });
+        return;
       }
+
+      await client.leave(data.roomId);
+      socketState.rooms.delete(data.roomId);
       this.logger.log(`User ${data.userId} left chat room ${data.roomId}`);
       client.emit('chat:left', { roomId: data.roomId, success: true });
     } catch (error) {
