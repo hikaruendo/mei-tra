@@ -1071,16 +1071,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return { canStart: true };
     }
 
-    // 全員人間の場合: 全員が準備完了かつREADYステータスが必要
-    if (room.status !== RoomStatus.READY) {
-      return { canStart: false, reason: 'Room is not ready' };
-    }
-
-    const allReady = actualPlayers.every((p) => p.isReady);
-    if (!allReady) {
-      return { canStart: false, reason: 'All players must be ready' };
-    }
-
+    // 全員人間で満席の場合も、現在の待機UIでは ready 操作を出していないため
+    // ホストがそのまま開始できるようにする。
     return { canStart: true };
   }
 
