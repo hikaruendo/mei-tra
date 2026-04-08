@@ -200,26 +200,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 player={player}
                 size="medium"
                 showName={true}
-                statusLabel={statusLabel}
               />
             </div>
             {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
             {statusLabel && (
               <div className={styles.disconnectedBadge}>{statusLabel}</div>
             )}
-            {isHost &&
-              onReplaceWithCOM &&
-              !isCurrentPlayer &&
-              (isDisconnected || isIdle) &&
-              !player.isCOM && (
-                <button
-                  type="button"
-                  className={styles.replaceWithComButton}
-                  onClick={() => onReplaceWithCOM(player.playerId)}
-                >
-                  {tStatus('replaceWithCom')}
-                </button>
-              )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
               <button
                 className={styles.brokenButton}
@@ -242,6 +228,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               <div className={styles.statusMessage}>{t('selectNegri')}</div>
             </div>
           )}
+          {isHost &&
+            onReplaceWithCOM &&
+            !isCurrentPlayer &&
+            (isDisconnected || isIdle) &&
+            !player.isCOM && (
+              <div className={`${styles.statusPanel} ${styles.replaceWithComPanel}`}>
+                <div className={styles.statusHeader}>{tStatus('disconnected')}</div>
+                <button
+                  type="button"
+                  className={styles.replaceWithComButton}
+                  onClick={() => onReplaceWithCOM(player.playerId)}
+                >
+                  {tStatus('replaceWithCom')}
+                </button>
+              </div>
+            )}
           {isCurrentPlayer && agariCard && isWinningPlayer && (
             <div className={`${styles.statusPanel} ${styles.agariStatusPanel}`}>
               <div className={styles.statusHeader}>{t('agari')}</div>

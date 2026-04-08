@@ -214,6 +214,7 @@ export default function Home() {
                   teamScores={teamScores}
                   currentPlayerId={currentPlayerId}
                   currentRoomId={currentRoomId}
+                  isHost={isHost}
                   idlePlayerIds={idlePlayerIds}
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}

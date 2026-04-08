@@ -45,6 +45,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       state.playState = {
         currentField: {
           cards: [],
+          playedBy: [],
           baseCard: '',
           dealerId: player.playerId,
           isComplete: false,

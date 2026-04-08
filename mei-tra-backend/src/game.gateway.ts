@@ -244,14 +244,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const roomGameState = await this.roomService.getRoomGameState(roomId);
+    const updatedRoom = await this.roomService.getRoom(roomId);
     this.server.to(roomId).emit('player-converted-to-com', {
       playerId,
       playerName: targetPlayer?.name ?? playerId,
       message,
     });
+    if (updatedRoom) {
+      this.server.to(roomId).emit('room-updated', updatedRoom);
+    }
     this.server
       .to(roomId)
       .emit('update-players', roomGameState.getState().players);
+    this.server.emit('rooms-list', await this.roomService.listRooms());
     this.triggerComAutoPlayIfNeeded(roomId);
     return true;
   }
@@ -458,6 +463,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.warn(
       `[Reconnection] Sending back-to-lobby for socket=${client.id} room=${roomId ?? 'none'} reason=${reason}`,
     );
+    if (roomId) {
+      await client.leave(roomId);
+    }
+    this.playerRooms.delete(client.id);
     client.emit('back-to-lobby');
     client.emit('error-message', reason);
     client.emit('rooms-list', await this.roomService.listRooms());
@@ -895,15 +904,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                       player.playerId,
                     );
                   if (converted) {
+                    const updatedRoom = await this.roomService.getRoom(roomId);
                     this.server.to(roomId).emit('player-converted-to-com', {
                       playerId: player.playerId,
                       playerName: disconnectDisplayName,
                       message:
                         'Player disconnected for too long - converted to COM',
                     });
+                    if (updatedRoom) {
+                      this.server.to(roomId).emit('room-updated', updatedRoom);
+                    }
                     this.server
                       .to(roomId)
                       .emit('update-players', roomGameState.getState().players);
+                    this.server.emit(
+                      'rooms-list',
+                      await this.roomService.listRooms(),
+                    );
                   }
                 }
               } catch (error) {

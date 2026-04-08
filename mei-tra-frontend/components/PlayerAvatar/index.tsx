@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
 import { Player } from '../../types/game.types';
 import { getPlayerProfile, getDefaultAvatarUrl, PlayerProfile } from '../../lib/utils/profileUtils';
 import { PlayerIdentityChip } from '../PlayerIdentityChip';
@@ -11,7 +10,6 @@ interface PlayerAvatarProps {
   size?: 'small' | 'medium' | 'large';
   showName?: boolean;
   className?: string;
-  statusLabel?: string | null;
 }
 
 export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
@@ -19,9 +17,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   size = 'medium',
   showName = true,
   className = '',
-  statusLabel,
 }) => {
-  const t = useTranslations('playerStatus');
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [imageError, setImageError] = useState(false);
 
@@ -56,8 +52,6 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   const sizePixels = getSizePixels();
   const isDefaultAvatar = imageError || !profile?.avatarUrl;
   const avatarSrc = getAvatarSrc();
-  const isDisconnected = !player.isCOM && !player.id;
-  const resolvedStatusLabel = statusLabel ?? (isDisconnected ? t('disconnected') : null);
 
   return (
     <div className={`${styles.playerAvatar} ${styles[size]} ${className}`}>
@@ -72,9 +66,6 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
           priority={false}
           unoptimized={isDefaultAvatar}
         />
-        {resolvedStatusLabel && (
-          <div className={styles.disconnectedBadge}>{resolvedStatusLabel}</div>
-        )}
         {player.isCOM && (
           <div className={styles.comBadge}>
             <span className={styles.comIcon}>🤖</span>

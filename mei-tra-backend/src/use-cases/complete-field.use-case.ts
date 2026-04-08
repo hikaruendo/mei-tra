@@ -59,6 +59,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       if (state.playState) {
         state.playState.currentField = {
           cards: [],
+          playedBy: [],
           baseCard: '',
           dealerId: winner.playerId,
           isComplete: false,
@@ -269,6 +270,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     const newPlayState = {
       currentField: {
         cards: [],
+        playedBy: [],
         baseCard: '',
         dealerId: nextBlowPlayer.playerId,
         isComplete: false,

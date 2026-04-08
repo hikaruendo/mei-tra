@@ -631,6 +631,7 @@ export class GameStateService implements IGameStateService {
     state.playState = {
       currentField: {
         cards: [],
+        playedBy: [],
         baseCard: '',
         dealerId: state.players[0].playerId,
         isComplete: false,
@@ -670,5 +671,15 @@ export class GameStateService implements IGameStateService {
     }
     // Set new timeout
     this.disconnectedPlayers.set(playerId, timeout);
+  }
+
+  clearDisconnectTimeout(playerId: string): void {
+    const existingTimeout = this.disconnectedPlayers.get(playerId);
+    if (!existingTimeout) {
+      return;
+    }
+
+    clearTimeout(existingTimeout);
+    this.disconnectedPlayers.delete(playerId);
   }
 }

@@ -121,7 +121,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async listRooms(): Promise<Room[]> {
     const rooms = await this.roomRepository.findAll();
-    return rooms.map((room) => this.normalizeRoomHostFlags(room));
+    return rooms
+      .map((room) => this.normalizeRoomHostFlags(room))
+      .filter((room) => room.players.some((player) => !player.isCOM));
   }
 
   async createNewRoom(
@@ -660,6 +662,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           : [];
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
       restoredSeatData = seatData ?? null;
+      gameState.clearDisconnectTimeout(user.playerId);
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
     } else if (vacantIndexes.length > 0) {
@@ -673,6 +676,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const originalPlayerId = seatRoomPlayer?.playerId;
       if (originalPlayerId) {
         gameState.removePlayerToken(originalPlayerId);
+        gameState.clearDisconnectTimeout(originalPlayerId);
       }
       restoredSeatData = seatData ?? null;
       delete roomVacant[assignedIndex];
@@ -997,6 +1001,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     this.remapGameStatePlayerIdReferences(state, comPlayerId, playerId);
 
     gameState.registerPlayerToken(playerId, playerId);
+    gameState.clearDisconnectTimeout(playerId);
     if (state.teamAssignments[comPlayerId] != null) {
       delete state.teamAssignments[comPlayerId];
     }

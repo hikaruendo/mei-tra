@@ -6,6 +6,19 @@ import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCom
 import { Room } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
+const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
+  const seen = new Set<string>();
+
+  return fields.filter((field) => {
+    const signature = `${field.winnerId}|${field.winnerTeam}|${field.cards.join(',')}`;
+    if (seen.has(signature)) {
+      return false;
+    }
+    seen.add(signature);
+    return true;
+  });
+};
+
 export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
@@ -56,6 +69,7 @@ export const useGame = () => {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const [currentHostId, setCurrentHostId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
   const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
@@ -71,6 +85,7 @@ export const useGame = () => {
     setGameStarted(false);
     setGamePhase(null);
     setCurrentRoomId(null);
+    setCurrentHostId(null);
     setCurrentPlayerId(null);
     setIsHost(false);
     setIdlePlayerIds([]);
@@ -103,6 +118,15 @@ export const useGame = () => {
       }
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!currentHostId || !currentPlayerId) {
+      setIsHost(false);
+      return;
+    }
+
+    setIsHost(currentHostId === currentPlayerId);
+  }, [currentHostId, currentPlayerId]);
 
   useEffect(() => {
     setIsClient(true);
@@ -174,14 +198,29 @@ export const useGame = () => {
         setCurrentRoomId(roomId);
       },
       'room-updated': (room: Room) => {
-        if (room.id !== currentRoomId) {
-          return;
-        }
         const selfPlayerId =
           currentPlayerId ??
           room.players.find((player) => player.userId === user?.id)?.playerId ??
           null;
-        setIsHost(Boolean(selfPlayerId && room.hostId === selfPlayerId));
+        const isCurrentRoom =
+          room.id === currentRoomId ||
+          Boolean(
+            selfPlayerId &&
+              room.players.some((player) => player.playerId === selfPlayerId),
+          );
+
+        if (!isCurrentRoom) {
+          return;
+        }
+
+        if (!currentRoomId) {
+          setCurrentRoomId(room.id);
+        }
+
+        setCurrentHostId(room.hostId);
+        if (selfPlayerId) {
+          setCurrentPlayerId(selfPlayerId);
+        }
       },
       'game-state': ({
         players,
@@ -222,12 +261,12 @@ export const useGame = () => {
         setTeamScores(teamScores);
         if (you !== undefined) setCurrentPlayerId(you);
         setNegriCard(negriCard);
-        setCompletedFields(fields);
+        setCompletedFields(dedupeCompletedFields(fields));
         setNegriPlayerId(negriPlayerId);
         setCurrentRoomId(roomId);
+        setCurrentHostId(hostId ?? null);
         setGameStarted(true);
         setPointsToWin(pointsToWin);
-        setIsHost(Boolean(hostId && hostId === (you ?? currentPlayerId)));
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
             players.some((player) => player.playerId === playerId),
@@ -445,8 +484,14 @@ export const useGame = () => {
         setCurrentField(field);
       },
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
-        setCompletedFields(prev => [...prev, field]);
-        setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });
+        setCompletedFields((prev) => dedupeCompletedFields([...prev, field]));
+        setCurrentField({
+          cards: [],
+          playedBy: [],
+          baseCard: '',
+          dealerId: nextPlayerId,
+          isComplete: false,
+        });
       },
       'round-results': ({ scores }: {
         scores: { [key: number]: TeamScore };
@@ -482,7 +527,7 @@ export const useGame = () => {
         setWhoseTurn(currentTurn);
         setGamePhase(gamePhase);
         setCurrentField(currentField);
-        setCompletedFields(completedFields);
+        setCompletedFields(dedupeCompletedFields(completedFields));
         setNegriCard(negriCard);
         setNegriPlayerId(negriPlayerId);
         setRevealedAgari(revealedAgari);

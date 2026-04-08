@@ -68,6 +68,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
       const currentField = state.playState.currentField;
       currentField.cards.push(card);
+      currentField.playedBy.push(player.playerId);
       if (currentField.cards.length === 1) {
         currentField.baseCard = card;
       }
