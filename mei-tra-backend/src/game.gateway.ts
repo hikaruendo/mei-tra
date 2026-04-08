@@ -878,6 +878,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           playerName: disconnectDisplayName,
           roomId,
         });
+        this.server.to(roomId).emit('update-players', state.players);
 
         // プレイ中の場合は長めのタイムアウトを設定
         // プレイヤーとトークンを保持しつつ、長時間放置されたらCOMに変換

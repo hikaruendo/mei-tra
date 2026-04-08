@@ -76,6 +76,12 @@ export const GameTable: React.FC<GameTableProps> = ({
   }
 
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
+  const effectiveIsHost =
+    isHost ||
+    players.some(
+      (player) =>
+        player.playerId === currentPlayerId && Boolean(player.isHost),
+    );
 
   // Consistent table order for all players, self is always bottom
   const orderedPlayers = getSeatOrderWithSelfBottom(
@@ -162,7 +168,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               players={players}
               currentField={currentField}
               currentTrump={currentTrump}
-              isHost={isHost}
+              isHost={effectiveIsHost}
               isIdle={idlePlayerIds.includes(player_.playerId)}
               onReplaceWithCOM={onReplaceWithCOM}
             />

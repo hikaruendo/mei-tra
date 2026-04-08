@@ -154,7 +154,15 @@ export const RoomList: React.FC<RoomListProps> = ({
         </div>
         <div className={styles.roomList}>
           {filteredRooms.map((room) => {
-            const actualPlayerCount = room.players.filter(p => !p.isCOM).length;
+            const displayPlayers = room.players
+              .filter(
+                (player, index, players) =>
+                  players.findIndex(
+                    (candidate) => candidate.playerId === player.playerId,
+                  ) === index,
+              )
+              .slice(0, room.settings.maxPlayers);
+            const actualPlayerCount = displayPlayers.filter((p) => !p.isCOM).length;
             return (
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
@@ -164,7 +172,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                     {t('room.status')}: {getStatusText(room.status, t)}
                   </p>
                   <ul className={styles.playerList}>
-                    {room.players.map((player, index) => (
+                    {displayPlayers.map((player, index) => (
                       <li
                         key={`${player.playerId}-${index}`}
                         className={styles.playerItem}
@@ -177,7 +185,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                 </div>
                 {(() => {
                   const isPlayingRoom = room.status === RoomStatus.PLAYING;
-                  const hasComSeat = room.players.some((p) => p.isCOM === true);
+                  const hasComSeat = displayPlayers.some((p) => p.isCOM === true);
                   const canJoin =
                     (!isPlayingRoom && actualPlayerCount < room.settings.maxPlayers) ||
                     (isPlayingRoom && hasComSeat);
