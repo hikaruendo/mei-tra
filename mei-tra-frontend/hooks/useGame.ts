@@ -66,6 +66,22 @@ export const useGame = () => {
 
   const [paused, setPaused] = useState(false);
 
+  const mergePlayersWithMetadata = useCallback(
+    (nextPlayers: Player[], previousPlayers: Player[] = players) =>
+      nextPlayers.map((nextPlayer) => {
+        const previousPlayer = previousPlayers.find(
+          (candidate) => candidate.playerId === nextPlayer.playerId,
+        );
+
+        return {
+          ...previousPlayer,
+          ...nextPlayer,
+          isHost: previousPlayer?.isHost ?? nextPlayer.isHost,
+        };
+      }),
+    [players],
+  );
+
   const resetRoomState = useCallback(() => {
     gameOverShownRef.current = null;
     setGameStarted(false);
@@ -164,13 +180,16 @@ export const useGame = () => {
         }
       },
       'update-players': (players: Player[]) => {
-        setPlayers(players);
+        setPlayers((prev) => {
+          const mergedPlayers = mergePlayersWithMetadata(players, prev);
+          syncCurrentPlayerIdentity(mergedPlayers, currentPlayerId);
+          return mergedPlayers;
+        });
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
             players.some((player) => player.playerId === playerId),
           ),
         );
-        syncCurrentPlayerIdentity(players, currentPlayerId);
       },
       'set-room-id': (roomId: string) => {
         setCurrentRoomId(roomId);
@@ -224,8 +243,11 @@ export const useGame = () => {
         roomId: string;
         pointsToWin: number;
       }) => {
-        setPlayers(players);
-        syncCurrentPlayerIdentity(players, you ?? currentPlayerId);
+        setPlayers((prev) => {
+          const mergedPlayers = mergePlayersWithMetadata(players, prev);
+          syncCurrentPlayerIdentity(mergedPlayers, you ?? currentPlayerId);
+          return mergedPlayers;
+        });
         setGamePhase(gamePhase);
         setWhoseTurn(currentTurn);
         setCurrentField(currentField);
@@ -288,8 +310,11 @@ export const useGame = () => {
       'game-started': (roomId: string, players: Player[], pointsToWin: number) => {
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
-        setPlayers(players);
-        syncCurrentPlayerIdentity(players, currentPlayerId);
+        setPlayers((prev) => {
+          const mergedPlayers = mergePlayersWithMetadata(players, prev);
+          syncCurrentPlayerIdentity(mergedPlayers, currentPlayerId);
+          return mergedPlayers;
+        });
 
         // Identify self by playerId (stable across reconnections), not socket.id
         const index = players.findIndex(p => p.playerId === currentPlayerId);
@@ -379,7 +404,7 @@ export const useGame = () => {
       },
       'blow-started': ({ startingPlayer, players }: { startingPlayer: string; players: Player[] }) => {
         setGamePhase('blow');
-        setPlayers(players);
+        setPlayers((prev) => mergePlayersWithMetadata(players, prev));
         setWhoseTurn(startingPlayer);
       },
       'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclaration[]; actionHistory?: BlowAction[]; currentHighest: BlowDeclaration | null }) => {
@@ -395,7 +420,7 @@ export const useGame = () => {
           type: 'warning'
         });
         resetBlowState({ preservePlayers: true });
-        setPlayers(players);
+        setPlayers((prev) => mergePlayersWithMetadata(players, prev));
         setWhoseTurn(nextPlayerId);
         setGamePhase(gamePhase ?? 'blow');
         setCurrentTrump(null);
@@ -418,7 +443,7 @@ export const useGame = () => {
           type: 'warning'
         });
         resetBlowState({ preservePlayers: true });
-        setPlayers(players);
+        setPlayers((prev) => mergePlayersWithMetadata(players, prev));
         setWhoseTurn(nextDealer);
         setCurrentTrump(currentTrump ?? null);
         setCurrentHighestDeclaration(currentHighestDeclaration ?? null);
@@ -452,7 +477,7 @@ export const useGame = () => {
       'card-played': ({ field, players: updatedPlayers }: { field: Field, players: Player[] }) => {
         setCurrentField(field);
         // Update players with the latest data from server
-        setPlayers(updatedPlayers);
+        setPlayers((prev) => mergePlayersWithMetadata(updatedPlayers, prev));
       },
       'field-updated': (field: Field) => {
         setCurrentField(field);
@@ -491,7 +516,7 @@ export const useGame = () => {
         currentHighestDeclaration: BlowDeclaration | null;
         blowDeclarations: BlowDeclaration[];
       }) => {
-        setPlayers(players);
+        setPlayers((prev) => mergePlayersWithMetadata(players, prev));
         setWhoseTurn(currentTurn);
         setGamePhase(gamePhase);
         setCurrentField(currentField);
@@ -631,6 +656,7 @@ export const useGame = () => {
     currentPlayerId,
     currentRoomId,
     negriPlayerId,
+    mergePlayersWithMetadata,
     syncCurrentPlayerIdentity,
     resetRoomState,
     t,
