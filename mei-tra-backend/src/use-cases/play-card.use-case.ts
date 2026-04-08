@@ -67,8 +67,12 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       player.hand = player.hand.filter((c) => c !== card);
 
       const currentField = state.playState.currentField;
+      const playedBy = Array.isArray(currentField.playedBy)
+        ? currentField.playedBy
+        : [];
+      currentField.playedBy = playedBy;
       currentField.cards.push(card);
-      currentField.playedBy.push(player.playerId);
+      playedBy.push(player.playerId);
       if (currentField.cards.length === 1) {
         currentField.baseCard = card;
       }

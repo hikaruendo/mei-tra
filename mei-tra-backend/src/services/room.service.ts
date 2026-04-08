@@ -329,6 +329,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     this.remapBlowStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
   }
 
+  private clearGameStateDisconnectTimeout(
+    gameState: GameStateService,
+    playerId: string,
+  ): void {
+    gameState.clearDisconnectTimeout(playerId);
+  }
+
   async fillVacantSeatsWithCOM(roomId: string): Promise<void> {
     const room = await this.getRoom(roomId);
     if (!room) return;
@@ -662,7 +669,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           : [];
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
       restoredSeatData = seatData ?? null;
-      gameState.clearDisconnectTimeout(user.playerId);
+      this.clearGameStateDisconnectTimeout(gameState, user.playerId);
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
     } else if (vacantIndexes.length > 0) {
@@ -676,7 +683,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const originalPlayerId = seatRoomPlayer?.playerId;
       if (originalPlayerId) {
         gameState.removePlayerToken(originalPlayerId);
-        gameState.clearDisconnectTimeout(originalPlayerId);
+        this.clearGameStateDisconnectTimeout(gameState, originalPlayerId);
       }
       restoredSeatData = seatData ?? null;
       delete roomVacant[assignedIndex];
