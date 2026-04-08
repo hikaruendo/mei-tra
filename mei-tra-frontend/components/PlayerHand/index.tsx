@@ -26,6 +26,7 @@ interface PlayerHandProps {
   currentField: Field | null;
   currentTrump: TrumpType | null;
   isHost?: boolean;
+  isIdle?: boolean;
   onReplaceWithCOM?: (playerId: string) => void;
 }
 
@@ -46,6 +47,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentField,
   currentTrump,
   isHost = false,
+  isIdle = false,
   onReplaceWithCOM,
 }) => {
   const t = useTranslations('playerHand');
@@ -62,6 +64,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
   const isDisconnected = !player.isCOM && !player.id;
+  const statusLabel = isDisconnected
+    ? tStatus('disconnected')
+    : isIdle
+      ? tStatus('idle')
+      : null;
 
   useEffect(() => {
     if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
@@ -193,16 +200,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 player={player}
                 size="medium"
                 showName={true}
+                statusLabel={statusLabel}
               />
             </div>
             {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
-            {isDisconnected && (
-              <div className={styles.disconnectedBadge}>{tStatus('disconnected')}</div>
+            {statusLabel && (
+              <div className={styles.disconnectedBadge}>{statusLabel}</div>
             )}
             {isHost &&
               onReplaceWithCOM &&
               !isCurrentPlayer &&
-              isDisconnected &&
+              (isDisconnected || isIdle) &&
               !player.isCOM && (
                 <button
                   type="button"

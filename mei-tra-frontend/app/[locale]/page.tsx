@@ -110,6 +110,7 @@ export default function Home() {
     shuffleTeams,
     removePlayerFromRoom,
     replacePlayerWithCOM,
+    idlePlayerIds = [],
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -213,6 +214,7 @@ export default function Home() {
                   teamScores={teamScores}
                   currentPlayerId={currentPlayerId}
                   currentRoomId={currentRoomId}
+                  idlePlayerIds={idlePlayerIds}
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}

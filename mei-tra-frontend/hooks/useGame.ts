@@ -57,6 +57,7 @@ export const useGame = () => {
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
 
   const [users, setUsers] = useState<User[]>([]);
   // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
@@ -147,6 +148,11 @@ export const useGame = () => {
       },
       'update-players': (players: Player[]) => {
         setPlayers(players);
+        setIdlePlayerIds((prev) =>
+          prev.filter((playerId) =>
+            players.some((player) => player.playerId === playerId),
+          ),
+        );
         syncCurrentPlayerIdentity(players, currentPlayerId);
       },
       'set-room-id': (roomId: string) => {
@@ -194,6 +200,11 @@ export const useGame = () => {
         setCurrentRoomId(roomId);
         setGameStarted(true);
         setPointsToWin(pointsToWin);
+        setIdlePlayerIds((prev) =>
+          prev.filter((playerId) =>
+            players.some((player) => player.playerId === playerId),
+          ),
+        );
       },
       'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean; team?: number; name?: string }) => {
         // isSelf: true means the backend confirmed "this is YOUR player ID".
@@ -288,6 +299,9 @@ export const useGame = () => {
       },
       'update-turn': (playerId: string) => {
         setWhoseTurn(playerId);
+        if (socket && currentRoomId) {
+          socket.emit('turn-ack', { roomId: currentRoomId });
+        }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         // Prevent showing alert multiple times for the same game
@@ -462,6 +476,7 @@ export const useGame = () => {
         setGamePhase(null);
         setCurrentRoomId(null);
         setIsHost(false);
+        setIdlePlayerIds([]);
         setPlayers([]);
         setTeamScores({
           0: { deal: 0, blow: 0, play: 0, total: 0 },
@@ -481,23 +496,41 @@ export const useGame = () => {
         setNotification({ message, type: 'success' });
       },
       'player-disconnected': ({ playerId }: { playerId: string }) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         setNotification({
           message: tStatus('disconnectedNotice', { playerId }),
           type: 'warning'
         });
       },
+      'player-idle': ({ playerId }: { playerId: string }) => {
+        setIdlePlayerIds((prev) =>
+          prev.includes(playerId) ? prev : [...prev, playerId],
+        );
+        setNotification({
+          message: tStatus('idleNotice', { playerId }),
+          type: 'warning',
+        });
+      },
+      'player-idle-cleared': ({ playerId }: { playerId: string }) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+      },
       'player-converted-to-com': ({ playerId, message }: { playerId: string; message: string }) => {
         console.log('[useGame] Player converted to COM:', playerId, message);
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         setNotification({
           message: message || tStatus('convertedToComNotice', { playerId }),
           type: 'warning'
         });
       },
       'player-left': ({ playerId }: { playerId: string; roomId: string }) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         if (playerId === currentPlayerId) {
           setCurrentRoomId(null);
           setIsHost(false);
         }
+      },
+      'turn-ping': ({ roomId }: { roomId: string }) => {
+        socket.emit('turn-ack', { roomId });
       },
     };
 
@@ -716,6 +749,7 @@ export const useGame = () => {
     shuffleTeams,
     removePlayerFromRoom,
     replacePlayerWithCOM,
+    idlePlayerIds,
     pointsToWin,
     users,
     paused,

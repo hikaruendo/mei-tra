@@ -11,6 +11,7 @@ interface PlayerAvatarProps {
   size?: 'small' | 'medium' | 'large';
   showName?: boolean;
   className?: string;
+  statusLabel?: string | null;
 }
 
 export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
@@ -18,6 +19,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   size = 'medium',
   showName = true,
   className = '',
+  statusLabel,
 }) => {
   const t = useTranslations('playerStatus');
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
@@ -55,6 +57,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   const isDefaultAvatar = imageError || !profile?.avatarUrl;
   const avatarSrc = getAvatarSrc();
   const isDisconnected = !player.isCOM && !player.id;
+  const resolvedStatusLabel = statusLabel ?? (isDisconnected ? t('disconnected') : null);
 
   return (
     <div className={`${styles.playerAvatar} ${styles[size]} ${className}`}>
@@ -69,8 +72,8 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
           priority={false}
           unoptimized={isDefaultAvatar}
         />
-        {isDisconnected && (
-          <div className={styles.disconnectedBadge}>{t('disconnected')}</div>
+        {resolvedStatusLabel && (
+          <div className={styles.disconnectedBadge}>{resolvedStatusLabel}</div>
         )}
         {player.isCOM && (
           <div className={styles.comBadge}>
