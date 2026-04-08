@@ -36,6 +36,7 @@ export interface FieldCompleteEvent {
 export interface Player extends User {
   team: Team;
   hand: string[];
+  isHost?: boolean;
   isPasser?: boolean;
   isCOM?: boolean;
   hasBroken?: boolean;

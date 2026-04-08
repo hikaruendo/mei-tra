@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
@@ -63,6 +63,30 @@ export const useGame = () => {
 
   const [paused, setPaused] = useState(false);
 
+  const syncCurrentPlayerIdentity = useCallback((
+    nextPlayers: Player[],
+    fallbackPlayerId?: string | null,
+  ) => {
+    const selfByPlayerId =
+      (fallbackPlayerId &&
+        nextPlayers.find((player) => player.playerId === fallbackPlayerId)) ||
+      null;
+
+    if (selfByPlayerId) {
+      setCurrentPlayerId(selfByPlayerId.playerId);
+      setIsHost(Boolean(selfByPlayerId.isHost));
+      return;
+    }
+
+    if (user?.id) {
+      const selfByUserId = nextPlayers.find((player) => player.userId === user.id);
+      if (selfByUserId) {
+        setCurrentPlayerId(selfByUserId.playerId);
+        setIsHost(Boolean(selfByUserId.isHost));
+      }
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     setIsClient(true);
 
@@ -122,12 +146,7 @@ export const useGame = () => {
       },
       'update-players': (players: Player[]) => {
         setPlayers(players);
-        if (!currentPlayerId && user?.id) {
-          const selfPlayer = players.find((player) => player.userId === user.id);
-          if (selfPlayer) {
-            setCurrentPlayerId(selfPlayer.playerId);
-          }
-        }
+        syncCurrentPlayerIdentity(players, currentPlayerId);
       },
       'set-room-id': (roomId: string) => {
         setCurrentRoomId(roomId);
@@ -158,6 +177,7 @@ export const useGame = () => {
         pointsToWin: number;
       }) => {
         setPlayers(players);
+        syncCurrentPlayerIdentity(players, you ?? currentPlayerId);
         setGamePhase(gamePhase);
         setWhoseTurn(currentTurn);
         setCurrentField(currentField);
@@ -216,6 +236,7 @@ export const useGame = () => {
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
         setPlayers(players);
+        syncCurrentPlayerIdentity(players, currentPlayerId);
 
         // Identify self by playerId (stable across reconnections), not socket.id
         const index = players.findIndex(p => p.playerId === currentPlayerId);
@@ -478,7 +499,7 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId, user?.id]);
+  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId, user?.id, syncCurrentPlayerIdentity]);
 
   const resetBlowState = (options?: { preservePlayers?: boolean }) => {
     setBlowDeclarations([]);
