@@ -65,6 +65,22 @@ export const useGame = () => {
 
   const [paused, setPaused] = useState(false);
 
+  const resetRoomState = useCallback(() => {
+    gameOverShownRef.current = null;
+    setGameStarted(false);
+    setGamePhase(null);
+    setCurrentRoomId(null);
+    setCurrentPlayerId(null);
+    setIsHost(false);
+    setIdlePlayerIds([]);
+    setPlayers([]);
+    setTeamScores({
+      0: { deal: 0, blow: 0, play: 0, total: 0 },
+      1: { deal: 0, blow: 0, play: 0, total: 0 }
+    });
+    sessionStorage.removeItem('roomId');
+  }, []);
+
   const syncCurrentPlayerIdentity = useCallback((
     nextPlayers: Player[],
     fallbackPlayerId?: string | null,
@@ -471,19 +487,7 @@ export const useGame = () => {
               ? sessionStorage.getItem('roomId')
               : null,
         });
-        gameOverShownRef.current = null;
-        setGameStarted(false);
-        setGamePhase(null);
-        setCurrentRoomId(null);
-        setIsHost(false);
-        setIdlePlayerIds([]);
-        setPlayers([]);
-        setTeamScores({
-          0: { deal: 0, blow: 0, play: 0, total: 0 },
-          1: { deal: 0, blow: 0, play: 0, total: 0 }
-        });
-        // Clear stored roomId so socket reconnects don't attempt to rejoin the old room
-        sessionStorage.removeItem('roomId');
+        resetRoomState();
       },
       'game-paused': ({ message }: { message: string }) => {
         setPaused(true);
@@ -517,6 +521,14 @@ export const useGame = () => {
       'player-converted-to-com': ({ playerId, message }: { playerId: string; message: string }) => {
         console.log('[useGame] Player converted to COM:', playerId, message);
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+        if (playerId === currentPlayerId) {
+          resetRoomState();
+          setNotification({
+            message: message || tStatus('convertedToComNotice', { playerId }),
+            type: 'warning'
+          });
+          return;
+        }
         setNotification({
           message: message || tStatus('convertedToComNotice', { playerId }),
           type: 'warning'
@@ -556,6 +568,7 @@ export const useGame = () => {
     currentRoomId,
     negriPlayerId,
     syncCurrentPlayerIdentity,
+    resetRoomState,
     t,
     tStatus,
     user?.id,
