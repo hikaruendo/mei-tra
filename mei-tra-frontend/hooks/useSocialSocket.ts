@@ -23,7 +23,7 @@ export function useSocialSocket(): UseSocialSocketReturn {
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      if (socket && user?.id) {
+      if (socket?.connected && user?.id) {
         socket.emit('chat:join-room', { roomId, userId: user.id });
       }
     },
@@ -32,7 +32,7 @@ export function useSocialSocket(): UseSocialSocketReturn {
 
   const leaveRoom = useCallback(
     (roomId: string) => {
-      if (socket && user?.id) {
+      if (socket?.connected && user?.id) {
         socket.emit('chat:leave-room', { roomId, userId: user.id });
       }
     },

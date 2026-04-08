@@ -18,6 +18,7 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const joinedRoomRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isMinimized) return;
@@ -34,13 +35,29 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
   const { messages, typingUsers } = useChatMessages(roomId);
 
   useEffect(() => {
-    if (isConnected && roomId) {
+    if (!isConnected || !roomId) {
+      return;
+    }
+
+    if (joinedRoomRef.current && joinedRoomRef.current !== roomId) {
+      leaveRoom(joinedRoomRef.current);
+      joinedRoomRef.current = null;
+    }
+
+    if (joinedRoomRef.current !== roomId) {
       joinRoom(roomId);
-      return () => {
-        leaveRoom(roomId);
-      };
+      joinedRoomRef.current = roomId;
     }
   }, [isConnected, roomId, joinRoom, leaveRoom]);
+
+  useEffect(() => {
+    return () => {
+      if (joinedRoomRef.current) {
+        leaveRoom(joinedRoomRef.current);
+        joinedRoomRef.current = null;
+      }
+    };
+  }, [leaveRoom]);
 
   // Auto-minimize chat when game starts
   useEffect(() => {
