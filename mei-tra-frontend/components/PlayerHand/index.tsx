@@ -64,11 +64,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
   const isDisconnected = !player.isCOM && !player.id;
-  const statusLabel = isDisconnected
-    ? tStatus('disconnected')
-    : isIdle
-      ? tStatus('idle')
-      : null;
 
   useEffect(() => {
     if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
@@ -203,9 +198,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               />
             </div>
             {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
-            {statusLabel && (
-              <div className={styles.disconnectedBadge}>{statusLabel}</div>
-            )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
               <button
                 className={styles.brokenButton}
