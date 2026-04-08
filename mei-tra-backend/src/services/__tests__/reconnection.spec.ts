@@ -831,6 +831,50 @@ describe('Reconnection Token Management', () => {
         expect(room.players[0].team).toBe(0);
       });
 
+      it('should preserve host status when the room host replaces a COM placeholder', async () => {
+        const roomId = 'room-123';
+        const hostUser = {
+          id: 'socket-host',
+          playerId: 'player-1',
+          name: 'Host Player',
+        };
+
+        const comPlayer: RoomPlayer = {
+          id: 'com-0',
+          playerId: 'com-0',
+          name: 'COM',
+          team: 0,
+          hand: [],
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: false,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+
+        const room: Room = {
+          ...baseRoom,
+          status: RoomStatus.WAITING,
+          players: [comPlayer],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+        roomRepository.removePlayer.mockResolvedValue(true);
+        roomRepository.addPlayer.mockResolvedValue(true);
+
+        const result = await roomService.joinRoom(roomId, hostUser);
+
+        expect(result).toBe(true);
+        expect(roomRepository.addPlayer).toHaveBeenCalledWith(
+          roomId,
+          expect.objectContaining({
+            playerId: 'player-1',
+            isHost: true,
+          }),
+        );
+      });
+
       it('should restore the correct com seat even when repository order changes', async () => {
         const roomId = 'room-123';
         const playerId = 'player-1';

@@ -763,7 +763,10 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
       isHost:
-        currentSeatRoomPlayer?.isHost ?? seatRoomSnapshot?.isHost ?? false,
+        room.hostId === user.playerId ||
+        currentSeatRoomPlayer?.isHost ||
+        seatRoomSnapshot?.isHost ||
+        false,
       joinedAt: seatRoomSnapshot?.joinedAt
         ? new Date(seatRoomSnapshot.joinedAt)
         : new Date(),

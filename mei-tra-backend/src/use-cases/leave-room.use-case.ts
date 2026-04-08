@@ -68,9 +68,11 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
       // state.players is empty during waiting room (populated only at startGame).
       // Fall back to the room's real (non-COM) players in that case.
       const updatedPlayers =
-        state.players.length > 0
-          ? state.players
-          : (roomExists?.players.filter((p) => !p.isCOM) ?? []);
+        roomExists.status === 'waiting'
+          ? roomExists.players
+          : state.players.length > 0
+            ? state.players
+            : (roomExists?.players.filter((p) => !p.isCOM) ?? []);
 
       return {
         success: true,

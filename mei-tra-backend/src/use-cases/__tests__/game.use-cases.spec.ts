@@ -301,7 +301,7 @@ describe('Game Use Cases', () => {
       const roomService = createRoomServiceMock();
       const useCase = new LeaveRoomUseCase(roomService);
 
-      const room: Room = { ...baseRoom };
+      const room: Room = { ...baseRoom, status: RoomStatus.PLAYING };
       const statePlayers: Player[] = [
         {
           id: 'socket-2',
@@ -340,6 +340,94 @@ describe('Game Use Cases', () => {
 
       const leaveRoomMock = roomService.leaveRoom as jest.Mock;
       expect(leaveRoomMock).toHaveBeenCalledWith(room.id, 'player-1');
+    });
+
+    it('returns room players for waiting rooms so host reassignment reaches the client', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new LeaveRoomUseCase(roomService);
+
+      const waitingRoom: Room = {
+        ...baseRoom,
+        status: RoomStatus.WAITING,
+        hostId: 'player-2',
+        players: [
+          {
+            id: 'com-0',
+            playerId: 'com-0',
+            name: 'COM',
+            team: 0 as const,
+            hand: [],
+            isPasser: false,
+            isReady: false,
+            isHost: false,
+            isCOM: true,
+            hasBroken: false,
+            joinedAt: new Date(),
+          },
+          {
+            id: 'socket-2',
+            playerId: 'player-2',
+            name: 'Player 2',
+            team: 1 as const,
+            hand: [],
+            isPasser: false,
+            isReady: false,
+            isHost: true,
+            hasBroken: false,
+            joinedAt: new Date(),
+          },
+        ],
+      };
+
+      const state = {
+        players: [
+          {
+            id: 'com-0',
+            playerId: 'com-0',
+            name: 'COM',
+            team: 0 as const,
+            hand: [],
+            isPasser: false,
+            hasBroken: false,
+          },
+          {
+            id: 'socket-2',
+            playerId: 'player-2',
+            name: 'Player 2',
+            team: 1 as const,
+            hand: [],
+            isPasser: false,
+            hasBroken: false,
+          },
+        ],
+        teamAssignments: {} as Record<string, number>,
+        gamePhase: null as GamePhase,
+      };
+
+      const gameStateMock = {
+        getState: jest.fn(() => state),
+      } as unknown as GameStateService;
+
+      roomService.getRoom
+        .mockResolvedValueOnce(baseRoom)
+        .mockResolvedValueOnce(waitingRoom);
+      roomService.leaveRoom.mockResolvedValue(true);
+      roomService.listRooms.mockResolvedValue([waitingRoom]);
+      roomService.getRoomGameState.mockResolvedValue(gameStateMock);
+
+      const result = await useCase.execute({
+        playerId: 'player-1',
+        roomId: waitingRoom.id,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.updatedPlayers).toEqual(waitingRoom.players);
+      expect(result.data?.updatedPlayers).toContainEqual(
+        expect.objectContaining({
+          playerId: 'player-2',
+          isHost: true,
+        }),
+      );
     });
 
     it('signals room deletion when room is removed', async () => {
