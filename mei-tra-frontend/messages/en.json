@@ -275,7 +275,8 @@
       "starting": "Server is starting up. Please wait."
     },
     "shuffleTeams": "Shuffle",
-    "fillWithCOM": "Add COM"
+    "fillWithCOM": "Add COM",
+    "removePlayer": "Remove"
   },
   "game": {
     "initializing": "Initializing game...",
@@ -601,6 +602,12 @@
       "flow": "Game Flow\nDeal → Blow → Play → Waiting (until 10 fields completed)",
       "settings": "Basic Settings\n4 players 2 teams / Opposite = partner / First to 10 points wins / Minimum 6 pairs declaration"
     }
+  },
+  "playerStatus": {
+    "disconnected": "Disconnected",
+    "replaceWithCom": "Replace with COM",
+    "disconnectedNotice": "Player {playerId} disconnected. They will be replaced with COM after the timeout.",
+    "convertedToComNotice": "Player {playerId} was replaced with COM after being disconnected too long."
   },
   "profile": {
     "title": "Profile",

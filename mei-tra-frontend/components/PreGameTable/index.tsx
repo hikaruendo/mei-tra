@@ -14,6 +14,7 @@ interface PreGameTableProps {
   onStart: () => void;
   onLeave: () => void;
   shuffleTeams?: () => void;
+  onRemovePlayer?: (playerId: string) => void;
 }
 
 const positions = ['bottom', 'left', 'top', 'right'] as const;
@@ -36,6 +37,7 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
   onStart,
   onLeave,
   shuffleTeams,
+  onRemovePlayer,
 }) => {
   const tRoot = useTranslations();
 
@@ -56,7 +58,21 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
           key={player.playerId}
           className={`${styles.playerSeat} ${styles[positions[idx]]}`}
         >
-          <PlayerAvatar player={player} size="medium" showName={true} />
+          <div className={styles.seatContent}>
+            <PlayerAvatar player={player} size="medium" showName={true} />
+            {isHost &&
+              onRemovePlayer &&
+              !player.isCOM &&
+              player.playerId !== currentPlayerId && (
+                <button
+                  type="button"
+                  className={styles.seatActionButton}
+                  onClick={() => onRemovePlayer(player.playerId)}
+                >
+                  {tRoot('room.removePlayer')}
+                </button>
+              )}
+          </div>
         </div>
       ))}
 

@@ -108,6 +108,8 @@ export default function Home() {
     isHost = false,
     startGame,
     shuffleTeams,
+    removePlayerFromRoom,
+    replacePlayerWithCOM,
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -187,6 +189,7 @@ export default function Home() {
                     onStart={startGame}
                     onLeave={handleLeaveRoom}
                     shuffleTeams={shuffleTeams}
+                    onRemovePlayer={removePlayerFromRoom}
                   />
                 ) : (
                 <GameTable
@@ -212,6 +215,7 @@ export default function Home() {
                   currentRoomId={currentRoomId}
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}
+                  onReplaceWithCOM={replacePlayerWithCOM}
                 />
                 )}
                 {gameStarted && (

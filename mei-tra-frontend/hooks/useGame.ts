@@ -6,6 +6,7 @@ import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCom
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
+  const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
@@ -245,7 +246,13 @@ export const useGame = () => {
         } else {
           // Fallback: match by userId for authenticated users
           console.error('[useGame] Player not found in game-started by playerId', { currentPlayerId });
-          const userIndex = players.findIndex(p => p.userId && users.find(u => u.userId === p.userId && u.playerId === currentPlayerId));
+          const userIndex = players.findIndex(
+            (p) =>
+              p.userId &&
+              usersRef.current.find(
+                (u) => u.userId === p.userId && u.playerId === currentPlayerId,
+              ),
+          );
           if (userIndex !== -1) {
             setCurrentPlayerId(players[userIndex].playerId);
           }
@@ -473,10 +480,16 @@ export const useGame = () => {
         setGameStarted(true);
         setNotification({ message, type: 'success' });
       },
+      'player-disconnected': ({ playerId }: { playerId: string }) => {
+        setNotification({
+          message: tStatus('disconnectedNotice', { playerId }),
+          type: 'warning'
+        });
+      },
       'player-converted-to-com': ({ playerId, message }: { playerId: string; message: string }) => {
         console.log('[useGame] Player converted to COM:', playerId, message);
         setNotification({
-          message: `プレイヤー ${playerId} が長時間切断のため、COMプレイヤーに変換されました`,
+          message: message || tStatus('convertedToComNotice', { playerId }),
           type: 'warning'
         });
       },
@@ -499,7 +512,21 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId, user?.id, syncCurrentPlayerIdentity]);
+  }, [
+    socket,
+    name,
+    currentHighestDeclaration,
+    players,
+    isConnecting,
+    isConnected,
+    currentPlayerId,
+    currentRoomId,
+    negriPlayerId,
+    syncCurrentPlayerIdentity,
+    t,
+    tStatus,
+    user?.id,
+  ]);
 
   const resetBlowState = (options?: { preservePlayers?: boolean }) => {
     setBlowDeclarations([]);
@@ -520,6 +547,26 @@ export const useGame = () => {
   const startGame = () => {
     if (!currentRoomId || !currentPlayerId) return;
     socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
+  };
+
+  const removePlayerFromRoom = (targetPlayerId: string) => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    socket.emit('moderate-player', {
+      roomId: currentRoomId,
+      requesterPlayerId: currentPlayerId,
+      targetPlayerId,
+      action: 'remove',
+    });
+  };
+
+  const replacePlayerWithCOM = (targetPlayerId: string) => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    socket.emit('moderate-player', {
+      roomId: currentRoomId,
+      requesterPlayerId: currentPlayerId,
+      targetPlayerId,
+      action: 'replace-with-com',
+    });
   };
 
   const shuffleTeams = () => {
@@ -667,6 +714,8 @@ export const useGame = () => {
     isHost,
     startGame,
     shuffleTeams,
+    removePlayerFromRoom,
+    replacePlayerWithCOM,
     pointsToWin,
     users,
     paused,

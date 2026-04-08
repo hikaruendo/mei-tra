@@ -36,6 +36,7 @@ interface GameTableProps {
   isHost?: boolean;
   onStart?: () => void;
   onLeave?: () => void;
+  onReplaceWithCOM?: (playerId: string) => void;
 }
 
 
@@ -64,6 +65,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   isHost = false,
   onStart,
   onLeave,
+  onReplaceWithCOM,
 }) => {
   const tRoot = useTranslations();
 
@@ -158,6 +160,8 @@ export const GameTable: React.FC<GameTableProps> = ({
               players={players}
               currentField={currentField}
               currentTrump={currentTrump}
+              isHost={isHost}
+              onReplaceWithCOM={onReplaceWithCOM}
             />
           );
         })}

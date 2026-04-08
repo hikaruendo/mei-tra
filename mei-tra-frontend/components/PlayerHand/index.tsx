@@ -25,6 +25,8 @@ interface PlayerHandProps {
   players: Player[];
   currentField: Field | null;
   currentTrump: TrumpType | null;
+  isHost?: boolean;
+  onReplaceWithCOM?: (playerId: string) => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -43,8 +45,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   players,
   currentField,
   currentTrump,
+  isHost = false,
+  onReplaceWithCOM,
 }) => {
   const t = useTranslations('playerHand');
+  const tStatus = useTranslations('playerStatus');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const autoRevealAttemptedRef = useRef(false);
@@ -56,6 +61,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   );
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
+  const isDisconnected = !player.isCOM && !player.id;
 
   useEffect(() => {
     if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
@@ -190,6 +196,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               />
             </div>
             {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
+            {isDisconnected && (
+              <div className={styles.disconnectedBadge}>{tStatus('disconnected')}</div>
+            )}
+            {isHost &&
+              onReplaceWithCOM &&
+              !isCurrentPlayer &&
+              isDisconnected &&
+              !player.isCOM && (
+                <button
+                  type="button"
+                  className={styles.replaceWithComButton}
+                  onClick={() => onReplaceWithCOM(player.playerId)}
+                >
+                  {tStatus('replaceWithCom')}
+                </button>
+              )}
             {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
               <button
                 className={styles.brokenButton}

@@ -45,6 +45,8 @@ import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.
 import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 
+const DISCONNECT_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -642,45 +644,43 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           playerId: player.playerId,
           roomId,
         });
+        this.server.to(roomId).emit('player-disconnected', {
+          playerId: player.playerId,
+          roomId,
+        });
 
         // プレイ中の場合は長めのタイムアウト(5分)を設定
         // プレイヤーとトークンを保持しつつ、長時間放置されたらCOMに変換
         if (state.gamePhase === 'play' || state.gamePhase === 'blow') {
-          const timeout: NodeJS.Timeout = setTimeout(
-            () => {
-              void (async () => {
-                try {
-                  const room = await this.roomService.getRoom(roomId);
-                  if (room?.status === RoomStatus.PLAYING) {
-                    const converted: boolean =
-                      await this.roomService.convertPlayerToCOM(
-                        roomId,
-                        player.playerId,
-                      );
-                    if (converted) {
-                      this.server.to(roomId).emit('player-converted-to-com', {
-                        playerId: player.playerId,
-                        message:
-                          'Player disconnected for too long - converted to COM',
-                      });
-                      this.server
-                        .to(roomId)
-                        .emit(
-                          'update-players',
-                          roomGameState.getState().players,
-                        );
-                    }
+          const timeout: NodeJS.Timeout = setTimeout(() => {
+            void (async () => {
+              try {
+                const room = await this.roomService.getRoom(roomId);
+                if (room?.status === RoomStatus.PLAYING) {
+                  const converted: boolean =
+                    await this.roomService.convertPlayerToCOM(
+                      roomId,
+                      player.playerId,
+                    );
+                  if (converted) {
+                    this.server.to(roomId).emit('player-converted-to-com', {
+                      playerId: player.playerId,
+                      message:
+                        'Player disconnected for too long - converted to COM',
+                    });
+                    this.server
+                      .to(roomId)
+                      .emit('update-players', roomGameState.getState().players);
                   }
-                } catch (error) {
-                  console.error(
-                    '[Disconnect] Error converting player to COM:',
-                    error,
-                  );
                 }
-              })();
-            },
-            5 * 60 * 1000,
-          ); // 5 minutes
+              } catch (error) {
+                console.error(
+                  '[Disconnect] Error converting player to COM:',
+                  error,
+                );
+              }
+            })();
+          }, DISCONNECT_TO_COM_TIMEOUT_MS);
 
           roomGameState.setDisconnectTimeout(player.playerId, timeout);
         } else {
@@ -1059,6 +1059,152 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: true };
     } catch (error) {
       console.error('Error in handleLeaveRoom:', error);
+      return { success: false, error: 'Internal server error' };
+    }
+  }
+
+  @SubscribeMessage('moderate-player')
+  async handleModeratePlayer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: {
+      roomId: string;
+      requesterPlayerId: string;
+      targetPlayerId: string;
+      action: 'remove' | 'replace-with-com';
+    },
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const room = await this.roomService.getRoom(data.roomId);
+      if (!room) {
+        client.emit('error-message', 'Room not found');
+        return { success: false, error: 'Room not found' };
+      }
+
+      if (room.hostId !== data.requesterPlayerId) {
+        client.emit('error-message', 'Only the host can moderate players');
+        return { success: false, error: 'Only the host can moderate players' };
+      }
+
+      if (data.requesterPlayerId === data.targetPlayerId) {
+        client.emit('error-message', 'Host cannot moderate themselves');
+        return { success: false, error: 'Host cannot moderate themselves' };
+      }
+
+      const targetPlayer = room.players.find(
+        (player) => player.playerId === data.targetPlayerId,
+      );
+      if (!targetPlayer || targetPlayer.isCOM) {
+        client.emit('error-message', 'Target player not found');
+        return { success: false, error: 'Target player not found' };
+      }
+
+      if (data.action === 'remove') {
+        if (room.status !== RoomStatus.WAITING) {
+          client.emit(
+            'error-message',
+            'Players can only be removed in the waiting room',
+          );
+          return {
+            success: false,
+            error: 'Players can only be removed in the waiting room',
+          };
+        }
+
+        const targetSocket = targetPlayer.id
+          ? this.server.sockets.sockets.get(targetPlayer.id)
+          : undefined;
+        if (targetSocket) {
+          await targetSocket.leave(data.roomId);
+          this.playerRooms.delete(targetPlayer.id);
+          targetSocket.emit(
+            'error-message',
+            'You were removed from the room by the host',
+          );
+          targetSocket.emit('back-to-lobby');
+        }
+
+        const result = await this.leaveRoomUseCase.execute({
+          playerId: data.targetPlayerId,
+          roomId: data.roomId,
+        });
+
+        if (!result.success || !result.data) {
+          const errorMessage = result.errorMessage || 'Failed to remove player';
+          client.emit('error-message', errorMessage);
+          return { success: false, error: errorMessage };
+        }
+
+        const { playerId, roomDeleted, roomsList, updatedPlayers } =
+          result.data;
+
+        if (roomDeleted) {
+          this.server.emit('rooms-list', roomsList);
+          return { success: true };
+        }
+
+        const updatedRoom = await this.roomService.getRoom(data.roomId);
+        if (updatedRoom) {
+          this.server.to(data.roomId).emit('room-updated', updatedRoom);
+        }
+
+        this.server.to(data.roomId).emit('player-left', {
+          playerId,
+          roomId: data.roomId,
+        });
+        this.server.emit('rooms-list', roomsList);
+        if (updatedPlayers) {
+          this.server.to(data.roomId).emit('update-players', updatedPlayers);
+        }
+
+        return { success: true };
+      }
+
+      const roomGameState = await this.roomService.getRoomGameState(
+        data.roomId,
+      );
+      const state = roomGameState.getState();
+      const targetStatePlayer = state.players.find(
+        (player) => player.playerId === data.targetPlayerId,
+      );
+
+      if (
+        room.status !== RoomStatus.PLAYING ||
+        !targetStatePlayer ||
+        targetStatePlayer.id
+      ) {
+        client.emit(
+          'error-message',
+          'Only disconnected in-game players can be replaced with COM',
+        );
+        return {
+          success: false,
+          error: 'Only disconnected in-game players can be replaced with COM',
+        };
+      }
+
+      const converted = await this.roomService.convertPlayerToCOM(
+        data.roomId,
+        data.targetPlayerId,
+      );
+      if (!converted) {
+        client.emit('error-message', 'Failed to replace player with COM');
+        return { success: false, error: 'Failed to replace player with COM' };
+      }
+
+      this.server.to(data.roomId).emit('player-converted-to-com', {
+        playerId: data.targetPlayerId,
+        message: 'Host replaced a disconnected player with COM',
+      });
+      this.server
+        .to(data.roomId)
+        .emit('update-players', roomGameState.getState().players);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleModeratePlayer:', error);
+      client.emit('error-message', 'Internal server error');
       return { success: false, error: 'Internal server error' };
     }
   }

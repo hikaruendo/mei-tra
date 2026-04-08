@@ -275,7 +275,8 @@
       "starting": "サーバーを起動しています。しばらくお待ちください。"
     },
     "shuffleTeams": "シャッフル",
-    "fillWithCOM": "COM追加"
+    "fillWithCOM": "COM追加",
+    "removePlayer": "退出させる"
   },
   "game": {
     "initializing": "ゲームを初期化中...",
@@ -555,6 +556,12 @@
       "flow": "ゲームフロー\nDeal → Blow → Play → Waiting（10フィールド完了まで）",
       "settings": "基本設定\n4人2チーム / 対面がパートナー / 10点先取勝利 / 最低6ペア宣言"
     }
+  },
+  "playerStatus": {
+    "disconnected": "Disconnected",
+    "replaceWithCom": "COMに切り替え",
+    "disconnectedNotice": "プレイヤー {playerId} の接続が切れました。一定時間後にCOMへ切り替わります。",
+    "convertedToComNotice": "プレイヤー {playerId} が長時間切断のため、COMプレイヤーに変換されました。"
   },
   "profile": {
     "title": "プロフィール",

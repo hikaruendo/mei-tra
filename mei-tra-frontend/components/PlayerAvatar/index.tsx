@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Player } from '../../types/game.types';
 import { getPlayerProfile, getDefaultAvatarUrl, PlayerProfile } from '../../lib/utils/profileUtils';
 import { PlayerIdentityChip } from '../PlayerIdentityChip';
@@ -18,12 +19,13 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   showName = true,
   className = '',
 }) => {
+  const t = useTranslations('playerStatus');
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     getPlayerProfile(player).then(setProfile);
-  }, [player.userId, player.name, player.isAuthenticated]);
+  }, [player]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -52,28 +54,23 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   const sizePixels = getSizePixels();
   const isDefaultAvatar = imageError || !profile?.avatarUrl;
   const avatarSrc = getAvatarSrc();
+  const isDisconnected = !player.isCOM && !player.id;
 
   return (
     <div className={`${styles.playerAvatar} ${styles[size]} ${className}`}>
       <div className={styles.avatarContainer}>
-        {isDefaultAvatar ? (
-          <img
-            src={avatarSrc}
-            alt={`${displayName}'s avatar`}
-            width={sizePixels}
-            height={sizePixels}
-            className={styles.avatarImage}
-          />
-        ) : (
-          <Image
-            src={avatarSrc}
-            alt={`${displayName}'s avatar`}
-            width={sizePixels}
-            height={sizePixels}
-            className={styles.avatarImage}
-            onError={handleImageError}
-            priority={false}
-          />
+        <Image
+          src={avatarSrc}
+          alt={`${displayName}'s avatar`}
+          width={sizePixels}
+          height={sizePixels}
+          className={styles.avatarImage}
+          onError={handleImageError}
+          priority={false}
+          unoptimized={isDefaultAvatar}
+        />
+        {isDisconnected && (
+          <div className={styles.disconnectedBadge}>{t('disconnected')}</div>
         )}
         {player.isCOM && (
           <div className={styles.comBadge}>

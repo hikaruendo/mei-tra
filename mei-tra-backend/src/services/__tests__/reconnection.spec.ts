@@ -364,9 +364,11 @@ describe('Reconnection Token Management', () => {
       const comPlayerService: jest.Mocked<IComPlayerService> = {
         createComPlayer: jest.fn(),
         selectBestCard: jest.fn(),
-        selectBaseSuit: jest.fn(
-          (_hand: string[], _trump: TrumpType | null) => '♠',
-        ),
+        selectBaseSuit: jest.fn((hand: string[], trump: TrumpType | null) => {
+          void hand;
+          void trump;
+          return '♠';
+        }),
         isComPlayer: jest.fn(),
       };
       gameStateFactory = new GameStateFactory(
@@ -866,13 +868,13 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.joinRoom(roomId, hostUser);
 
         expect(result).toBe(true);
-        expect(roomRepository.addPlayer).toHaveBeenCalledWith(
+        expect(roomRepository.addPlayer.mock.calls).toContainEqual([
           roomId,
           expect.objectContaining({
             playerId: 'player-1',
             isHost: true,
           }),
-        );
+        ]);
       });
 
       it('should restore the correct com seat even when repository order changes', async () => {
