@@ -561,9 +561,9 @@
     "disconnected": "Disconnected",
     "idle": "応答なし",
     "replaceWithCom": "COMに切り替え",
-    "disconnectedNotice": "プレイヤー {playerId} の接続が切れました。一定時間後にCOMへ切り替わります。",
-    "idleNotice": "プレイヤー {playerId} が手番中に応答していません。ホストはCOMに切り替えできます。",
-    "convertedToComNotice": "プレイヤー {playerId} が長時間切断のため、COMプレイヤーに変換されました。"
+    "disconnectedNotice": "{playerName} の接続が切れました。一定時間後にCOMへ切り替わります。",
+    "idleNotice": "{playerName} が手番中に応答していません。ホストはCOMに切り替えできます。",
+    "convertedToComNotice": "{playerName} が長時間切断のため、COMプレイヤーに変換されました。"
   },
   "profile": {
     "title": "プロフィール",

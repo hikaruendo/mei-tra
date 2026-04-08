@@ -607,9 +607,9 @@
     "disconnected": "Disconnected",
     "idle": "Unresponsive",
     "replaceWithCom": "Replace with COM",
-    "disconnectedNotice": "Player {playerId} disconnected. They will be replaced with COM after the timeout.",
-    "idleNotice": "Player {playerId} is not responding on their turn. The host can replace them with COM.",
-    "convertedToComNotice": "Player {playerId} was replaced with COM after being disconnected too long."
+    "disconnectedNotice": "{playerName} disconnected. They will be replaced with COM after the timeout.",
+    "idleNotice": "{playerName} is not responding on their turn. The host can replace them with COM.",
+    "convertedToComNotice": "{playerName} was replaced with COM after being disconnected too long."
   },
   "profile": {
     "title": "Profile",

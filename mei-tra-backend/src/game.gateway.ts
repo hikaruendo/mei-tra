@@ -246,6 +246,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     this.server.to(roomId).emit('player-converted-to-com', {
       playerId,
+      playerName: targetPlayer?.name ?? playerId,
       message,
     });
     this.server
@@ -303,6 +304,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             monitor.idleEmitted = true;
             this.server.to(roomId).emit('player-idle', {
               playerId,
+              playerName: currentPlayer.name,
               roomId,
             });
           }
@@ -827,6 +829,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const player = players.find((p) => p.id === client.id);
+      const authenticatedUser = (client.data as { user?: AuthenticatedUser })
+        .user;
 
       if (player) {
         const activeMonitor = this.turnAckMonitors.get(roomId);
@@ -834,11 +838,35 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.clearTurnAckMonitor(roomId);
         }
 
+        const disconnectDisplayName =
+          authenticatedUser?.profile?.displayName || player.name;
+
         // プレイヤーのチーム情報を保持
         state.teamAssignments[player.playerId] = player.team;
 
         // ソケットIDをクリア（切断状態を示す）
         player.id = '';
+
+        const room = await this.roomService.getRoom(roomId);
+        if (room?.hostId === player.playerId) {
+          const nextHost = room.players.find(
+            (candidate) =>
+              candidate.playerId !== player.playerId && !candidate.isCOM,
+          );
+          if (nextHost) {
+            await this.roomService.updateRoom(roomId, {
+              hostId: nextHost.playerId,
+            });
+            const updatedRoom = await this.roomService.getRoom(roomId);
+            if (updatedRoom) {
+              this.server.to(roomId).emit('room-updated', updatedRoom);
+              this.server
+                .to(roomId)
+                .emit('update-players', updatedRoom.players);
+            }
+            this.server.emit('rooms-list', await this.roomService.listRooms());
+          }
+        }
 
         // Notify other players in the same room about the disconnection
         this.server.to(roomId).emit('player-left', {
@@ -847,6 +875,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         this.server.to(roomId).emit('player-disconnected', {
           playerId: player.playerId,
+          playerName: disconnectDisplayName,
           roomId,
         });
 
@@ -866,6 +895,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                   if (converted) {
                     this.server.to(roomId).emit('player-converted-to-com', {
                       playerId: player.playerId,
+                      playerName: disconnectDisplayName,
                       message:
                         'Player disconnected for too long - converted to COM',
                     });

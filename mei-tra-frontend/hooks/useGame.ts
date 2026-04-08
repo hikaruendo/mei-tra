@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
+import { Room } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
 export const useGame = () => {
@@ -173,6 +174,30 @@ export const useGame = () => {
       },
       'set-room-id': (roomId: string) => {
         setCurrentRoomId(roomId);
+      },
+      'room-updated': (room: Room) => {
+        if (room.id !== currentRoomId) {
+          return;
+        }
+
+        setPlayers((prev) => {
+          const mergedPlayers = prev.map((player) => {
+            const roomPlayer = room.players.find(
+              (candidate) => candidate.playerId === player.playerId,
+            );
+            if (!roomPlayer) {
+              return player;
+            }
+
+            return {
+              ...player,
+              ...roomPlayer,
+            };
+          });
+
+          syncCurrentPlayerIdentity(mergedPlayers, currentPlayerId);
+          return mergedPlayers;
+        });
       },
       'game-state': ({
         players,
@@ -499,38 +524,77 @@ export const useGame = () => {
         setGameStarted(true);
         setNotification({ message, type: 'success' });
       },
-      'player-disconnected': ({ playerId }: { playerId: string }) => {
+      'player-disconnected': ({
+        playerId,
+        playerName,
+      }: {
+        playerId: string;
+        playerName?: string;
+      }) => {
+        setPlayers((prev) =>
+          prev.map((player) =>
+            player.playerId === playerId
+              ? {
+                  ...player,
+                  id: '',
+                  name: playerName ?? player.name,
+                }
+              : player,
+          ),
+        );
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         setNotification({
-          message: tStatus('disconnectedNotice', { playerId }),
+          message: tStatus('disconnectedNotice', {
+            playerName: playerName ?? playerId,
+          }),
           type: 'warning'
         });
       },
-      'player-idle': ({ playerId }: { playerId: string }) => {
+      'player-idle': ({
+        playerId,
+        playerName,
+      }: {
+        playerId: string;
+        playerName?: string;
+      }) => {
         setIdlePlayerIds((prev) =>
           prev.includes(playerId) ? prev : [...prev, playerId],
         );
         setNotification({
-          message: tStatus('idleNotice', { playerId }),
+          message: tStatus('idleNotice', {
+            playerName: playerName ?? playerId,
+          }),
           type: 'warning',
         });
       },
       'player-idle-cleared': ({ playerId }: { playerId: string }) => {
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
       },
-      'player-converted-to-com': ({ playerId, message }: { playerId: string; message: string }) => {
+      'player-converted-to-com': ({
+        playerId,
+        playerName,
+        message,
+      }: {
+        playerId: string;
+        playerName?: string;
+        message: string;
+      }) => {
         console.log('[useGame] Player converted to COM:', playerId, message);
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         if (playerId === currentPlayerId) {
           resetRoomState();
           setNotification({
-            message: message || tStatus('convertedToComNotice', { playerId }),
+            message: tStatus('convertedToComNotice', {
+              playerName: playerName ?? playerId,
+            }),
             type: 'warning'
           });
           return;
         }
         setNotification({
-          message: message || tStatus('convertedToComNotice', { playerId }),
+          message: tStatus('convertedToComNotice', {
+            playerName: playerName ?? playerId,
+          }),
           type: 'warning'
         });
       },
