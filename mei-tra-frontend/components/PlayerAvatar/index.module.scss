@@ -17,15 +17,21 @@
 
 .disconnectedBadge {
   position: absolute;
-  top: 6px;
-  left: 6px;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 2;
+  max-width: calc(100% - 8px);
   padding: 2px 6px;
   border-radius: 999px;
   background: rgba(127, 29, 29, 0.92);
   color: #fee2e2;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .comBadge {
@@ -69,17 +75,10 @@
   }
 
   .disconnectedBadge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  z-index: 2;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(127, 29, 29, 0.92);
-  color: #fee2e2;
-  font-size: 10px;
-  font-weight: 700;
-}
+    font-size: 8px;
+    max-width: calc(100% - 6px);
+    padding: 2px 5px;
+  }
 
 .comBadge {
     inset: 0;
@@ -101,17 +100,8 @@
   }
 
   .disconnectedBadge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  z-index: 2;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(127, 29, 29, 0.92);
-  color: #fee2e2;
-  font-size: 10px;
-  font-weight: 700;
-}
+    font-size: 9px;
+  }
 
 .comBadge {
     inset: 0;
@@ -133,17 +123,8 @@
   }
 
   .disconnectedBadge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  z-index: 2;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(127, 29, 29, 0.92);
-  color: #fee2e2;
-  font-size: 10px;
-  font-weight: 700;
-}
+    font-size: 10px;
+  }
 
 .comBadge {
     inset: 0;

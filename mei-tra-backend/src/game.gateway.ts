@@ -687,6 +687,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 negriCard: state.playState?.negriCard,
                 fields: state.playState?.fields,
                 roomId: roomId,
+                hostId: room.hostId,
                 pointsToWin: state.pointsToWin,
               });
               this.server.to(roomId).emit('update-players', state.players);
@@ -1179,6 +1180,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               player.playerId === normalizedUser.playerId ? player.hand : [],
           })),
           you: normalizedUser.playerId,
+          hostId: room.hostId,
         };
 
         this.server.to(client.id).emit('game-resumed', {
