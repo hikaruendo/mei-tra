@@ -186,12 +186,14 @@ export class SupabaseUserProfileRepository implements IUserProfileRepository {
     score: number,
   ): Promise<void> {
     try {
+      const normalizedScore = Number(score);
+
       const { error } = await this.supabase
         .from('user_profiles')
         .update({
           games_played: gamesPlayed,
           games_won: gamesWon,
-          total_score: score,
+          total_score: normalizedScore,
         })
         .eq('id', id);
 
@@ -273,9 +275,9 @@ export class SupabaseUserProfileRepository implements IUserProfileRepository {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       lastSeenAt: new Date(row.last_seen_at),
-      gamesPlayed: row.games_played,
-      gamesWon: row.games_won,
-      totalScore: row.total_score,
+      gamesPlayed: Number(row.games_played),
+      gamesWon: Number(row.games_won),
+      totalScore: Number(row.total_score),
       preferences: row.preferences,
     };
   }
