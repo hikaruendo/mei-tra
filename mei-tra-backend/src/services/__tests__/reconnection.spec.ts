@@ -364,9 +364,11 @@ describe('Reconnection Token Management', () => {
       const comPlayerService: jest.Mocked<IComPlayerService> = {
         createComPlayer: jest.fn(),
         selectBestCard: jest.fn(),
-        selectBaseSuit: jest.fn(
-          (_hand: string[], _trump: TrumpType | null) => '♠',
-        ),
+        selectBaseSuit: jest.fn((hand: string[], trump: TrumpType | null) => {
+          void hand;
+          void trump;
+          return '♠';
+        }),
         isComPlayer: jest.fn(),
       };
       gameStateFactory = new GameStateFactory(
@@ -866,13 +868,64 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.joinRoom(roomId, hostUser);
 
         expect(result).toBe(true);
-        expect(roomRepository.addPlayer).toHaveBeenCalledWith(
+        expect(roomRepository.addPlayer.mock.calls).toContainEqual([
           roomId,
           expect.objectContaining({
             playerId: 'player-1',
             isHost: true,
           }),
-        );
+        ]);
+      });
+
+      it('should normalize duplicate host flags based on room.hostId', async () => {
+        const roomId = 'room-123';
+        const room: Room = {
+          ...baseRoom,
+          hostId: 'player-2',
+          players: [
+            {
+              id: 'socket-1',
+              playerId: 'player-1',
+              name: 'Player1',
+              team: 0,
+              hand: [],
+              isPasser: false,
+              hasBroken: false,
+              hasRequiredBroken: false,
+              isReady: false,
+              isHost: true,
+              joinedAt: new Date(),
+            },
+            {
+              id: 'socket-2',
+              playerId: 'player-2',
+              name: 'Player2',
+              team: 1,
+              hand: [],
+              isPasser: false,
+              hasBroken: false,
+              hasRequiredBroken: false,
+              isReady: false,
+              isHost: true,
+              joinedAt: new Date(),
+            },
+          ] as RoomPlayer[],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+
+        const normalizedRoom = await roomService.getRoom(roomId);
+
+        expect(
+          normalizedRoom?.players.find(
+            (player) => player.playerId === 'player-1',
+          )?.isHost,
+        ).toBe(false);
+        expect(
+          normalizedRoom?.players.find(
+            (player) => player.playerId === 'player-2',
+          )?.isHost,
+        ).toBe(true);
       });
 
       it('should restore the correct com seat even when repository order changes', async () => {

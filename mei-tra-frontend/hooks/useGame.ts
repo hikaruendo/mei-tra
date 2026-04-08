@@ -3,9 +3,24 @@ import { useTranslations } from 'next-intl';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
+import { Room } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 
+const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
+  const seen = new Set<string>();
+
+  return fields.filter((field) => {
+    const signature = `${field.winnerId}|${field.winnerTeam}|${field.cards.join(',')}`;
+    if (seen.has(signature)) {
+      return false;
+    }
+    seen.add(signature);
+    return true;
+  });
+};
+
 export const useGame = () => {
+  const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
@@ -54,14 +69,33 @@ export const useGame = () => {
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const [currentHostId, setCurrentHostId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
 
   const [users, setUsers] = useState<User[]>([]);
   // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
   const usersRef = useRef<User[]>([]);
 
   const [paused, setPaused] = useState(false);
+
+  const resetRoomState = useCallback(() => {
+    gameOverShownRef.current = null;
+    setGameStarted(false);
+    setGamePhase(null);
+    setCurrentRoomId(null);
+    setCurrentHostId(null);
+    setCurrentPlayerId(null);
+    setIsHost(false);
+    setIdlePlayerIds([]);
+    setPlayers([]);
+    setTeamScores({
+      0: { deal: 0, blow: 0, play: 0, total: 0 },
+      1: { deal: 0, blow: 0, play: 0, total: 0 }
+    });
+    sessionStorage.removeItem('roomId');
+  }, []);
 
   const syncCurrentPlayerIdentity = useCallback((
     nextPlayers: Player[],
@@ -74,7 +108,6 @@ export const useGame = () => {
 
     if (selfByPlayerId) {
       setCurrentPlayerId(selfByPlayerId.playerId);
-      setIsHost(Boolean(selfByPlayerId.isHost));
       return;
     }
 
@@ -82,10 +115,18 @@ export const useGame = () => {
       const selfByUserId = nextPlayers.find((player) => player.userId === user.id);
       if (selfByUserId) {
         setCurrentPlayerId(selfByUserId.playerId);
-        setIsHost(Boolean(selfByUserId.isHost));
       }
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!currentHostId || !currentPlayerId) {
+      setIsHost(false);
+      return;
+    }
+
+    setIsHost(currentHostId === currentPlayerId);
+  }, [currentHostId, currentPlayerId]);
 
   useEffect(() => {
     setIsClient(true);
@@ -146,10 +187,40 @@ export const useGame = () => {
       },
       'update-players': (players: Player[]) => {
         setPlayers(players);
+        setIdlePlayerIds((prev) =>
+          prev.filter((playerId) =>
+            players.some((player) => player.playerId === playerId),
+          ),
+        );
         syncCurrentPlayerIdentity(players, currentPlayerId);
       },
       'set-room-id': (roomId: string) => {
         setCurrentRoomId(roomId);
+      },
+      'room-updated': (room: Room) => {
+        const selfPlayerId =
+          currentPlayerId ??
+          room.players.find((player) => player.userId === user?.id)?.playerId ??
+          null;
+        const isCurrentRoom =
+          room.id === currentRoomId ||
+          Boolean(
+            selfPlayerId &&
+              room.players.some((player) => player.playerId === selfPlayerId),
+          );
+
+        if (!isCurrentRoom) {
+          return;
+        }
+
+        if (!currentRoomId) {
+          setCurrentRoomId(room.id);
+        }
+
+        setCurrentHostId(room.hostId);
+        if (selfPlayerId) {
+          setCurrentPlayerId(selfPlayerId);
+        }
       },
       'game-state': ({
         players,
@@ -162,6 +233,7 @@ export const useGame = () => {
         negriCard,
         fields,
         roomId,
+        hostId,
         pointsToWin,
       }: {
         players: Player[];
@@ -174,6 +246,7 @@ export const useGame = () => {
         negriCard: string | null;
         fields: CompletedField[];
         roomId: string;
+        hostId?: string;
         pointsToWin: number;
       }) => {
         setPlayers(players);
@@ -188,11 +261,17 @@ export const useGame = () => {
         setTeamScores(teamScores);
         if (you !== undefined) setCurrentPlayerId(you);
         setNegriCard(negriCard);
-        setCompletedFields(fields);
+        setCompletedFields(dedupeCompletedFields(fields));
         setNegriPlayerId(negriPlayerId);
         setCurrentRoomId(roomId);
+        setCurrentHostId(hostId ?? null);
         setGameStarted(true);
         setPointsToWin(pointsToWin);
+        setIdlePlayerIds((prev) =>
+          prev.filter((playerId) =>
+            players.some((player) => player.playerId === playerId),
+          ),
+        );
       },
       'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean; team?: number; name?: string }) => {
         // isSelf: true means the backend confirmed "this is YOUR player ID".
@@ -245,7 +324,13 @@ export const useGame = () => {
         } else {
           // Fallback: match by userId for authenticated users
           console.error('[useGame] Player not found in game-started by playerId', { currentPlayerId });
-          const userIndex = players.findIndex(p => p.userId && users.find(u => u.userId === p.userId && u.playerId === currentPlayerId));
+          const userIndex = players.findIndex(
+            (p) =>
+              p.userId &&
+              usersRef.current.find(
+                (u) => u.userId === p.userId && u.playerId === currentPlayerId,
+              ),
+          );
           if (userIndex !== -1) {
             setCurrentPlayerId(players[userIndex].playerId);
           }
@@ -281,6 +366,9 @@ export const useGame = () => {
       },
       'update-turn': (playerId: string) => {
         setWhoseTurn(playerId);
+        if (socket && currentRoomId) {
+          socket.emit('turn-ack', { roomId: currentRoomId });
+        }
       },
       'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
         // Prevent showing alert multiple times for the same game
@@ -396,8 +484,14 @@ export const useGame = () => {
         setCurrentField(field);
       },
       'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
-        setCompletedFields(prev => [...prev, field]);
-        setCurrentField({ cards: [], baseCard: '', dealerId: nextPlayerId, isComplete: false });
+        setCompletedFields((prev) => dedupeCompletedFields([...prev, field]));
+        setCurrentField({
+          cards: [],
+          playedBy: [],
+          baseCard: '',
+          dealerId: nextPlayerId,
+          isComplete: false,
+        });
       },
       'round-results': ({ scores }: {
         scores: { [key: number]: TeamScore };
@@ -433,7 +527,7 @@ export const useGame = () => {
         setWhoseTurn(currentTurn);
         setGamePhase(gamePhase);
         setCurrentField(currentField);
-        setCompletedFields(completedFields);
+        setCompletedFields(dedupeCompletedFields(completedFields));
         setNegriCard(negriCard);
         setNegriPlayerId(negriPlayerId);
         setRevealedAgari(revealedAgari);
@@ -450,18 +544,7 @@ export const useGame = () => {
               ? sessionStorage.getItem('roomId')
               : null,
         });
-        gameOverShownRef.current = null;
-        setGameStarted(false);
-        setGamePhase(null);
-        setCurrentRoomId(null);
-        setIsHost(false);
-        setPlayers([]);
-        setTeamScores({
-          0: { deal: 0, blow: 0, play: 0, total: 0 },
-          1: { deal: 0, blow: 0, play: 0, total: 0 }
-        });
-        // Clear stored roomId so socket reconnects don't attempt to rejoin the old room
-        sessionStorage.removeItem('roomId');
+        resetRoomState();
       },
       'game-paused': ({ message }: { message: string }) => {
         setPaused(true);
@@ -473,18 +556,89 @@ export const useGame = () => {
         setGameStarted(true);
         setNotification({ message, type: 'success' });
       },
-      'player-converted-to-com': ({ playerId, message }: { playerId: string; message: string }) => {
-        console.log('[useGame] Player converted to COM:', playerId, message);
+      'player-disconnected': ({
+        playerId,
+        playerName,
+      }: {
+        playerId: string;
+        playerName?: string;
+      }) => {
+        setPlayers((prev) =>
+          prev.map((player) =>
+            player.playerId === playerId
+              ? {
+                  ...player,
+                  id: '',
+                  name: playerName ?? player.name,
+                }
+              : player,
+          ),
+        );
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         setNotification({
-          message: `プレイヤー ${playerId} が長時間切断のため、COMプレイヤーに変換されました`,
+          message: tStatus('disconnectedNotice', {
+            playerName: playerName ?? playerId,
+          }),
+          type: 'warning'
+        });
+      },
+      'player-idle': ({
+        playerId,
+        playerName,
+      }: {
+        playerId: string;
+        playerName?: string;
+      }) => {
+        setIdlePlayerIds((prev) =>
+          prev.includes(playerId) ? prev : [...prev, playerId],
+        );
+        setNotification({
+          message: tStatus('idleNotice', {
+            playerName: playerName ?? playerId,
+          }),
+          type: 'warning',
+        });
+      },
+      'player-idle-cleared': ({ playerId }: { playerId: string }) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+      },
+      'player-converted-to-com': ({
+        playerId,
+        playerName,
+        message,
+      }: {
+        playerId: string;
+        playerName?: string;
+        message: string;
+      }) => {
+        console.log('[useGame] Player converted to COM:', playerId, message);
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+        if (playerId === currentPlayerId) {
+          resetRoomState();
+          setNotification({
+            message: tStatus('convertedToComNotice', {
+              playerName: playerName ?? playerId,
+            }),
+            type: 'warning'
+          });
+          return;
+        }
+        setNotification({
+          message: tStatus('convertedToComNotice', {
+            playerName: playerName ?? playerId,
+          }),
           type: 'warning'
         });
       },
       'player-left': ({ playerId }: { playerId: string; roomId: string }) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         if (playerId === currentPlayerId) {
           setCurrentRoomId(null);
           setIsHost(false);
         }
+      },
+      'turn-ping': ({ roomId }: { roomId: string }) => {
+        socket.emit('turn-ack', { roomId });
       },
     };
 
@@ -499,7 +653,22 @@ export const useGame = () => {
         socket.off(event, socketHandlers[event as keyof typeof socketHandlers]);
       });
     };
-  }, [socket, name, currentHighestDeclaration, players, isConnecting, isConnected, currentPlayerId, negriPlayerId, user?.id, syncCurrentPlayerIdentity]);
+  }, [
+    socket,
+    name,
+    currentHighestDeclaration,
+    players,
+    isConnecting,
+    isConnected,
+    currentPlayerId,
+    currentRoomId,
+    negriPlayerId,
+    syncCurrentPlayerIdentity,
+    resetRoomState,
+    t,
+    tStatus,
+    user?.id,
+  ]);
 
   const resetBlowState = (options?: { preservePlayers?: boolean }) => {
     setBlowDeclarations([]);
@@ -520,6 +689,26 @@ export const useGame = () => {
   const startGame = () => {
     if (!currentRoomId || !currentPlayerId) return;
     socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
+  };
+
+  const removePlayerFromRoom = (targetPlayerId: string) => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    socket.emit('moderate-player', {
+      roomId: currentRoomId,
+      requesterPlayerId: currentPlayerId,
+      targetPlayerId,
+      action: 'remove',
+    });
+  };
+
+  const replacePlayerWithCOM = (targetPlayerId: string) => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    socket.emit('moderate-player', {
+      roomId: currentRoomId,
+      requesterPlayerId: currentPlayerId,
+      targetPlayerId,
+      action: 'replace-with-com',
+    });
   };
 
   const shuffleTeams = () => {
@@ -667,6 +856,9 @@ export const useGame = () => {
     isHost,
     startGame,
     shuffleTeams,
+    removePlayerFromRoom,
+    replacePlayerWithCOM,
+    idlePlayerIds,
     pointsToWin,
     users,
     paused,

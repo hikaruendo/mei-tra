@@ -20,6 +20,7 @@ export interface CompletedField {
 
 export interface Field {
   cards: string[];
+  playedBy: string[];
   baseCard: string;
   baseSuit?: string;
   dealerId: string;

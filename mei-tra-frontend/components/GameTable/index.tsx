@@ -30,12 +30,14 @@ interface GameTableProps {
   teamScores: TeamScores;
   currentPlayerId: string | null;
   currentRoomId: string | null;
+  idlePlayerIds?: string[];
   pointsToWin: number;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
   isHost?: boolean;
   onStart?: () => void;
   onLeave?: () => void;
+  onReplaceWithCOM?: (playerId: string) => void;
 }
 
 
@@ -60,10 +62,12 @@ export const GameTable: React.FC<GameTableProps> = ({
   teamScores,
   currentPlayerId,
   pointsToWin,
+  idlePlayerIds = [],
   isWaiting = false,
   isHost = false,
   onStart,
   onLeave,
+  onReplaceWithCOM,
 }) => {
   const tRoot = useTranslations();
 
@@ -158,6 +162,9 @@ export const GameTable: React.FC<GameTableProps> = ({
               players={players}
               currentField={currentField}
               currentTrump={currentTrump}
+              isHost={isHost}
+              isIdle={idlePlayerIds.includes(player_.playerId)}
+              onReplaceWithCOM={onReplaceWithCOM}
             />
           );
         })}

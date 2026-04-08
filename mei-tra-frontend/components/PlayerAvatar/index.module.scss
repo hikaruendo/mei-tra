@@ -15,6 +15,25 @@
   aspect-ratio: 1;
 }
 
+.disconnectedBadge {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: calc(100% - 8px);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(127, 29, 29, 0.92);
+  color: #fee2e2;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .comBadge {
   position: absolute;
   inset: 0;
@@ -55,7 +74,13 @@
     max-width: 60px;
   }
 
-  .comBadge {
+  .disconnectedBadge {
+    font-size: 8px;
+    max-width: calc(100% - 6px);
+    padding: 2px 5px;
+  }
+
+.comBadge {
     inset: 0;
   }
 
@@ -74,7 +99,11 @@
     max-width: 100px;
   }
 
-  .comBadge {
+  .disconnectedBadge {
+    font-size: 9px;
+  }
+
+.comBadge {
     inset: 0;
   }
 
@@ -93,7 +122,11 @@
     max-width: 120px;
   }
 
-  .comBadge {
+  .disconnectedBadge {
+    font-size: 10px;
+  }
+
+.comBadge {
     inset: 0;
   }
 

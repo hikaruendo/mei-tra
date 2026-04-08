@@ -30,6 +30,16 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30分
   private cleanupIntervalId: ReturnType<typeof setInterval>;
 
+  private normalizeRoomHostFlags(room: Room): Room {
+    return {
+      ...room,
+      players: room.players.map((player) => ({
+        ...player,
+        isHost: player.playerId === room.hostId,
+      })),
+    };
+  }
+
   constructor(
     @Inject('IRoomRepository')
     private readonly roomRepository: IRoomRepository,
@@ -84,11 +94,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async createRoom(room: Room): Promise<Room> {
     const createdRoom = await this.roomRepository.create(room);
-    return createdRoom;
+    return this.normalizeRoomHostFlags(createdRoom);
   }
 
   async getRoom(roomId: string): Promise<Room | null> {
-    return this.roomRepository.findById(roomId);
+    const room = await this.roomRepository.findById(roomId);
+    return room ? this.normalizeRoomHostFlags(room) : null;
   }
 
   async updateRoom(
@@ -109,7 +120,10 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   }
 
   async listRooms(): Promise<Room[]> {
-    return this.roomRepository.findAll();
+    const rooms = await this.roomRepository.findAll();
+    return rooms
+      .map((room) => this.normalizeRoomHostFlags(room))
+      .filter((room) => room.players.some((player) => !player.isCOM));
   }
 
   async createNewRoom(
@@ -313,6 +327,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   ): void {
     this.remapPlayStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
     this.remapBlowStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
+  }
+
+  private clearGameStateDisconnectTimeout(
+    gameState: GameStateService,
+    playerId: string,
+  ): void {
+    gameState.clearDisconnectTimeout(playerId);
   }
 
   async fillVacantSeatsWithCOM(roomId: string): Promise<void> {
@@ -648,6 +669,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           : [];
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
       restoredSeatData = seatData ?? null;
+      this.clearGameStateDisconnectTimeout(gameState, user.playerId);
       delete roomVacant[assignedIndex];
       if (Object.keys(roomVacant).length === 0) delete this.vacantSeats[roomId];
     } else if (vacantIndexes.length > 0) {
@@ -661,6 +683,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const originalPlayerId = seatRoomPlayer?.playerId;
       if (originalPlayerId) {
         gameState.removePlayerToken(originalPlayerId);
+        this.clearGameStateDisconnectTimeout(gameState, originalPlayerId);
       }
       restoredSeatData = seatData ?? null;
       delete roomVacant[assignedIndex];
@@ -762,11 +785,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         false,
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
-      isHost:
-        room.hostId === user.playerId ||
-        currentSeatRoomPlayer?.isHost ||
-        seatRoomSnapshot?.isHost ||
-        false,
+      isHost: room.hostId === user.playerId,
       joinedAt: seatRoomSnapshot?.joinedAt
         ? new Date(seatRoomSnapshot.joinedAt)
         : new Date(),
@@ -989,6 +1008,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     this.remapGameStatePlayerIdReferences(state, comPlayerId, playerId);
 
     gameState.registerPlayerToken(playerId, playerId);
+    gameState.clearDisconnectTimeout(playerId);
     if (state.teamAssignments[comPlayerId] != null) {
       delete state.teamAssignments[comPlayerId];
     }

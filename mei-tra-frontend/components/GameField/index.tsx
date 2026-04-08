@@ -26,9 +26,6 @@ export const GameField: React.FC<GameFieldProps> = ({
     return null;
   }
 
-  // ディーラーのインデックスを取得
-  const dealerIndex = players.findIndex(p => p.playerId === currentField.dealerId);
-  
   return (
     <div className={styles.fieldContainer}>
       {currentField && (
@@ -37,10 +34,10 @@ export const GameField: React.FC<GameFieldProps> = ({
             {currentField.cards.map((card: string, index: number) => {
               const isRed = card.match(/[♥♦]/);
               const isJoker = card === 'JOKER';
-              const player =
-                dealerIndex === -1
-                  ? null
-                  : players[(dealerIndex + index) % players.length];
+              const playedByPlayerId = currentField.playedBy?.[index];
+              const player = playedByPlayerId
+                ? players.find((candidate) => candidate.playerId === playedByPlayerId) ?? null
+                : null;
               
               return (
                 <div key={index} className={styles.fieldContent}>

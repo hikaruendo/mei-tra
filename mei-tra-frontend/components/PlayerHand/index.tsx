@@ -25,6 +25,9 @@ interface PlayerHandProps {
   players: Player[];
   currentField: Field | null;
   currentTrump: TrumpType | null;
+  isHost?: boolean;
+  isIdle?: boolean;
+  onReplaceWithCOM?: (playerId: string) => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -43,8 +46,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   players,
   currentField,
   currentTrump,
+  isHost = false,
+  isIdle = false,
+  onReplaceWithCOM,
 }) => {
   const t = useTranslations('playerHand');
+  const tStatus = useTranslations('playerStatus');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const autoRevealAttemptedRef = useRef(false);
@@ -56,6 +63,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   );
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
+  const isDisconnected = !player.isCOM && !player.id;
 
   useEffect(() => {
     if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
@@ -212,6 +220,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               <div className={styles.statusMessage}>{t('selectNegri')}</div>
             </div>
           )}
+          {isHost &&
+            onReplaceWithCOM &&
+            !isCurrentPlayer &&
+            (isDisconnected || isIdle) &&
+            !player.isCOM && (
+              <div className={`${styles.statusPanel} ${styles.replaceWithComPanel}`}>
+                <div className={styles.statusHeader}>{tStatus('disconnected')}</div>
+                <button
+                  type="button"
+                  className={styles.replaceWithComButton}
+                  onClick={() => onReplaceWithCOM(player.playerId)}
+                >
+                  {tStatus('replaceWithCom')}
+                </button>
+              </div>
+            )}
           {isCurrentPlayer && agariCard && isWinningPlayer && (
             <div className={`${styles.statusPanel} ${styles.agariStatusPanel}`}>
               <div className={styles.statusHeader}>{t('agari')}</div>

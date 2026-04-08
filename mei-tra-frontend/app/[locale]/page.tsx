@@ -108,6 +108,9 @@ export default function Home() {
     isHost = false,
     startGame,
     shuffleTeams,
+    removePlayerFromRoom,
+    replacePlayerWithCOM,
+    idlePlayerIds = [],
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -187,6 +190,7 @@ export default function Home() {
                     onStart={startGame}
                     onLeave={handleLeaveRoom}
                     shuffleTeams={shuffleTeams}
+                    onRemovePlayer={removePlayerFromRoom}
                   />
                 ) : (
                 <GameTable
@@ -210,8 +214,11 @@ export default function Home() {
                   teamScores={teamScores}
                   currentPlayerId={currentPlayerId}
                   currentRoomId={currentRoomId}
+                  isHost={isHost}
+                  idlePlayerIds={idlePlayerIds}
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}
+                  onReplaceWithCOM={replacePlayerWithCOM}
                 />
                 )}
                 {gameStarted && (

@@ -23,7 +23,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 
   useEffect(() => {
     getPlayerProfile(player).then(setProfile);
-  }, [player.userId, player.name, player.isAuthenticated]);
+  }, [player]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -56,25 +56,16 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   return (
     <div className={`${styles.playerAvatar} ${styles[size]} ${className}`}>
       <div className={styles.avatarContainer}>
-        {isDefaultAvatar ? (
-          <img
-            src={avatarSrc}
-            alt={`${displayName}'s avatar`}
-            width={sizePixels}
-            height={sizePixels}
-            className={styles.avatarImage}
-          />
-        ) : (
-          <Image
-            src={avatarSrc}
-            alt={`${displayName}'s avatar`}
-            width={sizePixels}
-            height={sizePixels}
-            className={styles.avatarImage}
-            onError={handleImageError}
-            priority={false}
-          />
-        )}
+        <Image
+          src={avatarSrc}
+          alt={`${displayName}'s avatar`}
+          width={sizePixels}
+          height={sizePixels}
+          className={styles.avatarImage}
+          onError={handleImageError}
+          priority={false}
+          unoptimized={isDefaultAvatar}
+        />
         {player.isCOM && (
           <div className={styles.comBadge}>
             <span className={styles.comIcon}>🤖</span>

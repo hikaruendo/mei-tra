@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { RoomStatus } from '../types/room.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import {
   ILeaveRoomUseCase,
@@ -68,7 +69,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
       // state.players is empty during waiting room (populated only at startGame).
       // Fall back to the room's real (non-COM) players in that case.
       const updatedPlayers =
-        roomExists.status === 'waiting'
+        roomExists.status === RoomStatus.WAITING
           ? roomExists.players
           : state.players.length > 0
             ? state.players
