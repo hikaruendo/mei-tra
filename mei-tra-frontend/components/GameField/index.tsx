@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, Field } from '../../types/game.types';
 import { PlayerIdentityChip } from '../PlayerIdentityChip';
+import { CardFace } from '../CardFace';
 import styles from './index.module.scss';
 
 interface GameFieldProps {
@@ -32,13 +33,11 @@ export const GameField: React.FC<GameFieldProps> = ({
         <div className={styles.fieldContainerOuter}>
           <div className={styles.fieldContainerInner}>
             {currentField.cards.map((card: string, index: number) => {
-              const isRed = card.match(/[♥♦]/);
-              const isJoker = card === 'JOKER';
               const playedByPlayerId = currentField.playedBy?.[index];
               const player = playedByPlayerId
                 ? players.find((candidate) => candidate.playerId === playedByPlayerId) ?? null
                 : null;
-              
+
               return (
                 <div key={index} className={styles.fieldContent}>
                   {player ? (
@@ -51,15 +50,8 @@ export const GameField: React.FC<GameFieldProps> = ({
                   ) : (
                     <div className={styles.nameFallback}>{t('unknown')}</div>
                   )}
-                  <div className={`${styles.card} ${isRed ? styles.redSuit : styles.blackSuit} ${isJoker ? styles.joker : ''}`}>
-                    {isJoker ? (
-                      <div className={styles.jokerRank}>JOKER</div>
-                    ) : (
-                      <>
-                        <div className={styles.rank}>{card.replace(/[♠♣♥♦]/, '')}</div>
-                        <div className={styles.suit}>{card.match(/[♠♣♥♦]/)?.[0]}</div>
-                      </>
-                    )}
+                  <div className={styles.card}>
+                    <CardFace card={card} />
                   </div>
                 </div>
               );

@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from '../../types/game.types';
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
+import { CardFace } from '../CardFace';
 import { CompletedFields } from '../CompletedFields';
 import { PlayerAvatar } from '../PlayerAvatar';
 import styles from './index.module.scss';
@@ -100,11 +101,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return (
         <div className={styles.handContainer}>
           {player.hand.map((card, index) => {
-            const value = card.replace(/[♠♣♥♦]/, '');
-            const suit = card.match(/[♠♣♥♦]/)?.[0] || '';
-            const isRed = suit === '♥' || suit === '♦';
             const isNegri = card === negriCard;
-            const isJoker = card === 'JOKER';
             const isSelected = card === selectedCard || card === selectedNegriCard;
             const distanceFromCenter = index - (player.hand.length - 1) / 2;
             const maxDistance = Math.max((player.hand.length - 1) / 2, 1);
@@ -118,7 +115,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isRed || isNegri ? styles.redSuit : styles.blackSuit} ${isNegri ? styles.negriCard : ''} ${isJoker ? styles.joker : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable}`}
+                className={`${styles.card} ${isNegri ? styles.negriCard : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable}`}
                 onClick={() => {
                   if (gamePhase === 'play' && whoseTurn === currentPlayerId && isPlayable) {
                     handleCardClick(card);
@@ -131,14 +128,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   '--card-translate-y': `${cardLift}px`,
                 } as React.CSSProperties}
               >
-                {isJoker ? (
-                  <div className={styles.jokerRank}>JOKER</div>
-                ) : (
-                  <>
-                    <div className={styles.rank}>{value}</div>
-                    <div className={styles.suit}>{suit}</div>
-                  </>
-                )}
+                <CardFace card={card} />
                 {isNegri && <div className={styles.negriLabel}>{t('negri')}</div>}
               </div>
             );
@@ -178,7 +168,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               '--card-total': player.hand.length,
             } as React.CSSProperties}
           >
-            🂠
+            <CardFace faceDown />
           </div>
         ))}
       </div>

@@ -80,45 +80,12 @@
   background: var(--color-white);
   border-radius: var(--radius-md);
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: var(--spacing-sm);
-  font-size: var(--font-size-lg);
-  font-weight: bold;
+  overflow: hidden;
   box-shadow: var(--shadow-card);
-}
-
-.rank{
-  font-size: var(--font-size-xl);
-  line-height: 1;
-}
-
-.suit{
-  font-size: var(--font-size-xxl);
-  line-height: 1;
-}
-
-.redSuit{
-  color: #D40000;
-}
-
-.blackSuit{
-  color: #212121;
-}
-
-.joker{
-  color: purple;
-}
-
-.jokerRank{
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  font-size: var(--font-size-base);
-  letter-spacing: -1px;
-  margin-left: var(--spacing-xs);
-  font-weight: bold;
-  color: purple;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .baseSuitSelection{
@@ -188,50 +155,11 @@
   color: black;
 }
 
-.completedFieldCard .rank{
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  font-size: 8px;
-  letter-spacing: -1px;
-  color: purple;
-}
-
 @media (max-width: 768px) {
   .card {
     width: 68px;
     height: 94px;
-    padding: 0.25rem;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-  }
-
-  .rank{
-    font-size: 1.5rem;
-    line-height: 1;
-    margin-bottom: 0px;
-    letter-spacing: -1px;
-  }
-  
-  .suit{
-    font-size: 1.8rem;
-    line-height: 1;
-  }
-
-  .card.selected,
-  .card:hover {
-    transform: translateY(-20px) rotate(0deg) scale(1.1) !important;
-    z-index: var(--z-index-card);
-    margin: 0 var(--spacing-md);
-    transition: all 0.3s ease-in-out;
-  }
-
-  .jokerRank{
-    writing-mode: vertical-rl;
-    text-orientation: upright;
-    font-size: 14px;
-    letter-spacing: -3px;
-    margin-left: var(--spacing-xs);
-    font-weight: bold;
-    color: purple;
   }
 
   .fieldContainer{
