@@ -6,6 +6,7 @@ import { ProfileEditForm } from './ProfileEditForm';
 import { Navigation } from '../layout/Navigation';
 import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
+import { createClient } from '@/lib/supabase';
 import { useTranslations } from 'next-intl';
 import styles from './ProfilePage.module.scss';
 
@@ -15,6 +16,9 @@ export function ProfilePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(user?.profile || null);
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -70,6 +74,37 @@ export function ProfilePage() {
 
   const handleEditCancel = () => {
     setIsEditing(false);
+  };
+
+  const handlePasswordReset = async () => {
+    setPasswordResetMessage(null);
+    setPasswordResetError(null);
+
+    if (!user.email) {
+      setPasswordResetError(t('passwordResetEmailMissing'));
+      return;
+    }
+
+    setIsSendingPasswordReset(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) {
+        console.error('Password reset request error:', error);
+        setPasswordResetError(t('passwordResetSendFailed'));
+      } else {
+        setPasswordResetMessage(t('passwordResetLinkSent'));
+      }
+    } catch (error) {
+      console.error('Unexpected password reset request error:', error);
+      setPasswordResetError(t('passwordResetSendFailed'));
+    } finally {
+      setIsSendingPasswordReset(false);
+    }
   };
 
   if (isEditing && profile) {
@@ -209,6 +244,26 @@ export function ProfilePage() {
                   <span className={styles.accountLabel}>{t('emailAddress')}</span>
                   <span className={styles.accountValue}>{user.email}</span>
                 </div>
+              </div>
+              <div className={styles.accountActions}>
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={isSendingPasswordReset || !user.email}
+                  className={styles.accountActionButton}
+                >
+                  {isSendingPasswordReset ? t('passwordResetSending') : t('passwordResetAction')}
+                </button>
+                {passwordResetMessage && (
+                  <p className={styles.accountSuccess} role="status">
+                    {passwordResetMessage}
+                  </p>
+                )}
+                {passwordResetError && (
+                  <p className={styles.accountError} role="alert">
+                    {passwordResetError}
+                  </p>
+                )}
               </div>
             </div>
           </div>

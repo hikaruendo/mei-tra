@@ -25,7 +25,7 @@ export default function ResetPasswordPage() {
       } else {
         setError('無効なリセットリンクです。再度パスワードリセットを申請してください。');
         setTimeout(() => {
-          router.push('/auth/login');
+          router.push('/');
         }, 3000);
       }
     };
@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
           <div className={styles.error}>
             <h2>エラー</h2>
             <p>{error}</p>
-            <p>ログインページに自動的に移動します...</p>
+            <p>トップページに自動的に移動します...</p>
           </div>
         </div>
       </div>
@@ -99,10 +99,10 @@ export default function ResetPasswordPage() {
       <ConfirmModal
         isOpen={showSuccessModal}
         title="パスワード更新完了"
-        message="パスワードが更新されました。ログインページに移動します。"
-        onConfirm={() => router.push('/auth/login')}
-        onCancel={() => router.push('/auth/login')}
-        confirmText="ログインへ"
+        message="パスワードが更新されました。トップページに移動します。"
+        onConfirm={() => router.push('/')}
+        onCancel={() => router.push('/')}
+        confirmText="トップへ"
         showCancelButton={false}
       />
       <div className={styles.card}>

@@ -659,6 +659,11 @@
     "joinDate": "Joined",
     "lastLogin": "Last Login",
     "emailAddress": "Email Address",
+    "passwordResetAction": "Set or change password",
+    "passwordResetSending": "Sending...",
+    "passwordResetLinkSent": "Password setup/change link sent to your email. Please check your inbox.",
+    "passwordResetSendFailed": "Failed to send the password setup/change link. Please try again.",
+    "passwordResetEmailMissing": "A password setup/change link cannot be sent because this account has no email address.",
     "loggedIn": "Login",
     "loggingOut": "Logging out...",
     "logout": "Logout"

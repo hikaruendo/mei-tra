@@ -613,6 +613,11 @@
     "joinDate": "参加日",
     "lastLogin": "最終ログイン",
     "emailAddress": "メールアドレス",
+    "passwordResetAction": "パスワードを設定・変更",
+    "passwordResetSending": "送信中...",
+    "passwordResetLinkSent": "パスワード設定・変更リンクをメールで送信しました。メールをご確認ください。",
+    "passwordResetSendFailed": "パスワード設定・変更リンクの送信に失敗しました。もう一度お試しください。",
+    "passwordResetEmailMissing": "メールアドレスがないため、パスワード設定・変更リンクを送信できません。",
     "loggedIn": "ログイン",
     "loggingOut": "ログアウト中...",
     "logout": "ログアウト"
