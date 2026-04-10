@@ -189,6 +189,7 @@ export const GameTable: React.FC<GameTableProps> = ({
             players={players}
             onBaseSuitSelect={gameActions.selectBaseSuit}
             isCurrentPlayer={currentPlayerId === whoseTurn}
+            currentPlayerId={currentPlayerId || ''}
           />
         )}
       </div>

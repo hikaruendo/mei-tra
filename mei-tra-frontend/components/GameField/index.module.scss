@@ -1,4 +1,4 @@
-.fieldContainer{
+.fieldContainer {
   grid-area: field;
   position: relative;
   justify-self: center;
@@ -13,7 +13,7 @@
   z-index: 4;
 }
 
-.fieldContainerOuter{
+.fieldContainerOuter {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -25,7 +25,7 @@
   border-radius: 999px;
 }
 
-.fieldContainerOuter::before{
+.fieldContainerOuter::before {
   content: '';
   position: absolute;
   inset: -10px;
@@ -44,37 +44,40 @@
   z-index: 0;
 }
 
-.fieldContainerInner{
+.fieldContainerInner {
   position: relative;
   z-index: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.35rem;
+  width: 200px;
+  height: 200px;
 }
 
-.fieldContent{
+/* Each played card is absolutely positioned from center */
+.playedCard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+/* Seat-based positioning: offset from center */
+.bottom {
+  transform: translate(-50%, 5%);
+}
+
+.top {
+  transform: translate(-50%, -105%);
+}
+
+.left {
+  transform: translate(-105%, -50%);
+}
+
+.right {
+  transform: translate(5%, -50%);
+}
+
+.card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;  /* Space between player name and card */
-}
-
-.name{
-  max-width: 96px;
-}
-
-.nameFallback {
-  color: #ffffff;
-  font-size: 0.85rem;
-  text-align: center;
-  line-height: 1;
-}
-
-.card{
-  position: relative;
-  transition: transform 0.2s ease;
   width: var(--card-width);
   height: var(--card-height);
   background: var(--color-white);
@@ -88,7 +91,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.baseSuitSelection{
+.baseSuitSelection {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -97,16 +104,18 @@
   align-items: center;
   border-radius: 10px;
   z-index: 10;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
 }
 
-.baseSuitSelection h3{
+.baseSuitSelection h3 {
   color: white;
   margin-bottom: 15px;
   text-align: center;
   white-space: nowrap;
 }
 
-.suitButtons{
+.suitButtons {
   display: flex;
   flex-direction: row;
   gap: 20px;
@@ -114,12 +123,12 @@
   align-items: center;
 }
 
-.suitButtons button:hover{
+.suitButtons button:hover {
   transform: scale(1.1);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
-.suitButtons button{
+.suitButtons button {
   padding: 10px;
   border-radius: 5px;
   font-size: 32px;
@@ -133,36 +142,30 @@
   align-items: center;
 }
 
-.suitButtons button[onClick*="♥"], 
-.suitButtons button[onClick*="♦"]{
+.suitButtons button[onClick*="♥"],
+.suitButtons button[onClick*="♦"] {
   color: red;
 }
 
 .suitButtons button[onClick*="♠"],
-.suitButtons button[onClick*="♣"]{
+.suitButtons button[onClick*="♣"] {
   color: #ededed;
 }
 
-.suitButtons button.selectedSuit{
+.suitButtons button.selectedSuit {
   background: white;
 }
 
-.suitButtons button.selectedSuit.redSuit{
+.suitButtons button.selectedSuit.redSuit {
   color: red;
 }
 
-.suitButtons button.selectedSuit.blackSuit{
+.suitButtons button.selectedSuit.blackSuit {
   color: black;
 }
 
 @media (max-width: 768px) {
-  .card {
-    width: 68px;
-    height: 94px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-  }
-
-  .fieldContainer{
+  .fieldContainer {
     width: 100%;
     height: auto;
     min-height: 0;
@@ -171,7 +174,7 @@
     overflow: visible;
   }
 
-  .fieldContainerOuter{
+  .fieldContainerOuter {
     width: min(100%, 248px);
     aspect-ratio: 1 / 1;
     min-height: 0;
@@ -181,7 +184,7 @@
     border-radius: 999px;
   }
 
-  .fieldContainerOuter::before{
+  .fieldContainerOuter::before {
     inset: -8px;
     background: radial-gradient(
       circle at center,
@@ -195,25 +198,15 @@
     filter: blur(10px);
   }
 
-  .fieldContainerInner{
-    gap: 0.15rem;
-    min-height: 0;
+  .fieldContainerInner {
+    width: 160px;
+    height: 160px;
   }
 
-  .fieldContent{
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.2rem;  /* Space between player name and card */
-  }
-
-  .name {
-    max-width: 72px;
-  }
-
-  .nameFallback {
-    font-size: 0.7rem;
+  .card {
+    width: 68px;
+    height: 94px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
 }
 
@@ -244,10 +237,6 @@
       rgba(255, 255, 255, 0) 100%
     );
     filter: blur(24px);
-  }
-
-  .nameFallback {
-    color: #0f172a;
   }
 
   .baseSuitSelection {
