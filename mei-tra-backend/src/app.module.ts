@@ -17,7 +17,7 @@ import { APP_FILTER } from '@nestjs/core';
     SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.development', '.env.local', '.env'],
+      envFilePath: ['.env.local', '.env.development', '.env'],
     }),
     ScheduleModule.forRoot(),
     DatabaseModule,

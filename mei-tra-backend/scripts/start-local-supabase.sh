@@ -10,6 +10,13 @@ if [[ -f .env.development ]]; then
   set +a
 fi
 
+if [[ -f .env.local ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env.local
+  set +a
+fi
+
 supabase start
 
 echo
