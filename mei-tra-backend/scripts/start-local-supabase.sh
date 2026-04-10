@@ -10,6 +10,8 @@ if [[ -f .env.development ]]; then
   set +a
 fi
 
-export RESEND_API_KEY="${RESEND_API_KEY:-dummy}"
-
 supabase start
+
+echo
+echo "Local auth emails are available in Mailpit:"
+echo "  http://localhost:54324"
