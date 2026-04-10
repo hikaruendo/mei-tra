@@ -384,8 +384,7 @@
 
 .card.unplayable {
   cursor: not-allowed;
-  filter: grayscale(0.7) brightness(0.85);
-  opacity: 0.7;
+  filter: brightness(0.45) saturate(0.3);
 }
 
 .playerPosition.top .playerInfo,
