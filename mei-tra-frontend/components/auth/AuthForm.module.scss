@@ -164,6 +164,7 @@ $opacity-disabled: 0.5;
 }
 
 .magicLinkButton,
+.googleButton,
 .resetButton {
   width: 100%;
   display: flex;
@@ -307,7 +308,8 @@ $opacity-disabled: 0.5;
     }
   }
 
-  .magicLinkButton {
+  .magicLinkButton,
+  .googleButton {
     border-color: rgba(148, 163, 184, 0.24);
     background: rgba(255, 255, 255, 0.72);
     color: #0f172a;

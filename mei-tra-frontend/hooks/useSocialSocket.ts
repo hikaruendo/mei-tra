@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
-import { useAuth } from './useAuth';
 import { useSocialSocketContext } from '../contexts/SocialSocketContext';
 import {
   ChatMessageEvent,
@@ -18,49 +17,47 @@ export interface UseSocialSocketReturn {
 }
 
 export function useSocialSocket(): UseSocialSocketReturn {
-  const { user } = useAuth();
   const { socket, isConnected } = useSocialSocketContext();
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      if (socket?.connected && user?.id) {
-        socket.emit('chat:join-room', { roomId, userId: user.id });
+      if (socket?.connected) {
+        socket.emit('chat:join-room', { roomId });
       }
     },
-    [socket, user?.id],
+    [socket],
   );
 
   const leaveRoom = useCallback(
     (roomId: string) => {
-      if (socket?.connected && user?.id) {
-        socket.emit('chat:leave-room', { roomId, userId: user.id });
+      if (socket?.connected) {
+        socket.emit('chat:leave-room', { roomId });
       }
     },
-    [socket, user?.id],
+    [socket],
   );
 
   const sendMessage = useCallback(
     (roomId: string, content: string, replyTo?: string) => {
-      if (socket && user?.id) {
+      if (socket) {
         socket.emit('chat:post-message', {
           roomId,
-          userId: user.id,
           content,
           contentType: 'text',
           replyTo,
         });
       }
     },
-    [socket, user?.id],
+    [socket],
   );
 
   const sendTyping = useCallback(
     (roomId: string) => {
-      if (socket && user?.id) {
-        socket.emit('chat:typing', { roomId, userId: user.id });
+      if (socket) {
+        socket.emit('chat:typing', { roomId });
       }
     },
-    [socket, user?.id],
+    [socket],
   );
 
   const loadMessages = useCallback(
