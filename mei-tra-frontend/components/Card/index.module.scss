@@ -1,7 +1,6 @@
 .card {
   width: 1.8rem;
-  height: 2.5rem;
-  background: white;
+  aspect-ratio: 2 / 3;
   border-radius: 4px;
   display: flex;
   overflow: hidden;
@@ -22,7 +21,7 @@
 @media (max-width: 768px) {
   .card {
     width: 1.5rem;
-    height: 2.25rem;
+    aspect-ratio: 2 / 3;
     margin: 0 -8px;
   }
 }
