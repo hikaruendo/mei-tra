@@ -185,6 +185,21 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <div className={styles.primaryAuth}>
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={isSigningInWithGoogle || loading}
+            className={styles.googleButton}
+          >
+            {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
+          </button>
+
+          <div className={styles.divider}>
+            <span>{t('or')}</span>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
             <label htmlFor="email" className={styles.label}>
@@ -286,19 +301,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
           <div className={styles.alternativeAuth}>
             <button
               type="button"
-              onClick={handleGoogleAuth}
-              disabled={isSigningInWithGoogle || loading}
-              className={styles.googleButton}
-            >
-              {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
-            </button>
-
-            <div className={styles.divider}>
-              <span>{t('or')}</span>
-            </div>
-
-            <button
-              type="button"
               onClick={handleMagicLink}
               disabled={isSendingMagicLink || !formData.email.trim()}
               className={styles.magicLinkButton}
@@ -313,23 +315,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
               className={styles.resetButton}
             >
               {isSendingReset ? t('sending') : t('forgotPassword')}
-            </button>
-          </div>
-        )}
-
-        {mode === 'signup' && (
-          <div className={styles.alternativeAuth}>
-            <div className={styles.divider}>
-              <span>{t('or')}</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              disabled={isSigningInWithGoogle || loading}
-              className={styles.googleButton}
-            >
-              {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
             </button>
           </div>
         )}
