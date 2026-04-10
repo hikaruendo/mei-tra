@@ -32,8 +32,7 @@
   cursor: pointer;
   transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
   width: 72px;
-  height: 104px;
-  background: var(--color-white);
+  aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   display: flex;
   overflow: hidden;
@@ -47,7 +46,7 @@
 
 .cardFaceDown{
   width: 1.7rem;
-  height: 2.5rem;
+  aspect-ratio: 2 / 3;
   border-radius: 0.25rem;
   display: flex;
   overflow: hidden;
@@ -479,7 +478,7 @@
 
   .card {
     width: 54px;
-    height: 72px;
+    aspect-ratio: 2 / 3;
   }
 
   .card.selected,
@@ -511,7 +510,7 @@
 
   .cardFaceDown{
     width: 1.25rem;
-    height: 1.8rem;
+    aspect-ratio: 2 / 3;
     border-radius: 0.25rem;
     margin-left: -0.9rem;
     border: 1px solid rgba(255, 255, 255, 0.25);
@@ -643,14 +642,12 @@
 
   .playerPosition.bottom .card {
     width: 63px;
-    height: 92px;
+    aspect-ratio: 2 / 3;
     margin: 0 -1.02rem;
-    padding: 0.24rem;
     z-index: calc(var(--card-index, 0) + 1);
     transform-origin: bottom center;
     transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .playerPosition.bottom .card.selected,

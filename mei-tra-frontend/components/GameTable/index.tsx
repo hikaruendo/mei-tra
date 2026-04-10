@@ -8,6 +8,7 @@ import { PlayerHand } from '../PlayerHand';
 import { GameControls } from '../GameControls';
 import { BlowControls } from '../BlowControls';
 import { getSeatOrderWithSelfBottom } from '../../lib/utils/tableOrder';
+import { usePreloadCards } from '../../hooks/usePreloadCards';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -70,6 +71,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   onReplaceWithCOM,
 }) => {
   const tRoot = useTranslations();
+  usePreloadCards();
 
   if (!players || players.length === 0) {
     return null;
