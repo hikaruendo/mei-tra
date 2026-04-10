@@ -178,6 +178,49 @@
   }
 }
 
+:global(html[data-theme='light']) {
+  .blowControlsContainer {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(148, 163, 184, 0.24);
+  }
+
+  .currentTurn.inactive {
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #374151;
+  }
+
+  .select {
+    background-color: #f8fafc;
+    color: #111827;
+    border-color: rgba(148, 163, 184, 0.24);
+  }
+
+  .input {
+    background-color: #f8fafc;
+    color: #111827;
+    border-color: rgba(148, 163, 184, 0.24);
+  }
+
+  .passButton {
+    color: #374151;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+
+  .passButton:hover {
+    border-color: rgba(148, 163, 184, 0.6);
+  }
+
+  .declarationItem {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #111827;
+  }
+
+  .declarationItem.pass {
+    background-color: rgba(0, 0, 0, 0.02);
+    color: #6b7280;
+  }
+}
+
 @keyframes pulse {
   0% {
     opacity: 1;

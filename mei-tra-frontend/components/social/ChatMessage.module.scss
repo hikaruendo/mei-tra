@@ -63,3 +63,26 @@
   margin-top: 0.25rem;
   word-break: break-word;
 }
+
+:global(html[data-theme='light']) {
+  .senderName {
+    color: #111827;
+  }
+
+  .text {
+    color: #374151;
+  }
+
+  .timestamp {
+    color: #6b7280;
+  }
+
+  .avatarFallback {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: #111827;
+  }
+
+  .systemMessage {
+    color: #6b7280;
+  }
+}

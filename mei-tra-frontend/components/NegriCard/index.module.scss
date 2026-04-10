@@ -22,12 +22,12 @@
   height: 3rem;
   margin: 0 -15px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s ease;
-  background: linear-gradient(45deg, #1a237e, #283593);
-  font-size: 1.5rem;
   border-radius: 0.25rem;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }

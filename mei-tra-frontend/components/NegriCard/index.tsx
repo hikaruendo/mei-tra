@@ -1,6 +1,8 @@
 import React from 'react';
 import styles from './index.module.scss';
 import { Card } from '../Card';
+import { CardFace } from '../CardFace';
+
 interface NegriCardProps {
   negriCard: string;
   negriPlayerId: string;
@@ -18,12 +20,12 @@ export const NegriCard: React.FC<NegriCardProps> = ({
     <div className={styles.negriCardDisplay}>
       {isNegriPlayer ? (
         <div className={styles.negriField}>
-          <Card 
-            card={negriCard}
-          />
+          <Card card={negriCard} />
         </div>
       ) : (
-        <div className={styles.cardFaceDown}>🂠</div>
+        <div className={styles.cardFaceDown}>
+          <CardFace faceDown />
+        </div>
       )}
     </div>
   );
