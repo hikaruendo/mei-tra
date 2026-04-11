@@ -64,7 +64,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   );
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
-  const isDisconnected = !player.isCOM && !player.id;
+  const isDisconnected = !player.isCOM && !player.socketId;
 
   useEffect(() => {
     if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {

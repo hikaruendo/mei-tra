@@ -4,12 +4,12 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
 
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
-export interface User {
-  id: string; // Socket ID
-  playerId: string; // Legacy player identifier
+export interface ConnectionUser {
+  socketId: string; // Connection/session identifier only
+  playerId: string; // Table participant identifier (future participantId equivalent)
   name: string;
-  userId?: string; // Supabase auth user ID (optional for backward compatibility)
-  isAuthenticated?: boolean; // Whether user is authenticated with Supabase
+  userId?: string; // Canonical authenticated account ID
+  isAuthenticated?: boolean;
 }
 
 export interface CompletedField {
@@ -34,7 +34,7 @@ export interface FieldCompleteEvent {
   nextPlayerId: string;
 }
 
-export interface Player extends User {
+export interface Player extends ConnectionUser {
   team: Team;
   hand: string[];
   isHost?: boolean;

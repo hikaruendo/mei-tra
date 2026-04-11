@@ -1,4 +1,4 @@
-import { Player, User } from '../../types/game.types';
+import { ConnectionUser, Player } from '../../types/game.types';
 
 export interface IGameStateService {
   addPlayer(
@@ -7,13 +7,15 @@ export interface IGameStateService {
     userId?: string,
     isAuthenticated?: boolean,
   ): boolean;
-  getUsers(): User[];
-  updateUserName(socketId: string, name: string): boolean;
+  getUsers(): ConnectionUser[];
+  findConnectionUserBySocketId(socketId: string): ConnectionUser | null;
+  findConnectionUserByUserId(userId: string): ConnectionUser | null;
+  updateUserNameBySocketId(socketId: string, name: string): boolean;
   findPlayerByUserId(userId: string): Player | null;
   findPlayerByReconnectToken(token: string): Player | null;
   updatePlayerSocketId(
     playerId: string,
-    newId: string,
+    socketId: string,
     userId?: string,
   ): Promise<void>;
 }

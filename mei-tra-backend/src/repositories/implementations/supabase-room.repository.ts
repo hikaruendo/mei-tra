@@ -296,7 +296,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       const { error } = await this.supabase.from('room_players').insert({
         room_id: roomId,
         player_id: player.playerId,
-        socket_id: player.id,
+        socket_id: player.socketId,
         user_id: player.userId ?? null,
         name: player.name,
         hand: player.hand,
@@ -352,7 +352,9 @@ export class SupabaseRoomRepository implements IRoomRepository {
     try {
       const updateData: Partial<RoomPlayerUpdate> = {};
 
-      if (updates.id) updateData.socket_id = updates.id;
+      if (updates.socketId !== undefined) {
+        updateData.socket_id = updates.socketId;
+      }
       if (updates.userId !== undefined) updateData.user_id = updates.userId;
       if (updates.name) updateData.name = updates.name;
       if (updates.hand) updateData.hand = updates.hand;
@@ -445,7 +447,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     const playerInserts = players.map((player) => ({
       room_id: roomId,
       player_id: player.playerId,
-      socket_id: player.id,
+      socket_id: player.socketId,
       user_id: player.userId ?? null,
       name: player.name,
       hand: player.hand,
@@ -484,7 +486,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
 
   private mapDatabaseToPlayers(dbPlayers: RoomPlayerRow[]): RoomPlayer[] {
     return dbPlayers.map((dbPlayer) => ({
-      id: dbPlayer.socket_id || '',
+      socketId: dbPlayer.socket_id || '',
       playerId: dbPlayer.player_id,
       userId: dbPlayer.user_id ?? undefined,
       name: dbPlayer.name,

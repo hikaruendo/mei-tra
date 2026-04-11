@@ -70,7 +70,7 @@ export async function transitionToPlayPhase({
   const delayedEvents: GatewayEvent[] = [
     {
       scope: 'socket',
-      socketId: winningPlayer.id,
+      socketId: winningPlayer.socketId,
       event: 'reveal-agari',
       payload: {
         agari: state.agari,

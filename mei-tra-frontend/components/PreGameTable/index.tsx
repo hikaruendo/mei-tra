@@ -21,7 +21,7 @@ const positions = ['bottom', 'left', 'top', 'right'] as const;
 
 function createEmptySlot(index: number): Player {
   return {
-    id: `empty-${index}`,
+    socketId: `empty-${index}`,
     playerId: `empty-${index}`,
     name: 'COM',
     team: 0,

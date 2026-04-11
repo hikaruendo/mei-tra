@@ -88,7 +88,7 @@ export const GameTable: React.FC<GameTableProps> = ({
 
   // During waiting, fill undefined slots with COM placeholders
   const createCOMSlot = (idx: number): Player => ({
-    id: `com-${idx}`,
+    socketId: `com-${idx}`,
     playerId: `com-${idx}`,
     name: 'COM',
     team: (idx % 2) as Player['team'],

@@ -1,14 +1,14 @@
 export type Team = 0 | 1;
 
-export interface User {
-  id: string; // Socket ID
-  playerId: string; // Legacy player identifier
+export interface ConnectionUser {
+  socketId: string; // Connection/session identifier only
+  playerId: string; // Table participant identifier (future participantId equivalent)
   name: string;
-  userId?: string; // Supabase auth user ID (optional for backward compatibility)
-  isAuthenticated?: boolean; // Whether user is authenticated with Supabase
+  userId?: string; // Canonical authenticated account ID
+  isAuthenticated?: boolean;
 }
 
-export interface Player extends User {
+export interface Player extends ConnectionUser {
   hand: string[];
   team: Team;
   isPasser: boolean;

@@ -1,5 +1,5 @@
 import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
-import { User } from '../../types/game.types';
+import { ConnectionUser } from '../../types/game.types';
 import { GameStateService } from '../game-state.service';
 
 export interface IRoomService {
@@ -15,7 +15,7 @@ export interface IRoomService {
     teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room>;
   leaveRoom(roomId: string, playerId: string): Promise<boolean>;
-  joinRoom(roomId: string, user: User): Promise<boolean>;
+  joinRoom(roomId: string, user: ConnectionUser): Promise<boolean>;
   updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean>;
   updatePlayerInRoom(
     roomId: string,

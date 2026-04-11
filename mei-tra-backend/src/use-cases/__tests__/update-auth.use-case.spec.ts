@@ -3,7 +3,7 @@ import { AuthService } from '../../auth/auth.service';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IGameStateService } from '../../services/interfaces/game-state-service.interface';
 import { AuthenticatedUser } from '../../types/user.types';
-import { Player } from '../../types/game.types';
+import { ConnectionUser, Player } from '../../types/game.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { GameStateService } from '../../services/game-state.service';
 
@@ -44,21 +44,26 @@ describe('UpdateAuthUseCase', () => {
 
   it('updates connected user and room players when display name changes', async () => {
     const authService = createAuthServiceMock();
-    const users: Player[] = [
+    const users: ConnectionUser[] = [
       {
-        id: 'socket-1',
+        socketId: 'socket-1',
         playerId: 'player-1',
         name: 'Old Name',
         userId: 'user-1',
         isAuthenticated: true,
-        hand: [],
-        team: 0,
-        isPasser: false,
-      } as Player,
+      },
     ];
     const gameState = {
       getUsers: jest.fn(() => users),
-      updateUserName: jest.fn(() => {
+      findConnectionUserByUserId: jest.fn(
+        (userId: string) =>
+          users.find((user) => user.userId === userId) ?? null,
+      ),
+      findConnectionUserBySocketId: jest.fn(
+        (socketId: string) =>
+          users.find((user) => user.socketId === socketId) ?? null,
+      ),
+      updateUserNameBySocketId: jest.fn(() => {
         users[0].name = 'User Display';
         return true;
       }),
@@ -67,7 +72,7 @@ describe('UpdateAuthUseCase', () => {
     const roomState = {
       players: [
         {
-          id: 'socket-1',
+          socketId: 'socket-1',
           playerId: 'player-1',
           name: 'Old Name',
           userId: 'user-1',
@@ -89,7 +94,7 @@ describe('UpdateAuthUseCase', () => {
       status: RoomStatus.WAITING,
       players: [
         {
-          id: 'socket-1',
+          socketId: 'socket-1',
           playerId: 'player-1',
           name: 'User Display',
           userId: 'user-1',
@@ -118,9 +123,7 @@ describe('UpdateAuthUseCase', () => {
     authService.getUserFromSocketToken = jest
       .fn()
       .mockResolvedValue(authenticatedUser);
-    roomService.getRoomGameState = jest
-      .fn()
-      .mockResolvedValue(roomGameState);
+    roomService.getRoomGameState = jest.fn().mockResolvedValue(roomGameState);
     roomService.updatePlayerInRoom = jest.fn().mockResolvedValue(true);
     roomService.getRoom = jest.fn().mockResolvedValue(updatedRoom);
 
@@ -136,7 +139,7 @@ describe('UpdateAuthUseCase', () => {
     expect(authService.getUserFromSocketToken).toHaveBeenCalledWith('token', {
       bypassCache: true,
     });
-    expect(gameState.updateUserName).toHaveBeenCalledWith(
+    expect(gameState.updateUserNameBySocketId).toHaveBeenCalledWith(
       'socket-1',
       'User Display',
     );
@@ -144,6 +147,7 @@ describe('UpdateAuthUseCase', () => {
       'room-1',
       'player-1',
       expect.objectContaining({
+        socketId: 'socket-1',
         name: 'User Display',
         userId: 'user-1',
         isAuthenticated: true,

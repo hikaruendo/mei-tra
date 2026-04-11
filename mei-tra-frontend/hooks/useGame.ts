@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
-import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
+import { BlowAction, BlowDeclaration, BlowState, CompletedField, ConnectionUser, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 import { reconnectSocket } from '../app/socket';
@@ -76,9 +76,9 @@ export const useGame = () => {
   const [pointsToWin, setPointsToWin] = useState<number>(0);
   const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<ConnectionUser[]>([]);
   // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
-  const usersRef = useRef<User[]>([]);
+  const usersRef = useRef<ConnectionUser[]>([]);
 
   const [paused, setPaused] = useState(false);
 
@@ -199,7 +199,7 @@ export const useGame = () => {
 
     const socketHandlers = {
       // ユーザーの更新
-      'update-users': (users: User[]) => {
+      'update-users': (users: ConnectionUser[]) => {
         usersRef.current = users;
         setUsers(users);
       },
@@ -208,7 +208,7 @@ export const useGame = () => {
           setUsers((prev) => {
             const existingIndex = prev.findIndex((u) => u.playerId === playerId);
             const baseUser = {
-              id: playerId,
+              socketId: '',
               playerId,
               name,
               isAuthenticated: false,
@@ -343,7 +343,7 @@ export const useGame = () => {
           const knownUser = usersRef.current.find(u => u.playerId === data.playerId);
 
           return [...prev, {
-            id: data.playerId,
+            socketId: knownUser?.socketId ?? '',
             playerId: data.playerId,
             name: data.name || knownUser?.name || data.playerId,
             team: (data.team ?? 0) as Player['team'],
@@ -609,7 +609,7 @@ export const useGame = () => {
             player.playerId === playerId
               ? {
                   ...player,
-                  id: '',
+                  socketId: '',
                   name: playerName ?? player.name,
                 }
               : player,
