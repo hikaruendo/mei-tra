@@ -27,6 +27,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,8 +105,9 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       const { error } = await supabase.auth.signInWithOtp({
         email: formData.email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          shouldCreateUser: false,
+        },
       });
 
       if (error) {
@@ -118,6 +120,34 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       setError(t('unexpectedError'));
     } finally {
       setIsSendingMagicLink(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setError(null);
+    setSuccessMessage(null);
+    setIsSigningInWithGoogle(true);
+
+    try {
+      const { createClient } = await import('@/lib/supabase');
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: 'openid email profile',
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        setIsSigningInWithGoogle(false);
+      }
+    } catch (err) {
+      console.error('Google auth error:', err);
+      setError(t('unexpectedError'));
+      setIsSigningInWithGoogle(false);
     }
   };
 
@@ -155,6 +185,21 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <div className={styles.primaryAuth}>
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={isSigningInWithGoogle || loading}
+            className={styles.googleButton}
+          >
+            {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
+          </button>
+
+          <div className={styles.divider}>
+            <span>{t('or')}</span>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
             <label htmlFor="email" className={styles.label}>
@@ -254,10 +299,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
 
         {mode === 'signin' && (
           <div className={styles.alternativeAuth}>
-            <div className={styles.divider}>
-              <span>{t('or')}</span>
-            </div>
-
             <button
               type="button"
               onClick={handleMagicLink}

@@ -12,6 +12,8 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './services/chat.service';
 import { Logger } from '@nestjs/common';
 import { ChatTypingEvent } from './types/social-events.types';
+import { AuthService } from './auth/auth.service';
+import { AuthenticatedUser } from './types/user.types';
 
 @WebSocketGateway({
   namespace: '/social',
@@ -26,16 +28,49 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(SocialGateway.name);
   private readonly socketRooms: Map<
     string,
-    { userId?: string; rooms: Set<string> }
+    { userId: string; rooms: Set<string> }
   > = new Map();
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly authService: AuthService,
+  ) {}
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     this.logger.log(`Social client connected: ${client.id}`);
-    const userId = client.handshake.auth?.userId as string;
+
+    const auth = client.handshake.auth || {};
+    const supabaseToken =
+      typeof auth.token === 'string' ? auth.token : undefined;
+
+    if (!supabaseToken) {
+      this.logger.warn('[SocialAuth] No authentication token provided');
+      client.emit('chat:error', { message: 'Authentication required' });
+      client.disconnect();
+      return;
+    }
+
+    let authenticatedUser: AuthenticatedUser | null = null;
+    try {
+      authenticatedUser =
+        await this.authService.getUserFromSocketToken(supabaseToken);
+    } catch (error) {
+      this.logger.warn('[SocialAuth] Failed to authenticate user:', error);
+      client.emit('chat:error', { message: 'Authentication failed' });
+      client.disconnect();
+      return;
+    }
+
+    if (!authenticatedUser) {
+      this.logger.warn('[SocialAuth] Invalid authentication token');
+      client.emit('chat:error', { message: 'Invalid authentication token' });
+      client.disconnect();
+      return;
+    }
+
+    (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
     this.socketRooms.set(client.id, {
-      userId,
+      userId: authenticatedUser.id,
       rooms: new Set<string>(),
     });
   }
@@ -48,11 +83,14 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('chat:join-room')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; userId: string },
+    @MessageBody() data: { roomId: string; userId?: string },
   ): Promise<void> {
     try {
+      const authenticatedUser = this.getAuthenticatedUser(client);
+      if (!authenticatedUser) return;
+
       const socketState = this.socketRooms.get(client.id) ?? {
-        userId: data.userId,
+        userId: authenticatedUser.id,
         rooms: new Set<string>(),
       };
       this.socketRooms.set(client.id, socketState);
@@ -65,7 +103,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await client.join(data.roomId);
       socketState.rooms.add(data.roomId);
       this.logger.log(
-        `User ${data.userId} joined chat room ${data.roomId} via socket ${client.id}`,
+        `User ${authenticatedUser.id} joined chat room ${data.roomId} via socket ${client.id}`,
       );
       client.emit('chat:joined', { roomId: data.roomId, success: true });
     } catch (error) {
@@ -77,9 +115,12 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('chat:leave-room')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; userId: string },
+    @MessageBody() data: { roomId: string; userId?: string },
   ): Promise<void> {
     try {
+      const authenticatedUser = this.getAuthenticatedUser(client);
+      if (!authenticatedUser) return;
+
       const socketState = this.socketRooms.get(client.id);
       if (!socketState?.rooms.has(data.roomId)) {
         client.emit('chat:left', { roomId: data.roomId, success: true });
@@ -88,7 +129,9 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       await client.leave(data.roomId);
       socketState.rooms.delete(data.roomId);
-      this.logger.log(`User ${data.userId} left chat room ${data.roomId}`);
+      this.logger.log(
+        `User ${authenticatedUser.id} left chat room ${data.roomId}`,
+      );
       client.emit('chat:left', { roomId: data.roomId, success: true });
     } catch (error) {
       this.logger.error(`Failed to leave room: ${error}`);
@@ -102,16 +145,19 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody()
     data: {
       roomId: string;
-      userId: string;
+      userId?: string;
       content: string;
       contentType?: 'text' | 'emoji' | 'system';
       replyTo?: string;
     },
   ): Promise<void> {
     try {
+      const authenticatedUser = this.getAuthenticatedUser(client);
+      if (!authenticatedUser) return;
+
       const event = await this.chatService.postMessage({
         roomId: data.roomId,
-        userId: data.userId,
+        userId: authenticatedUser.id,
         content: data.content,
         contentType: data.contentType,
         replyTo: data.replyTo,
@@ -119,7 +165,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(data.roomId).emit('chat:message', event);
       this.logger.log(
-        `Message posted to room ${data.roomId} by user ${data.userId}`,
+        `Message posted to room ${data.roomId} by user ${authenticatedUser.id}`,
       );
     } catch (error) {
       this.logger.error(`Failed to post message: ${error}`);
@@ -130,12 +176,15 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('chat:typing')
   async handleTyping(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; userId: string },
+    @MessageBody() data: { roomId: string; userId?: string },
   ): Promise<void> {
+    const authenticatedUser = this.getAuthenticatedUser(client);
+    if (!authenticatedUser) return;
+
     const typingEvent: ChatTypingEvent = {
       type: 'chat.typing',
       roomId: data.roomId,
-      userId: data.userId,
+      userId: authenticatedUser.id,
       startedAt: new Date().toISOString(),
     };
 
@@ -148,6 +197,9 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; limit?: number; cursor?: string },
   ): Promise<void> {
     try {
+      const authenticatedUser = this.getAuthenticatedUser(client);
+      if (!authenticatedUser) return;
+
       const messages = await this.chatService.listMessages({
         roomId: data.roomId,
         limit: data.limit,
@@ -162,5 +214,17 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.error(`Failed to list messages: ${error}`);
       client.emit('chat:error', { message: 'Failed to list messages' });
     }
+  }
+
+  private getAuthenticatedUser(client: Socket): AuthenticatedUser | null {
+    const authenticatedUser = (client.data as { user?: AuthenticatedUser })
+      .user;
+
+    if (!authenticatedUser) {
+      client.emit('chat:error', { message: 'Authentication required' });
+      return null;
+    }
+
+    return authenticatedUser;
   }
 }

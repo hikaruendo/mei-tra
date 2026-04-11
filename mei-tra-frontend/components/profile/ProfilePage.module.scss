@@ -302,6 +302,50 @@ $transition-button: all 0.3s ease;
   color: #ededed;
 }
 
+.accountActions {
+  margin-top: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  align-items: flex-start;
+}
+
+.accountActionButton {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ededed;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: $transition-button;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.accountSuccess,
+.accountError {
+  margin: 0;
+  font-size: $font-size-sm;
+}
+
+.accountSuccess {
+  color: #4ade80;
+}
+
+.accountError {
+  color: #f87171;
+}
+
 .noProfileText {
   text-align: center;
   padding: $spacing-xl;
@@ -434,6 +478,25 @@ $transition-button: all 0.3s ease;
 
   .accountRow {
     border-bottom-color: rgba(15, 23, 42, 0.06);
+  }
+
+  .accountActionButton {
+    background-color: rgba(15, 23, 42, 0.05);
+    color: #111827;
+    border-color: rgba(15, 23, 42, 0.12);
+
+    &:hover:not(:disabled) {
+      background-color: rgba(15, 23, 42, 0.08);
+      border-color: rgba(15, 23, 42, 0.16);
+    }
+  }
+
+  .accountSuccess {
+    color: #15803d;
+  }
+
+  .accountError {
+    color: #b91c1c;
   }
 
   .editButton {

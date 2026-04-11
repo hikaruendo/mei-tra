@@ -16,11 +16,13 @@ const SocialSocketContext = createContext<SocialSocketContextValue | undefined>(
 );
 
 export function SocialSocketProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!user?.id) {
       // Disconnect socket when user logs out
       if (socketRef.current) {
@@ -35,39 +37,63 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    const socket = io(`${BACKEND_URL}/social`, {
-      auth: {
-        userId: user.id,
-      },
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
+    const initializeSocket = async () => {
+      let token: string | null = null;
+      try {
+        token = await getAccessToken();
+      } catch (error) {
+        console.error('[SocialSocketProvider] Failed to get auth token:', error);
+        if (isMounted) {
+          setIsConnected(false);
+        }
+        return;
+      }
 
-    socket.on('connect', () => {
-      console.log('[SocialSocketProvider] Connected to /social namespace');
-      setIsConnected(true);
-    });
+      if (!isMounted) return;
 
-    socket.on('disconnect', () => {
-      console.log('[SocialSocketProvider] Disconnected from /social namespace');
-      setIsConnected(false);
-    });
+      if (!token) {
+        console.error('[SocialSocketProvider] No auth token available');
+        setIsConnected(false);
+        return;
+      }
 
-    socket.on('connect_error', (error) => {
-      console.error('[SocialSocketProvider] Connection error:', error);
-      setIsConnected(false);
-    });
+      const socket = io(`${BACKEND_URL}/social`, {
+        auth: {
+          token,
+        },
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
 
-    socketRef.current = socket;
+      socket.on('connect', () => {
+        console.log('[SocialSocketProvider] Connected to /social namespace');
+        setIsConnected(true);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('[SocialSocketProvider] Disconnected from /social namespace');
+        setIsConnected(false);
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('[SocialSocketProvider] Connection error:', error);
+        setIsConnected(false);
+      });
+
+      socketRef.current = socket;
+    };
+
+    void initializeSocket();
 
     return () => {
+      isMounted = false;
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
     };
-  }, [user?.id]);
+  }, [user?.id, getAccessToken]);
 
   return (
     <SocialSocketContext.Provider

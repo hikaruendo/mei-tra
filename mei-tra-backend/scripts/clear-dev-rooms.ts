@@ -2,8 +2,9 @@ import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import * as path from 'path';
 
-// Load environment variables from .env.development by default
+// Load shared development defaults first, then allow local overrides.
 config({ path: path.resolve(__dirname, '../.env.development') });
+config({ path: path.resolve(__dirname, '../.env.local'), override: true });
 
 async function main() {
   const url = process.env.SUPABASE_URL_DEV;
@@ -15,7 +16,7 @@ async function main() {
     console.error(
       'Missing SUPABASE_URL_DEV or SUPABASE_SERVICE_ROLE_KEY_DEV/SUPABASE_ANON_KEY_DEV',
     );
-    console.error('Make sure .env.development is properly configured.');
+    console.error('Make sure .env.development/.env.local are properly configured.');
     process.exit(1);
   }
 

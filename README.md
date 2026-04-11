@@ -36,7 +36,8 @@
 #### 初回起動時のみ
 ```bash
 # Supabaseを起動（1回だけ）
-supabase start
+cd mei-tra-backend
+npm run supabase:start
 ```
 
 #### 通常の開発作業
@@ -66,7 +67,7 @@ supabase db push   # 現在のマイグレーションを適用
 Supabase設定ファイル（supabase/config.toml）を変更した場合
 ```bash
 supabase stop
-supabase start
+npm run supabase:start
 ```
 
 #### 開発終了時
