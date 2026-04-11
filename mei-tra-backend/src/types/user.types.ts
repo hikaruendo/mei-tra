@@ -1,3 +1,5 @@
+export type FontSizePreset = 'standard' | 'large' | 'xlarge' | 'xxlarge';
+
 export interface UserProfile {
   id: string; // Supabase auth user ID
   username: string;
@@ -20,6 +22,7 @@ export interface UserPreferences {
   notifications: boolean;
   sound: boolean;
   theme: 'light' | 'dark';
+  fontSize: FontSizePreset;
 }
 
 export interface CreateUserProfileDto {

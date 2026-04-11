@@ -30,10 +30,11 @@ $disabled-border: rgba(255, 255, 255, 0.06);
 @mixin button-base {
   flex: 0 1 auto;
   min-width: 120px;
-  padding: 8px 16px;
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.95rem;
   font-weight: 600;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -51,18 +52,18 @@ $disabled-border: rgba(255, 255, 255, 0.06);
   }
 
   .input {
-    padding: 10px 14px;
-    font-size: 16px;
+    padding: 0.7rem 0.9rem;
+    font-size: 1rem;
   }
 
   .btn {
-    padding: 8px 12px;
-    font-size: 13px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
     min-width: 100px;
   }
 
   .playerCount {
-    font-size: 11px;
+    font-size: 0.78rem;
   }
 }
 }
@@ -86,12 +87,13 @@ $disabled-border: rgba(255, 255, 255, 0.06);
 
 .input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   background: $input-bg;
   color: #ededed;
-  font-size: 18px;
+  font-size: 1.1rem;
+  line-height: 1.4;
   transition: all 0.3s ease;
   outline: none;
 
@@ -108,10 +110,11 @@ $disabled-border: rgba(255, 255, 255, 0.06);
 
 .btnContainer {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 0.5rem;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -176,7 +179,7 @@ $disabled-border: rgba(255, 255, 255, 0.06);
 }
 
 .playerCount {
-  font-size: 12px;
+  font-size: 0.82rem;
   opacity: 0.9;
   font-weight: normal;
   text-transform: none;

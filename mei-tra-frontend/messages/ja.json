@@ -20,7 +20,15 @@
     "themeLabel": "テーマ",
     "themeSystem": "システム",
     "themeLight": "ライト",
-    "themeDark": "ダーク"
+    "themeDark": "ダーク",
+    "fontSizeLabel": "文字サイズ",
+    "fontSizeStandard": "標準",
+    "fontSizeLarge": "大きめ",
+    "fontSizeXLarge": "大きい",
+    "fontSizeXXLarge": "特大",
+    "languageLabel": "言語",
+    "languageJapanese": "日本語",
+    "languageEnglish": "English"
   },
   "landing": {
     "hero": {
@@ -620,7 +628,9 @@
     "passwordResetEmailMissing": "メールアドレスがないため、パスワード設定・変更リンクを送信できません。",
     "loggedIn": "ログイン",
     "loggingOut": "ログアウト中...",
-    "logout": "ログアウト"
+    "logout": "ログアウト",
+    "passwordResetConfirmTitle": "パスワード設定・変更メールを送信しますか？",
+    "passwordResetConfirmMessage": "{email} 宛に、パスワード設定・変更用のメールを送信します。よろしいですか？"
   },
   "terms": {
     "title": "利用規約",

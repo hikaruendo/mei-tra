@@ -20,6 +20,30 @@ export const metadata: Metadata = {
   description: "4人対戦のオンラインカードゲーム「Meitra」をプレイしよう",
 };
 
+const preferenceBootstrapScript = `
+  (function () {
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('theme');
+      var resolvedTheme = theme === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : (theme === 'light' || theme === 'dark' ? theme : 'dark');
+      root.setAttribute('data-theme', resolvedTheme);
+
+      var fontSize = localStorage.getItem('fontSize');
+      var resolvedFontSize =
+        fontSize === 'large' ||
+        fontSize === 'xlarge' ||
+        fontSize === 'xxlarge'
+          ? fontSize
+          : 'standard';
+      root.setAttribute('data-font-size', resolvedFontSize);
+    } catch (error) {
+      console.warn('[preferences] Failed to apply boot preferences', error);
+    }
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -29,7 +53,11 @@ export default function RootLayout({
 
   return (
     <html suppressHydrationWarning>
-      <head />
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: preferenceBootstrapScript }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

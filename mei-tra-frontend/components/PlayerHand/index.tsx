@@ -1,14 +1,61 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from '../../types/game.types';
+import { FontSizePreset } from '../../types/user.types';
 import { NegriCard } from '../NegriCard';
 import { Card } from '../Card';
 import { CardFace } from '../CardFace';
 import { CompletedFields } from '../CompletedFields';
 import { PlayerAvatar } from '../PlayerAvatar';
+import { useAuth } from '../../hooks/useAuth';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '../PlayAndCancelBtn';
+
+const HAND_CARD_METRICS: Record<
+  FontSizePreset,
+  {
+    width: number;
+    overlap: string;
+    hoverLift: number;
+    hoverOverlap: string;
+    spreadLift: number;
+    minHeight: number;
+  }
+> = {
+  standard: {
+    width: 72,
+    overlap: '-15px',
+    hoverLift: 28,
+    hoverOverlap: '-0.6rem',
+    spreadLift: 18,
+    minHeight: 160,
+  },
+  large: {
+    width: 80,
+    overlap: '-18px',
+    hoverLift: 32,
+    hoverOverlap: '-0.72rem',
+    spreadLift: 20,
+    minHeight: 168,
+  },
+  xlarge: {
+    width: 88,
+    overlap: '-21px',
+    hoverLift: 36,
+    hoverOverlap: '-0.85rem',
+    spreadLift: 23,
+    minHeight: 178,
+  },
+  xxlarge: {
+    width: 96,
+    overlap: '-24px',
+    hoverLift: 40,
+    hoverOverlap: '-1rem',
+    spreadLift: 26,
+    minHeight: 188,
+  },
+};
 
 interface PlayerHandProps {
   player: Player;
@@ -53,9 +100,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 }) => {
   const t = useTranslations('playerHand');
   const tStatus = useTranslations('playerStatus');
+  const { fontSizePreference } = useAuth();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const autoRevealAttemptedRef = useRef(false);
+  const handCardMetrics = HAND_CARD_METRICS[fontSizePreference];
 
   const { isValidCardPlay } = useCardValidation(
     player.hand,
@@ -99,7 +148,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const renderPlayerHand = (isCurrentPlayer: boolean) => {
     if (isCurrentPlayer) {
       return (
-        <div className={styles.handContainer}>
+        <div
+          className={styles.handContainer}
+          style={{
+            '--player-hand-card-width': `${handCardMetrics.width}px`,
+            '--player-hand-card-overlap': handCardMetrics.overlap,
+            '--player-hand-card-hover-lift': `${handCardMetrics.hoverLift}px`,
+            '--player-hand-card-hover-overlap': handCardMetrics.hoverOverlap,
+            '--player-hand-card-container-min-height': `${handCardMetrics.minHeight}px`,
+          } as React.CSSProperties}
+        >
           {player.hand.map((card, index) => {
             const isNegri = card === negriCard;
             const isSelected = card === selectedCard || card === selectedNegriCard;
@@ -107,7 +165,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const maxDistance = Math.max((player.hand.length - 1) / 2, 1);
             const normalizedDistance = distanceFromCenter / maxDistance;
             const cardRotation = normalizedDistance * 15;
-            const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * 18;
+            const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * handCardMetrics.spreadLift;
 
             const validationResult = isValidCardPlay(card);
             const isPlayable = isCurrentPlayer && validationResult.isValid;

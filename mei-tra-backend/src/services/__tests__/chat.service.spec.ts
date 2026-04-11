@@ -91,7 +91,7 @@ describe('ChatService', () => {
         gamesPlayed: 0,
         gamesWon: 0,
         totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light' },
+        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
       });
       chatMessageRepository.create.mockResolvedValue(mockMessage);
 
@@ -176,7 +176,7 @@ describe('ChatService', () => {
         gamesPlayed: 0,
         gamesWon: 0,
         totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light' },
+        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
       });
       chatMessageRepository.create.mockResolvedValue(mockMessage);
 

@@ -75,6 +75,7 @@ export class SupabaseUserProfileRepository implements IUserProfileRepository {
         notifications: true,
         sound: true,
         theme: 'light',
+        fontSize: 'standard',
       };
 
       const insertData = {

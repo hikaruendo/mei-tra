@@ -1,17 +1,62 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '../auth/AuthModal';
-import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import styles from './UserProfile.module.scss';
 
-export function UserProfile() {
+interface UserProfileProps {
+  variant?: 'default' | 'compact';
+}
+
+const PROFILE_TRIGGER_ICON_SIZE = '1.2rem';
+
+export function UserProfile({ variant = 'default' }: UserProfileProps) {
   const { user, signOut, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isCompactMenuOpen, setIsCompactMenuOpen] = useState(false);
+  const compactMenuRef = useRef<HTMLDivElement | null>(null);
   const t = useTranslations('profile');
+  const isCompact = variant === 'compact';
+
+  const displayName = user?.profile?.displayName || user?.email || t('guestUser');
+  const username = user?.profile?.username || user?.id.slice(0, 8) || 'guest';
+  const secondaryEmail = user?.email && user.profile?.displayName && user.profile.displayName !== user.email
+    ? user.email
+    : null;
+
+  useEffect(() => {
+    if (!isCompact || !isCompactMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!compactMenuRef.current?.contains(event.target as Node)) {
+        setIsCompactMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsCompactMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isCompact, isCompactMenuOpen]);
+
+  const closeCompactMenu = () => {
+    setIsCompactMenuOpen(false);
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -24,11 +69,38 @@ export function UserProfile() {
     }
   };
 
+  const renderAvatar = (className: string, placeholderClassName: string) => {
+    if (user?.profile?.avatarUrl) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={user.profile.avatarUrl}
+          alt={t('profileImage')}
+          className={className}
+        />
+      );
+    }
+
+    return (
+      <div className={placeholderClassName}>
+        {displayName.charAt(0).toUpperCase() || '?'}
+      </div>
+    );
+  };
+
   if (loading) {
+    if (isCompact) {
+      return (
+        <div className={styles.compactStatus} aria-label={t('loading')} title={t('loading')}>
+          <div className={styles.loadingSpinner}></div>
+        </div>
+      );
+    }
+
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.loadingSpinner}></div>
-        <span className={styles.loadingText}>読み込み中...</span>
+        <span className={styles.loadingText}>{t('loading')}</span>
       </div>
     );
   }
@@ -36,12 +108,25 @@ export function UserProfile() {
   if (!user) {
     return (
       <>
-        <button
-          onClick={() => setShowAuthModal(true)}
-          className={styles.loginButton}
-        >
-          ログイン
-        </button>
+        {isCompact ? (
+          <button
+            type="button"
+            onClick={() => setShowAuthModal(true)}
+            className={styles.compactTrigger}
+            aria-label={t('loginButton')}
+            title={t('loginButton')}
+          >
+            <UserIcon />
+            <span className={styles.srOnly}>{t('loginButton')}</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className={styles.loginButton}
+          >
+            {t('loginButton')}
+          </button>
+        )}
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
@@ -50,41 +135,85 @@ export function UserProfile() {
     );
   }
 
+  if (isCompact) {
+    return (
+      <div className={styles.compactMenu} ref={compactMenuRef}>
+        <button
+          type="button"
+          className={`${styles.compactTrigger} ${isCompactMenuOpen ? styles.compactTriggerOpen : ''}`}
+          onClick={() => setIsCompactMenuOpen((prev) => !prev)}
+          aria-expanded={isCompactMenuOpen}
+          aria-haspopup="menu"
+          aria-label={`${t('title')}: ${displayName}`}
+          title={displayName}
+        >
+          {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
+          <span className={styles.srOnly}>{t('title')}</span>
+        </button>
+
+        {isCompactMenuOpen && (
+          <div className={styles.compactPopover} role="menu" aria-label={t('accountInfo')}>
+            <Link href="/profile" className={styles.compactSummary} onClick={closeCompactMenu} role="menuitem">
+              <span className={styles.compactDisplayName}>{displayName}</span>
+              {secondaryEmail ? (
+                <span className={styles.compactMeta}>{secondaryEmail}</span>
+              ) : null}
+              <span className={styles.compactMeta}>@{username}</span>
+            </Link>
+            <div className={styles.compactActions}>
+              <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
+                {t('title')}
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  closeCompactMenu();
+                  void handleSignOut();
+                }}
+                disabled={isSigningOut}
+                className={styles.compactActionButton}
+              >
+                {isSigningOut ? t('loggingOut') : t('logout')}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={styles.userContainer}>
       <div className={styles.avatarContainer}>
-        {user.profile?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.profile.avatarUrl}
-            alt="アバター"
-            className={styles.avatar}
-          />
-        ) : (
-          <div className={styles.avatarPlaceholder}>
-            {(user.profile?.displayName || user.email)?.charAt(0).toUpperCase() || '?'}
-          </div>
-        )}
+        {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
       </div>
 
       <Link href="/profile" className={styles.profileLink}>
         <div className={styles.userInfo}>
-          <span className={styles.displayName}>
-            {user.profile?.displayName || user.email}
-          </span>
-          <span className={styles.username}>
-            @{user.profile?.username || user.id.substring(0, 8)}
-          </span>
+          <span className={styles.displayName}>{displayName}</span>
+          <span className={styles.username}>@{username}</span>
         </div>
       </Link>
 
       <button
-        onClick={handleSignOut}
+        onClick={() => {
+          void handleSignOut();
+        }}
         disabled={isSigningOut}
         className={styles.signOutButton}
       >
         {isSigningOut ? t('loggingOut') : t('logout')}
       </button>
     </div>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width={PROFILE_TRIGGER_ICON_SIZE} height={PROFILE_TRIGGER_ICON_SIZE} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="5.1" r="2.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3.2 13.2a4.8 4.8 0 0 1 9.6 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   );
 }

@@ -4,12 +4,23 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { disconnectSocket } from '@/app/socket';
-import { AuthUser, SignUpData, SignInData, UserProfile, UserPreferences } from '@/types/user.types';
+import { AuthUser, FontSizePreset, SignUpData, SignInData, UserProfile, UserPreferences } from '@/types/user.types';
+import {
+  DEFAULT_FONT_SIZE_PRESET,
+  DEFAULT_THEME_PREFERENCE,
+  FONT_SIZE_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  normalizeUserPreferences,
+  readStoredFontSizePreset,
+  readStoredThemePreference,
+} from '@/lib/preferences';
 
 interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
   loading: boolean;
+  themePreference: UserPreferences['theme'];
+  fontSizePreference: FontSizePreset;
   signUp: (data: SignUpData) => Promise<{ user: User | null; error: AuthError | null }>;
   signIn: (data: SignInData) => Promise<{ user: User | null; error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
@@ -17,6 +28,7 @@ interface AuthContextType {
   refreshSession: () => Promise<void>;
   refreshUserProfile: () => Promise<void>;
   setThemePreference: (theme: UserPreferences['theme']) => Promise<void>;
+  setFontSizePreference: (fontSize: FontSizePreset) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [themePreference, setThemePreferenceState] = useState<UserPreferences['theme']>(DEFAULT_THEME_PREFERENCE);
+  const [fontSizePreference, setFontSizePreferenceState] = useState<FontSizePreset>(DEFAULT_FONT_SIZE_PRESET);
   const loadingUserRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
 
@@ -42,8 +56,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return;
 
     document.documentElement.setAttribute('data-theme', resolveTheme(theme));
-    localStorage.setItem('theme', theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [resolveTheme]);
+
+  const applyFontSize = useCallback((fontSize: FontSizePreset) => {
+    if (typeof window === 'undefined') return;
+
+    document.documentElement.setAttribute('data-font-size', fontSize);
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, fontSize);
+  }, []);
+
+  const cacheUserProfile = useCallback((userId: string, profile: UserProfile) => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      sessionStorage.setItem('auth_profile_cache', JSON.stringify({
+        profile,
+        userId,
+        timestamp: Date.now(),
+      }));
+    } catch (error) {
+      console.warn('[AuthContext] Failed to cache profile:', error);
+    }
+  }, []);
 
   const clearClientAuthState = useCallback(() => {
     disconnectSocket();
@@ -150,11 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profile) {
           console.log('[AuthContext] Profile loaded successfully');
 
-          const defaultPreferences = {
-            notifications: true,
-            sound: true,
-            theme: 'dark' as const
-          };
+          const preferences = normalizeUserPreferences(profile.preferences);
 
           const userProfile: UserProfile = {
             id: profile.id,
@@ -167,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             gamesPlayed: profile.games_played || 0,
             gamesWon: profile.games_won || 0,
             totalScore: profile.total_score || 0,
-            preferences: profile.preferences || defaultPreferences,
+            preferences,
           };
 
           setUser({
@@ -178,15 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Cache the profile (browser only)
           if (typeof window !== 'undefined' && retryCount >= 0) {
-            try {
-              sessionStorage.setItem('auth_profile_cache', JSON.stringify({
-                profile: userProfile,
-                userId: supabaseUser.id,
-                timestamp: Date.now(),
-              }));
-            } catch (e) {
-              console.warn('[AuthContext] Failed to cache profile:', e);
-            }
+            cacheUserProfile(supabaseUser.id, userProfile);
           }
         } else {
           console.log('[AuthContext] No profile data returned');
@@ -224,7 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     await attemptLoad(retryCount);
-  }, []);
+  }, [cacheUserProfile]);
 
   // Ref to allow recursive calls from setTimeout without stale closures
   const loadUserProfileRef = useRef(loadUserProfile);
@@ -233,44 +256,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const storedTheme = localStorage.getItem('theme');
-    applyTheme(
-      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
-        ? storedTheme
-        : 'dark',
-    );
-  }, [applyTheme]);
+    const storedTheme = readStoredThemePreference();
+    const storedFontSize = readStoredFontSizePreset();
+
+    setThemePreferenceState(storedTheme);
+    setFontSizePreferenceState(storedFontSize);
+    applyTheme(storedTheme);
+    applyFontSize(storedFontSize);
+  }, [applyFontSize, applyTheme]);
 
   useEffect(() => {
-    const theme = user?.profile?.preferences?.theme;
+    const preferences = user?.profile?.preferences;
 
-    if (theme === 'light' || theme === 'dark' || theme === 'system') {
-      applyTheme(theme);
+    if (preferences) {
+      const normalizedPreferences = normalizeUserPreferences(preferences);
+      setThemePreferenceState(normalizedPreferences.theme);
+      setFontSizePreferenceState(normalizedPreferences.fontSize);
+      applyTheme(normalizedPreferences.theme);
+      applyFontSize(normalizedPreferences.fontSize);
       return;
     }
 
     if (!user) {
-      const storedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
-      applyTheme(
-        storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
-          ? storedTheme
-          : 'dark',
-      );
+      const storedTheme = readStoredThemePreference();
+      const storedFontSize = readStoredFontSizePreset();
+      setThemePreferenceState(storedTheme);
+      setFontSizePreferenceState(storedFontSize);
+      applyTheme(storedTheme);
+      applyFontSize(storedFontSize);
     }
-  }, [applyTheme, user]);
+  }, [applyFontSize, applyTheme, user]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const preference = user?.profile?.preferences?.theme ?? localStorage.getItem('theme');
-    if (preference !== 'system') return;
+    if (themePreference !== 'system') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => applyTheme('system');
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [applyTheme, user?.profile?.preferences?.theme]);
+  }, [applyTheme, themePreference]);
 
   useEffect(() => {
     // Initialize auth immediately on mount
@@ -411,63 +438,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadUserProfile(session.user, -1);
   }, [session, loadUserProfile]);
 
-  const setThemePreference = useCallback(async (theme: UserPreferences['theme']) => {
-    applyTheme(theme);
-
+  const updateLocalUserPreferences = useCallback((partial: Partial<UserPreferences>) => {
     setUser((prev) => {
       if (!prev?.profile) return prev;
 
       const updatedProfile = {
         ...prev.profile,
-        preferences: {
+        preferences: normalizeUserPreferences({
           ...prev.profile.preferences,
-          theme,
-        },
+          ...partial,
+        }),
       };
 
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem('auth_profile_cache', JSON.stringify({
-            profile: updatedProfile,
-            userId: prev.id,
-            timestamp: Date.now(),
-          }));
-        } catch {}
-      }
+      cacheUserProfile(prev.id, updatedProfile);
 
       return {
         ...prev,
         profile: updatedProfile,
       };
     });
+  }, [cacheUserProfile]);
 
+  const persistUserPreferences = useCallback(async (partial: Partial<UserPreferences>) => {
     if (!user?.id) return;
 
-    const currentPreferences = user.profile?.preferences ?? {
-      notifications: true,
-      sound: true,
-      theme: 'dark' as const,
-    };
+    const nextPreferences = normalizeUserPreferences({
+      ...user.profile?.preferences,
+      theme: partial.theme ?? themePreference,
+      fontSize: partial.fontSize ?? fontSizePreference,
+      notifications: partial.notifications ?? user.profile?.preferences?.notifications,
+      sound: partial.sound ?? user.profile?.preferences?.sound,
+    });
 
     const { error } = await supabase
       .from('user_profiles')
       .update({
-        preferences: {
-          ...currentPreferences,
-          theme,
-        },
+        preferences: nextPreferences,
       })
       .eq('id', user.id);
 
     if (error) {
-      console.warn('[AuthContext] Failed to persist theme preference:', error.message);
+      console.warn('[AuthContext] Failed to persist user preferences:', error.message);
     }
-  }, [applyTheme, user]);
+  }, [fontSizePreference, themePreference, user]);
+
+  const setThemePreference = useCallback(async (theme: UserPreferences['theme']) => {
+    applyTheme(theme);
+    setThemePreferenceState(theme);
+    updateLocalUserPreferences({ theme });
+    await persistUserPreferences({ theme });
+  }, [applyTheme, persistUserPreferences, updateLocalUserPreferences]);
+
+  const setFontSizePreference = useCallback(async (fontSize: FontSizePreset) => {
+    applyFontSize(fontSize);
+    setFontSizePreferenceState(fontSize);
+    updateLocalUserPreferences({ fontSize });
+    await persistUserPreferences({ fontSize });
+  }, [applyFontSize, persistUserPreferences, updateLocalUserPreferences]);
 
   const value: AuthContextType = {
     user,
     session,
     loading,
+    themePreference,
+    fontSizePreference,
     signUp,
     signIn,
     signOut,
@@ -475,6 +509,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshSession,
     refreshUserProfile,
     setThemePreference,
+    setFontSizePreference,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

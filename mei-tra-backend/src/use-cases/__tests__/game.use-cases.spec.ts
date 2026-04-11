@@ -184,6 +184,7 @@ describe('Game Use Cases', () => {
             notifications: true,
             sound: true,
             theme: 'light',
+            fontSize: 'standard',
           },
         },
       } as AuthenticatedUser;
@@ -1764,6 +1765,7 @@ describe('Game Use Cases', () => {
           notifications: true,
           sound: true,
           theme: 'light',
+          fontSize: 'standard',
         },
       },
     };

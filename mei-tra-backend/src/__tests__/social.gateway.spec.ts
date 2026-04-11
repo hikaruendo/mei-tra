@@ -37,7 +37,7 @@ describe('SocialGateway', () => {
       gamesPlayed: 0,
       gamesWon: 0,
       totalScore: 0,
-      preferences: { notifications: true, sound: true, theme: 'dark' },
+      preferences: { notifications: true, sound: true, theme: 'dark', fontSize: 'standard' },
     },
   };
 

@@ -1,7 +1,9 @@
 .gameInfoContainer {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
   padding: 16px 32px;
 }
 
@@ -9,6 +11,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  min-width: 0;
+  flex: 1 1 18rem;
 }
 
 .gameInfoTrump {
@@ -19,21 +23,26 @@
   color: white;
   font-weight: bold;
   font-size: 1.1rem;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .gameInfoScores {
   display: flex;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .gameInfoScoreText0 {
   font-weight: bold;
   font-size: 1.1rem;
+  line-height: 1.4;
 }
 
 .gameInfoScoreText1 {
   font-weight: bold;
   font-size: 1.1rem;
+  line-height: 1.4;
 }
 
 .leaveButton {
@@ -47,6 +56,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  line-height: 1.3;
 
   &:hover {
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
