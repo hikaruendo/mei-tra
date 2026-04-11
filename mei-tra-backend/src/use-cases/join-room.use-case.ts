@@ -7,7 +7,7 @@ import {
   JoinRoomSuccess,
   ResumeGamePayload,
 } from './interfaces/join-room.use-case.interface';
-import { User } from '../types/game.types';
+import { ConnectionUser } from '../types/game.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { RoomStatus } from '../types/room.types';
 
@@ -90,9 +90,9 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
   }
 
   private normalizeUser(
-    user: User,
+    user: ConnectionUser,
     authenticatedUser?: AuthenticatedUser | null,
-  ): User {
+  ): ConnectionUser {
     if (!authenticatedUser) {
       return { ...user };
     }

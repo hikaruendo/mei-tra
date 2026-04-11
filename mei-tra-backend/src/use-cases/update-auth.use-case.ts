@@ -87,8 +87,9 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       },
     ];
 
-    const users = this.gameState.getUsers();
-    const existingUser = users.find((user) => user.id === socketId);
+    const existingUser =
+      this.gameState.findConnectionUserByUserId(authenticatedUser.id) ??
+      this.gameState.findConnectionUserBySocketId(socketId);
 
     if (!existingUser) {
       const added = this.gameState.addPlayer(
@@ -113,32 +114,33 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       }
     }
 
-    const currentUser =
-      existingUser ??
-      this.gameState.getUsers().find((user) => user.id === socketId);
-
-    if (!currentUser) {
+    if (!existingUser) {
       return {
         clientEvents,
         broadcastEvents: [],
       };
     }
 
-    const nameChanged = currentUser.name !== displayName;
+    const socketChanged = existingUser.socketId !== socketId;
+    if (socketChanged) {
+      existingUser.socketId = socketId;
+    }
+
+    const nameChanged = existingUser.name !== displayName;
     const authChanged =
-      currentUser.userId !== authenticatedUser.id ||
-      currentUser.isAuthenticated !== true;
+      existingUser.userId !== authenticatedUser.id ||
+      existingUser.isAuthenticated !== true;
 
     if (nameChanged) {
-      this.gameState.updateUserName(socketId, displayName);
+      this.gameState.updateUserNameBySocketId(socketId, displayName);
     }
 
     if (authChanged) {
-      currentUser.userId = authenticatedUser.id;
-      currentUser.isAuthenticated = true;
+      existingUser.userId = authenticatedUser.id;
+      existingUser.isAuthenticated = true;
     }
 
-    if (nameChanged || authChanged) {
+    if (socketChanged || nameChanged || authChanged) {
       return {
         clientEvents,
         broadcastEvents: [
@@ -169,9 +171,9 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     const roomGameState =
       await this.roomService.getRoomGameState(currentRoomId);
     const state = roomGameState.getState();
-    const currentPlayer = state.players.find(
-      (player) => player.id === socketId,
-    );
+    const currentPlayer =
+      state.players.find((player) => player.userId === authenticatedUser.id) ??
+      state.players.find((player) => player.socketId === socketId);
 
     if (!currentPlayer) {
       return undefined;
@@ -181,6 +183,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       authenticatedUser.profile?.displayName ||
       authenticatedUser.email ||
       currentPlayer.name;
+    currentPlayer.socketId = socketId;
     currentPlayer.name = displayName;
     currentPlayer.userId = authenticatedUser.id;
     currentPlayer.isAuthenticated = true;
@@ -190,6 +193,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       currentRoomId,
       currentPlayer.playerId,
       {
+        socketId,
         name: displayName,
         userId: authenticatedUser.id,
         isAuthenticated: true,

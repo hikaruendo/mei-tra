@@ -3,7 +3,7 @@ import { Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
-import { GameState, User, Team, Player } from '../types/game.types';
+import { GameState, ConnectionUser, Team, Player } from '../types/game.types';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';
@@ -172,7 +172,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   ): RoomPlayer {
     const idStr = String(index);
     return {
-      id: `com-${idStr}`,
+      socketId: `com-${idStr}`,
       playerId: `com-${idStr}`,
       name: 'COM',
       isCOM: true,
@@ -238,7 +238,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private cloneRoomPlayer(player: RoomPlayer): RoomPlayer {
     return {
       ...player,
-      id: '',
+      socketId: '',
       hand: [...player.hand],
       joinedAt: new Date(player.joinedAt),
     };
@@ -247,7 +247,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private cloneGamePlayer(player: Player): Player {
     return {
       ...player,
-      id: '',
+      socketId: '',
       hand: [...player.hand],
     };
   }
@@ -614,7 +614,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return true;
   }
 
-  async joinRoom(roomId: string, user: User): Promise<boolean> {
+  async joinRoom(roomId: string, user: ConnectionUser): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
       return false;
@@ -764,7 +764,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const player: RoomPlayer = {
       ...(seatRoomSnapshot ?? {}),
       ...user,
-      id: user.id,
+      socketId: user.socketId,
       playerId: user.playerId,
       team: currentSeatRoomPlayer?.team ?? team,
       hand: [...(currentSeatRoomHand ?? hand)],
@@ -924,7 +924,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const comPlayerId = currentSeatPlayer.playerId;
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
-      id: '',
+      socketId: '',
       playerId,
       hand: [
         ...(currentSeatPlayer.hand.length
@@ -958,7 +958,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const restoredGamePlayerBase: Player = seatData.gamePlayer
       ? {
           ...seatData.gamePlayer,
-          id: '',
+          socketId: '',
           playerId,
           hand: [
             ...(state.players[gsIndex]?.hand.length
@@ -967,7 +967,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           ],
         }
       : {
-          id: '',
+          socketId: '',
           playerId,
           name: restoredRoomPlayer.name,
           team: restoredRoomPlayer.team,
@@ -980,7 +980,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (gsIndex !== -1) {
       state.players[gsIndex] = {
         ...restoredGamePlayerBase,
-        id: '',
+        socketId: '',
         playerId,
         name: restoredRoomPlayer.name,
         team: restoredRoomPlayer.team,
@@ -1001,7 +1001,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     } else {
       state.players.push({
         ...restoredGamePlayerBase,
-        id: '',
+        socketId: '',
       });
     }
 
@@ -1144,7 +1144,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     void roomGameState.updatePlayerSocketId(playerId, socketId, userId);
 
     // Update player's socket ID and userId in database directly
-    const updates: { id: string; userId?: string } = { id: socketId };
+    const updates: { socketId: string; userId?: string } = { socketId };
     if (userId) {
       updates.userId = userId;
     }

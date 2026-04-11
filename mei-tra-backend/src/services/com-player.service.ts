@@ -12,7 +12,7 @@ export class ComPlayerService implements IComPlayerService {
 
   createComPlayer(seatIndex: number, team: Team): Player {
     return {
-      id: `com-${seatIndex}`,
+      socketId: `com-${seatIndex}`,
       playerId: `com-${seatIndex}`,
       name: `COM ${seatIndex + 1}`,
       hand: [],

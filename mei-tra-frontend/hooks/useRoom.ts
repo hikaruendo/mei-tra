@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSocket } from './useSocket';
 import { Room, RoomPlayer } from '../types/room.types';
 import { useAuth } from '../contexts/AuthContext';
-import { Player, Team, User } from '../types/game.types';
+import { ConnectionUser, Player, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 
 interface UseRoomOptions {
-  users?: User[];
+  users?: ConnectionUser[];
   currentPlayerId?: string | null;
 }
 
@@ -89,7 +89,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           const existingPlayers = room.players.map((p, index) => {
             if (typeof p === 'string') {
               return {
-                id: p,
+                socketId: '',
                 playerId: p,
                 name: p,
                 hand: [],
@@ -109,7 +109,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           // 空いている席（COMプレースホルダー）を探す
           const comIndex = existingPlayers.findIndex(p => p.isCOM === true && !p.isReady);
           const newPlayer: RoomPlayer = {
-            id: playerId,
+            socketId: '',
             playerId,
             name: playerId,
             hand: [],
@@ -173,7 +173,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           const updatedPlayers = prev.players.map(p =>
             p.playerId === playerId
               ? {
-                  id: `com-disconnected-${playerId}`,
+                  socketId: '',
                   playerId: `com-disconnected-${playerId}`,
                   name: 'COM',
                   hand: [],
@@ -250,7 +250,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             if (updatedPlayer) {
               return {
                 ...roomPlayer,
-                id: updatedPlayer.id,
+                socketId: updatedPlayer.socketId,
                 team: updatedPlayer.team,
                 name: updatedPlayer.name,
                 userId: updatedPlayer.userId,
@@ -406,7 +406,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     const displayName = user.profile?.displayName || user.email || 'User';
     const userToJoin = {
-      id: socket.id ?? '',
+      socketId: socket.id ?? '',
       playerId: user.id,  // Supabase userId — must match room.hostId set during createRoom
       name: displayName,
       userId: user.id,

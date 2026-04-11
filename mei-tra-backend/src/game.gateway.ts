@@ -14,7 +14,7 @@ import { IBlowService } from './services/interfaces/blow-service.interface';
 import { IPlayService } from './services/interfaces/play-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { IChomboService } from './services/interfaces/chombo-service.interface';
-import { Player, TrumpType, User } from './types/game.types';
+import { ConnectionUser, Player, TrumpType } from './types/game.types';
 import { RoomStatus } from './types/room.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { AuthService } from './auth/auth.service';
@@ -224,8 +224,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const targetPlayer = room?.players.find(
       (player) => player.playerId === playerId,
     );
-    const targetSocket = targetPlayer?.id
-      ? this.server.sockets.sockets.get(targetPlayer.id)
+    const targetSocket = targetPlayer?.socketId
+      ? this.server.sockets.sockets.get(targetPlayer.socketId)
       : undefined;
 
     if (targetSocket) {
@@ -281,14 +281,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (
       !currentPlayer ||
       currentPlayer.isCOM ||
-      !currentPlayer.id ||
+      !currentPlayer.socketId ||
       (state.gamePhase !== 'play' && state.gamePhase !== 'blow')
     ) {
       return;
     }
 
     const emitPing = () => {
-      this.server.to(currentPlayer.id).emit('turn-ping', { roomId, playerId });
+      this.server.to(currentPlayer.socketId).emit('turn-ping', {
+        roomId,
+        playerId,
+      });
     };
 
     const monitor: TurnAckMonitor = {
@@ -756,7 +759,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           .getUsers()
           .find((u) => u.userId === authenticatedUser.id);
         if (existingUser) {
-          existingUser.id = client.id;
+          existingUser.socketId = client.id;
         } else {
           this.gameState.addPlayer(
             client.id,
@@ -838,7 +841,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await roomGameState.saveState();
       }
 
-      const player = players.find((p) => p.id === client.id);
+      const player = players.find((p) => p.socketId === client.id);
       const authenticatedUser = (client.data as { user?: AuthenticatedUser })
         .user;
 
@@ -855,7 +858,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         state.teamAssignments[player.playerId] = player.team;
 
         // ソケットIDをクリア（切断状態を示す）
-        player.id = '';
+        player.socketId = '';
 
         const room = await this.roomService.getRoom(roomId);
         if (room?.hostId === player.playerId) {
@@ -995,8 +998,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const { room } = result.data;
-      const hostUser: User = {
-        id: client.id,
+      const hostUser: ConnectionUser = {
+        socketId: client.id,
         playerId: authenticatedUser.id,
         name: playerName || authenticatedUser.email || 'User',
         userId: authenticatedUser.id,
@@ -1076,7 +1079,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join-room')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; user: User },
+    @MessageBody() data: { roomId: string; user: ConnectionUser },
   ) {
     this.activityTracker.recordActivity();
 
@@ -1362,12 +1365,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           };
         }
 
-        const targetSocket = targetPlayer.id
-          ? this.server.sockets.sockets.get(targetPlayer.id)
+        const targetSocket = targetPlayer.socketId
+          ? this.server.sockets.sockets.get(targetPlayer.socketId)
           : undefined;
         if (targetSocket) {
           await targetSocket.leave(data.roomId);
-          this.playerRooms.delete(targetPlayer.id);
+          this.playerRooms.delete(targetPlayer.socketId);
           targetSocket.emit(
             'error-message',
             'You were removed from the room by the host',
@@ -1422,7 +1425,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const canReplaceDisconnected = Boolean(
         room.status === RoomStatus.PLAYING &&
           targetStatePlayer &&
-          !targetStatePlayer.id,
+          !targetStatePlayer.socketId,
       );
       const canReplaceIdle = Boolean(
         room.status === RoomStatus.PLAYING &&
@@ -1487,7 +1490,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
     const matchesCurrentTurnPlayer =
       currentPlayer &&
-      (currentPlayer.id === client.id ||
+      (currentPlayer.socketId === client.id ||
         (Boolean(userId) && currentPlayer.userId === userId));
 
     if (!matchesCurrentTurnPlayer) {

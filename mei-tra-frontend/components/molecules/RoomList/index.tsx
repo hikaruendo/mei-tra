@@ -4,7 +4,7 @@ import { useRoom } from '../../../hooks/useRoom';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
 import { useAuth } from '../../../hooks/useAuth';
 import { RoomStatus } from '../../../types/room.types';
-import { User } from '../../../types/game.types';
+import { ConnectionUser } from '../../../types/game.types';
 import styles from './index.module.scss';
 
 const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
@@ -36,7 +36,7 @@ const getStatusClass = (status: RoomStatus) => {
 interface RoomListProps {
   isConnected?: boolean;
   isConnecting?: boolean;
-  users?: User[];
+  users?: ConnectionUser[];
   currentPlayerId?: string | null;
   onRoomEntered?: (roomId: string) => void;
 }

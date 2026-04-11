@@ -1,6 +1,6 @@
 import { AuthenticatedUser } from '../../types/user.types';
 import {
-  User,
+  ConnectionUser,
   Player,
   TeamScores,
   Field,
@@ -16,7 +16,7 @@ export interface JoinRoomRequest {
   socketId: string;
   targetRoomId: string;
   currentRoomId?: string;
-  user: User;
+  user: ConnectionUser;
   authenticatedUser?: Nullable<AuthenticatedUser>;
 }
 
@@ -52,7 +52,7 @@ export interface JoinRoomSuccess {
 export interface JoinRoomResponse {
   success: boolean;
   errorMessage?: string;
-  normalizedUser?: User;
+  normalizedUser?: ConnectionUser;
   previousRoomNotification?: PreviousRoomNotification;
   data?: JoinRoomSuccess;
 }

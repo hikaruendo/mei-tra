@@ -9,7 +9,7 @@ import {
   CompletedField,
   TeamScore,
   ScoreRecord,
-  User,
+  ConnectionUser,
 } from '../types/game.types';
 import { CardService } from './card.service';
 import { ChomboService } from './chombo.service';
@@ -19,7 +19,7 @@ import { IGameStateService } from './interfaces/game-state-service.interface';
 @Injectable()
 export class GameStateService implements IGameStateService {
   private readonly logger = new Logger(GameStateService.name);
-  private users: User[] = [];
+  private users: ConnectionUser[] = [];
   private state: GameState;
   private playerIds: Map<string, string> = new Map(); // token -> playerId
   private disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map(); // 切断されたプレイヤーのタイマーを管理
@@ -102,9 +102,15 @@ export class GameStateService implements IGameStateService {
         continue;
       }
 
+      const legacySocketId = (rawPlayer as Player & { id?: string }).id;
       const normalizedPlayer: Player = {
         ...rawPlayer,
-        id: typeof rawPlayer.id === 'string' ? rawPlayer.id : '',
+        socketId:
+          typeof rawPlayer.socketId === 'string'
+            ? rawPlayer.socketId
+            : typeof legacySocketId === 'string'
+              ? legacySocketId
+              : '',
         hand: Array.isArray(rawPlayer.hand) ? rawPlayer.hand : [],
         isPasser: rawPlayer.isPasser ?? false,
         hasBroken: rawPlayer.hasBroken ?? false,
@@ -112,7 +118,7 @@ export class GameStateService implements IGameStateService {
       };
 
       if (
-        normalizedPlayer.id !== rawPlayer.id ||
+        normalizedPlayer.socketId !== rawPlayer.socketId ||
         normalizedPlayer.hand !== rawPlayer.hand ||
         normalizedPlayer.isPasser !== rawPlayer.isPasser ||
         normalizedPlayer.hasBroken !== rawPlayer.hasBroken ||
@@ -156,8 +162,16 @@ export class GameStateService implements IGameStateService {
     return this.state;
   }
 
-  getUsers(): User[] {
+  getUsers(): ConnectionUser[] {
     return this.users;
+  }
+
+  findConnectionUserBySocketId(socketId: string): ConnectionUser | null {
+    return this.users.find((user) => user.socketId === socketId) || null;
+  }
+
+  findConnectionUserByUserId(userId: string): ConnectionUser | null {
+    return this.users.find((user) => user.userId === userId) || null;
   }
 
   async updateState(newState: Partial<GameState>): Promise<void> {
@@ -249,7 +263,7 @@ export class GameStateService implements IGameStateService {
     const playerId = userId || this.generateReconnectToken();
     const users = this.getUsers();
     users.push({
-      id: socketId,
+      socketId,
       playerId,
       name,
       userId,
@@ -264,8 +278,8 @@ export class GameStateService implements IGameStateService {
     return true;
   }
 
-  updateUserName(socketId: string, name: string): boolean {
-    const user = this.users.find((u) => u.id === socketId);
+  updateUserNameBySocketId(socketId: string, name: string): boolean {
+    const user = this.findConnectionUserBySocketId(socketId);
     if (!user) {
       return false;
     }
@@ -293,7 +307,7 @@ export class GameStateService implements IGameStateService {
     ); // 15秒待ってから削除
 
     // ソケットIDだけ即時クリア（切断状態を示す）
-    player.id = '';
+    player.socketId = '';
   }
 
   // プレイヤーの再接続トークンを登録
@@ -333,7 +347,7 @@ export class GameStateService implements IGameStateService {
 
   async updatePlayerSocketId(
     playerId: string,
-    newId: string,
+    socketId: string,
     userId?: string,
   ): Promise<void> {
     // Find the player by playerId, not by socket id
@@ -348,7 +362,7 @@ export class GameStateService implements IGameStateService {
       }
 
       // Update the socket ID
-      player.id = newId;
+      player.socketId = socketId;
 
       // Update userId if provided (for authenticated users)
       if (userId) {
@@ -367,7 +381,9 @@ export class GameStateService implements IGameStateService {
       // Persist the player update
       if (this.roomId) {
         try {
-          const updates: { id: string; userId?: string } = { id: newId };
+          const updates: { socketId: string; userId?: string } = {
+            socketId,
+          };
           if (userId) {
             updates.userId = userId;
           }
