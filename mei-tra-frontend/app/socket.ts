@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
+let latestAuthToken: string | undefined;
 
 function detectSafari(): boolean {
   if (typeof window === 'undefined') return false;
@@ -13,6 +14,8 @@ function detectSafari(): boolean {
 }
 
 export function getSocket(authToken?: string): Socket {
+  latestAuthToken = authToken ?? latestAuthToken;
+
   if (!socket && typeof window !== 'undefined') {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
 
@@ -27,7 +30,7 @@ export function getSocket(authToken?: string): Socket {
       auth: (cb: (data: { roomId: string; token?: string }) => void) => {
         const currentRoomId = sessionStorage.getItem('roomId') || '';
         console.log('[Socket] Auth callback — roomId from sessionStorage:', currentRoomId || 'none');
-        cb({ roomId: currentRoomId, token: authToken });
+        cb({ roomId: currentRoomId, token: latestAuthToken });
       },
       autoConnect: false,
       reconnection: true,
@@ -71,12 +74,27 @@ export function getSocket(authToken?: string): Socket {
   return socket!;
 }
 
-export function reconnectSocket(authToken?: string): void {
+export function getExistingSocket(): Socket | null {
+  return socket;
+}
+
+export function reconnectSocket(authToken?: string): Socket {
+  latestAuthToken = authToken ?? latestAuthToken;
+
   if (socket) {
+    socket.auth = (cb: (data: { roomId: string; token?: string }) => void) => {
+      const currentRoomId = sessionStorage.getItem('roomId') || '';
+      console.log('[Socket] Reconnect auth callback — roomId from sessionStorage:', currentRoomId || 'none');
+      cb({ roomId: currentRoomId, token: latestAuthToken });
+    };
     socket.disconnect();
-    socket = null;
+    socket.connect();
+    return socket;
   }
-  getSocket(authToken);
+
+  const nextSocket = getSocket(authToken);
+  nextSocket.connect();
+  return nextSocket;
 }
 
 export function disconnectSocket(): void {
@@ -84,4 +102,5 @@ export function disconnectSocket(): void {
     socket.disconnect();
     socket = null;
   }
+  latestAuthToken = undefined;
 }

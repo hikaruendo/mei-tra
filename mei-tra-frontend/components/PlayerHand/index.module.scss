@@ -136,8 +136,20 @@
 
 .currentTurn{
   border: 2px solid #FFD700 !important;
+  background:
+    linear-gradient(180deg, rgba(9, 45, 32, 0.94) 0%, rgba(5, 24, 17, 0.98) 100%) !important;
   box-shadow: 0 0 8px rgba(255, 215, 0, 0.6) !important;
   transition: all 0.3s ease;
+}
+
+.currentTurn .playerName {
+  color: #ffffff;
+}
+
+.currentTurn .cardCount {
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .playerName{
@@ -272,8 +284,21 @@
   }
 
   .currentTurn {
-    border-color: #60a5fa !important;
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.45) !important;
+    border-color: #FFD700 !important;
+    border-width: 2px !important;
+    background:
+      linear-gradient(180deg, rgba(10, 43, 31, 0.94) 0%, rgba(6, 27, 19, 0.98) 100%) !important;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6) !important;
+  }
+
+  .currentTurn .playerName {
+    color: #ffffff;
+  }
+
+  .currentTurn .cardCount {
+    color: rgba(255, 255, 255, 0.86);
+    background: rgba(15, 23, 42, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .playerName {

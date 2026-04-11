@@ -28,6 +28,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
       const authenticatedUser = await this.authService.getUserFromSocketToken(
         request.token,
+        { bypassCache: true },
       );
 
       if (!authenticatedUser) {
@@ -112,6 +113,44 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       }
     }
 
+    const currentUser =
+      existingUser ??
+      this.gameState.getUsers().find((user) => user.id === socketId);
+
+    if (!currentUser) {
+      return {
+        clientEvents,
+        broadcastEvents: [],
+      };
+    }
+
+    const nameChanged = currentUser.name !== displayName;
+    const authChanged =
+      currentUser.userId !== authenticatedUser.id ||
+      currentUser.isAuthenticated !== true;
+
+    if (nameChanged) {
+      this.gameState.updateUserName(socketId, displayName);
+    }
+
+    if (authChanged) {
+      currentUser.userId = authenticatedUser.id;
+      currentUser.isAuthenticated = true;
+    }
+
+    if (nameChanged || authChanged) {
+      return {
+        clientEvents,
+        broadcastEvents: [
+          {
+            scope: 'all',
+            event: 'update-users',
+            payload: this.gameState.getUsers(),
+          },
+        ],
+      };
+    }
+
     return {
       clientEvents,
       broadcastEvents: [],
@@ -138,13 +177,27 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       return undefined;
     }
 
-    currentPlayer.name =
+    const displayName =
       authenticatedUser.profile?.displayName ||
       authenticatedUser.email ||
       currentPlayer.name;
+    currentPlayer.name = displayName;
     currentPlayer.userId = authenticatedUser.id;
+    currentPlayer.isAuthenticated = true;
 
-    return [
+    await roomGameState.saveState();
+    await this.roomService.updatePlayerInRoom(
+      currentRoomId,
+      currentPlayer.playerId,
+      {
+        name: displayName,
+        userId: authenticatedUser.id,
+        isAuthenticated: true,
+      },
+    );
+    const updatedRoom = await this.roomService.getRoom(currentRoomId);
+
+    const roomEvents: GatewayEvent[] = [
       {
         scope: 'room',
         roomId: currentRoomId,
@@ -152,5 +205,16 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         payload: state.players,
       },
     ];
+
+    if (updatedRoom) {
+      roomEvents.push({
+        scope: 'room',
+        roomId: currentRoomId,
+        event: 'room-updated',
+        payload: updatedRoom,
+      });
+    }
+
+    return roomEvents;
   }
 }
