@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserProfile, UserPreferences } from '@/types/user.types';
 import { supabase } from '@/lib/supabase';
+import { getExistingSocket } from '@/app/socket';
 import { useTranslations } from 'next-intl';
 import {
   optimizeImage,
@@ -40,7 +41,7 @@ interface DatabaseUserProfileResponse {
 }
 
 export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormProps) {
-  const { user, refreshUserProfile } = useAuth();
+  const { user, refreshUserProfile, getAccessToken } = useAuth();
   const t = useTranslations('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -224,6 +225,13 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
       // Refresh user profile in AuthContext to update avatar in header
       await refreshUserProfile();
+
+      const socket = getExistingSocket();
+      const token = await getAccessToken();
+
+      if (socket?.connected && token) {
+        socket.emit('update-auth', { token });
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : t('saveFailed'));
     } finally {

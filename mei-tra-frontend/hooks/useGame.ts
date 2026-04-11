@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 import { BlowAction, BlowDeclaration, BlowState, CompletedField, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType, User } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
+import { reconnectSocket } from '../app/socket';
 
 const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
   const seen = new Set<string>();
@@ -23,8 +24,9 @@ export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
+  const roomBootstrapRef = useRef<string | null>(null);
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -82,6 +84,7 @@ export const useGame = () => {
 
   const resetRoomState = useCallback(() => {
     gameOverShownRef.current = null;
+    roomBootstrapRef.current = null;
     setGameStarted(false);
     setGamePhase(null);
     setCurrentRoomId(null);
@@ -127,6 +130,44 @@ export const useGame = () => {
 
     setIsHost(currentHostId === currentPlayerId);
   }, [currentHostId, currentPlayerId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user || !socket?.connected || currentRoomId) {
+      return;
+    }
+
+    const storedRoomId = sessionStorage.getItem('roomId');
+    if (!storedRoomId || roomBootstrapRef.current === storedRoomId) {
+      return;
+    }
+
+    roomBootstrapRef.current = storedRoomId;
+
+    let cancelled = false;
+
+    void (async () => {
+      const token = await getAccessToken();
+      if (cancelled || !token) {
+        if (!token) {
+          roomBootstrapRef.current = null;
+        }
+        return;
+      }
+
+      console.log('[useGame] Bootstrapping room state from stored roomId:', storedRoomId);
+      reconnectSocket(token);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRoomId, getAccessToken, socket, user]);
+
+  useEffect(() => {
+    if (currentRoomId) {
+      roomBootstrapRef.current = null;
+    }
+  }, [currentRoomId]);
 
   useEffect(() => {
     setIsClient(true);

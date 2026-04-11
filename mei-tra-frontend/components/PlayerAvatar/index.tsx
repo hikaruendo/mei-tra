@@ -75,7 +75,6 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
       {showName && (
         <PlayerIdentityChip
           name={displayName}
-          team={player.team}
           className={styles.playerName}
         />
       )}

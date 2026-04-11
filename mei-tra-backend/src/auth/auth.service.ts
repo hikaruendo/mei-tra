@@ -14,6 +14,10 @@ interface CachedTokenValidation {
   expiresAt: number;
 }
 
+interface TokenValidationOptions {
+  bypassCache?: boolean;
+}
+
 @Injectable()
 export class AuthService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AuthService.name);
@@ -39,11 +43,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     clearInterval(this.cleanupInterval);
   }
 
-  async validateToken(token: string): Promise<AuthenticatedUser | null> {
+  async validateToken(
+    token: string,
+    options?: TokenValidationOptions,
+  ): Promise<AuthenticatedUser | null> {
     try {
       // Check cache first
       const cached = this.tokenCache.get(token);
-      if (cached && cached.expiresAt > Date.now()) {
+      if (!options?.bypassCache && cached && cached.expiresAt > Date.now()) {
         this.logger.debug(
           `[AuthService] Using cached token for user: ${cached.user.id}`,
         );
@@ -206,6 +213,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
   async getUserFromSocketToken(
     token: string,
+    options?: TokenValidationOptions,
   ): Promise<AuthenticatedUser | null> {
     try {
       if (!token) {
@@ -220,7 +228,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       );
 
       // For WebSocket connections, token might be passed directly
-      const result = await this.validateToken(token);
+      const result = await this.validateToken(token, options);
 
       if (!result) {
         this.logger.warn('[AuthService] Token validation returned null');
