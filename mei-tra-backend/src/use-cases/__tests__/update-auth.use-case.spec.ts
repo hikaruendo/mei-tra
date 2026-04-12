@@ -38,6 +38,7 @@ describe('UpdateAuthUseCase', () => {
         notifications: true,
         sound: true,
         theme: 'light',
+        fontSize: 'standard',
       },
     },
   };

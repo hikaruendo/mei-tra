@@ -200,7 +200,7 @@ describe('SocialGateway (e2e)', () => {
         gamesPlayed: 0,
         gamesWon: 0,
         totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light' },
+        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
       });
       mockChatMessageRepository.create.mockResolvedValue(mockMessage);
 
@@ -272,7 +272,7 @@ describe('SocialGateway (e2e)', () => {
         gamesPlayed: 0,
         gamesWon: 0,
         totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light' },
+        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
       });
       mockChatMessageRepository.create.mockResolvedValue(mockMessage);
 

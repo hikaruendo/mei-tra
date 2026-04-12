@@ -55,6 +55,10 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-# Database backups
+# Database backups and ad-hoc SQL dumps
 backups/
 *.sql
+
+# Tracked schema sources
+!database/schema.sql
+!supabase/migrations/*.sql

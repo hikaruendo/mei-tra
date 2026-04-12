@@ -1,3 +1,5 @@
+export type FontSizePreset = 'standard' | 'large' | 'xlarge' | 'xxlarge';
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -16,6 +18,7 @@ export interface UserPreferences {
   notifications: boolean;
   sound: boolean;
   theme: 'system' | 'light' | 'dark';
+  fontSize: FontSizePreset;
 }
 
 export interface AuthUser {

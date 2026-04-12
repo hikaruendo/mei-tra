@@ -188,6 +188,7 @@ export interface Database {
             notifications: boolean;
             sound: boolean;
             theme: 'light' | 'dark';
+            fontSize: 'standard' | 'large' | 'xlarge' | 'xxlarge';
           };
         };
         Insert: {
@@ -205,6 +206,7 @@ export interface Database {
             notifications?: boolean;
             sound?: boolean;
             theme?: 'light' | 'dark';
+            fontSize?: 'standard' | 'large' | 'xlarge' | 'xxlarge';
           };
         };
         Update: {
@@ -222,6 +224,7 @@ export interface Database {
             notifications?: boolean;
             sound?: boolean;
             theme?: 'light' | 'dark';
+            fontSize?: 'standard' | 'large' | 'xlarge' | 'xxlarge';
           };
         };
       };

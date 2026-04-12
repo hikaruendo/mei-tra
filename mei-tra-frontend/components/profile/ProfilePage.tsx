@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
 import { createClient } from '@/lib/supabase';
 import { useTranslations } from 'next-intl';
+import { ConfirmModal } from '../molecules/ConfirmModal';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {
@@ -17,6 +18,7 @@ export function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(user?.profile || null);
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  const [showPasswordResetConfirm, setShowPasswordResetConfirm] = useState(false);
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
   const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
 
@@ -76,7 +78,7 @@ export function ProfilePage() {
     setIsEditing(false);
   };
 
-  const handlePasswordReset = async () => {
+  const sendPasswordReset = async () => {
     setPasswordResetMessage(null);
     setPasswordResetError(null);
 
@@ -105,6 +107,27 @@ export function ProfilePage() {
     } finally {
       setIsSendingPasswordReset(false);
     }
+  };
+
+  const handlePasswordResetClick = () => {
+    setPasswordResetMessage(null);
+    setPasswordResetError(null);
+
+    if (!user.email) {
+      setPasswordResetError(t('passwordResetEmailMissing'));
+      return;
+    }
+
+    setShowPasswordResetConfirm(true);
+  };
+
+  const handlePasswordResetConfirm = () => {
+    setShowPasswordResetConfirm(false);
+    void sendPasswordReset();
+  };
+
+  const handlePasswordResetCancel = () => {
+    setShowPasswordResetConfirm(false);
   };
 
   if (isEditing && profile) {
@@ -248,7 +271,7 @@ export function ProfilePage() {
               <div className={styles.accountActions}>
                 <button
                   type="button"
-                  onClick={handlePasswordReset}
+                  onClick={handlePasswordResetClick}
                   disabled={isSendingPasswordReset || !user.email}
                   className={styles.accountActionButton}
                 >
@@ -270,6 +293,15 @@ export function ProfilePage() {
         </div>
       </div>
     </div>
+      <ConfirmModal
+        isOpen={showPasswordResetConfirm}
+        title={t('passwordResetConfirmTitle')}
+        message={t('passwordResetConfirmMessage', { email: user.email ?? '' })}
+        onConfirm={handlePasswordResetConfirm}
+        onCancel={handlePasswordResetCancel}
+        confirmText={t('passwordResetAction')}
+        cancelText={t('cancel')}
+      />
     </>
   );
 }

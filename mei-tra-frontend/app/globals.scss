@@ -6,6 +6,22 @@
 $font-family-base: Arial, sans-serif;
 $transition-base: 0.3s ease;
 
+html {
+  font-size: 100%;
+}
+
+html[data-font-size='large'] {
+  font-size: 120%;
+}
+
+html[data-font-size='xlarge'] {
+  font-size: 140%;
+}
+
+html[data-font-size='xxlarge'] {
+  font-size: 170%;
+}
+
 body {
   background-color: #000000;
   color: #ededed;

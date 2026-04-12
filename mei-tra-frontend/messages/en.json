@@ -20,7 +20,15 @@
     "themeLabel": "Theme",
     "themeSystem": "System",
     "themeLight": "Light",
-    "themeDark": "Dark"
+    "themeDark": "Dark",
+    "fontSizeLabel": "Text size",
+    "fontSizeStandard": "Standard",
+    "fontSizeLarge": "Larger",
+    "fontSizeXLarge": "Large",
+    "fontSizeXXLarge": "Extra large",
+    "languageLabel": "Language",
+    "languageJapanese": "Japanese",
+    "languageEnglish": "English"
   },
   "landing": {
     "hero": {
@@ -666,7 +674,9 @@
     "passwordResetEmailMissing": "A password setup/change link cannot be sent because this account has no email address.",
     "loggedIn": "Login",
     "loggingOut": "Logging out...",
-    "logout": "Logout"
+    "logout": "Logout",
+    "passwordResetConfirmTitle": "Send a password reset email?",
+    "passwordResetConfirmMessage": "A password setup/change email will be sent to {email}. Do you want to continue?"
   },
   "terms": {
     "title": "Terms of Service",
