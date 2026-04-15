@@ -1,24 +1,57 @@
+import type {
+  TransportTheme,
+  TransportUserPreferences,
+  UpdateUserProfileRequestDto,
+  UserProfileDto,
+} from '@contracts/profile';
 import { UserPreferences, UserProfile } from '@/types/user.types';
-
-export interface UserProfileApiResponse {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-  lastSeenAt: string;
-  gamesPlayed: number;
-  gamesWon: number;
-  totalScore: number;
-  preferences: UserPreferences;
-}
 
 export interface UpdateUserProfilePayload {
   username?: string;
   displayName?: string;
   avatarUrl?: string;
   preferences?: Partial<UserPreferences>;
+}
+
+export type UserProfileApiResponse = UserProfileDto;
+
+function resolveTransportTheme(
+  theme: UserPreferences['theme'] | undefined,
+): TransportTheme | undefined {
+  if (theme === 'light' || theme === 'dark') {
+    return theme;
+  }
+
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  ) {
+    return 'dark';
+  }
+
+  return theme === 'system' ? 'light' : undefined;
+}
+
+function mapPreferencesForTransport(
+  preferences: Partial<UserPreferences> | undefined,
+): Partial<TransportUserPreferences> | undefined {
+  if (!preferences) {
+    return undefined;
+  }
+
+  const mapped: Partial<TransportUserPreferences> = {
+    notifications: preferences.notifications,
+    sound: preferences.sound,
+    fontSize: preferences.fontSize,
+  };
+
+  const theme = resolveTransportTheme(preferences.theme);
+  if (theme) {
+    mapped.theme = theme;
+  }
+
+  return mapped;
 }
 
 export function mapUserProfileResponse(
@@ -44,13 +77,20 @@ export async function updateUserProfileViaApi(
   accessToken: string,
   payload: UpdateUserProfilePayload,
 ): Promise<UserProfile> {
+  const transportPayload: UpdateUserProfileRequestDto = {
+    username: payload.username,
+    displayName: payload.displayName,
+    avatarUrl: payload.avatarUrl,
+    preferences: mapPreferencesForTransport(payload.preferences),
+  };
+
   const response = await fetch(`/api/user-profile/${userId}`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(transportPayload),
   });
 
   if (!response.ok) {

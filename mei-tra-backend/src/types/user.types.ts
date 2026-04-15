@@ -1,4 +1,4 @@
-export type FontSizePreset = 'standard' | 'large' | 'xlarge' | 'xxlarge';
+import type { FontSizePreset } from '@contracts/profile';
 
 export interface UserProfile {
   id: string; // Supabase auth user ID

@@ -1,3 +1,4 @@
+import type { GameStatePayload } from '@contracts/game';
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -679,7 +680,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               void client.join(roomId);
 
               // ゲーム状態をクライアントに送信
-              this.server.to(client.id).emit('game-state', {
+              const payload: GameStatePayload = {
                 players: state.players.map((player) => ({
                   ...player,
                   hand:
@@ -688,7 +689,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                       : [], // 自分の手札のみ表示
                 })),
                 gamePhase: state.gamePhase || 'waiting',
-                currentField: state.playState?.currentField,
+                currentField: state.playState?.currentField ?? null,
                 currentTurn:
                   state.currentPlayerIndex !== -1 &&
                   state.players[state.currentPlayerIndex]
@@ -697,12 +698,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 blowState: state.blowState,
                 teamScores: state.teamScores,
                 you: existingPlayer.playerId,
-                negriCard: state.playState?.negriCard,
-                fields: state.playState?.fields,
+                negriCard: state.playState?.negriCard ?? null,
+                fields: state.playState?.fields ?? [],
                 roomId: roomId,
                 hostId: room.hostId,
                 pointsToWin: state.pointsToWin,
-              });
+              };
+
+              this.server.to(client.id).emit('game-state', payload);
               this.server.to(roomId).emit('update-players', state.players);
 
               // Always issue reconnect token as fallback
@@ -1193,8 +1196,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(data.roomId).emit('set-room-id', data.roomId);
 
       if (resumeGame) {
-        const maskedGameStateForJoiner = {
+        const maskedGameStateForJoiner: GameStatePayload = {
           ...resumeGame.gameState,
+          currentField: resumeGame.gameState.currentField ?? null,
+          negriCard: resumeGame.gameState.negriCard ?? null,
+          fields: resumeGame.gameState.fields ?? [],
           players: resumeGame.gameState.players.map((player) => ({
             ...player,
             hand:

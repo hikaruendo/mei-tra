@@ -66,7 +66,7 @@ export interface Field {
 export interface CompletedField {
   cards: string[];
   winnerId: string;
-  winnerTeam: number;
+  winnerTeam: Team;
   dealerId: string;
 }
 

@@ -161,7 +161,7 @@ ${t('overview.gameFlowExample')}` }
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [tutorialSections]);
 
   return (
     <div className={styles.whitepaperContainer}>

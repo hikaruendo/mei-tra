@@ -1,8 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import type {
+  BlowStartedPayload,
+  BrokenPayload,
+  CompletedFieldContract,
+  FieldCompletePayload,
+  FieldContract,
+  GameOverPayload,
+  GameStatePayload,
+  NewRoundStartedPayload,
+  RoundCancelledPayload,
+  RoundResultsPayload,
+  TransportGamePhase,
+  TransportTeamScores,
+  UpdatePhasePayload,
+} from '@contracts/game';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
-import { BlowAction, BlowDeclaration, BlowState, CompletedField, ConnectionUser, Field, FieldCompleteEvent, GamePhase, Player, TeamScore, TeamScores, TrumpType } from '../types/game.types';
+import { BlowAction, BlowDeclaration, CompletedField, ConnectionUser, Field, GamePhase, Player, TeamScores, TrumpType } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 import { reconnectSocket } from '../app/socket';
@@ -20,6 +35,57 @@ const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
   });
 };
 
+const createEmptyTeamScores = (): TeamScores => ({
+  0: { deal: 0, blow: 0, play: 0, total: 0 },
+  1: { deal: 0, blow: 0, play: 0, total: 0 },
+});
+
+const toUiGamePhase = (phase: TransportGamePhase): GamePhase =>
+  phase === 'waiting' ? null : phase;
+
+const toUiField = (field: FieldContract | null): Field | null => {
+  if (!field) {
+    return null;
+  }
+
+  return {
+    cards: field.cards,
+    playedBy: field.playedBy,
+    baseCard: field.baseCard,
+    baseSuit: field.baseSuit,
+    dealerId: field.dealerId,
+    isComplete: field.isComplete,
+  };
+};
+
+const toUiCompletedField = (
+  field: CompletedFieldContract,
+): CompletedField => ({
+  cards: field.cards,
+  winnerId: field.winnerId,
+  winnerTeam: field.winnerTeam,
+});
+
+const toUiCompletedFields = (
+  fields: CompletedFieldContract[] | undefined,
+): CompletedField[] =>
+  dedupeCompletedFields((fields ?? []).map((field) => toUiCompletedField(field)));
+
+const toUiTeamScores = (scores: TransportTeamScores): TeamScores => ({
+  0: {
+    deal: 0,
+    blow: 0,
+    play: scores[0]?.play ?? 0,
+    total: scores[0]?.total ?? 0,
+  },
+  1: {
+    deal: 0,
+    blow: 0,
+    play: scores[1]?.play ?? 0,
+    total: scores[1]?.total ?? 0,
+  },
+});
+
 export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
@@ -34,10 +100,7 @@ export const useGame = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
-  const [teamScores, setTeamScores] = useState<TeamScores>({
-    0: { deal: 0, blow: 0, play: 0, total: 0 },
-    1: { deal: 0, blow: 0, play: 0, total: 0 }
-  });
+  const [teamScores, setTeamScores] = useState<TeamScores>(createEmptyTeamScores);
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
   const [blowActionHistory, setBlowActionHistory] = useState<BlowAction[]>([]);
@@ -93,10 +156,7 @@ export const useGame = () => {
     setIsHost(false);
     setIdlePlayerIds([]);
     setPlayers([]);
-    setTeamScores({
-      0: { deal: 0, blow: 0, play: 0, total: 0 },
-      1: { deal: 0, blow: 0, play: 0, total: 0 }
-    });
+    setTeamScores(createEmptyTeamScores());
     sessionStorage.removeItem('roomId');
   }, []);
 
@@ -276,33 +336,20 @@ export const useGame = () => {
         roomId,
         hostId,
         pointsToWin,
-      }: {
-        players: Player[];
-        gamePhase: GamePhase;
-        currentField: Field | null;
-        currentTurn: string;
-        blowState: BlowState;
-        teamScores: TeamScores;
-        you: string;
-        negriCard: string | null;
-        fields: CompletedField[];
-        roomId: string;
-        hostId?: string;
-        pointsToWin: number;
-      }) => {
+      }: GameStatePayload) => {
         setPlayers(players);
         syncCurrentPlayerIdentity(players, you ?? currentPlayerId);
-        setGamePhase(gamePhase);
+        setGamePhase(toUiGamePhase(gamePhase));
         setWhoseTurn(currentTurn);
-        setCurrentField(currentField);
+        setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
         setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
         setBlowDeclarations(blowState.declarations);
         setBlowActionHistory(blowState.actionHistory ?? []);
-        setTeamScores(teamScores);
+        setTeamScores(toUiTeamScores(teamScores));
         if (you !== undefined) setCurrentPlayerId(you);
         setNegriCard(negriCard);
-        setCompletedFields(dedupeCompletedFields(fields));
+        setCompletedFields(toUiCompletedFields(fields));
         setNegriPlayerId(negriPlayerId);
         setCurrentRoomId(roomId);
         setCurrentHostId(hostId ?? null);
@@ -382,12 +429,18 @@ export const useGame = () => {
         setGameStarted(true);
         setGamePhase('blow');
       },
-      'update-phase': ({ phase, scores, winner, currentHighestDeclaration }: { phase: GamePhase; scores: TeamScores; winner: number | null; currentHighestDeclaration: BlowDeclaration | null }) => {
-        setGamePhase(phase);
-        setTeamScores(scores);
+      'update-phase': ({
+        phase,
+        scores,
+        winner,
+        currentHighestDeclaration,
+      }: UpdatePhasePayload) => {
+        const nextPhase = toUiGamePhase(phase);
+        setGamePhase(nextPhase);
+        setTeamScores(toUiTeamScores(scores));
         
         // Set current trump when transitioning to play phase
-        if (phase === 'play' && currentHighestDeclaration) {
+        if (nextPhase === 'play' && currentHighestDeclaration) {
           setCurrentTrump(currentHighestDeclaration.trumpType);
         } else {
           // Reset current trump when not in play phase
@@ -395,9 +448,9 @@ export const useGame = () => {
         }
         
         // Only show alert for phases other than 'play' and when not transitioning to a new round
-        if (winner !== null && phase !== 'play' && phase !== 'blow') {
+        if (winner !== null && nextPhase !== 'play' && nextPhase !== 'blow') {
           setNotification({
-            message: t('phaseResult', { team: winner, phase: t(`phaseNames.${phase}` as 'phaseNames.deal') }),
+            message: t('phaseResult', { team: winner, phase: t(`phaseNames.${nextPhase}` as 'phaseNames.deal') }),
             type: 'success',
           });
         }
@@ -411,7 +464,7 @@ export const useGame = () => {
           socket.emit('turn-ack', { roomId: currentRoomId });
         }
       },
-      'game-over': ({ winner, finalScores }: { winner: string; finalScores: TeamScores }) => {
+      'game-over': ({ winner, finalScores }: GameOverPayload) => {
         // Prevent showing alert multiple times for the same game
         const gameOverKey = `${winner}-${finalScores[0].total}-${finalScores[1].total}`;
         if (gameOverShownRef.current === gameOverKey) {
@@ -427,24 +480,21 @@ export const useGame = () => {
           message: t('gameOver.message', {
             winnerTeam,
             team0Name,
-            team0Score: finalScores[0].total,
+            team0Score: finalScores[0]?.total ?? 0,
             team1Name,
-            team1Score: finalScores[1].total,
+            team1Score: finalScores[1]?.total ?? 0,
           }),
         });
         setGameStarted(false);
         setGamePhase(null);
-        setTeamScores({
-          0: { deal: 0, blow: 0, play: 0, total: 0 },
-          1: { deal: 0, blow: 0, play: 0, total: 0 }
-        });
+        setTeamScores(createEmptyTeamScores());
 
         // ゲーム終了後、古いroomIdでの再接続ループを防ぐ
         sessionStorage.removeItem('roomId');
 
         // Keep ref set until the next game starts (game-started handler clears it)
       },
-      'blow-started': ({ startingPlayer, players }: { startingPlayer: string; players: Player[] }) => {
+      'blow-started': ({ startingPlayer, players }: BlowStartedPayload) => {
         setGamePhase('blow');
         setPlayers(players);
         setWhoseTurn(startingPlayer);
@@ -456,7 +506,7 @@ export const useGame = () => {
         // Note: Player state updates (including isPasser) are handled by 'update-players' event
         // This prevents race conditions and ensures consistency across all blow phase operations
       },
-      'broken': ({ nextPlayerId, players, gamePhase }: { nextPlayerId: string; players: Player[]; gamePhase?: GamePhase }) => {
+      'broken': ({ nextPlayerId, players, gamePhase }: BrokenPayload) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
@@ -464,7 +514,7 @@ export const useGame = () => {
         resetBlowState({ preservePlayers: true });
         setPlayers(players);
         setWhoseTurn(nextPlayerId);
-        setGamePhase(gamePhase ?? 'blow');
+        setGamePhase(toUiGamePhase(gamePhase ?? 'blow'));
         setCurrentTrump(null);
       },
       // TODO: 実装
@@ -479,7 +529,14 @@ export const useGame = () => {
       'round-reset': () => {
         resetBlowState();
       },
-      'round-cancelled': ({ nextDealer, players, currentTrump, currentHighestDeclaration, blowDeclarations, actionHistory }: { nextDealer: string; players: Player[]; currentTrump?: TrumpType | null; currentHighestDeclaration?: BlowDeclaration | null; blowDeclarations?: BlowDeclaration[]; actionHistory?: BlowAction[] }) => {
+      'round-cancelled': ({
+        nextDealer,
+        players,
+        currentTrump,
+        currentHighestDeclaration,
+        blowDeclarations,
+        actionHistory,
+      }: RoundCancelledPayload) => {
         setNotification({
           message: 'Round cancelled! All players passed.',
           type: 'warning'
@@ -524,8 +581,10 @@ export const useGame = () => {
       'field-updated': (field: Field) => {
         setCurrentField(field);
       },
-      'field-complete': ({ field, nextPlayerId }: FieldCompleteEvent) => {
-        setCompletedFields((prev) => dedupeCompletedFields([...prev, field]));
+      'field-complete': ({ field, nextPlayerId }: FieldCompletePayload) => {
+        setCompletedFields((prev) =>
+          dedupeCompletedFields([...prev, toUiCompletedField(field)]),
+        );
         setCurrentField({
           cards: [],
           playedBy: [],
@@ -534,10 +593,8 @@ export const useGame = () => {
           isComplete: false,
         });
       },
-      'round-results': ({ scores }: {
-        scores: { [key: number]: TeamScore };
-      }) => {
-        setTeamScores(scores as TeamScores);
+      'round-results': ({ scores }: RoundResultsPayload) => {
+        setTeamScores(toUiTeamScores(scores));
       },
       'new-round-started': ({
         players,
@@ -551,24 +608,12 @@ export const useGame = () => {
         currentTrump,
         currentHighestDeclaration,
         blowDeclarations,
-      }: {
-        players: Player[];
-        currentTurn: string;
-        gamePhase: GamePhase;
-        currentField: Field | null;
-        completedFields: CompletedField[];
-        negriCard: string | null;
-        negriPlayerId: string | null;
-        revealedAgari: string | null;
-        currentTrump: TrumpType | null;
-        currentHighestDeclaration: BlowDeclaration | null;
-        blowDeclarations: BlowDeclaration[];
-      }) => {
+      }: NewRoundStartedPayload) => {
         setPlayers(players);
         setWhoseTurn(currentTurn);
-        setGamePhase(gamePhase);
-        setCurrentField(currentField);
-        setCompletedFields(dedupeCompletedFields(completedFields));
+        setGamePhase(toUiGamePhase(gamePhase));
+        setCurrentField(toUiField(currentField));
+        setCompletedFields(toUiCompletedFields(completedFields));
         setNegriCard(negriCard);
         setNegriPlayerId(negriPlayerId);
         setRevealedAgari(revealedAgari);

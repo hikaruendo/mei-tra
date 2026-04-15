@@ -423,16 +423,18 @@ describe('Reconnection Token Management', () => {
         return true;
       });
 
-      roomRepository.removePlayer.mockImplementation(async (roomId, playerId) => {
-        if (!persistedRoom || persistedRoom.id !== roomId) {
-          return false;
-        }
+      roomRepository.removePlayer.mockImplementation(
+        async (roomId, playerId) => {
+          if (!persistedRoom || persistedRoom.id !== roomId) {
+            return false;
+          }
 
-        persistedRoom.players = persistedRoom.players.filter(
-          (player) => player.playerId !== playerId,
-        );
-        return true;
-      });
+          persistedRoom.players = persistedRoom.players.filter(
+            (player) => player.playerId !== playerId,
+          );
+          return true;
+        },
+      );
 
       roomRepository.update.mockImplementation(async (roomId, updates) => {
         if (!persistedRoom || persistedRoom.id !== roomId) {
@@ -526,21 +528,21 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.convertPlayerToCOM(roomId, playerId);
 
         expect(result).toBe(true);
-        // eslint-disable-next-line @typescript-eslint/unbound-method
+
         expect(roomRepository.removePlayer).toHaveBeenCalledWith(
           roomId,
           playerId,
         );
-        // eslint-disable-next-line @typescript-eslint/unbound-method
+
         expect(roomRepository.addPlayer).toHaveBeenCalled();
 
         // Verify com player was created
-        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+        /* eslint-disable @typescript-eslint/no-unsafe-assignment */
         const addPlayerCall = (roomRepository.addPlayer as jest.Mock).mock
           .calls[0][1];
         expect(addPlayerCall.playerId).toContain('com-');
         expect(addPlayerCall.name).toBe('COM');
-        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+        /* eslint-enable @typescript-eslint/no-unsafe-assignment */
       });
 
       it('should keep reconnectToken when converting to com', async () => {
@@ -576,11 +578,11 @@ describe('Reconnection Token Management', () => {
         await roomService.convertPlayerToCOM(roomId, playerId);
 
         // Token should still exist in the map (not removed)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const tokenMap = (gameState as any)['playerIds'];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         expect(tokenMap.has(playerId)).toBe(true);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         expect(tokenMap.get(playerId)).toBe(playerId);
       });
 
@@ -844,9 +846,7 @@ describe('Reconnection Token Management', () => {
               .getPersistedRoom()
               ?.players.map((player) => player.playerId) ?? [],
           ).size,
-        ).toBe(
-          roomState.getPersistedRoom()?.players.length,
-        );
+        ).toBe(roomState.getPersistedRoom()?.players.length);
       });
 
       it('should return false if room not found', async () => {
@@ -910,7 +910,7 @@ describe('Reconnection Token Management', () => {
         const roomState = bindRoomRepositoryToState(room);
 
         // Manually set vacantSeat (simulating previous leave)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: {
@@ -1117,7 +1117,7 @@ describe('Reconnection Token Management', () => {
 
         // Simulate a stored vacant seat that used to be index 0, while the
         // current repository order now places the replacement com at index 1.
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: {
@@ -1208,7 +1208,7 @@ describe('Reconnection Token Management', () => {
 
         // Snapshot at leave time still had three cards, but the com has since
         // played one and only holds two.
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: {
@@ -1320,7 +1320,6 @@ describe('Reconnection Token Management', () => {
         };
         gameState.getState().teamAssignments[targetCom.playerId] = 0;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: {
@@ -1453,7 +1452,6 @@ describe('Reconnection Token Management', () => {
           currentBlowIndex: 0,
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: {
@@ -1534,7 +1532,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.registerPlayerToken(originalPlayerId, originalPlayerId);
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: {
@@ -1650,7 +1647,6 @@ describe('Reconnection Token Management', () => {
           hasRequiredBroken: false,
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (roomService as any)['vacantSeats'][roomId] = {
           0: {
             roomPlayer: roomSnapshot,
@@ -1669,10 +1665,7 @@ describe('Reconnection Token Management', () => {
         expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
         expect(gameState.getState().players[0].playerId).toBe(playerId);
         expect(gameState.getState().players[0].isPasser).toBe(true);
-        expect(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          (roomService as any)['vacantSeats'][roomId],
-        ).toBeUndefined();
+        expect((roomService as any)['vacantSeats'][roomId]).toBeUndefined();
       });
     });
 
@@ -1718,11 +1711,11 @@ describe('Reconnection Token Management', () => {
         await roomService.leaveRoom(roomId, playerId);
 
         // Token should still exist in the map (not removed)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const tokenMap = (gameState as any)['playerIds'];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         expect(tokenMap.has(playerId)).toBe(true);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         expect(tokenMap.get(playerId)).toBe(playerId);
       });
 
@@ -1771,8 +1764,9 @@ describe('Reconnection Token Management', () => {
 
         await roomService.leaveRoom(roomId, playerId);
 
-        const replacementCom =
-          roomRepository.addPlayer.mock.calls[0]?.[1] as RoomPlayer | undefined;
+        const replacementCom = roomRepository.addPlayer.mock.calls[0]?.[1] as
+          | RoomPlayer
+          | undefined;
         expect(replacementCom?.isCOM).toBe(true);
         expect(replacementCom?.isPasser).toBe(false);
         expect(gameState.getState().players[0].isCOM).toBe(true);
@@ -1813,19 +1807,19 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
 
         // Verify player was converted to com
-        const comPlayer = roomState.getPersistedRoom()?.players.find((p) =>
-          p.playerId.startsWith('com-'),
-        );
+        const comPlayer = roomState
+          .getPersistedRoom()
+          ?.players.find((p) => p.playerId.startsWith('com-'));
         expect(comPlayer).toBeDefined();
 
         // Verify vacantSeats contains the player's data
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
+        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
         expect((roomService as any)['vacantSeats'][roomId]).toBeDefined();
         const vacantSeat = Object.values(
           (roomService as any)['vacantSeats'][roomId],
         )[0] as any;
         expect(vacantSeat.roomPlayer.playerId).toBe(playerId);
-        /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
+        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
       });
     });
   });

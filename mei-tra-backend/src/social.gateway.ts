@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */
+import type { ChatMessagesPayload, ChatTypingEvent } from '@contracts/social';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -11,7 +12,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './services/chat.service';
 import { Logger } from '@nestjs/common';
-import { ChatTypingEvent } from './types/social-events.types';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
@@ -169,7 +169,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `Message posted to room ${data.roomId} by user ${authenticatedUser.id}`,
       );
     } catch (error) {
-      this.logger.error(`Failed to post message: ${error}`);
+      this.logGatewayError('Failed to post message', error);
       client.emit('chat:error', { message: 'Failed to post message' });
     }
   }
@@ -207,12 +207,14 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
         cursor: data.cursor,
       });
 
-      client.emit('chat:messages', {
+      const payload: ChatMessagesPayload = {
         roomId: data.roomId,
         messages: messages,
-      });
+      };
+
+      client.emit('chat:messages', payload);
     } catch (error) {
-      this.logger.error(`Failed to list messages: ${error}`);
+      this.logGatewayError('Failed to list messages', error);
       client.emit('chat:error', { message: 'Failed to list messages' });
     }
   }
@@ -227,5 +229,22 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     return authenticatedUser;
+  }
+
+  private logGatewayError(message: string, error: unknown): void {
+    if (error instanceof Error) {
+      if (
+        error.message === 'Chat room not found' ||
+        error.message === 'User profile not found'
+      ) {
+        this.logger.warn(`${message}: ${error.message}`);
+        return;
+      }
+
+      this.logger.error(`${message}: ${error.message}`);
+      return;
+    }
+
+    this.logger.error(`${message}: ${String(error)}`);
   }
 }

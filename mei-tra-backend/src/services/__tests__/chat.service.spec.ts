@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { ChatService } from '../chat.service';
 import { IChatRoomRepository } from '../../repositories/interfaces/chat-room.repository.interface';
 import { IChatMessageRepository } from '../../repositories/interfaces/chat-message.repository.interface';
@@ -91,7 +90,12 @@ describe('ChatService', () => {
         gamesPlayed: 0,
         gamesWon: 0,
         totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
+        preferences: {
+          notifications: true,
+          sound: true,
+          theme: 'light',
+          fontSize: 'standard',
+        },
       });
       chatMessageRepository.create.mockResolvedValue(mockMessage);
 
@@ -176,7 +180,12 @@ describe('ChatService', () => {
         gamesPlayed: 0,
         gamesWon: 0,
         totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
+        preferences: {
+          notifications: true,
+          sound: true,
+          theme: 'light',
+          fontSize: 'standard',
+        },
       });
       chatMessageRepository.create.mockResolvedValue(mockMessage);
 

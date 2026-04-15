@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { BrokenPayload } from '@contracts/game';
 import {
   IRevealBrokenHandUseCase,
   RevealBrokenHandRequest,
@@ -88,15 +89,17 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       const events: GatewayEvent[] = [];
       if (firstBlowPlayer) {
+        const brokenPayload: BrokenPayload = {
+          nextPlayerId: firstBlowPlayer.playerId,
+          players: state.players,
+          gamePhase: 'blow',
+        };
+
         events.push({
           scope: 'room',
           roomId,
           event: 'broken',
-          payload: {
-            nextPlayerId: firstBlowPlayer.playerId,
-            players: state.players,
-            gamePhase: 'blow',
-          },
+          payload: brokenPayload,
         });
         events.push({
           scope: 'room',

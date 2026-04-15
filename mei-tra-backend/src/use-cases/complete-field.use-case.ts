@@ -1,4 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type {
+  FieldCompletePayload,
+  GameOverPayload,
+  NewRoundStartedPayload,
+  RoundResultsPayload,
+  UpdatePhasePayload,
+} from '@contracts/game';
 import {
   ICompleteFieldUseCase,
   CompleteFieldRequest,
@@ -66,16 +73,18 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         };
       }
 
+      const fieldCompletePayload: FieldCompletePayload = {
+        winnerId: winner.playerId,
+        field: completedField,
+        nextPlayerId: winner.playerId,
+      };
+
       const events: GatewayEvent[] = [
         {
           scope: 'room',
           roomId,
           event: 'field-complete',
-          payload: {
-            winnerId: winner.playerId,
-            field: completedField,
-            nextPlayerId: winner.playerId,
-          },
+          payload: fieldCompletePayload,
         },
         {
           scope: 'room',
@@ -111,13 +120,15 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       }
 
       this.applyPlayPoints(state, declaringTeam);
+      const roundResultsPayload: RoundResultsPayload = {
+        scores: state.teamScores,
+      };
+
       events.push({
         scope: 'room',
         roomId,
         event: 'round-results',
-        payload: {
-          scores: state.teamScores,
-        },
+        payload: roundResultsPayload,
       });
 
       const hasTeamReachedGoal = Object.values(state.teamScores).some(
@@ -132,14 +143,16 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           ? (Number(winningTeamEntry[0]) as Team)
           : declaringTeam;
 
+        const gameOverPayload: GameOverPayload = {
+          winner: `Team ${winningTeam}`,
+          finalScores: state.teamScores,
+        };
+
         events.push({
           scope: 'room',
           roomId,
           event: 'game-over',
-          payload: {
-            winner: `Team ${winningTeam}`,
-            finalScores: state.teamScores,
-          },
+          payload: gameOverPayload,
         });
 
         await this.roomService.updateRoomStatus(roomId, RoomStatus.FINISHED);
@@ -300,6 +313,27 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentPlayerIndex: nextBlowIndex,
     });
 
+    const newRoundPayload: NewRoundStartedPayload = {
+      players: updatedState.players,
+      currentTurn: nextBlowPlayer.playerId,
+      gamePhase: 'blow',
+      currentField: null,
+      completedFields: [],
+      negriCard: null,
+      negriPlayerId: null,
+      revealedAgari: null,
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      blowDeclarations: [],
+    };
+
+    const updatePhasePayload: UpdatePhasePayload = {
+      phase: 'blow',
+      scores: updatedState.teamScores,
+      winner: nextBlowPlayer.team,
+      currentTrump: null,
+    };
+
     const delayedEvents: GatewayEvent[] = [
       {
         scope: 'room',
@@ -312,19 +346,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         scope: 'room',
         roomId,
         event: 'new-round-started',
-        payload: {
-          players: updatedState.players,
-          currentTurn: nextBlowPlayer.playerId,
-          gamePhase: 'blow',
-          currentField: null,
-          completedFields: [],
-          negriCard: null,
-          negriPlayerId: null,
-          revealedAgari: null,
-          currentTrump: null,
-          currentHighestDeclaration: null,
-          blowDeclarations: [],
-        },
+        payload: newRoundPayload,
         delayMs: 3000,
       },
       {
@@ -338,12 +360,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         scope: 'room',
         roomId,
         event: 'update-phase',
-        payload: {
-          phase: 'blow',
-          scores: updatedState.teamScores,
-          winner: nextBlowPlayer.team,
-          currentTrump: null,
-        },
+        payload: updatePhasePayload,
         delayMs: 3000,
       },
     ];

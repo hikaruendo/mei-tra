@@ -1,5 +1,10 @@
 /// <reference types="multer" />
 import {
+  AvatarUploadResponseDto,
+  UpdateUserProfileRequestDto,
+  UserProfileDto,
+} from '@contracts/profile';
+import {
   Controller,
   Get,
   Put,
@@ -20,7 +25,11 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
-import { AuthenticatedUser, UpdateUserProfileDto } from '../types/user.types';
+import {
+  AuthenticatedUser,
+  UpdateUserProfileDto,
+  UserProfile,
+} from '../types/user.types';
 import { SupabaseService } from '../database/supabase.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/decorators/user.decorator';
@@ -43,9 +52,9 @@ export class UserProfileController {
       if (!profile) {
         throw new HttpException('Profile not found', HttpStatus.NOT_FOUND);
       }
-      return profile;
+      return this.toUserProfileDto(profile);
     } catch (error) {
-      this.logger.error(`Failed to get profile for user ${id}:`, error);
+      this.logControllerError(`Failed to get profile for user ${id}`, error);
       throw error;
     }
   }
@@ -55,17 +64,17 @@ export class UserProfileController {
   async updateProfile(
     @Param('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Body() updateData: UpdateUserProfileDto,
+    @Body() updateData: UpdateUserProfileRequestDto,
   ) {
     try {
       this.assertProfileOwnership(id, currentUser);
       const updatedProfile = await this.userProfileRepository.update(
         id,
-        updateData,
+        updateData as UpdateUserProfileDto,
       );
-      return updatedProfile;
+      return this.toUserProfileDto(updatedProfile);
     } catch (error) {
-      this.logger.error(`Failed to update profile for user ${id}:`, error);
+      this.logControllerError(`Failed to update profile for user ${id}`, error);
       if (error instanceof HttpException) {
         throw error;
       }
@@ -142,13 +151,15 @@ export class UserProfileController {
         avatarUrl: urlData.publicUrl,
       });
 
-      return {
+      const response: AvatarUploadResponseDto = {
         message: 'Avatar uploaded successfully',
         avatarUrl: urlData.publicUrl,
-        profile: updatedProfile,
+        profile: this.toUserProfileDto(updatedProfile),
       };
+
+      return response;
     } catch (error) {
-      this.logger.error(`Failed to upload avatar for user ${id}:`, error);
+      this.logControllerError(`Failed to upload avatar for user ${id}`, error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -226,5 +237,48 @@ export class UserProfileController {
     } catch {
       return null;
     }
+  }
+
+  private logControllerError(message: string, error: unknown): void {
+    if (error instanceof HttpException) {
+      const status = error.getStatus();
+      const detail = error.message;
+
+      if (status >= 500) {
+        this.logger.error(`${message}: ${detail}`);
+        return;
+      }
+
+      this.logger.warn(`${message}: ${detail}`);
+      return;
+    }
+
+    if (error instanceof Error) {
+      this.logger.error(`${message}: ${error.message}`);
+      return;
+    }
+
+    this.logger.error(`${message}: ${String(error)}`);
+  }
+
+  private toUserProfileDto(profile: UserProfile): UserProfileDto {
+    return {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+      createdAt: profile.createdAt.toISOString(),
+      updatedAt: profile.updatedAt.toISOString(),
+      lastSeenAt: profile.lastSeenAt.toISOString(),
+      gamesPlayed: profile.gamesPlayed,
+      gamesWon: profile.gamesWon,
+      totalScore: profile.totalScore,
+      preferences: {
+        notifications: profile.preferences.notifications,
+        sound: profile.preferences.sound,
+        theme: profile.preferences.theme,
+        fontSize: profile.preferences.fontSize,
+      },
+    };
   }
 }

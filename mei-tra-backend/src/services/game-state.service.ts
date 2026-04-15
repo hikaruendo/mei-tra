@@ -545,10 +545,12 @@ export class GameStateService implements IGameStateService {
     }
 
     field.isComplete = true;
+    const winnerTeam =
+      state.players.find((p) => p.playerId === winnerId)?.team ?? (0 as const);
     const completedField: CompletedField = {
       cards: field.cards,
       winnerId: winnerId,
-      winnerTeam: state.players.find((p) => p.playerId === winnerId)?.team || 0,
+      winnerTeam,
       dealerId: field.dealerId,
     };
 

@@ -1,5 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type {
+  BasicProfile,
+  ChatMessage as ChatMessageDto,
+  ChatMessageEvent,
+} from '@contracts/social';
 import {
   ChatMessage,
   ChatRoom,
@@ -9,7 +14,6 @@ import {
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IChatRoomRepository } from '../repositories/interfaces/chat-room.repository.interface';
 import { IChatMessageRepository } from '../repositories/interfaces/chat-message.repository.interface';
-import { ChatMessageEvent, BasicProfile } from '../types/social-events.types';
 
 export interface PostMessageDto {
   roomId: string;
@@ -93,16 +97,7 @@ export class ChatService {
     };
   }
 
-  async listMessages(dto: ListMessagesDto): Promise<
-    Array<{
-      id: string;
-      sender: BasicProfile;
-      content: string;
-      contentType: string;
-      createdAt: string;
-      replyTo?: string;
-    }>
-  > {
+  async listMessages(dto: ListMessagesDto): Promise<ChatMessageDto[]> {
     const roomId = ChatRoomId.create(dto.roomId);
     const messages = await this.chatMessageRepository.findByRoomId(
       roomId,

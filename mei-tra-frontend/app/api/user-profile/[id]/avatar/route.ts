@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { AvatarUploadResponseDto } from '@contracts/profile';
 import { getBackendApiUrl } from '@/lib/backend-api';
 
 export async function POST(
@@ -34,7 +35,7 @@ export async function POST(
       );
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as AvatarUploadResponseDto;
     return NextResponse.json(result);
   } catch (error) {
     console.error('Avatar upload error:', error);

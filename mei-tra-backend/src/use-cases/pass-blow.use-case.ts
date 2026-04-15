@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { RoundCancelledPayload } from '@contracts/game';
 import {
   IPassBlowUseCase,
   PassBlowRequest,
@@ -205,6 +206,11 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     await roomGameState.dealCards();
     await roomGameState.saveState();
 
+    const roundCancelledPayload: RoundCancelledPayload = {
+      nextDealer: firstBlowPlayer.playerId,
+      players: state.players,
+    };
+
     const events: GatewayEvent[] = [
       {
         scope: 'room',
@@ -227,10 +233,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         scope: 'room',
         roomId,
         event: 'round-cancelled',
-        payload: {
-          nextDealer: firstBlowPlayer.playerId,
-          players: state.players,
-        },
+        payload: roundCancelledPayload,
       },
       {
         scope: 'room',

@@ -98,26 +98,28 @@ describe('UserProfileController (e2e)', () => {
         fontSize: 'standard',
       },
     });
-    update.mockImplementation(async (id: string, payload: Record<string, unknown>) => ({
-      id,
-      username: (payload.username as string) ?? 'user1',
-      displayName: (payload.displayName as string) ?? 'User 1',
-      avatarUrl:
-        (payload.avatarUrl as string) ??
-        'https://example.supabase.co/storage/v1/object/public/avatars/user-1/avatar-next.webp',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastSeenAt: new Date(),
-      gamesPlayed: 0,
-      gamesWon: 0,
-      totalScore: 0,
-      preferences: {
-        notifications: true,
-        sound: true,
-        theme: 'light',
-        fontSize: 'standard',
-      },
-    }));
+    update.mockImplementation(
+      async (id: string, payload: Record<string, unknown>) => ({
+        id,
+        username: (payload.username as string) ?? 'user1',
+        displayName: (payload.displayName as string) ?? 'User 1',
+        avatarUrl:
+          (payload.avatarUrl as string) ??
+          'https://example.supabase.co/storage/v1/object/public/avatars/user-1/avatar-next.webp',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSeenAt: new Date(),
+        gamesPlayed: 0,
+        gamesWon: 0,
+        totalScore: 0,
+        preferences: {
+          notifications: true,
+          sound: true,
+          theme: 'light',
+          fontSize: 'standard',
+        },
+      }),
+    );
 
     remove.mockResolvedValue({ error: null });
     upload.mockResolvedValue({ error: null });

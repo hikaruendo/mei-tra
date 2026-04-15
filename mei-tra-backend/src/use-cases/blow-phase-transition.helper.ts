@@ -1,3 +1,4 @@
+import type { UpdatePhasePayload } from '@contracts/game';
 import { GameState } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { IBlowService } from '../services/interfaces/blow-service.interface';
@@ -67,6 +68,13 @@ export async function transitionToPlayPhase({
     },
   ];
 
+  const updatePhasePayload: UpdatePhasePayload = {
+    phase: 'play',
+    scores: state.teamScores,
+    winner: winningPlayer.team,
+    currentHighestDeclaration: state.blowState.currentHighestDeclaration,
+  };
+
   const delayedEvents: GatewayEvent[] = [
     {
       scope: 'socket',
@@ -90,12 +98,7 @@ export async function transitionToPlayPhase({
       scope: 'room',
       roomId,
       event: 'update-phase',
-      payload: {
-        phase: 'play',
-        scores: state.teamScores,
-        winner: winningPlayer.team,
-        currentHighestDeclaration: state.blowState.currentHighestDeclaration,
-      },
+      payload: updatePhasePayload,
       delayMs: 3000,
     },
   ];

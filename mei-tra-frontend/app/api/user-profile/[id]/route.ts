@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type {
+  UpdateUserProfileRequestDto,
+  UserProfileDto,
+} from '@contracts/profile';
 import { getBackendApiUrl } from '@/lib/backend-api';
 
-async function proxyResponse(response: Response): Promise<NextResponse> {
+async function proxyResponse<T>(response: Response): Promise<NextResponse<T>> {
   const contentType =
     response.headers.get('content-type') ?? 'application/json; charset=utf-8';
   const body = await response.text();
@@ -24,7 +28,7 @@ export async function GET(
     cache: 'no-store',
   });
 
-  return proxyResponse(response);
+  return proxyResponse<UserProfileDto>(response);
 }
 
 export async function PUT(
@@ -41,15 +45,15 @@ export async function PUT(
     );
   }
 
+  const body = (await request.json()) as UpdateUserProfileRequestDto;
   const response = await fetch(getBackendApiUrl(`/user-profile/${id}`), {
     method: 'PUT',
     headers: {
       Authorization: authorization,
-      'Content-Type':
-        request.headers.get('content-type') ?? 'application/json',
+      'Content-Type': 'application/json',
     },
-    body: await request.text(),
+    body: JSON.stringify(body),
   });
 
-  return proxyResponse(response);
+  return proxyResponse<UserProfileDto>(response);
 }

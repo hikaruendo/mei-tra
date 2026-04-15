@@ -13,6 +13,9 @@ const backendBaseUrl = normalizeBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL);
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    externalDir: true,
+  },
   webpack: (config) => {
     config.resolve.fallback = { fs: false, path: false };
     return config;

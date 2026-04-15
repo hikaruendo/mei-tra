@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { JoinRoomUseCase } from '../join-room.use-case';
 import { CreateRoomUseCase } from '../create-room.use-case';
