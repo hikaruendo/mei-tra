@@ -5,13 +5,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '../auth/AuthModal';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { UserIcon } from '@/components/icons/UIIcons';
 import styles from './UserProfile.module.scss';
 
 interface UserProfileProps {
   variant?: 'default' | 'compact';
 }
-
-const PROFILE_TRIGGER_ICON_SIZE = '1.2rem';
 
 export function UserProfile({ variant = 'default' }: UserProfileProps) {
   const { user, signOut, loading } = useAuth();
@@ -116,7 +115,7 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
             aria-label={t('loginButton')}
             title={t('loginButton')}
           >
-            <UserIcon />
+            <UserIcon size="1.2rem" />
             <span className={styles.srOnly}>{t('loginButton')}</span>
           </button>
         ) : (
@@ -206,14 +205,5 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
         {isSigningOut ? t('loggingOut') : t('logout')}
       </button>
     </div>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width={PROFILE_TRIGGER_ICON_SIZE} height={PROFILE_TRIGGER_ICON_SIZE} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="5.1" r="2.6" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M3.2 13.2a4.8 4.8 0 0 1 9.6 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
   );
 }

@@ -29,24 +29,28 @@
 }
 
 .contentBlock {
-  margin-bottom: $spacing-lg;
+  margin-bottom: 0;
 }
 
 .textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
   font-size: $font-size-base;
   line-height: 1.75;
   color: #ededed;
 
   p {
-    margin-bottom: $spacing-md;
+    margin: 0;
+    max-width: 68ch;
   }
 
   h3 {
-    font-size: $font-size-lg;
-    font-weight: 600;
+    font-size: clamp(1.15rem, 1.05rem + 0.35vw, 1.35rem);
+    font-weight: 700;
     color: #ededed;
-    margin: $spacing-lg 0 $spacing-sm;
-    line-height: 1.4;
+    margin: 0 0 calc($spacing-xs / 2);
+    line-height: 1.35;
   }
 
   h4 {
@@ -70,6 +74,17 @@
   li {
     margin-bottom: $spacing-xs;
   }
+}
+
+.ruleLikeText {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.ruleLikeParagraph {
+  margin-bottom: 0;
+  max-width: 68ch;
 }
 
 :global(html[data-theme='light']) {

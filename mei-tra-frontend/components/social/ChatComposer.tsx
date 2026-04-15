@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { SendIcon } from '@/components/icons/UIIcons';
 import styles from './ChatComposer.module.scss';
 
 interface ChatComposerProps {
@@ -36,9 +37,7 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
           disabled={disabled || !message.trim()}
           className={styles.sendButton}
         >
-          <svg className={styles.sendIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
+          <SendIcon className={styles.sendIcon} />
         </button>
       </form>
       <div className={styles.charCount}>

@@ -2,13 +2,24 @@
 
 .whitepaperContainer {
   position: relative;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+  gap: $spacing-lg;
+  max-width: 1280px;
+  margin: 0 auto;
   background: #000;
   min-height: 100vh;
+
+  @media (max-width: 768px) {
+    display: block;
+  }
 }
 
 .mainContent {
   width: 100%;
-  padding: 0 $spacing-lg;
+  min-width: 0;
+  padding: 0 $spacing-lg 0 0;
 
   @media (max-width: 768px) {
     padding: 0;
@@ -18,8 +29,8 @@
 .contentWrapper {
   max-width: 900px;
   width: 100%;
-  margin: 0 auto;
-  padding: $spacing-md $spacing-lg;
+  margin: 0 auto 0 0;
+  padding: 0 $spacing-lg $spacing-md 0;
   line-height: 1.7;
   color: #ededed;
 

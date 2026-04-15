@@ -43,7 +43,7 @@ export function JackSystem({ data }: JackSystemProps) {
             <div className={styles.strengthOrder}>
               <span>{t('strengthOrder')}</span>
               <span className={styles.orderText}>
-                JOKER &gt; J{trump.suit} &gt; J{trump.subSuit} &gt; {t('other')}{trump.suitName} &gt; {t('otherCards')}
+                JOKER {'>'} J{trump.suit} {'>'} J{trump.subSuit} {'>'} {t('other')}{trump.suitName} {'>'} {t('otherCards')}
               </span>
             </div>
           </div>
