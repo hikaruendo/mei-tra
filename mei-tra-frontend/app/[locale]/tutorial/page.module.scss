@@ -6,12 +6,10 @@
 }
 
 .main {
-  margin-left: 280px;
   padding: $spacing-xl $spacing-md $spacing-lg;
   min-height: 100vh;
 
   @media (max-width: 768px) {
-    margin-left: 0;
     padding: $spacing-lg $spacing-sm $spacing-md;
   }
 }
