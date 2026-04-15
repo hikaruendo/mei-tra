@@ -76,6 +76,17 @@
   }
 }
 
+.ruleLikeText {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.ruleLikeParagraph {
+  margin-bottom: 0;
+  max-width: 68ch;
+}
+
 :global(html[data-theme='light']) {
   .section {
     background: #f6f8fb;
