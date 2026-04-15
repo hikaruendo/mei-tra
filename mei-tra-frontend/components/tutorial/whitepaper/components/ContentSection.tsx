@@ -1,6 +1,6 @@
 'use client';
 
-import { Section, ContentBlock, RuleBlock, ExampleBlock, TrumpHierarchyBlock, InteractiveDemoBlock, TipBlock, JackSystemBlock, ScoreCalculatorBlock } from '../content/tutorialContent';
+import { Section, ContentBlock, RuleBlock, ExampleBlock, TrumpHierarchyBlock, InteractiveDemoBlock, TipBlock, JackSystemBlock, ScoreCalculatorBlock } from '../content/tutorialTypes';
 import { RuleCard } from './RuleCard';
 import { TrumpHierarchy } from './TrumpHierarchy';
 import { ExampleCard } from './ExampleCard';
@@ -17,15 +17,22 @@ interface ContentSectionProps {
 export function ContentSection({ section }: ContentSectionProps) {
   const renderContent = (block: ContentBlock) => {
     switch (block.type) {
-      case 'text':
+      case 'text': {
         const textContent = block.content as string;
         return (
           <div className={styles.textBlock}>
-            {textContent.split('\n').map((line, index) => (
-              <p key={index} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-            ))}
+            {textContent.split('\n').map((line, index) => {
+              const subtitleMatch = line.match(/^\*\*(.*?)\*\*$/);
+
+              if (subtitleMatch) {
+                return <h3 key={index}>{subtitleMatch[1]}</h3>;
+              }
+
+              return <p key={index} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
+            })}
           </div>
         );
+      }
       case 'rule':
         return <RuleCard rule={block.content as RuleBlock} />;
       case 'example':

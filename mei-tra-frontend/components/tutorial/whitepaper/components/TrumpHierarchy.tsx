@@ -33,7 +33,7 @@ export function TrumpHierarchy({ data }: TrumpHierarchyProps) {
               {trump.label}
             </span>
             {index < data.trumps.length - 1 && (
-              <span className={styles.separator}>&gt;</span>
+              <span className={styles.separator}>{'>'}</span>
             )}
           </div>
         ))}

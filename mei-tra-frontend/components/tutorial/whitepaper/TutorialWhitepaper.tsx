@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Sidebar } from './components/Sidebar';
 import { ContentSection } from './components/ContentSection';
-import { Section } from './content/tutorialContent';
+import { Section } from './content/tutorialTypes';
 import styles from './TutorialWhitepaper.module.scss';
 
 export function TutorialWhitepaper() {
@@ -21,9 +21,13 @@ export function TutorialWhitepaper() {
     }
 
     overviewContent.push(
-      { type: 'text' as const, content: t('overview.description') },
-      { type: 'rule' as const, content: { title: t('overview.objective'), description: t('overview.objectiveDesc'), example: t('overview.objectiveExample') } },
-      { type: 'rule' as const, content: { title: t('overview.gameFlow'), description: t('overview.gameFlowDesc'), example: t('overview.gameFlowExample') } }
+      { type: 'text' as const, content: `**${t('overview.about')}**\n${t('overview.description')}` },
+      { type: 'text' as const, content: `**${t('overview.objective')}**
+${t('overview.objectiveDesc')}
+${t('overview.objectiveExample')}` },
+      { type: 'text' as const, content: `**${t('overview.gameFlow')}**
+${t('overview.gameFlowDesc')}
+${t('overview.gameFlowExample')}` }
     );
 
     return [
@@ -116,7 +120,6 @@ export function TutorialWhitepaper() {
       title: t('cards.title'),
       content: [
         { type: 'rule', content: { title: t('cards.composition'), description: t('cards.compositionDesc'), example: t('cards.compositionExample') } },
-        { type: 'rule', content: { title: t('cards.scoreCards'), description: t('cards.scoreCardsDesc'), example: t('cards.scoreCardsExample') } },
         { type: 'rule', content: { title: t('cards.strength'), description: t('cards.strengthDesc'), example: t('cards.strengthExample') } }
       ]
     },
@@ -169,11 +172,11 @@ export function TutorialWhitepaper() {
       id: 'scoring',
       title: t('scoring.title'),
       content: [
-        { type: 'text', content: t('scoring.description') },
-        { type: 'score-calculator', content: { title: t('scoring.calculator'), description: t('scoring.calculatorDesc') } },
         { type: 'rule', content: { title: t('scoring.formula'), description: t('scoring.formulaDesc'), example: t('scoring.formulaExample') } },
         { type: 'example', content: { scenario: t('scoring.successExample'), declaration: t('scoring.successDeclaration'), explanation: t('scoring.successExplanation') } },
-        { type: 'example', content: { scenario: t('scoring.failExample'), declaration: t('scoring.failDeclaration'), explanation: t('scoring.failExplanation') } }
+        { type: 'example', content: { scenario: t('scoring.failExample'), declaration: t('scoring.failDeclaration'), explanation: t('scoring.failExplanation') } },
+        { type: 'text', content: t('scoring.description') },
+        { type: 'score-calculator', content: { title: t('scoring.calculator'), description: t('scoring.calculatorDesc') } }
       ]
     },
     {
@@ -192,9 +195,9 @@ export function TutorialWhitepaper() {
       id: 'strategy',
       title: t('strategy.title'),
       content: [
-        { type: 'tip', content: { title: t('strategy.blowStrategy'), tips: [t('strategy.blowTip1'), t('strategy.blowTip2'), t('strategy.blowTip3'), t('strategy.blowTip4'), t('strategy.blowTip5')] } },
+        { type: 'tip', content: { title: t('strategy.blowStrategy'), tips: [t('strategy.blowTip1'), t('strategy.blowTip2'), t('strategy.blowTip3'), t('strategy.blowTip4')] } },
         { type: 'tip', content: { title: t('strategy.playStrategy'), tips: [t('strategy.playTip1'), t('strategy.playTip2'), t('strategy.playTip3'), t('strategy.playTip4'), t('strategy.playTip5')] } },
-        { type: 'tip', content: { title: t('strategy.teamStrategy'), tips: [t('strategy.teamTip1'), t('strategy.teamTip2'), t('strategy.teamTip3'), t('strategy.teamTip4'), t('strategy.teamTip5')] } }
+        { type: 'tip', content: { title: t('strategy.teamStrategy'), tips: [t('strategy.teamTip1'), t('strategy.teamTip2'), t('strategy.teamTip4'), t('strategy.teamTip5')] } }
       ]
     },
     {

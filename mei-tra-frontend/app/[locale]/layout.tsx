@@ -75,8 +75,8 @@ function getJsonLd(locale: string) {
     url: SITE_URL,
     description:
       locale === 'ja'
-        ? '4人2チーム制の戦略的オンライントランプゲーム。ブロー宣言やジャックシステムなど独自ルールを持つトリックテイキングゲームをオンラインで無料プレイ。'
-        : 'A strategic 4-player, 2-team online card game. Play this unique trick-taking game with Blow declarations and the Jack system for free.',
+        ? '4人2チーム制の戦略的オンライントランプゲーム。ビットやジャックシステムなど独自ルールを持つトリックテイキングゲームをオンラインで無料プレイ。'
+        : 'A strategic 4-player, 2-team online card game. Play this unique trick-taking game with bidding and the Jack system for free.',
     applicationCategory: 'GameApplication',
     operatingSystem: 'Web',
     offers: {

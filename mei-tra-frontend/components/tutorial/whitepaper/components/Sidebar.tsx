@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Section } from '../content/tutorialContent';
+import { Section } from '../content/tutorialTypes';
 import styles from './Sidebar.module.scss';
 
 interface SidebarProps {

@@ -22,11 +22,11 @@ test.describe('Tutorial Whitepaper', () => {
   test('allows navigating sections via sidebar', async ({ page }) => {
     await expect(page.getByText('目次')).toBeVisible();
     await expect(page.getByRole('button', { name: 'ゲームの概要' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'ブロー（宣言）システム' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ビットシステム' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'ブロー（宣言）システム' }).click();
+    await page.getByRole('button', { name: 'ビットシステム' }).click();
     await expect(
-      page.getByRole('heading', { level: 2, name: 'ブロー（宣言）システム' }),
+      page.getByRole('heading', { level: 2, name: 'ビットシステム' }),
     ).toBeVisible();
     await expect(page.getByRole('heading', { level: 3, name: 'スートの強さ順' })).toBeVisible();
   });
@@ -42,6 +42,6 @@ test.describe('Tutorial Whitepaper', () => {
 
     await page.getByRole('button', { name: '戦略とコツ' }).click();
     await expect(page.getByRole('heading', { level: 2, name: '戦略とコツ' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 3, name: 'ブロー宣言戦略' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: 'ビット戦略' })).toBeVisible();
   });
 });

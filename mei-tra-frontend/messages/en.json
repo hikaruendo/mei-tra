@@ -56,7 +56,7 @@
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
-      "caption": "Four players, real time. Blow declarations, Jack hierarchy, Broken hands—full rules, nothing cut."
+      "caption": "Four players, real time. Bids, Jack hierarchy, Broken hands—full rules, nothing cut."
     },
     "features": {
       "eyebrow": "Features",
@@ -71,7 +71,7 @@
         {
           "badge": "02",
           "title": "Full Rule Engine",
-          "description": "Blow declarations, Broken hands. The complete Meisen Trump rules, nothing simplified."
+          "description": "Bids, Broken hands. The complete Meisen Trump rules, nothing simplified."
         },
         {
           "badge": "03",
@@ -93,7 +93,7 @@
         {
           "step": "01",
           "title": "Learn the Rules",
-          "description": "The rules guide covers Blow declarations, scoring, and edge cases. Most players are ready to start within minutes."
+          "description": "The rules guide covers Bids, scoring, and edge cases. Most players are ready to start within minutes."
         },
         {
           "step": "02",
@@ -134,7 +134,7 @@
       "items": [
         {
           "question": "What is Meisen Trump?",
-          "answer": "A 4-player, 2-team trick-taking card game from Kyushu Institute of Technology. It centers on Blow declarations—bidding how many tricks you'll win and which suit is trump—and has been passed down through student clubs for over 100 years."
+          "answer": "A 4-player, 2-team trick-taking card game from Kyushu Institute of Technology. It centers on bidding—declaring how many tricks you'll win and which suit is trump—and has been passed down through student clubs for over 100 years."
         },
         {
           "question": "Can I play alone?",
@@ -297,7 +297,7 @@
     "phaseResult": "Team {team} won the {phase} phase",
     "phaseNames": {
       "deal": "deal",
-      "blow": "blow",
+      "blow": "bid",
       "play": "play",
       "waiting": "waiting"
     },
@@ -322,7 +322,7 @@
   },
   "gamePhase": {
     "deal": "Deal",
-    "blow": "Blow",
+    "blow": "Bid",
     "play": "Play",
     "waiting": "Waiting"
   },
@@ -393,7 +393,7 @@
       "description": "Meitra (明専トランプ, Meisen Trump) is a sophisticated 4-player partnership trick-taking card game originating from Japan. If you're familiar with Bridge, you'll recognize many similarities—but Meitra introduces unique mechanics like the Jack system, Broken hands, and Chombo violations that create a distinct strategic experience.",
       "keyFeatures": "Key Features",
       "feature1": "Partnership Play: 4 players in 2 teams, partners sit opposite",
-      "feature2": "Strategic Bidding: 'Blow' phase similar to Bridge's auction",
+      "feature2": "Strategic Bidding: a bid phase similar to Bridge's auction",
       "feature3": "Unique Mechanics: Special Jack hierarchy, JOKER power, and Tra trump",
       "feature4": "Risk & Reward: Declare your tricks wisely—success brings points, failure brings penalties",
       "feature5": "Violation System: 'Chombo' penalties add strategic depth",
@@ -403,14 +403,14 @@
       "gameFlow": "Game Flow Overview",
       "phase1Title": "1. Deal Phase",
       "phase1Desc": "Each player receives 10 cards. One card remains face-down as the 'hidden card.'",
-      "phase2Title": "2. Blow Phase (Bidding)",
+      "phase2Title": "2. Bid Phase (Bidding)",
       "phase2Desc": "Players take turns declaring how many 'pairs' (tricks) they can win out of 10, and which suit will be trump. Like Bridge's auction, higher bids override lower ones. Minimum bid: 6 pairs.",
       "phase3Title": "3. Play Phase (Trick-taking)",
       "phase3Desc": "The highest bidder (dealer) leads. Players compete to win tricks following standard trick-taking rules with trump and base suit bonuses. Play continues for 10 tricks.",
       "phase4Title": "4. Scoring",
       "phase4Desc": "Points are calculated based on whether the declaring team achieved their bid. First team to 10 points wins!",
       "uniqueMechanics": "What Makes Meitra Special",
-      "mechanic1Title": "The Blow System",
+      "mechanic1Title": "The Bidding System",
       "mechanic1Desc": "Unlike Bridge's complex suit ranking, Meitra uses five trump types with clear hierarchy: Tra (special no-trump) > Hearts > Diamonds > Clubs > Spades. Players bid both the number of tricks AND the trump suit, creating layered strategic decisions.",
       "mechanic2Title": "Jack Hierarchy",
       "mechanic2Desc": "When a trump suit is declared (except Tra), two Jacks become super-powered: the 'Main J' (Jack of trump suit) and 'Sub J' (Jack of same color as trump). These become the 2nd and 3rd strongest cards after JOKER, adding tactical depth to hand evaluation.",
@@ -421,43 +421,41 @@
       "mechanic5Title": "Chombo (Violations)",
       "mechanic5Desc": "Meitra includes a violation system where opponents can call out rule-breaking: Negri Forget, Four-Jack violations, Last Tanzen (ending with JOKER), and wrong Broken declarations. Only the opposing team can report violations, adding a competitive edge.",
       "bridgeComparison": "For Bridge Players",
-      "bridgeComparisonDesc": "Think of Meitra as Bridge's Japanese cousin with a twist. The Blow phase is your auction, pairs are tricks, and the dealer is the declarer. However, Meitra adds unique flavor with its Jack system, simplified trump hierarchy, special violation rules, and the mysterious Tra trump that changes the game dynamics entirely.",
+      "bridgeComparisonDesc": "Think of Meitra as Bridge's Japanese cousin with a twist. The Bid phase is your auction, pairs are tricks, and the dealer is the declarer. However, Meitra adds unique flavor with its Jack system, simplified trump hierarchy, special violation rules, and the mysterious Tra trump that changes the game dynamics entirely.",
       "scoringSystem": "Scoring Explained",
-      "scoringFormula": "Formula: If you meet or exceed your bid (Y ≥ X): 0.5×(Y-X) + X - 5 points | If you fail (Y < X): Y - X points (negative)",
+      "scoringFormula": "Formula: If you meet or exceed your bid (Y ≥ X): 0.5×(Y-X) + X - 5 points | If you fail (Y '<' X): Y - X points (negative)",
       "scoringExample1": "Example: Bid 7 pairs, win 8 → 0.5×(8-7) + 7 - 5 = 2.5 points ✓",
       "scoringExample2": "Example: Bid 8 pairs, win 6 → 6 - 8 = -2 points ✗",
       "scoringNote": "Notice: Exceeding your bid gives modest bonuses (0.5× multiplier), but failing gives harsh penalties (full difference). This encourages realistic bidding!",
       "culturalNote": "Cultural Context",
-      "culturalNoteDesc": "Meitra originated in Japanese student circles, where creative trump-based games developed unique local rules. The name '明専トランプ' (Meisen Trump) references its origins. Terms like 'Blow' (declaration), 'Negri' (unwanted), and 'Chombo' (violation) are Japanese gaming terminology that add character to the game.",
+      "culturalNoteDesc": "Meitra originated in Japanese student circles, where creative trump-based games developed unique local rules. The name '明専トランプ' (Meisen Trump) references its origins. Terms like 'Bid' (declaration), 'Negri' (unwanted), and 'Chombo' (violation) are Japanese gaming terminology that add character to the game.",
       "readyToPlay": "Ready to Play?",
-      "readyToPlayDesc": "Now that you understand the basics, dive into the detailed rules to master the Jack system, learn optimal bidding strategies, and discover the nuances that make Meitra a deeply strategic partnership game. Good luck, and may your Blows be bold!"
+      "readyToPlayDesc": "Now that you understand the basics, dive into the detailed rules to master the Jack system, learn optimal bidding strategies, and discover the nuances that make Meitra a deeply strategic partnership game. Good luck, and may your bids be bold!"
     },
     "overview": {
       "title": "Game Overview",
-      "bridgeNote": "Note for Bridge Players: Meitra is similar to Bridge - both are 4-player partnership trick-taking games. In Meitra, the 'Blow' phase is like Bridge's auction, 'fields' are tricks, and 'pairs' refer to the number of tricks you aim to win.",
-      "description": "Meitra is a strategic 4-player, 2-team card game. It features an advanced gameplay combining the Blow (declaration) system, special Jack mechanics, and a detailed scoring system.",
+      "about": "What Is Meisen Trump?",
+      "bridgeNote": "Note for Bridge Players: Meitra is similar to Bridge - both are 4-player partnership trick-taking games. In Meitra, the 'Bid' phase is like Bridge's auction, 'fields' are tricks, and 'pairs' refer to the number of tricks you aim to win.",
+      "description": "Meitra is a strategic 4-player, 2-team card game. Players make bids based on their hands and decide how to help their team gain an advantage or avoid losing ground. The rules are simple, but the decisions are deep.",
       "objective": "Game Objective",
-      "objectiveDesc": "Achieve the declared number of pairs in the Blow phase and be the first team to reach 10 points to win",
-      "objectiveExample": "Team Play: 2 players sitting opposite each other form a team; target score can be adjusted in settings",
-      "gameFlow": "Game Flow",
-      "gameFlowDesc": "Each round consists of 4 phases",
-      "gameFlowExample": "Deal → Blow → Play → Waiting"
+      "objectiveDesc": "Achieve the number of pairs declared in the bid and be the first team to reach the target score to win.",
+      "objectiveExample": "This is a team game. The two players sitting opposite each other form a team, and the target score can be changed in the room settings.",
+      "gameFlow": "How to Play",
+      "gameFlowDesc": "Create an account, then create a room from the room list page. You can set the target score when creating the room. A COM player is included by default, so you can start a solo game immediately. If a friend joins the room, the COM player is automatically replaced by that friend.",
+      "gameFlowExample": "Meitra is a trick-taking game. Each round proceeds in the order Deal -> Bid -> Trick. A round contains 10 Tricks, one for each card in hand. If a team Takes at least as many Tricks as it Bid, that team earns points. Rounds continue until one team reaches the target total score first."
     },
     "cards": {
       "title": "Cards and Deck",
       "composition": "Card Composition",
       "compositionDesc": "Play with: 5-A + JOKER (53 cards total). 2, 3, 4 are excluded",
       "compositionExample": "Each suit (♠♥♦♣): 5,6,7,8,9,10,J,Q,K,A + 1 JOKER",
-      "scoreCards": "Score Cards",
-      "scoreCardsDesc": "Use 2, 3, 4 cards separately for score display",
-      "scoreCardsExample": "Red Team: ♥ 2,3,4 / Black Team: ♠ 2,3,4",
       "strength": "Basic Card Strength",
-      "strengthDesc": "JOKER > A > K > Q > J > 10 > 9 > 8 > 7 > 6 > 5",
-      "strengthExample": "Value: JOKER, A, K, Q, J, 10, 9, 8, 7, 6, 5..."
+      "strengthDesc": "Each card has a strength value, and higher numbers are stronger. The base order is JOKER(150) > A(14) > K(13) > Q(12) > J(11) > 10(10) > 9(9) > 8(8) > 7(7) > 6(6) > 5(5).",
+      "strengthExample": "During play, this base strength gets a +100 bonus for trump cards and a +50 bonus for the base suit."
     },
     "blow": {
-      "title": "Blow (Declaration) System",
-      "description": "In the Blow phase, you declare 'how many pairs out of 10 fields you can take' and 'which suit to use as trump'. This is the core of the game. A pair means the number of fields (tricks) you can win. Similar to Bridge's bidding phase, players compete to make the highest declaration.",
+      "title": "Bidding System",
+      "description": "In the Bid phase, you declare 'how many pairs out of 10 fields you can take' and 'which suit to use as trump'. This is the core of the game. A pair means the number of fields (tricks) you can win. Similar to Bridge's bidding phase, players compete to make the highest declaration.",
       "basicRule": "Basic Declaration Rules",
       "basicRuleDesc": "Minimum 6 pairs required. Declare a combination of number of pairs and suit type (like Bridge's contract bidding)",
       "basicRuleExample": "e.g., 'Heart 7 pairs', 'Diamond 6 pairs', 'Tra 8 pairs'",
@@ -466,8 +464,8 @@
       "higherDeclaration": "Higher Declaration Conditions",
       "higherDeclarationDesc": "① Increase number of pairs ② Use stronger suit with same pairs",
       "higherDeclarationExample": "Club 7 → Heart 7 (same pairs, stronger suit) / Club 8 (more pairs)",
-      "practice": "Practice Blow Declaration",
-      "practiceDesc": "Experience the actual Blow declaration system and understand the higher declaration rules."
+      "practice": "Practice Bidding",
+      "practiceDesc": "Experience the actual bidding system and understand the higher declaration rules."
     },
     "jack": {
       "title": "JOKER and Jack Special System",
@@ -477,9 +475,9 @@
       "jokerRule": "JOKER",
       "jokerDesc": "Always the strongest card in any situation (strength 150)",
       "mainJackRule": "Main J (Primary Jack)",
-      "mainJackDesc": "Jack of the trump suit (strength 19)",
+      "mainJackDesc": "The Jack of the trump suit (strength 19)",
       "subJackRule": "Sub J (Secondary Jack)",
-      "subJackDesc": "Jack of the same color as trump suit (strength 18)",
+      "subJackDesc": "The Jack of the same color as the trump suit (strength 18)",
       "herzTrump": "Heart Trump",
       "daiyaTrump": "Diamond Trump",
       "clubTrump": "Club Trump",
@@ -496,9 +494,9 @@
     },
     "play": {
       "title": "Play Phase",
-      "description": "After Blow declarations, play cards to compete for fields (tricks). Like Bridge, this is a trick-taking phase where you try to win the number of tricks you declared. The competition is about how many pairs (tricks) you can take out of 10 fields.",
+      "description": "After bidding, play cards to compete for fields (tricks). Like Bridge, this is a trick-taking phase where you try to win the number of tricks you declared. The competition is about how many pairs (tricks) you can take out of 10 fields.",
       "order": "Basic Play Order",
-      "orderDesc": "Play cards clockwise from the dealer (highest declarer), similar to Bridge's play phase",
+      "orderDesc": "Play cards counterclockwise from the dealer (highest declarer), similar to Bridge's play phase",
       "orderExample": "1st: Dealer → 2nd: Left → 3rd: Opposite (Partner) → 4th: Right",
       "winner": "Field Winner Determination",
       "winnerDesc": "Based on the card strength system, the player who played the strongest card wins the trick",
@@ -530,20 +528,20 @@
       "calculatorDesc": "Enter declared pairs and fields won to calculate actual score.",
       "formula": "Score Formula",
       "formulaDesc": "Let X = declared pairs, Y = fields won",
-      "formulaExample": "If Y≥X: 0.5×(Y-X)+X-5 points / If Y&lt;X: Y-X points",
+      "formulaExample": "If Y≥X: 0.5×(Y-X)+X-5 points / If Y'<'X: Y-X points",
       "successExample": "Declaration Success Example",
       "successDeclaration": "Declared 7 pairs, won 8 fields",
       "successExplanation": "Y(8)≥X(7) so: 0.5×(8-7)+7-5 = 0.5×1+2 = 2.5 points",
       "failExample": "Declaration Failure Example",
       "failDeclaration": "Declared 8 pairs, won 6 fields",
-      "failExplanation": "Y(6)&lt;X(8) so: 6-8 = -2 points (negative)",
+      "failExplanation": "Y(6)'<'X(8) so: 6-8 = -2 points (negative)",
       "declaredPairs": "Declared Pairs (X):",
       "wonFields": "Fields Won (Y):",
       "declarationSuccess": "Declaration Success",
       "declarationFailure": "Declaration Failure",
       "points": "points",
       "whenSuccess": "Y ≥ X so:",
-      "whenFailure": "Y &lt; X so:",
+      "whenFailure": "Y '<' X so:",
       "examplesTitle": "Examples",
       "example1": "Declaration Success (Minimum)",
       "example2": "Exceeded Declaration (Bonus)",
@@ -561,8 +559,8 @@
       "tip4": "High declarations have higher base points but greater risk"
     },
     "chombo": {
-      "title": "Chombo (Violation) System",
-      "description": "Illegal actions or rule violations during the game are called Chombo, and penalties are imposed when pointed out by the opposing team.",
+      "title": "Chombo (Violation) System [Not Implemented]",
+      "description": "Chombo (violation) rules are not implemented in the current version of Meitra. The items below describe rules planned for a future implementation.",
       "negriForget": "Negri Forget (negri-forget)",
       "negriForgetDesc": "Violation when forgetting to select Negri card",
       "negriForgetExample": "Negri not selected at play start → Can be reported as violation",
@@ -581,12 +579,11 @@
     },
     "strategy": {
       "title": "Strategy and Tips",
-      "blowStrategy": "Blow Declaration Strategy",
+      "blowStrategy": "Bidding Strategy",
       "blowTip1": "Assess hand strength to predict how many pairs out of 10 fields you can take",
       "blowTip2": "Strong trumps are easier to declare but carry higher risk",
       "blowTip3": "Start with safe declarations around 6-7 pairs",
       "blowTip4": "Observe partner's declaration patterns for coordination",
-      "blowTip5": "With 4 Jacks, mandatory Broken - declare honestly without hiding",
       "playStrategy": "Play Phase Strategy",
       "playTip1": "Trump cards are powerful but timing is crucial",
       "playTip2": "Be aware of base suit when playing cards",
@@ -596,7 +593,6 @@
       "teamStrategy": "Team Coordination",
       "teamTip1": "Support partner's declaration with your plays",
       "teamTip2": "Strategies to hinder opposing team's declarations are also important",
-      "teamTip3": "Don't miss Chombo violations - point them out",
       "teamTip4": "Share score calculations to understand game situation",
       "teamTip5": "Take long-term view to reach 10 points"
     },
@@ -606,9 +602,9 @@
       "cardStrength": "Card Strength\nJOKER(150) > A(14) > K(13) > Q(12) > J(11) > 10(10) > 9(9) > 8(8) > 7(7) > 6(6) > 5(5)",
       "bonus": "Strength Bonus\nTrump Suit: +100 / Base Suit: +50",
       "jackSystem": "Jack System\nMain J (Trump suit J) / Sub J (Varies by trump)",
-      "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y&lt;X: Y-X points\n(X=declared pairs, Y=fields won)",
+      "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y'<'X: Y-X points\n(X=declared pairs, Y=fields won)",
       "violations": "Main Violations\nNegri Forget / 4J Violation / Last Tanzen / Wrong Broken / Wrong Open",
-      "flow": "Game Flow\nDeal → Blow → Play → Waiting (until 10 fields completed)",
+      "flow": "Game Flow\nMeitra is a trick-taking game. Each round proceeds in the order Deal -> Bid -> Trick. A round contains 10 Tricks, one for each card in hand. If a team Takes at least as many Tricks as it Bid, that team earns points. Rounds continue until one team reaches the target total score first. (until 10 fields completed)",
       "settings": "Basic Settings\n4 players 2 teams / Opposite = partner / First to 10 points wins / Minimum 6 pairs declaration"
     }
   },
