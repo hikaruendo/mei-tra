@@ -172,7 +172,9 @@ $opacity-disabled: 0.5;
 .resetButton {
   width: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 0.625rem;
   padding: $spacing-sm $spacing-md;
   margin-bottom: $spacing-sm;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -213,6 +215,13 @@ $opacity-disabled: 0.5;
     border-color: #f5f5f5;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
   }
+}
+
+.googleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .resetButton {

@@ -7,8 +7,24 @@ export interface Section {
 }
 
 export interface ContentBlock {
-  type: 'text' | 'rule' | 'example' | 'trump-hierarchy' | 'interactive-demo' | 'tip' | 'jack-system' | 'score-calculator';
-  content: string | RuleBlock | ExampleBlock | TrumpHierarchyBlock | InteractiveDemoBlock | TipBlock | JackSystemBlock | ScoreCalculatorBlock;
+  type:
+    | 'text'
+    | 'rule'
+    | 'example'
+    | 'trump-hierarchy'
+    | 'interactive-demo'
+    | 'tip'
+    | 'jack-system'
+    | 'score-calculator';
+  content:
+    | string
+    | RuleBlock
+    | ExampleBlock
+    | TrumpHierarchyBlock
+    | InteractiveDemoBlock
+    | TipBlock
+    | JackSystemBlock
+    | ScoreCalculatorBlock;
 }
 
 export interface RuleBlock {

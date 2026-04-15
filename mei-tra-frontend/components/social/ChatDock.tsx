@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { ChevronDownIcon } from '@/components/icons/UIIcons';
 import { useSocialSocket, useChatMessages } from '../../hooks/useSocialSocket';
 import { ChatMessage } from './ChatMessage';
 import { ChatComposer } from './ChatComposer';
@@ -106,9 +107,7 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
           onClick={() => setIsMinimized(true)}
           className={styles.minimizeButton}
         >
-          <svg className={styles.icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDownIcon className={styles.icon} />
         </button>
       </div>
 

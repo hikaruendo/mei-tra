@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
+import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import { SignInData, SignUpData } from '@/types/user.types';
 import styles from './AuthForm.module.scss';
 
@@ -192,6 +193,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             disabled={isSigningInWithGoogle || loading}
             className={styles.googleButton}
           >
+            {!isSigningInWithGoogle && (
+              <span className={styles.googleIcon} aria-hidden="true">
+                <GoogleIcon />
+              </span>
+            )}
             {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
           </button>
 

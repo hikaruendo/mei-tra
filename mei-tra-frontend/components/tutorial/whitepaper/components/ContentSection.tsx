@@ -1,6 +1,16 @@
 'use client';
 
-import { Section, ContentBlock, RuleBlock, ExampleBlock, TrumpHierarchyBlock, InteractiveDemoBlock, TipBlock, JackSystemBlock, ScoreCalculatorBlock } from '../content/tutorialTypes';
+import {
+  ContentBlock,
+  ExampleBlock,
+  InteractiveDemoBlock,
+  JackSystemBlock,
+  RuleBlock,
+  ScoreCalculatorBlock,
+  Section,
+  TipBlock,
+  TrumpHierarchyBlock,
+} from '../types';
 import { RuleCard } from './RuleCard';
 import { TrumpHierarchy } from './TrumpHierarchy';
 import { ExampleCard } from './ExampleCard';
