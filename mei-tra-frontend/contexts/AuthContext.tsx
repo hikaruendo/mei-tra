@@ -5,6 +5,7 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { disconnectSocket } from '@/app/socket';
 import { AuthUser, FontSizePreset, SignUpData, SignInData, UserProfile, UserPreferences } from '@/types/user.types';
+import { updateUserProfileViaApi } from '@/lib/api/user-profile';
 import {
   DEFAULT_FONT_SIZE_PRESET,
   DEFAULT_THEME_PREFERENCE,
@@ -462,6 +463,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const persistUserPreferences = useCallback(async (partial: Partial<UserPreferences>) => {
     if (!user?.id) return;
 
+    const accessToken = await getAccessToken();
+    if (!accessToken) return;
+
     const nextPreferences = normalizeUserPreferences({
       ...user.profile?.preferences,
       theme: partial.theme ?? themePreference,
@@ -470,17 +474,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sound: partial.sound ?? user.profile?.preferences?.sound,
     });
 
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
+    try {
+      await updateUserProfileViaApi(user.id, accessToken, {
         preferences: nextPreferences,
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      console.warn('[AuthContext] Failed to persist user preferences:', error.message);
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('[AuthContext] Failed to persist user preferences:', message);
     }
-  }, [fontSizePreference, themePreference, user]);
+  }, [fontSizePreference, getAccessToken, themePreference, user]);
 
   const setThemePreference = useCallback(async (theme: UserPreferences['theme']) => {
     applyTheme(theme);

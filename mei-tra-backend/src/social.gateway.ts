@@ -14,11 +14,12 @@ import { Logger } from '@nestjs/common';
 import { ChatTypingEvent } from './types/social-events.types';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
+import { createSocketCorsOriginHandler } from './config/frontend-origins';
 
 @WebSocketGateway({
   namespace: '/social',
   cors: {
-    origin: '*',
+    origin: createSocketCorsOriginHandler(),
     credentials: true,
   },
   transports: ['websocket', 'polling'],

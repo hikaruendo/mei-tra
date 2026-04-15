@@ -14,15 +14,119 @@ import {
   ChatRoomId,
   UserId,
 } from '../src/types/social.types';
+import { AuthService } from '../src/auth/auth.service';
+import { SupabaseService } from '../src/database/supabase.service';
+import {
+  AuthenticatedUser,
+  ChatProfileDto,
+  UserProfile,
+} from '../src/types/user.types';
 
 describe('SocialGateway (e2e)', () => {
   let app: INestApplication;
   let clientSocket: ClientSocket;
+  let clients: ClientSocket[];
   let mockChatRoomRepository: jest.Mocked<IChatRoomRepository>;
   let mockChatMessageRepository: jest.Mocked<IChatMessageRepository>;
   let mockProfileRepository: jest.Mocked<IUserProfileRepository>;
+  let mockAuthService: { getUserFromSocketToken: jest.Mock };
+
+  const profiles: Record<string, UserProfile> = {
+    'user-1': {
+      id: 'user-1',
+      username: 'userone',
+      displayName: 'User One',
+      avatarUrl: undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSeenAt: new Date(),
+      gamesPlayed: 0,
+      gamesWon: 0,
+      totalScore: 0,
+      preferences: {
+        notifications: true,
+        sound: true,
+        theme: 'light',
+        fontSize: 'standard',
+      },
+    },
+    'user-2': {
+      id: 'user-2',
+      username: 'usertwo',
+      displayName: 'User Two',
+      avatarUrl: undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSeenAt: new Date(),
+      gamesPlayed: 0,
+      gamesWon: 0,
+      totalScore: 0,
+      preferences: {
+        notifications: true,
+        sound: true,
+        theme: 'light',
+        fontSize: 'standard',
+      },
+    },
+  };
+
+  const authenticatedUsersByToken: Record<string, AuthenticatedUser> = {
+    'token-user-1': {
+      id: 'user-1',
+      email: 'user-1@example.com',
+      profile: profiles['user-1'],
+    },
+    'token-user-2': {
+      id: 'user-2',
+      email: 'user-2@example.com',
+      profile: profiles['user-2'],
+    },
+  };
+
+  const chatProfiles: Record<string, ChatProfileDto> = {
+    'user-1': {
+      userId: 'user-1',
+      displayName: 'User One',
+      avatarUrl: undefined,
+      rankTier: 'bronze',
+    },
+    'user-2': {
+      userId: 'user-2',
+      displayName: 'User Two',
+      avatarUrl: undefined,
+      rankTier: 'bronze',
+    },
+  };
+
+  const waitForConnect = (socket: ClientSocket) =>
+    new Promise<void>((resolve, reject) => {
+      socket.once('connect', () => resolve());
+      socket.once('connect_error', (error) => reject(error));
+    });
+
+  const createClient = async (token: string) => {
+    const address = app.getHttpServer().address() as { port: number };
+    const socket = io(`http://localhost:${address.port}/social`, {
+      transports: ['websocket'],
+      auth: { token },
+      extraHeaders: {
+        origin: 'http://localhost:3000',
+      },
+      reconnection: false,
+      forceNew: true,
+    });
+
+    clients.push(socket);
+    await waitForConnect(socket);
+    return socket;
+  };
 
   beforeEach(async () => {
+    process.env.FRONTEND_URL_DEV = 'http://localhost:3000';
+    process.env.FRONTEND_URL_PROD = 'https://mei-tra.example.com';
+
+    clients = [];
+
     mockChatRoomRepository = {
       findById: jest.fn(),
       create: jest.fn(),
@@ -36,15 +140,19 @@ describe('SocialGateway (e2e)', () => {
     mockChatMessageRepository = {
       findById: jest.fn(),
       findByRoomId: jest.fn(),
-      create: jest.fn(),
+      create: jest.fn(async (message) => message),
       deleteMessagesBefore: jest.fn(),
       deleteByRoomId: jest.fn(),
     } as jest.Mocked<IChatMessageRepository>;
 
     mockProfileRepository = {
-      findById: jest.fn(),
+      findById: jest.fn(async (id: string) => profiles[id] ?? null),
       findByUsername: jest.fn(),
-      findByUserIds: jest.fn(),
+      findByUserIds: jest.fn(async (userIds: string[]) =>
+        userIds
+          .map((userId) => chatProfiles[userId])
+          .filter((profile): profile is ChatProfileDto => Boolean(profile)),
+      ),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -52,6 +160,12 @@ describe('SocialGateway (e2e)', () => {
       updateGameStats: jest.fn(),
       searchByUsername: jest.fn(),
     } as jest.Mocked<IUserProfileRepository>;
+
+    mockAuthService = {
+      getUserFromSocketToken: jest.fn(
+        async (token: string) => authenticatedUsersByToken[token] ?? null,
+      ),
+    };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [SocialModule],
@@ -62,31 +176,37 @@ describe('SocialGateway (e2e)', () => {
       .useValue(mockChatMessageRepository)
       .overrideProvider('IUserProfileRepository')
       .useValue(mockProfileRepository)
+      .overrideProvider(AuthService)
+      .useValue(mockAuthService)
+      .overrideProvider(SupabaseService)
+      .useValue({})
       .compile();
 
     app = moduleFixture.createNestApplication();
     await app.listen(0);
 
-    const address = app.getHttpServer().address() as { port: number };
-    const port = address.port;
-    const url = `http://localhost:${port}/social`;
-
-    clientSocket = io(url, {
-      transports: ['websocket'],
-      auth: {
-        userId: 'test-user-id',
-      },
-    });
-
-    await new Promise<void>((resolve) => {
-      clientSocket.on('connect', () => resolve());
-    });
+    clientSocket = await createClient('token-user-1');
   });
 
   afterEach(async () => {
-    if (clientSocket?.connected) {
-      clientSocket.disconnect();
-    }
+    await Promise.all(
+      clients.map(
+        (socket) =>
+          new Promise<void>((resolve) => {
+            if (!socket.connected) {
+              socket.close();
+              resolve();
+              return;
+            }
+
+            socket.once('disconnect', () => resolve());
+            socket.disconnect();
+          }),
+      ),
+    );
+
+    clients = [];
+
     if (app) {
       await app.close();
     }
@@ -95,6 +215,9 @@ describe('SocialGateway (e2e)', () => {
   describe('Connection', () => {
     it('should connect successfully', () => {
       expect(clientSocket.connected).toBe(true);
+      expect(mockAuthService.getUserFromSocketToken).toHaveBeenCalledWith(
+        'token-user-1',
+      );
     });
 
     it('should disconnect successfully', (done) => {
@@ -119,20 +242,28 @@ describe('SocialGateway (e2e)', () => {
         },
       );
 
-      clientSocket.emit('chat:join-room', {
-        roomId,
-        userId: 'test-user-id',
-      });
+      clientSocket.emit('chat:join-room', { roomId });
     });
 
-    it('should handle join room errors', (done) => {
-      clientSocket.on('chat:error', (data: { message: string }) => {
-        expect(data.message).toBeDefined();
-        done();
-      });
+    it('should treat duplicate joins as idempotent', (done) => {
+      const roomId = 'test-room-repeat';
+      let joinCount = 0;
 
-      // Emit with invalid data to trigger error
-      clientSocket.emit('chat:join-room', {});
+      clientSocket.on(
+        'chat:joined',
+        (data: { roomId: string; success: boolean }) => {
+          expect(data.roomId).toBe(roomId);
+          expect(data.success).toBe(true);
+          joinCount += 1;
+          if (joinCount === 1) {
+            clientSocket.emit('chat:join-room', { roomId });
+            return;
+          }
+          done();
+        },
+      );
+
+      clientSocket.emit('chat:join-room', { roomId });
     });
   });
 
@@ -140,11 +271,7 @@ describe('SocialGateway (e2e)', () => {
     it('should leave a chat room successfully', (done) => {
       const roomId = 'test-room-2';
 
-      // First join the room
-      clientSocket.emit('chat:join-room', {
-        roomId,
-        userId: 'test-user-id',
-      });
+      clientSocket.emit('chat:join-room', { roomId });
 
       clientSocket.on('chat:joined', () => {
         clientSocket.on(
@@ -156,10 +283,7 @@ describe('SocialGateway (e2e)', () => {
           },
         );
 
-        clientSocket.emit('chat:leave-room', {
-          roomId,
-          userId: 'test-user-id',
-        });
+        clientSocket.emit('chat:leave-room', { roomId });
       });
     });
   });
@@ -167,7 +291,6 @@ describe('SocialGateway (e2e)', () => {
   describe('chat:post-message', () => {
     it('should post and broadcast message successfully', (done) => {
       const roomId = 'test-room-3';
-      const userId = 'test-user-id';
       const content = 'Hello, world!';
 
       const mockRoom = ChatRoom.create({
@@ -182,65 +305,37 @@ describe('SocialGateway (e2e)', () => {
       const mockMessage = ChatMessage.create({
         id: 'message-id',
         roomId: ChatRoomId.create(roomId),
-        senderId: UserId.create(userId),
+        senderId: UserId.create('user-1'),
         content,
         contentType: 'text',
         createdAt: new Date(),
       });
 
       mockChatRoomRepository.findById.mockResolvedValue(mockRoom);
-      mockProfileRepository.findById.mockResolvedValue({
-        id: userId,
-        username: 'testuser',
-        displayName: 'Test User',
-        avatarUrl: 'https://example.com/avatar.jpg',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastSeenAt: new Date(),
-        gamesPlayed: 0,
-        gamesWon: 0,
-        totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
-      });
       mockChatMessageRepository.create.mockResolvedValue(mockMessage);
 
-      // First join the room
-      clientSocket.emit('chat:join-room', {
-        roomId,
-        userId,
-      });
+      clientSocket.emit('chat:join-room', { roomId });
 
       clientSocket.on('chat:joined', () => {
         clientSocket.on('chat:message', (data) => {
           expect(data.type).toBe('chat.message');
           expect(data.roomId).toBe(roomId);
           expect(data.message.content).toBe(content);
-          expect(data.message.sender.userId).toBe(userId);
+          expect(data.message.sender.userId).toBe('user-1');
           done();
         });
 
         clientSocket.emit('chat:post-message', {
           roomId,
-          userId,
           content,
         });
       });
     });
 
-    it('should broadcast to multiple users in the same room', (done) => {
+    it('should broadcast to multiple users in the same room', async () => {
       const roomId = 'test-room-4';
-      const userId1 = 'user-1';
-      const userId2 = 'user-2';
       const content = 'Message to all';
-
-      const address = app.getHttpServer().address() as { port: number };
-      const port = address.port;
-      const url = `http://localhost:${port}/social`;
-
-      const client2 = io(url, {
-        transports: ['websocket'],
-        auth: { userId: userId2 },
-      });
+      const client2 = await createClient('token-user-2');
 
       const mockRoom = ChatRoom.create({
         id: ChatRoomId.create(roomId),
@@ -254,113 +349,89 @@ describe('SocialGateway (e2e)', () => {
       const mockMessage = ChatMessage.create({
         id: 'broadcast-msg',
         roomId: ChatRoomId.create(roomId),
-        senderId: UserId.create(userId1),
+        senderId: UserId.create('user-1'),
         content,
         contentType: 'text',
         createdAt: new Date(),
       });
 
       mockChatRoomRepository.findById.mockResolvedValue(mockRoom);
-      mockProfileRepository.findById.mockResolvedValue({
-        id: userId1,
-        username: 'userone',
-        displayName: 'User One',
-        avatarUrl: undefined,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastSeenAt: new Date(),
-        gamesPlayed: 0,
-        gamesWon: 0,
-        totalScore: 0,
-        preferences: { notifications: true, sound: true, theme: 'light', fontSize: 'standard' },
-      });
       mockChatMessageRepository.create.mockResolvedValue(mockMessage);
 
-      let messagesReceived = 0;
-
-      client2.on('connect', () => {
-        // Both clients join the same room
-        clientSocket.emit('chat:join-room', { roomId, userId: userId1 });
-        client2.emit('chat:join-room', { roomId, userId: userId2 });
-
+      await new Promise<void>((resolve) => {
         let joinedCount = 0;
-        const checkBothJoined = () => {
-          joinedCount++;
+        const onJoined = () => {
+          joinedCount += 1;
           if (joinedCount === 2) {
-            // Send message from client 1
-            clientSocket.emit('chat:post-message', {
-              roomId,
-              userId: userId1,
-              content,
-            });
+            resolve();
           }
         };
 
-        clientSocket.on('chat:joined', checkBothJoined);
-        client2.on('chat:joined', checkBothJoined);
+        clientSocket.once('chat:joined', onJoined);
+        client2.once('chat:joined', onJoined);
 
-        // Both clients should receive the message
+        clientSocket.emit('chat:join-room', { roomId });
+        client2.emit('chat:join-room', { roomId });
+      });
+
+      await new Promise<void>((resolve) => {
+        let messagesReceived = 0;
         const handleMessage = (data: {
           message: { content: string };
           roomId: string;
         }) => {
           expect(data.message.content).toBe(content);
-          messagesReceived++;
+          expect(data.roomId).toBe(roomId);
+          messagesReceived += 1;
           if (messagesReceived === 2) {
-            client2.disconnect();
-            done();
+            resolve();
           }
         };
 
-        clientSocket.on('chat:message', handleMessage);
-        client2.on('chat:message', handleMessage);
+        clientSocket.once('chat:message', handleMessage);
+        client2.once('chat:message', handleMessage);
+
+        clientSocket.emit('chat:post-message', {
+          roomId,
+          content,
+        });
       });
     });
   });
 
   describe('chat:typing', () => {
-    it('should broadcast typing event to other users', (done) => {
+    it('should broadcast typing event to other users', async () => {
       const roomId = 'test-room-5';
-      const userId1 = 'user-1';
-      const userId2 = 'user-2';
+      const client2 = await createClient('token-user-2');
 
-      const address = app.getHttpServer().address() as { port: number };
-      const port = address.port;
-      const url = `http://localhost:${port}/social`;
-
-      const client2 = io(url, {
-        transports: ['websocket'],
-        auth: { userId: userId2 },
-      });
-
-      client2.on('connect', () => {
-        clientSocket.emit('chat:join-room', { roomId, userId: userId1 });
-        client2.emit('chat:join-room', { roomId, userId: userId2 });
-
+      await new Promise<void>((resolve) => {
         let joinedCount = 0;
-        const checkBothJoined = () => {
-          joinedCount++;
+        const onJoined = () => {
+          joinedCount += 1;
           if (joinedCount === 2) {
-            clientSocket.emit('chat:typing', {
-              roomId,
-              userId: userId1,
-              isTyping: true,
-            });
+            resolve();
           }
         };
 
-        clientSocket.on('chat:joined', checkBothJoined);
-        client2.on('chat:joined', checkBothJoined);
+        clientSocket.once('chat:joined', onJoined);
+        client2.once('chat:joined', onJoined);
 
-        client2.on(
-          'chat:user-typing',
-          (data: { userId: string; isTyping: boolean }) => {
-            expect(data.userId).toBe(userId1);
-            expect(data.isTyping).toBe(true);
-            client2.disconnect();
-            done();
+        clientSocket.emit('chat:join-room', { roomId });
+        client2.emit('chat:join-room', { roomId });
+      });
+
+      await new Promise<void>((resolve) => {
+        client2.once(
+          'chat:typing',
+          (data: { type: string; roomId: string; userId: string }) => {
+            expect(data.type).toBe('chat.typing');
+            expect(data.roomId).toBe(roomId);
+            expect(data.userId).toBe('user-1');
+            resolve();
           },
         );
+
+        clientSocket.emit('chat:typing', { roomId });
       });
     });
   });
@@ -368,24 +439,22 @@ describe('SocialGateway (e2e)', () => {
   describe('Error Handling', () => {
     it('should handle missing chat room error', (done) => {
       const roomId = 'non-existent-room';
-      const userId = 'test-user-id';
 
       mockChatRoomRepository.findById.mockResolvedValue(null);
 
-      clientSocket.on('chat:error', (data: { message: string }) => {
-        expect(data.message).toContain('room');
-        done();
-      });
+      clientSocket.on('chat:joined', () => {
+        clientSocket.once('chat:error', (data: { message: string }) => {
+          expect(data.message).toBe('Failed to post message');
+          done();
+        });
 
-      clientSocket.emit('chat:join-room', { roomId, userId });
-
-      setTimeout(() => {
         clientSocket.emit('chat:post-message', {
           roomId,
-          userId,
           content: 'Test',
         });
-      }, 100);
+      });
+
+      clientSocket.emit('chat:join-room', { roomId });
     });
   });
 });

@@ -7,13 +7,14 @@ import { Navigation } from '../layout/Navigation';
 import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
 import { createClient } from '@/lib/supabase';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ConfirmModal } from '../molecules/ConfirmModal';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {
   const { user, loading } = useAuth();
   const t = useTranslations('profile');
+  const locale = useLocale();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(user?.profile || null);
@@ -21,6 +22,7 @@ export function ProfilePage() {
   const [showPasswordResetConfirm, setShowPasswordResetConfirm] = useState(false);
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
   const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  const localePrefix = locale === 'en' ? '/en' : '';
 
   if (loading) {
     return (
@@ -92,7 +94,7 @@ export function ProfilePage() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}${localePrefix}/auth/reset-password`,
       });
 
       if (error) {

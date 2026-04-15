@@ -6,7 +6,7 @@ describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
   const makePlayer = (playerId: string, isCOM = false): Player => ({
-    id: playerId,
+    socketId: playerId,
     playerId,
     name: playerId,
     hand: [],
@@ -25,6 +25,7 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', 'K♣', '6♣'],
+      playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
       baseCard: '5♣',
       dealerId: 'player-1',
       isComplete: true,
@@ -45,6 +46,7 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
+      playedBy: ['player-1', 'com-1', 'player-2', 'com-2'],
       baseCard: '5♣',
       dealerId: 'player-1',
       isComplete: true,

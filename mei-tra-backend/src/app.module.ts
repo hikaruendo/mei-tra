@@ -6,6 +6,7 @@ import { HealthController } from './controllers/health.controller';
 import { AppService } from './app.service';
 import { GameModule } from './game.module';
 import { SocialModule } from './social.module';
+import { AuthModule } from './auth/auth.module';
 import { UserProfileController } from './controllers/user-profile.controller';
 import { DatabaseModule } from './database/database.module';
 import { RepositoriesModule } from './repositories/repositories.module';
@@ -21,6 +22,7 @@ import { APP_FILTER } from '@nestjs/core';
     }),
     ScheduleModule.forRoot(),
     DatabaseModule,
+    AuthModule,
     GameModule,
     SocialModule,
     RepositoriesModule,

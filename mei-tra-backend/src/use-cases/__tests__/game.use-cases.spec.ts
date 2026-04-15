@@ -103,7 +103,7 @@ describe('Game Use Cases', () => {
 
   const basePlayers: RoomPlayer[] = [
     {
-      id: 'socket-1',
+      socketId: 'socket-1',
       playerId: 'player-1',
       name: 'Player 1',
       team: 0 as const,
@@ -115,7 +115,7 @@ describe('Game Use Cases', () => {
       joinedAt: new Date(),
     },
     {
-      id: 'socket-2',
+      socketId: 'socket-2',
       playerId: 'player-2',
       name: 'Player 2',
       team: 1 as const,
@@ -193,7 +193,7 @@ describe('Game Use Cases', () => {
         socketId: 'socket-1',
         targetRoomId: room.id,
         user: {
-          id: 'socket-1',
+          socketId: 'socket-1',
           playerId: 'player-1',
           name: 'Fallback Name',
         },
@@ -225,7 +225,7 @@ describe('Game Use Cases', () => {
         socketId: 'socket-1',
         targetRoomId: 'room-unknown',
         user: {
-          id: 'socket-1',
+          socketId: 'socket-1',
           playerId: 'player-1',
           name: 'Player 1',
         },
@@ -305,7 +305,7 @@ describe('Game Use Cases', () => {
       const room: Room = { ...baseRoom, status: RoomStatus.PLAYING };
       const statePlayers: Player[] = [
         {
-          id: 'socket-2',
+          socketId: 'socket-2',
           playerId: 'player-2',
           name: 'Player 2',
           team: 1 as const,
@@ -353,7 +353,7 @@ describe('Game Use Cases', () => {
         hostId: 'player-2',
         players: [
           {
-            id: 'com-0',
+            socketId: 'com-0',
             playerId: 'com-0',
             name: 'COM',
             team: 0 as const,
@@ -366,7 +366,7 @@ describe('Game Use Cases', () => {
             joinedAt: new Date(),
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Player 2',
             team: 1 as const,
@@ -383,7 +383,7 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            id: 'com-0',
+            socketId: 'com-0',
             playerId: 'com-0',
             name: 'COM',
             team: 0 as const,
@@ -392,7 +392,7 @@ describe('Game Use Cases', () => {
             hasBroken: false,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Player 2',
             team: 1 as const,
@@ -463,7 +463,7 @@ describe('Game Use Cases', () => {
         players: [
           ...baseRoom.players,
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Player 2',
             team: 1 as const,
@@ -479,7 +479,7 @@ describe('Game Use Cases', () => {
 
       const statePlayers: Player[] = [
         {
-          id: '',
+          socketId: '',
           playerId: 'com-0',
           name: 'COM',
           team: 0 as const,
@@ -487,7 +487,7 @@ describe('Game Use Cases', () => {
           isPasser: false,
         },
         {
-          id: 'socket-2',
+          socketId: 'socket-2',
           playerId: 'player-2',
           name: 'Player 2',
           team: 1 as const,
@@ -561,7 +561,7 @@ describe('Game Use Cases', () => {
       } = {
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             name: 'Player 1',
             team: 0 as const,
@@ -569,7 +569,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Player 2',
             team: 1 as const,
@@ -629,7 +629,7 @@ describe('Game Use Cases', () => {
         status: RoomStatus.READY,
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             name: 'Player 1',
             team: 0 as const,
@@ -641,7 +641,7 @@ describe('Game Use Cases', () => {
             joinedAt: new Date(),
           },
           {
-            id: 'socket-3',
+            socketId: 'socket-3',
             playerId: 'player-3',
             name: 'Player 3',
             team: 1 as const,
@@ -653,7 +653,7 @@ describe('Game Use Cases', () => {
             joinedAt: new Date(),
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Player 2',
             team: 0 as const,
@@ -665,7 +665,7 @@ describe('Game Use Cases', () => {
             joinedAt: new Date(),
           },
           {
-            id: 'socket-4',
+            socketId: 'socket-4',
             playerId: 'player-4',
             name: 'Player 4',
             team: 1 as const,
@@ -682,7 +682,7 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            id: 'socket-4',
+            socketId: 'socket-4',
             playerId: 'player-4',
             name: 'Player 4',
             team: 1 as const,
@@ -690,7 +690,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Player 2',
             team: 1 as const,
@@ -698,7 +698,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             name: 'Player 1',
             team: 1 as const,
@@ -783,7 +783,7 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => ({
           players: [
             {
-              id: 'socket-1',
+              socketId: 'socket-1',
               playerId: 'player-1',
               name: 'Player 1',
               team: 0 as const,
@@ -853,7 +853,7 @@ describe('Game Use Cases', () => {
         players: [
           ...(baseRoom.players.map((p) => ({ ...p })) as RoomPlayer[]),
           {
-            id: 'socket-3',
+            socketId: 'socket-3',
             playerId: 'player-3',
             name: 'Player 3',
             team: 0 as const,
@@ -931,6 +931,7 @@ describe('Game Use Cases', () => {
 
       const currentField: Field = {
         cards: [],
+        playedBy: [],
         baseCard: '',
         dealerId: 'player-1',
         isComplete: false,
@@ -943,7 +944,7 @@ describe('Game Use Cases', () => {
       } = {
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             userId: 'user-1',
             name: 'Player 1',
@@ -952,7 +953,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             userId: 'user-2',
             name: 'Player 2',
@@ -1003,6 +1004,7 @@ describe('Game Use Cases', () => {
 
       const fieldBefore: Field = {
         cards: ['C1', 'C2', 'C3'],
+        playedBy: ['player-1', 'player-2', 'player-3'],
         baseCard: 'C1',
         dealerId: 'player-1',
         isComplete: false,
@@ -1015,7 +1017,7 @@ describe('Game Use Cases', () => {
       } = {
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             userId: 'user-1',
             name: 'Player 1',
@@ -1081,7 +1083,7 @@ describe('Game Use Cases', () => {
       );
 
       const comPlayer: Player = {
-        id: 'com-0',
+        socketId: 'com-0',
         playerId: 'com-0',
         name: 'COM',
         hand: ['9♣'],
@@ -1104,7 +1106,7 @@ describe('Game Use Cases', () => {
         players: [
           comPlayer,
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             userId: 'user-2',
             name: 'Player 2',
@@ -1121,6 +1123,7 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: {
             cards: ['JOKER'],
+            playedBy: ['com-0'],
             baseCard: 'JOKER',
             baseSuit: undefined,
             dealerId: 'com-0',
@@ -1201,7 +1204,7 @@ describe('Game Use Cases', () => {
       );
 
       const comPlayer: Player = {
-        id: 'com-timeout-1',
+        socketId: 'com-timeout-1',
         playerId: 'com-timeout-1',
         name: 'COM',
         hand: ['6♥', 'A♠'],
@@ -1214,7 +1217,7 @@ describe('Game Use Cases', () => {
         players: [
           comPlayer,
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             userId: 'user-2',
             name: 'Player 2',
@@ -1237,6 +1240,7 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: {
             cards: [],
+            playedBy: [],
             baseCard: '',
             dealerId: 'com-timeout-1',
             isComplete: false,
@@ -1308,7 +1312,7 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            id: 'com-timeout-1',
+            socketId: 'com-timeout-1',
             playerId: 'com-timeout-1',
             name: 'COM',
             hand: ['6♥', 'A♠'],
@@ -1317,7 +1321,7 @@ describe('Game Use Cases', () => {
             isCOM: true,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             userId: 'user-2',
             name: 'Player 2',
@@ -1383,7 +1387,7 @@ describe('Game Use Cases', () => {
       } = {
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             userId: 'user-1',
             name: 'Player 1',
@@ -1392,7 +1396,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             userId: 'user-2',
             name: 'Player 2',
@@ -1404,6 +1408,7 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: {
             cards: ['JOKER'],
+            playedBy: ['player-1'],
             baseCard: 'JOKER',
             baseSuit: undefined,
             dealerId: 'player-1',
@@ -1459,7 +1464,7 @@ describe('Game Use Cases', () => {
       } = {
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             userId: 'user-1',
             name: 'Player 1',
@@ -1468,7 +1473,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             userId: 'user-2',
             name: 'Player 2',
@@ -1526,7 +1531,7 @@ describe('Game Use Cases', () => {
     const buildState = () => ({
       players: [
         {
-          id: 'socket-1',
+          socketId: 'socket-1',
           playerId: 'player-1',
           name: 'Player 1',
           hand: ['A', 'B'],
@@ -1534,7 +1539,7 @@ describe('Game Use Cases', () => {
           isPasser: false,
         },
         {
-          id: 'socket-2',
+          socketId: 'socket-2',
           playerId: 'player-2',
           name: 'Player 2',
           hand: ['C', 'D'],
@@ -1546,6 +1551,7 @@ describe('Game Use Cases', () => {
         fields: [] as Field[],
         currentField: {
           cards: [],
+          playedBy: [],
           baseCard: '',
           dealerId: 'player-1',
           isComplete: false,
@@ -1617,6 +1623,7 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'C', 'E', 'F'],
+          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
           dealerId: 'player-1',
           isComplete: false,
@@ -1665,6 +1672,7 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
+          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
           dealerId: 'player-1',
           isComplete: false,
@@ -1693,21 +1701,15 @@ describe('Game Use Cases', () => {
       jest.clearAllMocks();
     });
 
-    it('updates authenticated player stats and resets game state', async () => {
+    it('updates authenticated player stats only for authenticated players', async () => {
       const roomService = createRoomServiceMock();
-      const resetStateMock = jest.fn();
-
-      roomService.getRoomGameState.mockResolvedValue({
-        resetState: resetStateMock,
-      } as unknown as GameStateService);
-
       const useCase = new ProcessGameOverUseCase(roomService);
 
       await useCase.execute({
         roomId: 'room-1',
         players: [
           {
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             name: 'Player 1',
             userId: 'user-1',
@@ -1716,7 +1718,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           } as Player,
           {
-            id: 'socket-2',
+            socketId: 'socket-2',
             playerId: 'player-2',
             name: 'Guest',
             team: 1,
@@ -1738,11 +1740,6 @@ describe('Game Use Cases', () => {
         20,
       );
       expect(roomService.updateUserGameStats).toHaveBeenCalledTimes(1);
-
-      await jest.advanceTimersByTimeAsync(5000);
-
-      expect(roomService.getRoomGameState).toHaveBeenCalledWith('room-1');
-      expect(resetStateMock).toHaveBeenCalled();
     });
   });
 
@@ -1775,9 +1772,12 @@ describe('Game Use Cases', () => {
       const users: Player[] = [];
       const gameState = {
         getUsers: jest.fn(() => users),
+        findConnectionUserByUserId: jest.fn(() => undefined),
+        findConnectionUserBySocketId: jest.fn(() => undefined),
+        updateUserNameBySocketId: jest.fn(),
         addPlayer: jest.fn(() => {
           users.push({
-            id: 'socket-1',
+            socketId: 'socket-1',
             playerId: 'player-1',
             name: 'User Display',
             hand: [],

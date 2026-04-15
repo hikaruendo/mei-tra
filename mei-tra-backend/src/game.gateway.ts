@@ -44,6 +44,7 @@ import { IComPlayerService } from './services/interfaces/com-player-service.inte
 import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.interface';
 import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
+import { createSocketCorsOriginHandler } from './config/frontend-origins';
 
 const DISCONNECT_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
 const TURN_ACK_PING_INTERVAL_MS = 15 * 1000;
@@ -60,7 +61,7 @@ interface TurnAckMonitor {
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: createSocketCorsOriginHandler(),
     credentials: true,
   },
   transports: ['websocket', 'polling'],

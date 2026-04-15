@@ -30,6 +30,16 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
 
+  const localePrefix = locale === 'en' ? '/en' : '';
+  const authCallbackUrl =
+    typeof window === 'undefined'
+      ? '/auth/callback'
+      : `${window.location.origin}${localePrefix}/auth/callback`;
+  const resetPasswordUrl =
+    typeof window === 'undefined'
+      ? '/auth/reset-password'
+      : `${window.location.origin}${localePrefix}/auth/reset-password`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -106,7 +116,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       const { error } = await supabase.auth.signInWithOtp({
         email: formData.email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: authCallbackUrl,
           shouldCreateUser: false,
         },
       });
@@ -136,7 +146,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: authCallbackUrl,
           scopes: 'openid email profile',
         },
       });
@@ -167,7 +177,7 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
       const supabase = createClient();
 
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
+        redirectTo: resetPasswordUrl
       });
 
       if (error) {

@@ -15,11 +15,15 @@ import {
   HttpStatus,
   Logger,
   Inject,
+  UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
-import { UpdateUserProfileDto } from '../types/user.types';
+import { AuthenticatedUser, UpdateUserProfileDto } from '../types/user.types';
 import { SupabaseService } from '../database/supabase.service';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser } from '../auth/decorators/user.decorator';
 import * as sharp from 'sharp';
 
 @Controller('user-profile')
@@ -47,11 +51,14 @@ export class UserProfileController {
   }
 
   @Put(':id')
+  @UseGuards(AuthGuard)
   async updateProfile(
     @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
     @Body() updateData: UpdateUserProfileDto,
   ) {
     try {
+      this.assertProfileOwnership(id, currentUser);
       const updatedProfile = await this.userProfileRepository.update(
         id,
         updateData,
@@ -59,6 +66,9 @@ export class UserProfileController {
       return updatedProfile;
     } catch (error) {
       this.logger.error(`Failed to update profile for user ${id}:`, error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         'Failed to update profile',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -67,9 +77,11 @@ export class UserProfileController {
   }
 
   @Post(':id/avatar')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   async uploadAvatar(
     @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -81,6 +93,8 @@ export class UserProfileController {
     file: Express.Multer.File,
   ) {
     try {
+      this.assertProfileOwnership(id, currentUser);
+
       // Optimize image using Sharp
       const optimizedBuffer = await this.optimizeImage(file.buffer);
 
@@ -101,10 +115,10 @@ export class UserProfileController {
       }
 
       // Upload to Supabase Storage
-      const fileName = `avatar-${id}-${Date.now()}.webp`;
+      const objectPath = `${id}/avatar-${Date.now()}.webp`;
       const { error } = await this.supabaseService.client.storage
         .from('avatars')
-        .upload(fileName, optimizedBuffer, {
+        .upload(objectPath, optimizedBuffer, {
           contentType: 'image/webp',
           cacheControl: '3600',
           upsert: false,
@@ -121,7 +135,7 @@ export class UserProfileController {
       // Get public URL
       const { data: urlData } = this.supabaseService.client.storage
         .from('avatars')
-        .getPublicUrl(fileName);
+        .getPublicUrl(objectPath);
 
       // Update user profile with new avatar URL
       const updatedProfile = await this.userProfileRepository.update(id, {
@@ -144,6 +158,15 @@ export class UserProfileController {
         'Failed to upload avatar',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  private assertProfileOwnership(
+    requestedUserId: string,
+    currentUser: AuthenticatedUser,
+  ): void {
+    if (currentUser.id !== requestedUserId) {
+      throw new ForbiddenException('Cannot modify another user profile');
     }
   }
 
@@ -170,14 +193,12 @@ export class UserProfileController {
 
   private async deleteOldAvatar(avatarUrl: string): Promise<void> {
     try {
-      // Extract filename from URL
-      const urlParts = avatarUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
+      const objectPath = this.extractAvatarObjectPath(avatarUrl);
 
-      if (fileName && fileName.startsWith('avatar-')) {
+      if (objectPath) {
         const { error } = await this.supabaseService.client.storage
           .from('avatars')
-          .remove([fileName]);
+          .remove([objectPath]);
 
         if (error) {
           this.logger.warn('Failed to delete old avatar:', error);
@@ -187,6 +208,23 @@ export class UserProfileController {
     } catch (error) {
       this.logger.warn('Error deleting old avatar:', error);
       // Don't throw error as this is not critical
+    }
+  }
+
+  private extractAvatarObjectPath(avatarUrl: string): string | null {
+    try {
+      const parsed = new URL(avatarUrl);
+      const decodedPath = decodeURIComponent(parsed.pathname);
+      const marker = '/storage/v1/object/public/avatars/';
+      const markerIndex = decodedPath.indexOf(marker);
+
+      if (markerIndex === -1) {
+        return null;
+      }
+
+      return decodedPath.slice(markerIndex + marker.length);
+    } catch {
+      return null;
     }
   }
 }
