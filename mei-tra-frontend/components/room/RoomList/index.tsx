@@ -56,6 +56,8 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const { backendStatus, isLoading } = useBackendStatus();
+  const isSocketReady = Boolean(isConnected && !isConnecting);
+  const disableRoomActions = backendStatus.isStarting || !isSocketReady;
 
   const filteredRooms = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -116,7 +118,7 @@ export const RoomList: React.FC<RoomListProps> = ({
           <button
             type="submit"
             className={styles.createButton}
-            disabled={backendStatus.isStarting}
+            disabled={disableRoomActions}
           >
             {t('room.create')}
           </button>
@@ -193,7 +195,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                     <button
                       onClick={() => joinRoom(room.id)}
                       className={styles.joinButton}
-                      disabled={backendStatus.isStarting}
+                      disabled={disableRoomActions}
                     >
                       {t('room.join')}
                     </button>

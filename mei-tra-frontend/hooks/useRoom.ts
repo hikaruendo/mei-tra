@@ -344,7 +344,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     if (!socket?.connected) {
-      console.error('[useRoom] Cannot create room: socket not connected', {
+      console.warn('[useRoom] Cannot create room: socket not connected', {
         socketPresent: !!socket,
         socketId: socket?.id ?? null,
         storedRoomId:
