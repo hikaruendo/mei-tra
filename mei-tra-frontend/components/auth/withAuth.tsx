@@ -1,7 +1,7 @@
 'use client';
 
 import { ComponentType } from 'react';
-import { ProtectedRoute } from './ProtectedRoute';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface WithAuthOptions {
   requireAuth?: boolean;

@@ -2,19 +2,19 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { GameTable } from '../../components/GameTable';
-import { PreGameTable } from '../../components/PreGameTable';
-import { Notification } from '../../components/Notification';
-import { Navigation } from '../../components/layout/Navigation';
-import { useGame } from '../../hooks/useGame';
-import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
-import { RoomList } from '../../components/molecules/RoomList';
-import { GameDock } from '../../components/game/GameDock';
-import { LandingPage } from '../../components/landing/LandingPage';
-import { AuthModal } from '../../components/auth/AuthModal';
-import { ConfirmModal } from '../../components/molecules/ConfirmModal';
-import { useAuth } from '../../hooks/useAuth';
-import { useSocket } from '../../hooks/useSocket';
+import { GameTable } from '@/components/game/GameTable';
+import { PreGameTable } from '@/components/game/PreGameTable';
+import { Notification } from '@/components/shared/Notification';
+import { Navigation } from '@/components/layout/Navigation';
+import { useGame } from '@/hooks/useGame';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { RoomList } from '@/components/room/RoomList';
+import { GameDock } from '@/components/game/GameDock';
+import { LandingPage } from '@/components/landing/LandingPage';
+import { AuthModal } from '@/components/auth/AuthModal';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
+import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';

@@ -1,14 +1,14 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { AuthModal } from '../auth/AuthModal';
-import { ProfileEditForm } from './ProfileEditForm';
-import { Navigation } from '../layout/Navigation';
+import { AuthModal } from '@/components/auth/AuthModal';
+import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
+import { Navigation } from '@/components/layout/Navigation';
 import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
 import { createClient } from '@/lib/supabase';
 import { useLocale, useTranslations } from 'next-intl';
-import { ConfirmModal } from '../molecules/ConfirmModal';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
-import { AuthModal } from './AuthModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { useState, useEffect } from 'react';
 import styles from './ProtectedRoute.module.scss';
 

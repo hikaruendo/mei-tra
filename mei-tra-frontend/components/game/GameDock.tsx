@@ -1,9 +1,9 @@
 'use client';
 
-import type { TrumpType } from '../../types/game.types';
-import { useKeyboardOffset } from '../../hooks/useKeyboardOffset';
-import { ChatDock } from '../social/ChatDock';
-import { StrengthOrderDock } from './StrengthOrderDock';
+import type { TrumpType } from '@/types/game.types';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset';
+import { ChatDock } from '@/components/social/ChatDock';
+import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
 
 interface GameDockProps {

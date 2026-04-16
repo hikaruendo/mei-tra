@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Sidebar } from './components/Sidebar';
-import { ContentSection } from './components/ContentSection';
+import { Sidebar } from '@/components/tutorial/whitepaper/components/Sidebar';
+import { ContentSection } from '@/components/tutorial/whitepaper/components/ContentSection';
 import { Section } from './types';
 import styles from './TutorialWhitepaper.module.scss';
 

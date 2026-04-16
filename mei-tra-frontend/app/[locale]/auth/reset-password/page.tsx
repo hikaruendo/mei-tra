@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { ConfirmModal } from '../../../../components/molecules/ConfirmModal';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import styles from './page.module.scss';
 
 export default function ResetPasswordPage() {

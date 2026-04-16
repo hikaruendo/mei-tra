@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import type { TrumpType } from '../../types/game.types';
+import type { TrumpType } from '@/types/game.types';
 import {
   getStrengthOrder,
   getTrumpDisplay,
-} from '../../lib/utils/trumpDisplay';
+} from '@/lib/utils/trumpDisplay';
 import styles from './StrengthOrderDock.module.scss';
 
 const SUIT_KEYS: Record<TrumpType, string> = {

@@ -11,13 +11,13 @@ import {
   TipBlock,
   TrumpHierarchyBlock,
 } from '../types';
-import { RuleCard } from './RuleCard';
-import { TrumpHierarchy } from './TrumpHierarchy';
-import { ExampleCard } from './ExampleCard';
-import { InteractiveDemo } from './InteractiveDemo';
-import { TipCard } from './TipCard';
-import { JackSystem } from './JackSystem';
-import { ScoreCalculator } from './ScoreCalculator';
+import { RuleCard } from '@/components/tutorial/whitepaper/components/RuleCard';
+import { TrumpHierarchy } from '@/components/tutorial/whitepaper/components/TrumpHierarchy';
+import { ExampleCard } from '@/components/tutorial/whitepaper/components/ExampleCard';
+import { InteractiveDemo } from '@/components/tutorial/whitepaper/components/InteractiveDemo';
+import { TipCard } from '@/components/tutorial/whitepaper/components/TipCard';
+import { JackSystem } from '@/components/tutorial/whitepaper/components/JackSystem';
+import { ScoreCalculator } from '@/components/tutorial/whitepaper/components/ScoreCalculator';
 import styles from './ContentSection.module.scss';
 import ruleCardStyles from './RuleCard.module.scss';
 

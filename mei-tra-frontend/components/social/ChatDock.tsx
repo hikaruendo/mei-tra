@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronDownIcon } from '@/components/icons/UIIcons';
-import { useSocialSocket, useChatMessages } from '../../hooks/useSocialSocket';
-import { ChatMessage } from './ChatMessage';
-import { ChatComposer } from './ChatComposer';
+import { useSocialSocket, useChatMessages } from '@/hooks/useSocialSocket';
+import { ChatMessage } from '@/components/social/ChatMessage';
+import { ChatComposer } from '@/components/social/ChatComposer';
 import styles from './ChatDock.module.scss';
 
 interface ChatDockProps {
