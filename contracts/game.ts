@@ -144,3 +144,13 @@ export interface GameOverPayload {
   winner: string;
   finalScores: TransportTeamScores;
 }
+
+export interface RoomPlayingPayload {
+  players: PlayerContract[];
+}
+
+export interface GameStartedPayload {
+  roomId: string;
+  players: PlayerContract[];
+  pointsToWin: number;
+}

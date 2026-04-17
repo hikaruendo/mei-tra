@@ -1,3 +1,5 @@
+import type { PlayerContract } from '@contracts/game';
+
 export type Team = 0 | 1;
 
 export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
@@ -103,3 +105,24 @@ export interface GameActions {
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: (playerId: string) => void;
 } 
+
+export function fromPlayerContract(player: PlayerContract): Player {
+  return {
+    socketId: player.socketId,
+    playerId: player.playerId,
+    name: player.name,
+    userId: player.userId,
+    isAuthenticated: player.isAuthenticated,
+    team: player.team,
+    hand: [...player.hand],
+    isHost: player.isHost,
+    isPasser: player.isPasser,
+    isCOM: player.isCOM,
+    hasBroken: player.hasBroken ?? false,
+    hasRequiredBroken: player.hasRequiredBroken ?? false,
+  };
+}
+
+export function fromPlayerContracts(players: PlayerContract[]): Player[] {
+  return players.map(fromPlayerContract);
+}

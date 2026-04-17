@@ -2,7 +2,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
 import { IGameStateRepository } from '../interfaces/game-state.repository.interface';
-import { GameState, Player, ScoreRecord } from '../../types/game.types';
+import {
+  GameState,
+  DomainPlayer,
+  PlayerConnectionMetadata,
+  ScoreRecord,
+} from '../../types/game.types';
+import {
+  PersistedGamePlayer,
+  toPersistedGamePlayer,
+  toRuntimePlayer,
+} from '../../types/player-adapters';
 import { Database } from '../../types/database.types';
 
 type GameStateRow = Database['public']['Tables']['game_states']['Row'];
@@ -26,7 +36,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         .insert({
           room_id: roomId,
           state_data: {
-            players: gameState.players,
+            players: gameState.players.map((player) =>
+              toPersistedGamePlayer(player),
+            ),
             deck: gameState.deck,
             agari: gameState.agari,
             blowState: gameState.blowState,
@@ -103,7 +115,11 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
         updateData.state_data = {
           ...currentStateData,
-          ...(gameState.players && { players: gameState.players }),
+          ...(gameState.players && {
+            players: gameState.players.map((player) =>
+              toPersistedGamePlayer(player),
+            ),
+          }),
           ...(gameState.deck && { deck: gameState.deck }),
           ...(gameState.agari !== undefined && { agari: gameState.agari }),
           ...(gameState.blowState && { blowState: gameState.blowState }),
@@ -174,7 +190,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  async updatePlayers(roomId: string, players: Player[]): Promise<boolean> {
+  async updatePlayers(
+    roomId: string,
+    players: DomainPlayer[],
+  ): Promise<boolean> {
     try {
       const { data: currentData } = await this.supabase
         .from('game_states')
@@ -190,7 +209,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         .update({
           state_data: {
             ...currentStateData,
-            players,
+            players: players.map((player) => toPersistedGamePlayer(player)),
           },
         })
         .eq('room_id', roomId);
@@ -207,52 +226,36 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  async updatePlayer(
+  async updatePlayerConnection(
     roomId: string,
     playerId: string,
-    updates: Partial<Player>,
+    updates: Partial<PlayerConnectionMetadata>,
   ): Promise<boolean> {
-    try {
-      const { data: currentData } = await this.supabase
-        .from('game_states')
-        .select('state_data')
-        .eq('room_id', roomId)
-        .single();
+    void playerId;
+    void updates;
 
-      const currentStateData =
-        (currentData?.state_data as Record<string, any>) || {};
-      const players = (currentStateData.players as Player[]) || [];
+    // Connection metadata now lives in room/session state. Keep the method for
+    // incremental Phase 3 compatibility without mutating persisted game-state
+    // snapshots.
+    const { error } = await this.supabase
+      .from('game_states')
+      .select('id')
+      .eq('room_id', roomId)
+      .single();
 
-      const playerIndex = players.findIndex(
-        (p: Player) => p.playerId === playerId,
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return false;
+      }
+
+      this.logger.error(
+        'Failed to verify game state before connection sync',
+        error,
       );
-      if (playerIndex === -1) {
-        this.logger.warn(`Player ${playerId} not found in game state`);
-        return false;
-      }
-
-      players[playerIndex] = { ...players[playerIndex], ...updates };
-
-      const { error } = await this.supabase
-        .from('game_states')
-        .update({
-          state_data: {
-            ...currentStateData,
-            players,
-          },
-        })
-        .eq('room_id', roomId);
-
-      if (error) {
-        this.logger.error('Failed to update player:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      this.logger.error('Error updating player:', error);
       return false;
     }
+
+    return true;
   }
 
   async updateGamePhase(roomId: string, phase: string): Promise<boolean> {
@@ -346,9 +349,16 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   private mapDatabaseToGameState(dbGameState: GameStateRow): GameState {
     const stateData = dbGameState.state_data || {};
+    const players = Array.isArray(stateData.players)
+      ? stateData.players
+          .map((player) =>
+            toRuntimePlayer(player as Partial<PersistedGamePlayer>),
+          )
+          .filter((player): player is DomainPlayer => Boolean(player))
+      : [];
 
     return {
-      players: stateData.players || [],
+      players,
       currentPlayerIndex: dbGameState.current_player_index,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],

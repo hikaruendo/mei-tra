@@ -1,4 +1,5 @@
-import { Player } from './game.types';
+import { PlayerGameplayState } from './game.types';
+import { SessionUser } from './session.types';
 
 export enum RoomStatus {
   WAITING = 'waiting',
@@ -8,7 +9,7 @@ export enum RoomStatus {
   ABANDONED = 'abandoned',
 }
 
-export interface RoomPlayer extends Player {
+export interface RoomPlayer extends SessionUser, PlayerGameplayState {
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;

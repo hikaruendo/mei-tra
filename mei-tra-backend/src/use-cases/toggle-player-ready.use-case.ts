@@ -6,6 +6,7 @@ import {
   TogglePlayerReadyResponse,
 } from './interfaces/toggle-player-ready.use-case.interface';
 import { RoomStatus } from '../types/room.types';
+import { resolveRoomTransportPlayers } from './helpers/player-resolution.helper';
 
 @Injectable()
 export class TogglePlayerReadyUseCase implements ITogglePlayerReadyUseCase {
@@ -59,9 +60,12 @@ export class TogglePlayerReadyUseCase implements ITogglePlayerReadyUseCase {
       }
 
       const updatedRoom = await this.roomService.getRoom(roomId);
+      const nextRoom = updatedRoom ?? room;
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
       return {
         success: true,
-        updatedRoom: updatedRoom ?? room,
+        updatedRoom: nextRoom,
+        updatedPlayers: resolveRoomTransportPlayers(roomGameState, nextRoom),
       };
     } catch (error) {
       this.logger.error(

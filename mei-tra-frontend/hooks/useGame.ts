@@ -6,19 +6,37 @@ import type {
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
+  GameStartedPayload,
   GameOverPayload,
   GameStatePayload,
   NewRoundStartedPayload,
+  PlayerContract,
   RoundCancelledPayload,
   RoundResultsPayload,
   TransportGamePhase,
   TransportTeamScores,
   UpdatePhasePayload,
 } from '@contracts/game';
+import type {
+  GamePlayerJoinedPayload,
+  RoomContract,
+  RoomSyncPayload,
+} from '@contracts/room';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
-import { BlowAction, BlowDeclaration, CompletedField, ConnectionUser, Field, GamePhase, Player, TeamScores, TrumpType } from '../types/game.types';
-import { Room } from '../types/room.types';
+import {
+  BlowAction,
+  BlowDeclaration,
+  CompletedField,
+  ConnectionUser,
+  Field,
+  GamePhase,
+  Player,
+  TeamScores,
+  TrumpType,
+  fromPlayerContracts,
+} from '../types/game.types';
+import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 import { reconnectSocket } from '../app/socket';
 
@@ -93,6 +111,15 @@ export const useGame = () => {
   const { user, getAccessToken } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
+  const legacyRoomEventSkipRef = useRef<{
+    roomId: string | null;
+    roomUpdated: boolean;
+    updatePlayers: boolean;
+  }>({
+    roomId: null,
+    roomUpdated: false,
+    updatePlayers: false,
+  });
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -181,6 +208,43 @@ export const useGame = () => {
       }
     }
   }, [user?.id]);
+
+  const markRoomSyncHandled = useCallback((roomId: string) => {
+    legacyRoomEventSkipRef.current = {
+      roomId,
+      roomUpdated: true,
+      updatePlayers: true,
+    };
+  }, []);
+
+  const shouldSkipLegacyRoomUpdated = useCallback((roomId: string) => {
+    const state = legacyRoomEventSkipRef.current;
+    if (state.roomId !== roomId || !state.roomUpdated) {
+      return false;
+    }
+
+    state.roomUpdated = false;
+    if (!state.updatePlayers) {
+      state.roomId = null;
+    }
+    return true;
+  }, []);
+
+  const shouldSkipLegacyUpdatePlayers = useCallback((roomId: string | null) => {
+    const state = legacyRoomEventSkipRef.current;
+    if (!state.updatePlayers) {
+      return false;
+    }
+    if (roomId && state.roomId && state.roomId !== roomId) {
+      return false;
+    }
+
+    state.updatePlayers = false;
+    if (!state.roomUpdated) {
+      state.roomId = null;
+    }
+    return true;
+  }, []);
 
   useEffect(() => {
     if (!currentHostId || !currentPlayerId) {
@@ -286,28 +350,39 @@ export const useGame = () => {
           setNotification({ message: error, type: 'error' });
         }
       },
-      'update-players': (players: Player[]) => {
-        setPlayers(players);
+      'update-players': (players: PlayerContract[]) => {
+        if (shouldSkipLegacyUpdatePlayers(currentRoomId)) {
+          return;
+        }
+        const nextPlayers = fromPlayerContracts(players);
+        setPlayers(nextPlayers);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
-            players.some((player) => player.playerId === playerId),
+            nextPlayers.some((player) => player.playerId === playerId),
           ),
         );
-        syncCurrentPlayerIdentity(players, currentPlayerId);
+        syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
       },
       'set-room-id': (roomId: string) => {
         setCurrentRoomId(roomId);
       },
-      'room-updated': (room: Room) => {
+      'room-updated': (room: RoomContract) => {
+        const nextRoom = fromRoomContract(room);
+        if (shouldSkipLegacyRoomUpdated(nextRoom.id)) {
+          return;
+        }
         const selfPlayerId =
           currentPlayerId ??
-          room.players.find((player) => player.userId === user?.id)?.playerId ??
+          nextRoom.players.find((player) => player.userId === user?.id)
+            ?.playerId ??
           null;
         const isCurrentRoom =
-          room.id === currentRoomId ||
+          nextRoom.id === currentRoomId ||
           Boolean(
             selfPlayerId &&
-              room.players.some((player) => player.playerId === selfPlayerId),
+              nextRoom.players.some(
+                (player) => player.playerId === selfPlayerId,
+              ),
           );
 
         if (!isCurrentRoom) {
@@ -315,10 +390,44 @@ export const useGame = () => {
         }
 
         if (!currentRoomId) {
-          setCurrentRoomId(room.id);
+          setCurrentRoomId(nextRoom.id);
         }
 
-        setCurrentHostId(room.hostId);
+        setCurrentHostId(nextRoom.hostId);
+        if (selfPlayerId) {
+          setCurrentPlayerId(selfPlayerId);
+        }
+      },
+      'room-sync': (payload: RoomSyncPayload) => {
+        const { room: nextRoom, players: nextPlayers } =
+          fromRoomSyncPayload(payload);
+        markRoomSyncHandled(nextRoom.id);
+        const selfPlayerId =
+          currentPlayerId ??
+          nextRoom.players.find((player) => player.userId === user?.id)
+            ?.playerId ??
+          null;
+        const isCurrentRoom =
+          nextRoom.id === currentRoomId ||
+          Boolean(
+            selfPlayerId &&
+              nextRoom.players.some(
+                (player) => player.playerId === selfPlayerId,
+              ),
+          );
+
+        if (!isCurrentRoom) {
+          return;
+        }
+
+        setPlayers(nextPlayers);
+        syncCurrentPlayerIdentity(nextPlayers, selfPlayerId);
+
+        if (!currentRoomId) {
+          setCurrentRoomId(nextRoom.id);
+        }
+
+        setCurrentHostId(nextRoom.hostId);
         if (selfPlayerId) {
           setCurrentPlayerId(selfPlayerId);
         }
@@ -337,8 +446,9 @@ export const useGame = () => {
         hostId,
         pointsToWin,
       }: GameStatePayload) => {
-        setPlayers(players);
-        syncCurrentPlayerIdentity(players, you ?? currentPlayerId);
+        const nextPlayers = fromPlayerContracts(players);
+        setPlayers(nextPlayers);
+        syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
         setGamePhase(toUiGamePhase(gamePhase));
         setWhoseTurn(currentTurn);
         setCurrentField(toUiField(currentField));
@@ -357,11 +467,11 @@ export const useGame = () => {
         setPointsToWin(pointsToWin);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
-            players.some((player) => player.playerId === playerId),
+            nextPlayers.some((player) => player.playerId === playerId),
           ),
         );
       },
-      'game-player-joined': (data: { playerId: string; roomId: string; isHost: boolean; roomStatus?: string; isSelf?: boolean; team?: number; name?: string }) => {
+      'game-player-joined': (data: GamePlayerJoinedPayload) => {
         // isSelf: true means the backend confirmed "this is YOUR player ID".
         // Only set currentPlayerId from this explicit self-identification event.
         if (data.isSelf) {
@@ -399,20 +509,27 @@ export const useGame = () => {
           }];
         });
       },
-      'game-started': (roomId: string, players: Player[], pointsToWin: number) => {
+      'game-started': ({
+        roomId,
+        players,
+        pointsToWin,
+      }: GameStartedPayload) => {
+        const nextPlayers = fromPlayerContracts(players);
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
-        setPlayers(players);
-        syncCurrentPlayerIdentity(players, currentPlayerId);
+        setPlayers(nextPlayers);
+        syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
 
         // Identify self by playerId (stable across reconnections), not socket.id
-        const index = players.findIndex(p => p.playerId === currentPlayerId);
+        const index = nextPlayers.findIndex(
+          (player) => player.playerId === currentPlayerId,
+        );
         if (index !== -1) {
-          setCurrentPlayerId(players[index].playerId);
+          setCurrentPlayerId(nextPlayers[index].playerId);
         } else {
           // Fallback: match by userId for authenticated users
           console.error('[useGame] Player not found in game-started by playerId', { currentPlayerId });
-          const userIndex = players.findIndex(
+          const userIndex = nextPlayers.findIndex(
             (p) =>
               p.userId &&
               usersRef.current.find(
@@ -420,7 +537,7 @@ export const useGame = () => {
               ),
           );
           if (userIndex !== -1) {
-            setCurrentPlayerId(players[userIndex].playerId);
+            setCurrentPlayerId(nextPlayers[userIndex].playerId);
           }
         }
 
@@ -749,7 +866,10 @@ export const useGame = () => {
     currentPlayerId,
     currentRoomId,
     negriPlayerId,
+    markRoomSyncHandled,
     syncCurrentPlayerIdentity,
+    shouldSkipLegacyRoomUpdated,
+    shouldSkipLegacyUpdatePlayers,
     resetRoomState,
     t,
     tStatus,

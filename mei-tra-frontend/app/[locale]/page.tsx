@@ -227,6 +227,7 @@ export default function Home() {
                     gameStarted={gameStarted}
                     currentTrump={currentTrump}
                     gamePhase={gamePhase}
+                    players={players}
                   />
                 )}
               </div>

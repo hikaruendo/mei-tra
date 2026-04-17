@@ -1,12 +1,11 @@
 import { CardService } from '../card.service';
 import { PlayService } from '../play.service';
-import { Field, Player } from '../../types/game.types';
+import { DomainPlayer, Field } from '../../types/game.types';
 
 describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
-  const makePlayer = (playerId: string, isCOM = false): Player => ({
-    socketId: playerId,
+  const makePlayer = (playerId: string, isCOM = false): DomainPlayer => ({
     playerId,
     name: playerId,
     hand: [],

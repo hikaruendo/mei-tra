@@ -4,12 +4,28 @@ import { IGameStateRepository } from '../../repositories/interfaces/game-state.r
 import { IRoomRepository } from '../../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
 import { GameStateFactory } from '../game-state.factory';
-import { GameState, Player, TrumpType } from '../../types/game.types';
+import { DomainPlayer, GameState, TrumpType } from '../../types/game.types';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';
 import { PlayService } from '../play.service';
 import { IComPlayerService } from '../interfaces/com-player-service.interface';
+
+const makeGamePlayer = (
+  playerId: string,
+  name: string,
+  team: 0 | 1,
+  overrides: Partial<DomainPlayer> = {},
+): DomainPlayer => ({
+  playerId,
+  name,
+  team,
+  hand: [],
+  isPasser: false,
+  hasBroken: false,
+  hasRequiredBroken: false,
+  ...overrides,
+});
 
 describe('Reconnection Token Management', () => {
   describe('GameStateService', () => {
@@ -27,7 +43,7 @@ describe('Reconnection Token Management', () => {
         delete: jest.fn(),
         updateCurrentPlayerIndex: jest.fn(),
         updatePlayers: jest.fn(),
-        updatePlayer: jest.fn(),
+        updatePlayerConnection: jest.fn(),
         updateGamePhase: jest.fn(),
         bulkUpdate: jest.fn(),
         deleteExpiredGameStates: jest.fn(),
@@ -51,16 +67,7 @@ describe('Reconnection Token Management', () => {
         gameStateService.registerPlayerToken(token, playerId);
 
         // Verify by trying to find player by token
-        const player: Player = {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          name: 'Test Player',
-          team: 0,
-          hand: [],
-          isPasser: false,
-          hasBroken: false,
-          hasRequiredBroken: false,
-        };
+        const player = makeGamePlayer('player-1', 'Test Player', 0);
 
         // Add player to state first
         gameStateService.getState().players.push(player);
@@ -78,27 +85,9 @@ describe('Reconnection Token Management', () => {
         gameStateService.registerPlayerToken(token, playerId1);
         gameStateService.registerPlayerToken(token, playerId2);
 
-        const player1: Player = {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          name: 'Player 1',
-          team: 0,
-          hand: [],
-          isPasser: false,
-          hasBroken: false,
-          hasRequiredBroken: false,
-        };
+        const player1 = makeGamePlayer('player-1', 'Player 1', 0);
 
-        const player2: Player = {
-          socketId: 'socket-2',
-          playerId: 'player-2',
-          name: 'Player 2',
-          team: 1,
-          hand: [],
-          isPasser: false,
-          hasBroken: false,
-          hasRequiredBroken: false,
-        };
+        const player2 = makeGamePlayer('player-2', 'Player 2', 1);
 
         gameStateService.getState().players.push(player1, player2);
 
@@ -112,16 +101,7 @@ describe('Reconnection Token Management', () => {
         const token = 'test-token';
         const playerId = 'player-1';
 
-        const player: Player = {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          name: 'Test Player',
-          team: 0,
-          hand: [],
-          isPasser: false,
-          hasBroken: false,
-          hasRequiredBroken: false,
-        };
+        const player = makeGamePlayer('player-1', 'Test Player', 0);
         gameStateService.getState().players.push(player);
 
         gameStateService.registerPlayerToken(token, playerId);
@@ -146,27 +126,9 @@ describe('Reconnection Token Management', () => {
         const playerId1 = 'player-1';
         const playerId2 = 'player-2';
 
-        const player1: Player = {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          name: 'Player 1',
-          team: 0,
-          hand: [],
-          isPasser: false,
-          hasBroken: false,
-          hasRequiredBroken: false,
-        };
+        const player1 = makeGamePlayer('player-1', 'Player 1', 0);
 
-        const player2: Player = {
-          socketId: 'socket-2',
-          playerId: 'player-2',
-          name: 'Player 2',
-          team: 1,
-          hand: [],
-          isPasser: false,
-          hasBroken: false,
-          hasRequiredBroken: false,
-        };
+        const player2 = makeGamePlayer('player-2', 'Player 2', 1);
 
         gameStateService.getState().players.push(player1, player2);
 
@@ -194,7 +156,6 @@ describe('Reconnection Token Management', () => {
         const persistedState: GameState = {
           players: [
             {
-              socketId: 'socket-1',
               playerId: 'player-1',
               name: 'Player 1',
               team: 0,
@@ -204,7 +165,6 @@ describe('Reconnection Token Management', () => {
               hasRequiredBroken: false,
             },
             {
-              socketId: 'socket-2',
               playerId: 'player-2',
               name: 'Player 2',
               team: 1,
@@ -352,7 +312,7 @@ describe('Reconnection Token Management', () => {
         delete: jest.fn(),
         updateCurrentPlayerIndex: jest.fn(),
         updatePlayers: jest.fn(),
-        updatePlayer: jest.fn(),
+        updatePlayerConnection: jest.fn(),
         updateGamePhase: jest.fn(),
         bulkUpdate: jest.fn(),
         deleteExpiredGameStates: jest.fn(),
@@ -616,7 +576,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: player.socketId,
             playerId,
             name: player.name,
             team: player.team,
@@ -703,7 +662,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: player.socketId,
             playerId,
             name: player.name,
             team: player.team,
@@ -811,7 +769,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: existingCom.socketId,
             playerId: existingCom.playerId,
             name: existingCom.name,
             team: existingCom.team,
@@ -822,7 +779,6 @@ describe('Reconnection Token Management', () => {
             isCOM: true,
           },
           {
-            socketId: player.socketId,
             playerId,
             name: player.name,
             team: player.team,
@@ -1092,7 +1048,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: otherCom.socketId,
             playerId: otherCom.playerId,
             name: otherCom.name,
             team: otherCom.team,
@@ -1103,7 +1058,6 @@ describe('Reconnection Token Management', () => {
             isCOM: true,
           },
           {
-            socketId: targetCom.socketId,
             playerId: targetCom.playerId,
             name: targetCom.name,
             team: targetCom.team,
@@ -1194,7 +1148,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: targetCom.socketId,
             playerId: targetCom.playerId,
             name: targetCom.name,
             team: targetCom.team,
@@ -1285,7 +1238,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: targetCom.socketId,
             playerId: targetCom.playerId,
             name: targetCom.name,
             team: targetCom.team,
@@ -1406,7 +1358,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: targetCom.socketId,
             playerId: targetCom.playerId,
             name: targetCom.name,
             team: targetCom.team,
@@ -1611,7 +1562,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           {
-            socketId: 'com-socket',
             playerId: 'com-0',
             name: 'COM',
             team: 0,
@@ -1698,7 +1648,6 @@ describe('Reconnection Token Management', () => {
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.registerPlayerToken(playerId, playerId);
         gameState.getState().players.push({
-          socketId: 'socket-1',
           playerId: 'player-1',
           name: 'Test Player',
           team: 0,
@@ -1751,7 +1700,6 @@ describe('Reconnection Token Management', () => {
         gameState.getState().gamePhase = 'blow';
         gameState.getState().players = [
           {
-            socketId: player.socketId,
             playerId,
             name: player.name,
             team: player.team,

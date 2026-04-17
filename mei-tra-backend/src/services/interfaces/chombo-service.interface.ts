@@ -1,11 +1,11 @@
-import { ChomboViolation, Player, Field } from '../../types/game.types';
+import { ChomboViolation, DomainPlayer, Field } from '../../types/game.types';
 
 export interface IChomboService {
   checkViolations(
     playerId: string,
     action: string,
     context: {
-      player: Player;
+      player: DomainPlayer;
       field?: Field;
       card?: string;
       neguri?: { [key: string]: string };
@@ -27,6 +27,6 @@ export interface IChomboService {
   expireViolations(): void;
   getActiveViolations(): ChomboViolation[];
   clearViolations(): void;
-  checkForBrokenHand(player: Player): void;
-  checkForRequiredBrokenHand(player: Player): void;
+  checkForBrokenHand(player: DomainPlayer): void;
+  checkForRequiredBrokenHand(player: DomainPlayer): void;
 }

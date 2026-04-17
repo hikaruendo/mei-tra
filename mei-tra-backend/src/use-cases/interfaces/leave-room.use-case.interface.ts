@@ -1,5 +1,5 @@
 import { Room } from '../../types/room.types';
-import { Player } from '../../types/game.types';
+import { TransportPlayer } from '../../types/player-adapters';
 
 export interface LeaveRoomRequest {
   playerId: string;
@@ -10,7 +10,7 @@ export interface LeaveRoomSuccessData {
   playerId: string;
   roomDeleted: boolean;
   roomsList: Room[];
-  updatedPlayers?: Player[];
+  updatedPlayers?: TransportPlayer[];
   gamePausedMessage?: string;
 }
 

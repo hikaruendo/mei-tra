@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   GameState,
-  Player,
+  DomainPlayer,
   BlowState,
   PlayState,
   Field,
@@ -9,21 +9,33 @@ import {
   CompletedField,
   TeamScore,
   ScoreRecord,
-  ConnectionUser,
+  GamePhase,
 } from '../types/game.types';
 import { CardService } from './card.service';
 import { ChomboService } from './chombo.service';
 import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
 import { IGameStateService } from './interfaces/game-state-service.interface';
+import { GameStateManager } from './game-state-manager.service';
+import { PlayerConnectionManager } from './player-connection-manager.service';
+import { GamePhaseService } from './game-phase.service';
+import { PlayerConnectionState, SessionUser } from '../types/session.types';
+import {
+  toRuntimePlayer,
+  toTransportPlayers,
+  TransportPlayer,
+} from '../types/player-adapters';
+import { RoomPlayer } from '../types/room.types';
 
 @Injectable()
 export class GameStateService implements IGameStateService {
   private readonly logger = new Logger(GameStateService.name);
-  private users: ConnectionUser[] = [];
   private state: GameState;
-  private playerIds: Map<string, string> = new Map(); // token -> playerId
-  private disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map(); // 切断されたプレイヤーのタイマーを管理
   private roomId: string | null = null;
+  private readonly stateManager: GameStateManager;
+  private readonly connectionManager: PlayerConnectionManager;
+  private readonly playerIds: Map<string, string>;
+  private readonly disconnectedPlayers: Map<string, NodeJS.Timeout>;
+  private readonly gamePhaseService: GamePhaseService;
 
   constructor(
     private readonly cardService: CardService,
@@ -31,6 +43,15 @@ export class GameStateService implements IGameStateService {
     @Inject('IGameStateRepository')
     private readonly gameStateRepository: IGameStateRepository,
   ) {
+    this.gamePhaseService = new GamePhaseService();
+    this.stateManager = new GameStateManager(
+      this.gameStateRepository,
+      this.logger,
+      this.gamePhaseService,
+    );
+    this.connectionManager = new PlayerConnectionManager(this.logger);
+    this.playerIds = this.connectionManager.playerIds;
+    this.disconnectedPlayers = this.connectionManager.disconnectedPlayers;
     this.initializeState();
   }
 
@@ -89,36 +110,21 @@ export class GameStateService implements IGameStateService {
     const rawPlayers = Array.isArray(this.state.players)
       ? this.state.players
       : [];
-    const sanitizedPlayers: Player[] = [];
+    const sanitizedPlayers: DomainPlayer[] = [];
     let changed = !Array.isArray(this.state.players);
+    let warnNeeded = !Array.isArray(this.state.players);
 
     for (const rawPlayer of rawPlayers) {
-      if (
-        !rawPlayer ||
-        typeof rawPlayer.playerId !== 'string' ||
-        typeof rawPlayer.name !== 'string'
-      ) {
+      const normalizedPlayer = toRuntimePlayer(
+        rawPlayer as Partial<DomainPlayer>,
+      );
+      if (!normalizedPlayer) {
         changed = true;
+        warnNeeded = true;
         continue;
       }
 
-      const legacySocketId = (rawPlayer as Player & { id?: string }).id;
-      const normalizedPlayer: Player = {
-        ...rawPlayer,
-        socketId:
-          typeof rawPlayer.socketId === 'string'
-            ? rawPlayer.socketId
-            : typeof legacySocketId === 'string'
-              ? legacySocketId
-              : '',
-        hand: Array.isArray(rawPlayer.hand) ? rawPlayer.hand : [],
-        isPasser: rawPlayer.isPasser ?? false,
-        hasBroken: rawPlayer.hasBroken ?? false,
-        hasRequiredBroken: rawPlayer.hasRequiredBroken ?? false,
-      };
-
       if (
-        normalizedPlayer.socketId !== rawPlayer.socketId ||
         normalizedPlayer.hand !== rawPlayer.hand ||
         normalizedPlayer.isPasser !== rawPlayer.isPasser ||
         normalizedPlayer.hasBroken !== rawPlayer.hasBroken ||
@@ -133,10 +139,12 @@ export class GameStateService implements IGameStateService {
     if (changed) {
       this.state.players = sanitizedPlayers;
 
-      const roomLabel = this.roomId ?? 'unknown-room';
-      this.logger.warn(
-        `Sanitized malformed players in game state for ${roomLabel}`,
-      );
+      if (warnNeeded) {
+        const roomLabel = this.roomId ?? 'unknown-room';
+        this.logger.warn(
+          `Sanitized malformed players in game state for ${roomLabel}`,
+        );
+      }
     }
 
     const normalizedIndex =
@@ -162,95 +170,92 @@ export class GameStateService implements IGameStateService {
     return this.state;
   }
 
-  getUsers(): ConnectionUser[] {
-    return this.users;
+  getSessionUsers(): SessionUser[] {
+    return this.connectionManager.getSessionUsers();
   }
 
-  findConnectionUserBySocketId(socketId: string): ConnectionUser | null {
-    return this.users.find((user) => user.socketId === socketId) || null;
+  getTransportPlayers(
+    players: DomainPlayer[] = this.state.players,
+    roomPlayers?: RoomPlayer[],
+  ): TransportPlayer[] {
+    return toTransportPlayers(players, {
+      getConnectionState: (playerId) =>
+        this.connectionManager.getPlayerConnectionState(playerId),
+      roomPlayers,
+    });
   }
 
-  findConnectionUserByUserId(userId: string): ConnectionUser | null {
-    return this.users.find((user) => user.userId === userId) || null;
+  findSessionUserBySocketId(socketId: string): SessionUser | null {
+    return this.connectionManager.findSessionUserBySocketId(socketId);
+  }
+
+  findSessionUserByUserId(userId: string): SessionUser | null {
+    return this.connectionManager.findSessionUserByUserId(userId);
+  }
+
+  findSessionUserByPlayerId(playerId: string): SessionUser | null {
+    return this.connectionManager.findSessionUserByPlayerId(playerId);
+  }
+
+  upsertSessionUser(sessionUser: SessionUser): {
+    user: SessionUser;
+    created: boolean;
+    changed: boolean;
+  } {
+    return this.connectionManager.upsertSessionUser(sessionUser);
   }
 
   async updateState(newState: Partial<GameState>): Promise<void> {
-    this.state = {
-      ...this.state,
-      ...newState,
-    };
+    this.state = await this.stateManager.updateState(
+      this.roomId,
+      this.state,
+      newState,
+    );
+  }
 
-    // Persist to database if roomId is set
-    if (this.roomId) {
-      try {
-        await this.gameStateRepository.update(this.roomId, newState);
-      } catch {
-        // Continue with in-memory operation even if persistence fails
-      }
-    }
+  async transitionPhase(nextPhase: GamePhase): Promise<void> {
+    this.state = await this.stateManager.transitionPhase(
+      this.roomId,
+      this.state,
+      nextPhase,
+    );
   }
 
   async loadState(roomId: string): Promise<void> {
-    try {
-      const persistedState =
-        await this.gameStateRepository.findByRoomId(roomId);
-      if (persistedState) {
-        this.state = persistedState;
-        this.roomId = roomId;
+    this.roomId = roomId;
+    const persistedState = await this.stateManager.loadState(
+      roomId,
+      this.state,
+    );
+    if (persistedState) {
+      this.state = persistedState;
 
-        const sanitized = this.sanitizePlayers();
-        if (sanitized) {
-          try {
-            await this.gameStateRepository.update(roomId, {
-              players: this.state.players,
-              currentPlayerIndex: this.state.currentPlayerIndex,
-            });
-          } catch {
-            // Continue with in-memory operation even if persistence fails
-          }
-        }
-
-        // Rebuild playerIds map from persisted players
-        // This is necessary because playerIds map is not persisted to database
-        this.playerIds.clear();
-        this.state.players.forEach((player) => {
-          if (player.playerId) {
-            // Use playerId as both token and playerId for simplicity
-            this.playerIds.set(player.playerId, player.playerId);
-          }
+      const sanitized = this.sanitizePlayers();
+      if (sanitized) {
+        await this.stateManager.updateState(roomId, this.state, {
+          players: this.state.players,
+          currentPlayerIndex: this.state.currentPlayerIndex,
         });
-      } else {
-        // Initialize new state for this room
-        this.roomId = roomId;
-        await this.gameStateRepository.create(roomId, this.state);
       }
-    } catch {
-      // Fall back to in-memory state
-      this.roomId = roomId;
+
+      this.state.players.forEach((player) => {
+        if (player.playerId) {
+          this.connectionManager.registerPlayerToken(
+            player.playerId,
+            player.playerId,
+          );
+        }
+      });
     }
   }
 
   async configureGameSettings(pointsToWin: number): Promise<void> {
     this.state.pointsToWin = pointsToWin;
-
-    // Persist the updated setting
-    if (this.roomId) {
-      try {
-        await this.gameStateRepository.update(this.roomId, { pointsToWin });
-      } catch {
-        // Silent fail
-      }
-    }
+    await this.stateManager.configureGameSettings(this.roomId, pointsToWin);
   }
 
   async saveState(): Promise<void> {
-    if (this.roomId) {
-      try {
-        await this.gameStateRepository.update(this.roomId, this.state);
-      } catch {
-        // Silent fail
-      }
-    }
+    await this.stateManager.saveState(this.roomId, this.state);
   }
 
   addPlayer(
@@ -259,90 +264,79 @@ export class GameStateService implements IGameStateService {
     userId?: string,
     isAuthenticated?: boolean,
   ): boolean {
-    // Add new user - use userId as playerId for authenticated users
-    const playerId = userId || this.generateReconnectToken();
-    const users = this.getUsers();
-    users.push({
+    return this.connectionManager.addPlayer(
       socketId,
-      playerId,
       name,
       userId,
-      isAuthenticated: isAuthenticated || false,
-    });
-
-    // Store userId mapping
-    if (userId) {
-      this.playerIds.set(userId, playerId);
-    }
-
-    return true;
+      isAuthenticated,
+    );
   }
 
   updateUserNameBySocketId(socketId: string, name: string): boolean {
-    const user = this.findConnectionUserBySocketId(socketId);
-    if (!user) {
-      return false;
-    }
-    user.name = name;
-    return true;
+    return this.connectionManager.updateUserNameBySocketId(socketId, name);
   }
 
-  private generateReconnectToken(): string {
-    return Math.random().toString(36).substring(2, 15);
+  findPlayerByActorId(actorId: string): DomainPlayer | null {
+    const sessionUser =
+      this.connectionManager.findSessionUserByUserId(actorId) ??
+      this.connectionManager.findSessionUserByPlayerId(actorId);
+
+    if (sessionUser) {
+      return (
+        this.state.players.find(
+          (player) => player.playerId === sessionUser.playerId,
+        ) || null
+      );
+    }
+
+    return (
+      this.connectionManager.findPlayerByReconnectToken(
+        this.state.players,
+        actorId,
+      ) ?? null
+    );
+  }
+
+  findPlayerBySocketId(socketId: string): DomainPlayer | null {
+    const sessionUser =
+      this.connectionManager.findSessionUserBySocketId(socketId);
+    if (!sessionUser) {
+      return null;
+    }
+
+    return (
+      this.state.players.find(
+        (player) => player.playerId === sessionUser.playerId,
+      ) ?? null
+    );
   }
 
   removePlayer(playerId: string) {
-    const player = this.state.players.find((p) => p.playerId === playerId);
-    if (!player) return;
-
-    // 15秒間、再接続を待つ
-    this.disconnectedPlayers.set(
-      playerId,
-      setTimeout(() => {
-        this.disconnectedPlayers.delete(playerId);
-        this.state.players = this.state.players.filter(
-          (p) => p.playerId !== playerId,
-        );
-      }, 15000),
-    ); // 15秒待ってから削除
-
-    // ソケットIDだけ即時クリア（切断状態を示す）
-    player.socketId = '';
+    this.connectionManager.removePlayer(this.state.players, playerId);
   }
 
   // プレイヤーの再接続トークンを登録
   registerPlayerToken(token: string, playerId: string): void {
-    this.playerIds.set(token, playerId);
+    this.connectionManager.registerPlayerToken(token, playerId);
   }
 
   // プレイヤーの再接続トークンを削除
   removePlayerToken(playerId: string): void {
-    // playerIdsマップから該当するトークンを検索して削除
-    for (const [token, id] of this.playerIds.entries()) {
-      if (id === playerId) {
-        this.playerIds.delete(token);
-        break;
-      }
-    }
+    this.connectionManager.removePlayerToken(playerId);
   }
 
-  findPlayerByUserId(userId: string): Player | null {
-    // Find player by their Supabase userId
-    // This works even if the player is disconnected (empty socket id)
-    return this.state.players.find((p) => p.userId === userId) || null;
+  findPlayerByUserId(userId: string): DomainPlayer | null {
+    return this.connectionManager.findPlayerByUserId(
+      this.state.players,
+      userId,
+    );
   }
 
-  findPlayerByReconnectToken(token: string): Player | null {
-    // First try to find by token in playerIds map
-    const playerId = this.playerIds.get(token);
-    if (playerId) {
-      // Look for the player in the player list by playerId,
-      // even if the player's socket id is empty (meaning they disconnected)
-      return this.state.players.find((p) => p.playerId === playerId) || null;
-    }
-
-    // If not found, try to find by playerId directly
-    return this.state.players.find((p) => p.playerId === token) || null;
+  findPlayerByReconnectToken(token: string): DomainPlayer | null {
+    return this.connectionManager.findPlayerByReconnectToken(
+      this.state.players,
+      token,
+    );
   }
 
   async updatePlayerSocketId(
@@ -350,53 +344,58 @@ export class GameStateService implements IGameStateService {
     socketId: string,
     userId?: string,
   ): Promise<void> {
-    // Find the player by playerId, not by socket id
-    const player = this.state.players.find((p) => p.playerId === playerId);
-
-    if (player) {
-      // Cancel reconnection timer if exists
-      const timeout = this.disconnectedPlayers.get(playerId);
-      if (timeout) {
-        clearTimeout(timeout);
-        this.disconnectedPlayers.delete(playerId);
-      }
-
-      // Update the socket ID
-      player.socketId = socketId;
-
-      // Update userId if provided (for authenticated users)
-      if (userId) {
-        player.userId = userId;
-        console.log(
-          `[GameState] Updated player ${playerId} with userId: ${userId}`,
-        );
-      }
-
-      // Update token mappings
-      const token = this.playerIds.get(player.playerId);
-      if (token) {
-        this.playerIds.set(token, player.playerId);
-      }
-
-      // Persist the player update
-      if (this.roomId) {
-        try {
-          const updates: { socketId: string; userId?: string } = {
-            socketId,
-          };
-          if (userId) {
-            updates.userId = userId;
-          }
-          await this.gameStateRepository.updatePlayer(
-            this.roomId,
-            playerId,
-            updates,
-          );
-        } catch (error) {
-          console.error('Failed to persist player socket update:', error);
-        }
-      }
+    const player = this.state.players.find(
+      (candidate) => candidate.playerId === playerId,
+    );
+    if (!player) {
+      return;
     }
+
+    await this.applyPlayerConnectionState(playerId, {
+      socketId,
+      userId,
+      isAuthenticated: userId ? true : undefined,
+    });
+  }
+
+  async applyPlayerConnectionState(
+    playerId: string,
+    connectionState: PlayerConnectionState,
+  ): Promise<void> {
+    const player = this.state.players.find(
+      (candidate) => candidate.playerId === playerId,
+    );
+    if (!player) {
+      return;
+    }
+
+    this.connectionManager.applyConnectionState(
+      playerId,
+      player.name,
+      connectionState,
+    );
+
+    const updates: {
+      socketId: string;
+      userId?: string;
+      isAuthenticated?: boolean;
+    } = { socketId: connectionState.socketId };
+    if (connectionState.userId !== undefined) {
+      updates.userId = connectionState.userId;
+    }
+    if (connectionState.isAuthenticated !== undefined) {
+      updates.isAuthenticated = connectionState.isAuthenticated;
+    }
+
+    await this.stateManager.persistPlayerConnectionUpdate(
+      this.roomId,
+      playerId,
+      updates,
+    );
+  }
+
+  getPlayerConnectionState(playerId: string): PlayerConnectionState | null {
+    return this.connectionManager.getPlayerConnectionState(playerId);
   }
 
   async dealCards(): Promise<void> {
@@ -468,17 +467,17 @@ export class GameStateService implements IGameStateService {
     // Persist the turn change
     if (this.roomId) {
       try {
-        await this.gameStateRepository.updateCurrentPlayerIndex(
+        await this.stateManager.persistCurrentPlayerIndex(
           this.roomId,
           this.state.currentPlayerIndex,
         );
-      } catch (error) {
-        console.error('Failed to persist turn change:', error);
+      } catch {
+        // Keep in-memory turn changes even if persistence fails.
       }
     }
   }
 
-  getCurrentPlayer(): Player | null {
+  getCurrentPlayer(): DomainPlayer | null {
     return this.state.players[this.state.currentPlayerIndex] || null;
   }
 
@@ -498,7 +497,7 @@ export class GameStateService implements IGameStateService {
     }
 
     const maxTeamSize = Math.max(team0.length, team1.length);
-    const ordered: Player[] = [];
+    const ordered: DomainPlayer[] = [];
 
     for (let i = 0; i < maxTeamSize; i++) {
       if (team0[i]) {
@@ -566,14 +565,7 @@ export class GameStateService implements IGameStateService {
     this.initializeState();
 
     // Clear persisted state
-    if (this.roomId) {
-      try {
-        await this.gameStateRepository.delete(this.roomId);
-        await this.gameStateRepository.create(this.roomId, this.state);
-      } catch (error) {
-        console.error('Failed to reset persisted state:', error);
-      }
-    }
+    await this.stateManager.resetState(this.roomId, this.state);
   }
 
   async resetRoundState(): Promise<void> {
@@ -602,14 +594,7 @@ export class GameStateService implements IGameStateService {
 
   set roundNumber(value: number) {
     this.state.roundNumber = value;
-    // Persist round number change
-    if (this.roomId) {
-      this.gameStateRepository
-        .bulkUpdate(this.roomId, { round_number: value })
-        .catch((error) =>
-          console.error('Failed to persist round number:', error),
-        );
-    }
+    void this.stateManager.persistRoundNumber(this.roomId, value);
   }
 
   get currentTurn(): string | null {
@@ -623,25 +608,21 @@ export class GameStateService implements IGameStateService {
     );
     if (playerIndex !== -1) {
       this.state.currentPlayerIndex = playerIndex;
-      // Persist turn change
-      if (this.roomId) {
-        this.gameStateRepository
-          .updateCurrentPlayerIndex(this.roomId, playerIndex)
-          .catch((error) =>
-            console.error('Failed to persist turn change:', error),
-          );
-      }
+      void this.stateManager.persistCurrentPlayerIndex(
+        this.roomId,
+        playerIndex,
+      );
     }
   }
 
   async startGame(): Promise<void> {
+    await this.transitionPhase('blow');
     const state = this.getState();
 
     // Arrange seats so partners sit opposite and turns follow seat order
     this.arrangePlayersForSeatOrder();
 
     // Initialize game state
-    state.gamePhase = 'blow';
     state.deck = this.cardService.generateDeck();
     await this.dealCards();
 
@@ -682,22 +663,10 @@ export class GameStateService implements IGameStateService {
   }
 
   setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {
-    // Clear any existing timeout
-    const existingTimeout = this.disconnectedPlayers.get(playerId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-    // Set new timeout
-    this.disconnectedPlayers.set(playerId, timeout);
+    this.connectionManager.setDisconnectTimeout(playerId, timeout);
   }
 
   clearDisconnectTimeout(playerId: string): void {
-    const existingTimeout = this.disconnectedPlayers.get(playerId);
-    if (!existingTimeout) {
-      return;
-    }
-
-    clearTimeout(existingTimeout);
-    this.disconnectedPlayers.delete(playerId);
+    this.connectionManager.clearDisconnectTimeout(playerId);
   }
 }

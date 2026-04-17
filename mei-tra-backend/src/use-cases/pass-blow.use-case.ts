@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { RoundCancelledPayload } from '@contracts/game';
 import {
   IPassBlowUseCase,
@@ -13,6 +13,12 @@ import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { GameState } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import {
+  buildPlayerSyncEvents,
+  resolvePlayerByActorId,
+  resolveTransportPlayers,
+} from './helpers/player-resolution.helper';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
+import {
   transitionToPlayPhase,
   TransitionResult,
 } from './blow-phase-transition.helper';
@@ -26,17 +32,17 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     @Inject('IBlowService') private readonly blowService: IBlowService,
     @Inject('ICardService') private readonly cardService: ICardService,
     @Inject('IChomboService') private readonly chomboService: IChomboService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async execute(request: PassBlowRequest): Promise<PassBlowResponse> {
     try {
-      const { roomId, userId } = request;
+      const { roomId, actorId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      // userId for real players, playerId as fallback for COM players
-      const player = state.players.find(
-        (p) => p.userId === userId || p.playerId === userId,
-      );
+      const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -74,6 +80,24 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       });
       state.blowState.lastPasser = player.playerId;
 
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'blow_passed',
+        playerId: player.playerId,
+        state,
+        actionData: {
+          declarationsCount: state.blowState.declarations.length,
+          lastPasser: state.blowState.lastPasser,
+          actedCount: state.players.filter((p) => {
+            const hasDeclared = state.blowState.declarations.some(
+              (d) => d.playerId === p.playerId,
+            );
+            return hasDeclared || p.isPasser;
+          }).length,
+        },
+      });
+      const room = await this.roomService.getRoom(roomId);
+
       const events: GatewayEvent[] = [
         {
           scope: 'room',
@@ -86,13 +110,12 @@ export class PassBlowUseCase implements IPassBlowUseCase {
             lastPasser: player.playerId,
           },
         },
-        {
-          scope: 'room',
-          roomId,
-          event: 'update-players',
-          payload: state.players,
-        },
       ];
+      events.push(
+        ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
+          room,
+        }),
+      );
 
       // Calculate how many players have acted (declared or passed)
       const actedCount = state.players.filter((p) => {
@@ -121,10 +144,12 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         const transition: TransitionResult = await transitionToPlayPhase({
           roomId,
           roomGameState,
+          room,
           state,
           blowService: this.blowService,
           cardService: this.cardService,
           chomboService: this.chomboService,
+          gameEventLogService: this.gameEventLogService,
         });
 
         return {
@@ -204,20 +229,37 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.currentPlayerIndex = firstBlowIndex;
     state.deck = this.cardService.generateDeck();
     await roomGameState.dealCards();
-    await roomGameState.saveState();
 
+    await this.gameEventLogService?.log({
+      roomId,
+      actionType: 'round_cancelled',
+      playerId: null,
+      state,
+      actionData: {
+        reason: 'no_declarations',
+        nextDealerPlayerId: firstBlowPlayer.playerId,
+        nextBlowIndex: firstBlowIndex,
+      },
+    });
+
+    await roomGameState.saveState();
+    const room = await this.roomService.getRoom(roomId);
+
+    const playerSyncEvents = buildPlayerSyncEvents(
+      roomGameState,
+      roomId,
+      state.players,
+      {
+        room,
+      },
+    );
     const roundCancelledPayload: RoundCancelledPayload = {
       nextDealer: firstBlowPlayer.playerId,
-      players: state.players,
+      players: resolveTransportPlayers(roomGameState, state.players),
     };
 
     const events: GatewayEvent[] = [
-      {
-        scope: 'room',
-        roomId,
-        event: 'update-players',
-        payload: state.players,
-      },
+      ...playerSyncEvents,
       {
         scope: 'room',
         roomId,
@@ -242,7 +284,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         payload: firstBlowPlayer.playerId,
       },
     ];
-
     return { events };
   }
 }

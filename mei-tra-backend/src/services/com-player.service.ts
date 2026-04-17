@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { Player, Team, Field, TrumpType } from '../types/game.types';
+import { DomainPlayer, Team, Field, TrumpType } from '../types/game.types';
 import { ICardService } from './interfaces/card-service.interface';
 import { IComPlayerService } from './interfaces/com-player-service.interface';
 
@@ -10,9 +10,8 @@ export class ComPlayerService implements IComPlayerService {
     private readonly cardService: ICardService,
   ) {}
 
-  createComPlayer(seatIndex: number, team: Team): Player {
+  createComPlayer(seatIndex: number, team: Team): DomainPlayer {
     return {
-      socketId: `com-${seatIndex}`,
       playerId: `com-${seatIndex}`,
       name: `COM ${seatIndex + 1}`,
       hand: [],
@@ -117,7 +116,9 @@ export class ComPlayerService implements IComPlayerService {
     return selectedSuit;
   }
 
-  isComPlayer(player: Player | { isCOM?: boolean; playerId: string }): boolean {
+  isComPlayer(
+    player: DomainPlayer | { isCOM?: boolean; playerId: string },
+  ): boolean {
     return player.isCOM === true || player.playerId.startsWith('com-');
   }
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type {
   FieldCompletePayload,
   GameOverPayload,
@@ -13,12 +13,17 @@ import {
   GameOverInstruction,
 } from './interfaces/complete-field.use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { IPlayService } from '../services/interfaces/play-service.interface';
 import { IScoreService } from '../services/interfaces/score-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { Team, GameState } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { RoomStatus } from '../types/room.types';
+import {
+  buildPlayerSyncEvents,
+  resolveTransportPlayers,
+} from './helpers/player-resolution.helper';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {
@@ -28,6 +33,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('IPlayService') private readonly playService: IPlayService,
     @Inject('IScoreService') private readonly scoreService: IScoreService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async execute(request: CompleteFieldRequest): Promise<CompleteFieldResponse> {
@@ -57,6 +65,19 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         return { success: false, error: 'Failed to persist completed field' };
       }
 
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'field_completed',
+        playerId: winner.playerId,
+        state,
+        actionData: {
+          completedField,
+          winnerPlayerId: winner.playerId,
+          winnerTeam: winner.team,
+          cards: [...field.cards],
+        },
+      });
+
       const allHandsEmpty = state.players.every(
         (player) => player.hand.length === 0,
       );
@@ -78,6 +99,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         field: completedField,
         nextPlayerId: winner.playerId,
       };
+      const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
         {
@@ -86,12 +108,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           event: 'field-complete',
           payload: fieldCompletePayload,
         },
-        {
-          scope: 'room',
-          roomId,
-          event: 'update-players',
-          payload: state.players,
-        },
+        ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
+          room,
+        }),
       ];
 
       const response: CompleteFieldResponse = {
@@ -120,6 +139,19 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       }
 
       this.applyPlayPoints(state, declaringTeam);
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'round_completed',
+        playerId: state.blowState.currentHighestDeclaration?.playerId ?? null,
+        state,
+        actionData: {
+          declaringTeam,
+          highestDeclaration: state.blowState.currentHighestDeclaration,
+          teamScores: state.teamScores,
+          completedFields: state.playState?.fields ?? [],
+        },
+      });
+
       const roundResultsPayload: RoundResultsPayload = {
         scores: state.teamScores,
       };
@@ -155,13 +187,23 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           payload: gameOverPayload,
         });
 
+        await this.gameEventLogService?.log({
+          roomId,
+          actionType: 'game_over',
+          playerId: null,
+          state,
+          actionData: {
+            winningTeam,
+            finalScores: state.teamScores,
+          },
+        });
+
         await this.roomService.updateRoomStatus(roomId, RoomStatus.FINISHED);
         await roomGameState.saveState();
 
         const gameOverInstruction: GameOverInstruction = {
           winningTeam,
           teamScores: state.teamScores,
-          players: state.players,
           resetDelayMs: 5000,
         };
 
@@ -306,15 +348,15 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentBlowIndex: nextBlowIndex,
     };
 
+    await roomGameState.transitionPhase('blow');
     await roomGameState.updateState({
-      gamePhase: 'blow',
       playState: newPlayState,
       blowState: newBlowState,
       currentPlayerIndex: nextBlowIndex,
     });
 
     const newRoundPayload: NewRoundStartedPayload = {
-      players: updatedState.players,
+      players: resolveTransportPlayers(roomGameState, updatedState.players),
       currentTurn: nextBlowPlayer.playerId,
       gamePhase: 'blow',
       currentField: null,
@@ -364,6 +406,18 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         delayMs: 3000,
       },
     ];
+
+    await this.gameEventLogService?.log({
+      roomId,
+      actionType: 'round_reset',
+      playerId: nextBlowPlayer.playerId,
+      state: updatedState,
+      actionData: {
+        nextDealerPlayerId: nextBlowPlayer.playerId,
+        nextRoundNumber: updatedState.roundNumber,
+        nextBlowIndex,
+      },
+    });
 
     return delayedEvents;
   }

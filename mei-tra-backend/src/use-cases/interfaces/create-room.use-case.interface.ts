@@ -1,5 +1,6 @@
 import { AuthenticatedUser } from '../../types/user.types';
 import { Room } from '../../types/room.types';
+import { RoomPlayer } from '../../types/room.types';
 
 export interface CreateRoomRequest {
   roomName: string;
@@ -15,6 +16,7 @@ export interface CreateRoomResponse {
   data?: {
     room: Room;
     roomsList: Room[];
+    hostPlayer: RoomPlayer;
   };
 }
 

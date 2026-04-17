@@ -5,6 +5,7 @@ export interface GatewayEvent {
   event: string;
   roomId?: string;
   socketId?: string;
+  excludeSocketId?: string;
   payload?: unknown;
   delayMs?: number;
 }

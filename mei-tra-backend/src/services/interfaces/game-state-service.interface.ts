@@ -1,4 +1,5 @@
-import { ConnectionUser, Player } from '../../types/game.types';
+import { DomainPlayer } from '../../types/game.types';
+import { PlayerConnectionState, SessionUser } from '../../types/session.types';
 
 export interface IGameStateService {
   addPlayer(
@@ -7,15 +8,26 @@ export interface IGameStateService {
     userId?: string,
     isAuthenticated?: boolean,
   ): boolean;
-  getUsers(): ConnectionUser[];
-  findConnectionUserBySocketId(socketId: string): ConnectionUser | null;
-  findConnectionUserByUserId(userId: string): ConnectionUser | null;
+  getSessionUsers(): SessionUser[];
+  findSessionUserBySocketId(socketId: string): SessionUser | null;
+  findSessionUserByUserId(userId: string): SessionUser | null;
+  findSessionUserByPlayerId(playerId: string): SessionUser | null;
+  upsertSessionUser(sessionUser: SessionUser): {
+    user: SessionUser;
+    created: boolean;
+    changed: boolean;
+  };
   updateUserNameBySocketId(socketId: string, name: string): boolean;
-  findPlayerByUserId(userId: string): Player | null;
-  findPlayerByReconnectToken(token: string): Player | null;
+  findPlayerByActorId(actorId: string): DomainPlayer | null;
+  findPlayerBySocketId(socketId: string): DomainPlayer | null;
   updatePlayerSocketId(
     playerId: string,
     socketId: string,
     userId?: string,
   ): Promise<void>;
+  applyPlayerConnectionState(
+    playerId: string,
+    connectionState: PlayerConnectionState,
+  ): Promise<void>;
+  getPlayerConnectionState(playerId: string): PlayerConnectionState | null;
 }

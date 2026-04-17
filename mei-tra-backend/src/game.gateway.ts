@@ -1,4 +1,3 @@
-import type { GameStatePayload } from '@contracts/game';
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -9,14 +8,8 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
-import { ICardService } from './services/interfaces/card-service.interface';
-import { IScoreService } from './services/interfaces/score-service.interface';
-import { IBlowService } from './services/interfaces/blow-service.interface';
-import { IPlayService } from './services/interfaces/play-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
-import { IChomboService } from './services/interfaces/chombo-service.interface';
-import { ConnectionUser, Player, TrumpType } from './types/game.types';
-import { RoomStatus } from './types/room.types';
+import { TrumpType } from './types/game.types';
 import { ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
@@ -40,25 +33,22 @@ import { IRevealBrokenHandUseCase } from './use-cases/interfaces/reveal-broken-h
 import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use-case.interface';
 import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
 import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
-import { ChatService } from './services/chat.service';
-import { IComPlayerService } from './services/interfaces/com-player-service.interface';
-import { IComAutoPlayService } from './services/interfaces/com-autoplay-service.interface';
 import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
+import { SessionUser } from './types/session.types';
+import { JoinRoomGatewayEffectsService } from './services/join-room-gateway-effects.service';
+import { DisconnectGatewayEffectsService } from './services/disconnect-gateway-effects.service';
+import { RoomUpdateGatewayEffectsService } from './services/room-update-gateway-effects.service';
+import { StartGameGatewayEffectsService } from './services/start-game-gateway-effects.service';
+import { TurnMonitorService } from './services/turn-monitor.service';
+import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
+import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
+import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
+import { Room } from './types/room.types';
+import { toRoomContract, toRoomContracts } from './types/room-adapters';
 
 const DISCONNECT_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
-const TURN_ACK_PING_INTERVAL_MS = 15 * 1000;
-const TURN_IDLE_WARNING_MS = 45 * 1000;
-const TURN_IDLE_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
-
-interface TurnAckMonitor {
-  playerId: string;
-  lastAckAt: number;
-  pingInterval: NodeJS.Timeout;
-  statusInterval: NodeJS.Timeout;
-  idleEmitted: boolean;
-}
 
 @WebSocketGateway({
   cors: {
@@ -74,21 +64,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(GameGateway.name);
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
-  private turnAckMonitors: Map<string, TurnAckMonitor> = new Map();
 
   constructor(
     @Inject('IGameStateService')
     private readonly gameState: IGameStateService,
-    @Inject('ICardService')
-    private readonly cardService: ICardService,
-    @Inject('IScoreService')
-    private readonly scoreService: IScoreService,
-    @Inject('IBlowService')
-    private readonly blowService: IBlowService,
-    @Inject('IPlayService')
-    private readonly playService: IPlayService,
-    @Inject('IChomboService')
-    private readonly chomboService: IChomboService,
     @Inject('IRoomService')
     private readonly roomService: IRoomService,
     @Inject('IJoinRoomUseCase')
@@ -124,15 +103,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject('IFillWithComUseCase')
     private readonly fillWithComUseCase: IFillWithComUseCase,
     private readonly authService: AuthService,
-    private readonly chatService: ChatService,
-    @Inject('IComPlayerService')
-    private readonly comPlayerService: IComPlayerService,
-    @Inject('IComAutoPlayService')
-    private readonly comAutoPlayService: IComAutoPlayService,
     @Inject('IComAutoPlayUseCase')
     private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
     @Inject('IActivityTrackerService')
     private readonly activityTracker: IActivityTrackerService,
+    private readonly turnMonitorService: TurnMonitorService,
+    private readonly reconnectionUseCase: ReconnectionUseCase,
+    private readonly moderatePlayerUseCase: ModeratePlayerUseCase,
+    private readonly shuffleTeamsUseCase: ShuffleTeamsUseCase,
+    private readonly joinRoomGatewayEffectsService: JoinRoomGatewayEffectsService,
+    private readonly disconnectGatewayEffectsService: DisconnectGatewayEffectsService,
+    private readonly roomUpdateGatewayEffectsService: RoomUpdateGatewayEffectsService,
+    private readonly startGameGatewayEffectsService: StartGameGatewayEffectsService,
   ) {}
 
   /**
@@ -154,17 +136,59 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return authName;
   }
 
+  private getAuthenticatedUser(client: Socket): AuthenticatedUser | undefined {
+    return (client.data as { user?: AuthenticatedUser }).user;
+  }
+
+  private getActorId(client: Socket): string {
+    return this.getAuthenticatedUser(client)?.id ?? client.id;
+  }
+
+  private normalizeGatewayPayload(event: GatewayEvent): unknown {
+    if (event.event === 'room-updated' && event.payload) {
+      return toRoomContract(event.payload as Room);
+    }
+
+    if (event.event === 'rooms-list' && Array.isArray(event.payload)) {
+      return toRoomContracts(event.payload as Room[]);
+    }
+
+    return event.payload;
+  }
+
+  private emitRoomsListToAll(rooms: Room[]): void {
+    this.server.emit(
+      'rooms-list',
+      this.roomUpdateGatewayEffectsService.buildRoomsListView(rooms),
+    );
+  }
+
+  private emitRoomsListToSocket(client: Socket, rooms: Room[]): void {
+    client.emit(
+      'rooms-list',
+      this.roomUpdateGatewayEffectsService.buildRoomsListView(rooms),
+    );
+  }
+
   private dispatchEvents(events?: GatewayEvent[]) {
     if (!events) {
       return;
     }
 
     events.forEach((event) => {
+      const payload = this.normalizeGatewayPayload(event);
       const emit = () => {
         switch (event.scope) {
           case 'room':
             if (event.roomId) {
-              this.server.to(event.roomId).emit(event.event, event.payload);
+              const roomEmitter = this.server.to(event.roomId);
+              if (event.excludeSocketId) {
+                roomEmitter
+                  .except(event.excludeSocketId)
+                  .emit(event.event, payload);
+              } else {
+                roomEmitter.emit(event.event, payload);
+              }
               if (
                 event.event === 'update-turn' &&
                 typeof event.payload === 'string'
@@ -175,11 +199,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             break;
           case 'socket':
             if (event.socketId) {
-              this.server.to(event.socketId).emit(event.event, event.payload);
+              this.server.to(event.socketId).emit(event.event, payload);
             }
             break;
           case 'all':
-            this.server.emit(event.event, event.payload);
+            this.server.emit(event.event, payload);
             break;
         }
       };
@@ -193,28 +217,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private clearTurnAckMonitor(roomId: string): void {
-    const monitor = this.turnAckMonitors.get(roomId);
-    if (!monitor) {
-      return;
-    }
-
-    clearInterval(monitor.pingInterval);
-    clearInterval(monitor.statusInterval);
-    this.turnAckMonitors.delete(roomId);
-  }
-
-  private async isTurnStillOwnedByPlayer(
-    roomId: string,
-    playerId: string,
-  ): Promise<boolean> {
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const state = roomGameState.getState();
-    const currentPlayer = state.players[state.currentPlayerIndex];
-
-    return (
-      (state.gamePhase === 'play' || state.gamePhase === 'blow') &&
-      currentPlayer?.playerId === playerId
-    );
+    this.turnMonitorService.clearMonitor(roomId);
   }
 
   private async forceReplacePlayerWithCOM(
@@ -222,12 +225,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     playerId: string,
     message: string,
   ): Promise<boolean> {
+    const roomGameState = await this.roomService.getRoomGameState(roomId);
     const room = await this.roomService.getRoom(roomId);
     const targetPlayer = room?.players.find(
       (player) => player.playerId === playerId,
     );
-    const targetSocket = targetPlayer?.socketId
-      ? this.server.sockets.sockets.get(targetPlayer.socketId)
+    const targetSocketId =
+      roomGameState.getPlayerConnectionState(playerId)?.socketId;
+    const targetSocket = targetSocketId
+      ? this.server.sockets.sockets.get(targetSocketId)
       : undefined;
 
     if (targetSocket) {
@@ -245,7 +251,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return false;
     }
 
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
     const updatedRoom = await this.roomService.getRoom(roomId);
     this.server.to(roomId).emit('player-converted-to-com', {
       playerId,
@@ -253,12 +258,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       message,
     });
     if (updatedRoom) {
-      this.server.to(roomId).emit('room-updated', updatedRoom);
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: updatedRoom,
+          scope: 'room',
+          roomId,
+        }),
+      );
     }
-    this.server
-      .to(roomId)
-      .emit('update-players', roomGameState.getState().players);
-    this.server.emit('rooms-list', await this.roomService.listRooms());
+    this.emitRoomsListToAll(await this.roomService.listRooms());
     this.triggerComAutoPlayIfNeeded(roomId);
     return true;
   }
@@ -267,103 +275,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     roomId: string,
     playerId: string,
   ): Promise<void> {
-    this.clearTurnAckMonitor(roomId);
-
-    const room = await this.roomService.getRoom(roomId);
-    if (room?.status !== RoomStatus.PLAYING) {
-      return;
-    }
-
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const state = roomGameState.getState();
-    const currentPlayer = state.players.find(
-      (candidate) => candidate.playerId === playerId,
-    );
-
-    if (
-      !currentPlayer ||
-      currentPlayer.isCOM ||
-      !currentPlayer.socketId ||
-      (state.gamePhase !== 'play' && state.gamePhase !== 'blow')
-    ) {
-      return;
-    }
-
-    const emitPing = () => {
-      this.server.to(currentPlayer.socketId).emit('turn-ping', {
-        roomId,
-        playerId,
-      });
-    };
-
-    const monitor: TurnAckMonitor = {
+    await this.turnMonitorService.startMonitor(
+      roomId,
       playerId,
-      lastAckAt: Date.now(),
-      pingInterval: setInterval(emitPing, TURN_ACK_PING_INTERVAL_MS),
-      statusInterval: setInterval(() => {
-        void (async () => {
-          if (!(await this.isTurnStillOwnedByPlayer(roomId, playerId))) {
-            this.clearTurnAckMonitor(roomId);
-            return;
-          }
-
-          const now = Date.now();
-          const silenceMs = now - monitor.lastAckAt;
-
-          if (!monitor.idleEmitted && silenceMs >= TURN_IDLE_WARNING_MS) {
-            monitor.idleEmitted = true;
-            this.server.to(roomId).emit('player-idle', {
-              playerId,
-              playerName: currentPlayer.name,
-              roomId,
-            });
-          }
-
-          if (silenceMs >= TURN_IDLE_TO_COM_TIMEOUT_MS) {
-            this.clearTurnAckMonitor(roomId);
-            try {
-              await this.forceReplacePlayerWithCOM(
-                roomId,
-                playerId,
-                'Player became unresponsive during their turn - converted to COM',
-              );
-            } catch (error) {
-              console.error(
-                '[TurnAck] Error converting idle player to COM:',
-                error,
-              );
-            }
-          }
-        })();
-      }, 5000),
-      idleEmitted: false,
-    };
-
-    this.turnAckMonitors.set(roomId, monitor);
-    emitPing();
-  }
-
-  private markTurnAck(roomId: string, playerId: string): void {
-    const monitor = this.turnAckMonitors.get(roomId);
-    if (!monitor || monitor.playerId !== playerId) {
-      return;
-    }
-
-    monitor.lastAckAt = Date.now();
-    if (monitor.idleEmitted) {
-      monitor.idleEmitted = false;
-      this.server.to(roomId).emit('player-idle-cleared', {
-        playerId,
-        roomId,
-      });
-    }
+      this.server,
+      async (monitoredRoomId, monitoredPlayerId) => {
+        await this.forceReplacePlayerWithCOM(
+          monitoredRoomId,
+          monitoredPlayerId,
+          'Player became unresponsive during their turn - converted to COM',
+        );
+      },
+    );
   }
 
   private isPlayerIdle(roomId: string, playerId: string): boolean {
-    const monitor = this.turnAckMonitors.get(roomId);
-    return Boolean(
-      monitor && monitor.playerId === playerId && monitor.idleEmitted,
-    );
+    return this.turnMonitorService.isPlayerIdle(roomId, playerId);
   }
 
   private async triggerRevealBrokenHand(request?: RevealBrokenRequest) {
@@ -371,10 +298,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const clientSocket = [...this.server.sockets.sockets.values()].find(
-      (s) =>
-        (s.data as { user?: AuthenticatedUser }).user?.id === request.userId,
+    const roomGameState = await this.roomService.getRoomGameState(
+      request.roomId,
     );
+    const sessionUser =
+      roomGameState.findSessionUserByUserId(request.actorId) ??
+      roomGameState.findSessionUserBySocketId(request.actorId) ??
+      roomGameState.findSessionUserByPlayerId(request.actorId);
+    const clientSocket = sessionUser?.socketId
+      ? this.server.sockets.sockets.get(sessionUser.socketId)
+      : undefined;
     if (!clientSocket) {
       console.warn(
         '[GameGateway] Socket not found when handling required broken hand',
@@ -418,7 +351,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (response.gameOver) {
       await this.processGameOverUseCase.execute({
         roomId,
-        players: response.gameOver.players,
         winningTeam: response.gameOver.winningTeam,
         teamScores: response.gameOver.teamScores,
         resetDelayMs: response.gameOver.resetDelayMs,
@@ -454,7 +386,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       await this.roomService.deleteRoom(roomId);
       const roomsList = await this.roomService.listRooms();
-      this.server.emit('rooms-list', roomsList);
+      this.emitRoomsListToAll(roomsList);
     } catch (error) {
       console.error('Failed to close finished room:', error);
     }
@@ -474,7 +406,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.playerRooms.delete(client.id);
     client.emit('back-to-lobby');
     client.emit('error-message', reason);
-    client.emit('rooms-list', await this.roomService.listRooms());
+    this.emitRoomsListToSocket(client, await this.roomService.listRooms());
   }
 
   private triggerComAutoPlayIfNeeded(roomId: string): void {
@@ -573,219 +505,53 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // 再接続処理
-    let reconnected = false;
     if (roomId && authenticatedUser) {
-      try {
-        console.log('[Reconnection] Attempting reconnection with:', {
+      const result = await this.reconnectionUseCase.execute({
+        roomId,
+        socketId: client.id,
+        authenticatedUser,
+      });
+
+      if (!result.success) {
+        await this.sendBackToLobby(client, result.reason, roomId);
+        return;
+      }
+
+      this.playerRooms.set(client.id, roomId);
+      await client.join(roomId);
+
+      if (result.mode === 'waiting-room') {
+        const reconnectEntryEvents =
+          await this.joinRoomGatewayEffectsService.buildRoomEntryEvents({
+            clientId: client.id,
+            room: result.room,
+            selfPlayer: {
+              playerId: result.selfPlayerId,
+              name: result.selfName,
+              team: result.selfTeam,
+            },
+            isHost: result.isHost,
+            roomStatus: result.room.status,
+            roomsList: result.roomsList,
+            roomsListScope: 'socket',
+          });
+        this.dispatchEvents(reconnectEntryEvents);
+        return;
+      }
+
+      const activeReconnectEvents =
+        await this.joinRoomGatewayEffectsService.buildActiveReconnectEvents({
+          clientId: client.id,
           roomId,
-          userId: authenticatedUser.id,
-          socketId: client.id,
+          room: result.room,
+          gameState: result.gameState,
+          reconnectToken: result.reconnectToken,
         });
-
-        // ルームのゲーム状態を取得
-        const roomGameState = await this.roomService.getRoomGameState(roomId);
-        const room = await this.roomService.getRoom(roomId);
-        if (!room) {
-          throw new Error(`Room ${roomId} not found during reconnection`);
-        }
-        const state = roomGameState.getState();
-        const isActiveGame =
-          room.status === RoomStatus.PLAYING &&
-          state.gamePhase !== null &&
-          state.gamePhase !== 'waiting';
-
-        if (!isActiveGame) {
-          await this.roomService.initCOMPlaceholders(roomId);
-          const updatedRoom = await this.roomService.getRoom(roomId);
-          if (!updatedRoom) {
-            throw new Error(`Room ${roomId} not found after COM init`);
-          }
-
-          const existingWaitingPlayer = updatedRoom.players.find(
-            (player) =>
-              player.userId === authenticatedUser.id ||
-              player.playerId === authenticatedUser.id,
-          );
-
-          if (existingWaitingPlayer) {
-            const result = await this.roomService.handlePlayerReconnection(
-              roomId,
-              existingWaitingPlayer.playerId,
-              client.id,
-              authenticatedUser.id,
-            );
-
-            if (!result.success) {
-              client.emit('error-message', 'Failed to reconnect');
-            } else {
-              this.playerRooms.set(client.id, roomId);
-              void client.join(roomId);
-
-              this.server.to(client.id).emit('game-player-joined', {
-                playerId: existingWaitingPlayer.playerId,
-                roomId,
-                isHost: updatedRoom.hostId === existingWaitingPlayer.playerId,
-                roomStatus: updatedRoom.status,
-                isSelf: true,
-                team: existingWaitingPlayer.team,
-                name: existingWaitingPlayer.name,
-              });
-              this.server.to(client.id).emit('set-room-id', roomId);
-              this.server.to(client.id).emit('room-updated', updatedRoom);
-              this.server
-                .to(client.id)
-                .emit('update-players', updatedRoom.players);
-              this.server
-                .to(client.id)
-                .emit('rooms-list', await this.roomService.listRooms());
-
-              reconnected = true;
-            }
-          } else {
-            console.warn(
-              `[Reconnection] ✗ No waiting-room player found by userId: ${authenticatedUser.id} in room ${roomId}`,
-            );
-            await this.sendBackToLobby(
-              client,
-              'Your previous room session is no longer valid. Please join or create a room again.',
-              roomId,
-            );
-            return;
-          }
-        } else {
-          // ログインユーザーはuserIdで検索
-          const existingPlayer = roomGameState.findPlayerByUserId(
-            authenticatedUser.id,
-          );
-          if (existingPlayer) {
-            console.log(
-              `[Reconnection] ✓ Found player by userId: ${authenticatedUser.id}, playerId: ${existingPlayer.playerId}`,
-            );
-
-            // ルームサービスで再接続処理
-            const result = await this.roomService.handlePlayerReconnection(
-              roomId,
-              existingPlayer.playerId,
-              client.id,
-              authenticatedUser?.id, // Pass userId for authenticated users
-            );
-
-            if (!result.success) {
-              client.emit('error-message', 'Failed to reconnect');
-              // フォールスルーしてロビー接続へ
-            } else {
-              // ルームに参加
-              this.playerRooms.set(client.id, roomId);
-              void client.join(roomId);
-
-              // ゲーム状態をクライアントに送信
-              const payload: GameStatePayload = {
-                players: state.players.map((player) => ({
-                  ...player,
-                  hand:
-                    player.playerId === existingPlayer.playerId
-                      ? player.hand
-                      : [], // 自分の手札のみ表示
-                })),
-                gamePhase: state.gamePhase || 'waiting',
-                currentField: state.playState?.currentField ?? null,
-                currentTurn:
-                  state.currentPlayerIndex !== -1 &&
-                  state.players[state.currentPlayerIndex]
-                    ? state.players[state.currentPlayerIndex].playerId
-                    : null,
-                blowState: state.blowState,
-                teamScores: state.teamScores,
-                you: existingPlayer.playerId,
-                negriCard: state.playState?.negriCard ?? null,
-                fields: state.playState?.fields ?? [],
-                roomId: roomId,
-                hostId: room.hostId,
-                pointsToWin: state.pointsToWin,
-              };
-
-              this.server.to(client.id).emit('game-state', payload);
-              this.server.to(roomId).emit('update-players', state.players);
-
-              // Always issue reconnect token as fallback
-              // Even authenticated users need it when authToken isn't ready on reload
-              this.server
-                .to(client.id)
-                .emit('reconnect-token', `${existingPlayer.playerId}`);
-
-              if (authenticatedUser) {
-                console.log(
-                  `[Reconnection] Authenticated user ${authenticatedUser.id} issued fallback token: ${existingPlayer.playerId}`,
-                );
-              } else {
-                console.log(
-                  `[Reconnection] Issued guest token: ${existingPlayer.playerId}`,
-                );
-              }
-
-              reconnected = true;
-            }
-          } else {
-            console.log(
-              `[Reconnection] ✗ No player found by userId: ${authenticatedUser.id}, treating as new lobby connection`,
-            );
-            await this.sendBackToLobby(
-              client,
-              'Your previous room session is no longer valid. Please join or create a room again.',
-              roomId,
-            );
-            return;
-          }
-        }
-      } catch (error) {
-        console.log(
-          '[Reconnection] Game state not found, treating as new lobby connection:',
-          error,
-        );
-        await this.sendBackToLobby(
-          client,
-          'Your previous room session is no longer available. Please join or create a room again.',
-          roomId,
-        );
-        return;
+      this.dispatchEvents(activeReconnectEvents);
+      if (result.currentTurnPlayerId) {
+        void this.startTurnAckMonitor(roomId, result.currentTurnPlayerId);
       }
-      if (reconnected) {
-        // Even on successful reconnection, keep gameState.users in sync with the
-        // new socket ID. Without this, actions like create-room (which look up the
-        // user by socket.id) would fail after the player leaves and tries to create
-        // a new room, because the old socket ID is no longer valid.
-        const displayName =
-          authenticatedUser.profile?.displayName ||
-          authenticatedUser.email ||
-          'User';
-        const existingUser = this.gameState
-          .getUsers()
-          .find((u) => u.userId === authenticatedUser.id);
-        if (existingUser) {
-          existingUser.socketId = client.id;
-        } else {
-          this.gameState.addPlayer(
-            client.id,
-            displayName,
-            authenticatedUser.id,
-            true,
-          );
-        }
-        try {
-          const currentRoomGameState =
-            await this.roomService.getRoomGameState(roomId);
-          const currentTurnPlayerId = currentRoomGameState.currentTurn;
-          if (currentTurnPlayerId) {
-            void this.startTurnAckMonitor(roomId, currentTurnPlayerId);
-          }
-        } catch (error) {
-          this.logger.warn(
-            `Failed to restart turn monitor after reconnection for room ${roomId}: ${String(error)}`,
-          );
-        }
-        return;
-      }
+      return;
     }
 
     // 新規認証済みプレイヤーとして追加
@@ -795,19 +561,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       'User';
     const userId = authenticatedUser.id;
 
-    if (
-      this.gameState.addPlayer(
-        client.id,
-        displayName,
-        userId,
-        true, // Always authenticated
-      )
-    ) {
-      const users = this.gameState.getUsers();
+    const syncResult = this.gameState.upsertSessionUser({
+      socketId: client.id,
+      playerId: userId,
+      name: displayName,
+      userId,
+      isAuthenticated: true,
+    });
+
+    if (syncResult.created || syncResult.changed) {
+      const users = this.gameState.getSessionUsers();
       this.server.emit('update-users', users);
     } else {
-      client.emit('error-message', 'Game is full!');
-      client.disconnect();
+      this.server.emit('update-users', this.gameState.getSessionUsers());
     }
   }
 
@@ -828,131 +594,51 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (roomId) {
       this.playerRooms.delete(client.id);
       await client.leave(roomId);
+      const authenticatedUser = this.getAuthenticatedUser(client);
+      const preparation =
+        await this.disconnectGatewayEffectsService.prepareDisconnect({
+          roomId,
+          socketId: client.id,
+          displayName: authenticatedUser?.profile?.displayName,
+        });
 
-      // Guard against malformed persisted state during disconnect cleanup.
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const state = roomGameState.getState();
-      const rawPlayers = Array.isArray(state?.players) ? state.players : [];
-      const players = rawPlayers.filter((player): player is Player =>
-        Boolean(player),
+      if (!preparation) {
+        return;
+      }
+
+      if (
+        this.turnMonitorService.isMonitoringPlayer(roomId, preparation.playerId)
+      ) {
+        this.clearTurnAckMonitor(roomId);
+      }
+
+      this.dispatchEvents(preparation.events);
+
+      const timeoutMs =
+        preparation.timeoutMode === 'convert-to-com'
+          ? DISCONNECT_TO_COM_TIMEOUT_MS
+          : 10000;
+      const timeout: NodeJS.Timeout = setTimeout(() => {
+        void this.disconnectGatewayEffectsService
+          .buildTimeoutEvents({
+            roomId,
+            playerId: preparation.playerId,
+            playerName: preparation.playerName,
+            timeoutMode: preparation.timeoutMode,
+          })
+          .then((events) => this.dispatchEvents(events))
+          .catch((error) => {
+            console.error(
+              '[Disconnect] Error processing disconnect timeout:',
+              error,
+            );
+          });
+      }, timeoutMs);
+
+      preparation.roomGameState.setDisconnectTimeout(
+        preparation.playerId,
+        timeout,
       );
-
-      if (players.length !== rawPlayers.length) {
-        this.logger.warn(
-          `Dropping malformed players from room ${roomId} during disconnect cleanup`,
-        );
-        state.players = players;
-        await roomGameState.saveState();
-      }
-
-      const player = players.find((p) => p.socketId === client.id);
-      const authenticatedUser = (client.data as { user?: AuthenticatedUser })
-        .user;
-
-      if (player) {
-        const activeMonitor = this.turnAckMonitors.get(roomId);
-        if (activeMonitor?.playerId === player.playerId) {
-          this.clearTurnAckMonitor(roomId);
-        }
-
-        const disconnectDisplayName =
-          authenticatedUser?.profile?.displayName || player.name;
-
-        // プレイヤーのチーム情報を保持
-        state.teamAssignments[player.playerId] = player.team;
-
-        // ソケットIDをクリア（切断状態を示す）
-        player.socketId = '';
-
-        const room = await this.roomService.getRoom(roomId);
-        if (room?.hostId === player.playerId) {
-          const nextHost = room.players.find(
-            (candidate) =>
-              candidate.playerId !== player.playerId && !candidate.isCOM,
-          );
-          if (nextHost) {
-            await this.roomService.updateRoom(roomId, {
-              hostId: nextHost.playerId,
-            });
-            const updatedRoom = await this.roomService.getRoom(roomId);
-            if (updatedRoom) {
-              this.server.to(roomId).emit('room-updated', updatedRoom);
-              this.server
-                .to(roomId)
-                .emit('update-players', updatedRoom.players);
-            }
-            this.server.emit('rooms-list', await this.roomService.listRooms());
-          }
-        }
-
-        // Notify other players in the same room about the disconnection
-        this.server.to(roomId).emit('player-left', {
-          playerId: player.playerId,
-          roomId,
-        });
-        this.server.to(roomId).emit('player-disconnected', {
-          playerId: player.playerId,
-          playerName: disconnectDisplayName,
-          roomId,
-        });
-        this.server.to(roomId).emit('update-players', state.players);
-
-        // プレイ中の場合は長めのタイムアウトを設定
-        // プレイヤーとトークンを保持しつつ、長時間放置されたらCOMに変換
-        if (state.gamePhase === 'play' || state.gamePhase === 'blow') {
-          const timeout: NodeJS.Timeout = setTimeout(() => {
-            void (async () => {
-              try {
-                const room = await this.roomService.getRoom(roomId);
-                if (room?.status === RoomStatus.PLAYING) {
-                  const converted: boolean =
-                    await this.roomService.convertPlayerToCOM(
-                      roomId,
-                      player.playerId,
-                    );
-                  if (converted) {
-                    const updatedRoom = await this.roomService.getRoom(roomId);
-                    this.server.to(roomId).emit('player-converted-to-com', {
-                      playerId: player.playerId,
-                      playerName: disconnectDisplayName,
-                      message:
-                        'Player disconnected for too long - converted to COM',
-                    });
-                    if (updatedRoom) {
-                      this.server.to(roomId).emit('room-updated', updatedRoom);
-                    }
-                    this.server
-                      .to(roomId)
-                      .emit('update-players', roomGameState.getState().players);
-                    this.server.emit(
-                      'rooms-list',
-                      await this.roomService.listRooms(),
-                    );
-                  }
-                }
-              } catch (error) {
-                console.error(
-                  '[Disconnect] Error converting player to COM:',
-                  error,
-                );
-              }
-            })();
-          }, DISCONNECT_TO_COM_TIMEOUT_MS);
-
-          roomGameState.setDisconnectTimeout(player.playerId, timeout);
-        } else {
-          // ロビー状態の場合のみタイムアウトを設定
-          const timeout: NodeJS.Timeout = setTimeout(() => {
-            roomGameState.removePlayer(player.playerId);
-            this.server
-              .to(roomId)
-              .emit('update-players', roomGameState.getState().players);
-          }, 10000); // 10 seconds timeout
-
-          // Store the timeout ID for potential cancellation on reconnection
-          roomGameState.setDisconnectTimeout(player.playerId, timeout);
-        }
-      }
     }
   }
   //-------Connection-------
@@ -974,8 +660,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const auth = client.handshake.auth || {};
 
       // 認証済みユーザー情報を取得
-      const authenticatedUser = (client.data as { user?: AuthenticatedUser })
-        .user;
+      const authenticatedUser = this.getAuthenticatedUser(client);
 
       // 共通ヘルパーメソッドを使用して名前を取得
       const playerName = this.getPlayerName(authenticatedUser || null, auth);
@@ -993,86 +678,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      if (!authenticatedUser) {
-        client.emit('error-message', 'Authentication required to create room');
-        return {
-          success: false,
-          error: 'Authentication required to create room',
-        };
-      }
-
-      const { room } = result.data;
-      const hostUser: ConnectionUser = {
-        socketId: client.id,
-        playerId: authenticatedUser.id,
-        name: playerName || authenticatedUser.email || 'User',
-        userId: authenticatedUser.id,
-        isAuthenticated: true,
-      };
-
-      const joined = await this.roomService.joinRoom(room.id, hostUser);
-      if (!joined) {
-        client.emit('error-message', 'Failed to join created room');
-        return { success: false, error: 'Failed to join created room' };
-      }
-
-      await this.roomService.initCOMPlaceholders(room.id);
-
-      const updatedRoom = await this.roomService.getRoom(room.id);
-      if (!updatedRoom) {
-        client.emit('error-message', 'Failed to load created room');
-        return { success: false, error: 'Failed to load created room' };
-      }
-
-      const hostPlayer = updatedRoom.players.find(
-        (player) => player.playerId === hostUser.playerId,
-      );
-      if (!hostPlayer) {
-        client.emit('error-message', 'Host player not found in created room');
-        return {
-          success: false,
-          error: 'Host player not found in created room',
-        };
-      }
-
-      this.playerRooms.set(client.id, room.id);
-      await client.join(room.id);
-      client.emit('game-player-joined', {
-        playerId: hostPlayer.playerId,
-        roomId: room.id,
-        isHost: true,
-        roomStatus: updatedRoom.status,
-        isSelf: true,
-        team: hostPlayer.team,
-        name: hostPlayer.name,
-      });
-      client.emit('set-room-id', room.id);
-      client.emit('update-players', updatedRoom.players);
-      client.emit('room-updated', updatedRoom);
-
-      // Create corresponding chat room for the game room
-      try {
-        await this.chatService.createRoom({
-          id: room.id,
-          scope: 'table',
-          name: `Game: ${room.name}`,
-          ownerId: authenticatedUser?.id,
-          visibility: 'private',
-          messageTtlHours: 24,
+      const { room: updatedRoom, hostPlayer, roomsList } = result.data;
+      this.playerRooms.set(client.id, updatedRoom.id);
+      await client.join(updatedRoom.id);
+      const createRoomEvents =
+        await this.joinRoomGatewayEffectsService.buildRoomEntryEvents({
+          clientId: client.id,
+          room: updatedRoom,
+          selfPlayer: {
+            playerId: hostPlayer.playerId,
+            name: hostPlayer.name,
+            team: hostPlayer.team,
+          },
+          isHost: true,
+          roomStatus: updatedRoom.status,
+          roomsList,
+          roomsListScope: 'all',
         });
-        console.log(`[GameGateway] Chat room created for game room ${room.id}`);
-      } catch (error: unknown) {
-        console.error(
-          `[GameGateway] Failed to create chat room:`,
-          error instanceof Error ? error.message : error,
-        );
-        // Don't fail the game room creation if chat room creation fails
-      }
+      this.dispatchEvents(createRoomEvents);
 
-      const roomsList = await this.roomService.listRooms();
-      this.server.emit('rooms-list', roomsList);
-
-      return { success: true, room: updatedRoom };
+      return {
+        success: true,
+        room: (
+          await this.roomUpdateGatewayEffectsService.buildRoomView(updatedRoom)
+        ).room,
+      };
     } catch (error) {
       console.error('Error in handleCreateRoom:', error);
       client.emit('error-message', 'Failed to create room');
@@ -1083,14 +713,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join-room')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; user: ConnectionUser },
+    @MessageBody() data: { roomId: string; user: SessionUser },
   ) {
     this.activityTracker.recordActivity();
 
     try {
       const currentRoomId = this.playerRooms.get(client.id);
-      const authenticatedUser = (client.data as { user?: AuthenticatedUser })
-        .user;
+      const authenticatedUser = this.getAuthenticatedUser(client);
 
       const result = await this.joinRoomUseCase.execute({
         socketId: client.id,
@@ -1110,117 +739,32 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (currentRoomId && currentRoomId !== data.roomId) {
         await client.leave(currentRoomId);
-        this.server.to(currentRoomId).emit('player-left', {
-          playerId:
-            result.previousRoomNotification?.playerId ??
-            normalizedUser.playerId,
-          roomId: currentRoomId,
-        });
       }
 
       this.playerRooms.set(client.id, data.roomId);
       await client.join(data.roomId);
 
-      const { room, isHost, roomStatus, roomsList, resumeGame } = result.data;
-
-      this.server.to(data.roomId).emit('room-player-joined', {
-        playerId: normalizedUser.playerId,
-        roomId: data.roomId,
-        isHost,
-      });
-
-      // Send self-identification FIRST directly to the joining client.
-      // isSelf: true tells the frontend "this is YOUR player ID".
-      // This must arrive before the existing-player loop events.
-      const joiningPlayer = room.players.find(
-        (p) => p.playerId === normalizedUser.playerId,
+      const joinEffects = await this.joinRoomGatewayEffectsService.buildEffects(
+        {
+          clientId: client.id,
+          roomId: data.roomId,
+          currentRoomId,
+          normalizedUser,
+          previousRoomNotification: result.previousRoomNotification,
+          joinData: result.data,
+        },
       );
-      const joiningTeam = joiningPlayer?.team ?? 0;
 
-      client.emit('game-player-joined', {
-        playerId: normalizedUser.playerId,
-        roomId: data.roomId,
-        isHost,
-        roomStatus,
-        isSelf: true,
-        team: joiningTeam,
-        name: normalizedUser.name,
-      });
+      this.dispatchEvents(joinEffects.events);
 
-      // Broadcast to other room members (not the joining client) so they see the new player.
-      this.server.to(data.roomId).except(client.id).emit('game-player-joined', {
-        playerId: normalizedUser.playerId,
-        roomId: data.roomId,
-        isHost,
-        roomStatus,
-        team: joiningTeam,
-        name: normalizedUser.name,
-      });
-
-      // Notify the joining client about each player already in the room.
-      // game-player-joined only carries one player at a time, so we loop.
-      // usersRef in useGame resolves display names, so this reuses existing logic.
-      // COM placeholder players (isCOM:true, isReady:false) are also included
-      // so that useGame.ts's players array contains them for shuffleTeams.
-      if (!resumeGame) {
-        for (const existingPlayer of room.players) {
-          if (existingPlayer.playerId !== normalizedUser.playerId) {
-            client.emit('game-player-joined', {
-              playerId: existingPlayer.playerId,
-              roomId: data.roomId,
-              isHost: existingPlayer.isHost,
-              roomStatus,
-              team: existingPlayer.team,
-              name: existingPlayer.name,
-              isCOM: existingPlayer.isCOM ?? false,
-              isReady: existingPlayer.isReady ?? false,
-            });
-          }
-        }
-      }
-
-      // 待機中ルームに参加した場合、残席をCOMプレースホルダーで埋める
-      if (!resumeGame && roomStatus === RoomStatus.WAITING) {
-        await this.roomService.initCOMPlaceholders(data.roomId);
-        const updatedRoom = await this.roomService.getRoom(data.roomId);
-        if (updatedRoom) {
-          this.server.to(data.roomId).emit('room-updated', updatedRoom);
-          // update-players で全プレイヤー(real + COM)を同期し、staleなCOMゴーストを排除する
-          this.server
-            .to(data.roomId)
-            .emit('update-players', updatedRoom.players);
-        }
-      }
-
-      this.server.emit('rooms-list', roomsList);
-      this.server.to(data.roomId).emit('set-room-id', data.roomId);
-
-      if (resumeGame) {
-        const maskedGameStateForJoiner: GameStatePayload = {
-          ...resumeGame.gameState,
-          currentField: resumeGame.gameState.currentField ?? null,
-          negriCard: resumeGame.gameState.negriCard ?? null,
-          fields: resumeGame.gameState.fields ?? [],
-          players: resumeGame.gameState.players.map((player) => ({
-            ...player,
-            hand:
-              player.playerId === normalizedUser.playerId ? player.hand : [],
-          })),
-          you: normalizedUser.playerId,
-          hostId: room.hostId,
-        };
-
-        this.server.to(client.id).emit('game-resumed', {
-          message: resumeGame.message,
-        });
-        this.server.to(client.id).emit('game-state', maskedGameStateForJoiner);
-        this.server
-          .to(data.roomId)
-          .except(client.id)
-          .emit('update-players', resumeGame.gameState.players);
-      }
-
-      return { success: true, room };
+      return {
+        success: true,
+        room: (
+          await this.roomUpdateGatewayEffectsService.buildRoomView(
+            joinEffects.room,
+          )
+        ).room,
+      };
     } catch (error) {
       console.error('Failed to join room:', error);
       client.emit('error-message', 'Failed to join room');
@@ -1232,7 +776,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleListRooms(client: Socket) {
     try {
       const rooms = await this.roomService.listRooms();
-      client.emit('rooms-list', rooms);
+      this.emitRoomsListToSocket(client, rooms);
     } catch (error) {
       console.error('Failed to list rooms:', error);
     }
@@ -1255,7 +799,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error };
       }
 
-      this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
+      );
       return { success: true };
     } catch (error) {
       console.error('Error in handleTogglePlayerReady:', error);
@@ -1293,7 +843,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (roomDeleted) {
         this.server.to(client.id).emit('back-to-lobby');
-        this.server.emit('rooms-list', roomsList);
+        this.emitRoomsListToAll(roomsList);
         return { success: true };
       }
 
@@ -1302,11 +852,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomId: data.roomId,
       });
 
-      this.server.emit('rooms-list', roomsList);
+      this.emitRoomsListToAll(roomsList);
       this.server.to(client.id).emit('back-to-lobby');
 
       if (updatedPlayers) {
-        this.server.to(data.roomId).emit('update-players', updatedPlayers);
+        this.dispatchEvents([
+          this.roomUpdateGatewayEffectsService.buildPlayersEvent({
+            players: updatedPlayers,
+            scope: 'room',
+            roomId: data.roomId,
+          }),
+        ]);
       }
 
       if (gamePausedMessage) {
@@ -1336,136 +892,74 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const room = await this.roomService.getRoom(data.roomId);
-      if (!room) {
-        client.emit('error-message', 'Room not found');
-        return { success: false, error: 'Room not found' };
+      const result = await this.moderatePlayerUseCase.execute({
+        roomId: data.roomId,
+        requesterPlayerId: data.requesterPlayerId,
+        targetPlayerId: data.targetPlayerId,
+        action: data.action,
+        isPlayerIdle: this.isPlayerIdle(data.roomId, data.targetPlayerId),
+      });
+
+      if (!result.success) {
+        client.emit('error-message', result.error);
+        return { success: false, error: result.error };
       }
 
-      if (room.hostId !== data.requesterPlayerId) {
-        client.emit('error-message', 'Only the host can moderate players');
-        return { success: false, error: 'Only the host can moderate players' };
-      }
-
-      if (data.requesterPlayerId === data.targetPlayerId) {
-        client.emit('error-message', 'Host cannot moderate themselves');
-        return { success: false, error: 'Host cannot moderate themselves' };
-      }
-
-      const targetPlayer = room.players.find(
-        (player) => player.playerId === data.targetPlayerId,
-      );
-      if (!targetPlayer || targetPlayer.isCOM) {
-        client.emit('error-message', 'Target player not found');
-        return { success: false, error: 'Target player not found' };
-      }
-
-      if (data.action === 'remove') {
-        if (room.status !== RoomStatus.WAITING) {
-          client.emit(
-            'error-message',
-            'Players can only be removed in the waiting room',
-          );
-          return {
-            success: false,
-            error: 'Players can only be removed in the waiting room',
-          };
-        }
-
-        const targetSocket = targetPlayer.socketId
-          ? this.server.sockets.sockets.get(targetPlayer.socketId)
-          : undefined;
+      if (result.targetSocketId) {
+        const targetSocket = this.server.sockets.sockets.get(
+          result.targetSocketId,
+        );
         if (targetSocket) {
           await targetSocket.leave(data.roomId);
-          this.playerRooms.delete(targetPlayer.socketId);
+          this.playerRooms.delete(result.targetSocketId);
           targetSocket.emit(
             'error-message',
-            'You were removed from the room by the host',
+            result.mode === 'remove'
+              ? 'You were removed from the room by the host'
+              : result.message,
           );
           targetSocket.emit('back-to-lobby');
         }
+      }
 
-        const result = await this.leaveRoomUseCase.execute({
-          playerId: data.targetPlayerId,
-          roomId: data.roomId,
-        });
-
-        if (!result.success || !result.data) {
-          const errorMessage = result.errorMessage || 'Failed to remove player';
-          client.emit('error-message', errorMessage);
-          return { success: false, error: errorMessage };
-        }
-
-        const { playerId, roomDeleted, roomsList, updatedPlayers } =
-          result.data;
-
-        if (roomDeleted) {
-          this.server.emit('rooms-list', roomsList);
+      if (result.mode === 'remove') {
+        if (result.roomDeleted) {
+          this.emitRoomsListToAll(result.roomsList);
           return { success: true };
         }
 
-        const updatedRoom = await this.roomService.getRoom(data.roomId);
-        if (updatedRoom) {
-          this.server.to(data.roomId).emit('room-updated', updatedRoom);
+        if (result.updatedRoom) {
+          this.dispatchEvents(
+            await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+              room: result.updatedRoom,
+              scope: 'room',
+              roomId: data.roomId,
+            }),
+          );
         }
-
         this.server.to(data.roomId).emit('player-left', {
-          playerId,
+          playerId: result.playerId,
           roomId: data.roomId,
         });
-        this.server.emit('rooms-list', roomsList);
-        if (updatedPlayers) {
-          this.server.to(data.roomId).emit('update-players', updatedPlayers);
-        }
-
+        this.emitRoomsListToAll(result.roomsList);
         return { success: true };
       }
 
-      const roomGameState = await this.roomService.getRoomGameState(
-        data.roomId,
-      );
-      const state = roomGameState.getState();
-      const targetStatePlayer = state.players.find(
-        (player) => player.playerId === data.targetPlayerId,
-      );
-
-      const canReplaceDisconnected = Boolean(
-        room.status === RoomStatus.PLAYING &&
-          targetStatePlayer &&
-          !targetStatePlayer.socketId,
-      );
-      const canReplaceIdle = Boolean(
-        room.status === RoomStatus.PLAYING &&
-          targetStatePlayer &&
-          this.isPlayerIdle(data.roomId, data.targetPlayerId),
-      );
-
-      if (!canReplaceDisconnected && !canReplaceIdle) {
-        client.emit(
-          'error-message',
-          'Only disconnected or idle in-game players can be replaced with COM',
-        );
-        return {
-          success: false,
-          error:
-            'Only disconnected or idle in-game players can be replaced with COM',
-        };
-      }
-
       this.clearTurnAckMonitor(data.roomId);
-
-      const converted = await this.forceReplacePlayerWithCOM(
-        data.roomId,
-        data.targetPlayerId,
-        canReplaceIdle
-          ? 'Host replaced an unresponsive player with COM'
-          : 'Host replaced a disconnected player with COM',
+      this.server.to(data.roomId).emit('player-converted-to-com', {
+        playerId: result.playerId,
+        playerName: result.playerName,
+        message: result.message,
+      });
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
       );
-      if (!converted) {
-        client.emit('error-message', 'Failed to replace player with COM');
-        return { success: false, error: 'Failed to replace player with COM' };
-      }
-
+      this.emitRoomsListToAll(result.roomsList);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
       return { success: true };
     } catch (error) {
       console.error('Error in handleModeratePlayer:', error);
@@ -1483,28 +977,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!roomId) {
       return;
     }
-
-    const monitor = this.turnAckMonitors.get(roomId);
-    if (!monitor) {
-      return;
-    }
-
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const state = roomGameState.getState();
-    const currentPlayer = state.players.find(
-      (player) => player.playerId === monitor.playerId,
+    await this.turnMonitorService.acknowledge(
+      roomId,
+      client.id,
+      this.getAuthenticatedUser(client)?.id,
     );
-    const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
-    const matchesCurrentTurnPlayer =
-      currentPlayer &&
-      (currentPlayer.socketId === client.id ||
-        (Boolean(userId) && currentPlayer.userId === userId));
-
-    if (!matchesCurrentTurnPlayer) {
-      return;
-    }
-
-    this.markTurnAck(roomId, monitor.playerId);
   }
 
   @SubscribeMessage('change-player-team')
@@ -1530,12 +1007,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false };
       }
 
-      this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
-
-      // Sync all clients with full player list (real + COM) to keep team display consistent
-      this.server
-        .to(data.roomId)
-        .emit('update-players', result.updatedRoom.players);
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
+      );
 
       return { success: true };
     } catch (error) {
@@ -1551,44 +1029,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; playerId: string },
   ): Promise<{ success: boolean }> {
     try {
-      let room = await this.roomService.getRoom(data.roomId);
-      if (!room) {
-        client.emit('error-message', 'Room not found');
-        return { success: false };
-      }
-      if (room.hostId !== data.playerId) {
-        client.emit('error-message', 'Only the host can shuffle teams');
-        return { success: false };
-      }
-
-      // Auto-fill empty slots with COM before shuffling so 2:2 splits are possible
-      if (room.players.length < 4) {
-        const fillResult = await this.fillWithComUseCase.execute({
-          roomId: data.roomId,
-          playerId: data.playerId,
-        });
-        if (fillResult.success && fillResult.updatedRoom) {
-          room = fillResult.updatedRoom;
-        }
-      }
-
-      // Fisher-Yates shuffle all players (real + COM)
-      const shuffled = [...room.players];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      const half = Math.floor(shuffled.length / 2);
-      shuffled.forEach((p, idx) => {
-        p.team = (idx < half ? 0 : 1) as import('./types/game.types').Team;
+      const result = await this.shuffleTeamsUseCase.execute({
+        roomId: data.roomId,
+        playerId: data.playerId,
       });
+      if (!result.success || !result.updatedRoom) {
+        client.emit('error-message', result.error || 'Failed to change teams');
+        return { success: false };
+      }
 
-      room.updatedAt = new Date();
-      await this.roomService.updateRoom(data.roomId, room);
-
-      this.server.to(data.roomId).emit('room-updated', room);
-      this.server.to(data.roomId).emit('update-players', room.players);
-
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
+      );
       return { success: true };
     } catch (error) {
       console.error('Error in handleShuffleTeams:', error);
@@ -1614,7 +1070,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false };
       }
 
-      this.server.to(data.roomId).emit('room-updated', result.updatedRoom);
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
+      );
       return { success: true };
     } catch (error) {
       console.error('Error in handleFillWithCom:', error);
@@ -1645,14 +1107,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const { players, pointsToWin, updatePhase, currentTurnPlayerId } =
       result.data;
+    const startGameEvents =
+      await this.startGameGatewayEffectsService.buildEvents({
+        roomId: data.roomId,
+        players,
+        pointsToWin,
+        updatePhase,
+        currentTurnPlayerId,
+      });
 
-    this.server.to(data.roomId).emit('room-playing', players);
-    this.server
-      .to(data.roomId)
-      .emit('game-started', data.roomId, players, pointsToWin);
-    this.server.to(data.roomId).emit('update-phase', updatePhase);
-    this.server.to(data.roomId).emit('update-turn', currentTurnPlayerId);
-    void this.startTurnAckMonitor(data.roomId, currentTurnPlayerId);
+    this.dispatchEvents(startGameEvents);
 
     this.triggerComAutoPlayIfNeeded(data.roomId);
 
@@ -1670,16 +1134,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
-      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
+      const actorId = this.getActorId(client);
       const result = await this.declareBlowUseCase.execute({
         roomId: data.roomId,
-        userId: userId ?? client.id,
+        actorId,
         declaration: data.declaration,
       });
 
       if (!result.success) {
         this.logger.warn(
-          `declare-blow rejected room=${data.roomId} user=${userId ?? client.id} reason=${result.error ?? 'unknown'} declaration=${JSON.stringify(data.declaration)}`,
+          `declare-blow rejected room=${data.roomId} user=${actorId} reason=${result.error ?? 'unknown'} declaration=${JSON.stringify(data.declaration)}`,
         );
         client.emit('error-message', result.error ?? 'Failed to declare blow');
         return;
@@ -1703,15 +1167,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
-      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
+      const actorId = this.getActorId(client);
       const result = await this.passBlowUseCase.execute({
         roomId: data.roomId,
-        userId: userId ?? client.id,
+        actorId,
       });
 
       if (!result.success) {
         this.logger.warn(
-          `pass-blow rejected room=${data.roomId} user=${userId ?? client.id} reason=${result.error ?? 'unknown'}`,
+          `pass-blow rejected room=${data.roomId} user=${actorId} reason=${result.error ?? 'unknown'}`,
         );
         client.emit('error-message', result.error ?? 'Failed to pass blow');
         return;
@@ -1733,10 +1197,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; card: string },
   ): Promise<void> {
     try {
-      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
+      const actorId = this.getActorId(client);
       const result = await this.selectNegriUseCase.execute({
         roomId: data.roomId,
-        userId: userId ?? client.id,
+        actorId,
         card: data.card,
       });
 
@@ -1760,10 +1224,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     try {
-      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
+      const actorId = this.getActorId(client);
       const result = await this.playCardUseCase.execute({
         roomId: data.roomId,
-        userId: userId ?? client.id,
+        actorId,
         card: data.card,
       });
 
@@ -1807,10 +1271,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; suit: string },
   ): Promise<void> {
     try {
-      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
+      const actorId = this.getActorId(client);
       const result = await this.selectBaseSuitUseCase.execute({
         roomId: data.roomId,
-        userId: userId ?? client.id,
+        actorId,
         suit: data.suit,
       });
 
@@ -1833,10 +1297,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomId: string; playerId: string },
   ): Promise<void> {
     try {
-      const userId = (client.data as { user?: AuthenticatedUser }).user?.id;
+      const actorId = this.getActorId(client);
       const preparation = await this.revealBrokenHandUseCase.prepare({
         roomId: data.roomId,
-        userId: userId ?? client.id,
+        actorId,
         playerId: data.playerId,
       });
 

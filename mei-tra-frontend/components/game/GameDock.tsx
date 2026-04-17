@@ -1,8 +1,9 @@
 'use client';
 
-import type { TrumpType } from '@/types/game.types';
+import type { Player, TrumpType } from '@/types/game.types';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset';
 import { ChatDock } from '@/components/social/ChatDock';
+import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
 
@@ -11,9 +12,16 @@ interface GameDockProps {
   gameStarted: boolean;
   currentTrump: TrumpType | null;
   gamePhase?: string | null;
+  players: Player[];
 }
 
-export function GameDock({ roomId, gameStarted, currentTrump, gamePhase }: GameDockProps) {
+export function GameDock({
+  roomId,
+  gameStarted,
+  currentTrump,
+  gamePhase,
+  players,
+}: GameDockProps) {
   const keyboardOffset = useKeyboardOffset();
 
   return (
@@ -22,6 +30,7 @@ export function GameDock({ roomId, gameStarted, currentTrump, gamePhase }: GameD
       style={keyboardOffset > 0 ? { bottom: `${keyboardOffset}px` } : undefined}
     >
       <StrengthOrderDock currentTrump={currentTrump} />
+      <GameHistoryDock roomId={roomId} gameStarted={gameStarted} players={players} />
       <ChatDock roomId={roomId} gameStarted={gameStarted} gamePhase={gamePhase} />
     </div>
   );

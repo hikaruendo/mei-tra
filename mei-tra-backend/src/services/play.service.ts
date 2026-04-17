@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Field, Player, TrumpType } from '../types/game.types';
+import { DomainPlayer, Field, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 import { IPlayService } from './interfaces/play-service.interface';
 
@@ -9,9 +9,9 @@ export class PlayService implements IPlayService {
 
   determineFieldWinner(
     field: Field,
-    players: Player[],
+    players: DomainPlayer[],
     trumpSuit: TrumpType | null,
-  ): Player | null {
+  ): DomainPlayer | null {
     if (players.length === 0) {
       return null;
     }
@@ -23,7 +23,7 @@ export class PlayService implements IPlayService {
       field.baseSuit,
     );
 
-    let winner: Player | null = null;
+    let winner: DomainPlayer | null = null;
     let highestStrength = -1;
 
     // ディーラーのインデックスを取得
