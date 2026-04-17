@@ -1,0 +1,160 @@
+@use '../../styles/base/variables-modules.scss' as *;
+
+.section {
+  margin-top: $spacing-xl;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: $spacing-xl;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: 500;
+  color: #ededed;
+  margin: 0;
+}
+
+.description {
+  margin: 0;
+  color: #9ca3af;
+  font-size: $font-size-sm;
+}
+
+.statusText {
+  margin: 0;
+  color: #9ca3af;
+  font-size: $font-size-sm;
+}
+
+.errorText {
+  margin: 0;
+  color: #f87171;
+  font-size: $font-size-sm;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.card {
+  display: block;
+  border-radius: $radius-lg;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: $spacing-lg;
+  text-decoration: none;
+  color: inherit;
+  transition: $transition-button;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-md;
+  align-items: flex-start;
+  margin-bottom: $spacing-sm;
+}
+
+.roomName {
+  margin: 0;
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: #ededed;
+}
+
+.completedAt {
+  margin: 0;
+  color: #9ca3af;
+  font-size: $font-size-sm;
+  white-space: nowrap;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm $spacing-lg;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metaLabel {
+  color: #9ca3af;
+  font-size: $font-size-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metaValue {
+  color: #ededed;
+  font-size: $font-size-sm;
+  font-weight: 500;
+}
+
+.detailsLink {
+  display: inline-flex;
+  margin-top: $spacing-md;
+  color: #93c5fd;
+  font-size: $font-size-sm;
+  font-weight: 600;
+}
+
+:global(html[data-theme='light']) {
+  .section {
+    border-top-color: rgba(17, 24, 39, 0.08);
+  }
+
+  .description,
+  .statusText,
+  .completedAt,
+  .metaLabel {
+    color: #6b7280;
+  }
+
+  .card {
+    border-color: rgba(17, 24, 39, 0.08);
+    background: rgba(17, 24, 39, 0.02);
+  }
+
+  .card:hover {
+    border-color: rgba(17, 24, 39, 0.18);
+    background: rgba(17, 24, 39, 0.04);
+  }
+
+  .roomName,
+  .sectionTitle,
+  .metaValue {
+    color: #111827;
+  }
+}
+
+@media (max-width: 640px) {
+  .cardHeader {
+    flex-direction: column;
+  }
+
+  .completedAt {
+    white-space: normal;
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+}

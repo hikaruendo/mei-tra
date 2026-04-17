@@ -58,6 +58,16 @@ export interface GameHistorySummary {
   lastTimestamp: Date | null;
 }
 
+export interface RecentGameHistoryItem {
+  roomId: string;
+  roomName: string;
+  completedAt: Date;
+  roundCount: number;
+  totalEntries: number;
+  winningTeam: number | null;
+  lastActionType: GameHistoryActionType | null;
+}
+
 export interface GameHistoryReplayRound {
   roundNumber: number | null;
   startedAt: Date | null;

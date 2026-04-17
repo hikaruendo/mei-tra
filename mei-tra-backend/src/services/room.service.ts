@@ -30,6 +30,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private vacantSeats: VacantSeats = {};
 
   private readonly ROOM_EXPIRY_TIME = 6 * 60 * 60 * 1000; // 6時間
+  private readonly FINISHED_ROOM_RETENTION_TIME = 30 * 24 * 60 * 60 * 1000; // 30日
   private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30分
   private cleanupIntervalId: ReturnType<typeof setInterval>;
   private readonly playerReferenceRemapperService: PlayerReferenceRemapperService;
@@ -108,20 +109,18 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private async cleanupRooms() {
     try {
       const now = new Date();
-      const expiryTime = now.getTime() - this.ROOM_EXPIRY_TIME;
+      const rooms = await this.roomRepository.findAll();
 
-      // Find rooms older than expiry time
-      const expiredRooms = await this.roomRepository.findRoomsOlderThan(
-        new Date(expiryTime),
-      );
+      for (const room of rooms) {
+        const roomAge = now.getTime() - room.lastActivityAt.getTime();
+        const shouldDeleteFinishedRoom =
+          room.status === RoomStatus.FINISHED &&
+          roomAge > this.FINISHED_ROOM_RETENTION_TIME;
+        const shouldDeleteInactiveRoom =
+          room.status !== RoomStatus.FINISHED &&
+          roomAge > this.ROOM_EXPIRY_TIME;
 
-      for (const room of expiredRooms) {
-        // Check deletion conditions
-        if (
-          room.status === RoomStatus.FINISHED ||
-          room.status === RoomStatus.ABANDONED ||
-          now.getTime() - room.lastActivityAt.getTime() > this.ROOM_EXPIRY_TIME
-        ) {
+        if (shouldDeleteFinishedRoom || shouldDeleteInactiveRoom) {
           await this.deleteRoom(room.id);
         }
       }
@@ -157,14 +156,24 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async deleteRoom(roomId: string): Promise<void> {
     await this.roomRepository.delete(roomId);
+    await this.releaseRoomResources(roomId);
+  }
+
+  releaseRoomResources(roomId: string): Promise<void> {
     this.roomGameStates.delete(roomId);
     delete this.vacantSeats[roomId];
+    return Promise.resolve();
   }
 
   async listRooms(): Promise<Room[]> {
     const rooms = await this.roomRepository.findAll();
     return rooms
       .map((room) => this.normalizeRoomHostFlags(room))
+      .filter(
+        (room) =>
+          room.status !== RoomStatus.FINISHED &&
+          room.status !== RoomStatus.ABANDONED,
+      )
       .filter((room) => room.players.some((player) => !player.isCOM));
   }
 

@@ -288,6 +288,7 @@ describe('Reconnection Token Management', () => {
         findRoomsOlderThan: jest.fn(),
         findByStatus: jest.fn(),
         findByHostId: jest.fn(),
+        findRecentFinishedByUserId: jest.fn(),
         updateStatus: jest.fn(),
         updateLastActivity: jest.fn(),
         deleteExpiredRooms: jest.fn(),

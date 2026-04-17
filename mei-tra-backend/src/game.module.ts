@@ -47,6 +47,7 @@ import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
 import { GameEventLogService } from './services/game-event-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
+import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
 
 @Module({
   imports: [RepositoriesModule, AuthModule, SocialModule],
@@ -191,10 +192,14 @@ import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
       provide: 'IGetGameHistoryUseCase',
       useClass: GetGameHistoryUseCase,
     },
+    {
+      provide: 'IGetUserRecentGameHistoryUseCase',
+      useClass: GetUserRecentGameHistoryUseCase,
+    },
     ReconnectionUseCase,
     ModeratePlayerUseCase,
     ShuffleTeamsUseCase,
   ],
-  exports: ['IActivityTrackerService'],
+  exports: ['IActivityTrackerService', 'IGetUserRecentGameHistoryUseCase'],
 })
 export class GameModule {}

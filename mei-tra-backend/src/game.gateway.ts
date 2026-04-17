@@ -384,7 +384,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
 
-      await this.roomService.deleteRoom(roomId);
+      await this.roomService.releaseRoomResources(roomId);
       const roomsList = await this.roomService.listRooms();
       this.emitRoomsListToAll(roomsList);
     } catch (error) {

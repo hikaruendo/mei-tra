@@ -4,6 +4,7 @@ import {
   UpdateUserProfileRequestDto,
   UserProfileDto,
 } from '@contracts/profile';
+import { RecentGameHistoryItemContract } from '@contracts/game-history';
 import {
   Controller,
   Get,
@@ -33,6 +34,8 @@ import {
 import { SupabaseService } from '../database/supabase.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/decorators/user.decorator';
+import { RecentGameHistoryItem } from '../types/game-history.types';
+import { IGetUserRecentGameHistoryUseCase } from '../use-cases/interfaces/get-user-recent-game-history.use-case.interface';
 import * as sharp from 'sharp';
 
 @Controller('user-profile')
@@ -43,7 +46,20 @@ export class UserProfileController {
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository,
     private readonly supabaseService: SupabaseService,
+    @Inject('IGetUserRecentGameHistoryUseCase')
+    private readonly getUserRecentGameHistoryUseCase: IGetUserRecentGameHistoryUseCase,
   ) {}
+
+  @Get(':id/game-history')
+  @UseGuards(AuthGuard)
+  async getRecentGameHistory(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<RecentGameHistoryItemContract[]> {
+    this.assertProfileOwnership(id, currentUser);
+    const history = await this.getUserRecentGameHistoryUseCase.execute(id, 10);
+    return history.map((item) => this.toRecentGameHistoryItemDto(item));
+  }
 
   @Get(':id')
   async getProfile(@Param('id') id: string) {
@@ -279,6 +295,20 @@ export class UserProfileController {
         theme: profile.preferences.theme,
         fontSize: profile.preferences.fontSize,
       },
+    };
+  }
+
+  private toRecentGameHistoryItemDto(
+    item: RecentGameHistoryItem,
+  ): RecentGameHistoryItemContract {
+    return {
+      roomId: item.roomId,
+      roomName: item.roomName,
+      completedAt: item.completedAt.toISOString(),
+      roundCount: item.roundCount,
+      totalEntries: item.totalEntries,
+      winningTeam: item.winningTeam,
+      lastActionType: item.lastActionType,
     };
   }
 }

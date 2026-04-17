@@ -70,18 +70,8 @@ export class SupabaseRoomRepository implements IRoomRepository {
         throw new Error(`Failed to fetch room: ${roomError.message}`);
       }
 
-      const { data: playersData, error: playersError } = await this.supabase
-        .from('room_players')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('joined_at', { ascending: true });
-
-      if (playersError) {
-        this.logger.error('Failed to fetch room players:', playersError);
-        // Continue without players data rather than failing completely
-      }
-
-      const players = playersData ? this.mapDatabaseToPlayers(playersData) : [];
+      const playersByRoomId = await this.fetchPlayersByRoomIds([roomId]);
+      const players = playersByRoomId.get(roomId) ?? [];
       return this.mapDatabaseToRoom(roomData, players);
     } catch (error) {
       this.logger.error('Error finding room by ID:', error);
@@ -111,14 +101,8 @@ export class SupabaseRoomRepository implements IRoomRepository {
         throw new Error(`Failed to update room: ${error.message}`);
       }
 
-      // Fetch updated players
-      const { data: playersData } = await this.supabase
-        .from('room_players')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('joined_at', { ascending: true });
-
-      const players = playersData ? this.mapDatabaseToPlayers(playersData) : [];
+      const playersByRoomId = await this.fetchPlayersByRoomIds([roomId]);
+      const players = playersByRoomId.get(roomId) ?? [];
       return this.mapDatabaseToRoom(data, players);
     } catch (error) {
       this.logger.error('Error updating room:', error);
@@ -153,22 +137,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         throw new Error(`Failed to fetch rooms: ${roomsError.message}`);
       }
 
-      // For performance, only fetch players for each room when needed
-      const rooms: Room[] = [];
-      for (const roomData of roomsData) {
-        const { data: playersData } = await this.supabase
-          .from('room_players')
-          .select('*')
-          .eq('room_id', roomData.id)
-          .order('joined_at', { ascending: true });
-
-        const players = playersData
-          ? this.mapDatabaseToPlayers(playersData)
-          : [];
-        rooms.push(this.mapDatabaseToRoom(roomData, players));
-      }
-
-      return rooms;
+      return this.mapRoomsWithPlayers(roomsData);
     } catch (error) {
       this.logger.error('Error finding all rooms:', error);
       throw error;
@@ -187,21 +156,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         throw new Error(`Failed to fetch rooms by status: ${error.message}`);
       }
 
-      const rooms: Room[] = [];
-      for (const roomData of roomsData) {
-        const { data: playersData } = await this.supabase
-          .from('room_players')
-          .select('*')
-          .eq('room_id', roomData.id)
-          .order('joined_at', { ascending: true });
-
-        const players = playersData
-          ? this.mapDatabaseToPlayers(playersData)
-          : [];
-        rooms.push(this.mapDatabaseToRoom(roomData, players));
-      }
-
-      return rooms;
+      return this.mapRoomsWithPlayers(roomsData);
     } catch (error) {
       this.logger.error('Error finding rooms by status:', error);
       throw error;
@@ -220,23 +175,38 @@ export class SupabaseRoomRepository implements IRoomRepository {
         throw new Error(`Failed to fetch rooms by host: ${error.message}`);
       }
 
-      const rooms: Room[] = [];
-      for (const roomData of roomsData) {
-        const { data: playersData } = await this.supabase
-          .from('room_players')
-          .select('*')
-          .eq('room_id', roomData.id)
-          .order('joined_at', { ascending: true });
-
-        const players = playersData
-          ? this.mapDatabaseToPlayers(playersData)
-          : [];
-        rooms.push(this.mapDatabaseToRoom(roomData, players));
-      }
-
-      return rooms;
+      return this.mapRoomsWithPlayers(roomsData);
     } catch (error) {
       this.logger.error('Error finding rooms by host ID:', error);
+      throw error;
+    }
+  }
+
+  async findRecentFinishedByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<Room[]> {
+    try {
+      const { data: roomsData, error } = await this.supabase
+        .from('rooms')
+        .select('*, room_players!inner(user_id)')
+        .eq('status', RoomStatus.FINISHED)
+        .eq('room_players.user_id', userId)
+        .order('last_activity_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(
+          `Failed to fetch recent finished rooms by user: ${error.message}`,
+        );
+      }
+
+      return this.mapRoomsWithPlayers((roomsData ?? []) as RoomRow[]);
+    } catch (error) {
+      this.logger.error(
+        'Error finding recent finished rooms by user ID:',
+        error,
+      );
       throw error;
     }
   }
@@ -419,21 +389,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         throw new Error(`Failed to find old rooms: ${error.message}`);
       }
 
-      const rooms: Room[] = [];
-      for (const roomData of roomsData) {
-        const { data: playersData } = await this.supabase
-          .from('room_players')
-          .select('*')
-          .eq('room_id', roomData.id)
-          .order('joined_at', { ascending: true });
-
-        const players = playersData
-          ? this.mapDatabaseToPlayers(playersData)
-          : [];
-        rooms.push(this.mapDatabaseToRoom(roomData, players));
-      }
-
-      return rooms;
+      return this.mapRoomsWithPlayers(roomsData);
     } catch (error) {
       this.logger.error('Error finding old rooms:', error);
       throw error;
@@ -484,8 +440,52 @@ export class SupabaseRoomRepository implements IRoomRepository {
     };
   }
 
-  private mapDatabaseToPlayers(dbPlayers: RoomPlayerRow[]): RoomPlayer[] {
-    return dbPlayers.map((dbPlayer) => ({
+  private async mapRoomsWithPlayers(roomsData: RoomRow[]): Promise<Room[]> {
+    const playersByRoomId = await this.fetchPlayersByRoomIds(
+      roomsData.map((room) => room.id),
+    );
+
+    return roomsData.map((roomData) =>
+      this.mapDatabaseToRoom(roomData, playersByRoomId.get(roomData.id) ?? []),
+    );
+  }
+
+  private async fetchPlayersByRoomIds(
+    roomIds: string[],
+  ): Promise<Map<string, RoomPlayer[]>> {
+    const playersByRoomId = new Map<string, RoomPlayer[]>();
+
+    for (const roomId of roomIds) {
+      playersByRoomId.set(roomId, []);
+    }
+
+    if (roomIds.length === 0) {
+      return playersByRoomId;
+    }
+
+    const { data: playersData, error } = await this.supabase
+      .from('room_players')
+      .select('*')
+      .in('room_id', roomIds)
+      .order('room_id', { ascending: true })
+      .order('joined_at', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch room players: ${error.message}`);
+    }
+
+    for (const dbPlayer of playersData ?? []) {
+      const players = playersByRoomId.get(dbPlayer.room_id);
+      if (players) {
+        players.push(this.mapDatabaseToPlayer(dbPlayer));
+      }
+    }
+
+    return playersByRoomId;
+  }
+
+  private mapDatabaseToPlayer(dbPlayer: RoomPlayerRow): RoomPlayer {
+    return {
       socketId: dbPlayer.socket_id || '',
       playerId: dbPlayer.player_id,
       userId: dbPlayer.user_id ?? undefined,
@@ -499,6 +499,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
       isHost: dbPlayer.is_host,
       isCOM: dbPlayer.player_id.startsWith('com-'),
       joinedAt: new Date(dbPlayer.joined_at),
-    }));
+    };
   }
 }

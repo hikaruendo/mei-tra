@@ -3,6 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
+import { ProfileRecentMatchesSection } from '@/components/profile/ProfileRecentMatchesSection';
 import { Navigation } from '@/components/layout/Navigation';
 import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
@@ -12,7 +13,7 @@ import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, getAccessToken } = useAuth();
   const t = useTranslations('profile');
   const locale = useLocale();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -291,6 +292,11 @@ export function ProfilePage() {
                 )}
               </div>
             </div>
+
+            <ProfileRecentMatchesSection
+              userId={user.id}
+              getAccessToken={getAccessToken}
+            />
           </div>
         </div>
       </div>

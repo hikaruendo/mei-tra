@@ -65,6 +65,7 @@ describe('CreateRoomUseCase', () => {
       updatePlayerInRoom: jest.fn(),
       updateRoom: jest.fn(),
       deleteRoom: jest.fn(),
+      releaseRoomResources: jest.fn(),
       canStartGame: jest.fn(),
       handlePlayerReconnection: jest.fn(),
       restorePlayerFromVacantSeat: jest.fn(),

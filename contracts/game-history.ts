@@ -46,6 +46,16 @@ export interface GameHistorySummaryContract {
   lastTimestamp: string | null;
 }
 
+export interface RecentGameHistoryItemContract {
+  roomId: string;
+  roomName: string;
+  completedAt: string;
+  roundCount: number;
+  totalEntries: number;
+  winningTeam: number | null;
+  lastActionType: GameHistoryActionType | null;
+}
+
 export interface GameHistoryReplayRoundContract {
   roundNumber: number | null;
   startedAt: string | null;

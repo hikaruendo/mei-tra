@@ -11,6 +11,7 @@ export interface IRoomRepository {
   // Room-specific operations
   findByStatus(status: RoomStatus): Promise<Room[]>;
   findByHostId(hostId: string): Promise<Room[]>;
+  findRecentFinishedByUserId(userId: string, limit: number): Promise<Room[]>;
   updateStatus(roomId: string, status: RoomStatus): Promise<boolean>;
   updateLastActivity(roomId: string): Promise<void>;
 

@@ -7,6 +7,7 @@ export interface IRoomService {
   getRoom(roomId: string): Promise<Room | null>;
   updateRoom(roomId: string, updates: Partial<Room>): Promise<Room | null>;
   deleteRoom(roomId: string): Promise<void>;
+  releaseRoomResources(roomId: string): Promise<void>;
   listRooms(): Promise<Room[]>;
   createNewRoom(
     name: string,

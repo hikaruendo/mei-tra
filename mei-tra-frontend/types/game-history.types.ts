@@ -8,6 +8,7 @@ import type {
   GameHistoryReplayQueryContract,
   GameHistoryReplayRoundContract,
   GameHistoryReplayViewContract,
+  RecentGameHistoryItemContract,
   GameHistorySummaryContract,
 } from '@contracts/game-history';
 
@@ -33,6 +34,13 @@ export type GameHistorySummary = Omit<
 > & {
   firstTimestamp: Date | null;
   lastTimestamp: Date | null;
+};
+
+export type RecentGameHistoryItem = Omit<
+  RecentGameHistoryItemContract,
+  'completedAt'
+> & {
+  completedAt: Date;
 };
 
 export type GameHistoryReplayDetailValue = GameHistoryReplayDetailValueContract;
@@ -119,5 +127,14 @@ export function fromGameHistorySummaryContract(
     ...summary,
     firstTimestamp: toDateOrNull(summary.firstTimestamp),
     lastTimestamp: toDateOrNull(summary.lastTimestamp),
+  };
+}
+
+export function fromRecentGameHistoryItemContract(
+  item: RecentGameHistoryItemContract,
+): RecentGameHistoryItem {
+  return {
+    ...item,
+    completedAt: new Date(item.completedAt),
   };
 }
