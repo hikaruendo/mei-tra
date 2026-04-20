@@ -11,6 +11,26 @@
 - バックエンド: NestJS
 - 通信: WebSocket
 
+最近の主要な設計方針は次の通りです。
+
+- 外側は Next.js / NestJS の標準的な module、route、controller、gateway、DI に乗せる。一方で、ゲームの正しさに直結する `CardService` / `BlowService` / `PlayService` / `ScoreService` / `ChomboService` / `GamePhaseService` は domain層として扱い、UI・Socket・DB へ散らさない
+- room/player 同期は `room-sync` を主系統にし、`room-updated` / `update-players` は互換 fallback として維持する
+- 対局ログは `game_history` を write/read side の両方で使い、**プレイ中 UI ではなくプロフィールの「最近の対局」から詳細ページへ入る**
+
+## リポジトリ構成
+
+- `mei-tra-frontend/`: Next.js App Router の frontend。本番 UI、認証 UI、プロフィール、チュートリアルを持つ。`components/` は `game/`, `room/`, `shared/`, `auth/`, `social/` など feature 単位で整理している
+- `mei-tra-backend/`: NestJS backend。ゲーム進行、Socket.IO、profile API、game-history API、chat API、Supabase 永続化を持つ
+- `contracts/`: frontend / backend が共有する transport 契約。REST DTO と Socket.IO payload のみを置く
+- `docs/developer-guide/`: 現行 `main` を読むための開発者向けドキュメント群
+- `docs/architecture/game-core-design-and-realtime-scaling.md`: domain層を中心にゲームルール周辺を厚く守る設計方針と realtime 接続数の判断ライン
+
+型の責務は次のように分けています。
+
+- `contracts/`: wire 契約
+- `mei-tra-frontend/types/`: UI state / view model
+- `mei-tra-backend/src/types/`: domain / persistence / internal service types
+
 ## 技術スタック
 
 ### フロントエンド
