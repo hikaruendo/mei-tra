@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import styles from './page.module.scss';
 
@@ -17,7 +17,6 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
@@ -50,7 +49,6 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
         password: password
       });

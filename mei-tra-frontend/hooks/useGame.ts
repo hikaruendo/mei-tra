@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import type {
   BlowStartedPayload,
   BrokenPayload,
+  CardPlayedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -11,11 +12,13 @@ import type {
   GameStatePayload,
   NewRoundStartedPayload,
   PlayerContract,
+  PlayCardPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
   TransportGamePhase,
   TransportTeamScores,
   UpdatePhasePayload,
+  UpdateTurnPayload,
 } from '@contracts/game';
 import type {
   GamePlayerJoinedPayload,
@@ -575,7 +578,7 @@ export const useGame = () => {
       'error-message': (message: string) => {
         setNotification({ message, type: 'error' });
       },
-      'update-turn': (playerId: string) => {
+      'update-turn': (playerId: UpdateTurnPayload) => {
         setWhoseTurn(playerId);
         if (socket && currentRoomId) {
           socket.emit('turn-ack', { roomId: currentRoomId });
@@ -690,7 +693,7 @@ export const useGame = () => {
           setCurrentTrump(currentHighestDeclaration.trumpType);
         }
       },
-      'card-played': ({ field, players: updatedPlayers }: { field: Field, players: Player[] }) => {
+      'card-played': ({ field, players: updatedPlayers }: CardPlayedPayload) => {
         setCurrentField(field);
         // Update players with the latest data from server
         setPlayers(updatedPlayers);
@@ -979,10 +982,14 @@ export const useGame = () => {
         setNotification({ message: t('errors.notYourTurnPlay'), type: 'error' });
         return;
       }
-      socket?.emit('play-card', {
+      if (!currentRoomId) {
+        return;
+      }
+      const payload: PlayCardPayload = {
         roomId: currentRoomId,
         card,
-      });
+      };
+      socket?.emit('play-card', payload);
     },
     selectBaseSuit: (suit: string) => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {

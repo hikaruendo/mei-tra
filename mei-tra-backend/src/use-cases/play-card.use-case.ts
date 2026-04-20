@@ -4,10 +4,10 @@ import {
   PlayCardRequest,
   PlayCardResponse,
   CompleteFieldTrigger,
+  PlayCardGatewayEvent,
 } from './interfaces/play-card.use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
-import { GatewayEvent } from './interfaces/gateway-event.interface';
 import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
@@ -96,7 +96,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         },
       });
 
-      const events: GatewayEvent[] = [
+      const events: PlayCardGatewayEvent[] = [
         {
           scope: 'room',
           roomId,

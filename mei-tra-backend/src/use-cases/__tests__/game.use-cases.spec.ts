@@ -1054,7 +1054,18 @@ describe('Game Use Cases', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.events?.[0].event).toBe('card-played');
+      const cardPlayedEvent = result.events?.find(
+        (evt) => evt.event === 'card-played',
+      );
+      expect(cardPlayedEvent?.payload).toMatchObject({
+        playerId: 'player-1',
+        card: 'C1',
+        field: expect.objectContaining({
+          cards: ['C1'],
+          playedBy: ['player-1'],
+        }),
+        players: expect.any(Array),
+      });
       const updateTurnEvent = result.events?.find(
         (evt) => evt.event === 'update-turn',
       );

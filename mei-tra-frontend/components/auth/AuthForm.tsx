@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import { SignInData, SignUpData } from '@/types/user.types';
+import { supabase } from '@/lib/supabase';
 import styles from './AuthForm.module.scss';
 
 interface AuthFormProps {
@@ -110,9 +111,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     setIsSendingMagicLink(true);
 
     try {
-      const { createClient } = await import('@/lib/supabase');
-      const supabase = createClient();
-
       const { error } = await supabase.auth.signInWithOtp({
         email: formData.email,
         options: {
@@ -140,9 +138,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     setIsSigningInWithGoogle(true);
 
     try {
-      const { createClient } = await import('@/lib/supabase');
-      const supabase = createClient();
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -173,9 +168,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     setIsSendingReset(true);
 
     try {
-      const { createClient } = await import('@/lib/supabase');
-      const supabase = createClient();
-
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
         redirectTo: resetPasswordUrl
       });

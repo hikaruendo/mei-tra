@@ -113,6 +113,20 @@ export interface FieldCompletePayload {
   nextPlayerId: string;
 }
 
+export interface PlayCardPayload {
+  roomId: string;
+  card: string;
+}
+
+export interface CardPlayedPayload {
+  playerId: string;
+  card: string;
+  field: FieldContract;
+  players: PlayerContract[];
+}
+
+export type UpdateTurnPayload = string;
+
 export interface RoundResultsPayload {
   scores: TransportTeamScores;
 }

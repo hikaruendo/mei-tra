@@ -135,11 +135,10 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       card: bestCard,
     });
 
-    const {
-      events = [],
-      delayedEvents = [],
-      completeFieldTrigger,
-    } = result as ResponseWithDelayed<PlayCardResponse>;
+    const playResult = result as ResponseWithDelayed<PlayCardResponse>;
+    const events: GatewayEvent[] = [...(playResult.events ?? [])];
+    const delayedEvents: GatewayEvent[] = [...(playResult.delayedEvents ?? [])];
+    const { completeFieldTrigger } = playResult;
 
     const updatedState = gameState.getState();
     const updatedField = updatedState.playState?.currentField ?? null;

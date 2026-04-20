@@ -7,6 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import type { PlayCardPayload } from '@contracts/game';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { TrumpType } from './types/game.types';
@@ -1219,7 +1220,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('play-card')
   async handlePlayCard(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; card: string },
+    @MessageBody() data: PlayCardPayload,
   ): Promise<void> {
     this.activityTracker.recordActivity();
 

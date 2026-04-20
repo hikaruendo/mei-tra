@@ -7,7 +7,7 @@ import { ProfileRecentMatchesSection } from '@/components/profile/ProfileRecentM
 import { Navigation } from '@/components/layout/Navigation';
 import { useState } from 'react';
 import { UserProfile } from '@/types/user.types';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useLocale, useTranslations } from 'next-intl';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import styles from './ProfilePage.module.scss';
@@ -93,7 +93,6 @@ export function ProfilePage() {
     setIsSendingPasswordReset(true);
 
     try {
-      const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}${localePrefix}/auth/reset-password`,
       });
