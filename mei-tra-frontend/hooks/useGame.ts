@@ -13,6 +13,8 @@ import type {
   NewRoundStartedPayload,
   PlayerContract,
   PlayCardPayload,
+  RequestAgariPayload,
+  RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
   TransportGamePhase,
@@ -113,6 +115,7 @@ export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
   const { user, getAccessToken } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
+  const agariRequestKeyRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
   const legacyRoomEventSkipRef = useRef<{
     roomId: string | null;
@@ -168,6 +171,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
   const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
+  const [disconnectedPlayerIds, setDisconnectedPlayerIds] = useState<string[]>([]);
 
   const [users, setUsers] = useState<ConnectionUser[]>([]);
   // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
@@ -177,6 +181,7 @@ export const useGame = () => {
 
   const resetRoomState = useCallback(() => {
     gameOverShownRef.current = null;
+    agariRequestKeyRef.current = null;
     roomBootstrapRef.current = null;
     setGameStarted(false);
     setGamePhase(null);
@@ -185,10 +190,23 @@ export const useGame = () => {
     setCurrentPlayerId(null);
     setIsHost(false);
     setIdlePlayerIds([]);
+    setDisconnectedPlayerIds([]);
     setPlayers([]);
     setTeamScores(createEmptyTeamScores());
     sessionStorage.removeItem('roomId');
   }, []);
+
+  const syncDisconnectedPlayerIdsFromPlayers = useCallback(
+    (nextPlayers: Array<Pick<Player, 'playerId' | 'isCOM' | 'socketId'>>) => {
+      setDisconnectedPlayerIds((prev) =>
+        prev.filter((playerId) => {
+          const player = nextPlayers.find((candidate) => candidate.playerId === playerId);
+          return Boolean(player && !player.isCOM && !player.socketId);
+        }),
+      );
+    },
+    [],
+  );
 
   const syncCurrentPlayerIdentity = useCallback((
     nextPlayers: Player[],
@@ -297,6 +315,47 @@ export const useGame = () => {
   }, [currentRoomId]);
 
   useEffect(() => {
+    if (
+      !socket?.connected ||
+      !currentRoomId ||
+      gamePhase !== 'play' ||
+      !currentPlayerId ||
+      currentHighestDeclaration?.playerId !== currentPlayerId ||
+      revealedAgari ||
+      negriCard
+    ) {
+      if (gamePhase !== 'play') {
+        agariRequestKeyRef.current = null;
+      }
+      return;
+    }
+
+    const requestKey = [
+      currentRoomId,
+      socket.id,
+      currentPlayerId,
+      currentHighestDeclaration.trumpType,
+      currentHighestDeclaration.numberOfPairs,
+      currentHighestDeclaration.timestamp,
+    ].join(':');
+    if (agariRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    agariRequestKeyRef.current = requestKey;
+    const payload: RequestAgariPayload = { roomId: currentRoomId };
+    socket.emit('request-agari', payload);
+  }, [
+    currentHighestDeclaration,
+    currentPlayerId,
+    currentRoomId,
+    gamePhase,
+    negriCard,
+    revealedAgari,
+    socket,
+  ]);
+
+  useEffect(() => {
     setIsClient(true);
 
     // Update loading state based on socket status - but don't block UI
@@ -359,6 +418,7 @@ export const useGame = () => {
         }
         const nextPlayers = fromPlayerContracts(players);
         setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
             nextPlayers.some((player) => player.playerId === playerId),
@@ -424,6 +484,7 @@ export const useGame = () => {
         }
 
         setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         syncCurrentPlayerIdentity(nextPlayers, selfPlayerId);
 
         if (!currentRoomId) {
@@ -451,6 +512,7 @@ export const useGame = () => {
       }: GameStatePayload) => {
         const nextPlayers = fromPlayerContracts(players);
         setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
         setGamePhase(toUiGamePhase(gamePhase));
         setWhoseTurn(currentTurn);
@@ -521,6 +583,7 @@ export const useGame = () => {
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
         setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
 
         // Identify self by playerId (stable across reconnections), not socket.id
@@ -617,6 +680,7 @@ export const useGame = () => {
       'blow-started': ({ startingPlayer, players }: BlowStartedPayload) => {
         setGamePhase('blow');
         setPlayers(players);
+        syncDisconnectedPlayerIdsFromPlayers(players);
         setWhoseTurn(startingPlayer);
       },
       'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclaration[]; actionHistory?: BlowAction[]; currentHighest: BlowDeclaration | null }) => {
@@ -633,6 +697,7 @@ export const useGame = () => {
         });
         resetBlowState({ preservePlayers: true });
         setPlayers(players);
+        syncDisconnectedPlayerIdsFromPlayers(players);
         setWhoseTurn(nextPlayerId);
         setGamePhase(toUiGamePhase(gamePhase ?? 'blow'));
         setCurrentTrump(null);
@@ -663,14 +728,15 @@ export const useGame = () => {
         });
         resetBlowState({ preservePlayers: true });
         setPlayers(players);
+        syncDisconnectedPlayerIdsFromPlayers(players);
         setWhoseTurn(nextDealer);
         setCurrentTrump(currentTrump ?? null);
         setCurrentHighestDeclaration(currentHighestDeclaration ?? null);
         setBlowDeclarations(blowDeclarations ?? []);
         setBlowActionHistory(actionHistory ?? []);
       },
-      'reveal-agari': ({ agari, message }: { agari: string, message: string }) => {
-        setRevealedAgari(agari);        
+      'reveal-agari': ({ agari, message }: RevealAgariPayload) => {
+        setRevealedAgari(agari);
         setNotification({
           message,
           type: 'success'
@@ -697,6 +763,7 @@ export const useGame = () => {
         setCurrentField(field);
         // Update players with the latest data from server
         setPlayers(updatedPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(updatedPlayers);
       },
       'field-updated': (field: Field) => {
         setCurrentField(field);
@@ -730,6 +797,7 @@ export const useGame = () => {
         blowDeclarations,
       }: NewRoundStartedPayload) => {
         setPlayers(players);
+        syncDisconnectedPlayerIdsFromPlayers(players);
         setWhoseTurn(currentTurn);
         setGamePhase(toUiGamePhase(gamePhase));
         setCurrentField(toUiField(currentField));
@@ -781,6 +849,9 @@ export const useGame = () => {
           ),
         );
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+        setDisconnectedPlayerIds((prev) =>
+          prev.includes(playerId) ? prev : [...prev, playerId],
+        );
         setNotification({
           message: tStatus('disconnectedNotice', {
             playerName: playerName ?? playerId,
@@ -819,6 +890,7 @@ export const useGame = () => {
       }) => {
         console.log('[useGame] Player converted to COM:', playerId, message);
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+        setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== playerId));
         if (playerId === currentPlayerId) {
           resetRoomState();
           setNotification({
@@ -838,6 +910,7 @@ export const useGame = () => {
       },
       'player-left': ({ playerId }: { playerId: string; roomId: string }) => {
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+        setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== playerId));
         if (playerId === currentPlayerId) {
           setCurrentRoomId(null);
           setIsHost(false);
@@ -874,6 +947,7 @@ export const useGame = () => {
     shouldSkipLegacyRoomUpdated,
     shouldSkipLegacyUpdatePlayers,
     resetRoomState,
+    syncDisconnectedPlayerIdsFromPlayers,
     t,
     tStatus,
     user?.id,
@@ -1072,6 +1146,7 @@ export const useGame = () => {
     removePlayerFromRoom,
     replacePlayerWithCOM,
     idlePlayerIds,
+    disconnectedPlayerIds,
     pointsToWin,
     users,
     paused,

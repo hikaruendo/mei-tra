@@ -35,6 +35,7 @@ function buildHistoryQueryString(query?: GameHistoryReplayQuery): string {
 
 async function fetchGameHistoryResource<TContract, TData>(
   path: string,
+  accessToken: string,
   fallbackMessage: string,
   mapResponse: (data: TContract) => TData,
 ): Promise<TData> {
@@ -42,6 +43,9 @@ async function fetchGameHistoryResource<TContract, TData>(
     path,
     {
       method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
       cache: 'no-store',
     },
   );
@@ -63,10 +67,12 @@ async function fetchGameHistoryResource<TContract, TData>(
 
 export async function fetchGameHistoryReplay(
   roomId: string,
+  accessToken: string,
   query?: GameHistoryReplayQuery,
 ): Promise<GameHistoryReplayView> {
   return fetchGameHistoryResource<GameHistoryReplayViewContract, GameHistoryReplayView>(
     `/api/game-history/${roomId}/replay${buildHistoryQueryString(query)}`,
+    accessToken,
     'Failed to fetch game history replay',
     fromGameHistoryReplayViewContract,
   );
@@ -74,10 +80,12 @@ export async function fetchGameHistoryReplay(
 
 export async function fetchGameHistorySummary(
   roomId: string,
+  accessToken: string,
   query?: GameHistoryReplayQuery,
 ): Promise<GameHistorySummary> {
   return fetchGameHistoryResource<GameHistorySummaryContract, GameHistorySummary>(
     `/api/game-history/${roomId}/summary${buildHistoryQueryString(query)}`,
+    accessToken,
     'Failed to fetch game history summary',
     fromGameHistorySummaryContract,
   );

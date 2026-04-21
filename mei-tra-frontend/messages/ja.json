@@ -456,7 +456,8 @@
   },
   "playerHand": {
     "cards": "枚",
-    "selectNegri": "ネグリカードを選択してください",
+    "selectNegri": "ネグリを選択してください",
+    "selectNegriWithAgari": "このカードがアガリです。ネグリを選択してください",
     "agari": "アガリ",
     "revealBroken": "ブロークンハンドを公開",
     "negri": "ネグリ",
@@ -646,7 +647,7 @@
     }
   },
   "playerStatus": {
-    "disconnected": "Disconnected",
+    "disconnected": "切断中",
     "idle": "応答なし",
     "replaceWithCom": "COMに切り替え",
     "disconnectedNotice": "{playerName} の接続が切れました。一定時間後にCOMへ切り替わります。",

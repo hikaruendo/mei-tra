@@ -58,21 +58,27 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       const won = player.team === winningTeam;
       const playerScore = teamScores[player.team]?.total ?? 0;
 
-      try {
-        await this.roomService.updateUserGameStats(
-          player.userId,
-          won,
-          playerScore,
-        );
-      } catch (error) {
-        this.logger.error(
-          `Failed to update stats for user ${player.userId}:`,
-          error,
-        );
-      }
+      await this.roomService.updateUserGameStats(
+        player.userId,
+        won,
+        playerScore,
+      );
+
+      return player;
     });
 
     const results = await Promise.allSettled(updatePromises);
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Failed to update stats for user ${authenticatedPlayers[index].userId}:`,
+          result.reason,
+        );
+      }
+    });
+    const updatedPlayers = results.flatMap((result) =>
+      result.status === 'fulfilled' ? [result.value.playerId] : [],
+    );
     const failedUpdates = results.filter(
       (result) => result.status === 'rejected',
     ).length;
@@ -83,8 +89,8 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       playerId: null,
       actionData: {
         winningTeam,
-        updatedPlayers: authenticatedPlayers.map((player) => player.playerId),
-        updatedCount: authenticatedPlayers.length,
+        updatedPlayers,
+        updatedCount: updatedPlayers.length,
         skippedPlayers: room.players
           .filter(
             (roomPlayer) =>
@@ -111,11 +117,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       return sessionUser.userId;
     }
 
-    if (
-      roomPlayer.isAuthenticated &&
-      typeof roomPlayer.userId === 'string' &&
-      roomPlayer.userId.length > 0
-    ) {
+    if (typeof roomPlayer.userId === 'string' && roomPlayer.userId.length > 0) {
       return roomPlayer.userId;
     }
 

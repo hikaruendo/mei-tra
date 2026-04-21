@@ -489,6 +489,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       socketId: dbPlayer.socket_id || '',
       playerId: dbPlayer.player_id,
       userId: dbPlayer.user_id ?? undefined,
+      isAuthenticated: Boolean(dbPlayer.user_id),
       name: dbPlayer.name,
       hand: dbPlayer.hand,
       team: dbPlayer.team as 0 | 1,

@@ -1,4 +1,4 @@
-import type { UpdatePhasePayload } from '@contracts/game';
+import type { RevealAgariPayload, UpdatePhasePayload } from '@contracts/game';
 import { GameState } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { GameStateService } from '../services/game-state.service';
@@ -102,16 +102,22 @@ export async function transitionToPlayPhase({
   const winningPlayerSession = roomGameState.findSessionUserByPlayerId(
     winningPlayer.playerId,
   );
-  if (winningPlayerSession?.socketId) {
+  const winningPlayerSocketId =
+    winningPlayerSession?.socketId ??
+    room?.players.find((player) => player.playerId === winningPlayer.playerId)
+      ?.socketId;
+
+  if (state.agari && winningPlayerSocketId) {
+    const revealAgariPayload: RevealAgariPayload = {
+      agari: state.agari,
+      message: 'Select a card from your hand as Negri',
+      playerId: winningPlayer.playerId,
+    };
     delayedEvents.unshift({
       scope: 'socket',
-      socketId: winningPlayerSession.socketId,
+      socketId: winningPlayerSocketId,
       event: 'reveal-agari',
-      payload: {
-        agari: state.agari,
-        message: 'Select a card from your hand as Negri',
-        playerId: winningPlayer.playerId,
-      },
+      payload: revealAgariPayload,
       delayMs: 3000,
     });
   }
@@ -122,7 +128,7 @@ export async function transitionToPlayPhase({
         playerId: winningPlayer.playerId,
         actorId:
           winningPlayerSession?.userId ??
-          winningPlayerSession?.socketId ??
+          winningPlayerSocketId ??
           winningPlayer.playerId,
       }
     : undefined;

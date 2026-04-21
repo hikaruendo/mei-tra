@@ -75,6 +75,7 @@ interface PlayerHandProps {
   currentTrump: TrumpType | null;
   isHost?: boolean;
   isIdle?: boolean;
+  isDisconnected?: boolean;
   onReplaceWithCOM?: (playerId: string) => void;
 }
 
@@ -96,6 +97,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentTrump,
   isHost = false,
   isIdle = false,
+  isDisconnected = false,
   onReplaceWithCOM,
 }) => {
   const t = useTranslations('playerHand');
@@ -113,7 +115,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   );
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
-  const isDisconnected = !player.isCOM && !player.socketId;
+  const shouldSelectNegri =
+    gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard;
+  const replaceWithComStatusLabel = isDisconnected
+    ? tStatus('disconnected')
+    : tStatus('idle');
 
   useEffect(() => {
     if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
@@ -262,7 +268,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               currentPlayerId={currentPlayerId}
             />
           )}
-          {gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard && (
+          {shouldSelectNegri && (
             <div className={styles.statusPanel}>
               <div className={styles.statusHeader}>{t('negri')}</div>
               <div className={styles.statusMessage}>{t('selectNegri')}</div>
@@ -274,7 +280,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             (isDisconnected || isIdle) &&
             !player.isCOM && (
               <div className={`${styles.statusPanel} ${styles.replaceWithComPanel}`}>
-                <div className={styles.statusHeader}>{tStatus('disconnected')}</div>
+                <div className={styles.statusHeader}>{replaceWithComStatusLabel}</div>
                 <button
                   type="button"
                   className={styles.replaceWithComButton}

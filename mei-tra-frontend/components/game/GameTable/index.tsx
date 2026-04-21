@@ -32,6 +32,7 @@ interface GameTableProps {
   currentPlayerId: string | null;
   currentRoomId: string | null;
   idlePlayerIds?: string[];
+  disconnectedPlayerIds?: string[];
   pointsToWin: number;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -64,6 +65,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentPlayerId,
   pointsToWin,
   idlePlayerIds = [],
+  disconnectedPlayerIds = [],
   isWaiting = false,
   isHost = false,
   onStart,
@@ -166,6 +168,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentTrump={currentTrump}
               isHost={isHost}
               isIdle={idlePlayerIds.includes(player_.playerId)}
+              isDisconnected={disconnectedPlayerIds.includes(player_.playerId)}
               onReplaceWithCOM={onReplaceWithCOM}
             />
           );

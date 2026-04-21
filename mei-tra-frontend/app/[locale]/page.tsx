@@ -111,6 +111,7 @@ export default function Home() {
     removePlayerFromRoom,
     replacePlayerWithCOM,
     idlePlayerIds = [],
+    disconnectedPlayerIds = [],
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -216,6 +217,7 @@ export default function Home() {
                   currentRoomId={currentRoomId}
                   isHost={isHost}
                   idlePlayerIds={idlePlayerIds}
+                  disconnectedPlayerIds={disconnectedPlayerIds}
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}

@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import type { GameHistoryReplayViewContract } from '@contracts/game-history';
 import { proxyGameHistoryRequest } from '../proxy';
 
 export async function GET(
@@ -7,9 +6,5 @@ export async function GET(
   { params }: { params: Promise<{ roomId: string }> },
 ) {
   const { roomId } = await params;
-  return proxyGameHistoryRequest<GameHistoryReplayViewContract>(
-    request,
-    roomId,
-    'replay',
-  );
+  return proxyGameHistoryRequest(request, roomId, 'replay');
 }

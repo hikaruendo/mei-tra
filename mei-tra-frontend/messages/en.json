@@ -456,7 +456,8 @@
   },
   "playerHand": {
     "cards": "cards",
-    "selectNegri": "Please select your Negri card",
+    "selectNegri": "Please select your Negri",
+    "selectNegriWithAgari": "This card is Agari. Select your Negri.",
     "agari": "Agari",
     "revealBroken": "Reveal Broken Hand",
     "negri": "Negri",

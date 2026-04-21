@@ -96,6 +96,16 @@ export interface UpdatePhasePayload {
   currentTrump?: TrumpType | null;
 }
 
+export interface RequestAgariPayload {
+  roomId: string;
+}
+
+export interface RevealAgariPayload {
+  agari: string;
+  message: string;
+  playerId: string;
+}
+
 export interface BrokenPayload {
   nextPlayerId: string;
   players: PlayerContract[];

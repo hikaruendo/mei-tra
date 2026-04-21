@@ -10,6 +10,7 @@ import {
   GameHistorySummary,
   GameHistoryReplayView,
 } from '@/types/game-history.types';
+import { useAuth } from '@/hooks/useAuth';
 
 export function useGameHistory(
   roomId: string | null,
@@ -25,6 +26,7 @@ export function useGameHistory(
   const [summary, setSummary] = useState<GameHistorySummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { getAccessToken } = useAuth();
 
   const loadHistory = useCallback(async () => {
     if (!roomId) {
@@ -38,14 +40,19 @@ export function useGameHistory(
     setError(null);
 
     try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error('Authentication required');
+      }
+
       const includeReplay = options?.includeReplay ?? true;
       const includeSummary = options?.includeSummary ?? true;
       const [nextReplay, nextSummary] = await Promise.all([
         includeReplay
-          ? fetchGameHistoryReplay(roomId, options?.replayQuery)
+          ? fetchGameHistoryReplay(roomId, accessToken, options?.replayQuery)
           : Promise.resolve(null),
         includeSummary
-          ? fetchGameHistorySummary(roomId, options?.summaryQuery)
+          ? fetchGameHistorySummary(roomId, accessToken, options?.summaryQuery)
           : Promise.resolve(null),
       ]);
       setReplay(nextReplay);
@@ -64,6 +71,7 @@ export function useGameHistory(
     options?.includeSummary,
     options?.replayQuery,
     options?.summaryQuery,
+    getAccessToken,
     roomId,
   ]);
 

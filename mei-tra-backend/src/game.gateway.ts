@@ -7,7 +7,11 @@ import {
 } from '@nestjs/websockets';
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import type { PlayCardPayload } from '@contracts/game';
+import type {
+  PlayCardPayload,
+  RequestAgariPayload,
+  RevealAgariPayload,
+} from '@contracts/game';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { TrumpType } from './types/game.types';
@@ -1214,6 +1218,53 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       console.error('Error in handleSelectNegri:', error);
       client.emit('error-message', 'Failed to select Negri');
+    }
+  }
+
+  @SubscribeMessage('request-agari')
+  async handleRequestAgari(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: RequestAgariPayload,
+  ): Promise<void> {
+    try {
+      const roomGameState = await this.roomService.getRoomGameState(
+        data.roomId,
+      );
+      const state = roomGameState.getState();
+      const actorId = this.getActorId(client);
+      const room = await this.roomService.getRoom(data.roomId);
+      const sessionUser =
+        roomGameState.findSessionUserByUserId(actorId) ??
+        roomGameState.findSessionUserBySocketId(client.id) ??
+        roomGameState.findSessionUserByPlayerId(actorId);
+      const roomPlayer = room?.players.find(
+        (player) =>
+          player.userId === actorId ||
+          player.socketId === client.id ||
+          player.playerId === sessionUser?.playerId,
+      );
+      const requesterPlayerId = sessionUser?.playerId ?? roomPlayer?.playerId;
+      const winningPlayerId =
+        state.blowState.currentHighestDeclaration?.playerId;
+
+      if (
+        state.gamePhase !== 'play' ||
+        !state.agari ||
+        !requesterPlayerId ||
+        requesterPlayerId !== winningPlayerId
+      ) {
+        return;
+      }
+
+      const payload: RevealAgariPayload = {
+        agari: state.agari,
+        message: 'Select a card from your hand as Negri',
+        playerId: requesterPlayerId,
+      };
+      client.emit('reveal-agari', payload);
+    } catch (error) {
+      this.logger.error('Error in handleRequestAgari:', error);
+      client.emit('error-message', 'Failed to reveal Agari');
     }
   }
 

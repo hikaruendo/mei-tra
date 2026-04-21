@@ -19,7 +19,7 @@ export class UserGameStatsService {
       const profile = await this.userProfileRepository.findById(userId);
       if (!profile) {
         this.logger.warn(`User profile not found for user ${userId}`);
-        return;
+        throw new Error(`User profile not found for user ${userId}`);
       }
 
       await this.userProfileRepository.updateGameStats(
@@ -33,6 +33,7 @@ export class UserGameStatsService {
         `Failed to update game stats for user ${userId}:`,
         error,
       );
+      throw error;
     }
   }
 

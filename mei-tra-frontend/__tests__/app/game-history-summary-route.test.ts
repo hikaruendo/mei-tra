@@ -29,6 +29,11 @@ describe('GET /api/game-history/[roomId]/summary', () => {
   it('proxies summary requests to the backend API with query params', async () => {
     const request = new NextRequest(
       'http://localhost:3000/api/game-history/room-1/summary?roundNumber=2',
+      {
+        headers: {
+          authorization: 'Bearer token-1',
+        },
+      },
     );
 
     const response = await GET(request, {
@@ -40,8 +45,24 @@ describe('GET /api/game-history/[roomId]/summary', () => {
       expect.objectContaining({
         method: 'GET',
         cache: 'no-store',
+        headers: {
+          Authorization: 'Bearer token-1',
+        },
       }),
     );
     expect(response.status).toBe(200);
+  });
+
+  it('rejects requests without an authorization header', async () => {
+    const request = new NextRequest(
+      'http://localhost:3000/api/game-history/room-1/summary',
+    );
+
+    const response = await GET(request, {
+      params: Promise.resolve({ roomId: 'room-1' }),
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(response.status).toBe(401);
   });
 });

@@ -29,6 +29,7 @@ import {
 import { ICardService } from '../../services/interfaces/card-service.interface';
 import { IPlayService } from '../../services/interfaces/play-service.interface';
 import { IScoreService } from '../../services/interfaces/score-service.interface';
+import { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
 describe('Game Use Cases', () => {
   const createRoomServiceMock = () => {
     const mock: Partial<jest.Mocked<IRoomService>> = {
@@ -1834,6 +1835,37 @@ describe('Game Use Cases', () => {
       expect(roomService.updateUserGameStats).toHaveBeenCalledTimes(1);
     });
 
+    it('updates stats when persisted room player has userId without session flag', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new ProcessGameOverUseCase(roomService);
+      roomService.getRoom.mockResolvedValue({
+        ...baseRoom,
+        players: [
+          {
+            ...basePlayers[0],
+            userId: 'user-1',
+          },
+        ],
+      });
+
+      await useCase.execute({
+        roomId: 'room-1',
+        winningTeam: 1,
+        teamScores: {
+          0: { play: 5, total: 20 },
+          1: { play: 2, total: 10 },
+        } as TeamScores,
+        resetDelayMs: 5000,
+      });
+
+      expect(roomService.updateUserGameStats).toHaveBeenCalledWith(
+        'user-1',
+        false,
+        20,
+      );
+      expect(roomService.updateUserGameStats).toHaveBeenCalledTimes(1);
+    });
+
     it('prefers authenticated session users when resolving stats updates', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new ProcessGameOverUseCase(roomService);
@@ -1873,6 +1905,62 @@ describe('Game Use Cases', () => {
         20,
       );
       expect(roomService.updateUserGameStats).toHaveBeenCalledTimes(1);
+    });
+
+    it('records only successful stat updates in the audit log', async () => {
+      const roomService = createRoomServiceMock();
+      const gameEventLogService = {
+        log: jest.fn().mockResolvedValue(undefined),
+      } as unknown as jest.Mocked<IGameEventLogService>;
+      const useCase = new ProcessGameOverUseCase(
+        roomService,
+        gameEventLogService,
+      );
+      roomService.getRoom.mockResolvedValue({
+        ...baseRoom,
+        players: [
+          {
+            ...basePlayers[0],
+            userId: 'user-1',
+            isAuthenticated: true,
+          },
+          {
+            ...basePlayers[1],
+            userId: 'user-2',
+            isAuthenticated: true,
+          },
+        ],
+      });
+      roomService.updateUserGameStats.mockImplementation(
+        async (userId: string) => {
+          if (userId === 'user-1') {
+            throw new Error('stats failed');
+          }
+        },
+      );
+
+      await expect(
+        useCase.execute({
+          roomId: 'room-1',
+          winningTeam: 1,
+          teamScores: {
+            0: { play: 5, total: 20 },
+            1: { play: 2, total: 10 },
+          } as TeamScores,
+          resetDelayMs: 5000,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(gameEventLogService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionType: 'player_stats_updated',
+          actionData: expect.objectContaining({
+            updatedPlayers: ['player-2'],
+            updatedCount: 1,
+            failedCount: 1,
+          }),
+        }),
+      );
     });
   });
 
