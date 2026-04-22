@@ -146,14 +146,12 @@
   align-items: center;
 }
 
-.suitButtons button[onClick*="♥"],
-.suitButtons button[onClick*="♦"] {
-  color: red;
+.suitButtons button.redSuit {
+  color: #dc2626;
 }
 
-.suitButtons button[onClick*="♠"],
-.suitButtons button[onClick*="♣"] {
-  color: #ededed;
+.suitButtons button.blackSuit {
+  color: #111827;
 }
 
 .suitButtons button.selectedSuit {
@@ -205,6 +203,14 @@
   font-size: 1.05rem;
   font-weight: 800;
   line-height: 1;
+}
+
+.baseSuitBadgeSymbol.redSuit {
+  color: #dc2626;
+}
+
+.baseSuitBadgeSymbol.blackSuit {
+  color: #111827;
 }
 
 @media (max-width: 768px) {
