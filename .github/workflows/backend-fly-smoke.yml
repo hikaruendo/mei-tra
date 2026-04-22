@@ -1,0 +1,55 @@
+name: Backend Fly Smoke
+
+on:
+  pull_request:
+    paths:
+      - '.dockerignore'
+      - '.github/workflows/backend-fly-smoke.yml'
+      - 'contracts/**'
+      - 'mei-tra-backend/**'
+  workflow_dispatch:
+
+jobs:
+  docker-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Fly backend image
+        run: docker build -t meitra-backend-fly-smoke -f mei-tra-backend/Dockerfile.fly .
+
+      - name: Start container and check health
+        run: |
+          set -euo pipefail
+
+          docker run -d --name meitra-backend-fly-smoke \
+            -e NODE_ENV=production \
+            -e PORT=3333 \
+            -e SUPABASE_URL_PROD=https://prod-project.supabase.co \
+            -e SUPABASE_ANON_KEY_PROD=dummy-anon \
+            -e SUPABASE_SERVICE_ROLE_KEY_PROD=dummy-service \
+            -e FRONTEND_URL_PROD=http://localhost:3000 \
+            -p 3339:3333 \
+            meitra-backend-fly-smoke
+
+          cleanup() {
+            exit_code=$?
+            if [ "$exit_code" -ne 0 ]; then
+              docker logs meitra-backend-fly-smoke || true
+            fi
+            docker rm -f meitra-backend-fly-smoke || true
+            exit "$exit_code"
+          }
+          trap cleanup EXIT
+
+          for _ in {1..30}; do
+            if curl -fsS http://127.0.0.1:3339/api/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Backend container did not pass /api/health smoke check"
+          exit 1

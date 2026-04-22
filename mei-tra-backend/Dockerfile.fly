@@ -34,4 +34,4 @@ COPY --from=build /app/package.json /app/package-lock.json /app/
 RUN npm ci --omit=dev
 
 EXPOSE 3333
-CMD [ "node", "--max-old-space-size=320", "dist/src/main.js" ]
+CMD [ "node", "--max-old-space-size=320", "dist/main.js" ]
