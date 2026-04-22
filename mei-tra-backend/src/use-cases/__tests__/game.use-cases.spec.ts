@@ -21,6 +21,7 @@ import { IGameStateService } from '../../services/interfaces/game-state-service.
 import { GameStateService } from '../../services/game-state.service';
 import {
   DomainPlayer,
+  BlowState,
   GamePhase,
   TeamScores,
   Field,
@@ -1542,11 +1543,7 @@ describe('Game Use Cases', () => {
 
       const state: {
         players: DomainPlayer[];
-        blowState: {
-          declarations: unknown[];
-          currentHighestDeclaration: unknown;
-          currentBlowIndex: number;
-        };
+        blowState: BlowState;
         currentPlayerIndex: number;
         gamePhase: 'play' | 'blow';
         deck: string[];
@@ -1568,8 +1565,12 @@ describe('Game Use Cases', () => {
           },
         ],
         blowState: {
+          currentTrump: null,
           declarations: [],
+          actionHistory: [],
           currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
           currentBlowIndex: 0,
         },
         currentPlayerIndex: 0,
@@ -1624,6 +1625,148 @@ describe('Game Use Cases', () => {
         );
         expect(brokenEvent).toBeDefined();
       }
+    });
+
+    it('resets blow declarations after broken hand without changing starting order', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state: {
+        players: DomainPlayer[];
+        blowState: BlowState;
+        currentPlayerIndex: number;
+        gamePhase: 'play' | 'blow';
+        deck: string[];
+      } = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0,
+            isPasser: false,
+          },
+          {
+            playerId: 'player-2',
+            name: 'Player 2',
+            hand: ['D1'],
+            team: 1,
+            isPasser: true,
+          },
+          {
+            playerId: 'player-3',
+            name: 'Player 3',
+            hand: ['H1'],
+            team: 0,
+            isPasser: false,
+          },
+          {
+            playerId: 'player-4',
+            name: 'Player 4',
+            hand: ['S1'],
+            team: 1,
+            isPasser: false,
+          },
+        ],
+        blowState: {
+          currentTrump: 'club',
+          declarations: [
+            {
+              playerId: 'player-1',
+              trumpType: 'club',
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+          ],
+          actionHistory: [
+            {
+              type: 'declare',
+              playerId: 'player-1',
+              trumpType: 'club',
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+            {
+              type: 'pass',
+              playerId: 'player-2',
+              timestamp: 2,
+            },
+          ],
+          currentHighestDeclaration: {
+            playerId: 'player-1',
+            trumpType: 'club',
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+          lastPasser: 'player-2',
+          isRoundCancelled: false,
+          currentBlowIndex: 2,
+        },
+        currentPlayerIndex: 1,
+        gamePhase: 'blow',
+        deck: [],
+      };
+
+      const dealCardsMock = jest.fn(() => {
+        state.players.forEach((player) => {
+          player.hand = ['X1', 'X2'];
+        });
+      });
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        dealCards: dealCardsMock,
+        transitionPhase: jest.fn().mockImplementation(async (phase) => {
+          state.gamePhase = phase;
+        }),
+        findPlayerByActorId: jest.fn(
+          (actorId: string) =>
+            state.players.find((player) => player.playerId === actorId) ?? null,
+        ),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const completion = await useCase.finalize({
+        roomId: 'room-1',
+        playerId: 'player-3',
+      });
+
+      expect(completion.success).toBe(true);
+      expect(state.blowState.currentBlowIndex).toBe(2);
+      expect(state.currentPlayerIndex).toBe(2);
+      expect(state.blowState.declarations).toEqual([]);
+      expect(state.blowState.actionHistory).toEqual([]);
+      expect(state.blowState.currentHighestDeclaration).toBeNull();
+      expect(state.blowState.currentTrump).toBeNull();
+      expect(state.blowState.lastPasser).toBeNull();
+      expect(state.players.every((player) => !player.isPasser)).toBe(true);
+      expect(dealCardsMock).toHaveBeenCalled();
+
+      const blowUpdatedEvent = completion.events?.find(
+        (evt) => evt.event === 'blow-updated',
+      );
+      expect(blowUpdatedEvent?.payload).toMatchObject({
+        declarations: [],
+        actionHistory: [],
+        currentHighest: null,
+        lastPasser: null,
+      });
+
+      const brokenEvent = completion.events?.find(
+        (evt) => evt.event === 'broken',
+      );
+      expect(brokenEvent?.payload).toMatchObject({
+        nextPlayerId: 'player-3',
+        gamePhase: 'blow',
+      });
+
+      const updateTurnEvent = completion.events?.find(
+        (evt) => evt.event === 'update-turn',
+      );
+      expect(updateTurnEvent?.payload).toBe('player-3');
     });
   });
 
