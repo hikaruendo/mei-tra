@@ -12,6 +12,7 @@ import {
   cleanupPreviewUrl,
   formatFileSize
 } from '@/lib/utils/imageOptimizer';
+import { clearPlayerProfileCache } from '@/lib/utils/profileUtils';
 import styles from './ProfileEditForm.module.scss';
 
 interface ProfileEditFormProps {
@@ -191,6 +192,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
       // プロフィールを更新
       const updatedProfile = await updateProfile();
+      clearPlayerProfileCache(updatedProfile.id);
       onSave(updatedProfile);
 
       // Refresh user profile in AuthContext to update avatar in header
