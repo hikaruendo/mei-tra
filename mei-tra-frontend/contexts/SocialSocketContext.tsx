@@ -3,8 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../hooks/useAuth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+import { getSocketBaseUrl } from '@/lib/socket-url';
 
 interface SocialSocketContextValue {
   socket: Socket | null;
@@ -18,6 +17,7 @@ const SocialSocketContext = createContext<SocialSocketContextValue | undefined>(
 export function SocialSocketProvider({ children }: { children: React.ReactNode }) {
   const { user, getAccessToken } = useAuth();
   const socketRef = useRef<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
+        setSocket(null);
         setIsConnected(false);
       }
       return;
@@ -57,13 +58,15 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      const socket = io(`${BACKEND_URL}/social`, {
+      const socket = io(`${getSocketBaseUrl()}/social`, {
         auth: {
           token,
         },
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 5,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        timeout: 30000,
       });
 
       socket.on('connect', () => {
@@ -82,6 +85,7 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
       });
 
       socketRef.current = socket;
+      setSocket(socket);
     };
 
     void initializeSocket();
@@ -91,13 +95,15 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
+        setSocket(null);
+        setIsConnected(false);
       }
     };
   }, [user?.id, getAccessToken]);
 
   return (
     <SocialSocketContext.Provider
-      value={{ socket: socketRef.current, isConnected }}
+      value={{ socket, isConnected }}
     >
       {children}
     </SocialSocketContext.Provider>

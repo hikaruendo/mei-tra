@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { getSocketBaseUrl } from '@/lib/socket-url';
 
 let socket: Socket | null = null;
 let latestAuthToken: string | undefined;
@@ -17,7 +18,7 @@ export function getSocket(authToken?: string): Socket {
   latestAuthToken = authToken ?? latestAuthToken;
 
   if (!socket && typeof window !== 'undefined') {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3333';
+    const socketUrl = getSocketBaseUrl();
 
     const isSafari = detectSafari();
 
