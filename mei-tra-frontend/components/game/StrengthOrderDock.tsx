@@ -19,9 +19,13 @@ const SUIT_KEYS: Record<TrumpType, string> = {
 
 interface StrengthOrderDockProps {
   currentTrump: TrumpType | null;
+  placement?: 'default' | 'topbar';
 }
 
-export function StrengthOrderDock({ currentTrump }: StrengthOrderDockProps) {
+export function StrengthOrderDock({
+  currentTrump,
+  placement = 'default',
+}: StrengthOrderDockProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
   const tJack = useTranslations('tutorial.jack');
@@ -51,7 +55,10 @@ export function StrengthOrderDock({ currentTrump }: StrengthOrderDockProps) {
       : null;
 
   return (
-    <div className={styles.dock} ref={dockRef}>
+    <div
+      className={`${styles.dock} ${placement === 'topbar' ? styles.topbar : ''}`}
+      ref={dockRef}
+    >
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}

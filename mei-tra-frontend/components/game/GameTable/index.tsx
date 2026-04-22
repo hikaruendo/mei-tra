@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
 import { GameField } from '@/components/game/GameField';
 import { GameInfo } from '@/components/game/GameInfo';
+import { GameDock } from '@/components/game/GameDock';
 import styles from './index.module.scss';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
@@ -63,6 +64,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   setNumberOfPairs,
   teamScores,
   currentPlayerId,
+  currentRoomId,
   pointsToWin,
   idlePlayerIds = [],
   disconnectedPlayerIds = [],
@@ -108,6 +110,16 @@ export const GameTable: React.FC<GameTableProps> = ({
           teamScores={teamScores}
           pointsToWin={pointsToWin}
           players={players}
+          actionSlot={
+            currentRoomId ? (
+              <GameDock
+                roomId={currentRoomId}
+                gameStarted={!isWaiting}
+                currentTrump={currentTrump}
+                gamePhase={gamePhase}
+              />
+            ) : null
+          }
           onLeave={onLeave}
         />
       )}

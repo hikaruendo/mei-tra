@@ -13,11 +13,18 @@
   border: 1px solid rgba(16, 185, 129, 0.12);
 
   @media (max-width: 768px) {
-    width: min(16rem, calc(100vw - 7rem));
-    max-width: calc(100vw - 7rem);
-    height: min(28rem, calc(100dvh - 10rem));
-    max-height: calc(100dvh - 10rem);
+    width: min(22rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    height: min(28rem, calc(100dvh - 8rem));
+    max-height: calc(100dvh - 8rem);
   }
+}
+
+.chatDock.topbar {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 80;
 }
 
 .minimized {

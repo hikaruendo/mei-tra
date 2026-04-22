@@ -45,6 +45,13 @@
   line-height: 1.4;
 }
 
+.gameInfoActions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
 .leaveButton {
   color: #000;
   background-color: #fff;
@@ -73,6 +80,10 @@
   .gameInfoScores {
     flex-direction: column;
     gap: 0.25rem;
+  }
+
+  .gameInfoActions {
+    margin-left: auto;
   }
 
   .leaveButton {

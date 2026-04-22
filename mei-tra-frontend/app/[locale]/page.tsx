@@ -9,7 +9,6 @@ import { Navigation } from '@/components/layout/Navigation';
 import { useGame } from '@/hooks/useGame';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RoomList } from '@/components/room/RoomList';
-import { GameDock } from '@/components/game/GameDock';
 import { LandingPage } from '@/components/landing/LandingPage';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
@@ -222,14 +221,6 @@ export default function Home() {
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
                 />
-                )}
-                {gameStarted && (
-                  <GameDock
-                    roomId={currentRoomId}
-                    gameStarted={gameStarted}
-                    currentTrump={currentTrump}
-                    gamePhase={gamePhase}
-                  />
                 )}
               </div>
             )}

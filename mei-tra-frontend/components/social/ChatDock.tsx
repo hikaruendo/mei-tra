@@ -12,9 +12,15 @@ interface ChatDockProps {
   roomId: string;
   gameStarted?: boolean;
   gamePhase?: string | null;
+  placement?: 'default' | 'topbar';
 }
 
-export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockProps) {
+export function ChatDock({
+  roomId,
+  gameStarted = false,
+  gamePhase,
+  placement = 'default',
+}: ChatDockProps) {
   const t = useTranslations('chatDock');
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -96,7 +102,10 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
   }
 
   return (
-    <div className={styles.chatDock} ref={chatRef}>
+    <div
+      className={`${styles.chatDock} ${placement === 'topbar' ? styles.topbar : ''}`}
+      ref={chatRef}
+    >
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>

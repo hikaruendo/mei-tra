@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { GameDock } from '@/components/game/GameDock';
 
-jest.mock('@/hooks/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => 0,
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
 jest.mock('@/components/game/StrengthOrderDock', () => ({
