@@ -1,4 +1,8 @@
-import { GameState, Player } from '../../types/game.types';
+import {
+  GameState,
+  DomainPlayer,
+  PlayerConnectionMetadata,
+} from '../../types/game.types';
 
 export interface IGameStateRepository {
   // Game state CRUD operations
@@ -11,11 +15,11 @@ export interface IGameStateRepository {
   delete(roomId: string): Promise<void>;
 
   // Player management in game state
-  updatePlayers(roomId: string, players: Player[]): Promise<boolean>;
-  updatePlayer(
+  updatePlayers(roomId: string, players: DomainPlayer[]): Promise<boolean>;
+  updatePlayerConnection(
     roomId: string,
     playerId: string,
-    updates: Partial<Player>,
+    updates: Partial<PlayerConnectionMetadata>,
   ): Promise<boolean>;
 
   // Game phase management

@@ -15,7 +15,7 @@ import {
   SystemIcon,
   TextSizeIcon,
 } from '@/components/icons/UIIcons';
-import { UserProfile } from '../profile/UserProfile';
+import { UserProfile } from '@/components/profile/UserProfile';
 import styles from './Navigation.module.scss';
 
 interface NavigationProps {

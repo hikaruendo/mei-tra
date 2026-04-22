@@ -1,14 +1,17 @@
 export type Team = 0 | 1;
 
-export interface ConnectionUser {
-  socketId: string; // Connection/session identifier only
+export interface PlayerIdentity {
   playerId: string; // Table participant identifier (future participantId equivalent)
   name: string;
+}
+
+export interface PlayerConnectionMetadata {
+  socketId: string; // Connection/session identifier only
   userId?: string; // Canonical authenticated account ID
   isAuthenticated?: boolean;
 }
 
-export interface Player extends ConnectionUser {
+export interface PlayerGameplayState {
   hand: string[];
   team: Team;
   isPasser: boolean;
@@ -16,6 +19,8 @@ export interface Player extends ConnectionUser {
   hasBroken?: boolean;
   hasRequiredBroken?: boolean;
 }
+
+export interface DomainPlayer extends PlayerIdentity, PlayerGameplayState {}
 
 export interface TeamScore {
   play: number;
@@ -66,7 +71,7 @@ export interface Field {
 export interface CompletedField {
   cards: string[];
   winnerId: string;
-  winnerTeam: number;
+  winnerTeam: Team;
   dealerId: string;
 }
 
@@ -114,7 +119,7 @@ export interface ChomboViolation {
 export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
-  players: Player[];
+  players: DomainPlayer[];
   currentPlayerIndex: number;
   gamePhase: GamePhase;
   deck: string[];

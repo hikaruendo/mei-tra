@@ -1,5 +1,5 @@
 import { GatewayEvent } from './gateway-event.interface';
-import { Field, Player, Team, TeamScores } from '../../types/game.types';
+import { Field, Team, TeamScores } from '../../types/game.types';
 
 export interface CompleteFieldRequest {
   roomId: string;
@@ -9,7 +9,6 @@ export interface CompleteFieldRequest {
 export interface GameOverInstruction {
   winningTeam: Team;
   teamScores: TeamScores;
-  players: Player[];
   resetDelayMs: number;
 }
 

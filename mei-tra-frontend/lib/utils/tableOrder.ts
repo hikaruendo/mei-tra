@@ -1,4 +1,4 @@
-import { Player } from '../../types/game.types';
+import { Player } from '@/types/game.types';
 
 /**
  * Returns 4 entries in waiting-room order, grouped by team and rotated so the

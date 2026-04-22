@@ -9,6 +9,12 @@ import { IGameStateService } from '../services/interfaces/game-state-service.int
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { AuthenticatedUser } from '../types/user.types';
+import {
+  buildPlayerSyncEvents,
+  buildRoomUpdatedEvent,
+  resolvePlayerByActorId,
+  resolvePlayerBySocketId,
+} from './helpers/player-resolution.helper';
 
 @Injectable()
 export class UpdateAuthUseCase implements IUpdateAuthUseCase {
@@ -87,67 +93,22 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       },
     ];
 
-    const existingUser =
-      this.gameState.findConnectionUserByUserId(authenticatedUser.id) ??
-      this.gameState.findConnectionUserBySocketId(socketId);
+    const syncResult = this.gameState.upsertSessionUser({
+      socketId,
+      playerId: authenticatedUser.id,
+      name: displayName,
+      userId: authenticatedUser.id,
+      isAuthenticated: true,
+    });
 
-    if (!existingUser) {
-      const added = this.gameState.addPlayer(
-        socketId,
-        displayName,
-        authenticatedUser.id,
-        true,
-      );
-
-      if (added) {
-        const updatedUsers = this.gameState.getUsers();
-        return {
-          clientEvents,
-          broadcastEvents: [
-            {
-              scope: 'all',
-              event: 'update-users',
-              payload: updatedUsers,
-            },
-          ],
-        };
-      }
-    }
-
-    if (!existingUser) {
-      return {
-        clientEvents,
-        broadcastEvents: [],
-      };
-    }
-
-    const socketChanged = existingUser.socketId !== socketId;
-    if (socketChanged) {
-      existingUser.socketId = socketId;
-    }
-
-    const nameChanged = existingUser.name !== displayName;
-    const authChanged =
-      existingUser.userId !== authenticatedUser.id ||
-      existingUser.isAuthenticated !== true;
-
-    if (nameChanged) {
-      this.gameState.updateUserNameBySocketId(socketId, displayName);
-    }
-
-    if (authChanged) {
-      existingUser.userId = authenticatedUser.id;
-      existingUser.isAuthenticated = true;
-    }
-
-    if (socketChanged || nameChanged || authChanged) {
+    if (syncResult.created || syncResult.changed) {
       return {
         clientEvents,
         broadcastEvents: [
           {
             scope: 'all',
             event: 'update-users',
-            payload: this.gameState.getUsers(),
+            payload: this.gameState.getSessionUsers(),
           },
         ],
       };
@@ -170,23 +131,25 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     const roomGameState =
       await this.roomService.getRoomGameState(currentRoomId);
-    const state = roomGameState.getState();
     const currentPlayer =
-      state.players.find((player) => player.userId === authenticatedUser.id) ??
-      state.players.find((player) => player.socketId === socketId);
+      resolvePlayerByActorId(roomGameState, authenticatedUser.id) ??
+      resolvePlayerBySocketId(roomGameState, socketId);
 
     if (!currentPlayer) {
       return undefined;
     }
 
+    const state = roomGameState.getState();
     const displayName =
       authenticatedUser.profile?.displayName ||
       authenticatedUser.email ||
       currentPlayer.name;
-    currentPlayer.socketId = socketId;
     currentPlayer.name = displayName;
-    currentPlayer.userId = authenticatedUser.id;
-    currentPlayer.isAuthenticated = true;
+    await roomGameState.applyPlayerConnectionState(currentPlayer.playerId, {
+      socketId,
+      userId: authenticatedUser.id,
+      isAuthenticated: true,
+    });
 
     await roomGameState.saveState();
     await this.roomService.updatePlayerInRoom(
@@ -201,22 +164,17 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     );
     const updatedRoom = await this.roomService.getRoom(currentRoomId);
 
-    const roomEvents: GatewayEvent[] = [
-      {
-        scope: 'room',
-        roomId: currentRoomId,
-        event: 'update-players',
-        payload: state.players,
-      },
-    ];
+    const roomEvents: GatewayEvent[] = buildPlayerSyncEvents(
+      roomGameState,
+      currentRoomId,
+      state.players,
+      { room: updatedRoom },
+    );
 
     if (updatedRoom) {
-      roomEvents.push({
-        scope: 'room',
-        roomId: currentRoomId,
-        event: 'room-updated',
-        payload: updatedRoom,
-      });
+      roomEvents.push(
+        buildRoomUpdatedEvent(roomGameState, updatedRoom, state.players),
+      );
     }
 
     return roomEvents;

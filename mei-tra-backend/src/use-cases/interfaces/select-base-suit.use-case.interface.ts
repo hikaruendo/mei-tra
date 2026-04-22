@@ -2,7 +2,7 @@ import { GatewayEvent } from './gateway-event.interface';
 
 export interface SelectBaseSuitRequest {
   roomId: string;
-  userId: string;
+  actorId: string;
   suit: string;
 }
 

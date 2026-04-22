@@ -1,4 +1,6 @@
-export type FontSizePreset = 'standard' | 'large' | 'xlarge' | 'xxlarge';
+import type { FontSizePreset as ContractFontSizePreset } from '@contracts/profile';
+
+export type FontSizePreset = ContractFontSizePreset;
 
 export interface UserProfile {
   id: string;

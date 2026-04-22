@@ -1,4 +1,4 @@
-import type { TrumpType } from '../../types/game.types';
+import type { TrumpType } from '@/types/game.types';
 
 const TRUMP_DISPLAY: Record<TrumpType, string> = {
   tra: 'Tra',

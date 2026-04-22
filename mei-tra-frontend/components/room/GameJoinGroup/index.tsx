@@ -1,0 +1,25 @@
+'use client';
+
+import { GameJoinForm } from '@/components/room/GameJoinForm';
+import { RoomList } from '@/components/room/RoomList';
+import styles from './index.module.scss';
+type GameJoinGroupProps = {
+  name: string;
+  onNameChange: (name: string) => void;
+  onJoinGame: () => void;
+  isConnected?: boolean;
+  isConnecting?: boolean;
+};
+
+export default function GameJoinGroup({ name, onNameChange, onJoinGame, isConnected, isConnecting }: GameJoinGroupProps) {
+  return (
+    <div className={styles.container}>
+      <GameJoinForm
+        name={name}
+        onNameChange={onNameChange}
+        onJoinGame={onJoinGame}
+      />
+      <RoomList isConnected={isConnected} isConnecting={isConnecting} />
+    </div>
+  );
+}

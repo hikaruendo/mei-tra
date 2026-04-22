@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { AuthForm } from './AuthForm';
+import { AuthForm } from '@/components/auth/AuthForm';
 import styles from './AuthModal.module.scss';
 
 interface AuthModalProps {

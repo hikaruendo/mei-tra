@@ -12,6 +12,7 @@ const customJestConfig = {
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@contracts/(.*)$': '<rootDir>/../contracts/$1',
   },
   testMatch: ['**/__tests__/**/*.test.{js,jsx,ts,tsx}'],
 }

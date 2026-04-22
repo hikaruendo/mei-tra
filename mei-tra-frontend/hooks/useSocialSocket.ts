@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
-import { useSocialSocketContext } from '../contexts/SocialSocketContext';
-import {
+import type {
   ChatMessageEvent,
+  ChatMessagesPayload,
   ChatTypingEvent,
-} from '../types/social.types';
+} from '@contracts/social';
+import { useSocialSocketContext } from '../contexts/SocialSocketContext';
 
 export interface UseSocialSocketReturn {
   socket: Socket | null;
@@ -112,34 +113,13 @@ export function useChatMessages(roomId: string) {
       }
     };
 
-    const handleMessages = (data: { roomId: string; messages: Array<{
-      id: string;
-      sender: {
-        userId: string;
-        displayName: string;
-        avatarUrl?: string;
-        countryCode?: string;
-        rankTier: string;
-      };
-      content: string;
-      contentType: string;
-      createdAt: string;
-      replyTo?: string;
-    }> }) => {
+    const handleMessages = (data: ChatMessagesPayload) => {
       if (data.roomId === roomId) {
         console.log('[useChatMessages] Loaded messages:', data.messages);
-        // Transform ChatMessage[] into ChatMessageEvent[]
         const events: ChatMessageEvent[] = data.messages.map((msg) => ({
-          type: 'chat.message' as const,
+          type: 'chat.message',
           roomId: data.roomId,
-          message: {
-            id: msg.id,
-            sender: msg.sender,
-            content: msg.content,
-            contentType: msg.contentType as 'text' | 'emoji' | 'system',
-            createdAt: msg.createdAt,
-            replyTo: msg.replyTo,
-          },
+          message: msg,
         }));
         setMessages(events);
       }

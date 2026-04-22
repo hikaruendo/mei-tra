@@ -3,38 +3,38 @@
 ## Context & Intent
 - Bridge Base Online (BBO) demonstrates that an always-on lobby, a persistent friend graph, and rich spectating loops are core to long-term engagement.
 - Meitra already ships with Supabase Auth, matchmaking, and real-time gameplay; the social layer must slot into the existing Next.js / NestJS / Supabase stack without breaking current flows.
-- We follow Clean Architecture ideals—domain models and application use-cases live in `shared/`, `mei-tra-backend/src/social/` contains adapters, and UI orchestration stays inside the frontend. This keeps the social layer evolvable on web and future mobile clients.
+- The current repo does not apply full Clean Architecture everywhere. It uses Next.js / NestJS conventions for framework wiring, keeps shared wire shapes in `contracts/`, and keeps social/game business rules in backend services and use-cases under `mei-tra-backend/src/`. UI orchestration stays inside the frontend.
 
 ## Guiding Principles
-- **Dependency rule first**: domain entities (`shared/domain/social/*.ts`) own business rules; backend services adapt them via repositories, and frontends consume DTOs mapped from domain objects.
+- **Backend rules first**: backend services/use-cases own business rules; repositories adapt persistence to Supabase; frontends consume DTOs mapped from transport contracts.
 - **Presence everywhere**: surface who is online and what they are doing across lobby, tables, and profile views.
 - **Rooms before DMs**: prioritise lobby & table conversations to create shared spaces before deep one-to-one messaging.
 - **Moderation by default**: blocklists, mute scopes, and report pipelines exist alongside every communication surface.
-- **Cross-client parity**: REST endpoints expose use-cases; Socket.IO events keep clients reactive. Contracts sit in `shared/contracts/social.ts` to ensure symmetry.
+- **Cross-client parity**: REST endpoints expose use-cases; Socket.IO events keep clients reactive. Shared wire contracts sit in `contracts/social.ts`.
 
 ## Delivery Phasing
 1. **Phase 1 – Chat & Friends Use-Cases**
-   - Implement domain use-cases (`AddFriend`, `AcceptFriend`, `PostChatMessage`) and map to Nest controllers/gateways.
+   - Implement backend use-cases (`AddFriend`, `AcceptFriend`, `PostChatMessage`) and map to Nest controllers/gateways.
    - Global + table chat via `/social` namespace.
-   - Presence badges rendered via domain `PresenceSnapshot` entity.
+   - Presence badges rendered from a backend `PresenceSnapshot` model.
    - Toast notifications for friend requests and chat mentions.
 2. **Phase 2 – Lobby Presence & Spectating**
    - Aggregate lobby roster use-case (`ListActiveTables`) returning DTOs for the lobby directory.
-   - Observer channels with read-only chat publishing domain events.
+   - Observer channels with read-only chat publishing backend events.
    - Activity feed panel backed by `ListNotifications` use-case.
 3. **Phase 3 – Replays & Leaderboards**
-   - Replay capture pipeline triggered by gameplay bounded context -> `RecordReplay` use-case storing domain `Replay` aggregate.
+   - Replay capture pipeline triggered by gameplay context -> `RecordReplay` use-case storing a replay model.
    - Weekly / seasonal leaderboard snapshots generated via Supabase function invoked by Nest scheduled job.
 4. **Phase 4 – Advanced Moderation & Mobile Polish**
    - Moderation review workflows, temporary mute policies, and audit logs.
    - Push notification abstraction for mobile/desktop parity.
 
-Each phase hands off clear contracts to frontend teams while keeping domain logic centralised.
+Each phase hands off clear contracts to frontend teams while keeping business rules centralised in backend services/use-cases.
 
 ---
 
 ## Architecture Overview
-- **Domain Layer (`shared/domain/social/`)**
+- **Backend Business Rules (`mei-tra-backend/src/`)**
   - Entities: `Profile`, `Friendship`, `ChatMessage`, `Presence`, `Replay`, `LeaderboardSnapshot`, `Notification`, `ModerationAction`.
   - Value Objects: `UserId`, `ChatRoomId`, `Visibility`, `RankTier`.
   - Use-Cases: functions returning `Result` objects, independent of Nest/Next.
@@ -44,7 +44,7 @@ Each phase hands off clear contracts to frontend teams while keeping domain logi
   - `SocialModule` wires controllers (`ProfilesController`, `FriendsController`, `ChatController`, `NotificationsController`) and gateway (`SocialGateway`).
 - **Interface Layer (Frontend)**
   - Next.js server actions / API routes fetch via REST; client components subscribe through a shared `useSocialSocket` hook.
-  - UI state hooks mirror domain models via TypeScript adapters in `mei-tra-frontend/lib/social/mapper.ts`.
+  - UI state hooks mirror backend DTOs via TypeScript adapters in `mei-tra-frontend/lib/social/mapper.ts`.
 - **Infrastructure**
   - Supabase Postgres handles persistence with RLS per table.
   - Socket.IO for realtime events (namespace `/social`).
@@ -110,7 +110,7 @@ Controllers receive DTOs, resolve use-case providers, and convert `Result` objec
 
 ## Event Contracts
 ```ts
-// shared/contracts/social.ts
+// contracts/social.ts
 export interface PresenceEvent {
   type: 'presence.update';
   userId: string;

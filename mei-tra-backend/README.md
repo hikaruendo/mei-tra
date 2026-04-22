@@ -25,9 +25,33 @@
 
 明専トランプ（Old Maid）のバックエンドAPI。NestJS + Supabase + WebSocketで構築されています。
 
+## 現在の設計方針
+
+- 全面 Clean Architecture ではありません。NestJS の module / provider / DI / controller / gateway は素直に使い、ゲームルールの正しさに直結する部分だけを厚く守ります
+- ルール判定・得点計算・phase transition の正しさは `CardService`, `BlowService`, `PlayService`, `ScoreService`, `ChomboService`, `GamePhaseService` に寄せています
+- `GameStateManager`, `PlayerConnectionManager`, `ComSessionService`, `TurnMonitorService` は domain層そのものではなく、state / session / realtime 例外処理を支える application service として扱います
+- gateway は transport adapter として薄くし、reconnect / moderation / start-game / room sync の組み立ては use-case / effects service へ委譲しています
+- room/player 同期の主系統は `room-sync` で、`room-updated` / `update-players` は互換 fallback です
+
+## 現在の主な read-side
+
+- `GET /api/user-profile/:id/game-history`
+  - self-only の最近の完了対局一覧
+  - プロフィールの「最近の対局」一覧で使用
+- `GET /api/game-history/:roomId/summary`
+  - 対局ログの summary
+- `GET /api/game-history/:roomId/replay`
+  - round / action / player で絞れる replay / audit view
+
+## finished room の扱い
+
+- 対局終了後の room は socket 上では閉じますが、DB からはすぐ削除しません
+- これはプロフィールの recent matches と replay/audit 詳細ページを成立させるためです
+- `game_history` は既存テーブルを再利用しており、migration 追加なしで write/read side を構成しています
+
 ## NestJSモジュールシステム
 
-このプロジェクトはNestJSのモジュールシステムを活用し、依存性注入(DI)とクリーンアーキテクチャを実現しています。
+このプロジェクトは NestJS のモジュールシステムを活用し、依存性注入(DI)で gateway、use-case、service、repository を配線しています。独自レイヤーを全体に強制するのではなく、NestJS の標準構造に乗せたうえで、ゲームルール周辺だけを明確な domain層として扱います。
 
 ### モジュール階層
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { Navigation } from '@/components/layout/Navigation';
-import { RoomList } from '@/components/molecules/RoomList';
+import { RoomList } from '@/components/room/RoomList';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useSocket } from '@/hooks/useSocket';
 import { useRouter } from '@/i18n/routing';

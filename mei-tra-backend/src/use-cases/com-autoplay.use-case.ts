@@ -18,7 +18,7 @@ import {
   ISelectNegriUseCase,
   SelectNegriResponse,
 } from './interfaces/select-negri.use-case.interface';
-import { Player } from '../types/game.types';
+import { DomainPlayer } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { CompleteFieldTrigger } from './interfaces/play-card.use-case.interface';
@@ -78,7 +78,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
   private async handleComPlayPhase(
     roomId: string,
-    comPlayer: Player,
+    comPlayer: DomainPlayer,
     gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
     const state = gameState.getState();
@@ -101,7 +101,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       const negriResult: SelectNegriResponse =
         await this.selectNegriUseCase.execute({
           roomId,
-          userId: comPlayer.userId ?? comPlayer.playerId,
+          actorId: comPlayer.playerId,
           card: negriCard,
         });
 
@@ -131,15 +131,14 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
     const result: PlayCardResponse = await this.playCardUseCase.execute({
       roomId,
-      userId: comPlayer.userId ?? comPlayer.playerId,
+      actorId: comPlayer.playerId,
       card: bestCard,
     });
 
-    const {
-      events = [],
-      delayedEvents = [],
-      completeFieldTrigger,
-    } = result as ResponseWithDelayed<PlayCardResponse>;
+    const playResult = result as ResponseWithDelayed<PlayCardResponse>;
+    const events: GatewayEvent[] = [...(playResult.events ?? [])];
+    const delayedEvents: GatewayEvent[] = [...(playResult.delayedEvents ?? [])];
+    const { completeFieldTrigger } = playResult;
 
     const updatedState = gameState.getState();
     const updatedField = updatedState.playState?.currentField ?? null;
@@ -195,13 +194,13 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
   private async handleComBlowPhase(
     roomId: string,
-    comPlayer: Player,
+    comPlayer: DomainPlayer,
     gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
     // COMは常にパス
     const result: PassBlowResponse = await this.passBlowUseCase.execute({
       roomId,
-      userId: comPlayer.userId ?? comPlayer.playerId,
+      actorId: comPlayer.playerId,
     });
 
     const { events = [], delayedEvents = [] } =

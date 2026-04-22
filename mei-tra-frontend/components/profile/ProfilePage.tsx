@@ -1,19 +1,21 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { AuthModal } from '../auth/AuthModal';
-import { ProfileEditForm } from './ProfileEditForm';
-import { Navigation } from '../layout/Navigation';
-import { useState } from 'react';
+import { AuthModal } from '@/components/auth/AuthModal';
+import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
+import { ProfileRecentMatchesSection } from '@/components/profile/ProfileRecentMatchesSection';
+import { Navigation } from '@/components/layout/Navigation';
+import { useEffect, useState } from 'react';
 import { UserProfile } from '@/types/user.types';
-import { createClient } from '@/lib/supabase';
-import { useTranslations } from 'next-intl';
-import { ConfirmModal } from '../molecules/ConfirmModal';
+import { supabase } from '@/lib/supabase';
+import { useLocale, useTranslations } from 'next-intl';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import styles from './ProfilePage.module.scss';
 
 export function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, getAccessToken, refreshUserProfile } = useAuth();
   const t = useTranslations('profile');
+  const locale = useLocale();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(user?.profile || null);
@@ -21,6 +23,26 @@ export function ProfilePage() {
   const [showPasswordResetConfirm, setShowPasswordResetConfirm] = useState(false);
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
   const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  const localePrefix = locale === 'en' ? '/en' : '';
+
+  useEffect(() => {
+    if (!user?.id) {
+      setCurrentProfile(null);
+      return;
+    }
+
+    if (!isEditing) {
+      setCurrentProfile(user.profile ?? null);
+    }
+  }, [isEditing, user?.id, user?.profile]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    void refreshUserProfile();
+  }, [refreshUserProfile, user?.id]);
 
   if (loading) {
     return (
@@ -90,9 +112,8 @@ export function ProfilePage() {
     setIsSendingPasswordReset(true);
 
     try {
-      const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}${localePrefix}/auth/reset-password`,
       });
 
       if (error) {
@@ -289,6 +310,11 @@ export function ProfilePage() {
                 )}
               </div>
             </div>
+
+            <ProfileRecentMatchesSection
+              userId={user.id}
+              getAccessToken={getAccessToken}
+            />
           </div>
         </div>
       </div>

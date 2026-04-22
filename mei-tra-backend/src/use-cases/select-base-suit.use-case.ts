@@ -6,6 +6,7 @@ import {
 } from './interfaces/select-base-suit.use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
+import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
 
 @Injectable()
 export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
@@ -19,7 +20,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
     request: SelectBaseSuitRequest,
   ): Promise<SelectBaseSuitResponse> {
     try {
-      const { roomId, userId, suit } = request;
+      const { roomId, actorId, suit } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
@@ -30,7 +31,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
         return { success: false, error: 'Cannot select base suit now' };
       }
 
-      const player = state.players.find((p) => p.userId === userId);
+      const player = resolvePlayerByActorId(roomGameState, actorId);
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
       }

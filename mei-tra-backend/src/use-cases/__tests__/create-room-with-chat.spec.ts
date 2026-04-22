@@ -1,30 +1,71 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { CreateRoomUseCase } from '../create-room.use-case';
 import { ChatService } from '../../services/chat.service';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
-import { Room, RoomStatus } from '../../types/room.types';
-import { ChatRoom, ChatRoomId } from '../../types/social.types';
+import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
 
-describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
+describe('CreateRoomUseCase', () => {
   let createRoomUseCase: CreateRoomUseCase;
   let roomService: jest.Mocked<IRoomService>;
   let chatService: jest.Mocked<ChatService>;
 
+  const roomId = 'game-room-123';
+  const userId = 'user-123';
+  const hostPlayer: RoomPlayer = {
+    socketId: '',
+    playerId: userId,
+    userId,
+    isAuthenticated: true,
+    name: 'Test Player',
+    team: 0,
+    hand: [],
+    isPasser: false,
+    hasBroken: false,
+    hasRequiredBroken: false,
+    isReady: false,
+    isHost: true,
+    joinedAt: new Date(),
+  } as RoomPlayer;
+
+  const createdRoom: Room = {
+    id: roomId,
+    name: 'Test Game Room',
+    hostId: userId,
+    status: RoomStatus.WAITING,
+    settings: {
+      maxPlayers: 4,
+      isPrivate: false,
+      password: null,
+      teamAssignmentMethod: 'random',
+      pointsToWin: 10,
+      allowSpectators: true,
+    },
+    players: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastActivityAt: new Date(),
+  };
+
+  const updatedRoom: Room = {
+    ...createdRoom,
+    players: [hostPlayer],
+  };
+
   beforeEach(() => {
     roomService = {
       createRoom: jest.fn(),
-      createNewRoom: jest.fn(),
-      listRooms: jest.fn(),
-      getRoom: jest.fn(),
-      joinRoom: jest.fn(),
+      createNewRoom: jest.fn().mockResolvedValue(createdRoom),
+      listRooms: jest.fn().mockResolvedValue([updatedRoom]),
+      getRoom: jest.fn().mockResolvedValue(updatedRoom),
+      joinRoom: jest.fn().mockResolvedValue(true),
       leaveRoom: jest.fn(),
       getRoomGameState: jest.fn(),
       updateRoomStatus: jest.fn(),
       updatePlayerInRoom: jest.fn(),
       updateRoom: jest.fn(),
       deleteRoom: jest.fn(),
+      releaseRoomResources: jest.fn(),
       canStartGame: jest.fn(),
       handlePlayerReconnection: jest.fn(),
       restorePlayerFromVacantSeat: jest.fn(),
@@ -32,314 +73,69 @@ describe('CreateRoomUseCase with Chat Room Auto-creation', () => {
       updateUserGameStats: jest.fn(),
       updateUserLastSeen: jest.fn(),
       fillVacantSeatsWithCOM: jest.fn(),
-      initCOMPlaceholders: jest.fn(),
+      initCOMPlaceholders: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IRoomService>;
 
     chatService = {
-      createRoom: jest.fn(),
+      createRoom: jest.fn().mockResolvedValue({}),
       postMessage: jest.fn(),
       listMessages: jest.fn(),
       getRoom: jest.fn(),
       listRooms: jest.fn(),
     } as unknown as jest.Mocked<ChatService>;
 
-    createRoomUseCase = new CreateRoomUseCase(roomService);
+    createRoomUseCase = new CreateRoomUseCase(roomService, chatService);
   });
 
-  describe('Chat Room Auto-creation Integration', () => {
-    it('should create chat room with same ID as game room', async () => {
-      const roomId = 'game-room-123';
-      const userId = 'user-123';
-
-      const mockRoom: Room = {
-        id: roomId,
-        name: 'Test Game Room',
-        hostId: userId,
-        status: RoomStatus.WAITING,
-        settings: {
-          maxPlayers: 4,
-          isPrivate: false,
-          password: null,
-          teamAssignmentMethod: 'random',
-          pointsToWin: 10,
-          allowSpectators: true,
-        },
-        players: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastActivityAt: new Date(),
-      };
-
-      const mockChatRoom = ChatRoom.create({
-        id: ChatRoomId.create(roomId),
-        scope: 'table',
-        name: `Game: ${mockRoom.name}`,
-        visibility: 'private',
-        messageTtlHours: 24,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      roomService.createNewRoom.mockResolvedValue(mockRoom);
-      chatService.createRoom.mockResolvedValue(mockChatRoom);
-
-      const result = await createRoomUseCase.execute({
-        roomName: 'Test Game Room',
-        pointsToWin: 10,
-        teamAssignmentMethod: 'random',
-        playerName: 'Test Player',
-        authenticatedUser: { id: userId, profile: {} as any },
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.data?.room.id).toBe(roomId);
-
-      // In the actual implementation in GameGateway, chat room is created after this
-      // This test verifies that the room ID can be used for chat room creation
-      expect(mockRoom.id).toBeTruthy();
+  it('creates the room, joins the host, initializes COM placeholders, and creates chat room', async () => {
+    const result = await createRoomUseCase.execute({
+      roomName: 'Test Game Room',
+      pointsToWin: 10,
+      teamAssignmentMethod: 'random',
+      playerName: 'Test Player',
+      authenticatedUser: { id: userId, profile: {} as any },
     });
 
-    it('should handle chat room creation with custom room ID', async () => {
-      const customRoomId = 'custom-game-room-456';
-      const userId = 'user-456';
-
-      const mockRoom: Room = {
-        id: customRoomId,
-        name: 'Custom Room',
-        hostId: userId,
-        status: RoomStatus.WAITING,
-        settings: {
-          maxPlayers: 4,
-          isPrivate: true,
-          password: 'secret',
-          teamAssignmentMethod: 'host-choice',
-          pointsToWin: 15,
-          allowSpectators: false,
-        },
-        players: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastActivityAt: new Date(),
-      };
-
-      const mockChatRoom = ChatRoom.create({
-        id: ChatRoomId.create(customRoomId),
-        scope: 'table',
-        name: `Game: Custom Room`,
-        ownerId: undefined,
-        visibility: 'private',
-        messageTtlHours: 24,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      roomService.createNewRoom.mockResolvedValue(mockRoom);
-      chatService.createRoom.mockResolvedValue(mockChatRoom);
-
-      const result = await createRoomUseCase.execute({
-        roomName: 'Custom Room',
-        pointsToWin: 15,
-        teamAssignmentMethod: 'host-choice',
-        playerName: 'Host Player',
-        authenticatedUser: { id: userId, profile: {} as any },
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.data?.room.id).toBe(customRoomId);
-    });
-  });
-
-  describe('Chat Room Creation Failure Handling', () => {
-    it('should succeed game room creation even if chat room creation fails', async () => {
-      const roomId = 'game-room-789';
-      const userId = 'user-789';
-
-      const mockRoom: Room = {
-        id: roomId,
-        name: 'Resilient Room',
-        hostId: userId,
-        status: RoomStatus.WAITING,
-        settings: {
-          maxPlayers: 4,
-          isPrivate: false,
-          password: null,
-          teamAssignmentMethod: 'random',
-          pointsToWin: 10,
-          allowSpectators: true,
-        },
-        players: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastActivityAt: new Date(),
-      };
-
-      roomService.createNewRoom.mockResolvedValue(mockRoom);
-      chatService.createRoom.mockRejectedValue(
-        new Error('Database connection failed'),
-      );
-
-      const result = await createRoomUseCase.execute({
-        roomName: 'Resilient Room',
-        pointsToWin: 10,
-        teamAssignmentMethod: 'random',
-        playerName: 'Resilient Player',
-        authenticatedUser: { id: userId, profile: {} as any },
-      });
-
-      // Game room creation should still succeed
-      expect(result.success).toBe(true);
-      expect(result.data?.room.id).toBe(roomId);
-    });
-  });
-
-  describe('Chat Room Properties', () => {
-    it('should create chat room with correct scope and visibility', async () => {
-      const roomId = 'game-room-abc';
-      const userId = 'user-abc';
-
-      const mockChatRoom = ChatRoom.create({
-        id: ChatRoomId.create(roomId),
-        scope: 'table',
-        name: 'Game: Test Room',
-        ownerId: undefined,
-        visibility: 'private',
-        messageTtlHours: 24,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      chatService.createRoom.mockResolvedValue(mockChatRoom);
-
-      await chatService.createRoom({
+    expect(result.success).toBe(true);
+    expect(roomService.createNewRoom).toHaveBeenCalledWith(
+      'Test Game Room',
+      userId,
+      10,
+      'random',
+    );
+    expect(roomService.joinRoom).toHaveBeenCalledWith(
+      roomId,
+      expect.objectContaining({
+        playerId: userId,
+        userId,
+        name: 'Test Player',
+      }),
+    );
+    expect(roomService.initCOMPlaceholders).toHaveBeenCalledWith(roomId);
+    expect(chatService.createRoom).toHaveBeenCalledWith(
+      expect.objectContaining({
         id: roomId,
         scope: 'table',
-        name: 'Game: Test Room',
+        name: 'Game: Test Game Room',
         ownerId: userId,
-        visibility: 'private',
-        messageTtlHours: 24,
-      });
-
-      expect(jest.mocked(chatService.createRoom)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: roomId,
-          scope: 'table',
-          visibility: 'private',
-        }),
-      );
-    });
-
-    it('should set chat room name based on game room name', async () => {
-      const roomId = 'game-room-xyz';
-      const gameRoomName = 'Epic Battle Arena';
-      const expectedChatRoomName = `Game: ${gameRoomName}`;
-
-      const mockChatRoom = ChatRoom.create({
-        id: ChatRoomId.create(roomId),
-        scope: 'table',
-        name: expectedChatRoomName,
-        visibility: 'private',
-        messageTtlHours: 24,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      chatService.createRoom.mockResolvedValue(mockChatRoom);
-
-      await chatService.createRoom({
-        id: roomId,
-        scope: 'table',
-        name: expectedChatRoomName,
-        visibility: 'private',
-      });
-
-      expect(jest.mocked(chatService.createRoom)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: expectedChatRoomName,
-        }),
-      );
-    });
-
-    it('should use default TTL of 24 hours for chat messages', async () => {
-      const roomId = 'game-room-ttl';
-
-      const mockChatRoom = ChatRoom.create({
-        id: ChatRoomId.create(roomId),
-        scope: 'table',
-        visibility: 'private',
-        messageTtlHours: 24,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      chatService.createRoom.mockResolvedValue(mockChatRoom);
-
-      await chatService.createRoom({
-        id: roomId,
-        scope: 'table',
-        visibility: 'private',
-        messageTtlHours: 24,
-      });
-
-      expect(jest.mocked(chatService.createRoom)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          messageTtlHours: 24,
-        }),
-      );
-    });
+      }),
+    );
+    expect(result.data?.room).toEqual(updatedRoom);
+    expect(result.data?.hostPlayer).toEqual(hostPlayer);
   });
 
-  describe('Room ID Consistency', () => {
-    it('should ensure game room ID matches chat room ID', async () => {
-      const roomId = 'consistent-room-id';
-      const userId = 'user-consistent';
+  it('still succeeds when chat room creation fails', async () => {
+    chatService.createRoom.mockRejectedValueOnce(new Error('chat failed'));
 
-      const mockRoom: Room = {
-        id: roomId,
-        name: 'Consistency Test',
-        hostId: userId,
-        status: RoomStatus.WAITING,
-        settings: {
-          maxPlayers: 4,
-          isPrivate: false,
-          password: null,
-          teamAssignmentMethod: 'random',
-          pointsToWin: 10,
-          allowSpectators: true,
-        },
-        players: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastActivityAt: new Date(),
-      };
-
-      const mockChatRoom = ChatRoom.create({
-        id: ChatRoomId.create(roomId),
-        scope: 'table',
-        visibility: 'private',
-        messageTtlHours: 24,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      roomService.createNewRoom.mockResolvedValue(mockRoom);
-      chatService.createRoom.mockResolvedValue(mockChatRoom);
-
-      const gameRoomResult = await createRoomUseCase.execute({
-        roomName: 'Consistency Test',
-        pointsToWin: 10,
-        teamAssignmentMethod: 'random',
-        playerName: 'Consistent Player',
-        authenticatedUser: { id: userId, profile: {} as any },
-      });
-
-      const chatRoomResult = await chatService.createRoom({
-        id: roomId,
-        scope: 'table',
-        visibility: 'private',
-      });
-
-      expect(gameRoomResult.data?.room.id).toBe(roomId);
-      expect(chatRoomResult.getId().getValue()).toBe(roomId);
+    const result = await createRoomUseCase.execute({
+      roomName: 'Test Game Room',
+      pointsToWin: 10,
+      teamAssignmentMethod: 'random',
+      playerName: 'Test Player',
+      authenticatedUser: { id: userId, profile: {} as any },
     });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.room.id).toBe(roomId);
   });
 });

@@ -1,4 +1,4 @@
-import { Player } from '../../types/game.types';
+import { Player } from '@/types/game.types';
 
 /**
  * チーム番号に基づいてプレイヤー名からチーム表示名を生成

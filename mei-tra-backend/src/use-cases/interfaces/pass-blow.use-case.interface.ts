@@ -2,7 +2,7 @@ import { GatewayEvent } from './gateway-event.interface';
 
 export interface PassBlowRequest {
   roomId: string;
-  userId: string;
+  actorId: string;
 }
 
 export interface PassBlowResponse {
@@ -13,7 +13,7 @@ export interface PassBlowResponse {
   revealBrokenRequest?: {
     roomId: string;
     playerId: string;
-    userId: string;
+    actorId: string;
   };
 }
 

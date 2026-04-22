@@ -1,5 +1,4 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { RoomStatus } from '../types/room.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import {
   ILeaveRoomUseCase,
@@ -7,6 +6,7 @@ import {
   LeaveRoomResponse,
   LeaveRoomSuccessData,
 } from './interfaces/leave-room.use-case.interface';
+import { resolveRoomTransportPlayers } from './helpers/player-resolution.helper';
 
 @Injectable()
 export class LeaveRoomUseCase implements ILeaveRoomUseCase {
@@ -66,14 +66,11 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
       // Preserve team assignment for returning players
       state.teamAssignments[player.playerId] = player.team;
 
-      // state.players is empty during waiting room (populated only at startGame).
-      // Fall back to the room's real (non-COM) players in that case.
-      const updatedPlayers =
-        roomExists.status === RoomStatus.WAITING
-          ? roomExists.players
-          : state.players.length > 0
-            ? state.players
-            : (roomExists?.players.filter((p) => !p.isCOM) ?? []);
+      const updatedPlayers = resolveRoomTransportPlayers(
+        roomGameState,
+        roomExists,
+        { statePlayers: state.players },
+      );
 
       return {
         success: true,

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   IDeclareBlowUseCase,
   DeclareBlowRequest,
@@ -9,6 +9,11 @@ import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
+import {
+  buildPlayerSyncEvents,
+  resolvePlayerByActorId,
+} from './helpers/player-resolution.helper';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import {
   transitionToPlayPhase,
   TransitionResult,
@@ -23,14 +28,17 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
     @Inject('IBlowService') private readonly blowService: IBlowService,
     @Inject('ICardService') private readonly cardService: ICardService,
     @Inject('IChomboService') private readonly chomboService: IChomboService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async execute(request: DeclareBlowRequest): Promise<DeclareBlowResponse> {
     try {
-      const { roomId, userId, declaration } = request;
+      const { roomId, actorId, declaration } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.userId === userId);
+      const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -85,6 +93,22 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       });
       state.blowState.currentHighestDeclaration = newDeclaration;
 
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'blow_declared',
+        playerId: player.playerId,
+        state,
+        actionData: {
+          declaration: {
+            trumpType: declaration.trumpType,
+            numberOfPairs: declaration.numberOfPairs,
+          },
+          currentHighestDeclaration: state.blowState.currentHighestDeclaration,
+          declarationsCount: state.blowState.declarations.length,
+        },
+      });
+      const room = await this.roomService.getRoom(roomId);
+
       const events: GatewayEvent[] = [
         {
           scope: 'room',
@@ -97,13 +121,12 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
             lastPasser: state.blowState.lastPasser,
           },
         },
-        {
-          scope: 'room',
-          roomId,
-          event: 'update-players',
-          payload: state.players,
-        },
       ];
+      events.push(
+        ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
+          room,
+        }),
+      );
 
       // Calculate how many players have acted (declared or passed)
       const actedCount = state.players.filter((p) => {
@@ -118,10 +141,12 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         const transition: TransitionResult = await transitionToPlayPhase({
           roomId,
           roomGameState,
+          room,
           state,
           blowService: this.blowService,
           cardService: this.cardService,
           chomboService: this.chomboService,
+          gameEventLogService: this.gameEventLogService,
         });
 
         return {

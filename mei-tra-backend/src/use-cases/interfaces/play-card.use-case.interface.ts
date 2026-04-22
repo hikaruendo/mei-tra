@@ -1,11 +1,18 @@
 import { GatewayEvent } from './gateway-event.interface';
 import { Field } from '../../types/game.types';
+import type {
+  CardPlayedPayload,
+  PlayCardPayload,
+  UpdateTurnPayload,
+} from '@contracts/game';
 
-export interface PlayCardRequest {
-  roomId: string;
-  userId: string;
-  card: string;
+export interface PlayCardRequest extends PlayCardPayload {
+  actorId: string;
 }
+
+export type PlayCardGatewayEvent =
+  | GatewayEvent<CardPlayedPayload, 'card-played'>
+  | GatewayEvent<UpdateTurnPayload, 'update-turn'>;
 
 export interface CompleteFieldTrigger {
   roomId: string;
@@ -16,7 +23,7 @@ export interface CompleteFieldTrigger {
 export interface PlayCardResponse {
   success: boolean;
   error?: string;
-  events?: GatewayEvent[];
+  events?: PlayCardGatewayEvent[];
   delayedEvents?: GatewayEvent[];
   completeFieldTrigger?: CompleteFieldTrigger;
 }

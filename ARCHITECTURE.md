@@ -2,7 +2,14 @@
 
 このドキュメントでは、フロントエンドからバックエンド、データベースまでの全体アーキテクチャを説明します。
 
-## 🔗 全体の依存関係の方向 (Clean Architecture)
+## 🔗 全体の依存関係の方向
+
+現在の設計は「全面的な Clean Architecture」ではありません。外側は Next.js / NestJS の標準構成を活用し、ゲームルールの正しさに直結する内側だけを厚く守る構成です。
+
+- 外側: Next.js / NestJS の page、route、controller、gateway、module、DI に寄せる
+- 中間: use-case / session service / transport contract が、外側の framework と内側の game core を橋渡しする
+- 内側: `CardService` / `BlowService` / `PlayService` / `ScoreService` / `ChomboService` / `GamePhaseService` を domain層として扱い、ルール判定・phase transition・得点計算を UI / Socket / DB に散らさない
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -20,21 +27,24 @@
 │                                ▼                                     │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │    Gateways/Controllers (Infrastructure/Presentation Layer)  │  │
-│  │    ・GameGateway, SocialGateway, UserProfileController       │  │
+│  │    ・GameGateway, SocialGateway, UserProfileController,      │  │
+│  │      GameHistoryController                                  │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                ▼                                     │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │           Use Cases (Application Layer)                       │  │
-│  │           ・JoinRoomUseCase, PlayCardUseCase                  │  │
+│  │           ・JoinRoomUseCase, ReconnectionUseCase,            │  │
+│  │             PlayCardUseCase, GetUserRecentGameHistoryUseCase │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                ▼                                     │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │             Services (Domain Layer)                           │  │
-│  │             ・RoomService, CardService, ChatService           │  │
+│  │       Domain Layer / State Services                           │  │
+│  │       ・CardService, BlowService, PlayService, ScoreService,  │  │
+│  │         ChomboService, GamePhaseService, GameStateManager    │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                ▼                                     │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │      Repository Interfaces (Domain Layer)                    │  │
+│  │      Repository Interfaces (Application Ports)                │  │
 │  │      ・IRoomRepository, IChatRoomRepository                   │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                ▲                                     │
@@ -54,7 +64,7 @@
 └─────────────────────────────────────────────────────────────────────┘
 
 依存の方向: 外側 → 内側
-内側の層は外側を知らない (Clean Architectureの原則)
+内側のゲームコアは外側を知らず、UI / transport / framework wiring は外側に留める
 ```
 
 ## 📊 システム全体構成
@@ -71,7 +81,7 @@
 └─────────────────────────────────────────────────────────────────────┘
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│     🚀 Backend (Infrastructure/Application/Domain Layers)            │
+│     🚀 Backend (NestJS Application + Domain Layer)                   │
 │         NestJS / Fly.io でホスティング                                │
 └─────────────────────────────────────────────────────────────────────┘
                                     ▼
@@ -89,7 +99,8 @@
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          📱 Presentation Layer                           │
 │  ┌────────────────────────────────────────────────────────────────┐    │
-│  │  Pages (app/[locale]/page.tsx)                                  │    │
+│  │  Pages (app/[locale]/page.tsx,                                   │    │
+│  │         app/[locale]/game-history/[roomId]/page.tsx)            │    │
 │  │  - ルーティング                                                   │    │
 │  │  - SSR/SSG                                                       │    │
 │  │  - 国際化 (i18n)                                                │    │
@@ -163,7 +174,9 @@
 │                                ▼                                         │
 │  ┌────────────────────────────────────────────────────────────────┐    │
 │  │  REST API Client (app/api/)                                      │    │
-│  │  └─ /api/user-profile/{id}/avatar (アバター画像アップロード)    │    │
+│  │  ├─ /api/user-profile/{id}/avatar      (アバター画像アップロード) │    │
+│  │  ├─ /api/user-profile/{id}/game-history (プロフィールの最近の対局)│    │
+│  │  └─ /api/game-history/{roomId}/summary|replay                  │    │
 │  │                                                                  │    │
 │  │  使用例: 大容量バイナリデータの送信                               │    │
 │  └────────────────────────────────────────────────────────────────┘    │
@@ -175,7 +188,7 @@
 - REST APIクライアント (大容量データ用)
 - 再接続ロジック
 
-## 🚀 Backend Layer 詳細 (NestJS + Clean Architecture)
+## 🚀 Backend Layer 詳細 (NestJS + 選択的な境界設計)
 
 ### Infrastructure/Presentation Layer (インフラ/プレゼンテーション層)
 
@@ -194,6 +207,7 @@
 │  │  │ ・declare-blow          │ ・chat:typing                     │  │    │
 │  │  │ ・play-card             │ ・chat:list-messages              │  │    │
 │  │  │ ・reconnection 処理     │                                   │  │    │
+│  │  │ ・room-sync 配信        │                                   │  │    │
 │  │  └─────────────────────────┴──────────────────────────────────┘  │    │
 │  │                                                                    │    │
 │  │  役割: プロトコル処理 (WebSocket イベント→Use Cases へ委譲)       │    │
@@ -201,9 +215,13 @@
 │                                  ▼                                         │
 │  ┌──────────────────────────────────────────────────────────────────┐    │
 │  │  REST Controllers (*.controller.ts)                               │    │
-│  │  └─ UserProfileController                                         │    │
-│  │     ├─ POST /:id/avatar (画像アップロード + Sharp.js 最適化)     │    │
-│  │     └─ GET  /:id (プロフィール取得)                              │    │
+│  │  ├─ UserProfileController                                         │    │
+│  │  │  ├─ POST /:id/avatar      (画像アップロード + Sharp.js 最適化)│    │
+│  │  │  ├─ GET  /:id             (プロフィール取得)                  │    │
+│  │  │  └─ GET  /:id/game-history (self-only 最近の対局一覧)        │    │
+│  │  └─ GameHistoryController                                         │    │
+│  │     ├─ GET /:roomId/summary  (対局ログ summary)                  │    │
+│  │     └─ GET /:roomId/replay   (対局ログ replay/audit)             │    │
 │  │                                                                    │    │
 │  │  役割: REST API エンドポイント (大容量バイナリ専用)               │    │
 │  └──────────────────────────────────────────────────────────────────┘    │
@@ -224,11 +242,13 @@
 │  ┌──────────────────────────────────────────────────────────────────┐    │
 │  │  Use Cases (use-cases/*.use-case.ts)                              │    │
 │  │  ├─ JoinRoomUseCase         (ルーム参加ロジック)                  │    │
+│  │  ├─ ReconnectionUseCase     (再接続・復帰ロジック)                │    │
 │  │  ├─ CreateRoomUseCase       (ルーム作成ロジック)                  │    │
 │  │  ├─ StartGameUseCase        (ゲーム開始ロジック)                  │    │
 │  │  ├─ DeclareBlowUseCase      (Blow宣言ロジック)                    │    │
 │  │  ├─ PlayCardUseCase         (カードプレイロジック)                │    │
-│  │  └─ ...                                                            │    │
+│  │  ├─ ModeratePlayerUseCase   (モデレーション / COM 置換)          │    │
+│  │  └─ GetUserRecentGameHistoryUseCase (プロフィール履歴一覧)        │    │
 │  │                                                                    │    │
 │  │  特徴:                                                             │    │
 │  │  ・@Injectable() でNestJS DIに登録                                 │    │
@@ -241,7 +261,7 @@
 
 **責任範囲**:
 - アプリケーション固有のビジネスルール
-- 複数のDomain Servicesの調整
+- 複数の domain service / application service の調整
 - 入力検証とデータ変換
 - Gateway向けイベントの準備
 
@@ -268,33 +288,35 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 }
 ```
 
-### Domain Layer (ドメイン層 - Services)
+### Domain Layer / Application Services
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
-│                          🧠 Domain Layer (Services)                        │
+│                  🧠 Domain Layer / Application Services                     │
 │  ┌──────────────────────────────────────────────────────────────────┐    │
-│  │  Domain Services (services/*.service.ts)                           │    │
-│  │  ├─ GameStateService     (ゲーム状態管理)                         │    │
-│  │  ├─ RoomService          (ルーム管理)                             │    │
-│  │  ├─ CardService          (カード配布・管理)                       │    │
-│  │  ├─ BlowService          (Blowフェーズロジック)                   │    │
-│  │  ├─ PlayService          (Playフェーズロジック)                   │    │
-│  │  ├─ ScoreService         (スコア計算)                             │    │
-│  │  ├─ ChatService          (チャットロジック)                       │    │
-│  │  ├─ ChatCleanupService   (期限切れメッセージ削除)                 │    │
-│  │  └─ AuthService          (認証・認可)                             │    │
+│  │  Domain Layer                                                     │    │
+│  │  ├─ CardService          (カード強度・スート・デッキ)             │    │
+│  │  ├─ BlowService          (Blow 宣言の合法性)                      │    │
+│  │  ├─ PlayService          (場の勝者判定)                           │    │
+│  │  ├─ ScoreService         (得点計算)                               │    │
+│  │  ├─ ChomboService        (チョンボ判定)                           │    │
+│  │  └─ GamePhaseService     (phase transition の合法性)              │    │
 │  │                                                                    │    │
-│  │  役割: ドメインロジック (ゲームルール、ビジネスルール)             │    │
+│  │  Application / Session Services                                    │    │
+│  │  ├─ GameStateService / GameStateManager                           │    │
+│  │  ├─ PlayerConnectionManager / ComSessionService                   │    │
+│  │  ├─ RoomService / TurnMonitorService                              │    │
+│  │  └─ GameEventLogService / ChatService / AuthService               │    │
+│  │                                                                    │    │
+│  │  役割: ルールの正しさと session / state の整合性を分けて扱う       │    │
 │  └──────────────────────────────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
 **責任範囲**:
-- ビジネスルール (ゲームルール)
-- ドメインエンティティの操作
-- 純粋な計算ロジック
-- インフラストラクチャに依存しない
+- domain層はルール判定、得点計算、phase legality の source of truth
+- application / session services は reconnect、COM 置換、timer、永続化、read-side 補助などを調整する
+- すべての service が純粋 domain という意味ではない。特に `GameStateManager`, `RoomService`, `GameEventLogService`, `AuthService`, `ChatService` は repository や外部境界と接続する
 
 ### Infrastructure Layer - Data Access (インフラ層 - データアクセス)
 
@@ -336,7 +358,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
 **依存性逆転の例**:
 ```typescript
-// Domain層はインターフェースに依存
+// Application service は repository interface に依存
 class RoomService {
   constructor(
     @Inject('IRoomRepository')
@@ -365,7 +387,7 @@ class RoomService {
 │  │  ├─ rooms                  (ルーム情報)                            │    │
 │  │  ├─ room_players           (ルーム参加プレイヤー)                  │    │
 │  │  ├─ game_states            (ゲーム状態)                            │    │
-│  │  ├─ game_history           (ゲーム履歴)                            │    │
+│  │  ├─ game_history           (ゲーム履歴 / replay / audit log)      │    │
 │  │  ├─ chat_rooms             (チャットルーム)                        │    │
 │  │  ├─ chat_messages          (チャットメッセージ)                    │    │
 │  │  └─ user_profiles          (ユーザープロフィール)                  │    │
@@ -373,7 +395,7 @@ class RoomService {
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 🔗 依存関係の方向 (Clean Architecture 準拠)
+## 🔗 依存関係の方向
 
 ```
 外側 (Infrastructure) ────────→ 内側 (Domain)
@@ -387,7 +409,7 @@ Gateways/Controllers
   │
   └─→ Use Cases
         │
-        └─→ Services (Domain Logic)
+        └─→ Domain Layer / Application Services
               │
               └─→ Repository Interfaces ←┐
                                          │ 実装
@@ -396,15 +418,20 @@ Gateways/Controllers
 
 ### 重要な原則
 
-1. **依存性の方向**: 内側の層は外側を知らない
-   - Domain層はInfrastructure層を知らない
-   - Services層はGateways/Controllersを知らない
+1. **依存性の方向**: domain層は外側を知らない
+   - `CardService`, `BlowService`, `PlayService`, `ScoreService`, `ChomboService`, `GamePhaseService` は UI / Socket / DB の詳細を知らない
+   - use-case / application service は gateway/controller ではなく interface や service に依存する
 
 2. **依存性逆転の原則** (Dependency Inversion Principle)
    - 上位モジュール (Services) は下位モジュール (Repositories) に依存しない
    - どちらも抽象 (Interface) に依存する
 
-3. **テスト容易性**
+3. **厚く守る場所とフレームワークに任せる場所**
+   - ルール判定、phase、得点計算、合法手判定は domain層の service に集める
+   - page / route / gateway wiring / proxy は Next.js / NestJS の標準的な書き方に寄せる
+   - つまり、全部を Clean Architecture にするのではなく、壊れるとゲームの正しさが崩れる場所だけを厚くする
+
+4. **テスト容易性**
    - インターフェースを使うことでモックへの差し替えが簡単
    ```typescript
    Test.createTestingModule({
@@ -430,27 +457,42 @@ Frontend                     Backend                          Database
                                 │
                                 ├─→ 3. PlayCardUseCase.execute()
                                         │
-                                        ├─→ 4. PlayService.playCard()
-                                        │     (ゲームルール検証)
-                                        │
-                                        ├─→ 5. RoomService.getRoomGameState()
+                                        ├─→ 4. RoomService.getRoomGameState()
                                         │     │
-                                        │     └─→ GameStateRepository.findByRoomId()
+                                        │     └─→ GameStateManager.loadState()
                                         │           │
-                                        │           └─→ Supabase SELECT
+                                        │           └─→ GameStateRepository.findByRoomId()
+                                        │                 │
+                                        │                 └─→ Supabase SELECT
                                         │
-                                        └─→ 6. GameStateRepository.update()
-                                                  │
-                                                  └─→ Supabase UPDATE
+                                        ├─→ 5. actor/player 解決 + 手札/turn/currentField 検証
+                                        │
+                                        ├─→ 6. player.hand と currentField を更新
+                                        │
+                                        ├─→ 7. GameEventLogService.log('card_played')
+                                        │     │
+                                        │     └─→ game_history INSERT
+                                        │
+                                        ├─→ 8. roomGameState.nextTurn() / saveState()
+                                        │     │
+                                        │     └─→ GameStateManager.saveState()
+                                        │           │
+                                        │           └─→ GameStateRepository.update()
+                                        │                 │
+                                        │                 └─→ Supabase UPDATE
+                                        │
+                                        └─→ 9. GatewayEvent[] を返す
 
                                 ▼
-                           7. server.to(roomId).emit('card-played', {...})
+                           10. GameGateway.dispatchEvents()
+                                │
+                                └─→ server.to(roomId).emit('card-played', {...})
      │
      ◀──────────────────────────┘
 
-8. useGame: 'card-played' イベント受信
+11. useGame: 'card-played' イベント受信
      │
-     └─→ setCurrentField() でReact状態更新
+     └─→ setCurrentField() / setPlayers() でReact状態更新
            │
            └─→ UI再レンダリング
 ```
@@ -461,11 +503,13 @@ Frontend                     Backend                          Database
 2. **WebSocket送信**: Socket.IOで `play-card` イベント送信
 3. **Gateway**: `GameGateway.handlePlayCard()` がイベント受信
 4. **Use Case**: `PlayCardUseCase.execute()` に委譲
-5. **Domain Service**: `PlayService.playCard()` でゲームルール検証
-6. **Repository**: `GameStateRepository` でデータベース読み書き
-7. **Database**: Supabaseに永続化
-8. **WebSocket配信**: `server.to(roomId).emit()` でルーム内全員に配信
-9. **Frontend更新**: `useGame` でイベント受信 → React状態更新 → UI再レンダリング
+5. **State取得**: `RoomService.getRoomGameState()` が in-memory の `GameStateService` を返す。未ロードなら `GameStateManager.loadState()` 経由で DB から復元する
+6. **検証**: `PlayCardUseCase` が actor/player 解決、手札、turn、currentField を検証する
+7. **状態更新**: `player.hand` と `currentField` を更新し、必要なら `nextTurn()` する
+8. **監査ログ**: `GameEventLogService.log()` が `card_played` を `game_history` に記録する
+9. **永続化**: `roomGameState.saveState()` → `GameStateManager.saveState()` → `GameStateRepository.update()` で Supabase に保存する
+10. **WebSocket配信**: use-case が返した `GatewayEvent[]` を `GameGateway.dispatchEvents()` が `card-played` / `update-turn` として room に配信する
+11. **Frontend更新**: `useGame` が `card-played` を受信し、`setCurrentField()` と `setPlayers()` で React state を更新する
 
 ## 🏗️ NestJS Module 構成
 
@@ -519,9 +563,9 @@ AppModule (ルート)
 | **Presentation (Frontend)** | UI表示、ユーザー入力 | React Components, Pages | State Management |
 | **State Management** | 状態管理、Socket購読 | useGame, useSocket | Communication |
 | **Communication** | 通信プロトコル | Socket.IO Client, Axios | Backend |
-| **Infrastructure (Backend)** | プロトコル処理 | GameGateway, SocialGateway | Use Cases |
-| **Application** | アプリケーションロジック | JoinRoomUseCase, PlayCardUseCase | Services |
-| **Domain** | ビジネスルール | GameStateService, CardService | Repositories |
+| **Infrastructure (Backend)** | プロトコル処理 | GameGateway, SocialGateway, UserProfileController, GameHistoryController | Use Cases |
+| **Application** | アプリケーションロジック | JoinRoomUseCase, ReconnectionUseCase, PlayCardUseCase, GetUserRecentGameHistoryUseCase | Services |
+| **Domain Layer / Application Services** | ルール判定と state/session 調整 | CardService, BlowService, PlayService, ScoreService, ChomboService, GamePhaseService, GameStateManager, PlayerConnectionManager | Repositories |
 | **Infrastructure (Data)** | データ永続化 | SupabaseRoomRepository | Database |
 | **External** | 外部サービス | Supabase PostgreSQL | - |
 
@@ -541,10 +585,14 @@ AppModule (ルート)
 - 接続維持が必要 (プレゼンス、タイピング通知)
 - 複数クライアントへのブロードキャスト
 
+Socket event の event 名と payload shape は frontend/backend 間の通信契約です。`room-sync`、`game-history`、`play-card` / `card-played` / `update-turn` など一部は `contracts/` に明示されていますが、すべての event が schema 化されているわけではありません。未 schema 化の event は暗黙契約なので、変更時は frontend/backend の両方を同時に確認・更新します。
+
 ### RESTを使う場合 (HTTP API)
 
 **適用例**:
 - アバター画像アップロード (UserProfileController)
+- プロフィールの最近の対局一覧
+- 対局ログの summary / replay read-side
 
 **理由**:
 - 大容量バイナリデータ (最大2MB画像)
@@ -555,16 +603,16 @@ AppModule (ルート)
 ## 📚 関連ドキュメント
 
 - [CLAUDE.md](./CLAUDE.md) - プロジェクト全体の概要と開発ガイドライン
-- [mei-tra-backend/README.md](./mei-tra-backend/README.md) - NestJSモジュールシステムの詳細
-- [database/schema.sql](./mei-tra-backend/database/schema.sql) - データベーススキーマ定義
+- [mei-tra-backend/README.md](./mei-tra-backend/README.md) - backend の現在の構成と履歴 read-side
+- [docs/architecture/game-core-design-and-realtime-scaling.md](./docs/architecture/game-core-design-and-realtime-scaling.md) - domain層を中心にゲームルール周辺を厚く守る設計方針と realtime 接続数の判断ライン
 
 ## 🎓 設計思想
 
 このプロジェクトは以下の原則に基づいて設計されています:
 
-1. **Clean Architecture**: 層の分離と依存性の方向管理
+1. **選択的な境界設計**: 外側は Next.js / NestJS に寄せ、ゲームルール周辺だけを domain層として厚く守る
 2. **SOLID原則**: 特に依存性逆転の原則 (DIP) とインターフェース分離の原則 (ISP)
-3. **ドメイン駆動設計 (DDD)**: ビジネスロジックをDomain層に集約
+3. **ゲームルール中心設計**: phase / rule / state mutation のうち、正しさに直結する判断を domain層に集約
 4. **依存性注入 (DI)**: NestJSのDIコンテナでテスト容易性を確保
 5. **Repository Pattern**: データアクセスの抽象化
-6. **Use Case Pattern**: アプリケーション固有のロジックをカプセル化
+6. **Use Case Pattern**: アプリケーション固有のロジックと transport の橋渡しをカプセル化

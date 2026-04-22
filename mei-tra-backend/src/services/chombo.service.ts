@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChomboViolation, Player, Field } from '../types/game.types';
+import { ChomboViolation, DomainPlayer, Field } from '../types/game.types';
 import { PlayService } from './play.service';
 import { IChomboService } from './interfaces/chombo-service.interface';
 
@@ -13,7 +13,7 @@ export class ChomboService implements IChomboService {
     playerId: string,
     action: string,
     context: {
-      player: Player;
+      player: DomainPlayer;
       field?: Field;
       card?: string;
       neguri?: { [key: string]: string };
@@ -134,7 +134,7 @@ export class ChomboService implements IChomboService {
     this.violations = [];
   }
 
-  checkForBrokenHand(player: Player): void {
+  checkForBrokenHand(player: DomainPlayer): void {
     const hand = player.hand;
 
     // Defensive check: filter out undefined cards
@@ -162,7 +162,7 @@ export class ChomboService implements IChomboService {
     }
   }
 
-  checkForRequiredBrokenHand(player: Player): void {
+  checkForRequiredBrokenHand(player: DomainPlayer): void {
     const hand = player.hand;
 
     // Defensive check: filter out undefined cards

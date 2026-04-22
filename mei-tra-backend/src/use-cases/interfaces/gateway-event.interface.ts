@@ -1,10 +1,14 @@
 export type GatewayEmitScope = 'room' | 'socket' | 'all';
 
-export interface GatewayEvent {
+export interface GatewayEvent<
+  TPayload = unknown,
+  TEvent extends string = string,
+> {
   scope: GatewayEmitScope;
-  event: string;
+  event: TEvent;
   roomId?: string;
   socketId?: string;
-  payload?: unknown;
+  excludeSocketId?: string;
+  payload?: TPayload;
   delayMs?: number;
 }

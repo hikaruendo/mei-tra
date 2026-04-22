@@ -1,7 +1,6 @@
 import { AuthenticatedUser } from '../../types/user.types';
 import {
-  ConnectionUser,
-  Player,
+  DomainPlayer,
   TeamScores,
   Field,
   GamePhase,
@@ -9,6 +8,7 @@ import {
   CompletedField,
 } from '../../types/game.types';
 import { Room, RoomStatus } from '../../types/room.types';
+import { SessionUser } from '../../types/session.types';
 
 type Nullable<T> = T | null | undefined;
 
@@ -16,7 +16,7 @@ export interface JoinRoomRequest {
   socketId: string;
   targetRoomId: string;
   currentRoomId?: string;
-  user: ConnectionUser;
+  user: SessionUser;
   authenticatedUser?: Nullable<AuthenticatedUser>;
 }
 
@@ -28,7 +28,7 @@ export interface PreviousRoomNotification {
 export interface ResumeGamePayload {
   message: string;
   gameState: {
-    players: Player[];
+    players: DomainPlayer[];
     gamePhase: GamePhase;
     currentField: Field | null;
     currentTurn: string | null;
@@ -52,7 +52,7 @@ export interface JoinRoomSuccess {
 export interface JoinRoomResponse {
   success: boolean;
   errorMessage?: string;
-  normalizedUser?: ConnectionUser;
+  normalizedUser?: SessionUser;
   previousRoomNotification?: PreviousRoomNotification;
   data?: JoinRoomSuccess;
 }

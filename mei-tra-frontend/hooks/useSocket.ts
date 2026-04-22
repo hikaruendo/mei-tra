@@ -49,7 +49,7 @@ export function useSocket(): UseSocketReturn {
         const token = authTokenRef.current ?? await getAccessToken();
 
         if (!token) {
-          console.error('[useSocket] No auth token available - cannot connect');
+          console.warn('[useSocket] No auth token available - cannot connect');
           if (isMounted) {
             setIsConnected(false);
             setIsConnecting(false);
@@ -93,7 +93,7 @@ export function useSocket(): UseSocketReturn {
           };
 
           const handleConnectError = (error: Error) => {
-            console.error('[useSocket] Connection error:', error);
+            console.warn('[useSocket] Connection error:', error);
             if (!isMounted) return;
             setIsConnected(false);
             // Backend cold start中も再接続を継続する
@@ -114,7 +114,7 @@ export function useSocket(): UseSocketReturn {
           };
 
           const handleReconnectFailed = () => {
-            console.error('[useSocket] Reconnect failed', {
+            console.warn('[useSocket] Reconnect failed', {
               storedRoomId:
                 typeof window !== 'undefined'
                   ? sessionStorage.getItem('roomId')

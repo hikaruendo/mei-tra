@@ -7,6 +7,10 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
+import {
+  buildPlayerSyncEvents,
+  resolvePlayerByActorId,
+} from './helpers/player-resolution.helper';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {
@@ -19,12 +23,10 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
 
   async execute(request: SelectNegriRequest): Promise<SelectNegriResponse> {
     try {
-      const { roomId, userId, card } = request;
+      const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find(
-        (p) => p.userId === userId || p.playerId === userId,
-      );
+      const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -81,14 +83,12 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       }
 
       state.currentPlayerIndex = winnerIndex;
+      const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
-        {
-          scope: 'room',
-          roomId,
-          event: 'update-players',
-          payload: state.players,
-        },
+        ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
+          room,
+        }),
         {
           scope: 'room',
           roomId,

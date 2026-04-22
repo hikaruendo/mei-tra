@@ -1,9 +1,9 @@
-import { Field, Player, TrumpType } from '../../types/game.types';
+import { DomainPlayer, Field, TrumpType } from '../../types/game.types';
 
 export interface IPlayService {
   determineFieldWinner(
     field: Field,
-    players: Player[],
+    players: DomainPlayer[],
     trumpSuit: TrumpType | null,
-  ): Player | null;
+  ): DomainPlayer | null;
 }

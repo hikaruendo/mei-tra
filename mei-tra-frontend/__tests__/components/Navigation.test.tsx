@@ -10,16 +10,21 @@ jest.mock('next/image', () => ({
   __esModule: true,
   default: ({
     alt,
-    priority: _priority,
-    unoptimized: _unoptimized,
+    priority,
+    unoptimized,
     ...props
   }: React.ImgHTMLAttributes<HTMLImageElement> & {
     priority?: boolean;
     unoptimized?: boolean;
-  }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img alt={alt} {...props} />
-  ),
+  }) => {
+    void priority;
+    void unoptimized;
+
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img alt={alt} {...props} />
+    );
+  },
 }));
 
 jest.mock('@/hooks/useAuth', () => ({

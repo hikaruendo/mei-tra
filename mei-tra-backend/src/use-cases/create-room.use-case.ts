@@ -1,18 +1,32 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import {
   CreateRoomRequest,
   CreateRoomResponse,
   ICreateRoomUseCase,
 } from './interfaces/create-room.use-case.interface';
+import { ChatService } from '../services/chat.service';
+import { SessionUser } from '../types/session.types';
+
+type ChatRoomCreator = {
+  createRoom(
+    request: Parameters<ChatService['createRoom']>[0],
+  ): Promise<unknown>;
+};
 
 @Injectable()
 export class CreateRoomUseCase implements ICreateRoomUseCase {
   private readonly logger = new Logger(CreateRoomUseCase.name);
+  private readonly chatRoomService: ChatRoomCreator;
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
-  ) {}
+    @Optional() chatService?: ChatService,
+  ) {
+    this.chatRoomService = chatService ?? {
+      createRoom: () => Promise.resolve(undefined),
+    };
+  }
 
   async execute(request: CreateRoomRequest): Promise<CreateRoomResponse> {
     try {
@@ -50,13 +64,64 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         teamAssignmentMethod,
       );
 
+      const hostUser: SessionUser = {
+        socketId: '',
+        playerId: authenticatedUser.id,
+        name: playerName,
+        userId: authenticatedUser.id,
+        isAuthenticated: true,
+      };
+
+      const joined = await this.roomService.joinRoom(room.id, hostUser);
+      if (!joined) {
+        return {
+          success: false,
+          errorMessage: 'Failed to join created room',
+        };
+      }
+
+      await this.roomService.initCOMPlaceholders(room.id);
+      const updatedRoom = await this.roomService.getRoom(room.id);
+      if (!updatedRoom) {
+        return {
+          success: false,
+          errorMessage: 'Failed to load created room',
+        };
+      }
+
+      const hostPlayer = updatedRoom.players.find(
+        (player) => player.playerId === hostUser.playerId,
+      );
+      if (!hostPlayer) {
+        return {
+          success: false,
+          errorMessage: 'Host player not found in created room',
+        };
+      }
+
+      try {
+        await this.chatRoomService.createRoom({
+          id: room.id,
+          scope: 'table',
+          name: `Game: ${room.name}`,
+          ownerId: authenticatedUser.id,
+          visibility: 'private',
+          messageTtlHours: 24,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Failed to create chat room for game room ${room.id}: ${String(error)}`,
+        );
+      }
+
       const roomsList = await this.roomService.listRooms();
 
       return {
         success: true,
         data: {
-          room,
+          room: updatedRoom,
           roomsList,
+          hostPlayer,
         },
       };
     } catch (error) {

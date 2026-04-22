@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## AI Documentation Reading Policy
+
+- Use `README.md`, `AGENTS.md`, and the actual source code as the default context for implementation work.
+- Do not read all of `docs/developer-guide/` by default. It is a human onboarding series; open only the chapter that matches the task: frontend (`02`), backend (`03`), realtime flow (`04`), data/auth/persistence (`05`), or dev/ops (`06`).
+- `docs/archive/2025-06-zenn-meitra-project-memo.md` is a historical Zenn article archive from 2025-06. Do not treat it as current implementation guidance unless the user asks about project history.
+- Prefer targeted `rg` searches over loading large Markdown trees. If documentation and code disagree, trust the code and update the relevant documentation.
+
 ## Project Overview
 
 This is an online multiplayer card game called "明専トランプ (Mei-Tra)" - a 4-player, 2-team card game. The project consists of:
@@ -68,13 +75,14 @@ npx playwright test --debug                     # Run in debug mode
 
 ### Backend Architecture (NestJS + Repository Pattern)
 
-The backend follows Clean Architecture principles with a clear separation of concerns:
+The backend does not implement full Clean Architecture across the whole app. It uses NestJS's module/provider/DI/controller/gateway structure for ordinary framework concerns, and keeps the correctness-critical game rules in dedicated domain-layer services.
 
 - **WebSocket Gateways**: Two separate gateways for different concerns
   - `game.gateway.ts` (namespace: `/`): Game logic and room management
   - `social.gateway.ts` (namespace: `/social`): Chat and social features
 - **Use Cases Layer** (`src/use-cases/`): Application-specific business rules (e.g., `JoinRoomUseCase`, `PlayCardUseCase`)
-- **Services Layer** (`src/services/`): Domain logic for game mechanics (card, score, blow, play, chombo)
+- **Domain Layer Services** (`src/services/card.service.ts`, `src/services/blow.service.ts`, `src/services/play.service.ts`, `src/services/score.service.ts`, `src/services/chombo.service.ts`, `src/services/game-phase.service.ts`): Source of truth for game-rule judgment, scoring, and phase legality
+- **Session / State Services** (`src/services/game-state.service.ts`, `src/services/game-state-manager.service.ts`, `src/services/player-connection-manager.service.ts`, `src/services/com-session.service.ts`, `src/services/turn-monitor.service.ts`): State persistence, connection metadata, reconnect, COM replacement, and realtime exception handling
 - **Repository Pattern** (`src/repositories/`): Data persistence abstraction with interfaces and Supabase implementations
 - **Database Module** (`src/database/`): Supabase configuration and connection management
 

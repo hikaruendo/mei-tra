@@ -1,4 +1,4 @@
-import { Player } from '../../types/game.types';
+import { Player } from '@/types/game.types';
 
 export interface PlayerProfile {
   displayName: string;

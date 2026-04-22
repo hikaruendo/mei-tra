@@ -2,7 +2,7 @@ import { GatewayEvent } from './gateway-event.interface';
 
 export interface SelectNegriRequest {
   roomId: string;
-  userId: string;
+  actorId: string;
   card: string;
 }
 

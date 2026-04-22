@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import type { BrokenPayload } from '@contracts/game';
 import {
   IRevealBrokenHandUseCase,
   RevealBrokenHandRequest,
@@ -7,7 +8,12 @@ import {
 } from './interfaces/reveal-broken-hand.use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
+import {
+  resolvePlayerByActorId,
+  resolveTransportPlayers,
+} from './helpers/player-resolution.helper';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
@@ -16,16 +22,18 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('ICardService') private readonly cardService: ICardService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async prepare(
     request: RevealBrokenHandRequest,
   ): Promise<RevealBrokenHandPreparation> {
     try {
-      const { roomId, userId, playerId } = request;
+      const { roomId, actorId, playerId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const state = roomGameState.getState();
-      const player = state.players.find((p) => p.userId === userId);
+      const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -63,13 +71,10 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      state.blowState.declarations = [];
-      state.blowState.actionHistory = [];
-      state.blowState.currentHighestDeclaration = null;
-      state.blowState.lastPasser = null;
-      state.gamePhase = 'blow';
+      await roomGameState.transitionPhase('blow');
+      const nextState = roomGameState.getState();
 
-      state.playState = {
+      nextState.playState = {
         currentField: null,
         negriCard: null,
         neguri: {},
@@ -79,24 +84,31 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         openDeclarerId: null,
       };
 
-      const firstBlowIndex = state.blowState.currentBlowIndex;
-      const firstBlowPlayer = state.players[firstBlowIndex];
+      nextState.blowState.declarations = [];
+      nextState.blowState.actionHistory = [];
+      nextState.blowState.currentHighestDeclaration = null;
+      nextState.blowState.lastPasser = null;
 
-      state.currentPlayerIndex = firstBlowIndex;
-      state.deck = this.cardService.generateDeck();
+      const firstBlowIndex = nextState.blowState.currentBlowIndex;
+      const firstBlowPlayer = nextState.players[firstBlowIndex];
+
+      nextState.currentPlayerIndex = firstBlowIndex;
+      nextState.deck = this.cardService.generateDeck();
       await roomGameState.dealCards();
 
       const events: GatewayEvent[] = [];
       if (firstBlowPlayer) {
+        const brokenPayload: BrokenPayload = {
+          nextPlayerId: firstBlowPlayer.playerId,
+          players: resolveTransportPlayers(roomGameState, nextState.players),
+          gamePhase: 'blow',
+        };
+
         events.push({
           scope: 'room',
           roomId,
           event: 'broken',
-          payload: {
-            nextPlayerId: firstBlowPlayer.playerId,
-            players: state.players,
-            gamePhase: 'blow',
-          },
+          payload: brokenPayload,
         });
         events.push({
           scope: 'room',
@@ -105,6 +117,23 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           payload: firstBlowPlayer.playerId,
         });
       }
+
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'broken_hand_revealed',
+        playerId,
+        state: nextState,
+        actionData: {
+          nextPlayerId: firstBlowPlayer?.playerId ?? null,
+          nextBlowIndex: firstBlowIndex,
+          startingHandsByPlayerId: Object.fromEntries(
+            nextState.players.map((statePlayer) => [
+              statePlayer.playerId,
+              [...statePlayer.hand],
+            ]),
+          ),
+        },
+      });
 
       await roomGameState.saveState();
 

@@ -60,7 +60,8 @@ export function getSocket(authToken?: string): Socket {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('[Socket] Connection error:', error.message);
+      // Expected during backend cold start / local backend restarts.
+      console.warn('[Socket] Connection error:', error.message);
     });
 
     socket.on('disconnect', (reason) => {

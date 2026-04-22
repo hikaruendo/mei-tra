@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { AuthModal } from '../auth/AuthModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { UserIcon } from '@/components/icons/UIIcons';

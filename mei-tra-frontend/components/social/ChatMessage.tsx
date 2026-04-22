@@ -1,6 +1,6 @@
 'use client';
 
-import { ChatMessage as ChatMessageType } from '../../types/social.types';
+import type { ChatMessage as ChatMessageType } from '@contracts/social';
 import styles from './ChatMessage.module.scss';
 
 interface ChatMessageProps {
@@ -23,6 +23,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* Avatar */}
       <div className={styles.avatar}>
         {message.sender.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={message.sender.avatarUrl}
             alt={message.sender.displayName}

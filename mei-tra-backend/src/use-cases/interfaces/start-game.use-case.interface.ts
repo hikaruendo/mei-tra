@@ -1,4 +1,5 @@
-import { Player, TeamScores, GamePhase } from '../../types/game.types';
+import type { UpdatePhasePayload } from '@contracts/game';
+import { DomainPlayer } from '../../types/game.types';
 
 export interface StartGameRequest {
   playerId: string;
@@ -6,13 +7,9 @@ export interface StartGameRequest {
 }
 
 export interface StartGameSuccessData {
-  players: Player[];
+  players: DomainPlayer[];
   pointsToWin: number;
-  updatePhase: {
-    phase: GamePhase;
-    scores: TeamScores;
-    winner: string | null;
-  };
+  updatePhase: UpdatePhasePayload;
   currentTurnPlayerId: string;
 }
 

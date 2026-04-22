@@ -1,12 +1,11 @@
 import { CardService } from '../card.service';
 import { PlayService } from '../play.service';
-import { Field, Player } from '../../types/game.types';
+import { DomainPlayer, Field } from '../../types/game.types';
 
 describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
-  const makePlayer = (playerId: string, isCOM = false): Player => ({
-    id: playerId,
+  const makePlayer = (playerId: string, isCOM = false): DomainPlayer => ({
     playerId,
     name: playerId,
     hand: [],
@@ -25,6 +24,7 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', 'K♣', '6♣'],
+      playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
       baseCard: '5♣',
       dealerId: 'player-1',
       isComplete: true,
@@ -45,6 +45,7 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
+      playedBy: ['player-1', 'com-1', 'player-2', 'com-2'],
       baseCard: '5♣',
       dealerId: 'player-1',
       isComplete: true,

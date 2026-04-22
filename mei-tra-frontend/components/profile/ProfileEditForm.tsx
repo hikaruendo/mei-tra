@@ -3,9 +3,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserProfile, UserPreferences } from '@/types/user.types';
-import { supabase } from '@/lib/supabase';
 import { getExistingSocket } from '@/app/socket';
 import { useTranslations } from 'next-intl';
+import { updateUserProfileViaApi } from '@/lib/api/user-profile';
 import {
   optimizeImage,
   validateImageFile,
@@ -23,20 +23,6 @@ interface ProfileEditFormProps {
 interface FormData {
   username: string;
   displayName: string;
-  preferences: UserPreferences;
-}
-
-interface DatabaseUserProfileResponse {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url?: string;
-  created_at: string;
-  updated_at: string;
-  last_seen_at: string;
-  games_played: number;
-  games_won: number;
-  total_score: number;
   preferences: UserPreferences;
 }
 
@@ -141,6 +127,11 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
   const uploadAvatar = async (): Promise<string | null> => {
     if (!avatarFile || !user) return null;
+    const accessToken = await getAccessToken();
+
+    if (!accessToken) {
+      throw new Error(t('userNotFound'));
+    }
 
     const formData = new FormData();
     formData.append('avatar', avatarFile);
@@ -149,7 +140,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
       method: 'POST',
       body: formData,
       headers: {
-        'Authorization': `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
@@ -162,22 +153,19 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
     return result.avatarUrl;
   };
 
-  const updateProfile = async (): Promise<DatabaseUserProfileResponse> => {
+  const updateProfile = async (): Promise<UserProfile> => {
     if (!user) throw new Error(t('userNotFound'));
+    const accessToken = await getAccessToken();
 
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update({
-        username: formData.username,
-        display_name: formData.displayName,
-        preferences: formData.preferences,
-      })
-      .eq('id', user.id)
-      .select()
-      .single();
+    if (!accessToken) {
+      throw new Error(t('userNotFound'));
+    }
 
-    if (error) throw error;
-    return data as DatabaseUserProfileResponse;
+    return updateUserProfileViaApi(user.id, accessToken, {
+      username: formData.username,
+      displayName: formData.displayName,
+      preferences: formData.preferences,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,32 +184,14 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
         return;
       }
 
-      let avatarUrl = profile.avatarUrl;
-
       // アバター画像をアップロード（あれば）
       if (avatarFile) {
-        avatarUrl = await uploadAvatar() || undefined;
+        await uploadAvatar();
       }
 
       // プロフィールを更新
       const updatedProfile = await updateProfile();
-
-      // アバターURLを統合
-      const finalProfile: UserProfile = {
-        id: updatedProfile.id,
-        username: updatedProfile.username,
-        displayName: updatedProfile.display_name,
-        avatarUrl,
-        createdAt: new Date(updatedProfile.created_at),
-        updatedAt: new Date(updatedProfile.updated_at),
-        lastSeenAt: new Date(updatedProfile.last_seen_at),
-        gamesPlayed: updatedProfile.games_played,
-        gamesWon: updatedProfile.games_won,
-        totalScore: updatedProfile.total_score,
-        preferences: updatedProfile.preferences,
-      };
-
-      onSave(finalProfile);
+      onSave(updatedProfile);
 
       // Refresh user profile in AuthContext to update avatar in header
       await refreshUserProfile();

@@ -1,12 +1,17 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   IPlayCardUseCase,
   PlayCardRequest,
   PlayCardResponse,
   CompleteFieldTrigger,
+  PlayCardGatewayEvent,
 } from './interfaces/play-card.use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
-import { GatewayEvent } from './interfaces/gateway-event.interface';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
+import {
+  resolvePlayerByActorId,
+  resolveTransportPlayers,
+} from './helpers/player-resolution.helper';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -14,17 +19,17 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async execute(request: PlayCardRequest): Promise<PlayCardResponse> {
     try {
-      const { roomId, userId, card } = request;
+      const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      // userId for real players, playerId as fallback for COM players
-      const player = state.players.find(
-        (p) => p.userId === userId || p.playerId === userId,
-      );
+      const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -77,7 +82,21 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         currentField.baseCard = card;
       }
 
-      const events: GatewayEvent[] = [
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'card_played',
+        playerId: player.playerId,
+        state,
+        actionData: {
+          card,
+          fieldCards: [...currentField.cards],
+          baseCard: currentField.baseCard,
+          playedBy: [...playedBy],
+          isFieldComplete: currentField.cards.length === 4,
+        },
+      });
+
+      const events: PlayCardGatewayEvent[] = [
         {
           scope: 'room',
           roomId,
@@ -86,7 +105,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
             playerId: player.playerId,
             card,
             field: currentField,
-            players: state.players,
+            players: resolveTransportPlayers(roomGameState, state.players),
           },
         },
       ];

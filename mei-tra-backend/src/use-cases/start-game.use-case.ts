@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import {
   IStartGameUseCase,
@@ -6,6 +6,8 @@ import {
   StartGameResponse,
 } from './interfaces/start-game.use-case.interface';
 import { RoomStatus } from '../types/room.types';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
+import { toDomainPlayer } from '../types/player-adapters';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {
@@ -13,6 +15,9 @@ export class StartGameUseCase implements IStartGameUseCase {
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async execute(request: StartGameRequest): Promise<StartGameResponse> {
@@ -47,7 +52,7 @@ export class StartGameUseCase implements IStartGameUseCase {
             );
           }
           return {
-            ...roomPlayer,
+            ...toDomainPlayer(roomPlayer),
             hand: [...roomPlayer.hand],
             isPasser: roomPlayer.isPasser ?? false,
             hasBroken: roomPlayer.hasBroken ?? false,
@@ -56,8 +61,8 @@ export class StartGameUseCase implements IStartGameUseCase {
         }
 
         return {
-          ...existingPlayer,
-          ...roomPlayer,
+          ...toDomainPlayer(existingPlayer),
+          ...toDomainPlayer(roomPlayer),
           hand: [...existingPlayer.hand],
           isPasser: existingPlayer.isPasser,
           hasBroken: existingPlayer.hasBroken,
@@ -125,6 +130,25 @@ export class StartGameUseCase implements IStartGameUseCase {
       // firstBlowIndex is randomized inside roomGameState.startGame()
       const firstBlowPlayer =
         updatedState.players[updatedState.blowState.currentBlowIndex];
+
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'game_started',
+        playerId,
+        state: updatedState,
+        actionData: {
+          startedByPlayerId: playerId,
+          firstBlowPlayerId: firstBlowPlayer?.playerId ?? null,
+          pointsToWin: updatedState.pointsToWin,
+          playerCount: updatedState.players.length,
+          startingHandsByPlayerId: Object.fromEntries(
+            updatedState.players.map((player) => [
+              player.playerId,
+              [...player.hand],
+            ]),
+          ),
+        },
+      });
 
       return {
         success: true,
