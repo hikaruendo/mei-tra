@@ -1,4 +1,4 @@
-import { Player } from '@/types/game.types';
+import type { Player } from '@/types/game.types';
 
 export interface PlayerProfile {
   displayName: string;
@@ -9,7 +9,14 @@ export interface PlayerProfile {
 /**
  * プレイヤーのプロフィール情報を取得
  */
-export const getPlayerProfile = async (player: Player): Promise<PlayerProfile> => {
+type PlayerProfileInput = Pick<
+  Player,
+  'name' | 'userId' | 'isAuthenticated'
+>;
+
+export const getPlayerProfile = async (
+  player: PlayerProfileInput,
+): Promise<PlayerProfile> => {
   // 認証済みユーザーの場合、プロフィールAPIからデータを取得
   if (player.userId && player.isAuthenticated) {
     try {
