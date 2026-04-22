@@ -11,6 +11,12 @@
 - `docs/archive/2025-06-zenn-meitra-project-memo.md` is a historical Zenn article archive from 2025-06. Do not use it as current implementation guidance unless the user explicitly asks about project history.
 - Prefer targeted search with `rg` over reading whole Markdown trees. When code and docs disagree, trust the code and update the relevant doc.
 
+## Agent Harness Guidance
+- Keep `AGENTS.md` as a small map, not a full manual. Add deeper guidance to the relevant README or `docs/developer-guide/*` chapter.
+- When an agent repeatedly needs the same instruction, prefer encoding it as a test, lint rule, type contract, script, or short runbook rather than a long prose rule.
+- For UI or realtime regressions, verify through the app when possible: run the dev servers, inspect logs, and capture screenshots or browser state before claiming the fix.
+- Treat stale or duplicated docs as technical debt. Update or delete them when code changes, and avoid adding broad docs that future agents must read by default.
+
 ## Build, Test, and Development Commands
 - Frontend: `cd mei-tra-frontend && npm run dev` (Turbopack dev server), `npm run build` (Next production build), `npm run lint` (ESLint), `npm run test` (Jest/RTL) when applicable.
 - Backend: `cd mei-tra-backend && npm run start:dev` (Nest hot reload), `npm run build` (tsc), `npm run lint` (ESLint + Prettier), `npm test` and `npm run test:cov` for core game logic.
