@@ -416,6 +416,12 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         nextDealerPlayerId: nextBlowPlayer.playerId,
         nextRoundNumber: updatedState.roundNumber,
         nextBlowIndex,
+        startingHandsByPlayerId: Object.fromEntries(
+          updatedState.players.map((player) => [
+            player.playerId,
+            [...player.hand],
+          ]),
+        ),
       },
     });
 

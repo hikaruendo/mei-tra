@@ -169,7 +169,46 @@ describe('GameHistoryController', () => {
           endedAt: new Date('2026-04-16T00:00:00.000Z'),
           actionTypes: ['game_started' as const],
           playerIds: [],
-          entries: [],
+          entries: [
+            {
+              id: 'history-1',
+              roomId: 'room-1',
+              gameStateId: 'state-1',
+              actionType: 'game_started' as const,
+              playerId: 'player-1',
+              actionData: {
+                startingHandsByPlayerId: {
+                  'player-1': ['S-A', 'H-9'],
+                  'player-2': ['D-5'],
+                },
+              },
+              timestamp: new Date('2026-04-16T00:00:00.000Z'),
+            },
+          ],
+          events: [
+            {
+              id: 'history-1',
+              timestamp: new Date('2026-04-16T00:00:00.000Z'),
+              actionType: 'game_started' as const,
+              kind: 'lifecycle' as const,
+              playerId: 'player-1',
+              roundNumber: 1,
+              gamePhase: 'blow' as const,
+              summary: 'Game started',
+              details: {
+                firstBlowPlayerId: 'player-1',
+                startedByPlayerId: 'player-1',
+                pointsToWin: 10,
+              },
+              detailItems: [],
+              actionData: {
+                startingHandsByPlayerId: {
+                  'player-1': ['S-A', 'H-9'],
+                  'player-2': ['D-5'],
+                },
+              },
+            },
+          ],
         },
       ],
     };
@@ -188,7 +227,28 @@ describe('GameHistoryController', () => {
 
     await expect(
       controller.replayByRoomId('room-1', { limit: '5' }, currentUser),
-    ).resolves.toEqual(replay);
+    ).resolves.toEqual({
+      ...replay,
+      rounds: [
+        expect.objectContaining({
+          viewerStartingHand: ['S-A', 'H-9'],
+          entries: [
+            expect.objectContaining({
+              actionData: {
+                viewerStartingHand: ['S-A', 'H-9'],
+              },
+            }),
+          ],
+          events: [
+            expect.objectContaining({
+              actionData: {
+                viewerStartingHand: ['S-A', 'H-9'],
+              },
+            }),
+          ],
+        }),
+      ],
+    });
     expect(getGameHistoryUseCase.replay).toHaveBeenCalledWith('room-1', {
       actionType: undefined,
       limit: 5,

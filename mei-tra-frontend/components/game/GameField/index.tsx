@@ -33,6 +33,7 @@ export const GameField: React.FC<GameFieldProps> = ({
   const t = useTranslations('gameField');
   const isJokerBaseCard = currentField?.baseCard === 'JOKER';
   const needsBaseSuitSelection = isJokerBaseCard && !currentField?.baseSuit && isCurrentPlayer;
+  const isRedBaseSuit = currentField?.baseSuit === '♥' || currentField?.baseSuit === '♦';
 
   const orderedPlayers = getSeatOrderWithSelfBottom(players, currentPlayerId);
 
@@ -73,13 +74,11 @@ export const GameField: React.FC<GameFieldProps> = ({
             </div>
           </div>
         ) : currentField?.baseSuit && (
-          <div className={styles.baseSuitSelection}>
-            <h3>{t('suit')}</h3>
-            <div className={styles.suitButtons}>
-              <button disabled className={`${styles.selectedSuit} ${currentField.baseSuit === '♠' ? styles.blackSuit : ''} ${currentField.baseSuit === '♥' || currentField.baseSuit === '♦' ? styles.redSuit : ''} ${currentField.baseSuit === '♣' ? styles.blackSuit : ''}`}>
-                {currentField.baseSuit}
-              </button>
-            </div>
+          <div className={styles.baseSuitBadge} aria-label={`${t('suit')}: ${currentField.baseSuit}`}>
+            <span className={styles.baseSuitBadgeLabel}>{t('suit')}</span>
+            <span className={`${styles.baseSuitBadgeSymbol} ${isRedBaseSuit ? styles.redSuit : styles.blackSuit}`}>
+              {currentField.baseSuit}
+            </span>
           </div>
         )}
       </div>

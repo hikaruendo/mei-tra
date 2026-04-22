@@ -16,9 +16,11 @@ import {
   GameHistoryActionType,
   GameHistoryEntry,
   GameHistoryQuery,
+  GameHistoryReplayEvent,
   GameHistoryReplayView,
   GameHistorySummary,
 } from '../types/game-history.types';
+import { RoomPlayer } from '../types/room.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 
@@ -56,8 +58,15 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistoryReplayView> {
-    await this.assertRoomParticipant(roomId, currentUser.id);
-    return this.getGameHistoryUseCase.replay(roomId, this.parseQuery(query));
+    const participant = await this.assertRoomParticipant(
+      roomId,
+      currentUser.id,
+    );
+    const replay = await this.getGameHistoryUseCase.replay(
+      roomId,
+      this.parseQuery(query),
+    );
+    return this.withViewerStartingHands(replay, participant.playerId);
   }
 
   @Get(':roomId')
@@ -67,25 +76,113 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistoryEntry[]> {
-    await this.assertRoomParticipant(roomId, currentUser.id);
-    return this.getGameHistoryUseCase.execute(roomId, this.parseQuery(query));
+    const participant = await this.assertRoomParticipant(
+      roomId,
+      currentUser.id,
+    );
+    const history = await this.getGameHistoryUseCase.execute(
+      roomId,
+      this.parseQuery(query),
+    );
+    return history.map((entry) =>
+      this.withSanitizedActionData(entry, participant.playerId),
+    );
   }
 
   private async assertRoomParticipant(
     roomId: string,
     userId: string,
-  ): Promise<void> {
+  ): Promise<RoomPlayer> {
     const room = await this.roomRepository.findById(roomId);
     if (!room) {
       throw new NotFoundException('Room not found');
     }
 
-    const isParticipant = room.players.some(
-      (player) => player.userId === userId,
-    );
-    if (!isParticipant) {
+    const participant = room.players.find((player) => player.userId === userId);
+    if (!participant) {
       throw new ForbiddenException('Cannot access another user game history');
     }
+
+    return participant;
+  }
+
+  private withViewerStartingHands(
+    replay: GameHistoryReplayView,
+    viewerPlayerId: string,
+  ): GameHistoryReplayView {
+    return {
+      ...replay,
+      rounds: replay.rounds.map((round) => ({
+        ...round,
+        viewerStartingHand:
+          this.resolveViewerStartingHand(round.events, viewerPlayerId) ?? [],
+        entries: round.entries.map((entry) =>
+          this.withSanitizedActionData(entry, viewerPlayerId),
+        ),
+        events: round.events.map((event) => ({
+          ...event,
+          actionData: this.sanitizeActionData(event.actionData, viewerPlayerId),
+        })),
+      })),
+    };
+  }
+
+  private resolveViewerStartingHand(
+    events: GameHistoryReplayEvent[],
+    viewerPlayerId: string,
+  ): string[] | null {
+    return events.reduce<string[] | null>((latestHand, event) => {
+      return (
+        this.extractViewerStartingHand(event.actionData, viewerPlayerId) ??
+        latestHand
+      );
+    }, null);
+  }
+
+  private withSanitizedActionData<
+    TEntry extends { actionData: Record<string, unknown> },
+  >(entry: TEntry, viewerPlayerId: string): TEntry {
+    return {
+      ...entry,
+      actionData: this.sanitizeActionData(entry.actionData, viewerPlayerId),
+    };
+  }
+
+  private sanitizeActionData(
+    actionData: Record<string, unknown>,
+    viewerPlayerId: string,
+  ): Record<string, unknown> {
+    const safeActionData = { ...actionData };
+    delete safeActionData.startingHandsByPlayerId;
+    const viewerStartingHand = this.extractViewerStartingHand(
+      actionData,
+      viewerPlayerId,
+    );
+
+    return viewerStartingHand
+      ? { ...safeActionData, viewerStartingHand }
+      : safeActionData;
+  }
+
+  private extractViewerStartingHand(
+    actionData: Record<string, unknown>,
+    viewerPlayerId: string,
+  ): string[] | null {
+    const handsByPlayerId = actionData.startingHandsByPlayerId;
+    if (
+      !handsByPlayerId ||
+      typeof handsByPlayerId !== 'object' ||
+      Array.isArray(handsByPlayerId)
+    ) {
+      return null;
+    }
+
+    const hand = (handsByPlayerId as Record<string, unknown>)[viewerPlayerId];
+    if (!Array.isArray(hand)) {
+      return null;
+    }
+
+    return hand.filter((card): card is string => typeof card === 'string');
   }
 
   private parseQuery(query: GameHistoryRequestQuery): GameHistoryQuery {

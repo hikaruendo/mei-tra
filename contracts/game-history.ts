@@ -60,6 +60,7 @@ export interface GameHistoryReplayRoundContract {
   roundNumber: number | null;
   startedAt: string | null;
   endedAt: string | null;
+  viewerStartingHand?: string[];
   actionTypes: GameHistoryActionType[];
   playerIds: string[];
   entries: GameHistoryEntryContract[];

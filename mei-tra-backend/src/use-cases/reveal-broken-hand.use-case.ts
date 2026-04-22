@@ -126,6 +126,12 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         actionData: {
           nextPlayerId: firstBlowPlayer?.playerId ?? null,
           nextBlowIndex: firstBlowIndex,
+          startingHandsByPlayerId: Object.fromEntries(
+            nextState.players.map((statePlayer) => [
+              statePlayer.playerId,
+              [...statePlayer.hand],
+            ]),
+          ),
         },
       });
 

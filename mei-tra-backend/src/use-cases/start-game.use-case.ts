@@ -141,6 +141,12 @@ export class StartGameUseCase implements IStartGameUseCase {
           firstBlowPlayerId: firstBlowPlayer?.playerId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
+          startingHandsByPlayerId: Object.fromEntries(
+            updatedState.players.map((player) => [
+              player.playerId,
+              [...player.hand],
+            ]),
+          ),
         },
       });
 

@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { useGameHistory } from '@/hooks/useGameHistory';
-import type { GameHistoryFilters } from '@/types/game-history.types';
 import styles from './GameHistoryPageClient.module.scss';
 
 interface GameHistoryPageClientProps {
@@ -16,11 +15,6 @@ export function GameHistoryPageClient({
   roomId,
 }: GameHistoryPageClientProps) {
   const t = useTranslations('gameHistoryDock');
-  const [filters, setFilters] = useState<GameHistoryFilters>({
-    round: 'all',
-    actionType: 'all',
-    playerId: 'all',
-  });
   const { summary } = useGameHistory(roomId, true, {
     includeReplay: false,
   });
@@ -44,21 +38,6 @@ export function GameHistoryPageClient({
 
     return `${summary.firstTimestamp.toLocaleString()} - ${summary.lastTimestamp.toLocaleString()}`;
   }, [summary?.firstTimestamp, summary?.lastTimestamp, t]);
-  const activeFilterChips = useMemo(() => {
-    const chips: string[] = [];
-
-    if (filters.round !== 'all') {
-      chips.push(t('round', { round: filters.round }));
-    }
-    if (filters.actionType !== 'all') {
-      chips.push(t(`actionTypes.${filters.actionType}` as never));
-    }
-    if (filters.playerId !== 'all') {
-      chips.push(summary?.playerNames[filters.playerId] ?? filters.playerId);
-    }
-
-    return chips;
-  }, [filters.actionType, filters.playerId, filters.round, summary?.playerNames, t]);
 
   return (
     <div className={styles.container}>
@@ -68,8 +47,8 @@ export function GameHistoryPageClient({
           <h1 className={styles.title}>{t('title')}</h1>
           <p className={styles.description}>{t('pageDescription')}</p>
         </div>
-        <Link href="/rooms" className={styles.backLink}>
-          {t('backToRooms')}
+        <Link href="/profile" className={styles.backLink}>
+          {t('backToProfile')}
         </Link>
       </div>
       <section className={styles.summaryPanel}>
@@ -113,26 +92,6 @@ export function GameHistoryPageClient({
           </div>
         </div>
       </section>
-      <section className={styles.feedSection}>
-        <div className={styles.feedHeader}>
-          <h2 className={styles.feedTitle}>{t('filteredFeed')}</h2>
-          <p className={styles.feedDescription}>{t('feedDescription')}</p>
-        </div>
-        <div className={styles.filterSummary}>
-          <span className={styles.filterSummaryLabel}>{t('activeFilters')}</span>
-          {activeFilterChips.length > 0 ? (
-            <div className={styles.filterSummaryChips}>
-              {activeFilterChips.map((chip) => (
-                <span key={chip} className={styles.filterSummaryChip}>
-                  {chip}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span className={styles.filterSummaryValue}>{t('allFilters')}</span>
-          )}
-        </div>
-      </section>
       <GameHistoryDock
         roomId={roomId}
         gameStarted={false}
@@ -141,7 +100,6 @@ export function GameHistoryPageClient({
         showOverview={false}
         summaryOverride={summary}
         includeSummaryFetch={false}
-        onFiltersChange={setFilters}
       />
     </div>
   );

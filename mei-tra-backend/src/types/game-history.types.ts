@@ -72,6 +72,7 @@ export interface GameHistoryReplayRound {
   roundNumber: number | null;
   startedAt: Date | null;
   endedAt: Date | null;
+  viewerStartingHand?: string[];
   actionTypes: GameHistoryActionType[];
   playerIds: string[];
   entries: GameHistoryEntry[];

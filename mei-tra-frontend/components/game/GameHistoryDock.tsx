@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { Link } from '@/i18n/routing';
+import { CardFace } from '@/components/game/CardFace';
 import type {
   GameHistoryActionType,
   GameHistoryFilters,
@@ -54,6 +55,30 @@ const ACTION_TYPE_MESSAGE_KEYS: Record<GameHistoryActionType, string> = {
   broken_hand_revealed: 'actionTypes.broken_hand_revealed',
   game_over: 'actionTypes.game_over',
   player_stats_updated: 'actionTypes.player_stats_updated',
+};
+
+const extractScoreTotals = (
+  value: Record<string, unknown> | null,
+): Record<string, number> => {
+  if (!value) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([teamKey, teamValue]) => {
+        if (
+          !teamValue ||
+          typeof teamValue !== 'object' ||
+          typeof (teamValue as { total?: unknown }).total !== 'number'
+        ) {
+          return null;
+        }
+
+        return [teamKey, (teamValue as { total: number }).total] as const;
+      })
+      .filter((entry): entry is readonly [string, number] => Boolean(entry)),
+  );
 };
 
 export function GameHistoryDock({
@@ -137,6 +162,13 @@ export function GameHistoryDock({
     });
   }, [replay]);
 
+  const displayRounds = useMemo(
+    () =>
+      variant === 'page'
+        ? orderedRounds.filter((round) => round.roundNumber !== null)
+        : orderedRounds,
+    [orderedRounds, variant],
+  );
   const latestRound = orderedRounds[0] ?? null;
   const eventFeed = useMemo(
     () =>
@@ -174,26 +206,52 @@ export function GameHistoryDock({
       .sort((left, right) => right[1] - left[1])
       .slice(0, 4);
   }, [orderedRounds]);
-  const playerBreakdown = useMemo(() => {
-    const counts = new Map<string, number>();
-
-    for (const round of orderedRounds) {
-      for (const event of round.events) {
-        if (!event.playerId) {
-          continue;
-        }
-        counts.set(event.playerId, (counts.get(event.playerId) ?? 0) + 1);
-      }
-    }
-
-    return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1])
-      .slice(0, 5);
-  }, [orderedRounds]);
   const playerOptions = useMemo(
     () => resolvedSummary?.playerIds ?? [],
     [resolvedSummary],
   );
+  const roundScoreDeltas = useMemo(() => {
+    const deltasByEventId = new Map<string, Record<string, number>>();
+    const previousTotals: Record<string, number> = {};
+
+    if (!replay) {
+      return deltasByEventId;
+    }
+
+    const chronologicalEvents = replay.rounds
+      .flatMap((round) => round.events)
+      .sort(
+        (left, right) =>
+          left.timestamp.getTime() - right.timestamp.getTime(),
+      );
+
+    for (const event of chronologicalEvents) {
+      if (event.actionType !== 'round_completed') {
+        continue;
+      }
+
+      const scoreDetail = event.detailItems.find(
+        (detailItem) => detailItem.value.kind === 'scores',
+      );
+
+      if (!scoreDetail || scoreDetail.value.kind !== 'scores') {
+        continue;
+      }
+
+      const currentTotals = extractScoreTotals(scoreDetail.value.scores);
+      const eventDeltas = Object.fromEntries(
+        Object.entries(currentTotals).map(([teamKey, total]) => [
+          teamKey,
+          total - (previousTotals[teamKey] ?? 0),
+        ]),
+      );
+
+      deltasByEventId.set(event.id, eventDeltas);
+      Object.assign(previousTotals, currentTotals);
+    }
+
+    return deltasByEventId;
+  }, [replay]);
   const visiblePlayerCount = useMemo(
     () =>
       new Set(orderedRounds.flatMap((round) => round.playerIds)).size,
@@ -207,8 +265,10 @@ export function GameHistoryDock({
     return {
       latest: eventFeed[0]?.event.timestamp ?? null,
       earliest: eventFeed.at(-1)?.event.timestamp ?? null,
-    };
-  }, [eventFeed]);
+      };
+    }, [eventFeed]);
+  const hasDisplayEvents =
+    variant === 'page' ? displayRounds.length > 0 : eventFeed.length > 0;
   const formattedHistoryWindow = useMemo(() => {
     if (!resolvedSummary?.firstTimestamp || !resolvedSummary.lastTimestamp) {
       return t('unknownTimeWindow');
@@ -281,7 +341,10 @@ export function GameHistoryDock({
     return [pairsPart ?? null, maybeTrump].filter(Boolean).join(' / ');
   };
 
-  const formatScores = (value: Record<string, unknown> | null) => {
+  const formatScores = (
+    value: Record<string, unknown> | null,
+    roundDeltas?: Record<string, number>,
+  ) => {
     if (!value) {
       return null;
     }
@@ -296,9 +359,9 @@ export function GameHistoryDock({
           return null;
         }
 
-        const play =
-          typeof (teamValue as { play?: unknown }).play === 'number'
-            ? (teamValue as { play: number }).play
+        const roundScore =
+          roundDeltas && Object.prototype.hasOwnProperty.call(roundDeltas, teamKey)
+            ? roundDeltas[teamKey]
             : null;
         const total = (teamValue as { total: number }).total;
         const teamNumber = Number(teamKey);
@@ -307,7 +370,9 @@ export function GameHistoryDock({
           : formatTeam(teamNumber);
 
         return `${teamLabel ?? teamKey}: ${
-          play === null ? total : `${play} / ${total}`
+          roundScore === null
+            ? t('scoreTotalValue', { total })
+            : t('scoreValue', { play: roundScore, total })
         }`;
       })
       .filter((entry): entry is string => Boolean(entry));
@@ -319,7 +384,10 @@ export function GameHistoryDock({
     return teamValues.join(', ');
   };
 
-  const formatDetailValue = (detailItem: GameHistoryReplayDetailItem) => {
+  const formatDetailValue = (
+    detailItem: GameHistoryReplayDetailItem,
+    event?: GameHistoryReplayEvent,
+  ) => {
     switch (detailItem.value.kind) {
       case 'text':
         if (
@@ -351,7 +419,12 @@ export function GameHistoryDock({
           ? detailItem.value.cards.join(', ')
           : null;
       case 'scores':
-        return formatScores(detailItem.value.scores);
+        return formatScores(
+          detailItem.value.scores,
+          event?.actionType === 'round_completed'
+            ? roundScoreDeltas.get(event.id)
+            : undefined,
+        );
       default:
         return null;
     }
@@ -360,7 +433,7 @@ export function GameHistoryDock({
   const getEventDetails = (event: GameHistoryReplayEvent) =>
     event.detailItems
       .map((detailItem) => {
-        const renderedValue = formatDetailValue(detailItem);
+        const renderedValue = formatDetailValue(detailItem, event);
         if (!renderedValue) {
           return null;
         }
@@ -368,6 +441,75 @@ export function GameHistoryDock({
         return `${getDetailLabel(detailItem.labelKey)}: ${renderedValue}`;
       })
       .filter((entry): entry is string => Boolean(entry));
+
+  const getDetailValue = (
+    event: GameHistoryReplayEvent,
+    labelKey: string,
+  ) => {
+    const detailItem = event.detailItems.find(
+      (item) => item.labelKey === labelKey,
+    );
+
+    return detailItem ? formatDetailValue(detailItem, event) : null;
+  };
+
+  const formatEventSummary = (event: GameHistoryReplayEvent) => {
+    const player = formatPlayer(event.playerId) ?? t('unknownPlayer');
+
+    switch (event.actionType) {
+      case 'game_started':
+        return t('summaries.game_started' as never, {
+          firstBlow: getDetailValue(event, 'firstBlow') ?? t('unknownPlayer'),
+          pointsToWin: getDetailValue(event, 'pointsToWin') ?? '-',
+        } as never);
+      case 'blow_declared':
+        return t('summaries.blow_declared' as never, {
+          player,
+          declaration: getDetailValue(event, 'declaration') ?? t('unknownValue'),
+        } as never);
+      case 'blow_passed':
+        return t('summaries.blow_passed' as never, { player } as never);
+      case 'play_phase_started':
+        return t('summaries.play_phase_started' as never, {
+          player: getDetailValue(event, 'winner') ?? player,
+          trump: getDetailValue(event, 'trump') ?? t('unknownValue'),
+        } as never);
+      case 'card_played':
+        return t('summaries.card_played' as never, {
+          player,
+          card: getDetailValue(event, 'card') ?? t('unknownValue'),
+        } as never);
+      case 'field_completed':
+        return t('summaries.field_completed' as never, {
+          winner: getDetailValue(event, 'winner') ?? t('unknownPlayer'),
+          team: getDetailValue(event, 'winnerTeam') ?? t('unknownValue'),
+        } as never);
+      case 'round_completed':
+        return t('summaries.round_completed' as never, {
+          team: getDetailValue(event, 'declaringTeam') ?? t('unknownValue'),
+        } as never);
+      case 'round_cancelled':
+        return t('summaries.round_cancelled' as never);
+      case 'round_reset':
+        return t('summaries.round_reset' as never);
+      case 'broken_hand_revealed':
+        return t('summaries.broken_hand_revealed' as never, {
+          player,
+          nextPlayer: getDetailValue(event, 'nextPlayer') ?? t('unknownPlayer'),
+        } as never);
+      case 'game_over':
+        return t('summaries.game_over' as never, {
+          team: getDetailValue(event, 'winnerTeam') ?? t('unknownValue'),
+        } as never);
+      case 'player_stats_updated':
+        return t('summaries.player_stats_updated' as never, {
+          updated: getDetailValue(event, 'updated') ?? '0',
+          failed: getDetailValue(event, 'failed') ?? '0',
+        } as never);
+      default:
+        return event.summary;
+    }
+  };
 
   const getRoundHighlights = (round: GameHistoryReplayRound) => {
     const highlights = new Set<string>();
@@ -429,7 +571,9 @@ export function GameHistoryDock({
                 ) : null}
               </div>
             </div>
-            <div className={styles.eventSummary}>{event.summary}</div>
+            <div className={styles.eventSummary}>
+              {formatEventSummary(event)}
+            </div>
             {eventDetails.length > 0 ? (
               <div className={styles.eventDetails}>
                 {eventDetails.map((detail) => (
@@ -444,6 +588,29 @@ export function GameHistoryDock({
       })}
     </ul>
   );
+
+  const renderStartingHand = (round: GameHistoryReplayRound) => {
+    const hand = round.viewerStartingHand ?? [];
+
+    return (
+      <div className={styles.startingHandPanel}>
+        <span className={styles.startingHandLabel}>{t('startingHand')}</span>
+        {hand.length > 0 ? (
+          <div className={styles.startingHandCards}>
+            {hand.map((card, index) => (
+              <CardFace
+                key={`${round.roundNumber}-${card}-${index}`}
+                card={card}
+                className={styles.startingHandCard}
+              />
+            ))}
+          </div>
+        ) : (
+          <span className={styles.startingHandEmpty}>{t('noStartingHand')}</span>
+        )}
+      </div>
+    );
+  };
 
   if (variant === 'dock' && isMinimized) {
     return (
@@ -515,7 +682,7 @@ export function GameHistoryDock({
         <div className={styles.state}>{t('loading')}</div>
       ) : error ? (
         <div className={styles.stateError}>{error}</div>
-      ) : eventFeed.length === 0 ? (
+      ) : !hasDisplayEvents ? (
         <div className={styles.state}>{t('empty')}</div>
       ) : (
         <div className={styles.content}>
@@ -551,35 +718,10 @@ export function GameHistoryDock({
                   <span className={styles.overviewValueSmall}>{formattedHistoryWindow}</span>
                 </div>
               </div>
-              <div className={styles.pageBreakdowns}>
-                {actionBreakdown.length > 0 ? (
-                  <div className={styles.breakdownPanel}>
-                    <h4 className={styles.breakdownTitle}>{t('topActions')}</h4>
-                    <div className={styles.breakdown}>
-                      {actionBreakdown.map(([actionType, count]) => (
-                        <span key={actionType} className={styles.badge}>
-                          {getActionLabel(actionType)} x{count}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                {playerBreakdown.length > 0 ? (
-                  <div className={styles.breakdownPanel}>
-                    <h4 className={styles.breakdownTitle}>{t('topPlayers')}</h4>
-                    <div className={styles.breakdown}>
-                      {playerBreakdown.map(([playerId, count]) => (
-                        <span key={playerId} className={styles.badge}>
-                          {formatPlayer(playerId)} x{count}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </>
           ) : null}
-          <div className={styles.toolbar}>
+          {variant !== 'page' ? (
+            <div className={styles.toolbar}>
             <label className={styles.selectLabel}>
               {t('roundFilter')}
               <select
@@ -649,7 +791,9 @@ export function GameHistoryDock({
               </span>
             </div>
           </div>
-          <div className={styles.roundMeta}>
+          ) : null}
+          {variant !== 'page' ? (
+            <div className={styles.roundMeta}>
             <span className={styles.roundTitle}>
               {selectedRound === 'all'
                 ? t('allRounds')
@@ -661,11 +805,12 @@ export function GameHistoryDock({
               {formatEventWindow(feedWindow?.earliest, feedWindow?.latest)}
             </span>
           </div>
-          {variant === 'page' && orderedRounds.length > 0 ? (
+          ) : null}
+          {variant === 'page' && displayRounds.length > 0 ? (
             <section className={styles.roundSections}>
               <h4 className={styles.breakdownTitle}>{t('roundBreakdown')}</h4>
               <div className={styles.roundSectionList}>
-                {orderedRounds.map((round, index) => {
+                {displayRounds.map((round, index) => {
                   const chronologicalEvents = [...round.events].sort(
                     (left, right) =>
                       left.timestamp.getTime() - right.timestamp.getTime(),
@@ -712,6 +857,7 @@ export function GameHistoryDock({
                         </div>
                       </summary>
                       <div className={styles.roundSectionBody}>
+                        {renderStartingHand(round)}
                         {roundHighlights.length > 0 ? (
                           <div className={styles.breakdown}>
                             {roundHighlights.map((highlight) => (
@@ -743,9 +889,6 @@ export function GameHistoryDock({
               </div>
             </section>
           ) : null}
-          {variant === 'page' ? (
-            <h4 className={styles.breakdownTitle}>{t('filteredFeed')}</h4>
-          ) : null}
           {variant !== 'page' && actionBreakdown.length > 0 && (
             <div className={styles.breakdown}>
               {actionBreakdown.map(([actionType, count]) => (
@@ -755,7 +898,7 @@ export function GameHistoryDock({
               ))}
             </div>
           )}
-          {renderEventList(eventFeed)}
+          {variant !== 'page' ? renderEventList(eventFeed) : null}
         </div>
       )}
     </div>

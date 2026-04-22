@@ -168,6 +168,45 @@
   color: black;
 }
 
+.baseSuitBadge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(4, 19, 12, 0.72);
+  color: #f8fafc;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.baseSuitBadgeLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
+.baseSuitBadgeSymbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 0.45rem;
+  background: #f8fafc;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 @media (max-width: 768px) {
   .fieldContainer {
     width: 100%;
@@ -212,6 +251,22 @@
     aspect-ratio: 2 / 3;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
+
+  .baseSuitBadge {
+    top: -0.1rem;
+    right: -0.15rem;
+    padding: 0.3rem 0.48rem;
+  }
+
+  .baseSuitBadgeLabel {
+    font-size: 0.68rem;
+  }
+
+  .baseSuitBadgeSymbol {
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 0.98rem;
+  }
 }
 
 :global(html[data-theme='light']) {
@@ -251,6 +306,17 @@
 
   .baseSuitSelection h3 {
     color: #111827;
+  }
+
+  .baseSuitBadge {
+    border-color: rgba(148, 163, 184, 0.32);
+    background: rgba(248, 250, 252, 0.9);
+    color: #111827;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  }
+
+  .baseSuitBadgeSymbol {
+    background: #ffffff;
   }
 
   .suitButtons button {
