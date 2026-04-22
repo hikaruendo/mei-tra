@@ -12,7 +12,7 @@ interface ChatDockProps {
   roomId: string;
   gameStarted?: boolean;
   gamePhase?: string | null;
-  placement?: 'default' | 'topbar';
+  placement?: 'default' | 'topbar' | 'menu';
 }
 
 export function ChatDock({
@@ -43,6 +43,7 @@ export function ChatDock({
 
   useEffect(() => {
     if (!isConnected || !roomId) {
+      joinedRoomRef.current = null;
       return;
     }
 
@@ -103,7 +104,7 @@ export function ChatDock({
 
   return (
     <div
-      className={`${styles.chatDock} ${placement === 'topbar' ? styles.topbar : ''}`}
+      className={`${styles.chatDock} ${placement === 'topbar' ? styles.topbar : ''} ${placement === 'menu' ? styles.menu : ''}`}
       ref={chatRef}
     >
       {/* Header */}

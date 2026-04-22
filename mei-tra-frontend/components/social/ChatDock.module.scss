@@ -31,6 +31,17 @@
   }
 }
 
+.chatDock.menu {
+  position: fixed;
+  top: 4.25rem;
+  right: 0.75rem;
+  z-index: 100;
+  width: min(22rem, calc(100vw - 1.5rem));
+  height: min(28rem, calc(100dvh - 5.25rem));
+  max-width: calc(100vw - 1.5rem);
+  max-height: calc(100dvh - 5.25rem);
+}
+
 .minimized {
   position: relative;
   z-index: 50;
@@ -55,7 +66,7 @@
   }
 
   @media (max-width: 768px) {
-    min-width: 4.25rem;
+    min-width: 7.5rem;
     padding: 0.5rem 0.75rem;
   }
 }

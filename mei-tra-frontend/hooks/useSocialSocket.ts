@@ -40,7 +40,7 @@ export function useSocialSocket(): UseSocialSocketReturn {
 
   const sendMessage = useCallback(
     (roomId: string, content: string, replyTo?: string) => {
-      if (socket) {
+      if (socket?.connected) {
         socket.emit('chat:post-message', {
           roomId,
           content,
@@ -54,7 +54,7 @@ export function useSocialSocket(): UseSocialSocketReturn {
 
   const sendTyping = useCallback(
     (roomId: string) => {
-      if (socket) {
+      if (socket?.connected) {
         socket.emit('chat:typing', { roomId });
       }
     },
@@ -63,7 +63,7 @@ export function useSocialSocket(): UseSocialSocketReturn {
 
   const loadMessages = useCallback(
     (roomId: string, limit?: number, cursor?: string) => {
-      if (socket) {
+      if (socket?.connected) {
         socket.emit('chat:list-messages', { roomId, limit, cursor });
       }
     },
@@ -82,12 +82,12 @@ export function useSocialSocket(): UseSocialSocketReturn {
 }
 
 export function useChatMessages(roomId: string) {
-  const { socket, loadMessages } = useSocialSocket();
+  const { socket, isConnected, loadMessages } = useSocialSocket();
   const [messages, setMessages] = useState<ChatMessageEvent[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!socket) {
+    if (!socket || !isConnected) {
       return;
     }
 
@@ -134,7 +134,7 @@ export function useChatMessages(roomId: string) {
       socket.off('chat:typing', handleTyping);
       socket.off('chat:messages', handleMessages);
     };
-  }, [socket, roomId, loadMessages]);
+  }, [socket, isConnected, roomId, loadMessages]);
 
   return { messages, typingUsers, loadMessages };
 }
