@@ -390,7 +390,6 @@
     "pageDescription": "ラウンドごとに自分の手札と対局の流れを確認できます。",
   "backToRooms": "ルーム一覧へ",
   "backToProfile": "プロフィールへ",
-  "roomIdLabel": "ルームID",
   "feedDescription": "下のログでは、ラウンド・アクション・プレイヤーの条件で履歴を追えます。",
   "activeFilters": "現在の絞り込み",
   "allFilters": "全条件",

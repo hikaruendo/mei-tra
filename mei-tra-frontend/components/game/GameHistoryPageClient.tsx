@@ -53,10 +53,6 @@ export function GameHistoryPageClient({
       </div>
       <section className={styles.summaryPanel}>
         <div className={styles.summaryHeader}>
-          <div>
-            <div className={styles.summaryLabel}>{t('roomIdLabel')}</div>
-            <div className={styles.summaryValue}>{roomId}</div>
-          </div>
           <div className={styles.statusBadge}>{summaryStatusLabel}</div>
         </div>
         <div className={styles.summaryGrid}>
