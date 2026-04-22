@@ -1,0 +1,18 @@
+# Fly backend deploy uses the repository root as Docker context so shared
+# contracts can be copied into the backend image. Keep the context small.
+**
+
+!contracts/
+!contracts/**
+!mei-tra-backend/
+!mei-tra-backend/**
+
+mei-tra-backend/node_modules
+mei-tra-backend/dist
+mei-tra-backend/coverage
+mei-tra-backend/logs
+mei-tra-backend/*.log
+mei-tra-backend/.env
+mei-tra-backend/.env.*
+mei-tra-backend/.temp
+mei-tra-backend/.tmp
