@@ -22,6 +22,11 @@
   &:hover {
     background-color: #059669;
   }
+
+  @media (max-width: 768px) {
+    min-width: 4.25rem;
+    padding: 0.5rem 0.75rem;
+  }
 }
 
 .panel {

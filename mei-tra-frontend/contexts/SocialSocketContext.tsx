@@ -35,6 +35,8 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
     }
 
     if (socketRef.current) {
+      setSocket(socketRef.current);
+      setIsConnected(socketRef.current.connected);
       return;
     }
 

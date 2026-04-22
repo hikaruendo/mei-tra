@@ -25,6 +25,10 @@
   top: calc(100% + 0.5rem);
   right: 0;
   z-index: 80;
+
+  @media (max-width: 768px) {
+    right: -4.75rem;
+  }
 }
 
 .minimized {
@@ -48,6 +52,11 @@
 
   &:hover {
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    min-width: 4.25rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 
