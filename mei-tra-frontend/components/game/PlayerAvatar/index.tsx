@@ -20,10 +20,44 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 }) => {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [imageError, setImageError] = useState(false);
+  const { playerId, userId, isAuthenticated, isCOM, name } = player;
 
   useEffect(() => {
-    getPlayerProfile(player).then(setProfile);
-  }, [player]);
+    let cancelled = false;
+
+    getPlayerProfile({ name, userId, isAuthenticated }).then((nextProfile) => {
+      if (cancelled) {
+        return;
+      }
+
+      setProfile((previousProfile) => {
+        if (
+          !nextProfile.isAuthenticated &&
+          !userId &&
+          !isCOM &&
+          previousProfile?.isAuthenticated
+        ) {
+          return previousProfile;
+        }
+
+        return nextProfile;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    playerId,
+    userId,
+    isAuthenticated,
+    isCOM,
+    name,
+  ]);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [playerId, profile?.avatarUrl]);
 
   const handleImageError = () => {
     setImageError(true);

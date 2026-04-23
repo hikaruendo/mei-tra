@@ -2,6 +2,10 @@
   position: relative;
 }
 
+.topbar {
+  display: inline-flex;
+}
+
 .orderButton {
   background-color: #10b981;
   color: white;
@@ -17,6 +21,11 @@
 
   &:hover {
     background-color: #059669;
+  }
+
+  @media (max-width: 768px) {
+    min-width: 7.5rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 
@@ -36,6 +45,11 @@
     min-width: min(18rem, calc(100vw - 1rem));
     max-width: calc(100vw - 1rem);
   }
+}
+
+.topbar .panel {
+  top: calc(100% + 0.5rem);
+  bottom: auto;
 }
 
 .panelHeader {

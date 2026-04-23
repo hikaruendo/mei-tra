@@ -152,6 +152,12 @@ export class TurnMonitorService implements OnModuleDestroy {
       return;
     }
 
+    const room = await this.roomService.getRoom(roomId);
+    if (room?.status !== RoomStatus.PLAYING) {
+      this.clearMonitor(roomId);
+      return;
+    }
+
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const currentPlayer = state.players.find(
@@ -183,6 +189,11 @@ export class TurnMonitorService implements OnModuleDestroy {
     roomId: string,
     playerId: string,
   ): Promise<boolean> {
+    const room = await this.roomService.getRoom(roomId);
+    if (room?.status !== RoomStatus.PLAYING) {
+      return false;
+    }
+
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const currentPlayer = state.players[state.currentPlayerIndex];

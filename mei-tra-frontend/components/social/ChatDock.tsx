@@ -12,11 +12,17 @@ interface ChatDockProps {
   roomId: string;
   gameStarted?: boolean;
   gamePhase?: string | null;
+  placement?: 'default' | 'topbar' | 'menu';
 }
 
-export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockProps) {
+export function ChatDock({
+  roomId,
+  gameStarted = false,
+  gamePhase,
+  placement = 'default',
+}: ChatDockProps) {
   const t = useTranslations('chatDock');
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(gameStarted);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const joinedRoomRef = useRef<string | null>(null);
@@ -37,6 +43,7 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
 
   useEffect(() => {
     if (!isConnected || !roomId) {
+      joinedRoomRef.current = null;
       return;
     }
 
@@ -96,7 +103,10 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
   }
 
   return (
-    <div className={styles.chatDock} ref={chatRef}>
+    <div
+      className={`${styles.chatDock} ${placement === 'topbar' ? styles.topbar : ''} ${placement === 'menu' ? styles.menu : ''}`}
+      ref={chatRef}
+    >
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
@@ -115,7 +125,7 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
       <div className={styles.messagesContainer}>
         {messages.length === 0 ? (
           <div className={styles.emptyState}>
-            No messages yet. Start the conversation!
+            {t('empty')}
           </div>
         ) : (
           messages.map((msg) => (
@@ -124,14 +134,21 @@ export function ChatDock({ roomId, gameStarted = false, gamePhase }: ChatDockPro
         )}
         {typingUsers.size > 0 && (
           <div className={styles.typingIndicator}>
-            {typingUsers.size === 1 ? 'Someone is' : `${typingUsers.size} people are`} typing...
+            {typingUsers.size === 1
+              ? t('typingOne')
+              : t('typingMany', { count: typingUsers.size })}
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Composer */}
-      <ChatComposer onSend={handleSendMessage} disabled={!isConnected} />
+      <ChatComposer
+        onSend={handleSendMessage}
+        disabled={!isConnected}
+        connectingPlaceholder={t('connectingPlaceholder')}
+        inputPlaceholder={t('inputPlaceholder')}
+      />
     </div>
   );
 }

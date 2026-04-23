@@ -15,6 +15,7 @@ interface GameInfoProps {
   teamScores: TeamScores;
   pointsToWin: number;
   players: Player[];
+  actionSlot?: React.ReactNode;
   onLeave?: () => void;
 }
 
@@ -25,6 +26,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   pointsToWin,
   players,
+  actionSlot,
   onLeave,
 }) => {
   const t = useTranslations();
@@ -71,9 +73,12 @@ export const GameInfo: React.FC<GameInfoProps> = ({
             </span>
           </div>
         </div>
-        <button onClick={handleLeaveClick} className={styles.leaveButton}>
-          {t('common.leave')}
-        </button>
+        <div className={styles.gameInfoActions}>
+          {actionSlot}
+          <button onClick={handleLeaveClick} className={styles.leaveButton}>
+            {t('common.leave')}
+          </button>
+        </div>
       </div>
 
       <ConfirmModal

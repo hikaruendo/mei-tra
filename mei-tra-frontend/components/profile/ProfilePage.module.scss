@@ -219,44 +219,14 @@ $transition-button: all 0.3s ease;
   border-radius: $radius-lg;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.06);
-
-  &.gamesPlayed {
-    background-color: rgba(255, 255, 255, 0.03);
-  }
-
-  &.gamesWon {
-    background-color: rgba(34, 197, 94, 0.05);
-  }
-
-  &.winRate {
-    background-color: rgba(59, 130, 246, 0.05);
-  }
-
-  &.totalScore {
-    background-color: rgba(124, 58, 237, 0.05);
-  }
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .statValue {
   font-size: $font-size-xxl;
   font-weight: bold;
   margin-bottom: $spacing-xs;
-
-  &.gamesPlayed {
-    color: #ededed;
-  }
-
-  &.gamesWon {
-    color: #4ade80;
-  }
-
-  &.winRate {
-    color: #60a5fa;
-  }
-
-  &.totalScore {
-    color: #a78bfa;
-  }
+  color: #ededed;
 }
 
 .statLabel {
@@ -449,18 +419,12 @@ $transition-button: all 0.3s ease;
     text-shadow: none;
   }
 
-  .statCard.gamesPlayed {
+  .statCard {
     background-color: rgba(15, 23, 42, 0.03);
     border-color: rgba(15, 23, 42, 0.08);
   }
 
-  .statCard.gamesWon,
-  .statCard.winRate,
-  .statCard.totalScore {
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .statValue.gamesPlayed,
+  .statValue,
   .sectionTitle,
   .accountValue {
     color: #111827;

@@ -109,6 +109,32 @@ const toUiTeamScores = (scores: TransportTeamScores): TeamScores => ({
   },
 });
 
+const mergePlayersPreservingIdentity = (
+  previousPlayers: Player[],
+  nextPlayers: Player[],
+): Player[] => {
+  const previousByPlayerId = new Map(
+    previousPlayers.map((player) => [player.playerId, player]),
+  );
+
+  return nextPlayers.map((nextPlayer) => {
+    const previousPlayer = previousByPlayerId.get(nextPlayer.playerId);
+    if (!previousPlayer || nextPlayer.isCOM) {
+      return nextPlayer;
+    }
+
+    return {
+      ...previousPlayer,
+      ...nextPlayer,
+      userId: nextPlayer.userId ?? previousPlayer.userId,
+      isAuthenticated:
+        nextPlayer.isAuthenticated ?? previousPlayer.isAuthenticated,
+      isHost: nextPlayer.isHost ?? previousPlayer.isHost,
+      name: nextPlayer.name || previousPlayer.name,
+    };
+  });
+};
+
 export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
@@ -412,11 +438,14 @@ export const useGame = () => {
           setNotification({ message: error, type: 'error' });
         }
       },
-      'update-players': (players: PlayerContract[]) => {
+      'update-players': (playerContracts: PlayerContract[]) => {
         if (shouldSkipLegacyUpdatePlayers(currentRoomId)) {
           return;
         }
-        const nextPlayers = fromPlayerContracts(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
         setPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setIdlePlayerIds((prev) =>
@@ -483,9 +512,10 @@ export const useGame = () => {
           return;
         }
 
-        setPlayers(nextPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        syncCurrentPlayerIdentity(nextPlayers, selfPlayerId);
+        const mergedPlayers = mergePlayersPreservingIdentity(players, nextPlayers);
+        setPlayers(mergedPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(mergedPlayers);
+        syncCurrentPlayerIdentity(mergedPlayers, selfPlayerId);
 
         if (!currentRoomId) {
           setCurrentRoomId(nextRoom.id);
@@ -497,7 +527,7 @@ export const useGame = () => {
         }
       },
       'game-state': ({
-        players,
+        players: playerContracts,
         gamePhase,
         currentField,
         currentTurn,
@@ -510,7 +540,10 @@ export const useGame = () => {
         hostId,
         pointsToWin,
       }: GameStatePayload) => {
-        const nextPlayers = fromPlayerContracts(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
         setPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
@@ -576,10 +609,13 @@ export const useGame = () => {
       },
       'game-started': ({
         roomId,
-        players,
+        players: playerContracts,
         pointsToWin,
       }: GameStartedPayload) => {
-        const nextPlayers = fromPlayerContracts(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
         setPlayers(nextPlayers);
@@ -677,10 +713,14 @@ export const useGame = () => {
 
         // Keep ref set until the next game starts (game-started handler clears it)
       },
-      'blow-started': ({ startingPlayer, players }: BlowStartedPayload) => {
+      'blow-started': ({ startingPlayer, players: playerContracts }: BlowStartedPayload) => {
         setGamePhase('blow');
-        setPlayers(players);
-        syncDisconnectedPlayerIdsFromPlayers(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
+        setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(startingPlayer);
       },
       'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclaration[]; actionHistory?: BlowAction[]; currentHighest: BlowDeclaration | null }) => {
@@ -690,14 +730,18 @@ export const useGame = () => {
         // Note: Player state updates (including isPasser) are handled by 'update-players' event
         // This prevents race conditions and ensures consistency across all blow phase operations
       },
-      'broken': ({ nextPlayerId, players, gamePhase }: BrokenPayload) => {
+      'broken': ({ nextPlayerId, players: playerContracts, gamePhase }: BrokenPayload) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
         });
         resetBlowState({ preservePlayers: true });
-        setPlayers(players);
-        syncDisconnectedPlayerIdsFromPlayers(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
+        setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(nextPlayerId);
         setGamePhase(toUiGamePhase(gamePhase ?? 'blow'));
         setCurrentTrump(null);
@@ -716,7 +760,7 @@ export const useGame = () => {
       },
       'round-cancelled': ({
         nextDealer,
-        players,
+        players: playerContracts,
         currentTrump,
         currentHighestDeclaration,
         blowDeclarations,
@@ -727,8 +771,12 @@ export const useGame = () => {
           type: 'warning'
         });
         resetBlowState({ preservePlayers: true });
-        setPlayers(players);
-        syncDisconnectedPlayerIdsFromPlayers(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
+        setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(nextDealer);
         setCurrentTrump(currentTrump ?? null);
         setCurrentHighestDeclaration(currentHighestDeclaration ?? null);
@@ -761,9 +809,12 @@ export const useGame = () => {
       },
       'card-played': ({ field, players: updatedPlayers }: CardPlayedPayload) => {
         setCurrentField(field);
-        // Update players with the latest data from server
-        setPlayers(updatedPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(updatedPlayers);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(updatedPlayers),
+        );
+        setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
       },
       'field-updated': (field: Field) => {
         setCurrentField(field);
@@ -784,7 +835,7 @@ export const useGame = () => {
         setTeamScores(toUiTeamScores(scores));
       },
       'new-round-started': ({
-        players,
+        players: playerContracts,
         currentTurn,
         gamePhase,
         currentField,
@@ -796,8 +847,12 @@ export const useGame = () => {
         currentHighestDeclaration,
         blowDeclarations,
       }: NewRoundStartedPayload) => {
-        setPlayers(players);
-        syncDisconnectedPlayerIdsFromPlayers(players);
+        const nextPlayers = mergePlayersPreservingIdentity(
+          players,
+          fromPlayerContracts(playerContracts),
+        );
+        setPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(currentTurn);
         setGamePhase(toUiGamePhase(gamePhase));
         setCurrentField(toUiField(currentField));

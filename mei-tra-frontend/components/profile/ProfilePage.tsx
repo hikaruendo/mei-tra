@@ -225,32 +225,32 @@ export function ProfilePage() {
             {profile ? (
               <div className={styles.statsGrid}>
                 {/* Games Played */}
-                <div className={`${styles.statCard} ${styles.gamesPlayed}`}>
-                  <div className={`${styles.statValue} ${styles.gamesPlayed}`}>
+                <div className={styles.statCard}>
+                  <div className={styles.statValue}>
                     {profile.gamesPlayed}
                   </div>
                   <div className={styles.statLabel}>{t('gamesPlayed')}</div>
                 </div>
 
                 {/* Games Won */}
-                <div className={`${styles.statCard} ${styles.gamesWon}`}>
-                  <div className={`${styles.statValue} ${styles.gamesWon}`}>
+                <div className={styles.statCard}>
+                  <div className={styles.statValue}>
                     {profile.gamesWon}
                   </div>
                   <div className={styles.statLabel}>{t('wins')}</div>
                 </div>
 
                 {/* Win Rate */}
-                <div className={`${styles.statCard} ${styles.winRate}`}>
-                  <div className={`${styles.statValue} ${styles.winRate}`}>
+                <div className={styles.statCard}>
+                  <div className={styles.statValue}>
                     {winRate}%
                   </div>
                   <div className={styles.statLabel}>{t('winRate')}</div>
                 </div>
 
                 {/* Total Score */}
-                <div className={`${styles.statCard} ${styles.totalScore}`}>
-                  <div className={`${styles.statValue} ${styles.totalScore}`}>
+                <div className={styles.statCard}>
+                  <div className={styles.statValue}>
                     {profile.totalScore}
                   </div>
                   <div className={styles.statLabel}>{t('totalScore')}</div>

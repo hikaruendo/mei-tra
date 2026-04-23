@@ -7,9 +7,16 @@ import styles from './ChatComposer.module.scss';
 interface ChatComposerProps {
   onSend: (content: string) => void;
   disabled?: boolean;
+  connectingPlaceholder: string;
+  inputPlaceholder: string;
 }
 
-export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  disabled,
+  connectingPlaceholder,
+  inputPlaceholder,
+}: ChatComposerProps) {
   const [message, setMessage] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
@@ -27,7 +34,7 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={disabled ? 'Connecting...' : 'Type a message...'}
+          placeholder={disabled ? connectingPlaceholder : inputPlaceholder}
           disabled={disabled}
           className={styles.input}
           maxLength={500}

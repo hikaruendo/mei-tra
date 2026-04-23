@@ -87,17 +87,34 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       nextState.blowState.declarations = [];
       nextState.blowState.actionHistory = [];
       nextState.blowState.currentHighestDeclaration = null;
+      nextState.blowState.currentTrump = null;
       nextState.blowState.lastPasser = null;
+      nextState.blowState.isRoundCancelled = false;
 
       const firstBlowIndex = nextState.blowState.currentBlowIndex;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
       nextState.currentPlayerIndex = firstBlowIndex;
+      nextState.players.forEach((statePlayer) => {
+        statePlayer.isPasser = false;
+      });
       nextState.deck = this.cardService.generateDeck();
       await roomGameState.dealCards();
 
       const events: GatewayEvent[] = [];
       if (firstBlowPlayer) {
+        events.push({
+          scope: 'room',
+          roomId,
+          event: 'blow-updated',
+          payload: {
+            declarations: [],
+            actionHistory: [],
+            currentHighest: null,
+            lastPasser: null,
+          },
+        });
+
         const brokenPayload: BrokenPayload = {
           nextPlayerId: firstBlowPlayer.playerId,
           players: resolveTransportPlayers(roomGameState, nextState.players),
