@@ -252,11 +252,6 @@ export function GameHistoryDock({
 
     return deltasByEventId;
   }, [replay]);
-  const visiblePlayerCount = useMemo(
-    () =>
-      new Set(orderedRounds.flatMap((round) => round.playerIds)).size,
-    [orderedRounds],
-  );
   const feedWindow = useMemo(() => {
     if (eventFeed.length === 0) {
       return null;
@@ -513,7 +508,6 @@ export function GameHistoryDock({
 
   const getRoundHighlights = (round: GameHistoryReplayRound) => {
     const highlights = new Set<string>();
-    const latestEvent = round.events.at(-1);
     const candidateEvents = [
       [...round.events].reverse().find((event) => event.actionType === 'game_over'),
       [...round.events]
@@ -531,12 +525,6 @@ export function GameHistoryDock({
       for (const detail of getEventDetails(event).slice(0, 2)) {
         highlights.add(detail);
       }
-    }
-
-    if (latestEvent) {
-      highlights.add(
-        `${t('overviewLastAction')}: ${getActionLabel(latestEvent.actionType)}`,
-      );
     }
 
     return [...highlights].slice(0, 4);
@@ -709,10 +697,6 @@ export function GameHistoryDock({
                   <span className={styles.overviewLabel}>{t('overviewRounds')}</span>
                   <span className={styles.overviewValue}>{resolvedSummary.roundNumbers.length}</span>
                 </div>
-                <div className={styles.overviewCard}>
-                  <span className={styles.overviewLabel}>{t('overviewPlayers')}</span>
-                  <span className={styles.overviewValue}>{resolvedSummary.playerIds.length}</span>
-                </div>
                 <div className={styles.overviewCardWide}>
                   <span className={styles.overviewLabel}>{t('overviewWindow')}</span>
                   <span className={styles.overviewValueSmall}>{formattedHistoryWindow}</span>
@@ -784,11 +768,6 @@ export function GameHistoryDock({
               <span className={styles.metric}>
                 {t('entriesMetric', { count: replay?.totalEntries ?? 0 })}
               </span>
-              <span className={styles.metric}>
-                {t('playersMetric', {
-                  count: visiblePlayerCount,
-                })}
-              </span>
             </div>
           </div>
           ) : null}
@@ -840,12 +819,6 @@ export function GameHistoryDock({
                           </span>
                         </div>
                         <div className={styles.roundSectionMetrics}>
-                          <span className={styles.badge}>
-                            {t('entriesMetric', { count: round.entries.length })}
-                          </span>
-                          <span className={styles.badge}>
-                            {t('playersMetric', { count: round.playerIds.length })}
-                          </span>
                           {roundSummaryHighlights.map((highlight) => (
                             <span
                               key={`${round.roundNumber}-summary-${highlight}`}
@@ -863,15 +836,6 @@ export function GameHistoryDock({
                             {roundHighlights.map((highlight) => (
                               <span key={`${round.roundNumber}-${highlight}`} className={styles.badge}>
                                 {highlight}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {round.actionTypes.length > 0 ? (
-                          <div className={styles.breakdown}>
-                            {round.actionTypes.map((actionType) => (
-                              <span key={actionType} className={styles.badge}>
-                                {getActionLabel(actionType)}
                               </span>
                             ))}
                           </div>

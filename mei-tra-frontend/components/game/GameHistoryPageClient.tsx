@@ -28,9 +28,6 @@ export function GameHistoryPageClient({
     : summary.winningTeam === null
       ? t('noWinner')
       : t('teamValue', { team: summary.winningTeam + 1 });
-  const lastActionLabel = !summary?.lastActionType
-    ? t('noLastAction')
-    : t(`actionTypes.${summary.lastActionType}` as never);
   const historyWindowLabel = useMemo(() => {
     if (!summary?.firstTimestamp || !summary.lastTimestamp) {
       return t('unknownTimeWindow');
@@ -61,25 +58,9 @@ export function GameHistoryPageClient({
             <span className={styles.summaryValue}>{winnerLabel}</span>
           </div>
           <div className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>{t('overviewLastAction')}</span>
-            <span className={styles.summaryValue}>{lastActionLabel}</span>
-          </div>
-          <div className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>{t('overviewEntries')}</span>
-            <span className={styles.summaryValue}>
-              {summary?.totalEntries ?? '--'}
-            </span>
-          </div>
-          <div className={styles.summaryCard}>
             <span className={styles.summaryLabel}>{t('overviewRounds')}</span>
             <span className={styles.summaryValue}>
               {summary?.roundNumbers.length ?? '--'}
-            </span>
-          </div>
-          <div className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>{t('overviewPlayers')}</span>
-            <span className={styles.summaryValue}>
-              {summary?.playerIds.length ?? '--'}
             </span>
           </div>
           <div className={`${styles.summaryCard} ${styles.summaryCardWide}`}>
