@@ -15,15 +15,33 @@ const SocialSocketContext = createContext<SocialSocketContextValue | undefined>(
 );
 
 export function SocialSocketProvider({ children }: { children: React.ReactNode }) {
-  const { user, getAccessToken } = useAuth();
+  const { user, session, getAccessToken } = useAuth();
   const socketRef = useRef<Socket | null>(null);
+  const activeUserIdRef = useRef<string | null>(null);
+  const mountedRef = useRef(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    mountedRef.current = true;
 
-    if (!user?.id) {
+    return () => {
+      mountedRef.current = false;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setSocket(null);
+        setIsConnected(false);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const userId = user?.id ?? null;
+    activeUserIdRef.current = userId;
+
+    if (!userId) {
       // Disconnect socket when user logs out
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -43,16 +61,16 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
     const initializeSocket = async () => {
       let token: string | null = null;
       try {
-        token = await getAccessToken();
+        token = session?.access_token ?? await getAccessToken();
       } catch (error) {
         console.error('[SocialSocketProvider] Failed to get auth token:', error);
-        if (isMounted) {
+        if (mountedRef.current && activeUserIdRef.current === userId) {
           setIsConnected(false);
         }
         return;
       }
 
-      if (!isMounted) return;
+      if (!mountedRef.current || activeUserIdRef.current !== userId) return;
 
       if (!token) {
         console.error('[SocialSocketProvider] No auth token available');
@@ -91,17 +109,7 @@ export function SocialSocketProvider({ children }: { children: React.ReactNode }
     };
 
     void initializeSocket();
-
-    return () => {
-      isMounted = false;
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-        setSocket(null);
-        setIsConnected(false);
-      }
-    };
-  }, [user?.id, getAccessToken]);
+  }, [user?.id, session?.access_token, getAccessToken]);
 
   return (
     <SocialSocketContext.Provider

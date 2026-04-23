@@ -34,11 +34,12 @@
 .chatDock.menu {
   position: fixed;
   top: 4.25rem;
+  left: 0.75rem;
   right: 0.75rem;
   z-index: 100;
-  width: min(22rem, calc(100vw - 1.5rem));
+  width: auto;
   height: min(28rem, calc(100dvh - 5.25rem));
-  max-width: calc(100vw - 1.5rem);
+  max-width: none;
   max-height: calc(100dvh - 5.25rem);
 }
 
