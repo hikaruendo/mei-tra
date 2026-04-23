@@ -67,10 +67,10 @@ export const GameField: React.FC<GameFieldProps> = ({
           <div className={styles.baseSuitSelection}>
             <h3>{t('selectBaseSuit')}</h3>
             <div className={styles.suitButtons}>
-              <button onClick={() => onBaseSuitSelect('♠')}>♠</button>
-              <button onClick={() => onBaseSuitSelect('♥')}>♥</button>
-              <button onClick={() => onBaseSuitSelect('♦')}>♦</button>
-              <button onClick={() => onBaseSuitSelect('♣')}>♣</button>
+              <button className={styles.blackSuit} onClick={() => onBaseSuitSelect('♠')}>♠</button>
+              <button className={styles.redSuit} onClick={() => onBaseSuitSelect('♥')}>♥</button>
+              <button className={styles.redSuit} onClick={() => onBaseSuitSelect('♦')}>♦</button>
+              <button className={styles.blackSuit} onClick={() => onBaseSuitSelect('♣')}>♣</button>
             </div>
           </div>
         ) : currentField?.baseSuit && (
