@@ -33,9 +33,10 @@ const preferenceBootstrapScript = `
       var fontSize = localStorage.getItem('fontSize');
       var resolvedFontSize =
         fontSize === 'large' ||
-        fontSize === 'xlarge' ||
-        fontSize === 'xxlarge'
+        fontSize === 'xlarge'
           ? fontSize
+          : fontSize === 'xxlarge'
+            ? 'xlarge'
           : 'standard';
       root.setAttribute('data-font-size', resolvedFontSize);
     } catch (error) {

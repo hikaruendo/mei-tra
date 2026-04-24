@@ -17,6 +17,10 @@
   "nav": {
     "rooms": "Rooms",
     "tutorial": "Docs",
+    "discord": "Discord",
+    "x": "X",
+    "community": "Community",
+    "externalLink": "external link",
     "menu": "Menu",
     "themeLabel": "Theme",
     "themeSystem": "System",

@@ -17,6 +17,10 @@
   "nav": {
     "rooms": "ルーム一覧",
     "tutorial": "ドキュメント",
+    "discord": "Discord",
+    "x": "X",
+    "community": "コミュニティ",
+    "externalLink": "外部リンク",
     "menu": "メニュー",
     "themeLabel": "テーマ",
     "themeSystem": "システム",

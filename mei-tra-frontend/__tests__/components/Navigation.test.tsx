@@ -1,5 +1,5 @@
 import type React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Navigation } from '@/components/layout/Navigation';
 
 const replaceMock = jest.fn();
@@ -56,6 +56,10 @@ jest.mock('next-intl', () => ({
     const labels: Record<string, string> = {
       rooms: 'ルーム一覧',
       tutorial: 'ドキュメント',
+      discord: 'Discord',
+      x: 'X',
+      community: 'コミュニティ',
+      externalLink: '外部リンク',
       menu: 'メニュー',
       themeLabel: 'テーマ',
       themeSystem: 'システム',
@@ -89,10 +93,20 @@ describe('Navigation', () => {
   it('opens the font size menu and updates the selected preset', () => {
     render(<Navigation />);
 
-    fireEvent.click(screen.getByRole('button', { name: /文字サイズ/ }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: /特大/ }));
+    fireEvent.click(screen.getByRole('button', { name: '文字サイズ: 大きめ' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /大きい/ }));
 
-    expect(setFontSizePreferenceMock).toHaveBeenCalledWith('xxlarge');
+    expect(setFontSizePreferenceMock).toHaveBeenCalledWith('xlarge');
+    expect(screen.queryByRole('menuitemradio', { name: /特大/ })).not.toBeInTheDocument();
+  });
+
+  it('shows three icon buttons for mobile font size selection', () => {
+    render(<Navigation />);
+
+    expect(screen.getAllByRole('button', { name: /文字サイズ:/ })).toHaveLength(4);
+    expect(screen.getByRole('button', { name: '文字サイズ: 標準 100%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 大きめ 120%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 大きい 150%' })).toBeInTheDocument();
   });
 
   it('opens the theme menu and updates the theme', () => {
@@ -111,5 +125,15 @@ describe('Navigation', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: /English/ }));
 
     expect(replaceMock).toHaveBeenCalledWith('/rooms', { locale: 'en' });
+  });
+
+  it('shows social links in the shared navigation', () => {
+    render(<Navigation />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'コミュニティ' }));
+
+    const communityMenu = screen.getByRole('menu', { name: 'コミュニティ' });
+    expect(within(communityMenu).getByRole('menuitem', { name: /^Discord/ })).toBeInTheDocument();
+    expect(within(communityMenu).getByRole('menuitem', { name: /^X/ })).toBeInTheDocument();
   });
 });
