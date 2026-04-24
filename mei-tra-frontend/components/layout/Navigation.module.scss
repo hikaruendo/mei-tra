@@ -117,6 +117,18 @@ $desktop-breakpoint: 960px;
   }
 }
 
+.externalLinkIcon {
+  flex-shrink: 0;
+  opacity: 0.78;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.utilityExternalOption:hover .externalLinkIcon,
+.mobileExternalLink:hover .externalLinkIcon {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
 .utilityRail {
   display: flex;
   align-items: center;
@@ -198,6 +210,7 @@ $desktop-breakpoint: 960px;
   background: transparent;
   color: #ededed;
   cursor: pointer;
+  text-decoration: none;
   text-align: left;
   transition: $transition-button;
 
@@ -205,6 +218,10 @@ $desktop-breakpoint: 960px;
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.08);
   }
+}
+
+.utilityExternalOption {
+  font-weight: 700;
 }
 
 .activeUtilityOption {
@@ -291,8 +308,8 @@ $desktop-breakpoint: 960px;
   flex-direction: column;
   justify-content: space-around;
   align-items: center;
-  width: 32px;
-  height: 24px;
+  width: 28px;
+  height: 20px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -307,7 +324,7 @@ $desktop-breakpoint: 960px;
 
   span {
     display: block;
-    width: 24px;
+    width: 22px;
     height: 2px;
     background-color: #ededed;
     transition: all 0.3s ease;
@@ -319,7 +336,7 @@ $desktop-breakpoint: 960px;
     }
 
     &:nth-child(2) {
-      top: 11px;
+      top: 9px;
     }
 
     &:nth-child(3) {
@@ -329,7 +346,7 @@ $desktop-breakpoint: 960px;
 
   &.active {
     span:nth-child(1) {
-      transform: translateY(11px) rotate(45deg);
+      transform: translateY(9px) rotate(45deg);
       top: 0;
     }
 
@@ -338,7 +355,7 @@ $desktop-breakpoint: 960px;
     }
 
     span:nth-child(3) {
-      transform: translateY(-11px) rotate(-45deg);
+      transform: translateY(-9px) rotate(-45deg);
       bottom: 0;
     }
   }
@@ -362,11 +379,16 @@ $desktop-breakpoint: 960px;
   right: -320px;
   width: min(320px, calc(100vw - 1.25rem));
   height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   background-color: #111;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.3);
   transition: right 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 
   &.open {
     right: 0;
@@ -378,22 +400,26 @@ $desktop-breakpoint: 960px;
 }
 
 .mobileMenuContent {
-  padding: 5rem $spacing-md $spacing-md;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 3rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: 0.6rem;
 }
 
 .mobileNavLink {
-  display: block;
-  padding: $spacing-md;
+  display: flex;
+  align-items: center;
+  padding: 0.42rem 0.6rem;
   color: #888;
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
+  line-height: 1.1;
   border-radius: $radius-md;
   transition: $transition-button;
-  min-height: 44px;
+  min-height: 36px;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.06);
@@ -401,10 +427,47 @@ $desktop-breakpoint: 960px;
   }
 }
 
+.mobileExternalSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.mobileExternalLinks {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mobileExternalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #9ca3af;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  transition: $transition-button;
+
+  &:hover {
+    color: #ededed;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+}
+
 .mobileSettingsSection {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.7rem;
+  margin-top: 0.55rem;
 }
 
 .mobileSectionLabel {
@@ -419,28 +482,27 @@ $desktop-breakpoint: 960px;
   flex-wrap: wrap;
 }
 
-.mobileFontSizeList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.mobileFontSizeButton {
+.mobileFontSizeRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 3rem;
-  padding: 0.8rem 0.9rem;
-  border-radius: 0.8rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mobileFontSizeIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   color: #ededed;
-  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: $transition-button;
-  text-align: left;
+  padding: 0;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.06);
@@ -448,19 +510,21 @@ $desktop-breakpoint: 960px;
   }
 }
 
+.mobileFontSizeGlyph {
+  font-size: 0.78rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
 .activeMobileFontSizeButton {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.18);
 }
 
-.mobileFontSizeScale {
-  font-size: 0.8rem;
-  color: #9ca3af;
-}
-
 .langSwitcherMobile {
   display: block;
-  padding: $spacing-md;
+  margin-top: 0.45rem;
+  padding: $spacing-sm;
   background-color: rgba(255, 255, 255, 0.03);
   color: #888;
   text-decoration: none;
@@ -531,12 +595,13 @@ $desktop-breakpoint: 960px;
   }
 
   .utilityPopoverTitle,
-  .utilityOptionMeta,
-  .mobileFontSizeScale {
+  .utilityOptionMeta {
     color: #6b7280;
   }
 
   .navLink,
+  .mobileNavLink,
+  .mobileExternalLink,
   .langSwitcherMobile,
   .themeButton,
   .utilityTrigger {
@@ -544,6 +609,8 @@ $desktop-breakpoint: 960px;
   }
 
   .navLink:hover,
+  .mobileNavLink:hover,
+  .mobileExternalLink:hover,
   .langSwitcherMobile:hover,
   .themeButton:hover,
   .utilityTrigger:hover {
@@ -561,14 +628,16 @@ $desktop-breakpoint: 960px;
   }
 
   .utilityPopover,
-  .mobileFontSizeButton,
+  .mobileExternalLink,
+  .mobileFontSizeIconButton,
   .langSwitcherMobile,
   .themeButton,
   .utilityTrigger {
     border-color: rgba(15, 23, 42, 0.1);
   }
 
-  .mobileFontSizeButton,
+  .mobileExternalLink,
+  .mobileFontSizeIconButton,
   .langSwitcherMobile,
   .themeButton,
   .utilityTrigger {
@@ -584,13 +653,13 @@ $desktop-breakpoint: 960px;
   .utilityOptionState,
   .utilityOptionPreview,
   .utilityOptionIcon,
-  .mobileFontSizeButton,
+  .mobileFontSizeIconButton,
   .mobileSectionLabel {
     color: #111827;
   }
 
   .utilityOption:hover,
-  .mobileFontSizeButton:hover {
+  .mobileFontSizeIconButton:hover {
     background: rgba(15, 23, 42, 0.05);
     border-color: rgba(15, 23, 42, 0.12);
   }

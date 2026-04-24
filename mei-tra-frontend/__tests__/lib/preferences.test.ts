@@ -30,10 +30,17 @@ describe('preferences helpers', () => {
 
   it('reads stored theme and font size when values are valid', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'system');
-    localStorage.setItem(FONT_SIZE_STORAGE_KEY, 'xxlarge');
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, 'xlarge');
 
     expect(readStoredThemePreference()).toBe('system');
-    expect(readStoredFontSizePreset()).toBe('xxlarge');
+    expect(readStoredFontSizePreset()).toBe('xlarge');
+  });
+
+  it('maps legacy xxlarge font size to xlarge', () => {
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, 'xxlarge');
+
+    expect(readStoredFontSizePreset()).toBe('xlarge');
+    expect(normalizeUserPreferences({ fontSize: 'xxlarge' }).fontSize).toBe('xlarge');
   });
 
   it('falls back to defaults when stored values are invalid', () => {

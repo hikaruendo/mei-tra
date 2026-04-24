@@ -22,12 +22,13 @@ export const FONT_SIZE_PRESETS: Record<
     rootPercent: 120,
   },
   xlarge: {
-    scale: 1.4,
-    rootPercent: 140,
+    scale: 1.5,
+    rootPercent: 150,
   },
+  // Legacy value kept so old persisted preferences do not break.
   xxlarge: {
-    scale: 1.7,
-    rootPercent: 170,
+    scale: 1.5,
+    rootPercent: 150,
   },
 };
 
@@ -35,7 +36,6 @@ export const FONT_SIZE_PRESET_ORDER: FontSizePreset[] = [
   'standard',
   'large',
   'xlarge',
-  'xxlarge',
 ];
 
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
@@ -50,7 +50,15 @@ export function isThemePreference(value: unknown): value is UserPreferences['the
 }
 
 export function isFontSizePreset(value: unknown): value is FontSizePreset {
-  return FONT_SIZE_PRESET_ORDER.includes(value as FontSizePreset);
+  return value === 'standard' || value === 'large' || value === 'xlarge' || value === 'xxlarge';
+}
+
+export function normalizeFontSizePreset(value: unknown): FontSizePreset {
+  if (value === 'xxlarge') {
+    return 'xlarge';
+  }
+
+  return isFontSizePreset(value) ? value : DEFAULT_FONT_SIZE_PRESET;
 }
 
 export function normalizeUserPreferences(
@@ -68,9 +76,7 @@ export function normalizeUserPreferences(
     theme: isThemePreference(preferences?.theme)
       ? preferences.theme
       : DEFAULT_USER_PREFERENCES.theme,
-    fontSize: isFontSizePreset(preferences?.fontSize)
-      ? preferences.fontSize
-      : DEFAULT_USER_PREFERENCES.fontSize,
+    fontSize: normalizeFontSizePreset(preferences?.fontSize),
   };
 }
 
@@ -89,7 +95,5 @@ export function readStoredFontSizePreset(): FontSizePreset {
   }
 
   const storedFontSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
-  return isFontSizePreset(storedFontSize)
-    ? storedFontSize
-    : DEFAULT_FONT_SIZE_PRESET;
+  return normalizeFontSizePreset(storedFontSize);
 }

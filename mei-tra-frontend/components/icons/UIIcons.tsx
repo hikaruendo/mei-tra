@@ -96,6 +96,50 @@ export function CheckIcon({ size, ...props }: IconProps) {
   );
 }
 
+export function ExternalLinkIcon({ size, ...props }: IconProps) {
+  const iconSize = getIconSize(size, 16);
+  return (
+    <svg width={iconSize} height={iconSize} viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M6.25 4.25H4.3A1.3 1.3 0 0 0 3 5.55v6.15A1.3 1.3 0 0 0 4.3 13h6.15a1.3 1.3 0 0 0 1.3-1.3V9.75"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.35"
+      />
+      <path
+        d="M8.25 3h4.75v4.75M7.75 8.25 12.7 3.3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.35"
+      />
+    </svg>
+  );
+}
+
+export function CommunityIcon({ size, ...props }: IconProps) {
+  const iconSize = getIconSize(size, 16);
+  return (
+    <svg width={iconSize} height={iconSize} viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <circle cx="6.1" cy="5.5" r="2.25" stroke="currentColor" strokeWidth="1.35" />
+      <path
+        d="M2.5 13.1c.45-2.15 1.8-3.35 3.6-3.35s3.15 1.2 3.6 3.35"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.35"
+      />
+      <circle cx="11.25" cy="6.4" r="1.75" stroke="currentColor" strokeWidth="1.25" />
+      <path
+        d="M10.2 10.25c1.55.15 2.6 1.1 3.05 2.85"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.25"
+      />
+    </svg>
+  );
+}
+
 export function UserIcon({ size, ...props }: IconProps) {
   const iconSize = getIconSize(size, 16);
   return (

@@ -9,6 +9,8 @@ import { FONT_SIZE_PRESETS, FONT_SIZE_PRESET_ORDER } from '@/lib/preferences';
 import { FontSizePreset } from '@/types/user.types';
 import {
   CheckIcon,
+  CommunityIcon,
+  ExternalLinkIcon,
   GlobeIcon,
   MoonIcon,
   SunIcon,
@@ -23,13 +25,18 @@ interface NavigationProps {
   inRoom?: boolean;
 }
 
-type UtilityMenu = 'theme' | 'fontSize' | 'language';
+type UtilityMenu = 'theme' | 'fontSize' | 'community' | 'language';
 
 type ThemeOption = {
   value: 'system' | 'light' | 'dark';
   label: string;
   Icon: typeof SystemIcon;
 };
+
+const socialLinks = [
+  { key: 'discord', href: 'https://discord.gg/4TP7wvwA6c' },
+  { key: 'x', href: 'https://x.com/meitra_' },
+] as const;
 
 export function Navigation({ gameStarted = false, inRoom = false }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -40,6 +47,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
   const router = useRouter();
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
   const fontSizeMenuRef = useRef<HTMLDivElement | null>(null);
+  const communityMenuRef = useRef<HTMLDivElement | null>(null);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const {
     fontSizePreference,
@@ -108,7 +116,9 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
         ? themeMenuRef
         : openUtilityMenu === 'fontSize'
           ? fontSizeMenuRef
-          : languageMenuRef;
+          : openUtilityMenu === 'community'
+            ? communityMenuRef
+            : languageMenuRef;
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!activeMenuRef.current?.contains(event.target as Node)) {
@@ -201,6 +211,40 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
             </div>
 
             <div className={styles.utilityRail}>
+              <div className={styles.utilityMenu} ref={communityMenuRef}>
+                <button
+                  type="button"
+                  className={`${styles.utilityTrigger} ${openUtilityMenu === 'community' ? styles.utilityTriggerOpen : ''}`}
+                  onClick={() => toggleUtilityMenu('community')}
+                  aria-expanded={openUtilityMenu === 'community'}
+                  aria-haspopup="menu"
+                  aria-label={t('community')}
+                  title={t('community')}
+                >
+                  <CommunityIcon size="1.2rem" />
+                  <span className={styles.srOnly}>{t('community')}</span>
+                </button>
+                {openUtilityMenu === 'community' && (
+                  <div className={`${styles.utilityPopover} ${styles.utilityPopoverCompact}`} role="menu" aria-label={t('community')}>
+                    <span className={styles.utilityPopoverTitle}>{t('community')}</span>
+                    {socialLinks.map((link) => (
+                      <a
+                        key={link.key}
+                        href={link.href}
+                        className={`${styles.utilityOption} ${styles.utilityExternalOption}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        role="menuitem"
+                        aria-label={`${t(link.key)} ${t('externalLink')}`}
+                      >
+                        <span className={styles.utilityOptionLabel}>{t(link.key)}</span>
+                        <ExternalLinkIcon size="0.95rem" className={styles.externalLinkIcon} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className={styles.utilityMenu} ref={themeMenuRef}>
                 <button
                   type="button"
@@ -361,6 +405,25 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
           >
             {t('tutorial')}
           </Link>
+          <div className={styles.mobileExternalSection} aria-label={t('community')}>
+            <span className={styles.mobileSectionLabel}>{t('community')}</span>
+            <div className={styles.mobileExternalLinks}>
+              {socialLinks.map((link) => (
+                <a
+                  key={link.key}
+                  href={link.href}
+                  className={styles.mobileExternalLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={closeMobileMenu}
+                  aria-label={`${t(link.key)} ${t('externalLink')}`}
+                >
+                  <span>{t(link.key)}</span>
+                  <ExternalLinkIcon size="0.9rem" className={styles.externalLinkIcon} />
+                </a>
+              ))}
+            </div>
+          </div>
           <div className={styles.mobileSettingsSection}>
             <span className={styles.mobileSectionLabel}>{t('themeLabel')}</span>
             <div className={styles.mobileThemeRow}>
@@ -380,16 +443,23 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
           </div>
           <div className={styles.mobileSettingsSection}>
             <span className={styles.mobileSectionLabel}>{t('fontSizeLabel')}</span>
-            <div className={styles.mobileFontSizeList}>
+            <div className={styles.mobileFontSizeRow} role="group" aria-label={t('fontSizeLabel')}>
               {fontSizeOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  className={`${styles.mobileFontSizeButton} ${fontSizePreference === option.value ? styles.activeMobileFontSizeButton : ''}`}
+                  className={`${styles.mobileFontSizeIconButton} ${fontSizePreference === option.value ? styles.activeMobileFontSizeButton : ''}`}
                   onClick={() => handleFontSizeChange(option.value)}
+                  aria-label={`${t('fontSizeLabel')}: ${option.label} ${option.scale}`}
+                  aria-pressed={fontSizePreference === option.value}
+                  title={`${option.label} ${option.scale}`}
                 >
-                  <span>{option.label}</span>
-                  <span className={styles.mobileFontSizeScale}>{option.scale}</span>
+                  <span
+                    className={styles.mobileFontSizeGlyph}
+                    aria-hidden="true"
+                  >
+                    {FONT_SIZE_PRESETS[option.value].rootPercent}
+                  </span>
                 </button>
               ))}
             </div>
