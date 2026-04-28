@@ -4,7 +4,7 @@ import { IGameStateRepository } from '../../repositories/interfaces/game-state.r
 import { IRoomRepository } from '../../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
 import { GameStateFactory } from '../game-state.factory';
-import { DomainPlayer, GameState, TrumpType } from '../../types/game.types';
+import { DomainPlayer, GameState } from '../../types/game.types';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';
@@ -324,12 +324,6 @@ describe('Reconnection Token Management', () => {
       const chomboService = new ChomboService(playService);
       const comPlayerService: jest.Mocked<IComPlayerService> = {
         createComPlayer: jest.fn(),
-        selectBestCard: jest.fn(),
-        selectBaseSuit: jest.fn((hand: string[], trump: TrumpType | null) => {
-          void hand;
-          void trump;
-          return '♠';
-        }),
         isComPlayer: jest.fn(),
       };
       gameStateFactory = new GameStateFactory(

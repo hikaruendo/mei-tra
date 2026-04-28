@@ -298,13 +298,44 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.turnMonitorService.isPlayerIdle(roomId, playerId);
   }
 
-  private async triggerRevealBrokenHand(request?: RevealBrokenRequest) {
+  private finalizeBrokenHandAfterDelay(
+    followUp: { roomId: string; playerId: string },
+    delayMs: number,
+  ): void {
+    setTimeout(() => {
+      void this.revealBrokenHandUseCase
+        .finalize(followUp)
+        .then((completion) => {
+          if (!completion.success) {
+            console.error(
+              'Failed to finalize broken hand sequence:',
+              completion.error,
+            );
+            return;
+          }
+
+          this.dispatchEvents(completion.events);
+          this.triggerComAutoPlayIfNeeded(followUp.roomId);
+        })
+        .catch((error) =>
+          console.error('Error finalizing broken hand sequence:', error),
+        );
+    }, delayMs);
+  }
+
+  private async triggerRevealBrokenHand(
+    request?: RevealBrokenRequest,
+  ): Promise<boolean> {
     if (!request) {
-      return;
+      return false;
     }
 
     const roomGameState = await this.roomService.getRoomGameState(
       request.roomId,
+    );
+    const state = roomGameState.getState();
+    const targetPlayer = state.players.find(
+      (player) => player.playerId === request.playerId,
     );
     const sessionUser =
       roomGameState.findSessionUserByUserId(request.actorId) ??
@@ -313,12 +344,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const clientSocket = sessionUser?.socketId
       ? this.server.sockets.sockets.get(sessionUser.socketId)
       : undefined;
+    if (
+      !clientSocket &&
+      (targetPlayer?.isCOM || targetPlayer?.playerId.startsWith('com-'))
+    ) {
+      this.finalizeBrokenHandAfterDelay(
+        { roomId: request.roomId, playerId: request.playerId },
+        3000,
+      );
+      return true;
+    }
+
     if (!clientSocket) {
       console.warn(
         '[GameGateway] Socket not found when handling required broken hand',
         request,
       );
-      return;
+      return false;
     }
 
     try {
@@ -326,8 +368,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomId: request.roomId,
         playerId: request.playerId,
       });
+      return true;
     } catch (error) {
       console.error('Failed to trigger reveal-broken-hand flow:', error);
+      return false;
     }
   }
 
@@ -434,7 +478,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // イベント配信（遅延含む）
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
-      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
+      const revealBrokenScheduled = await this.triggerRevealBrokenHand(
+        result.revealBrokenRequest,
+      );
+
+      const delayedEvents = result.delayedEvents ?? [];
+      const maxDelay = delayedEvents.reduce(
+        (max, event) => Math.max(max, event.delayMs ?? 0),
+        0,
+      );
 
       if (result.completeFieldTrigger) {
         const trigger = result.completeFieldTrigger;
@@ -452,6 +504,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
         }, trigger.delayMs);
         return; // Wait for completion result before continuing loop
+      }
+
+      if (maxDelay > 0 && !revealBrokenScheduled) {
+        setTimeout(
+          () => this.triggerComAutoPlayIfNeeded(roomId),
+          maxDelay + 100,
+        );
+        return;
+      }
+
+      if (revealBrokenScheduled) {
+        return;
       }
 
       if (!result.shouldContinue) {
@@ -1156,8 +1220,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
-      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
-      this.triggerComAutoPlayIfNeeded(data.roomId);
+      const revealBrokenScheduled = await this.triggerRevealBrokenHand(
+        result.revealBrokenRequest,
+      );
+      if (!revealBrokenScheduled) {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
+      }
     } catch (error) {
       console.error('Error in handleDeclareBlow:', error);
       client.emit('error-message', 'Failed to declare blow');
@@ -1188,8 +1256,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
-      await this.triggerRevealBrokenHand(result.revealBrokenRequest);
-      this.triggerComAutoPlayIfNeeded(data.roomId);
+      const revealBrokenScheduled = await this.triggerRevealBrokenHand(
+        result.revealBrokenRequest,
+      );
+      if (!revealBrokenScheduled) {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
+      }
     } catch (error) {
       console.error('Error in handlePassBlow:', error);
       client.emit('error-message', 'Failed to pass blow');
@@ -1366,25 +1438,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const delay = preparation.delayMs ?? 0;
       const followUp = preparation.followUp;
-      setTimeout(() => {
-        void this.revealBrokenHandUseCase
-          .finalize(followUp)
-          .then((completion) => {
-            if (!completion.success) {
-              console.error(
-                'Failed to finalize broken hand sequence:',
-                completion.error,
-              );
-              return;
-            }
-
-            this.dispatchEvents(completion.events);
-            this.triggerComAutoPlayIfNeeded(data.roomId);
-          })
-          .catch((error) =>
-            console.error('Error finalizing broken hand sequence:', error),
-          );
-      }, delay);
+      this.finalizeBrokenHandAfterDelay(followUp, delay);
     } catch (error) {
       console.error('Error in handleRevealBrokenHand:', error);
       client.emit('error-message', 'Failed to process broken hand');

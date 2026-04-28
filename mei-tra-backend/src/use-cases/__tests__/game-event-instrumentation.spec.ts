@@ -3,6 +3,24 @@ import { PlayCardUseCase } from '../play-card.use-case';
 import { ProcessGameOverUseCase } from '../process-game-over.use-case';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
+import { ICardService } from '../../services/interfaces/card-service.interface';
+
+const createCardServiceMock = () =>
+  ({
+    getCardSuit: (
+      card: string,
+      _trumpType?: Parameters<ICardService['getCardSuit']>[1],
+      baseSuit?: string,
+    ): string => {
+      if (card === 'JOKER') {
+        return baseSuit ?? '';
+      }
+      if (card.startsWith('10')) {
+        return card.slice(2);
+      }
+      return card.slice(-1);
+    },
+  }) as unknown as ICardService;
 
 describe('Game event instrumentation', () => {
   it('logs game_started when a game begins', async () => {
@@ -108,7 +126,11 @@ describe('Game event instrumentation', () => {
       log: jest.fn().mockResolvedValue(undefined),
     } as unknown as IGameEventLogService;
 
-    const useCase = new PlayCardUseCase(roomService, gameEventLogService);
+    const useCase = new PlayCardUseCase(
+      roomService,
+      createCardServiceMock(),
+      gameEventLogService,
+    );
 
     await useCase.execute({ roomId: 'room-1', actorId: 'user-1', card: 'AS' });
 

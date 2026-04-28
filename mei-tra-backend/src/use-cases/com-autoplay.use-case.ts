@@ -6,10 +6,15 @@ import {
 } from './interfaces/com-autoplay-use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IComPlayerService } from '../services/interfaces/com-player-service.interface';
+import { IComStrategyService } from '../services/interfaces/com-strategy-service.interface';
 import {
   IPlayCardUseCase,
   PlayCardResponse,
 } from './interfaces/play-card.use-case.interface';
+import {
+  DeclareBlowResponse,
+  IDeclareBlowUseCase,
+} from './interfaces/declare-blow.use-case.interface';
 import {
   IPassBlowUseCase,
   PassBlowResponse,
@@ -35,8 +40,12 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     private readonly roomService: IRoomService,
     @Inject('IComPlayerService')
     private readonly comPlayerService: IComPlayerService,
+    @Inject('IComStrategyService')
+    private readonly comStrategyService: IComStrategyService,
     @Inject('IPlayCardUseCase')
     private readonly playCardUseCase: IPlayCardUseCase,
+    @Inject('IDeclareBlowUseCase')
+    private readonly declareBlowUseCase: IDeclareBlowUseCase,
     @Inject('IPassBlowUseCase')
     private readonly passBlowUseCase: IPassBlowUseCase,
     @Inject('ISelectNegriUseCase')
@@ -87,7 +96,10 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       state.playState?.negriCard == null &&
       state.blowState.currentHighestDeclaration?.playerId === comPlayer.playerId
     ) {
-      const negriCard = comPlayer.hand[0];
+      const negriCard = this.comStrategyService.chooseNegriCard(
+        state,
+        comPlayer,
+      );
 
       if (!negriCard) {
         return {
@@ -120,14 +132,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       };
     }
 
-    const currentField = state.playState?.currentField ?? null;
-    const currentTrump = state.blowState?.currentTrump ?? null;
-
-    const bestCard = this.comPlayerService.selectBestCard(
-      comPlayer.hand,
-      currentField,
-      currentTrump,
-    );
+    const bestCard = this.comStrategyService.choosePlayCard(state, comPlayer);
 
     const result: PlayCardResponse = await this.playCardUseCase.execute({
       roomId,
@@ -149,9 +154,9 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       !updatedField.baseSuit &&
       updatedField.dealerId === comPlayer.playerId
     ) {
-      updatedField.baseSuit = this.comPlayerService.selectBaseSuit(
-        comPlayer.hand,
-        updatedState.blowState?.currentTrump ?? null,
+      updatedField.baseSuit = this.comStrategyService.chooseBaseSuit(
+        updatedState,
+        comPlayer,
       );
 
       events.push({
@@ -175,12 +180,14 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       await gameState.saveState();
     }
 
-    // Continue if server advanced the turn or completed a field
+    const nextPlayer = updatedState.players[updatedState.currentPlayerIndex];
+    // Continue from the persisted turn owner instead of trusting only emitted
+    // events; this keeps autoplay alive even when a use-case emits no turn event.
     const shouldContinue =
       !completeFieldTrigger &&
-      events.some(
-        (e) => e.event === 'update-turn' || e.event === 'field-complete',
-      );
+      result.success &&
+      !!nextPlayer &&
+      this.comPlayerService.isComPlayer(nextPlayer);
 
     return {
       success: result.success,
@@ -197,11 +204,21 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     comPlayer: DomainPlayer,
     gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
-    // COMは常にパス
-    const result: PassBlowResponse = await this.passBlowUseCase.execute({
-      roomId,
-      actorId: comPlayer.playerId,
-    });
+    const action = this.comStrategyService.chooseBlowAction(
+      gameState.getState(),
+      comPlayer,
+    );
+    const result: PassBlowResponse | DeclareBlowResponse =
+      action.type === 'declare'
+        ? await this.declareBlowUseCase.execute({
+            roomId,
+            actorId: comPlayer.playerId,
+            declaration: action.declaration,
+          })
+        : await this.passBlowUseCase.execute({
+            roomId,
+            actorId: comPlayer.playerId,
+          });
 
     const { events = [], delayedEvents = [] } =
       result as ResponseWithDelayed<PassBlowResponse>;

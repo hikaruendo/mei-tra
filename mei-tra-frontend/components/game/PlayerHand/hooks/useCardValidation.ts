@@ -20,7 +20,7 @@ const getTrumpSuit = (trumpType: TrumpType): string => {
 
 const isSecondaryJack = (card: string, trumpType: TrumpType): boolean => {
   return card === getSecondaryJack(trumpType);
-}
+};
 
 const getPrimaryJack = (trumpType: TrumpType): string => {
   switch (trumpType) {
@@ -37,7 +37,7 @@ const getPrimaryJack = (trumpType: TrumpType): string => {
     default:
       return 'J♥';
   }
-}
+};
 
 const getSecondaryJack = (trumpType: TrumpType): string => {
   switch (trumpType) {
@@ -54,7 +54,7 @@ const getSecondaryJack = (trumpType: TrumpType): string => {
     default:
       return 'J♦';
   }
-}
+};
 
 const getCardSuit = (
   card: string,
@@ -79,7 +79,7 @@ const getCardSuit = (
   }
 
   return card.slice(-1);
-}
+};
 
 export const useCardValidation = (
   playerHand: string[],
@@ -110,7 +110,10 @@ export const useCardValidation = (
 
       const baseCard = currentField.baseCard;
       // If baseCard is Joker, use the selected baseSuit
-      const baseSuit = baseCard === 'JOKER' ? currentField.baseSuit : getCardSuit(baseCard, currentTrump, currentField.baseSuit);
+      const baseSuit =
+        baseCard === 'JOKER'
+          ? currentField.baseSuit
+          : getCardSuit(baseCard, currentTrump, currentField.baseSuit);
       const cardSuit = getCardSuit(card, currentTrump, baseSuit);
 
       // If no trump is set (Tra) or trump is not Tra, use normal suit matching rules
@@ -119,7 +122,11 @@ export const useCardValidation = (
           return { isValid: true };
         }
 
-        if (playerHand.some((c) => getCardSuit(c) === baseSuit)) {
+        if (
+          playerHand.some(
+            (c) => c !== 'JOKER' && getCardSuit(c) === baseSuit,
+          )
+        ) {
           return {
             isValid: false,
             message: `You must play a card of suit ${baseSuit}`,
@@ -136,7 +143,9 @@ export const useCardValidation = (
         // If player has the base suit, they must play it
         if (baseSuit !== cardSuit) {
           const hasBaseSuit = playerHand.some(
-            (c) => getCardSuit(c, currentTrump) === baseSuit,
+            (c) =>
+              c !== 'JOKER' &&
+              getCardSuit(c, currentTrump, baseSuit) === baseSuit,
           );
           if (hasBaseSuit) {
             return {
@@ -148,10 +157,12 @@ export const useCardValidation = (
 
         // If currentTrump matches baseSuit, player has no cards of that suit, and has Joker, they must play Joker
         if (
-          currentTrump === baseSuit &&
+          trumpSuit === baseSuit &&
           playerHand.includes('JOKER') &&
           !playerHand.some(
-            (c) => getCardSuit(c, currentTrump) === baseSuit,
+            (c) =>
+              c !== 'JOKER' &&
+              getCardSuit(c, currentTrump, baseSuit) === baseSuit,
           )
         ) {
           if (card !== 'JOKER') {
@@ -169,7 +180,9 @@ export const useCardValidation = (
           baseSuit === trumpSuit &&
           playerHand.includes('JOKER') &&
           !playerHand.some(
-            (c) => getCardSuit(c, currentTrump) === trumpSuit,
+            (c) =>
+              c !== 'JOKER' &&
+              getCardSuit(c, currentTrump, baseSuit) === trumpSuit,
           )
         ) {
           if (card !== 'JOKER') {
@@ -189,4 +202,4 @@ export const useCardValidation = (
       isValidCardPlay,
     };
   }, [playerHand, currentField, currentTrump]);
-}; 
+};
