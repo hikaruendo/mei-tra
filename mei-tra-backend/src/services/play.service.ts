@@ -5,6 +5,14 @@ import { IPlayService } from './interfaces/play-service.interface';
 
 @Injectable()
 export class PlayService implements IPlayService {
+  private readonly trumpToSuit: Record<TrumpType, string> = {
+    tra: '',
+    herz: '♥',
+    daiya: '♦',
+    club: '♣',
+    zuppe: '♠',
+  };
+
   constructor(private readonly cardService: CardService) {}
 
   determineFieldWinner(
@@ -62,5 +70,88 @@ export class PlayService implements IPlayService {
     });
 
     return winner;
+  }
+
+  getLegalPlayCards(
+    hand: string[],
+    field: Field | null,
+    trump: TrumpType | null,
+  ): string[] {
+    if (hand.length === 0) {
+      return [];
+    }
+
+    if (hand.length === 2 && hand.includes('JOKER')) {
+      return ['JOKER'];
+    }
+
+    if (!field || field.cards.length === 0 || !field.baseCard) {
+      return [...hand];
+    }
+
+    const baseSuit = this.resolveFieldBaseSuit(field, trump);
+    if (!baseSuit) {
+      return [...hand];
+    }
+
+    const suitCards = hand.filter(
+      (card) =>
+        card !== 'JOKER' &&
+        this.cardService.getCardSuit(card, trump, baseSuit) === baseSuit,
+    );
+    const jokerCards = hand.filter((card) => card === 'JOKER');
+
+    if (suitCards.length > 0) {
+      return [...suitCards, ...jokerCards];
+    }
+
+    const trumpSuit = trump ? this.trumpToSuit[trump] : '';
+    const hasJoker = hand.includes('JOKER');
+    const hasTrumpSuit = trumpSuit
+      ? hand.some(
+          (card) =>
+            card !== 'JOKER' &&
+            this.cardService.getCardSuit(card, trump, baseSuit) === trumpSuit,
+        )
+      : false;
+
+    if (hasJoker && baseSuit === trumpSuit && !hasTrumpSuit) {
+      return ['JOKER'];
+    }
+
+    return [...hand];
+  }
+
+  getCardPlayError(
+    hand: string[],
+    field: Field,
+    trump: TrumpType | null,
+    card: string,
+  ): string | null {
+    if (hand.length === 2 && hand.includes('JOKER') && card !== 'JOKER') {
+      return 'In Tanzen round, you must play the Joker if you have it.';
+    }
+
+    const legalCards = this.getLegalPlayCards(hand, field, trump);
+    if (legalCards.includes(card)) {
+      return null;
+    }
+
+    const baseSuit = this.resolveFieldBaseSuit(field, trump);
+    const trumpSuit = trump ? this.trumpToSuit[trump] : '';
+
+    if (baseSuit && baseSuit === trumpSuit && hand.includes('JOKER')) {
+      return `You must play the Joker since you have no ${trumpSuit} cards.`;
+    }
+
+    return baseSuit ? `You must play a card of suit ${baseSuit}.` : null;
+  }
+
+  private resolveFieldBaseSuit(field: Field, trump: TrumpType | null): string {
+    if (field.baseCard === 'JOKER') {
+      return field.baseSuit ?? '';
+    }
+
+    return this.cardService.getCardSuit(field.baseCard, trump, field.baseSuit);
   }
 }

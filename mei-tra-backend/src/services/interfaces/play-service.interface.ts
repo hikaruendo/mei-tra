@@ -6,4 +6,17 @@ export interface IPlayService {
     players: DomainPlayer[],
     trumpSuit: TrumpType | null,
   ): DomainPlayer | null;
+
+  getLegalPlayCards(
+    hand: string[],
+    field: Field | null,
+    trump: TrumpType | null,
+  ): string[];
+
+  getCardPlayError(
+    hand: string[],
+    field: Field,
+    trump: TrumpType | null,
+    card: string,
+  ): string | null;
 }

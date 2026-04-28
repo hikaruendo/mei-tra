@@ -21,34 +21,30 @@ type TrumpEvaluation = {
   score: number;
 };
 
+const TRUMP_TYPES: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz', 'tra'];
+const TRUMP_STRENGTH: Record<TrumpType, number> = {
+  zuppe: 1,
+  club: 2,
+  daiya: 3,
+  herz: 4,
+  tra: 5,
+};
+const TRUMP_TO_SUIT: Record<TrumpType, string> = {
+  zuppe: '♠',
+  club: '♣',
+  daiya: '♦',
+  herz: '♥',
+  tra: '',
+};
+const SUITS = ['♠', '♥', '♦', '♣'];
+const NON_DECLARABLE_PAIRS = 5;
+const MIN_DECLARATION_SCORE = 3.8;
+const SCORE_PER_ESTIMATED_PAIR = 1.35;
+const ESTIMATED_PAIR_BASELINE = 5;
+const MAX_ESTIMATED_PAIRS = 10;
+
 @Injectable()
 export class ComStrategyService implements IComStrategyService {
-  private readonly trumpTypes: TrumpType[] = [
-    'zuppe',
-    'club',
-    'daiya',
-    'herz',
-    'tra',
-  ];
-
-  private readonly trumpStrength: Record<TrumpType, number> = {
-    zuppe: 1,
-    club: 2,
-    daiya: 3,
-    herz: 4,
-    tra: 5,
-  };
-
-  private readonly trumpToSuit: Record<TrumpType, string> = {
-    zuppe: '♠',
-    club: '♣',
-    daiya: '♦',
-    herz: '♥',
-    tra: '',
-  };
-
-  private readonly suits = ['♠', '♥', '♦', '♣'];
-
   constructor(
     @Inject('ICardService')
     private readonly cardService: ICardService,
@@ -69,16 +65,14 @@ export class ComStrategyService implements IComStrategyService {
       : null;
     const currentHighestIsPartner =
       currentHighestPlayer?.team === comPlayer.team;
-    const evaluations = this.trumpTypes
-      .map((trumpType) => this.evaluateHandForTrump(comPlayer.hand, trumpType))
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        return (
-          this.trumpStrength[b.trumpType] - this.trumpStrength[a.trumpType]
-        );
-      });
+    const evaluations = TRUMP_TYPES.map((trumpType) =>
+      this.evaluateHandForTrump(comPlayer.hand, trumpType),
+    ).sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return TRUMP_STRENGTH[b.trumpType] - TRUMP_STRENGTH[a.trumpType];
+    });
 
     if (evaluations.length === 0 || evaluations[0].estimatedPairs < 6) {
       return { type: 'pass' };
@@ -120,7 +114,11 @@ export class ComStrategyService implements IComStrategyService {
   choosePlayCard(state: GameState, comPlayer: DomainPlayer): string {
     const field = state.playState?.currentField ?? null;
     const trump = state.blowState.currentTrump;
-    const legalCards = this.getLegalPlayCards(comPlayer.hand, field, trump);
+    const legalCards = this.playService.getLegalPlayCards(
+      comPlayer.hand,
+      field,
+      trump,
+    );
 
     if (legalCards.length === 0) {
       throw new Error('COM player has no legal cards to play');
@@ -178,76 +176,24 @@ export class ComStrategyService implements IComStrategyService {
 
   chooseBaseSuit(state: GameState, comPlayer: DomainPlayer): string {
     const trump = state.blowState.currentTrump;
-    const preferredTrumpSuit = trump ? this.trumpToSuit[trump] : '';
-    const rankedSuits = this.suits
-      .map((suit) => ({
-        suit,
-        score: this.baseSuitControlScore(comPlayer.hand, suit, trump),
-      }))
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        if (a.suit === preferredTrumpSuit) {
-          return -1;
-        }
-        if (b.suit === preferredTrumpSuit) {
-          return 1;
-        }
-        return this.suits.indexOf(a.suit) - this.suits.indexOf(b.suit);
-      });
+    const preferredTrumpSuit = trump ? TRUMP_TO_SUIT[trump] : '';
+    const rankedSuits = SUITS.map((suit) => ({
+      suit,
+      score: this.baseSuitControlScore(comPlayer.hand, suit, trump),
+    })).sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      if (a.suit === preferredTrumpSuit) {
+        return -1;
+      }
+      if (b.suit === preferredTrumpSuit) {
+        return 1;
+      }
+      return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+    });
 
     return rankedSuits[0]?.suit ?? '♠';
-  }
-
-  getLegalPlayCards(
-    hand: string[],
-    field: Field | null,
-    trump: TrumpType | null,
-  ): string[] {
-    if (hand.length === 0) {
-      return [];
-    }
-
-    if (hand.length === 2 && hand.includes('JOKER')) {
-      return ['JOKER'];
-    }
-
-    if (!field || field.cards.length === 0 || !field.baseCard) {
-      return [...hand];
-    }
-
-    const baseSuit = this.resolveFieldBaseSuit(field, trump);
-    if (!baseSuit) {
-      return [...hand];
-    }
-
-    const suitCards = hand.filter(
-      (card) =>
-        card !== 'JOKER' &&
-        this.cardService.getCardSuit(card, trump, baseSuit) === baseSuit,
-    );
-    const jokerCards = hand.filter((card) => card === 'JOKER');
-
-    if (suitCards.length > 0) {
-      return [...suitCards, ...jokerCards];
-    }
-
-    const trumpSuit = trump ? this.trumpToSuit[trump] : '';
-    const hasJoker = hand.includes('JOKER');
-    const hasTrumpSuit = trumpSuit
-      ? hand.some(
-          (card) =>
-            card !== 'JOKER' &&
-            this.cardService.getCardSuit(card, trump, baseSuit) === trumpSuit,
-        )
-      : false;
-
-    if (hasJoker && baseSuit === trumpSuit && !hasTrumpSuit) {
-      return ['JOKER'];
-    }
-
-    return [...hand];
   }
 
   private chooseLeadCard(
@@ -319,7 +265,7 @@ export class ComStrategyService implements IComStrategyService {
         candidates.push({
           ...declaration,
           risk: pairs - evaluation.estimatedPairs,
-          trumpStrength: this.trumpStrength[evaluation.trumpType],
+          trumpStrength: TRUMP_STRENGTH[evaluation.trumpType],
         });
       }
     }
@@ -344,7 +290,7 @@ export class ComStrategyService implements IComStrategyService {
     hand: string[],
     trumpType: TrumpType,
   ): TrumpEvaluation {
-    const trumpSuit = this.trumpToSuit[trumpType];
+    const trumpSuit = TRUMP_TO_SUIT[trumpType];
     const suitCounts = this.countSuits(hand, trumpType);
     let score = 0;
 
@@ -379,7 +325,7 @@ export class ComStrategyService implements IComStrategyService {
     score += Math.max(0, trumpCount - 2) * 0.25;
 
     if (trumpSuit) {
-      for (const suit of this.suits) {
+      for (const suit of SUITS) {
         if (suit === trumpSuit) {
           continue;
         }
@@ -393,13 +339,23 @@ export class ComStrategyService implements IComStrategyService {
     }
 
     const estimatedPairs =
-      score < 3.8 ? 5 : Math.min(10, Math.max(6, Math.floor(5 + score / 1.35)));
+      score < MIN_DECLARATION_SCORE
+        ? NON_DECLARABLE_PAIRS
+        : Math.min(
+            MAX_ESTIMATED_PAIRS,
+            Math.max(
+              6,
+              Math.floor(
+                ESTIMATED_PAIR_BASELINE + score / SCORE_PER_ESTIMATED_PAIR,
+              ),
+            ),
+          );
 
     return { trumpType, estimatedPairs, score };
   }
 
   private scoreNeededForPairs(numberOfPairs: number): number {
-    return (numberOfPairs - 5) * 1.35;
+    return (numberOfPairs - ESTIMATED_PAIR_BASELINE) * SCORE_PER_ESTIMATED_PAIR;
   }
 
   private trumpCardValue(rank: string): number {
@@ -478,7 +434,7 @@ export class ComStrategyService implements IComStrategyService {
 
     const rank = this.getRank(card);
     const suit = this.cardService.getCardSuit(card, trump);
-    const trumpSuit = trump ? this.trumpToSuit[trump] : '';
+    const trumpSuit = trump ? TRUMP_TO_SUIT[trump] : '';
     const suitCount = hand.filter(
       (handCard) =>
         handCard !== 'JOKER' &&
@@ -543,7 +499,7 @@ export class ComStrategyService implements IComStrategyService {
     }
     const rank = this.getRank(card);
     const suit = this.cardService.getCardSuit(card, trump);
-    const trumpSuit = trump ? this.trumpToSuit[trump] : '';
+    const trumpSuit = trump ? TRUMP_TO_SUIT[trump] : '';
     return (
       rank === 'A' ||
       rank === 'K' ||
@@ -638,7 +594,7 @@ export class ComStrategyService implements IComStrategyService {
   }
 
   private getPrimaryJack(trump: TrumpType): string {
-    return `J${this.trumpToSuit[trump]}`;
+    return `J${TRUMP_TO_SUIT[trump]}`;
   }
 
   private getSecondaryJack(trump: TrumpType): string {

@@ -55,4 +55,35 @@ describe('PlayService', () => {
 
     expect(winner?.playerId).toBe('com-1');
   });
+
+  it('returns only base-suit cards when the hand can follow suit', () => {
+    const field: Field = {
+      cards: ['K♠'],
+      playedBy: ['player-2'],
+      baseCard: 'K♠',
+      dealerId: 'player-2',
+      isComplete: false,
+    };
+
+    expect(
+      playService.getLegalPlayCards(['5♠', 'A♥'], field, 'club'),
+    ).toEqual(['5♠']);
+  });
+
+  it('requires Joker in Tanzen when the hand has it', () => {
+    const field: Field = {
+      cards: [],
+      playedBy: [],
+      baseCard: '',
+      dealerId: 'player-1',
+      isComplete: false,
+    };
+
+    expect(
+      playService.getLegalPlayCards(['JOKER', 'A♥'], field, 'club'),
+    ).toEqual(['JOKER']);
+    expect(
+      playService.getCardPlayError(['JOKER', 'A♥'], field, 'club', 'A♥'),
+    ).toContain('must play the Joker');
+  });
 });

@@ -31,6 +31,8 @@ import { ICardService } from '../../services/interfaces/card-service.interface';
 import { IPlayService } from '../../services/interfaces/play-service.interface';
 import { IScoreService } from '../../services/interfaces/score-service.interface';
 import { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
+import { CardService } from '../../services/card.service';
+import { PlayService } from '../../services/play.service';
 describe('Game Use Cases', () => {
   const createRoomServiceMock = () => {
     const mock: Partial<jest.Mocked<IRoomService>> = {
@@ -81,6 +83,8 @@ describe('Game Use Cases', () => {
     };
     return mock as jest.Mocked<ICardService>;
   };
+
+  const createPlayRulesService = () => new PlayService(new CardService());
 
   const createPlayServiceMock = (winnerId: string) => {
     const determineFieldWinnerMock = jest.fn<
@@ -995,7 +999,10 @@ describe('Game Use Cases', () => {
   describe('PlayCardUseCase', () => {
     it('plays a card and advances turn when field not complete', async () => {
       const roomService = createRoomServiceMock();
-      const useCase = new PlayCardUseCase(roomService, createCardServiceMock());
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
 
       const currentField: Field = {
         cards: [],
@@ -1086,7 +1093,10 @@ describe('Game Use Cases', () => {
 
     it('returns complete field trigger when field reaches four cards', async () => {
       const roomService = createRoomServiceMock();
-      const useCase = new PlayCardUseCase(roomService, createCardServiceMock());
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
 
       const fieldBefore: Field = {
         cards: ['C1', 'C2', 'C3'],
@@ -1148,7 +1158,10 @@ describe('Game Use Cases', () => {
 
     it('rejects off-suit play when the player has the base suit', async () => {
       const roomService = createRoomServiceMock();
-      const useCase = new PlayCardUseCase(roomService, createCardServiceMock());
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
       const currentField: Field = {
         cards: ['K♠'],
         playedBy: ['player-2'],
@@ -1193,7 +1206,10 @@ describe('Game Use Cases', () => {
 
     it('allows off-suit play when the player has no base suit', async () => {
       const roomService = createRoomServiceMock();
-      const useCase = new PlayCardUseCase(roomService, createCardServiceMock());
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
       const currentField: Field = {
         cards: ['K♠'],
         playedBy: ['player-2'],
@@ -1246,7 +1262,10 @@ describe('Game Use Cases', () => {
 
     it('requires Joker in Tanzen when the player has it', async () => {
       const roomService = createRoomServiceMock();
-      const useCase = new PlayCardUseCase(roomService, createCardServiceMock());
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
       const currentField: Field = {
         cards: [],
         playedBy: [],
@@ -1302,7 +1321,6 @@ describe('Game Use Cases', () => {
         chooseNegriCard: jest.fn(),
         choosePlayCard: jest.fn(() => 'JOKER'),
         chooseBaseSuit: jest.fn(() => '♣'),
-        getLegalPlayCards: jest.fn(),
       };
       const playCardUseCase = {
         execute: jest.fn(),
@@ -1434,7 +1452,6 @@ describe('Game Use Cases', () => {
         chooseNegriCard: jest.fn(() => '6♥'),
         choosePlayCard: jest.fn(),
         chooseBaseSuit: jest.fn(),
-        getLegalPlayCards: jest.fn(),
       };
       const playCardUseCase = {
         execute: jest.fn(),
@@ -1567,7 +1584,6 @@ describe('Game Use Cases', () => {
         chooseNegriCard: jest.fn(),
         choosePlayCard: jest.fn(),
         chooseBaseSuit: jest.fn(),
-        getLegalPlayCards: jest.fn(),
       };
       const playCardUseCase = {
         execute: jest.fn(),

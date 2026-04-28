@@ -1,9 +1,4 @@
-import {
-  DomainPlayer,
-  Field,
-  GameState,
-  TrumpType,
-} from '../../types/game.types';
+import { DomainPlayer, GameState, TrumpType } from '../../types/game.types';
 
 export type ComBlowAction =
   | {
@@ -20,9 +15,4 @@ export interface IComStrategyService {
   chooseNegriCard(state: GameState, comPlayer: DomainPlayer): string;
   choosePlayCard(state: GameState, comPlayer: DomainPlayer): string;
   chooseBaseSuit(state: GameState, comPlayer: DomainPlayer): string;
-  getLegalPlayCards(
-    hand: string[],
-    field: Field | null,
-    trump: TrumpType | null,
-  ): string[];
 }

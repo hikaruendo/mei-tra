@@ -12,23 +12,15 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { ICardService } from '../services/interfaces/card-service.interface';
-import { Field, TrumpType } from '../types/game.types';
+import { IPlayService } from '../services/interfaces/play-service.interface';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
   private readonly logger = new Logger(PlayCardUseCase.name);
-  private readonly trumpToSuit: Record<TrumpType, string> = {
-    tra: '',
-    herz: '♥',
-    daiya: '♦',
-    club: '♣',
-    zuppe: '♠',
-  };
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
-    @Inject('ICardService') private readonly cardService: ICardService,
+    @Inject('IPlayService') private readonly playService: IPlayService,
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
@@ -78,7 +70,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      const legalPlayError = this.getLegalPlayError(
+      const legalPlayError = this.playService.getCardPlayError(
         player.hand,
         state.playState.currentField,
         state.blowState?.currentTrump ?? null,
@@ -171,63 +163,5 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       );
       return { success: false, error: 'Internal server error' };
     }
-  }
-
-  private getLegalPlayError(
-    hand: string[],
-    currentField: Field,
-    currentTrump: TrumpType | null,
-    card: string,
-  ): string | null {
-    if (hand.length === 2 && hand.includes('JOKER') && card !== 'JOKER') {
-      return 'In Tanzen round, you must play the Joker if you have it.';
-    }
-
-    if (card === 'JOKER') {
-      return null;
-    }
-
-    if (!currentField.cards.length || !currentField.baseCard) {
-      return null;
-    }
-
-    const baseSuit =
-      currentField.baseCard === 'JOKER'
-        ? currentField.baseSuit
-        : this.cardService.getCardSuit(
-            currentField.baseCard,
-            currentTrump,
-            currentField.baseSuit,
-          );
-
-    if (!baseSuit) {
-      return null;
-    }
-
-    const cardSuit = this.cardService.getCardSuit(card, currentTrump, baseSuit);
-    const hasBaseSuit = hand.some(
-      (handCard) =>
-        handCard !== 'JOKER' &&
-        this.cardService.getCardSuit(handCard, currentTrump, baseSuit) ===
-          baseSuit,
-    );
-
-    if (cardSuit !== baseSuit && hasBaseSuit) {
-      return `You must play a card of suit ${baseSuit}.`;
-    }
-
-    const trumpSuit = currentTrump ? this.trumpToSuit[currentTrump] : '';
-    const hasNonJokerTrump = hand.some(
-      (handCard) =>
-        handCard !== 'JOKER' &&
-        this.cardService.getCardSuit(handCard, currentTrump, baseSuit) ===
-          trumpSuit,
-    );
-
-    if (baseSuit === trumpSuit && hand.includes('JOKER') && !hasNonJokerTrump) {
-      return `You must play the Joker since you have no ${trumpSuit} cards.`;
-    }
-
-    return null;
   }
 }
