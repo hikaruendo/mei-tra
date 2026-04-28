@@ -12,6 +12,7 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
+import { IPlayService } from '../services/interfaces/play-service.interface';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -19,6 +20,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
+    @Inject('IPlayService') private readonly playService: IPlayService,
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
@@ -66,6 +68,16 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           success: false,
           error: 'Card already played on the field',
         };
+      }
+
+      const legalPlayError = this.playService.getCardPlayError(
+        player.hand,
+        state.playState.currentField,
+        state.blowState?.currentTrump ?? null,
+        card,
+      );
+      if (legalPlayError) {
+        return { success: false, error: legalPlayError };
       }
 
       // Remove the card from player's hand

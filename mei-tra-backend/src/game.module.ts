@@ -9,6 +9,7 @@ import { PlayService } from './services/play.service';
 import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
 import { ComPlayerService } from './services/com-player.service';
+import { ComStrategyService } from './services/com-strategy.service';
 import { ComAutoPlayService } from './services/com-autoplay.service';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { AuthModule } from './auth/auth.module';
@@ -114,6 +115,11 @@ import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-gam
     {
       provide: 'IComPlayerService',
       useExisting: ComPlayerService,
+    },
+    ComStrategyService,
+    {
+      provide: 'IComStrategyService',
+      useExisting: ComStrategyService,
     },
     ComAutoPlayService,
     {
