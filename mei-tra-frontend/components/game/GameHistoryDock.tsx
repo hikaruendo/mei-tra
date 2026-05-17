@@ -105,7 +105,7 @@ export function GameHistoryDock({
     'all' | GameHistoryActionType
   >('all');
   const [selectedPlayerId, setSelectedPlayerId] = useState<'all' | string>('all');
-  const entryLimit = variant === 'page' ? 250 : 25;
+  const entryLimit = variant === 'page' ? undefined : 25;
   const historyEnabled = variant === 'page' || !isMinimized;
   const replayQuery = useMemo(
     () => ({
