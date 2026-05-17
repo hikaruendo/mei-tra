@@ -98,4 +98,50 @@ describe('SupabaseGameHistoryRepository', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]?.id).toBe('history-2');
   });
+
+  it('deletes game history for finished rooms outside the recent limit', async () => {
+    const roomsOrder = jest.fn().mockResolvedValue({
+      data: [
+        { id: 'room-1' },
+        { id: 'room-2' },
+        { id: 'room-3' },
+        { id: 'room-4' },
+      ],
+      error: null,
+    });
+    const roomsEq = jest.fn().mockReturnValue({ order: roomsOrder });
+    const roomsSelect = jest.fn().mockReturnValue({ eq: roomsEq });
+
+    const historyIn = jest.fn().mockResolvedValue({ count: 2, error: null });
+    const historyDelete = jest.fn().mockReturnValue({ in: historyIn });
+
+    const from = jest.fn((table: string) => {
+      if (table === 'rooms') {
+        return { select: roomsSelect };
+      }
+
+      if (table === 'game_history') {
+        return { delete: historyDelete };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const supabaseService = {
+      client: { from },
+    } as unknown as SupabaseService;
+
+    const repository = new SupabaseGameHistoryRepository(supabaseService);
+
+    await expect(
+      repository.deleteForFinishedRoomsOutsideRecentLimit(2),
+    ).resolves.toBe(2);
+
+    expect(roomsEq).toHaveBeenCalledWith('status', 'finished');
+    expect(roomsOrder).toHaveBeenCalledWith('last_activity_at', {
+      ascending: false,
+    });
+    expect(historyDelete).toHaveBeenCalledWith({ count: 'exact' });
+    expect(historyIn).toHaveBeenCalledWith('room_id', ['room-3', 'room-4']);
+  });
 });

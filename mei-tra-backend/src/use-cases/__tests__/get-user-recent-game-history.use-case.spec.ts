@@ -118,4 +118,94 @@ describe('GetUserRecentGameHistoryUseCase', () => {
       'room-2',
     );
   });
+
+  it('omits finished rooms whose retained history has been pruned', async () => {
+    const roomRepository: Pick<IRoomRepository, 'findRecentFinishedByUserId'> =
+      {
+        findRecentFinishedByUserId: jest.fn().mockResolvedValue([
+          {
+            id: 'room-with-history',
+            name: 'Retained room',
+            hostId: 'host-1',
+            status: RoomStatus.FINISHED,
+            players: [],
+            settings: {
+              maxPlayers: 4,
+              isPrivate: false,
+              password: null,
+              teamAssignmentMethod: 'random',
+              pointsToWin: 7,
+              allowSpectators: true,
+            },
+            createdAt: new Date('2026-04-16T00:00:00.000Z'),
+            updatedAt: new Date('2026-04-16T00:05:00.000Z'),
+            lastActivityAt: new Date('2026-04-16T00:05:00.000Z'),
+          },
+          {
+            id: 'pruned-room',
+            name: 'Pruned room',
+            hostId: 'host-2',
+            status: RoomStatus.FINISHED,
+            players: [],
+            settings: {
+              maxPlayers: 4,
+              isPrivate: false,
+              password: null,
+              teamAssignmentMethod: 'random',
+              pointsToWin: 7,
+              allowSpectators: true,
+            },
+            createdAt: new Date('2026-04-15T00:00:00.000Z'),
+            updatedAt: new Date('2026-04-15T00:05:00.000Z'),
+            lastActivityAt: new Date('2026-04-15T00:05:00.000Z'),
+          },
+        ]),
+      };
+
+    const gameEventLogService: IGameEventLogService = {
+      log: jest.fn(),
+      listByRoomId: jest.fn(),
+      replayByRoomId: jest.fn(),
+      summarizeByRoomId: jest
+        .fn()
+        .mockResolvedValueOnce({
+          roomId: 'room-with-history',
+          totalEntries: 2,
+          byActionType: { game_over: 1 },
+          playerIds: ['player-1'],
+          playerNames: { 'player-1': 'Player 1' },
+          status: 'completed' as const,
+          winningTeam: 0,
+          lastActionType: 'game_over' as const,
+          roundNumbers: [1],
+          firstTimestamp: new Date('2026-04-16T00:00:00.000Z'),
+          lastTimestamp: new Date('2026-04-16T00:05:00.000Z'),
+        })
+        .mockResolvedValueOnce({
+          roomId: 'pruned-room',
+          totalEntries: 0,
+          byActionType: {},
+          playerIds: [],
+          playerNames: {},
+          status: 'in_progress' as const,
+          winningTeam: null,
+          lastActionType: null,
+          roundNumbers: [],
+          firstTimestamp: null,
+          lastTimestamp: null,
+        }),
+    };
+
+    const useCase = new GetUserRecentGameHistoryUseCase(
+      roomRepository as IRoomRepository,
+      gameEventLogService,
+    );
+
+    await expect(useCase.execute('user-1')).resolves.toEqual([
+      expect.objectContaining({
+        roomId: 'room-with-history',
+        totalEntries: 2,
+      }),
+    ]);
+  });
 });

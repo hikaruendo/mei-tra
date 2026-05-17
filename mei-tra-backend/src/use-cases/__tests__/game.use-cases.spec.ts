@@ -2341,6 +2341,7 @@ describe('Game Use Cases', () => {
       const roomService = createRoomServiceMock();
       const gameEventLogService = {
         log: jest.fn().mockResolvedValue(undefined),
+        pruneFinishedRoomHistory: jest.fn().mockResolvedValue(0),
       } as unknown as jest.Mocked<IGameEventLogService>;
       const useCase = new ProcessGameOverUseCase(
         roomService,
@@ -2391,6 +2392,7 @@ describe('Game Use Cases', () => {
           }),
         }),
       );
+      expect(gameEventLogService.pruneFinishedRoomHistory).toHaveBeenCalled();
     });
   });
 

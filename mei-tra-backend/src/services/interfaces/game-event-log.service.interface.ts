@@ -36,4 +36,5 @@ export interface IGameEventLogService {
     roomId: string,
     query?: GameHistoryQuery,
   ): Promise<GameHistoryReplayView>;
+  pruneFinishedRoomHistory?(keepRecentRooms?: number): Promise<number>;
 }

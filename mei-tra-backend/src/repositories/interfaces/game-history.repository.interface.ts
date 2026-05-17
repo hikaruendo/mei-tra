@@ -10,4 +10,5 @@ export interface IGameHistoryRepository {
     roomId: string,
     query?: GameHistoryQuery,
   ): Promise<GameHistoryEntry[]>;
+  deleteForFinishedRoomsOutsideRecentLimit(limit: number): Promise<number>;
 }
