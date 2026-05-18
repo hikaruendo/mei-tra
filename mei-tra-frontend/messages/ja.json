@@ -420,6 +420,7 @@
     "noLastAction": "なし",
     "entriesMetric": "{count}件",
     "startingHand": "このラウンドの自分の手札",
+    "redealtHand": "繰り直し後の自分の手札",
     "noStartingHand": "手札ログなし",
     "unknownPlayer": "不明なプレイヤー",
     "unknownValue": "不明",

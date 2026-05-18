@@ -348,9 +348,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       !clientSocket &&
       (targetPlayer?.isCOM || targetPlayer?.playerId.startsWith('com-'))
     ) {
+      const preparation = await this.revealBrokenHandUseCase.prepare({
+        roomId: request.roomId,
+        actorId: request.playerId,
+        playerId: request.playerId,
+      });
+
+      if (!preparation.success || !preparation.followUp) {
+        console.warn(
+          '[GameGateway] Failed to prepare COM broken hand reveal',
+          preparation.error,
+        );
+        return false;
+      }
+
       this.finalizeBrokenHandAfterDelay(
-        { roomId: request.roomId, playerId: request.playerId },
-        3000,
+        preparation.followUp,
+        preparation.delayMs ?? 3000,
       );
       return true;
     }

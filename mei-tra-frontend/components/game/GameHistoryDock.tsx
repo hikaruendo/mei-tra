@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { Link } from '@/i18n/routing';
@@ -530,76 +531,151 @@ export function GameHistoryDock({
     return [...highlights].slice(0, 4);
   };
 
+  const renderEventItem = (
+    event: GameHistoryReplayEvent,
+    roundNumber: number | null,
+  ) => {
+    const eventDetails = getEventDetails(event);
+
+    return (
+      <li key={event.id} className={styles.eventItem}>
+        <div className={styles.eventMetaRow}>
+          <div className={styles.eventTimestamp}>
+            {event.timestamp.toLocaleTimeString()}
+          </div>
+          <div className={styles.eventBadges}>
+            <span className={styles.eventBadge}>
+              {roundNumber === null
+                ? t('preGame')
+                : t('round', { round: roundNumber })}
+            </span>
+            <span className={styles.eventBadge}>
+              {getActionLabel(event.actionType)}
+            </span>
+            {formatPlayer(event.playerId) ? (
+              <span className={styles.eventBadgeMuted}>
+                {formatPlayer(event.playerId)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div className={styles.eventSummary}>
+          {formatEventSummary(event)}
+        </div>
+        {eventDetails.length > 0 ? (
+          <div className={styles.eventDetails}>
+            {eventDetails.map((detail) => (
+              <span key={`${event.id}-${detail}`} className={styles.detailChip}>
+                {detail}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </li>
+    );
+  };
+
   const renderEventList = (
     items: Array<{ event: GameHistoryReplayEvent; roundNumber: number | null }>,
   ) => (
     <ul className={styles.eventList}>
-      {items.map(({ event, roundNumber }) => {
-        const eventDetails = getEventDetails(event);
-
-        return (
-          <li key={event.id} className={styles.eventItem}>
-            <div className={styles.eventMetaRow}>
-              <div className={styles.eventTimestamp}>
-                {event.timestamp.toLocaleTimeString()}
-              </div>
-              <div className={styles.eventBadges}>
-                <span className={styles.eventBadge}>
-                  {roundNumber === null
-                    ? t('preGame')
-                    : t('round', { round: roundNumber })}
-                </span>
-                <span className={styles.eventBadge}>
-                  {getActionLabel(event.actionType)}
-                </span>
-                {formatPlayer(event.playerId) ? (
-                  <span className={styles.eventBadgeMuted}>
-                    {formatPlayer(event.playerId)}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-            <div className={styles.eventSummary}>
-              {formatEventSummary(event)}
-            </div>
-            {eventDetails.length > 0 ? (
-              <div className={styles.eventDetails}>
-                {eventDetails.map((detail) => (
-                  <span key={`${event.id}-${detail}`} className={styles.detailChip}>
-                    {detail}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </li>
-        );
-      })}
+      {items.map(({ event, roundNumber }) => renderEventItem(event, roundNumber))}
     </ul>
   );
 
-  const renderStartingHand = (round: GameHistoryReplayRound) => {
-    const hand = round.viewerStartingHand ?? [];
+  const extractViewerHand = (event: GameHistoryReplayEvent): string[] => {
+    const hand = event.actionData.viewerStartingHand;
 
-    return (
-      <div className={styles.startingHandPanel}>
-        <span className={styles.startingHandLabel}>{t('startingHand')}</span>
-        {hand.length > 0 ? (
-          <div className={styles.startingHandCards}>
-            {hand.map((card, index) => (
-              <CardFace
-                key={`${round.roundNumber}-${card}-${index}`}
-                card={card}
-                className={styles.startingHandCard}
-              />
-            ))}
-          </div>
-        ) : (
-          <span className={styles.startingHandEmpty}>{t('noStartingHand')}</span>
-        )}
-      </div>
-    );
+    return Array.isArray(hand)
+      ? hand.filter((card): card is string => typeof card === 'string')
+      : [];
   };
 
+  const renderHandSnapshot = (
+    label: string,
+    hand: string[],
+    keyPrefix: string,
+  ) => (
+    <div className={styles.startingHandPanel}>
+      <span className={styles.startingHandLabel}>{label}</span>
+      {hand.length > 0 ? (
+        <div className={styles.startingHandCards}>
+          {hand.map((card, index) => (
+            <CardFace
+              key={`${keyPrefix}-${card}-${index}`}
+              card={card}
+              className={styles.startingHandCard}
+            />
+          ))}
+        </div>
+      ) : (
+        <span className={styles.startingHandEmpty}>{t('noStartingHand')}</span>
+      )}
+    </div>
+  );
+
+  const renderRoundTimeline = (
+    round: GameHistoryReplayRound,
+    events: GameHistoryReplayEvent[],
+  ) => {
+    const items: ReactNode[] = [];
+    let renderedInitialHand = false;
+
+    events.forEach((event) => {
+      const hand = extractViewerHand(event);
+      const isBrokenHand = event.actionType === 'broken_hand_revealed';
+
+      if (hand.length > 0 && !isBrokenHand && !renderedInitialHand) {
+        items.push(
+          <li
+            key={`${event.id}-starting-hand`}
+            className={styles.handSnapshotItem}
+          >
+            {renderHandSnapshot(
+              t('startingHand'),
+              hand,
+              `${event.id}-starting-hand`,
+            )}
+          </li>,
+        );
+        renderedInitialHand = true;
+      }
+
+      items.push(renderEventItem(event, round.roundNumber));
+
+      if (hand.length > 0 && isBrokenHand) {
+        items.push(
+          <li
+            key={`${event.id}-redealt-hand`}
+            className={styles.handSnapshotItem}
+          >
+            {renderHandSnapshot(
+              t('redealtHand'),
+              hand,
+              `${event.id}-redealt-hand`,
+            )}
+          </li>,
+        );
+      }
+    });
+
+    if (!renderedInitialHand && items.length > 0) {
+      items.unshift(
+        <li
+          key={`${round.roundNumber ?? 'pre-game'}-starting-hand-fallback`}
+          className={styles.handSnapshotItem}
+        >
+          {renderHandSnapshot(
+            t('startingHand'),
+            round.viewerStartingHand ?? [],
+            `${round.roundNumber ?? 'pre-game'}-starting-hand-fallback`,
+          )}
+        </li>,
+      );
+    }
+
+    return <ul className={styles.eventList}>{items}</ul>;
+  };
   if (variant === 'dock' && isMinimized) {
     return (
       <div className={styles.minimized}>
@@ -830,7 +906,6 @@ export function GameHistoryDock({
                         </div>
                       </summary>
                       <div className={styles.roundSectionBody}>
-                        {renderStartingHand(round)}
                         {roundHighlights.length > 0 ? (
                           <div className={styles.breakdown}>
                             {roundHighlights.map((highlight) => (
@@ -840,12 +915,7 @@ export function GameHistoryDock({
                             ))}
                           </div>
                         ) : null}
-                        {renderEventList(
-                          chronologicalEvents.map((event) => ({
-                            event,
-                            roundNumber: round.roundNumber,
-                          })),
-                        )}
+                        {renderRoundTimeline(round, chronologicalEvents)}
                       </div>
                     </details>
                   );

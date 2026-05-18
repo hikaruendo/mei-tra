@@ -43,10 +43,14 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player mismatch for broken hand' };
       }
 
+      if (!player.hasRequiredBroken) {
+        return { success: false, error: 'Player does not have broken hand' };
+      }
+
       return {
         success: true,
         delayMs: 3000,
-        followUp: { roomId, playerId },
+        followUp: { roomId, playerId, handSnapshot: [...player.hand] },
       };
     } catch (error) {
       this.logger.error(
@@ -60,6 +64,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
   async finalize(followUp: {
     roomId: string;
     playerId: string;
+    handSnapshot?: string[];
   }): Promise<RevealBrokenHandCompletion> {
     try {
       const { roomId, playerId } = followUp;
@@ -69,6 +74,17 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
+      }
+
+      if (!player.hasRequiredBroken) {
+        return { success: false, error: 'Player does not have broken hand' };
+      }
+
+      if (
+        followUp.handSnapshot &&
+        !this.isSameHand(player.hand, followUp.handSnapshot)
+      ) {
+        return { success: false, error: 'Broken hand request is stale' };
       }
 
       await roomGameState.transitionPhase('blow');
@@ -162,5 +178,13 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       );
       return { success: false, error: 'Internal server error' };
     }
+  }
+
+  private isSameHand(currentHand: string[], snapshot: string[]): boolean {
+    if (currentHand.length !== snapshot.length) {
+      return false;
+    }
+
+    return currentHand.every((card, index) => card === snapshot[index]);
   }
 }
