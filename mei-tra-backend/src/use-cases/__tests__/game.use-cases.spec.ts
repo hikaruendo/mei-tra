@@ -2150,6 +2150,85 @@ describe('Game Use Cases', () => {
       expect(roomGameState.saveState).not.toHaveBeenCalled();
       expect(gameEventLogService.log).not.toHaveBeenCalled();
     });
+
+    it('allows optional broken hand reveal when the player has normal broken', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state: {
+        players: DomainPlayer[];
+        blowState: BlowState;
+        currentPlayerIndex: number;
+        gamePhase: 'play' | 'blow';
+        deck: string[];
+      } = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['2♣', '3♦'],
+            team: 0,
+            isPasser: false,
+            hasBroken: true,
+            hasRequiredBroken: false,
+          },
+        ],
+        blowState: {
+          currentTrump: null,
+          declarations: [],
+          actionHistory: [],
+          currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
+        currentPlayerIndex: 0,
+        gamePhase: 'blow',
+        deck: [],
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        dealCards: jest.fn(() => {
+          state.players[0].hand = ['X1', 'X2'];
+        }),
+        transitionPhase: jest.fn().mockImplementation(async (phase) => {
+          state.gamePhase = phase;
+        }),
+        findPlayerByActorId: jest.fn(
+          (actorId: string) =>
+            state.players.find((player) => player.playerId === actorId) ?? null,
+        ),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const preparation = await useCase.prepare({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        playerId: 'player-1',
+      });
+
+      expect(preparation.success).toBe(true);
+      expect(preparation.followUp).toEqual({
+        roomId: 'room-1',
+        playerId: 'player-1',
+        handSnapshot: ['2♣', '3♦'],
+      });
+
+      if (!preparation.followUp) {
+        throw new Error('Expected broken hand followUp');
+      }
+
+      const completion = await useCase.finalize(preparation.followUp);
+
+      expect(completion.success).toBe(true);
+      expect(roomGameState.transitionPhase).toHaveBeenCalledWith('blow');
+      expect(roomGameState.dealCards).toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalled();
+    });
   });
 
   describe('CompleteFieldUseCase', () => {

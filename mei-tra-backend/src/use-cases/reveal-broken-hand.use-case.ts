@@ -43,7 +43,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player mismatch for broken hand' };
       }
 
-      if (!player.hasRequiredBroken) {
+      if (!this.hasRevealableBrokenHand(player)) {
         return { success: false, error: 'Player does not have broken hand' };
       }
 
@@ -76,7 +76,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      if (!player.hasRequiredBroken) {
+      if (!this.hasRevealableBrokenHand(player)) {
         return { success: false, error: 'Player does not have broken hand' };
       }
 
@@ -186,5 +186,12 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
     }
 
     return currentHand.every((card, index) => card === snapshot[index]);
+  }
+
+  private hasRevealableBrokenHand(player: {
+    hasBroken?: boolean;
+    hasRequiredBroken?: boolean;
+  }): boolean {
+    return Boolean(player.hasBroken || player.hasRequiredBroken);
   }
 }
