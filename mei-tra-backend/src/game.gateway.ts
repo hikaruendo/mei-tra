@@ -26,10 +26,7 @@ import { ITogglePlayerReadyUseCase } from './use-cases/interfaces/toggle-player-
 import { IChangePlayerTeamUseCase } from './use-cases/interfaces/change-player-team.use-case.interface';
 import { IFillWithComUseCase } from './use-cases/interfaces/fill-with-com.use-case.interface';
 import { GatewayEvent } from './use-cases/interfaces/gateway-event.interface';
-import {
-  IDeclareBlowUseCase,
-  RevealBrokenRequest,
-} from './use-cases/interfaces/declare-blow.use-case.interface';
+import { IDeclareBlowUseCase } from './use-cases/interfaces/declare-blow.use-case.interface';
 import { IPassBlowUseCase } from './use-cases/interfaces/pass-blow.use-case.interface';
 import { ISelectNegriUseCase } from './use-cases/interfaces/select-negri.use-case.interface';
 import { IPlayCardUseCase } from './use-cases/interfaces/play-card.use-case.interface';
@@ -323,58 +320,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }, delayMs);
   }
 
-  private async triggerRevealBrokenHand(
-    request?: RevealBrokenRequest,
-  ): Promise<boolean> {
-    if (!request) {
-      return false;
-    }
-
-    const roomGameState = await this.roomService.getRoomGameState(
-      request.roomId,
-    );
-    const state = roomGameState.getState();
-    const targetPlayer = state.players.find(
-      (player) => player.playerId === request.playerId,
-    );
-    const sessionUser =
-      roomGameState.findSessionUserByUserId(request.actorId) ??
-      roomGameState.findSessionUserBySocketId(request.actorId) ??
-      roomGameState.findSessionUserByPlayerId(request.actorId);
-    const clientSocket = sessionUser?.socketId
-      ? this.server.sockets.sockets.get(sessionUser.socketId)
-      : undefined;
-    if (
-      !clientSocket &&
-      (targetPlayer?.isCOM || targetPlayer?.playerId.startsWith('com-'))
-    ) {
-      this.finalizeBrokenHandAfterDelay(
-        { roomId: request.roomId, playerId: request.playerId },
-        3000,
-      );
-      return true;
-    }
-
-    if (!clientSocket) {
-      console.warn(
-        '[GameGateway] Socket not found when handling required broken hand',
-        request,
-      );
-      return false;
-    }
-
-    try {
-      await this.handleRevealBrokenHand(clientSocket, {
-        roomId: request.roomId,
-        playerId: request.playerId,
-      });
-      return true;
-    } catch (error) {
-      console.error('Failed to trigger reveal-broken-hand flow:', error);
-      return false;
-    }
-  }
-
   private async processFieldCompletionResult(
     roomId: string,
     response: Awaited<ReturnType<ICompleteFieldUseCase['execute']>>,
@@ -478,9 +423,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // イベント配信（遅延含む）
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
-      const revealBrokenScheduled = await this.triggerRevealBrokenHand(
-        result.revealBrokenRequest,
-      );
 
       const delayedEvents = result.delayedEvents ?? [];
       const maxDelay = delayedEvents.reduce(
@@ -506,15 +448,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return; // Wait for completion result before continuing loop
       }
 
-      if (maxDelay > 0 && !revealBrokenScheduled) {
+      if (maxDelay > 0) {
         setTimeout(
           () => this.triggerComAutoPlayIfNeeded(roomId),
           maxDelay + 100,
         );
-        return;
-      }
-
-      if (revealBrokenScheduled) {
         return;
       }
 
@@ -1220,12 +1158,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
-      const revealBrokenScheduled = await this.triggerRevealBrokenHand(
-        result.revealBrokenRequest,
-      );
-      if (!revealBrokenScheduled) {
-        this.triggerComAutoPlayIfNeeded(data.roomId);
-      }
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleDeclareBlow:', error);
       client.emit('error-message', 'Failed to declare blow');
@@ -1256,12 +1189,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.dispatchEvents(result.events);
       this.dispatchEvents(result.delayedEvents);
-      const revealBrokenScheduled = await this.triggerRevealBrokenHand(
-        result.revealBrokenRequest,
-      );
-      if (!revealBrokenScheduled) {
-        this.triggerComAutoPlayIfNeeded(data.roomId);
-      }
+      this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handlePassBlow:', error);
       client.emit('error-message', 'Failed to pass blow');

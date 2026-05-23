@@ -27,6 +27,8 @@ import {
   GameHistorySummary,
 } from '../types/game-history.types';
 
+const DEFAULT_FINISHED_ROOM_HISTORY_LIMIT = 10;
+
 @Injectable()
 export class GameEventLogService implements IGameEventLogService {
   private readonly logger = new Logger(GameEventLogService.name);
@@ -65,6 +67,22 @@ export class GameEventLogService implements IGameEventLogService {
 
   listByRoomId(roomId: string, query?: GameHistoryQuery) {
     return this.gameHistoryRepository.findByRoomId(roomId, query);
+  }
+
+  async pruneFinishedRoomHistory(
+    keepRecentRooms: number = DEFAULT_FINISHED_ROOM_HISTORY_LIMIT,
+  ): Promise<number> {
+    try {
+      return await this.gameHistoryRepository.deleteForFinishedRoomsOutsideRecentLimit(
+        Math.max(1, keepRecentRooms),
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to prune old game history entries',
+        error instanceof Error ? error.stack : String(error),
+      );
+      return 0;
+    }
   }
 
   async summarizeByRoomId(

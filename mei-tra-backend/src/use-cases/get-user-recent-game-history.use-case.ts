@@ -46,8 +46,11 @@ export class GetUserRecentGameHistoryUseCase
       }),
     );
 
-    return items.sort(
-      (left, right) => right.completedAt.getTime() - left.completedAt.getTime(),
-    );
+    return items
+      .filter((item) => item.totalEntries > 0)
+      .sort(
+        (left, right) =>
+          right.completedAt.getTime() - left.completedAt.getTime(),
+      );
   }
 }

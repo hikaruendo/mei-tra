@@ -12,6 +12,7 @@ export interface RevealBrokenHandPreparation {
   followUp?: {
     roomId: string;
     playerId: string;
+    handSnapshot?: string[];
   };
   delayMs?: number;
 }
@@ -29,5 +30,6 @@ export interface IRevealBrokenHandUseCase {
   finalize(followUp: {
     roomId: string;
     playerId: string;
+    handSnapshot?: string[];
   }): Promise<RevealBrokenHandCompletion>;
 }

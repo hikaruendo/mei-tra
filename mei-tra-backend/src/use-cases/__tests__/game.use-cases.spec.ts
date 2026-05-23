@@ -5,6 +5,8 @@ import { LeaveRoomUseCase } from '../leave-room.use-case';
 import { StartGameUseCase } from '../start-game.use-case';
 import { TogglePlayerReadyUseCase } from '../toggle-player-ready.use-case';
 import { ChangePlayerTeamUseCase } from '../change-player-team.use-case';
+import { DeclareBlowUseCase } from '../declare-blow.use-case';
+import { PassBlowUseCase } from '../pass-blow.use-case';
 import { PlayCardUseCase } from '../play-card.use-case';
 import { SelectBaseSuitUseCase } from '../select-base-suit.use-case';
 import { SelectNegriUseCase } from '../select-negri.use-case';
@@ -33,6 +35,10 @@ import { IScoreService } from '../../services/interfaces/score-service.interface
 import { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
 import { CardService } from '../../services/card.service';
 import { PlayService } from '../../services/play.service';
+import {
+  BROKEN_HAND_REVEAL_PENDING_TTL_MS,
+  REQUIRED_BROKEN_HAND_REVEAL_ERROR,
+} from '../helpers/broken-hand.helper';
 describe('Game Use Cases', () => {
   const createRoomServiceMock = () => {
     const mock: Partial<jest.Mocked<IRoomService>> = {
@@ -996,6 +1002,95 @@ describe('Game Use Cases', () => {
     });
   });
 
+  describe('Blow action required broken guard', () => {
+    const buildRequiredBrokenState = () => ({
+      players: [
+        {
+          playerId: 'player-1',
+          name: 'Player 1',
+          hand: ['J♠', 'J♣', 'J♥', 'J♦'],
+          team: 0 as Team,
+          isPasser: false,
+          hasRequiredBroken: true,
+        },
+      ],
+      currentPlayerIndex: 0,
+      gamePhase: 'blow' as GamePhase,
+      blowState: {
+        currentTrump: null,
+        declarations: [],
+        actionHistory: [],
+        currentHighestDeclaration: null,
+        lastPasser: null,
+        isRoundCancelled: false,
+        currentBlowIndex: 0,
+      },
+    });
+
+    it('rejects declare when required broken hand must be revealed', async () => {
+      const roomService = createRoomServiceMock();
+      const blowService = {
+        isValidDeclaration: jest.fn(),
+        createDeclaration: jest.fn(),
+      };
+      const useCase = new DeclareBlowUseCase(
+        roomService,
+        blowService as never,
+        createCardServiceMock(),
+      );
+      const state = buildRequiredBrokenState();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        declaration: { trumpType: 'club', numberOfPairs: 6 },
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: REQUIRED_BROKEN_HAND_REVEAL_ERROR,
+      });
+      expect(blowService.isValidDeclaration).not.toHaveBeenCalled();
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+
+    it('rejects pass when required broken hand must be revealed', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new PassBlowUseCase(
+        roomService,
+        {} as never,
+        createCardServiceMock(),
+      );
+      const state = buildRequiredBrokenState();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: REQUIRED_BROKEN_HAND_REVEAL_ERROR,
+      });
+      expect(state.players[0].isPasser).toBe(false);
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+  });
+
   describe('PlayCardUseCase', () => {
     it('plays a card and advances turn when field not complete', async () => {
       const roomService = createRoomServiceMock();
@@ -1334,6 +1429,10 @@ describe('Game Use Cases', () => {
       const selectNegriUseCase = {
         execute: jest.fn(),
       };
+      const revealBrokenHandUseCase = {
+        prepare: jest.fn(),
+        finalize: jest.fn(),
+      };
       const useCase = new ComAutoPlayUseCase(
         roomService,
         comPlayerService as never,
@@ -1342,6 +1441,7 @@ describe('Game Use Cases', () => {
         declareBlowUseCase as never,
         passBlowUseCase as never,
         selectNegriUseCase as never,
+        revealBrokenHandUseCase as never,
       );
 
       const comPlayer: DomainPlayer = {
@@ -1465,6 +1565,10 @@ describe('Game Use Cases', () => {
       const selectNegriUseCase = {
         execute: jest.fn(),
       };
+      const revealBrokenHandUseCase = {
+        prepare: jest.fn(),
+        finalize: jest.fn(),
+      };
       const useCase = new ComAutoPlayUseCase(
         roomService,
         comPlayerService as never,
@@ -1473,6 +1577,7 @@ describe('Game Use Cases', () => {
         declareBlowUseCase as never,
         passBlowUseCase as never,
         selectNegriUseCase as never,
+        revealBrokenHandUseCase as never,
       );
 
       const comPlayer: DomainPlayer = {
@@ -1597,6 +1702,10 @@ describe('Game Use Cases', () => {
       const selectNegriUseCase = {
         execute: jest.fn(),
       };
+      const revealBrokenHandUseCase = {
+        prepare: jest.fn(),
+        finalize: jest.fn(),
+      };
       const useCase = new ComAutoPlayUseCase(
         roomService,
         comPlayerService as never,
@@ -1605,6 +1714,7 @@ describe('Game Use Cases', () => {
         declareBlowUseCase as never,
         passBlowUseCase as never,
         selectNegriUseCase as never,
+        revealBrokenHandUseCase as never,
       );
 
       const comPlayer: DomainPlayer = {
@@ -1658,6 +1768,103 @@ describe('Game Use Cases', () => {
         declaration: { trumpType: 'herz', numberOfPairs: 6 },
       });
       expect(passBlowUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it('reveals required broken hand for COM before choosing blow action', async () => {
+      const roomService = createRoomServiceMock();
+      const comPlayerService = {
+        createComPlayer: jest.fn(),
+        isComPlayer: jest.fn(() => true),
+      };
+      const comStrategyService = {
+        chooseBlowAction: jest.fn(),
+        chooseNegriCard: jest.fn(),
+        choosePlayCard: jest.fn(),
+        chooseBaseSuit: jest.fn(),
+      };
+      const playCardUseCase = { execute: jest.fn() };
+      const declareBlowUseCase = { execute: jest.fn() };
+      const passBlowUseCase = { execute: jest.fn() };
+      const selectNegriUseCase = { execute: jest.fn() };
+      const revealBrokenHandUseCase = {
+        prepare: jest.fn().mockResolvedValue({
+          success: true,
+          followUp: {
+            roomId: 'room-1',
+            playerId: 'com-0',
+            handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+          },
+        }),
+        finalize: jest.fn().mockResolvedValue({
+          success: true,
+          events: [
+            {
+              scope: 'room',
+              roomId: 'room-1',
+              event: 'broken',
+              payload: { nextPlayerId: 'com-0' },
+            },
+          ],
+        }),
+      };
+      const useCase = new ComAutoPlayUseCase(
+        roomService,
+        comPlayerService as never,
+        comStrategyService as never,
+        playCardUseCase as never,
+        declareBlowUseCase as never,
+        passBlowUseCase as never,
+        selectNegriUseCase as never,
+        revealBrokenHandUseCase as never,
+      );
+
+      const comPlayer: DomainPlayer = {
+        playerId: 'com-0',
+        name: 'COM',
+        hand: ['J♠', 'J♣', 'J♥', 'J♦'],
+        team: 0,
+        isPasser: false,
+        isCOM: true,
+        hasRequiredBroken: true,
+      };
+      const state = {
+        players: [comPlayer],
+        currentPlayerIndex: 0,
+        gamePhase: 'blow' as GamePhase,
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        getCurrentPlayer: jest.fn(
+          () => state.players[state.currentPlayerIndex],
+        ),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({ roomId: 'room-1' });
+
+      expect(result.success).toBe(true);
+      expect(revealBrokenHandUseCase.prepare).toHaveBeenCalledWith({
+        roomId: 'room-1',
+        actorId: 'com-0',
+        playerId: 'com-0',
+      });
+      expect(revealBrokenHandUseCase.finalize).toHaveBeenCalledWith({
+        roomId: 'room-1',
+        playerId: 'com-0',
+        handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+      });
+      expect(comStrategyService.chooseBlowAction).not.toHaveBeenCalled();
+      expect(declareBlowUseCase.execute).not.toHaveBeenCalled();
+      expect(passBlowUseCase.execute).not.toHaveBeenCalled();
+      expect(result.events).toEqual([
+        {
+          scope: 'room',
+          roomId: 'room-1',
+          event: 'broken',
+          payload: { nextPlayerId: 'com-0' },
+        },
+      ]);
     });
   });
 
@@ -1761,6 +1968,7 @@ describe('Game Use Cases', () => {
             hand: ['C1'],
             team: 0,
             isPasser: false,
+            hasRequiredBroken: false,
           },
           {
             playerId: 'player-2',
@@ -1826,7 +2034,14 @@ describe('Game Use Cases', () => {
     it('prepares and finalizes broken hand flow', async () => {
       const roomService = createRoomServiceMock();
       const cardService = createCardServiceMock();
-      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+      const gameEventLogService = {
+        log: jest.fn().mockResolvedValue(undefined),
+      } as unknown as jest.Mocked<IGameEventLogService>;
+      const useCase = new RevealBrokenHandUseCase(
+        roomService,
+        cardService,
+        gameEventLogService,
+      );
 
       const state: {
         players: DomainPlayer[];
@@ -1834,6 +2049,11 @@ describe('Game Use Cases', () => {
         currentPlayerIndex: number;
         gamePhase: 'play' | 'blow';
         deck: string[];
+        pendingBrokenHandReveal?: {
+          playerId: string;
+          handSnapshot: string[];
+          startedAt: number;
+        } | null;
       } = {
         players: [
           {
@@ -1842,6 +2062,7 @@ describe('Game Use Cases', () => {
             hand: ['C1'],
             team: 0,
             isPasser: false,
+            hasRequiredBroken: true,
           },
           {
             playerId: 'player-2',
@@ -1849,6 +2070,7 @@ describe('Game Use Cases', () => {
             hand: ['D1'],
             team: 1,
             isPasser: false,
+            hasRequiredBroken: false,
           },
         ],
         blowState: {
@@ -1861,7 +2083,7 @@ describe('Game Use Cases', () => {
           currentBlowIndex: 0,
         },
         currentPlayerIndex: 0,
-        gamePhase: 'play' as const,
+        gamePhase: 'blow' as const,
         deck: [],
       };
 
@@ -1874,9 +2096,6 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         dealCards: dealCardsMock,
-        transitionPhase: jest.fn().mockImplementation(async (phase) => {
-          state.gamePhase = phase;
-        }),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
             ? (state.players.find((player) => player.playerId === 'player-1') ??
@@ -1902,16 +2121,172 @@ describe('Game Use Cases', () => {
       expect(preparation.success).toBe(true);
       expect(preparation.delayMs).toBe(3000);
       expect(preparation.followUp).toBeDefined();
+      expect(state.pendingBrokenHandReveal).toEqual({
+        playerId: 'player-1',
+        handSnapshot: ['C1'],
+        startedAt: expect.any(Number),
+      });
 
       if (preparation.followUp) {
         const completion = await useCase.finalize(preparation.followUp);
         expect(completion.success).toBe(true);
+        expect(state.pendingBrokenHandReveal).toBeNull();
         expect(dealCardsMock).toHaveBeenCalled();
+        expect(gameEventLogService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            actionType: 'broken_hand_revealed',
+            playerId: 'player-1',
+            actionData: expect.objectContaining({
+              nextPlayerId: 'player-1',
+              nextBlowIndex: 0,
+              startingHandsByPlayerId: {
+                'player-1': ['X1', 'X2'],
+                'player-2': ['X1', 'X2'],
+              },
+            }),
+          }),
+        );
         const brokenEvent = completion.events?.find(
           (evt) => evt.event === 'broken',
         );
         expect(brokenEvent).toBeDefined();
       }
+    });
+
+    it('rejects broken hand reveal outside the blow phase', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0,
+            isPasser: false,
+            hasRequiredBroken: true,
+          },
+        ],
+        blowState: {
+          declarations: [],
+        },
+        gamePhase: 'play' as GamePhase,
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const preparation = await useCase.prepare({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        playerId: 'player-1',
+      });
+
+      expect(preparation).toEqual({
+        success: false,
+        error: 'Cannot reveal broken hand now',
+      });
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+
+    it('rejects broken hand reveal after the player already acted in blow', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0,
+            isPasser: false,
+            hasRequiredBroken: true,
+          },
+        ],
+        blowState: {
+          declarations: [
+            {
+              playerId: 'player-1',
+              trumpType: 'club' as const,
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+          ],
+        },
+        gamePhase: 'blow' as GamePhase,
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const preparation = await useCase.prepare({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        playerId: 'player-1',
+      });
+
+      expect(preparation).toEqual({
+        success: false,
+        error: 'Cannot reveal broken hand now',
+      });
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+
+    it('rejects broken hand reveal after the player already passed in blow', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0,
+            isPasser: true,
+            hasRequiredBroken: true,
+          },
+        ],
+        blowState: {
+          declarations: [],
+        },
+        gamePhase: 'blow' as GamePhase,
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const preparation = await useCase.prepare({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        playerId: 'player-1',
+      });
+
+      expect(preparation).toEqual({
+        success: false,
+        error: 'Cannot reveal broken hand now',
+      });
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
     });
 
     it('resets blow declarations after broken hand without changing starting order', async () => {
@@ -1925,6 +2300,11 @@ describe('Game Use Cases', () => {
         currentPlayerIndex: number;
         gamePhase: 'play' | 'blow';
         deck: string[];
+        pendingBrokenHandReveal?: {
+          playerId: string;
+          handSnapshot: string[];
+          startedAt: number;
+        } | null;
       } = {
         players: [
           {
@@ -1940,6 +2320,7 @@ describe('Game Use Cases', () => {
             hand: ['D1'],
             team: 1,
             isPasser: true,
+            hasRequiredBroken: false,
           },
           {
             playerId: 'player-3',
@@ -1947,6 +2328,7 @@ describe('Game Use Cases', () => {
             hand: ['H1'],
             team: 0,
             isPasser: false,
+            hasRequiredBroken: true,
           },
           {
             playerId: 'player-4',
@@ -1954,6 +2336,7 @@ describe('Game Use Cases', () => {
             hand: ['S1'],
             team: 1,
             isPasser: false,
+            hasRequiredBroken: false,
           },
         ],
         blowState: {
@@ -1993,6 +2376,11 @@ describe('Game Use Cases', () => {
         currentPlayerIndex: 1,
         gamePhase: 'blow',
         deck: [],
+        pendingBrokenHandReveal: {
+          playerId: 'player-3',
+          handSnapshot: ['H1'],
+          startedAt: 1,
+        },
       };
 
       const dealCardsMock = jest.fn(() => {
@@ -2004,9 +2392,6 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         dealCards: dealCardsMock,
-        transitionPhase: jest.fn().mockImplementation(async (phase) => {
-          state.gamePhase = phase;
-        }),
         findPlayerByActorId: jest.fn(
           (actorId: string) =>
             state.players.find((player) => player.playerId === actorId) ?? null,
@@ -2022,6 +2407,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(completion.success).toBe(true);
+      expect(state.pendingBrokenHandReveal).toBeNull();
       expect(state.blowState.currentBlowIndex).toBe(2);
       expect(state.currentPlayerIndex).toBe(2);
       expect(state.blowState.declarations).toEqual([]);
@@ -2054,6 +2440,221 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'update-turn',
       );
       expect(updateTurnEvent?.payload).toBe('player-3');
+    });
+
+    it('allows a new broken hand reveal when a previous pending marker expired', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state: {
+        players: DomainPlayer[];
+        blowState: Pick<BlowState, 'declarations'>;
+        gamePhase: GamePhase;
+        pendingBrokenHandReveal?: {
+          playerId: string;
+          handSnapshot: string[];
+          startedAt: number;
+        } | null;
+      } = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0,
+            isPasser: false,
+            hasRequiredBroken: true,
+          },
+        ],
+        blowState: { declarations: [] },
+        gamePhase: 'blow',
+        pendingBrokenHandReveal: {
+          playerId: 'player-1',
+          handSnapshot: ['old-card'],
+          startedAt: Date.now() - BROKEN_HAND_REVEAL_PENDING_TTL_MS - 1,
+        },
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const preparation = await useCase.prepare({
+        roomId: 'room-1',
+        actorId: 'user-1',
+        playerId: 'player-1',
+      });
+
+      expect(preparation.success).toBe(true);
+      expect(state.pendingBrokenHandReveal).toEqual({
+        playerId: 'player-1',
+        handSnapshot: ['C1'],
+        startedAt: expect.any(Number),
+      });
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not finalize a stale delayed broken hand request after the hand changes', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const gameEventLogService = {
+        log: jest.fn().mockResolvedValue(undefined),
+      } as unknown as jest.Mocked<IGameEventLogService>;
+      const useCase = new RevealBrokenHandUseCase(
+        roomService,
+        cardService,
+        gameEventLogService,
+      );
+
+      const state: {
+        players: DomainPlayer[];
+        blowState: BlowState;
+        currentPlayerIndex: number;
+        gamePhase: 'play' | 'blow';
+        deck: string[];
+        pendingBrokenHandReveal?: {
+          playerId: string;
+          handSnapshot: string[];
+          startedAt: number;
+        } | null;
+      } = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['new-card'],
+            team: 0,
+            isPasser: false,
+            hasRequiredBroken: true,
+          },
+        ],
+        blowState: {
+          currentTrump: null,
+          declarations: [],
+          actionHistory: [],
+          currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
+        currentPlayerIndex: 0,
+        gamePhase: 'play',
+        deck: [],
+        pendingBrokenHandReveal: {
+          playerId: 'player-1',
+          handSnapshot: ['old-card'],
+          startedAt: 1,
+        },
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        dealCards: jest.fn(),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const completion = await useCase.finalize({
+        roomId: 'room-1',
+        playerId: 'player-1',
+        handSnapshot: ['old-card'],
+      });
+
+      expect(completion).toEqual({
+        success: false,
+        error: 'Broken hand request is stale',
+      });
+      expect(roomGameState.dealCards).not.toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalled();
+      expect(state.pendingBrokenHandReveal).toBeNull();
+      expect(gameEventLogService.log).not.toHaveBeenCalled();
+    });
+
+    it('allows optional broken hand reveal when the player has normal broken', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new RevealBrokenHandUseCase(roomService, cardService);
+
+      const state: {
+        players: DomainPlayer[];
+        blowState: BlowState;
+        currentPlayerIndex: number;
+        gamePhase: 'play' | 'blow';
+        deck: string[];
+        pendingBrokenHandReveal?: {
+          playerId: string;
+          handSnapshot: string[];
+          startedAt: number;
+        } | null;
+      } = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['2♣', '3♦'],
+            team: 0,
+            isPasser: false,
+            hasBroken: true,
+            hasRequiredBroken: false,
+          },
+        ],
+        blowState: {
+          currentTrump: null,
+          declarations: [],
+          actionHistory: [],
+          currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
+        currentPlayerIndex: 0,
+        gamePhase: 'blow',
+        deck: [],
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        dealCards: jest.fn(() => {
+          state.players[0].hand = ['X1', 'X2'];
+        }),
+        findPlayerByActorId: jest.fn(
+          (actorId: string) =>
+            state.players.find((player) => player.playerId === actorId) ?? null,
+        ),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const preparation = await useCase.prepare({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        playerId: 'player-1',
+      });
+
+      expect(preparation.success).toBe(true);
+      expect(preparation.followUp).toEqual({
+        roomId: 'room-1',
+        playerId: 'player-1',
+        handSnapshot: ['2♣', '3♦'],
+      });
+
+      if (!preparation.followUp) {
+        throw new Error('Expected broken hand followUp');
+      }
+
+      const completion = await useCase.finalize(preparation.followUp);
+
+      expect(completion.success).toBe(true);
+      expect(state.pendingBrokenHandReveal).toBeNull();
+      expect(roomGameState.dealCards).toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalled();
     });
   });
 
@@ -2341,6 +2942,7 @@ describe('Game Use Cases', () => {
       const roomService = createRoomServiceMock();
       const gameEventLogService = {
         log: jest.fn().mockResolvedValue(undefined),
+        pruneFinishedRoomHistory: jest.fn().mockResolvedValue(0),
       } as unknown as jest.Mocked<IGameEventLogService>;
       const useCase = new ProcessGameOverUseCase(
         roomService,
@@ -2391,6 +2993,7 @@ describe('Game Use Cases', () => {
           }),
         }),
       );
+      expect(gameEventLogService.pruneFinishedRoomHistory).toHaveBeenCalled();
     });
   });
 

@@ -85,6 +85,12 @@ export interface PlayState {
   openDeclarerId: string | null;
 }
 
+export interface PendingBrokenHandReveal {
+  playerId: string;
+  handSnapshot: string[];
+  startedAt: number;
+}
+
 export interface ScoreCard {
   value: number;
   suit: '♥' | '♦' | '♠' | '♣';
@@ -127,6 +133,7 @@ export interface GameState {
   teamScoreRecords: Record<Team, ScoreRecord[]>;
   blowState: BlowState;
   playState?: PlayState;
+  pendingBrokenHandReveal?: PendingBrokenHandReveal | null;
   agari?: string;
   roundNumber: number;
   pointsToWin: number;

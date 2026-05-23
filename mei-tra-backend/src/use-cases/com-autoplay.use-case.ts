@@ -23,10 +23,12 @@ import {
   ISelectNegriUseCase,
   SelectNegriResponse,
 } from './interfaces/select-negri.use-case.interface';
+import { IRevealBrokenHandUseCase } from './interfaces/reveal-broken-hand.use-case.interface';
 import { DomainPlayer } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { CompleteFieldTrigger } from './interfaces/play-card.use-case.interface';
+import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
 
 type ResponseWithDelayed<T> = T & {
   delayedEvents?: GatewayEvent[];
@@ -50,6 +52,8 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     private readonly passBlowUseCase: IPassBlowUseCase,
     @Inject('ISelectNegriUseCase')
     private readonly selectNegriUseCase: ISelectNegriUseCase,
+    @Inject('IRevealBrokenHandUseCase')
+    private readonly revealBrokenHandUseCase: IRevealBrokenHandUseCase,
   ) {}
 
   async execute(request: ComAutoPlayRequest): Promise<ComAutoPlayResponse> {
@@ -58,6 +62,10 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     try {
       // 1. ゲーム状態取得
       const gameState = await this.roomService.getRoomGameState(roomId);
+      if (await getBrokenHandRevealPendingError(gameState)) {
+        return { success: true, events: [], shouldContinue: false };
+      }
+
       const currentPlayer = gameState.getCurrentPlayer();
 
       // 2. COMプレイヤーでなければスキップ
@@ -71,6 +79,14 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       if (phase === 'play') {
         return await this.handleComPlayPhase(roomId, currentPlayer, gameState);
       } else if (phase === 'blow') {
+        if (currentPlayer.hasRequiredBroken) {
+          return await this.handleComRequiredBrokenHand(
+            roomId,
+            currentPlayer,
+            gameState,
+          );
+        }
+
         return await this.handleComBlowPhase(roomId, currentPlayer, gameState);
       }
 
@@ -234,9 +250,50 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       success: result.success,
       events,
       delayedEvents,
-      revealBrokenRequest: result.revealBrokenRequest,
       shouldContinue,
       error: result.error,
+    };
+  }
+
+  private async handleComRequiredBrokenHand(
+    roomId: string,
+    comPlayer: DomainPlayer,
+    gameState: GameStateService,
+  ): Promise<ComAutoPlayResponse> {
+    const preparation = await this.revealBrokenHandUseCase.prepare({
+      roomId,
+      actorId: comPlayer.playerId,
+      playerId: comPlayer.playerId,
+    });
+
+    if (!preparation.success || !preparation.followUp) {
+      return {
+        success: false,
+        events: [],
+        shouldContinue: false,
+        error: preparation.error ?? 'Failed to prepare COM broken hand reveal',
+      };
+    }
+
+    const completion = await this.revealBrokenHandUseCase.finalize(
+      preparation.followUp,
+    );
+
+    if (!completion.success) {
+      return {
+        success: false,
+        events: [],
+        shouldContinue: false,
+        error: completion.error ?? 'Failed to finalize COM broken hand reveal',
+      };
+    }
+
+    const nextPlayer = gameState.getCurrentPlayer();
+    return {
+      success: true,
+      events: completion.events ?? [],
+      shouldContinue:
+        !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
     };
   }
 }

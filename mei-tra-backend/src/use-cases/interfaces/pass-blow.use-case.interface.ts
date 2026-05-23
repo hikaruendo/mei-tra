@@ -10,11 +10,6 @@ export interface PassBlowResponse {
   error?: string;
   events?: GatewayEvent[];
   delayedEvents?: GatewayEvent[];
-  revealBrokenRequest?: {
-    roomId: string;
-    playerId: string;
-    actorId: string;
-  };
 }
 
 export interface IPassBlowUseCase {

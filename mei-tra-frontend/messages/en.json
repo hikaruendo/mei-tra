@@ -420,6 +420,7 @@
     "noLastAction": "None",
     "entriesMetric": "{count} entries",
     "startingHand": "Your starting hand this round",
+    "redealtHand": "Your hand after redeal",
     "noStartingHand": "No hand log",
     "unknownPlayer": "Unknown player",
     "unknownValue": "Unknown",

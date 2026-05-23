@@ -103,6 +103,8 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
         finalScores: teamScores,
       },
     });
+
+    await this.gameEventLogService?.pruneFinishedRoomHistory?.();
   }
 
   private resolveAuthenticatedUserId(

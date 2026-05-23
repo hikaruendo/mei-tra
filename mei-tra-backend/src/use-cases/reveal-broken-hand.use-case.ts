@@ -14,6 +14,7 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
+import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
@@ -33,6 +34,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
     try {
       const { roomId, actorId, playerId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
+      const state = roomGameState.getState();
       const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
@@ -43,10 +45,38 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player mismatch for broken hand' };
       }
 
+      if (state.gamePhase !== 'blow') {
+        return { success: false, error: 'Cannot reveal broken hand now' };
+      }
+
+      const hasDeclared = state.blowState.declarations.some(
+        (declaration) => declaration.playerId === playerId,
+      );
+      if (player.isPasser || hasDeclared) {
+        return { success: false, error: 'Cannot reveal broken hand now' };
+      }
+
+      if (!this.hasRevealableBrokenHand(player)) {
+        return { success: false, error: 'Player does not have broken hand' };
+      }
+
+      const pendingError = await getBrokenHandRevealPendingError(roomGameState);
+      if (pendingError) {
+        return { success: false, error: pendingError };
+      }
+
+      const handSnapshot = [...player.hand];
+      state.pendingBrokenHandReveal = {
+        playerId,
+        handSnapshot,
+        startedAt: Date.now(),
+      };
+      await roomGameState.saveState();
+
       return {
         success: true,
         delayMs: 3000,
-        followUp: { roomId, playerId },
+        followUp: { roomId, playerId, handSnapshot },
       };
     } catch (error) {
       this.logger.error(
@@ -60,6 +90,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
   async finalize(followUp: {
     roomId: string;
     playerId: string;
+    handSnapshot?: string[];
   }): Promise<RevealBrokenHandCompletion> {
     try {
       const { roomId, playerId } = followUp;
@@ -71,8 +102,30 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      await roomGameState.transitionPhase('blow');
+      if (!this.hasRevealableBrokenHand(player)) {
+        return { success: false, error: 'Player does not have broken hand' };
+      }
+
+      const pendingReveal = state.pendingBrokenHandReveal;
+      if (!pendingReveal || pendingReveal.playerId !== playerId) {
+        return { success: false, error: 'Broken hand reveal is not pending' };
+      }
+
+      if (
+        followUp.handSnapshot &&
+        !this.isSameHand(pendingReveal.handSnapshot, followUp.handSnapshot)
+      ) {
+        return { success: false, error: 'Broken hand request is stale' };
+      }
+
+      if (!this.isSameHand(player.hand, pendingReveal.handSnapshot)) {
+        state.pendingBrokenHandReveal = null;
+        await roomGameState.saveState();
+        return { success: false, error: 'Broken hand request is stale' };
+      }
+
       const nextState = roomGameState.getState();
+      nextState.pendingBrokenHandReveal = null;
 
       nextState.playState = {
         currentField: null,
@@ -162,5 +215,20 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       );
       return { success: false, error: 'Internal server error' };
     }
+  }
+
+  private isSameHand(currentHand: string[], snapshot: string[]): boolean {
+    if (currentHand.length !== snapshot.length) {
+      return false;
+    }
+
+    return currentHand.every((card, index) => card === snapshot[index]);
+  }
+
+  private hasRevealableBrokenHand(player: {
+    hasBroken?: boolean;
+    hasRequiredBroken?: boolean;
+  }): boolean {
+    return Boolean(player.hasBroken || player.hasRequiredBroken);
   }
 }

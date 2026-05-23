@@ -96,6 +96,21 @@ describe('GameEventLogService', () => {
     expect(repository.findByRoomId).toHaveBeenCalledWith('room-1', query);
   });
 
+  it('prunes history for finished rooms outside the retained room limit', async () => {
+    const repository = {
+      create: jest.fn(),
+      findByRoomId: jest.fn(),
+      deleteForFinishedRoomsOutsideRecentLimit: jest.fn().mockResolvedValue(42),
+    } as unknown as IGameHistoryRepository;
+
+    const service = new GameEventLogService(repository);
+
+    await expect(service.pruneFinishedRoomHistory()).resolves.toBe(42);
+    expect(
+      repository.deleteForFinishedRoomsOutsideRecentLimit,
+    ).toHaveBeenCalledWith(10);
+  });
+
   it('summarizes room history by action type and round', async () => {
     const history = [
       {

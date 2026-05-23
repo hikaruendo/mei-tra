@@ -4,7 +4,6 @@ import { Room } from '../types/room.types';
 import { GameStateService } from '../services/game-state.service';
 import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
-import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
@@ -12,11 +11,6 @@ import { GatewayEvent } from './interfaces/gateway-event.interface';
 export interface TransitionResult {
   events: GatewayEvent[];
   delayedEvents: GatewayEvent[];
-  revealBrokenRequest?: {
-    roomId: string;
-    playerId: string;
-    actorId: string;
-  };
 }
 
 interface TransitionParams {
@@ -26,7 +20,6 @@ interface TransitionParams {
   state: GameState;
   blowService: IBlowService;
   cardService: ICardService;
-  chomboService: IChomboService;
   gameEventLogService?: IGameEventLogService;
 }
 
@@ -37,7 +30,6 @@ export async function transitionToPlayPhase({
   state,
   blowService,
   cardService,
-  chomboService,
   gameEventLogService,
 }: TransitionParams): Promise<TransitionResult> {
   const highestDeclaration = blowService.findHighestDeclaration(
@@ -55,7 +47,6 @@ export async function transitionToPlayPhase({
     winningPlayer.hand.push(state.agari);
   }
   winningPlayer.hand.sort((a, b) => cardService.compareCards(a, b));
-  chomboService.checkForRequiredBrokenHand(winningPlayer);
 
   await roomGameState.transitionPhase('play');
   const nextState = roomGameState.getState();
@@ -122,17 +113,6 @@ export async function transitionToPlayPhase({
     });
   }
 
-  const revealBrokenRequest = winningPlayer.hasRequiredBroken
-    ? {
-        roomId,
-        playerId: winningPlayer.playerId,
-        actorId:
-          winningPlayerSession?.userId ??
-          winningPlayerSocketId ??
-          winningPlayer.playerId,
-      }
-    : undefined;
-
   await gameEventLogService?.log({
     roomId,
     actionType: 'play_phase_started',
@@ -142,7 +122,6 @@ export async function transitionToPlayPhase({
       currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
       currentTrump: nextState.blowState.currentTrump,
       winnerPlayerId: winningPlayer.playerId,
-      revealBrokenRequired: Boolean(revealBrokenRequest),
     },
   });
 
@@ -151,6 +130,5 @@ export async function transitionToPlayPhase({
   return {
     events,
     delayedEvents,
-    revealBrokenRequest,
   };
 }

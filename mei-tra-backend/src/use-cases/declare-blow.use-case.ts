@@ -7,7 +7,6 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
-import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import {
   buildPlayerSyncEvents,
@@ -18,6 +17,10 @@ import {
   transitionToPlayPhase,
   TransitionResult,
 } from './blow-phase-transition.helper';
+import {
+  getBrokenHandRevealPendingError,
+  getRequiredBrokenHandRevealError,
+} from './helpers/broken-hand.helper';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -27,7 +30,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('IBlowService') private readonly blowService: IBlowService,
     @Inject('ICardService') private readonly cardService: ICardService,
-    @Inject('IChomboService') private readonly chomboService: IChomboService,
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
@@ -44,8 +46,18 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
+      const pendingError = await getBrokenHandRevealPendingError(roomGameState);
+      if (pendingError) {
+        return { success: false, error: pendingError };
+      }
+
       if (!roomGameState.isPlayerTurn(player.playerId)) {
         return { success: false, error: "It's not your turn to declare" };
+      }
+
+      const requiredBrokenError = getRequiredBrokenHandRevealError(player);
+      if (requiredBrokenError) {
+        return { success: false, error: requiredBrokenError };
       }
 
       // Check if player has already declared in this blow phase
@@ -145,7 +157,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           state,
           blowService: this.blowService,
           cardService: this.cardService,
-          chomboService: this.chomboService,
           gameEventLogService: this.gameEventLogService,
         });
 
@@ -153,7 +164,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           success: true,
           events: [...events, ...transition.events],
           delayedEvents: transition.delayedEvents,
-          revealBrokenRequest: transition.revealBrokenRequest,
         };
       }
 

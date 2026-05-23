@@ -9,11 +9,6 @@ export interface ComAutoPlayResponse {
   success: boolean;
   events: GatewayEvent[];
   delayedEvents?: GatewayEvent[];
-  revealBrokenRequest?: {
-    roomId: string;
-    playerId: string;
-    actorId: string;
-  };
   completeFieldTrigger?: CompleteFieldTrigger;
   shouldContinue: boolean;
   error?: string;

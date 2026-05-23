@@ -15,6 +15,10 @@ type GameStateIdRow = Pick<
   Database['public']['Tables']['game_states']['Row'],
   'id'
 >;
+type FinishedRoomIdRow = Pick<
+  Database['public']['Tables']['rooms']['Row'],
+  'id'
+>;
 
 @Injectable()
 export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
@@ -103,6 +107,58 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     return entries.filter(
       (entry) => this.extractRoundNumber(entry) === query.roundNumber,
     );
+  }
+
+  async deleteForFinishedRoomsOutsideRecentLimit(
+    limit: number,
+  ): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('rooms')
+      .select('id')
+      .eq('status', 'finished')
+      .order('last_activity_at', { ascending: false });
+
+    if (error) {
+      this.logger.error(
+        'Failed to list finished rooms for history pruning',
+        error,
+      );
+      throw new Error(
+        `Failed to list finished rooms for history pruning: ${error.message}`,
+      );
+    }
+
+    const roomIds = ((data as FinishedRoomIdRow[]) ?? []).map(
+      (room) => room.id,
+    );
+    const staleRoomIds = roomIds.slice(Math.max(1, limit));
+    let deletedCount = 0;
+
+    for (let index = 0; index < staleRoomIds.length; index += 100) {
+      const roomIdChunk = staleRoomIds.slice(index, index + 100);
+      if (roomIdChunk.length === 0) {
+        continue;
+      }
+
+      const { count, error: deleteError } = await this.supabase
+        .from('game_history')
+        .delete({ count: 'exact' })
+        .in('room_id', roomIdChunk);
+
+      if (deleteError) {
+        this.logger.error(
+          'Failed to prune old game history entries',
+          deleteError,
+        );
+        throw new Error(
+          `Failed to prune old game history entries: ${deleteError.message}`,
+        );
+      }
+
+      deletedCount += count ?? 0;
+    }
+
+    return deletedCount;
   }
 
   private async findGameStateIdByRoomId(

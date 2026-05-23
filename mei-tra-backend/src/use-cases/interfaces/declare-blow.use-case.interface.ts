@@ -10,18 +10,11 @@ export interface DeclareBlowRequest {
   };
 }
 
-export interface RevealBrokenRequest {
-  roomId: string;
-  playerId: string;
-  actorId: string;
-}
-
 export interface DeclareBlowResponse {
   success: boolean;
   error?: string;
   events?: GatewayEvent[];
   delayedEvents?: GatewayEvent[];
-  revealBrokenRequest?: RevealBrokenRequest;
 }
 
 export interface IDeclareBlowUseCase {
