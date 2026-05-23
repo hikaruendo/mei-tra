@@ -32,6 +32,7 @@
 - `GameStateManager`, `PlayerConnectionManager`, `ComSessionService`, `TurnMonitorService` は domain層そのものではなく、state / session / realtime 例外処理を支える application service として扱います
 - gateway は transport adapter として薄くし、reconnect / moderation / start-game / room sync の組み立ては use-case / effects service へ委譲しています
 - room/player 同期の主系統は `room-sync` で、`room-updated` / `update-players` は互換 fallback です
+- `src/use-cases/helpers/` は「複数 UseCase で共有する純粋なルール判定」だけを置く場所です。I/O、永続化、event 組み立て、state mutation は UseCase / Service に置きます
 
 ## 現在の主な read-side
 
