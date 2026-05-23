@@ -1089,6 +1089,136 @@ describe('Game Use Cases', () => {
       expect(state.players[0].isPasser).toBe(false);
       expect(roomGameState.saveState).not.toHaveBeenCalled();
     });
+
+    it('rejects pass outside blow phase', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new PassBlowUseCase(
+        roomService,
+        {} as never,
+        createCardServiceMock(),
+      );
+      const state = {
+        ...buildRequiredBrokenState(),
+        gamePhase: 'play' as GamePhase,
+        players: [
+          {
+            ...buildRequiredBrokenState().players[0],
+            hasRequiredBroken: false,
+          },
+        ],
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Cannot pass now',
+      });
+      expect(roomGameState.isPlayerTurn).not.toHaveBeenCalled();
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+
+    it('rejects duplicate pass recorded in blow action history', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new PassBlowUseCase(
+        roomService,
+        {} as never,
+        createCardServiceMock(),
+      );
+      const state = {
+        ...buildRequiredBrokenState(),
+        players: [
+          {
+            ...buildRequiredBrokenState().players[0],
+            isPasser: false,
+            hasRequiredBroken: false,
+          },
+        ],
+        blowState: {
+          ...buildRequiredBrokenState().blowState,
+          actionHistory: [
+            {
+              type: 'pass' as const,
+              playerId: 'player-1',
+              timestamp: 1,
+            },
+          ],
+        },
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'You have already passed in this blow phase',
+      });
+      expect(state.blowState.actionHistory).toHaveLength(1);
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+
+    it('rejects declare outside blow phase', async () => {
+      const roomService = createRoomServiceMock();
+      const blowService = {
+        isValidDeclaration: jest.fn(),
+        createDeclaration: jest.fn(),
+      };
+      const useCase = new DeclareBlowUseCase(
+        roomService,
+        blowService as never,
+        createCardServiceMock(),
+      );
+      const state = {
+        ...buildRequiredBrokenState(),
+        gamePhase: 'play' as GamePhase,
+        players: [
+          {
+            ...buildRequiredBrokenState().players[0],
+            hasRequiredBroken: false,
+          },
+        ],
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        declaration: { trumpType: 'club', numberOfPairs: 6 },
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Cannot declare now',
+      });
+      expect(roomGameState.isPlayerTurn).not.toHaveBeenCalled();
+      expect(blowService.isValidDeclaration).not.toHaveBeenCalled();
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
   });
 
   describe('PlayCardUseCase', () => {

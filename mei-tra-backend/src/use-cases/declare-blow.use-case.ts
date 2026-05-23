@@ -21,6 +21,11 @@ import {
   getBrokenHandRevealPendingError,
   getRequiredBrokenHandRevealError,
 } from './helpers/broken-hand.helper';
+import {
+  countPlayersActedInBlow,
+  hasPlayerDeclaredInBlow,
+  hasPlayerPassedInBlow,
+} from './helpers/blow-action.helper';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -46,6 +51,10 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
+      if (state.gamePhase !== 'blow') {
+        return { success: false, error: 'Cannot declare now' };
+      }
+
       const pendingError = await getBrokenHandRevealPendingError(roomGameState);
       if (pendingError) {
         return { success: false, error: pendingError };
@@ -61,10 +70,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       // Check if player has already declared in this blow phase
-      const alreadyDeclared = state.blowState.declarations.some(
-        (d) => d.playerId === player.playerId,
-      );
-      if (alreadyDeclared) {
+      if (hasPlayerDeclaredInBlow(state.blowState, player.playerId)) {
         return {
           success: false,
           error: 'You have already declared in this blow phase',
@@ -72,7 +78,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       // Check if player has already passed in this blow phase
-      if (player.isPasser) {
+      if (hasPlayerPassedInBlow(state.blowState, player)) {
         return {
           success: false,
           error: 'You have already passed in this blow phase',
@@ -141,12 +147,10 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       );
 
       // Calculate how many players have acted (declared or passed)
-      const actedCount = state.players.filter((p) => {
-        const hasDeclared = state.blowState.declarations.some(
-          (d) => d.playerId === p.playerId,
-        );
-        return hasDeclared || p.isPasser;
-      }).length;
+      const actedCount = countPlayersActedInBlow(
+        state.players,
+        state.blowState,
+      );
 
       // If all players have acted, transition to play phase
       if (actedCount === state.players.length) {
@@ -175,10 +179,9 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       const maxAttempts = state.players.length;
       while (attempts < maxAttempts) {
         const currentPlayer = state.players[state.currentPlayerIndex];
-        const hasDeclared = state.blowState.declarations.some(
-          (d) => d.playerId === currentPlayer.playerId,
-        );
-        const hasActed = hasDeclared || currentPlayer.isPasser;
+        const hasActed =
+          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.playerId) ||
+          hasPlayerPassedInBlow(state.blowState, currentPlayer);
 
         if (!hasActed) {
           break; // Found a player who hasn't acted yet

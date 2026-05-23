@@ -55,6 +55,13 @@ export function BlowControls({
   const t = useTranslations('blowControls');
   const currentPlayerName = players.find(p => p.playerId === whoseTurn)?.name;
   const playerMap = new Map(players.map((player) => [player.playerId, player]));
+  const currentPlayer =
+    isCurrentPlayer && whoseTurn ? playerMap.get(whoseTurn) : undefined;
+  const currentPlayerAlreadyActed =
+    !!currentPlayer &&
+    (currentPlayer.isPasser ||
+      blowDeclarations.some((declaration) => declaration.playerId === currentPlayer.playerId) ||
+      blowActionHistory.some((action) => action.playerId === currentPlayer.playerId));
 
   // 宣言処理
   const handleDeclare = () => {
@@ -180,7 +187,7 @@ export function BlowControls({
   };
 
   // コントロールが無効かどうか
-  const isDisabled = !isCurrentPlayer;
+  const isDisabled = !isCurrentPlayer || currentPlayerAlreadyActed;
   const isSelectedDeclarationValid =
     selectedTrump !== null &&
     isDeclarationValid(selectedTrump, numberOfPairs);
