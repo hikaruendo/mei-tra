@@ -10,6 +10,22 @@ function normalizeOrigin(origin: string | undefined): string | null {
   }
 }
 
+function isLocalDevelopmentOrigin(origin: string): boolean {
+  if (process.env.NODE_ENV === 'production') {
+    return false;
+  }
+
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      ['localhost', '127.0.0.1', '::1'].includes(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function getFrontendOriginAllowlist(): string[] {
   const candidates = [
     normalizeOrigin(process.env.FRONTEND_URL_DEV),
@@ -29,7 +45,10 @@ export function isAllowedFrontendOrigin(origin?: string): boolean {
     return false;
   }
 
-  return getFrontendOriginAllowlist().includes(normalizedOrigin);
+  return (
+    getFrontendOriginAllowlist().includes(normalizedOrigin) ||
+    isLocalDevelopmentOrigin(normalizedOrigin)
+  );
 }
 
 export function createSocketCorsOriginHandler() {
