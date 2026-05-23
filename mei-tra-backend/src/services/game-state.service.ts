@@ -72,6 +72,7 @@ export class GameStateService implements IGameStateService {
       gamePhase: null,
       blowState: this.getInitialBlowState(),
       playState: this.getInitialPlayState(),
+      pendingBrokenHandReveal: null,
       teamScoreRecords: {
         0: [],
         1: [],
@@ -424,6 +425,7 @@ export class GameStateService implements IGameStateService {
       player.hasBroken = false;
       player.hasRequiredBroken = false;
     });
+    this.state.pendingBrokenHandReveal = null;
 
     // Deal exactly 10 cards to each player
     for (let i = 0; i < 10; i++) {
@@ -624,6 +626,7 @@ export class GameStateService implements IGameStateService {
 
     // Initialize game state
     state.deck = this.cardService.generateDeck();
+    state.pendingBrokenHandReveal = null;
     await this.dealCards();
 
     // Initialize play state

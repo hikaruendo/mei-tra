@@ -4,7 +4,6 @@ import { GameState } from '../../types/game.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { IBlowService } from '../../services/interfaces/blow-service.interface';
 import { ICardService } from '../../services/interfaces/card-service.interface';
-import { IChomboService } from '../../services/interfaces/chombo-service.interface';
 
 describe('transitionToPlayPhase', () => {
   it('reveals the Agari card using room player socket when session lookup is empty', async () => {
@@ -119,10 +118,6 @@ describe('transitionToPlayPhase', () => {
     const cardService = {
       compareCards: jest.fn(() => 0),
     } as unknown as ICardService;
-    const chomboService = {
-      checkForRequiredBrokenHand: jest.fn(),
-    } as unknown as IChomboService;
-
     const result = await transitionToPlayPhase({
       roomId: 'room-1',
       roomGameState,
@@ -130,7 +125,6 @@ describe('transitionToPlayPhase', () => {
       state,
       blowService,
       cardService,
-      chomboService,
     });
 
     expect(state.players[0].hand).toContain('H-A');
@@ -157,5 +151,96 @@ describe('transitionToPlayPhase', () => {
     });
     expect(updatePhaseEvent?.payload).not.toHaveProperty('agariCard');
     expect(updatePhaseEvent?.payload).not.toHaveProperty('agariPlayerId');
+  });
+
+  it('does not request broken reveal after the Agari card is added', async () => {
+    const declaration = {
+      playerId: 'player-1',
+      trumpType: 'club' as const,
+      numberOfPairs: 6,
+      timestamp: 1,
+    };
+    const state: GameState = {
+      players: [
+        {
+          playerId: 'player-1',
+          name: 'Player 1',
+          team: 0 as const,
+          hand: ['J♠', 'J♣', 'J♥'],
+          isPasser: false,
+          hasRequiredBroken: false,
+        },
+      ],
+      currentPlayerIndex: 0,
+      gamePhase: 'blow',
+      deck: [],
+      agari: 'J♦',
+      teamScores: {
+        0: { play: 0, total: 0 },
+        1: { play: 0, total: 0 },
+      },
+      teamScoreRecords: {
+        0: [],
+        1: [],
+      },
+      blowState: {
+        currentTrump: null,
+        currentHighestDeclaration: declaration,
+        declarations: [declaration],
+        actionHistory: [],
+        lastPasser: null,
+        isRoundCancelled: false,
+        currentBlowIndex: 0,
+      },
+      playState: {
+        currentField: null,
+        negriCard: null,
+        neguri: {},
+        fields: [],
+        lastWinnerId: null,
+        openDeclared: false,
+        openDeclarerId: null,
+      },
+      roundNumber: 1,
+      pointsToWin: 10,
+      teamAssignments: {},
+    };
+    const roomGameState = {
+      transitionPhase: jest.fn(async (phase: GameState['gamePhase']) => {
+        state.gamePhase = phase;
+      }),
+      getState: jest.fn(() => state),
+      getTransportPlayers: jest.fn(() => state.players),
+      findSessionUserByPlayerId: jest.fn(() => null),
+      saveState: jest.fn(),
+    } as unknown as GameStateService;
+    const blowService = {
+      findHighestDeclaration: jest.fn(() => declaration),
+    } as unknown as IBlowService;
+    const cardService = {
+      compareCards: jest.fn(() => 0),
+    } as unknown as ICardService;
+
+    const result = await transitionToPlayPhase({
+      roomId: 'room-1',
+      roomGameState,
+      state,
+      blowService,
+      cardService,
+    });
+
+    expect(state.players[0].hand).toEqual(['J♠', 'J♣', 'J♥', 'J♦']);
+    expect(state.players[0].hasRequiredBroken).toBe(false);
+    expect(state.gamePhase).toBe('play');
+    expect(
+      result.delayedEvents.some(
+        (event) =>
+          event.event === 'update-phase' &&
+          typeof event.payload === 'object' &&
+          event.payload !== null &&
+          'phase' in event.payload &&
+          event.payload.phase === 'play',
+      ),
+    ).toBe(true);
   });
 });
