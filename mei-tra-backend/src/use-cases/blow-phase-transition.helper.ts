@@ -122,7 +122,6 @@ export async function transitionToPlayPhase({
       currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
       currentTrump: nextState.blowState.currentTrump,
       winnerPlayerId: winningPlayer.playerId,
-      revealBrokenRequired: false,
     },
   });
 

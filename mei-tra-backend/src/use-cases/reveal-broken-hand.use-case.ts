@@ -124,7 +124,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Broken hand request is stale' };
       }
 
-      await roomGameState.transitionPhase('blow');
       const nextState = roomGameState.getState();
       nextState.pendingBrokenHandReveal = null;
 

@@ -2096,9 +2096,6 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         dealCards: dealCardsMock,
-        transitionPhase: jest.fn().mockImplementation(async (phase) => {
-          state.gamePhase = phase;
-        }),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
             ? (state.players.find((player) => player.playerId === 'player-1') ??
@@ -2395,9 +2392,6 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         dealCards: dealCardsMock,
-        transitionPhase: jest.fn().mockImplementation(async (phase) => {
-          state.gamePhase = phase;
-        }),
         findPlayerByActorId: jest.fn(
           (actorId: string) =>
             state.players.find((player) => player.playerId === actorId) ?? null,
@@ -2561,7 +2555,6 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         dealCards: jest.fn(),
-        transitionPhase: jest.fn(),
         saveState: jest.fn(),
       } as unknown as GameStateService;
 
@@ -2577,7 +2570,6 @@ describe('Game Use Cases', () => {
         success: false,
         error: 'Broken hand request is stale',
       });
-      expect(roomGameState.transitionPhase).not.toHaveBeenCalled();
       expect(roomGameState.dealCards).not.toHaveBeenCalled();
       expect(roomGameState.saveState).toHaveBeenCalled();
       expect(state.pendingBrokenHandReveal).toBeNull();
@@ -2631,9 +2623,6 @@ describe('Game Use Cases', () => {
         dealCards: jest.fn(() => {
           state.players[0].hand = ['X1', 'X2'];
         }),
-        transitionPhase: jest.fn().mockImplementation(async (phase) => {
-          state.gamePhase = phase;
-        }),
         findPlayerByActorId: jest.fn(
           (actorId: string) =>
             state.players.find((player) => player.playerId === actorId) ?? null,
@@ -2664,7 +2653,6 @@ describe('Game Use Cases', () => {
 
       expect(completion.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toBeNull();
-      expect(roomGameState.transitionPhase).toHaveBeenCalledWith('blow');
       expect(roomGameState.dealCards).toHaveBeenCalled();
       expect(roomGameState.saveState).toHaveBeenCalled();
     });

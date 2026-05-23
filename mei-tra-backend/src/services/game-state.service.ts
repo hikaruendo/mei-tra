@@ -626,7 +626,6 @@ export class GameStateService implements IGameStateService {
 
     // Initialize game state
     state.deck = this.cardService.generateDeck();
-    state.pendingBrokenHandReveal = null;
     await this.dealCards();
 
     // Initialize play state
