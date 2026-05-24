@@ -37,11 +37,19 @@ const TRUMP_TO_SUIT: Record<TrumpType, string> = {
   tra: '',
 };
 const SUITS = ['♠', '♥', '♦', '♣'];
+
+// COMの宣言判断は、実際の勝ち数を完全シミュレーションせず、
+// 手札の強さをscore化して「何ペアくらい狙えるか」を推定する。
+// scoreが閾値未満なら6ペア宣言できない手として5ペア扱いにし、
+// 閾値以上なら floor(5 + score / 1.35) を6〜10に丸める。
 const NON_DECLARABLE_PAIRS = 5;
 const MIN_DECLARATION_SCORE = 3.8;
 const SCORE_PER_ESTIMATED_PAIR = 1.35;
 const ESTIMATED_PAIR_BASELINE = 5;
 const MAX_ESTIMATED_PAIRS = 10;
+const JOKER_SCORE = 2.2;
+const PRIMARY_JACK_SCORE = 1.5;
+const SECONDARY_JACK_SCORE = 1.2;
 
 @Injectable()
 export class ComStrategyService implements IComStrategyService {
@@ -80,11 +88,11 @@ export class ComStrategyService implements IComStrategyService {
 
     if (currentHighestIsPartner) {
       const best = evaluations[0];
+      // 味方が最高宣言中なら基本は邪魔しない。
+      // 例外として、味方宣言より2ペア以上高く見積もれる場合だけovercallする。
       const shouldOvercallPartner =
         currentHighest != null &&
-        best.estimatedPairs >= currentHighest.numberOfPairs + 2 &&
-        best.score >=
-          this.scoreNeededForPairs(currentHighest.numberOfPairs + 2);
+        best.estimatedPairs >= currentHighest.numberOfPairs + 2;
 
       if (!shouldOvercallPartner) {
         return { type: 'pass' };
@@ -294,34 +302,21 @@ export class ComStrategyService implements IComStrategyService {
     const suitCounts = this.countSuits(hand, trumpType);
     let score = 0;
 
+    // scoreは「このtrumpで支配力がどれだけあるか」の概算。
+    // Joker、主J、同色Jを特殊カードとして先に評価し、
+    // それ以外は切り札かどうかとランクで評価する。
     for (const card of hand) {
-      if (card === 'JOKER') {
-        score += 2.2;
+      const specialCardScore = this.specialCardScore(card, trumpType);
+      if (specialCardScore !== null) {
+        score += specialCardScore;
         continue;
       }
 
-      const rank = this.getRank(card);
-      const suit = this.cardService.getCardSuit(card, trumpType);
-      const isTrump = trumpSuit !== '' && suit === trumpSuit;
-
-      if (this.isPrimaryJack(card, trumpType)) {
-        score += 1.5;
-        continue;
-      }
-
-      if (this.isSecondaryJack(card, trumpType)) {
-        score += 1.2;
-        continue;
-      }
-
-      if (isTrump) {
-        score += this.trumpCardValue(rank);
-      } else {
-        score += this.offTrumpCardValue(rank);
-      }
+      score += this.normalCardScore(card, trumpType, trumpSuit);
     }
 
     const trumpCount = trumpSuit ? (suitCounts.get(trumpSuit) ?? 0) : 0;
+    // 切り札が3枚以上ある手は、その枚数分だけ少し上乗せする。
     score += Math.max(0, trumpCount - 2) * 0.25;
 
     if (trumpSuit) {
@@ -329,6 +324,7 @@ export class ComStrategyService implements IComStrategyService {
         if (suit === trumpSuit) {
           continue;
         }
+        // 切り札以外のsuitが0〜1枚なら、フォローを切ってtrumpを出しやすい。
         const count = suitCounts.get(suit) ?? 0;
         if (count === 0) {
           score += 0.35;
@@ -338,6 +334,8 @@ export class ComStrategyService implements IComStrategyService {
       }
     }
 
+    // score < 3.8 は宣言不可の5ペア扱い。
+    // score >= 3.8 は floor(5 + score / 1.35) で推定し、最低6・最大10に丸める。
     const estimatedPairs =
       score < MIN_DECLARATION_SCORE
         ? NON_DECLARABLE_PAIRS
@@ -354,11 +352,37 @@ export class ComStrategyService implements IComStrategyService {
     return { trumpType, estimatedPairs, score };
   }
 
-  private scoreNeededForPairs(numberOfPairs: number): number {
-    return (numberOfPairs - ESTIMATED_PAIR_BASELINE) * SCORE_PER_ESTIMATED_PAIR;
+  private specialCardScore(card: string, trumpType: TrumpType): number | null {
+    if (card === 'JOKER') {
+      return JOKER_SCORE;
+    }
+
+    if (this.isPrimaryJack(card, trumpType)) {
+      return PRIMARY_JACK_SCORE;
+    }
+
+    if (this.isSecondaryJack(card, trumpType)) {
+      return SECONDARY_JACK_SCORE;
+    }
+
+    return null;
   }
 
-  private trumpCardValue(rank: string): number {
+  private normalCardScore(
+    card: string,
+    trumpType: TrumpType,
+    trumpSuit: string,
+  ): number {
+    const rank = this.getRank(card);
+    const suit = this.cardService.getCardSuit(card, trumpType);
+    const isTrump = trumpSuit !== '' && suit === trumpSuit;
+
+    return isTrump
+      ? this.normalTrumpCardValue(rank)
+      : this.offTrumpCardValue(rank);
+  }
+
+  private normalTrumpCardValue(rank: string): number {
     switch (rank) {
       case 'A':
         return 1.0;
@@ -367,6 +391,8 @@ export class ComStrategyService implements IComStrategyService {
       case 'Q':
         return 0.6;
       case 'J':
+        // 通常デッキでは主J・同色Jが先に評価されるため、ここには基本的に来ない。
+        // それでもJが切り札扱いで残った場合の防御的な補助値。
         return 0.5;
       case '10':
         return 0.35;
