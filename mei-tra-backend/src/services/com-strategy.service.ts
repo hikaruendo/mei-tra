@@ -215,14 +215,14 @@ export class ComStrategyService implements IComStrategyService {
     const declaringTeam = this.findDeclaringTeam(state);
     const teamTaken = this.countCompletedFieldsByTeam(state, comPlayer.team);
     const declaration = state.blowState.currentHighestDeclaration;
-    const completedTricks = state.playState?.fields.length ?? 0;
+    const completedTrumpLeadCount = this.countCompletedTrumpLeads(state, trump);
     const remainingTricks = comPlayer.hand.length;
     const needsWins =
       declaringTeam === comPlayer.team &&
       declaration != null &&
       declaration.numberOfPairs - teamTaken >= remainingTricks - 1;
 
-    if (declaringTeam === comPlayer.team && completedTricks < 2) {
+    if (declaringTeam === comPlayer.team && completedTrumpLeadCount < 2) {
       const trumpLead = this.chooseTrumpLeadCard(legalCards, trump);
       if (trumpLead) {
         return trumpLead;
@@ -296,6 +296,17 @@ export class ComStrategyService implements IComStrategyService {
     return candidates.length > 0
       ? this.chooseLowestDiscard(candidates, trump)
       : null;
+  }
+
+  private countCompletedTrumpLeads(
+    state: GameState,
+    trump: TrumpType | null,
+  ): number {
+    return (
+      state.playState?.fields.filter((field) =>
+        this.isTrumpCard(field.cards[0], trump),
+      ).length ?? 0
+    );
   }
 
   private findLowestValidDeclaration(
