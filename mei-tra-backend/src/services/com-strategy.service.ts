@@ -233,15 +233,44 @@ export class ComStrategyService implements IComStrategyService {
       return this.chooseStrongestControlCard(legalCards, trump);
     }
 
+    if (declaringTeam === comPlayer.team && completedTrumpLeadCount >= 2) {
+      const nonTrumpAceLead = this.chooseNonTrumpAceLeadCard(legalCards, trump);
+      if (nonTrumpAceLead) {
+        return nonTrumpAceLead;
+      }
+
+      const lowGonLead = this.chooseLowGonLeadCard(legalCards, trump);
+      if (lowGonLead) {
+        return lowGonLead;
+      }
+
+      const partnerDeclaredSuitLead = this.choosePartnerDeclaredSuitLeadCard(
+        legalCards,
+        trump,
+        declaration,
+        comPlayer,
+        state,
+      );
+      if (partnerDeclaredSuitLead) {
+        return partnerDeclaredSuitLead;
+      }
+
+      const nonTrumpCards = this.preferNonTrumpLeadCards(legalCards, trump);
+      return this.chooseMiddleControlCard(
+        nonTrumpCards.length > 0 ? nonTrumpCards : legalCards,
+        trump,
+      );
+    }
+
     const lowGonLead = this.chooseLowGonLeadCard(legalCards, trump);
     if (lowGonLead) {
       return lowGonLead;
     }
 
     if (declaringTeam === comPlayer.team) {
-      const nonJoker = legalCards.filter((card) => card !== 'JOKER');
+      const nonTrumpCards = this.preferNonTrumpLeadCards(legalCards, trump);
       return this.chooseMiddleControlCard(
-        nonJoker.length > 0 ? nonJoker : legalCards,
+        nonTrumpCards.length > 0 ? nonTrumpCards : legalCards,
         trump,
       );
     }
@@ -296,6 +325,48 @@ export class ComStrategyService implements IComStrategyService {
     return candidates.length > 0
       ? this.chooseLowestDiscard(candidates, trump)
       : null;
+  }
+
+  private chooseNonTrumpAceLeadCard(
+    legalCards: string[],
+    trump: TrumpType | null,
+  ): string | null {
+    const aceCards = this.preferNonTrumpLeadCards(legalCards, trump).filter(
+      (card) => this.getRank(card) === 'A',
+    );
+    return aceCards.length > 0 ? aceCards[0] : null;
+  }
+
+  private choosePartnerDeclaredSuitLeadCard(
+    legalCards: string[],
+    trump: TrumpType | null,
+    declaration: BlowDeclaration | null,
+    comPlayer: DomainPlayer,
+    state: GameState,
+  ): string | null {
+    if (
+      declaration == null ||
+      declaration.playerId === comPlayer.playerId ||
+      this.findPlayer(state, declaration.playerId)?.team !== comPlayer.team
+    ) {
+      return null;
+    }
+
+    const trumpCards = legalCards.filter((card) =>
+      this.isTrumpCard(card, trump),
+    );
+    return trumpCards.length > 0
+      ? this.chooseLowestDiscard(trumpCards, trump)
+      : null;
+  }
+
+  private preferNonTrumpLeadCards(
+    legalCards: string[],
+    trump: TrumpType | null,
+  ): string[] {
+    return legalCards.filter(
+      (card) => card !== 'JOKER' && !this.isTrumpCard(card, trump),
+    );
   }
 
   private countCompletedTrumpLeads(
