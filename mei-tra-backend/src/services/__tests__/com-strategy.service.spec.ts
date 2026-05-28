@@ -142,6 +142,34 @@ describe('ComStrategyService', () => {
     expect(strategy.chooseBlowAction(gameState, com)).toEqual({ type: 'pass' });
   });
 
+  it('overcalls a partner declaration from one pair higher', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['JOKER', 'J♥', 'J♦', 'A♥', 'K♥', 'Q♥', '10♥', 'A♠', '5♣', '6♦'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = state({
+      players: [com, player('e1', 1), partner, player('e2', 1)],
+      blowState: {
+        currentHighestDeclaration: {
+          playerId: partner.playerId,
+          trumpType: 'club',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      } as Partial<BlowState> as BlowState,
+    });
+
+    const action = strategy.chooseBlowAction(gameState, com);
+
+    expect(action.type).toBe('declare');
+    if (action.type === 'declare') {
+      expect(action.declaration.numberOfPairs).toBe(7);
+    }
+  });
+
   it('selects low off-trump negri and avoids Joker, jacks, and high trump', () => {
     const com = player(
       'com-0',

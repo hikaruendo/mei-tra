@@ -50,6 +50,7 @@ const MAX_ESTIMATED_PAIRS = 10;
 const JOKER_SCORE = 2.2;
 const PRIMARY_JACK_SCORE = 1.5;
 const SECONDARY_JACK_SCORE = 1.2;
+const PARTNER_OVERCALL_PAIR_STEP = 1;
 
 @Injectable()
 export class ComStrategyService implements IComStrategyService {
@@ -89,10 +90,11 @@ export class ComStrategyService implements IComStrategyService {
     if (currentHighestIsPartner) {
       const best = evaluations[0];
       // 味方が最高宣言中なら基本は邪魔しない。
-      // 例外として、味方宣言より2ペア以上高く見積もれる場合だけovercallする。
+      // 例外として、味方宣言より1ペア以上高く見積もれる場合だけovercallする。
       const shouldOvercallPartner =
         currentHighest != null &&
-        best.estimatedPairs >= currentHighest.numberOfPairs + 2;
+        best.estimatedPairs >=
+          currentHighest.numberOfPairs + PARTNER_OVERCALL_PAIR_STEP;
 
       if (!shouldOvercallPartner) {
         return { type: 'pass' };
@@ -321,7 +323,7 @@ export class ComStrategyService implements IComStrategyService {
         if (
           currentHighestIsPartner &&
           currentHighest != null &&
-          pairs < currentHighest.numberOfPairs + 2
+          pairs < currentHighest.numberOfPairs + PARTNER_OVERCALL_PAIR_STEP
         ) {
           continue;
         }
