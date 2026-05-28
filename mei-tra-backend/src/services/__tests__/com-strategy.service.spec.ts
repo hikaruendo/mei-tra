@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { BlowService } from '../blow.service';
 import { CardService } from '../card.service';
 import { ComStrategyService } from '../com-strategy.service';
@@ -23,6 +24,10 @@ describe('ComStrategyService', () => {
     playService,
     blowService,
   );
+  const strategyWithScorePerEstimatedPair = (value: string) =>
+    new ComStrategyService(cardService, playService, blowService, {
+      get: jest.fn().mockReturnValue(value),
+    } as unknown as ConfigService);
 
   const player = (
     playerId: string,
@@ -118,6 +123,39 @@ describe('ComStrategyService', () => {
     ).toEqual({
       type: 'pass',
     });
+  });
+
+  it('uses configured score per estimated pair when deciding how high to declare', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['A♥', 'K♥', 'Q♥', '10♥', '9♠', '8♠', '7♦', '6♦', '5♣', '5♥'],
+      { isCOM: true },
+    );
+    const enemy = player('enemy-1', 1);
+    const gameState = state({
+      players: [com, enemy, player('partner-0', 0), player('enemy-2', 1)],
+      blowState: {
+        currentHighestDeclaration: {
+          playerId: enemy.playerId,
+          trumpType: 'tra',
+          numberOfPairs: 7,
+          timestamp: Date.now(),
+        },
+      } as Partial<BlowState> as BlowState,
+    });
+
+    expect(strategy.chooseBlowAction(gameState, com)).toEqual({
+      type: 'pass',
+    });
+
+    const aggressiveAction = strategyWithScorePerEstimatedPair(
+      '0.8',
+    ).chooseBlowAction(gameState, com);
+    expect(aggressiveAction.type).toBe('declare');
+    if (aggressiveAction.type === 'declare') {
+      expect(aggressiveAction.declaration.numberOfPairs).toBeGreaterThan(7);
+    }
   });
 
   it('does not overcall a partner declaration without a clear upgrade', () => {

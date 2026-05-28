@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   BlowDeclaration,
   DomainPlayer,
@@ -41,10 +42,12 @@ const SUITS = ['♠', '♥', '♦', '♣'];
 // COMの宣言判断は、実際の勝ち数を完全シミュレーションせず、
 // 手札の強さをscore化して「何ペアくらい狙えるか」を推定する。
 // scoreが閾値未満なら6ペア宣言できない手として5ペア扱いにし、
-// 閾値以上なら floor(5 + score / 1.35) を6〜10に丸める。
+// 閾値以上なら floor(5 + score / SCORE_PER_ESTIMATED_PAIR) を6〜10に丸める。
+// SCORE_PER_ESTIMATED_PAIRは小さいほど吹きやすく、大きいほど吹きにくい。
 const NON_DECLARABLE_PAIRS = 5;
 const MIN_DECLARATION_SCORE = 3.8;
-const SCORE_PER_ESTIMATED_PAIR = 1.35;
+const SCORE_PER_ESTIMATED_PAIR_ENV = 'SCORE_PER_ESTIMATED_PAIR';
+const DEFAULT_SCORE_PER_ESTIMATED_PAIR = 1.35;
 const ESTIMATED_PAIR_BASELINE = 5;
 const MAX_ESTIMATED_PAIRS = 10;
 const JOKER_SCORE = 2.2;
@@ -54,6 +57,8 @@ const PARTNER_OVERCALL_PAIR_STEP = 1;
 
 @Injectable()
 export class ComStrategyService implements IComStrategyService {
+  private readonly scorePerEstimatedPair: number;
+
   constructor(
     @Inject('ICardService')
     private readonly cardService: ICardService,
@@ -61,7 +66,11 @@ export class ComStrategyService implements IComStrategyService {
     private readonly playService: IPlayService,
     @Inject('IBlowService')
     private readonly blowService: IBlowService,
-  ) {}
+    @Optional()
+    private readonly configService?: ConfigService,
+  ) {
+    this.scorePerEstimatedPair = this.resolveScorePerEstimatedPair();
+  }
 
   chooseBlowAction(state: GameState, comPlayer: DomainPlayer): ComBlowAction {
     if (comPlayer.hasBroken || comPlayer.hasRequiredBroken) {
@@ -476,7 +485,7 @@ export class ComStrategyService implements IComStrategyService {
     }
 
     // score < 3.8 は宣言不可の5ペア扱い。
-    // score >= 3.8 は floor(5 + score / 1.35) で推定し、最低6・最大10に丸める。
+    // score >= 3.8 は floor(5 + score / SCORE_PER_ESTIMATED_PAIR) で推定し、最低6・最大10に丸める。
     const estimatedPairs =
       score < MIN_DECLARATION_SCORE
         ? NON_DECLARABLE_PAIRS
@@ -485,12 +494,23 @@ export class ComStrategyService implements IComStrategyService {
             Math.max(
               6,
               Math.floor(
-                ESTIMATED_PAIR_BASELINE + score / SCORE_PER_ESTIMATED_PAIR,
+                ESTIMATED_PAIR_BASELINE + score / this.scorePerEstimatedPair,
               ),
             ),
           );
 
     return { trumpType, estimatedPairs, score };
+  }
+
+  private resolveScorePerEstimatedPair(): number {
+    const rawValue = this.configService?.get<string>(
+      SCORE_PER_ESTIMATED_PAIR_ENV,
+    );
+    const parsedValue = Number(rawValue);
+
+    return Number.isFinite(parsedValue) && parsedValue > 0
+      ? parsedValue
+      : DEFAULT_SCORE_PER_ESTIMATED_PAIR;
   }
 
   private specialCardScore(card: string, trumpType: TrumpType): number | null {
