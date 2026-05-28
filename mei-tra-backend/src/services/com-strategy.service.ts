@@ -213,14 +213,27 @@ export class ComStrategyService implements IComStrategyService {
     const declaringTeam = this.findDeclaringTeam(state);
     const teamTaken = this.countCompletedFieldsByTeam(state, comPlayer.team);
     const declaration = state.blowState.currentHighestDeclaration;
+    const completedTricks = state.playState?.fields.length ?? 0;
     const remainingTricks = comPlayer.hand.length;
     const needsWins =
       declaringTeam === comPlayer.team &&
       declaration != null &&
       declaration.numberOfPairs - teamTaken >= remainingTricks - 1;
 
+    if (declaringTeam === comPlayer.team && completedTricks < 2) {
+      const trumpLead = this.chooseTrumpLeadCard(legalCards, trump);
+      if (trumpLead) {
+        return trumpLead;
+      }
+    }
+
     if (needsWins || remainingTricks <= 3) {
       return this.chooseStrongestControlCard(legalCards, trump);
+    }
+
+    const lowGonLead = this.chooseLowGonLeadCard(legalCards, trump);
+    if (lowGonLead) {
+      return lowGonLead;
     }
 
     if (declaringTeam === comPlayer.team) {
@@ -238,6 +251,49 @@ export class ComStrategyService implements IComStrategyService {
       nonControlCards.length > 0 ? nonControlCards : legalCards,
       trump,
     );
+  }
+
+  private chooseTrumpLeadCard(
+    legalCards: string[],
+    trump: TrumpType | null,
+  ): string | null {
+    const trumpCards = legalCards.filter((card) =>
+      this.isTrumpCard(card, trump),
+    );
+    return trumpCards.length > 0
+      ? this.chooseStrongestControlCard(trumpCards, trump)
+      : null;
+  }
+
+  private chooseLowGonLeadCard(
+    legalCards: string[],
+    trump: TrumpType | null,
+  ): string | null {
+    const trumpSuit = trump && trump !== 'tra' ? TRUMP_TO_SUIT[trump] : '';
+    const candidates: string[] = [];
+
+    for (const suit of SUITS) {
+      if (suit === trumpSuit) {
+        continue;
+      }
+
+      const suitCards = legalCards.filter(
+        (card) =>
+          card !== 'JOKER' &&
+          this.cardService.getCardSuit(card, trump) === suit,
+      );
+      const hasKing = suitCards.some((card) => this.getRank(card) === 'K');
+      const hasAce = suitCards.some((card) => this.getRank(card) === 'A');
+      if (!hasKing || hasAce) {
+        continue;
+      }
+
+      candidates.push(...suitCards.filter((card) => this.isLowCard(card)));
+    }
+
+    return candidates.length > 0
+      ? this.chooseLowestDiscard(candidates, trump)
+      : null;
   }
 
   private findLowestValidDeclaration(
@@ -533,6 +589,24 @@ export class ComStrategyService implements IComStrategyService {
       this.isSecondaryJack(card, trump) ||
       (trumpSuit !== '' && suit === trumpSuit)
     );
+  }
+
+  private isTrumpCard(card: string, trump: TrumpType | null): boolean {
+    if (!trump || trump === 'tra' || card === 'JOKER') {
+      return false;
+    }
+
+    const trumpSuit = TRUMP_TO_SUIT[trump];
+    const suit = this.cardService.getCardSuit(card, trump);
+    return (
+      this.isPrimaryJack(card, trump) ||
+      this.isSecondaryJack(card, trump) ||
+      suit === trumpSuit
+    );
+  }
+
+  private isLowCard(card: string): boolean {
+    return ['5', '6', '7', '8', '9'].includes(this.getRank(card));
   }
 
   private baseSuitControlScore(

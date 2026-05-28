@@ -206,6 +206,66 @@ describe('ComStrategyService', () => {
     expect(strategy.choosePlayCard(gameState, com)).toBe('5♣');
   });
 
+  it('leads trump during the first two tricks when the COM team declares', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['A♥', '5♥', 'K♠', '5♠', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = leadState(com, 'herz', {
+      currentHighestDeclaration: {
+        playerId: partner.playerId,
+        trumpType: 'herz',
+        numberOfPairs: 6,
+        timestamp: Date.now(),
+      },
+    });
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('A♥');
+  });
+
+  it('does not use low-gon on the trump suit', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['K♥', '5♥', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦', '5♠', '8♠'],
+      { isCOM: true },
+    );
+    const enemy = player('enemy-1', 1);
+    const gameState = leadState(com, 'herz', {
+      currentHighestDeclaration: {
+        playerId: enemy.playerId,
+        trumpType: 'herz',
+        numberOfPairs: 6,
+        timestamp: Date.now(),
+      },
+    });
+
+    expect(strategy.choosePlayCard(gameState, com)).not.toBe('5♥');
+  });
+
+  it('leads the low card first when holding low-gon without the ace', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['K♠', '5♠', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦', '5♥', '8♥'],
+      { isCOM: true },
+    );
+    const enemy = player('enemy-1', 1);
+    const gameState = leadState(com, 'herz', {
+      currentHighestDeclaration: {
+        playerId: enemy.playerId,
+        trumpType: 'herz',
+        numberOfPairs: 6,
+        timestamp: Date.now(),
+      },
+    });
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('5♠');
+  });
+
   it('selects the strongest supported suit after leading Joker', () => {
     const com = player('com-0', 0, ['A♣', 'K♣', '5♣', 'A♠', '6♥'], {
       isCOM: true,
@@ -243,6 +303,38 @@ describe('ComStrategyService', () => {
       players,
       gamePhase: 'play',
       blowState: { currentTrump: trump } as Partial<BlowState> as BlowState,
+      playState: playStateValue,
+    });
+  }
+
+  function leadState(
+    com: DomainPlayer,
+    trump: TrumpType | null,
+    blowState: Partial<BlowState> = {},
+  ): GameState {
+    const players = [
+      com,
+      player('enemy-1', 1),
+      player('partner-0', 0),
+      player('enemy-2', 1),
+    ];
+    const playStateValue: PlayState = {
+      currentField: null,
+      negriCard: null,
+      neguri: {},
+      fields: [],
+      lastWinnerId: null,
+      openDeclared: false,
+      openDeclarerId: null,
+    };
+
+    return state({
+      players,
+      gamePhase: 'play',
+      blowState: {
+        currentTrump: trump,
+        ...blowState,
+      } as Partial<BlowState> as BlowState,
       playState: playStateValue,
     });
   }
