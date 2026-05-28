@@ -303,9 +303,10 @@ export class ComStrategyService implements IComStrategyService {
     trump: TrumpType | null,
   ): number {
     return (
-      state.playState?.fields.filter((field) =>
-        this.isTrumpCard(field.cards[0], trump),
-      ).length ?? 0
+      state.playState?.fields.filter((field) => {
+        const leadCard = field.cards[0];
+        return leadCard != null && this.isTrumpCard(leadCard, trump);
+      }).length ?? 0
     );
   }
 
