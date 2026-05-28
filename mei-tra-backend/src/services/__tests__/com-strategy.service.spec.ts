@@ -308,6 +308,90 @@ describe('ComStrategyService', () => {
     expect(strategy.choosePlayCard(gameState, com)).toBe('A♥');
   });
 
+  it('leads a non-trump ace after two completed trump leads when wins are not urgent', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['A♥', 'K♥', 'Q♥', 'A♠', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = leadState(
+      com,
+      'herz',
+      {
+        currentHighestDeclaration: {
+          playerId: partner.playerId,
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      },
+      [
+        completedField(['5♥', 'A♠', '6♠', '7♠'], 0),
+        completedField(['6♥', 'A♣', '7♣', '8♣'], 1),
+      ],
+    );
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('A♠');
+  });
+
+  it('uses low-gon after two trump leads when there is no non-trump ace', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['A♥', 'K♥', 'Q♥', 'K♠', '5♠', 'Q♦', '7♣', '9♦', '10♣', '6♦'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = leadState(
+      com,
+      'herz',
+      {
+        currentHighestDeclaration: {
+          playerId: partner.playerId,
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      },
+      [
+        completedField(['5♥', 'A♠', '6♠', '7♠'], 0),
+        completedField(['6♥', 'A♣', '7♣', '8♣'], 1),
+      ],
+    );
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('5♠');
+  });
+
+  it('falls back to the partner declared suit after two trump leads', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['5♥', '8♥', 'Q♠', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦', 'Q♣'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = leadState(
+      com,
+      'herz',
+      {
+        currentHighestDeclaration: {
+          playerId: partner.playerId,
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      },
+      [
+        completedField(['K♥', 'A♠', '6♠', '7♠'], 0),
+        completedField(['6♥', 'A♣', '7♣', '8♣'], 1),
+      ],
+    );
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('5♥');
+  });
+
   it('does not use low-gon on the trump suit', () => {
     const com = player(
       'com-0',
@@ -422,11 +506,14 @@ describe('ComStrategyService', () => {
     });
   }
 
-  function completedField(cards: string[]): CompletedField {
+  function completedField(
+    cards: string[],
+    winnerTeam: Team = 0,
+  ): CompletedField {
     return {
       cards,
       winnerId: 'winner',
-      winnerTeam: 0,
+      winnerTeam,
       dealerId: 'leader',
     };
   }
