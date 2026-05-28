@@ -4,6 +4,7 @@ import { ComStrategyService } from '../com-strategy.service';
 import { PlayService } from '../play.service';
 import {
   BlowState,
+  CompletedField,
   DomainPlayer,
   Field,
   GamePhase,
@@ -254,6 +255,59 @@ describe('ComStrategyService', () => {
     expect(strategy.choosePlayCard(gameState, com)).toBe('A♥');
   });
 
+  it('counts completed trump leads instead of total completed tricks', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['A♥', '5♥', 'K♠', '5♠', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = leadState(
+      com,
+      'herz',
+      {
+        currentHighestDeclaration: {
+          playerId: partner.playerId,
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      },
+      [
+        completedField(['5♠', 'A♠', '6♠', '7♠']),
+        completedField(['6♣', 'A♣', '7♣', '8♣']),
+      ],
+    );
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('A♥');
+  });
+
+  it('ignores empty completed fields when counting trump leads', () => {
+    const com = player(
+      'com-0',
+      0,
+      ['A♥', '5♥', 'K♠', '5♠', '8♣', 'Q♦', '7♣', '9♦', '10♣', '6♦'],
+      { isCOM: true },
+    );
+    const partner = player('partner-0', 0);
+    const gameState = leadState(
+      com,
+      'herz',
+      {
+        currentHighestDeclaration: {
+          playerId: partner.playerId,
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: Date.now(),
+        },
+      },
+      [completedField([])],
+    );
+
+    expect(strategy.choosePlayCard(gameState, com)).toBe('A♥');
+  });
+
   it('does not use low-gon on the trump suit', () => {
     const com = player(
       'com-0',
@@ -339,6 +393,7 @@ describe('ComStrategyService', () => {
     com: DomainPlayer,
     trump: TrumpType | null,
     blowState: Partial<BlowState> = {},
+    completedFields: CompletedField[] = [],
   ): GameState {
     const players = [
       com,
@@ -350,7 +405,7 @@ describe('ComStrategyService', () => {
       currentField: null,
       negriCard: null,
       neguri: {},
-      fields: [],
+      fields: completedFields,
       lastWinnerId: null,
       openDeclared: false,
       openDeclarerId: null,
@@ -365,5 +420,14 @@ describe('ComStrategyService', () => {
       } as Partial<BlowState> as BlowState,
       playState: playStateValue,
     });
+  }
+
+  function completedField(cards: string[]): CompletedField {
+    return {
+      cards,
+      winnerId: 'winner',
+      winnerTeam: 0,
+      dealerId: 'leader',
+    };
   }
 });
