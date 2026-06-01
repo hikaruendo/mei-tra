@@ -51,7 +51,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   const t = useTranslations();
   const { user } = useAuth();
   const memoizedUsers = useMemo(() => users, [users]);
-  const { availableRooms, createRoom, joinRoom, error, currentRoom } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
+  const { availableRooms, createRoom, joinRoom, watchRoom, error, currentRoom } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
@@ -191,14 +191,29 @@ export const RoomList: React.FC<RoomListProps> = ({
                   const canJoin =
                     (!isPlayingRoom && actualPlayerCount < room.settings.maxPlayers) ||
                     (isPlayingRoom && hasComSeat);
-                  return canJoin && currentRoom?.id !== room.id && (
-                    <button
-                      onClick={() => joinRoom(room.id)}
-                      className={styles.joinButton}
-                      disabled={disableRoomActions}
-                    >
-                      {t('room.join')}
-                    </button>
+                  const canWatch =
+                    isPlayingRoom && room.settings.allowSpectators;
+                  return currentRoom?.id !== room.id && (
+                    <>
+                      {canJoin && (
+                        <button
+                          onClick={() => joinRoom(room.id)}
+                          className={styles.joinButton}
+                          disabled={disableRoomActions}
+                        >
+                          {t('room.join')}
+                        </button>
+                      )}
+                      {canWatch && (
+                        <button
+                          onClick={() => watchRoom(room.id)}
+                          className={styles.joinButton}
+                          disabled={disableRoomActions}
+                        >
+                          {t('room.watch')}
+                        </button>
+                      )}
+                    </>
                   );
                 })()}
               </div>

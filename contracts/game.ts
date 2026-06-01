@@ -80,7 +80,8 @@ export interface GameStatePayload {
   currentTurn: string | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
-  you: string;
+  you: string | null;
+  isSpectator?: boolean;
   negriCard: string | null;
   fields: CompletedFieldContract[];
   roomId: string;
