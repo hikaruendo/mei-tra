@@ -498,9 +498,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         });
         if (response.success && response.room) {
           const nextRoom = fromRoomContract(response.room);
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('roomId', nextRoom.id);
-          }
           setCurrentRoom(nextRoom);
           return;
         }
@@ -552,6 +549,27 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       },
     );
   }, [socket, user]);
+
+  const watchRoom = useCallback((roomId: string) => {
+    if (!socket?.connected) {
+      setError('Socket not connected');
+      return;
+    }
+
+    socket.emit(
+      'watch-room',
+      { roomId },
+      (response: { success: boolean; room?: RoomContract; error?: string }) => {
+        if (response.success && response.room) {
+          const nextRoom = fromRoomContract(response.room);
+          setCurrentRoom(nextRoom);
+          return;
+        }
+
+        setError(response.error || 'Failed to watch room');
+      },
+    );
+  }, [socket]);
 
   // ルーム退出
   const leaveRoom = useCallback((roomId: string) => {
@@ -673,6 +691,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       error: null,
       createRoom: () => {},
       joinRoom: () => {},
+      watchRoom: () => {},
       leaveRoom: () => {},
       togglePlayerReady: () => {},
       startGameRoom: () => {},
@@ -689,6 +708,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     error,
     createRoom,
     joinRoom,
+    watchRoom,
     leaveRoom,
     togglePlayerReady,
     startGameRoom,

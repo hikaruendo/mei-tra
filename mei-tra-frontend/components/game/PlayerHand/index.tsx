@@ -76,6 +76,7 @@ interface PlayerHandProps {
   isHost?: boolean;
   isIdle?: boolean;
   isDisconnected?: boolean;
+  isSpectator?: boolean;
   onReplaceWithCOM?: (playerId: string) => void;
 }
 
@@ -98,6 +99,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isHost = false,
   isIdle = false,
   isDisconnected = false,
+  isSpectator = false,
   onReplaceWithCOM,
 }) => {
   const t = useTranslations('playerHand');
@@ -152,7 +154,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const renderPlayerHand = (isCurrentPlayer: boolean) => {
-    if (isCurrentPlayer) {
+    if (isCurrentPlayer && !isSpectator) {
       return (
         <div
           className={styles.handContainer}
@@ -223,7 +225,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
     return (
       <div className={styles.otherPlayerHandContainer}>
-        {Array(player.hand.length).fill(null).map((_, cardIndex) => (
+        {player.hand.map((card, cardIndex) => (
           <div
             key={cardIndex}
             className={styles.cardFaceDown}
@@ -232,7 +234,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               '--card-total': player.hand.length,
             } as React.CSSProperties}
           >
-            <CardFace faceDown />
+            {isSpectator ? <CardFace card={card} /> : <CardFace faceDown />}
           </div>
         ))}
       </div>

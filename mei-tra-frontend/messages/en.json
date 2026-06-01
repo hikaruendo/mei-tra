@@ -256,6 +256,7 @@
     "title": "Room List",
     "create": "Create Room",
     "join": "Join",
+    "watch": "Watch",
     "start": "Start Game",
     "roomName": "Enter room name",
     "search": "Search by room name",

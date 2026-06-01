@@ -195,6 +195,7 @@ export const useGame = () => {
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [currentHostId, setCurrentHostId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
   const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
   const [disconnectedPlayerIds, setDisconnectedPlayerIds] = useState<string[]>([]);
@@ -215,6 +216,7 @@ export const useGame = () => {
     setCurrentHostId(null);
     setCurrentPlayerId(null);
     setIsHost(false);
+    setIsSpectator(false);
     setIdlePlayerIds([]);
     setDisconnectedPlayerIds([]);
     setPlayers([]);
@@ -539,6 +541,7 @@ export const useGame = () => {
         roomId,
         hostId,
         pointsToWin,
+        isSpectator,
       }: GameStatePayload) => {
         const nextPlayers = mergePlayersPreservingIdentity(
           players,
@@ -546,7 +549,9 @@ export const useGame = () => {
         );
         setPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
+        if (!isSpectator) {
+          syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
+        }
         setGamePhase(toUiGamePhase(gamePhase));
         setWhoseTurn(currentTurn);
         setCurrentField(toUiField(currentField));
@@ -556,11 +561,15 @@ export const useGame = () => {
         setBlowActionHistory(blowState.actionHistory ?? []);
         setTeamScores(toUiTeamScores(teamScores));
         if (you !== undefined) setCurrentPlayerId(you);
+        setIsSpectator(Boolean(isSpectator));
         setNegriCard(negriCard);
         setCompletedFields(toUiCompletedFields(fields));
         setNegriPlayerId(negriPlayerId);
         setCurrentRoomId(roomId);
         setCurrentHostId(hostId ?? null);
+        if (isSpectator) {
+          setIsHost(false);
+        }
         setGameStarted(true);
         setPointsToWin(pointsToWin);
         setIdlePlayerIds((prev) =>
@@ -679,7 +688,7 @@ export const useGame = () => {
       },
       'update-turn': (playerId: UpdateTurnPayload) => {
         setWhoseTurn(playerId);
-        if (socket && currentRoomId) {
+        if (socket && currentRoomId && !isSpectator) {
           socket.emit('turn-ack', { roomId: currentRoomId });
         }
       },
@@ -972,7 +981,9 @@ export const useGame = () => {
         }
       },
       'turn-ping': ({ roomId }: { roomId: string }) => {
-        socket.emit('turn-ack', { roomId });
+        if (!isSpectator) {
+          socket.emit('turn-ack', { roomId });
+        }
       },
     };
 
@@ -996,6 +1007,7 @@ export const useGame = () => {
     isConnected,
     currentPlayerId,
     currentRoomId,
+    isSpectator,
     negriPlayerId,
     markRoomSyncHandled,
     syncCurrentPlayerIdentity,
@@ -1196,6 +1208,7 @@ export const useGame = () => {
     closeGameOverModal,
     currentRoomId,
     isHost,
+    isSpectator,
     startGame,
     shuffleTeams,
     removePlayerFromRoom,

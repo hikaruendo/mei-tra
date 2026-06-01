@@ -15,6 +15,7 @@ import { RepositoriesModule } from './repositories/repositories.module';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social.module';
 import { JoinRoomUseCase } from './use-cases/join-room.use-case';
+import { WatchRoomUseCase } from './use-cases/watch-room.use-case';
 import { CreateRoomUseCase } from './use-cases/create-room.use-case';
 import { LeaveRoomUseCase } from './use-cases/leave-room.use-case';
 import { StartGameUseCase } from './use-cases/start-game.use-case';
@@ -42,6 +43,7 @@ import { JoinRoomGatewayEffectsService } from './services/join-room-gateway-effe
 import { DisconnectGatewayEffectsService } from './services/disconnect-gateway-effects.service';
 import { RoomUpdateGatewayEffectsService } from './services/room-update-gateway-effects.service';
 import { StartGameGatewayEffectsService } from './services/start-game-gateway-effects.service';
+import { SpectatorGatewayEffectsService } from './services/spectator-gateway-effects.service';
 import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
@@ -66,6 +68,7 @@ import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-gam
     DisconnectGatewayEffectsService,
     RoomUpdateGatewayEffectsService,
     StartGameGatewayEffectsService,
+    SpectatorGatewayEffectsService,
     GameEventLogService,
     {
       provide: 'IActivityTrackerService',
@@ -129,6 +132,10 @@ import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-gam
     {
       provide: 'IJoinRoomUseCase',
       useClass: JoinRoomUseCase,
+    },
+    {
+      provide: 'IWatchRoomUseCase',
+      useClass: WatchRoomUseCase,
     },
     {
       provide: 'ICreateRoomUseCase',

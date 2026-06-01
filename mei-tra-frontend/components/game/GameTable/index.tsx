@@ -38,6 +38,7 @@ interface GameTableProps {
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
   isHost?: boolean;
+  isSpectator?: boolean;
   onStart?: () => void;
   onLeave?: () => void;
   onReplaceWithCOM?: (playerId: string) => void;
@@ -70,6 +71,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   disconnectedPlayerIds = [],
   isWaiting = false,
   isHost = false,
+  isSpectator = false,
   onStart,
   onLeave,
   onReplaceWithCOM,
@@ -124,7 +126,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      {gamePhase && (
+      {gamePhase && !isSpectator && (
         <GameControls
           gamePhase={gamePhase}
           renderBlowControls={() => (
@@ -153,7 +155,9 @@ export const GameTable: React.FC<GameTableProps> = ({
           const player_ = resolvedPlayer;
 
           const position = positions[idx];
-          const currentPlayerTeam = players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
+          const currentPlayerTeam = isSpectator
+            ? player_.team
+            : players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
 
           // Show all team's completed fields only for bottom player
           const teamCompletedFields = position === 'bottom'
@@ -181,6 +185,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               isHost={isHost}
               isIdle={idlePlayerIds.includes(player_.playerId)}
               isDisconnected={disconnectedPlayerIds.includes(player_.playerId)}
+              isSpectator={isSpectator}
               onReplaceWithCOM={onReplaceWithCOM}
             />
           );
