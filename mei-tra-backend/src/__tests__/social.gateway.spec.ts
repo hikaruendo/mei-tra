@@ -23,6 +23,7 @@ describe('SocialGateway', () => {
   let authService: jest.Mocked<Pick<AuthService, 'getUserFromSocketToken'>>;
   let serverEmit: jest.Mock;
   let serverTo: jest.Mock;
+  let serverExcept: jest.Mock;
 
   const authenticatedUser: AuthenticatedUser = {
     id: 'user-1',
@@ -74,7 +75,11 @@ describe('SocialGateway', () => {
       getUserFromSocketToken: jest.fn(),
     };
     serverEmit = jest.fn();
-    serverTo = jest.fn().mockReturnValue({ emit: serverEmit });
+    serverExcept = jest.fn().mockReturnValue({ emit: serverEmit });
+    serverTo = jest.fn().mockReturnValue({
+      except: serverExcept,
+      emit: serverEmit,
+    });
 
     gateway = new SocialGateway(
       chatService as unknown as ChatService,
@@ -159,12 +164,9 @@ describe('SocialGateway', () => {
       replyTo: undefined,
     });
     expect(socket.emit).toHaveBeenCalledWith('chat:message', event);
-    expect(socket.to).toHaveBeenCalledWith('room-1');
-    const socketToTarget = socket.to.mock.results[0].value as {
-      emit: jest.Mock;
-    };
-    expect(socketToTarget.emit).toHaveBeenCalledWith('chat:message', event);
-    expect(serverTo).not.toHaveBeenCalled();
+    expect(serverTo).toHaveBeenCalledWith('room-1');
+    expect(serverExcept).toHaveBeenCalledWith('socket-1');
+    expect(serverEmit).toHaveBeenCalledWith('chat:message', event);
   });
 
   it('sends typing events as the authenticated user and ignores spoofed userId', async () => {

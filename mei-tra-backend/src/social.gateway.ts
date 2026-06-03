@@ -165,7 +165,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       client.emit('chat:message', event);
-      client.to(data.roomId).emit('chat:message', event);
+      this.server.to(data.roomId).except(client.id).emit('chat:message', event);
       this.logger.log(
         `Message posted to room ${data.roomId} by user ${authenticatedUser.id}`,
       );
