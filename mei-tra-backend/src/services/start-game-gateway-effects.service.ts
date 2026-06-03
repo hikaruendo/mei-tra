@@ -54,9 +54,14 @@ export class StartGameGatewayEffectsService {
           roomId,
         })
       : [];
+    const roomsList = await this.roomService.listRooms();
 
     return [
       ...roomEvents,
+      this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
+        rooms: roomsList,
+        scope: 'all',
+      }),
       {
         scope: 'room',
         roomId,

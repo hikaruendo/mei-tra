@@ -35,6 +35,7 @@ import { IRevealBrokenHandUseCase } from './use-cases/interfaces/reveal-broken-h
 import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use-case.interface';
 import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
 import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
+import { IWatchRoomUseCase } from './use-cases/interfaces/watch-room.use-case.interface';
 import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
@@ -108,6 +109,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly authService: AuthService,
     @Inject('IComAutoPlayUseCase')
     private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
+    @Inject('IWatchRoomUseCase')
+    private readonly watchRoomUseCase: IWatchRoomUseCase,
     @Inject('IActivityTrackerService')
     private readonly activityTracker: IActivityTrackerService,
     private readonly turnMonitorService: TurnMonitorService,
@@ -174,6 +177,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
+  private queueSpectatorSnapshot(roomId: string): void {
+    this.spectatorGatewayEffectsService.queueSnapshot(this.server, roomId, () =>
+      this.watchRoomUseCase.buildSnapshot(roomId),
+    );
+  }
+
   private dispatchEvents(events?: GatewayEvent[]) {
     if (!events) {
       return;
@@ -199,10 +208,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
               ) {
                 void this.startTurnAckMonitor(event.roomId, event.payload);
               }
-              this.spectatorGatewayEffectsService.queueSnapshot(
-                this.server,
-                event.roomId,
-              );
+              this.queueSpectatorSnapshot(event.roomId);
             }
             break;
           case 'socket':
@@ -265,7 +271,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playerName: targetPlayer?.name ?? playerId,
       message,
     });
-    this.spectatorGatewayEffectsService.queueSnapshot(this.server, roomId);
+    this.queueSpectatorSnapshot(roomId);
     if (updatedRoom) {
       this.dispatchEvents(
         await this.roomUpdateGatewayEffectsService.buildRoomEvents({
@@ -812,20 +818,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      const result = await this.spectatorGatewayEffectsService.watchRoom(
-        client,
-        data.roomId,
-      );
+      const result = await this.watchRoomUseCase.execute({
+        roomId: data.roomId,
+      });
 
-      if (!result.success || !result.room) {
+      if (!result.success || !result.data) {
         const errorMessage = result.error ?? 'Failed to watch room';
         client.emit('error-message', errorMessage);
         return { success: false, error: errorMessage };
       }
 
+      await this.spectatorGatewayEffectsService.watchRoom(
+        client,
+        data.roomId,
+        result.data.gameState,
+      );
+
       return {
         success: true,
-        room: result.room,
+        room: toRoomContract(result.data.room),
       };
     } catch (error) {
       console.error('Error in handleWatchRoom:', error);
@@ -935,10 +946,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         playerId,
         roomId: data.roomId,
       });
-      this.spectatorGatewayEffectsService.queueSnapshot(
-        this.server,
-        data.roomId,
-      );
+      this.queueSpectatorSnapshot(data.roomId);
 
       this.emitRoomsListToAll(roomsList);
       this.server.to(client.id).emit('back-to-lobby');
@@ -957,10 +965,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
           .to(data.roomId)
           .emit('game-paused', { message: gamePausedMessage });
-        this.spectatorGatewayEffectsService.queueSnapshot(
-          this.server,
-          data.roomId,
-        );
+        this.queueSpectatorSnapshot(data.roomId);
       } else if (!roomDeleted) {
         this.triggerComAutoPlayIfNeeded(data.roomId);
       }
@@ -1042,10 +1047,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           playerId: result.playerId,
           roomId: data.roomId,
         });
-        this.spectatorGatewayEffectsService.queueSnapshot(
-          this.server,
-          data.roomId,
-        );
+        this.queueSpectatorSnapshot(data.roomId);
         this.emitRoomsListToAll(result.roomsList);
         return { success: true };
       }
@@ -1056,10 +1058,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         playerName: result.playerName,
         message: result.message,
       });
-      this.spectatorGatewayEffectsService.queueSnapshot(
-        this.server,
-        data.roomId,
-      );
+      this.queueSpectatorSnapshot(data.roomId);
       this.dispatchEvents(
         await this.roomUpdateGatewayEffectsService.buildRoomEvents({
           room: result.updatedRoom,

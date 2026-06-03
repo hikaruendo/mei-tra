@@ -1,24 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { RoomContract } from '@contracts/room';
-import { toRoomContract } from '../types/room-adapters';
-import { IWatchRoomUseCase } from '../use-cases/interfaces/watch-room.use-case.interface';
+import type { GameStatePayload } from '@contracts/game';
 
-interface WatchRoomGatewayResponse {
-  success: boolean;
-  error?: string;
-  room?: RoomContract;
-}
+type BuildSpectatorSnapshot = () => Promise<GameStatePayload | null>;
 
 @Injectable()
 export class SpectatorGatewayEffectsService {
   private readonly spectatorRooms = new Map<string, string>();
   private readonly snapshotTimers = new Map<string, NodeJS.Timeout>();
-
-  constructor(
-    @Inject('IWatchRoomUseCase')
-    private readonly watchRoomUseCase: IWatchRoomUseCase,
-  ) {}
 
   isSpectatorSocket(socketId: string): boolean {
     return this.spectatorRooms.has(socketId);
@@ -36,28 +25,16 @@ export class SpectatorGatewayEffectsService {
   async watchRoom(
     client: Socket,
     roomId: string,
-  ): Promise<WatchRoomGatewayResponse> {
+    gameState: GameStatePayload,
+  ): Promise<void> {
     const currentRoomId = this.spectatorRooms.get(client.id);
     if (currentRoomId && currentRoomId !== roomId) {
       await client.leave(this.getRoomName(currentRoomId));
     }
 
-    const result = await this.watchRoomUseCase.execute({ roomId });
-    if (!result.success || !result.data) {
-      return {
-        success: false,
-        error: result.error ?? 'Failed to watch room',
-      };
-    }
-
     this.spectatorRooms.set(client.id, roomId);
     await client.join(this.getRoomName(roomId));
-    client.emit('game-state', result.data.gameState);
-
-    return {
-      success: true,
-      room: toRoomContract(result.data.room),
-    };
+    client.emit('game-state', gameState);
   }
 
   async leaveCurrentRoom(client: Socket): Promise<void> {
@@ -107,14 +84,18 @@ export class SpectatorGatewayEffectsService {
     }
   }
 
-  queueSnapshot(server: Server, roomId: string): void {
+  queueSnapshot(
+    server: Server,
+    roomId: string,
+    buildSnapshot: BuildSpectatorSnapshot,
+  ): void {
     if (this.snapshotTimers.has(roomId)) {
       return;
     }
 
     const timer = setTimeout(() => {
       this.snapshotTimers.delete(roomId);
-      void this.emitSnapshot(server, roomId);
+      void this.emitSnapshot(server, roomId, buildSnapshot);
     }, 0);
     this.snapshotTimers.set(roomId, timer);
   }
@@ -123,14 +104,18 @@ export class SpectatorGatewayEffectsService {
     return `spectators:${roomId}`;
   }
 
-  private async emitSnapshot(server: Server, roomId: string): Promise<void> {
+  private async emitSnapshot(
+    server: Server,
+    roomId: string,
+    buildSnapshot: BuildSpectatorSnapshot,
+  ): Promise<void> {
     const roomName = this.getRoomName(roomId);
     const socketIds = server.sockets.adapter.rooms.get(roomName);
     if (!socketIds || socketIds.size === 0) {
       return;
     }
 
-    const snapshot = await this.watchRoomUseCase.buildSnapshot(roomId);
+    const snapshot = await buildSnapshot();
     if (!snapshot) {
       return;
     }
