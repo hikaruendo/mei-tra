@@ -242,7 +242,7 @@ export const GameTable: React.FC<GameTableProps> = ({
             players={players}
             onBaseSuitSelect={gameActions.selectBaseSuit}
             isCurrentPlayer={!isSpectator && currentPlayerId === whoseTurn}
-            currentPlayerId={isSpectator ? '' : currentPlayerId || ''}
+            currentPlayerId={tablePerspectivePlayerId || ''}
           />
         )}
       </div>
