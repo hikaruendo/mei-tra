@@ -7,6 +7,7 @@ describe('StartGameGatewayEffectsService', () => {
     const roomService = {
       getRoom: jest.fn().mockResolvedValue({
         id: 'room-1',
+        name: 'Room 1',
         players: [
           {
             playerId: 'player-1',
@@ -20,6 +21,13 @@ describe('StartGameGatewayEffectsService', () => {
           },
         ],
       }),
+      listRooms: jest.fn().mockResolvedValue([
+        {
+          id: 'room-1',
+          name: 'Room 1',
+          players: [],
+        },
+      ]),
       getRoomGameState: jest.fn().mockResolvedValue({
         getTransportPlayers: jest.fn(() => [
           {
@@ -68,6 +76,11 @@ describe('StartGameGatewayEffectsService', () => {
           ],
         },
       ]),
+      buildRoomsListEvent: jest.fn().mockReturnValue({
+        scope: 'all',
+        event: 'rooms-list',
+        payload: [{ id: 'room-1', name: 'Room 1' }],
+      }),
     } as unknown as RoomUpdateGatewayEffectsService;
 
     const service = new StartGameGatewayEffectsService(
@@ -131,6 +144,11 @@ describe('StartGameGatewayEffectsService', () => {
         ],
       },
       {
+        scope: 'all',
+        event: 'rooms-list',
+        payload: [{ id: 'room-1', name: 'Room 1' }],
+      },
+      {
         scope: 'room',
         roomId: 'room-1',
         event: 'room-playing',
@@ -187,5 +205,18 @@ describe('StartGameGatewayEffectsService', () => {
     expect(roomEventsArgs?.statePlayers?.[0]?.playerId).toBe('player-1');
     expect(roomEventsArgs?.scope).toBe('room');
     expect(roomEventsArgs?.roomId).toBe('room-1');
+    expect(roomService.listRooms).toHaveBeenCalledTimes(1);
+    expect(
+      jest.mocked(roomUpdateGatewayEffectsService.buildRoomsListEvent),
+    ).toHaveBeenCalledWith({
+      rooms: [
+        {
+          id: 'room-1',
+          name: 'Room 1',
+          players: [],
+        },
+      ],
+      scope: 'all',
+    });
   });
 });
