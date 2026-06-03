@@ -158,8 +158,13 @@ describe('SocialGateway', () => {
       contentType: 'text',
       replyTo: undefined,
     });
-    expect(serverTo).toHaveBeenCalledWith('room-1');
-    expect(serverEmit).toHaveBeenCalledWith('chat:message', event);
+    expect(socket.emit).toHaveBeenCalledWith('chat:message', event);
+    expect(socket.to).toHaveBeenCalledWith('room-1');
+    const socketToTarget = socket.to.mock.results[0].value as {
+      emit: jest.Mock;
+    };
+    expect(socketToTarget.emit).toHaveBeenCalledWith('chat:message', event);
+    expect(serverTo).not.toHaveBeenCalled();
   });
 
   it('sends typing events as the authenticated user and ignores spoofed userId', async () => {
