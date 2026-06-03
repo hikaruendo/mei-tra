@@ -118,7 +118,7 @@ describe('WatchRoomUseCase', () => {
     return new WatchRoomUseCase(roomService);
   };
 
-  it('returns a spectator snapshot with all hands visible', async () => {
+  it('returns a spectator snapshot with hands for perspective switching', async () => {
     const roomValue = room();
     const useCase = createUseCase(roomValue);
 

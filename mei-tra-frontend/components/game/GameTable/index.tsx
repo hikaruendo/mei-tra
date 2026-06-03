@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
 import { GameField } from '@/components/game/GameField';
@@ -78,17 +78,42 @@ export const GameTable: React.FC<GameTableProps> = ({
 }) => {
   const tRoot = useTranslations();
   usePreloadCards();
+  const [spectatorPerspectivePlayerId, setSpectatorPerspectivePlayerId] =
+    useState<string | null>(null);
+
+  const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
+  const hostPlayerId = players.find((player) => player.isHost)?.playerId ?? players[0]?.playerId ?? null;
+  const tablePerspectivePlayerId = isSpectator
+    ? spectatorPerspectivePlayerId ?? hostPlayerId
+    : currentPlayerId;
+  const perspectivePlayerTeam = players.find(
+    (player) => player.playerId === tablePerspectivePlayerId,
+  )?.team ?? 0;
+
+  useEffect(() => {
+    if (!isSpectator) {
+      if (spectatorPerspectivePlayerId) {
+        setSpectatorPerspectivePlayerId(null);
+      }
+      return;
+    }
+
+    const hasSelectedPerspective = players.some(
+      (player) => player.playerId === spectatorPerspectivePlayerId,
+    );
+    if (!hasSelectedPerspective) {
+      setSpectatorPerspectivePlayerId(hostPlayerId);
+    }
+  }, [hostPlayerId, isSpectator, players, spectatorPerspectivePlayerId]);
 
   if (!players || players.length === 0) {
     return null;
   }
 
-  const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
-
   // Consistent table order for all players, self is always bottom
   const orderedPlayers = getSeatOrderWithSelfBottom(
     players,
-    currentPlayerId || '',
+    tablePerspectivePlayerId || '',
   );
   const positions = ['bottom', 'left', 'top', 'right'];
 
@@ -156,7 +181,7 @@ export const GameTable: React.FC<GameTableProps> = ({
 
           const position = positions[idx];
           const currentPlayerTeam = isSpectator
-            ? player_.team
+            ? perspectivePlayerTeam
             : players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
 
           // Show all team's completed fields only for bottom player
@@ -178,7 +203,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               agariCard={revealedAgari || undefined}
               currentHighestDeclaration={currentHighestDeclaration || undefined}
               completedFields={teamCompletedFields}
-              currentPlayerId={currentPlayerId || ''}
+              currentPlayerId={tablePerspectivePlayerId || ''}
               players={players}
               currentField={currentField}
               currentTrump={currentTrump}
@@ -186,6 +211,12 @@ export const GameTable: React.FC<GameTableProps> = ({
               isIdle={idlePlayerIds.includes(player_.playerId)}
               isDisconnected={disconnectedPlayerIds.includes(player_.playerId)}
               isSpectator={isSpectator}
+              isSpectatorPerspective={
+                isSpectator && tablePerspectivePlayerId === player_.playerId
+              }
+              onSpectatorPerspectiveChange={
+                isSpectator ? setSpectatorPerspectivePlayerId : undefined
+              }
               onReplaceWithCOM={onReplaceWithCOM}
             />
           );
@@ -210,8 +241,8 @@ export const GameTable: React.FC<GameTableProps> = ({
             currentField={currentField}
             players={players}
             onBaseSuitSelect={gameActions.selectBaseSuit}
-            isCurrentPlayer={currentPlayerId === whoseTurn}
-            currentPlayerId={currentPlayerId || ''}
+            isCurrentPlayer={!isSpectator && currentPlayerId === whoseTurn}
+            currentPlayerId={isSpectator ? '' : currentPlayerId || ''}
           />
         )}
       </div>

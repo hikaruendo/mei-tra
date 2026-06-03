@@ -77,6 +77,8 @@ interface PlayerHandProps {
   isIdle?: boolean;
   isDisconnected?: boolean;
   isSpectator?: boolean;
+  isSpectatorPerspective?: boolean;
+  onSpectatorPerspectiveChange?: (playerId: string) => void;
   onReplaceWithCOM?: (playerId: string) => void;
 }
 
@@ -100,6 +102,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isIdle = false,
   isDisconnected = false,
   isSpectator = false,
+  isSpectatorPerspective = false,
+  onSpectatorPerspectiveChange,
   onReplaceWithCOM,
 }) => {
   const t = useTranslations('playerHand');
@@ -116,15 +120,20 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     currentTrump,
   );
   const isCurrentPlayer = currentPlayerId === player.playerId;
+  const canActAsCurrentPlayer = isCurrentPlayer && !isSpectator;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
   const shouldSelectNegri =
-    gamePhase === 'play' && isCurrentPlayer && isWinningPlayer && !negriCard;
+    gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
   const replaceWithComStatusLabel = isDisconnected
     ? tStatus('disconnected')
     : tStatus('idle');
 
   useEffect(() => {
-    if (gamePhase !== 'blow' || !isCurrentPlayer || !player.hasRequiredBroken) {
+    if (
+      gamePhase !== 'blow' ||
+      !canActAsCurrentPlayer ||
+      !player.hasRequiredBroken
+    ) {
       autoRevealAttemptedRef.current = false;
       return;
     }
@@ -138,12 +147,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   }, [
     gamePhase,
     gameActions,
-    isCurrentPlayer,
+    canActAsCurrentPlayer,
     player.hasRequiredBroken,
     player.playerId,
   ]);
 
   const handleCardClick = (card: string) => {
+    if (!canActAsCurrentPlayer) {
+      return;
+    }
+
     if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
       if (!negriCard && currentHighestDeclaration?.playerId === player.playerId) {
         setSelectedNegriCard(card);
@@ -154,7 +167,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const renderPlayerHand = (isCurrentPlayer: boolean) => {
-    if (isCurrentPlayer && !isSpectator) {
+    if (isCurrentPlayer) {
       return (
         <div
           className={styles.handContainer}
@@ -176,14 +189,19 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * handCardMetrics.spreadLift;
 
             const validationResult = isValidCardPlay(card);
-            const isPlayable = isCurrentPlayer && validationResult.isValid;
+            const isPlayable = canActAsCurrentPlayer && validationResult.isValid;
 
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isNegri ? styles.negriCard : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable}`}
+                className={`${styles.card} ${isNegri ? styles.negriCard : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''}`}
                 onClick={() => {
-                  if (gamePhase === 'play' && whoseTurn === currentPlayerId && isPlayable) {
+                  if (
+                    canActAsCurrentPlayer &&
+                    gamePhase === 'play' &&
+                    whoseTurn === currentPlayerId &&
+                    isPlayable
+                  ) {
                     handleCardClick(card);
                   }
                 }}
@@ -199,7 +217,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </div>
             );
           })}
-          {selectedCard && (
+          {!isSpectator && selectedCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedCard}
               onClick={() => {
@@ -209,7 +227,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               buttonText={t('play')}
             />
           )}
-          {selectedNegriCard && (
+          {!isSpectator && selectedNegriCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedNegriCard}
               onClick={() => {
@@ -234,35 +252,53 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               '--card-total': player.hand.length,
             } as React.CSSProperties}
           >
-            {isSpectator ? <CardFace card={card} /> : <CardFace faceDown />}
+            <CardFace faceDown />
           </div>
         ))}
       </div>
     );
   };
 
+  const playerInfoContent = (
+    <>
+      <div className={styles.playerAvatar}>
+        <PlayerAvatar
+          player={player}
+          size="medium"
+          showName={true}
+        />
+      </div>
+      {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
+      {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
+        <button
+          className={styles.brokenButton}
+          onClick={() => gameActions.revealBrokenHand(player.playerId)}
+        >
+          {t('revealBroken')}
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
       <div className={styles.playerInfo}>
         <div className={styles.playerInfoGroup}>
-          <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
-            <div className={styles.playerAvatar}>
-              <PlayerAvatar
-                player={player}
-                size="medium"
-                showName={true}
-              />
+          {isSpectator ? (
+            <button
+              type="button"
+              className={`${styles.playerInfoContainer} ${styles.spectatorPerspectiveButton} ${isCurrentTurn ? styles.currentTurn : ''} ${isSpectatorPerspective ? styles.spectatorPerspective : ''}`}
+              onClick={() => onSpectatorPerspectiveChange?.(player.playerId)}
+              aria-pressed={isSpectatorPerspective}
+              aria-label={`Switch spectator perspective to ${player.name}`}
+            >
+              {playerInfoContent}
+            </button>
+          ) : (
+            <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
+              {playerInfoContent}
             </div>
-            {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
-            {gamePhase === 'blow' && isCurrentPlayer && player.hasBroken && (
-              <button
-                className={styles.brokenButton}
-                onClick={() => gameActions.revealBrokenHand(player.playerId)}
-              >
-                {t('revealBroken')}
-              </button>
-            )}
-          </div>
+          )}
           {negriCard && negriPlayerId === player.playerId && (
             <NegriCard
               negriCard={negriCard}
