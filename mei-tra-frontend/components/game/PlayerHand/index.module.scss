@@ -92,6 +92,16 @@
   transition: all 0.3s ease-in-out;
 }
 
+.spectatorCard {
+  cursor: default;
+  filter: none;
+}
+
+.spectatorCard:hover {
+  transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
+  margin: 0 var(--player-hand-card-overlap, var(--card-overlap));
+}
+
 
 .playerInfo{
   position: relative;
@@ -128,6 +138,24 @@
   padding: 4px;
   min-width: 132px;
   backdrop-filter: blur(2px);
+}
+
+.spectatorPerspectiveButton {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.spectatorPerspectiveButton:hover,
+.spectatorPerspectiveButton:focus-visible {
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.28);
+  outline: none;
+}
+
+.spectatorPerspective {
+  border: 2px solid #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
 .playerAvatar{
@@ -411,6 +439,11 @@
 .card.unplayable {
   cursor: not-allowed;
   filter: brightness(0.45) saturate(0.3);
+}
+
+.card.unplayable.spectatorCard {
+  cursor: default;
+  filter: none;
 }
 
 .playerPosition.top .playerInfo,

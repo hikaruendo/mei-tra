@@ -105,6 +105,7 @@ export default function Home() {
     closeGameOverModal = () => {},
     currentRoomId = null,
     isHost = false,
+    isSpectator = false,
     startGame,
     shuffleTeams,
     removePlayerFromRoom,
@@ -136,6 +137,11 @@ export default function Home() {
   }
 
   const handleLeaveRoom = () => {
+    if (socket && currentRoomId && isSpectator) {
+      socket.emit('leave-watch-room', { roomId: currentRoomId });
+      return;
+    }
+
     if (socket && currentRoomId && currentPlayerId) {
       socket.emit('leave-room', { roomId: currentRoomId, playerId: currentPlayerId });
     }
@@ -215,6 +221,7 @@ export default function Home() {
                   currentPlayerId={currentPlayerId}
                   currentRoomId={currentRoomId}
                   isHost={isHost}
+                  isSpectator={isSpectator}
                   idlePlayerIds={idlePlayerIds}
                   disconnectedPlayerIds={disconnectedPlayerIds}
                   pointsToWin={pointsToWin}

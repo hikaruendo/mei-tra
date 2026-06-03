@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import type { GameActions, Player } from '@/types/game.types';
@@ -35,7 +35,17 @@ jest.mock('@/components/game/PlayerAvatar', () => ({
 }));
 
 jest.mock('@/components/game/CardFace', () => ({
-  CardFace: () => <div data-testid="card-face" />,
+  CardFace: ({
+    card,
+    faceDown,
+  }: {
+    card?: string;
+    faceDown?: boolean;
+  }) => (
+    <div data-testid={faceDown ? 'card-back' : 'card-front'}>
+      {card}
+    </div>
+  ),
 }));
 
 jest.mock('@/components/game/Card', () => ({
@@ -139,6 +149,43 @@ describe('PlayerHand', () => {
 
     expect(screen.getAllByText('Agari').length).toBeGreaterThan(0);
     expect(screen.getByText('Please select your Negri')).toBeInTheDocument();
-    expect(screen.getByText('H-A')).toBeInTheDocument();
+    expect(screen.getAllByText('H-A').length).toBeGreaterThan(0);
+  });
+
+  it('shows the selected spectator perspective hand face up', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      isSpectator: true,
+      isSpectatorPerspective: true,
+    });
+
+    expect(screen.getByTestId('card-front')).toHaveTextContent('H-A');
+    expect(screen.queryByTestId('card-back')).not.toBeInTheDocument();
+  });
+
+  it('keeps non-perspective spectator hands face down', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-1',
+      isSpectator: true,
+    });
+
+    expect(screen.getByTestId('card-back')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-front')).not.toBeInTheDocument();
+  });
+
+  it('lets spectators switch perspective from the player info button', () => {
+    const onSpectatorPerspectiveChange = jest.fn();
+    renderPlayerHand({
+      isSpectator: true,
+      onSpectatorPerspectiveChange,
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Switch spectator perspective to Player 2',
+      }),
+    );
+
+    expect(onSpectatorPerspectiveChange).toHaveBeenCalledWith('player-2');
   });
 });
