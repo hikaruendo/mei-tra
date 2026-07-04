@@ -202,9 +202,6 @@ export function ProfilePage() {
                 <h1 className={styles.profileName}>
                   {profile?.displayName || user?.email || 'User'}
                 </h1>
-                <p className={styles.profileUsername}>
-                  @{profile?.username || user?.id.substring(0, 8) || 'unknown'}
-                </p>
                 <p className={styles.profileEmail}>
                   {user.email}
                 </p>

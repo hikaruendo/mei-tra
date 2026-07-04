@@ -17,8 +17,8 @@
 .loadingSpinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.1);
-  border-top: 4px solid #fff;
+  border: 4px solid var(--mt-border-hairline);
+  border-top: 4px solid var(--mt-accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -30,7 +30,7 @@
 
 .loadingText {
   font-size: 1.1rem;
-  color: #888;
+  color: var(--mt-text-muted);
   font-weight: 500;
 }
 
@@ -40,18 +40,11 @@
 }
 
 .gameWrapper {
-  background-color: #0a1a0f;
+  background-color: var(--mt-surface-felt);
   min-height: calc(100dvh - 4rem);
   width: 100%;
   display: flex;
   flex-direction: column;
-}
-
-:global(html[data-theme='light']) .gameWrapper {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(236, 253, 245, 0.18) 0%, rgba(187, 247, 208, 0.12) 16%, rgba(74, 222, 128, 0.08) 32%, rgba(10, 40, 27, 0) 52%),
-    radial-gradient(circle at center, rgba(110, 231, 183, 0.08) 0%, rgba(10, 40, 27, 0) 48%),
-    linear-gradient(180deg, #18462f 0%, #133b28 18%, #0f2f20 100%);
 }
 
 @media (max-width: 768px) {

@@ -22,7 +22,6 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
   const isCompact = variant === 'compact';
 
   const displayName = user?.profile?.displayName || user?.email || t('guestUser');
-  const username = user?.profile?.username || user?.id.slice(0, 8) || 'guest';
   const secondaryEmail = user?.email && user.profile?.displayName && user.profile.displayName !== user.email
     ? user.email
     : null;
@@ -157,7 +156,6 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
               {secondaryEmail ? (
                 <span className={styles.compactMeta}>{secondaryEmail}</span>
               ) : null}
-              <span className={styles.compactMeta}>@{username}</span>
             </Link>
             <div className={styles.compactActions}>
               <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
@@ -191,7 +189,6 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
       <Link href="/profile" className={styles.profileLink}>
         <div className={styles.userInfo}>
           <span className={styles.displayName}>{displayName}</span>
-          <span className={styles.username}>@{username}</span>
         </div>
       </Link>
 

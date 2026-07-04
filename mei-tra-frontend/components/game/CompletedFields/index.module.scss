@@ -2,8 +2,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
+  background: var(--mt-surface-raised);
+  border-radius: var(--mt-radius);
   margin-top: 16px;
   padding: 8px 16px;
   width: 526px;
@@ -18,17 +18,17 @@
   justify-content: center;
   text-align: center;
   gap: 6px;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   padding: 8px;
 }
 
 .winnerName {
   font-size: 0.75rem;
-  color: #fff;
+  color: var(--mt-text-primary);
   text-align: center;
   padding: 4px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  background: var(--mt-surface-raised);
+  border-radius: var(--mt-radius);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

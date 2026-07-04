@@ -1,18 +1,41 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Fraunces,
+  Hanken_Grotesk,
+  Shippori_Mincho,
+  Zen_Kaku_Gothic_New,
+} from "next/font/google";
 import "./globals.scss";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SocialSocketProvider } from "@/contexts/SocialSocketContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Headings / wordmark (Latin) with Japanese mincho fallback
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const shipporiMincho = Shippori_Mincho({
+  variable: "--font-shippori-mincho",
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Body / UI (Latin) with Japanese gothic fallback
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const zenKaku = Zen_Kaku_Gothic_New({
+  variable: "--font-zen-kaku",
+  weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -53,15 +76,16 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html suppressHydrationWarning>
+    <html
+      suppressHydrationWarning
+      className={`${fraunces.variable} ${shipporiMincho.variable} ${hanken.variable} ${zenKaku.variable}`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: preferenceBootstrapScript }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         {gaId && (
           <>
             <Script

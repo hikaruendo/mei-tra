@@ -7,20 +7,20 @@
 }
 
 .orderButton {
-  background-color: #10b981;
-  color: white;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--mt-radius);
   min-height: 2.25rem;
   min-width: 5.5rem;
   font-size: 0.875rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--mt-shadow-btn);
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background 0.2s;
 
   &:hover {
-    background-color: #059669;
+    background: var(--mt-btn-primary-bg-hover);
   }
 
   @media (max-width: 768px) {
@@ -35,11 +35,11 @@
   right: 0;
   min-width: 18rem;
   max-width: 24rem;
-  background-color: #0d1f14;
-  border-radius: 0.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background-color: var(--mt-surface-raised);
+  border-radius: var(--mt-radius);
+  box-shadow: var(--mt-shadow-panel);
   overflow: hidden;
-  border: 1px solid rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--mt-border-hairline);
 
   @media (max-width: 768px) {
     min-width: min(18rem, calc(100vw - 1rem));
@@ -57,27 +57,27 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+  border-bottom: 1px solid var(--mt-border-hairline);
 }
 
 .panelTitle {
   font-weight: 600;
   font-size: 0.875rem;
-  color: white;
+  color: var(--mt-text-primary);
 }
 
 .closeButton {
   background: none;
   border: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
   font-size: 1.25rem;
   line-height: 1;
   padding: 0 0.25rem;
   transition: color 0.2s;
 
   &:hover {
-    color: #e5e7eb;
+    color: var(--mt-text-primary);
   }
 }
 
@@ -88,7 +88,7 @@
 .sectionTitle {
   font-weight: 600;
   font-size: 0.875rem;
-  color: white;
+  color: var(--mt-text-primary);
   margin-bottom: 0.75rem;
 }
 
@@ -100,14 +100,14 @@
 
 .strengthLabel {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--mt-text-muted);
   margin-bottom: 0.25rem;
 }
 
 .strengthRow {
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: #d1d5db;
+  color: var(--mt-text-secondary);
 }
 
 .strengthItem {
@@ -117,8 +117,8 @@
 .traNote {
   margin-top: 1rem;
   padding: 0.75rem;
-  background-color: rgba(16, 185, 129, 0.1);
-  border-radius: 0.375rem;
+  background-color: var(--mt-accent-subtle);
+  border-radius: var(--mt-radius);
 }
 
 .traNoteTitle {
@@ -129,56 +129,9 @@
 
 .traNoteDesc {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--mt-text-muted);
 }
 
 .genericSection {
   margin-top: 0.5rem;
-}
-
-:global(html[data-theme='light']) {
-  .orderButton {
-    background: linear-gradient(180deg, rgba(34, 197, 94, 0.98) 0%, rgba(22, 163, 74, 0.98) 100%);
-    color: #ffffff;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.24),
-      inset 0 -2px 0 rgba(0, 0, 0, 0.16),
-      0 12px 20px rgba(34, 197, 94, 0.18);
-  }
-
-  .panel {
-    background-color: #f6f8fb;
-    border-color: rgba(148, 163, 184, 0.18);
-    box-shadow: 0 20px 40px -16px rgba(15, 23, 42, 0.16);
-  }
-
-  .panelHeader {
-    border-bottom-color: rgba(148, 163, 184, 0.18);
-  }
-
-  .panelTitle,
-  .sectionTitle {
-    color: #111827;
-  }
-
-  .closeButton {
-    color: #6b7280;
-  }
-
-  .closeButton:hover {
-    color: #111827;
-  }
-
-  .strengthLabel,
-  .traNoteDesc {
-    color: #6b7280;
-  }
-
-  .strengthRow {
-    color: #374151;
-  }
-
-  .traNote {
-    background-color: rgba(59, 130, 246, 0.08);
-  }
 }

@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: #000;
+  background: var(--mt-surface-felt);
 }
 
 .main {
@@ -18,20 +18,21 @@
 
 .header {
   padding: $spacing-lg 0 $spacing-md;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--mt-border-hairline);
   margin-bottom: $spacing-lg;
 
   h1 {
+    font-family: var(--mt-font-heading);
     font-size: 2rem;
     font-weight: 700;
-    color: #ededed;
+    color: var(--mt-text-primary);
     margin: 0 0 $spacing-xs;
   }
 }
 
 .updated {
   font-size: $font-size-sm;
-  color: #888;
+  color: var(--mt-text-muted);
   margin: 0;
 }
 
@@ -43,12 +44,12 @@
 
 .section {
   margin-bottom: $spacing-lg;
-  background: linear-gradient(180deg, rgba(17, 17, 17, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--mt-surface-raised);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: 1rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 30px rgba(0, 0, 0, 0.18);
+    var(--mt-shadow-panel);
   padding: $spacing-lg;
 
   &:last-of-type {
@@ -58,20 +59,20 @@
   h2 {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #ededed;
+    color: var(--mt-text-primary);
     margin: 0 0 $spacing-sm;
   }
 
   p {
     margin: 0 0 $spacing-sm;
-    color: #ccc;
+    color: var(--mt-text-secondary);
     font-size: 0.9375rem;
   }
 
   ul {
     margin: 0 0 $spacing-sm;
     padding-left: 1.5rem;
-    color: #ccc;
+    color: var(--mt-text-secondary);
     font-size: 0.9375rem;
 
     li {
@@ -83,64 +84,15 @@
 .back {
   margin-top: $spacing-xl;
   padding-top: $spacing-lg;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--mt-border-hairline);
 
   a {
-    color: #888;
+    color: var(--mt-text-muted);
     text-decoration: none;
 
     &:hover {
-      color: #ededed;
+      color: var(--mt-accent);
       text-decoration: underline;
-    }
-  }
-}
-
-:global(html[data-theme='light']) {
-  .container {
-    background: linear-gradient(180deg, #eff4f8 0%, #edf4f0 24%, #eef4f7 100%);
-  }
-
-  .header {
-    border-bottom-color: rgba(148, 163, 184, 0.2);
-
-    h1 {
-      color: #0f172a;
-    }
-  }
-
-  .updated {
-    color: #64748b;
-  }
-
-  .section {
-    background: linear-gradient(180deg, rgba(249, 250, 251, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 1rem;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.72),
-      0 12px 30px rgba(15, 23, 42, 0.06);
-    padding: $spacing-lg;
-
-    h2 {
-      color: #0f172a;
-    }
-
-    p,
-    ul {
-      color: #475569;
-    }
-  }
-
-  .back {
-    border-top-color: rgba(148, 163, 184, 0.2);
-
-    a {
-      color: #64748b;
-
-      &:hover {
-        color: #0f172a;
-      }
     }
   }
 }

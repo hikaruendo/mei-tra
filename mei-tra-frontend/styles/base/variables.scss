@@ -59,6 +59,7 @@ $transition-tooltip: opacity 0.2s ease;
 $radius-sm: 4px;
 $radius-md: 8px;
 $radius-lg: 1rem;
+$radius-xl: 1.5rem;
 
 // Z-index
 $z-index-base: 1;
@@ -130,6 +131,7 @@ $z-index-tooltip: 50;
   --radius-sm: #{$radius-sm};
   --radius-md: #{$radius-md};
   --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
   
   // Z-index
   --z-index-base: #{$z-index-base};
@@ -137,4 +139,119 @@ $z-index-tooltip: 50;
   --z-index-controls: #{$z-index-controls};
   --z-index-overlay: #{$z-index-overlay};
   --z-index-tooltip: #{$z-index-tooltip};
+}
+
+// ── 01: 深緑のカードルーム (Card Room) design tokens ──
+// Layer 1 = raw palette (theme-independent). Layer 2 = semantic roles that
+// flip under html[data-theme='light']. Components consume only --mt-* roles.
+:root {
+  // Layer 1 — raw palette
+  --mt-raw-felt-900: #0e2a21;
+  --mt-raw-felt-800: #12352a;
+  --mt-raw-felt-700: #173d30;
+  --mt-raw-felt-600: #1b4a3a;
+  --mt-raw-pale-100: #f4f0e3;
+  --mt-raw-pale-200: #e9e5d5;
+  --mt-raw-pale-300: #dad5c2;
+  --mt-raw-brass-300: #e0c784;
+  --mt-raw-brass-500: #c9a34e;
+  --mt-raw-brass-600: #a9863b;
+  --mt-raw-brass-700: #8a6c2e;
+  --mt-raw-ivory: #ece6d6;
+  --mt-raw-sage: #a9b7a6;
+  --mt-raw-ink-900: #23281f;
+  --mt-raw-ink-600: #4a5142;
+  --mt-raw-card-red: #c0362c;
+  --mt-raw-card-red-dk: #9e2a22;
+
+  // Font stacks — JP fallback ordering is load-bearing (Latin faces render no CJK)
+  --mt-font-heading: var(--font-fraunces), var(--font-shippori-mincho), 'Shippori Mincho', serif;
+  --mt-font-body: var(--font-hanken), var(--font-zen-kaku), 'Zen Kaku Gothic New', system-ui, sans-serif;
+
+  // Signature radius
+  --mt-radius: 6px;
+
+  // Layer 2 — semantic roles (DARK, default)
+  --mt-surface-felt: var(--mt-raw-felt-900);
+  --mt-surface-raised: var(--mt-raw-felt-800);
+  --mt-surface-raised-2: var(--mt-raw-felt-700);
+  --mt-overlay-scrim: rgba(0, 0, 0, 0.7);
+
+  --mt-text-primary: var(--mt-raw-ivory);
+  --mt-text-secondary: var(--mt-raw-sage);
+  --mt-text-muted: rgba(169, 183, 166, 0.6);
+
+  --mt-accent: var(--mt-raw-brass-500);
+  --mt-accent-strong: var(--mt-raw-brass-300);
+  --mt-accent-subtle: rgba(201, 163, 78, 0.14);
+
+  --mt-border-hairline: rgba(236, 230, 214, 0.12);
+  --mt-focus-ring: var(--mt-raw-brass-500);
+
+  --mt-btn-primary-bg: linear-gradient(180deg, #c9a34e 0%, #a9863b 100%);
+  --mt-btn-primary-bg-hover: linear-gradient(180deg, #e0c784 0%, #c9a34e 100%);
+  --mt-btn-primary-text: #12352a;
+
+  --mt-danger: #c0362c;
+  --mt-success: #6fb98f;
+  --mt-warning: #e0c784;
+  // Text on the danger fill — mode-stable (danger stays dark red in both themes)
+  --mt-on-danger: var(--mt-raw-ivory);
+  // Text on the success fill — flips per theme (success is light green on dark, dark green on light)
+  --mt-on-success: var(--mt-raw-felt-900);
+
+  // Physical card tokens — mode-stable (a card's identity must not shift with chrome theme)
+  --mt-card-face: #f4f0e3;
+  --mt-card-ink: #23281f;
+  --mt-card-red: #c0362c;
+  --mt-card-back: #173d30;
+
+  // Shadows
+  --mt-shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --mt-shadow-btn: 0 4px 10px rgba(0, 0, 0, 0.28);
+
+  // Trump teaching colors (docs whitepaper hierarchy) — flip per theme for contrast
+  --mt-trump-tra: #e0b24a;
+  --mt-trump-herz: #e07264;
+  --mt-trump-daiya: #6fa0d6;
+  --mt-trump-club: #86be6e;
+  --mt-trump-zuppe: #c9c1b0;
+}
+
+html[data-theme='light'] {
+  // Daylight felt: a muted sage-green table so ivory cards and cream panels
+  // read as figures on a ground (avoids the pale-on-pale "flat" look).
+  --mt-surface-felt: #96ab90;
+  --mt-surface-raised: var(--mt-raw-pale-100);
+  --mt-surface-raised-2: var(--mt-raw-pale-300);
+  --mt-overlay-scrim: rgba(35, 40, 31, 0.55);
+
+  --mt-text-primary: var(--mt-raw-ink-900);
+  --mt-text-secondary: var(--mt-raw-ink-600);
+  --mt-text-muted: rgba(74, 81, 66, 0.65);
+
+  --mt-accent: var(--mt-raw-brass-600);
+  --mt-accent-strong: var(--mt-raw-brass-700);
+  --mt-accent-subtle: rgba(169, 134, 59, 0.12);
+
+  --mt-border-hairline: rgba(35, 40, 31, 0.2);
+  --mt-focus-ring: var(--mt-raw-brass-600);
+
+  --mt-btn-primary-bg: linear-gradient(180deg, #a9863b 0%, #8a6c2e 100%);
+  --mt-btn-primary-bg-hover: linear-gradient(180deg, #c9a34e 0%, #a9863b 100%);
+  --mt-btn-primary-text: #f4f0e3;
+
+  --mt-danger: #9e2a22;
+  --mt-success: #3b7a57;
+  --mt-warning: #8a6c2e;
+  --mt-on-success: var(--mt-raw-pale-100);
+
+  --mt-shadow-panel: 0 6px 20px rgba(35, 40, 31, 0.2), 0 1px 2px rgba(35, 40, 31, 0.14);
+  --mt-shadow-btn: 0 3px 8px rgba(35, 40, 31, 0.18);
+
+  --mt-trump-tra: #9a6e12;
+  --mt-trump-herz: #b23a2e;
+  --mt-trump-daiya: #2f5c8a;
+  --mt-trump-club: #3e6b2e;
+  --mt-trump-zuppe: #4a4436;
 } 

@@ -1,17 +1,17 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .scoreCalculator {
-  background: #111;
+  background: var(--mt-surface-raised);
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-bottom: $spacing-md;
 }
 
 .title {
   font-size: $font-size-xl;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-sm;
   text-align: center;
   line-height: 1.4;
@@ -19,7 +19,7 @@
 
 .description {
   text-align: center;
-  color: #888;
+  color: var(--mt-text-muted);
   margin-bottom: $spacing-lg;
   font-size: $font-size-base;
   line-height: 1.6;
@@ -46,7 +46,7 @@
 
 .label {
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   font-size: $font-size-base;
   display: flex;
   flex-direction: column;
@@ -55,19 +55,19 @@
 
 .input {
   padding: $spacing-sm $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: $radius-sm;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   font-size: $font-size-base;
   width: 120px;
   text-align: center;
   transition: border-color 0.15s ease;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ededed;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
 
   &:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    border-color: var(--mt-accent);
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
   }
 }
 
@@ -77,20 +77,20 @@
 }
 
 .resultCard {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-lg;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   min-width: 320px;
 
   &.success {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--mt-success);
+    background: var(--mt-surface-raised-2);
   }
 
   &.failure {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--mt-danger);
+    background: var(--mt-surface-raised-2);
   }
 }
 
@@ -98,36 +98,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: $spacing-md;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
 }
 
 .resultStatus {
   font-weight: 600;
   font-size: $font-size-lg;
-  color: #ededed;
+  color: var(--mt-text-primary);
 }
 
 .resultScore {
-  font-size: $font-size-xl;
+  font-size: $font-size-base;
   font-weight: 700;
   padding: $spacing-xs $spacing-sm;
-  border-radius: $radius-sm;
-  color: white;
+  border-radius: var(--mt-radius);
+  white-space: nowrap;
 
   .success & {
-    background: #10b981;
+    background: var(--mt-success);
+    color: var(--mt-on-success);
   }
 
   .failure & {
-    background: #ef4444;
+    background: var(--mt-danger);
+    color: var(--mt-on-danger);
   }
 }
 
 .calculation {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .formula {
@@ -136,27 +139,27 @@
   gap: $spacing-xs;
   font-family: monospace;
   font-size: $font-size-sm;
-  color: #888;
+  color: var(--mt-text-muted);
 
   span:last-child {
     font-weight: 700;
-    color: #ededed;
+    color: var(--mt-text-primary);
     font-size: $font-size-base;
   }
 }
 
 .examplesSection {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-lg;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-top: $spacing-lg;
 }
 
 .examplesTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-md;
 }
 
@@ -167,10 +170,10 @@
 }
 
 .example {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .exampleHeader {
@@ -182,7 +185,7 @@
 
 .exampleLabel {
   font-weight: 500;
-  color: #ededed;
+  color: var(--mt-text-primary);
 }
 
 .exampleScore {
@@ -192,34 +195,34 @@
   font-size: $font-size-sm;
 
   &.positive {
-    background: #10b981;
-    color: white;
+    background: var(--mt-success);
+    color: var(--mt-on-success);
   }
 
   &.negative {
-    background: #ef4444;
-    color: white;
+    background: var(--mt-danger);
+    color: var(--mt-on-danger);
   }
 }
 
 .exampleDetail {
   font-size: $font-size-sm;
-  color: #888;
+  color: var(--mt-text-muted);
   font-family: monospace;
 }
 
 .tips {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-lg;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-top: $spacing-lg;
 }
 
 .tipsTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-md;
 }
 
@@ -228,7 +231,7 @@
   padding-left: $spacing-lg;
 
   li {
-    color: #888;
+    color: var(--mt-text-muted);
     font-size: $font-size-base;
     line-height: 1.6;
     margin-bottom: $spacing-xs;
@@ -258,51 +261,5 @@
     flex-direction: column;
     gap: $spacing-xs;
     align-items: flex-start;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .scoreCalculator {
-    background: #ffffff;
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .title,
-  .label,
-  .resultStatus,
-  .examplesTitle,
-  .exampleLabel,
-  .tipsTitle {
-    color: #111827;
-  }
-
-  .description,
-  .formula,
-  .exampleDetail,
-  .tipsList li {
-    color: #4b5563;
-  }
-
-  .input,
-  .resultCard,
-  .calculation,
-  .examplesSection,
-  .example,
-  .tips {
-    background: rgba(15, 23, 42, 0.03);
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .input {
-    color: #111827;
-  }
-
-  .input:focus {
-    border-color: rgba(15, 23, 42, 0.18);
-    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
-  }
-
-  .formula span:last-child {
-    color: #111827;
   }
 }

@@ -22,7 +22,6 @@ interface ProfileEditFormProps {
 }
 
 interface FormData {
-  username: string;
   displayName: string;
   preferences: UserPreferences;
 }
@@ -33,7 +32,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
-    username: profile.username,
     displayName: profile.displayName,
     preferences: { ...profile.preferences },
   });
@@ -163,7 +161,9 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
     }
 
     return updateUserProfileViaApi(user.id, accessToken, {
-      username: formData.username,
+      // username is auto-assigned by the DB and no longer user-editable; send the
+      // existing value unchanged so the update never clears it.
+      username: profile.username,
       displayName: formData.displayName,
       preferences: formData.preferences,
     });
@@ -176,10 +176,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
     try {
       // バリデーション
-      if (!formData.username.trim()) {
-        setError(t('enterUsername'));
-        return;
-      }
       if (!formData.displayName.trim()) {
         setError(t('enterDisplayName'));
         return;
@@ -288,22 +284,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
       <div className={styles.formSection}>
         <h3 className={styles.sectionTitle}>{t('basicInfo')}</h3>
-
-        <div className={styles.inputGroup}>
-          <label htmlFor="username" className={styles.label}>
-            {t('username')}
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleInputChange}
-            disabled={isSaving}
-            className={styles.input}
-            required
-          />
-        </div>
 
         <div className={styles.inputGroup}>
           <label htmlFor="displayName" className={styles.label}>

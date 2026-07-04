@@ -1,7 +1,7 @@
 .card {
   width: 1.8rem;
   aspect-ratio: 2 / 3;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   display: flex;
   overflow: hidden;
   transition: transform 0.2s ease;

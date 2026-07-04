@@ -31,23 +31,23 @@
 
 .input {
   padding: 0.625rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   font-size: 0.95rem;
   line-height: 1.4;
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ededed;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
 
   &::placeholder {
-    color: #666;
+    color: var(--mt-text-muted);
   }
 
   &:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    border-color: var(--mt-accent);
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
   }
 
   @media (max-width: 640px) {
@@ -57,10 +57,10 @@
 
 .createButton {
   padding: 0.65rem 1rem;
-  background-color: #fff;
-  color: #000;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 500;
@@ -74,7 +74,8 @@
 }
 
 .createButton:hover {
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+  background: var(--mt-btn-primary-bg-hover);
+  box-shadow: var(--mt-shadow-btn);
 }
 
 .createButton:disabled {
@@ -83,21 +84,21 @@
 }
 
 .error {
-  color: #f87171;
+  color: var(--mt-danger);
   margin-bottom: 1.25rem;
   padding: 0.75rem;
-  background-color: rgba(220, 38, 38, 0.1);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  border-radius: 4px;
+  background-color: var(--mt-surface-raised-2);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
 }
 
 .connecting {
-  color: #60a5fa;
+  color: var(--mt-accent);
   margin-bottom: 1.25rem;
   padding: 0.75rem;
-  background-color: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 4px;
+  background-color: var(--mt-surface-raised-2);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   text-align: center;
 }
 
@@ -111,29 +112,29 @@
 
 .searchInput {
   padding: 0.625rem 0.875rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   font-size: 0.95rem;
   line-height: 1.4;
   width: 100%;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ededed;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
 
   &::placeholder {
-    color: #666;
+    color: var(--mt-text-muted);
   }
 
   &:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    border-color: var(--mt-accent);
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
   }
 }
 
 .section h3 {
   margin-bottom: 0.9375rem;
-  color: #ededed;
+  color: var(--mt-text-primary);
   font-size: 1.15rem;
 }
 
@@ -150,17 +151,17 @@
 .emptyState {
   margin-top: 1rem;
   padding: 1.5rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #888;
+  background: var(--mt-surface-raised);
+  color: var(--mt-text-muted);
   text-align: center;
   line-height: 1.5;
 }
 
 .roomItem {
-  background-color: #111;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: var(--mt-surface-raised);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
@@ -176,14 +177,14 @@
   margin: 0;
   font-size: 1rem;
   line-height: 1.35;
-  color: #ededed;
+  color: var(--mt-text-primary);
 }
 
 .roomInfo p {
   margin: 0.35rem 0;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: #888;
+  color: var(--mt-text-muted);
 }
 
 .status {
@@ -195,26 +196,26 @@
 }
 
 .statusWaiting {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-accent);
 }
 
 .statusReady {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-success);
 }
 
 .statusPlaying {
-  background-color: rgba(245, 124, 0, 0.1);
-  color: #fb923c;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-warning);
 }
 
 .joinButton {
   padding: 0.65rem 1rem;
-  background-color: #fff;
-  color: #000;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 500;
@@ -223,22 +224,23 @@
 }
 
 .joinButton:hover {
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+  background: var(--mt-btn-primary-bg-hover);
+  box-shadow: var(--mt-shadow-btn);
 }
 
 .joinButton:disabled {
-  background-color: #333;
-  color: #666;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-muted);
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .startButton {
   padding: 0.65rem 1rem;
-  background-color: #fff;
-  color: #000;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 500;
@@ -247,7 +249,8 @@
 }
 
 .startButton:hover {
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+  background: var(--mt-btn-primary-bg-hover);
+  box-shadow: var(--mt-shadow-btn);
 }
 
 .startButton:disabled {
@@ -258,9 +261,9 @@
 .readyButton {
   padding: 0.65rem 1rem;
   background-color: transparent;
-  color: #ededed;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  color: var(--mt-text-primary);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: 0.95rem;
   min-height: 2.75rem;
@@ -268,18 +271,18 @@
 }
 
 .readyButton:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--mt-surface-raised-2);
+  border-color: var(--mt-accent);
 }
 
 .readyButton.ready {
-  background-color: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+  background-color: var(--mt-surface-raised-2);
+  border-color: var(--mt-success);
+  color: var(--mt-success);
 }
 
 .readyButton.ready:hover {
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: var(--mt-surface-raised-2);
 }
 
 .readyButton:disabled {
@@ -290,9 +293,9 @@
 .comButton {
   padding: 0.65rem 1rem;
   background-color: transparent;
-  color: #ededed;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  color: var(--mt-text-primary);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: 0.95rem;
   min-height: 2.75rem;
@@ -300,8 +303,8 @@
 }
 
 .comButton:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--mt-surface-raised-2);
+  border-color: var(--mt-accent);
 }
 
 .comButton:disabled {
@@ -312,9 +315,9 @@
 .leaveButton {
   padding: 0.65rem 1rem;
   background-color: transparent;
-  color: #f87171;
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  border-radius: 4px;
+  color: var(--mt-danger);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: 0.95rem;
   min-height: 2.75rem;
@@ -322,8 +325,8 @@
 }
 
 .leaveButton:hover {
-  background-color: rgba(220, 38, 38, 0.1);
-  border-color: rgba(220, 38, 38, 0.5);
+  background-color: var(--mt-surface-raised-2);
+  border-color: var(--mt-danger);
 }
 
 .leaveButton:disabled {
@@ -332,20 +335,20 @@
 }
 
 .playerName {
-  color: #ededed;
+  color: var(--mt-text-primary);
 }
 
 .readyStatus {
   padding: 0.2rem 0.45rem;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   font-size: 0.82rem;
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-accent);
 }
 
 .readyStatus.ready {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-success);
 }
 
 .pointsToWinContainer {
@@ -368,7 +371,7 @@
 }
 
 .pointsToWinText {
-  color: #aaa;
+  color: var(--mt-text-muted);
   font-size: 0.88rem;
   line-height: 1;
 }
@@ -396,24 +399,24 @@
 .teamSelect {
   font-size: 0.95em;
   padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ededed;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
 
   option {
-    background: #111;
-    color: #ededed;
+    background: var(--mt-surface-raised);
+    color: var(--mt-text-primary);
   }
 }
 
 .teamButton {
   font-size: 0.9em;
   padding: 2px 8px;
-  background-color: #fff;
-  color: #000;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--mt-radius);
   cursor: pointer;
   transition: opacity 0.2s;
 
@@ -425,12 +428,12 @@
 
 .teamLabel {
   font-size: 0.95em;
-  color: #888;
+  color: var(--mt-text-muted);
 }
 
 .hostLabel {
   font-size: 0.9em;
-  color: #fb923c;
+  color: var(--mt-warning);
   margin-left: 0.25rem;
 }
 
@@ -444,124 +447,28 @@
 }
 
 .status-ok {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-success);
 }
 
 .status-degraded {
-  background-color: rgba(245, 124, 0, 0.1);
-  color: #fb923c;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-warning);
 }
 
 .status-error {
-  background-color: rgba(220, 38, 38, 0.1);
-  color: #f87171;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-danger);
 }
 
 .startingMessage {
   padding: 0.9375rem;
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 4px;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-accent);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   text-align: center;
   margin-bottom: 0.9375rem;
   font-size: 0.95rem;
   line-height: 1.45;
-}
-
-:global(html[data-theme='light']) {
-  .input,
-  .searchInput {
-    background: #f8fafc;
-    color: #111827;
-    border-color: rgba(15, 23, 42, 0.12);
-
-    &::placeholder {
-      color: #9ca3af;
-    }
-
-    &:focus {
-      border-color: rgba(15, 23, 42, 0.2);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
-    }
-  }
-
-  .roomItem,
-  .emptyState {
-    background-color: #f6f8fb;
-    border-color: rgba(15, 23, 42, 0.08);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-  }
-
-  .section h3,
-  .roomInfo h3 {
-    color: #111827;
-  }
-
-  .roomInfo p,
-  .emptyState {
-    color: #4b5563;
-  }
-
-  .playerName,
-  .pointsToWinText,
-  .teamLabel {
-    color: #4b5563;
-  }
-
-  .hostLabel {
-    color: #c2410c;
-  }
-
-  .teamSelect {
-    background: #f8fafc;
-    color: #111827;
-    border-color: rgba(15, 23, 42, 0.12);
-
-    option {
-      background: #f8fafc;
-      color: #111827;
-    }
-  }
-
-  .createButton,
-  .joinButton,
-  .startButton {
-    background-color: #111827;
-    color: #ffffff;
-  }
-
-  .createButton:hover,
-  .joinButton:hover,
-  .startButton:hover {
-    box-shadow: 0 0 20px rgba(15, 23, 42, 0.15);
-  }
-
-  .readyButton,
-  .comButton {
-    color: #111827;
-    border-color: rgba(15, 23, 42, 0.12);
-  }
-
-  .readyButton:hover,
-  .comButton:hover {
-    background-color: rgba(15, 23, 42, 0.05);
-    border-color: rgba(15, 23, 42, 0.18);
-  }
-
-  .leaveButton {
-    color: #dc2626;
-    border-color: rgba(220, 38, 38, 0.2);
-  }
-
-  .backendStatus {
-    background-color: rgba(34, 197, 94, 0.08);
-    color: #16a34a;
-  }
-
-  .status-ok {
-    background-color: rgba(34, 197, 94, 0.08);
-    color: #16a34a;
-  }
 }

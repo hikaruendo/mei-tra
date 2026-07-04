@@ -21,7 +21,7 @@
 }
 
 .gameInfoTrumpText {
-  color: white;
+  color: var(--mt-text-primary);
   font-weight: bold;
   font-size: 1.1rem;
   line-height: 1.4;
@@ -54,11 +54,11 @@
 }
 
 .leaveButton {
-  color: #000;
-  background-color: #fff;
-  border: none;
+  color: var(--mt-text-primary);
+  background-color: var(--mt-surface-raised);
+  border: 1px solid var(--mt-border-hairline);
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--mt-radius);
   min-height: 2.25rem;
   min-width: 5.5rem;
   font-size: 0.875rem;
@@ -67,7 +67,8 @@
   line-height: 1.3;
 
   &:hover {
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    border-color: var(--mt-accent);
+    box-shadow: 0 0 15px var(--mt-accent-subtle);
   }
 }
 
@@ -106,27 +107,5 @@
 @media (max-width: 420px) {
   .gameInfoContent {
     padding-right: 9.75rem;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .gameInfoContainer {
-    background: transparent;
-  }
-
-  .gameInfoTrumpText,
-  .gameInfoScoreText0,
-  .gameInfoScoreText1 {
-    color: rgba(248, 250, 252, 0.96);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  }
-
-  .leaveButton {
-    color: #ffffff;
-    background-color: #111827;
-
-    &:hover {
-      box-shadow: 0 0 15px rgba(15, 23, 42, 0.16);
-    }
   }
 }

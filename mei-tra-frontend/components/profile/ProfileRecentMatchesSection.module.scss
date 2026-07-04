@@ -2,7 +2,7 @@
 
 .section {
   margin-top: $spacing-xl;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--mt-border-hairline);
   padding-top: $spacing-xl;
 }
 
@@ -16,25 +16,25 @@
 .sectionTitle {
   font-size: $font-size-lg;
   font-weight: 500;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin: 0;
 }
 
 .description {
   margin: 0;
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
   font-size: $font-size-sm;
 }
 
 .statusText {
   margin: 0;
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
   font-size: $font-size-sm;
 }
 
 .errorText {
   margin: 0;
-  color: #f87171;
+  color: var(--mt-danger);
   font-size: $font-size-sm;
 }
 
@@ -46,17 +46,17 @@
 
 .card {
   display: block;
-  border-radius: $radius-lg;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--mt-radius);
+  border: 1px solid var(--mt-border-hairline);
+  background: var(--mt-surface-raised);
   padding: $spacing-lg;
   text-decoration: none;
   color: inherit;
   transition: $transition-button;
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--mt-accent);
+    background: var(--mt-surface-raised-2);
     transform: translateY(-1px);
   }
 }
@@ -73,12 +73,12 @@
   margin: 0;
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
 }
 
 .completedAt {
   margin: 0;
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
   font-size: $font-size-sm;
   white-space: nowrap;
 }
@@ -96,14 +96,14 @@
 }
 
 .metaLabel {
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
   font-size: $font-size-xs;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .metaValue {
-  color: #ededed;
+  color: var(--mt-text-primary);
   font-size: $font-size-sm;
   font-weight: 500;
 }
@@ -111,38 +111,9 @@
 .detailsLink {
   display: inline-flex;
   margin-top: $spacing-md;
-  color: #93c5fd;
+  color: var(--mt-accent);
   font-size: $font-size-sm;
   font-weight: 600;
-}
-
-:global(html[data-theme='light']) {
-  .section {
-    border-top-color: rgba(17, 24, 39, 0.08);
-  }
-
-  .description,
-  .statusText,
-  .completedAt,
-  .metaLabel {
-    color: #6b7280;
-  }
-
-  .card {
-    border-color: rgba(17, 24, 39, 0.08);
-    background: rgba(17, 24, 39, 0.02);
-  }
-
-  .card:hover {
-    border-color: rgba(17, 24, 39, 0.18);
-    background: rgba(17, 24, 39, 0.04);
-  }
-
-  .roomName,
-  .sectionTitle,
-  .metaValue {
-    color: #111827;
-  }
 }
 
 @media (max-width: 640px) {
