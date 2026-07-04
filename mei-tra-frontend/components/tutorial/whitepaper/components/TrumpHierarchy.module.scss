@@ -1,17 +1,17 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .trumpHierarchy {
-  background: #111;
+  background: var(--mt-surface-raised);
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-bottom: $spacing-md;
 }
 
 .title {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-sm;
   line-height: 1.4;
 }
@@ -32,8 +32,8 @@
 }
 
 .strength {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ededed;
+  background: var(--mt-accent-subtle);
+  color: var(--mt-text-primary);
   font-weight: 600;
   font-size: $font-size-sm;
   padding: 2px 6px;
@@ -46,7 +46,7 @@
   gap: 4px;
   font-weight: 500;
   font-size: $font-size-base;
-  color: #ededed;
+  color: var(--mt-text-primary);
 }
 
 .suit {
@@ -54,14 +54,14 @@
 }
 
 .separator {
-  color: #888;
+  color: var(--mt-text-muted);
   font-weight: 600;
   margin: 0 $spacing-xs;
 }
 
 .note {
   text-align: center;
-  color: #888;
+  color: var(--mt-text-muted);
   font-size: $font-size-sm;
   margin-top: $spacing-md;
   margin-bottom: 0;
@@ -75,27 +75,5 @@
 
   .separator {
     display: none;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .trumpHierarchy {
-    background: #ffffff;
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .title,
-  .strength,
-  .trumpName {
-    color: #111827;
-  }
-
-  .strength {
-    background: rgba(15, 23, 42, 0.06);
-  }
-
-  .separator,
-  .note {
-    color: #4b5563;
   }
 }

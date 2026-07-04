@@ -8,7 +8,7 @@
   gap: $spacing-lg;
   max-width: 1280px;
   margin: 0 auto;
-  background: #000;
+  background: var(--mt-surface-felt);
   min-height: 100vh;
 
   @media (max-width: 768px) {
@@ -32,25 +32,9 @@
   margin: 0 auto 0 0;
   padding: 0 $spacing-lg $spacing-md 0;
   line-height: 1.7;
-  color: #ededed;
+  color: var(--mt-text-primary);
 
   @media (max-width: 768px) {
     padding: 0 $spacing-md $spacing-sm;
-  }
-}
-
-:global(html[data-theme='dark']) {
-  .contentWrapper {
-    color: #e5e7eb;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .whitepaperContainer {
-    background: #eef2f6;
-  }
-
-  .contentWrapper {
-    color: #111827;
   }
 }

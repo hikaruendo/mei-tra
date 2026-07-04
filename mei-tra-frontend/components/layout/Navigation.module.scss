@@ -8,9 +8,9 @@ $transition-button: all 0.3s ease;
 $desktop-breakpoint: 960px;
 
 .navigation {
-  background-color: #000;
-  box-shadow: 0 1px 3px rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-btn);
+  border-bottom: 1px solid var(--mt-border-hairline);
 }
 
 .container {
@@ -69,11 +69,11 @@ $desktop-breakpoint: 960px;
 
 .brandName {
   margin-left: 0.375rem;
-  font-family: 'Playfair Display', 'Georgia', serif;
+  font-family: var(--mt-font-heading);
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: #ededed;
+  color: var(--mt-accent);
   white-space: nowrap;
 
   @media (min-width: $desktop-breakpoint) {
@@ -102,7 +102,7 @@ $desktop-breakpoint: 960px;
 }
 
 .navLink {
-  color: #888;
+  color: var(--mt-text-muted);
   padding: $spacing-sm $spacing-sm;
   border-radius: $radius-md;
   font-size: $font-size-sm;
@@ -112,8 +112,8 @@ $desktop-breakpoint: 960px;
   white-space: nowrap;
 
   &:hover {
-    color: #ededed;
-    background-color: rgba(255, 255, 255, 0.06);
+    color: var(--mt-text-primary);
+    background-color: var(--mt-surface-raised-2);
   }
 }
 
@@ -147,23 +147,23 @@ $desktop-breakpoint: 960px;
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #ededed;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
   cursor: pointer;
   transition: $transition-button;
   padding: 0;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.18);
+    background-color: var(--mt-surface-raised-2);
+    border-color: var(--mt-accent);
   }
 }
 
 .utilityTriggerOpen {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.22);
+  background-color: var(--mt-surface-raised-2);
+  border-color: var(--mt-accent);
 }
 
 .utilityPopover {
@@ -176,9 +176,9 @@ $desktop-breakpoint: 960px;
   gap: 0.25rem;
   padding: 0.55rem;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(8, 15, 12, 0.96);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--mt-border-hairline);
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
   z-index: 1002;
 }
 
@@ -195,7 +195,7 @@ $desktop-breakpoint: 960px;
   padding: 0.25rem 0.35rem 0.45rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
 }
 
 .utilityOption {
@@ -208,15 +208,15 @@ $desktop-breakpoint: 960px;
   border-radius: 0.8rem;
   border: 1px solid transparent;
   background: transparent;
-  color: #ededed;
+  color: var(--mt-text-primary);
   cursor: pointer;
   text-decoration: none;
   text-align: left;
   transition: $transition-button;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: var(--mt-surface-raised-2);
+    border-color: var(--mt-border-hairline);
   }
 }
 
@@ -225,8 +225,8 @@ $desktop-breakpoint: 960px;
 }
 
 .activeUtilityOption {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: var(--mt-surface-raised-2);
+  border-color: var(--mt-border-hairline);
 }
 
 .utilityOptionLead {
@@ -240,7 +240,7 @@ $desktop-breakpoint: 960px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #cbd5e1;
+  color: var(--mt-text-secondary);
   flex-shrink: 0;
 }
 
@@ -259,7 +259,7 @@ $desktop-breakpoint: 960px;
 
 .utilityOptionMeta {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--mt-text-secondary);
   line-height: 1.2;
 }
 
@@ -269,7 +269,7 @@ $desktop-breakpoint: 960px;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  color: #f8fafc;
+  color: var(--mt-text-primary);
   flex-shrink: 0;
 }
 
@@ -285,21 +285,21 @@ $desktop-breakpoint: 960px;
   width: 2.35rem;
   height: 2.35rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: #888;
+  border: 1px solid var(--mt-border-hairline);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-muted);
   cursor: pointer;
   transition: $transition-button;
 
   &:hover {
-    color: #ededed;
-    background: rgba(255, 255, 255, 0.06);
+    color: var(--mt-text-primary);
+    background: var(--mt-surface-raised-2);
   }
 }
 
 .activeThemeButton {
-  color: #ededed;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--mt-text-primary);
+  background: var(--mt-surface-raised-2);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -326,7 +326,7 @@ $desktop-breakpoint: 960px;
     display: block;
     width: 22px;
     height: 2px;
-    background-color: #ededed;
+    background-color: var(--mt-text-primary);
     transition: all 0.3s ease;
     position: absolute;
     left: 0;
@@ -365,7 +365,7 @@ $desktop-breakpoint: 960px;
   display: block;
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--mt-overlay-scrim);
   z-index: 999;
 
   @media (min-width: $desktop-breakpoint) {
@@ -381,8 +381,8 @@ $desktop-breakpoint: 960px;
   height: 100vh;
   height: 100dvh;
   max-height: 100dvh;
-  background-color: #111;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.3);
+  background-color: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
   transition: right 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
@@ -412,7 +412,7 @@ $desktop-breakpoint: 960px;
   display: flex;
   align-items: center;
   padding: 0.42rem 0.6rem;
-  color: #888;
+  color: var(--mt-text-muted);
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
@@ -422,8 +422,8 @@ $desktop-breakpoint: 960px;
   min-height: 36px;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    color: #ededed;
+    background-color: var(--mt-surface-raised-2);
+    color: var(--mt-text-primary);
   }
 }
 
@@ -446,10 +446,10 @@ $desktop-breakpoint: 960px;
   gap: 0.35rem;
   min-height: 2.25rem;
   padding: 0.45rem 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #9ca3af;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-secondary);
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 600;
@@ -457,9 +457,9 @@ $desktop-breakpoint: 960px;
   transition: $transition-button;
 
   &:hover {
-    color: #ededed;
-    background-color: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.14);
+    color: var(--mt-text-primary);
+    background-color: var(--mt-surface-raised-2);
+    border-color: var(--mt-accent);
   }
 }
 
@@ -473,7 +473,7 @@ $desktop-breakpoint: 960px;
 .mobileSectionLabel {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #cbd5e1;
+  color: var(--mt-text-secondary);
 }
 
 .mobileThemeRow {
@@ -496,17 +496,17 @@ $desktop-breakpoint: 960px;
   width: 2.35rem;
   height: 2.35rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: #ededed;
+  border: 1px solid var(--mt-border-hairline);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
   font-weight: 600;
   cursor: pointer;
   transition: $transition-button;
   padding: 0;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.14);
+    background-color: var(--mt-surface-raised-2);
+    border-color: var(--mt-accent);
   }
 }
 
@@ -517,35 +517,35 @@ $desktop-breakpoint: 960px;
 }
 
 .activeMobileFontSizeButton {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--mt-surface-raised-2);
+  border-color: var(--mt-accent);
 }
 
 .langSwitcherMobile {
   display: block;
   margin-top: 0.45rem;
   padding: $spacing-sm;
-  background-color: rgba(255, 255, 255, 0.03);
-  color: #888;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-text-muted);
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
   border-radius: $radius-md;
   transition: $transition-button;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   cursor: pointer;
   text-align: left;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #ededed;
+    background-color: var(--mt-surface-raised-2);
+    border-color: var(--mt-accent);
+    color: var(--mt-text-primary);
   }
 }
 
 .mobileUserProfile {
   padding: $spacing-md 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--mt-border-hairline);
 }
 
 .srOnly {
@@ -580,104 +580,7 @@ $desktop-breakpoint: 960px;
 }
 
 :global(html[data-theme='light']) {
-  .navigation {
-    background-color: #eef2f6;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  }
-
   .brandLogo {
     filter: brightness(0) saturate(100%);
-  }
-
-  .brandName {
-    color: #111827;
-  }
-
-  .utilityPopoverTitle,
-  .utilityOptionMeta {
-    color: #6b7280;
-  }
-
-  .navLink,
-  .mobileNavLink,
-  .mobileExternalLink,
-  .langSwitcherMobile,
-  .themeButton,
-  .utilityTrigger {
-    color: #4b5563;
-  }
-
-  .navLink:hover,
-  .mobileNavLink:hover,
-  .mobileExternalLink:hover,
-  .langSwitcherMobile:hover,
-  .themeButton:hover,
-  .utilityTrigger:hover {
-    color: #111827;
-    background-color: rgba(15, 23, 42, 0.05);
-    border-color: rgba(15, 23, 42, 0.12);
-  }
-
-  .activeThemeButton,
-  .utilityTriggerOpen,
-  .activeMobileFontSizeButton,
-  .activeUtilityOption {
-    color: #0f172a;
-    background: rgba(15, 23, 42, 0.08);
-  }
-
-  .utilityPopover,
-  .mobileExternalLink,
-  .mobileFontSizeIconButton,
-  .langSwitcherMobile,
-  .themeButton,
-  .utilityTrigger {
-    border-color: rgba(15, 23, 42, 0.1);
-  }
-
-  .mobileExternalLink,
-  .mobileFontSizeIconButton,
-  .langSwitcherMobile,
-  .themeButton,
-  .utilityTrigger {
-    background: rgba(255, 255, 255, 0.75);
-  }
-
-  .utilityPopover {
-    background: rgba(248, 250, 252, 0.98);
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
-  }
-
-  .utilityOption,
-  .utilityOptionState,
-  .utilityOptionPreview,
-  .utilityOptionIcon,
-  .mobileFontSizeIconButton,
-  .mobileSectionLabel {
-    color: #111827;
-  }
-
-  .utilityOption:hover,
-  .mobileFontSizeIconButton:hover {
-    background: rgba(15, 23, 42, 0.05);
-    border-color: rgba(15, 23, 42, 0.12);
-  }
-
-  .mobileOverlay {
-    background-color: rgba(15, 23, 42, 0.3);
-  }
-
-  .mobileMenu {
-    background-color: #eef2f6;
-    box-shadow: -2px 0 8px rgba(15, 23, 42, 0.1);
-  }
-
-  .mobileUserProfile {
-    border-top: 1px solid rgba(15, 23, 42, 0.08);
-  }
-
-  .mobileMenuButton span {
-    background-color: #111827;
   }
 }

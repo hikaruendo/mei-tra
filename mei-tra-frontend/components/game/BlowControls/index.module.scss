@@ -9,11 +9,11 @@
   z-index: 99;
   backdrop-filter: blur(8px);
   flex-direction: column;
-  background: rgba(6, 40, 20, 0.85);
+  background: var(--mt-surface-raised);
   padding: 0.9rem 1rem;
   border-radius: var(--border-radius-lg);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--mt-border-hairline);
+  box-shadow: var(--mt-shadow-panel);
   width: min(34rem, calc(100vw - 2rem));
 }
 
@@ -30,19 +30,19 @@
 .currentTurn {
   display: inline-block;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--mt-radius);
   font-size: 0.875rem;
   line-height: 1.4;
 }
 
 .currentTurn.active {
-  background-color: #059669;
-  color: white;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
 }
 
 .currentTurn.inactive {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #888;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-text-muted);
 }
 
 .controls {
@@ -57,24 +57,24 @@
 }
 
 .select {
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  border-radius: 0.25rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  background-color: rgba(16, 185, 129, 0.08);
-  color: #ededed;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
   width: 100%;
   font-size: 1rem;
 }
 
 .input {
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  border-radius: 0.25rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  background-color: rgba(16, 185, 129, 0.08);
+  background-color: var(--mt-surface-raised-2);
   font-size: 1rem;
-  color: #ededed;
+  color: var(--mt-text-primary);
   width: 100%;
   text-indent: 5px;
 }
@@ -90,12 +90,12 @@
   flex: 1;
   min-height: 2.75rem;
   padding: 0.45rem 0.8rem;
-  border-radius: 0.25rem;
+  border-radius: var(--mt-radius);
   font-weight: bold;
-  color: #000;
+  color: var(--mt-btn-primary-text);
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .button:disabled {
@@ -103,23 +103,23 @@
 }
 
 .declareButton {
-  background-color: #fff;
-  color: #000;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
 }
 
 .declareButton:hover {
-  background-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  background: var(--mt-btn-primary-bg-hover);
+  box-shadow: 0 0 15px var(--mt-accent-subtle);
 }
 
 .passButton {
   background-color: transparent;
-  color: #ededed;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--mt-text-primary);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .passButton:hover {
-  border-color: rgba(16, 185, 129, 0.5);
+  border-color: var(--mt-accent);
 }
 
 .declarations {
@@ -133,22 +133,22 @@
 }
 
 .declarationItem {
-  background-color: rgba(16, 185, 129, 0.08);
-  color: #ededed;
+  background-color: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
   padding: 0.35rem 0.5rem;
-  border-radius: 0.25rem;
+  border-radius: var(--mt-radius);
   font-size: 0.875rem;
   line-height: 1.4;
 }
 
 .declarationItem.pass {
-  background-color: rgba(16, 185, 129, 0.05);
-  color: #888;
+  background-color: var(--mt-surface-raised);
+  color: var(--mt-text-muted);
 }
 
 .declarationItem.highest {
-  border: 2px solid #facc15;
-  box-shadow: 0 0 10px 0 rgba(250, 204, 21, 0.5);
+  border: 2px solid var(--mt-accent);
+  box-shadow: 0 0 10px 0 var(--mt-accent-subtle);
 }
 
 @media (max-width: 768px) {
@@ -186,49 +186,6 @@
 
   .declarations {
     margin-top: 0.5rem;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .blowControlsContainer {
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(148, 163, 184, 0.24);
-  }
-
-  .currentTurn.inactive {
-    background-color: rgba(0, 0, 0, 0.06);
-    color: #374151;
-  }
-
-  .select {
-    background-color: #f8fafc;
-    color: #111827;
-    border-color: rgba(148, 163, 184, 0.24);
-  }
-
-  .input {
-    background-color: #f8fafc;
-    color: #111827;
-    border-color: rgba(148, 163, 184, 0.24);
-  }
-
-  .passButton {
-    color: #374151;
-    border-color: rgba(148, 163, 184, 0.3);
-  }
-
-  .passButton:hover {
-    border-color: rgba(148, 163, 184, 0.6);
-  }
-
-  .declarationItem {
-    background-color: rgba(0, 0, 0, 0.04);
-    color: #111827;
-  }
-
-  .declarationItem.pass {
-    background-color: rgba(0, 0, 0, 0.02);
-    color: #6b7280;
   }
 }
 

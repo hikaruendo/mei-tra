@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: #000;
+  background: var(--mt-surface-felt);
 }
 
 .main {
@@ -11,11 +11,5 @@
 
   @media (max-width: 768px) {
     padding: $spacing-lg $spacing-sm $spacing-md;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .container {
-    background: #eef2f6;
   }
 }

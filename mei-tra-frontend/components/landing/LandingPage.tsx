@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
+import { Footer } from '@/components/layout/Footer';
 import styles from './LandingPage.module.scss';
 
 interface LandingPageProps {
@@ -39,11 +40,6 @@ type LandingFaqItem = {
   answer: string;
 };
 
-type LandingFooterLink = {
-  label: string;
-  href: string;
-};
-
 export function LandingPage({
   onLoginClick,
   onSignupClick,
@@ -57,7 +53,6 @@ export function LandingPage({
   const steps = t.raw('community.steps') as LandingStep[];
   const testimonials = t.raw('testimonials.items') as LandingTestimonial[];
   const faqItems = t.raw('faq.items') as LandingFaqItem[];
-  const footerLinks = t.raw('footer.links') as LandingFooterLink[];
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -230,23 +225,7 @@ export function LandingPage({
       </section>
 
       {/* 8. Footer */}
-      <footer className={styles.footer}>
-        <nav className={styles.footerLinks}>
-          {footerLinks.map((link) => (
-            <a
-              key={link.label}
-              className={styles.footerLink}
-              href={link.href}
-              {...(link.href.startsWith('/')
-                ? {}
-                : { target: '_blank', rel: 'noreferrer' })}
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-        <p className={styles.footerCopy}>{t('footer.copyright')}</p>
-      </footer>
+      <Footer />
     </main>
   );
 }

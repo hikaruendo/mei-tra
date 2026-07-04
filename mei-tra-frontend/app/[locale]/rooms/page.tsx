@@ -1,6 +1,7 @@
 'use client';
 
 import { Navigation } from '@/components/layout/Navigation';
+import { Footer } from '@/components/layout/Footer';
 import { RoomList } from '@/components/room/RoomList';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useSocket } from '@/hooks/useSocket';
@@ -21,6 +22,7 @@ export default function RoomsPage() {
           isConnecting={isConnecting}
           onRoomEntered={() => router.push('/')}
         />
+        <Footer />
       </main>
     </ProtectedRoute>
   );

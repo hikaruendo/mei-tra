@@ -175,15 +175,15 @@
         },
         {
           "label": "Terms of Service",
-          "href": "/en/terms"
+          "href": "/terms"
         },
         {
           "label": "Privacy Policy",
-          "href": "/en/privacy"
+          "href": "/privacy"
         },
         {
           "label": "Docs",
-          "href": "/en/docs"
+          "href": "/docs"
         },
         {
           "label": "Discord",
@@ -203,23 +203,18 @@
     "logout": "Logout",
     "email": "Email",
     "password": "Password",
-    "username": "Username",
-    "displayName": "Display Name",
+    "displayName": "Name",
     "processing": "Processing...",
-    "loginWithEmail": "Login with Email",
     "continueWithGoogle": "Continue with Google",
     "forgotPassword": "Forgot Password?",
     "noAccount": "Don't have an account? Sign up",
     "hasAccount": "Already have an account? Login",
     "confirmEmailSent": "Confirmation email sent. Please click the link in the email to activate your account.",
-    "magicLinkSent": "If this email is registered, a login link will be sent. If it does not arrive, check your registration method.",
     "passwordResetSent": "Password reset link sent to your email. Please check your inbox.",
     "sending": "Sending...",
     "or": "or",
     "emailRequired": "Please enter your email address",
-    "usernameRequired": "Please enter your username",
-    "displayNameRequired": "Please enter your display name",
-    "usernameHelper": "3-50 alphanumeric characters and _ only",
+    "displayNameRequired": "Please enter your name",
     "unexpectedError": "An unexpected error occurred",
     "checkingAuth": "Checking authentication...",
     "authRequired": "Authentication Required",
@@ -695,8 +690,7 @@
     "save": "Save",
     "saving": "Saving...",
     "cancel": "Cancel",
-    "displayName": "Display Name",
-    "username": "Username",
+    "displayName": "Name",
     "bio": "Bio",
     "avatar": "Avatar",
     "profileImage": "Profile Image",
@@ -709,8 +703,7 @@
     "invalidFile": "Invalid file",
     "uploadFailed": "Failed to upload avatar",
     "userNotFound": "User not found",
-    "enterUsername": "Please enter username",
-    "enterDisplayName": "Please enter display name",
+    "enterDisplayName": "Please enter your name",
     "saveFailed": "Failed to save",
     "imageProcessing": "Processing image...",
     "imageProcessingFailed": "Failed to process image",

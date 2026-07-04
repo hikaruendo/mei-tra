@@ -3,22 +3,23 @@
 .section {
   margin-bottom: $spacing-xl;
   scroll-margin-top: $spacing-lg;
-  background: linear-gradient(180deg, rgba(17, 17, 17, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, var(--mt-surface-raised) 0%, var(--mt-surface-felt) 100%);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: $radius-md;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 26px rgba(0, 0, 0, 0.18);
+    var(--mt-shadow-panel);
   padding: $spacing-xl;
 }
 
 .sectionTitle {
+  font-family: var(--mt-font-heading);
   font-size: 1.875rem;
   font-weight: 700;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-lg;
   padding-bottom: $spacing-md;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--mt-border-hairline);
   line-height: 1.2;
 }
 
@@ -38,7 +39,7 @@
   gap: $spacing-sm;
   font-size: $font-size-base;
   line-height: 1.75;
-  color: #ededed;
+  color: var(--mt-text-primary);
 
   p {
     margin: 0;
@@ -48,7 +49,7 @@
   h3 {
     font-size: clamp(1.15rem, 1.05rem + 0.35vw, 1.35rem);
     font-weight: 700;
-    color: #ededed;
+    color: var(--mt-text-primary);
     margin: 0 0 calc($spacing-xs / 2);
     line-height: 1.35;
   }
@@ -56,14 +57,14 @@
   h4 {
     font-size: $font-size-base;
     font-weight: 600;
-    color: #ededed;
+    color: var(--mt-text-primary);
     margin: $spacing-md 0 $spacing-sm;
     line-height: 1.4;
   }
 
   strong {
     font-weight: 600;
-    color: #fff;
+    color: var(--mt-text-primary);
   }
 
   ul, ol {
@@ -87,45 +88,9 @@
   max-width: 68ch;
 }
 
-:global(html[data-theme='light']) {
-  .section {
-    background: #f6f8fb;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: $radius-md;
-    padding: $spacing-xl;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
-    margin-bottom: $spacing-lg;
-  }
-
-  .sectionTitle {
-    color: #111827;
-    border-bottom-color: rgba(15, 23, 42, 0.08);
-    margin-bottom: $spacing-xl;
-  }
-
-  .textBlock {
-    color: #374151;
-  }
-
-  .textBlock h3,
-  .textBlock h4 {
-    color: #111827;
-  }
-
-  .textBlock strong {
-    color: #111827;
-  }
-}
-
 @media (max-width: 768px) {
   .section {
     padding: $spacing-lg;
-  }
-
-  :global(html[data-theme='light']) {
-    .section {
-      padding: $spacing-lg;
-    }
   }
 }
 

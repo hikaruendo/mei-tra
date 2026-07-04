@@ -1,17 +1,17 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .ruleCard {
-  background: #111;
+  background: var(--mt-surface-raised);
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-bottom: $spacing-md;
 }
 
 .ruleTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-sm;
   line-height: 1.4;
 }
@@ -19,46 +19,24 @@
 .ruleDescription {
   font-size: $font-size-base;
   line-height: 1.6;
-  color: #888;
+  color: var(--mt-text-secondary);
   margin-bottom: $spacing-sm;
 }
 
 .ruleExample {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-sm;
   margin-top: $spacing-sm;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .exampleLabel {
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-right: $spacing-sm;
 }
 
 .exampleText {
-  color: #888;
-}
-
-:global(html[data-theme='light']) {
-  .ruleCard {
-    background: #ffffff;
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .ruleTitle,
-  .exampleLabel {
-    color: #111827;
-  }
-
-  .ruleDescription,
-  .exampleText {
-    color: #4b5563;
-  }
-
-  .ruleExample {
-    background: rgba(15, 23, 42, 0.03);
-    border-color: rgba(15, 23, 42, 0.08);
-  }
+  color: var(--mt-text-secondary);
 }

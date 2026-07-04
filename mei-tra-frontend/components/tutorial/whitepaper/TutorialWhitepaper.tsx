@@ -45,11 +45,11 @@ ${t('overview.gameFlowExample')}` }
         { type: 'text', content: t('blow.description') },
         { type: 'rule', content: { title: t('blow.basicRule'), description: t('blow.basicRuleDesc'), example: t('blow.basicRuleExample') } },
         { type: 'trump-hierarchy', content: { title: t('blow.hierarchy'), trumps: [
-          { type: 'tra' as const, label: 'Tra', strength: 5, color: '#FF6B00' },
-          { type: 'herz' as const, label: '♥', strength: 4, color: '#E91E63' },
-          { type: 'daiya' as const, label: '♦', strength: 3, color: '#2196F3' },
-          { type: 'club' as const, label: '♣', strength: 2, color: '#4CAF50' },
-          { type: 'zuppe' as const, label: '♠', strength: 1, color: '#424242' }
+          { type: 'tra' as const, label: 'Tra', strength: 5, color: 'var(--mt-trump-tra)' },
+          { type: 'herz' as const, label: '♥', strength: 4, color: 'var(--mt-trump-herz)' },
+          { type: 'daiya' as const, label: '♦', strength: 3, color: 'var(--mt-trump-daiya)' },
+          { type: 'club' as const, label: '♣', strength: 2, color: 'var(--mt-trump-club)' },
+          { type: 'zuppe' as const, label: '♠', strength: 1, color: 'var(--mt-trump-zuppe)' }
         ]} },
         { type: 'rule', content: { title: t('blow.higherDeclaration'), description: t('blow.higherDeclarationDesc'), example: t('blow.higherDeclarationExample') } }
       ]

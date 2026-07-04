@@ -3,7 +3,6 @@
 @use '../styles/base/reset' as *;
 
 // 変数
-$font-family-base: Arial, sans-serif;
 $transition-base: 0.3s ease;
 
 html {
@@ -23,13 +22,17 @@ html[data-font-size='xxlarge'] {
 }
 
 body {
-  background-color: #000000;
-  color: #ededed;
-  font-family: $font-family-base;
-  transition: background-color $transition-base;
+  background-color: var(--mt-surface-felt);
+  color: var(--mt-text-primary);
+  font-family: var(--mt-font-body);
+  transition:
+    background-color $transition-base,
+    color $transition-base;
 }
 
-html[data-theme='light'] body {
-  background-color: #eef2f6;
-  color: #111827;
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--mt-font-heading);
 }

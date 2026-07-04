@@ -1,33 +1,33 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .interactiveDemo {
-  background: #111;
+  background: var(--mt-surface-raised);
   border-radius: $radius-md;
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-bottom: $spacing-md;
 }
 
 .title {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-sm;
   line-height: 1.4;
 }
 
 .description {
-  color: #888;
+  color: var(--mt-text-secondary);
   margin-bottom: $spacing-md;
   font-size: $font-size-base;
   line-height: 1.6;
 }
 
 .demoContent {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .scenario {
@@ -36,22 +36,22 @@
 
 .currentDeclaration {
   font-size: $font-size-base;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-md;
   padding: $spacing-md;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--mt-surface-raised-2);
   border-radius: $radius-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
 
   strong {
-    color: #fff;
+    color: var(--mt-accent);
     font-size: $font-size-lg;
   }
 }
 
 .prompt {
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-md;
 }
 
@@ -64,18 +64,18 @@
 
 .optionButton {
   padding: $spacing-md;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
   font-size: $font-size-base;
   font-weight: 500;
-  color: #ededed;
+  color: var(--mt-text-primary);
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--mt-accent);
+    background: var(--mt-surface-raised);
   }
 
   &:disabled {
@@ -83,28 +83,28 @@
   }
 
   &.correct {
-    background: #10b981;
-    color: white;
-    border-color: #059669;
+    background: var(--mt-success);
+    color: var(--mt-on-success);
+    border-color: var(--mt-success);
   }
 
   &.incorrect {
-    background: #ef4444;
-    color: white;
-    border-color: #dc2626;
+    background: var(--mt-danger);
+    color: var(--mt-on-danger);
+    border-color: var(--mt-danger);
   }
 }
 
 .feedback {
   padding: $spacing-md;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: $radius-sm;
+  background: var(--mt-surface-raised-2);
+  border-radius: var(--mt-radius);
   margin-bottom: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
 
   p {
     margin: 0;
-    color: #ededed;
+    color: var(--mt-text-primary);
     font-weight: 500;
   }
 }
@@ -117,88 +117,29 @@
 
 .nextButton, .resetButton {
   padding: $spacing-sm $spacing-lg;
-  background: #fff;
-  color: #000;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
   border: none;
-  border-radius: $radius-sm;
+  border-radius: var(--mt-radius);
   font-size: $font-size-base;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 15px var(--mt-accent-subtle);
   }
 }
 
 .resetButton {
   background: transparent;
-  color: #888;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--mt-text-muted);
+  border: 1px solid var(--mt-border-hairline);
 
   &:hover {
-    border-color: #fff;
-    color: #ededed;
+    border-color: var(--mt-accent);
+    color: var(--mt-text-primary);
     box-shadow: none;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .interactiveDemo {
-    background: #f6f8fb;
-    border-color: rgba(15, 23, 42, 0.08);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-  }
-
-  .title,
-  .currentDeclaration,
-  .prompt,
-  .feedback p {
-    color: #111827;
-  }
-
-  .description {
-    color: #4b5563;
-  }
-
-  .demoContent,
-  .currentDeclaration,
-  .feedback,
-  .optionButton {
-    background: rgba(15, 23, 42, 0.03);
-    border-color: rgba(15, 23, 42, 0.08);
-  }
-
-  .currentDeclaration strong {
-    color: #111827;
-  }
-
-  .optionButton {
-    color: #111827;
-  }
-
-  .optionButton:hover:not(:disabled) {
-    border-color: rgba(15, 23, 42, 0.18);
-    background: rgba(15, 23, 42, 0.05);
-  }
-
-  .nextButton {
-    background: #111827;
-    color: #ffffff;
-  }
-
-  .nextButton:hover {
-    box-shadow: 0 0 15px rgba(15, 23, 42, 0.15);
-  }
-
-  .resetButton {
-    color: #4b5563;
-    border-color: rgba(15, 23, 42, 0.12);
-  }
-
-  .resetButton:hover {
-    border-color: rgba(15, 23, 42, 0.18);
-    color: #111827;
   }
 }
 

@@ -7,9 +7,9 @@
 
 .avatarContainer {
   position: relative;
-  border-radius: 8px;
+  border-radius: var(--mt-radius);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--mt-border-hairline);
   transition: all 0.2s ease;
   width: 100%;
   aspect-ratio: 1;
@@ -24,8 +24,8 @@
   max-width: calc(100% - 8px);
   padding: 0.15rem 0.35rem;
   border-radius: 999px;
-  background: rgba(127, 29, 29, 0.92);
-  color: #fee2e2;
+  background: var(--mt-danger);
+  color: var(--mt-on-danger);
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.1;
@@ -40,7 +40,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--mt-overlay-scrim);
   backdrop-filter: blur(2px);
   pointer-events: none;
   border-radius: inherit;

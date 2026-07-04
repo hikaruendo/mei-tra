@@ -6,6 +6,7 @@ import { GameTable } from '@/components/game/GameTable';
 import { PreGameTable } from '@/components/game/PreGameTable';
 import { Notification } from '@/components/shared/Notification';
 import { Navigation } from '@/components/layout/Navigation';
+import { Footer } from '@/components/layout/Footer';
 import { useGame } from '@/hooks/useGame';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RoomList } from '@/components/room/RoomList';
@@ -183,6 +184,7 @@ export default function Home() {
                 users={users}
                 currentPlayerId={currentPlayerId}
               />
+              <Footer />
             </div>
 
             {/* ② PreGameTable: 待機中 / GameTable: ゲーム中 */}

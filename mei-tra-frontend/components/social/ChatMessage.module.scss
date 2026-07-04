@@ -1,7 +1,7 @@
 .systemMessage {
   text-align: center;
   font-size: 0.875rem;
-  color: #888;
+  color: var(--mt-text-muted);
   font-style: italic;
   padding: 0.25rem 0;
 }
@@ -25,11 +25,11 @@
   width: 2rem;
   height: 2rem;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--mt-surface-raised-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ededed;
+  color: var(--mt-text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -48,41 +48,18 @@
 
 .senderName {
   font-weight: 500;
-  color: #ededed;
+  color: var(--mt-text-primary);
   font-size: 0.875rem;
 }
 
 .timestamp {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--mt-text-muted);
 }
 
 .text {
-  color: #d1d5db;
+  color: var(--mt-text-secondary);
   font-size: 0.875rem;
   margin-top: 0.25rem;
   word-break: break-word;
-}
-
-:global(html[data-theme='light']) {
-  .senderName {
-    color: #111827;
-  }
-
-  .text {
-    color: #374151;
-  }
-
-  .timestamp {
-    color: #6b7280;
-  }
-
-  .avatarFallback {
-    background-color: rgba(0, 0, 0, 0.08);
-    color: #111827;
-  }
-
-  .systemMessage {
-    color: #6b7280;
-  }
 }

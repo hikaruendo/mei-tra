@@ -8,7 +8,7 @@
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 500;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--mt-shadow-panel);
   animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s;
   max-width: 90%;
   width: auto;
@@ -18,23 +18,23 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background-color: rgba(6, 40, 20, 0.95);
-  color: #ededed;
+  background-color: var(--mt-surface-raised);
+  color: var(--mt-text-primary);
 }
 
 .success{
-  color: #4ade80;
-  border: 2px solid rgba(74, 222, 128, 0.4);
+  color: var(--mt-success);
+  border: 2px solid var(--mt-success);
 }
 
 .error{
-  color: #f87171;
-  border: 2px solid rgba(248, 113, 113, 0.4);
+  color: var(--mt-danger);
+  border: 2px solid var(--mt-danger);
 }
 
 .warning{
-  color: #fbbf24;
-  border: 2px solid rgba(251, 191, 36, 0.4);
+  color: var(--mt-warning);
+  border: 2px solid var(--mt-warning);
 }
 
 @keyframes slideIn {
@@ -61,20 +61,20 @@
 .success::before {
   content: "\2713";
   font-size: 1.2em;
-  color: #4ade80;
+  color: var(--mt-success);
 }
 
 .error::before {
   content: "\2715";
   font-size: 1.2em;
-  color: #f87171;
+  color: var(--mt-danger);
 }
 
 .warning::before {
   content: "!";
   font-size: 1.2em;
   font-weight: bold;
-  color: #fbbf24;
+  color: var(--mt-warning);
 }
 
 /* Responsive styles */

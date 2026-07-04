@@ -32,7 +32,8 @@ export interface AuthUser {
 export interface SignUpData {
   email: string;
   password: string;
-  username: string;
+  // Optional: when omitted, the DB trigger auto-generates a unique @handle (user_xxxx).
+  username?: string;
   displayName: string;
   locale?: 'ja' | 'en';
 }

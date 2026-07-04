@@ -1,17 +1,17 @@
 @use '../../../../styles/base/variables-modules' as *;
 
 .tipCard {
-  background: #111;
-  border-radius: $radius-md;
+  background: var(--mt-surface-raised);
+  border-radius: var(--mt-radius);
   padding: $spacing-md;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
   margin-bottom: $spacing-md;
 }
 
 .tipTitle {
   font-size: $font-size-lg;
   font-weight: 600;
-  color: #ededed;
+  color: var(--mt-text-primary);
   margin-bottom: $spacing-sm;
   line-height: 1.4;
 }
@@ -27,7 +27,7 @@
 }
 
 .tipItem {
-  color: #888;
+  color: var(--mt-text-muted);
   font-size: $font-size-base;
   line-height: 1.6;
   padding: $spacing-sm 0;
@@ -38,31 +38,11 @@
     content: '\2022';
     position: absolute;
     left: 0;
-    color: #888;
+    color: var(--mt-text-muted);
     font-weight: 400;
   }
 
   &:not(:last-child) {
     margin-bottom: $spacing-xs;
-  }
-}
-
-:global(html[data-theme='light']) {
-  .tipCard {
-    background: #f6f8fb;
-    border-color: rgba(15, 23, 42, 0.08);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-  }
-
-  .tipTitle {
-    color: #111827;
-  }
-
-  .tipItem {
-    color: #4b5563;
-  }
-
-  .tipItem:before {
-    color: #6b7280;
   }
 }
