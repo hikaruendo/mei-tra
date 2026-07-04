@@ -207,7 +207,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                       {canWatch && (
                         <button
                           onClick={() => watchRoom(room.id)}
-                          className={styles.joinButton}
+                          className={styles.watchButton}
                           disabled={disableRoomActions}
                         >
                           {t('room.watch')}

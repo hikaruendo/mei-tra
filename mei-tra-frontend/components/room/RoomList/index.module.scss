@@ -235,6 +235,31 @@
   box-shadow: none;
 }
 
+.watchButton {
+  padding: 0.65rem 1rem;
+  background: transparent;
+  color: var(--mt-text-primary);
+  border: 1px solid var(--mt-accent);
+  border-radius: var(--mt-radius);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  min-height: 2.75rem;
+  transition: all 0.3s ease;
+}
+
+.watchButton:hover {
+  background: var(--mt-accent-subtle);
+  border-color: var(--mt-accent-strong);
+}
+
+.watchButton:disabled {
+  background: transparent;
+  color: var(--mt-text-muted);
+  border-color: var(--mt-border-hairline);
+  cursor: not-allowed;
+}
+
 .startButton {
   padding: 0.65rem 1rem;
   background: var(--mt-btn-primary-bg);
