@@ -30,9 +30,13 @@ export class ShuffleTeamsUseCase {
         roomId: request.roomId,
         playerId: request.playerId,
       });
-      if (fillResult.success && fillResult.updatedRoom) {
-        room = fillResult.updatedRoom;
+      if (!fillResult.success || !fillResult.updatedRoom) {
+        return {
+          success: false,
+          error: fillResult.error || 'Failed to fill empty seats',
+        };
       }
+      room = fillResult.updatedRoom;
     }
 
     const shuffled = [...room.players];
@@ -45,9 +49,15 @@ export class ShuffleTeamsUseCase {
       player.team = (idx < half ? 0 : 1) as Team;
     });
 
-    room.updatedAt = new Date();
-    room.players = shuffled;
-    const updatedRoom = await this.roomService.updateRoom(request.roomId, room);
+    await Promise.all(
+      shuffled.map((player) =>
+        this.roomService.updatePlayerInRoom(request.roomId, player.playerId, {
+          team: player.team,
+        }),
+      ),
+    );
+
+    const updatedRoom = await this.roomService.getRoom(request.roomId);
     if (!updatedRoom) {
       return { success: false, error: 'Failed to change teams' };
     }

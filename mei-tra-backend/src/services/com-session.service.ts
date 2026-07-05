@@ -33,6 +33,7 @@ export class ComSessionService {
 
   private createCOMPlaceholder(
     index: number | string,
+    team: Team,
     hand: string[] = [],
   ): RoomPlayer {
     const idStr = String(index);
@@ -47,7 +48,7 @@ export class ComSessionService {
         name: 'COM',
         isCOM: true,
         hand,
-        team: 0 as Team,
+        team,
         isPasser: true,
         hasBroken: false,
         hasRequiredBroken: false,
@@ -66,8 +67,7 @@ export class ComSessionService {
     >,
     hand: string[] = [],
   ): RoomPlayer {
-    const comPlayer = this.createCOMPlaceholder(index, hand);
-    comPlayer.team = sourcePlayer.team;
+    const comPlayer = this.createCOMPlaceholder(index, sourcePlayer.team, hand);
     comPlayer.isPasser = sourcePlayer.isPasser;
     comPlayer.hasBroken = sourcePlayer.hasBroken ?? false;
     comPlayer.hasRequiredBroken = sourcePlayer.hasRequiredBroken ?? false;
@@ -109,8 +109,7 @@ export class ComSessionService {
         (player) => player.team === 1,
       ).length;
       const team = (team0Count <= team1Count ? 0 : 1) as Team;
-      const placeholder = this.createCOMPlaceholder(idx);
-      placeholder.team = team;
+      const placeholder = this.createCOMPlaceholder(idx, team);
       await this.roomRepository.addPlayer(roomId, placeholder);
       room.players.push(placeholder);
       state.players.push(toDomainPlayer(placeholder));

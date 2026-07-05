@@ -219,6 +219,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   private createCOMPlaceholder(
     index: number | string,
+    team: Team,
     hand: string[] = [],
   ): RoomPlayer {
     const idStr = String(index);
@@ -228,7 +229,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       name: 'COM',
       isCOM: true,
       hand,
-      team: 0 as Team,
+      team,
       isReady: false,
       isHost: false,
       joinedAt: new Date(),
@@ -245,8 +246,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     >,
     hand: string[] = [],
   ): RoomPlayer {
-    const comPlayer = this.createCOMPlaceholder(index, hand);
-    comPlayer.team = sourcePlayer.team;
+    const comPlayer = this.createCOMPlaceholder(index, sourcePlayer.team, hand);
     comPlayer.isPasser = sourcePlayer.isPasser;
     comPlayer.hasBroken = sourcePlayer.hasBroken ?? false;
     comPlayer.hasRequiredBroken = sourcePlayer.hasRequiredBroken ?? false;
@@ -477,8 +477,10 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       );
       if (playerIndex !== -1) {
         const leavingPlayer = room.players[playerIndex];
-        const comPlaceholder = this.createCOMPlaceholder(playerIndex);
-        comPlaceholder.team = leavingPlayer.team;
+        const comPlaceholder = this.createCOMPlaceholder(
+          playerIndex,
+          leavingPlayer.team,
+        );
         room.players[playerIndex] = comPlaceholder;
         await this.roomRepository.removePlayer(roomId, playerId);
         await this.roomRepository.addPlayer(roomId, comPlaceholder);

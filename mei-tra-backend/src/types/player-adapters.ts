@@ -94,6 +94,7 @@ export function toPersistedGamePlayer(
 
 export function toRuntimePlayer(
   player: Partial<PersistedGamePlayer> | null | undefined,
+  fallbackTeam?: 0 | 1,
 ): DomainPlayer | null {
   if (
     !player ||
@@ -103,11 +104,16 @@ export function toRuntimePlayer(
     return null;
   }
 
+  const team = player.team ?? fallbackTeam;
+  if (team !== 0 && team !== 1) {
+    return null;
+  }
+
   return {
     playerId: player.playerId,
     name: player.name,
     hand: Array.isArray(player.hand) ? [...player.hand] : [],
-    team: player.team ?? 0,
+    team,
     isPasser: player.isPasser ?? false,
     isCOM: player.isCOM,
     hasBroken: player.hasBroken ?? false,

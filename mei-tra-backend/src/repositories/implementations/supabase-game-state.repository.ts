@@ -349,11 +349,19 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   private mapDatabaseToGameState(dbGameState: GameStateRow): GameState {
     const stateData = dbGameState.state_data || {};
+    const teamAssignments = dbGameState.team_assignments as {
+      [playerId: string]: 0 | 1;
+    };
     const players = Array.isArray(stateData.players)
       ? stateData.players
-          .map((player) =>
-            toRuntimePlayer(player as Partial<PersistedGamePlayer>),
-          )
+          .map((player) => {
+            const persistedPlayer = player as Partial<PersistedGamePlayer>;
+            const fallbackTeam =
+              typeof persistedPlayer.playerId === 'string'
+                ? teamAssignments[persistedPlayer.playerId]
+                : undefined;
+            return toRuntimePlayer(persistedPlayer, fallbackTeam);
+          })
           .filter((player): player is DomainPlayer => Boolean(player))
       : [];
 
@@ -374,9 +382,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       agari: stateData.agari,
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
-      teamAssignments: dbGameState.team_assignments as {
-        [playerId: string]: 0 | 1;
-      },
+      teamAssignments,
     };
   }
 
