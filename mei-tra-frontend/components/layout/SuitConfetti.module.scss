@@ -1,0 +1,110 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.piece {
+  position: absolute;
+  top: -6%;
+  font-size: 1.7rem;
+  line-height: 1;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation-name: mtSuitFall;
+  animation-timing-function: cubic-bezier(0.35, 0.55, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+
+.red {
+  color: var(--mt-card-red);
+}
+
+.dark {
+  color: var(--mt-text-primary);
+}
+
+.note {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem 1.6rem;
+  border: 1px solid var(--mt-accent);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: mtNoteInOut 3.6s ease forwards;
+}
+
+.noteMark {
+  font-size: 0.9rem;
+  letter-spacing: 0.35em;
+  color: var(--mt-accent);
+}
+
+.noteMain {
+  font-family: var(--mt-font-heading);
+  font-size: 1.15rem;
+  color: var(--mt-text-primary);
+}
+
+@keyframes mtSuitFall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0) scale(var(--scale));
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(112vh) translateX(var(--drift)) rotate(var(--spin)) scale(var(--scale));
+    opacity: 0;
+  }
+}
+
+@keyframes mtNoteInOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -42%);
+  }
+  16%,
+  68% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -58%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece {
+    display: none;
+  }
+
+  .note {
+    animation: mtNoteFade 3s ease forwards;
+  }
+
+  @keyframes mtNoteFade {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    20%,
+    70% {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+}

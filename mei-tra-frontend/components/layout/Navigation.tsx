@@ -18,6 +18,7 @@ import {
   TextSizeIcon,
 } from '@/components/icons/UIIcons';
 import { UserProfile } from '@/components/profile/UserProfile';
+import { SuitConfetti } from './SuitConfetti';
 import styles from './Navigation.module.scss';
 
 interface NavigationProps {
@@ -38,9 +39,13 @@ const socialLinks = [
   { key: 'x', href: 'https://x.com/meitra_' },
 ] as const;
 
+let hasLoggedBrandGreeting = false;
+
 export function Navigation({ gameStarted = false, inRoom = false }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openUtilityMenu, setOpenUtilityMenu] = useState<UtilityMenu | null>(null);
+  const [eggActive, setEggActive] = useState(false);
+  const brandTapsRef = useRef<number[]>([]);
   const t = useTranslations('nav');
   const locale = useLocale();
   const pathname = usePathname();
@@ -65,6 +70,42 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  // Easter egg: tap the wordmark 7 times in quick succession.
+  const handleBrandTap = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const now = Date.now();
+    const recent = brandTapsRef.current.filter((time) => now - time < 800);
+    recent.push(now);
+    brandTapsRef.current = recent;
+
+    if (recent.length >= 7) {
+      event.preventDefault();
+      brandTapsRef.current = [];
+      setEggActive(true);
+      return;
+    }
+
+    closeMobileMenu();
+  };
+
+  useEffect(() => {
+    if (hasLoggedBrandGreeting) {
+      return;
+    }
+    hasLoggedBrandGreeting = true;
+    console.log(
+      '%c♠ ♥ Meitra ♦ ♣',
+      'color:#c9a34e;font-size:15px;font-weight:700;letter-spacing:0.15em;',
+    );
+    console.log(
+      '%c百年以上遊ばれてきたトリックテイキング。ようこそ、卓へ。',
+      'color:#a9b7a6;',
+    );
+    console.log(
+      '%cヒント: ヘッダーの Meitra を素早く7回叩いてみて。',
+      'color:#a9863b;font-style:italic;',
+    );
+  }, []);
 
   const closeUtilityMenu = () => {
     setOpenUtilityMenu(null);
@@ -174,13 +215,14 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
 
   return (
     <nav className={styles.navigation}>
+      {eggActive && <SuitConfetti onDone={() => setEggActive(false)} />}
       <div className={styles.container}>
         <div className={styles.content}>
           <div className={styles.brand}>
             <Link
               href="/"
               className={styles.brandLink}
-              onClick={closeMobileMenu}
+              onClick={handleBrandTap}
             >
               <Image
                 src="/meitra2.webp"
