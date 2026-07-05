@@ -5,9 +5,11 @@ import {
   StartGameRequest,
   StartGameResponse,
 } from './interfaces/start-game.use-case.interface';
-import { RoomStatus } from '../types/room.types';
+import { Room, RoomStatus } from '../types/room.types';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { toDomainPlayer } from '../types/player-adapters';
+import { GameStateService } from '../services/game-state.service';
+import { GameState } from '../types/game.types';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {
@@ -33,48 +35,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const state = roomGameState.getState();
-
-      // Waiting-room seat order is driven by room.players, so rebuild the in-memory
-      // players array from that source before starting. This keeps the play order
-      // aligned with the shuffled seat arrangement instead of any stale game-state order.
-      const existingPlayers = new Map(
-        state.players.map((statePlayer) => [statePlayer.playerId, statePlayer]),
-      );
-      state.players = room.players.map((roomPlayer) => {
-        const existingPlayer = existingPlayers.get(roomPlayer.playerId);
-
-        if (!existingPlayer) {
-          if (typeof roomGameState.registerPlayerToken === 'function') {
-            roomGameState.registerPlayerToken(
-              roomPlayer.playerId,
-              roomPlayer.playerId,
-            );
-          }
-          return {
-            ...toDomainPlayer(roomPlayer),
-            hand: [...roomPlayer.hand],
-            isPasser: roomPlayer.isPasser ?? false,
-            hasBroken: roomPlayer.hasBroken ?? false,
-            hasRequiredBroken: roomPlayer.hasRequiredBroken ?? false,
-          };
-        }
-
-        return {
-          ...toDomainPlayer(existingPlayer),
-          ...toDomainPlayer(roomPlayer),
-          hand: [...existingPlayer.hand],
-          isPasser: existingPlayer.isPasser,
-          hasBroken: existingPlayer.hasBroken,
-          hasRequiredBroken: existingPlayer.hasRequiredBroken,
-        };
-      });
-
-      state.teamAssignments = Object.fromEntries(
-        state.players.map((player) => [player.playerId, player.team]),
-      );
-
-      const player = state.players.find((p) => p.playerId === playerId);
+      const player = room.players.find((p) => p.playerId === playerId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
           playerId,
@@ -105,6 +66,24 @@ export class StartGameUseCase implements IStartGameUseCase {
 
       // 空席をCOMで埋めてからゲーム開始
       await this.roomService.fillVacantSeatsWithCOM(roomId);
+      const roomWithFilledSeats = await this.roomService.getRoom(roomId);
+      if (!roomWithFilledSeats) {
+        return {
+          success: false,
+          errorMessage: 'Room not found after filling vacant seats',
+        };
+      }
+
+      const teamValidationError =
+        this.validateFullRoomTeamBalance(roomWithFilledSeats);
+      if (teamValidationError) {
+        return {
+          success: false,
+          errorMessage: teamValidationError,
+        };
+      }
+
+      this.syncStatePlayersFromRoom(roomGameState, roomWithFilledSeats);
 
       await this.roomService.updateRoomStatus(roomId, RoomStatus.PLAYING);
       await roomGameState.startGame();
@@ -113,7 +92,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       updatedState.pointsToWin = room.settings.pointsToWin;
 
       // Synchronize hands with room representation
-      room.players.forEach((roomPlayer) => {
+      roomWithFilledSeats.players.forEach((roomPlayer) => {
         const statePlayer = updatedState.players.find(
           (p) => p.playerId === roomPlayer.playerId,
         );
@@ -173,5 +152,74 @@ export class StartGameUseCase implements IStartGameUseCase {
         errorMessage: 'Failed to start game',
       };
     }
+  }
+
+  private syncStatePlayersFromRoom(
+    roomGameState: GameStateService,
+    room: Room,
+  ): GameState {
+    const state = roomGameState.getState();
+
+    // Waiting-room seat order is driven by room.players, so rebuild the in-memory
+    // players array from that source before starting. This keeps the play order
+    // aligned with the shuffled seat arrangement instead of any stale game-state order.
+    const existingPlayers = new Map(
+      state.players.map((statePlayer) => [statePlayer.playerId, statePlayer]),
+    );
+    state.players = room.players.map((roomPlayer) => {
+      const existingPlayer = existingPlayers.get(roomPlayer.playerId);
+
+      if (!existingPlayer) {
+        if (typeof roomGameState.registerPlayerToken === 'function') {
+          roomGameState.registerPlayerToken(
+            roomPlayer.playerId,
+            roomPlayer.playerId,
+          );
+        }
+        return {
+          ...toDomainPlayer(roomPlayer),
+          hand: [...roomPlayer.hand],
+          isPasser: roomPlayer.isPasser ?? false,
+          hasBroken: roomPlayer.hasBroken ?? false,
+          hasRequiredBroken: roomPlayer.hasRequiredBroken ?? false,
+        };
+      }
+
+      return {
+        ...toDomainPlayer(existingPlayer),
+        ...toDomainPlayer(roomPlayer),
+        hand: [...existingPlayer.hand],
+        isPasser: existingPlayer.isPasser,
+        hasBroken: existingPlayer.hasBroken,
+        hasRequiredBroken: existingPlayer.hasRequiredBroken,
+      };
+    });
+
+    state.teamAssignments = Object.fromEntries(
+      state.players.map((player) => [player.playerId, player.team]),
+    );
+
+    return state;
+  }
+
+  private validateFullRoomTeamBalance(room: Room): string | null {
+    const maxPlayers = room.settings.maxPlayers;
+    if (room.players.length !== maxPlayers) {
+      return null;
+    }
+
+    const team0Count = room.players.filter(
+      (player) => player.team === 0,
+    ).length;
+    const team1Count = room.players.filter(
+      (player) => player.team === 1,
+    ).length;
+    const expectedTeamSize = maxPlayers / 2;
+
+    if (team0Count !== expectedTeamSize || team1Count !== expectedTeamSize) {
+      return 'Teams must be balanced before starting the game';
+    }
+
+    return null;
   }
 }

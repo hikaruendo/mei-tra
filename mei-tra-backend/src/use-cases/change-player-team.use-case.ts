@@ -39,12 +39,19 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       }
 
       const currentTeamCounts = {
-        0: room.players.filter((p) => !p.isCOM && p.team === 0).length,
-        1: room.players.filter((p) => !p.isCOM && p.team === 1).length,
+        0: room.players.filter((p) => p.team === 0).length,
+        1: room.players.filter((p) => p.team === 1).length,
       } as Record<Team, number>;
 
       const newTeamCounts = { ...currentTeamCounts };
       for (const [playerId, newTeam] of Object.entries(teamChanges)) {
+        if (newTeam !== 0 && newTeam !== 1) {
+          return {
+            success: false,
+            error: `Invalid team for player ${playerId}`,
+          };
+        }
+
         const player = room.players.find((p) => p.playerId === playerId);
         if (!player) {
           return {

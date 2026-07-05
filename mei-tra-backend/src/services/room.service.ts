@@ -476,7 +476,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         (p) => p.playerId === playerId,
       );
       if (playerIndex !== -1) {
+        const leavingPlayer = room.players[playerIndex];
         const comPlaceholder = this.createCOMPlaceholder(playerIndex);
+        comPlaceholder.team = leavingPlayer.team;
         room.players[playerIndex] = comPlaceholder;
         await this.roomRepository.removePlayer(roomId, playerId);
         await this.roomRepository.addPlayer(roomId, comPlaceholder);
@@ -484,9 +486,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         const state = gameState.getState();
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
-          state.players[gsIndex] = toDomainPlayer(
-            this.createCOMPlaceholder(gsIndex),
-          );
+          state.players[gsIndex] = toDomainPlayer(comPlaceholder);
+          if (state.teamAssignments[playerId] != null) {
+            delete state.teamAssignments[playerId];
+          }
+          state.teamAssignments[comPlaceholder.playerId] = comPlaceholder.team;
         }
       }
       // 再接続トークンを削除
