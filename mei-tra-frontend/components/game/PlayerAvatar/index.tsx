@@ -20,7 +20,14 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 }) => {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [imageError, setImageError] = useState(false);
-  const { playerId, userId, isAuthenticated, isCOM, name } = player;
+  const {
+    playerId,
+    userId,
+    isAuthenticated,
+    isCOM,
+    name,
+    profileRevision,
+  } = player;
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +60,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
     isAuthenticated,
     isCOM,
     name,
+    profileRevision,
   ]);
 
   useEffect(() => {

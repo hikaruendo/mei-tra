@@ -613,6 +613,25 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @SubscribeMessage('profile-updated')
+  handleProfileUpdated(@ConnectedSocket() client: Socket): void {
+    const authenticatedUser = this.getAuthenticatedUser(client);
+    if (!authenticatedUser) {
+      client.emit('profile-update-error', 'Authentication required');
+      return;
+    }
+
+    const payload = { userId: authenticatedUser.id };
+    const roomId = this.playerRooms.get(client.id);
+
+    if (roomId) {
+      this.server.to(roomId).emit('profile-updated', payload);
+      return;
+    }
+
+    this.server.emit('profile-updated', payload);
+  }
+
   async handleDisconnect(client: Socket) {
     this.activityTracker.decrementConnections();
 
