@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
 import { GameField } from '@/components/game/GameField';
@@ -10,6 +10,7 @@ import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { getSeatOrderWithSelfBottom } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
+import { SuitConfetti } from '@/components/layout/SuitConfetti';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -80,6 +81,8 @@ export const GameTable: React.FC<GameTableProps> = ({
   usePreloadCards();
   const [spectatorPerspectivePlayerId, setSpectatorPerspectivePlayerId] =
     useState<string | null>(null);
+  const [sweepActive, setSweepActive] = useState(false);
+  const sweepFiredRef = useRef(false);
 
   const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
   const hostPlayerId = players.find((player) => player.isHost)?.playerId ?? players[0]?.playerId ?? null;
@@ -106,6 +109,22 @@ export const GameTable: React.FC<GameTableProps> = ({
     }
   }, [hostPlayerId, isSpectator, players, spectatorPerspectivePlayerId]);
 
+  // Celebrate when one team sweeps all 10 fields (10 pairs) in a round.
+  useEffect(() => {
+    if (completedFields.length >= 10) {
+      const firstTeam = completedFields[0]?.winnerTeam;
+      const sweptByOneTeam = completedFields.every(
+        (field) => field.winnerTeam === firstTeam,
+      );
+      if (sweptByOneTeam && !sweepFiredRef.current) {
+        sweepFiredRef.current = true;
+        setSweepActive(true);
+      }
+    } else {
+      sweepFiredRef.current = false;
+    }
+  }, [completedFields]);
+
   if (!players || players.length === 0) {
     return null;
   }
@@ -129,6 +148,12 @@ export const GameTable: React.FC<GameTableProps> = ({
 
   return (
     <>
+      {sweepActive && (
+        <SuitConfetti
+          message="10ペア独占！"
+          onDone={() => setSweepActive(false)}
+        />
+      )}
       {!isWaiting && (
         <GameInfo
           currentTrump={currentTrump}

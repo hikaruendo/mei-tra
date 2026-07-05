@@ -7,9 +7,10 @@ const SUITS = ['♠', '♥', '♦', '♣'] as const;
 
 interface SuitConfettiProps {
   onDone: () => void;
+  message?: string;
 }
 
-export function SuitConfetti({ onDone }: SuitConfettiProps) {
+export function SuitConfetti({ onDone, message = '百年、めくり続けて。' }: SuitConfettiProps) {
   const pieces = useMemo(
     () =>
       Array.from({ length: 32 }, (_, i) => {
@@ -56,7 +57,7 @@ export function SuitConfetti({ onDone }: SuitConfettiProps) {
       ))}
       <div className={styles.note}>
         <span className={styles.noteMark}>♠ ♥ ♦ ♣</span>
-        <span className={styles.noteMain}>百年、めくり続けて。</span>
+        <span className={styles.noteMain}>{message}</span>
       </div>
     </div>
   );
