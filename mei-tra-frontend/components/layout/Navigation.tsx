@@ -74,13 +74,18 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
   // Easter egg: tap the wordmark 7 times in quick succession.
   const handleBrandTap = (event: React.MouseEvent<HTMLAnchorElement>) => {
     const now = Date.now();
-    const recent = brandTapsRef.current.filter((time) => now - time < 800);
-    recent.push(now);
-    brandTapsRef.current = recent;
+    const taps = brandTapsRef.current;
+    const last = taps.length ? taps[taps.length - 1] : 0;
+    // Reset the streak when the gap since the previous tap is too long,
+    // so 7 unhurried taps still count (a rolling window was too strict).
+    if (now - last > 600) {
+      taps.length = 0;
+    }
+    taps.push(now);
 
-    if (recent.length >= 7) {
+    if (taps.length >= 7) {
       event.preventDefault();
-      brandTapsRef.current = [];
+      taps.length = 0;
       setEggActive(true);
       return;
     }
