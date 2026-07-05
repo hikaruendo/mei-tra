@@ -44,6 +44,11 @@ import {
 import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 import { reconnectSocket } from '../app/socket';
+import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
+
+interface ProfileUpdatedPayload {
+  userId: string;
+}
 
 const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
   const seen = new Set<string>();
@@ -615,6 +620,22 @@ export const useGame = () => {
             isHost: data.isHost,
           }];
         });
+      },
+      'profile-updated': ({ userId }: ProfileUpdatedPayload) => {
+        if (!userId) {
+          return;
+        }
+
+        clearPlayerProfileCache(userId);
+        const profileRevision = Date.now();
+
+        setPlayers((prev) =>
+          prev.map((player) =>
+            player.userId === userId || player.playerId === userId
+              ? { ...player, profileRevision }
+              : player,
+          ),
+        );
       },
       'game-started': ({
         roomId,
