@@ -81,4 +81,44 @@ describe('ShuffleTeamsUseCase', () => {
     expect(result).toEqual({ success: false, error: 'fill failed' });
     expect(roomService.updatePlayerInRoom).not.toHaveBeenCalled();
   });
+
+  it('returns failure when any player team update fails', async () => {
+    const room = {
+      id: 'room-1',
+      hostId: 'host',
+      status: RoomStatus.WAITING,
+      players: [
+        { playerId: 'host', team: 0 },
+        { playerId: 'player-2', team: 1 },
+        { playerId: 'player-3', team: 0 },
+        { playerId: 'player-4', team: 1 },
+      ],
+      updatedAt: new Date(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(room),
+      updatePlayerInRoom: jest
+        .fn()
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true),
+    } as Partial<IRoomService> as IRoomService;
+    const fillWithComUseCase = {
+      execute: jest.fn(),
+    } as unknown as IFillWithComUseCase;
+    const useCase = new ShuffleTeamsUseCase(roomService, fillWithComUseCase);
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      playerId: 'host',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Failed to change teams',
+    });
+    expect(roomService.updatePlayerInRoom).toHaveBeenCalledTimes(4);
+    expect(roomService.getRoom).toHaveBeenCalledTimes(1);
+  });
 });

@@ -49,13 +49,16 @@ export class ShuffleTeamsUseCase {
       player.team = (idx < half ? 0 : 1) as Team;
     });
 
-    await Promise.all(
+    const updateResults = await Promise.all(
       shuffled.map((player) =>
         this.roomService.updatePlayerInRoom(request.roomId, player.playerId, {
           team: player.team,
         }),
       ),
     );
+    if (updateResults.some((updated) => !updated)) {
+      return { success: false, error: 'Failed to change teams' };
+    }
 
     const updatedRoom = await this.roomService.getRoom(request.roomId);
     if (!updatedRoom) {
