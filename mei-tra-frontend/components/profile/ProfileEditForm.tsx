@@ -199,6 +199,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
       if (socket?.connected && token) {
         socket.emit('update-auth', { token });
+        socket.emit('profile-updated');
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : t('saveFailed'));

@@ -16,10 +16,15 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { ConnectionUser, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
+import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 
 interface UseRoomOptions {
   users?: ConnectionUser[];
   currentPlayerId?: string | null;
+}
+
+interface ProfileUpdatedPayload {
+  userId: string;
 }
 
 export const useRoom = (options: UseRoomOptions = {}) => {
@@ -378,6 +383,43 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       }
     };
 
+    const applyProfileRevision = (
+      room: Room,
+      userId: string,
+      profileRevision: number,
+    ): Room => ({
+      ...room,
+      players: room.players.map((player) =>
+        player.userId === userId || player.playerId === userId
+          ? { ...player, profileRevision }
+          : player,
+      ),
+    });
+
+    const handleProfileUpdated = ({ userId }: ProfileUpdatedPayload) => {
+      if (!userId) {
+        return;
+      }
+
+      clearPlayerProfileCache(userId);
+      const profileRevision = Date.now();
+
+      setCurrentRoom((prevRoom) =>
+        prevRoom
+          ? applyProfileRevision(prevRoom, userId, profileRevision)
+          : prevRoom,
+      );
+      setAvailableRooms((prevRooms) =>
+        prevRooms.map((room) =>
+          room.players.some(
+            (player) => player.userId === userId || player.playerId === userId,
+          )
+            ? applyProfileRevision(room, userId, profileRevision)
+            : room,
+        ),
+      );
+    };
+
     // エラーメッセージ
     const handleErrorMessage = (message: string) => {
       console.warn('[useRoom] error-message received:', {
@@ -426,6 +468,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     socket.on('player-left', handlePlayerLeft);
     socket.on('room-playing', handleRoomPlaying);
     socket.on('update-players', handleUpdatePlayers);
+    socket.on('profile-updated', handleProfileUpdated);
     socket.on('error-message', handleErrorMessage);
     socket.on('set-room-id', handleSetRoomId);
     socket.on('back-to-lobby', handleBackToLobby);
@@ -438,6 +481,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       socket.off('player-left', handlePlayerLeft);
       socket.off('room-playing', handleRoomPlaying);
       socket.off('update-players', handleUpdatePlayers);
+      socket.off('profile-updated', handleProfileUpdated);
       socket.off('error-message', handleErrorMessage);
       socket.off('set-room-id', handleSetRoomId);
       socket.off('back-to-lobby', handleBackToLobby);

@@ -12,6 +12,7 @@ export interface ConnectionUser {
   name: string;
   userId?: string; // Canonical authenticated account ID
   isAuthenticated?: boolean;
+  profileRevision?: number;
 }
 
 export interface CompletedField {
