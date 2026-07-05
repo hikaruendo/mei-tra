@@ -863,6 +863,73 @@ describe('Game Use Cases', () => {
       expect(result.success).toBe(false);
       expect(result.errorMessage).toBe('Need more players');
     });
+
+    it('rejects starting a full room with unbalanced teams', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new StartGameUseCase(roomService);
+
+      const room: Room = {
+        ...baseRoom,
+        status: RoomStatus.READY,
+        players: [
+          {
+            ...basePlayers[0],
+            team: 0 as const,
+            isReady: true,
+          },
+          {
+            ...basePlayers[1],
+            team: 0 as const,
+            isReady: true,
+          },
+          {
+            socketId: 'socket-3',
+            playerId: 'player-3',
+            name: 'Player 3',
+            team: 0 as const,
+            hand: [],
+            isPasser: false,
+            isReady: true,
+            isHost: false,
+            hasBroken: false,
+            joinedAt: new Date(),
+          } as RoomPlayer,
+          {
+            socketId: 'socket-4',
+            playerId: 'player-4',
+            name: 'Player 4',
+            team: 1 as const,
+            hand: [],
+            isPasser: false,
+            isReady: true,
+            isHost: false,
+            hasBroken: false,
+            joinedAt: new Date(),
+          } as RoomPlayer,
+        ],
+      };
+
+      roomService.getRoom.mockResolvedValue(room);
+      roomService.getRoomGameState.mockResolvedValue({
+        getState: jest.fn(() => ({
+          players: [],
+          teamAssignments: {},
+        })),
+      } as unknown as GameStateService);
+      roomService.canStartGame.mockResolvedValue({ canStart: true });
+      roomService.fillVacantSeatsWithCOM.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        playerId: 'player-1',
+        roomId: room.id,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.errorMessage).toBe(
+        'Teams must be balanced before starting the game',
+      );
+      expect(roomService.updateRoomStatus).not.toHaveBeenCalled();
+    });
   });
 
   describe('TogglePlayerReadyUseCase', () => {
@@ -958,6 +1025,65 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Each team must have at most 2 players');
+    });
+
+    it('counts COM players when validating team changes', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new ChangePlayerTeamUseCase(roomService);
+
+      const room: Room = {
+        ...baseRoom,
+        players: [
+          {
+            ...basePlayers[0],
+            team: 0 as const,
+          },
+          {
+            ...basePlayers[1],
+            team: 0 as const,
+          },
+          {
+            socketId: 'com-1',
+            playerId: 'com-1',
+            name: 'COM 1',
+            team: 1 as const,
+            hand: [],
+            isPasser: false,
+            isReady: true,
+            isHost: false,
+            hasBroken: false,
+            isCOM: true,
+            joinedAt: new Date(),
+          } as RoomPlayer,
+          {
+            socketId: 'com-2',
+            playerId: 'com-2',
+            name: 'COM 2',
+            team: 1 as const,
+            hand: [],
+            isPasser: false,
+            isReady: true,
+            isHost: false,
+            hasBroken: false,
+            isCOM: true,
+            joinedAt: new Date(),
+          } as RoomPlayer,
+        ],
+      };
+
+      roomService.getRoom.mockResolvedValue(room);
+
+      const result = await useCase.execute({
+        roomId: room.id,
+        playerId: 'player-1',
+        teamChanges: {
+          'player-2': 1,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Each team must have at most 2 players');
+      expect(roomService.updatePlayerInRoom).not.toHaveBeenCalled();
     });
 
     it('applies valid team changes', async () => {

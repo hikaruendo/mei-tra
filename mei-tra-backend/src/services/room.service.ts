@@ -219,6 +219,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   private createCOMPlaceholder(
     index: number | string,
+    team: Team,
     hand: string[] = [],
   ): RoomPlayer {
     const idStr = String(index);
@@ -228,7 +229,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       name: 'COM',
       isCOM: true,
       hand,
-      team: 0 as Team,
+      team,
       isReady: false,
       isHost: false,
       joinedAt: new Date(),
@@ -245,8 +246,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     >,
     hand: string[] = [],
   ): RoomPlayer {
-    const comPlayer = this.createCOMPlaceholder(index, hand);
-    comPlayer.team = sourcePlayer.team;
+    const comPlayer = this.createCOMPlaceholder(index, sourcePlayer.team, hand);
     comPlayer.isPasser = sourcePlayer.isPasser;
     comPlayer.hasBroken = sourcePlayer.hasBroken ?? false;
     comPlayer.hasRequiredBroken = sourcePlayer.hasRequiredBroken ?? false;
@@ -476,7 +476,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         (p) => p.playerId === playerId,
       );
       if (playerIndex !== -1) {
-        const comPlaceholder = this.createCOMPlaceholder(playerIndex);
+        const leavingPlayer = room.players[playerIndex];
+        const comPlaceholder = this.createCOMPlaceholder(
+          playerIndex,
+          leavingPlayer.team,
+        );
         room.players[playerIndex] = comPlaceholder;
         await this.roomRepository.removePlayer(roomId, playerId);
         await this.roomRepository.addPlayer(roomId, comPlaceholder);
@@ -484,9 +488,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         const state = gameState.getState();
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
-          state.players[gsIndex] = toDomainPlayer(
-            this.createCOMPlaceholder(gsIndex),
-          );
+          state.players[gsIndex] = toDomainPlayer(comPlaceholder);
+          if (state.teamAssignments[playerId] != null) {
+            delete state.teamAssignments[playerId];
+          }
+          state.teamAssignments[comPlaceholder.playerId] = comPlaceholder.team;
         }
       }
       // 再接続トークンを削除

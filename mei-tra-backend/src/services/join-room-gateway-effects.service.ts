@@ -86,7 +86,7 @@ export class JoinRoomGatewayEffectsService {
     const joiningPlayer = room.players.find(
       (player) => player.playerId === normalizedUser.playerId,
     );
-    const joiningTeam = joiningPlayer?.team ?? 0;
+    const joiningTeam = joiningPlayer?.team;
 
     const roomPlayerJoinedPayload: RoomPlayerJoinedPayload = {
       playerId: normalizedUser.playerId,

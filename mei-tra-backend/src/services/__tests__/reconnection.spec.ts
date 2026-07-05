@@ -1615,6 +1615,85 @@ describe('Reconnection Token Management', () => {
     });
 
     describe('leaveRoom token preservation', () => {
+      it('should preserve team when replacing a leaving waiting-room player with a COM placeholder', async () => {
+        const roomId = 'room-123';
+        const playerId = 'player-2';
+
+        const hostPlayer: RoomPlayer = {
+          socketId: 'socket-1',
+          playerId: 'player-1',
+          name: 'Host Player',
+          team: 0,
+          hand: [],
+          isPasser: false,
+          hasBroken: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        };
+        const leavingPlayer: RoomPlayer = {
+          socketId: 'socket-2',
+          playerId,
+          name: 'Leaving Player',
+          team: 1,
+          hand: [],
+          isPasser: false,
+          hasBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+
+        const room: Room = {
+          ...baseRoom,
+          status: RoomStatus.WAITING,
+          players: [hostPlayer, leavingPlayer],
+        };
+
+        const roomState = bindRoomRepositoryToState(room);
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().players = [
+          {
+            playerId: hostPlayer.playerId,
+            name: hostPlayer.name,
+            team: hostPlayer.team,
+            hand: [],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+          {
+            playerId: leavingPlayer.playerId,
+            name: leavingPlayer.name,
+            team: leavingPlayer.team,
+            hand: [],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ];
+        gameState.getState().teamAssignments = {
+          [hostPlayer.playerId]: hostPlayer.team,
+          [leavingPlayer.playerId]: leavingPlayer.team,
+        };
+
+        await roomService.leaveRoom(roomId, playerId);
+
+        const updatedRoom = roomState.getPersistedRoom();
+        const replacementCom = updatedRoom?.players.find(
+          (player) => player.isCOM,
+        );
+        expect(replacementCom?.team).toBe(1);
+        expect(gameState.getState().players[1].playerId).toBe(
+          replacementCom?.playerId,
+        );
+        expect(gameState.getState().players[1].team).toBe(1);
+        expect(
+          gameState.getState().teamAssignments[replacementCom?.playerId ?? ''],
+        ).toBe(1);
+        expect(gameState.getState().teamAssignments[playerId]).toBeUndefined();
+      });
+
       it('should not remove reconnectToken when leaving during play', async () => {
         const roomId = 'room-123';
         const playerId = 'player-1';
