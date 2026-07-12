@@ -3,8 +3,8 @@
   position: relative;
   justify-self: center;
   width: 100%;
-  height: auto;
-  margin: -28px 0 auto;
+  height: 100%;
+  margin: 0;
   background: transparent;
   border-radius: 1rem;
   display: flex;
@@ -19,9 +19,9 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: min(100%, 320px);
+  width: min(100%, clamp(12rem, 34vh, 20rem));
   aspect-ratio: 1 / 1;
-  padding: 0.4rem;
+  padding: 0.25rem;
   border-radius: 999px;
 }
 
@@ -43,11 +43,23 @@
   z-index: 0;
 }
 
+:global(html[data-theme='light']) .fieldContainerOuter::before {
+  inset: -16px;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 245, 208, 0.55) 0%,
+    rgba(217, 176, 84, 0.32) 28%,
+    rgba(173, 128, 42, 0.16) 53%,
+    rgba(173, 128, 42, 0) 76%
+  );
+  filter: blur(14px);
+}
+
 .fieldContainerInner {
   position: relative;
   z-index: 1;
-  width: 200px;
-  height: 200px;
+  width: clamp(9rem, 22vh, 12rem);
+  height: clamp(9rem, 22vh, 12rem);
 }
 
 /* Each played card is absolutely positioned from center */
@@ -77,7 +89,7 @@
 
 .card {
   position: relative;
-  width: var(--card-width);
+  width: min(var(--card-width), 4.5rem);
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   display: flex;
@@ -225,7 +237,7 @@
   }
 
   .fieldContainerOuter {
-    width: min(100%, 248px);
+    width: min(100%, 208px);
     aspect-ratio: 1 / 1;
     min-height: 0;
     justify-content: center;
@@ -248,12 +260,12 @@
   }
 
   .fieldContainerInner {
-    width: 160px;
-    height: 160px;
+    width: 140px;
+    height: 140px;
   }
 
   .card {
-    width: 68px;
+    width: 60px;
     aspect-ratio: 2 / 3;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }

@@ -15,21 +15,29 @@
 }
 
 .menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--mt-btn-primary-text);
   background: var(--mt-btn-primary-bg);
   border: none;
-  padding: 0.5rem 0.75rem;
+  padding: 0;
   border-radius: var(--mt-radius);
   min-height: 2.25rem;
-  min-width: 4.75rem;
-  font-size: 0.875rem;
+  min-width: 2.25rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  line-height: 1.3;
 
   &:hover {
     box-shadow: 0 0 15px var(--mt-accent-subtle);
   }
+}
+
+.menuSymbol {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .mobileMenu {
@@ -56,4 +64,21 @@
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
+}
+
+.leaveMenuButton {
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--mt-accent);
+  }
 }

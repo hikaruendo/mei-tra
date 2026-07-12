@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType } from '@/types/game.types';
+import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
 import { FontSizePreset } from '@/types/user.types';
 import { NegriCard } from '@/components/game/NegriCard';
 import { Card } from '@/components/game/Card';
@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
+import { getTrumpDisplay } from '@/lib/utils/trumpDisplay';
 
 const HAND_CARD_METRICS: Record<
   FontSizePreset,
@@ -24,7 +25,7 @@ const HAND_CARD_METRICS: Record<
   }
 > = {
   standard: {
-    width: 72,
+    width: 80,
     overlap: '-15px',
     hoverLift: 28,
     hoverOverlap: '-0.6rem',
@@ -67,7 +68,7 @@ interface PlayerHandProps {
   gameActions: GameActions;
   position: string;
   agariCard?: string;
-  currentHighestDeclaration?: { playerId: string };
+  currentHighestDeclaration?: Pick<BlowDeclaration, 'playerId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
   completedFields: CompletedField[];
   currentPlayerId: string;
   players: Player[];
@@ -108,6 +109,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 }) => {
   const t = useTranslations('playerHand');
   const tStatus = useTranslations('playerStatus');
+  const tBlow = useTranslations('blowControls');
   const { fontSizePreference } = useAuth();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
@@ -122,8 +124,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const isCurrentPlayer = currentPlayerId === player.playerId;
   const canActAsCurrentPlayer = isCurrentPlayer && !isSpectator;
   const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
+  const playerDeclaration = isWinningPlayer && currentHighestDeclaration?.trumpType
+    ? {
+      trumpType: currentHighestDeclaration.trumpType,
+      numberOfPairs: currentHighestDeclaration.numberOfPairs,
+    }
+    : null;
   const shouldSelectNegri =
     gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
+  const hasOwnNegriCard = Boolean(
+    isCurrentPlayer && negriCard && negriPlayerId === player.playerId,
+  );
+  const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
+  const showDeclarationNegri = position === 'bottom' && hasOwnNegriCard;
+  const showDeclarationAgari = position === 'bottom' && showAgariPanel;
+  const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
   const replaceWithComStatusLabel = isDisconnected
     ? tStatus('disconnected')
     : tStatus('idle');
@@ -264,7 +279,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       <div className={styles.playerAvatar}>
         <PlayerAvatar
           player={player}
-          size="medium"
+          size={isCurrentPlayer ? 'medium' : 'small'}
           showName={true}
         />
       </div>
@@ -279,10 +294,64 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
     </>
   );
+  const declarationBadge = playerDeclaration ? (
+    <div className={styles.declarationBadge}>
+      <span className={styles.declarationLabel}>{t('bid')}</span>
+      <span className={styles.declarationValue}>
+        <span
+          aria-label={tBlow(playerDeclaration.trumpType)}
+          className={styles.declarationSuit}
+          data-trump={playerDeclaration.trumpType}
+        >
+          {getTrumpDisplay(playerDeclaration.trumpType)}
+        </span>
+        <span className={styles.declarationPairs}>{playerDeclaration.numberOfPairs}</span>
+      </span>
+    </div>
+  ) : null;
+  const bottomStatusZone = position === 'bottom' && (
+    declarationBadge || showDeclarationNegri || showDeclarationAgari || showHandStatusPanels
+  ) ? (
+    <div className={styles.bottomStatusZone}>
+      {(declarationBadge || showDeclarationNegri || showDeclarationAgari) && (
+        <div className={styles.declarationContext}>
+          {showDeclarationAgari && (
+            <div className={`${styles.statusPanel} ${styles.agariStatusPanel} ${styles.declarationAgariPanel}`}>
+              <div className={styles.statusHeader}>{t('agari')}</div>
+              <div className={styles.statusCardFrame}>
+                <Card card={agariCard!} />
+              </div>
+            </div>
+          )}
+          {(declarationBadge || showDeclarationNegri) && (
+            <div className={styles.declarationRow}>
+              {declarationBadge}
+              {showDeclarationNegri && (
+                <NegriCard
+                  negriCard={negriCard!}
+                  negriPlayerId={negriPlayerId!}
+                  currentPlayerId={currentPlayerId}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {showHandStatusPanels && (
+        <div className={styles.handStatusPanels}>
+          <div className={styles.statusPanel}>
+            <div className={styles.statusHeader}>{t('negri')}</div>
+            <div className={styles.statusMessage}>{t('selectNegri')}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
       <div className={styles.playerInfo}>
+        {position === 'bottom' ? bottomStatusZone : declarationBadge}
         <div className={styles.playerInfoGroup}>
           {isSpectator ? (
             <button
@@ -299,14 +368,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               {playerInfoContent}
             </div>
           )}
-          {negriCard && negriPlayerId === player.playerId && (
+          {hasOwnNegriCard && !showHandStatusPanels && !showDeclarationNegri && (
             <NegriCard
-              negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
+              negriCard={negriCard!}
+              negriPlayerId={negriPlayerId!}
               currentPlayerId={currentPlayerId}
             />
           )}
-          {shouldSelectNegri && (
+          {shouldSelectNegri && !showHandStatusPanels && (
             <div className={styles.statusPanel}>
               <div className={styles.statusHeader}>{t('negri')}</div>
               <div className={styles.statusMessage}>{t('selectNegri')}</div>
@@ -328,21 +397,23 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 </button>
               </div>
             )}
-          {isCurrentPlayer && agariCard && isWinningPlayer && (
+          {showAgariPanel && position !== 'bottom' && (
             <div className={`${styles.statusPanel} ${styles.agariStatusPanel}`}>
               <div className={styles.statusHeader}>{t('agari')}</div>
               <div className={styles.statusCardFrame}>
-                <Card card={agariCard} />
+                <Card card={agariCard!} />
               </div>
             </div>
           )}
         </div>
         {renderPlayerHand(isCurrentPlayer)}
         {completedFields.length > 0 && (
-          <CompletedFields
-            fields={completedFields}
-            players={players}
-          />
+          <div className={styles.completedFields}>
+            <CompletedFields
+              fields={completedFields}
+              players={players}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -12,6 +12,7 @@ interface GameDockProps {
   gameStarted: boolean;
   currentTrump: TrumpType | null;
   gamePhase?: string | null;
+  onLeaveRequest?: () => void;
 }
 
 export function GameDock({
@@ -19,6 +20,7 @@ export function GameDock({
   gameStarted,
   currentTrump,
   gamePhase,
+  onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
   const [isMobile, setIsMobile] = useState(false);
@@ -71,6 +73,20 @@ export function GameDock({
           placement={isMobile ? 'menu' : 'topbar'}
         />
       </div>
+      {isMobile && onLeaveRequest && (
+        <div className={styles.dockItem}>
+          <button
+            type="button"
+            className={styles.leaveMenuButton}
+            onClick={() => {
+              setIsMenuOpen(false);
+              onLeaveRequest();
+            }}
+          >
+            {tCommon('leave')}
+          </button>
+        </div>
+      )}
     </>
   );
 
@@ -82,8 +98,12 @@ export function GameDock({
           className={styles.menuButton}
           onClick={() => setIsMenuOpen((prev) => !prev)}
           aria-expanded={isMenuOpen}
+          aria-label={tCommon('menu')}
+          title={tCommon('menu')}
         >
-          {tCommon('menu')}
+          <span className={styles.menuSymbol} aria-hidden="true">
+            {isMenuOpen ? '×' : '⋯'}
+          </span>
         </button>
         <div
           className={`${styles.mobileMenu} ${isMenuOpen ? styles.mobileMenuOpen : ''}`}

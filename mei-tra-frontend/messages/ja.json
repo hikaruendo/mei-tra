@@ -14,6 +14,10 @@
     "example": "例:",
     "menu": "メニュー"
   },
+  "gameInfo": {
+    "reach": "リーチ",
+    "win": "WIN"
+  },
   "nav": {
     "rooms": "ルーム一覧",
     "tutorial": "ドキュメント",
@@ -329,7 +333,7 @@
   },
   "blowControls": {
     "currentTurn": "現在のターン:",
-    "selectTrump": "トランプを選択",
+    "selectTrump": "キリを選択",
     "selectPairs": "ペア数を選択",
     "declare": "宣言",
     "pass": "パス",
@@ -481,6 +485,7 @@
   },
   "playerHand": {
     "cards": "枚",
+    "bid": "アゲ:",
     "selectNegri": "ネグリを選択してください",
     "selectNegriWithAgari": "このカードがアガリです。ネグリを選択してください",
     "agari": "アガリ",

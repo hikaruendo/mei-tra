@@ -173,7 +173,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
   const activeLanguageLabel = languageOptions.find((option) => option.value === currentLocale)?.label ?? currentLocale;
 
   return (
-    <nav className={styles.navigation}>
+    <nav className={`${styles.navigation} ${gameStarted ? styles.gameNavigation : ''}`}>
       <div className={styles.container}>
         <div className={styles.content}>
           <div className={styles.brand}>
