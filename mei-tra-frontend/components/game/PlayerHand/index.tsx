@@ -309,9 +309,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       </span>
     </div>
   ) : null;
-  const bottomStatusZone = position === 'bottom' && (
-    declarationBadge || showDeclarationNegri || showDeclarationAgari || showHandStatusPanels
-  ) ? (
+  const hasBottomStatus = position === 'bottom' && Boolean(
+    declarationBadge || showDeclarationNegri || showDeclarationAgari || showHandStatusPanels,
+  );
+  const bottomStatusZone = hasBottomStatus ? (
     <div className={styles.bottomStatusZone}>
       {(declarationBadge || showDeclarationNegri || showDeclarationAgari) && (
         <div className={styles.declarationContext}>
@@ -350,7 +351,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
-      <div className={styles.playerInfo}>
+      <div className={`${styles.playerInfo} ${hasBottomStatus ? styles.hasBottomStatus : ''}`}>
         {position === 'bottom' ? bottomStatusZone : declarationBadge}
         <div className={styles.playerInfoGroup}>
           {isSpectator ? (

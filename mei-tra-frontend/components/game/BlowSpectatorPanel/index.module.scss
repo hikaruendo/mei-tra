@@ -1,0 +1,159 @@
+.spectatorPanel {
+  position: fixed;
+  top: 44%;
+  left: 50%;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
+  transform: translate(-50%, -50%);
+}
+
+.header,
+.summaryRow,
+.historyItem,
+.declarationValue {
+  display: flex;
+  align-items: center;
+}
+
+.header {
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.title {
+  color: var(--mt-text-primary);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.viewOnly {
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--mt-accent-subtle);
+  color: var(--mt-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.summary {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0;
+}
+
+.summaryRow {
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  color: var(--mt-text-primary);
+  font-size: 0.78rem;
+}
+
+.summaryRow dt {
+  flex: 0 0 auto;
+  color: var(--mt-text-muted);
+  font-weight: 700;
+}
+
+.summaryRow dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history {
+  border-top: 1px solid var(--mt-border-hairline);
+  padding-top: 0.45rem;
+}
+
+.historyTitle {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--mt-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.historyList {
+  display: grid;
+  gap: 0.25rem;
+  max-height: 6.5rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.historyItem {
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
+  font-size: 0.75rem;
+}
+
+.historyItem.pass {
+  background: transparent;
+  color: var(--mt-text-muted);
+}
+
+.historyItem.highest {
+  border: 1px solid var(--mt-accent);
+  box-shadow: inset 0 0 0 1px var(--mt-accent-subtle);
+}
+
+.playerName {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.declarationValue {
+  flex: 0 0 auto;
+  gap: 0.25rem;
+}
+
+.trump {
+  color: var(--mt-text-primary);
+  font-size: 1rem;
+  line-height: 0.8;
+}
+
+.trump[data-trump='herz'],
+.trump[data-trump='daiya'] {
+  color: var(--mt-danger);
+}
+
+.trump[data-trump='tra'] {
+  color: var(--mt-accent);
+}
+
+.emptyHistory {
+  margin: 0;
+  color: var(--mt-text-muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .spectatorPanel {
+    top: 37%;
+    width: min(18rem, calc(100vw - 2rem));
+    padding: 0.65rem 0.75rem;
+  }
+}
