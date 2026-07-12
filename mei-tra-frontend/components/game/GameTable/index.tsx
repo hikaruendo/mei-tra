@@ -8,6 +8,7 @@ import styles from './index.module.scss';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
+import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
 import { getSeatOrderWithSelfBottom } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 
@@ -148,25 +149,39 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      {gamePhase && !isSpectator && (
+      {gamePhase && (
         <GameControls
           gamePhase={gamePhase}
-          renderBlowControls={() => (
-            <BlowControls
-              isCurrentPlayer={currentPlayerId === whoseTurn}
-              whoseTurn={whoseTurn}
-              selectedTrump={selectedTrump}
-              setSelectedTrump={setSelectedTrump}
-              numberOfPairs={numberOfPairs}
-              setNumberOfPairs={setNumberOfPairs}
-              declareBlow={gameActions.declareBlow}
-              passBlow={gameActions.passBlow}
-              blowDeclarations={blowDeclarations}
-              blowActionHistory={blowActionHistory}
-              currentHighestDeclaration={currentHighestDeclaration}
-              players={players}
-            />
-          )}
+          renderBlowControls={() => {
+            if (isSpectator) {
+              return (
+                <BlowSpectatorPanel
+                  whoseTurn={whoseTurn}
+                  blowDeclarations={blowDeclarations}
+                  blowActionHistory={blowActionHistory}
+                  currentHighestDeclaration={currentHighestDeclaration}
+                  players={players}
+                />
+              );
+            }
+
+            return (
+              <BlowControls
+                isCurrentPlayer={currentPlayerId === whoseTurn}
+                whoseTurn={whoseTurn}
+                selectedTrump={selectedTrump}
+                setSelectedTrump={setSelectedTrump}
+                numberOfPairs={numberOfPairs}
+                setNumberOfPairs={setNumberOfPairs}
+                declareBlow={gameActions.declareBlow}
+                passBlow={gameActions.passBlow}
+                blowDeclarations={blowDeclarations}
+                blowActionHistory={blowActionHistory}
+                currentHighestDeclaration={currentHighestDeclaration}
+                players={players}
+              />
+            );
+          }}
         />
       )}
 

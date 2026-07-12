@@ -487,6 +487,10 @@
   width: 100%;
 }
 
+.playerPosition.bottom .playerInfo.hasBottomStatus {
+  row-gap: 0.35rem;
+}
+
 .playerPosition.bottom .declarationContext {
   display: flex;
   flex-direction: column;
@@ -518,6 +522,10 @@
   align-self: end;
   position: relative;
   z-index: 1;
+}
+
+.playerPosition.bottom .playerInfo.hasBottomStatus .playerInfoGroup {
+  align-self: start;
 }
 
 .playerPosition.bottom .playerInfoGroup > :nth-child(2) {
@@ -770,6 +778,10 @@
     align-items: flex-end;
     gap: 0.25rem;
     align-self: end;
+  }
+
+  .playerPosition.bottom .playerInfo.hasBottomStatus .playerInfoGroup {
+    align-self: start;
   }
 
   .playerPosition.bottom .playerInfoContainer {

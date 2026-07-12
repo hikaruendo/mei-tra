@@ -168,6 +168,7 @@ describe('PlayerHand', () => {
 
     expect(screen.getByText('Agari').closest('.bottomStatusZone')).toBeInTheDocument();
     expect(screen.getByText('Agari').closest('.declarationContext')).toBeInTheDocument();
+    expect(screen.getByText('Agari').closest('.playerInfo')).toHaveClass('hasBottomStatus');
     expect(
       screen.getByText('Please select your Negri').closest('.bottomStatusZone'),
     ).toBeInTheDocument();
