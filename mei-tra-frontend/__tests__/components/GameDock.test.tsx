@@ -87,4 +87,30 @@ describe('GameDock', () => {
     expect(screen.getByText('strength dock topbar')).toBeInTheDocument();
     expect(screen.getByText('chat dock menu')).toBeInTheDocument();
   });
+
+  it('includes the leave action in the mobile menu', async () => {
+    mockMatchMedia(true);
+    const onLeaveRequest = jest.fn();
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gamePhase="play"
+        onLeaveRequest={onLeaveRequest}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'menu' })).toBeInTheDocument();
+    });
+
+    const menuButton = screen.getByRole('button', { name: 'menu' });
+    fireEvent.click(menuButton);
+    fireEvent.click(screen.getByRole('button', { name: 'leave' }));
+
+    expect(onLeaveRequest).toHaveBeenCalledTimes(1);
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+  });
 });

@@ -8,6 +8,7 @@ jest.mock('next-intl', () => ({
     const labels: Record<string, Record<string, string>> = {
       playerHand: {
         agari: 'Agari',
+        bid: 'Bid:',
         cards: 'cards',
         negri: 'Negri',
         selectNegri: 'Please select your Negri',
@@ -150,6 +151,46 @@ describe('PlayerHand', () => {
     expect(screen.getAllByText('Agari').length).toBeGreaterThan(0);
     expect(screen.getByText('Please select your Negri')).toBeInTheDocument();
     expect(screen.getAllByText('H-A').length).toBeGreaterThan(0);
+  });
+
+  it('keeps bottom-player status displays in a dedicated zone above the hand', () => {
+    renderPlayerHand({
+      position: 'bottom',
+      agariCard: 'H-A',
+      currentHighestDeclaration: { playerId: 'player-2' },
+      currentPlayerId: 'player-2',
+      whoseTurn: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+    });
+
+    expect(screen.getByText('Agari').closest('.bottomStatusZone')).toBeInTheDocument();
+    expect(screen.getByText('Agari').closest('.declarationContext')).toBeInTheDocument();
+    expect(
+      screen.getByText('Please select your Negri').closest('.bottomStatusZone'),
+    ).toBeInTheDocument();
+  });
+
+  it('places the bottom player Negri card beside the declaration', () => {
+    renderPlayerHand({
+      position: 'bottom',
+      currentPlayerId: 'player-2',
+      negriCard: 'H-A',
+      negriPlayerId: 'player-2',
+    });
+
+    expect(screen.getByText('negri card').closest('.declarationContext')).toBeInTheDocument();
+  });
+
+  it('hides the Negri card for another player', () => {
+    renderPlayerHand({
+      negriCard: 'H-A',
+      negriPlayerId: 'player-2',
+    });
+
+    expect(screen.queryByText('negri card')).not.toBeInTheDocument();
   });
 
   it('shows the selected spectator perspective hand face up', () => {

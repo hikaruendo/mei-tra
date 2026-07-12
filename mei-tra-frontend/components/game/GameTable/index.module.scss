@@ -1,18 +1,25 @@
+.gameTable {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .playerPositions {
   position: relative;
   display: grid;
   grid-template-areas:
     ".    top     ."
     "left field right"
-    ".    bottom  .";
-  grid-template-columns: 240px minmax(360px, 480px) 240px;
-  grid-template-rows: auto minmax(200px, 248px) auto;
-  gap: 0.2rem 1.1rem;
+    "bottom bottom bottom";
+  grid-template-columns: minmax(120px, 150px) minmax(340px, 540px) minmax(120px, 150px);
+  grid-template-rows: minmax(3.75rem, auto) minmax(10rem, 1fr) minmax(8.75rem, auto);
+  gap: 0.15rem 0.75rem;
   justify-content: center;
-  align-items: start;
+  align-items: center;
   flex: 1;
   min-height: 0;
-  padding: 0.7rem 1.5rem 0.9rem;
+  padding: 0.25rem clamp(0.75rem, 2vw, 1.5rem) 0.5rem;
 }
 
 .waitingCenter {
@@ -77,13 +84,17 @@
 }
 
 @media (max-width: 768px) {
+  .gameTable {
+    min-height: auto;
+  }
+
   .playerPositions {
     grid-template-areas:
       "left top right"
       "field field field"
       "bottom bottom bottom";
     grid-template-columns: 78px minmax(0, 1fr) 78px;
-    grid-template-rows: auto minmax(190px, 214px) auto;
+    grid-template-rows: auto minmax(158px, 1fr) auto;
     gap: 0.1rem 0.5rem;
     margin-top: 0.35rem;
     padding: 0.35rem 0.4rem 0.75rem;

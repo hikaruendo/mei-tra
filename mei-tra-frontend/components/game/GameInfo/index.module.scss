@@ -1,56 +1,155 @@
 .gameInfoContainer {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  padding: 16px 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.3rem clamp(0.75rem, 2vw, 2rem);
+  flex-shrink: 0;
 }
 
 .gameInfoContent {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
   min-width: 0;
-  flex: 1 1 18rem;
-}
-
-.gameInfoTrump {
-  
-}
-
-.gameInfoTrumpText {
-  color: var(--mt-text-primary);
-  font-weight: bold;
-  font-size: 1.1rem;
-  line-height: 1.4;
-  word-break: break-word;
 }
 
 .gameInfoScores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.gameInfoScore {
+  position: relative;
+  min-width: 0;
+}
+
+.gameInfoScoreContent {
   display: flex;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.3rem;
 }
 
-.gameInfoScoreText0 {
-  font-weight: bold;
-  font-size: 1.1rem;
-  line-height: 1.4;
+.gameInfoMeter {
+  position: relative;
+  flex: 0 0 clamp(5rem, 10vw, 7rem);
+  width: clamp(5rem, 10vw, 7rem);
+  height: 1.35rem;
+  border-radius: 999px;
+  background: var(--mt-border-hairline);
+  overflow: hidden;
 }
 
-.gameInfoScoreText1 {
-  font-weight: bold;
-  font-size: 1.1rem;
-  line-height: 1.4;
+.gameInfoScoreFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--team-score-progress, 0%);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--mt-accent) 62%, transparent);
+  transition: width 0.3s ease;
+}
+
+.gameInfoScoreMeta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  height: 100%;
+  padding: 0 0.42rem;
+}
+
+.leadingTeam {
+  .gameInfoScoreValue {
+    color: var(--mt-accent);
+  }
+}
+
+.gameInfoScore.reachingTeam {
+  .gameInfoMeter {
+    box-shadow: 0 0 8px var(--mt-accent-subtle);
+  }
+}
+
+.gameInfoScore.winningTeam {
+  .gameInfoMeter {
+    box-shadow: 0 0 10px var(--mt-accent-subtle);
+  }
+}
+
+.team0 {
+  .gameInfoScoreFill {
+    background: color-mix(in srgb, var(--mt-accent) 62%, transparent);
+  }
+}
+
+.team1 {
+  .gameInfoScoreFill {
+    background: color-mix(in srgb, var(--mt-text-secondary) 52%, transparent);
+  }
+}
+
+.reachingTeam .gameInfoScoreFill,
+.winningTeam .gameInfoScoreFill {
+  background: color-mix(in srgb, var(--mt-accent) 52%, transparent);
+}
+
+.gameInfoScoreTeam {
+  flex: 0 1 auto;
+  max-width: clamp(4rem, 12vw, 9rem);
+  min-width: 0;
+  overflow: hidden;
+  color: var(--mt-text-secondary);
+  font-size: clamp(0.68rem, 0.85vw, 0.82rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gameInfoScoreValue {
+  color: var(--mt-text-primary);
+  font-size: clamp(0.96rem, 1.3vw, 1.1rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.gameInfoScoreValue span {
+  color: var(--mt-text-muted);
+  font-size: 0.7em;
+}
+
+.gameInfoScoreStatus {
+  padding: 0.1rem 0.36rem;
+  border-radius: 999px;
+  background: var(--mt-accent);
+  color: var(--mt-btn-primary-text);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  box-shadow: 0 1px 4px var(--mt-accent-subtle);
+}
+
+.scoreAnnouncement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .gameInfoActions {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
-  margin-left: auto;
+  min-width: max-content;
 }
 
 .leaveButton {
@@ -74,9 +173,12 @@
 
 @media (max-width: 768px) {
   .gameInfoContainer {
-    padding: 8px 12px;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 12px;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .gameInfoContent {
@@ -85,22 +187,47 @@
   }
 
   .gameInfoScores {
-    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .gameInfoScore {
+    width: 100%;
+  }
+
+  .gameInfoScoreContent {
     gap: 0.25rem;
+  }
+
+  .gameInfoMeter {
+    flex-basis: clamp(3.6rem, 18vw, 4.6rem);
+    width: clamp(3.6rem, 18vw, 4.6rem);
+    height: 1.2rem;
+  }
+
+  .gameInfoScoreMeta {
+    gap: 0.15rem;
+    padding: 0 0.28rem;
+  }
+
+  .gameInfoScoreStatus {
+    padding: 0.06rem 0.18rem;
+    font-size: 0.54rem;
+  }
+
+  .gameInfoScoreValue {
+    font-size: 0.86rem;
   }
 
   .gameInfoActions {
     position: absolute;
-    top: 8px;
+    top: 6px;
     right: 12px;
     align-items: flex-start;
     margin-left: 0;
   }
 
   .leaveButton {
-    margin-left: auto;
-    min-width: 4.25rem;
-    padding: 0.5rem 0.75rem;
+    display: none;
   }
 }
 

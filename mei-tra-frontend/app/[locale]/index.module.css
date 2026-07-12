@@ -47,6 +47,14 @@
   flex-direction: column;
 }
 
+@media (min-width: 769px) {
+  .activeGameWrapper {
+    height: calc(100dvh - 4.5rem);
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
 @media (max-width: 768px) {
   .main {
     min-height: calc(100dvh - 4rem);
@@ -55,5 +63,12 @@
   .gameWrapper {
     min-height: calc(100dvh - 4rem);
     padding-bottom: 4.5rem;
+  }
+
+  .activeGameWrapper {
+    height: calc(100dvh - 4rem);
+    min-height: 0;
+    padding-bottom: 0;
+    overflow: hidden;
   }
 }

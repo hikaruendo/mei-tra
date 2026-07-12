@@ -13,6 +13,22 @@ $desktop-breakpoint: 960px;
   border-bottom: 1px solid var(--mt-border-hairline);
 }
 
+@media (max-width: 768px) {
+  .gameNavigation .content {
+    min-height: 3.75rem;
+    padding: 0.45rem 0;
+  }
+
+  .gameNavigation .brandLogo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .gameNavigation .brandName {
+    font-size: 1.1rem;
+  }
+}
+
 .container {
   max-width: 80rem;
   margin: 0 auto;

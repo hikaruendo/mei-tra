@@ -81,7 +81,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   const [spectatorPerspectivePlayerId, setSpectatorPerspectivePlayerId] =
     useState<string | null>(null);
 
-  const currentHighestDeclarationPlayer = players.find(p => p.playerId === currentHighestDeclaration?.playerId)?.name;
   const hostPlayerId = players.find((player) => player.isHost)?.playerId ?? players[0]?.playerId ?? null;
   const tablePerspectivePlayerId = isSpectator
     ? spectatorPerspectivePlayerId ?? hostPlayerId
@@ -128,24 +127,22 @@ export const GameTable: React.FC<GameTableProps> = ({
   });
 
   return (
-    <>
+    <div className={styles.gameTable}>
       {!isWaiting && (
         <GameInfo
-          currentTrump={currentTrump}
-          currentHighestDeclarationPlayer={currentHighestDeclarationPlayer ?? null}
-          numberOfPairs={currentHighestDeclaration?.numberOfPairs ?? 0}
           teamScores={teamScores}
           pointsToWin={pointsToWin}
           players={players}
           actionSlot={
-            currentRoomId ? (
+            currentRoomId ? (onLeaveRequest) => (
               <GameDock
                 roomId={currentRoomId}
                 gameStarted={!isWaiting}
                 currentTrump={currentTrump}
                 gamePhase={gamePhase}
+                onLeaveRequest={onLeaveRequest}
               />
-            ) : null
+            ) : undefined
           }
           onLeave={onLeave}
         />
@@ -246,6 +243,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           />
         )}
       </div>
-    </>
+    </div>
   );
 };

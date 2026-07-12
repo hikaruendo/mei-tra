@@ -9,6 +9,7 @@
   padding: 0.25rem 0 5rem;
   min-height: var(--player-hand-card-container-min-height, 160px);
   overflow: visible;
+  z-index: var(--z-index-card);
 }
 
 .otherPlayerHandContainer{
@@ -20,7 +21,9 @@
   width: 100%;
   padding: 0.3rem 0 0;
   margin-left: 0;
-  min-height: 2.4rem;
+  min-height: 1.9rem;
+  position: relative;
+  z-index: var(--z-index-card);
 }
 
 .card {
@@ -45,12 +48,12 @@
 }
 
 .cardFaceDown{
-  width: 1.7rem;
+  width: 1.55rem;
   aspect-ratio: 2 / 3;
   border-radius: 0.25rem;
   display: flex;
   overflow: hidden;
-  margin-left: -0.9rem;
+  margin-left: -0.7rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   user-select: none;
   -webkit-user-select: none;
@@ -113,6 +116,56 @@
   border-radius: var(--radius-sm);
   margin-bottom: 0;
   background: transparent;
+}
+
+.declarationBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding: 0.18rem 0.45rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 999px;
+  background: var(--mt-surface-raised);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+}
+
+.declarationLabel {
+  color: var(--mt-text-secondary);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.declarationValue {
+  display: flex;
+  align-items: center;
+  gap: 0.22rem;
+  color: var(--mt-text-primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.declarationSuit {
+  color: var(--mt-text-primary);
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 0.8;
+}
+
+.declarationSuit[data-trump='herz'],
+.declarationSuit[data-trump='daiya'] {
+  color: var(--mt-danger);
+}
+
+.declarationSuit[data-trump='tra'] {
+  color: var(--mt-accent);
+}
+
+.declarationPairs {
+  min-width: 0.75rem;
+  text-align: center;
 }
 
 .playerInfoGroup{
@@ -334,7 +387,7 @@
   grid-area: top;
   align-self: start;
   justify-self: center;
-  margin-top: -1.45rem;
+  margin-top: 0.1rem;
 }
 
 .playerPosition.bottom {
@@ -387,7 +440,7 @@
 .playerPosition.top .playerInfoContainer,
 .playerPosition.left .playerInfoContainer,
 .playerPosition.right .playerInfoContainer {
-  min-width: 82px;
+  min-width: 68px;
   padding: 0.16rem;
   background: var(--mt-surface-raised-2);
 }
@@ -395,8 +448,8 @@
 .playerPosition.top .playerName,
 .playerPosition.left .playerName,
 .playerPosition.right .playerName {
-  max-width: 76px;
-  font-size: 0.76rem;
+  max-width: 64px;
+  font-size: 0.7rem;
 }
 
 .playerPosition.top .cardCount,
@@ -406,21 +459,70 @@
 }
 
 .playerPosition.bottom .playerInfo {
-  align-items: center;
-  row-gap: 0.1rem;
-  padding-top: 0.1rem;
+  display: grid;
+  grid-template-areas:
+    "status status"
+    "profile hand"
+    "fields fields";
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  column-gap: clamp(0.4rem, 1.25vw, 1rem);
+  row-gap: 0.65rem;
+  width: min(100%, 48rem);
+  margin: 0 auto;
+  padding: 0.1rem 0.35rem 0;
 }
 
-  .playerPosition.bottom .playerInfoGroup {
-    width: 100%;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 0.7rem;
-  }
+.bottomStatusZone {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-width: 0;
+}
 
-  .playerPosition.bottom .playerInfoGroup > :nth-child(2) {
-    margin-left: 0.35rem;
-  }
+.playerPosition.bottom .bottomStatusZone {
+  grid-area: status;
+  width: 100%;
+}
+
+.playerPosition.bottom .declarationContext {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  justify-self: start;
+}
+
+.declarationRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.declarationRow > :last-child:not(:first-child) {
+  margin-left: 0.4rem;
+}
+
+.playerPosition.bottom .declarationBadge {
+  margin-bottom: 0;
+}
+
+.playerPosition.bottom .playerInfoGroup {
+  grid-area: profile;
+  width: auto;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: end;
+  position: relative;
+  z-index: 1;
+}
+
+.playerPosition.bottom .playerInfoGroup > :nth-child(2) {
+  margin-left: 0.15rem;
+}
 
 .playerPosition.bottom .playerInfoContainer {
   min-width: 94px;
@@ -436,6 +538,63 @@
   margin-left: 0.55rem;
 }
 
+.playerPosition.bottom .declarationAgariPanel {
+  min-width: 0;
+  min-height: 0;
+  padding: 0.2rem 0.3rem;
+  flex-direction: row;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.playerPosition.bottom .declarationAgariPanel .statusHeader {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.playerPosition.bottom .declarationAgariPanel .statusCardFrame {
+  min-width: 1.8rem;
+  min-height: 2.7rem;
+  padding: 0;
+}
+
+.playerPosition.bottom .declarationAgariPanel .statusCardFrame > * {
+  transform: none;
+}
+
+.playerPosition.bottom .handContainer {
+  grid-area: hand;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.2rem 0 2.6rem;
+}
+
+.handStatusPanels {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.playerPosition.bottom .handStatusPanels {
+  max-width: 100%;
+  margin: 0;
+}
+
+.playerPosition.bottom .card {
+  width: var(--player-hand-card-width, 72px);
+  margin: 0 max(-1.75rem, calc((2.5rem - var(--player-hand-card-width, 72px)) / 2));
+}
+
+.completedFields {
+  grid-area: fields;
+  justify-self: center;
+  min-width: 0;
+  width: min(100%, 42rem);
+}
+
 @media (max-width: 768px) {
   .playerPosition.top,
   .playerPosition.bottom,
@@ -447,13 +606,13 @@
   .playerPosition.top {
     align-self: start;
     padding-top: 0;
-    margin-top: -1rem;
+    margin-top: -0.15rem;
   }
 
   .playerPosition.left,
   .playerPosition.right {
     align-self: start;
-    margin-top: -0.2rem;
+    margin-top: 0.55rem;
   }
 
   .playerPosition.bottom {
@@ -568,20 +727,49 @@
   .playerPosition.bottom .playerInfo {
     width: 100%;
     max-width: 100%;
-    padding: 0 0.2rem 0.4rem;
+    display: grid;
+    grid-template-areas:
+      "status status"
+      "profile hand"
+      "fields fields";
+    grid-template-columns: 5.25rem minmax(0, 1fr);
+    align-items: end;
+    column-gap: 0;
+    row-gap: 0;
+    padding: 0 0.2rem 0.2rem;
     margin-bottom: 0;
-    margin-top: 0.35rem;
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    row-gap: 0.05rem;
+    margin-top: 0.1rem;
+  }
+
+  .declarationBadge {
+    margin-bottom: 0.15rem;
+    padding: 0.15rem 0.36rem;
+  }
+
+  .playerPosition.bottom .bottomStatusZone {
+    align-items: flex-end;
+    gap: 0.35rem;
+  }
+
+  .declarationLabel {
+    font-size: 0.6rem;
+  }
+
+  .declarationValue {
+    font-size: 0.7rem;
+  }
+
+  .declarationSuit {
+    font-size: 1rem;
   }
 
   .playerPosition.bottom .playerInfoGroup {
-    width: 100%;
+    grid-area: profile;
+    width: auto;
     justify-content: flex-start;
-    align-items: center;
-    gap: 0.5rem;
+    align-items: flex-end;
+    gap: 0.25rem;
+    align-self: end;
   }
 
   .playerPosition.bottom .playerInfoContainer {
@@ -591,7 +779,7 @@
 
   .playerPosition.bottom .statusPanel {
     align-self: center;
-    margin-top: -0.35rem;
+    margin-top: 0;
     min-width: 84px;
     min-height: 92px;
     padding: 0.38rem 0.45rem;
@@ -622,14 +810,47 @@
   }
 
   .playerPosition.bottom .handContainer {
+    grid-area: hand;
     width: 100%;
+    min-width: 0;
     justify-content: center;
     align-items: flex-end;
-    padding: 0 0 4.35rem;
-    margin-top: -1.3rem;
+    padding: 0 0 3.6rem;
+    margin: 0;
     overflow-x: visible;
     overflow-y: visible;
-    min-height: 154px;
+    min-height: 9.6rem;
+  }
+
+  .playerPosition.bottom .handStatusPanels {
+    gap: 0.35rem;
+    margin: 0 0 0.35rem;
+  }
+
+  .playerPosition.bottom .handStatusPanels .statusPanel {
+    margin-top: 0;
+  }
+
+  .playerPosition.bottom .handStatusPanels .agariStatusPanel {
+    margin-left: 0;
+  }
+
+  .playerPosition.bottom .declarationAgariPanel {
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0.16rem 0.25rem;
+  }
+
+  .playerPosition.bottom .declarationAgariPanel .statusCardFrame > * {
+    transform: none;
+  }
+
+  .completedFields {
+    grid-area: fields;
+    width: 100%;
+    margin-top: 0.9rem;
+    z-index: 3;
   }
 
   .playerPosition.bottom .card {

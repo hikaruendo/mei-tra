@@ -189,7 +189,7 @@ export default function Home() {
 
             {/* ② PreGameTable: 待機中 / GameTable: ゲーム中 */}
             {currentRoomId && (
-              <div className={styles.gameWrapper}>
+              <div className={`${styles.gameWrapper} ${gameStarted ? styles.activeGameWrapper : ''}`}>
                 {!gameStarted ? (
                   <PreGameTable
                     players={players}

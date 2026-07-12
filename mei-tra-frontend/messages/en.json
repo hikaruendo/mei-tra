@@ -14,6 +14,10 @@
     "example": "Example:",
     "menu": "Menu"
   },
+  "gameInfo": {
+    "reach": "Reach",
+    "win": "WIN"
+  },
   "nav": {
     "rooms": "Rooms",
     "tutorial": "Docs",
@@ -481,6 +485,7 @@
   },
   "playerHand": {
     "cards": "cards",
+    "bid": "Bid:",
     "selectNegri": "Please select your Negri",
     "selectNegriWithAgari": "This card is Agari. Select your Negri.",
     "agari": "Agari",

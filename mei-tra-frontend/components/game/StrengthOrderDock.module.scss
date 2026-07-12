@@ -1,5 +1,6 @@
 .dock {
   position: relative;
+  z-index: 110;
 }
 
 .topbar {
@@ -31,6 +32,7 @@
 
 .panel {
   position: absolute;
+  z-index: 110;
   bottom: calc(100% + 0.5rem);
   right: 0;
   min-width: 18rem;
