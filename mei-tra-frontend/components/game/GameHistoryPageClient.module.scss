@@ -1,3 +1,5 @@
+@use '../../styles/base/typography' as typography;
+
 .container {
   width: min(100%, 1080px);
   margin: 0 auto;
@@ -25,7 +27,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--mt-text-muted);
 }
 
 .title {
@@ -36,7 +38,7 @@
 
 .description {
   margin: 0;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--mt-text-secondary);
   font-size: 0.95rem;
 }
 
@@ -45,15 +47,16 @@
   align-items: center;
   text-decoration: none;
   color: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--mt-border-hairline);
+  background: var(--mt-surface-raised-2);
   border-radius: 999px;
   padding: 0.45rem 0.8rem;
   font-size: 0.85rem;
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--mt-accent-subtle);
+    border-color: var(--mt-accent);
   }
 }
 
@@ -62,9 +65,10 @@
   flex-direction: column;
   gap: 0.85rem;
   padding: 1rem 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--mt-border-hairline);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
 }
 
 .summaryHeader {
@@ -80,8 +84,8 @@
   align-items: center;
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--mt-accent-subtle);
+  border: 1px solid var(--mt-border-hairline);
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -102,8 +106,8 @@
   gap: 0.28rem;
   padding: 0.8rem 0.9rem;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--mt-surface-raised-2);
+  border: 1px solid var(--mt-border-hairline);
 }
 
 .summaryCardWide {
@@ -116,7 +120,7 @@
 
 .summaryLabel {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--mt-text-secondary);
 }
 
 .summaryValue {
@@ -151,12 +155,12 @@
 
 .filterSummaryLabel {
   font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--mt-text-muted);
 }
 
 .filterSummaryValue {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--mt-text-primary);
 }
 
 .filterSummaryChips {
@@ -170,8 +174,8 @@
   align-items: center;
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--mt-surface-raised-2);
+  border: 1px solid var(--mt-border-hairline);
   font-size: 0.74rem;
 }
 
@@ -184,43 +188,72 @@
 .feedDescription {
   margin: 0;
   font-size: 0.86rem;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--mt-text-secondary);
 }
 
-:global(html[data-theme='light']) {
+:global(html[data-font-size]) {
   .eyebrow,
-  .description,
-  .summaryLabel,
+  .summaryLabel {
+    font-size: typography.scale(0.72rem);
+  }
+
+  .title {
+    font-size: typography.scale(1.5rem);
+  }
+
+  .description {
+    font-size: typography.scale(0.95rem);
+  }
+
+  .backLink {
+    font-size: typography.scale(0.85rem);
+  }
+
+  .statusBadge {
+    font-size: typography.scale(0.78rem);
+  }
+
+  .summaryValue {
+    font-size: typography.scale(0.98rem);
+  }
+
+  .summaryValueSmall {
+    font-size: typography.scale(0.82rem);
+  }
+
   .filterSummaryLabel,
-  .feedDescription {
-    color: #64748b;
-  }
-
-  .backLink,
-  .statusBadge,
   .filterSummaryChip {
-    border-color: rgba(148, 163, 184, 0.22);
-    background: rgba(15, 23, 42, 0.04);
-  }
-
-  .backLink:hover {
-    background: rgba(15, 23, 42, 0.08);
-  }
-
-  .summaryPanel {
-    border-color: rgba(148, 163, 184, 0.18);
-    background: rgba(255, 255, 255, 0.76);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.74),
-      0 12px 28px rgba(15, 23, 42, 0.08);
-  }
-
-  .summaryCard {
-    border-color: rgba(148, 163, 184, 0.16);
-    background: rgba(15, 23, 42, 0.03);
+    font-size: typography.scale(0.74rem);
   }
 
   .filterSummaryValue {
-    color: #334155;
+    font-size: typography.scale(0.8rem);
+  }
+
+  .feedTitle {
+    font-size: typography.scale(1rem);
+  }
+
+  .feedDescription {
+    font-size: typography.scale(0.86rem);
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  .header {
+    align-items: stretch;
+  }
+
+  .backLink {
+    justify-content: center;
+    min-height: 3rem;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryCardWide {
+    grid-column: auto;
   }
 }

@@ -1,10 +1,12 @@
+@use '../../styles/base/typography' as typography;
+
 .dock {
   position: relative;
-  z-index: 110;
 }
 
 .topbar {
-  display: inline-flex;
+  display: flex;
+  height: 100%;
 }
 
 .orderButton {
@@ -14,7 +16,8 @@
   border-radius: var(--mt-radius);
   min-height: 2.25rem;
   min-width: 5.5rem;
-  font-size: 0.875rem;
+  height: 100%;
+  font-size: typography.scale(0.875rem);
   box-shadow: var(--mt-shadow-btn);
   border: none;
   cursor: pointer;
@@ -35,17 +38,19 @@
   z-index: 110;
   bottom: calc(100% + 0.5rem);
   right: 0;
-  min-width: 18rem;
-  max-width: 24rem;
+  width: min(24rem, calc(100vw - 2rem));
+  min-width: min(18rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: min(32rem, calc(100dvh - 8rem));
   background-color: var(--mt-surface-raised);
   border-radius: var(--mt-radius);
   box-shadow: var(--mt-shadow-panel);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--mt-border-hairline);
 
   @media (max-width: 768px) {
-    min-width: min(18rem, calc(100vw - 1rem));
-    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 5.25rem);
   }
 }
 
@@ -54,17 +59,40 @@
   bottom: auto;
 }
 
+@media (min-width: 769px) {
+  .topbar .panel {
+    right: calc(-100% - 0.5rem);
+  }
+}
+
+@media (max-width: 959px) {
+  .topbar .panel {
+    position: fixed;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    z-index: 220;
+    max-height: calc(100dvh - 2rem);
+    transform: translate(-50%, -50%);
+  }
+}
+
 .panelHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
+  background: var(--mt-surface-raised);
   border-bottom: 1px solid var(--mt-border-hairline);
 }
 
 .panelTitle {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   color: var(--mt-text-primary);
 }
 
@@ -73,7 +101,7 @@
   border: none;
   cursor: pointer;
   color: var(--mt-text-secondary);
-  font-size: 1.25rem;
+  font-size: typography.scale(1.25rem);
   line-height: 1;
   padding: 0 0.25rem;
   transition: color 0.2s;
@@ -89,7 +117,7 @@
 
 .sectionTitle {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   color: var(--mt-text-primary);
   margin-bottom: 0.75rem;
 }
@@ -101,13 +129,13 @@
 }
 
 .strengthLabel {
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
   color: var(--mt-text-muted);
   margin-bottom: 0.25rem;
 }
 
 .strengthRow {
-  font-size: 0.8125rem;
+  font-size: typography.scale(0.8125rem);
   line-height: 1.6;
   color: var(--mt-text-secondary);
 }
@@ -125,15 +153,26 @@
 
 .traNoteTitle {
   font-weight: 600;
-  font-size: 0.8125rem;
+  font-size: typography.scale(0.8125rem);
   margin-bottom: 0.25rem;
 }
 
 .traNoteDesc {
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
   color: var(--mt-text-muted);
 }
 
 .genericSection {
   margin-top: 0.5rem;
+}
+
+:global(html[data-font-size='xlarge']) {
+  .panel {
+    min-width: min(18rem, calc(100vw - 2rem));
+    width: min(24rem, calc(100vw - 2rem));
+  }
+
+  .orderButton {
+    min-height: 3rem;
+  }
 }

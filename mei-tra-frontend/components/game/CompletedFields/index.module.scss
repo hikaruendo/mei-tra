@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .completedFieldsContainer {
   display: flex;
   flex-wrap: nowrap;
@@ -27,7 +29,7 @@
 }
 
 .winnerName {
-  font-size: 0.72rem;
+  font-size: typography.scale(0.72rem);
   color: var(--mt-text-primary);
   text-align: center;
   padding: 0;
@@ -44,16 +46,16 @@
 .cards {
   display: flex;
   align-items: center;
-  height: 3rem;
+  height: calc(3rem * var(--mt-card-scale));
   gap: 0;
   justify-content: center;
   width: 100%;
 }
 
 .cards > * {
-  flex: 0 0 2rem;
-  width: 2rem;
-  margin: 0 -0.32rem;
+  flex: 0 0 calc(2rem * var(--mt-card-scale));
+  width: calc(2rem * var(--mt-card-scale));
+  margin: 0 calc(-0.32rem * var(--mt-card-scale));
 }
 
 @media (max-width: 768px) {
@@ -70,17 +72,17 @@
   }
 
   .winnerName {
-    font-size: 0.66rem;
+    font-size: typography.scale(0.66rem);
     padding: 0;
   }
 
   .cards {
-    height: 2.625rem;
+    height: calc(2.625rem * var(--mt-card-scale));
   }
 
   .cards > * {
-    flex-basis: 1.75rem;
-    width: 1.75rem;
-    margin: 0 -0.24rem;
+    flex-basis: calc(1.75rem * var(--mt-card-scale));
+    width: calc(1.75rem * var(--mt-card-scale));
+    margin: 0 calc(-0.24rem * var(--mt-card-scale));
   }
 }

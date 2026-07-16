@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .playerAvatar {
   display: flex;
   flex-direction: column;
@@ -26,7 +28,7 @@
   border-radius: 999px;
   background: var(--mt-danger);
   color: var(--mt-on-danger);
-  font-size: 0.72rem;
+  font-size: typography.scale(0.72rem);
   font-weight: 700;
   line-height: 1.1;
   white-space: nowrap;
@@ -47,7 +49,7 @@
 }
 
 .comIcon {
-  font-size: 2rem;
+  font-size: typography.scale(2rem);
   line-height: 1;
   display: block;
 }
@@ -71,11 +73,11 @@
   }
 
   .playerName {
-    max-width: 60px;
+    max-width: 4.75rem;
   }
 
   .disconnectedBadge {
-    font-size: 0.68rem;
+    font-size: typography.scale(0.68rem);
     max-width: calc(100% - 6px);
     padding: 0.15rem 0.3rem;
   }
@@ -85,7 +87,7 @@
   }
 
   .comIcon {
-    font-size: 1.125rem;
+    font-size: typography.scale(1.125rem);
   }
 }
 
@@ -100,7 +102,7 @@
   }
 
   .disconnectedBadge {
-    font-size: 0.72rem;
+    font-size: typography.scale(0.72rem);
   }
 
 .comBadge {
@@ -108,7 +110,7 @@
   }
 
   .comIcon {
-    font-size: 2rem;
+    font-size: typography.scale(2rem);
   }
 }
 
@@ -123,7 +125,7 @@
   }
 
   .disconnectedBadge {
-    font-size: 0.78rem;
+    font-size: typography.scale(0.78rem);
   }
 
 .comBadge {
@@ -131,6 +133,6 @@
   }
 
   .comIcon {
-    font-size: 2.25rem;
+    font-size: typography.scale(2.25rem);
   }
 }

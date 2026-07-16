@@ -160,7 +160,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
   const fontSizeOptions = FONT_SIZE_PRESET_ORDER.map((value) => ({
     value,
     label: t(fontSizeLabelKeys[value]),
-    scale: `${FONT_SIZE_PRESETS[value].rootPercent}%`,
+    scale: `${FONT_SIZE_PRESETS[value].scale.toFixed(1)}x`,
   }));
 
   const languageOptions = [
@@ -458,7 +458,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
                     className={styles.mobileFontSizeGlyph}
                     aria-hidden="true"
                   >
-                    {FONT_SIZE_PRESETS[option.value].rootPercent}
+                    {option.scale}
                   </span>
                 </button>
               ))}

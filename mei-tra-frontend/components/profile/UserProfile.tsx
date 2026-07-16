@@ -159,7 +159,7 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
             </Link>
             <div className={styles.compactActions}>
               <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
-                {t('title')}
+                {t('edit')}
               </Link>
               <button
                 type="button"
@@ -182,13 +182,15 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
 
   return (
     <div className={styles.userContainer}>
-      <div className={styles.avatarContainer}>
-        {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
-      </div>
-
-      <Link href="/profile" className={styles.profileLink}>
+      <Link href="/profile" className={styles.profileEditLink}>
+        <div className={styles.avatarContainer}>
+          {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
+        </div>
         <div className={styles.userInfo}>
           <span className={styles.displayName}>{displayName}</span>
+          <span className={styles.profileEditHint}>
+            {t('edit')}
+          </span>
         </div>
       </Link>
 

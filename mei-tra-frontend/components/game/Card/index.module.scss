@@ -1,12 +1,12 @@
 .card {
-  width: 1.8rem;
+  width: calc(1.8rem * var(--mt-card-scale));
   aspect-ratio: 2 / 3;
   border-radius: var(--mt-radius);
   display: flex;
   overflow: hidden;
   transition: transform 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  margin: 0 -10px;
+  margin: 0 calc(-10px * var(--mt-card-scale));
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -20,8 +20,8 @@
 
 @media (max-width: 768px) {
   .card {
-    width: 1.5rem;
+    width: calc(1.5rem * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
-    margin: 0 -8px;
+    margin: 0 calc(-8px * var(--mt-card-scale));
   }
 }

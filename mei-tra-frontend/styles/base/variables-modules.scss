@@ -37,12 +37,12 @@ $card-negri-width: 50px;
 $card-negri-height: 70px;
 
 // Font sizes
-$font-size-xs: 0.7rem;
-$font-size-sm: 0.9rem;
-$font-size-base: 1rem;
-$font-size-lg: 1.4rem;
-$font-size-xl: 2rem;
-$font-size-xxl: 2.2rem;
+$font-size-xs: var(--font-size-xs);
+$font-size-sm: var(--font-size-sm);
+$font-size-base: var(--font-size-base);
+$font-size-lg: var(--font-size-lg);
+$font-size-xl: var(--font-size-xl);
+$font-size-xxl: var(--font-size-xxl);
 
 // Shadows
 $shadow-card: 0 2px 4px rgba(0, 0, 0, 0.2);

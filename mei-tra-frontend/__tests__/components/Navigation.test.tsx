@@ -100,13 +100,13 @@ describe('Navigation', () => {
     expect(screen.queryByRole('menuitemradio', { name: /特大/ })).not.toBeInTheDocument();
   });
 
-  it('shows three icon buttons for mobile font size selection', () => {
+  it('shows the configured font size options', () => {
     render(<Navigation />);
 
     expect(screen.getAllByRole('button', { name: /文字サイズ:/ })).toHaveLength(4);
-    expect(screen.getByRole('button', { name: '文字サイズ: 標準 100%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '文字サイズ: 大きめ 120%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '文字サイズ: 大きい 150%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 標準 1.0x' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 大きめ 1.5x' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 大きい 2.0x' })).toBeInTheDocument();
   });
 
   it('opens the theme menu and updates the theme', () => {

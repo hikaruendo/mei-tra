@@ -1,6 +1,8 @@
+@use '../../styles/base/typography' as typography;
+
 .systemMessage {
   text-align: center;
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   color: var(--mt-text-muted);
   font-style: italic;
   padding: 0.25rem 0;
@@ -30,7 +32,7 @@
   align-items: center;
   justify-content: center;
   color: var(--mt-text-primary);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -49,17 +51,17 @@
 .senderName {
   font-weight: 500;
   color: var(--mt-text-primary);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
 }
 
 .timestamp {
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
   color: var(--mt-text-muted);
 }
 
 .text {
   color: var(--mt-text-secondary);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   margin-top: 0.25rem;
   word-break: break-word;
 }

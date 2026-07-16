@@ -1,8 +1,10 @@
+@use '../../styles/base/typography' as typography;
+
 $spacing-xs: 0.25rem;
 $spacing-sm: 0.5rem;
 $spacing-md: 1rem;
-$font-size-xs: 0.7rem;
-$font-size-sm: 0.9rem;
+$font-size-xs: var(--font-size-xs);
+$font-size-sm: var(--font-size-sm);
 $radius-md: 8px;
 $transition-button: all 0.3s ease;
 $opacity-disabled: 0.5;
@@ -56,8 +58,10 @@ $opacity-disabled: 0.5;
 
 .userContainer {
   display: flex;
-  align-items: center;
-  gap: $spacing-sm;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  width: 100%;
 }
 
 .avatarContainer {
@@ -81,27 +85,35 @@ $opacity-disabled: 0.5;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 600;
   color: var(--mt-text-primary);
   border: 2px solid var(--mt-border-hairline);
   flex-shrink: 0;
 }
 
-.profileLink {
+.profileEditLink {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--mt-border-hairline);
+  background: var(--mt-surface-raised-2);
   text-decoration: none;
   transition: $transition-button;
-  border-radius: $radius-md;
-  padding: $spacing-xs;
-  margin: -#{$spacing-xs};
+  border-radius: 0.75rem;
 
   &:hover {
-    background-color: var(--mt-surface-raised-2);
-    transform: translateY(-1px);
+    border-color: var(--mt-accent);
+    background-color: var(--mt-surface-raised);
   }
 
-  &:active {
-    transform: translateY(0);
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
   }
 }
 
@@ -112,9 +124,20 @@ $opacity-disabled: 0.5;
 }
 
 .displayName {
-  font-size: $font-size-sm;
-  font-weight: 500;
+  font-size: typography.scale(0.9rem);
+  font-weight: 700;
   color: var(--mt-text-primary);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.profileEditHint {
+  display: inline-flex;
+  align-items: center;
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.68rem);
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .stats {
@@ -127,18 +150,25 @@ $opacity-disabled: 0.5;
 }
 
 .signOutButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.75rem;
   background-color: var(--mt-surface-raised-2);
   color: var(--mt-text-primary);
-  padding: $spacing-xs $spacing-sm;
-  border: none;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--mt-border-hairline);
   border-radius: $radius-md;
-  font-size: $font-size-xs;
-  font-weight: 500;
+  font-size: typography.scale(0.72rem);
+  font-weight: 700;
   cursor: pointer;
   transition: $transition-button;
+  white-space: nowrap;
 
   &:hover:not(:disabled) {
     background-color: var(--mt-surface-raised);
+    border-color: var(--mt-accent);
   }
 
   &:disabled {
@@ -173,6 +203,7 @@ $opacity-disabled: 0.5;
   border: none;
   background: transparent;
   cursor: pointer;
+  padding: 0.125rem;
 
   &:hover {
     background-color: var(--mt-surface-raised-2);
@@ -182,6 +213,12 @@ $opacity-disabled: 0.5;
     outline: none;
     box-shadow: 0 0 0 2px var(--mt-focus-ring);
   }
+}
+
+.compactTrigger .avatar,
+.compactTrigger .avatarPlaceholder {
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .compactTriggerOpen {
@@ -225,7 +262,7 @@ $opacity-disabled: 0.5;
 }
 
 .compactDisplayName {
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 700;
   color: var(--mt-text-primary);
   line-height: 1.2;
@@ -233,7 +270,7 @@ $opacity-disabled: 0.5;
 }
 
 .compactMeta {
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
   color: var(--mt-text-secondary);
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -257,7 +294,7 @@ $opacity-disabled: 0.5;
   border: 1px solid var(--mt-border-hairline);
   background: var(--mt-surface-raised-2);
   color: var(--mt-text-primary);
-  font-size: 0.9rem;
+  font-size: typography.scale(0.9rem);
   font-weight: 600;
   text-decoration: none;
   transition: $transition-button;

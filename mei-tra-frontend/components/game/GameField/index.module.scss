@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .fieldContainer {
   grid-area: field;
   position: relative;
@@ -89,7 +91,10 @@
 
 .card {
   position: relative;
-  width: min(var(--card-width), 4.5rem);
+  width: min(
+    calc(var(--card-width) * var(--mt-card-scale)),
+    calc(4.5rem * var(--mt-card-scale))
+  );
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   display: flex;
@@ -126,7 +131,7 @@
   margin-bottom: 0.75rem;
   text-align: center;
   white-space: normal;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   line-height: 1.35;
 }
 
@@ -147,7 +152,7 @@
 .suitButtons button {
   padding: 0.625rem;
   border-radius: var(--mt-radius);
-  font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  font-size: typography.scale(1.75rem);
   cursor: pointer;
   border: 1px solid var(--mt-border-hairline);
   background: var(--mt-surface-raised-2);
@@ -198,7 +203,7 @@
 }
 
 .baseSuitBadgeLabel {
-  font-size: 0.72rem;
+  font-size: typography.scale(0.72rem);
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -213,7 +218,7 @@
   height: 1.55rem;
   border-radius: 0.45rem;
   background: var(--mt-card-face);
-  font-size: 1.05rem;
+  font-size: typography.scale(1.05rem);
   font-weight: 800;
   line-height: 1;
 }
@@ -265,7 +270,7 @@
   }
 
   .card {
-    width: 60px;
+    width: calc(60px * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
@@ -277,12 +282,28 @@
   }
 
   .baseSuitBadgeLabel {
-    font-size: 0.68rem;
+    font-size: typography.scale(0.68rem);
   }
 
   .baseSuitBadgeSymbol {
     width: 1.4rem;
     height: 1.4rem;
-    font-size: 0.98rem;
+    font-size: typography.scale(0.98rem);
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  .baseSuitSelection {
+    width: min(100%, 22rem);
+    padding: 1rem;
+  }
+
+  .suitButtons {
+    gap: 0.5rem;
+  }
+
+  .suitButtons button {
+    min-width: 4rem;
+    min-height: 4rem;
   }
 }

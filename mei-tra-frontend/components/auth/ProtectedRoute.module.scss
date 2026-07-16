@@ -2,9 +2,9 @@ $color-white: #ffffff;
 $spacing-md: 1rem;
 $spacing-sm: 0.5rem;
 $spacing-lg: 2rem;
-$font-size-base: 1rem;
-$font-size-sm: 0.9rem;
-$font-size-xxl: 2.2rem;
+$font-size-base: var(--font-size-base);
+$font-size-sm: var(--font-size-sm);
+$font-size-xxl: var(--font-size-xxl);
 $radius-md: 8px;
 $transition-button: all 0.3s ease;
 

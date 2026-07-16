@@ -1,61 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
-import { FontSizePreset } from '@/types/user.types';
 import { NegriCard } from '@/components/game/NegriCard';
 import { Card } from '@/components/game/Card';
 import { CardFace } from '@/components/game/CardFace';
 import { CompletedFields } from '@/components/game/CompletedFields';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
-import { useAuth } from '@/hooks/useAuth';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
 import { getTrumpDisplay } from '@/lib/utils/trumpDisplay';
 
-const HAND_CARD_METRICS: Record<
-  FontSizePreset,
-  {
-    width: number;
-    overlap: string;
-    hoverLift: number;
-    hoverOverlap: string;
-    spreadLift: number;
-    minHeight: number;
-  }
-> = {
-  standard: {
-    width: 80,
-    overlap: '-15px',
-    hoverLift: 28,
-    hoverOverlap: '-0.6rem',
-    spreadLift: 18,
-    minHeight: 160,
-  },
-  large: {
-    width: 80,
-    overlap: '-18px',
-    hoverLift: 32,
-    hoverOverlap: '-0.72rem',
-    spreadLift: 20,
-    minHeight: 168,
-  },
-  xlarge: {
-    width: 88,
-    overlap: '-21px',
-    hoverLift: 36,
-    hoverOverlap: '-0.85rem',
-    spreadLift: 23,
-    minHeight: 178,
-  },
-  xxlarge: {
-    width: 96,
-    overlap: '-24px',
-    hoverLift: 40,
-    hoverOverlap: '-1rem',
-    spreadLift: 26,
-    minHeight: 188,
-  },
+const HAND_CARD_METRICS = {
+  width: 80,
+  overlap: '-15px',
+  hoverLift: 28,
+  hoverOverlap: '-0.6rem',
+  spreadLift: 18,
+  minHeight: 160,
 };
 
 interface PlayerHandProps {
@@ -110,11 +72,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const t = useTranslations('playerHand');
   const tStatus = useTranslations('playerStatus');
   const tBlow = useTranslations('blowControls');
-  const { fontSizePreference } = useAuth();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const autoRevealAttemptedRef = useRef(false);
-  const handCardMetrics = HAND_CARD_METRICS[fontSizePreference];
+  const handCardMetrics = HAND_CARD_METRICS;
 
   const { isValidCardPlay } = useCardValidation(
     player.hand,

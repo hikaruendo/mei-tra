@@ -117,6 +117,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
       {showName && (
         <PlayerIdentityChip
           name={displayName}
+          size={size === 'small' ? 'compact' : 'default'}
           className={styles.playerName}
         />
       )}

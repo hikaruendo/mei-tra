@@ -1,3 +1,5 @@
+@use '../../styles/base/typography' as typography;
+
 $lp-radius-xl: 32px;
 $lp-radius-lg: 24px;
 $lp-radius-md: 16px;
@@ -517,5 +519,88 @@ $lp-content-width: min(1200px, 100%);
   .ctaSectionRow {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+:global(html[data-font-size]) {
+  .heroLabel,
+  .sectionEyebrow,
+  .timelineStep,
+  .testimonialRole {
+    font-size: typography.scale(0.85rem);
+  }
+
+  .heroTitle {
+    font-size: typography.scale(3.6rem);
+  }
+
+  .heroDescription,
+  .testimonialQuote,
+  .faqSummary,
+  .ctaSectionDescription {
+    font-size: typography.scale(1.05rem);
+  }
+
+  .primaryCta,
+  .secondaryCta,
+  .sectionDescription {
+    font-size: var(--font-size-base);
+  }
+
+  .metric strong,
+  .sectionTitle {
+    font-size: typography.scale(1.8rem);
+  }
+
+  .metric span,
+  .testimonialName,
+  .screenshotCaption,
+  .faqAnswer {
+    font-size: typography.scale(0.95rem);
+  }
+
+  .featureCard h3,
+  .timelineCard h3 {
+    font-size: typography.scale(1.2rem);
+  }
+
+  .featureBadge {
+    font-size: typography.scale(0.9rem);
+  }
+
+  .ctaSectionTitle {
+    font-size: typography.scale(2.2rem);
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  .hero,
+  .section,
+  .screenshotSection,
+  .ctaSection {
+    padding: 2rem 1rem;
+  }
+
+  .heroTitle {
+    font-size: typography.scale(2.6rem);
+  }
+
+  .primaryCta,
+  .secondaryCta {
+    width: 100%;
+    min-height: 3.25rem;
+  }
+
+  .metrics,
+  .featureGrid,
+  .timeline,
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ctaRow,
+  .ctaSectionRow {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

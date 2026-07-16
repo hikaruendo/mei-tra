@@ -3,7 +3,7 @@ $spacing-md: 1rem;
 $radius-lg: 1rem;
 $shadow-controls: 0 4px 12px rgba(0, 0, 0, 0.3);
 $z-index-overlay: 40;
-$font-size-xl: 2rem;
+$font-size-xl: var(--font-size-xl);
 $transition-button: all 0.3s ease;
 
 .overlay {

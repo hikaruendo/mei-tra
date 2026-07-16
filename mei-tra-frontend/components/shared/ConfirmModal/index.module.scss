@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .overlay {
   position: fixed;
   top: 0;
@@ -31,7 +33,7 @@
 
 .title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: typography.scale(1.25rem);
   font-weight: 600;
   color: var(--mt-text-primary);
 }
@@ -42,7 +44,7 @@
 
 .message {
   margin: 0;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   color: var(--mt-text-secondary);
   line-height: 1.5;
   white-space: pre-line;
@@ -60,11 +62,27 @@
 .confirmButton {
   padding: 8px 16px;
   border-radius: var(--mt-radius);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
+}
+
+:global(html[data-font-size='xlarge']) {
+  .modal {
+    width: min(90%, 32rem);
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .confirmButton {
+    width: 100%;
+    min-height: 3rem;
+  }
 }
 
 .cancelButton {

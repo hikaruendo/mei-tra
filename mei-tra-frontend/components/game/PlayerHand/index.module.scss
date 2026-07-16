@@ -1,4 +1,9 @@
+@use '../../../styles/base/typography' as typography;
+
 .handContainer{
+  --player-hand-card-scaled-width: calc(var(--player-hand-card-width, 72px) * var(--mt-card-scale));
+  --player-hand-card-scaled-overlap: calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale));
+  --player-hand-card-scaled-hover-overlap: calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale));
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -7,7 +12,7 @@
   position: relative;
   width: 100%;
   padding: 0.25rem 0 5rem;
-  min-height: var(--player-hand-card-container-min-height, 160px);
+  min-height: calc(var(--player-hand-card-container-min-height, 160px) * var(--mt-card-scale));
   overflow: visible;
   z-index: var(--z-index-card);
 }
@@ -21,20 +26,20 @@
   width: 100%;
   padding: 0.3rem 0 0;
   margin-left: 0;
-  min-height: 1.9rem;
+  min-height: calc(1.9rem * var(--mt-card-scale));
   position: relative;
   z-index: var(--z-index-card);
 }
 
 .card {
   flex-shrink: 0;
-  margin: 0 var(--player-hand-card-overlap, var(--card-overlap));
+  margin: 0 var(--player-hand-card-scaled-overlap, calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale)));
   transition: var(--transition-card);
   transform-origin: bottom center;
   position: relative;
   cursor: pointer;
-  transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
-  width: var(--player-hand-card-width, 72px);
+  transform: translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) !important;
+  width: var(--player-hand-card-scaled-width, calc(var(--player-hand-card-width, 72px) * var(--mt-card-scale)));
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   display: flex;
@@ -48,12 +53,12 @@
 }
 
 .cardFaceDown{
-  width: 1.55rem;
+  width: calc(1.55rem * var(--mt-card-scale));
   aspect-ratio: 2 / 3;
   border-radius: 0.25rem;
   display: flex;
   overflow: hidden;
-  margin-left: -0.7rem;
+  margin-left: calc(-0.7rem * var(--mt-card-scale));
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   user-select: none;
   -webkit-user-select: none;
@@ -74,7 +79,7 @@
   right: 0;
   text-align: center;
   color: var(--mt-accent);
-  font-size: 0.6rem;
+  font-size: typography.scale(0.6rem);
   font-weight: bold;
   text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
   pointer-events: none;
@@ -84,9 +89,9 @@
 /* Card states */
 .card.selected,
 .card:hover {
-  transform: translateY(calc(var(--card-translate-y, 0px) - var(--player-hand-card-hover-lift, 28px))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
+  transform: translateY(calc((var(--card-translate-y, 0px) - var(--player-hand-card-hover-lift, 28px)) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
   z-index: calc(var(--card-index, 0) + 1) !important;
-  margin: 0 var(--player-hand-card-hover-overlap, -0.6rem);
+  margin: 0 var(--player-hand-card-scaled-hover-overlap, calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale)));
   transition: all 0.3s ease-in-out;
 }
 
@@ -101,8 +106,8 @@
 }
 
 .spectatorCard:hover {
-  transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
-  margin: 0 var(--player-hand-card-overlap, var(--card-overlap));
+  transform: translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) !important;
+  margin: 0 var(--player-hand-card-scaled-overlap, calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale)));
 }
 
 
@@ -134,7 +139,7 @@
 
 .declarationLabel {
   color: var(--mt-text-secondary);
-  font-size: 0.66rem;
+  font-size: typography.scale(0.66rem);
   font-weight: 700;
 }
 
@@ -143,13 +148,13 @@
   align-items: center;
   gap: 0.22rem;
   color: var(--mt-text-primary);
-  font-size: 0.76rem;
+  font-size: typography.scale(0.76rem);
   font-weight: 800;
 }
 
 .declarationSuit {
   color: var(--mt-text-primary);
-  font-size: 1.15rem;
+  font-size: typography.scale(1.15rem);
   font-weight: 900;
   line-height: 0.8;
 }
@@ -250,7 +255,7 @@
 }
 
 .cardCount{
-  font-size: 0.72rem;
+  font-size: typography.scale(0.72rem);
   color: var(--mt-text-muted);
   background: var(--mt-surface-raised);
   padding: 0.15rem 0.4rem;
@@ -262,7 +267,7 @@
 
 
 .disconnectedBadge {
-  font-size: 0.72rem;
+  font-size: typography.scale(0.72rem);
   color: var(--mt-warning);
   background: var(--mt-surface-raised);
   padding: 0.15rem 0.45rem;
@@ -279,7 +284,7 @@
   border: 1px solid var(--mt-danger);
   background: var(--mt-danger);
   color: var(--mt-on-danger);
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
   font-weight: 700;
   cursor: pointer;
 }
@@ -319,13 +324,13 @@
   background: var(--mt-surface-raised-2);
   color: var(--mt-text-primary);
   font-weight: 700;
-  font-size: 0.74rem;
+  font-size: typography.scale(0.74rem);
   letter-spacing: 0.02em;
   text-align: center;
 }
 
 .statusMessage{
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
   color: var(--mt-text-secondary);
   max-width: 92px;
   text-align: center;
@@ -437,6 +442,15 @@
   margin-bottom: 0;
 }
 
+.playerPosition.top .declarationBadge {
+  position: absolute;
+  bottom: calc(100% + 0.15rem);
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  transform: translateX(-50%);
+}
+
 .playerPosition.top .playerInfoContainer,
 .playerPosition.left .playerInfoContainer,
 .playerPosition.right .playerInfoContainer {
@@ -449,13 +463,13 @@
 .playerPosition.left .playerName,
 .playerPosition.right .playerName {
   max-width: 64px;
-  font-size: 0.7rem;
+  font-size: typography.scale(0.7rem);
 }
 
 .playerPosition.top .cardCount,
 .playerPosition.left .cardCount,
 .playerPosition.right .cardCount {
-  font-size: 0.62rem;
+  font-size: typography.scale(0.62rem);
 }
 
 .playerPosition.bottom .playerInfo {
@@ -592,8 +606,11 @@
 }
 
 .playerPosition.bottom .card {
-  width: var(--player-hand-card-width, 72px);
-  margin: 0 max(-1.75rem, calc((2.5rem - var(--player-hand-card-width, 72px)) / 2));
+  width: var(--player-hand-card-scaled-width, calc(var(--player-hand-card-width, 72px) * var(--mt-card-scale)));
+  margin: 0 max(
+    calc(-1.75rem * var(--mt-card-scale)),
+    calc((2.5rem - var(--player-hand-card-scaled-width, calc(var(--player-hand-card-width, 72px) * var(--mt-card-scale)))) / 2)
+  );
 }
 
 .completedFields {
@@ -636,13 +653,13 @@
   }
 
   .card {
-    width: 54px;
+    width: calc(54px * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
   }
 
   .card.selected,
   .card:hover {
-    transform: translateY(-20px) rotate(0deg) scale(1.1) !important;
+    transform: translateY(calc(-20px * var(--mt-card-scale))) rotate(0deg) scale(1.1) !important;
     z-index: var(--z-index-card);
     margin: 0 var(--spacing-md);
     transition: all 0.3s ease-in-out;
@@ -662,16 +679,16 @@
   .otherPlayerHandContainer{
     padding: 0.1rem 0 0;
     margin-left: 0;
-    min-height: 1.75rem;
+    min-height: calc(1.75rem * var(--mt-card-scale));
     align-items: flex-end;
     overflow: visible;
   }
 
   .cardFaceDown{
-    width: 1.25rem;
+    width: calc(1.25rem * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
     border-radius: 0.25rem;
-    margin-left: -0.9rem;
+    margin-left: calc(-0.9rem * var(--mt-card-scale));
     border: 1px solid var(--mt-border-hairline);
     transform-origin: bottom center;
     transform: none;
@@ -690,12 +707,12 @@
 
   .playerName{
     max-width: 72px;
-    font-size: 0.8rem;
+    font-size: typography.scale(0.8rem);
     color: var(--mt-text-primary);
   }
 
   .cardCount{
-    font-size: 0.75rem;
+    font-size: typography.scale(0.75rem);
     color: var(--mt-text-muted);
     background: var(--mt-surface-raised);
     padding: 0.15rem 0.5rem;
@@ -723,13 +740,13 @@
   .playerPosition.left .playerName,
   .playerPosition.right .playerName {
     max-width: 58px;
-    font-size: 0.68rem;
+    font-size: typography.scale(0.68rem);
   }
 
   .playerPosition.top .cardCount,
   .playerPosition.left .cardCount,
   .playerPosition.right .cardCount {
-    font-size: 0.68rem;
+    font-size: typography.scale(0.68rem);
   }
 
   .playerPosition.bottom .playerInfo {
@@ -760,15 +777,15 @@
   }
 
   .declarationLabel {
-    font-size: 0.6rem;
+    font-size: typography.scale(0.6rem);
   }
 
   .declarationValue {
-    font-size: 0.7rem;
+    font-size: typography.scale(0.7rem);
   }
 
   .declarationSuit {
-    font-size: 1rem;
+    font-size: typography.scale(1rem);
   }
 
   .playerPosition.bottom .playerInfoGroup {
@@ -803,12 +820,12 @@
 
   .playerPosition.bottom .statusHeader {
     min-width: 3rem;
-    font-size: 0.68rem;
+    font-size: typography.scale(0.68rem);
   }
 
   .playerPosition.bottom .statusMessage {
     max-width: 80px;
-    font-size: 0.68rem;
+    font-size: typography.scale(0.68rem);
     line-height: 1.25;
   }
 
@@ -818,7 +835,7 @@
 
   .playerPosition.bottom .playerName {
     max-width: 80px;
-    font-size: 0.78rem;
+    font-size: typography.scale(0.78rem);
   }
 
   .playerPosition.bottom .handContainer {
@@ -831,7 +848,7 @@
     margin: 0;
     overflow-x: visible;
     overflow-y: visible;
-    min-height: 9.6rem;
+    min-height: calc(9.6rem * var(--mt-card-scale));
   }
 
   .playerPosition.bottom .handStatusPanels {
@@ -866,24 +883,61 @@
   }
 
   .playerPosition.bottom .card {
-    width: 63px;
+    width: calc(63px * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
-    margin: 0 -1.02rem;
+    margin: 0 calc(-1.02rem * var(--mt-card-scale));
     z-index: calc(var(--card-index, 0) + 1);
     transform-origin: bottom center;
-    transform: translateY(var(--card-translate-y, 0)) rotate(var(--card-rotation, 0deg)) !important;
+    transform: translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) !important;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
   }
 
   .playerPosition.bottom .card.selected,
   .playerPosition.bottom .card:hover {
     z-index: calc(var(--card-index, 0) + 1) !important;
-    transform: translateY(calc(var(--card-translate-y, 0px) - 26px)) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
-    margin: 0 -0.72rem;
+    transform: translateY(calc((var(--card-translate-y, 0px) - 26px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
+    margin: 0 calc(-0.72rem * var(--mt-card-scale));
     box-shadow: 0 18px 28px rgba(0, 0, 0, 0.34);
   }
 
   .confirmationButtons {
     bottom: -25px;
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  @media (min-width: 769px) {
+    .playerPosition.top .playerInfoContainer,
+    .playerPosition.left .playerInfoContainer,
+    .playerPosition.right .playerInfoContainer {
+      min-width: 7rem;
+    }
+
+    .playerPosition.top .playerName,
+    .playerPosition.left .playerName,
+    .playerPosition.right .playerName {
+      max-width: 6.5rem;
+    }
+
+    .playerPosition.bottom .playerInfo {
+      grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+    }
+
+    .playerPosition.bottom .playerInfoContainer,
+    .playerPosition.bottom .statusPanel {
+      min-width: 7rem;
+    }
+
+    .playerPosition.bottom .statusMessage {
+      max-width: 7rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .playerPosition.top .playerInfoContainer,
+    .playerPosition.left .playerInfoContainer,
+    .playerPosition.right .playerInfoContainer {
+      transform: none;
+    }
   }
 }

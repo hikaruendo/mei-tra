@@ -13,7 +13,7 @@ export const PlayerIdentityChip: React.FC<PlayerIdentityChipProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`${styles.chip} ${styles[size]} ${className}`}>
+    <div className={`${styles.chip} ${styles[size]} ${className}`} title={name}>
       <span className={styles.label}>{name}</span>
     </div>
   );

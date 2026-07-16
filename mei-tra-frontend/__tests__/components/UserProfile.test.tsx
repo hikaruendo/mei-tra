@@ -31,6 +31,7 @@ jest.mock('next-intl', () => ({
   useTranslations: () => {
     const labels: Record<string, string> = {
       title: 'プロフィール',
+      edit: 'プロフィールを編集',
       loading: 'プロフィールを読み込み中...',
       loginButton: 'ログイン',
       guestUser: 'ゲストユーザー',
@@ -60,6 +61,13 @@ describe('UserProfile', () => {
 
     expect(screen.getByRole('menu', { name: /アカウント情報/ })).toBeInTheDocument();
     expect(screen.getByText('hika.blue91@gmail.com')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /プロフィールを編集/ })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('menuitem', { name: /ログアウト/ })).toBeInTheDocument();
+  });
+
+  it('shows a dedicated profile edit link in the default layout', () => {
+    render(<UserProfile />);
+
+    expect(screen.getByRole('link', { name: /プロフィールを編集/ })).toHaveAttribute('href', '/profile');
   });
 });
