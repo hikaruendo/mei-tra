@@ -72,15 +72,25 @@ describe('UserProfile', () => {
     expect(screen.getByRole('link', { name: /プロフィールを編集/ })).toHaveAttribute('href', '/profile');
   });
 
-  it('disables profile navigation and logout during a game', () => {
+  it('uses disabled buttons for profile editing and logout during a game', () => {
     render(<UserProfile isGameInProgress />);
 
-    const profileAction = screen.getByText('プロフィールを編集');
-    expect(profileAction.closest('a')).toBeNull();
-    expect(profileAction.closest('[aria-disabled="true"]')).toHaveAttribute('title', '対局中はこの操作を行えません');
+    const profileButton = screen.getByRole('button', { name: /プロフィールを編集/ });
+    expect(profileButton).toBeDisabled();
+    expect(profileButton).toHaveAttribute('title', '対局中はこの操作を行えません');
 
     const logoutButton = screen.getByRole('button', { name: 'ログアウト' });
     expect(logoutButton).toBeDisabled();
     expect(logoutButton).toHaveAttribute('title', '対局中はこの操作を行えません');
+  });
+
+  it('uses a disabled button for profile editing in the compact menu during a game', () => {
+    render(<UserProfile variant="compact" isGameInProgress />);
+
+    fireEvent.click(screen.getByRole('button', { name: /プロフィール/ }));
+
+    const profileButton = screen.getByRole('menuitem', { name: 'プロフィールを編集' });
+    expect(profileButton).toBeDisabled();
+    expect(profileButton).toHaveAttribute('title', '対局中はこの操作を行えません');
   });
 });

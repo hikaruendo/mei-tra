@@ -103,10 +103,12 @@ $opacity-disabled: 0.5;
   border: 1px solid var(--mt-border-hairline);
   background: var(--mt-surface-raised-2);
   text-decoration: none;
+  text-align: left;
   transition: $transition-button;
   border-radius: 0.75rem;
+  cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: var(--mt-accent);
     background-color: var(--mt-surface-raised);
   }

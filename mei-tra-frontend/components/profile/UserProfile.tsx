@@ -191,13 +191,15 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
             )}
             <div className={styles.compactActions}>
               {isGameInProgress ? (
-                <span
-                  className={`${styles.compactActionLink} ${styles.disabledProfileAction}`}
-                  aria-disabled="true"
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`${styles.compactActionButton} ${styles.disabledProfileAction}`}
+                  disabled
                   title={unavailableDuringGameMessage}
                 >
                   {t('edit')}
-                </span>
+                </button>
               ) : (
                 <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
                   {t('edit')}
@@ -226,13 +228,14 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
   return (
     <div className={styles.userContainer}>
       {isGameInProgress ? (
-        <span
+        <button
+          type="button"
           className={`${styles.profileEditLink} ${styles.disabledProfileAction}`}
-          aria-disabled="true"
+          disabled
           title={unavailableDuringGameMessage}
         >
           {profileEditContent}
-        </span>
+        </button>
       ) : (
         <Link href="/profile" className={styles.profileEditLink}>
           {profileEditContent}
