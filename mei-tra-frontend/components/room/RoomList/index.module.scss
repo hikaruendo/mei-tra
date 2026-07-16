@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .container {
   max-width: 50rem;
   margin: 0 auto;
@@ -33,7 +35,7 @@
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   line-height: 1.4;
   flex: 1;
   min-width: 0;
@@ -62,7 +64,7 @@
   border: none;
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 500;
   flex-shrink: 0;
   min-height: 2.75rem;
@@ -114,7 +116,7 @@
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   line-height: 1.4;
   width: 100%;
   box-sizing: border-box;
@@ -135,7 +137,7 @@
 .section h3 {
   margin-bottom: 0.9375rem;
   color: var(--mt-text-primary);
-  font-size: 1.15rem;
+  font-size: typography.scale(1.15rem);
 }
 
 .roomList {
@@ -175,14 +177,14 @@
 
 .roomInfo h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   line-height: 1.35;
   color: var(--mt-text-primary);
 }
 
 .roomInfo p {
   margin: 0.35rem 0;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   line-height: 1.45;
   color: var(--mt-text-muted);
 }
@@ -190,7 +192,7 @@
 .status {
   padding: 0.3rem 0.55rem;
   border-radius: 4px;
-  font-size: 0.82rem;
+  font-size: typography.scale(0.82rem);
   font-weight: bold;
   display: inline-block;
 }
@@ -217,7 +219,7 @@
   border: none;
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 500;
   min-height: 2.75rem;
   transition: all 0.3s ease;
@@ -242,7 +244,7 @@
   border: 1px solid var(--mt-accent);
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 500;
   min-height: 2.75rem;
   transition: all 0.3s ease;
@@ -267,7 +269,7 @@
   border: none;
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 500;
   min-height: 2.75rem;
   transition: all 0.3s ease;
@@ -290,7 +292,7 @@
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   min-height: 2.75rem;
   transition: all 0.3s ease;
 }
@@ -322,7 +324,7 @@
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   min-height: 2.75rem;
   transition: all 0.3s ease;
 }
@@ -344,7 +346,7 @@
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   min-height: 2.75rem;
   transition: all 0.3s ease;
 }
@@ -366,7 +368,7 @@
 .readyStatus {
   padding: 0.2rem 0.45rem;
   border-radius: var(--mt-radius);
-  font-size: 0.82rem;
+  font-size: typography.scale(0.82rem);
   background-color: var(--mt-surface-raised-2);
   color: var(--mt-accent);
 }
@@ -397,7 +399,7 @@
 
 .pointsToWinText {
   color: var(--mt-text-muted);
-  font-size: 0.88rem;
+  font-size: typography.scale(0.88rem);
   line-height: 1;
 }
 
@@ -466,7 +468,7 @@
   padding: 0.75rem;
   border-radius: 4px;
   text-align: center;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: bold;
   margin-bottom: 0.9375rem;
 }
@@ -494,6 +496,51 @@
   border-radius: var(--mt-radius);
   text-align: center;
   margin-bottom: 0.9375rem;
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   line-height: 1.45;
+}
+
+:global(html[data-font-size='xlarge']) {
+  .container {
+    padding-inline: 1rem;
+  }
+
+  .createForm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input,
+  .createButton,
+  .searchInput,
+  .joinButton,
+  .watchButton,
+  .startButton,
+  .readyButton,
+  .comButton,
+  .leaveButton {
+    width: 100%;
+  }
+
+  .roomList {
+    grid-template-columns: 1fr;
+  }
+
+  .pointsToWinContainer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .pointsToWinText {
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .pointsToWinInput {
+    width: 100%;
+    min-width: 0;
+    min-height: 3rem;
+  }
 }

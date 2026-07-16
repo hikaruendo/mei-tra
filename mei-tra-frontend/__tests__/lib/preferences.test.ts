@@ -1,6 +1,7 @@
 import {
   DEFAULT_FONT_SIZE_PRESET,
   DEFAULT_THEME_PREFERENCE,
+  FONT_SIZE_PRESETS,
   FONT_SIZE_STORAGE_KEY,
   THEME_STORAGE_KEY,
   normalizeUserPreferences,
@@ -41,6 +42,12 @@ describe('preferences helpers', () => {
 
     expect(readStoredFontSizePreset()).toBe('xlarge');
     expect(normalizeUserPreferences({ fontSize: 'xxlarge' }).fontSize).toBe('xlarge');
+  });
+
+  it('uses 1x, 1.5x, and 2x font size scales', () => {
+    expect(FONT_SIZE_PRESETS.standard).toMatchObject({ scale: 1, percent: 100 });
+    expect(FONT_SIZE_PRESETS.large).toMatchObject({ scale: 1.5, percent: 150 });
+    expect(FONT_SIZE_PRESETS.xlarge).toMatchObject({ scale: 2, percent: 200 });
   });
 
   it('falls back to defaults when stored values are invalid', () => {

@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .spectatorPanel {
   position: fixed;
   top: 44%;
@@ -30,7 +32,7 @@
 
 .title {
   color: var(--mt-text-primary);
-  font-size: 0.88rem;
+  font-size: typography.scale(0.88rem);
   font-weight: 800;
 }
 
@@ -39,7 +41,7 @@
   border-radius: 999px;
   background: var(--mt-accent-subtle);
   color: var(--mt-text-secondary);
-  font-size: 0.65rem;
+  font-size: typography.scale(0.65rem);
   font-weight: 700;
 }
 
@@ -54,7 +56,7 @@
   gap: 0.75rem;
   min-width: 0;
   color: var(--mt-text-primary);
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
 }
 
 .summaryRow dt {
@@ -82,7 +84,7 @@
   display: block;
   margin-bottom: 0.3rem;
   color: var(--mt-text-muted);
-  font-size: 0.68rem;
+  font-size: typography.scale(0.68rem);
   font-weight: 700;
 }
 
@@ -103,7 +105,7 @@
   border-radius: var(--mt-radius);
   background: var(--mt-surface-raised-2);
   color: var(--mt-text-primary);
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
 }
 
 .historyItem.pass {
@@ -131,7 +133,7 @@
 
 .trump {
   color: var(--mt-text-primary);
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   line-height: 0.8;
 }
 
@@ -147,7 +149,32 @@
 .emptyHistory {
   margin: 0;
   color: var(--mt-text-muted);
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
+}
+
+:global(html[data-font-size='xlarge']) {
+  .spectatorPanel {
+    width: min(34rem, calc(100vw - 1rem));
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
+  }
+
+  .summaryRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .summaryRow dd {
+    overflow: visible;
+    text-align: left;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .historyList {
+    max-height: 12rem;
+  }
 }
 
 @media (max-width: 768px) {

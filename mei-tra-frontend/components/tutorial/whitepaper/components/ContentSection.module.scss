@@ -1,4 +1,5 @@
 @use '../../../../styles/base/variables-modules' as *;
+@use '../../../../styles/base/typography' as typography;
 
 .section {
   margin-bottom: $spacing-xl;
@@ -14,7 +15,7 @@
 
 .sectionTitle {
   font-family: var(--mt-font-heading);
-  font-size: 1.875rem;
+  font-size: typography.scale(1.875rem);
   font-weight: 700;
   color: var(--mt-text-primary);
   margin-bottom: $spacing-lg;
@@ -47,7 +48,7 @@
   }
 
   h3 {
-    font-size: clamp(1.15rem, 1.05rem + 0.35vw, 1.35rem);
+    font-size: typography.scale(1.25rem);
     font-weight: 700;
     color: var(--mt-text-primary);
     margin: 0 0 calc($spacing-xs / 2);
@@ -91,6 +92,12 @@
 @media (max-width: 768px) {
   .section {
     padding: $spacing-lg;
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  .section {
+    padding: 1.25rem;
   }
 }
 

@@ -1,40 +1,45 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import {
-  Fraunces,
-  Hanken_Grotesk,
-  Shippori_Mincho,
-  Zen_Kaku_Gothic_New,
-} from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.scss";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SocialSocketProvider } from "@/contexts/SocialSocketContext";
 
 // Headings / wordmark (Latin) with Japanese mincho fallback
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: "./fonts/Fraunces-Variable.woff2",
   variable: "--font-fraunces",
-  subsets: ["latin"],
+  weight: "100 900",
   display: "swap",
 });
 
-const shipporiMincho = Shippori_Mincho({
+const shipporiMincho = localFont({
+  src: [
+    { path: "./fonts/ShipporiMincho-400.woff2", weight: "400" },
+    { path: "./fonts/ShipporiMincho-500.woff2", weight: "500" },
+    { path: "./fonts/ShipporiMincho-700.woff2", weight: "700" },
+  ],
   variable: "--font-shippori-mincho",
-  weight: ["400", "500", "700"],
-  subsets: ["latin"],
+  preload: false,
   display: "swap",
 });
 
 // Body / UI (Latin) with Japanese gothic fallback
-const hanken = Hanken_Grotesk({
+const hanken = localFont({
+  src: "./fonts/HankenGrotesk-Variable.woff2",
   variable: "--font-hanken",
-  subsets: ["latin"],
+  weight: "100 900",
   display: "swap",
 });
 
-const zenKaku = Zen_Kaku_Gothic_New({
+const zenKaku = localFont({
+  src: [
+    { path: "./fonts/ZenKakuGothicNew-400.woff2", weight: "400" },
+    { path: "./fonts/ZenKakuGothicNew-500.woff2", weight: "500" },
+    { path: "./fonts/ZenKakuGothicNew-700.woff2", weight: "700" },
+  ],
   variable: "--font-zen-kaku",
-  weight: ["400", "500", "700"],
-  subsets: ["latin"],
+  preload: false,
   display: "swap",
 });
 

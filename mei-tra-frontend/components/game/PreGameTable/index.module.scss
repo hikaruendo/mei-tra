@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .playerPositions {
   position: relative;
   display: grid;
@@ -36,7 +38,7 @@
   border: 1px solid var(--mt-danger);
   background: var(--mt-danger);
   color: var(--mt-on-danger);
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
   font-weight: 700;
   cursor: pointer;
 }
@@ -99,7 +101,7 @@
 }
 
 .startButton {
-  font-size: 1.05rem;
+  font-size: typography.scale(1.05rem);
   white-space: nowrap;
   background: var(--mt-btn-primary-bg);
   color: var(--mt-btn-primary-text);
@@ -117,7 +119,7 @@
 }
 
 .shuffleButton {
-  font-size: 0.98rem;
+  font-size: typography.scale(0.98rem);
   background: var(--mt-surface-raised);
   color: var(--mt-text-primary);
   border: 2px solid var(--mt-border-hairline);
@@ -134,7 +136,7 @@
 }
 
 .teamBadge {
-  font-size: 0.7rem;
+  font-size: typography.scale(0.7rem);
   padding: 2px 7px;
   border-radius: 4px;
   margin-top: 4px;
@@ -153,14 +155,14 @@
 
 .waitingText {
   max-width: 12rem;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   line-height: 1.45;
   color: var(--mt-text-secondary);
   text-align: center;
 }
 
 .leaveButton {
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   background: var(--mt-surface-raised);
   color: var(--mt-text-primary);
   border: 2px solid var(--mt-border-hairline);
@@ -179,7 +181,7 @@
 
 @media (max-width: 768px) {
   .playerPositions {
-    grid-template-columns: minmax(88px, 1fr) minmax(148px, 180px) minmax(88px, 1fr);
+    grid-template-columns: minmax(3.75rem, 1fr) minmax(8.75rem, 11rem) minmax(3.75rem, 1fr);
     grid-template-rows: auto auto auto;
     gap: 0.625rem;
     min-height: 100%;
@@ -205,11 +207,36 @@
   }
 
   .startButton {
-    font-size: 0.95rem;
+    font-size: min(typography.scale(0.95rem), 1.15rem);
   }
 
   .shuffleButton,
   .leaveButton {
-    font-size: 0.9rem;
+    font-size: min(typography.scale(0.9rem), 1.05rem);
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  @media (min-width: 769px) {
+    .playerPositions {
+      grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr) minmax(7rem, 10rem);
+      grid-template-rows: auto minmax(10rem, 1fr) auto;
+      gap: 0.5rem;
+      min-height: 100%;
+      padding: 0.65rem 0.5rem 1rem;
+    }
+
+    .center {
+      width: 100%;
+    }
+
+    .startButton,
+    .shuffleButton,
+    .leaveButton {
+      width: 100%;
+      max-width: 14rem;
+      min-height: 3.25rem;
+      white-space: nowrap;
+    }
   }
 }

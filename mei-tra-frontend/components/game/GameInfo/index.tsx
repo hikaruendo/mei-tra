@@ -29,7 +29,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
 
   const getTeamPlayerNames = (teamNumber: number): string => {
     const teamPlayers = players.filter(player => player.team === teamNumber);
-    return teamPlayers.map(player => player.isCOM ? 'com' : player.name).join(' & ');
+    return teamPlayers.map(player => player.isCOM ? 'COM' : player.name).join('・');
   };
   const getScoreProgress = (score: number) => {
     if (pointsToWin <= 0) {

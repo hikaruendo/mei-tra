@@ -94,6 +94,7 @@ export function GameHistoryDock({
 }: GameHistoryDockProps) {
   const t = useTranslations('gameHistoryDock');
   const trumpT = useTranslations('trump');
+  const unavailableDuringGameMessage = t('unavailableDuringGame');
   const getActionLabel = (actionType: GameHistoryActionType) =>
     t(ACTION_TYPE_MESSAGE_KEYS[actionType] as never);
   const getDetailLabel = (
@@ -715,12 +716,22 @@ export function GameHistoryDock({
         </div>
         <div className={styles.actions}>
           {variant === 'dock' ? (
-            <Link
-              href={`/game-history/${roomId}`}
-              className={styles.openPageLink}
-            >
-              {t('openPage')}
-            </Link>
+            gameStarted ? (
+              <span
+                className={`${styles.openPageLink} ${styles.disabledOpenPageLink}`}
+                aria-disabled="true"
+                title={unavailableDuringGameMessage}
+              >
+                {t('openPage')}
+              </span>
+            ) : (
+              <Link
+                href={`/game-history/${roomId}`}
+                className={styles.openPageLink}
+              >
+                {t('openPage')}
+              </Link>
+            )
           ) : null}
           <button
             type="button"

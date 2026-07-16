@@ -1,3 +1,5 @@
+@use '../../styles/base/typography' as typography;
+
 .chatDock {
   position: relative;
   z-index: 50;
@@ -43,9 +45,28 @@
   max-height: calc(100dvh - 5.25rem);
 }
 
+@media (max-width: 959px) {
+  .chatDock.topbar,
+  .chatDock.menu {
+    position: fixed;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    z-index: 220;
+    width: min(24rem, calc(100vw - 2rem));
+    height: min(32rem, calc(100dvh - 2rem));
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100dvh - 2rem);
+    transform: translate(-50%, -50%);
+  }
+}
+
 .minimized {
   position: relative;
   z-index: 50;
+  display: flex;
+  height: 100%;
 }
 
 .minimizedButton {
@@ -55,7 +76,8 @@
   border-radius: var(--mt-radius);
   min-height: 2.25rem;
   min-width: 5.5rem;
-  font-size: 0.875rem;
+  height: 100%;
+  font-size: typography.scale(0.875rem);
   box-shadow: var(--mt-shadow-btn);
   border: none;
   cursor: pointer;
@@ -103,7 +125,7 @@
 
 .headerTitle {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   color: var(--mt-text-primary);
 }
 
@@ -142,7 +164,7 @@
 }
 
 .typingIndicator {
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   color: var(--mt-text-muted);
   font-style: italic;
 }

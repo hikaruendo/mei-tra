@@ -7,24 +7,30 @@ $transition-base: 0.3s ease;
 
 html {
   font-size: 100%;
+  --mt-font-scale: 1;
+  --mt-card-scale: 1;
 }
 
 html[data-font-size='large'] {
-  font-size: 120%;
+  --mt-font-scale: 1.5;
+  --mt-card-scale: 1.1;
 }
 
 html[data-font-size='xlarge'] {
-  font-size: 150%;
+  --mt-font-scale: 2;
+  --mt-card-scale: 1.2;
 }
 
 html[data-font-size='xxlarge'] {
-  font-size: 150%;
+  --mt-font-scale: 2;
+  --mt-card-scale: 1.2;
 }
 
 body {
   background-color: var(--mt-surface-felt);
   color: var(--mt-text-primary);
   font-family: var(--mt-font-body);
+  font-size: calc(1rem * var(--mt-font-scale));
   transition:
     background-color $transition-base,
     color $transition-base;

@@ -1,3 +1,5 @@
+@use '../../styles/base/typography' as typography;
+
 $spacing-md: 1rem;
 $spacing-sm: 0.5rem;
 $spacing-lg: 2rem;
@@ -25,7 +27,7 @@ $desktop-breakpoint: 960px;
   }
 
   .gameNavigation .brandName {
-    font-size: 1.1rem;
+    font-size: typography.scale(1.1rem);
   }
 }
 
@@ -86,14 +88,14 @@ $desktop-breakpoint: 960px;
 .brandName {
   margin-left: 0.375rem;
   font-family: var(--mt-font-heading);
-  font-size: 1.25rem;
+  font-size: typography.scale(1.25rem);
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--mt-accent);
   white-space: nowrap;
 
   @media (min-width: $desktop-breakpoint) {
-    font-size: 1.5rem;
+    font-size: typography.scale(1.5rem);
   }
 }
 
@@ -121,7 +123,7 @@ $desktop-breakpoint: 960px;
   color: var(--mt-text-muted);
   padding: $spacing-sm $spacing-sm;
   border-radius: $radius-md;
-  font-size: $font-size-sm;
+  font-size: typography.scale($font-size-sm);
   font-weight: 500;
   text-decoration: none;
   transition: $transition-button;
@@ -131,6 +133,11 @@ $desktop-breakpoint: 960px;
     color: var(--mt-text-primary);
     background-color: var(--mt-surface-raised-2);
   }
+}
+
+.disabledNavigationLink {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .externalLinkIcon {
@@ -209,7 +216,7 @@ $desktop-breakpoint: 960px;
 .utilityPopoverTitle {
   display: block;
   padding: 0.25rem 0.35rem 0.45rem;
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
   font-weight: 700;
   color: var(--mt-text-secondary);
 }
@@ -268,13 +275,13 @@ $desktop-breakpoint: 960px;
 }
 
 .utilityOptionLabel {
-  font-size: 0.95rem;
+  font-size: typography.scale(0.95rem);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .utilityOptionMeta {
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
   color: var(--mt-text-secondary);
   line-height: 1.2;
 }
@@ -430,7 +437,7 @@ $desktop-breakpoint: 960px;
   padding: 0.42rem 0.6rem;
   color: var(--mt-text-muted);
   text-decoration: none;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   font-weight: 500;
   line-height: 1.1;
   border-radius: $radius-md;
@@ -467,7 +474,7 @@ $desktop-breakpoint: 960px;
   background: var(--mt-surface-raised-2);
   color: var(--mt-text-secondary);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: typography.scale(0.9rem);
   font-weight: 600;
   line-height: 1.1;
   transition: $transition-button;
@@ -487,7 +494,7 @@ $desktop-breakpoint: 960px;
 }
 
 .mobileSectionLabel {
-  font-size: 0.85rem;
+  font-size: typography.scale(0.85rem);
   font-weight: 700;
   color: var(--mt-text-secondary);
 }
@@ -509,8 +516,8 @@ $desktop-breakpoint: 960px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 999px;
   border: 1px solid var(--mt-border-hairline);
   background: var(--mt-surface-raised-2);
@@ -527,9 +534,11 @@ $desktop-breakpoint: 960px;
 }
 
 .mobileFontSizeGlyph {
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
   line-height: 1;
   font-weight: 800;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
 }
 
 .activeMobileFontSizeButton {
@@ -544,7 +553,7 @@ $desktop-breakpoint: 960px;
   background-color: var(--mt-surface-raised-2);
   color: var(--mt-text-muted);
   text-decoration: none;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   font-weight: 500;
   border-radius: $radius-md;
   transition: $transition-button;

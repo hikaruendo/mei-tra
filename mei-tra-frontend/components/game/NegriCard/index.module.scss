@@ -13,14 +13,14 @@
 }
 
 .negriCard {
-  width: 2rem;
-  height: 3rem;
+  width: calc(2rem * var(--mt-card-scale));
+  height: calc(3rem * var(--mt-card-scale));
 }
 
 .cardFaceDown {
-  width: 2rem;
-  height: 3rem;
-  margin: 0 -15px;
+  width: calc(2rem * var(--mt-card-scale));
+  height: calc(3rem * var(--mt-card-scale));
+  margin: 0 calc(-15px * var(--mt-card-scale));
   display: flex;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);

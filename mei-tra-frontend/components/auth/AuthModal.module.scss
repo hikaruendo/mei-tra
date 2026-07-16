@@ -1,9 +1,11 @@
+@use '../../styles/base/typography' as typography;
+
 $color-white: #ffffff;
 $spacing-md: 1rem;
 $radius-lg: 1rem;
 $shadow-controls: 0 4px 12px rgba(0, 0, 0, 0.3);
 $z-index-overlay: 40;
-$font-size-xl: 2rem;
+$font-size-xl: var(--font-size-xl);
 $transition-button: all 0.3s ease;
 
 .overlay {
@@ -49,7 +51,7 @@ $transition-button: all 0.3s ease;
   background: none;
   border: none;
   color: var(--mt-text-muted);
-  font-size: 1.5rem;
+  font-size: typography.scale(1.5rem);
   font-weight: bold;
   cursor: pointer;
   line-height: 1;

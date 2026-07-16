@@ -70,6 +70,7 @@ jest.mock('next-intl', () => ({
       fontSizeLarge: '大きめ',
       fontSizeXLarge: '大きい',
       fontSizeXXLarge: '特大',
+      unavailableDuringGame: '対局中はこの操作を行えません',
       languageLabel: '言語',
       languageJapanese: '日本語',
       languageEnglish: 'English',
@@ -80,8 +81,19 @@ jest.mock('next-intl', () => ({
 }));
 
 jest.mock('@/components/profile/UserProfile', () => ({
-  UserProfile: ({ variant }: { variant?: 'default' | 'compact' }) => (
-    <div data-testid={`user-profile-${variant ?? 'default'}`}>profile</div>
+  UserProfile: ({
+    variant,
+    isGameInProgress,
+  }: {
+    variant?: 'default' | 'compact';
+    isGameInProgress?: boolean;
+  }) => (
+    <div
+      data-testid={`user-profile-${variant ?? 'default'}`}
+      data-game-in-progress={String(isGameInProgress ?? false)}
+    >
+      profile
+    </div>
   ),
 }));
 
@@ -100,13 +112,13 @@ describe('Navigation', () => {
     expect(screen.queryByRole('menuitemradio', { name: /特大/ })).not.toBeInTheDocument();
   });
 
-  it('shows three icon buttons for mobile font size selection', () => {
+  it('shows the configured font size options', () => {
     render(<Navigation />);
 
     expect(screen.getAllByRole('button', { name: /文字サイズ:/ })).toHaveLength(4);
-    expect(screen.getByRole('button', { name: '文字サイズ: 標準 100%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '文字サイズ: 大きめ 120%' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '文字サイズ: 大きい 150%' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 標準 1.0x' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 大きめ 1.5x' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '文字サイズ: 大きい 2.0x' })).toBeInTheDocument();
   });
 
   it('opens the theme menu and updates the theme', () => {
@@ -135,5 +147,22 @@ describe('Navigation', () => {
     const communityMenu = screen.getByRole('menu', { name: 'コミュニティ' });
     expect(within(communityMenu).getByRole('menuitem', { name: /^Discord/ })).toBeInTheDocument();
     expect(within(communityMenu).getByRole('menuitem', { name: /^X/ })).toBeInTheDocument();
+  });
+
+  it('blocks game-disrupting navigation while keeping accessibility settings available', () => {
+    render(<Navigation gameStarted />);
+
+    for (const link of screen.getAllByText(/^(ルーム一覧|ドキュメント)$/)) {
+      expect(link).toHaveAttribute('aria-disabled', 'true');
+      expect(link).not.toHaveAttribute('href');
+    }
+    expect(screen.getByText('Meitra').closest('a')).toBeNull();
+    expect(screen.getByTestId('user-profile-compact')).toHaveAttribute('data-game-in-progress', 'true');
+    expect(screen.getByTestId('user-profile-default')).toHaveAttribute('data-game-in-progress', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: /テーマ/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /ライト/ }));
+
+    expect(setThemePreferenceMock).toHaveBeenCalledWith('light');
   });
 });

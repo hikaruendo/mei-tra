@@ -10,9 +10,10 @@ import styles from './UserProfile.module.scss';
 
 interface UserProfileProps {
   variant?: 'default' | 'compact';
+  isGameInProgress?: boolean;
 }
 
-export function UserProfile({ variant = 'default' }: UserProfileProps) {
+export function UserProfile({ variant = 'default', isGameInProgress = false }: UserProfileProps) {
   const { user, signOut, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -25,6 +26,7 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
   const secondaryEmail = user?.email && user.profile?.displayName && user.profile.displayName !== user.email
     ? user.email
     : null;
+  const unavailableDuringGameMessage = t('unavailableDuringGame');
 
   useEffect(() => {
     if (!isCompact || !isCompactMenuOpen) {
@@ -85,6 +87,29 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
       </div>
     );
   };
+
+  const compactSummaryContent = (
+    <>
+      <span className={styles.compactDisplayName}>{displayName}</span>
+      {secondaryEmail ? (
+        <span className={styles.compactMeta}>{secondaryEmail}</span>
+      ) : null}
+    </>
+  );
+
+  const profileEditContent = (
+    <>
+      <div className={styles.avatarContainer}>
+        {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
+      </div>
+      <div className={styles.userInfo}>
+        <span className={styles.displayName}>{displayName}</span>
+        <span className={styles.profileEditHint}>
+          {t('edit')}
+        </span>
+      </div>
+    </>
+  );
 
   if (loading) {
     if (isCompact) {
@@ -151,16 +176,35 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
 
         {isCompactMenuOpen && (
           <div className={styles.compactPopover} role="menu" aria-label={t('accountInfo')}>
-            <Link href="/profile" className={styles.compactSummary} onClick={closeCompactMenu} role="menuitem">
-              <span className={styles.compactDisplayName}>{displayName}</span>
-              {secondaryEmail ? (
-                <span className={styles.compactMeta}>{secondaryEmail}</span>
-              ) : null}
-            </Link>
-            <div className={styles.compactActions}>
-              <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
-                {t('title')}
+            {isGameInProgress ? (
+              <span
+                className={`${styles.compactSummary} ${styles.disabledProfileAction}`}
+                aria-disabled="true"
+                title={unavailableDuringGameMessage}
+              >
+                {compactSummaryContent}
+              </span>
+            ) : (
+              <Link href="/profile" className={styles.compactSummary} onClick={closeCompactMenu} role="menuitem">
+                {compactSummaryContent}
               </Link>
+            )}
+            <div className={styles.compactActions}>
+              {isGameInProgress ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`${styles.compactActionButton} ${styles.disabledProfileAction}`}
+                  disabled
+                  title={unavailableDuringGameMessage}
+                >
+                  {t('edit')}
+                </button>
+              ) : (
+                <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
+                  {t('edit')}
+                </Link>
+              )}
               <button
                 type="button"
                 role="menuitem"
@@ -168,8 +212,9 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
                   closeCompactMenu();
                   void handleSignOut();
                 }}
-                disabled={isSigningOut}
+                disabled={isSigningOut || isGameInProgress}
                 className={styles.compactActionButton}
+                title={isGameInProgress ? unavailableDuringGameMessage : undefined}
               >
                 {isSigningOut ? t('loggingOut') : t('logout')}
               </button>
@@ -182,22 +227,28 @@ export function UserProfile({ variant = 'default' }: UserProfileProps) {
 
   return (
     <div className={styles.userContainer}>
-      <div className={styles.avatarContainer}>
-        {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
-      </div>
-
-      <Link href="/profile" className={styles.profileLink}>
-        <div className={styles.userInfo}>
-          <span className={styles.displayName}>{displayName}</span>
-        </div>
-      </Link>
+      {isGameInProgress ? (
+        <button
+          type="button"
+          className={`${styles.profileEditLink} ${styles.disabledProfileAction}`}
+          disabled
+          title={unavailableDuringGameMessage}
+        >
+          {profileEditContent}
+        </button>
+      ) : (
+        <Link href="/profile" className={styles.profileEditLink}>
+          {profileEditContent}
+        </Link>
+      )}
 
       <button
         onClick={() => {
           void handleSignOut();
         }}
-        disabled={isSigningOut}
+        disabled={isSigningOut || isGameInProgress}
         className={styles.signOutButton}
+        title={isGameInProgress ? unavailableDuringGameMessage : undefined}
       >
         {isSigningOut ? t('loggingOut') : t('logout')}
       </button>

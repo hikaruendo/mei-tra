@@ -108,12 +108,12 @@ $z-index-tooltip: 50;
   --card-negri-height: #{$card-negri-height};
   
   // Font sizes
-  --font-size-xs: #{$font-size-xs};
-  --font-size-sm: #{$font-size-sm};
-  --font-size-base: #{$font-size-base};
-  --font-size-lg: #{$font-size-lg};
-  --font-size-xl: #{$font-size-xl};
-  --font-size-xxl: #{$font-size-xxl};
+  --font-size-xs: calc(#{$font-size-xs} * var(--mt-font-scale));
+  --font-size-sm: calc(#{$font-size-sm} * var(--mt-font-scale));
+  --font-size-base: calc(#{$font-size-base} * var(--mt-font-scale));
+  --font-size-lg: calc(#{$font-size-lg} * var(--mt-font-scale));
+  --font-size-xl: calc(#{$font-size-xl} * var(--mt-font-scale));
+  --font-size-xxl: calc(#{$font-size-xxl} * var(--mt-font-scale));
   
   // Shadows
   --shadow-card: #{$shadow-card};
@@ -254,4 +254,4 @@ html[data-theme='light'] {
   --mt-trump-daiya: #2f5c8a;
   --mt-trump-club: #3e6b2e;
   --mt-trump-zuppe: #4a4436;
-} 
+}

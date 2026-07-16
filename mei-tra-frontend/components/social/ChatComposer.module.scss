@@ -1,3 +1,5 @@
+@use '../../styles/base/typography' as typography;
+
 .composer {
   padding: 1rem;
   border-top: 1px solid var(--mt-border-hairline);
@@ -17,7 +19,7 @@
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   outline: none;
   transition: all 0.2s;
   background-color: var(--mt-surface-raised-2);
@@ -65,7 +67,7 @@
 }
 
 .charCount {
-  font-size: 0.75rem;
+  font-size: typography.scale(0.75rem);
   color: var(--mt-text-muted);
   margin-top: 0.25rem;
 }

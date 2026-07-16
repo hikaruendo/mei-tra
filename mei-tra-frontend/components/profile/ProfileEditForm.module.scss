@@ -1,12 +1,14 @@
+@use '../../styles/base/typography' as typography;
+
 $spacing-xs: 0.25rem;
 $spacing-sm: 0.5rem;
 $spacing-md: 1rem;
 $spacing-lg: 1.5rem;
 $spacing-xl: 2rem;
 
-$font-size-sm: 0.875rem;
-$font-size-base: 1rem;
-$font-size-lg: 1.125rem;
+$font-size-sm: var(--font-size-sm);
+$font-size-base: var(--font-size-base);
+$font-size-lg: var(--font-size-lg);
 
 $radius-sm: 4px;
 $radius-md: 8px;
@@ -91,7 +93,7 @@ $transition-standard: all 0.3s ease;
 }
 
 .avatarText {
-  font-size: 2.5rem;
+  font-size: typography.scale(2.5rem);
   font-weight: 600;
   color: var(--mt-text-primary);
 }

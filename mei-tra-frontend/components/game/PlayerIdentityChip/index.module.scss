@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -26,11 +28,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: min(typography.scale(0.85rem), 1.1rem);
   font-weight: 600;
   line-height: 1;
 }
 
 .compact .label {
-  font-size: 0.8rem;
+  font-size: min(typography.scale(0.8rem), 1rem);
 }

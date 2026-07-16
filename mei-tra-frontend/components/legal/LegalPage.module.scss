@@ -1,4 +1,5 @@
 @use '../../styles/base/variables-modules' as *;
+@use '../../styles/base/typography' as typography;
 
 .container {
   min-height: 100vh;
@@ -23,7 +24,7 @@
 
   h1 {
     font-family: var(--mt-font-heading);
-    font-size: 2rem;
+    font-size: typography.scale(2rem);
     font-weight: 700;
     color: var(--mt-text-primary);
     margin: 0 0 $spacing-xs;
@@ -57,7 +58,7 @@
   }
 
   h2 {
-    font-size: 1.125rem;
+    font-size: typography.scale(1.125rem);
     font-weight: 600;
     color: var(--mt-text-primary);
     margin: 0 0 $spacing-sm;
@@ -66,14 +67,14 @@
   p {
     margin: 0 0 $spacing-sm;
     color: var(--mt-text-secondary);
-    font-size: 0.9375rem;
+    font-size: typography.scale(0.9375rem);
   }
 
   ul {
     margin: 0 0 $spacing-sm;
     padding-left: 1.5rem;
     color: var(--mt-text-secondary);
-    font-size: 0.9375rem;
+    font-size: typography.scale(0.9375rem);
 
     li {
       margin-bottom: 0.5rem;

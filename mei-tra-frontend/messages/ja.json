@@ -35,6 +35,7 @@
     "fontSizeLarge": "大きめ",
     "fontSizeXLarge": "大きい",
     "fontSizeXXLarge": "特大",
+    "unavailableDuringGame": "対局中はこの操作を行えません",
     "languageLabel": "言語",
     "languageJapanese": "日本語",
     "languageEnglish": "English"
@@ -308,7 +309,7 @@
     },
     "errors": {
       "notYourTurnDeclare": "宣言するターンではありません",
-      "selectTrumpAndPairs": "トランプとペア数を選択してください",
+      "selectTrumpAndPairs": "キリ（切り札）とペア数を選択してください",
       "notYourTurnPass": "パスするターンではありません",
       "notYourTurnPlay": "あなたのターンではありません",
       "notYourTurnBaseSuit": "ベーススートを選択するターンではありません"
@@ -405,6 +406,7 @@
     "playerFilter": "プレイヤー",
     "allPlayers": "全プレイヤー",
     "openPage": "詳細表示",
+    "unavailableDuringGame": "対局中はこの操作を行えません",
     "pageDescription": "ラウンドごとに自分の手札と対局の流れを確認できます。",
     "backToRooms": "ルーム一覧へ",
     "backToProfile": "プロフィールへ",
@@ -530,16 +532,16 @@
       "compositionExample": "各スート（♠♥♦♣）：5,6,7,8,9,10,J,Q,K,A + JOKER1枚",
       "strength": "カード強度の基本",
       "strengthDesc": "カードには強度数値があり、数値が大きいほど強くなります。基本の強さ順は JOKER(150) > A(14) > K(13) > Q(12) > J(11) > 10(10) > 9(9) > 8(8) > 7(7) > 6(6) > 5(5) です。",
-      "strengthExample": "プレイ中はこの基本強度に、トランプなら +100、ベーススートなら +50 のボーナスが加わります。"
+      "strengthExample": "プレイ中はこの基本強度に、キリ（切り札）なら +100、ベーススートなら +50 のボーナスが加わります。"
     },
     "blow": {
       "title": "ビットシステム",
-      "description": "ビットでは「10フィールドのうち何ペア取れるか」と「使用するスート（切り札）」を宣言します。このシステムがゲームの核心部分です。ペアとは獲得できるフィールド数を意味します。",
+      "description": "ビットでは「10フィールドのうち何ペア取れるか」と「キリとして使うスート」を宣言します。このシステムがゲームの核心部分です。ペアとは獲得できるフィールド数を意味します。",
       "basicRule": "基本宣言ルール",
-      "basicRuleDesc": "最低6ペアのビットが必須。ペア数とスート種類の組み合わせで宣言",
+      "basicRuleDesc": "最低6ペアのビットが必須。ペア数とキリの組み合わせで宣言",
       "basicRuleExample": "「ハート7ペア」「ダイヤ6ペア」「トラ8ペア」など",
-      "hierarchy": "スートの強さ順",
-      "hierarchyNote": "同じペア数では、より強いトランプの宣言が上位となります",
+      "hierarchy": "キリの強さ順",
+      "hierarchyNote": "同じペア数では、より強いキリの宣言が上位となります",
       "higherDeclaration": "上位宣言の条件",
       "higherDeclarationDesc": "①ペア数を増やす　②同ペア数で強いスートにする",
       "higherDeclarationExample": "クラブ7ペア → ハート7ペア（同ペア、強スート）/ クラブ8ペア（多ペア）",
@@ -757,6 +759,7 @@
     "loggedIn": "ログイン",
     "loggingOut": "ログアウト中...",
     "logout": "ログアウト",
+    "unavailableDuringGame": "対局中はこの操作を行えません",
     "passwordResetConfirmTitle": "パスワード設定・変更メールを送信しますか？",
     "passwordResetConfirmMessage": "{email} 宛に、パスワード設定・変更用のメールを送信します。よろしいですか？"
   },

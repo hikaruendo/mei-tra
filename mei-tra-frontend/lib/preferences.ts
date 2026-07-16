@@ -10,25 +10,25 @@ export const FONT_SIZE_PRESETS: Record<
   FontSizePreset,
   {
     scale: number;
-    rootPercent: number;
+    percent: number;
   }
 > = {
   standard: {
     scale: 1,
-    rootPercent: 100,
+    percent: 100,
   },
   large: {
-    scale: 1.2,
-    rootPercent: 120,
+    scale: 1.5,
+    percent: 150,
   },
   xlarge: {
-    scale: 1.5,
-    rootPercent: 150,
+    scale: 2,
+    percent: 200,
   },
   // Legacy value kept so old persisted preferences do not break.
   xxlarge: {
-    scale: 1.5,
-    rootPercent: 150,
+    scale: 2,
+    percent: 200,
   },
 };
 

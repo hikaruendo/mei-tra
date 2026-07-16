@@ -1,3 +1,5 @@
+@use '../../../styles/base/typography' as typography;
+
 .blowControlsContainer {
   position: fixed;
   top: 44%;
@@ -31,7 +33,7 @@
   display: inline-block;
   padding: 0.5rem 1rem;
   border-radius: var(--mt-radius);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   line-height: 1.4;
 }
 
@@ -64,7 +66,7 @@
   background-color: var(--mt-surface-raised-2);
   color: var(--mt-text-primary);
   width: 100%;
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
 }
 
 .input {
@@ -73,7 +75,7 @@
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
   background-color: var(--mt-surface-raised-2);
-  font-size: 1rem;
+  font-size: typography.scale(1rem);
   color: var(--mt-text-primary);
   width: 100%;
   text-indent: 5px;
@@ -91,6 +93,7 @@
   min-height: 2.75rem;
   padding: 0.45rem 0.8rem;
   border-radius: var(--mt-radius);
+  font-size: typography.scale(1rem);
   font-weight: bold;
   color: var(--mt-btn-primary-text);
   cursor: pointer;
@@ -137,7 +140,7 @@
   color: var(--mt-text-primary);
   padding: 0.35rem 0.5rem;
   border-radius: var(--mt-radius);
-  font-size: 0.875rem;
+  font-size: typography.scale(0.875rem);
   line-height: 1.4;
 }
 
@@ -164,11 +167,11 @@
 
   .currentTurn {
     padding: 0.45rem 0.8rem;
-    font-size: 0.82rem;
+    font-size: typography.scale(0.82rem);
   }
 
   .select {
-    font-size: 1rem;
+    font-size: typography.scale(1rem);
     padding: 0.35rem 0.5rem;
   }
 
@@ -186,6 +189,27 @@
 
   .declarations {
     margin-top: 0.5rem;
+  }
+}
+
+:global(html[data-font-size='xlarge']) {
+  .blowControlsContainer {
+    top: 50%;
+    width: min(34rem, calc(100vw - 1rem));
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
+  }
+
+  .controlsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .buttonGroup {
+    grid-column: auto;
+  }
+
+  .button {
+    min-height: 3.25rem;
   }
 }
 

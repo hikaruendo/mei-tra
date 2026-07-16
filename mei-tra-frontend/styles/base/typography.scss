@@ -1,0 +1,3 @@
+@function scale($size) {
+  @return calc(#{$size} * var(--mt-font-scale));
+}
