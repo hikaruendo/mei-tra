@@ -1,3 +1,5 @@
+@use '../../styles/base/typography' as typography;
+
 $color-white: #ffffff;
 $spacing-md: 1rem;
 $radius-lg: 1rem;
@@ -49,7 +51,7 @@ $transition-button: all 0.3s ease;
   background: none;
   border: none;
   color: var(--mt-text-muted);
-  font-size: 1.5rem;
+  font-size: typography.scale(1.5rem);
   font-weight: bold;
   cursor: pointer;
   line-height: 1;

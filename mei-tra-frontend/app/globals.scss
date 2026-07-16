@@ -30,6 +30,7 @@ body {
   background-color: var(--mt-surface-felt);
   color: var(--mt-text-primary);
   font-family: var(--mt-font-body);
+  font-size: calc(1rem * var(--mt-font-scale));
   transition:
     background-color $transition-base,
     color $transition-base;

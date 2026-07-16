@@ -27,7 +27,7 @@ $desktop-breakpoint: 960px;
   }
 
   .gameNavigation .brandName {
-    font-size: 1.1rem;
+    font-size: typography.scale(1.1rem);
   }
 }
 
@@ -88,14 +88,14 @@ $desktop-breakpoint: 960px;
 .brandName {
   margin-left: 0.375rem;
   font-family: var(--mt-font-heading);
-  font-size: 1.25rem;
+  font-size: typography.scale(1.25rem);
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--mt-accent);
   white-space: nowrap;
 
   @media (min-width: $desktop-breakpoint) {
-    font-size: 1.5rem;
+    font-size: typography.scale(1.5rem);
   }
 }
 
@@ -529,7 +529,7 @@ $desktop-breakpoint: 960px;
 }
 
 .mobileFontSizeGlyph {
-  font-size: 0.78rem;
+  font-size: typography.scale(0.78rem);
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.04em;

@@ -1,6 +1,6 @@
 .paused {
   text-align: center;
-  font-size: 1.5rem;
+  font-size: calc(1.5rem * var(--mt-font-scale));
   font-weight: bold;
   margin-top: 1.25rem;
 }
@@ -29,7 +29,7 @@
 }
 
 .loadingText {
-  font-size: 1.1rem;
+  font-size: calc(1.1rem * var(--mt-font-scale));
   color: var(--mt-text-muted);
   font-weight: 500;
 }
