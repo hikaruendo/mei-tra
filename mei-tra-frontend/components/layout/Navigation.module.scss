@@ -135,6 +135,11 @@ $desktop-breakpoint: 960px;
   }
 }
 
+.disabledNavigationLink {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .externalLinkIcon {
   flex-shrink: 0;
   opacity: 0.78;

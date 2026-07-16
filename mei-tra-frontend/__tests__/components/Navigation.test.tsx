@@ -70,6 +70,7 @@ jest.mock('next-intl', () => ({
       fontSizeLarge: '大きめ',
       fontSizeXLarge: '大きい',
       fontSizeXXLarge: '特大',
+      unavailableDuringGame: '対局中はこの操作を行えません',
       languageLabel: '言語',
       languageJapanese: '日本語',
       languageEnglish: 'English',
@@ -80,8 +81,19 @@ jest.mock('next-intl', () => ({
 }));
 
 jest.mock('@/components/profile/UserProfile', () => ({
-  UserProfile: ({ variant }: { variant?: 'default' | 'compact' }) => (
-    <div data-testid={`user-profile-${variant ?? 'default'}`}>profile</div>
+  UserProfile: ({
+    variant,
+    isGameInProgress,
+  }: {
+    variant?: 'default' | 'compact';
+    isGameInProgress?: boolean;
+  }) => (
+    <div
+      data-testid={`user-profile-${variant ?? 'default'}`}
+      data-game-in-progress={String(isGameInProgress ?? false)}
+    >
+      profile
+    </div>
   ),
 }));
 
@@ -135,5 +147,22 @@ describe('Navigation', () => {
     const communityMenu = screen.getByRole('menu', { name: 'コミュニティ' });
     expect(within(communityMenu).getByRole('menuitem', { name: /^Discord/ })).toBeInTheDocument();
     expect(within(communityMenu).getByRole('menuitem', { name: /^X/ })).toBeInTheDocument();
+  });
+
+  it('blocks game-disrupting navigation while keeping accessibility settings available', () => {
+    render(<Navigation gameStarted />);
+
+    for (const link of screen.getAllByText(/^(ルーム一覧|ドキュメント)$/)) {
+      expect(link).toHaveAttribute('aria-disabled', 'true');
+      expect(link).not.toHaveAttribute('href');
+    }
+    expect(screen.getByText('Meitra').closest('a')).toBeNull();
+    expect(screen.getByTestId('user-profile-compact')).toHaveAttribute('data-game-in-progress', 'true');
+    expect(screen.getByTestId('user-profile-default')).toHaveAttribute('data-game-in-progress', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: /テーマ/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /ライト/ }));
+
+    expect(setThemePreferenceMock).toHaveBeenCalledWith('light');
   });
 });

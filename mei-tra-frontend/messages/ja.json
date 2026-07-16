@@ -35,6 +35,7 @@
     "fontSizeLarge": "大きめ",
     "fontSizeXLarge": "大きい",
     "fontSizeXXLarge": "特大",
+    "unavailableDuringGame": "対局中はこの操作を行えません",
     "languageLabel": "言語",
     "languageJapanese": "日本語",
     "languageEnglish": "English"
@@ -405,6 +406,7 @@
     "playerFilter": "プレイヤー",
     "allPlayers": "全プレイヤー",
     "openPage": "詳細表示",
+    "unavailableDuringGame": "対局中はこの操作を行えません",
     "pageDescription": "ラウンドごとに自分の手札と対局の流れを確認できます。",
     "backToRooms": "ルーム一覧へ",
     "backToProfile": "プロフィールへ",
@@ -757,6 +759,7 @@
     "loggedIn": "ログイン",
     "loggingOut": "ログアウト中...",
     "logout": "ログアウト",
+    "unavailableDuringGame": "対局中はこの操作を行えません",
     "passwordResetConfirmTitle": "パスワード設定・変更メールを送信しますか？",
     "passwordResetConfirmMessage": "{email} 宛に、パスワード設定・変更用のメールを送信します。よろしいですか？"
   },

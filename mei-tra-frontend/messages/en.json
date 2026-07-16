@@ -35,6 +35,7 @@
     "fontSizeLarge": "Larger",
     "fontSizeXLarge": "Large",
     "fontSizeXXLarge": "Extra large",
+    "unavailableDuringGame": "This action is unavailable during a game",
     "languageLabel": "Language",
     "languageJapanese": "Japanese",
     "languageEnglish": "English"
@@ -405,6 +406,7 @@
     "playerFilter": "Player",
     "allPlayers": "All players",
     "openPage": "Open full view",
+    "unavailableDuringGame": "This action is unavailable during a game",
     "pageDescription": "Review your starting hand and match flow by round.",
     "backToRooms": "Back to rooms",
     "backToProfile": "Back to profile",
@@ -757,6 +759,7 @@
     "loggedIn": "Login",
     "loggingOut": "Logging out...",
     "logout": "Logout",
+    "unavailableDuringGame": "This action is unavailable during a game",
     "passwordResetConfirmTitle": "Send a password reset email?",
     "passwordResetConfirmMessage": "A password setup/change email will be sent to {email}. Do you want to continue?"
   },
