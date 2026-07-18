@@ -135,8 +135,25 @@ npx playwright test --debug                     # デバッグモードで実行
   - API呼び出しのテスト
   - 実際のユーザー操作の模擬テスト
 
-### codex
-Web検索を有効化
+## How we used Codex and GPT-5.6
+
+Codex and GPT-5.6 were used as an active development partner throughout the
+Build Week submission. We used them to:
+
+- inspect the Next.js, NestJS, Socket.IO, and shared TypeScript monorepo;
+- trace real-time room and game-state flows across the frontend and backend;
+- review multiplayer synchronization, reconnection, and rule-validation logic;
+- refine the public project description, testing instructions, and English demo
+  captions and narration;
+- verify the final demo video, submission links, and Devpost checklist.
+
+All generated suggestions were reviewed against the running application and the
+repository before being used. The final architecture, implementation decisions,
+game rules, and submission content were selected and validated by the project
+author.
+
+For Codex sessions that need current web context, web search can be enabled with:
+
 ```bash
 codex --search
 ```
