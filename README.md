@@ -145,6 +145,12 @@ codex --search
 
 MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
 
+## OpenAI Build Week 2026
+
+Meitra's July 2026 accessibility extension, the Codex collaboration summary,
+and a reproducible demo/test checklist are documented in
+[docs/openai-build-week-2026.md](docs/openai-build-week-2026.md).
+
 ## 貢献
 
 プロジェクトへの貢献を歓迎します。IssueやPull Requestをお待ちしています。
