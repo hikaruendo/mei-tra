@@ -20,6 +20,7 @@ import { PlayerConnectionManager } from './player-connection-manager.service';
 import { GamePhaseService } from './game-phase.service';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
 import {
+  toDomainPlayer,
   toRuntimePlayer,
   toTransportPlayers,
   TransportPlayer,
@@ -257,6 +258,49 @@ export class GameStateService implements IGameStateService {
 
   async saveState(): Promise<void> {
     await this.stateManager.saveState(this.roomId, this.state);
+  }
+
+  async persistRoster(): Promise<void> {
+    await this.stateManager.persistRoster(this.roomId, this.state);
+  }
+
+  async reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void> {
+    const currentPlayers = new Map(
+      this.state.players.map((player) => [player.playerId, player]),
+    );
+
+    this.state.players = roomPlayers.map((roomPlayer) => {
+      const currentPlayer = currentPlayers.get(roomPlayer.playerId);
+      if (!currentPlayer) {
+        return toDomainPlayer(roomPlayer);
+      }
+
+      return toDomainPlayer({
+        ...roomPlayer,
+        hand: currentPlayer.hand,
+        isPasser: currentPlayer.isPasser,
+        hasBroken: currentPlayer.hasBroken,
+        hasRequiredBroken: currentPlayer.hasRequiredBroken,
+      });
+    });
+    this.state.teamAssignments = Object.fromEntries(
+      roomPlayers.map((player) => [player.playerId, player.team]),
+    );
+
+    roomPlayers.forEach((player) => {
+      this.connectionManager.registerPlayerToken(
+        player.playerId,
+        player.playerId,
+      );
+      if (player.userId) {
+        this.connectionManager.registerPlayerToken(
+          player.userId,
+          player.playerId,
+        );
+      }
+    });
+
+    await this.persistRoster();
   }
 
   addPlayer(

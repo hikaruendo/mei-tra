@@ -1,5 +1,6 @@
 import { DomainPlayer } from '../../types/game.types';
 import { PlayerConnectionState, SessionUser } from '../../types/session.types';
+import { RoomPlayer } from '../../types/room.types';
 
 export interface IGameStateService {
   addPlayer(
@@ -30,4 +31,6 @@ export interface IGameStateService {
     connectionState: PlayerConnectionState,
   ): Promise<void>;
   getPlayerConnectionState(playerId: string): PlayerConnectionState | null;
+  persistRoster(): Promise<void>;
+  reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void>;
 }

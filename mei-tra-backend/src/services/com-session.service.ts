@@ -99,6 +99,7 @@ export class ComSessionService {
       (player) => player.isCOM && !player.isReady,
     ).length;
     const slotsToFill = capacity - actualCount - placeholderCount;
+    let rosterChanged = false;
 
     for (let i = 0; i < slotsToFill; i++) {
       const idx = actualCount + placeholderCount + i;
@@ -110,11 +111,24 @@ export class ComSessionService {
       ).length;
       const team = (team0Count <= team1Count ? 0 : 1) as Team;
       const placeholder = this.createCOMPlaceholder(idx, team);
-      await this.roomRepository.addPlayer(roomId, placeholder);
+      const addSuccess = await this.roomRepository.addPlayer(
+        roomId,
+        placeholder,
+      );
+      if (!addSuccess) {
+        throw new Error(
+          `Failed to persist COM placeholder ${placeholder.playerId}`,
+        );
+      }
       room.players.push(placeholder);
       state.players.push(toDomainPlayer(placeholder));
       state.teamAssignments[placeholder.playerId] = placeholder.team;
       gameState.registerPlayerToken(placeholder.playerId, placeholder.playerId);
+      rosterChanged = true;
+    }
+
+    if (rosterChanged) {
+      await gameState.persistRoster();
     }
   }
 

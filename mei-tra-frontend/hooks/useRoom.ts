@@ -432,10 +432,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             : null,
       });
 
-      if (message === 'Failed to reconnect') {
-        return;
-      }
-
       setError(message);
     };
 

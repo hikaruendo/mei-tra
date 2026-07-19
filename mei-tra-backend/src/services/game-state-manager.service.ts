@@ -94,6 +94,24 @@ export class GameStateManager {
     }
   }
 
+  async persistRoster(
+    roomId: string | null,
+    state: Pick<GameState, 'players' | 'teamAssignments'>,
+  ): Promise<void> {
+    if (!roomId) {
+      throw new Error('Cannot persist roster without a room ID');
+    }
+
+    const persistedState = await this.repository.update(roomId, {
+      players: state.players,
+      teamAssignments: state.teamAssignments,
+    });
+
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
+    }
+  }
+
   async persistPlayerConnectionUpdate(
     roomId: string | null,
     playerId: string,

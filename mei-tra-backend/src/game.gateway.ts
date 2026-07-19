@@ -8,7 +8,9 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import type {
+  BackToLobbyPayload,
   PlayCardPayload,
+  ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
 } from '@contracts/game';
@@ -407,6 +409,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private async sendBackToLobby(
     client: Socket,
     reason: string,
+    code: ReconnectionFailureCode,
     roomId?: string,
   ): Promise<void> {
     console.warn(
@@ -417,8 +420,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     this.playerRooms.delete(client.id);
     await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
-    client.emit('back-to-lobby');
-    client.emit('error-message', reason);
+    const payload: BackToLobbyPayload = { code };
+    client.emit('back-to-lobby', payload);
     this.emitRoomsListToSocket(client, await this.roomService.listRooms());
   }
 
@@ -539,7 +542,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
-        await this.sendBackToLobby(client, result.reason, roomId);
+        await this.sendBackToLobby(client, result.reason, result.code, roomId);
         return;
       }
 

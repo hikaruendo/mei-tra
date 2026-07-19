@@ -5,52 +5,79 @@ import { RoomStatus } from '../../types/room.types';
 import { UserProfile } from '../../types/user.types';
 
 describe('ReconnectionUseCase', () => {
-  it('returns active game payload for authenticated reconnection', async () => {
-    const roomService = {
-      getRoomGameState: jest.fn().mockResolvedValue({
-        findSessionUserByUserId: jest.fn().mockReturnValue(null),
-        findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
-        findPlayerByActorId: jest.fn().mockReturnValue({ playerId: 'p1' }),
-        findPlayerByUserId: jest.fn().mockReturnValue({ playerId: 'p1' }),
-        getState: () => ({
-          players: [
-            { playerId: 'p1', hand: ['A♠'], socketId: '', userId: 'user-1' },
-            {
-              playerId: 'p2',
-              hand: ['K♠'],
-              socketId: 'socket-2',
-              userId: 'user-2',
-            },
-          ],
-          gamePhase: 'play',
-          currentPlayerIndex: 0,
-          blowState: {
-            declarations: [],
-            actionHistory: [],
-            currentTrump: null,
-            currentHighestDeclaration: null,
-            lastPasser: null,
-            isRoundCancelled: false,
-            currentBlowIndex: 0,
+  it('uses the persisted room player mapping after an active-game restart', async () => {
+    const roomGameState = {
+      findSessionUserByUserId: jest.fn().mockReturnValue(null),
+      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findPlayerByActorId: jest.fn().mockReturnValue(null),
+      getState: () => ({
+        players: [
+          {
+            playerId: 'seat-1',
+            name: 'User 1',
+            team: 0,
+            hand: ['A♠'],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
           },
-          playState: {
-            currentField: null,
-            negriCard: null,
-            neguri: {},
-            fields: [],
-            lastWinnerId: null,
-            openDeclared: false,
-            openDeclarerId: null,
+          {
+            playerId: 'p2',
+            name: 'User 2',
+            team: 1,
+            hand: ['K♠'],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
           },
-          teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
-          pointsToWin: 10,
-        }),
+        ],
+        gamePhase: 'play',
+        currentPlayerIndex: 0,
+        blowState: {
+          declarations: [],
+          actionHistory: [],
+          currentTrump: null,
+          currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
+        playState: {
+          currentField: null,
+          negriCard: null,
+          neguri: {},
+          fields: [],
+          lastWinnerId: null,
+          openDeclared: false,
+          openDeclarerId: null,
+        },
+        teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+        pointsToWin: 10,
       }),
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
       getRoom: jest.fn().mockResolvedValue({
         id: 'room-1',
-        hostId: 'p1',
+        hostId: 'seat-1',
         status: RoomStatus.PLAYING,
-        players: [],
+        players: [
+          {
+            playerId: 'seat-1',
+            socketId: 'stale-socket',
+            userId: 'user-1',
+            isAuthenticated: true,
+            name: 'User 1',
+            hand: ['A♠'],
+            team: 0,
+            isReady: true,
+            isHost: true,
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+            joinedAt: new Date(),
+          },
+        ],
       }),
       handlePlayerReconnection: jest.fn().mockResolvedValue({ success: true }),
       listRooms: jest.fn().mockResolvedValue([]),
@@ -92,18 +119,25 @@ describe('ReconnectionUseCase', () => {
       expect.objectContaining({
         success: true,
         mode: 'active-game',
-        reconnectToken: 'p1',
+        reconnectToken: 'seat-1',
       }),
+    );
+    expect(roomGameState.findPlayerByActorId).not.toHaveBeenCalled();
+    expect(roomService.handlePlayerReconnection).toHaveBeenCalledWith(
+      'room-1',
+      'seat-1',
+      'socket-1',
+      'user-1',
     );
   });
 
-  it('uses session mapping first when reconnecting to a waiting room', async () => {
+  it('reconciles persisted players before reconnecting to a waiting room', async () => {
     const roomPlayers = [
       {
         playerId: 'p1',
         socketId: 'stale-socket',
-        userId: undefined,
-        isAuthenticated: false,
+        userId: 'user-1',
+        isAuthenticated: true,
         name: 'User 1',
         hand: [],
         team: 0,
@@ -114,14 +148,9 @@ describe('ReconnectionUseCase', () => {
       },
     ];
     const roomGameState = {
-      findSessionUserByUserId: jest.fn().mockReturnValue({
-        playerId: 'p1',
-        socketId: 'stale-socket',
-        userId: 'user-1',
-        isAuthenticated: true,
-        name: 'User 1',
-      }),
+      findSessionUserByUserId: jest.fn().mockReturnValue(null),
       findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
       getState: () => ({
         players: [],
         gamePhase: 'waiting',
@@ -184,6 +213,15 @@ describe('ReconnectionUseCase', () => {
       'p1',
       'socket-1',
       'user-1',
+    );
+    expect(roomGameState.reconcileWaitingRoomPlayers).toHaveBeenCalledWith(
+      roomPlayers,
+    );
+    expect(
+      roomGameState.reconcileWaitingRoomPlayers.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      (roomService.initCOMPlaceholders as jest.Mock).mock
+        .invocationCallOrder[0],
     );
     expect(result).toEqual(
       expect.objectContaining({
