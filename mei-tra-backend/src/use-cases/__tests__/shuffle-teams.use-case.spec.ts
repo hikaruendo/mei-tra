@@ -82,6 +82,41 @@ describe('ShuffleTeamsUseCase', () => {
     expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
   });
 
+  it('rejects shuffling after the game has started', async () => {
+    const room = {
+      id: 'room-1',
+      hostId: 'host',
+      status: RoomStatus.PLAYING,
+      players: [
+        { playerId: 'host', team: 0 },
+        { playerId: 'player-2', team: 1 },
+        { playerId: 'player-3', team: 0 },
+        { playerId: 'player-4', team: 1 },
+      ],
+      updatedAt: new Date(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(room),
+      updatePlayersInRoom: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const fillWithComUseCase = {
+      execute: jest.fn(),
+    } as unknown as IFillWithComUseCase;
+    const useCase = new ShuffleTeamsUseCase(roomService, fillWithComUseCase);
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      playerId: 'host',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Teams can only be shuffled while waiting',
+    });
+    expect(fillWithComUseCase.execute).not.toHaveBeenCalled();
+    expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
+  });
+
   it('returns failure when any player team update fails', async () => {
     const room = {
       id: 'room-1',

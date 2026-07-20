@@ -1126,25 +1126,9 @@ export const useGame = () => {
 
   const shuffleTeams = () => {
     if (!socket || !currentRoomId || !currentPlayerId) return;
-    // Shuffle all current players (humans + COMs) for all team combinations
-    const activePlayers = [...players];
-    if (activePlayers.length < 2) return;
-    // Fisher-Yates shuffle over all active players (humans + COMs)
-    const shuffled = [...activePlayers];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    // First half → team 0, second half → team 1
-    const half = Math.ceil(shuffled.length / 2);
-    const teamChanges: { [playerId: string]: number } = {};
-    shuffled.forEach((p, idx) => {
-      teamChanges[p.playerId] = idx < half ? 0 : 1;
-    });
-    socket.emit('change-player-team', {
+    socket.emit('shuffle-teams', {
       roomId: currentRoomId,
       playerId: currentPlayerId,
-      teamChanges,
     });
   };
 
