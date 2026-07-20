@@ -5,13 +5,14 @@ import type {
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IGameStateService } from '../services/interfaces/game-state-service.interface';
+import { GameStateService } from '../services/game-state.service';
 import { RoomPlayer, RoomStatus } from '../types/room.types';
 import { AuthenticatedUser } from '../types/user.types';
 import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { Team } from '../types/game.types';
+import { DomainPlayer, Team } from '../types/game.types';
 
 export type ReconnectionResult =
   | {
@@ -42,6 +43,18 @@ export type ReconnectionResult =
       reason: string;
       roomId?: string;
     };
+
+type ActiveGameReconnection = Extract<
+  ReconnectionResult,
+  { success: true; mode: 'active-game' }
+>;
+
+export type ActiveGameSnapshot = Pick<
+  ActiveGameReconnection,
+  'gameState' | 'reconnectToken' | 'currentTurnPlayerId' | 'selfPlayerId'
+>;
+
+type ActiveRoom = NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
 
 @Injectable()
 export class ReconnectionUseCase {
@@ -159,16 +172,16 @@ export class ReconnectionUseCase {
         };
       }
 
-      const persistedRoomPlayer = this.resolveAuthenticatedRoomPlayer(
-        room.players,
+      const existingPlayer = this.resolveActiveGamePlayer(
+        roomGameState,
+        room,
         authenticatedUser.id,
       );
-      const existingPlayer = persistedRoomPlayer
-        ? (state.players.find(
-            (player) => player.playerId === persistedRoomPlayer.playerId,
-          ) ?? null)
-        : resolvePlayerByActorId(roomGameState, authenticatedUser.id);
       if (!existingPlayer) {
+        const persistedRoomPlayer = this.resolveAuthenticatedRoomPlayer(
+          room.players,
+          authenticatedUser.id,
+        );
         return {
           success: false,
           code: persistedRoomPlayer ? 'stateInconsistent' : 'sessionInvalid',
@@ -209,35 +222,12 @@ export class ReconnectionUseCase {
         roomId,
         roomsList: await this.roomService.listRooms(),
         room,
-        selfPlayerId: existingPlayer.playerId,
-        reconnectToken: existingPlayer.playerId,
-        currentTurnPlayerId:
-          state.currentPlayerIndex !== -1 &&
-          state.players[state.currentPlayerIndex]
-            ? state.players[state.currentPlayerIndex].playerId
-            : null,
-        gameState: {
-          players: resolveTransportPlayers(roomGameState, state.players, {
-            roomPlayers: room.players,
-            mapHand: (player) =>
-              player.playerId === existingPlayer.playerId ? player.hand : [],
-          }),
-          gamePhase: state.gamePhase || 'waiting',
-          currentField: state.playState?.currentField ?? null,
-          currentTurn:
-            state.currentPlayerIndex !== -1 &&
-            state.players[state.currentPlayerIndex]
-              ? state.players[state.currentPlayerIndex].playerId
-              : null,
-          blowState: state.blowState,
-          teamScores: state.teamScores,
-          you: existingPlayer.playerId,
-          negriCard: state.playState?.negriCard ?? null,
-          fields: state.playState?.fields ?? [],
+        ...this.buildActiveGameSnapshot(
           roomId,
-          hostId: room.hostId,
-          pointsToWin: state.pointsToWin,
-        },
+          room,
+          roomGameState,
+          existingPlayer,
+        ),
       };
     } catch (error) {
       this.logger.warn(
@@ -251,6 +241,109 @@ export class ReconnectionUseCase {
           'Your previous room session is no longer available. Please join or create a room again.',
       };
     }
+  }
+
+  async getActiveGameSnapshot(request: {
+    roomId: string;
+    authenticatedUser: AuthenticatedUser;
+  }): Promise<ActiveGameSnapshot | null> {
+    const { roomId, authenticatedUser } = request;
+
+    try {
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
+      const room = await this.roomService.getRoom(roomId);
+      if (!room) {
+        return null;
+      }
+
+      const state = roomGameState.getState();
+      const isActiveGame =
+        room.status === RoomStatus.PLAYING &&
+        state.gamePhase !== null &&
+        state.gamePhase !== 'waiting';
+      if (!isActiveGame) {
+        return null;
+      }
+
+      const existingPlayer = this.resolveActiveGamePlayer(
+        roomGameState,
+        room,
+        authenticatedUser.id,
+      );
+      if (!existingPlayer) {
+        return null;
+      }
+
+      return this.buildActiveGameSnapshot(
+        roomId,
+        room,
+        roomGameState,
+        existingPlayer,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `[Reconnection] Failed to load active snapshot room=${roomId} user=${authenticatedUser.id}: ${String(error)}`,
+      );
+      return null;
+    }
+  }
+
+  private resolveActiveGamePlayer(
+    roomGameState: GameStateService,
+    room: ActiveRoom,
+    authenticatedUserId: string,
+  ): DomainPlayer | null {
+    const persistedRoomPlayer = this.resolveAuthenticatedRoomPlayer(
+      room.players,
+      authenticatedUserId,
+    );
+
+    return persistedRoomPlayer
+      ? (roomGameState
+          .getState()
+          .players.find(
+            (player) => player.playerId === persistedRoomPlayer.playerId,
+          ) ?? null)
+      : resolvePlayerByActorId(roomGameState, authenticatedUserId);
+  }
+
+  private buildActiveGameSnapshot(
+    roomId: string,
+    room: ActiveRoom,
+    roomGameState: GameStateService,
+    player: DomainPlayer,
+  ): ActiveGameSnapshot {
+    const state = roomGameState.getState();
+    const currentTurnPlayerId =
+      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
+        ? state.players[state.currentPlayerIndex].playerId
+        : null;
+
+    return {
+      selfPlayerId: player.playerId,
+      reconnectToken: player.playerId,
+      currentTurnPlayerId,
+      gameState: {
+        players: resolveTransportPlayers(roomGameState, state.players, {
+          roomPlayers: room.players,
+          mapHand: (transportPlayer) =>
+            transportPlayer.playerId === player.playerId
+              ? transportPlayer.hand
+              : [],
+        }),
+        gamePhase: state.gamePhase || 'waiting',
+        currentField: state.playState?.currentField ?? null,
+        currentTurn: currentTurnPlayerId,
+        blowState: state.blowState,
+        teamScores: state.teamScores,
+        you: player.playerId,
+        negriCard: state.playState?.negriCard ?? null,
+        fields: state.playState?.fields ?? [],
+        roomId,
+        hostId: room.hostId,
+        pointsToWin: state.pointsToWin,
+      },
+    };
   }
 
   private syncGlobalConnectionUser(

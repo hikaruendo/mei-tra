@@ -1061,6 +1061,47 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
+  @SubscribeMessage('sync-game-state')
+  async handleSyncGameState(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId?: string },
+  ): Promise<void> {
+    const roomId = data.roomId ?? this.playerRooms.get(client.id);
+    if (!roomId) {
+      return;
+    }
+
+    let authenticatedUser = this.getAuthenticatedUser(client);
+    if (!authenticatedUser) {
+      const token = client.handshake.auth?.token;
+      if (typeof token !== 'string') {
+        return;
+      }
+
+      const refreshedAuthenticatedUser =
+        await this.authService.getUserFromSocketToken(token);
+      if (!refreshedAuthenticatedUser) {
+        return;
+      }
+      authenticatedUser = refreshedAuthenticatedUser;
+      (client.data as { user?: AuthenticatedUser }).user = authenticatedUser;
+    }
+
+    const snapshot = await this.reconnectionUseCase.getActiveGameSnapshot({
+      roomId,
+      authenticatedUser,
+    });
+    if (!snapshot) {
+      return;
+    }
+
+    client.emit('game-state', snapshot.gameState);
+    client.emit('reconnect-token', snapshot.reconnectToken);
+    if (snapshot.currentTurnPlayerId) {
+      void this.startTurnAckMonitor(roomId, snapshot.currentTurnPlayerId);
+    }
+  }
+
   @SubscribeMessage('change-player-team')
   async handleChangePlayerTeam(
     @ConnectedSocket() client: Socket,
