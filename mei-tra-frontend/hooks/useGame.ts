@@ -19,6 +19,7 @@ import type {
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
+  SyncGameStatePayload,
   TransportGamePhase,
   TransportTeamScores,
   UpdatePhasePayload,
@@ -1048,7 +1049,10 @@ export const useGame = () => {
       gameStateSyncKeyRef.current !== gameStateSyncKey
     ) {
       gameStateSyncKeyRef.current = gameStateSyncKey;
-      socket.emit('sync-game-state', { roomId: storedRoomId });
+      const payload: SyncGameStatePayload = {
+        roomId: storedRoomId ?? undefined,
+      };
+      socket.emit('sync-game-state', payload);
     }
 
     // Cleanup socket handlers

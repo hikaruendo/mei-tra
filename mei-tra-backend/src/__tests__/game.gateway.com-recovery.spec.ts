@@ -111,16 +111,15 @@ describe('GameGateway COM recovery integration', () => {
 
     await gateway.handleSyncGameState(client, { roomId: 'room-1' });
 
-    expect(testGateway.reconnectionUseCase.getActiveGameSnapshot).toHaveBeenCalledWith({
+    expect(
+      testGateway.reconnectionUseCase.getActiveGameSnapshot,
+    ).toHaveBeenCalledWith({
       roomId: 'room-1',
       authenticatedUser,
     });
     expect(testGateway.reconnectionUseCase.execute).not.toHaveBeenCalled();
     expect(client.emit).toHaveBeenCalledWith('game-state', gameState);
     expect(client.emit).toHaveBeenCalledWith('reconnect-token', 'player-1');
-    expect(testGateway.startTurnAckMonitor).toHaveBeenCalledWith(
-      'room-1',
-      'player-2',
-    );
+    expect(testGateway.startTurnAckMonitor).not.toHaveBeenCalled();
   });
 });

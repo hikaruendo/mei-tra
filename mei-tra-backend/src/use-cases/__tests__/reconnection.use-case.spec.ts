@@ -178,7 +178,6 @@ describe('ReconnectionUseCase', () => {
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
         pointsToWin: 10,
       }),
-      getTransportPlayers: jest.fn((players) => players),
     };
     const roomService = {
       getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
@@ -235,16 +234,16 @@ describe('ReconnectionUseCase', () => {
       },
     });
 
-    expect(snapshot).toEqual(
-      expect.objectContaining({
-        selfPlayerId: 'seat-1',
-        reconnectToken: 'seat-1',
-        currentTurnPlayerId: 'player-2',
-        gameState: expect.objectContaining({
-          currentTurn: 'player-2',
-          you: 'seat-1',
-        }),
-      }),
+    expect(snapshot?.selfPlayerId).toBe('seat-1');
+    expect(snapshot?.reconnectToken).toBe('seat-1');
+    expect(snapshot?.currentTurnPlayerId).toBe('player-2');
+    expect(snapshot?.gameState.currentTurn).toBe('player-2');
+    expect(snapshot?.gameState.you).toBe('seat-1');
+    expect(snapshot?.gameState.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ playerId: 'seat-1', hand: ['A♠'] }),
+        expect.objectContaining({ playerId: 'player-2', hand: [] }),
+      ]),
     );
     expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
     expect(roomService.listRooms).not.toHaveBeenCalled();

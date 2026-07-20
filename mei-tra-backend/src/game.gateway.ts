@@ -13,6 +13,7 @@ import type {
   ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
+  SyncGameStatePayload,
 } from '@contracts/game';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
@@ -1064,7 +1065,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sync-game-state')
   async handleSyncGameState(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId?: string },
+    @MessageBody() data: SyncGameStatePayload,
   ): Promise<void> {
     const roomId = data.roomId ?? this.playerRooms.get(client.id);
     if (!roomId) {
@@ -1073,7 +1074,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     let authenticatedUser = this.getAuthenticatedUser(client);
     if (!authenticatedUser) {
-      const token = client.handshake.auth?.token;
+      const auth = client.handshake.auth as { token?: unknown };
+      const token = auth.token;
       if (typeof token !== 'string') {
         return;
       }
@@ -1097,9 +1099,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     client.emit('game-state', snapshot.gameState);
     client.emit('reconnect-token', snapshot.reconnectToken);
-    if (snapshot.currentTurnPlayerId) {
-      void this.startTurnAckMonitor(roomId, snapshot.currentTurnPlayerId);
-    }
   }
 
   @SubscribeMessage('change-player-team')

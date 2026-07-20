@@ -89,6 +89,10 @@ export interface GameStatePayload {
   pointsToWin: number;
 }
 
+export interface SyncGameStatePayload {
+  roomId?: string;
+}
+
 export type ReconnectionFailureCode =
   | 'roomUnavailable'
   | 'sessionInvalid'
