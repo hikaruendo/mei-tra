@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IFillWithComUseCase } from './interfaces/fill-with-com.use-case.interface';
-import { Room } from '../types/room.types';
+import { Room, RoomStatus } from '../types/room.types';
 import { Team } from '../types/game.types';
 
 @Injectable()
@@ -19,6 +19,10 @@ export class ShuffleTeamsUseCase {
     let room = await this.roomService.getRoom(request.roomId);
     if (!room) {
       return { success: false, error: 'Room not found' };
+    }
+
+    if (room.status !== RoomStatus.WAITING) {
+      return { success: false, error: 'Teams can only be shuffled while waiting' };
     }
 
     if (room.hostId !== request.playerId) {
