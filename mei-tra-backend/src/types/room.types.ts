@@ -13,6 +13,7 @@ export interface RoomPlayer extends SessionUser, PlayerGameplayState {
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;
+  seatIndex?: number;
 }
 
 export interface Room {

@@ -129,10 +129,10 @@ export class GameStateService implements IGameStateService {
       }
 
       if (
-        normalizedPlayer.hand !== rawPlayer.hand ||
-        normalizedPlayer.isPasser !== rawPlayer.isPasser ||
-        normalizedPlayer.hasBroken !== rawPlayer.hasBroken ||
-        normalizedPlayer.hasRequiredBroken !== rawPlayer.hasRequiredBroken
+        !Array.isArray(rawPlayer.hand) ||
+        rawPlayer.isPasser === undefined ||
+        rawPlayer.hasBroken === undefined ||
+        rawPlayer.hasRequiredBroken === undefined
       ) {
         changed = true;
       }
@@ -289,6 +289,8 @@ export class GameStateService implements IGameStateService {
   }
 
   async reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void> {
+    const previousPlayers = this.state.players;
+    const previousTeamAssignments = this.state.teamAssignments;
     const currentPlayers = new Map(
       this.state.players.map((player) => [player.playerId, player]),
     );
@@ -325,7 +327,13 @@ export class GameStateService implements IGameStateService {
     });
 
     const hostId = roomPlayers.find((player) => player.isHost)?.playerId;
-    await this.persistRoster(roomPlayers, hostId);
+    try {
+      await this.persistRoster(roomPlayers, hostId);
+    } catch (error) {
+      this.state.players = previousPlayers;
+      this.state.teamAssignments = previousTeamAssignments;
+      throw error;
+    }
   }
 
   addPlayer(
@@ -699,7 +707,7 @@ export class GameStateService implements IGameStateService {
 
   async startGame(): Promise<void> {
     await this.transitionPhase('blow');
-    const state = this.getState();
+    let state = this.getState();
 
     // Arrange seats so partners sit opposite and turns follow seat order
     this.arrangePlayersForSeatOrder();
@@ -707,6 +715,7 @@ export class GameStateService implements IGameStateService {
     // Initialize game state
     state.deck = this.cardService.generateDeck();
     await this.dealCards();
+    state = this.getState();
 
     // Initialize play state
     state.playState = {

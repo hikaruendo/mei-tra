@@ -78,11 +78,11 @@ describe('SupabaseRoomRepository', () => {
       .mockResolvedValue({ data: roomsData, error: null });
     const roomsSelect = jest.fn().mockReturnValue({ order: roomsOrder });
 
-    const playerOrderByJoinedAt = jest
+    const playerOrderBySeatIndex = jest
       .fn()
       .mockResolvedValue({ data: roomPlayersData, error: null });
     const playerOrderByRoomId = jest.fn().mockReturnValue({
-      order: playerOrderByJoinedAt,
+      order: playerOrderBySeatIndex,
     });
     const playerIn = jest.fn().mockReturnValue({ order: playerOrderByRoomId });
     const playersSelect = jest.fn().mockReturnValue({ in: playerIn });
@@ -112,7 +112,7 @@ describe('SupabaseRoomRepository', () => {
     expect(playerOrderByRoomId).toHaveBeenCalledWith('room_id', {
       ascending: true,
     });
-    expect(playerOrderByJoinedAt).toHaveBeenCalledWith('joined_at', {
+    expect(playerOrderBySeatIndex).toHaveBeenCalledWith('seat_index', {
       ascending: true,
     });
     expect(rooms).toHaveLength(2);

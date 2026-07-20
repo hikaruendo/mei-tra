@@ -88,7 +88,20 @@ export class StartGameUseCase implements IStartGameUseCase {
       await this.roomService.updateRoomStatus(roomId, RoomStatus.PLAYING);
       await roomGameState.startGame();
 
-      const updatedState = roomGameState.getState();
+      let updatedState = roomGameState.getState();
+      if (
+        updatedState.blowState.currentBlowIndex !==
+        updatedState.currentPlayerIndex
+      ) {
+        await roomGameState.updateState({
+          currentPlayerIndex: updatedState.currentPlayerIndex,
+          blowState: {
+            ...updatedState.blowState,
+            currentBlowIndex: updatedState.currentPlayerIndex,
+          },
+        });
+        updatedState = roomGameState.getState();
+      }
       updatedState.pointsToWin = room.settings.pointsToWin;
 
       // Synchronize hands with room representation
@@ -106,7 +119,8 @@ export class StartGameUseCase implements IStartGameUseCase {
         p.isPasser = false;
       });
 
-      // firstBlowIndex is randomized inside roomGameState.startGame()
+      const currentTurnPlayer =
+        updatedState.players[updatedState.currentPlayerIndex];
       const firstBlowPlayer =
         updatedState.players[updatedState.blowState.currentBlowIndex];
 
@@ -139,7 +153,7 @@ export class StartGameUseCase implements IStartGameUseCase {
             scores: updatedState.teamScores,
             winner: null,
           },
-          currentTurnPlayerId: firstBlowPlayer.playerId,
+          currentTurnPlayerId: currentTurnPlayer.playerId,
         },
       };
     } catch (error) {

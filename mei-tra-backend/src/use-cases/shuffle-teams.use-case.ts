@@ -49,22 +49,18 @@ export class ShuffleTeamsUseCase {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     const half = Math.floor(shuffled.length / 2);
-    shuffled.forEach((player, idx) => {
-      player.team = (idx < half ? 0 : 1) as Team;
-    });
+    const shuffledPlayers = shuffled.map((player, seatIndex) => ({
+      ...player,
+      team: (seatIndex < half ? 0 : 1) as Team,
+      seatIndex,
+    }));
 
-    const updated = await this.roomService.updatePlayersInRoom(
-      request.roomId,
-      Object.fromEntries(
-        shuffled.map((player) => [
-          player.playerId,
-          {
-            team: player.team,
-          },
-        ]),
-      ),
-    );
-    if (!updated) {
+    try {
+      const roomGameState = await this.roomService.getRoomGameState(
+        request.roomId,
+      );
+      await roomGameState.reconcileWaitingRoomPlayers(shuffledPlayers);
+    } catch {
       return { success: false, error: 'Failed to change teams' };
     }
 

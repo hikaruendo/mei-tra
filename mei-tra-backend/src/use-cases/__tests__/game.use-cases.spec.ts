@@ -681,6 +681,78 @@ describe('Game Use Cases', () => {
       );
     });
 
+    it('synchronizes the initial blow index with the persisted current turn', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new StartGameUseCase(roomService);
+      const room: Room = {
+        ...baseRoom,
+        status: RoomStatus.READY,
+        players: baseRoom.players.map((player) => ({
+          ...player,
+          isReady: true,
+        })) as RoomPlayer[],
+      };
+      const state = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            team: 0 as const,
+            hand: [],
+            isPasser: false,
+          },
+          {
+            playerId: 'player-2',
+            name: 'Player 2',
+            team: 1 as const,
+            hand: [],
+            isPasser: false,
+          },
+        ] as DomainPlayer[],
+        currentPlayerIndex: 1,
+        blowState: {
+          currentBlowIndex: 0,
+          currentTrump: null,
+          currentHighestDeclaration: null,
+          declarations: [],
+          lastPasser: null,
+          isRoundCancelled: false,
+        },
+        teamScores: {
+          0: { play: 0, total: 0 },
+          1: { play: 0, total: 0 },
+        } as TeamScores,
+        pointsToWin: 0,
+        gamePhase: 'blow' as GamePhase,
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        startGame: jest.fn().mockResolvedValue(undefined),
+        updateState: jest.fn(async (updates) => {
+          state.currentPlayerIndex = updates.currentPlayerIndex;
+          state.blowState = updates.blowState;
+        }),
+      } as unknown as GameStateService;
+
+      roomService.getRoom.mockResolvedValue(room);
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.canStartGame.mockResolvedValue({ canStart: true });
+      roomService.updateRoomStatus.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        playerId: 'player-1',
+        roomId: room.id,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.currentTurnPlayerId).toBe('player-2');
+      expect(state.blowState.currentBlowIndex).toBe(1);
+      expect(roomGameState.updateState).toHaveBeenCalledWith({
+        currentPlayerIndex: 1,
+        blowState: expect.objectContaining({ currentBlowIndex: 1 }),
+      });
+    });
+
     it('rebuilds state players from room seat order before starting', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new StartGameUseCase(roomService);
@@ -1433,6 +1505,7 @@ describe('Game Use Cases', () => {
           playedBy: ['player-1'],
         }),
         players: expect.any(Array),
+        nextPlayerId: 'player-2',
       });
       const updateTurnEvent = result.events?.find(
         (evt) => evt.event === 'update-turn',

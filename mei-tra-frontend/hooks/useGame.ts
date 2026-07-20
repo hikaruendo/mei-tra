@@ -853,7 +853,11 @@ export const useGame = () => {
           setCurrentTrump(currentHighestDeclaration.trumpType);
         }
       },
-      'card-played': ({ field, players: updatedPlayers }: CardPlayedPayload) => {
+      'card-played': ({
+        field,
+        players: updatedPlayers,
+        nextPlayerId,
+      }: CardPlayedPayload) => {
         setCurrentField(field);
         const nextPlayers = mergePlayersPreservingIdentity(
           players,
@@ -861,6 +865,9 @@ export const useGame = () => {
         );
         setPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
+        if (nextPlayerId) {
+          setWhoseTurn(nextPlayerId);
+        }
       },
       'field-updated': (field: Field) => {
         setCurrentField(field);

@@ -186,7 +186,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const legacyPlayers = gameState.players.map((player) =>
       toPersistedGamePlayer(player),
     );
-    const persistedRoomPlayers = roomPlayers.map((player) => ({
+    const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
       playerId: player.playerId,
       userId: player.userId ?? null,
       name: player.name,
@@ -195,6 +195,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       isHost: player.isHost,
       isCOM: player.isCOM ?? false,
       joinedAt: player.joinedAt.toISOString(),
+      seatIndex,
     }));
 
     try {
@@ -388,7 +389,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const statePlayers = new Map(
       gameState.players.map((player) => [player.playerId, player]),
     );
-    const rows = roomPlayers.map((player) => {
+    const rows = roomPlayers.map((player, seatIndex) => {
       const statePlayer = statePlayers.get(player.playerId);
       return {
         room_id: roomId,
@@ -405,6 +406,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         is_host: player.isHost,
         is_com: player.isCOM ?? false,
         joined_at: player.joinedAt.toISOString(),
+        seat_index: seatIndex,
       };
     });
 
@@ -447,7 +449,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       .from('room_players')
       .select('*')
       .eq('room_id', roomId)
-      .order('joined_at', { ascending: true });
+      .order('seat_index', { ascending: true });
 
     if (error) {
       throw new Error(`Failed to fetch room players: ${error.message}`);

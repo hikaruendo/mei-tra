@@ -4,7 +4,7 @@ import { IFillWithComUseCase } from '../interfaces/fill-with-com.use-case.interf
 import { RoomPlayer, RoomStatus } from '../../types/room.types';
 
 describe('ShuffleTeamsUseCase', () => {
-  it('fills empty seats before shuffling and persists the updated room', async () => {
+  it('fills empty seats and atomically persists shuffled seats and teams', async () => {
     const room = {
       id: 'room-1',
       hostId: 'host',
@@ -24,34 +24,37 @@ describe('ShuffleTeamsUseCase', () => {
         { playerId: 'com-2', team: 1 },
       ],
     };
+    const roomGameState = {
+      reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
+    };
     const roomService = {
       getRoom: jest
         .fn()
         .mockResolvedValueOnce(room)
         .mockResolvedValueOnce(updatedRoom),
-      updatePlayersInRoom: jest.fn().mockResolvedValue(true),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest.fn().mockResolvedValue({ success: true, updatedRoom }),
     } as unknown as IFillWithComUseCase;
     const useCase = new ShuffleTeamsUseCase(roomService, fillWithComUseCase);
 
-    const result = await useCase.execute({
-      roomId: 'room-1',
-      playerId: 'host',
-    });
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+    const result = await useCase.execute({ roomId: 'room-1', playerId: 'host' });
+    randomSpy.mockRestore();
 
     expect(result.success).toBe(true);
     expect(fillWithComUseCase.execute).toHaveBeenCalled();
-    expect(roomService.updatePlayersInRoom).toHaveBeenCalledTimes(1);
-    const [, updates] = jest.mocked(roomService.updatePlayersInRoom).mock
+    expect(roomGameState.reconcileWaitingRoomPlayers).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ playerId: 'host', team: 1, seatIndex: 3 }),
+      ]),
+    );
+    const [shuffledPlayers] = roomGameState.reconcileWaitingRoomPlayers.mock
       .calls[0];
-    expect(
-      Object.values(updates).every(
-        (playerUpdates: Partial<RoomPlayer>) =>
-          playerUpdates.team === 0 || playerUpdates.team === 1,
-      ),
-    ).toBe(true);
+    expect(shuffledPlayers.map((player: RoomPlayer) => player.seatIndex)).toEqual(
+      [0, 1, 2, 3],
+    );
   });
 
   it('returns failure when empty seats cannot be filled', async () => {
@@ -64,7 +67,7 @@ describe('ShuffleTeamsUseCase', () => {
     };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(room),
-      updatePlayersInRoom: jest.fn(),
+      getRoomGameState: jest.fn(),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest
@@ -79,7 +82,7 @@ describe('ShuffleTeamsUseCase', () => {
     });
 
     expect(result).toEqual({ success: false, error: 'fill failed' });
-    expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
+    expect(roomService.getRoomGameState).not.toHaveBeenCalled();
   });
 
   it('rejects shuffling after the game has started', async () => {
@@ -97,7 +100,7 @@ describe('ShuffleTeamsUseCase', () => {
     };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(room),
-      updatePlayersInRoom: jest.fn(),
+      getRoomGameState: jest.fn(),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest.fn(),
@@ -114,10 +117,10 @@ describe('ShuffleTeamsUseCase', () => {
       error: 'Teams can only be shuffled while waiting',
     });
     expect(fillWithComUseCase.execute).not.toHaveBeenCalled();
-    expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
+    expect(roomService.getRoomGameState).not.toHaveBeenCalled();
   });
 
-  it('returns failure when any player team update fails', async () => {
+  it('returns failure when the atomic roster update fails', async () => {
     const room = {
       id: 'room-1',
       hostId: 'host',
@@ -130,9 +133,12 @@ describe('ShuffleTeamsUseCase', () => {
       ],
       updatedAt: new Date(),
     };
+    const roomGameState = {
+      reconcileWaitingRoomPlayers: jest.fn().mockRejectedValue(new Error('db')),
+    };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(room),
-      updatePlayersInRoom: jest.fn().mockResolvedValue(false),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest.fn(),
@@ -148,7 +154,7 @@ describe('ShuffleTeamsUseCase', () => {
       success: false,
       error: 'Failed to change teams',
     });
-    expect(roomService.updatePlayersInRoom).toHaveBeenCalledTimes(1);
+    expect(roomGameState.reconcileWaitingRoomPlayers).toHaveBeenCalledTimes(1);
     expect(roomService.getRoom).toHaveBeenCalledTimes(1);
   });
 });
