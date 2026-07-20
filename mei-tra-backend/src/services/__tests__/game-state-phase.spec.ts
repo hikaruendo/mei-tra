@@ -70,6 +70,37 @@ describe('GameStateService phase transitions', () => {
     expect(service.getState().version).toBe(2);
   });
 
+  it('keeps the persisted version when resetting a round', async () => {
+    const state = service.getState();
+    state.version = 96;
+    state.teamAssignments = { 'player-1': 0 };
+
+    await service.resetRoundState();
+    expect(service.getState().version).toBe(96);
+    expect(service.getState().teamAssignments).toEqual({ 'player-1': 0 });
+
+    await service.saveState();
+
+    expect(repository.update).toHaveBeenCalledWith(
+      'room-1',
+      expect.any(Object),
+      96,
+    );
+  });
+
+  it('persists round changes through an explicit state update', async () => {
+    const state = service.getState();
+    state.version = 96;
+
+    await service.updateState({ roundNumber: 2 });
+
+    expect(repository.update).toHaveBeenCalledWith(
+      'room-1',
+      { roundNumber: 2 },
+      96,
+    );
+  });
+
   it('records a completed field without persisting an intermediate snapshot', () => {
     const state = service.getState();
     state.players = [

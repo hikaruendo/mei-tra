@@ -314,7 +314,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     state: GameState,
   ): Promise<GatewayEvent[]> {
     await roomGameState.resetRoundState();
-    roomGameState.roundNumber = state.roundNumber + 1;
+    await roomGameState.updateState({
+      roundNumber: state.roundNumber + 1,
+    });
 
     const updatedState = roomGameState.getState();
     const nextBlowIndex =

@@ -3025,6 +3025,55 @@ describe('Game Use Cases', () => {
       expect(result.gameOver).toBeUndefined();
     });
 
+    it('persists the next round number before starting the next round', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      state.players[0].hand = ['A', 'C'];
+      state.players[1].hand = ['E', 'F'];
+      const updateState = jest.fn(async (updates) => {
+        Object.assign(state, updates);
+      });
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: jest.fn(() => ({
+          cards: ['A', 'C', 'E', 'F'],
+          winnerId: 'player-1',
+          winnerTeam: 0,
+          dealerId: 'player-1',
+        })),
+        saveState: jest.fn(),
+        resetRoundState: jest.fn(async () => {}),
+        transitionPhase: jest.fn(async () => {}),
+        updateState,
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: {
+          cards: ['A', 'C', 'E', 'F'],
+          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          baseCard: 'A',
+          dealerId: 'player-1',
+          isComplete: true,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(updateState).toHaveBeenNthCalledWith(1, { roundNumber: 2 });
+      expect(roomGameState.transitionPhase).toHaveBeenCalledWith('blow');
+      expect(roomGameState.saveState).toHaveBeenCalled();
+    });
+
     it('produces game over instruction when team reaches target', async () => {
       const roomService = createRoomServiceMock();
       const playService = createPlayServiceMock('player-1');
