@@ -48,6 +48,7 @@ import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
 import { reconnectSocket } from '../app/socket';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
+import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -865,8 +866,10 @@ export const useGame = () => {
         );
         setPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        if (nextPlayerId) {
-          setWhoseTurn(nextPlayerId);
+        const resolvedNextPlayerId =
+          nextPlayerId ?? inferNextTurnAfterCardPlayed(nextPlayers, field);
+        if (resolvedNextPlayerId) {
+          setWhoseTurn(resolvedNextPlayerId);
         }
       },
       'field-updated': (field: Field) => {
