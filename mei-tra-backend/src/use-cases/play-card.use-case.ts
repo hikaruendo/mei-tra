@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import type { CardPlayedPayload } from '@contracts/game';
 import {
   IPlayCardUseCase,
   PlayCardRequest,
@@ -108,17 +109,18 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         },
       });
 
+      const cardPlayedPayload: CardPlayedPayload = {
+        playerId: player.playerId,
+        card,
+        field: currentField,
+        players: resolveTransportPlayers(roomGameState, state.players),
+      };
       const events: PlayCardGatewayEvent[] = [
         {
           scope: 'room',
           roomId,
           event: 'card-played',
-          payload: {
-            playerId: player.playerId,
-            card,
-            field: currentField,
-            players: resolveTransportPlayers(roomGameState, state.players),
-          },
+          payload: cardPlayedPayload,
         },
       ];
 
@@ -146,6 +148,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       await roomGameState.nextTurn();
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
+        cardPlayedPayload.nextPlayerId = nextPlayer.playerId;
         events.push({
           scope: 'room',
           roomId,

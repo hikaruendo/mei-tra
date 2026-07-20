@@ -31,6 +31,10 @@ describe('GameStateService phase transitions', () => {
     service.setRoomId('room-1');
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('persists a legal transition', async () => {
     await service.transitionPhase('blow');
 
@@ -136,5 +140,56 @@ describe('GameStateService phase transitions', () => {
     );
     expect(state.playState.fields).toHaveLength(1);
     expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('selects the initial blow player at random instead of the host seat', async () => {
+    repository.update.mockImplementation(
+      async (_roomId, updates, expectedVersion) => ({
+        ...service.getState(),
+        ...updates,
+        version: (expectedVersion ?? 0) + 1,
+      }),
+    );
+    const state = service.getState();
+    state.players = [
+      {
+        playerId: 'host-player',
+        name: 'Host',
+        team: 0,
+        hand: [],
+        isPasser: false,
+      },
+      {
+        playerId: 'player-2',
+        name: 'Player 2',
+        team: 1,
+        hand: [],
+        isPasser: false,
+      },
+      {
+        playerId: 'player-3',
+        name: 'Player 3',
+        team: 0,
+        hand: [],
+        isPasser: false,
+      },
+      {
+        playerId: 'player-4',
+        name: 'Player 4',
+        team: 1,
+        hand: [],
+        isPasser: false,
+      },
+    ];
+    jest.spyOn(Math, 'random').mockReturnValue(0.6);
+
+    await service.startGame();
+
+    const startedState = service.getState();
+    expect(startedState.currentPlayerIndex).toBe(2);
+    expect(startedState.players[startedState.currentPlayerIndex].playerId).toBe(
+      'player-3',
+    );
+    expect(startedState.blowState.currentBlowIndex).toBe(2);
   });
 });

@@ -223,6 +223,7 @@ describe('Reconnection Token Management', () => {
 
         expect(foundPlayer1?.playerId).toBe('player-1');
         expect(foundPlayer2?.playerId).toBe('player-2');
+        expect(gameStateRepository.update).not.toHaveBeenCalled();
       });
 
       it('should handle empty players array', async () => {

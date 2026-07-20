@@ -70,6 +70,7 @@ export interface Database {
           is_host: boolean;
           is_com: boolean;
           joined_at: string;
+          seat_index: number;
           user_id: string | null;
         };
         Insert: {
@@ -87,6 +88,7 @@ export interface Database {
           is_host?: boolean;
           is_com?: boolean;
           joined_at?: string;
+          seat_index?: number;
           user_id?: string | null;
         };
         Update: {
@@ -104,6 +106,7 @@ export interface Database {
           is_host?: boolean;
           is_com?: boolean;
           joined_at?: string;
+          seat_index?: number;
           user_id?: string | null;
         };
       };

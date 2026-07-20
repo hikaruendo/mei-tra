@@ -246,10 +246,47 @@ describe('SupabaseGameStateRepository', () => {
             isHost: true,
             isCOM: false,
             joinedAt: roomPlayerRow.joined_at,
+            seatIndex: 0,
           },
         ],
       }),
     );
     expect(state?.version).toBe(5);
+  });
+
+  it('reassigns sequential seat indexes when persisting a roster', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: { ...gameStateRow, version: 5 },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+    const secondPlayer = {
+      ...createRoomPlayer(),
+      playerId: 'player-2',
+      name: 'Player 2',
+      seatIndex: 0,
+    };
+
+    await repository.persistRoomRoster(
+      gameStateRow.room_id,
+      [
+        { ...createRoomPlayer(), seatIndex: 7 },
+        secondPlayer,
+      ],
+      createState(),
+      'player-1',
+    );
+
+    expect(rpc).toHaveBeenCalledWith(
+      'persist_room_roster_atomic',
+      expect.objectContaining({
+        p_room_players: expect.arrayContaining([
+          expect.objectContaining({ playerId: 'player-1', seatIndex: 0 }),
+          expect.objectContaining({ playerId: 'player-2', seatIndex: 1 }),
+        ]),
+      }),
+    );
   });
 });

@@ -36,6 +36,7 @@ describe('Game event instrumentation', () => {
             },
           ],
           teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+          currentPlayerIndex: 0,
           gamePhase: 'blow',
           roundNumber: 1,
           blowState: { currentBlowIndex: 0 },

@@ -278,6 +278,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         is_host: player.isHost,
         is_com: player.isCOM ?? false,
         joined_at: player.joinedAt.toISOString(),
+        seat_index: await this.getNextSeatIndex(roomId),
       });
 
       if (error) {
@@ -400,7 +401,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     roomId: string,
     players: RoomPlayer[],
   ): Promise<void> {
-    const playerInserts = players.map((player) => ({
+    const playerInserts = players.map((player, seatIndex) => ({
       room_id: roomId,
       player_id: player.playerId,
       socket_id: player.socketId,
@@ -415,6 +416,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       is_host: player.isHost,
       is_com: player.isCOM ?? false,
       joined_at: player.joinedAt.toISOString(),
+      seat_index: seatIndex,
     }));
 
     const { error } = await this.supabase
@@ -468,7 +470,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       .select('*')
       .in('room_id', roomIds)
       .order('room_id', { ascending: true })
-      .order('joined_at', { ascending: true });
+      .order('seat_index', { ascending: true });
 
     if (error) {
       throw new Error(`Failed to fetch room players: ${error.message}`);
@@ -500,6 +502,22 @@ export class SupabaseRoomRepository implements IRoomRepository {
       isHost: dbPlayer.is_host,
       isCOM: dbPlayer.is_com,
       joinedAt: new Date(dbPlayer.joined_at),
+      seatIndex: dbPlayer.seat_index,
     };
+  }
+
+  private async getNextSeatIndex(roomId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from('room_players')
+      .select('seat_index')
+      .eq('room_id', roomId)
+      .order('seat_index', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      throw new Error(`Failed to allocate seat index: ${error.message}`);
+    }
+
+    return (data?.[0]?.seat_index ?? -1) + 1;
   }
 }

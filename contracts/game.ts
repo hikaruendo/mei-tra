@@ -147,6 +147,7 @@ export interface CardPlayedPayload {
   card: string;
   field: FieldContract;
   players: PlayerContract[];
+  nextPlayerId?: string;
 }
 
 export type UpdateTurnPayload = string;
