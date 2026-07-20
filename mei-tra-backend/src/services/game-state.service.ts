@@ -640,18 +640,22 @@ export class GameStateService implements IGameStateService {
 
   async resetRoundState(): Promise<void> {
     // Keep the current players, scores, and game settings
+    const version = this.state.version;
     const players = [...this.state.players];
     const teamScores = { ...this.state.teamScores };
     const teamScoreRecords = { ...this.state.teamScoreRecords };
+    const teamAssignments = { ...this.state.teamAssignments };
     const pointsToWin = this.state.pointsToWin;
 
     // Initialize new state with preserved pointsToWin
     this.initializeState(pointsToWin);
 
     // Restore players and scores
+    this.state.version = version;
     this.state.players = players;
     this.state.teamScores = teamScores;
     this.state.teamScoreRecords = teamScoreRecords;
+    this.state.teamAssignments = teamAssignments;
 
     // Generate new deck and deal cards
     this.state.deck = this.cardService.generateDeck();
@@ -664,15 +668,6 @@ export class GameStateService implements IGameStateService {
 
   set roundNumber(value: number) {
     this.state.roundNumber = value;
-    void this.enqueuePersistence(() =>
-      this.stateManager.persistRoundNumber(this.roomId, this.state, value),
-    )
-      .then((version) => {
-        this.state.version = version;
-      })
-      .catch((error) => {
-        this.logger.error('Failed to persist round number:', error);
-      });
   }
 
   get currentTurn(): string | null {
