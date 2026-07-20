@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refactor Meitra"
+  short_description: "Refactor Meitra without breaking realtime game invariants"
+  default_prompt: "Use $refactor-meitra to refactor this Meitra code while preserving game rules, reconnect behavior, and migration safety."

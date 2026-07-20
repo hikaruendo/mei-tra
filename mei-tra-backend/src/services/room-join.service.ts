@@ -1,5 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
+import { Injectable } from '@nestjs/common';
 import { DomainPlayer, Team } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
@@ -25,8 +24,6 @@ interface RestoredSeatData {
 @Injectable()
 export class RoomJoinService {
   constructor(
-    @Inject('IRoomRepository')
-    private readonly roomRepository: IRoomRepository,
     private readonly playerReferenceRemapperService: PlayerReferenceRemapperService,
   ) {}
 
@@ -37,17 +34,58 @@ export class RoomJoinService {
     user,
     vacantSeats,
   }: JoinRoomParams): Promise<boolean> {
+    void roomId;
     const state = gameState.getState();
-
-    if (this.countActualPlayers(room.players) >= room.settings.maxPlayers) {
-      return false;
-    }
 
     const existingPlayer = room.players.find(
       (player) => player.playerId === user.playerId,
     );
     if (existingPlayer) {
+      const statePlayer = state.players.find(
+        (player) => player.playerId === existingPlayer.playerId,
+      );
+      const isWaitingRoom =
+        state.gamePhase === null || state.gamePhase === 'waiting';
+      if (!statePlayer && !isWaitingRoom) {
+        return false;
+      }
+
+      const updatedPlayer: RoomPlayer = {
+        ...existingPlayer,
+        ...user,
+        userId: user.userId ?? existingPlayer.userId,
+        isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
+      };
+      Object.assign(existingPlayer, updatedPlayer);
+      if (statePlayer) {
+        statePlayer.name = updatedPlayer.name;
+        statePlayer.team = updatedPlayer.team;
+      } else {
+        state.players.push(toDomainPlayer(updatedPlayer));
+      }
+      state.teamAssignments[updatedPlayer.playerId] = updatedPlayer.team;
+
+      gameState.registerPlayerToken(
+        updatedPlayer.playerId,
+        updatedPlayer.playerId,
+      );
+      if (updatedPlayer.userId) {
+        gameState.registerPlayerToken(
+          updatedPlayer.userId,
+          updatedPlayer.playerId,
+        );
+      }
+      await gameState.applyPlayerConnectionState(updatedPlayer.playerId, {
+        socketId: updatedPlayer.socketId,
+        userId: updatedPlayer.userId,
+        isAuthenticated: updatedPlayer.isAuthenticated,
+      });
+      await gameState.persistRoster(room.players, room.hostId);
       return true;
+    }
+
+    if (this.countActualPlayers(room.players) >= room.settings.maxPlayers) {
+      return false;
     }
 
     const roomVacant = vacantSeats[roomId] || {};
@@ -198,19 +236,6 @@ export class RoomJoinService {
         : new Date(),
     };
 
-    if (replacingComId) {
-      await this.roomRepository.removePlayer(roomId, replacingComId);
-      const addSuccess = await this.roomRepository.addPlayer(roomId, player);
-      if (!addSuccess) {
-        return false;
-      }
-    } else {
-      const addSuccess = await this.roomRepository.addPlayer(roomId, player);
-      if (!addSuccess) {
-        return false;
-      }
-    }
-
     if (assignedIndex !== -1) {
       room.players[assignedIndex] = player;
     } else {
@@ -284,8 +309,15 @@ export class RoomJoinService {
     state.teamAssignments[player.playerId] = player.team;
 
     gameState.registerPlayerToken(player.playerId, player.playerId);
-
-    await this.roomRepository.updateLastActivity(roomId);
+    if (player.userId) {
+      gameState.registerPlayerToken(player.userId, player.playerId);
+    }
+    await gameState.applyPlayerConnectionState(player.playerId, {
+      socketId: player.socketId,
+      userId: player.userId,
+      isAuthenticated: player.isAuthenticated,
+    });
+    await gameState.persistRoster(room.players, room.hostId);
     return true;
   }
 

@@ -1,5 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
+import { Inject, Injectable } from '@nestjs/common';
 import { DomainPlayer, Team } from '../types/game.types';
 import { toDomainPlayer, toRoomPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
@@ -21,11 +20,7 @@ export type VacantSeats = Record<
 
 @Injectable()
 export class ComSessionService {
-  private readonly logger = new Logger(ComSessionService.name);
-
   constructor(
-    @Inject('IRoomRepository')
-    private readonly roomRepository: IRoomRepository,
     @Inject('IComPlayerService')
     private readonly comPlayerService: IComPlayerService,
     private readonly playerReferenceRemapper: PlayerReferenceRemapperService,
@@ -92,6 +87,7 @@ export class ComSessionService {
     room: Room,
     gameState: GameStateService,
   ): Promise<void> {
+    void roomId;
     const state = gameState.getState();
     const capacity = room.settings?.maxPlayers ?? 4;
     const actualCount = room.players.filter((player) => !player.isCOM).length;
@@ -99,6 +95,7 @@ export class ComSessionService {
       (player) => player.isCOM && !player.isReady,
     ).length;
     const slotsToFill = capacity - actualCount - placeholderCount;
+    let rosterChanged = false;
 
     for (let i = 0; i < slotsToFill; i++) {
       const idx = actualCount + placeholderCount + i;
@@ -110,38 +107,43 @@ export class ComSessionService {
       ).length;
       const team = (team0Count <= team1Count ? 0 : 1) as Team;
       const placeholder = this.createCOMPlaceholder(idx, team);
-      await this.roomRepository.addPlayer(roomId, placeholder);
       room.players.push(placeholder);
       state.players.push(toDomainPlayer(placeholder));
       state.teamAssignments[placeholder.playerId] = placeholder.team;
       gameState.registerPlayerToken(placeholder.playerId, placeholder.playerId);
+      rosterChanged = true;
+    }
+
+    if (rosterChanged) {
+      await gameState.persistRoster(room.players, room.hostId);
     }
   }
 
   async fillVacantSeatsWithCOM(
     roomId: string,
     room: Room,
-    gameState?: GameStateService,
+    gameState: GameStateService,
   ): Promise<void> {
+    void roomId;
     const lobbyComPlaceholders = room.players.filter((player) => player.isCOM);
 
-    await Promise.all(
-      lobbyComPlaceholders.map(async (comPlaceholder) => {
-        await this.roomRepository.removePlayer(roomId, comPlaceholder.playerId);
-        room.players = room.players.filter(
-          (player) => player.playerId !== comPlaceholder.playerId,
-        );
-        if (gameState) {
-          const state = gameState.getState();
-          state.players = state.players.filter(
-            (player) => player.playerId !== comPlaceholder.playerId,
-          );
-        }
-      }),
+    const placeholderIds = new Set(
+      lobbyComPlaceholders.map((player) => player.playerId),
     );
+    room.players = room.players.filter(
+      (player) => !placeholderIds.has(player.playerId),
+    );
+    const state = gameState.getState();
+    state.players = state.players.filter(
+      (player) => !placeholderIds.has(player.playerId),
+    );
+    placeholderIds.forEach((playerId) => {
+      delete state.teamAssignments[playerId];
+    });
 
     const maxPlayers = room.settings?.maxPlayers ?? 4;
     if (room.players.length >= maxPlayers) {
+      await gameState.persistRoster(room.players, room.hostId);
       return;
     }
 
@@ -170,34 +172,23 @@ export class ComSessionService {
         joinedAt: new Date(),
       });
 
-      const addResult = await this.roomRepository.addPlayer(
-        roomId,
-        roomComPlayer,
-      );
-      if (!addResult) {
-        this.logger.error(
-          `Failed to add COM player ${roomComPlayer.playerId} to room ${roomId}`,
-        );
-        throw new Error(`Failed to add COM player ${roomComPlayer.playerId}`);
-      }
-
       room.players.push(roomComPlayer);
-      if (gameState) {
-        const state = gameState.getState();
-        state.players.push(toDomainPlayer(comPlayer));
-        gameState.registerPlayerToken(
-          roomComPlayer.playerId,
-          roomComPlayer.playerId,
-        );
-      }
+      state.players.push(toDomainPlayer(comPlayer));
+      state.teamAssignments[roomComPlayer.playerId] = roomComPlayer.team;
+      gameState.registerPlayerToken(
+        roomComPlayer.playerId,
+        roomComPlayer.playerId,
+      );
     }
+
+    await gameState.persistRoster(room.players, room.hostId);
   }
 
   async convertPlayerToCOM(
     roomId: string,
     playerId: string,
     room: Room,
-    gameState: GameStateService | undefined,
+    gameState: GameStateService,
     vacantSeats: VacantSeats,
   ): Promise<boolean> {
     const playerIndex = room.players.findIndex(
@@ -211,10 +202,10 @@ export class ComSessionService {
       vacantSeats[roomId] = {};
     }
 
-    const state = gameState?.getState();
-    const gsIndex = state
-      ? state.players.findIndex((player) => player.playerId === playerId)
-      : -1;
+    const state = gameState.getState();
+    const gsIndex = state.players.findIndex(
+      (player) => player.playerId === playerId,
+    );
 
     const originalHand = room.players[playerIndex].hand ?? [];
     const uniqueIdx = `timeout-${playerIndex}-${Date.now()}`;
@@ -227,7 +218,7 @@ export class ComSessionService {
     vacantSeats[roomId][playerIndex] = {
       roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
       gamePlayer:
-        gsIndex !== -1 && state
+        gsIndex !== -1
           ? this.cloneGamePlayer(state.players[gsIndex])
           : undefined,
       replacementPlayerId: comPlayer.playerId,
@@ -235,30 +226,26 @@ export class ComSessionService {
 
     room.players[playerIndex] = comPlayer;
 
-    await this.roomRepository.removePlayer(roomId, playerId);
-    await this.roomRepository.addPlayer(roomId, comPlayer);
-
-    if (gameState && state) {
-      if (gsIndex !== -1) {
-        const originalGameHand = state.players[gsIndex].hand ?? [];
-        const comGamePlayer = this.createActiveCOMReplacement(
-          uniqueIdx,
-          state.players[gsIndex],
-          [...originalGameHand],
-        );
-        state.players[gsIndex] = toDomainPlayer(comGamePlayer);
-        this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
-          state,
-          playerId,
-          comGamePlayer.playerId,
-        );
-        if (state.teamAssignments[playerId] != null) {
-          delete state.teamAssignments[playerId];
-        }
-        state.teamAssignments[comGamePlayer.playerId] = comGamePlayer.team;
+    if (gsIndex !== -1) {
+      const originalGameHand = state.players[gsIndex].hand ?? [];
+      const comGamePlayer = this.createActiveCOMReplacement(
+        uniqueIdx,
+        state.players[gsIndex],
+        [...originalGameHand],
+      );
+      state.players[gsIndex] = toDomainPlayer(comGamePlayer);
+      this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
+        state,
+        playerId,
+        comGamePlayer.playerId,
+      );
+      if (state.teamAssignments[playerId] != null) {
+        delete state.teamAssignments[playerId];
       }
+      state.teamAssignments[comGamePlayer.playerId] = comGamePlayer.team;
     }
 
+    await gameState.persistRoster(room.players, room.hostId);
     return true;
   }
 }

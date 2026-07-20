@@ -297,6 +297,11 @@
     "initializing": "Initializing game...",
     "initializingActions": "Initializing game actions...",
     "paused": "Game is paused. It will resume when 4 players are present.",
+    "reconnectRecovery": {
+      "roomUnavailable": "Your previous room has ended. Please join again from the room list.",
+      "sessionInvalid": "Your previous seat could not be verified. Please join again from the room list.",
+      "stateInconsistent": "The server connection was restored. Please join the room again."
+    },
     "yourTurn": "Your turn",
     "waiting": "Waiting...",
     "orderButton": "Order",

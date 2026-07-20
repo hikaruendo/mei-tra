@@ -179,7 +179,7 @@ describe('UpdateAuthUseCase', () => {
         isAuthenticated: true,
       }),
     );
-    expect(roomGameState.saveState).toHaveBeenCalled();
+    expect(roomGameState.saveState).not.toHaveBeenCalled();
     expect(result.broadcastEvents).toContainEqual(
       expect.objectContaining({
         event: 'update-users',

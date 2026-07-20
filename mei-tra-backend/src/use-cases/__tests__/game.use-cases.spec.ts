@@ -49,6 +49,7 @@ describe('Game Use Cases', () => {
       updateRoomStatus: jest.fn(),
       fillVacantSeatsWithCOM: jest.fn(),
       updatePlayerInRoom: jest.fn(),
+      updatePlayersInRoom: jest.fn().mockResolvedValue(true),
       canStartGame: jest.fn(),
       createNewRoom: jest.fn(),
       leaveRoom: jest.fn(),
@@ -1083,7 +1084,7 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Each team must have at most 2 players');
-      expect(roomService.updatePlayerInRoom).not.toHaveBeenCalled();
+      expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
     });
 
     it('applies valid team changes', async () => {
@@ -1116,10 +1117,8 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(true);
 
-      const updatePlayerInRoomMock =
-        roomService.updatePlayerInRoom as jest.Mock;
-      expect(updatePlayerInRoomMock).toHaveBeenCalledWith(room.id, 'player-2', {
-        team: 0,
+      expect(roomService.updatePlayersInRoom).toHaveBeenCalledWith(room.id, {
+        'player-2': { team: 0 },
       });
       expect(
         result.updatedRoom?.players.find((p) => p.playerId === 'player-2')

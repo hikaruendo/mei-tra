@@ -62,3 +62,4 @@ backups/
 # Tracked schema sources
 !database/schema.sql
 !supabase/migrations/*.sql
+!supabase/tests/*.sql

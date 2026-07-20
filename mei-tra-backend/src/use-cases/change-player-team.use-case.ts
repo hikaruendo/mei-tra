@@ -73,13 +73,17 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
         };
       }
 
-      // Persist each team change to room_players table via updatePlayerInRoom.
-      // updateRoom() only saves rooms-table columns (name/hostId/status) and would
-      // return stale team values fetched from room_players.
-      for (const [pid, newTeam] of Object.entries(teamChanges)) {
-        await this.roomService.updatePlayerInRoom(roomId, pid, {
-          team: newTeam as Team,
-        });
+      const updated = await this.roomService.updatePlayersInRoom(
+        roomId,
+        Object.fromEntries(
+          Object.entries(teamChanges).map(([pid, newTeam]) => [
+            pid,
+            { team: newTeam as Team },
+          ]),
+        ),
+      );
+      if (!updated) {
+        return { success: false, error: 'Failed to change teams' };
       }
 
       // Re-fetch room so updatedRoom.players reflects the persisted team changes.

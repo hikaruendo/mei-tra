@@ -1,5 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
+import { Injectable } from '@nestjs/common';
 import { DomainPlayer } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
@@ -10,8 +9,6 @@ import { VacantSeats } from './com-session.service';
 @Injectable()
 export class SeatRestorationService {
   constructor(
-    @Inject('IRoomRepository')
-    private readonly roomRepository: IRoomRepository,
     private readonly playerReferenceRemapper: PlayerReferenceRemapperService,
   ) {}
 
@@ -67,17 +64,6 @@ export class SeatRestorationService {
     };
 
     room.players[currentSeatIndex] = restoredRoomPlayer;
-
-    await this.roomRepository.removePlayer(roomId, comPlayerId);
-    const addSuccess = await this.roomRepository.addPlayer(
-      roomId,
-      restoredRoomPlayer,
-    );
-    if (!addSuccess) {
-      await this.roomRepository.addPlayer(roomId, currentSeatPlayer);
-      room.players[currentSeatIndex] = currentSeatPlayer;
-      return false;
-    }
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
@@ -139,6 +125,7 @@ export class SeatRestorationService {
       delete vacantSeats[roomId];
     }
 
+    await gameState.persistRoster(room.players, room.hostId);
     return true;
   }
 }

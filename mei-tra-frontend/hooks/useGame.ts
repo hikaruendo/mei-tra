@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type {
+  BackToLobbyPayload,
   BlowStartedPayload,
   BrokenPayload,
   CardPlayedPayload,
@@ -13,6 +14,7 @@ import type {
   NewRoundStartedPayload,
   PlayerContract,
   PlayCardPayload,
+  ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
   RoundCancelledPayload,
@@ -49,6 +51,17 @@ import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 interface ProfileUpdatedPayload {
   userId: string;
 }
+
+const reconnectRecoveryMessageKeys: Record<
+  ReconnectionFailureCode,
+  | 'reconnectRecovery.roomUnavailable'
+  | 'reconnectRecovery.sessionInvalid'
+  | 'reconnectRecovery.stateInconsistent'
+> = {
+  roomUnavailable: 'reconnectRecovery.roomUnavailable',
+  sessionInvalid: 'reconnectRecovery.sessionInvalid',
+  stateInconsistent: 'reconnectRecovery.stateInconsistent',
+};
 
 const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
   const seen = new Set<string>();
@@ -894,7 +907,7 @@ export const useGame = () => {
         setCurrentHighestDeclaration(currentHighestDeclaration);
         setBlowDeclarations(blowDeclarations);
       },
-      'back-to-lobby': () => {
+      'back-to-lobby': (payload?: BackToLobbyPayload) => {
         console.warn('[useGame] back-to-lobby received', {
           currentRoomId,
           currentPlayerId,
@@ -904,6 +917,12 @@ export const useGame = () => {
               : null,
         });
         resetRoomState();
+        if (payload?.code) {
+          setNotification({
+            message: t(reconnectRecoveryMessageKeys[payload.code]),
+            type: 'warning',
+          });
+        }
       },
       'game-paused': ({ message }: { message: string }) => {
         setPaused(true);

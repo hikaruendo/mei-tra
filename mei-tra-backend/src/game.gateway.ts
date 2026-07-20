@@ -8,7 +8,9 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import type {
+  BackToLobbyPayload,
   PlayCardPayload,
+  ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
 } from '@contracts/game';
@@ -29,14 +31,16 @@ import { GatewayEvent } from './use-cases/interfaces/gateway-event.interface';
 import { IDeclareBlowUseCase } from './use-cases/interfaces/declare-blow.use-case.interface';
 import { IPassBlowUseCase } from './use-cases/interfaces/pass-blow.use-case.interface';
 import { ISelectNegriUseCase } from './use-cases/interfaces/select-negri.use-case.interface';
-import { IPlayCardUseCase } from './use-cases/interfaces/play-card.use-case.interface';
+import {
+  CompleteFieldTrigger,
+  IPlayCardUseCase,
+} from './use-cases/interfaces/play-card.use-case.interface';
 import { ISelectBaseSuitUseCase } from './use-cases/interfaces/select-base-suit.use-case.interface';
 import { IRevealBrokenHandUseCase } from './use-cases/interfaces/reveal-broken-hand.use-case.interface';
-import { ICompleteFieldUseCase } from './use-cases/interfaces/complete-field.use-case.interface';
+import { CompleteFieldResponse } from './use-cases/interfaces/complete-field.use-case.interface';
 import { IProcessGameOverUseCase } from './use-cases/interfaces/process-game-over.use-case.interface';
 import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.interface';
 import { IWatchRoomUseCase } from './use-cases/interfaces/watch-room.use-case.interface';
-import { IComAutoPlayUseCase } from './use-cases/interfaces/com-autoplay-use-case.interface';
 import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
 import { SessionUser } from './types/session.types';
@@ -51,6 +55,10 @@ import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
 import { Room } from './types/room.types';
 import { toRoomContract, toRoomContracts } from './types/room-adapters';
+import {
+  ComAutoPlayRecoveryHandlers,
+  ComAutoPlayRecoveryService,
+} from './services/com-autoplay-recovery.service';
 
 const DISCONNECT_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
 
@@ -68,6 +76,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(GameGateway.name);
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
+  private readonly comAutoPlayRecoveryHandlers: ComAutoPlayRecoveryHandlers = {
+    dispatchEvents: (events) => this.dispatchEvents(events),
+    processFieldCompletion: (roomId, response) =>
+      this.processFieldCompletionResult(roomId, response),
+  };
 
   constructor(
     @Inject('IGameStateService')
@@ -94,8 +107,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly selectBaseSuitUseCase: ISelectBaseSuitUseCase,
     @Inject('IRevealBrokenHandUseCase')
     private readonly revealBrokenHandUseCase: IRevealBrokenHandUseCase,
-    @Inject('ICompleteFieldUseCase')
-    private readonly completeFieldUseCase: ICompleteFieldUseCase,
     @Inject('IProcessGameOverUseCase')
     private readonly processGameOverUseCase: IProcessGameOverUseCase,
     @Inject('IUpdateAuthUseCase')
@@ -107,13 +118,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject('IFillWithComUseCase')
     private readonly fillWithComUseCase: IFillWithComUseCase,
     private readonly authService: AuthService,
-    @Inject('IComAutoPlayUseCase')
-    private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
     @Inject('IWatchRoomUseCase')
     private readonly watchRoomUseCase: IWatchRoomUseCase,
     @Inject('IActivityTrackerService')
     private readonly activityTracker: IActivityTrackerService,
     private readonly turnMonitorService: TurnMonitorService,
+    private readonly comAutoPlayRecoveryService: ComAutoPlayRecoveryService,
     private readonly reconnectionUseCase: ReconnectionUseCase,
     private readonly moderatePlayerUseCase: ModeratePlayerUseCase,
     private readonly shuffleTeamsUseCase: ShuffleTeamsUseCase,
@@ -335,7 +345,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private async processFieldCompletionResult(
     roomId: string,
-    response: Awaited<ReturnType<ICompleteFieldUseCase['execute']>>,
+    response: CompleteFieldResponse,
   ) {
     if (!response.success) {
       this.server
@@ -346,14 +356,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.dispatchEvents(response.events);
     this.dispatchEvents(response.delayedEvents);
-
-    const delayedEvents = response.delayedEvents ?? [];
-    const maxDelay = delayedEvents.reduce(
-      (max, event) => Math.max(max, event.delayMs ?? 0),
-      0,
-    );
-
-    const scheduleAutoPlay = () => this.triggerComAutoPlayIfNeeded(roomId);
 
     if (response.gameOver) {
       await this.processGameOverUseCase.execute({
@@ -366,16 +368,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       setTimeout(() => {
         void this.closeFinishedRoom(roomId);
       }, closeDelay);
-    } else if (maxDelay > 0) {
-      setTimeout(scheduleAutoPlay, maxDelay + 100);
-    } else {
-      scheduleAutoPlay();
     }
   }
 
   private async closeFinishedRoom(roomId: string): Promise<void> {
     try {
       this.clearTurnAckMonitor(roomId);
+      this.comAutoPlayRecoveryService.clearRoom(roomId);
 
       const socketIds = Array.from(
         this.server.sockets.adapter.rooms.get(roomId) ?? [],
@@ -407,6 +406,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private async sendBackToLobby(
     client: Socket,
     reason: string,
+    code: ReconnectionFailureCode,
     roomId?: string,
   ): Promise<void> {
     console.warn(
@@ -417,77 +417,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     this.playerRooms.delete(client.id);
     await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
-    client.emit('back-to-lobby');
-    client.emit('error-message', reason);
+    const payload: BackToLobbyPayload = { code };
+    client.emit('back-to-lobby', payload);
     this.emitRoomsListToSocket(client, await this.roomService.listRooms());
   }
 
   private triggerComAutoPlayIfNeeded(roomId: string): void {
-    // Non-blocking: fire and forget
-    void this.runComAutoPlayLoop(roomId);
+    this.comAutoPlayRecoveryService.trigger(
+      roomId,
+      this.comAutoPlayRecoveryHandlers,
+    );
   }
 
-  private async runComAutoPlayLoop(roomId: string): Promise<void> {
-    let iteration = 0;
-    const MAX_ITERATIONS = 10; // Safety limit: max 10 consecutive COM plays
-
-    while (iteration < MAX_ITERATIONS) {
-      const result = await this.comAutoPlayUseCase.execute({ roomId });
-
-      if (!result.success) {
-        console.error(`COM auto-play failed: ${result.error}`);
-        return;
-      }
-
-      // イベント配信（遅延含む）
-      this.dispatchEvents(result.events);
-      this.dispatchEvents(result.delayedEvents);
-
-      const delayedEvents = result.delayedEvents ?? [];
-      const maxDelay = delayedEvents.reduce(
-        (max, event) => Math.max(max, event.delayMs ?? 0),
-        0,
-      );
-
-      if (result.completeFieldTrigger) {
-        const trigger = result.completeFieldTrigger;
-        setTimeout(() => {
-          void this.completeFieldUseCase
-            .execute({ roomId: trigger.roomId, field: trigger.field })
-            .then((response) =>
-              this.processFieldCompletionResult(trigger.roomId, response),
-            )
-            .catch((error) => {
-              console.error('Error completing field:', error);
-              this.server
-                .to(trigger.roomId)
-                .emit('error-message', 'Failed to complete field');
-            });
-        }, trigger.delayMs);
-        return; // Wait for completion result before continuing loop
-      }
-
-      if (maxDelay > 0) {
-        setTimeout(
-          () => this.triggerComAutoPlayIfNeeded(roomId),
-          maxDelay + 100,
-        );
-        return;
-      }
-
-      if (!result.shouldContinue) {
-        return; // Stop the loop - no more COM players
-      }
-
-      iteration++;
-
-      // Non-blocking wait - yields to event loop
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-
-    // Safety: log if we hit the iteration limit
-    console.error(
-      `[GameGateway] COM auto-play loop exceeded ${MAX_ITERATIONS} iterations for room ${roomId}. Possible infinite loop prevented.`,
+  private scheduleFieldCompletion(trigger: CompleteFieldTrigger): void {
+    this.comAutoPlayRecoveryService.scheduleFieldCompletion(
+      trigger,
+      this.comAutoPlayRecoveryHandlers,
     );
   }
 
@@ -539,7 +484,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
-        await this.sendBackToLobby(client, result.reason, roomId);
+        await this.sendBackToLobby(client, result.reason, result.code, roomId);
         return;
       }
 
@@ -577,6 +522,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (result.currentTurnPlayerId) {
         void this.startTurnAckMonitor(roomId, result.currentTurnPlayerId);
       }
+      this.triggerComAutoPlayIfNeeded(roomId);
       return;
     }
 
@@ -1467,23 +1413,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.dispatchEvents(result.events);
 
       if (result.completeFieldTrigger) {
-        const trigger = result.completeFieldTrigger;
-        setTimeout(() => {
-          void this.completeFieldUseCase
-            .execute({
-              roomId: trigger.roomId,
-              field: trigger.field,
-            })
-            .then((response) =>
-              this.processFieldCompletionResult(trigger.roomId, response),
-            )
-            .catch((error) => {
-              console.error('Error completing field:', error);
-              this.server
-                .to(trigger.roomId)
-                .emit('error-message', 'Failed to complete field');
-            });
-        }, trigger.delayMs);
+        this.scheduleFieldCompletion(result.completeFieldTrigger);
       } else {
         this.triggerComAutoPlayIfNeeded(data.roomId);
       }

@@ -5,6 +5,7 @@ import {
   GameState,
   PlayerConnectionMetadata,
 } from '../types/game.types';
+import { RoomPlayer } from '../types/room.types';
 import { GamePhaseService } from './game-phase.service';
 
 export class GameStateManager {
@@ -32,11 +33,15 @@ export class GameStateManager {
     };
 
     if (roomId) {
-      try {
-        await this.repository.update(roomId, newState);
-      } catch {
-        // Keep in-memory state even if persistence fails.
+      const persistedState = await this.repository.update(
+        roomId,
+        newState,
+        currentState.version,
+      );
+      if (!persistedState) {
+        throw new Error(`Game state not found for room ${roomId}`);
       }
+      nextState.version = persistedState.version;
     }
 
     return nextState;
@@ -62,36 +67,69 @@ export class GameStateManager {
 
       await this.repository.create(roomId, initialState);
       return null;
-    } catch {
-      return null;
+    } catch (error) {
+      this.logger.error(`Failed to load game state for room ${roomId}`, error);
+      throw error;
     }
   }
 
   async configureGameSettings(
     roomId: string | null,
+    currentState: GameState,
     pointsToWin: number,
-  ): Promise<void> {
+  ): Promise<GameState> {
     if (!roomId) {
-      return;
+      return { ...currentState, pointsToWin };
     }
 
-    try {
-      await this.repository.update(roomId, { pointsToWin });
-    } catch {
-      // Silent fail
+    const persistedState = await this.repository.update(
+      roomId,
+      { pointsToWin },
+      currentState.version,
+    );
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
     }
+    return persistedState;
   }
 
-  async saveState(roomId: string | null, state: GameState): Promise<void> {
+  async saveState(roomId: string | null, state: GameState): Promise<GameState> {
     if (!roomId) {
-      return;
+      return state;
     }
 
-    try {
-      await this.repository.update(roomId, state);
-    } catch {
-      // Silent fail
+    const persistedState = await this.repository.update(
+      roomId,
+      state,
+      state.version,
+    );
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
     }
+    return persistedState;
+  }
+
+  async persistRoster(
+    roomId: string | null,
+    roomPlayers: RoomPlayer[],
+    state: GameState,
+    hostId?: string,
+  ): Promise<GameState> {
+    if (!roomId) {
+      throw new Error('Cannot persist roster without a room ID');
+    }
+
+    const persistedState = await this.repository.persistRoomRoster(
+      roomId,
+      roomPlayers,
+      state,
+      hostId,
+    );
+
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
+    }
+    return persistedState;
   }
 
   async persistPlayerConnectionUpdate(
@@ -112,32 +150,42 @@ export class GameStateManager {
 
   async persistCurrentPlayerIndex(
     roomId: string | null,
+    state: GameState,
     currentPlayerIndex: number,
-  ): Promise<void> {
+  ): Promise<number | undefined> {
     if (!roomId) {
-      return;
+      return state.version;
     }
 
-    try {
-      await this.repository.updateCurrentPlayerIndex(
-        roomId,
-        currentPlayerIndex,
-      );
-    } catch (error) {
-      this.logger.error('Failed to persist turn change:', error);
+    const persistedState = await this.repository.update(
+      roomId,
+      { currentPlayerIndex },
+      state.version,
+    );
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
     }
+    return persistedState.version;
   }
 
-  persistRoundNumber(roomId: string | null, roundNumber: number): void {
+  async persistRoundNumber(
+    roomId: string | null,
+    state: GameState,
+    roundNumber: number,
+  ): Promise<number | undefined> {
     if (!roomId) {
-      return;
+      return state.version;
     }
 
-    this.repository
-      .bulkUpdate(roomId, { round_number: roundNumber })
-      .catch((error) => {
-        this.logger.error('Failed to persist round number:', error);
-      });
+    const persistedState = await this.repository.update(
+      roomId,
+      { roundNumber },
+      state.version,
+    );
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
+    }
+    return persistedState.version;
   }
 
   async resetState(roomId: string | null, state: GameState): Promise<void> {

@@ -89,6 +89,15 @@ export interface GameStatePayload {
   pointsToWin: number;
 }
 
+export type ReconnectionFailureCode =
+  | 'roomUnavailable'
+  | 'sessionInvalid'
+  | 'stateInconsistent';
+
+export interface BackToLobbyPayload {
+  code: ReconnectionFailureCode;
+}
+
 export interface UpdatePhasePayload {
   phase: TransportGamePhase;
   scores: TransportTeamScores;

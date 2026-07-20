@@ -1,4 +1,7 @@
-import type { GameStatePayload } from '@contracts/game';
+import type {
+  GameStatePayload,
+  ReconnectionFailureCode,
+} from '@contracts/game';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IGameStateService } from '../services/interfaces/game-state-service.interface';
@@ -35,6 +38,7 @@ export type ReconnectionResult =
     }
   | {
       success: false;
+      code: ReconnectionFailureCode;
       reason: string;
       roomId?: string;
     };
@@ -62,6 +66,7 @@ export class ReconnectionUseCase {
       if (!room) {
         return {
           success: false,
+          code: 'roomUnavailable',
           roomId,
           reason:
             'Your previous room session is no longer available. Please join or create a room again.',
@@ -75,11 +80,25 @@ export class ReconnectionUseCase {
         state.gamePhase !== 'waiting';
 
       if (!isActiveGame) {
-        await this.roomService.initCOMPlaceholders(roomId);
+        try {
+          await roomGameState.reconcileWaitingRoomPlayers(room.players);
+          await this.roomService.initCOMPlaceholders(roomId);
+        } catch (error) {
+          this.logger.error(
+            `[Reconnection] Failed to reconcile waiting room=${roomId} user=${authenticatedUser.id}: ${String(error)}`,
+          );
+          return {
+            success: false,
+            code: 'stateInconsistent',
+            roomId,
+            reason: 'Failed to reconcile the waiting-room roster',
+          };
+        }
         const updatedRoom = await this.roomService.getRoom(roomId);
         if (!updatedRoom) {
           return {
             success: false,
+            code: 'roomUnavailable',
             roomId,
             reason:
               'Your previous room session is no longer available. Please join or create a room again.',
@@ -95,6 +114,7 @@ export class ReconnectionUseCase {
         if (!existingWaitingPlayer) {
           return {
             success: false,
+            code: 'sessionInvalid',
             roomId,
             reason:
               'Your previous room session is no longer valid. Please join or create a room again.',
@@ -108,8 +128,17 @@ export class ReconnectionUseCase {
           authenticatedUser.id,
         );
         if (!reconnectResult.success) {
+          this.logStateMismatch(
+            roomId,
+            authenticatedUser.id,
+            existingWaitingPlayer.playerId,
+            updatedRoom.players.length,
+            roomGameState.getState().players.length,
+            reconnectResult.error,
+          );
           return {
             success: false,
+            code: 'stateInconsistent',
             roomId,
             reason: 'Failed to reconnect',
           };
@@ -130,13 +159,19 @@ export class ReconnectionUseCase {
         };
       }
 
-      const existingPlayer = resolvePlayerByActorId(
-        roomGameState,
+      const persistedRoomPlayer = this.resolveAuthenticatedRoomPlayer(
+        room.players,
         authenticatedUser.id,
       );
+      const existingPlayer = persistedRoomPlayer
+        ? (state.players.find(
+            (player) => player.playerId === persistedRoomPlayer.playerId,
+          ) ?? null)
+        : resolvePlayerByActorId(roomGameState, authenticatedUser.id);
       if (!existingPlayer) {
         return {
           success: false,
+          code: persistedRoomPlayer ? 'stateInconsistent' : 'sessionInvalid',
           roomId,
           reason:
             'Your previous room session is no longer valid. Please join or create a room again.',
@@ -150,8 +185,17 @@ export class ReconnectionUseCase {
         authenticatedUser.id,
       );
       if (!reconnectResult.success) {
+        this.logStateMismatch(
+          roomId,
+          authenticatedUser.id,
+          existingPlayer.playerId,
+          room.players.length,
+          state.players.length,
+          reconnectResult.error,
+        );
         return {
           success: false,
+          code: 'stateInconsistent',
           roomId,
           reason: 'Failed to reconnect',
         };
@@ -201,6 +245,7 @@ export class ReconnectionUseCase {
       );
       return {
         success: false,
+        code: 'roomUnavailable',
         roomId,
         reason:
           'Your previous room session is no longer available. Please join or create a room again.',
@@ -254,5 +299,30 @@ export class ReconnectionUseCase {
     );
 
     return authenticatedMatches.length === 1 ? authenticatedMatches[0] : null;
+  }
+
+  private resolveAuthenticatedRoomPlayer(
+    roomPlayers: RoomPlayer[],
+    authenticatedUserId: string,
+  ): RoomPlayer | null {
+    const matches = roomPlayers.filter(
+      (player) =>
+        player.isAuthenticated && player.userId === authenticatedUserId,
+    );
+
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  private logStateMismatch(
+    roomId: string,
+    userId: string,
+    playerId: string,
+    roomPlayerCount: number,
+    statePlayerCount: number,
+    error?: string,
+  ): void {
+    this.logger.error(
+      `[Reconnection] State mismatch room=${roomId} user=${userId} player=${playerId} roomPlayers=${roomPlayerCount} statePlayers=${statePlayerCount} error=${error ?? 'unknown'}`,
+    );
   }
 }

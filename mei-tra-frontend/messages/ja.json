@@ -297,6 +297,11 @@
     "initializing": "ゲームを初期化中...",
     "initializingActions": "ゲームアクションを初期化中...",
     "paused": "ゲームが一時停止しています。4人のプレイヤーが揃うと再開します。",
+    "reconnectRecovery": {
+      "roomUnavailable": "以前のルームは終了しています。ルーム一覧から入り直してください。",
+      "sessionInvalid": "以前の参加情報を確認できませんでした。ルーム一覧から入り直してください。",
+      "stateInconsistent": "サーバーとの接続を復旧しました。ルームにもう一度入室してください。"
+    },
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
     "orderButton": "強さ順",

@@ -20,6 +20,7 @@ import { PlayerConnectionManager } from './player-connection-manager.service';
 import { GamePhaseService } from './game-phase.service';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
 import {
+  toDomainPlayer,
   toRuntimePlayer,
   toTransportPlayers,
   TransportPlayer,
@@ -36,6 +37,7 @@ export class GameStateService implements IGameStateService {
   private readonly playerIds: Map<string, string>;
   private readonly disconnectedPlayers: Map<string, NodeJS.Timeout>;
   private readonly gamePhaseService: GamePhaseService;
+  private persistenceQueue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly cardService: CardService,
@@ -61,6 +63,7 @@ export class GameStateService implements IGameStateService {
 
   private initializeState(pointsToWin: number = 10): void {
     this.state = {
+      version: 0,
       players: [],
       deck: [],
       currentPlayerIndex: 0,
@@ -206,19 +209,24 @@ export class GameStateService implements IGameStateService {
     return this.connectionManager.upsertSessionUser(sessionUser);
   }
 
+  private enqueuePersistence<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.persistenceQueue.then(operation, operation);
+    this.persistenceQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+
   async updateState(newState: Partial<GameState>): Promise<void> {
-    this.state = await this.stateManager.updateState(
-      this.roomId,
-      this.state,
-      newState,
+    this.state = await this.enqueuePersistence(() =>
+      this.stateManager.updateState(this.roomId, this.state, newState),
     );
   }
 
   async transitionPhase(nextPhase: GamePhase): Promise<void> {
-    this.state = await this.stateManager.transitionPhase(
-      this.roomId,
-      this.state,
-      nextPhase,
+    this.state = await this.enqueuePersistence(() =>
+      this.stateManager.transitionPhase(this.roomId, this.state, nextPhase),
     );
   }
 
@@ -233,7 +241,7 @@ export class GameStateService implements IGameStateService {
 
       const sanitized = this.sanitizePlayers();
       if (sanitized) {
-        await this.stateManager.updateState(roomId, this.state, {
+        this.state = await this.stateManager.updateState(roomId, this.state, {
           players: this.state.players,
           currentPlayerIndex: this.state.currentPlayerIndex,
         });
@@ -251,12 +259,73 @@ export class GameStateService implements IGameStateService {
   }
 
   async configureGameSettings(pointsToWin: number): Promise<void> {
-    this.state.pointsToWin = pointsToWin;
-    await this.stateManager.configureGameSettings(this.roomId, pointsToWin);
+    this.state = await this.enqueuePersistence(() =>
+      this.stateManager.configureGameSettings(
+        this.roomId,
+        this.state,
+        pointsToWin,
+      ),
+    );
   }
 
   async saveState(): Promise<void> {
-    await this.stateManager.saveState(this.roomId, this.state);
+    this.state = await this.enqueuePersistence(() =>
+      this.stateManager.saveState(this.roomId, this.state),
+    );
+  }
+
+  async persistRoster(
+    roomPlayers: RoomPlayer[],
+    hostId?: string,
+  ): Promise<void> {
+    this.state = await this.enqueuePersistence(() =>
+      this.stateManager.persistRoster(
+        this.roomId,
+        roomPlayers,
+        this.state,
+        hostId,
+      ),
+    );
+  }
+
+  async reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void> {
+    const currentPlayers = new Map(
+      this.state.players.map((player) => [player.playerId, player]),
+    );
+
+    this.state.players = roomPlayers.map((roomPlayer) => {
+      const currentPlayer = currentPlayers.get(roomPlayer.playerId);
+      if (!currentPlayer) {
+        return toDomainPlayer(roomPlayer);
+      }
+
+      return toDomainPlayer({
+        ...roomPlayer,
+        hand: currentPlayer.hand,
+        isPasser: currentPlayer.isPasser,
+        hasBroken: currentPlayer.hasBroken,
+        hasRequiredBroken: currentPlayer.hasRequiredBroken,
+      });
+    });
+    this.state.teamAssignments = Object.fromEntries(
+      roomPlayers.map((player) => [player.playerId, player.team]),
+    );
+
+    roomPlayers.forEach((player) => {
+      this.connectionManager.registerPlayerToken(
+        player.playerId,
+        player.playerId,
+      );
+      if (player.userId) {
+        this.connectionManager.registerPlayerToken(
+          player.userId,
+          player.playerId,
+        );
+      }
+    });
+
+    const hostId = roomPlayers.find((player) => player.isHost)?.playerId;
+    await this.persistRoster(roomPlayers, hostId);
   }
 
   addPlayer(
@@ -469,9 +538,12 @@ export class GameStateService implements IGameStateService {
     // Persist the turn change
     if (this.roomId) {
       try {
-        await this.stateManager.persistCurrentPlayerIndex(
-          this.roomId,
-          this.state.currentPlayerIndex,
+        this.state.version = await this.enqueuePersistence(() =>
+          this.stateManager.persistCurrentPlayerIndex(
+            this.roomId,
+            this.state,
+            this.state.currentPlayerIndex,
+          ),
         );
       } catch {
         // Keep in-memory turn changes even if persistence fails.
@@ -531,10 +603,7 @@ export class GameStateService implements IGameStateService {
     return currentPlayer?.playerId === playerId;
   }
 
-  async completeField(
-    field: Field,
-    winnerId: string,
-  ): Promise<CompletedField | null> {
+  completeField(field: Field, winnerId: string): CompletedField | null {
     const state = this.getState();
     if (!state.playState) {
       return null;
@@ -549,16 +618,13 @@ export class GameStateService implements IGameStateService {
     const winnerTeam =
       state.players.find((p) => p.playerId === winnerId)?.team ?? (0 as const);
     const completedField: CompletedField = {
-      cards: field.cards,
+      cards: [...field.cards],
       winnerId: winnerId,
       winnerTeam,
       dealerId: field.dealerId,
     };
 
     state.playState.fields.push(completedField);
-
-    // Persist the completed field
-    await this.saveState();
 
     return completedField;
   }
@@ -567,7 +633,9 @@ export class GameStateService implements IGameStateService {
     this.initializeState();
 
     // Clear persisted state
-    await this.stateManager.resetState(this.roomId, this.state);
+    await this.enqueuePersistence(() =>
+      this.stateManager.resetState(this.roomId, this.state),
+    );
   }
 
   async resetRoundState(): Promise<void> {
@@ -596,7 +664,15 @@ export class GameStateService implements IGameStateService {
 
   set roundNumber(value: number) {
     this.state.roundNumber = value;
-    void this.stateManager.persistRoundNumber(this.roomId, value);
+    void this.enqueuePersistence(() =>
+      this.stateManager.persistRoundNumber(this.roomId, this.state, value),
+    )
+      .then((version) => {
+        this.state.version = version;
+      })
+      .catch((error) => {
+        this.logger.error('Failed to persist round number:', error);
+      });
   }
 
   get currentTurn(): string | null {
@@ -610,10 +686,19 @@ export class GameStateService implements IGameStateService {
     );
     if (playerIndex !== -1) {
       this.state.currentPlayerIndex = playerIndex;
-      void this.stateManager.persistCurrentPlayerIndex(
-        this.roomId,
-        playerIndex,
-      );
+      void this.enqueuePersistence(() =>
+        this.stateManager.persistCurrentPlayerIndex(
+          this.roomId,
+          this.state,
+          playerIndex,
+        ),
+      )
+        .then((version) => {
+          this.state.version = version;
+        })
+        .catch((error) => {
+          this.logger.error('Failed to persist turn change:', error);
+        });
     }
   }
 
