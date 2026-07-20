@@ -68,6 +68,7 @@ export interface Database {
           has_required_broken: boolean;
           is_ready: boolean;
           is_host: boolean;
+          is_com: boolean;
           joined_at: string;
           user_id: string | null;
         };
@@ -84,6 +85,7 @@ export interface Database {
           has_required_broken?: boolean;
           is_ready?: boolean;
           is_host?: boolean;
+          is_com?: boolean;
           joined_at?: string;
           user_id?: string | null;
         };
@@ -100,6 +102,7 @@ export interface Database {
           has_required_broken?: boolean;
           is_ready?: boolean;
           is_host?: boolean;
+          is_com?: boolean;
           joined_at?: string;
           user_id?: string | null;
         };
@@ -124,6 +127,7 @@ export interface Database {
             }>;
           };
           team_assignments: { [key: string]: number };
+          version: number;
           created_at: string;
           updated_at: string;
         };
@@ -146,6 +150,7 @@ export interface Database {
             }>;
           };
           team_assignments?: { [key: string]: number };
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -168,6 +173,7 @@ export interface Database {
             }>;
           };
           team_assignments?: { [key: string]: number };
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };

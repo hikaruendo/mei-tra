@@ -10,6 +10,18 @@ export type PersistedGamePlayer = DomainPlayer & {
   id?: string;
 };
 
+export interface PersistedPlayerGameplayState {
+  hand: string[];
+  isPasser: boolean;
+  hasBroken: boolean;
+  hasRequiredBroken: boolean;
+}
+
+export type PersistedPlayerStates = Record<
+  string,
+  PersistedPlayerGameplayState
+>;
+
 export type TransportPlayer = DomainPlayer &
   PlayerConnectionMetadata & {
     isHost?: boolean;
@@ -90,6 +102,22 @@ export function toPersistedGamePlayer(
   return {
     ...toDomainPlayer(player),
   };
+}
+
+export function toPersistedPlayerStates(
+  players: DomainPlayer[],
+): PersistedPlayerStates {
+  return Object.fromEntries(
+    players.map((player) => [
+      player.playerId,
+      {
+        hand: [...player.hand],
+        isPasser: player.isPasser,
+        hasBroken: player.hasBroken ?? false,
+        hasRequiredBroken: player.hasRequiredBroken ?? false,
+      },
+    ]),
+  );
 }
 
 export function toRuntimePlayer(

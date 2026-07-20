@@ -31,6 +31,6 @@ export interface IGameStateService {
     connectionState: PlayerConnectionState,
   ): Promise<void>;
   getPlayerConnectionState(playerId: string): PlayerConnectionState | null;
-  persistRoster(): Promise<void>;
+  persistRoster(roomPlayers: RoomPlayer[], hostId?: string): Promise<void>;
   reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void>;
 }

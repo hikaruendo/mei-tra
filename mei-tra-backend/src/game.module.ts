@@ -51,6 +51,7 @@ import { GameEventLogService } from './services/game-event-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
+import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
 
 @Module({
   imports: [RepositoriesModule, AuthModule, SocialModule],
@@ -59,6 +60,7 @@ import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-gam
     GameGateway,
     ActivityTrackerService,
     TurnMonitorService,
+    ComAutoPlayRecoveryService,
     PlayerReferenceRemapperService,
     UserGameStatsService,
     ComSessionService,

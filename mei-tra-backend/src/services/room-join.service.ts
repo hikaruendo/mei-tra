@@ -1,5 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
+import { Injectable } from '@nestjs/common';
 import { DomainPlayer, Team } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
@@ -25,8 +24,6 @@ interface RestoredSeatData {
 @Injectable()
 export class RoomJoinService {
   constructor(
-    @Inject('IRoomRepository')
-    private readonly roomRepository: IRoomRepository,
     private readonly playerReferenceRemapperService: PlayerReferenceRemapperService,
   ) {}
 
@@ -37,6 +34,7 @@ export class RoomJoinService {
     user,
     vacantSeats,
   }: JoinRoomParams): Promise<boolean> {
+    void roomId;
     const state = gameState.getState();
 
     const existingPlayer = room.players.find(
@@ -58,15 +56,6 @@ export class RoomJoinService {
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
       };
-      const updateSuccess = await this.roomRepository.updatePlayer(
-        roomId,
-        existingPlayer.playerId,
-        updatedPlayer,
-      );
-      if (!updateSuccess) {
-        return false;
-      }
-
       Object.assign(existingPlayer, updatedPlayer);
       if (statePlayer) {
         statePlayer.name = updatedPlayer.name;
@@ -91,8 +80,7 @@ export class RoomJoinService {
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
       });
-      await gameState.persistRoster();
-      await this.roomRepository.updateLastActivity(roomId);
+      await gameState.persistRoster(room.players, room.hostId);
       return true;
     }
 
@@ -248,19 +236,6 @@ export class RoomJoinService {
         : new Date(),
     };
 
-    if (replacingComId) {
-      await this.roomRepository.removePlayer(roomId, replacingComId);
-      const addSuccess = await this.roomRepository.addPlayer(roomId, player);
-      if (!addSuccess) {
-        return false;
-      }
-    } else {
-      const addSuccess = await this.roomRepository.addPlayer(roomId, player);
-      if (!addSuccess) {
-        return false;
-      }
-    }
-
     if (assignedIndex !== -1) {
       room.players[assignedIndex] = player;
     } else {
@@ -342,9 +317,7 @@ export class RoomJoinService {
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,
     });
-    await gameState.persistRoster();
-
-    await this.roomRepository.updateLastActivity(roomId);
+    await gameState.persistRoster(room.players, room.hostId);
     return true;
   }
 

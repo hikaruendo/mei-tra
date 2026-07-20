@@ -125,6 +125,7 @@ export interface ChomboViolation {
 export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
+  version?: number;
   players: DomainPlayer[];
   currentPlayerIndex: number;
   gamePhase: GamePhase;

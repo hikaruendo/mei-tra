@@ -47,15 +47,10 @@ async function login(page: Page, user: typeof PLAYER1) {
   await page.waitForTimeout(500);
 }
 
-/** Create a room then click join, wait for PreGameTable to appear */
+/** Create a room and wait for the host to enter PreGameTable */
 async function createRoom(page: Page, roomName: string) {
   await page.getByPlaceholder('ルーム名を入力').fill(roomName);
   await page.getByRole('button', { name: 'ルーム作成' }).click();
-
-  // Wait for the room to appear in the list, then join it
-  const row = page.locator('[class*="roomItem"]').filter({ hasText: roomName });
-  await expect(row).toBeVisible({ timeout: 10_000 });
-  await row.getByRole('button', { name: '参加' }).click();
 
   await expect(page.locator('[class*="playerPositions"]')).toBeVisible({ timeout: 15_000 });
 }
@@ -135,6 +130,12 @@ test.describe('Waiting Room', () => {
 
     await expect(team0Seats).toHaveCount(2);
     await expect(team1Seats).toHaveCount(2);
+
+    await page1.getByRole('button', { name: 'シャッフル' }).click();
+    await page1.waitForTimeout(500);
+    await expect(team0Seats).toHaveCount(2);
+    await expect(team1Seats).toHaveCount(2);
+    await expect(page1.locator('[class*="playerSeat"]')).toHaveCount(4);
   });
 
   // ────────────────────────────────────────────
@@ -162,6 +163,12 @@ test.describe('Waiting Room', () => {
     const names2 = await getRealPlayerNames(page2);
     expect(names1).toHaveLength(2);
     expect(names2).toHaveLength(2);
+    await expect(
+      page1.locator('[class*="playerSeat"]').filter({ hasText: 'COM' }),
+    ).toHaveCount(2);
+    await expect(
+      page2.locator('[class*="playerSeat"]').filter({ hasText: 'COM' }),
+    ).toHaveCount(2);
   });
 
   // ────────────────────────────────────────────
@@ -207,5 +214,8 @@ test.describe('Waiting Room', () => {
 
     // Total seats must still be 4
     await expect(page1.locator('[class*="playerSeat"]')).toHaveCount(4);
+    await expect(
+      page1.locator('[class*="playerSeat"]').filter({ hasText: 'COM' }),
+    ).toHaveCount(3);
   });
 });

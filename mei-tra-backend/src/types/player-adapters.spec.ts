@@ -1,4 +1,4 @@
-import { toRuntimePlayer } from './player-adapters';
+import { toPersistedPlayerStates, toRuntimePlayer } from './player-adapters';
 
 describe('player-adapters', () => {
   describe('toRuntimePlayer', () => {
@@ -25,6 +25,35 @@ describe('player-adapters', () => {
       });
 
       expect(player).toBeNull();
+    });
+  });
+
+  describe('toPersistedPlayerStates', () => {
+    it('persists gameplay fields without duplicating player identity', () => {
+      const states = toPersistedPlayerStates([
+        {
+          playerId: 'player-1',
+          name: 'Player 1',
+          hand: ['S1'],
+          team: 1,
+          isPasser: true,
+          isCOM: false,
+          hasBroken: true,
+          hasRequiredBroken: false,
+        },
+      ]);
+
+      expect(states).toEqual({
+        'player-1': {
+          hand: ['S1'],
+          isPasser: true,
+          hasBroken: true,
+          hasRequiredBroken: false,
+        },
+      });
+      expect(states['player-1']).not.toHaveProperty('name');
+      expect(states['player-1']).not.toHaveProperty('team');
+      expect(states['player-1']).not.toHaveProperty('isCOM');
     });
   });
 });

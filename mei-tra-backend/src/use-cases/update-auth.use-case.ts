@@ -151,7 +151,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       isAuthenticated: true,
     });
 
-    await roomGameState.saveState();
     await this.roomService.updatePlayerInRoom(
       currentRoomId,
       currentPlayer.playerId,

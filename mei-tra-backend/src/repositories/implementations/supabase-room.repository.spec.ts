@@ -34,6 +34,7 @@ describe('SupabaseRoomRepository', () => {
       team: number;
       is_host: boolean;
       is_ready: boolean;
+      is_com: boolean;
       hand: string[];
       is_passer: boolean;
       has_broken: boolean;
@@ -54,6 +55,7 @@ describe('SupabaseRoomRepository', () => {
       has_required_broken: overrides.has_required_broken ?? false,
       is_ready: overrides.is_ready ?? false,
       is_host: overrides.is_host ?? false,
+      is_com: overrides.is_com ?? false,
       joined_at: joinedAt,
     };
   }

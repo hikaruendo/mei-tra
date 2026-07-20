@@ -29,7 +29,7 @@ describe('ShuffleTeamsUseCase', () => {
         .fn()
         .mockResolvedValueOnce(room)
         .mockResolvedValueOnce(updatedRoom),
-      updatePlayerInRoom: jest.fn().mockResolvedValue(true),
+      updatePlayersInRoom: jest.fn().mockResolvedValue(true),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest.fn().mockResolvedValue({ success: true, updatedRoom }),
@@ -43,13 +43,13 @@ describe('ShuffleTeamsUseCase', () => {
 
     expect(result.success).toBe(true);
     expect(fillWithComUseCase.execute).toHaveBeenCalled();
-    expect(roomService.updatePlayerInRoom).toHaveBeenCalledTimes(4);
-    const updateCalls = jest.mocked(roomService.updatePlayerInRoom).mock.calls;
-    expect(updateCalls.every(([roomId]) => roomId === 'room-1')).toBe(true);
+    expect(roomService.updatePlayersInRoom).toHaveBeenCalledTimes(1);
+    const [, updates] = jest.mocked(roomService.updatePlayersInRoom).mock
+      .calls[0];
     expect(
-      updateCalls.every(
-        ([, , updates]: [string, string, Partial<RoomPlayer>]) =>
-          updates.team === 0 || updates.team === 1,
+      Object.values(updates).every(
+        (playerUpdates: Partial<RoomPlayer>) =>
+          playerUpdates.team === 0 || playerUpdates.team === 1,
       ),
     ).toBe(true);
   });
@@ -64,7 +64,7 @@ describe('ShuffleTeamsUseCase', () => {
     };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(room),
-      updatePlayerInRoom: jest.fn(),
+      updatePlayersInRoom: jest.fn(),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest
@@ -79,7 +79,7 @@ describe('ShuffleTeamsUseCase', () => {
     });
 
     expect(result).toEqual({ success: false, error: 'fill failed' });
-    expect(roomService.updatePlayerInRoom).not.toHaveBeenCalled();
+    expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
   });
 
   it('returns failure when any player team update fails', async () => {
@@ -97,12 +97,7 @@ describe('ShuffleTeamsUseCase', () => {
     };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(room),
-      updatePlayerInRoom: jest
-        .fn()
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(true),
+      updatePlayersInRoom: jest.fn().mockResolvedValue(false),
     } as Partial<IRoomService> as IRoomService;
     const fillWithComUseCase = {
       execute: jest.fn(),
@@ -118,7 +113,7 @@ describe('ShuffleTeamsUseCase', () => {
       success: false,
       error: 'Failed to change teams',
     });
-    expect(roomService.updatePlayerInRoom).toHaveBeenCalledTimes(4);
+    expect(roomService.updatePlayersInRoom).toHaveBeenCalledTimes(1);
     expect(roomService.getRoom).toHaveBeenCalledTimes(1);
   });
 });

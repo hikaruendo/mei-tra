@@ -12,7 +12,8 @@ describe('GameStateService phase transitions', () => {
     repository = {
       create: jest.fn().mockResolvedValue(true),
       findByRoomId: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockResolvedValue(true),
+      update: jest.fn().mockResolvedValue({ version: 1 }),
+      persistRoomRoster: jest.fn().mockResolvedValue({ version: 1 }),
       delete: jest.fn().mockResolvedValue(true),
       updatePlayerConnection: jest.fn().mockResolvedValue(true),
       updateGamePhase: jest.fn().mockResolvedValue(true),
@@ -34,9 +35,11 @@ describe('GameStateService phase transitions', () => {
     await service.transitionPhase('blow');
 
     expect(service.getState().gamePhase).toBe('blow');
-    expect(repository.update).toHaveBeenCalledWith('room-1', {
-      gamePhase: 'blow',
-    });
+    expect(repository.update).toHaveBeenCalledWith(
+      'room-1',
+      { gamePhase: 'blow' },
+      0,
+    );
   });
 
   it('rejects an illegal transition and keeps the previous phase', async () => {
@@ -46,5 +49,61 @@ describe('GameStateService phase transitions', () => {
       'Invalid game phase transition: blow -> deal',
     );
     expect(service.getState().gamePhase).toBe('blow');
+  });
+
+  it('serializes concurrent persistence with the latest version', async () => {
+    const expectedVersions: Array<number | undefined> = [];
+    repository.update.mockImplementation(
+      async (_roomId, updates, expectedVersion) => {
+        expectedVersions.push(expectedVersion);
+        return {
+          ...service.getState(),
+          ...updates,
+          version: (expectedVersion ?? 0) + 1,
+        };
+      },
+    );
+
+    await Promise.all([service.saveState(), service.saveState()]);
+
+    expect(expectedVersions).toEqual([0, 1]);
+    expect(service.getState().version).toBe(2);
+  });
+
+  it('records a completed field without persisting an intermediate snapshot', () => {
+    const state = service.getState();
+    state.players = [
+      {
+        playerId: 'player-1',
+        name: 'Player 1',
+        team: 0,
+        hand: [],
+        isPasser: false,
+      },
+    ];
+    const currentField = {
+      cards: ['S1', 'S2', 'S3', 'S4'],
+      playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+      baseCard: 'S1',
+      dealerId: 'player-1',
+      isComplete: true,
+    };
+    state.playState = {
+      currentField,
+      negriCard: null,
+      neguri: {},
+      fields: [],
+      lastWinnerId: null,
+      openDeclared: false,
+      openDeclarerId: null,
+    };
+
+    const completedField = service.completeField(currentField, 'player-1');
+
+    expect(completedField).toEqual(
+      expect.objectContaining({ winnerId: 'player-1', winnerTeam: 0 }),
+    );
+    expect(state.playState.fields).toHaveLength(1);
+    expect(repository.update).not.toHaveBeenCalled();
   });
 });

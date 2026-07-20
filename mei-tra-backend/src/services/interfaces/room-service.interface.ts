@@ -23,6 +23,10 @@ export interface IRoomService {
     playerId: string,
     updates: Partial<RoomPlayer>,
   ): Promise<boolean>;
+  updatePlayersInRoom(
+    roomId: string,
+    updatesByPlayerId: Record<string, Partial<RoomPlayer>>,
+  ): Promise<boolean>;
   canStartGame(roomId: string): Promise<{ canStart: boolean; reason?: string }>;
   getRoomGameState(roomId: string): Promise<GameStateService>;
   convertPlayerToCOM(roomId: string, playerId: string): Promise<boolean>;

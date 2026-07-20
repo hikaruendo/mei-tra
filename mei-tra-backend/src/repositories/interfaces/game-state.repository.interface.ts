@@ -3,6 +3,7 @@ import {
   DomainPlayer,
   PlayerConnectionMetadata,
 } from '../../types/game.types';
+import { RoomPlayer } from '../../types/room.types';
 
 export interface IGameStateRepository {
   // Game state CRUD operations
@@ -11,6 +12,13 @@ export interface IGameStateRepository {
   update(
     roomId: string,
     gameState: Partial<GameState>,
+    expectedVersion?: number,
+  ): Promise<GameState | null>;
+  persistRoomRoster(
+    roomId: string,
+    roomPlayers: RoomPlayer[],
+    gameState: GameState,
+    hostId?: string,
   ): Promise<GameState | null>;
   delete(roomId: string): Promise<void>;
 

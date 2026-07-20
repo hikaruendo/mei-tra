@@ -76,22 +76,15 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     this.comSessionService =
       comSessionService ??
       new ComSessionService(
-        this.roomRepository,
         this.comPlayerService,
         this.playerReferenceRemapperService,
       );
     this.seatRestorationService =
       seatRestorationService ??
-      new SeatRestorationService(
-        this.roomRepository,
-        this.playerReferenceRemapperService,
-      );
+      new SeatRestorationService(this.playerReferenceRemapperService);
     this.roomJoinService =
       roomJoinService ??
-      new RoomJoinService(
-        this.roomRepository,
-        this.playerReferenceRemapperService,
-      );
+      new RoomJoinService(this.playerReferenceRemapperService);
     // 定期的なクリーンアップを開始
     this.startCleanupTask();
   }
@@ -357,7 +350,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const room = await this.getRoom(roomId);
     if (!room) return;
 
-    const gameState = this.roomGameStates.get(roomId);
+    const gameState = await this.getRoomGameState(roomId);
     await this.comSessionService.fillVacantSeatsWithCOM(
       roomId,
       room,
@@ -372,7 +365,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   async convertPlayerToCOM(roomId: string, playerId: string): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) return false;
-    const gameState = this.roomGameStates.get(roomId);
+    const gameState = await this.getRoomGameState(roomId);
     return this.comSessionService.convertPlayerToCOM(
       roomId,
       playerId,
@@ -442,10 +435,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
         room.players[playerIndex] = comPlayer;
 
-        // データベースでは元のプレイヤーを削除してCOMプレイヤーを追加
-        await this.roomRepository.removePlayer(roomId, playerId);
-        await this.roomRepository.addPlayer(roomId, comPlayer);
-
         // ゲーム状態も同時に更新（手札を引き継ぐ）
         if (gsIndex !== -1) {
           const originalGameHand = state.players[gsIndex].hand ?? [];
@@ -477,16 +466,15 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       );
       if (playerIndex !== -1) {
         const leavingPlayer = room.players[playerIndex];
+        const state = gameState.getState();
+        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+        const seatIndex = gsIndex !== -1 ? gsIndex : playerIndex;
         const comPlaceholder = this.createCOMPlaceholder(
-          playerIndex,
+          seatIndex,
           leavingPlayer.team,
         );
         room.players[playerIndex] = comPlaceholder;
-        await this.roomRepository.removePlayer(roomId, playerId);
-        await this.roomRepository.addPlayer(roomId, comPlaceholder);
 
-        const state = gameState.getState();
-        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         if (gsIndex !== -1) {
           state.players[gsIndex] = toDomainPlayer(comPlaceholder);
           if (state.teamAssignments[playerId] != null) {
@@ -499,9 +487,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       gameState.removePlayerToken(playerId);
     }
 
-    // ゲーム状態をDBに保存（COMプレイヤーへの置き換えを永続化）
-    await gameState.saveState();
-
     // If all players are COM placeholders (no human players), delete the room
     if (room.players.every((p) => p.isCOM === true)) {
       await this.deleteRoom(roomId);
@@ -513,18 +498,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const newHost = room.players.find((p) => !p.isCOM);
       if (newHost) {
         room.hostId = newHost.playerId;
-        newHost.isHost = true;
-        // データベースのホスト情報も更新
-        await this.roomRepository.updatePlayer(roomId, newHost.playerId, {
-          isHost: true,
-        });
-        // ルームのhostIdのみ更新（プレイヤー情報は再取得しない）
-        await this.roomRepository.update(roomId, { hostId: newHost.playerId });
       }
     }
 
-    // アクティビティ時刻のみ更新（プレイヤー情報の再取得を避ける）
-    await this.updateRoomActivity(roomId);
+    room.players.forEach((player) => {
+      player.isHost = player.playerId === room.hostId;
+    });
+    await gameState.persistRoster(room.players, room.hostId);
     return true;
   }
 
@@ -561,7 +541,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         this.vacantSeats,
       );
     if (restored) {
-      await this.updateRoomActivity(roomId);
+      this.logger.log(`Restored player ${playerId} in room ${roomId}`);
     }
     return restored;
   }
@@ -587,7 +567,66 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     playerId: string,
     updates: Partial<RoomPlayer>,
   ): Promise<boolean> {
-    return this.roomRepository.updatePlayer(roomId, playerId, updates);
+    return this.updatePlayersInRoom(roomId, { [playerId]: updates });
+  }
+
+  async updatePlayersInRoom(
+    roomId: string,
+    updatesByPlayerId: Record<string, Partial<RoomPlayer>>,
+  ): Promise<boolean> {
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return false;
+    }
+
+    const gameState = await this.getRoomGameState(roomId);
+    const state = gameState.getState();
+
+    for (const [playerId, updates] of Object.entries(updatesByPlayerId)) {
+      const roomPlayer = room.players.find(
+        (player) => player.playerId === playerId,
+      );
+      if (!roomPlayer) {
+        return false;
+      }
+
+      Object.assign(roomPlayer, updates);
+      if (updates.isHost === true) {
+        room.hostId = playerId;
+      }
+
+      const statePlayerIndex = state.players.findIndex(
+        (player) => player.playerId === playerId,
+      );
+      if (statePlayerIndex === -1) {
+        state.players.push(toDomainPlayer(roomPlayer));
+      } else {
+        const statePlayer = state.players[statePlayerIndex];
+        state.players[statePlayerIndex] = toDomainPlayer({
+          ...statePlayer,
+          ...(updates.name !== undefined && { name: updates.name }),
+          ...(updates.team !== undefined && { team: updates.team }),
+          ...(updates.isCOM !== undefined && { isCOM: updates.isCOM }),
+          ...(updates.hand !== undefined && { hand: [...updates.hand] }),
+          ...(updates.isPasser !== undefined && {
+            isPasser: updates.isPasser,
+          }),
+          ...(updates.hasBroken !== undefined && {
+            hasBroken: updates.hasBroken,
+          }),
+          ...(updates.hasRequiredBroken !== undefined && {
+            hasRequiredBroken: updates.hasRequiredBroken,
+          }),
+        });
+      }
+      state.teamAssignments[playerId] = roomPlayer.team;
+    }
+
+    room.players.forEach((player) => {
+      player.isHost = player.playerId === room.hostId;
+    });
+    await gameState.persistRoster(room.players, room.hostId);
+    return true;
   }
 
   private isValidStatusTransition(
@@ -699,7 +738,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       roomPlayerUpdates.isAuthenticated = connectionState.isAuthenticated;
     }
 
-    await this.roomRepository.updatePlayer(roomId, playerId, roomPlayerUpdates);
+    const updated = await this.updatePlayerInRoom(
+      roomId,
+      playerId,
+      roomPlayerUpdates,
+    );
+    if (!updated) {
+      return { success: false, error: 'Failed to persist player connection' };
+    }
 
     return { success: true };
   }

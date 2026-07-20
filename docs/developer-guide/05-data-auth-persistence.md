@@ -197,7 +197,10 @@ Supabase Auth の canonical user は `auth.users` です。一方、このアプ
 
 ### 5.4 game room / player の source of truth
 
-- persistence: `rooms`, `room_players`
+- room metadata: `rooms`
+- player identity / seat / team / ready / host: `room_players`
+- player gameplay state: `game_states.state_data.playerStates`
+- socket 接続情報: `GameStateService` 内の memory state
 - runtime: room ごとの `GameStateService`
 - frontend 表示: `types/room.types.ts`, `types/game.types.ts`
 
@@ -275,7 +278,7 @@ profile は現在も進化中の schema です。
 
 ### 7.1 room と room players
 
-room metadata は `rooms`、参加者は `room_players` にあります。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。
+room metadata は `rooms`、参加者の identity と座席情報は `room_players` にあります。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が `room_players`、`rooms.host_id`、`game_states` を一つの transaction で更新します。
 
 この説明が指す主なコードは次です。
 
@@ -286,7 +289,7 @@ room metadata は `rooms`、参加者は `room_players` にあります。`Supab
 - repository 境界:
   - `mei-tra-backend/src/repositories/interfaces/room.repository.interface.ts`
   - `mei-tra-backend/src/repositories/implementations/supabase-room.repository.ts`
-  - `create()`, `findById()`, `addPlayer()`, `removePlayer()`, `updatePlayer()`, `findRecentFinishedByUserId()`
+  - `create()`, `findById()`, `findRecentFinishedByUserId()`
 - application / session 境界:
   - `mei-tra-backend/src/services/room.service.ts`
   - `mei-tra-backend/src/services/room-join.service.ts`
@@ -297,21 +300,24 @@ room metadata は `rooms`、参加者は `room_players` にあります。`Supab
 
 - room に player が複数いるので read path が重い
 - runtime 上の `room.players` と waiting room UI が強く結び付いている
-- `isCOM`, `isReady`, `isHost` などは player row にも保持される
+- `isCOM`, `isReady`, `isHost`, `team`, `userId`, `name` は `room_players` が正である
+- `socketId` と認証済み接続状態は再接続ごとに変わるため永続化せず、memory 上で管理する
+- application service から `room_players` を個別 CRUD せず、完成したロスターを原子的に保存する
 - finished room も一定期間残し、プロフィールの recent matches から参照する
 
 ### 7.2 game state
 
-`game_states` には players, deck, agari, blowState, playState を `state_data` JSONB に持ちつつ、current player index や team scores は別カラムでも持ちます。
+`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ちつつ、current player index や team scores は別カラムでも持ちます。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存し、`playerOrder` が座席順を保持します。identity は `room_players` から合成します。
 
 この説明が指す主なコードは次です。
 
 - DB schema:
   - `mei-tra-backend/supabase/migrations/001_initial_schema.sql` の `game_states`
+  - `mei-tra-backend/supabase/migrations/20260719124824_atomic_room_state_persistence.sql` 以降の `version` / atomic RPC
 - repository 境界:
   - `mei-tra-backend/src/repositories/interfaces/game-state.repository.interface.ts`
   - `mei-tra-backend/src/repositories/implementations/supabase-game-state.repository.ts`
-  - `create()`, `findByRoomId()`, `update()`, `updatePlayers()`, `updatePlayerConnection()`, `updateGamePhase()`
+  - `create()`, `findByRoomId()`, `update()`, `persistRoomRoster()`
 - runtime state 境界:
   - `mei-tra-backend/src/services/game-state.service.ts`
   - `mei-tra-backend/src/services/game-state-manager.service.ts`
@@ -329,13 +335,15 @@ room metadata は `rooms`、参加者は `room_players` にあります。`Supab
 
 - state snapshot をまとめて保存しやすい
 - reconnect 時の復元がしやすい
+- `version` により古い snapshot からの上書きを拒否できる
+- `atomic_update_game_state()` が JSONB merge と scalar 更新を row lock 内で処理する
 
 欠点:
 
 - JSON shape と TypeScript 型がずれると runtime bug になる
-- 部分更新時に merge ロジックが必要
+- relation と JSONB を跨ぐロスター更新には transaction が必要
 
-`SupabaseGameStateRepository.update()` が current `state_data` を読んで merge しているのは、この欠点を吸収するためです。
+新コードは `load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。migration 未適用環境向けに旧 read / write path を一時的に残し、`state_data.players` と `room_players` の旧 gameplay columns も互換データとして同期します。新形式の安定稼働確認後に、この互換データを削除します。
 
 ### 7.3 chat
 
@@ -724,8 +732,8 @@ JSONB snapshot は reconnect に強い一方で、shape drift に弱いです。
 | `auth.users` | 認証アカウント本体 | frontend auth, Supabase trigger |
 | `user_profiles` | 表示名、avatar、統計、preferences | AuthContext, AuthService, UserProfileRepository |
 | `rooms` | ルーム本体。finished room は recent matches 用に一定期間保持 | RoomRepository, RoomService |
-| `room_players` | 座席、ready、team、socket/user 対応 | RoomRepository, RoomService |
-| `game_states` | ゲーム進行 snapshot | GameStateRepository, GameStateService |
+| `room_players` | player identity、座席、ready、team、host、user 対応 | RoomRepository, RoomService, atomic roster RPC |
+| `game_states` | ゲーム進行 snapshot、player gameplay state、version | GameStateRepository, GameStateService |
 | `game_history` | action log / audit / replay 補助線 | `SupabaseGameHistoryRepository`, `GameEventLogService`, `GameHistoryController`, `GetUserRecentGameHistoryUseCase` |
 | `chat_rooms` | chat room metadata | ChatRoomRepository, ChatService |
 | `chat_members` | chat membership | migration / policy 前提 |

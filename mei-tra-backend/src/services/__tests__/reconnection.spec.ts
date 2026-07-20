@@ -40,6 +40,18 @@ describe('Reconnection Token Management', () => {
         findByRoomId: jest.fn(),
         create: jest.fn(),
         update: jest.fn().mockResolvedValue({} as GameState),
+        persistRoomRoster: jest
+          .fn()
+          .mockImplementation(
+            async (
+              _roomId: string,
+              _roomPlayers: RoomPlayer[],
+              state: GameState,
+            ) => ({
+              ...state,
+              version: (state.version ?? 0) + 1,
+            }),
+          ),
         delete: jest.fn(),
         updateCurrentPlayerIndex: jest.fn(),
         updatePlayers: jest.fn(),
@@ -246,6 +258,18 @@ describe('Reconnection Token Management', () => {
 
         await expect(gameStateService.loadState(roomId)).resolves.not.toThrow();
       });
+
+      it('should surface persistence failures instead of caching empty state', async () => {
+        const roomId = 'room-load-failure';
+        gameStateRepository.findByRoomId.mockRejectedValue(
+          new Error('database unavailable'),
+        );
+
+        await expect(gameStateService.loadState(roomId)).rejects.toThrow(
+          'database unavailable',
+        );
+        expect(gameStateRepository.create).not.toHaveBeenCalled();
+      });
     });
 
     describe('reconcileWaitingRoomPlayers', () => {
@@ -288,12 +312,14 @@ describe('Reconnection Token Management', () => {
         expect(gameStateService.findPlayerByReconnectToken('user-1')).toEqual(
           expect.objectContaining({ playerId: 'seat-1' }),
         );
-        expect(gameStateRepository.update).toHaveBeenCalledWith(
+        expect(gameStateRepository.persistRoomRoster).toHaveBeenCalledWith(
           roomId,
+          roomPlayers,
           expect.objectContaining({
             players: gameStateService.getState().players,
             teamAssignments: { 'seat-1': 1 },
           }),
+          'seat-1',
         );
       });
     });
@@ -360,6 +386,18 @@ describe('Reconnection Token Management', () => {
         findByRoomId: jest.fn(),
         create: jest.fn(),
         update: jest.fn().mockResolvedValue({} as GameState),
+        persistRoomRoster: jest
+          .fn()
+          .mockImplementation(
+            async (
+              _roomId: string,
+              _roomPlayers: RoomPlayer[],
+              state: GameState,
+            ) => ({
+              ...state,
+              version: (state.version ?? 0) + 1,
+            }),
+          ),
         delete: jest.fn(),
         updateCurrentPlayerIndex: jest.fn(),
         updatePlayers: jest.fn(),
@@ -497,11 +535,66 @@ describe('Reconnection Token Management', () => {
         }
       });
 
+      gameStateRepository.persistRoomRoster.mockImplementation(
+        async (roomId, roomPlayers, state, hostId) => {
+          if (persistedRoom?.id === roomId) {
+            persistedRoom = cloneRoom({
+              ...persistedRoom,
+              hostId: hostId ?? persistedRoom.hostId,
+              players: roomPlayers.map((player) => ({
+                ...player,
+                socketId: '',
+              })),
+            });
+          }
+          return {
+            ...state,
+            version: (state.version ?? 0) + 1,
+          };
+        },
+      );
+
       return {
         getPersistedRoom: () =>
           persistedRoom ? cloneRoom(persistedRoom) : null,
       };
     };
+
+    it('does not overwrite current gameplay when updating roster metadata', async () => {
+      const player = makeGamePlayer('player-1', 'Player 1', 0, {
+        hand: ['stale-card'],
+      });
+      bindRoomRepositoryToState({
+        ...baseRoom,
+        players: [
+          {
+            ...player,
+            socketId: 'socket-1',
+            isReady: true,
+            isHost: true,
+            joinedAt: new Date(),
+          },
+        ],
+      });
+      const gameState = await roomService.getRoomGameState(baseRoom.id);
+      gameState.getState().players = [
+        {
+          ...player,
+          hand: ['current-card'],
+        },
+      ];
+
+      await roomService.updatePlayerInRoom(baseRoom.id, player.playerId, {
+        team: 1,
+      });
+
+      expect(gameState.getState().players[0]).toEqual(
+        expect.objectContaining({
+          team: 1,
+          hand: ['current-card'],
+        }),
+      );
+    });
 
     describe('convertPlayerToCOM', () => {
       it('should convert player to com and save to vacantSeats', async () => {
@@ -534,20 +627,10 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
 
-        expect(roomRepository.removePlayer).toHaveBeenCalledWith(
-          roomId,
-          playerId,
-        );
-
-        expect(roomRepository.addPlayer).toHaveBeenCalled();
-
-        // Verify com player was created
-        /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-        const addPlayerCall = (roomRepository.addPlayer as jest.Mock).mock
-          .calls[0][1];
-        expect(addPlayerCall.playerId).toContain('com-');
-        expect(addPlayerCall.name).toBe('COM');
-        /* eslint-enable @typescript-eslint/no-unsafe-assignment */
+        const persistedRoster =
+          gameStateRepository.persistRoomRoster.mock.calls[0][1];
+        expect(persistedRoster[0].playerId).toContain('com-');
+        expect(persistedRoster[0].name).toBe('COM');
       });
 
       it('should keep reconnectToken when converting to com', async () => {
@@ -986,19 +1069,15 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
         expect(roomRepository.addPlayer).not.toHaveBeenCalled();
-        expect(roomRepository.updatePlayer).toHaveBeenCalledWith(
+        expect(roomRepository.updatePlayer).not.toHaveBeenCalled();
+        expect(roomState.getPersistedRoom()?.players[0].socketId).toBe('');
+        expect(gameStateRepository.persistRoomRoster).toHaveBeenCalledWith(
           roomId,
-          'player-1',
-          expect.objectContaining({ socketId: 'socket-new' }),
-        );
-        expect(roomState.getPersistedRoom()?.players[0].socketId).toBe(
-          'socket-new',
-        );
-        expect(gameStateRepository.update).toHaveBeenCalledWith(
-          roomId,
+          [expect.objectContaining({ playerId: 'player-1' })],
           expect.objectContaining({
             players: [expect.objectContaining({ playerId: 'player-1' })],
           }),
+          'player-1',
         );
       });
 
@@ -1017,6 +1096,7 @@ describe('Reconnection Token Management', () => {
           team: 0,
           hand: [],
           isPasser: false,
+          isCOM: true,
           hasBroken: false,
           hasRequiredBroken: false,
           isReady: false,
@@ -1037,13 +1117,17 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.joinRoom(roomId, hostUser);
 
         expect(result).toBe(true);
-        expect(roomRepository.addPlayer.mock.calls).toContainEqual([
+        expect(gameStateRepository.persistRoomRoster).toHaveBeenCalledWith(
           roomId,
-          expect.objectContaining({
-            playerId: 'player-1',
-            isHost: true,
-          }),
-        ]);
+          [
+            expect.objectContaining({
+              playerId: 'player-1',
+              isHost: true,
+            }),
+          ],
+          expect.any(Object),
+          'player-1',
+        );
       });
 
       it('should normalize duplicate host flags based on room.hostId', async () => {
@@ -1744,11 +1828,26 @@ describe('Reconnection Token Management', () => {
           isHost: false,
           joinedAt: new Date(),
         };
+        const comPlayer2: RoomPlayer = {
+          ...leavingPlayer,
+          socketId: 'com-2',
+          playerId: 'com-2',
+          name: 'COM',
+          team: 0,
+          isCOM: true,
+          isReady: false,
+        };
+        const comPlayer3: RoomPlayer = {
+          ...comPlayer2,
+          socketId: 'com-3',
+          playerId: 'com-3',
+          team: 1,
+        };
 
         const room: Room = {
           ...baseRoom,
           status: RoomStatus.WAITING,
-          players: [hostPlayer, leavingPlayer],
+          players: [hostPlayer, comPlayer2, comPlayer3, leavingPlayer],
         };
 
         const roomState = bindRoomRepositoryToState(room);
@@ -1772,18 +1871,41 @@ describe('Reconnection Token Management', () => {
             hasBroken: false,
             hasRequiredBroken: false,
           },
+          makeGamePlayer(
+            comPlayer2.playerId,
+            comPlayer2.name,
+            comPlayer2.team,
+            {
+              isCOM: true,
+              isPasser: true,
+            },
+          ),
+          makeGamePlayer(
+            comPlayer3.playerId,
+            comPlayer3.name,
+            comPlayer3.team,
+            {
+              isCOM: true,
+              isPasser: true,
+            },
+          ),
         ];
         gameState.getState().teamAssignments = {
           [hostPlayer.playerId]: hostPlayer.team,
           [leavingPlayer.playerId]: leavingPlayer.team,
+          [comPlayer2.playerId]: comPlayer2.team,
+          [comPlayer3.playerId]: comPlayer3.team,
         };
 
         await roomService.leaveRoom(roomId, playerId);
 
         const updatedRoom = roomState.getPersistedRoom();
         const replacementCom = updatedRoom?.players.find(
-          (player) => player.isCOM,
+          (player) => player.playerId === 'com-1',
         );
+        expect(
+          new Set(updatedRoom?.players.map((player) => player.playerId)).size,
+        ).toBe(4);
         expect(replacementCom?.team).toBe(1);
         expect(gameState.getState().players[1].playerId).toBe(
           replacementCom?.playerId,
@@ -1887,11 +2009,6 @@ describe('Reconnection Token Management', () => {
 
         await roomService.leaveRoom(roomId, playerId);
 
-        const replacementCom = roomRepository.addPlayer.mock.calls[0]?.[1] as
-          | RoomPlayer
-          | undefined;
-        expect(replacementCom?.isCOM).toBe(true);
-        expect(replacementCom?.isPasser).toBe(false);
         expect(gameState.getState().players[0].isCOM).toBe(true);
         expect(gameState.getState().players[0].isPasser).toBe(false);
       });

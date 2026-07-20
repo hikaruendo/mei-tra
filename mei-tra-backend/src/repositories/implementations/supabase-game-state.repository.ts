@@ -10,13 +10,34 @@ import {
 } from '../../types/game.types';
 import {
   PersistedGamePlayer,
+  PersistedPlayerGameplayState,
+  PersistedPlayerStates,
   toPersistedGamePlayer,
+  toPersistedPlayerStates,
   toRuntimePlayer,
 } from '../../types/player-adapters';
 import { Database } from '../../types/database.types';
+import { RoomPlayer } from '../../types/room.types';
 
 type GameStateRow = Database['public']['Tables']['game_states']['Row'];
 type GameStateUpdate = Database['public']['Tables']['game_states']['Update'];
+type RoomPlayerRow = Database['public']['Tables']['room_players']['Row'];
+
+interface LoadedRoomGameState {
+  gameState: GameStateRow;
+  roomPlayers: RoomPlayerRow[];
+}
+
+interface RosterPlayerSnapshot {
+  playerId: string;
+  name: string;
+  team: number;
+  isCOM?: boolean;
+  hand: string[];
+  isPasser: boolean;
+  hasBroken: boolean;
+  hasRequiredBroken: boolean;
+}
 
 @Injectable()
 export class SupabaseGameStateRepository implements IGameStateRepository {
@@ -39,6 +60,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
             players: gameState.players.map((player) =>
               toPersistedGamePlayer(player),
             ),
+            playerStates: toPersistedPlayerStates(gameState.players),
+            playerOrder: gameState.players.map((player) => player.playerId),
             deck: gameState.deck,
             agari: gameState.agari,
             blowState: gameState.blowState,
@@ -69,6 +92,30 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async findByRoomId(roomId: string): Promise<GameState | null> {
     try {
+      const { data: loadedState, error: loadError } = await this.supabase.rpc(
+        'load_room_game_state',
+        { p_room_id: roomId },
+      );
+
+      if (!loadError) {
+        if (!loadedState) {
+          return null;
+        }
+
+        const payload = loadedState as LoadedRoomGameState;
+        return this.mapDatabaseToGameState(
+          payload.gameState,
+          payload.roomPlayers,
+        );
+      }
+
+      if (!this.isMissingRpcError(loadError)) {
+        throw new Error(`Failed to load room game state: ${loadError.message}`);
+      }
+
+      this.logger.warn(
+        'load_room_game_state RPC is unavailable; using legacy reads',
+      );
       const { data, error } = await this.supabase
         .from('game_states')
         .select('*')
@@ -82,7 +129,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         throw new Error(`Failed to fetch game state: ${error.message}`);
       }
 
-      return this.mapDatabaseToGameState(data);
+      const roomPlayers = await this.fetchRoomPlayers(roomId);
+      return this.mapDatabaseToGameState(data, roomPlayers);
     } catch (error) {
       this.logger.error('Error finding game state by room ID:', error);
       throw error;
@@ -92,86 +140,331 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
   async update(
     roomId: string,
     gameState: Partial<GameState>,
+    expectedVersion?: number,
   ): Promise<GameState | null> {
     try {
-      const updateData: Partial<GameStateUpdate> = {};
-
-      if (
-        gameState.players ||
-        gameState.deck ||
-        gameState.agari ||
-        gameState.blowState ||
-        gameState.playState
-      ) {
-        // Get current state data first
-        const { data: currentData } = await this.supabase
-          .from('game_states')
-          .select('state_data')
-          .eq('room_id', roomId)
-          .single();
-
-        const currentStateData =
-          (currentData?.state_data as Record<string, any>) || {};
-
-        updateData.state_data = {
-          ...currentStateData,
-          ...(gameState.players && {
-            players: gameState.players.map((player) =>
-              toPersistedGamePlayer(player),
-            ),
-          }),
-          ...(gameState.deck && { deck: gameState.deck }),
-          ...(gameState.agari !== undefined && { agari: gameState.agari }),
-          ...(gameState.blowState && { blowState: gameState.blowState }),
-          ...(gameState.playState && { playState: gameState.playState }),
-        };
-      }
-
-      if (gameState.currentPlayerIndex !== undefined)
-        updateData.current_player_index = gameState.currentPlayerIndex;
-      if (gameState.gamePhase !== undefined)
-        updateData.game_phase = gameState.gamePhase;
-      if (gameState.roundNumber !== undefined)
-        updateData.round_number = gameState.roundNumber;
-      if (gameState.pointsToWin !== undefined)
-        updateData.points_to_win = gameState.pointsToWin;
-      if (gameState.teamScores) updateData.team_scores = gameState.teamScores;
-      if (gameState.teamScoreRecords) {
-        // Convert Date objects to strings for database storage
-        const convertedRecords: Record<
-          string,
-          Array<{ points: number; timestamp: string; reason: string }>
-        > = {};
-        Object.entries(gameState.teamScoreRecords).forEach(
-          ([team, records]) => {
-            convertedRecords[team] = records.map((record) => ({
-              points: record.points,
-              timestamp: record.timestamp.toISOString(),
-              reason: record.reason,
-            }));
-          },
-        );
-        updateData.team_score_records = convertedRecords;
-      }
-      if (gameState.teamAssignments)
-        updateData.team_assignments = gameState.teamAssignments;
-
-      const { data, error } = await this.supabase
-        .from('game_states')
-        .update(updateData)
-        .eq('room_id', roomId)
-        .select()
-        .single();
+      const { data, error } = await this.supabase.rpc(
+        'atomic_update_game_state',
+        {
+          p_room_id: roomId,
+          p_state_patch: this.buildStatePatch(gameState),
+          p_scalar_patch: this.buildScalarPatch(gameState),
+          p_expected_version: expectedVersion ?? null,
+        },
+      );
 
       if (error) {
+        if (this.isMissingRpcError(error)) {
+          this.logger.warn(
+            'atomic_update_game_state RPC is unavailable; using legacy update',
+          );
+          return this.updateLegacy(roomId, gameState);
+        }
         throw new Error(`Failed to update game state: ${error.message}`);
       }
 
-      return this.mapDatabaseToGameState(data);
+      if (!data) {
+        return null;
+      }
+
+      const roomPlayers = await this.fetchRoomPlayers(roomId);
+      return this.mapDatabaseToGameState(data as GameStateRow, roomPlayers);
     } catch (error) {
       this.logger.error('Error updating game state:', error);
       throw error;
     }
+  }
+
+  async persistRoomRoster(
+    roomId: string,
+    roomPlayers: RoomPlayer[],
+    gameState: GameState,
+    hostId?: string,
+  ): Promise<GameState | null> {
+    const playerStates = toPersistedPlayerStates(gameState.players);
+    const playerOrder = gameState.players.map((player) => player.playerId);
+    const legacyPlayers = gameState.players.map((player) =>
+      toPersistedGamePlayer(player),
+    );
+    const persistedRoomPlayers = roomPlayers.map((player) => ({
+      playerId: player.playerId,
+      userId: player.userId ?? null,
+      name: player.name,
+      team: player.team,
+      isReady: player.isReady,
+      isHost: player.isHost,
+      isCOM: player.isCOM ?? false,
+      joinedAt: player.joinedAt.toISOString(),
+    }));
+
+    try {
+      const { data, error } = await this.supabase.rpc(
+        'persist_room_roster_atomic',
+        {
+          p_room_id: roomId,
+          p_room_players: persistedRoomPlayers,
+          p_player_states: playerStates,
+          p_player_order: playerOrder,
+          p_legacy_players: legacyPlayers,
+          p_team_assignments: gameState.teamAssignments,
+          p_host_id: hostId ?? null,
+          p_expected_version: gameState.version ?? null,
+        },
+      );
+
+      if (error) {
+        if (this.isMissingRpcError(error)) {
+          this.logger.warn(
+            'persist_room_roster_atomic RPC is unavailable; using legacy roster writes',
+          );
+          await this.persistRoomRosterLegacy(
+            roomId,
+            roomPlayers,
+            gameState,
+            hostId,
+          );
+          return this.findByRoomId(roomId);
+        }
+        throw new Error(`Failed to persist room roster: ${error.message}`);
+      }
+
+      return data
+        ? this.mapDatabaseToGameState(data as GameStateRow, roomPlayers)
+        : null;
+    } catch (error) {
+      this.logger.error('Error persisting room roster:', error);
+      throw error;
+    }
+  }
+
+  private buildStatePatch(
+    gameState: Partial<GameState>,
+  ): Record<string, unknown> {
+    const patch: Record<string, unknown> = {};
+
+    if (gameState.players) {
+      patch.players = gameState.players.map((player) =>
+        toPersistedGamePlayer(player),
+      );
+      patch.playerStates = toPersistedPlayerStates(gameState.players);
+      patch.playerOrder = gameState.players.map((player) => player.playerId);
+    }
+    if (gameState.deck) patch.deck = gameState.deck;
+    if (gameState.agari !== undefined) patch.agari = gameState.agari;
+    if (gameState.blowState) patch.blowState = gameState.blowState;
+    if (gameState.playState) patch.playState = gameState.playState;
+    if (gameState.pendingBrokenHandReveal !== undefined) {
+      patch.pendingBrokenHandReveal = gameState.pendingBrokenHandReveal;
+    }
+
+    return patch;
+  }
+
+  private buildScalarPatch(
+    gameState: Partial<GameState>,
+  ): Record<string, unknown> {
+    const patch: Record<string, unknown> = {};
+
+    if (gameState.currentPlayerIndex !== undefined) {
+      patch.currentPlayerIndex = gameState.currentPlayerIndex;
+    }
+    if (gameState.gamePhase !== undefined) {
+      patch.gamePhase = gameState.gamePhase;
+    }
+    if (gameState.roundNumber !== undefined) {
+      patch.roundNumber = gameState.roundNumber;
+    }
+    if (gameState.pointsToWin !== undefined) {
+      patch.pointsToWin = gameState.pointsToWin;
+    }
+    if (gameState.teamScores) patch.teamScores = gameState.teamScores;
+    if (gameState.teamScoreRecords) {
+      patch.teamScoreRecords = this.convertScoreRecordsForPersistence(
+        gameState.teamScoreRecords,
+      );
+    }
+    if (gameState.teamAssignments) {
+      patch.teamAssignments = gameState.teamAssignments;
+    }
+
+    return patch;
+  }
+
+  private convertScoreRecordsForPersistence(
+    recordsByTeam: GameState['teamScoreRecords'],
+  ): Record<
+    string,
+    Array<{ points: number; timestamp: string; reason: string }>
+  > {
+    return Object.fromEntries(
+      Object.entries(recordsByTeam).map(([team, records]) => [
+        team,
+        records.map((record) => ({
+          points: record.points,
+          timestamp: record.timestamp.toISOString(),
+          reason: record.reason,
+        })),
+      ]),
+    );
+  }
+
+  private async updateLegacy(
+    roomId: string,
+    gameState: Partial<GameState>,
+  ): Promise<GameState | null> {
+    const updateData: Partial<GameStateUpdate> = {};
+    const statePatch = this.buildStatePatch(gameState);
+
+    if (Object.keys(statePatch).length > 0) {
+      const { data: currentData } = await this.supabase
+        .from('game_states')
+        .select('state_data')
+        .eq('room_id', roomId)
+        .single();
+      updateData.state_data = {
+        ...((currentData?.state_data as Record<string, unknown>) ?? {}),
+        ...statePatch,
+      };
+    }
+
+    if (gameState.currentPlayerIndex !== undefined) {
+      updateData.current_player_index = gameState.currentPlayerIndex;
+    }
+    if (gameState.gamePhase !== undefined) {
+      updateData.game_phase = gameState.gamePhase;
+    }
+    if (gameState.roundNumber !== undefined) {
+      updateData.round_number = gameState.roundNumber;
+    }
+    if (gameState.pointsToWin !== undefined) {
+      updateData.points_to_win = gameState.pointsToWin;
+    }
+    if (gameState.teamScores) updateData.team_scores = gameState.teamScores;
+    if (gameState.teamScoreRecords) {
+      updateData.team_score_records = this.convertScoreRecordsForPersistence(
+        gameState.teamScoreRecords,
+      );
+    }
+    if (gameState.teamAssignments) {
+      updateData.team_assignments = gameState.teamAssignments;
+    }
+
+    const { data, error } = await this.supabase
+      .from('game_states')
+      .update(updateData)
+      .eq('room_id', roomId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update game state: ${error.message}`);
+    }
+
+    const roomPlayers = await this.fetchRoomPlayers(roomId);
+    return this.mapDatabaseToGameState(data, roomPlayers);
+  }
+
+  private async persistRoomRosterLegacy(
+    roomId: string,
+    roomPlayers: RoomPlayer[],
+    gameState: GameState,
+    hostId?: string,
+  ): Promise<void> {
+    const existingPlayers = await this.fetchRoomPlayers(roomId);
+    const desiredIds = new Set(roomPlayers.map((player) => player.playerId));
+
+    await Promise.all(
+      existingPlayers
+        .filter((player) => !desiredIds.has(player.player_id))
+        .map((player) =>
+          this.supabase
+            .from('room_players')
+            .delete()
+            .eq('room_id', roomId)
+            .eq('player_id', player.player_id),
+        ),
+    );
+
+    const statePlayers = new Map(
+      gameState.players.map((player) => [player.playerId, player]),
+    );
+    const rows = roomPlayers.map((player) => {
+      const statePlayer = statePlayers.get(player.playerId);
+      return {
+        room_id: roomId,
+        player_id: player.playerId,
+        socket_id: null,
+        user_id: player.userId ?? null,
+        name: player.name,
+        hand: [...(statePlayer?.hand ?? [])],
+        team: player.team,
+        is_passer: statePlayer?.isPasser ?? false,
+        has_broken: statePlayer?.hasBroken ?? false,
+        has_required_broken: statePlayer?.hasRequiredBroken ?? false,
+        is_ready: player.isReady,
+        is_host: player.isHost,
+        is_com: player.isCOM ?? false,
+        joined_at: player.joinedAt.toISOString(),
+      };
+    });
+
+    if (rows.length > 0) {
+      const { error } = await this.supabase
+        .from('room_players')
+        .upsert(rows, { onConflict: 'room_id,player_id' });
+      if (error) {
+        throw new Error(
+          `Failed to persist legacy room roster: ${error.message}`,
+        );
+      }
+    }
+
+    const roomUpdate: Record<string, unknown> = {
+      last_activity_at: new Date().toISOString(),
+    };
+    if (hostId) roomUpdate.host_id = hostId;
+    const { error: roomError } = await this.supabase
+      .from('rooms')
+      .update(roomUpdate)
+      .eq('id', roomId);
+    if (roomError) {
+      throw new Error(
+        `Failed to update legacy room roster: ${roomError.message}`,
+      );
+    }
+
+    const persistedState = await this.updateLegacy(roomId, {
+      players: gameState.players,
+      teamAssignments: gameState.teamAssignments,
+    });
+    if (!persistedState) {
+      throw new Error(`Game state not found for room ${roomId}`);
+    }
+  }
+
+  private async fetchRoomPlayers(roomId: string): Promise<RoomPlayerRow[]> {
+    const { data, error } = await this.supabase
+      .from('room_players')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('joined_at', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch room players: ${error.message}`);
+    }
+
+    return (data ?? []) as RoomPlayerRow[];
+  }
+
+  private isMissingRpcError(error: {
+    code?: string;
+    message?: string;
+  }): boolean {
+    return (
+      error.code === 'PGRST202' ||
+      error.code === '42883' ||
+      error.message?.includes('Could not find the function') === true
+    );
   }
 
   async delete(roomId: string): Promise<void> {
@@ -195,31 +488,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     players: DomainPlayer[],
   ): Promise<boolean> {
     try {
-      const { data: currentData } = await this.supabase
-        .from('game_states')
-        .select('state_data')
-        .eq('room_id', roomId)
-        .single();
-
-      const currentStateData =
-        (currentData?.state_data as Record<string, any>) || {};
-
-      const { error } = await this.supabase
-        .from('game_states')
-        .update({
-          state_data: {
-            ...currentStateData,
-            players: players.map((player) => toPersistedGamePlayer(player)),
-          },
-        })
-        .eq('room_id', roomId);
-
-      if (error) {
-        this.logger.error('Failed to update players:', error);
-        return false;
-      }
-
-      return true;
+      return Boolean(await this.update(roomId, { players }));
     } catch (error) {
       this.logger.error('Error updating players:', error);
       return false;
@@ -260,20 +529,12 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async updateGamePhase(roomId: string, phase: string): Promise<boolean> {
     try {
-      const { error } = await this.supabase
-        .from('game_states')
-        .update({
-          game_phase:
+      return Boolean(
+        await this.update(roomId, {
+          gamePhase:
             phase as Database['public']['Tables']['game_states']['Row']['game_phase'],
-        })
-        .eq('room_id', roomId);
-
-      if (error) {
-        this.logger.error('Failed to update game phase:', error);
-        return false;
-      }
-
-      return true;
+        }),
+      );
     } catch (error) {
       this.logger.error('Error updating game phase:', error);
       return false;
@@ -285,17 +546,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     index: number,
   ): Promise<boolean> {
     try {
-      const { error } = await this.supabase
-        .from('game_states')
-        .update({ current_player_index: index })
-        .eq('room_id', roomId);
-
-      if (error) {
-        this.logger.error('Failed to update current player index:', error);
-        return false;
-      }
-
-      return true;
+      return Boolean(await this.update(roomId, { currentPlayerIndex: index }));
     } catch (error) {
       this.logger.error('Error updating current player index:', error);
       return false;
@@ -307,17 +558,21 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     updates: Partial<GameStateUpdate>,
   ): Promise<boolean> {
     try {
-      const { error } = await this.supabase
-        .from('game_states')
-        .update(updates)
-        .eq('room_id', roomId);
-
-      if (error) {
-        this.logger.error('Failed to bulk update game state:', error);
-        return false;
+      const gameStateUpdates: Partial<GameState> = {};
+      if (updates.round_number !== undefined) {
+        gameStateUpdates.roundNumber = updates.round_number;
+      }
+      if (updates.current_player_index !== undefined) {
+        gameStateUpdates.currentPlayerIndex = updates.current_player_index;
+      }
+      if (updates.game_phase !== undefined) {
+        gameStateUpdates.gamePhase = updates.game_phase;
+      }
+      if (updates.points_to_win !== undefined) {
+        gameStateUpdates.pointsToWin = updates.points_to_win;
       }
 
-      return true;
+      return Boolean(await this.update(roomId, gameStateUpdates));
     } catch (error) {
       this.logger.error('Error bulk updating game state:', error);
       return false;
@@ -347,25 +602,92 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  private mapDatabaseToGameState(dbGameState: GameStateRow): GameState {
+  private mapDatabaseToGameState(
+    dbGameState: GameStateRow,
+    roomPlayers?: Array<RoomPlayerRow | RoomPlayer>,
+  ): GameState {
     const stateData = dbGameState.state_data || {};
     const teamAssignments = dbGameState.team_assignments as {
       [playerId: string]: 0 | 1;
     };
-    const players = Array.isArray(stateData.players)
-      ? stateData.players
-          .map((player) => {
-            const persistedPlayer = player as Partial<PersistedGamePlayer>;
-            const fallbackTeam =
-              typeof persistedPlayer.playerId === 'string'
-                ? teamAssignments[persistedPlayer.playerId]
-                : undefined;
-            return toRuntimePlayer(persistedPlayer, fallbackTeam);
-          })
-          .filter((player): player is DomainPlayer => Boolean(player))
-      : [];
+    const legacyPlayers = new Map<string, Partial<PersistedGamePlayer>>(
+      Array.isArray(stateData.players)
+        ? stateData.players
+            .filter(
+              (player): player is PersistedGamePlayer =>
+                typeof (player as PersistedGamePlayer)?.playerId === 'string',
+            )
+            .map((player) => [player.playerId, player])
+        : [],
+    );
+    const playerStates =
+      stateData.playerStates && typeof stateData.playerStates === 'object'
+        ? (stateData.playerStates as PersistedPlayerStates)
+        : {};
+    const hasAuthoritativeRoster = roomPlayers !== undefined;
+    const rosterPlayers = (roomPlayers ?? []).map((player) =>
+      this.toRosterPlayerSnapshot(player),
+    );
+    const roomPlayersById = new Map(
+      rosterPlayers.map((player) => [player.playerId, player]),
+    );
+    const persistedOrder = (
+      Array.isArray(stateData.playerOrder)
+        ? stateData.playerOrder.filter(
+            (playerId): playerId is string => typeof playerId === 'string',
+          )
+        : []
+    ).filter(
+      (playerId) => !hasAuthoritativeRoster || roomPlayersById.has(playerId),
+    );
+    const playerOrder = [
+      ...persistedOrder,
+      ...rosterPlayers
+        .map((player) => player.playerId)
+        .filter((playerId) => !persistedOrder.includes(playerId)),
+      ...(!hasAuthoritativeRoster
+        ? Array.from(legacyPlayers.keys()).filter(
+            (playerId) => !persistedOrder.includes(playerId),
+          )
+        : []),
+    ];
+    const players = playerOrder
+      .map((playerId) => {
+        const roomPlayer = roomPlayersById.get(playerId);
+        const legacyPlayer = legacyPlayers.get(playerId);
+        const gameplay = playerStates[playerId] as
+          | PersistedPlayerGameplayState
+          | undefined;
+        const fallbackTeam = teamAssignments[playerId];
+
+        return toRuntimePlayer(
+          {
+            ...legacyPlayer,
+            playerId,
+            name: roomPlayer?.name ?? legacyPlayer?.name,
+            team: roomPlayer?.team as 0 | 1 | undefined,
+            isCOM: roomPlayer?.isCOM ?? legacyPlayer?.isCOM,
+            hand: gameplay?.hand ?? roomPlayer?.hand ?? legacyPlayer?.hand,
+            isPasser:
+              gameplay?.isPasser ??
+              roomPlayer?.isPasser ??
+              legacyPlayer?.isPasser,
+            hasBroken:
+              gameplay?.hasBroken ??
+              roomPlayer?.hasBroken ??
+              legacyPlayer?.hasBroken,
+            hasRequiredBroken:
+              gameplay?.hasRequiredBroken ??
+              roomPlayer?.hasRequiredBroken ??
+              legacyPlayer?.hasRequiredBroken,
+          },
+          fallbackTeam,
+        );
+      })
+      .filter((player): player is DomainPlayer => Boolean(player));
 
     return {
+      version: dbGameState.version,
       players,
       currentPlayerIndex: dbGameState.current_player_index,
       gamePhase: dbGameState.game_phase,
@@ -379,10 +701,39 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       ),
       blowState: stateData.blowState,
       playState: stateData.playState,
+      pendingBrokenHandReveal: stateData.pendingBrokenHandReveal ?? null,
       agari: stateData.agari,
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
       teamAssignments,
+    };
+  }
+
+  private toRosterPlayerSnapshot(
+    player: RoomPlayerRow | RoomPlayer,
+  ): RosterPlayerSnapshot {
+    if ('player_id' in player) {
+      return {
+        playerId: player.player_id,
+        name: player.name,
+        team: player.team,
+        isCOM: player.is_com,
+        hand: [...player.hand],
+        isPasser: player.is_passer,
+        hasBroken: player.has_broken,
+        hasRequiredBroken: player.has_required_broken,
+      };
+    }
+
+    return {
+      playerId: player.playerId,
+      name: player.name,
+      team: player.team,
+      isCOM: player.isCOM,
+      hand: [...player.hand],
+      isPasser: player.isPasser,
+      hasBroken: player.hasBroken ?? false,
+      hasRequiredBroken: player.hasRequiredBroken ?? false,
     };
   }
 
