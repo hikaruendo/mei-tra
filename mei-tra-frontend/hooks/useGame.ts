@@ -19,6 +19,7 @@ import type {
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
+  SyncGameStatePayload,
   TransportGamePhase,
   TransportTeamScores,
   UpdatePhasePayload,
@@ -161,6 +162,7 @@ export const useGame = () => {
   const gameOverShownRef = useRef<string | null>(null);
   const agariRequestKeyRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
+  const gameStateSyncKeyRef = useRef<string | null>(null);
   const legacyRoomEventSkipRef = useRef<{
     roomId: string | null;
     roomUpdated: boolean;
@@ -228,6 +230,7 @@ export const useGame = () => {
     gameOverShownRef.current = null;
     agariRequestKeyRef.current = null;
     roomBootstrapRef.current = null;
+    gameStateSyncKeyRef.current = null;
     setGameStarted(false);
     setGamePhase(null);
     setCurrentRoomId(null);
@@ -1031,6 +1034,26 @@ export const useGame = () => {
     Object.entries(socketHandlers).forEach(([event, handler]) => {
       socket.on(event, handler);
     });
+
+    const storedRoomId =
+      typeof window === 'undefined'
+        ? null
+        : sessionStorage.getItem('roomId');
+    const gameStateSyncKey =
+      socket.connected && socket.id && storedRoomId
+        ? `${socket.id}:${storedRoomId}`
+        : null;
+
+    if (
+      gameStateSyncKey &&
+      gameStateSyncKeyRef.current !== gameStateSyncKey
+    ) {
+      gameStateSyncKeyRef.current = gameStateSyncKey;
+      const payload: SyncGameStatePayload = {
+        roomId: storedRoomId ?? undefined,
+      };
+      socket.emit('sync-game-state', payload);
+    }
 
     // Cleanup socket handlers
     return () => {

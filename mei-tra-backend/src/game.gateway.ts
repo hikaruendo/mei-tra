@@ -13,6 +13,7 @@ import type {
   ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
+  SyncGameStatePayload,
 } from '@contracts/game';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
@@ -1059,6 +1060,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.id,
       this.getAuthenticatedUser(client)?.id,
     );
+  }
+
+  @SubscribeMessage('sync-game-state')
+  async handleSyncGameState(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: SyncGameStatePayload,
+  ): Promise<void> {
+    const roomId = data.roomId ?? this.playerRooms.get(client.id);
+    if (!roomId) {
+      return;
+    }
+
+    let authenticatedUser = this.getAuthenticatedUser(client);
+    if (!authenticatedUser) {
+      const auth = client.handshake.auth as { token?: unknown };
+      const token = auth.token;
+      if (typeof token !== 'string') {
+        return;
+      }
+
+      const refreshedAuthenticatedUser =
+        await this.authService.getUserFromSocketToken(token);
+      if (!refreshedAuthenticatedUser) {
+        return;
+      }
+      authenticatedUser = refreshedAuthenticatedUser;
+      (client.data as { user?: AuthenticatedUser }).user = authenticatedUser;
+    }
+
+    const snapshot = await this.reconnectionUseCase.getActiveGameSnapshot({
+      roomId,
+      authenticatedUser,
+    });
+    if (!snapshot) {
+      return;
+    }
+
+    client.emit('game-state', snapshot.gameState);
+    client.emit('reconnect-token', snapshot.reconnectToken);
   }
 
   @SubscribeMessage('change-player-team')
