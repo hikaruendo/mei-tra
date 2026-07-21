@@ -106,6 +106,7 @@ describe('GameGateway COM recovery integration', () => {
       id: 'socket-1',
       handshake: { auth: { token: 'token' } },
       data: { user: authenticatedUser },
+      join: jest.fn().mockResolvedValue(undefined),
       emit: jest.fn(),
     } as unknown as Socket;
 
@@ -118,6 +119,7 @@ describe('GameGateway COM recovery integration', () => {
       authenticatedUser,
     });
     expect(testGateway.reconnectionUseCase.execute).not.toHaveBeenCalled();
+    expect(client.join).toHaveBeenCalledWith('room-1');
     expect(client.emit).toHaveBeenCalledWith('game-state', gameState);
     expect(client.emit).toHaveBeenCalledWith('reconnect-token', 'player-1');
     expect(testGateway.startTurnAckMonitor).not.toHaveBeenCalled();

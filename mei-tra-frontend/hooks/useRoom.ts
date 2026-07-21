@@ -33,7 +33,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   const [error, setError] = useState<string | null>(null);
   const [playerReadyStatus, setPlayerReadyStatus] = useState<Record<string, boolean>>({});
   const [isClient, setIsClient] = useState(false);
-  const { socket } = useSocket();
+  const {
+    socket,
+    isConnected: socketConnected,
+    isConnecting: socketConnecting,
+  } = useSocket();
   const { user } = useAuth();
 
   const users = useMemo(() => options.users ?? [], [options.users]);
@@ -739,6 +743,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       playerReadyStatus: {},
       changePlayerTeam: () => {},
       fillWithCOM: () => {},
+      isConnected: false,
+      isConnecting: false,
     };
   }
 
@@ -756,5 +762,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     playerReadyStatus,
     changePlayerTeam,
     fillWithCOM,
+    isConnected: socketConnected,
+    isConnecting: socketConnecting,
   };
 };

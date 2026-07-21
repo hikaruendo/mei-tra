@@ -51,12 +51,23 @@ export const RoomList: React.FC<RoomListProps> = ({
   const t = useTranslations();
   const { user } = useAuth();
   const memoizedUsers = useMemo(() => users, [users]);
-  const { availableRooms, createRoom, joinRoom, watchRoom, error, currentRoom } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
+  const {
+    availableRooms,
+    createRoom,
+    joinRoom,
+    watchRoom,
+    error,
+    currentRoom,
+    isConnected: roomSocketConnected,
+    isConnecting: roomSocketConnecting,
+  } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const { backendStatus, isLoading } = useBackendStatus();
-  const isSocketReady = Boolean(isConnected && !isConnecting);
+  const effectiveIsConnected = isConnected ?? roomSocketConnected;
+  const effectiveIsConnecting = isConnecting ?? roomSocketConnecting;
+  const isSocketReady = Boolean(effectiveIsConnected && !effectiveIsConnecting);
   const disableRoomActions = backendStatus.isStarting || !isSocketReady;
 
   const filteredRooms = useMemo(() => {
@@ -140,8 +151,8 @@ export const RoomList: React.FC<RoomListProps> = ({
       )}
 
       {/* 接続状態の表示 */}
-      {isConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
-      {!isConnected && !isConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
+      {effectiveIsConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
+      {!effectiveIsConnected && !effectiveIsConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.section}>

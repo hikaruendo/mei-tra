@@ -3,6 +3,13 @@ import { getSocketBaseUrl } from '@/lib/socket-url';
 
 let socket: Socket | null = null;
 let latestAuthToken: string | undefined;
+let authTokenProvider: (() => Promise<string | null>) | undefined;
+
+export function setSocketAuthTokenProvider(
+  provider: (() => Promise<string | null>) | undefined,
+): void {
+  authTokenProvider = provider;
+}
 
 function detectSafari(): boolean {
   if (typeof window === 'undefined') return false;
@@ -28,9 +35,12 @@ export function getSocket(authToken?: string): Socket {
       // This ensures that after a server restart, the socket reconnects with the correct
       // roomId (set in sessionStorage when the player joined a room), allowing the server
       // to re-add the socket to the correct socket.io room and receive room broadcasts.
-      auth: (cb: (data: { roomId: string; token?: string }) => void) => {
+      auth: async (cb: (data: { roomId: string; token?: string }) => void) => {
         const currentRoomId = sessionStorage.getItem('roomId') || '';
         console.log('[Socket] Auth callback — roomId from sessionStorage:', currentRoomId || 'none');
+        if (authTokenProvider) {
+          latestAuthToken = await authTokenProvider() ?? latestAuthToken;
+        }
         cb({ roomId: currentRoomId, token: latestAuthToken });
       },
       autoConnect: false,
@@ -84,9 +94,12 @@ export function reconnectSocket(authToken?: string): Socket {
   latestAuthToken = authToken ?? latestAuthToken;
 
   if (socket) {
-    socket.auth = (cb: (data: { roomId: string; token?: string }) => void) => {
+    socket.auth = async (cb: (data: { roomId: string; token?: string }) => void) => {
       const currentRoomId = sessionStorage.getItem('roomId') || '';
       console.log('[Socket] Reconnect auth callback — roomId from sessionStorage:', currentRoomId || 'none');
+      if (authTokenProvider) {
+        latestAuthToken = await authTokenProvider() ?? latestAuthToken;
+      }
       cb({ roomId: currentRoomId, token: latestAuthToken });
     };
     socket.disconnect();

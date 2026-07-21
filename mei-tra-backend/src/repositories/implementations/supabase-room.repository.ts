@@ -269,11 +269,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         socket_id: player.socketId,
         user_id: player.userId ?? null,
         name: player.name,
-        hand: player.hand,
         team: player.team,
-        is_passer: player.isPasser,
-        has_broken: player.hasBroken,
-        has_required_broken: player.hasRequiredBroken,
         is_ready: player.isReady,
         is_host: player.isHost,
         is_com: player.isCOM ?? false,
@@ -328,14 +324,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       }
       if (updates.userId !== undefined) updateData.user_id = updates.userId;
       if (updates.name) updateData.name = updates.name;
-      if (updates.hand) updateData.hand = updates.hand;
       if (updates.team !== undefined) updateData.team = updates.team;
-      if (updates.isPasser !== undefined)
-        updateData.is_passer = updates.isPasser;
-      if (updates.hasBroken !== undefined)
-        updateData.has_broken = updates.hasBroken;
-      if (updates.hasRequiredBroken !== undefined)
-        updateData.has_required_broken = updates.hasRequiredBroken;
       if (updates.isReady !== undefined) updateData.is_ready = updates.isReady;
       if (updates.isHost !== undefined) updateData.is_host = updates.isHost;
 
@@ -407,11 +396,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       socket_id: player.socketId,
       user_id: player.userId ?? null,
       name: player.name,
-      hand: player.hand,
       team: player.team,
-      is_passer: player.isPasser,
-      has_broken: player.hasBroken,
-      has_required_broken: player.hasRequiredBroken,
       is_ready: player.isReady,
       is_host: player.isHost,
       is_com: player.isCOM ?? false,
@@ -493,11 +478,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
       userId: dbPlayer.user_id ?? undefined,
       isAuthenticated: Boolean(dbPlayer.user_id),
       name: dbPlayer.name,
-      hand: dbPlayer.hand,
+      hand: [],
       team: dbPlayer.team as 0 | 1,
-      isPasser: dbPlayer.is_passer,
-      hasBroken: dbPlayer.has_broken,
-      hasRequiredBroken: dbPlayer.has_required_broken,
+      isPasser: false,
+      hasBroken: false,
+      hasRequiredBroken: false,
       isReady: dbPlayer.is_ready,
       isHost: dbPlayer.is_host,
       isCOM: dbPlayer.is_com,

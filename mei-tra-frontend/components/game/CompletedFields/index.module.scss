@@ -1,5 +1,34 @@
 @use '../../../styles/base/typography' as typography;
 
+.completedFieldsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.summary {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.45rem;
+  align-self: center;
+  padding: 0.15rem 0.65rem;
+  border-radius: var(--mt-radius-pill);
+  background: color-mix(in srgb, var(--mt-surface) 72%, transparent);
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.72rem);
+  line-height: 1.2;
+  box-shadow: var(--mt-shadow-soft);
+}
+
+.summary strong {
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.9rem);
+  font-weight: 800;
+}
+
 .completedFieldsContainer {
   display: flex;
   flex-wrap: nowrap;
@@ -64,6 +93,15 @@
     min-height: 4rem;
     padding: 0;
     width: 100%;
+  }
+
+  .summary {
+    font-size: typography.scale(0.66rem);
+    padding: 0.12rem 0.5rem;
+  }
+
+  .summary strong {
+    font-size: typography.scale(0.82rem);
   }
 
   .completedField {

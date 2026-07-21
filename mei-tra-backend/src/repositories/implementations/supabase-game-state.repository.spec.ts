@@ -8,15 +8,6 @@ describe('SupabaseGameStateRepository', () => {
     id: 'game-state-1',
     room_id: '00000000-0000-0000-0000-000000000001',
     state_data: {
-      players: [
-        {
-          playerId: 'player-1',
-          name: 'Legacy name',
-          hand: ['legacy-card'],
-          team: 0,
-          isPasser: false,
-        },
-      ],
       playerStates: {
         'player-1': {
           hand: ['S1'],
@@ -55,7 +46,6 @@ describe('SupabaseGameStateRepository', () => {
       1: { play: 0, total: 0 },
     },
     team_score_records: { 0: [], 1: [] },
-    team_assignments: { 'player-1': 1 },
     version: 4,
     created_at: '2026-07-19T00:00:00.000Z',
     updated_at: '2026-07-19T00:00:00.000Z',
@@ -68,15 +58,12 @@ describe('SupabaseGameStateRepository', () => {
     socket_id: null,
     user_id: '00000000-0000-0000-0000-000000000101',
     name: 'Current name',
-    hand: ['room-card'],
     team: 1,
-    is_passer: false,
-    has_broken: false,
-    has_required_broken: false,
     is_ready: true,
     is_host: true,
     is_com: false,
     joined_at: '2026-07-19T00:00:00.000Z',
+    seat_index: 0,
   };
 
   function createState(): GameState {
@@ -156,7 +143,7 @@ describe('SupabaseGameStateRepository', () => {
     ]);
   });
 
-  it('does not revive legacy players missing from the authoritative roster', async () => {
+  it('ignores player order entries missing from the authoritative roster', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: {
         gameState: gameStateRow,
@@ -251,6 +238,12 @@ describe('SupabaseGameStateRepository', () => {
         ],
       }),
     );
+    const [, rosterPayload] = rpc.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
+    expect(rosterPayload).not.toHaveProperty('p_legacy_players');
+    expect(rosterPayload).not.toHaveProperty('p_team_assignments');
     expect(state?.version).toBe(5);
   });
 
@@ -271,22 +264,23 @@ describe('SupabaseGameStateRepository', () => {
 
     await repository.persistRoomRoster(
       gameStateRow.room_id,
-      [
-        { ...createRoomPlayer(), seatIndex: 7 },
-        secondPlayer,
-      ],
+      [{ ...createRoomPlayer(), seatIndex: 7 }, secondPlayer],
       createState(),
       'player-1',
     );
 
-    expect(rpc).toHaveBeenCalledWith(
-      'persist_room_roster_atomic',
-      expect.objectContaining({
-        p_room_players: expect.arrayContaining([
-          expect.objectContaining({ playerId: 'player-1', seatIndex: 0 }),
-          expect.objectContaining({ playerId: 'player-2', seatIndex: 1 }),
-        ]),
-      }),
-    );
+    const [, rosterPayload] = rpc.mock.calls[0] as [
+      string,
+      { p_room_players: Array<{ playerId: string; seatIndex: number }> },
+    ];
+    expect(
+      rosterPayload.p_room_players.map((player) => ({
+        playerId: player.playerId,
+        seatIndex: player.seatIndex,
+      })),
+    ).toEqual([
+      { playerId: 'player-1', seatIndex: 0 },
+      { playerId: 'player-2', seatIndex: 1 },
+    ]);
   });
 });

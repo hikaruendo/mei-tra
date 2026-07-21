@@ -46,7 +46,6 @@ import {
 } from '../types/game.types';
 import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { getTeamDisplayName } from '../lib/utils/teamUtils';
-import { reconnectSocket } from '../app/socket';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
 
@@ -159,7 +158,7 @@ export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
-  const { user, getAccessToken } = useAuth();
+  const { user } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
   const agariRequestKeyRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
@@ -338,25 +337,9 @@ export const useGame = () => {
 
     roomBootstrapRef.current = storedRoomId;
 
-    let cancelled = false;
-
-    void (async () => {
-      const token = await getAccessToken();
-      if (cancelled || !token) {
-        if (!token) {
-          roomBootstrapRef.current = null;
-        }
-        return;
-      }
-
-      console.log('[useGame] Bootstrapping room state from stored roomId:', storedRoomId);
-      reconnectSocket(token);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentRoomId, getAccessToken, socket, user]);
+    console.log('[useGame] Syncing room state from stored roomId:', storedRoomId);
+    socket.emit('sync-game-state', { roomId: storedRoomId });
+  }, [currentRoomId, socket, user]);
 
   useEffect(() => {
     if (currentRoomId) {
@@ -1215,6 +1198,7 @@ export const useGame = () => {
     return {
       isLoading: true,
       loadingStep: 'クライアントを初期化中...',
+      socket,
       isConnected: false,
       isConnecting: false,
       gameOverModal: null,
@@ -1227,6 +1211,7 @@ export const useGame = () => {
     return {
       isLoading: true,
       loadingStep: loadingState.step,
+      socket,
       isConnected,
       isConnecting,
       gameOverModal: null,
@@ -1275,6 +1260,7 @@ export const useGame = () => {
     pointsToWin,
     users,
     paused,
+    socket,
     isConnected,
     isConnecting,
   };

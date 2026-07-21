@@ -35,10 +35,7 @@ describe('SupabaseRoomRepository', () => {
       is_host: boolean;
       is_ready: boolean;
       is_com: boolean;
-      hand: string[];
-      is_passer: boolean;
-      has_broken: boolean;
-      has_required_broken: boolean;
+      seat_index: number;
     }> = {},
   ) {
     return {
@@ -48,15 +45,12 @@ describe('SupabaseRoomRepository', () => {
       socket_id: overrides.socket_id ?? `${playerId}-socket`,
       user_id: overrides.user_id ?? playerId,
       name: overrides.name ?? playerId,
-      hand: overrides.hand ?? [],
       team: overrides.team ?? 0,
-      is_passer: overrides.is_passer ?? false,
-      has_broken: overrides.has_broken ?? false,
-      has_required_broken: overrides.has_required_broken ?? false,
       is_ready: overrides.is_ready ?? false,
       is_host: overrides.is_host ?? false,
       is_com: overrides.is_com ?? false,
       joined_at: joinedAt,
+      seat_index: overrides.seat_index ?? 0,
     };
   }
 
@@ -68,9 +62,14 @@ describe('SupabaseRoomRepository', () => {
     const roomPlayersData = [
       createPlayerRow('room-1', 'player-1', '2026-04-16T00:00:30.000Z', {
         is_host: true,
+        seat_index: 0,
       }),
-      createPlayerRow('room-1', 'player-2', '2026-04-16T00:01:00.000Z'),
-      createPlayerRow('room-2', 'player-3', '2026-04-16T01:00:30.000Z'),
+      createPlayerRow('room-1', 'player-2', '2026-04-16T00:01:00.000Z', {
+        seat_index: 1,
+      }),
+      createPlayerRow('room-2', 'player-3', '2026-04-16T01:00:30.000Z', {
+        seat_index: 0,
+      }),
     ];
 
     const roomsOrder = jest
