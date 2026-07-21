@@ -13,25 +13,33 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, player
   const t = useTranslations('completedFields');
 
   return (
-    <div className={styles.completedFieldsContainer}>
-      {fields.map((field, index) => {
-        const winnerName = players.find(p => p.playerId === field.winnerId)?.name || t('unknown');
-        return (
-          <div key={index} className={styles.completedField}>
-            <div className={styles.winnerName}>{winnerName}</div>
-            <div className={styles.cards}>
-              {field.cards.map((card: string, cardIndex: number) => {
-                return (
-                  <Card 
-                    key={cardIndex}
-                    card={card}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+    <div className={styles.completedFieldsPanel}>
+      <div className={styles.summary}>
+        <span>{t('takenLabel')}</span>
+        <strong>{t('takenCount', { count: fields.length })}</strong>
+      </div>
+      {fields.length > 0 && (
+        <div className={styles.completedFieldsContainer}>
+          {fields.map((field, index) => {
+            const winnerName = players.find(p => p.playerId === field.winnerId)?.name || t('unknown');
+            return (
+              <div key={index} className={styles.completedField}>
+                <div className={styles.winnerName}>{winnerName}</div>
+                <div className={styles.cards}>
+                  {field.cards.map((card: string, cardIndex: number) => {
+                    return (
+                      <Card
+                        key={cardIndex}
+                        card={card}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

@@ -40,7 +40,10 @@ describe('ShuffleTeamsUseCase', () => {
     const useCase = new ShuffleTeamsUseCase(roomService, fillWithComUseCase);
 
     const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
-    const result = await useCase.execute({ roomId: 'room-1', playerId: 'host' });
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      playerId: 'host',
+    });
     randomSpy.mockRestore();
 
     expect(result.success).toBe(true);
@@ -51,10 +54,10 @@ describe('ShuffleTeamsUseCase', () => {
       ]),
     );
     const [shuffledPlayers] = roomGameState.reconcileWaitingRoomPlayers.mock
-      .calls[0];
-    expect(shuffledPlayers.map((player: RoomPlayer) => player.seatIndex)).toEqual(
-      [0, 1, 2, 3],
-    );
+      .calls[0] as [RoomPlayer[]];
+    expect(
+      shuffledPlayers.map((player: RoomPlayer) => player.seatIndex),
+    ).toEqual([0, 1, 2, 3]);
   });
 
   it('returns failure when empty seats cannot be filled', async () => {

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
-import { getSocket } from '../app/socket';
+import {
+  getExistingSocket,
+  getSocket,
+  setSocketAuthTokenProvider,
+} from '../app/socket';
 import { useAuth } from './useAuth';
 
 export interface UseSocketReturn {
@@ -8,6 +12,8 @@ export interface UseSocketReturn {
   isConnected: boolean;
   isConnecting: boolean;
 }
+
+let sharedConnectInFlight = false;
 
 export function useSocket(): UseSocketReturn {
   const { getAccessToken, loading, user } = useAuth();
@@ -28,6 +34,7 @@ export function useSocket(): UseSocketReturn {
 
     const initializeSocket = async () => {
       isInitializingRef.current = true;
+      setSocketAuthTokenProvider(getAccessToken);
 
       // If a socket already exists and is connected, reflect that immediately
       if (socketRef.current?.connected) {
@@ -61,9 +68,11 @@ export function useSocket(): UseSocketReturn {
         console.log('[useSocket] Auth token retrieved, initializing socket with token');
         authTokenRef.current = token;
 
-        // Initialize socket with auth token
+        // Initialize or reuse the shared game socket. Multiple hooks can call
+        // useSocket on the same page, but only one socket connection should be
+        // created and connected.
         if (!socketRef.current) {
-          socketRef.current = getSocket(token);
+          socketRef.current = getExistingSocket() ?? getSocket(token);
         }
         managedSocket = socketRef.current;
 
@@ -74,6 +83,7 @@ export function useSocket(): UseSocketReturn {
             if (!isMounted) return;
             setIsConnected(true);
             setIsConnecting(false);
+            sharedConnectInFlight = false;
             isInitializingRef.current = false;
           };
 
@@ -89,6 +99,7 @@ export function useSocket(): UseSocketReturn {
             if (!isMounted) return;
             setIsConnected(false);
             setIsConnecting(true);
+            sharedConnectInFlight = false;
             isInitializingRef.current = false;
           };
 
@@ -98,6 +109,7 @@ export function useSocket(): UseSocketReturn {
             setIsConnected(false);
             // Backend cold start中も再接続を継続する
             setIsConnecting(true);
+            sharedConnectInFlight = false;
             isInitializingRef.current = false;
           };
 
@@ -132,9 +144,16 @@ export function useSocket(): UseSocketReturn {
           managedSocket.io.on('reconnect_failed', handleReconnectFailed);
 
           // Connect the socket if not already connected
-          if (!managedSocket.connected) {
+          if (!managedSocket.connected && !sharedConnectInFlight) {
             console.log('[useSocket] Attempting to connect socket with auth token...');
+            sharedConnectInFlight = true;
             managedSocket.connect();
+          } else if (!managedSocket.connected) {
+            console.log('[useSocket] Socket connection already in progress');
+            if (isMounted) {
+              setIsConnecting(true);
+            }
+            isInitializingRef.current = false;
           } else {
             // Already connected, update state immediately
             console.log('[useSocket] Socket already connected');

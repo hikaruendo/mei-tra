@@ -1097,6 +1097,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    this.playerRooms.set(client.id, roomId);
+    await client.join(roomId);
     client.emit('game-state', snapshot.gameState);
     client.emit('reconnect-token', snapshot.reconnectToken);
   }

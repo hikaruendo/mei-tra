@@ -22,7 +22,10 @@ export class ShuffleTeamsUseCase {
     }
 
     if (room.status !== RoomStatus.WAITING) {
-      return { success: false, error: 'Teams can only be shuffled while waiting' };
+      return {
+        success: false,
+        error: 'Teams can only be shuffled while waiting',
+      };
     }
 
     if (room.hostId !== request.playerId) {

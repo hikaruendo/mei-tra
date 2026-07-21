@@ -14,7 +14,6 @@ import { LandingPage } from '@/components/landing/LandingPage';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { useAuth } from '@/hooks/useAuth';
-import { useSocket } from '@/hooks/useSocket';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +25,6 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const gameState = useGame();
-  const { socket } = useSocket();
 
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -118,6 +116,7 @@ export default function Home() {
     isConnected = false,
     isConnecting = false,
     users = [],
+    socket = null,
   } = gameState;
 
   // Type guard to ensure gameActions exists
@@ -177,15 +176,17 @@ export default function Home() {
         ) : (
           <>
             {/* ① RoomList: 部屋に入っていない && ゲーム未開始 */}
-            <div style={{ display: (!currentRoomId && !gameStarted) ? 'block' : 'none' }}>
-              <RoomList
-                isConnected={isConnected}
-                isConnecting={isConnecting}
-                users={users}
-                currentPlayerId={currentPlayerId}
-              />
-              <Footer />
-            </div>
+            {!currentRoomId && !gameStarted && (
+              <div>
+                <RoomList
+                  isConnected={isConnected}
+                  isConnecting={isConnecting}
+                  users={users}
+                  currentPlayerId={currentPlayerId}
+                />
+                <Footer />
+              </div>
+            )}
 
             {/* ② PreGameTable: 待機中 / GameTable: ゲーム中 */}
             {currentRoomId && (

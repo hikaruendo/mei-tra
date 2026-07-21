@@ -33,6 +33,26 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const TOKEN_REFRESH_SKEW_SECONDS = 60;
+
+function getJwtExpiresAt(token: string): number | null {
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) return null;
+
+    const normalizedPayload = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const decodedPayload = JSON.parse(atob(normalizedPayload)) as {
+      exp?: unknown;
+    };
+
+    return typeof decodedPayload.exp === 'number' ? decodedPayload.exp : null;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -410,7 +430,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) return null;
 
-    return data.session.access_token;
+    const expiresAt =
+      data.session.expires_at ?? getJwtExpiresAt(data.session.access_token);
+    const shouldRefresh =
+      typeof expiresAt === 'number' &&
+      expiresAt - TOKEN_REFRESH_SKEW_SECONDS <= Math.floor(Date.now() / 1000);
+
+    if (!shouldRefresh) {
+      return data.session.access_token;
+    }
+
+    const { data: refreshedData, error: refreshError } =
+      await supabase.auth.refreshSession();
+    if (refreshError || !refreshedData.session) {
+      console.warn('[AuthContext] Failed to refresh access token', refreshError);
+      return null;
+    }
+
+    setSession(refreshedData.session);
+    return refreshedData.session.access_token;
   }, []); // No dependencies - always get fresh session
 
   const refreshSession = useCallback(async () => {

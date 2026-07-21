@@ -369,7 +369,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           )}
         </div>
         {renderPlayerHand(isCurrentPlayer)}
-        {completedFields.length > 0 && (
+        {(completedFields.length > 0 || (position === 'bottom' && gamePhase === 'play')) && (
           <div className={styles.completedFields}>
             <CompletedFields
               fields={completedFields}

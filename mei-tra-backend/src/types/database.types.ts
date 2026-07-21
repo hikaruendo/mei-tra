@@ -61,11 +61,7 @@ export interface Database {
           player_id: string;
           socket_id: string | null;
           name: string;
-          hand: string[];
           team: number;
-          is_passer: boolean;
-          has_broken: boolean;
-          has_required_broken: boolean;
           is_ready: boolean;
           is_host: boolean;
           is_com: boolean;
@@ -79,11 +75,7 @@ export interface Database {
           player_id: string;
           socket_id?: string | null;
           name: string;
-          hand?: string[];
           team?: number;
-          is_passer?: boolean;
-          has_broken?: boolean;
-          has_required_broken?: boolean;
           is_ready?: boolean;
           is_host?: boolean;
           is_com?: boolean;
@@ -97,11 +89,7 @@ export interface Database {
           player_id?: string;
           socket_id?: string | null;
           name?: string;
-          hand?: string[];
           team?: number;
-          is_passer?: boolean;
-          has_broken?: boolean;
-          has_required_broken?: boolean;
           is_ready?: boolean;
           is_host?: boolean;
           is_com?: boolean;
@@ -129,7 +117,6 @@ export interface Database {
               reason: string;
             }>;
           };
-          team_assignments: { [key: string]: number };
           version: number;
           created_at: string;
           updated_at: string;
@@ -152,7 +139,6 @@ export interface Database {
               reason: string;
             }>;
           };
-          team_assignments?: { [key: string]: number };
           version?: number;
           created_at?: string;
           updated_at?: string;
@@ -175,7 +161,6 @@ export interface Database {
               reason: string;
             }>;
           };
-          team_assignments?: { [key: string]: number };
           version?: number;
           created_at?: string;
           updated_at?: string;

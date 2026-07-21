@@ -382,6 +382,8 @@
     "unknown": "Unknown"
   },
   "completedFields": {
+    "takenLabel": "Taken",
+    "takenCount": "{count} pairs",
     "unknown": "Unknown"
   },
   "chatDock": {

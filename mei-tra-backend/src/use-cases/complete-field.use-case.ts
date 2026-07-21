@@ -56,7 +56,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
 
       this.removeCardsFromHands(state, field.cards);
 
-      const completedField = await roomGameState.completeField(
+      const completedField = roomGameState.completeField(
         field,
         winner.playerId,
       );
