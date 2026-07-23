@@ -3,7 +3,7 @@ import type { BlowDeclaration } from '@/types/game.types';
 import {
   getValidBlowPairValues,
   isBlowDeclarationValid,
-} from '../../../shared/game-client/blow';
+} from '@meitra/game-client/blow';
 
 const declaration = (
   overrides: Partial<BlowDeclaration> = {},

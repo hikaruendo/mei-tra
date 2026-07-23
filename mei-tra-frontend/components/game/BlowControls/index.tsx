@@ -4,7 +4,7 @@ import { BlowAction, BlowDeclaration, Player, TrumpType } from '@/types/game.typ
 import {
   getValidBlowPairValues,
   isBlowDeclarationValid,
-} from '../../../../shared/game-client/blow';
+} from '@meitra/game-client/blow';
 import styles from './index.module.scss';
 
 interface BlowControlsProps {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { TrumpType, Field } from '@/types/game.types';
 
-import { validateCardPlay } from '../../../../../shared/game-client/card-legality';
+import { validateCardPlay } from '@meitra/game-client/card-legality';
 
 export const useCardValidation = (
   playerHand: string[],
