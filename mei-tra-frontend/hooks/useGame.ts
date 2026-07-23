@@ -30,6 +30,7 @@ import type {
   RoomContract,
   RoomSyncPayload,
 } from '@contracts/room';
+import type { NameUpdatedPayload } from '@contracts/socket';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import {
@@ -422,8 +423,9 @@ export const useGame = () => {
         usersRef.current = users;
         setUsers(users);
       },
-      'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
-        if (success && playerId && name) {
+      'name-updated': (payload: NameUpdatedPayload) => {
+        if (payload.success && payload.playerId) {
+          const { playerId, name } = payload;
           setUsers((prev) => {
             const existingIndex = prev.findIndex((u) => u.playerId === playerId);
             const baseUser = {
@@ -441,8 +443,8 @@ export const useGame = () => {
 
             return [...prev, baseUser];
           });
-        } else if (!success && error) {
-          setNotification({ message: error, type: 'error' });
+        } else if (!payload.success) {
+          setNotification({ message: payload.error, type: 'error' });
         }
       },
       'update-players': (playerContracts: PlayerContract[]) => {
@@ -1094,14 +1096,13 @@ export const useGame = () => {
 
   const startGame = () => {
     if (!currentRoomId || !currentPlayerId) return;
-    socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
+    socket?.emit('start-game', { roomId: currentRoomId });
   };
 
   const removePlayerFromRoom = (targetPlayerId: string) => {
     if (!socket || !currentRoomId || !currentPlayerId) return;
     socket.emit('moderate-player', {
       roomId: currentRoomId,
-      requesterPlayerId: currentPlayerId,
       targetPlayerId,
       action: 'remove',
     });
@@ -1111,7 +1112,6 @@ export const useGame = () => {
     if (!socket || !currentRoomId || !currentPlayerId) return;
     socket.emit('moderate-player', {
       roomId: currentRoomId,
-      requesterPlayerId: currentPlayerId,
       targetPlayerId,
       action: 'replace-with-com',
     });
@@ -1119,10 +1119,7 @@ export const useGame = () => {
 
   const shuffleTeams = () => {
     if (!socket || !currentRoomId || !currentPlayerId) return;
-    socket.emit('shuffle-teams', {
-      roomId: currentRoomId,
-      playerId: currentPlayerId,
-    });
+    socket.emit('shuffle-teams', { roomId: currentRoomId });
   };
 
   const gameActions = {

@@ -1,0 +1,32 @@
+# Dependencies and local Expo state
+node_modules/
+.expo/
+.metro-health-check*
+
+# Build and test output
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+
+# Local configuration and credentials
+.env*
+!.env.example
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+credentials.json
+
+# Local tooling and logs
+.vscode/
+*.log
+*.orig.*
+
+# Documentation is kept in Git but is not needed by native builders.
+docs/
+
+# Keep sibling workspace packages available to EAS Build. The upload must include
+# ../package.json, ../package-lock.json, ../contracts, and ../shared/game-client.

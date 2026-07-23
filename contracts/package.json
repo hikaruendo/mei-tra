@@ -1,0 +1,36 @@
+{
+  "name": "@meitra/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "exports": {
+    "./game": {
+      "types": "./game.ts",
+      "default": "./game.ts"
+    },
+    "./game-history": {
+      "types": "./game-history.ts",
+      "default": "./game-history.ts"
+    },
+    "./profile": {
+      "types": "./profile.ts",
+      "default": "./profile.ts"
+    },
+    "./push": {
+      "types": "./push.ts",
+      "default": "./push.ts"
+    },
+    "./room": {
+      "types": "./room.ts",
+      "default": "./room.ts"
+    },
+    "./social": {
+      "types": "./social.ts",
+      "default": "./social.ts"
+    },
+    "./socket": {
+      "types": "./socket.ts",
+      "default": "./socket.ts"
+    }
+  }
+}

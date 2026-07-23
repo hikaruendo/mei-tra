@@ -21,6 +21,7 @@ export interface ComAutoPlayRecoveryHandlers {
   processFieldCompletion(
     roomId: string,
     response: CompleteFieldResponse,
+    initiatingActorId?: string,
   ): Promise<void>;
 }
 
@@ -106,6 +107,7 @@ export class ComAutoPlayRecoveryService {
             response,
             handlers,
             generation,
+            trigger.initiatingActorId,
           ),
         )
         .catch((error) => {
@@ -232,11 +234,12 @@ export class ComAutoPlayRecoveryService {
     response: CompleteFieldResponse,
     handlers: ComAutoPlayRecoveryHandlers,
     generation: number,
+    initiatingActorId?: string,
   ): Promise<void> {
     if (!this.isCurrentGeneration(roomId, generation)) {
       return;
     }
-    await handlers.processFieldCompletion(roomId, response);
+    await handlers.processFieldCompletion(roomId, response, initiatingActorId);
     if (!this.isCurrentGeneration(roomId, generation)) {
       return;
     }

@@ -12,7 +12,7 @@ begin
 
   if not has_function_privilege(
     'service_role',
-    'public.persist_room_roster_atomic(uuid,jsonb,jsonb,jsonb,jsonb,jsonb,text,bigint)',
+    'public.persist_room_roster_atomic(uuid,jsonb,jsonb,jsonb,text,bigint)',
     'execute'
   ) then
     raise exception 'service_role cannot execute persist_room_roster_atomic';
@@ -27,11 +27,10 @@ values (
   'player-old'
 );
 
-insert into public.game_states (room_id, state_data, team_assignments)
+insert into public.game_states (room_id, state_data)
 values (
   '00000000-0000-0000-0000-000000000901',
-  '{"players": [], "playerStates": {}, "playerOrder": []}'::jsonb,
-  '{}'::jsonb
+  '{"players": [], "playerStates": {}, "playerOrder": []}'::jsonb
 );
 
 insert into public.room_players (
@@ -39,14 +38,16 @@ insert into public.room_players (
   player_id,
   name,
   team,
-  is_host
+  is_host,
+  seat_index
 )
 values (
   '00000000-0000-0000-0000-000000000901',
   'player-old',
   'Old player',
   0,
-  true
+  true,
+  0
 );
 
 do $$
@@ -59,8 +60,6 @@ begin
       '[{"playerId":"player-new","name":"New player","isReady":true,"isHost":true,"isCOM":false}]'::jsonb,
       '{"player-new":{"hand":[],"isPasser":false,"hasBroken":false,"hasRequiredBroken":false}}'::jsonb,
       '["player-new"]'::jsonb,
-      '[]'::jsonb,
-      '{}'::jsonb,
       'player-new',
       0
     );
@@ -91,11 +90,9 @@ $$;
 
 select public.persist_room_roster_atomic(
   '00000000-0000-0000-0000-000000000901',
-  '[{"playerId":"player-new","name":"New player","team":1,"isReady":true,"isHost":true,"isCOM":false,"joinedAt":"2026-07-19T00:00:00.000Z"}]'::jsonb,
+  '[{"playerId":"player-new","name":"New player","team":1,"isReady":true,"isHost":true,"isCOM":false,"joinedAt":"2026-07-19T00:00:00.000Z","seatIndex":0}]'::jsonb,
   '{"player-new":{"hand":["S1"],"isPasser":true,"hasBroken":true,"hasRequiredBroken":false}}'::jsonb,
   '["player-new"]'::jsonb,
-  '[{"playerId":"player-new","name":"New player","team":1,"hand":["S1"],"isPasser":true,"hasBroken":true,"hasRequiredBroken":false}]'::jsonb,
-  '{"player-new":1}'::jsonb,
   'player-new',
   0
 );
@@ -113,7 +110,7 @@ begin
   if persisted_player.player_id <> 'player-new'
     or persisted_player.socket_id is not null
     or persisted_player.team <> 1
-    or persisted_player.hand <> '["S1"]'::jsonb then
+    or persisted_player.seat_index <> 0 then
     raise exception 'Valid roster write did not persist the expected player';
   end if;
 

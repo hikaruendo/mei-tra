@@ -37,10 +37,16 @@ export class RoomJoinService {
     void roomId;
     const state = gameState.getState();
 
-    const existingPlayer = room.players.find(
-      (player) => player.playerId === user.playerId,
-    );
+    const existingPlayer =
+      room.players.find((player) => player.playerId === user.playerId) ??
+      (user.userId
+        ? room.players.find((player) => player.userId === user.userId)
+        : undefined);
     if (existingPlayer) {
+      const stableSeatUser: SessionUser = {
+        ...user,
+        playerId: existingPlayer.playerId,
+      };
       const statePlayer = state.players.find(
         (player) => player.playerId === existingPlayer.playerId,
       );
@@ -52,9 +58,10 @@ export class RoomJoinService {
 
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
-        ...user,
-        userId: user.userId ?? existingPlayer.userId,
-        isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
+        ...stableSeatUser,
+        userId: stableSeatUser.userId ?? existingPlayer.userId,
+        isAuthenticated:
+          stableSeatUser.isAuthenticated ?? existingPlayer.isAuthenticated,
       };
       Object.assign(existingPlayer, updatedPlayer);
       if (statePlayer) {
@@ -97,15 +104,25 @@ export class RoomJoinService {
     let replacingComId: string | null = null;
     let restoredSeatData: RestoredSeatData | null = null;
 
-    const matchingVacantIndex = vacantIndexes.find(
-      (index) => roomVacant[index]?.roomPlayer.playerId === user.playerId,
-    );
+    const matchingVacantIndex = vacantIndexes.find((index) => {
+      const vacantRoomPlayer = roomVacant[index]?.roomPlayer;
+      return (
+        vacantRoomPlayer?.playerId === user.playerId ||
+        (user.userId && vacantRoomPlayer?.userId === user.userId)
+      );
+    });
 
     if (matchingVacantIndex !== undefined) {
       assignedIndex = matchingVacantIndex;
       const seatData = roomVacant[assignedIndex];
       const seatRoomPlayer = seatData?.roomPlayer;
       const seatGamePlayer = seatData?.gamePlayer;
+      if (seatRoomPlayer?.playerId) {
+        user = {
+          ...user,
+          playerId: seatRoomPlayer.playerId,
+        };
+      }
 
       hand = seatGamePlayer
         ? [...seatGamePlayer.hand]

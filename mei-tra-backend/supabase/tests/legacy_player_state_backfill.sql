@@ -3,11 +3,11 @@ begin;
 insert into public.rooms (id, name, host_id)
 values (
   '00000000-0000-0000-0000-000000000902',
-  'Legacy player backfill test',
+  'Legacy player cleanup test',
   'legacy-player-1'
 );
 
-insert into public.game_states (room_id, state_data, team_assignments)
+insert into public.game_states (room_id, state_data)
 values (
   '00000000-0000-0000-0000-000000000902',
   '{
@@ -20,20 +20,23 @@ values (
         "isPasser": true,
         "hasBroken": true,
         "hasRequiredBroken": false
-      },
-      {
-        "playerId": "legacy-player-2",
-        "name": "Legacy Player 2",
-        "team": 1,
-        "hand": ["D3"],
-        "isPasser": false
       }
-    ]
-  }'::jsonb,
-  '{"legacy-player-1": 0, "legacy-player-2": 1}'::jsonb
+    ],
+    "playerStates": {
+      "legacy-player-1": {
+        "hand": ["S1", "H2"],
+        "isPasser": true,
+        "hasBroken": true,
+        "hasRequiredBroken": false
+      }
+    },
+    "playerOrder": ["legacy-player-1"]
+  }'::jsonb
 );
 
-\ir ../migrations/20260719124824_atomic_room_state_persistence.sql
+update public.game_states
+set state_data = coalesce(state_data, '{}'::jsonb) - 'players'
+where state_data ? 'players';
 
 do $$
 declare
@@ -45,12 +48,16 @@ begin
   where room_id = '00000000-0000-0000-0000-000000000902';
 
   if persisted_state.version <> 0 then
-    raise exception 'Backfill changed the game state version';
+    raise exception 'Legacy cleanup changed the game state version';
+  end if;
+
+  if persisted_state.state_data ? 'players' then
+    raise exception 'Legacy cleanup left state_data.players';
   end if;
 
   if persisted_state.state_data->'playerOrder'
-    <> '["legacy-player-1", "legacy-player-2"]'::jsonb then
-    raise exception 'Backfill did not preserve legacy player order';
+    <> '["legacy-player-1"]'::jsonb then
+    raise exception 'Legacy cleanup did not preserve playerOrder';
   end if;
 
   if persisted_state.state_data->'playerStates'->'legacy-player-1'
@@ -60,17 +67,7 @@ begin
       "hasBroken": true,
       "hasRequiredBroken": false
     }'::jsonb then
-    raise exception 'Backfill did not preserve the first player gameplay state';
-  end if;
-
-  if persisted_state.state_data->'playerStates'->'legacy-player-2'
-    <> '{
-      "hand": ["D3"],
-      "isPasser": false,
-      "hasBroken": false,
-      "hasRequiredBroken": false
-    }'::jsonb then
-    raise exception 'Backfill did not supply defaults for legacy flags';
+    raise exception 'Legacy cleanup did not preserve playerStates';
   end if;
 end;
 $$;

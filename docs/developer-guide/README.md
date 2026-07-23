@@ -46,6 +46,7 @@ AI agent は、このシリーズを全章まとめて読む前提にしない�
 | --- | --- |
 | frontend 本体 | `mei-tra-frontend/app/`, `mei-tra-frontend/components/`, `mei-tra-frontend/hooks/`, `mei-tra-frontend/contexts/` |
 | frontend 型 / ローカライズ | `mei-tra-frontend/types/`, `mei-tra-frontend/i18n/`, `mei-tra-frontend/messages/` |
+| mobile 本体 | `mei-tra-mobile/src/app/`, `mei-tra-mobile/src/components/`, `mei-tra-mobile/src/context/` |
 | backend 本体 | `mei-tra-backend/src/` |
 | backend のユースケース分解 | `mei-tra-backend/src/use-cases/`, `mei-tra-backend/src/services/`, `mei-tra-backend/src/repositories/` |
 | Supabase schema / migration | `mei-tra-backend/supabase/migrations/` |
@@ -70,11 +71,12 @@ AI agent は、このシリーズを全章まとめて読む前提にしない�
 
 ## このシリーズで扱う範囲
 
-このシリーズの中心は、現在実際に動いている Web 版の frontend / backend / Supabase / 運用です。
+このシリーズの中心は、Web / mobile frontend、backend、Supabase、運用です。モバイル固有の起動・構成は `mei-tra-mobile/README.md` を正とします。
 
 扱うもの:
 
 - Next.js frontend
+- Expo / React Native mobile
 - NestJS backend
 - Socket.IO によるゲーム同期とソーシャルチャット
 - Supabase Auth / Database / Storage
@@ -83,11 +85,10 @@ AI agent は、このシリーズを全章まとめて読む前提にしない�
 
 深く扱わないもの:
 
-- `mei-tra-mobile/`
 - `mei-tra-cloudflare/`
 - ルールの完全な入門解説
 
-`mei-tra-mobile/` と `mei-tra-cloudflare/` は repo に存在しますが、現時点では主実装ではありません。必要になった段階で appendix を追加するのが自然です。
+`mei-tra-cloudflare/` は repo に存在しますが、現時点では主実装ではありません。
 
 ## 読み進めるときのおすすめ
 

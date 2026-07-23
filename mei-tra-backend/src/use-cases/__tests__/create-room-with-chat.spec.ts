@@ -94,6 +94,7 @@ describe('CreateRoomUseCase', () => {
       pointsToWin: 10,
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
+      socketId: 'socket-1',
       authenticatedUser: { id: userId, profile: {} as any },
     });
 
@@ -108,6 +109,7 @@ describe('CreateRoomUseCase', () => {
       roomId,
       expect.objectContaining({
         playerId: userId,
+        socketId: 'socket-1',
         userId,
         name: 'Test Player',
       }),
@@ -133,10 +135,32 @@ describe('CreateRoomUseCase', () => {
       pointsToWin: 10,
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
+      socketId: 'socket-1',
       authenticatedUser: { id: userId, profile: {} as any },
     });
 
     expect(result.success).toBe(true);
     expect(result.data?.room.id).toBe(roomId);
+  });
+
+  it('deletes the empty room when the host join is rejected by persistence', async () => {
+    roomService.joinRoom.mockResolvedValueOnce(false);
+
+    const result = await createRoomUseCase.execute({
+      roomName: 'Test Game Room',
+      pointsToWin: 10,
+      teamAssignmentMethod: 'random',
+      playerName: 'Test Player',
+      socketId: 'socket-1',
+      authenticatedUser: { id: userId, profile: {} as any },
+    });
+
+    expect(result).toEqual({
+      success: false,
+      errorMessage: 'Failed to join created room',
+    });
+    expect(roomService.deleteRoom).toHaveBeenCalledWith(roomId);
+    expect(roomService.initCOMPlaceholders).not.toHaveBeenCalled();
+    expect(chatService.createRoom).not.toHaveBeenCalled();
   });
 });

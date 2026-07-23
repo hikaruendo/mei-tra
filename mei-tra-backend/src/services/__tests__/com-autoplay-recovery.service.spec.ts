@@ -93,6 +93,7 @@ describe('ComAutoPlayRecoveryService', () => {
     expect(handlers.processFieldCompletion).toHaveBeenCalledWith(
       'room-1',
       completionResponse,
+      undefined,
     );
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
   });

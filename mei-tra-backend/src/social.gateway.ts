@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */
 import type { ChatMessagesPayload, ChatTypingEvent } from '@contracts/social';
 import {
   WebSocketGateway,
@@ -15,6 +14,7 @@ import { Logger } from '@nestjs/common';
 import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
+import { AccountActionGateService } from './services/account-action-gate.service';
 
 @WebSocketGateway({
   namespace: '/social',
@@ -35,6 +35,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatService: ChatService,
     private readonly authService: AuthService,
+    private readonly accountActionGateService: AccountActionGateService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -153,7 +154,10 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ): Promise<void> {
     try {
-      const authenticatedUser = this.getAuthenticatedUser(client);
+      const authenticatedUser = await this.getActiveAuthenticatedUser(
+        client,
+        'post a chat message',
+      );
       if (!authenticatedUser) return;
 
       const event = await this.chatService.postMessage({
@@ -180,7 +184,10 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; userId?: string },
   ): Promise<void> {
-    const authenticatedUser = this.getAuthenticatedUser(client);
+    const authenticatedUser = await this.getActiveAuthenticatedUser(
+      client,
+      'send a typing event',
+    );
     if (!authenticatedUser) return;
 
     const typingEvent: ChatTypingEvent = {
@@ -230,6 +237,32 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     return authenticatedUser;
+  }
+
+  private async getActiveAuthenticatedUser(
+    client: Socket,
+    action: string,
+  ): Promise<AuthenticatedUser | null> {
+    try {
+      const result =
+        await this.accountActionGateService.ensureActiveSocketActor(
+          client,
+          action,
+        );
+
+      if (!result.allowed || !result.authenticatedUser) {
+        client.emit('chat:error', {
+          message: result.errorMessage ?? 'Authentication required',
+        });
+        return null;
+      }
+
+      return result.authenticatedUser;
+    } catch (error) {
+      this.logGatewayError(`Failed to authorize ${action}`, error);
+      client.emit('chat:error', { message: 'Authentication failed' });
+      return null;
+    }
   }
 
   private logGatewayError(message: string, error: unknown): void {

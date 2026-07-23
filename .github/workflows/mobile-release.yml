@@ -1,0 +1,125 @@
+name: Mobile EAS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        required: true
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+        default: preview
+      platform:
+        description: Target platform
+        required: true
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+        default: all
+      submit:
+        description: Submit the completed build to TestFlight or Google Play internal testing
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release-${{ inputs.profile }}-${{ inputs.platform }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: mei-tra-mobile
+
+jobs:
+  release:
+    name: EAS ${{ inputs.profile }} (${{ inputs.platform }})
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.profile == 'production' && 'mobile-production' || 'mobile-preview' }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_CLI_VERSION: 21.1.0
+      RELEASE_PROFILE: ${{ inputs.profile }}
+      RELEASE_PLATFORM: ${{ inputs.platform }}
+      RELEASE_SUBMIT: ${{ inputs.submit }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies for preflight
+        run: npm ci
+
+      - name: Validate EAS monorepo packaging
+        run: npm run validate:eas-monorepo
+
+      - name: Validate release prerequisites
+        run: |
+          set -euo pipefail
+
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo 'EXPO_TOKEN is required in the selected GitHub environment.' >&2
+            exit 1
+          fi
+
+          if [ "$RELEASE_PROFILE" = production ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo 'Production builds must be dispatched from main.' >&2
+            exit 1
+          fi
+
+          if [ "$RELEASE_SUBMIT" = true ] && [ "$RELEASE_PROFILE" != production ]; then
+            echo 'Only the production profile may be submitted by this workflow.' >&2
+            exit 1
+          fi
+
+          node - <<'NODE'
+          const app = require('./app.json').expo;
+
+          if (!app.extra?.eas?.projectId) {
+            throw new Error(
+              'app.json must contain expo.extra.eas.projectId. Link the app with EAS before dispatching a release.',
+            );
+          }
+
+          if (!app.runtimeVersion) {
+            console.warn(
+              'expo.runtimeVersion is not configured. EAS Update is intentionally unavailable until it is added to app.json.',
+            );
+          }
+          NODE
+
+      - name: Validate resolved EAS profile
+        run: |
+          npx --yes eas-cli@${EAS_CLI_VERSION} config \
+            --profile "$RELEASE_PROFILE" \
+            --json > "$RUNNER_TEMP/meitra-eas-config.json"
+
+      - name: Build with EAS
+        run: |
+          set -euo pipefail
+          submit_args=()
+          if [ "$RELEASE_SUBMIT" = true ]; then
+            submit_args+=(--auto-submit-with-profile production)
+          fi
+
+          npx --yes eas-cli@${EAS_CLI_VERSION} build \
+            --platform "$RELEASE_PLATFORM" \
+            --profile "$RELEASE_PROFILE" \
+            --non-interactive \
+            --wait \
+            --freeze-credentials \
+            "${submit_args[@]}"

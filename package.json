@@ -1,0 +1,17 @@
+{
+  "name": "meitra-monorepo",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "mei-tra-mobile",
+    "contracts",
+    "shared/game-client"
+  ],
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "eslint": "^9.0.0"
+  },
+  "scripts": {
+    "mobile:validate-eas-monorepo": "npm --workspace mei-tra-mobile run validate:eas-monorepo"
+  }
+}

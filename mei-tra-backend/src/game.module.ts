@@ -12,6 +12,7 @@ import { ComPlayerService } from './services/com-player.service';
 import { ComStrategyService } from './services/com-strategy.service';
 import { ComAutoPlayService } from './services/com-autoplay.service';
 import { RepositoriesModule } from './repositories/repositories.module';
+import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social.module';
 import { JoinRoomUseCase } from './use-cases/join-room.use-case';
@@ -52,9 +53,19 @@ import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
 import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
+import { DeleteAccountUseCase } from './use-cases/delete-account.use-case';
+import { PushNotificationModule } from './push/push-notification.module';
+import { GameplayNotificationService } from './services/gameplay-notification.service';
+import { AccountActionGateService } from './services/account-action-gate.service';
 
 @Module({
-  imports: [RepositoriesModule, AuthModule, SocialModule],
+  imports: [
+    RepositoriesModule,
+    DatabaseModule,
+    AuthModule,
+    SocialModule,
+    PushNotificationModule,
+  ],
   controllers: [GameHistoryController],
   providers: [
     GameGateway,
@@ -72,6 +83,8 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
     StartGameGatewayEffectsService,
     SpectatorGatewayEffectsService,
     GameEventLogService,
+    GameplayNotificationService,
+    AccountActionGateService,
     {
       provide: 'IActivityTrackerService',
       useExisting: ActivityTrackerService,
@@ -211,10 +224,18 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
       provide: 'IGetUserRecentGameHistoryUseCase',
       useClass: GetUserRecentGameHistoryUseCase,
     },
+    {
+      provide: 'IDeleteAccountUseCase',
+      useClass: DeleteAccountUseCase,
+    },
     ReconnectionUseCase,
     ModeratePlayerUseCase,
     ShuffleTeamsUseCase,
   ],
-  exports: ['IActivityTrackerService', 'IGetUserRecentGameHistoryUseCase'],
+  exports: [
+    'IActivityTrackerService',
+    'IGetUserRecentGameHistoryUseCase',
+    'IDeleteAccountUseCase',
+  ],
 })
 export class GameModule {}

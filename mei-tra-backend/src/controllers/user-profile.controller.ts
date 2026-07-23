@@ -7,6 +7,7 @@ import {
 import { RecentGameHistoryItemContract } from '@contracts/game-history';
 import {
   Controller,
+  Delete,
   Get,
   Put,
   Post,
@@ -23,6 +24,8 @@ import {
   Inject,
   UseGuards,
   ForbiddenException,
+  ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
@@ -34,8 +37,15 @@ import {
 import { SupabaseService } from '../database/supabase.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/decorators/user.decorator';
+import { AllowDeletingAccountAuth } from '../auth/decorators/allow-deleting-account.decorator';
 import { RecentGameHistoryItem } from '../types/game-history.types';
 import { IGetUserRecentGameHistoryUseCase } from '../use-cases/interfaces/get-user-recent-game-history.use-case.interface';
+import {
+  AccountDeletionBlockedError,
+  AccountDeletionFailedError,
+  DeleteAccountResult,
+  IDeleteAccountUseCase,
+} from '../use-cases/interfaces/delete-account.use-case.interface';
 import * as sharp from 'sharp';
 
 @Controller('user-profile')
@@ -48,6 +58,8 @@ export class UserProfileController {
     private readonly supabaseService: SupabaseService,
     @Inject('IGetUserRecentGameHistoryUseCase')
     private readonly getUserRecentGameHistoryUseCase: IGetUserRecentGameHistoryUseCase,
+    @Inject('IDeleteAccountUseCase')
+    private readonly deleteAccountUseCase: IDeleteAccountUseCase,
   ) {}
 
   @Get(':id/game-history')
@@ -98,6 +110,38 @@ export class UserProfileController {
         'Failed to update profile',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  @Delete(':id')
+  @UseGuards(AuthGuard)
+  @AllowDeletingAccountAuth()
+  async deleteAccount(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<DeleteAccountResult> {
+    try {
+      this.assertProfileOwnership(id, currentUser);
+      return await this.deleteAccountUseCase.execute(id);
+    } catch (error) {
+      this.logControllerError(`Failed to delete account for user ${id}`, error);
+
+      if (error instanceof AccountDeletionBlockedError) {
+        throw new ConflictException({
+          message: 'Leave active rooms before deleting account',
+          activeRoomCount: error.blockers.length,
+        });
+      }
+
+      if (error instanceof AccountDeletionFailedError) {
+        throw new InternalServerErrorException('Failed to delete account');
+      }
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Failed to delete account');
     }
   }
 

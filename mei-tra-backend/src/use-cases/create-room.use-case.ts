@@ -35,6 +35,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         pointsToWin,
         teamAssignmentMethod,
         playerName,
+        socketId,
         authenticatedUser,
       } = request;
 
@@ -65,7 +66,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       );
 
       const hostUser: SessionUser = {
-        socketId: '',
+        socketId,
         playerId: authenticatedUser.id,
         name: playerName,
         userId: authenticatedUser.id,
@@ -74,6 +75,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
       const joined = await this.roomService.joinRoom(room.id, hostUser);
       if (!joined) {
+        await this.deleteEmptyRoomAfterFailedHostJoin(room.id);
         return {
           success: false,
           errorMessage: 'Failed to join created room',
@@ -133,6 +135,17 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         success: false,
         errorMessage: 'Failed to create room',
       };
+    }
+  }
+
+  private async deleteEmptyRoomAfterFailedHostJoin(roomId: string) {
+    try {
+      await this.roomService.deleteRoom(roomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete room ${roomId} after host join failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 }

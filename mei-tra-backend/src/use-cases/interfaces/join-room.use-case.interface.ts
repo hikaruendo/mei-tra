@@ -16,7 +16,6 @@ export interface JoinRoomRequest {
   socketId: string;
   targetRoomId: string;
   currentRoomId?: string;
-  user: SessionUser;
   authenticatedUser?: Nullable<AuthenticatedUser>;
 }
 

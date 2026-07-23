@@ -1,0 +1,19 @@
+{
+  "name": "@meitra/game-client",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "@meitra/contracts": "file:../../contracts"
+  },
+  "exports": {
+    "./blow": {
+      "types": "./blow.ts",
+      "default": "./blow.ts"
+    },
+    "./card-legality": {
+      "types": "./card-legality.ts",
+      "default": "./card-legality.ts"
+    }
+  }
+}

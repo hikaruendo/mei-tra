@@ -1,0 +1,17 @@
+export const colors = {
+  background: '#082f26',
+  backgroundElevated: '#0d3b31',
+  panel: '#123f35',
+  panelStrong: '#184b3f',
+  border: '#326357',
+  text: '#f4f0df',
+  textMuted: '#acb9ad',
+  gold: '#c49a3a',
+  goldPressed: '#a77f28',
+  danger: '#d66b62',
+  success: '#6bb995',
+  card: '#fffdf4',
+  cardText: '#15201b',
+  redSuit: '#c63832',
+  overlay: 'rgba(3, 22, 18, 0.76)',
+} as const;

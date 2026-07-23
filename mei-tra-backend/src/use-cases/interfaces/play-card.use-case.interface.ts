@@ -18,6 +18,7 @@ export interface CompleteFieldTrigger {
   roomId: string;
   delayMs: number;
   field: Field;
+  initiatingActorId?: string;
 }
 
 export interface PlayCardResponse {

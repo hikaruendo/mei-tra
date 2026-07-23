@@ -143,7 +143,7 @@ export default function Home() {
     }
 
     if (socket && currentRoomId && currentPlayerId) {
-      socket.emit('leave-room', { roomId: currentRoomId, playerId: currentPlayerId });
+      socket.emit('leave-room', { roomId: currentRoomId });
     }
   };
 

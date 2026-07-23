@@ -558,30 +558,19 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    // 認証済みユーザー情報を使用（socket.id に依存しない）
     if (!user) {
       setError('Authentication required to join a room');
       return;
     }
 
-    const displayName = user.profile?.displayName || user.email || 'User';
-    const userToJoin = {
-      socketId: socket.id ?? '',
-      playerId: user.id,  // Supabase userId — must match room.hostId set during createRoom
-      name: displayName,
-      userId: user.id,
-      isAuthenticated: true
-    };
-
     console.log('[useRoom] Joining room:', {
       roomId,
-      displayName,
       userId: user.id
     });
 
     socket.emit(
       'join-room',
-      { roomId, user: userToJoin },
+      { roomId },
       (response: { success: boolean; room?: RoomContract }) => {
       if (response.success && response.room) {
         const nextRoom = fromRoomContract(response.room);
@@ -619,17 +608,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   const leaveRoom = useCallback((roomId: string) => {
     if (!socket) return;
 
-    const room = availableRooms.find(r => r.id === roomId) || currentRoom;
-    // userId でマッチング（socket.id は再接続で変わるため使わない）
-    const player = room?.players.find(p => user && p.userId === user.id);
-
-    if (!player?.playerId) {
-      console.error('[useRoom] Cannot leave room: player not found');
-      setError('Player not found in room');
-      return;
-    }
-
-    socket.emit('leave-room', { roomId, playerId: player.playerId }, (response: { success: boolean; error?: string }) => {
+    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('roomId');
@@ -639,7 +618,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         setError(response.error || 'Failed to leave room');
       }
     });
-  }, [socket, currentRoom, availableRooms, user]);
+  }, [socket]);
 
   // 準備状態の切り替え
   const togglePlayerReady = useCallback(() => {
@@ -653,28 +632,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    // userId でマッチング（socket.id は再接続で変わるため使わない）
-    const player = currentRoom.players.find(p => user && p.userId === user.id);
-    if (!player) {
-      setError('Player not found7');
-      return;
-    }
-    if (!player.playerId) {
-      setError('Player ID is not set');
-      return;
-    }
-
-    // ローカルの準備状態を即時更新
-    setPlayerReadyStatus(prev => ({
-      ...prev,
-      [player.playerId]: !prev[player.playerId]
-    }));
-
-    socket.emit('toggle-player-ready', {
-      roomId: currentRoom.id,
-      playerId: player.playerId
-    });
-  }, [socket, currentRoom, user]);
+    socket.emit('toggle-player-ready', { roomId: currentRoom.id });
+  }, [socket, currentRoom]);
 
   // ゲーム開始
   const startGameRoom = useCallback(() => {
@@ -683,50 +642,25 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    // userId でマッチング（socket.id は再接続で変わるため使わない）
-    const player = currentRoom.players.find(p => user && p.userId === user.id);
-    if (!player) {
-      setError('Player not found8');
-      return;
-    }
-
-    socket.emit('start-game', {
-      roomId: currentRoom.id,
-      playerId: player.playerId
-    });
-  }, [socket, currentRoom, user]);
+    socket.emit('start-game', { roomId: currentRoom.id });
+  }, [socket, currentRoom]);
 
   // COM追加（残席をCOMで埋める）
   const fillWithCOM = useCallback((roomId: string) => {
     if (!socket) return;
-    const room = availableRooms.find(r => r.id === roomId) || currentRoom;
-    const player = room?.players.find(p => user && p.userId === user.id);
-    if (!player?.playerId) {
-      console.error('[useRoom] Cannot fill with COM: player not found');
-      return;
-    }
-    socket.emit('fill-with-com', { roomId, playerId: player.playerId });
-  }, [socket, currentRoom, availableRooms, user]);
+    socket.emit('fill-with-com', { roomId });
+  }, [socket]);
 
   // プレイヤーのチーム変更
   const changePlayerTeam = useCallback((roomId: string, teamChanges: { [key: string]: number }): Promise<boolean> => {
     if (!socket) return Promise.resolve(false);
 
-    const room = availableRooms.find(r => r.id === roomId) || currentRoom;
-    // userId でマッチング（socket.id は再接続で変わるため使わない）
-    const player = room?.players.find(p => user && p.userId === user.id);
-
-    if (!player?.playerId) {
-      console.error('[useRoom] Cannot change team: player not found');
-      return Promise.resolve(false);
-    }
-
     return new Promise((resolve) => {
-      socket.emit('change-player-team', { roomId, playerId: player.playerId, teamChanges }, (response: { success: boolean }) => {
+      socket.emit('change-player-team', { roomId, teamChanges }, (response: { success: boolean }) => {
         resolve(response.success);
       });
     });
-  }, [socket, currentRoom, availableRooms, user]);
+  }, [socket]);
 
   if (!isClient) {
     return {
