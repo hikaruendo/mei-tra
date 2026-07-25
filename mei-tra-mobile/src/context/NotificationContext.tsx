@@ -12,6 +12,7 @@ import {
 import type { NotificationResponse } from 'expo-notifications';
 
 import { useAuth } from '@/context/AuthContext';
+import { useGame } from '@/context/GameContext';
 import {
   getNotificationRoomId,
   registerForPushNotifications,
@@ -29,6 +30,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 export function NotificationProvider({ children }: PropsWithChildren) {
   const router = useRouter();
   const { user, session, getAccessToken } = useAuth();
+  const { resumeRoom } = useGame();
   const [status, setStatus] = useState<NotificationContextValue['status']>('idle');
   const pendingRoomIdRef = useRef<string | null>(null);
   const handledResponseIdsRef = useRef(new Set<string>());
@@ -42,9 +44,10 @@ export function NotificationProvider({ children }: PropsWithChildren) {
       }
 
       pendingRoomIdRef.current = null;
+      void resumeRoom(roomId);
       router.push({ pathname: '/room/[roomId]', params: { roomId } });
     },
-    [router, user],
+    [resumeRoom, router, user],
   );
 
   const handleResponse = useCallback(

@@ -1,7 +1,6 @@
 import * as Notifications from 'expo-notifications';
 
 import {
-  clearLocalNotificationRegistration,
   getNotificationRoomId,
   registerForPushNotifications,
   setupNotificationHandling,
@@ -61,6 +60,7 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(),
   getExpoPushTokenAsync: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
+  unregisterForNotificationsAsync: jest.fn(),
   setNotificationHandler: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   getLastNotificationResponseAsync: jest.fn(async () => null),
@@ -89,6 +89,9 @@ describe('notifications', () => {
     (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({
       data: 'ExpoPushToken[token-1]',
     });
+    (
+      Notifications.unregisterForNotificationsAsync as jest.Mock
+    ).mockResolvedValue(undefined);
     fetchMock.mockResolvedValue({ ok: true, status: 200 });
     global.fetch = fetchMock as unknown as typeof fetch;
   });
@@ -151,6 +154,7 @@ describe('notifications', () => {
     );
 
     await expect(unregisterPushToken('access-token')).resolves.toBe('removed');
+    expect(Notifications.unregisterForNotificationsAsync).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenLastCalledWith(
       expect.stringContaining('/api/push-tokens?deviceId=device-1&platform='),
       expect.objectContaining({
@@ -185,12 +189,25 @@ describe('notifications', () => {
     expect(getNotificationRoomId(response)).toBe('room-1');
   });
 
-  it('clears local notification state even when remote removal fails', async () => {
+  it('unregisters the device when remote removal fails', async () => {
     await registerForPushNotifications('access-token');
     fetchMock.mockRejectedValueOnce(new Error('offline'));
 
+    await expect(unregisterPushToken('access-token')).resolves.toBe('removed');
+    await expect(unregisterPushToken('access-token')).resolves.toBe('none');
+  });
+
+  it('keeps local notification state when server and device removal both fail', async () => {
+    await registerForPushNotifications('access-token');
+    fetchMock.mockRejectedValueOnce(new Error('offline'));
+    (
+      Notifications.unregisterForNotificationsAsync as jest.Mock
+    ).mockRejectedValueOnce(new Error('native removal failed'));
+
     await expect(unregisterPushToken('access-token')).resolves.toBe('failed');
-    await clearLocalNotificationRegistration();
+
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200 });
+    await expect(unregisterPushToken('access-token')).resolves.toBe('removed');
     await expect(unregisterPushToken('access-token')).resolves.toBe('none');
   });
 });

@@ -11,6 +11,7 @@ export interface NotificationPlatform {
   getExpoPushToken: (
     projectId: string,
   ) => ReturnType<typeof Notifications.getExpoPushTokenAsync>;
+  unregisterForNotifications: () => Promise<void>;
   setupNotificationHandling: (
     responseHandler: NotificationResponseHandler,
     foregroundBehavior: Notifications.NotificationBehavior,
@@ -31,5 +32,6 @@ export const notificationPlatform: NotificationPlatform = {
   getExpoPushToken: async () => {
     throw new Error('Push notifications are not supported on web.');
   },
+  unregisterForNotifications: async () => undefined,
   setupNotificationHandling: () => () => undefined,
 };

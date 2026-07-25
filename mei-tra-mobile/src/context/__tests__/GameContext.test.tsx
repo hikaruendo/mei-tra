@@ -292,6 +292,40 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('resumes an explicitly requested room without stored recovery state', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      await flushPromises();
+    });
+    mockSocket.emit.mockClear();
+
+    let resumePromise: Promise<void> | undefined;
+    await act(async () => {
+      resumePromise = screen.latestGame.resumeRoom('room-notification');
+      await flushPromises();
+    });
+
+    expect(mockRoomStorage.set).toHaveBeenCalledWith('room-notification');
+    expect(
+      mockSocket.emit.mock.calls.filter(([event]) => event === 'sync-game-state'),
+    ).toEqual([['sync-game-state', { roomId: 'room-notification' }]]);
+    expect(screen.latestGame.connectionStatus).toBe('resyncing');
+
+    await act(async () => {
+      mockSocket.trigger('game-state', {
+        ...createGameState(),
+        roomId: 'room-notification',
+      });
+      await resumePromise;
+      await flushPromises();
+    });
+    expect(screen.latestGame.connectionStatus).toBe('connected');
+
+    await screen.unmount();
+  });
+
   it('blocks room and play actions while an authoritative resync is pending', async () => {
     const screen = await renderProvider();
 

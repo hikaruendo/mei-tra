@@ -26,16 +26,16 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={navigationTheme}>
         <AuthProvider>
-          <NotificationProvider>
-            <GameProvider>
+          <GameProvider>
+            <NotificationProvider>
               <Stack
                 screenOptions={{
                   headerShown: false,
                   contentStyle: { backgroundColor: colors.background },
                 }}
               />
-            </GameProvider>
-          </NotificationProvider>
+            </NotificationProvider>
+          </GameProvider>
         </AuthProvider>
         <StatusBar style="light" />
       </ThemeProvider>

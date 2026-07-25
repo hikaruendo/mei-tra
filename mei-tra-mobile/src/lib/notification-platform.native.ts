@@ -17,6 +17,8 @@ export const notificationPlatform: NotificationPlatform = {
   requestPermissions: () => Notifications.requestPermissionsAsync(),
   getExpoPushToken: (projectId) =>
     Notifications.getExpoPushTokenAsync({ projectId }),
+  unregisterForNotifications: () =>
+    Notifications.unregisterForNotificationsAsync(),
   setupNotificationHandling: (
     responseHandler: NotificationResponseHandler,
     foregroundBehavior,

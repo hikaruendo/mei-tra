@@ -294,5 +294,17 @@ describe('SupabaseRoomRepository', () => {
     expect(migration).toContain('meitra-account-room-membership');
     expect(migration).toContain('account_deletion_blocked');
     expect(migration).toContain('persist_room_roster_atomic');
+
+    const rosterFunction = lockMigration.slice(
+      lockMigration.indexOf(
+        'create or replace function public.persist_room_roster_atomic',
+      ),
+      lockMigration.indexOf('select *\n      into current_state'),
+    );
+
+    expect(rosterFunction).toContain('select p_host_id::uuid');
+    expect(rosterFunction).toContain('select distinct candidate.user_id');
+    expect(rosterFunction).toContain('order by candidate.user_id');
+    expect(rosterFunction.match(/pg_advisory_xact_lock/g)).toHaveLength(1);
   });
 });

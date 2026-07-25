@@ -140,27 +140,29 @@ begin
     declare
       current_state public.game_states%rowtype;
       updated_state public.game_states%rowtype;
-      roster_user_id uuid;
+      lock_user_id uuid;
     begin
-      for roster_user_id in
-        select distinct nullif(player."userId", '')::uuid
-        from jsonb_to_recordset(coalesce(p_room_players, '[]'::jsonb)) as player(
-          "userId" text
-        )
-        where nullif(player."userId", '') is not null
+      for lock_user_id in
+        select distinct candidate.user_id
+        from (
+          select nullif(player."userId", '')::uuid as user_id
+          from jsonb_to_recordset(coalesce(p_room_players, '[]'::jsonb)) as player(
+            "userId" text
+          )
+          where nullif(player."userId", '') is not null
+
+          union all
+
+          select p_host_id::uuid
+          where p_host_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        ) as candidate
+        order by candidate.user_id
       loop
         perform pg_advisory_xact_lock(
           hashtext('meitra-account-room-membership'),
-          hashtext(roster_user_id::text)
+          hashtext(lock_user_id::text)
         );
       end loop;
-
-      if p_host_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
-        perform pg_advisory_xact_lock(
-          hashtext('meitra-account-room-membership'),
-          hashtext(p_host_id)
-        );
-      end if;
 
       select *
       into current_state

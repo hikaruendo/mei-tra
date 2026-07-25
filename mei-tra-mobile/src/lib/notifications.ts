@@ -215,25 +215,44 @@ export const unregisterPushToken = async (
   const registration = await getLocalRegistration();
   if (!registration) return 'none';
 
+  let removedFromServer = false;
   try {
-    if (!accessToken) return 'failed';
-    const query = new URLSearchParams({
-      deviceId: registration.deviceId,
-      platform: registration.platform,
-    });
-    const response = await requestApi(
-      `/push-tokens?${query.toString()}`,
-      accessToken,
-      { method: 'DELETE' },
-    );
-    if (!response.ok) throw new Error(`Push token removal failed: ${response.status}`);
-    return 'removed';
+    if (accessToken) {
+      const query = new URLSearchParams({
+        deviceId: registration.deviceId,
+        platform: registration.platform,
+      });
+      const response = await requestApi(
+        `/push-tokens?${query.toString()}`,
+        accessToken,
+        { method: 'DELETE' },
+      );
+      if (!response.ok) {
+        throw new Error(`Push token removal failed: ${response.status}`);
+      }
+      removedFromServer = true;
+    }
   } catch (error) {
     console.warn('[Notifications] Failed to remove push token:', error);
-    return 'failed';
-  } finally {
-    await clearLocalNotificationRegistration();
   }
+
+  let unregisteredDevice = false;
+  try {
+    await notificationPlatform.unregisterForNotifications();
+    unregisteredDevice = true;
+  } catch (error) {
+    console.warn(
+      '[Notifications] Failed to unregister device notifications:',
+      error,
+    );
+  }
+
+  if (!removedFromServer && !unregisteredDevice) {
+    return 'failed';
+  }
+
+  await clearLocalNotificationRegistration();
+  return 'removed';
 };
 
 export const getNotificationRoomId = (

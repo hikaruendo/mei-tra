@@ -179,6 +179,7 @@ interface GameContextValue extends MobileState {
   currentPlayerId: string | null;
   isHost: boolean;
   refreshRooms: () => void;
+  resumeRoom: (roomId: string) => Promise<void>;
   createRoom: (name: string, pointsToWin: number) => Promise<boolean>;
   joinRoom: (roomId: string) => Promise<boolean>;
   watchRoom: (roomId: string) => Promise<boolean>;
@@ -213,6 +214,7 @@ interface ResyncFlight {
   resolve: () => void;
   running: boolean;
   syncStarted: boolean;
+  requestedRoomId: string | null;
   targetRoomId: string | null;
   timeout: ReturnType<typeof setTimeout>;
 }
@@ -280,6 +282,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       resolve: resolveFlight,
       running: false,
       syncStarted: false,
+      requestedRoomId: null,
       targetRoomId: null,
       timeout: setTimeout(() => {
         if (resyncFlightRef.current?.id !== id) return;
@@ -313,6 +316,7 @@ export function GameProvider({ children }: PropsWithChildren) {
           getAccessToken(),
           roomStorage.get(),
         ]);
+        const targetRoomId = flight.requestedRoomId ?? roomId;
 
         if (
           resyncFlightRef.current?.id !== flight.id ||
@@ -333,12 +337,12 @@ export function GameProvider({ children }: PropsWithChildren) {
         }
 
         flight.syncStarted = true;
-        flight.targetRoomId = roomId;
+        flight.targetRoomId = targetRoomId;
 
         socket.emit('list-rooms');
-        if (roomId) {
+        if (targetRoomId) {
           dispatch({ type: 'connection', status: 'resyncing' });
-          socket.emit('sync-game-state', { roomId });
+          socket.emit('sync-game-state', { roomId: targetRoomId });
         } else {
           finishResyncFlight(undefined);
         }
@@ -360,6 +364,29 @@ export function GameProvider({ children }: PropsWithChildren) {
 
     return flight.promise;
   }, [createResyncFlight, runResyncFlight]);
+
+  const resumeRoom = useCallback(
+    async (roomId: string) => {
+      const targetRoomId = roomId.trim();
+      if (!targetRoomId) return;
+
+      await roomStorage.set(targetRoomId);
+
+      const activeFlight = resyncFlightRef.current;
+      if (
+        activeFlight?.syncStarted &&
+        activeFlight.targetRoomId !== targetRoomId
+      ) {
+        finishResyncFlight(undefined, false);
+      }
+
+      const flight = createResyncFlight();
+      flight.requestedRoomId = targetRoomId;
+      void runResyncFlight(flight);
+      return flight.promise;
+    },
+    [createResyncFlight, finishResyncFlight, runResyncFlight],
+  );
 
   const canSendServerAction = useCallback((showError = true) => {
     const status = stateRef.current.connectionStatus;
@@ -1052,6 +1079,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       currentPlayerId,
       isHost,
       refreshRooms,
+      resumeRoom,
       createRoom,
       joinRoom,
       watchRoom,
@@ -1083,6 +1111,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       passBlow,
       playCard,
       refreshRooms,
+      resumeRoom,
       revealBrokenHand,
       selectBaseSuit,
       selectNegri,
