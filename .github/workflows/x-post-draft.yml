@@ -1,0 +1,52 @@
+name: Create X Post Draft
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  create-draft:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      contains(github.event.pull_request.labels.*.name, 'x:share')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create an approval draft
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const appUrl = 'https://meitra.kando1.com/';
+            const candidate = [
+              `Mei-Tra update: ${pr.title}`,
+              '',
+              `Try it: ${appUrl}`,
+            ].join('\n');
+
+            const body = [
+              `Source PR: #${pr.number} (${pr.html_url})`,
+              '',
+              'Edit the copy between the markers. Keep it concise, user-facing, and under X’s post limit.',
+              'Do not include private implementation details, commit hashes, or unannounced work.',
+              'This workflow publishes text only. Publish manually from X when the post needs a screenshot or video.',
+              '',
+              '<!-- x-post:start -->',
+              candidate,
+              '<!-- x-post:end -->',
+              '',
+              'When the copy and media are ready, comment exactly `/post-x` to publish. This action is irreversible.',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `X draft: ${pr.title}`,
+              body,
+              labels: ['x:review'],
+            });
