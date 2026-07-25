@@ -104,14 +104,14 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         <div className={styles.gameInfoContent}>
           <div className={styles.gameInfoScores}>
             {scoreTeams.map(({ teamNumber, teamName, score, progress, status, statusLabel }) => {
-              const isLeading = status === 'leading' || status === 'reach' || status === 'win';
+              const hasScoreEmphasis = status === 'reach' || status === 'win';
 
               return (
                 <div
                   key={teamNumber}
                   className={`${styles.gameInfoScore} ${
                     teamNumber === 0 ? styles.team0 : styles.team1
-                  } ${isLeading ? styles.leadingTeam : ''} ${
+                  } ${hasScoreEmphasis ? styles.scoreEmphasis : ''} ${
                     status === 'reach' ? styles.reachingTeam : ''
                   } ${status === 'win' ? styles.winningTeam : ''}`}
                   aria-label={teamName}

@@ -82,6 +82,64 @@
   overflow-y: auto;
 }
 
+.scoreComparison {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 10px;
+  background: var(--mt-surface-raised-2);
+}
+
+.scoreComparisonTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--mt-text-secondary);
+}
+
+.scoreComparisonRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scoreComparisonRow {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.scoreComparisonLabel,
+.scoreComparisonValue {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.scoreComparisonTrack {
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--mt-surface);
+}
+
+.scoreComparisonFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+
+.teamZero {
+  background: var(--mt-accent);
+}
+
+.teamOne {
+  background: var(--mt-text-secondary);
+}
+
 .pageOverview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

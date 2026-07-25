@@ -46,15 +46,15 @@ describe('GameHistoryDock', () => {
     players: [],
   };
 
-  it('disables the full-history page navigation while a game is in progress', () => {
+  it('allows full-history page navigation while a game is in progress', () => {
     render(<GameHistoryDock {...baseProps} gameStarted />);
 
     fireEvent.click(screen.getByRole('button', { name: '対局ログ' }));
 
-    const detailsAction = screen.getByText('詳細表示');
-    expect(detailsAction).toHaveAttribute('aria-disabled', 'true');
-    expect(detailsAction).not.toHaveAttribute('href');
-    expect(detailsAction).toHaveAttribute('title', '対局中はこの操作を行えません');
+    expect(screen.getByRole('link', { name: '詳細表示' })).toHaveAttribute(
+      'href',
+      '/game-history/room-123',
+    );
   });
 
   it('allows full-history page navigation while waiting', () => {

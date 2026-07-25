@@ -231,6 +231,27 @@
   color: var(--mt-card-ink);
 }
 
+.previewConfirmButton {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  z-index: 4;
+  min-height: 2rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 999px;
+  background: var(--mt-surface-raised);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.72rem);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--mt-shadow-panel);
+}
+
+.previewConfirmButton:hover {
+  border-color: var(--mt-accent);
+}
+
 @media (max-width: 768px) {
   .fieldContainer {
     width: 100%;

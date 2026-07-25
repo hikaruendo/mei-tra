@@ -11,6 +11,11 @@ const mockStrengthOrderDock = jest.fn(
 const mockChatDock = jest.fn(
   ({ placement }: { placement?: string }) => <div>chat dock {placement}</div>,
 );
+const mockGameHistoryDock = jest.fn(
+  ({ defaultOpen }: { defaultOpen?: boolean }) => (
+    <div>history dock {defaultOpen ? 'open' : 'closed'}</div>
+  ),
+);
 
 jest.mock('@/components/game/StrengthOrderDock', () => ({
   StrengthOrderDock: (props: { placement?: string }) => mockStrengthOrderDock(props),
@@ -20,10 +25,15 @@ jest.mock('@/components/social/ChatDock', () => ({
   ChatDock: (props: { placement?: string }) => mockChatDock(props),
 }));
 
+jest.mock('@/components/game/GameHistoryDock', () => ({
+  GameHistoryDock: (props: { defaultOpen?: boolean }) => mockGameHistoryDock(props),
+}));
+
 describe('GameDock', () => {
   beforeEach(() => {
     mockStrengthOrderDock.mockClear();
     mockChatDock.mockClear();
+    mockGameHistoryDock.mockClear();
   });
 
   const mockMatchMedia = (matches: boolean) => {
@@ -42,7 +52,7 @@ describe('GameDock', () => {
     });
   };
 
-  it('renders gameplay utility docks without the in-game history dock', () => {
+  it('opens the in-game history dock from the top bar', () => {
     mockMatchMedia(false);
 
     render(
@@ -56,8 +66,13 @@ describe('GameDock', () => {
 
     expect(screen.getByText('strength dock topbar')).toBeInTheDocument();
     expect(screen.getByText('chat dock topbar')).toBeInTheDocument();
-    expect(screen.queryByText('Replay Log')).not.toBeInTheDocument();
-    expect(screen.queryByText('対局ログ')).not.toBeInTheDocument();
+    const historyButton = screen.getByRole('button', { name: 'title' });
+    expect(historyButton).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(historyButton);
+
+    expect(screen.getByText('history dock open')).toBeInTheDocument();
+    expect(historyButton).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('uses a single mobile menu while keeping the chat dock mounted', async () => {

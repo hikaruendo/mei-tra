@@ -53,10 +53,6 @@ jest.mock('@/components/game/Card', () => ({
   Card: ({ card }: { card: string }) => <div>{card}</div>,
 }));
 
-jest.mock('@/components/game/NegriCard', () => ({
-  NegriCard: () => <div>negri card</div>,
-}));
-
 jest.mock('@/components/game/CompletedFields', () => ({
   CompletedFields: () => <div>completed fields</div>,
 }));
@@ -100,7 +96,6 @@ const renderPlayerHand = (
       position="left"
       completedFields={[]}
       currentPlayerId="player-1"
-      players={[otherPlayer]}
       currentField={null}
       currentTrump={null}
       isHost
@@ -174,7 +169,7 @@ describe('PlayerHand', () => {
     ).toBeInTheDocument();
   });
 
-  it('places the bottom player Negri card beside the declaration', () => {
+  it('shows a compact Negri badge for the player who selected it', () => {
     renderPlayerHand({
       position: 'bottom',
       currentPlayerId: 'player-2',
@@ -182,16 +177,47 @@ describe('PlayerHand', () => {
       negriPlayerId: 'player-2',
     });
 
-    expect(screen.getByText('negri card').closest('.declarationContext')).toBeInTheDocument();
+    expect(screen.getByText('Negri')).toHaveClass('negriBadge');
   });
 
-  it('hides the Negri card for another player', () => {
+  it('hides the Negri badge for another player', () => {
     renderPlayerHand({
       negriCard: 'H-A',
-      negriPlayerId: 'player-2',
+      negriPlayerId: 'player-1',
     });
 
-    expect(screen.queryByText('negri card')).not.toBeInTheDocument();
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+  });
+
+  it('reorders the current player hand locally with pointer drag', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerEnter(cards[1]);
+    fireEvent.pointerUp(cards[1]);
+
+    expect(screen.getAllByTestId('card-front').map((card) => card.textContent)).toEqual([
+      'S-2',
+      'H-A',
+    ]);
+  });
+
+  it('shows the taken-count badge and the current-turn clock', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      isCurrentTurn: true,
+      takenCount: 3,
+    });
+
+    expect(screen.getByLabelText('3setsTaken')).toBeInTheDocument();
+    expect(screen.getByLabelText('currentTurn')).toBeInTheDocument();
   });
 
   it('shows the selected spectator perspective hand face up', () => {

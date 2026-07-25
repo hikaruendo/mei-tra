@@ -113,12 +113,15 @@ export function BlowControls({
     );
   };
 
+  const formatSetOption = (pair: number) =>
+    pair === DEFAULT_MAX_PAIRS ? t('slami') : `${pair}${t('pairs')}`;
+
   // 有効なペア数選択肢を生成
   const getValidPairOptions = () => {
     if (!currentHighestDeclaration) {
       return DEFAULT_PAIR_OPTIONS.map(pair => ({
         value: pair,
-        label: `${pair} ${t('pairs')}`
+        label: formatSetOption(pair),
       }));
     }
 
@@ -131,7 +134,7 @@ export function BlowControls({
 
       return [{
         value: nextPair,
-        label: `${nextPair} ${t('pairs')}`
+        label: formatSetOption(nextPair),
       }];
     }
 
@@ -158,7 +161,9 @@ export function BlowControls({
       if (nextValidPair <= DEFAULT_MAX_PAIRS) {
         return [{
           value: nextValidPair,
-          label: `${nextValidPair} ${t('overCall')}`
+          label: nextValidPair === DEFAULT_MAX_PAIRS
+            ? t('slami')
+            : `${nextValidPair}${t('overCall')}`,
         }];
       }
 
@@ -167,7 +172,7 @@ export function BlowControls({
 
     return validPairs.map(pair => ({
       value: pair,
-      label: `${pair} ${t('pairs')}`
+      label: formatSetOption(pair),
     }));
   };
 
@@ -304,7 +309,7 @@ export function BlowControls({
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
                 >
-                  {player.name}: {entry.trumpType?.toUpperCase()} {entry.numberOfPairs} pairs
+                  {player.name}: {entry.trumpType?.toUpperCase()} {formatSetOption(declaration.numberOfPairs)}
                 </div>
               );
             })}

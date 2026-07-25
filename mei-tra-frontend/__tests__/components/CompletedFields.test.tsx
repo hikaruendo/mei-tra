@@ -25,22 +25,18 @@ describe('CompletedFields', () => {
     expect(screen.getByText('0 pairs')).toBeInTheDocument();
   });
 
-  it('shows the current number of taken pairs', () => {
+  it('shows the current number of taken pairs without player names', () => {
     render(
       <CompletedFields
         fields={[
           { cards: ['A♠'], winnerId: 'player-1', winnerTeam: 0 },
           { cards: ['K♣'], winnerId: 'player-2', winnerTeam: 0 },
         ]}
-        players={[
-          { playerId: 'player-1', name: 'Player 1' },
-          { playerId: 'player-2', name: 'Player 2' },
-        ]}
       />,
     );
 
     expect(screen.getByText('2 pairs')).toBeInTheDocument();
-    expect(screen.getByText('Player 1')).toBeInTheDocument();
-    expect(screen.getByText('Player 2')).toBeInTheDocument();
+    expect(screen.queryByText('Player 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Player 2')).not.toBeInTheDocument();
   });
 });

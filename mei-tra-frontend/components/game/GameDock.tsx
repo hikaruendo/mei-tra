@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
+import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
 
@@ -23,8 +24,10 @@ export function GameDock({
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
+  const tHistory = useTranslations('gameHistoryDock');
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -73,6 +76,19 @@ export function GameDock({
           placement={isMobile ? 'menu' : 'topbar'}
         />
       </div>
+      <div className={styles.dockItem}>
+        <button
+          type="button"
+          className={styles.historyButton}
+          onClick={() => {
+            setIsHistoryOpen((previous) => !previous);
+            setIsMenuOpen(false);
+          }}
+          aria-expanded={isHistoryOpen}
+        >
+          {tHistory('title')}
+        </button>
+      </div>
       {isMobile && onLeaveRequest && (
         <div className={styles.dockItem}>
           <button
@@ -111,6 +127,17 @@ export function GameDock({
         >
           {tools}
         </div>
+        {isHistoryOpen && (
+          <div className={styles.historyPanel}>
+            <GameHistoryDock
+              roomId={roomId}
+              gameStarted={gameStarted}
+              defaultOpen
+              hideOpenPage
+              onClose={() => setIsHistoryOpen(false)}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -118,6 +145,17 @@ export function GameDock({
   return (
     <div className={styles.container}>
       {tools}
+      {isHistoryOpen && (
+        <div className={styles.historyPanel}>
+          <GameHistoryDock
+            roomId={roomId}
+            gameStarted={gameStarted}
+            defaultOpen
+            hideOpenPage
+            onClose={() => setIsHistoryOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

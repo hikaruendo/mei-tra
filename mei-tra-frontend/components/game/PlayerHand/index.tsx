@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
-import { NegriCard } from '@/components/game/NegriCard';
 import { Card } from '@/components/game/Card';
 import { CardFace } from '@/components/game/CardFace';
 import { CompletedFields } from '@/components/game/CompletedFields';
@@ -33,7 +32,6 @@ interface PlayerHandProps {
   currentHighestDeclaration?: Pick<BlowDeclaration, 'playerId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
   completedFields: CompletedField[];
   currentPlayerId: string;
-  players: Player[];
   currentField: Field | null;
   currentTrump: TrumpType | null;
   isHost?: boolean;
@@ -43,6 +41,7 @@ interface PlayerHandProps {
   isSpectatorPerspective?: boolean;
   onSpectatorPerspectiveChange?: (playerId: string) => void;
   onReplaceWithCOM?: (playerId: string) => void;
+  takenCount?: number;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -58,7 +57,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentHighestDeclaration,
   completedFields,
   currentPlayerId,
-  players,
   currentField,
   currentTrump,
   isHost = false,
@@ -68,12 +66,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isSpectatorPerspective = false,
   onSpectatorPerspectiveChange,
   onReplaceWithCOM,
+  takenCount = 0,
 }) => {
   const t = useTranslations('playerHand');
   const tStatus = useTranslations('playerStatus');
   const tBlow = useTranslations('blowControls');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
+  const [displayHand, setDisplayHand] = useState(player.hand);
+  const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const autoRevealAttemptedRef = useRef(false);
   const handCardMetrics = HAND_CARD_METRICS;
 
@@ -93,11 +94,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : null;
   const shouldSelectNegri =
     gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
-  const hasOwnNegriCard = Boolean(
-    isCurrentPlayer && negriCard && negriPlayerId === player.playerId,
-  );
+  const isNegriPlayer = Boolean(negriCard && negriPlayerId === player.playerId);
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
-  const showDeclarationNegri = position === 'bottom' && hasOwnNegriCard;
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
   const replaceWithComStatusLabel = isDisconnected
@@ -128,6 +126,35 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     player.playerId,
   ]);
 
+  useEffect(() => {
+    setDisplayHand((previousHand) => {
+      const currentCards = new Set(player.hand);
+      const retainedCards = previousHand.filter((card) => currentCards.has(card));
+      const addedCards = player.hand.filter((card) => !retainedCards.includes(card));
+
+      return [...retainedCards, ...addedCards];
+    });
+  }, [player.hand]);
+
+  const reorderDisplayHand = (sourceCard: string, targetCard: string) => {
+    if (sourceCard === targetCard) {
+      return;
+    }
+
+    setDisplayHand((previousHand) => {
+      const sourceIndex = previousHand.indexOf(sourceCard);
+      const targetIndex = previousHand.indexOf(targetCard);
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return previousHand;
+      }
+
+      const nextHand = [...previousHand];
+      nextHand.splice(sourceIndex, 1);
+      nextHand.splice(targetIndex, 0, sourceCard);
+      return nextHand;
+    });
+  };
+
   const handleCardClick = (card: string) => {
     if (!canActAsCurrentPlayer) {
       return;
@@ -148,18 +175,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         <div
           className={styles.handContainer}
           style={{
-            '--player-hand-card-width': `${handCardMetrics.width}px`,
-            '--player-hand-card-overlap': handCardMetrics.overlap,
-            '--player-hand-card-hover-lift': `${handCardMetrics.hoverLift}px`,
-            '--player-hand-card-hover-overlap': handCardMetrics.hoverOverlap,
+            '--player-hand-card-base-width': `${handCardMetrics.width}px`,
+            '--player-hand-card-base-overlap': handCardMetrics.overlap,
+            '--player-hand-card-base-hover-lift': `${handCardMetrics.hoverLift}px`,
+            '--player-hand-card-base-hover-overlap': handCardMetrics.hoverOverlap,
             '--player-hand-card-container-min-height': `${handCardMetrics.minHeight}px`,
           } as React.CSSProperties}
         >
-          {player.hand.map((card, index) => {
-            const isNegri = card === negriCard;
+          {displayHand.map((card, index) => {
             const isSelected = card === selectedCard || card === selectedNegriCard;
-            const distanceFromCenter = index - (player.hand.length - 1) / 2;
-            const maxDistance = Math.max((player.hand.length - 1) / 2, 1);
+            const distanceFromCenter = index - (displayHand.length - 1) / 2;
+            const maxDistance = Math.max((displayHand.length - 1) / 2, 1);
             const normalizedDistance = distanceFromCenter / maxDistance;
             const cardRotation = normalizedDistance * 15;
             const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * handCardMetrics.spreadLift;
@@ -170,7 +196,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isNegri ? styles.negriCard : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''}`}
+                className={`${styles.card} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''}`}
+                draggable={canActAsCurrentPlayer}
                 onClick={() => {
                   if (
                     canActAsCurrentPlayer &&
@@ -181,15 +208,51 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     handleCardClick(card);
                   }
                 }}
+                onPointerDown={() => {
+                  if (canActAsCurrentPlayer) {
+                    setDraggingCard(card);
+                  }
+                }}
+                onPointerEnter={() => {
+                  if (draggingCard && canActAsCurrentPlayer) {
+                    reorderDisplayHand(draggingCard, card);
+                  }
+                }}
+                onPointerUp={() => setDraggingCard(null)}
+                onPointerCancel={() => setDraggingCard(null)}
+                onDragStart={(event) => {
+                  if (!canActAsCurrentPlayer) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  event.dataTransfer.setData('text/plain', card);
+                  event.dataTransfer.effectAllowed = 'move';
+                  setDraggingCard(card);
+                }}
+                onDragOver={(event) => {
+                  if (canActAsCurrentPlayer) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const sourceCard = event.dataTransfer.getData('text/plain') || draggingCard;
+                  if (sourceCard && canActAsCurrentPlayer) {
+                    reorderDisplayHand(sourceCard, card);
+                  }
+                  setDraggingCard(null);
+                }}
+                onDragEnd={() => setDraggingCard(null)}
                 style={{
                   '--card-index': index,
-                  '--card-total': player.hand.length,
+                  '--card-total': displayHand.length,
                   '--card-rotation': `${cardRotation}deg`,
                   '--card-translate-y': `${cardLift}px`,
                 } as React.CSSProperties}
               >
                 <CardFace card={card} />
-                {isNegri && <div className={styles.negriLabel}>{t('negri')}</div>}
               </div>
             );
           })}
@@ -271,11 +334,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     </div>
   ) : null;
   const hasBottomStatus = position === 'bottom' && Boolean(
-    declarationBadge || showDeclarationNegri || showDeclarationAgari || showHandStatusPanels,
+    declarationBadge || showDeclarationAgari || showHandStatusPanels,
   );
   const bottomStatusZone = hasBottomStatus ? (
     <div className={styles.bottomStatusZone}>
-      {(declarationBadge || showDeclarationNegri || showDeclarationAgari) && (
+      {(declarationBadge || showDeclarationAgari) && (
         <div className={styles.declarationContext}>
           {showDeclarationAgari && (
             <div className={`${styles.statusPanel} ${styles.agariStatusPanel} ${styles.declarationAgariPanel}`}>
@@ -285,18 +348,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </div>
             </div>
           )}
-          {(declarationBadge || showDeclarationNegri) && (
-            <div className={styles.declarationRow}>
-              {declarationBadge}
-              {showDeclarationNegri && (
-                <NegriCard
-                  negriCard={negriCard!}
-                  negriPlayerId={negriPlayerId!}
-                  currentPlayerId={currentPlayerId}
-                />
-              )}
-            </div>
-          )}
+          {declarationBadge && <div className={styles.declarationRow}>{declarationBadge}</div>}
         </div>
       )}
       {showHandStatusPanels && (
@@ -309,6 +361,31 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
     </div>
   ) : null;
+  const playerMetaBadges = (
+    <div className={styles.playerMetaBadges}>
+      {takenCount > 0 && (
+        <span
+          className={styles.takenBadge}
+          aria-label={`${takenCount}${t('setsTaken')}`}
+          title={`${takenCount}${t('setsTaken')}`}
+        >
+          <span aria-hidden="true">🂠</span>
+          <strong>{takenCount}</strong>
+        </span>
+      )}
+      {isNegriPlayer && <span className={styles.negriBadge}>{t('negri')}</span>}
+      {isCurrentTurn && (
+        <span
+          className={styles.turnBadge}
+          role="img"
+          aria-label={t('currentTurn')}
+          title={t('currentTurn')}
+        >
+          ◷
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
@@ -324,18 +401,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               aria-label={`Switch spectator perspective to ${player.name}`}
             >
               {playerInfoContent}
+              {playerMetaBadges}
             </button>
           ) : (
             <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
               {playerInfoContent}
+              {playerMetaBadges}
             </div>
-          )}
-          {hasOwnNegriCard && !showHandStatusPanels && !showDeclarationNegri && (
-            <NegriCard
-              negriCard={negriCard!}
-              negriPlayerId={negriPlayerId!}
-              currentPlayerId={currentPlayerId}
-            />
           )}
           {shouldSelectNegri && !showHandStatusPanels && (
             <div className={styles.statusPanel}>
@@ -373,7 +445,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           <div className={styles.completedFields}>
             <CompletedFields
               fields={completedFields}
-              players={players}
             />
           </div>
         )}

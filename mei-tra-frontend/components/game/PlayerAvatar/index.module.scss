@@ -5,6 +5,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .avatarContainer {
@@ -62,18 +64,24 @@
 }
 
 .playerName {
-  max-width: 100px;
+  width: 100%;
+  max-width: min(100%, 100px);
+  justify-content: center;
 }
 
 // サイズバリエーション
 .small {
+  width: 100%;
+  max-width: 4.75rem;
+
   .avatarContainer {
     width: 32px;
     height: 32px;
   }
 
   .playerName {
-    max-width: 4.75rem;
+    max-width: 100%;
+    padding-inline: 0.4rem;
   }
 
   .disconnectedBadge {
@@ -92,13 +100,16 @@
 }
 
 .medium {
+  width: 100%;
+  max-width: 100px;
+
   .avatarContainer {
     width: 64px;
     height: 64px;
   }
 
   .playerName {
-    max-width: 100px;
+    max-width: 100%;
   }
 
   .disconnectedBadge {
@@ -115,13 +126,16 @@
 }
 
 .large {
+  width: 100%;
+  max-width: 120px;
+
   .avatarContainer {
     width: 64px;
     height: 64px;
   }
 
   .playerName {
-    max-width: 120px;
+    max-width: 100%;
   }
 
   .disconnectedBadge {

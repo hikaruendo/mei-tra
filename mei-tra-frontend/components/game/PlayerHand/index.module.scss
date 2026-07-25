@@ -1,9 +1,15 @@
 @use '../../../styles/base/typography' as typography;
 
 .handContainer{
-  --player-hand-card-scaled-width: calc(var(--player-hand-card-width, 72px) * var(--mt-card-scale));
-  --player-hand-card-scaled-overlap: calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale));
-  --player-hand-card-scaled-hover-overlap: calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale));
+  --player-hand-compact-scale: 1;
+  --player-hand-compact-lift-scale: 1;
+  --player-hand-card-width: calc(var(--player-hand-card-base-width, 72px) * var(--player-hand-compact-scale));
+  --player-hand-card-overlap: calc(var(--player-hand-card-base-overlap, var(--card-overlap)) * var(--player-hand-compact-scale));
+  --player-hand-card-hover-lift: calc(var(--player-hand-card-base-hover-lift, 28px) * var(--player-hand-compact-lift-scale));
+  --player-hand-card-hover-overlap: calc(var(--player-hand-card-base-hover-overlap, -0.6rem) * var(--player-hand-compact-scale));
+  --player-hand-card-scaled-width: calc(var(--player-hand-card-width) * var(--mt-card-scale));
+  --player-hand-card-scaled-overlap: calc(var(--player-hand-card-overlap) * var(--mt-card-scale));
+  --player-hand-card-scaled-hover-overlap: calc(var(--player-hand-card-hover-overlap) * var(--mt-card-scale));
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -100,6 +106,11 @@
   transition: all 0.3s ease-in-out;
 }
 
+.dragging {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
 .spectatorCard {
   cursor: default;
   filter: none;
@@ -185,6 +196,7 @@
 }
 
 .playerInfoContainer{
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
@@ -196,6 +208,50 @@
   padding: 4px;
   min-width: 132px;
   backdrop-filter: blur(2px);
+}
+
+.playerMetaBadges {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.45rem;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.takenBadge,
+.negriBadge,
+.turnBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.25rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 999px;
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-soft);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.62rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.takenBadge {
+  gap: 0.12rem;
+  min-width: 1.9rem;
+  padding: 0.12rem 0.28rem;
+}
+
+.negriBadge {
+  padding: 0.12rem 0.32rem;
+  color: var(--mt-accent);
+}
+
+.turnBadge {
+  width: 1.25rem;
+  color: var(--mt-accent);
+  font-size: typography.scale(0.86rem);
 }
 
 .spectatorPerspectiveButton {
@@ -382,6 +438,8 @@
 }
 
 .playerPosition{
+  position: relative;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -618,6 +676,22 @@
   justify-self: center;
   min-width: 0;
   width: min(100%, 42rem);
+}
+
+@media (min-width: 769px) and (max-height: 760px) {
+  .handContainer {
+    --player-hand-compact-scale: 0.76;
+    --player-hand-compact-lift-scale: 0.62;
+    padding-bottom: 1.8rem;
+  }
+
+  .playerPosition.bottom {
+    margin-top: 0;
+  }
+
+  .playerPosition.bottom .handContainer {
+    padding-bottom: 1.35rem;
+  }
 }
 
 @media (max-width: 768px) {

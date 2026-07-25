@@ -26,6 +26,9 @@ interface GameHistoryDockProps {
   summaryOverride?: GameHistorySummary | null;
   includeSummaryFetch?: boolean;
   onFiltersChange?: (filters: GameHistoryFilters) => void;
+  defaultOpen?: boolean;
+  onClose?: () => void;
+  hideOpenPage?: boolean;
 }
 
 const ACTION_TYPE_OPTIONS: GameHistoryActionType[] = [
@@ -85,28 +88,28 @@ const extractScoreTotals = (
 export function GameHistoryDock({
   roomId,
   gameStarted,
-  players = [],
   variant = 'dock',
   showOverview = true,
   summaryOverride = null,
   includeSummaryFetch = true,
   onFiltersChange,
+  defaultOpen = false,
+  onClose,
+  hideOpenPage = false,
 }: GameHistoryDockProps) {
   const t = useTranslations('gameHistoryDock');
   const trumpT = useTranslations('trump');
-  const unavailableDuringGameMessage = t('unavailableDuringGame');
   const getActionLabel = (actionType: GameHistoryActionType) =>
     t(ACTION_TYPE_MESSAGE_KEYS[actionType] as never);
   const getDetailLabel = (
     key: string,
     values?: Record<string, boolean | number | string>,
   ) => t(`detailLabels.${key}` as never, values as never);
-  const [isMinimized, setIsMinimized] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(!defaultOpen);
   const [selectedRound, setSelectedRound] = useState<'all' | number>('all');
   const [selectedActionType, setSelectedActionType] = useState<
     'all' | GameHistoryActionType
   >('all');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<'all' | string>('all');
   const entryLimit = variant === 'page' ? undefined : 25;
   const historyEnabled = variant === 'page' || !isMinimized;
   const replayQuery = useMemo(
@@ -115,9 +118,8 @@ export function GameHistoryDock({
       roundNumber: selectedRound === 'all' ? undefined : selectedRound,
       actionType:
         selectedActionType === 'all' ? undefined : selectedActionType,
-      playerId: selectedPlayerId === 'all' ? undefined : selectedPlayerId,
     }),
-    [entryLimit, selectedActionType, selectedPlayerId, selectedRound],
+    [entryLimit, selectedActionType, selectedRound],
   );
   const { replay, summary, isLoading, error, refresh } = useGameHistory(
     roomId,
@@ -129,28 +131,18 @@ export function GameHistoryDock({
     },
   );
   const resolvedSummary = summaryOverride ?? summary;
-  const playerNameMap = useMemo(
-    () =>
-      new Map([
-        ...Object.entries(resolvedSummary?.playerNames ?? {}),
-        ...players.map((player) => [player.playerId, player.name] as const),
-      ]),
-    [players, resolvedSummary?.playerNames],
-  );
-
   useEffect(() => {
     setSelectedRound('all');
     setSelectedActionType('all');
-    setSelectedPlayerId('all');
   }, [roomId]);
 
   useEffect(() => {
     onFiltersChange?.({
       round: selectedRound,
       actionType: selectedActionType,
-      playerId: selectedPlayerId,
+      playerId: 'all',
     });
-  }, [onFiltersChange, selectedActionType, selectedPlayerId, selectedRound]);
+  }, [onFiltersChange, selectedActionType, selectedRound]);
 
   const orderedRounds = useMemo(() => {
     if (!replay) {
@@ -208,10 +200,6 @@ export function GameHistoryDock({
       .sort((left, right) => right[1] - left[1])
       .slice(0, 4);
   }, [orderedRounds]);
-  const playerOptions = useMemo(
-    () => resolvedSummary?.playerIds ?? [],
-    [resolvedSummary],
-  );
   const roundScoreDeltas = useMemo(() => {
     const deltasByEventId = new Map<string, Record<string, number>>();
     const previousTotals: Record<string, number> = {};
@@ -254,6 +242,30 @@ export function GameHistoryDock({
 
     return deltasByEventId;
   }, [replay]);
+  const scoreComparison = useMemo(() => {
+    if (!replay) {
+      return [];
+    }
+
+    const latestScoreDetail = replay.rounds
+      .flatMap((round) => round.events)
+      .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
+      .flatMap((event) => event.detailItems)
+      .find((detailItem) => detailItem.value.kind === 'scores');
+    const totals = latestScoreDetail?.value.kind === 'scores'
+      ? extractScoreTotals(latestScoreDetail.value.scores)
+      : {};
+    const maximum = Math.max(...Object.values(totals), 1);
+
+    return Object.entries(totals)
+      .map(([teamKey, total]) => ({
+        team: Number(teamKey),
+        total,
+        progress: Math.max(0, Math.min(100, (total / maximum) * 100)),
+      }))
+      .filter((entry) => !Number.isNaN(entry.team))
+      .sort((left, right) => left.team - right.team);
+  }, [replay]);
   const feedWindow = useMemo(() => {
     if (eventFeed.length === 0) {
       return null;
@@ -274,12 +286,6 @@ export function GameHistoryDock({
     return `${resolvedSummary.firstTimestamp.toLocaleString()} - ${resolvedSummary.lastTimestamp.toLocaleString()}`;
   }, [resolvedSummary?.firstTimestamp, resolvedSummary?.lastTimestamp, t]);
 
-  useEffect(() => {
-    if (variant === 'dock' && gameStarted) {
-      setIsMinimized(true);
-    }
-  }, [gameStarted, variant]);
-
   const formatTeam = (team: number | null | undefined) => {
     if (team === null || team === undefined) {
       return null;
@@ -293,7 +299,7 @@ export function GameHistoryDock({
       return null;
     }
 
-    return playerNameMap.get(playerId) ?? playerId;
+    return t('participant');
   };
 
   const formatTrump = (trump: unknown) => {
@@ -398,11 +404,7 @@ export function GameHistoryDock({
         }
         return detailItem.value.text;
       case 'player':
-        return (
-          detailItem.value.playerName ??
-          formatPlayer(detailItem.value.playerId) ??
-          null
-        );
+        return null;
       case 'team':
         return formatTeam(detailItem.value.team);
       case 'trump':
@@ -553,11 +555,6 @@ export function GameHistoryDock({
             <span className={styles.eventBadge}>
               {getActionLabel(event.actionType)}
             </span>
-            {formatPlayer(event.playerId) ? (
-              <span className={styles.eventBadgeMuted}>
-                {formatPlayer(event.playerId)}
-              </span>
-            ) : null}
           </div>
         </div>
         <div className={styles.eventSummary}>
@@ -715,23 +712,13 @@ export function GameHistoryDock({
           </p>
         </div>
         <div className={styles.actions}>
-          {variant === 'dock' ? (
-            gameStarted ? (
-              <span
-                className={`${styles.openPageLink} ${styles.disabledOpenPageLink}`}
-                aria-disabled="true"
-                title={unavailableDuringGameMessage}
-              >
-                {t('openPage')}
-              </span>
-            ) : (
-              <Link
-                href={`/game-history/${roomId}`}
-                className={styles.openPageLink}
-              >
-                {t('openPage')}
-              </Link>
-            )
+          {variant === 'dock' && !hideOpenPage ? (
+            <Link
+              href={`/game-history/${roomId}`}
+              className={styles.openPageLink}
+            >
+              {t('openPage')}
+            </Link>
           ) : null}
           <button
             type="button"
@@ -745,7 +732,13 @@ export function GameHistoryDock({
             <button
               type="button"
               className={styles.actionButton}
-              onClick={() => setIsMinimized(true)}
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                  return;
+                }
+                setIsMinimized(true);
+              }}
             >
               {t('minimize')}
             </button>
@@ -761,6 +754,29 @@ export function GameHistoryDock({
         <div className={styles.state}>{t('empty')}</div>
       ) : (
         <div className={styles.content}>
+          {scoreComparison.length > 0 && (
+            <section className={styles.scoreComparison} aria-label={t('scoreComparison')}>
+              <h4 className={styles.scoreComparisonTitle}>{t('scoreComparison')}</h4>
+              <div className={styles.scoreComparisonRows}>
+                {scoreComparison.map(({ team, total, progress }) => (
+                  <div key={team} className={styles.scoreComparisonRow}>
+                    <span className={styles.scoreComparisonLabel}>
+                      {formatTeam(team)}
+                    </span>
+                    <div className={styles.scoreComparisonTrack} aria-hidden="true">
+                      <span
+                        className={`${styles.scoreComparisonFill} ${
+                          team === 0 ? styles.teamZero : styles.teamOne
+                        }`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <strong className={styles.scoreComparisonValue}>{total}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           {variant === 'page' && showOverview && resolvedSummary ? (
             <>
               <div className={styles.pageOverview}>
@@ -829,24 +845,6 @@ export function GameHistoryDock({
                 {ACTION_TYPE_OPTIONS.map((actionType) => (
                   <option key={actionType} value={actionType}>
                     {getActionLabel(actionType)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={styles.selectLabel}>
-              {t('playerFilter')}
-              <select
-                className={styles.select}
-                value={selectedPlayerId}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  setSelectedPlayerId(value === 'all' ? 'all' : value);
-                }}
-              >
-                <option value="all">{t('allPlayers')}</option>
-                {playerOptions.map((playerId) => (
-                  <option key={playerId} value={playerId}>
-                    {formatPlayer(playerId)}
                   </option>
                 ))}
               </select>

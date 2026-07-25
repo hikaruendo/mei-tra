@@ -6,10 +6,9 @@ import { Card } from '@/components/game/Card';
 
 interface CompletedFieldsProps {
   fields: CompletedField[];
-  players: { playerId: string; name: string }[];
 }
 
-export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, players }) => {
+export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
   const t = useTranslations('completedFields');
 
   return (
@@ -21,10 +20,8 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, player
       {fields.length > 0 && (
         <div className={styles.completedFieldsContainer}>
           {fields.map((field, index) => {
-            const winnerName = players.find(p => p.playerId === field.winnerId)?.name || t('unknown');
             return (
               <div key={index} className={styles.completedField}>
-                <div className={styles.winnerName}>{winnerName}</div>
                 <div className={styles.cards}>
                   {field.cards.map((card: string, cardIndex: number) => {
                     return (

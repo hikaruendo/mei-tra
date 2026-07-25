@@ -18,6 +18,32 @@
   position: relative;
 }
 
+.historyButton {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.78rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.historyButton:hover,
+.historyButton[aria-expanded='true'] {
+  border-color: var(--mt-accent);
+  background: var(--mt-accent-subtle);
+}
+
+.historyPanel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 220;
+  width: min(26rem, calc(100vw - 1rem));
+}
+
 .menuButton {
   display: inline-flex;
   align-items: center;

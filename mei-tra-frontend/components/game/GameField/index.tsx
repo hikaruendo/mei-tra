@@ -13,6 +13,8 @@ interface GameFieldProps {
   onBaseSuitSelect: (suit: string) => void;
   isCurrentPlayer: boolean;
   currentPlayerId: string;
+  isPreview?: boolean;
+  onDismissPreview?: () => void;
 }
 
 function getCardSeatPosition(
@@ -29,10 +31,12 @@ export const GameField: React.FC<GameFieldProps> = ({
   onBaseSuitSelect,
   isCurrentPlayer,
   currentPlayerId,
+  isPreview = false,
+  onDismissPreview,
 }) => {
   const t = useTranslations('gameField');
   const isJokerBaseCard = currentField?.baseCard === 'JOKER';
-  const needsBaseSuitSelection = isJokerBaseCard && !currentField?.baseSuit && isCurrentPlayer;
+  const needsBaseSuitSelection = isJokerBaseCard && !currentField?.baseSuit && isCurrentPlayer && !isPreview;
   const isRedBaseSuit = currentField?.baseSuit === '♥' || currentField?.baseSuit === '♦';
 
   const orderedPlayers = getSeatOrderWithSelfBottom(players, currentPlayerId);
@@ -80,6 +84,15 @@ export const GameField: React.FC<GameFieldProps> = ({
               {currentField.baseSuit}
             </span>
           </div>
+        )}
+        {isPreview && onDismissPreview && (
+          <button
+            type="button"
+            className={styles.previewConfirmButton}
+            onClick={onDismissPreview}
+          >
+            {t('confirmField')}
+          </button>
         )}
       </div>
     </div>
