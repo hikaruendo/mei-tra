@@ -19,6 +19,11 @@ const HAND_CARD_METRICS = {
   minHeight: 160,
 };
 
+type DropPlacement = {
+  card: string;
+  side: 'before' | 'after';
+};
+
 interface PlayerHandProps {
   player: Player;
   isCurrentTurn: boolean;
@@ -75,6 +80,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const [displayHand, setDisplayHand] = useState(player.hand);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
+  const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null);
   const autoRevealAttemptedRef = useRef(false);
   const handCardMetrics = HAND_CARD_METRICS;
 
@@ -136,7 +142,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     });
   }, [player.hand]);
 
-  const reorderDisplayHand = (sourceCard: string, targetCard: string) => {
+  const reorderDisplayHand = (
+    sourceCard: string,
+    targetCard: string,
+    side: DropPlacement['side'],
+  ) => {
     if (sourceCard === targetCard) {
       return;
     }
@@ -150,9 +160,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
       const nextHand = [...previousHand];
       nextHand.splice(sourceIndex, 1);
-      nextHand.splice(targetIndex, 0, sourceCard);
+      const nextTargetIndex = nextHand.indexOf(targetCard);
+      nextHand.splice(nextTargetIndex + (side === 'after' ? 1 : 0), 0, sourceCard);
       return nextHand;
     });
+  };
+
+  const getDropSide = (event: React.PointerEvent<HTMLDivElement> | React.DragEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return event.clientX < bounds.left + bounds.width / 2 ? 'before' : 'after';
+  };
+
+  const updateDropPlacement = (
+    card: string,
+    event: React.PointerEvent<HTMLDivElement> | React.DragEvent<HTMLDivElement>,
+  ) => {
+    if (!draggingCard || draggingCard === card) {
+      return;
+    }
+
+    setDropPlacement({ card, side: getDropSide(event) });
   };
 
   const handleCardClick = (card: string) => {
@@ -196,7 +223,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''}`}
+                className={`${styles.card} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
                 draggable={canActAsCurrentPlayer}
                 onClick={() => {
                   if (
@@ -211,15 +238,25 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 onPointerDown={() => {
                   if (canActAsCurrentPlayer) {
                     setDraggingCard(card);
+                    setDropPlacement(null);
                   }
                 }}
-                onPointerEnter={() => {
-                  if (draggingCard && canActAsCurrentPlayer) {
-                    reorderDisplayHand(draggingCard, card);
+                onPointerMove={(event) => {
+                  if (canActAsCurrentPlayer) {
+                    updateDropPlacement(card, event);
                   }
                 }}
-                onPointerUp={() => setDraggingCard(null)}
-                onPointerCancel={() => setDraggingCard(null)}
+                onPointerUp={(event) => {
+                  if (draggingCard && dropPlacement?.card === card) {
+                    reorderDisplayHand(draggingCard, card, getDropSide(event));
+                  }
+                  setDraggingCard(null);
+                  setDropPlacement(null);
+                }}
+                onPointerCancel={() => {
+                  setDraggingCard(null);
+                  setDropPlacement(null);
+                }}
                 onDragStart={(event) => {
                   if (!canActAsCurrentPlayer) {
                     event.preventDefault();
@@ -229,22 +266,28 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   event.dataTransfer.setData('text/plain', card);
                   event.dataTransfer.effectAllowed = 'move';
                   setDraggingCard(card);
+                  setDropPlacement(null);
                 }}
                 onDragOver={(event) => {
                   if (canActAsCurrentPlayer) {
                     event.preventDefault();
                     event.dataTransfer.dropEffect = 'move';
+                    updateDropPlacement(card, event);
                   }
                 }}
                 onDrop={(event) => {
                   event.preventDefault();
                   const sourceCard = event.dataTransfer.getData('text/plain') || draggingCard;
                   if (sourceCard && canActAsCurrentPlayer) {
-                    reorderDisplayHand(sourceCard, card);
+                    reorderDisplayHand(sourceCard, card, getDropSide(event));
                   }
                   setDraggingCard(null);
+                  setDropPlacement(null);
                 }}
-                onDragEnd={() => setDraggingCard(null)}
+                onDragEnd={() => {
+                  setDraggingCard(null);
+                  setDropPlacement(null);
+                }}
                 style={{
                   '--card-index': index,
                   '--card-total': displayHand.length,
@@ -441,7 +484,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           )}
         </div>
         {renderPlayerHand(isCurrentPlayer)}
-        {(completedFields.length > 0 || (position === 'bottom' && gamePhase === 'play')) && (
+        {completedFields.length > 0 && (
           <div className={styles.completedFields}>
             <CompletedFields
               fields={completedFields}

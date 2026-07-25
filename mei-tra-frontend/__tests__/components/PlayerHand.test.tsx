@@ -199,14 +199,38 @@ describe('PlayerHand', () => {
     });
 
     const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
     fireEvent.pointerDown(cards[0], { isPrimary: true });
-    fireEvent.pointerEnter(cards[1]);
-    fireEvent.pointerUp(cards[1]);
+    fireEvent.pointerMove(targetCard, { clientX: 170 });
+    fireEvent.pointerUp(targetCard, { clientX: 170 });
 
     expect(screen.getAllByTestId('card-front').map((card) => card.textContent)).toEqual([
       'S-2',
       'H-A',
     ]);
+  });
+
+  it('shows an insertion marker on the target card while reordering', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 110 });
+
+    expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
   });
 
   it('shows the taken-count badge and the current-turn clock', () => {

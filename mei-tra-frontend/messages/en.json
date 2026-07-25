@@ -444,6 +444,7 @@
     "noStartingHand": "No hand log",
     "unknownPlayer": "Unknown player",
     "participant": "Player",
+    "participantNumber": "Player {number}",
     "unknownValue": "Unknown",
     "scoreValue": "Round {play} pts, total {total} pts",
     "scoreTotalValue": "Total {total} pts",

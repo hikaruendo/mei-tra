@@ -444,6 +444,7 @@
     "noStartingHand": "手札ログなし",
     "unknownPlayer": "不明なプレイヤー",
     "participant": "プレイヤー",
+    "participantNumber": "プレイヤー{number}",
     "unknownValue": "不明",
     "scoreValue": "今回 {play}点・累計 {total}点",
     "scoreTotalValue": "累計 {total}点",

@@ -1,32 +1,9 @@
-@use '../../../styles/base/typography' as typography;
-
 .completedFieldsPanel {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   width: 100%;
   max-width: 100%;
-}
-
-.summary {
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.45rem;
-  align-self: center;
-  padding: 0.15rem 0.65rem;
-  border-radius: var(--mt-radius-pill);
-  background: color-mix(in srgb, var(--mt-surface) 72%, transparent);
-  color: var(--mt-text-secondary);
-  font-size: typography.scale(0.72rem);
-  line-height: 1.2;
-  box-shadow: var(--mt-shadow-soft);
-}
-
-.summary strong {
-  color: var(--mt-text-primary);
-  font-size: typography.scale(0.9rem);
-  font-weight: 800;
 }
 
 .completedFieldsContainer {
@@ -38,7 +15,7 @@
   padding: 0;
   width: 100%;
   max-width: 100%;
-  min-height: 2.5rem;
+  min-height: 2.1rem;
 }
 
 .completedField {
@@ -54,16 +31,44 @@
 .cards {
   display: flex;
   align-items: center;
-  height: calc(2.1rem * var(--mt-card-scale));
+  height: calc(2rem * var(--mt-card-scale));
   gap: 0;
   justify-content: center;
   width: 100%;
 }
 
-.cards > * {
-  flex: 0 0 calc(1.35rem * var(--mt-card-scale));
-  width: calc(1.35rem * var(--mt-card-scale));
-  margin: 0 calc(-0.2rem * var(--mt-card-scale));
+.cardCorner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 calc(1.38rem * var(--mt-card-scale));
+  width: calc(1.38rem * var(--mt-card-scale));
+  height: calc(1.75rem * var(--mt-card-scale));
+  margin: 0 calc(-0.16rem * var(--mt-card-scale));
+  overflow: hidden;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 0.25rem;
+  background: var(--mt-card-face);
+  color: var(--mt-card-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.redCardCorner {
+  color: var(--mt-card-red);
+}
+
+.cardRank {
+  font-size: calc(0.8rem * var(--mt-card-scale));
+  font-weight: 900;
+  line-height: 0.85;
+}
+
+.cardSuit {
+  font-size: calc(0.95rem * var(--mt-card-scale));
+  font-weight: 900;
+  line-height: 0.8;
 }
 
 @media (max-width: 768px) {
@@ -75,22 +80,22 @@
     width: 100%;
   }
 
-  .summary {
-    font-size: typography.scale(0.66rem);
-    padding: 0.12rem 0.5rem;
-  }
-
-  .summary strong {
-    font-size: typography.scale(0.82rem);
-  }
-
   .cards {
     height: calc(1.75rem * var(--mt-card-scale));
   }
 
-  .cards > * {
+  .cardCorner {
     flex-basis: calc(1.1rem * var(--mt-card-scale));
     width: calc(1.1rem * var(--mt-card-scale));
+    height: calc(1.45rem * var(--mt-card-scale));
     margin: 0 calc(-0.16rem * var(--mt-card-scale));
+  }
+
+  .cardRank {
+    font-size: calc(0.68rem * var(--mt-card-scale));
+  }
+
+  .cardSuit {
+    font-size: calc(0.8rem * var(--mt-card-scale));
   }
 }

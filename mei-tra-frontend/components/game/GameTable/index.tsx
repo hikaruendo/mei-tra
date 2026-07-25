@@ -162,6 +162,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 gameStarted={!isWaiting}
                 currentTrump={currentTrump}
                 gamePhase={gamePhase}
+                players={players}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined

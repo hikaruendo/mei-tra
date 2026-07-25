@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { TrumpType } from '@/types/game.types';
+import type { Player, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
@@ -13,6 +13,7 @@ interface GameDockProps {
   gameStarted: boolean;
   currentTrump: TrumpType | null;
   gamePhase?: string | null;
+  players?: Player[];
   onLeaveRequest?: () => void;
 }
 
@@ -21,6 +22,7 @@ export function GameDock({
   gameStarted,
   currentTrump,
   gamePhase,
+  players,
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
@@ -132,6 +134,7 @@ export function GameDock({
             <GameHistoryDock
               roomId={roomId}
               gameStarted={gameStarted}
+              players={players}
               defaultOpen
               hideOpenPage
               onClose={() => setIsHistoryOpen(false)}
@@ -150,6 +153,7 @@ export function GameDock({
           <GameHistoryDock
             roomId={roomId}
             gameStarted={gameStarted}
+            players={players}
             defaultOpen
             hideOpenPage
             onClose={() => setIsHistoryOpen(false)}

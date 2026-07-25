@@ -12,13 +12,15 @@
 .gameInfoContent {
   display: flex;
   min-width: 0;
+  justify-content: center;
 }
 
 .gameInfoScores {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.3rem;
   flex: 1;
+  width: min(100%, 24rem);
 }
 
 .gameInfoScore {
