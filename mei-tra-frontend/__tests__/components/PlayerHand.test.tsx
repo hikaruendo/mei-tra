@@ -21,14 +21,20 @@ jest.mock('next-intl', () => ({
       },
     };
 
-    return (key: string, values?: Record<string, number>) => {
+    const translator = (key: string, values?: Record<string, number>) => {
       if (namespace === 'playerHand' && key === 'takenCount') {
         return `${values?.count ?? 0} sets`;
       }
 
       return labels[namespace]?.[key] ?? key;
     };
+
+    translator.has = (key: string) =>
+      namespace === 'playerHand' && key === 'takenCount';
+
+    return translator;
   },
+  useLocale: () => 'en',
 }));
 
 jest.mock('@/hooks/useAuth', () => ({

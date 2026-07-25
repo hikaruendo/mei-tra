@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
 import { Card } from '@/components/game/Card';
 import { CardFace } from '@/components/game/CardFace';
@@ -76,6 +76,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const t = useTranslations('playerHand');
   const tStatus = useTranslations('playerStatus');
   const tBlow = useTranslations('blowControls');
+  const locale = useLocale();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const [displayHand, setDisplayHand] = useState(player.hand);
@@ -111,6 +112,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const replaceWithComStatusLabel = isDisconnected
     ? tStatus('disconnected')
     : tStatus('idle');
+  const takenCountLabel = t.has('takenCount')
+    ? t('takenCount', { count: takenCount })
+    : locale === 'ja'
+      ? `${takenCount}組`
+      : `${takenCount} sets`;
 
   useEffect(() => {
     if (
@@ -356,7 +362,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       </div>
       {gamePhase && (
         <div className={styles.takenCount}>
-          {t('takenCount', { count: takenCount })}
+          {takenCountLabel}
         </div>
       )}
       {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
@@ -422,7 +428,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           aria-label={t('currentTurn')}
           title={t('currentTurn')}
         >
-          ◷
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.25" />
+            <path d="M12 7.5v4.9l3.35 2.1" />
+          </svg>
         </span>
       )}
     </div>
