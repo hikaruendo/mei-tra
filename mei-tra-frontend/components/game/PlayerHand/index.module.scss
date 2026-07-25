@@ -244,7 +244,6 @@
   gap: 0.2rem;
 }
 
-.takenBadge,
 .negriBadge,
 .turnBadge {
   display: inline-flex;
@@ -261,29 +260,22 @@
   line-height: 1;
 }
 
-.takenBadge {
-  gap: 0.12rem;
-  min-width: 1.9rem;
-  padding: 0.12rem 0.28rem;
-}
-
 .negriBadge {
   padding: 0.12rem 0.32rem;
   color: var(--mt-accent);
 }
 
 .turnBadge {
-  box-sizing: border-box;
-  flex: 0 0 1.65rem;
-  width: 1.65rem;
-  height: 1.65rem;
+  flex: 0 0 auto;
+  width: auto;
   min-height: 0;
   padding: 0;
-  border: 2px solid var(--mt-accent);
-  background: var(--mt-accent);
-  color: var(--mt-btn-primary-text);
-  box-shadow: 0 0 0 0.18rem var(--mt-accent-subtle), 0 0 0.8rem var(--mt-accent-subtle);
-  font-size: typography.scale(1.12rem);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--mt-accent);
+  font-size: typography.scale(1.35rem);
   line-height: 1;
 }
 
@@ -321,7 +313,7 @@
   color: var(--mt-text-primary);
 }
 
-.currentTurn .cardCount {
+.currentTurn .takenCount {
   color: var(--mt-text-muted);
   background: var(--mt-surface-raised);
   border: 1px solid var(--mt-border-hairline);
@@ -343,7 +335,7 @@
   }
 }
 
-.cardCount{
+.takenCount{
   font-size: typography.scale(0.72rem);
   color: var(--mt-text-muted);
   background: var(--mt-surface-raised);
@@ -565,9 +557,9 @@
   font-size: typography.scale(0.7rem);
 }
 
-.playerPosition.top .cardCount,
-.playerPosition.left .cardCount,
-.playerPosition.right .cardCount {
+.playerPosition.top .takenCount,
+.playerPosition.left .takenCount,
+.playerPosition.right .takenCount {
   font-size: typography.scale(0.62rem);
 }
 
@@ -826,7 +818,7 @@
     color: var(--mt-text-primary);
   }
 
-  .cardCount{
+  .takenCount{
     font-size: typography.scale(0.75rem);
     color: var(--mt-text-muted);
     background: var(--mt-surface-raised);
@@ -858,9 +850,9 @@
     font-size: typography.scale(0.68rem);
   }
 
-  .playerPosition.top .cardCount,
-  .playerPosition.left .cardCount,
-  .playerPosition.right .cardCount {
+  .playerPosition.top .takenCount,
+  .playerPosition.left .takenCount,
+  .playerPosition.right .takenCount {
     font-size: typography.scale(0.68rem);
   }
 

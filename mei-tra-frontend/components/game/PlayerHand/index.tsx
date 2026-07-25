@@ -354,7 +354,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           showName={true}
         />
       </div>
-      {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
+      {gamePhase && (
+        <div className={styles.takenCount}>
+          {t('takenCount', { count: takenCount })}
+        </div>
+      )}
       {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
         <button
           className={styles.brokenButton}
@@ -410,16 +414,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   ) : null;
   const playerMetaBadges = (
     <div className={styles.playerMetaBadges}>
-      {takenCount > 0 && (
-        <span
-          className={styles.takenBadge}
-          aria-label={`${takenCount}${t('setsTaken')}`}
-          title={`${takenCount}${t('setsTaken')}`}
-        >
-          <span aria-hidden="true">🂠</span>
-          <strong>{takenCount}</strong>
-        </span>
-      )}
       {isNegriPlayer && <span className={styles.negriBadge}>{t('negri')}</span>}
       {isCurrentTurn && (
         <span

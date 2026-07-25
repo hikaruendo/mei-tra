@@ -513,6 +513,7 @@
     "revealBroken": "Reveal Broken Hand",
     "negri": "Negri",
     "setsTaken": " sets taken",
+    "takenCount": "{count} sets",
     "currentTurn": "Current turn",
     "play": "Play"
   },

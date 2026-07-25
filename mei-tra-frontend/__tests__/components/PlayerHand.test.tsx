@@ -21,7 +21,13 @@ jest.mock('next-intl', () => ({
       },
     };
 
-    return (key: string) => labels[namespace]?.[key] ?? key;
+    return (key: string, values?: Record<string, number>) => {
+      if (namespace === 'playerHand' && key === 'takenCount') {
+        return `${values?.count ?? 0} sets`;
+      }
+
+      return labels[namespace]?.[key] ?? key;
+    };
   },
 }));
 
@@ -244,15 +250,16 @@ describe('PlayerHand', () => {
     expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
   });
 
-  it('shows the taken-count badge and the current-turn clock', () => {
+  it('shows the taken count in player info and the current-turn clock', () => {
     renderPlayerHand({
       currentPlayerId: 'player-2',
       isCurrentTurn: true,
       takenCount: 3,
     });
 
-    expect(screen.getByLabelText('3setsTaken')).toBeInTheDocument();
+    expect(screen.getByText('3 sets')).toHaveClass('takenCount');
     expect(screen.getByLabelText('currentTurn')).toBeInTheDocument();
+    expect(screen.queryByLabelText('3setsTaken')).not.toBeInTheDocument();
   });
 
   it('shows the selected spectator perspective hand face up', () => {
