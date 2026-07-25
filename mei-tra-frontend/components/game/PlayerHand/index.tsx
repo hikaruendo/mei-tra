@@ -100,7 +100,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : null;
   const shouldSelectNegri =
     gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
-  const isNegriPlayer = Boolean(negriCard && negriPlayerId === player.playerId);
+  const isNegriPlayer = Boolean(
+    negriCard &&
+      negriPlayerId === player.playerId &&
+      player.playerId === currentPlayerId,
+  );
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;

@@ -380,7 +380,6 @@
   "gameField": {
     "selectBaseSuit": "Select Base Suit",
     "suit": "Suit",
-    "confirmField": "Confirm",
     "unknown": "Unknown"
   },
   "completedFields": {

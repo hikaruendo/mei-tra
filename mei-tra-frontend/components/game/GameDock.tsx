@@ -65,6 +65,22 @@ export function GameDock({
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    if (!isHistoryOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsHistoryOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isHistoryOpen]);
+
   const tools = (
     <>
       <div className={styles.dockItem}>

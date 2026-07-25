@@ -555,7 +555,7 @@
 .playerPosition.top .playerInfoContainer,
 .playerPosition.left .playerInfoContainer,
 .playerPosition.right .playerInfoContainer {
-  min-width: 68px;
+  min-width: 5.5rem;
   padding: 0.16rem;
   background: var(--mt-surface-raised-2);
 }
@@ -563,7 +563,7 @@
 .playerPosition.top .playerName,
 .playerPosition.left .playerName,
 .playerPosition.right .playerName {
-  max-width: 64px;
+  max-width: 6.25rem;
   font-size: typography.scale(0.7rem);
 }
 
@@ -846,7 +846,7 @@
   .playerPosition.top .playerInfoContainer,
   .playerPosition.left .playerInfoContainer,
   .playerPosition.right .playerInfoContainer {
-    min-width: 62px;
+    min-width: 5rem;
     padding: 0.1rem;
     background: var(--mt-surface-raised-2);
     transform: scale(0.88);
@@ -856,7 +856,7 @@
   .playerPosition.top .playerName,
   .playerPosition.left .playerName,
   .playerPosition.right .playerName {
-    max-width: 58px;
+    max-width: 5.5rem;
     font-size: typography.scale(0.68rem);
   }
 

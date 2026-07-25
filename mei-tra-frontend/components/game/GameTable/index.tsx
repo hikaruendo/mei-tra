@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
 import { GameField } from '@/components/game/GameField';
@@ -81,8 +81,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   usePreloadCards();
   const [spectatorPerspectivePlayerId, setSpectatorPerspectivePlayerId] =
     useState<string | null>(null);
-  const [completedFieldPreview, setCompletedFieldPreview] = useState<Field | null>(null);
-  const latestFieldRef = useRef<Field | null>(null);
 
   const hostPlayerId = players.find((player) => player.isHost)?.playerId ?? players[0]?.playerId ?? null;
   const tablePerspectivePlayerId = isSpectator
@@ -107,25 +105,6 @@ export const GameTable: React.FC<GameTableProps> = ({
       setSpectatorPerspectivePlayerId(hostPlayerId);
     }
   }, [hostPlayerId, isSpectator, players, spectatorPerspectivePlayerId]);
-
-  useEffect(() => {
-    if (currentField?.cards.length) {
-      latestFieldRef.current = currentField;
-      setCompletedFieldPreview(null);
-      return;
-    }
-
-    const latestField = latestFieldRef.current;
-    if (!latestField?.cards.length) {
-      return;
-    }
-
-    latestFieldRef.current = null;
-    setCompletedFieldPreview(latestField);
-    const timeoutId = window.setTimeout(() => setCompletedFieldPreview(null), 5000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [currentField]);
 
   if (!players || players.length === 0) {
     return null;
@@ -275,13 +254,11 @@ export const GameTable: React.FC<GameTableProps> = ({
           </div>
         ) : (
           <GameField
-            currentField={currentField?.cards.length ? currentField : completedFieldPreview}
+            currentField={currentField}
             players={players}
             onBaseSuitSelect={gameActions.selectBaseSuit}
             isCurrentPlayer={!isSpectator && currentPlayerId === whoseTurn}
             currentPlayerId={tablePerspectivePlayerId || ''}
-            isPreview={Boolean(completedFieldPreview && !currentField?.cards.length)}
-            onDismissPreview={() => setCompletedFieldPreview(null)}
           />
         )}
       </div>

@@ -380,7 +380,6 @@
   "gameField": {
     "selectBaseSuit": "ベーススートを選択",
     "suit": "スート",
-    "confirmField": "確認",
     "unknown": "不明"
   },
   "completedFields": {

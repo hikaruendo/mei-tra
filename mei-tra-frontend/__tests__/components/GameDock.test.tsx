@@ -75,6 +75,26 @@ describe('GameDock', () => {
     expect(historyButton).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('closes the in-game history dock when clicking outside the dock', () => {
+    mockMatchMedia(false);
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gamePhase="play"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'title' }));
+    expect(screen.getByText('history dock open')).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByText('history dock open')).not.toBeInTheDocument();
+  });
+
   it('uses a single mobile menu while keeping the chat dock mounted', async () => {
     mockMatchMedia(true);
 

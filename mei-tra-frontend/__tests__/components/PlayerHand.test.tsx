@@ -189,6 +189,17 @@ describe('PlayerHand', () => {
     expect(screen.queryByText('Negri')).not.toBeInTheDocument();
   });
 
+  it('hides the Negri badge when the current player is not the Negri player', () => {
+    renderPlayerHand({
+      position: 'bottom',
+      currentPlayerId: 'player-1',
+      negriCard: 'H-A',
+      negriPlayerId: 'player-2',
+    });
+
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+  });
+
   it('reorders the current player hand locally with pointer drag', () => {
     renderPlayerHand({
       currentPlayerId: 'player-2',

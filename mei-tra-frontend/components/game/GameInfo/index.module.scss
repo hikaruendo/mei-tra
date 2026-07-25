@@ -29,11 +29,12 @@
 }
 
 .gameInfoScoreContent {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) clamp(7rem, 14vw, 10rem);
   height: 100%;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0.3rem;
+  justify-content: center;
+  column-gap: 0.55rem;
 }
 
 .gameInfoMeter {
@@ -102,14 +103,16 @@
 }
 
 .gameInfoScoreTeam {
-  flex: 0 1 auto;
-  max-width: clamp(4rem, 12vw, 9rem);
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  justify-self: end;
   overflow: hidden;
   color: var(--mt-text-secondary);
   font-size: typography.scale(0.82rem);
   font-weight: 700;
   line-height: 1.2;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -202,7 +205,8 @@
   }
 
   .gameInfoScoreContent {
-    gap: 0.25rem;
+    grid-template-columns: minmax(0, 8.5rem) clamp(6rem, 28vw, 8rem);
+    column-gap: 0.4rem;
   }
 
   .gameInfoMeter {
@@ -245,8 +249,7 @@
   }
 
   .gameInfoScoreTeam {
-    flex-basis: clamp(5.75rem, 14vw, 9rem);
-    max-width: clamp(5.75rem, 14vw, 9rem);
+    max-width: 100%;
     overflow: hidden;
     font-size: typography.scale(0.68rem);
     text-overflow: ellipsis;
