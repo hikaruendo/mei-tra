@@ -273,20 +273,18 @@
 }
 
 .turnBadge {
+  box-sizing: border-box;
+  flex: 0 0 1.65rem;
   width: 1.65rem;
-  min-height: 1.65rem;
+  height: 1.65rem;
+  min-height: 0;
+  padding: 0;
   border: 2px solid var(--mt-accent);
   background: var(--mt-accent);
   color: var(--mt-btn-primary-text);
   box-shadow: 0 0 0 0.18rem var(--mt-accent-subtle), 0 0 0.8rem var(--mt-accent-subtle);
   font-size: typography.scale(1.12rem);
-  animation: turnPulse 1.3s ease-in-out infinite;
-}
-
-@keyframes turnPulse {
-  50% {
-    transform: scale(1.08);
-  }
+  line-height: 1;
 }
 
 .spectatorPerspectiveButton {

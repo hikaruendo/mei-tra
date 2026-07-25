@@ -97,6 +97,17 @@
   visibility: visible;
 }
 
+.mobileMenu .dockItem,
+.mobileMenu .dockItem > * {
+  width: 100%;
+}
+
+.mobileMenu .historyButton {
+  min-width: 7.5rem;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+}
+
 .leaveMenuButton {
   width: 100%;
   min-height: 2.25rem;

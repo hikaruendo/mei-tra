@@ -126,16 +126,16 @@ export const GameInfo: React.FC<GameInfoProps> = ({
                     <span className={styles.gameInfoScoreTeam} title={teamName}>
                       {teamName}
                     </span>
-                    <div className={styles.gameInfoMeter}>
-                      <div className={styles.gameInfoScoreFill} aria-hidden="true" />
-                      <div className={styles.gameInfoScoreMeta}>
+                    <div className={styles.gameInfoMeterAndValue}>
+                      <div className={styles.gameInfoMeter}>
+                        <div className={styles.gameInfoScoreFill} aria-hidden="true" />
                         {statusLabel && (
                           <span className={styles.gameInfoScoreStatus}>{statusLabel}</span>
                         )}
-                        <span className={styles.gameInfoScoreValue}>
-                          {score}<span>/{pointsToWin}</span>
-                        </span>
                       </div>
+                      <span className={styles.gameInfoScoreValue}>
+                        {score}<span>/{pointsToWin}</span>
+                      </span>
                     </div>
                   </div>
                 </div>
