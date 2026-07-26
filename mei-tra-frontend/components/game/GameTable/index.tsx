@@ -19,7 +19,6 @@ interface GameTableProps {
   currentField: Field | null;
   players: Player[];
   negriCard: string | null;
-  negriPlayerId: string | null;
   completedFields: CompletedField[];
   revealedAgari: string | null;
   gameActions: GameActions;
@@ -53,7 +52,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentField,
   players,
   negriCard,
-  negriPlayerId,
   completedFields,
   revealedAgari,
   gameActions,
@@ -212,7 +210,6 @@ export const GameTable: React.FC<GameTableProps> = ({
               player={player_}
               isCurrentTurn={whoseTurn === player_.playerId}
               negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
               gameActions={gameActions}

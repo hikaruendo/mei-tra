@@ -251,7 +251,7 @@
   gap: 0.2rem;
 }
 
-.negriBadge {
+.teamBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -264,11 +264,17 @@
   font-size: typography.scale(0.62rem);
   font-weight: 800;
   line-height: 1;
+  padding: 0.12rem 0.32rem;
 }
 
-.negriBadge {
-  padding: 0.12rem 0.32rem;
-  color: var(--mt-accent);
+.teamRedBadge {
+  border-color: color-mix(in srgb, var(--mt-danger) 60%, var(--mt-border-hairline));
+  color: var(--mt-danger);
+}
+
+.teamBlackBadge {
+  border-color: var(--mt-card-ink);
+  color: var(--mt-card-ink);
 }
 
 .turnBadge {

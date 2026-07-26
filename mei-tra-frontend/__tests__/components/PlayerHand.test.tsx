@@ -14,6 +14,10 @@ jest.mock('next-intl', () => ({
         selectNegri: 'Please select your Negri',
         selectNegriWithAgari: 'This card is Agari. Select your Negri.',
       },
+      gameInfo: {
+        teamRed: 'Red team',
+        teamBlack: 'Black team',
+      },
       playerStatus: {
         disconnected: 'Disconnected',
         idle: 'Unresponsive',
@@ -105,7 +109,6 @@ const renderPlayerHand = (
       player={otherPlayer}
       isCurrentTurn={false}
       negriCard={null}
-      negriPlayerId={null}
       gamePhase="play"
       whoseTurn="player-1"
       gameActions={gameActions}
@@ -185,15 +188,15 @@ describe('PlayerHand', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows a compact Negri badge for the player who selected it', () => {
+  it('shows a red team badge instead of a Negri badge', () => {
     renderPlayerHand({
       position: 'bottom',
       currentPlayerId: 'player-2',
       negriCard: 'H-A',
-      negriPlayerId: 'player-2',
     });
 
-    expect(screen.getByText('Negri')).toHaveClass('negriBadge');
+    expect(screen.getByText('Red team')).toHaveClass('teamRedBadge');
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
   });
 
   it('uses the translated no-trump label in the declaration badge', () => {
@@ -208,24 +211,12 @@ describe('PlayerHand', () => {
     expect(screen.getByText('No Tra')).toHaveClass('declarationSuit');
   });
 
-  it('hides the Negri badge for another player', () => {
+  it('shows a black team badge for team one', () => {
     renderPlayerHand({
-      negriCard: 'H-A',
-      negriPlayerId: 'player-1',
+      player: { ...otherPlayer, team: 1 },
     });
 
-    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
-  });
-
-  it('hides the Negri badge when the current player is not the Negri player', () => {
-    renderPlayerHand({
-      position: 'bottom',
-      currentPlayerId: 'player-1',
-      negriCard: 'H-A',
-      negriPlayerId: 'player-2',
-    });
-
-    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+    expect(screen.getByText('Black team')).toHaveClass('teamBlackBadge');
   });
 
   it('reorders the current player hand locally with pointer drag', () => {

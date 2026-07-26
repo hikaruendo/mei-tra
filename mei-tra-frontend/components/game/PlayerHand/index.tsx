@@ -26,7 +26,6 @@ interface PlayerHandProps {
   player: Player;
   isCurrentTurn: boolean;
   negriCard: string | null;
-  negriPlayerId: string | null;
   gamePhase: GamePhase | null;
   whoseTurn: string | null;
   gameActions: GameActions;
@@ -51,7 +50,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   player,
   isCurrentTurn,
   negriCard,
-  negriPlayerId,
   gamePhase,
   whoseTurn,
   gameActions,
@@ -72,6 +70,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   takenCount = 0,
 }) => {
   const t = useTranslations('playerHand');
+  const tGameInfo = useTranslations('gameInfo');
   const tStatus = useTranslations('playerStatus');
   const tBlow = useTranslations('blowControls');
   const locale = useLocale();
@@ -99,11 +98,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : null;
   const shouldSelectNegri =
     gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
-  const isNegriPlayer = Boolean(
-    negriCard &&
-      negriPlayerId === player.playerId &&
-      player.playerId === currentPlayerId,
-  );
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
@@ -431,11 +425,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
     </div>
   ) : null;
-  const playerMetaBadges = isNegriPlayer ? (
+  const playerMetaBadges = (
     <div className={styles.playerMetaBadges}>
-      <span className={styles.negriBadge}>{t('negri')}</span>
+      <span
+        className={`${styles.teamBadge} ${
+          player.team === 0 ? styles.teamRedBadge : styles.teamBlackBadge
+        }`}
+      >
+        {tGameInfo(player.team === 0 ? 'teamRed' : 'teamBlack')}
+      </span>
     </div>
-  ) : null;
+  );
 
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
