@@ -56,10 +56,15 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
       {slots.map((player, idx) => (
         <div
           key={player.playerId}
-          className={`${styles.playerSeat} ${styles[positions[idx]]}`}
+          className={`${styles.playerSeat} ${styles[positions[idx]]} ${
+            idx % 2 === 0 ? styles.teamRed : styles.teamBlack
+          }`}
         >
           <div className={styles.seatContent}>
             <PlayerAvatar player={player} size="medium" showName={true} />
+            <span className={styles.teamBadge}>
+              {tRoot(idx % 2 === 0 ? 'gameInfo.teamRed' : 'gameInfo.teamBlack')}
+            </span>
             {isHost &&
               onRemovePlayer &&
               !player.isCOM &&

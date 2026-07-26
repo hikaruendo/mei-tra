@@ -36,3 +36,7 @@
 .compact .label {
   font-size: min(typography.scale(0.8rem), 1rem);
 }
+
+.center .label {
+  text-align: center;
+}

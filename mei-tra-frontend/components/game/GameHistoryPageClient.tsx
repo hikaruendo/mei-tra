@@ -27,7 +27,9 @@ export function GameHistoryPageClient({
     ? t('noWinner')
     : summary.winningTeam === null
       ? t('noWinner')
-      : t('teamValue', { team: summary.winningTeam + 1 });
+      : summary.winningTeam === 0
+        ? t('teamRed')
+        : t('teamBlack');
   const historyWindowLabel = useMemo(() => {
     if (!summary?.firstTimestamp || !summary.lastTimestamp) {
       return t('unknownTimeWindow');

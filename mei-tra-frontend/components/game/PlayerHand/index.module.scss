@@ -1,9 +1,15 @@
 @use '../../../styles/base/typography' as typography;
 
 .handContainer{
-  --player-hand-card-scaled-width: calc(var(--player-hand-card-width, 72px) * var(--mt-card-scale));
-  --player-hand-card-scaled-overlap: calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale));
-  --player-hand-card-scaled-hover-overlap: calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale));
+  --player-hand-compact-scale: 1;
+  --player-hand-compact-lift-scale: 1;
+  --player-hand-card-width: calc(var(--player-hand-card-base-width, 72px) * var(--player-hand-compact-scale));
+  --player-hand-card-overlap: calc(var(--player-hand-card-base-overlap, var(--card-overlap)) * var(--player-hand-compact-scale));
+  --player-hand-card-hover-lift: calc(var(--player-hand-card-base-hover-lift, 28px) * var(--player-hand-compact-lift-scale));
+  --player-hand-card-hover-overlap: calc(var(--player-hand-card-base-hover-overlap, -0.6rem) * var(--player-hand-compact-scale));
+  --player-hand-card-scaled-width: calc(var(--player-hand-card-width) * var(--mt-card-scale));
+  --player-hand-card-scaled-overlap: calc(var(--player-hand-card-overlap) * var(--mt-card-scale));
+  --player-hand-card-scaled-hover-overlap: calc(var(--player-hand-card-hover-overlap) * var(--mt-card-scale));
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -100,6 +106,35 @@
   transition: all 0.3s ease-in-out;
 }
 
+.dragging {
+  cursor: grabbing;
+  opacity: 0.58;
+  filter: brightness(1.1);
+  z-index: 60 !important;
+}
+
+.insertBefore::before,
+.insertAfter::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  width: 0.22rem;
+  border-radius: 999px;
+  background: var(--mt-accent);
+  box-shadow: 0 0 0 0.16rem var(--mt-accent-subtle);
+  pointer-events: none;
+  z-index: 70;
+}
+
+.insertBefore::before {
+  left: -0.36rem;
+}
+
+.insertAfter::after {
+  right: -0.36rem;
+}
+
 .spectatorCard {
   cursor: default;
   filter: none;
@@ -154,18 +189,20 @@
 
 .declarationSuit {
   color: var(--mt-text-primary);
-  font-size: typography.scale(1.15rem);
-  font-weight: 900;
-  line-height: 0.8;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
 }
 
 .declarationSuit[data-trump='herz'],
 .declarationSuit[data-trump='daiya'] {
-  color: var(--mt-danger);
+  color: var(--mt-card-red);
 }
 
+.declarationSuit[data-trump='club'],
+.declarationSuit[data-trump='zuppe'],
 .declarationSuit[data-trump='tra'] {
-  color: var(--mt-accent);
+  color: var(--mt-card-ink);
 }
 
 .declarationPairs {
@@ -185,6 +222,7 @@
 }
 
 .playerInfoContainer{
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
@@ -196,6 +234,79 @@
   padding: 4px;
   min-width: 132px;
   backdrop-filter: blur(2px);
+}
+
+.playerInfoBadges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.teamBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.05rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 999px;
+  background: var(--mt-surface-raised);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.62rem);
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  white-space: nowrap;
+}
+
+.teamRedBadge {
+  border-color: color-mix(in srgb, var(--mt-danger) 60%, var(--mt-border-hairline));
+  color: var(--mt-danger);
+}
+
+.teamBlackBadge {
+  border-color: var(--mt-team-black);
+  color: var(--mt-team-black);
+}
+
+.turnBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mt-surface-raised);
+  box-shadow: 0 1px 3px var(--mt-accent-subtle);
+  color: var(--mt-accent-strong);
+  line-height: 1;
+}
+
+.turnBadge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
+.clockHand {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: turn-clock-hand 3s linear infinite;
+}
+
+.clockCenter {
+  fill: currentColor;
+  stroke: none;
 }
 
 .spectatorPerspectiveButton {
@@ -217,7 +328,22 @@
 }
 
 .playerAvatar{
+  position: relative;
   width: calc(100% - 8px);
+}
+
+.avatarTurnBadge {
+  position: absolute;
+  top: -0.32rem;
+  right: -0.4rem;
+  z-index: 4;
+  pointer-events: none;
+}
+
+@keyframes turn-clock-hand {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .currentTurn{
@@ -232,7 +358,7 @@
   color: var(--mt-text-primary);
 }
 
-.currentTurn .cardCount {
+.currentTurn .takenCount {
   color: var(--mt-text-muted);
   background: var(--mt-surface-raised);
   border: 1px solid var(--mt-border-hairline);
@@ -254,15 +380,16 @@
   }
 }
 
-.cardCount{
+.takenCount{
   font-size: typography.scale(0.72rem);
   color: var(--mt-text-muted);
   background: var(--mt-surface-raised);
-  padding: 0.15rem 0.4rem;
+  padding: 0.1rem 0.28rem;
   border-radius: var(--mt-radius);
   font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   line-height: 1.3;
+  white-space: nowrap;
 }
 
 
@@ -312,8 +439,24 @@
     var(--mt-shadow-panel);
 }
 
-.agariStatusPanel{
+.agariTakenCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: calc(1.75rem * var(--mt-card-scale));
   margin-left: 0.35rem;
+  padding: 0.16rem 0.26rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 0.35rem;
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
+}
+
+.agariTakenLabel {
+  white-space: nowrap;
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.72rem);
+  font-weight: 800;
 }
 
 .statusHeader{
@@ -382,6 +525,8 @@
 }
 
 .playerPosition{
+  position: relative;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -401,6 +546,7 @@
   justify-self: stretch;
   width: 100%;
   margin-top: -1.4rem;
+  z-index: 30;
 }
 
 .playerPosition.left {
@@ -415,6 +561,13 @@
   align-self: start;
   justify-self: center;
   margin-top: -0.7rem;
+}
+
+.playerPosition.bottom .statusPanel,
+.playerPosition.bottom .bottomStatusZone,
+.playerPosition.bottom .playerInfoGroup {
+  position: relative;
+  z-index: 40;
 }
 
 .selected {
@@ -454,7 +607,7 @@
 .playerPosition.top .playerInfoContainer,
 .playerPosition.left .playerInfoContainer,
 .playerPosition.right .playerInfoContainer {
-  min-width: 68px;
+  min-width: 5.5rem;
   padding: 0.16rem;
   background: var(--mt-surface-raised-2);
 }
@@ -462,13 +615,13 @@
 .playerPosition.top .playerName,
 .playerPosition.left .playerName,
 .playerPosition.right .playerName {
-  max-width: 64px;
+  max-width: 6.25rem;
   font-size: typography.scale(0.7rem);
 }
 
-.playerPosition.top .cardCount,
-.playerPosition.left .cardCount,
-.playerPosition.right .cardCount {
+.playerPosition.top .takenCount,
+.playerPosition.left .takenCount,
+.playerPosition.right .takenCount {
   font-size: typography.scale(0.62rem);
 }
 
@@ -547,7 +700,7 @@
 }
 
 .playerPosition.bottom .playerInfoContainer {
-  min-width: 94px;
+  min-width: 7rem;
   padding: 0.28rem;
 }
 
@@ -556,34 +709,12 @@
   min-height: 100px;
 }
 
-.playerPosition.bottom .agariStatusPanel {
-  margin-left: 0.55rem;
-}
-
-.playerPosition.bottom .declarationAgariPanel {
-  min-width: 0;
-  min-height: 0;
-  padding: 0.2rem 0.3rem;
-  flex-direction: row;
-  gap: 0.3rem;
+.playerPosition.bottom .agariTakenCard {
   margin: 0;
 }
 
-.playerPosition.bottom .declarationAgariPanel .statusHeader {
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.playerPosition.bottom .declarationAgariPanel .statusCardFrame {
-  min-width: 1.8rem;
-  min-height: 2.7rem;
-  padding: 0;
-}
-
-.playerPosition.bottom .declarationAgariPanel .statusCardFrame > * {
-  transform: none;
+.playerPosition.bottom .declarationAgariCard {
+  padding: 0.14rem 0.22rem;
 }
 
 .playerPosition.bottom .handContainer {
@@ -618,6 +749,22 @@
   justify-self: center;
   min-width: 0;
   width: min(100%, 42rem);
+}
+
+@media (min-width: 769px) and (max-height: 760px) {
+  .handContainer {
+    --player-hand-compact-scale: 0.76;
+    --player-hand-compact-lift-scale: 0.62;
+    padding-bottom: 1.8rem;
+  }
+
+  .playerPosition.bottom {
+    margin-top: 0;
+  }
+
+  .playerPosition.bottom .handContainer {
+    padding-bottom: 1.35rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -711,7 +858,7 @@
     color: var(--mt-text-primary);
   }
 
-  .cardCount{
+  .takenCount{
     font-size: typography.scale(0.75rem);
     color: var(--mt-text-muted);
     background: var(--mt-surface-raised);
@@ -729,7 +876,7 @@
   .playerPosition.top .playerInfoContainer,
   .playerPosition.left .playerInfoContainer,
   .playerPosition.right .playerInfoContainer {
-    min-width: 62px;
+    min-width: 5rem;
     padding: 0.1rem;
     background: var(--mt-surface-raised-2);
     transform: scale(0.88);
@@ -739,13 +886,13 @@
   .playerPosition.top .playerName,
   .playerPosition.left .playerName,
   .playerPosition.right .playerName {
-    max-width: 58px;
+    max-width: 5.5rem;
     font-size: typography.scale(0.68rem);
   }
 
-  .playerPosition.top .cardCount,
-  .playerPosition.left .cardCount,
-  .playerPosition.right .cardCount {
+  .playerPosition.top .takenCount,
+  .playerPosition.left .takenCount,
+  .playerPosition.right .takenCount {
     font-size: typography.scale(0.68rem);
   }
 

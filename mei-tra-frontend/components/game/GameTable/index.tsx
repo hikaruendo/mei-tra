@@ -19,7 +19,6 @@ interface GameTableProps {
   currentField: Field | null;
   players: Player[];
   negriCard: string | null;
-  negriPlayerId: string | null;
   completedFields: CompletedField[];
   revealedAgari: string | null;
   gameActions: GameActions;
@@ -53,7 +52,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentField,
   players,
   negriCard,
-  negriPlayerId,
   completedFields,
   revealedAgari,
   gameActions,
@@ -133,7 +131,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         <GameInfo
           teamScores={teamScores}
           pointsToWin={pointsToWin}
-          players={players}
+          primaryTeam={perspectivePlayerTeam}
           actionSlot={
             currentRoomId ? (onLeaveRequest) => (
               <GameDock
@@ -141,6 +139,8 @@ export const GameTable: React.FC<GameTableProps> = ({
                 gameStarted={!isWaiting}
                 currentTrump={currentTrump}
                 gamePhase={gamePhase}
+                players={players}
+                currentPlayerId={tablePerspectivePlayerId}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -200,6 +200,9 @@ export const GameTable: React.FC<GameTableProps> = ({
           const teamCompletedFields = position === 'bottom'
             ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
             : [];
+          const takenCount = completedFields.filter(
+            (field) => field.winnerTeam === player_.team,
+          ).length;
 
           return (
             <PlayerHand
@@ -207,7 +210,6 @@ export const GameTable: React.FC<GameTableProps> = ({
               player={player_}
               isCurrentTurn={whoseTurn === player_.playerId}
               negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
               gameActions={gameActions}
@@ -216,9 +218,9 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentHighestDeclaration={currentHighestDeclaration || undefined}
               completedFields={teamCompletedFields}
               currentPlayerId={tablePerspectivePlayerId || ''}
-              players={players}
               currentField={currentField}
               currentTrump={currentTrump}
+              takenCount={takenCount}
               isHost={isHost}
               isIdle={idlePlayerIds.includes(player_.playerId)}
               isDisconnected={disconnectedPlayerIds.includes(player_.playerId)}

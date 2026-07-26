@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
 import { BlowAction, BlowDeclaration, Player } from '@/types/game.types';
-import { getTrumpDisplay } from '@/lib/utils/trumpDisplay';
 import styles from './index.module.scss';
 
 interface BlowSpectatorPanelProps {
@@ -69,7 +68,7 @@ export function BlowSpectatorPanel({
                   className={styles.trump}
                   data-trump={currentHighestDeclaration.trumpType}
                 >
-                  {getTrumpDisplay(currentHighestDeclaration.trumpType)}
+                  {t(currentHighestDeclaration.trumpType)}
                 </span>
                 <span>{currentHighestDeclaration.numberOfPairs}</span>
               </span>
@@ -96,7 +95,7 @@ export function BlowSpectatorPanel({
                   <span className={styles.declarationValue}>
                     <span>{t('bid')}</span>
                     <span className={styles.trump} data-trump={action.trumpType}>
-                      {getTrumpDisplay(action.trumpType ?? null)}
+                      {action.trumpType ? t(action.trumpType) : ''}
                     </span>
                     <span>{action.numberOfPairs}</span>
                   </span>

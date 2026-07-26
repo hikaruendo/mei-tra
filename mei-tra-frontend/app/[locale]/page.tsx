@@ -85,7 +85,6 @@ export default function Home() {
     currentField = null,
     players = [],
     negriCard = null,
-    negriPlayerId = null,
     completedFields = [],
     revealedAgari = null,
     gameActions,
@@ -209,7 +208,6 @@ export default function Home() {
                   currentField={currentField}
                   players={players}
                   negriCard={negriCard}
-                  negriPlayerId={negriPlayerId}
                   completedFields={completedFields}
                   revealedAgari={revealedAgari}
                   gameActions={gameActions}

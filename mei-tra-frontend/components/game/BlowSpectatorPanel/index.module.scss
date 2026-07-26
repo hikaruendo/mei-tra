@@ -139,11 +139,13 @@
 
 .trump[data-trump='herz'],
 .trump[data-trump='daiya'] {
-  color: var(--mt-danger);
+  color: var(--mt-card-red);
 }
 
+.trump[data-trump='club'],
+.trump[data-trump='zuppe'],
 .trump[data-trump='tra'] {
-  color: var(--mt-accent);
+  color: var(--mt-card-ink);
 }
 
 .emptyHistory {

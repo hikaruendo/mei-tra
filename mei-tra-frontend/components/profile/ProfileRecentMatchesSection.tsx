@@ -63,7 +63,7 @@ export function ProfileRecentMatchesSection({
       return t('recentMatchesNoWinner');
     }
 
-    return historyT('teamValue', { team: item.winningTeam + 1 });
+    return historyT(item.winningTeam === 0 ? 'teamRed' : 'teamBlack');
   };
 
   return (
