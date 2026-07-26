@@ -26,7 +26,7 @@ If X rejects a refresh request, generate a new OAuth 2.0 token pair in the Devel
 Every newly opened PR receives `x:share` automatically. GitHub does not reliably distinguish Codex, Claude, and a human when they use the same account, so this keeps the behavior consistent across agents. Remove the label before merging when the change is private, operational, or not worth announcing.
 
 1. Merge the labeled PR into `main`. The workflow creates an issue labeled `x:review`.
-2. Edit the text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. This workflow publishes text only. For a screenshot or video post, publish the approved copy manually from X instead.
+2. Edit the Japanese text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. The generated post contains no URL; add only the copy you want to publish. This workflow publishes text only. For a screenshot or video post, publish the approved copy manually from X instead.
 3. Comment exactly `/post-x` on the issue.
 
 ## Weekly devlog

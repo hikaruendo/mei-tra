@@ -22,11 +22,12 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
-            const appUrl = 'https://meitra.kando1.com/';
             const candidate = [
-              `Mei-Tra update: ${pr.title}`,
+              'Mei-Traをアップデートしました。',
               '',
-              `Try it: ${appUrl}`,
+              'より快適に遊べるよう、プレイ体験を改善しています。',
+              '',
+              'これからも遊びやすさを高めていきます。',
             ].join('\n');
 
             const body = [

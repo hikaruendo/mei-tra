@@ -40,12 +40,11 @@ jobs:
               return;
             }
 
-            const bullets = selected.map((pr) => `• ${pr.title}`);
             const candidate = [
-              'This week in Mei-Tra:',
-              ...bullets,
+              '今週のMei-Traアップデートです。',
               '',
-              'Play it: https://meitra.kando1.com/',
+              'プレイ体験と対戦の安定性を改善しました。',
+              'これからも遊びやすさを高めていきます。',
             ].join('\n');
 
             const body = [
