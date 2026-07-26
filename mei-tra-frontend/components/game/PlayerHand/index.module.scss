@@ -196,11 +196,18 @@
 
 .declarationSuit[data-trump='herz'],
 .declarationSuit[data-trump='daiya'] {
-  color: var(--mt-danger);
+  color: var(--mt-card-red);
+}
+
+.declarationSuit[data-trump='club'],
+.declarationSuit[data-trump='zuppe'],
+.declarationSuit[data-trump='tra'] {
+  color: var(--mt-card-ink);
 }
 
 .declarationSuit[data-trump='tra'] {
-  color: var(--mt-accent);
+  font-size: inherit;
+  line-height: 1;
 }
 
 .declarationPairs {

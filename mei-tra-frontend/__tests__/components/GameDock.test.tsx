@@ -95,6 +95,24 @@ describe('GameDock', () => {
     expect(screen.queryByText('history dock open')).not.toBeInTheDocument();
   });
 
+  it('keeps the in-game history dock open when interacting inside it', () => {
+    mockMatchMedia(false);
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gamePhase="play"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'title' }));
+    fireEvent.mouseDown(screen.getByText('history dock open'));
+
+    expect(screen.getByText('history dock open')).toBeInTheDocument();
+  });
+
   it('uses a single mobile menu while keeping the chat dock mounted', async () => {
     mockMatchMedia(true);
 

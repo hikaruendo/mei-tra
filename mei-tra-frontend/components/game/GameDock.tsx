@@ -162,7 +162,7 @@ export function GameDock({
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} ref={menuRef}>
       {tools}
       {isHistoryOpen && (
         <div className={styles.historyPanel}>

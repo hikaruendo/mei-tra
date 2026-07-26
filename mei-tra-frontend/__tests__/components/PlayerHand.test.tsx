@@ -19,6 +19,9 @@ jest.mock('next-intl', () => ({
         idle: 'Unresponsive',
         replaceWithCom: 'Replace with COM',
       },
+      blowControls: {
+        tra: 'No Tra',
+      },
     };
 
     const translator = (key: string, values?: Record<string, number>) => {
@@ -190,6 +193,18 @@ describe('PlayerHand', () => {
     });
 
     expect(screen.getByText('Negri')).toHaveClass('negriBadge');
+  });
+
+  it('uses the translated no-trump label in the declaration badge', () => {
+    renderPlayerHand({
+      currentHighestDeclaration: {
+        playerId: 'player-2',
+        trumpType: 'tra',
+        numberOfPairs: 6,
+      },
+    });
+
+    expect(screen.getByText('No Tra')).toHaveClass('declarationSuit');
   });
 
   it('hides the Negri badge for another player', () => {

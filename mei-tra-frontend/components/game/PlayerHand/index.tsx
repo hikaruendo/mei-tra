@@ -8,7 +8,6 @@ import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
-import { getTrumpDisplay } from '@/lib/utils/trumpDisplay';
 
 const HAND_CARD_METRICS = {
   width: 80,
@@ -401,7 +400,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           className={styles.declarationSuit}
           data-trump={playerDeclaration.trumpType}
         >
-          {getTrumpDisplay(playerDeclaration.trumpType)}
+          {tBlow(playerDeclaration.trumpType)}
         </span>
         <span className={styles.declarationPairs}>{playerDeclaration.numberOfPairs}</span>
       </span>
