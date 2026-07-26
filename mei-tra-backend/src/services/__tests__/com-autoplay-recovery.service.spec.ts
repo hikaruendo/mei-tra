@@ -9,7 +9,9 @@ import {
 } from '../com-autoplay-recovery.service';
 
 const flushPromises = async (): Promise<void> => {
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  for (let index = 0; index < 10; index += 1) {
+    await Promise.resolve();
+  }
 };
 
 const createService = () => {
@@ -43,6 +45,7 @@ const createService = () => {
 
 describe('ComAutoPlayRecoveryService', () => {
   it('completes a persisted full field when its timer was lost', async () => {
+    jest.useFakeTimers();
     const {
       service,
       roomService,
@@ -84,7 +87,6 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     await flushPromises();
-    await flushPromises();
 
     expect(completeFieldUseCase.execute).toHaveBeenCalledWith({
       roomId: 'room-1',
@@ -94,26 +96,19 @@ describe('ComAutoPlayRecoveryService', () => {
       'room-1',
       completionResponse,
     );
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.runOnlyPendingTimersAsync();
+    await flushPromises();
+
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 
-  it('serializes duplicate recovery triggers and reruns once afterward', async () => {
+  it('serializes duplicate recovery triggers before the delayed step', async () => {
+    jest.useFakeTimers();
     const { service, roomService, comAutoPlayUseCase, handlers } =
       createService();
-    let finishFirstRun:
-      | ((value: {
-          success: boolean;
-          events: never[];
-          shouldContinue: boolean;
-        }) => void)
-      | undefined;
-    const firstRun = new Promise<{
-      success: boolean;
-      events: never[];
-      shouldContinue: boolean;
-    }>((resolve) => {
-      finishFirstRun = resolve;
-    });
 
     roomService.getRoomGameState.mockResolvedValue({
       getState: () => ({
@@ -122,7 +117,7 @@ describe('ComAutoPlayRecoveryService', () => {
         pendingBrokenHandReveal: null,
       }),
     });
-    comAutoPlayUseCase.execute.mockReturnValueOnce(firstRun).mockResolvedValue({
+    comAutoPlayUseCase.execute.mockResolvedValue({
       success: true,
       events: [],
       shouldContinue: false,
@@ -130,19 +125,15 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     service.trigger('room-1', handlers);
+    await flushPromises();
+
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(2_000);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
-
-    finishFirstRun?.({
-      success: true,
-      events: [],
-      shouldContinue: false,
-    });
-    await flushPromises();
-    await flushPromises();
-
-    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
   });
 
   it('retries COM auto-play after a transient failure', async () => {
@@ -174,15 +165,17 @@ describe('ComAutoPlayRecoveryService', () => {
       });
 
     service.trigger('room-1', handlers);
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPromises();
+
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
 
-    await jest.advanceTimersByTimeAsync(5_000);
-    await Promise.resolve();
-    await Promise.resolve();
+    await jest.advanceTimersByTimeAsync(7_000);
+    await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
     service.clearRoom('room-1');
@@ -209,19 +202,18 @@ describe('ComAutoPlayRecoveryService', () => {
     });
 
     service.trigger('room-1', handlers);
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPromises();
 
-    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
     service.clearRoom('room-1');
     await jest.advanceTimersByTimeAsync(2_000);
 
-    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
 
   it('suppresses events from an in-flight run after the room is cleared', async () => {
+    jest.useFakeTimers();
     const { service, roomService, comAutoPlayUseCase, handlers } =
       createService();
     let finishRun:
@@ -250,6 +242,8 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     await flushPromises();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
     service.clearRoom('room-1');
     finishRun?.({
       success: true,
@@ -266,5 +260,6 @@ describe('ComAutoPlayRecoveryService', () => {
     await flushPromises();
 
     expect(handlers.dispatchEvents).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 });

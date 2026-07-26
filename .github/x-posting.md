@@ -30,6 +30,10 @@ Every newly opened PR receives `x:share` automatically. GitHub does not reliably
 3. Edit the Japanese text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. The generated post contains no URL. Review the attached screenshot or video and remove it from the draft if it does not accurately show the change.
 4. Comment exactly `/post-x` on the issue. The workflow uploads the approved media to X and attaches it to the post.
 
+## Re-capture a merged PR
+
+If a merged PR was missing its `x-demo` block when it closed, add the block to the PR body and run **Create X Post Draft** manually from the Actions tab. Enter the merged PR number in `Merged PR number to capture`. The workflow validates the `x:share` label, captures the route and steps from the current PR body, uploads the media artifact, and updates the existing `x:review` issue instead of creating a duplicate.
+
 ## Weekly devlog
 
 PRs labeled `x:devlog` are collected every Monday at 09:00 JST. The workflow makes one review issue from up to three PRs merged in the previous seven days. The same `/post-x` approval is required.

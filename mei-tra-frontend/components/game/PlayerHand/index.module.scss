@@ -56,6 +56,7 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
 
 .cardFaceDown{
@@ -238,6 +239,7 @@
 
 .playerInfoBadges {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
@@ -259,6 +261,10 @@
   font-weight: 800;
   line-height: 1;
   padding: 0.1rem 0.3rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -389,6 +395,11 @@
   font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   line-height: 1.3;
+  text-align: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -526,6 +537,7 @@
 
 .playerPosition{
   position: relative;
+  min-width: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -784,6 +796,9 @@
   .playerPosition.left,
   .playerPosition.right {
     align-self: start;
+    justify-self: stretch;
+    width: 100%;
+    min-width: 0;
     margin-top: 0.55rem;
   }
 
@@ -814,6 +829,8 @@
 
   .playerInfoGroup{
     gap: 0.5rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .handContainer{
@@ -842,7 +859,9 @@
   }
 
   .playerInfoContainer{
-    min-width: 72px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     border-radius: var(--radius-md);
     padding: 0.2rem;
   }
@@ -859,12 +878,26 @@
   }
 
   .takenCount{
-    font-size: typography.scale(0.75rem);
+    flex: 0 1 auto;
+    font-size: typography.scale(0.52rem);
     color: var(--mt-text-muted);
-    background: var(--mt-surface-raised);
-    padding: 0.15rem 0.5rem;
+    padding: 0.1rem 0.14rem;
     border-radius: var(--mt-radius);
     border: 1px solid var(--mt-border-hairline);
+  }
+
+  .teamBadge {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: typography.scale(0.52rem);
+    padding-inline: 0.14rem;
+  }
+
+  .playerInfoBadges {
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    align-items: center;
   }
 
   .playerPosition.top .playerInfo,
@@ -873,10 +906,18 @@
     margin-bottom: 0;
   }
 
+  .playerPosition.left .playerInfoGroup,
+  .playerPosition.right .playerInfoGroup {
+    width: 100%;
+    min-width: 0;
+  }
+
   .playerPosition.top .playerInfoContainer,
   .playerPosition.left .playerInfoContainer,
   .playerPosition.right .playerInfoContainer {
-    min-width: 5rem;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     padding: 0.1rem;
     background: var(--mt-surface-raised-2);
     transform: scale(0.88);
@@ -915,7 +956,8 @@
 
   .declarationBadge {
     margin-bottom: 0.15rem;
-    padding: 0.15rem 0.36rem;
+    gap: 0.15rem;
+    padding: 0.1rem 0.24rem;
   }
 
   .playerPosition.bottom .bottomStatusZone {
@@ -924,15 +966,15 @@
   }
 
   .declarationLabel {
-    font-size: typography.scale(0.6rem);
+    font-size: typography.scale(0.55rem);
   }
 
   .declarationValue {
-    font-size: typography.scale(0.7rem);
+    font-size: typography.scale(0.64rem);
   }
 
   .declarationSuit {
-    font-size: typography.scale(1rem);
+    font-size: typography.scale(0.8rem);
   }
 
   .playerPosition.bottom .playerInfoGroup {
@@ -941,6 +983,8 @@
     justify-content: flex-start;
     align-items: flex-end;
     gap: 0.25rem;
+    min-width: 0;
+    max-width: 100%;
     align-self: end;
   }
 
@@ -949,7 +993,9 @@
   }
 
   .playerPosition.bottom .playerInfoContainer {
-    min-width: 84px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     padding: 0.22rem;
   }
 
