@@ -59,6 +59,16 @@
   color: var(--mt-card-red);
 }
 
+.jokerCardCorner {
+  padding: 0;
+  background: var(--mt-card-face);
+}
+
+.jokerCardFace {
+  width: 100%;
+  height: 100%;
+}
+
 .cardRank {
   font-size: calc(0.8rem * var(--mt-card-scale));
   font-weight: 900;

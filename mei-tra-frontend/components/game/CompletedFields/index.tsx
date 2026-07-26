@@ -1,5 +1,6 @@
 import React from 'react';
 import { CompletedField } from '@/types/game.types';
+import { CardFace } from '@/components/game/CardFace';
 import styles from './index.module.scss';
 
 interface CompletedFieldsProps {
@@ -14,10 +15,6 @@ const SUIT_SYMBOLS: Record<string, string> = {
 };
 
 function getCardMark(card: string) {
-  if (card === 'JOKER') {
-    return { rank: 'J', suit: '★', isRed: true };
-  }
-
   const prefixedCard = card.match(/^([SHDC])-(.+)$/);
   if (prefixedCard) {
     const [, suit, rank] = prefixedCard;
@@ -36,6 +33,39 @@ function getCardMark(card: string) {
   };
 }
 
+interface TakenCardPreviewProps {
+  card: string;
+  className?: string;
+}
+
+export const TakenCardPreview: React.FC<TakenCardPreviewProps> = ({
+  card,
+  className = '',
+}) => {
+  if (card === 'JOKER') {
+    return (
+      <span
+        className={`${styles.cardCorner} ${styles.jokerCardCorner} ${className}`}
+        aria-label={card}
+      >
+        <CardFace card={card} className={styles.jokerCardFace} />
+      </span>
+    );
+  }
+
+  const mark = getCardMark(card);
+
+  return (
+    <span
+      className={`${styles.cardCorner} ${mark.isRed ? styles.redCardCorner : ''} ${className}`}
+      aria-label={card}
+    >
+      <span className={styles.cardRank}>{mark.rank}</span>
+      <span className={styles.cardSuit}>{mark.suit}</span>
+    </span>
+  );
+};
+
 export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
   return (
     <div className={styles.completedFieldsPanel}>
@@ -46,19 +76,11 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
               <div key={index} className={styles.completedField}>
                 <div className={styles.cards}>
                   {field.cards.map((card: string, cardIndex: number) => {
-                    const mark = getCardMark(card);
-
                     return (
-                      <span
+                      <TakenCardPreview
                         key={cardIndex}
-                        className={`${styles.cardCorner} ${
-                          mark.isRed ? styles.redCardCorner : ''
-                        }`}
-                        aria-label={card}
-                      >
-                        <span className={styles.cardRank}>{mark.rank}</span>
-                        <span className={styles.cardSuit}>{mark.suit}</span>
-                      </span>
+                        card={card}
+                      />
                     );
                   })}
                 </div>

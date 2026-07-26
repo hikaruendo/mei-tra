@@ -437,8 +437,24 @@
     var(--mt-shadow-panel);
 }
 
-.agariStatusPanel{
+.agariTakenCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: calc(1.75rem * var(--mt-card-scale));
   margin-left: 0.35rem;
+  padding: 0.16rem 0.26rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 0.35rem;
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
+}
+
+.agariTakenLabel {
+  white-space: nowrap;
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.72rem);
+  font-weight: 800;
 }
 
 .statusHeader{
@@ -691,34 +707,12 @@
   min-height: 100px;
 }
 
-.playerPosition.bottom .agariStatusPanel {
-  margin-left: 0.55rem;
-}
-
-.playerPosition.bottom .declarationAgariPanel {
-  min-width: 0;
-  min-height: 0;
-  padding: 0.2rem 0.3rem;
-  flex-direction: row;
-  gap: 0.3rem;
+.playerPosition.bottom .agariTakenCard {
   margin: 0;
 }
 
-.playerPosition.bottom .declarationAgariPanel .statusHeader {
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.playerPosition.bottom .declarationAgariPanel .statusCardFrame {
-  min-width: 1.8rem;
-  min-height: 2.7rem;
-  padding: 0;
-}
-
-.playerPosition.bottom .declarationAgariPanel .statusCardFrame > * {
-  transform: none;
+.playerPosition.bottom .declarationAgariCard {
+  padding: 0.14rem 0.22rem;
 }
 
 .playerPosition.bottom .handContainer {

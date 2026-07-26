@@ -24,6 +24,33 @@ interface ActiveReconnectGatewayHarness {
 }
 
 describe('GameGateway COM recovery integration', () => {
+  it('retries COM progress after a turn acknowledgement', async () => {
+    const gateway = createGateway();
+    const testGateway = gateway as unknown as {
+      spectatorGatewayEffectsService: { isSpectatorSocket: jest.Mock };
+      turnMonitorService: { acknowledge: jest.Mock };
+      comAutoPlayRecoveryService: { trigger: jest.Mock };
+    };
+    const acknowledge = jest.fn().mockResolvedValue(undefined);
+    const trigger = jest.fn();
+
+    testGateway.spectatorGatewayEffectsService = {
+      isSpectatorSocket: jest.fn().mockReturnValue(false),
+    };
+    testGateway.turnMonitorService = { acknowledge };
+    testGateway.comAutoPlayRecoveryService = { trigger };
+
+    const client = {
+      id: 'socket-1',
+      data: { user: { id: 'user-1' } },
+    } as unknown as Socket;
+
+    await gateway.handleTurnAck(client, { roomId: 'room-1' });
+
+    expect(acknowledge).toHaveBeenCalledWith('room-1', 'socket-1', 'user-1');
+    expect(trigger).toHaveBeenCalledWith('room-1', expect.anything());
+  });
+
   it('delegates COM recovery after an active-game reconnection', async () => {
     const gateway = createGateway();
     const testGateway = gateway as unknown as ActiveReconnectGatewayHarness;

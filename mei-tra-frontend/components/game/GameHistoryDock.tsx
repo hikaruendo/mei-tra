@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { Link } from '@/i18n/routing';
 import type {
   GameHistoryActionType,
-  GameHistoryFilters,
   GameHistoryReplayDetailItem,
   GameHistoryReplayEvent,
   GameHistoryReplayRound,
@@ -24,7 +23,6 @@ interface GameHistoryDockProps {
   showOverview?: boolean;
   summaryOverride?: GameHistorySummary | null;
   includeSummaryFetch?: boolean;
-  onFiltersChange?: (filters: GameHistoryFilters) => void;
   defaultOpen?: boolean;
   onClose?: () => void;
   hideOpenPage?: boolean;
@@ -121,7 +119,6 @@ export function GameHistoryDock({
   showOverview = true,
   summaryOverride = null,
   includeSummaryFetch = true,
-  onFiltersChange,
   defaultOpen = false,
   onClose,
   hideOpenPage = false,
@@ -135,7 +132,6 @@ export function GameHistoryDock({
     values?: Record<string, boolean | number | string>,
   ) => t(`detailLabels.${key}` as never, values as never);
   const [isMinimized, setIsMinimized] = useState(!defaultOpen);
-  const [selectedRound, setSelectedRound] = useState<'all' | number>('all');
   const historyEnabled = variant === 'page' || !isMinimized;
   const replayQuery = useMemo(() => ({}), []);
   const { replay, summary, isLoading, error, refresh } = useGameHistory(
@@ -148,18 +144,6 @@ export function GameHistoryDock({
     },
   );
   const resolvedSummary = summaryOverride ?? summary;
-  useEffect(() => {
-    setSelectedRound('all');
-  }, [roomId]);
-
-  useEffect(() => {
-    onFiltersChange?.({
-      round: selectedRound,
-      actionType: 'all',
-      playerId: 'all',
-    });
-  }, [onFiltersChange, selectedRound]);
-
   const orderedRounds = useMemo(() => {
     if (!replay) {
       return [];
@@ -179,13 +163,6 @@ export function GameHistoryDock({
         : orderedRounds,
     [orderedRounds, variant],
   );
-  const roundOptions = useMemo(() => {
-    if (!resolvedSummary) {
-      return [];
-    }
-
-    return [...resolvedSummary.roundNumbers].sort((left, right) => right - left);
-  }, [resolvedSummary]);
   const roundScoreDeltas = useMemo(() => {
     const deltasByEventId = new Map<string, Record<string, number>>();
     const previousTotals: Record<string, number> = {};
@@ -227,30 +204,6 @@ export function GameHistoryDock({
     }
 
     return deltasByEventId;
-  }, [replay]);
-  const scoreComparison = useMemo(() => {
-    if (!replay) {
-      return [];
-    }
-
-    const latestScoreDetail = replay.rounds
-      .flatMap((round) => round.events)
-      .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
-      .flatMap((event) => event.detailItems)
-      .find((detailItem) => detailItem.value.kind === 'scores');
-    const totals = latestScoreDetail?.value.kind === 'scores'
-      ? extractScoreTotals(latestScoreDetail.value.scores)
-      : {};
-    const maximum = Math.max(...Object.values(totals), 1);
-
-    return Object.entries(totals)
-      .map(([teamKey, total]) => ({
-        team: Number(teamKey),
-        total,
-        progress: Math.max(0, Math.min(100, (total / maximum) * 100)),
-      }))
-      .filter((entry) => !Number.isNaN(entry.team))
-      .sort((left, right) => left.team - right.team);
   }, [replay]);
   const formattedHistoryWindow = useMemo(() => {
     if (!resolvedSummary?.firstTimestamp || !resolvedSummary.lastTimestamp) {
@@ -401,10 +354,6 @@ export function GameHistoryDock({
         }),
     [orderedRounds, players, roundScoreDeltas, t, trumpT],
   );
-  const displayedRoundTableRows =
-    selectedRound === 'all'
-      ? roundTableRows
-      : roundTableRows.filter((row) => row.roundNumber === selectedRound);
   const hasDisplayEvents =
     variant === 'page' ? displayRounds.length > 0 : roundTableRows.length > 0;
 
@@ -725,29 +674,6 @@ export function GameHistoryDock({
         <div className={styles.state}>{t('empty')}</div>
       ) : (
         <div className={styles.content}>
-          {scoreComparison.length > 0 && (
-            <section className={styles.scoreComparison} aria-label={t('scoreComparison')}>
-              <h4 className={styles.scoreComparisonTitle}>{t('scoreComparison')}</h4>
-              <div className={styles.scoreComparisonRows}>
-                {scoreComparison.map(({ team, total, progress }) => (
-                  <div key={team} className={styles.scoreComparisonRow}>
-                    <span className={styles.scoreComparisonLabel}>
-                      {formatTeam(team)}
-                    </span>
-                    <div className={styles.scoreComparisonTrack} aria-hidden="true">
-                      <span
-                        className={`${styles.scoreComparisonFill} ${
-                          team === primaryTeam ? styles.teamZero : styles.teamOne
-                        }`}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <strong className={styles.scoreComparisonValue}>{total}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
           {variant === 'page' && showOverview && resolvedSummary ? (
             <>
               <div className={styles.pageOverview}>
@@ -777,33 +703,6 @@ export function GameHistoryDock({
                 </div>
               </div>
             </>
-          ) : null}
-          {variant !== 'page' ? (
-            <div className={styles.toolbar}>
-            <label className={styles.selectLabel}>
-              {t('roundFilter')}
-              <select
-                className={styles.select}
-                value={selectedRound}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  setSelectedRound(value === 'all' ? 'all' : Number(value));
-                }}
-              >
-                <option value="all">{t('allRounds')}</option>
-                {roundOptions.map((roundNumber) => (
-                  <option key={roundNumber} value={roundNumber}>
-                    {t('round', { round: roundNumber })}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className={styles.metrics}>
-              <span className={styles.metric}>
-                {t('entriesMetric', { count: replay?.totalEntries ?? 0 })}
-              </span>
-            </div>
-          </div>
           ) : null}
           {variant === 'page' && displayRounds.length > 0 ? (
             <section className={styles.roundSections}>
@@ -884,7 +783,7 @@ export function GameHistoryDock({
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedRoundTableRows.map((row) => (
+                  {roundTableRows.map((row) => (
                     <tr key={row.roundNumber}>
                       <th scope="row">{row.roundNumber}</th>
                       <td>{row.blower}</td>

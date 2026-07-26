@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
-import { Card } from '@/components/game/Card';
 import { CardFace } from '@/components/game/CardFace';
-import { CompletedFields } from '@/components/game/CompletedFields';
+import { CompletedFields, TakenCardPreview } from '@/components/game/CompletedFields';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
@@ -414,11 +413,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       {(declarationBadge || showDeclarationAgari) && (
         <div className={styles.declarationContext}>
           {showDeclarationAgari && (
-            <div className={`${styles.statusPanel} ${styles.agariStatusPanel} ${styles.declarationAgariPanel}`}>
-              <div className={styles.statusHeader}>{t('agari')}</div>
-              <div className={styles.statusCardFrame}>
-                <Card card={agariCard!} />
-              </div>
+            <div className={`${styles.agariTakenCard} ${styles.declarationAgariCard}`}>
+              <span className={styles.agariTakenLabel}>{t('agari')}</span>
+              <TakenCardPreview card={agariCard!} />
             </div>
           )}
           {declarationBadge && <div className={styles.declarationRow}>{declarationBadge}</div>}
@@ -485,11 +482,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </div>
             )}
           {showAgariPanel && position !== 'bottom' && (
-            <div className={`${styles.statusPanel} ${styles.agariStatusPanel}`}>
-              <div className={styles.statusHeader}>{t('agari')}</div>
-              <div className={styles.statusCardFrame}>
-                <Card card={agariCard!} />
-              </div>
+            <div className={styles.agariTakenCard}>
+              <span className={styles.agariTakenLabel}>{t('agari')}</span>
+              <TakenCardPreview card={agariCard!} />
             </div>
           )}
         </div>

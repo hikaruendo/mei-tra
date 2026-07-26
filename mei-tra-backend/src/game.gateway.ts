@@ -1060,6 +1060,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.id,
       this.getAuthenticatedUser(client)?.id,
     );
+    this.triggerComAutoPlayIfNeeded(roomId);
   }
 
   @SubscribeMessage('sync-game-state')

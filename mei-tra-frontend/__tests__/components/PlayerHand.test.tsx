@@ -70,6 +70,7 @@ jest.mock('@/components/game/Card', () => ({
 
 jest.mock('@/components/game/CompletedFields', () => ({
   CompletedFields: () => <div>completed fields</div>,
+  TakenCardPreview: ({ card }: { card: string }) => <div>{card}</div>,
 }));
 
 jest.mock('@/components/game/PlayAndCancelBtn', () => ({

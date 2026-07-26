@@ -32,7 +32,7 @@ jest.mock('next-intl', () => ({
       empty: '表示できる対局ログがありません',
       roundTableRound: 'R',
       roundTableBlower: '吹き手',
-      roundTableBid: 'アゲ',
+      roundTableBid: '宣言（Bid）',
       roundTableScore: '得点',
       teamRed: 'チーム赤',
       teamBlack: 'チーム黒',
@@ -190,7 +190,7 @@ describe('GameHistoryDock', () => {
     );
 
     expect(screen.getByRole('columnheader', { name: '吹き手' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'アゲ' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '宣言（Bid）' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
     expect(within(roundTable).getByText('Player 1')).toBeInTheDocument();
     expect(within(roundTable).getByText('チーム赤')).toBeInTheDocument();
