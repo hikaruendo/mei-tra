@@ -13,6 +13,7 @@ import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
+const COM_AUTO_PLAY_INITIAL_DELAY_MS = 2_000;
 const COM_AUTO_PLAY_CONTINUE_DELAY_MS = 2_000;
 const MAX_COM_AUTO_PLAY_RETRY_DELAY_MS = 60_000;
 
@@ -63,7 +64,7 @@ export class ComAutoPlayRecoveryService {
         !recoveredInterruptedProgress &&
         this.isCurrentGeneration(roomId, generation)
       ) {
-        await this.runAutoPlayStep(roomId, handlers, generation);
+        this.scheduleInitialAutoPlay(roomId, handlers);
       }
     })()
       .catch((error) => {
@@ -298,6 +299,35 @@ export class ComAutoPlayRecoveryService {
   ): void {
     this.retryAttempts.delete(roomId);
     this.scheduleTrigger(roomId, handlers, delayMs);
+  }
+
+  private scheduleInitialAutoPlay(
+    roomId: string,
+    handlers: ComAutoPlayRecoveryHandlers,
+  ): void {
+    if (this.retryTimeouts.has(roomId)) {
+      return;
+    }
+
+    const generation = this.getRoomGeneration(roomId);
+    const timeout = setTimeout(() => {
+      this.retryTimeouts.delete(roomId);
+      if (!this.isCurrentGeneration(roomId, generation)) {
+        return;
+      }
+
+      void this.runAutoPlayStep(roomId, handlers, generation).catch((error) => {
+        if (!this.isCurrentGeneration(roomId, generation)) {
+          return;
+        }
+        this.logger.error(
+          `COM auto-play initial step failed for room ${roomId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        this.scheduleRetry(roomId, handlers);
+      });
+    }, COM_AUTO_PLAY_INITIAL_DELAY_MS);
+    this.retryTimeouts.set(roomId, timeout);
   }
 
   private scheduleTrigger(
