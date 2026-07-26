@@ -128,13 +128,13 @@ export const GameInfo: React.FC<GameInfoProps> = ({
                     <div className={styles.gameInfoMeterAndValue}>
                       <div className={styles.gameInfoMeter}>
                         <div className={styles.gameInfoScoreFill} aria-hidden="true" />
+                        {statusLabel && (
+                          <span className={styles.gameInfoScoreStatus}>{statusLabel}</span>
+                        )}
                       </div>
                       <span className={styles.gameInfoScoreValue}>
                         {score}<span>/{pointsToWin}</span>
                       </span>
-                      {statusLabel && (
-                        <span className={styles.gameInfoScoreStatus}>{statusLabel}</span>
-                      )}
                     </div>
                   </div>
                 </div>

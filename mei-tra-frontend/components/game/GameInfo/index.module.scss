@@ -31,7 +31,7 @@
 
 .gameInfoScoreContent {
   display: grid;
-  grid-template-columns: minmax(0, 10rem) auto;
+  grid-template-columns: minmax(0, 5rem) auto;
   height: 100%;
   align-items: center;
   justify-content: flex-start;
@@ -42,7 +42,7 @@
   position: relative;
   flex: 0 0 clamp(7rem, 14vw, 10rem);
   width: clamp(7rem, 14vw, 10rem);
-  height: 0.62rem;
+  height: 0.74rem;
   border-radius: 2px;
   background: color-mix(in srgb, var(--mt-text-primary) 14%, transparent);
   overflow: hidden;
@@ -138,18 +138,24 @@
 }
 
 .gameInfoScoreStatus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.05rem;
-  padding: 0.08rem 0.36rem;
+  min-height: 0.86rem;
+  padding: 0.02rem 0.28rem;
   border: 1px solid currentColor;
-  border-radius: 0.25rem;
-  background: color-mix(in srgb, var(--mt-surface-raised) 88%, transparent);
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--mt-surface-raised) 78%, transparent);
   font-size: typography.scale(0.66rem);
   font-weight: 800;
   letter-spacing: 0;
-  line-height: 1.2;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
 }
 
 .scoreAnnouncement {
@@ -215,14 +221,14 @@
   }
 
   .gameInfoScoreContent {
-    grid-template-columns: minmax(0, 8.5rem) auto;
+    grid-template-columns: minmax(3.5rem, 4.75rem) auto;
     column-gap: 0.4rem;
   }
 
   .gameInfoMeter {
     flex-basis: clamp(6rem, 28vw, 8rem);
     width: clamp(6rem, 28vw, 8rem);
-    height: 0.56rem;
+    height: 0.7rem;
   }
 
   .gameInfoMeterAndValue {
@@ -230,8 +236,6 @@
   }
 
   .gameInfoScoreStatus {
-    left: 0.28rem;
-    padding: 0.06rem 0.18rem;
     font-size: typography.scale(0.54rem);
   }
 

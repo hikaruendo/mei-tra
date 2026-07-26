@@ -229,15 +229,16 @@ export function BlowControls({
             <select
               value={selectedTrump || ''}
               onChange={(e) => setSelectedTrump(e.target.value as TrumpType)}
-              className={styles.select}
+              className={`${styles.select} ${styles.trumpSelect}`}
+              data-trump={selectedTrump || undefined}
               disabled={isDisabled}
             >
               <option value="">{t('selectTrump')}</option>
-              <option value="tra">{t('tra')}</option>
-              <option value="herz">{t('herz')}</option>
-              <option value="daiya">{t('daiya')}</option>
-              <option value="club">{t('club')}</option>
-              <option value="zuppe">{t('zuppe')}</option>
+              <option className={styles.trumpOption} data-trump="tra" value="tra">{t('tra')}</option>
+              <option className={styles.trumpOption} data-trump="herz" value="herz">{t('herz')}</option>
+              <option className={styles.trumpOption} data-trump="daiya" value="daiya">{t('daiya')}</option>
+              <option className={styles.trumpOption} data-trump="club" value="club">{t('club')}</option>
+              <option className={styles.trumpOption} data-trump="zuppe" value="zuppe">{t('zuppe')}</option>
             </select>
 
             {/* ペア数選択 */}
@@ -309,7 +310,13 @@ export function BlowControls({
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
                 >
-                  {player.name}: {entry.trumpType ? t(entry.trumpType) : ''} {formatSetOption(declaration.numberOfPairs)}
+                  {player.name}:{' '}
+                  {entry.trumpType ? (
+                    <span className={styles.trumpLabel} data-trump={entry.trumpType}>
+                      {t(entry.trumpType)}
+                    </span>
+                  ) : null}{' '}
+                  {formatSetOption(declaration.numberOfPairs)}
                 </div>
               );
             })}

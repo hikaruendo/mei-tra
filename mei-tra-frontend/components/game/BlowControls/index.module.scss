@@ -69,6 +69,31 @@
   font-size: typography.scale(1rem);
 }
 
+.trumpSelect[data-trump='herz'],
+.trumpSelect[data-trump='daiya'],
+.trumpLabel[data-trump='herz'],
+.trumpLabel[data-trump='daiya'],
+.trumpOption[data-trump='herz'],
+.trumpOption[data-trump='daiya'] {
+  color: var(--mt-card-red);
+}
+
+.trumpSelect[data-trump='club'],
+.trumpSelect[data-trump='zuppe'],
+.trumpSelect[data-trump='tra'],
+.trumpLabel[data-trump='club'],
+.trumpLabel[data-trump='zuppe'],
+.trumpLabel[data-trump='tra'],
+.trumpOption[data-trump='club'],
+.trumpOption[data-trump='zuppe'],
+.trumpOption[data-trump='tra'] {
+  color: var(--mt-card-ink);
+}
+
+.trumpLabel {
+  font-weight: 800;
+}
+
 .input {
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);

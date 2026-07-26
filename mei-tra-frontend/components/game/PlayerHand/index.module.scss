@@ -236,30 +236,30 @@
   backdrop-filter: blur(2px);
 }
 
-.playerMetaBadges {
-  position: absolute;
-  right: -0.42rem;
-  bottom: -0.42rem;
-  z-index: 3;
+.playerInfoBadges {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .teamBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.25rem;
+  min-height: 1.05rem;
   border: 1px solid var(--mt-border-hairline);
   border-radius: 999px;
   background: var(--mt-surface-raised);
-  box-shadow: var(--mt-shadow-soft);
   color: var(--mt-text-primary);
   font-size: typography.scale(0.62rem);
   font-weight: 800;
   line-height: 1;
-  padding: 0.12rem 0.32rem;
+  padding: 0.1rem 0.3rem;
+  white-space: nowrap;
 }
 
 .teamRedBadge {
@@ -384,11 +384,12 @@
   font-size: typography.scale(0.72rem);
   color: var(--mt-text-muted);
   background: var(--mt-surface-raised);
-  padding: 0.15rem 0.4rem;
+  padding: 0.1rem 0.28rem;
   border-radius: var(--mt-radius);
   font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   line-height: 1.3;
+  white-space: nowrap;
 }
 
 
@@ -699,7 +700,7 @@
 }
 
 .playerPosition.bottom .playerInfoContainer {
-  min-width: 94px;
+  min-width: 7rem;
   padding: 0.28rem;
 }
 

@@ -188,13 +188,16 @@ describe('PlayerHand', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows a red team badge instead of a Negri badge', () => {
+  it('shows taken sets and the red team badge in the player info', () => {
     renderPlayerHand({
       position: 'bottom',
       currentPlayerId: 'player-2',
       negriCard: 'H-A',
     });
 
+    expect(screen.getByText('0 sets').closest('.playerInfoBadges')).toBe(
+      screen.getByText('Red team').closest('.playerInfoBadges'),
+    );
     expect(screen.getByText('Red team')).toHaveClass('teamRedBadge');
     expect(screen.queryByText('Negri')).not.toBeInTheDocument();
   });
@@ -271,6 +274,9 @@ describe('PlayerHand', () => {
     });
 
     expect(screen.getByText('3 sets')).toHaveClass('takenCount');
+    expect(screen.getByText('Red team').closest('.playerInfoBadges')).toBe(
+      screen.getByText('3 sets').closest('.playerInfoBadges'),
+    );
     const turnBadge = screen.getByLabelText('currentTurn');
     expect(turnBadge).toHaveClass('avatarTurnBadge');
     expect(turnBadge.parentElement).toHaveClass('playerAvatar');

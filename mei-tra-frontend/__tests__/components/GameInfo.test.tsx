@@ -42,6 +42,7 @@ describe('GameInfo', () => {
 
     expect(teamMeter).toHaveAttribute('aria-valuetext', '4/5 Reach');
     expect(screen.getByText('Reach')).toBeInTheDocument();
+    expect(screen.getByText('Reach').closest('.gameInfoMeter')).toBeInTheDocument();
   });
 
   it('marks a team at the target as a winner', () => {

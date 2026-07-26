@@ -109,6 +109,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : locale === 'ja'
       ? `${takenCount}組`
       : `${takenCount} sets`;
+  const teamLabel = tGameInfo(player.team === 0 ? 'teamRed' : 'teamBlack');
 
   useEffect(() => {
     if (
@@ -370,8 +371,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         {turnBadge}
       </div>
       {gamePhase && (
-        <div className={styles.takenCount}>
-          {takenCountLabel}
+        <div className={styles.playerInfoBadges}>
+          <span className={styles.takenCount}>
+            {takenCountLabel}
+          </span>
+          <span
+            className={`${styles.teamBadge} ${
+              player.team === 0 ? styles.teamRedBadge : styles.teamBlackBadge
+            }`}
+          >
+            {teamLabel}
+          </span>
         </div>
       )}
       {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
@@ -425,18 +435,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
     </div>
   ) : null;
-  const playerMetaBadges = (
-    <div className={styles.playerMetaBadges}>
-      <span
-        className={`${styles.teamBadge} ${
-          player.team === 0 ? styles.teamRedBadge : styles.teamBlackBadge
-        }`}
-      >
-        {tGameInfo(player.team === 0 ? 'teamRed' : 'teamBlack')}
-      </span>
-    </div>
-  );
-
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
       <div className={`${styles.playerInfo} ${hasBottomStatus ? styles.hasBottomStatus : ''}`}>
@@ -451,12 +449,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               aria-label={`Switch spectator perspective to ${player.name}`}
             >
               {playerInfoContent}
-              {playerMetaBadges}
             </button>
           ) : (
             <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
               {playerInfoContent}
-              {playerMetaBadges}
             </div>
           )}
           {shouldSelectNegri && !showHandStatusPanels && (
