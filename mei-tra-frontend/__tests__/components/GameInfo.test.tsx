@@ -56,4 +56,20 @@ describe('GameInfo', () => {
     expect(teamMeter).toHaveAttribute('aria-valuetext', '5/5 WIN');
     expect(screen.getByText('WIN')).toBeInTheDocument();
   });
+
+  it('keeps backend team zero red and team one black', () => {
+    renderGameInfo({
+      0: { deal: 0, blow: 0, play: 3, total: 3 },
+      1: { deal: 0, blow: 0, play: 1, total: 1 },
+    });
+
+    expect(screen.getByRole('meter', { name: 'Red team' })).toHaveAttribute(
+      'aria-valuetext',
+      '3/5',
+    );
+    expect(screen.getByRole('meter', { name: 'Black team' })).toHaveAttribute(
+      'aria-valuetext',
+      '1/5',
+    );
+  });
 });

@@ -206,4 +206,63 @@ describe('GameHistoryDock', () => {
     expect(within(roundTable).getByText('チーム赤')).toBeInTheDocument();
     expect(within(roundTable).getByText('チーム黒')).toBeInTheDocument();
   });
+
+  it('keeps replay score labels attached to backend team indexes', () => {
+    mockUseGameHistory.mockReturnValue({
+      replay: {
+        roomId: 'room-123',
+        totalEntries: 1,
+        rounds: [
+          {
+            roundNumber: 1,
+            startedAt: new Date('2026-07-26T00:00:00.000Z'),
+            endedAt: new Date('2026-07-26T00:03:00.000Z'),
+            actionTypes: ['round_completed'],
+            playerIds: [],
+            entries: [],
+            events: [
+              {
+                id: 'score-1',
+                timestamp: new Date('2026-07-26T00:03:00.000Z'),
+                actionType: 'round_completed',
+                playerId: null,
+                roundNumber: 1,
+                gamePhase: 'score',
+                kind: 'round',
+                summary: '',
+                details: {},
+                actionData: {},
+                detailItems: [
+                  {
+                    labelKey: 'scores',
+                    value: {
+                      kind: 'scores',
+                      scores: {
+                        0: { total: 1 },
+                        1: { total: 4 },
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      summary: null,
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+
+    render(<GameHistoryDock {...baseProps} gameStarted defaultOpen />);
+
+    const redScore = screen.getByText('チーム赤').closest('div');
+    const blackScore = screen.getByText('チーム黒').closest('div');
+
+    expect(redScore).not.toBeNull();
+    expect(blackScore).not.toBeNull();
+    expect(within(redScore as HTMLElement).getByText('+1')).toBeInTheDocument();
+    expect(within(blackScore as HTMLElement).getByText('+4')).toBeInTheDocument();
+  });
 });

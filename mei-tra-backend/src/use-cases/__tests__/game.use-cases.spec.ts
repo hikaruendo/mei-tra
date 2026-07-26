@@ -3196,6 +3196,114 @@ describe('Game Use Cases', () => {
         RoomStatus.FINISHED,
       );
     });
+
+    it('awards successful play points to declaring team one', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-2');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      state.blowState.currentHighestDeclaration = {
+        ...state.blowState.currentHighestDeclaration,
+        playerId: 'player-2',
+      };
+      state.players[0].hand = [];
+      state.players[1].hand = [];
+      state.playState.fields = [{ winnerTeam: 1 } as unknown as Field];
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: jest.fn(() => ({
+          cards: ['A', 'B', 'C', 'D'],
+          winnerId: 'player-2',
+          winnerTeam: 1,
+          dealerId: 'player-1',
+        })),
+        saveState: jest.fn(),
+        resetRoundState: jest.fn(async () => {}),
+        transitionPhase: jest.fn(async () => {}),
+        updateState: jest.fn(async (updates) => Object.assign(state, updates)),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: {
+          cards: ['A', 'B', 'C', 'D'],
+          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          baseCard: 'A',
+          dealerId: 'player-1',
+          isComplete: false,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.teamScores[0].total).toBe(0);
+      expect(state.teamScores[1].total).toBe(2);
+      expect(state.teamScoreRecords[1]).toEqual([
+        expect.objectContaining({ points: 2, reason: 'Play points' }),
+      ]);
+    });
+
+    it('awards failed team one declaration points to team zero', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(-2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      state.blowState.currentHighestDeclaration = {
+        ...state.blowState.currentHighestDeclaration,
+        playerId: 'player-2',
+      };
+      state.players[0].hand = [];
+      state.players[1].hand = [];
+      state.playState.fields = [{ winnerTeam: 0 } as unknown as Field];
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: jest.fn(() => ({
+          cards: ['A', 'B', 'C', 'D'],
+          winnerId: 'player-1',
+          winnerTeam: 0,
+          dealerId: 'player-1',
+        })),
+        saveState: jest.fn(),
+        resetRoundState: jest.fn(async () => {}),
+        transitionPhase: jest.fn(async () => {}),
+        updateState: jest.fn(async (updates) => Object.assign(state, updates)),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: {
+          cards: ['A', 'B', 'C', 'D'],
+          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          baseCard: 'A',
+          dealerId: 'player-1',
+          isComplete: false,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.teamScores[0].total).toBe(2);
+      expect(state.teamScores[1].total).toBe(0);
+      expect(state.teamScoreRecords[0]).toEqual([
+        expect.objectContaining({ points: 2, reason: 'Play points' }),
+      ]);
+    });
   });
 
   describe('ProcessGameOverUseCase', () => {
