@@ -307,7 +307,9 @@
     "yourTurn": "Your turn",
     "waiting": "Waiting...",
     "orderButton": "Order",
-    "phaseResult": "Team {team} won the {phase} phase",
+    "teamRed": "Red team",
+    "teamBlack": "Black team",
+    "phaseResult": "{teamName} won the {phase} phase",
     "phaseNames": {
       "deal": "deal",
       "blow": "bid",
@@ -323,8 +325,7 @@
     },
     "gameOver": {
       "title": "Game Over",
-      "teamFallback": "Team {teamNumber}",
-      "message": "{winnerTeam} wins!\n\nFinal score\n{team0Name}: {team0Score} points\n{team1Name}: {team1Score} points"
+      "message": "{winnerTeam} wins!\n\nFinal score\n{teamRedName}: {team0Score} points\n{teamBlackName}: {team1Score} points"
     },
     "trumpFormat": "Trump: {suit} ({symbol})",
     "suitHerz": "Heart",
@@ -371,6 +372,8 @@
   "scoreBoard": {
     "round": "Round",
     "team": "Team",
+    "teamRed": "Red team",
+    "teamBlack": "Black team",
     "points": "points",
     "thisRound": "This round:",
     "declared": "Declared:",

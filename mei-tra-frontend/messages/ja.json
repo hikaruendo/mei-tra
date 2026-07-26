@@ -307,7 +307,9 @@
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
     "orderButton": "強さ順",
-    "phaseResult": "チーム {team} が {phase} フェーズに勝利しました",
+    "teamRed": "チーム赤",
+    "teamBlack": "チーム黒",
+    "phaseResult": "{teamName} が {phase} フェーズに勝利しました",
     "phaseNames": {
       "deal": "配布",
       "blow": "ビット",
@@ -323,8 +325,7 @@
     },
     "gameOver": {
       "title": "ゲーム終了",
-      "teamFallback": "チーム {teamNumber}",
-      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{team0Name}: {team0Score} ポイント\n{team1Name}: {team1Score} ポイント"
+      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{teamRedName}: {team0Score} ポイント\n{teamBlackName}: {team1Score} ポイント"
     },
     "trumpFormat": "キリ：{suit}（{symbol}）",
     "suitHerz": "ハート",
@@ -371,6 +372,8 @@
   "scoreBoard": {
     "round": "ラウンド",
     "team": "チーム",
+    "teamRed": "チーム赤",
+    "teamBlack": "チーム黒",
     "points": "ポイント",
     "thisRound": "今ラウンド:",
     "declared": "宣言:",

@@ -45,7 +45,6 @@ import {
   fromPlayerContracts,
 } from '../types/game.types';
 import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
-import { getTeamDisplayName } from '../lib/utils/teamUtils';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
 
@@ -699,7 +698,10 @@ export const useGame = () => {
         // Only show alert for phases other than 'play' and when not transitioning to a new round
         if (winner !== null && nextPhase !== 'play' && nextPhase !== 'blow') {
           setNotification({
-            message: t('phaseResult', { team: winner, phase: t(`phaseNames.${nextPhase}` as 'phaseNames.deal') }),
+            message: t('phaseResult', {
+              teamName: t(winner === 0 ? 'teamRed' : 'teamBlack'),
+              phase: t(`phaseNames.${nextPhase}` as 'phaseNames.deal'),
+            }),
             type: 'success',
           });
         }
@@ -721,16 +723,16 @@ export const useGame = () => {
         }
         gameOverShownRef.current = gameOverKey;
 
-        const team0Name = getTeamDisplayName(players, 0) || t('gameOver.teamFallback', { teamNumber: 1 });
-        const team1Name = getTeamDisplayName(players, 1) || t('gameOver.teamFallback', { teamNumber: 2 });
-        const winnerTeam = winner === 'Team 0' ? team0Name : team1Name;
+        const teamRedName = t('teamRed');
+        const teamBlackName = t('teamBlack');
+        const winnerTeam = winner === 'Team 0' ? teamRedName : teamBlackName;
         setGameOverModal({
           title: t('gameOver.title'),
           message: t('gameOver.message', {
             winnerTeam,
-            team0Name,
+            teamRedName,
             team0Score: finalScores[0]?.total ?? 0,
-            team1Name,
+            teamBlackName,
             team1Score: finalScores[1]?.total ?? 0,
           }),
         });
