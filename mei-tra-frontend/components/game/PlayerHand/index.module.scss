@@ -189,9 +189,9 @@
 
 .declarationSuit {
   color: var(--mt-text-primary);
-  font-size: typography.scale(1.15rem);
-  font-weight: 900;
-  line-height: 0.8;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
 }
 
 .declarationSuit[data-trump='herz'],
@@ -203,11 +203,6 @@
 .declarationSuit[data-trump='zuppe'],
 .declarationSuit[data-trump='tra'] {
   color: var(--mt-card-ink);
-}
-
-.declarationSuit[data-trump='tra'] {
-  font-size: inherit;
-  line-height: 1;
 }
 
 .declarationPairs {
@@ -243,8 +238,8 @@
 
 .playerMetaBadges {
   position: absolute;
-  top: -0.5rem;
-  right: -0.45rem;
+  right: -0.42rem;
+  bottom: -0.42rem;
   z-index: 3;
   display: flex;
   align-items: center;

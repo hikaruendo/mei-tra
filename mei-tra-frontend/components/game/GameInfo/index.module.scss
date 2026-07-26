@@ -42,9 +42,9 @@
   position: relative;
   flex: 0 0 clamp(7rem, 14vw, 10rem);
   width: clamp(7rem, 14vw, 10rem);
-  height: 0.85rem;
+  height: 0.62rem;
   border-radius: 2px;
-  background: var(--mt-border-hairline);
+  background: color-mix(in srgb, var(--mt-text-primary) 14%, transparent);
   overflow: hidden;
 }
 
@@ -65,38 +65,46 @@
 
 .scoreEmphasis {
   .gameInfoScoreValue {
-    color: var(--mt-accent);
+    color: var(--mt-text-primary);
   }
 }
 
 .gameInfoScore.reachingTeam {
   .gameInfoMeter {
-    box-shadow: 0 0 8px var(--mt-accent-subtle);
+    outline: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+    outline-offset: 1px;
   }
 }
 
 .gameInfoScore.winningTeam {
   .gameInfoMeter {
-    box-shadow: 0 0 10px var(--mt-accent-subtle);
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
   }
 }
 
 .teamRed {
+  color: var(--mt-card-red);
+
   .gameInfoScoreFill {
-    background: color-mix(in srgb, var(--mt-card-red) 72%, transparent);
+    background: color-mix(in srgb, var(--mt-card-red) 88%, var(--mt-text-primary) 12%);
   }
 
-  .gameInfoScoreTeam {
+  .gameInfoScoreTeam,
+  .gameInfoScoreStatus {
     color: var(--mt-card-red);
   }
 }
 
 .teamBlack {
+  color: var(--mt-card-ink);
+
   .gameInfoScoreFill {
-    background: color-mix(in srgb, var(--mt-card-ink) 72%, transparent);
+    background: color-mix(in srgb, var(--mt-card-ink) 88%, transparent);
   }
 
-  .gameInfoScoreTeam {
+  .gameInfoScoreTeam,
+  .gameInfoScoreStatus {
     color: var(--mt-card-ink);
   }
 }
@@ -130,20 +138,18 @@
 }
 
 .gameInfoScoreStatus {
-  position: absolute;
-  top: 50%;
-  left: 0.42rem;
-  z-index: 1;
-  padding: 0.1rem 0.36rem;
-  border-radius: 999px;
-  background: var(--mt-accent);
-  color: var(--mt-btn-primary-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.05rem;
+  padding: 0.08rem 0.36rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--mt-surface-raised) 88%, transparent);
   font-size: typography.scale(0.66rem);
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   line-height: 1.2;
-  box-shadow: 0 1px 4px var(--mt-accent-subtle);
-  transform: translateY(-50%);
 }
 
 .scoreAnnouncement {
@@ -216,7 +222,7 @@
   .gameInfoMeter {
     flex-basis: clamp(6rem, 28vw, 8rem);
     width: clamp(6rem, 28vw, 8rem);
-    height: 0.75rem;
+    height: 0.56rem;
   }
 
   .gameInfoMeterAndValue {

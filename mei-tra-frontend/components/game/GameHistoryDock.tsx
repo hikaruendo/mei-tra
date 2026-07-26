@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { Link } from '@/i18n/routing';
@@ -272,6 +272,20 @@ export function GameHistoryDock({
       end?.toLocaleTimeString() ?? '--:--'
     }`;
 
+  const formatDeclarationSetCount = useCallback((value: string | null | undefined) => {
+    if (!value) {
+      return null;
+    }
+
+    const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*(?:pairs?|sets?|組)?$/i);
+
+    if (!match) {
+      return null;
+    }
+
+    return t('setCount', { count: Number(match[1]) });
+  }, [t]);
+
   const formatDeclaration = (value: unknown) => {
     if (typeof value !== 'string' || value.length === 0) {
       return null;
@@ -279,12 +293,14 @@ export function GameHistoryDock({
 
     const [pairsPart, trumpPart] = value.split(' / ');
     if (!trumpPart) {
-      return formatTrump(value) ?? value;
+      return formatDeclarationSetCount(value) ?? formatTrump(value) ?? value;
     }
     const maybeTrump =
       trumpPart && trumpPart.length > 0 ? formatTrump(trumpPart) : null;
 
-    return [pairsPart ?? null, maybeTrump].filter(Boolean).join(' / ');
+    return [formatDeclarationSetCount(pairsPart) ?? pairsPart, maybeTrump]
+      .filter(Boolean)
+      .join(' / ');
   };
 
   const roundTableRows = useMemo(
@@ -337,7 +353,7 @@ export function GameHistoryDock({
           const [pairsPart, trumpPart] = declarationValue?.split(' / ') ?? [];
           const declaration = declarationValue
             ? [
-                pairsPart,
+                formatDeclarationSetCount(pairsPart) ?? pairsPart,
                 trumpPart ? trumpT(trumpPart as never) : null,
               ].filter(Boolean).join(' / ')
             : t('unknownValue');
@@ -352,7 +368,7 @@ export function GameHistoryDock({
             scores,
           };
         }),
-    [orderedRounds, players, roundScoreDeltas, t, trumpT],
+    [formatDeclarationSetCount, orderedRounds, players, roundScoreDeltas, t, trumpT],
   );
   const hasDisplayEvents =
     variant === 'page' ? displayRounds.length > 0 : roundTableRows.length > 0;

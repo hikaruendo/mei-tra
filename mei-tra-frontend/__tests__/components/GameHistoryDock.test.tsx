@@ -43,7 +43,13 @@ jest.mock('next-intl', () => ({
       club: 'クラブ',
     };
 
-    return (key: string) => labels[key] ?? key;
+    return (key: string, values?: Record<string, number>) => {
+      if (key === 'setCount') {
+        return `${values?.count ?? 0}組`;
+      }
+
+      return labels[key] ?? key;
+    };
   },
 }));
 
@@ -113,7 +119,7 @@ describe('GameHistoryDock', () => {
                 detailItems: [
                   {
                     labelKey: 'highestDeclaration',
-                    value: { kind: 'text', text: '6 / club' },
+                    value: { kind: 'text', text: '6 pairs / club' },
                   },
                 ],
               },
@@ -193,6 +199,8 @@ describe('GameHistoryDock', () => {
     expect(screen.getByRole('columnheader', { name: '宣言（Bid）' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
     expect(within(roundTable).getByText('Player 1')).toBeInTheDocument();
+    expect(within(roundTable).getByText('6組 / クラブ')).toBeInTheDocument();
+    expect(within(roundTable).queryByText(/pairs/i)).not.toBeInTheDocument();
     expect(within(roundTable).getByText('チーム赤')).toBeInTheDocument();
     expect(within(roundTable).getByText('チーム黒')).toBeInTheDocument();
   });

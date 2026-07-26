@@ -415,6 +415,7 @@
     "roundTableBlower": "Lead",
     "roundTableBid": "Bid",
     "roundTableScore": "Score",
+    "setCount": "{count, plural, one {# set} other {# sets}}",
     "teamRed": "Red team",
     "teamBlack": "Black team",
     "scoreTotalShort": "Total {total}",

@@ -415,6 +415,7 @@
     "roundTableBlower": "吹き手",
     "roundTableBid": "宣言（Bid）",
     "roundTableScore": "得点",
+    "setCount": "{count}組",
     "teamRed": "チーム赤",
     "teamBlack": "チーム黒",
     "scoreTotalShort": "計{total}",
