@@ -30,13 +30,12 @@ jest.mock('next-intl', () => ({
       refresh: '更新',
       minimize: '閉じる',
       empty: '表示できる対局ログがありません',
-      roundTableRound: 'R',
+      roundTableRound: 'ラウンド',
       roundTableBlower: '吹き手',
-      roundTableBid: '宣言（Bid）',
+      roundTableBid: '宣言',
       roundTableScore: '得点',
       teamRed: 'チーム赤',
       teamBlack: 'チーム黒',
-      scoreTotalShort: '計{total}',
       roundInProgress: '進行中',
       participant: 'プレイヤー',
       unknownValue: '不明',
@@ -119,7 +118,7 @@ describe('GameHistoryDock', () => {
                 detailItems: [
                   {
                     labelKey: 'highestDeclaration',
-                    value: { kind: 'text', text: '6 pairs / club' },
+                    value: { kind: 'text', text: '6 pair(s) / club' },
                   },
                 ],
               },
@@ -196,11 +195,14 @@ describe('GameHistoryDock', () => {
     );
 
     expect(screen.getByRole('columnheader', { name: '吹き手' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: '宣言（Bid）' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'ラウンド' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '宣言' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
     expect(within(roundTable).getByText('Player 1')).toBeInTheDocument();
     expect(within(roundTable).getByText('6組 / クラブ')).toBeInTheDocument();
     expect(within(roundTable).queryByText(/pairs/i)).not.toBeInTheDocument();
+    expect(within(roundTable).queryByText('計4')).not.toBeInTheDocument();
+    expect(within(roundTable).queryByText('計2')).not.toBeInTheDocument();
     expect(within(roundTable).getByText('チーム赤')).toBeInTheDocument();
     expect(within(roundTable).getByText('チーム黒')).toBeInTheDocument();
   });

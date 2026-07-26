@@ -277,7 +277,9 @@ export function GameHistoryDock({
       return null;
     }
 
-    const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*(?:pairs?|sets?|組)?$/i);
+    const match = value
+      .trim()
+      .match(/^(\d+(?:\.\d+)?)\s*(?:pairs?|pair\(s\)|sets?|set\(s\)|組)?$/i);
 
     if (!match) {
       return null;
@@ -330,15 +332,15 @@ export function GameHistoryDock({
             ? roundScoreDeltas.get(scoreEvent.id)
             : undefined;
           const scores = Object.entries(totals)
-            .map(([teamKey, total]) => {
+            .map(([teamKey]) => {
               const team = Number(teamKey);
 
               return Number.isNaN(team)
                 ? null
-                : { team, total, delta: deltas?.[teamKey] ?? null };
+                : { team, delta: deltas?.[teamKey] ?? null };
             })
             .filter(
-              (score): score is { team: number; total: number; delta: number | null } =>
+              (score): score is { team: number; delta: number | null } =>
                 Boolean(score),
             )
             .sort((left, right) => left.team - right.team);
@@ -807,7 +809,7 @@ export function GameHistoryDock({
                       <td>
                         {row.scores.length > 0 ? (
                           <div className={styles.roundTeamScores}>
-                            {row.scores.map(({ team, total, delta }) => (
+                            {row.scores.map(({ team, delta }) => (
                               <div
                                 key={team}
                                 className={`${styles.roundTeamScore} ${
@@ -820,9 +822,6 @@ export function GameHistoryDock({
                                 <strong className={styles.roundTeamDelta}>
                                   {delta === null ? '—' : delta > 0 ? `+${delta}` : delta}
                                 </strong>
-                                <span className={styles.roundTeamTotal}>
-                                  {t('scoreTotalShort', { total })}
-                                </span>
                               </div>
                             ))}
                           </div>

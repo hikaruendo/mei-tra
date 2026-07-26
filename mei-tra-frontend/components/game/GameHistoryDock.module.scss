@@ -397,6 +397,7 @@
   color: var(--mt-text-secondary);
   font-size: 0.64rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .roundTable tbody th {
@@ -405,19 +406,19 @@
 }
 
 .roundTable th:nth-child(1) {
-  width: 8%;
+  width: 15%;
 }
 
 .roundTable th:nth-child(2) {
-  width: 20%;
+  width: 21%;
 }
 
 .roundTable th:nth-child(3) {
-  width: 23%;
+  width: 28%;
 }
 
 .roundTable th:nth-child(4) {
-  width: 49%;
+  width: 36%;
 }
 
 .roundTable tbody tr:last-child th,
@@ -433,9 +434,10 @@
 
 .roundTeamScore {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: max-content auto;
   align-items: baseline;
   gap: 0.3rem;
+  justify-content: start;
   min-width: 0;
 }
 
@@ -450,7 +452,6 @@
   font-weight: 800;
 }
 
-.roundTeamTotal,
 .roundInProgress {
   color: var(--mt-text-muted);
   font-size: 0.64rem;
