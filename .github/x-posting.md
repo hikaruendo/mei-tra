@@ -23,10 +23,11 @@ If X rejects a refresh request, generate a new OAuth 2.0 token pair in the Devel
 
 ## Individual release post
 
-1. Add `x:share` to a PR that has a player-visible improvement.
-2. Merge it into `main`. The workflow creates an issue labeled `x:review`.
-3. Edit the text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. This workflow publishes text only. For a screenshot or video post, publish the approved copy manually from X instead.
-4. Comment exactly `/post-x` on the issue.
+Newly opened PRs receive `x:share` automatically. This makes every agent-created PR an X-post candidate; remove the label before merging when the change is private, operational, or not worth announcing.
+
+1. Merge the labeled PR into `main`. The workflow creates an issue labeled `x:review`.
+2. Edit the text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. This workflow publishes text only. For a screenshot or video post, publish the approved copy manually from X instead.
+3. Comment exactly `/post-x` on the issue.
 
 ## Weekly devlog
 
