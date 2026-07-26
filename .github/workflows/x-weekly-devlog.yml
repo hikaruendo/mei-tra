@@ -51,7 +51,7 @@ jobs:
               'This is a weekly devlog candidate created from merged PRs labeled `x:devlog`.',
               '',
               'Edit the copy between the markers. Prefer a player benefit over implementation detail.',
-              'This workflow publishes text only. Publish manually from X when the post needs a screenshot or video.',
+              'This weekly workflow is text-first; attach media manually in the draft if it supports the summary.',
               '',
               '<!-- x-post:start -->',
               candidate,
