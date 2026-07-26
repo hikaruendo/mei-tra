@@ -1,0 +1,70 @@
+name: Create Weekly X Devlog Draft
+
+on:
+  schedule:
+    # Monday 09:00 JST
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  create-devlog-draft:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Collect merged devlog PRs and create an approval draft
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              base: 'main',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100,
+            });
+
+            const selected = pulls.filter((pr) => {
+              const labels = pr.labels.map((label) => label.name);
+              return pr.merged_at && new Date(pr.merged_at) >= cutoff && labels.includes('x:devlog');
+            }).slice(0, 3);
+
+            if (selected.length === 0) {
+              core.notice('No merged PRs with the x:devlog label in the last seven days.');
+              return;
+            }
+
+            const candidate = [
+              '今週のMei-Traアップデートです。',
+              '',
+              'プレイ体験と対戦の安定性を改善しました。',
+              'これからも遊びやすさを高めていきます。',
+            ].join('\n');
+
+            const body = [
+              'This is a weekly devlog candidate created from merged PRs labeled `x:devlog`.',
+              '',
+              'Edit the copy between the markers. Prefer a player benefit over implementation detail.',
+              'This weekly workflow is text-first; attach media manually in the draft if it supports the summary.',
+              '',
+              '<!-- x-post:start -->',
+              candidate,
+              '<!-- x-post:end -->',
+              '',
+              'When the copy and media are ready, comment exactly `/post-x` to publish. This action is irreversible.',
+            ].join('\n');
+
+            const date = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `X weekly devlog draft — ${date}`,
+              body,
+              labels: ['x:review'],
+            });

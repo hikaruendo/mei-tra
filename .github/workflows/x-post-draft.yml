@@ -1,0 +1,135 @@
+name: Create X Post Draft
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  capture_media:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      contains(github.event.pull_request.labels.*.name, 'x:share')
+    runs-on: ubuntu-latest
+    outputs:
+      media_available: ${{ steps.capture.outputs.media_available }}
+    steps:
+      - name: Check out the merged source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mei-tra-frontend/package-lock.json
+
+      - name: Install browser test dependencies
+        run: |
+          npm ci --prefix mei-tra-frontend
+          cd mei-tra-frontend
+          npx playwright install --with-deps chromium
+
+      - name: Save the PR body for the capture script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            fs.writeFileSync('demo-pr-body.md', context.payload.pull_request.body || '', 'utf8');
+
+      - name: Capture the changed surface
+        id: capture
+        env:
+          DEMO_BODY_FILE: demo-pr-body.md
+          PLAYWRIGHT_BASE_URL: https://meitra.kando1.com
+          MEDIA_OUTPUT_DIR: x-media
+        run: |
+          set -u
+          if ! node .github/scripts/capture-x-media.mjs; then
+            echo 'Media capture failed; continuing with a text-only draft.' >&2
+            rm -rf x-media
+            mkdir -p x-media
+            printf '{"media":"none"}\n' > x-media/media.json
+          fi
+
+          if [ "$(jq -r '.media' x-media/media.json)" = 'video' ] && [ -f x-media/capture.webm ]; then
+            ffmpeg -y -i x-media/capture.webm -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart x-media/capture.mp4
+            rm x-media/capture.webm
+            jq '.file = "capture.mp4"' x-media/media.json > x-media/media.tmp
+            mv x-media/media.tmp x-media/media.json
+          fi
+
+          if [ "$(jq -r '.media' x-media/media.json)" != 'none' ]; then
+            echo 'media_available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'media_available=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload captured media
+        if: steps.capture.outputs.media_available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: x-media-pr-${{ github.event.pull_request.number }}
+          path: x-media
+          if-no-files-found: error
+          retention-days: 30
+
+  create-draft:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      contains(github.event.pull_request.labels.*.name, 'x:share')
+    needs: capture_media
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create an approval draft
+        uses: actions/github-script@v7
+        env:
+          MEDIA_AVAILABLE: ${{ needs.capture_media.outputs.media_available }}
+          MEDIA_ARTIFACT_NAME: x-media-pr-${{ github.event.pull_request.number }}
+          MEDIA_RUN_ID: ${{ github.run_id }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const mediaAvailable = process.env.MEDIA_AVAILABLE === 'true';
+            const mediaArtifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.MEDIA_RUN_ID}/artifacts`;
+            const candidate = [
+              'Mei-Traをアップデートしました。',
+              '',
+              'より快適に遊べるよう、プレイ体験を改善しています。',
+              '',
+              'これからも遊びやすさを高めていきます。',
+            ].join('\n');
+
+            const body = [
+              `Source PR: #${pr.number} (${pr.html_url})`,
+              '',
+              'Edit the copy between the markers. Keep it concise, user-facing, and under X’s post limit.',
+              'Do not include private implementation details, commit hashes, or unannounced work.',
+              mediaAvailable
+                ? `A capture is attached as the GitHub Actions artifact [${process.env.MEDIA_ARTIFACT_NAME}](${mediaArtifactUrl}). Review it before publishing.`
+                : 'No capture was generated. Add media manually only if it accurately demonstrates this change.',
+              '',
+              '<!-- x-post:start -->',
+              candidate,
+              '<!-- x-post:end -->',
+              mediaAvailable
+                ? `<!-- x-media:run=${process.env.MEDIA_RUN_ID} name=${process.env.MEDIA_ARTIFACT_NAME} -->`
+                : '',
+              '',
+              'When the copy and media are ready, comment exactly `/post-x` to publish. This action is irreversible.',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `X draft: ${pr.title}`,
+              body,
+              labels: ['x:review'],
+            });

@@ -1,0 +1,181 @@
+name: Publish Approved X Post
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  publish:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/post-x' &&
+      contains(github.event.issue.labels.*.name, 'x:review') &&
+      !contains(github.event.issue.labels.*.name, 'x:posted')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: x-post-${{ github.event.issue.number }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Extract and validate the approved copy
+        id: post
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map((label) => label.name);
+            const { data: collaborator } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.actor,
+            });
+            if (!['admin', 'maintain', 'write'].includes(collaborator.permission)) {
+              core.setFailed('Only repository members with write access can approve an X post.');
+              return;
+            }
+            if (labels.includes('x:posted')) {
+              core.setFailed('This draft has already been posted.');
+              return;
+            }
+
+            const match = issue.body.match(/<!-- x-post:start -->\s*([\s\S]*?)\s*<!-- x-post:end -->/);
+            if (!match) {
+              core.setFailed('The issue body is missing the X post markers.');
+              return;
+            }
+
+            const text = match[1].trim();
+            if (!text || text.length > 260) {
+              core.setFailed('The candidate must contain between 1 and 260 characters.');
+              return;
+            }
+
+            core.setOutput('textBase64', Buffer.from(text, 'utf8').toString('base64'));
+            const mediaMatch = issue.body.match(/<!-- x-media:run=(\d+) name=([A-Za-z0-9._-]+) -->/);
+            if (mediaMatch) {
+              core.setOutput('mediaRunId', mediaMatch[1]);
+              core.setOutput('mediaArtifactName', mediaMatch[2]);
+            }
+
+      - name: Publish through the X API
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          X_POSTING_ENABLED: ${{ vars.X_POSTING_ENABLED }}
+          X_CLIENT_ID: ${{ secrets.X_CLIENT_ID }}
+          X_CLIENT_SECRET: ${{ secrets.X_CLIENT_SECRET }}
+          X_REFRESH_TOKEN: ${{ secrets.X_REFRESH_TOKEN }}
+          POST_TEXT_BASE64: ${{ steps.post.outputs.textBase64 }}
+          MEDIA_RUN_ID: ${{ steps.post.outputs.mediaRunId }}
+          MEDIA_ARTIFACT_NAME: ${{ steps.post.outputs.mediaArtifactName }}
+        run: |
+          set -euo pipefail
+
+          if [ "${X_POSTING_ENABLED}" != "true" ]; then
+            gh issue comment "${ISSUE_NUMBER}" --body 'X posting is disabled. Set the repository variable X_POSTING_ENABLED to true after configuring the X OAuth secrets.'
+            exit 0
+          fi
+
+          if [ -z "${X_CLIENT_ID}" ] || [ -z "${X_CLIENT_SECRET}" ] || [ -z "${X_REFRESH_TOKEN}" ]; then
+            gh issue comment "${ISSUE_NUMBER}" --body 'The X OAuth secrets are not fully configured, so this draft was not posted.'
+            exit 1
+          fi
+
+          echo "${POST_TEXT_BASE64}" | base64 --decode > post.txt
+          jq -n --rawfile text post.txt '{text: $text}' > post.json
+
+          token_response=$(curl --fail-with-body --silent --show-error \
+            --request POST 'https://api.x.com/2/oauth2/token' \
+            --user "${X_CLIENT_ID}:${X_CLIENT_SECRET}" \
+            --header 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=refresh_token' \
+            --data-urlencode "refresh_token=${X_REFRESH_TOKEN}")
+
+          x_access_token=$(echo "${token_response}" | jq -r '.access_token')
+          test -n "${x_access_token}" && test "${x_access_token}" != 'null'
+
+          media_id=''
+          if [ -n "${MEDIA_RUN_ID}" ] && [ -n "${MEDIA_ARTIFACT_NAME}" ]; then
+            mkdir -p media
+            gh run download "${MEDIA_RUN_ID}" --repo "${GH_REPO}" --name "${MEDIA_ARTIFACT_NAME}" --dir media
+            media_file=$(find media -type f -name '*.mp4' -print -quit)
+            if [ -z "${media_file}" ]; then
+              media_file=$(find media -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' \) -print -quit)
+            fi
+            test -n "${media_file}"
+
+            if [[ "${media_file}" == *.mp4 ]]; then
+              total_bytes=$(stat -c '%s' "${media_file}")
+              init_response=$(curl --fail-with-body --silent --show-error \
+                --request POST 'https://api.x.com/2/media/upload' \
+                --header "Authorization: Bearer ${x_access_token}" \
+                --form 'command=INIT' \
+                --form "total_bytes=${total_bytes}" \
+                --form 'media_type=video/mp4' \
+                --form 'media_category=tweet_video')
+              media_id=$(echo "${init_response}" | jq -r '.data.id')
+              test -n "${media_id}" && test "${media_id}" != 'null'
+
+              split -b 4m -d -a 4 "${media_file}" media/chunk-
+              segment_index=0
+              for chunk in media/chunk-*; do
+                curl --fail-with-body --silent --show-error \
+                  --request POST 'https://api.x.com/2/media/upload' \
+                  --header "Authorization: Bearer ${x_access_token}" \
+                  --form 'command=APPEND' \
+                  --form "media_id=${media_id}" \
+                  --form "segment_index=${segment_index}" \
+                  --form "media=@${chunk}" > /dev/null
+                segment_index=$((segment_index + 1))
+              done
+
+              finalize_response=$(curl --fail-with-body --silent --show-error \
+                --request POST 'https://api.x.com/2/media/upload' \
+                --header "Authorization: Bearer ${x_access_token}" \
+                --form 'command=FINALIZE' \
+                --form "media_id=${media_id}")
+              processing_state=$(echo "${finalize_response}" | jq -r '.data.processing_info.state // "succeeded"')
+
+              while [ "${processing_state}" = 'pending' ] || [ "${processing_state}" = 'in_progress' ]; do
+                sleep 5
+                status_response=$(curl --fail-with-body --silent --show-error \
+                  --request GET "https://api.x.com/2/media/upload?command=STATUS&media_id=${media_id}" \
+                  --header "Authorization: Bearer ${x_access_token}")
+                processing_state=$(echo "${status_response}" | jq -r '.data.processing_info.state // "succeeded"')
+              done
+              test "${processing_state}" = 'succeeded'
+            else
+              image_base64=$(base64 -w 0 "${media_file}")
+              image_response=$(jq -n \
+                --arg media "${image_base64}" \
+                --arg mediaType "$(file --brief --mime-type "${media_file}")" \
+                '{media: $media, media_category: "tweet_image", media_type: $mediaType, shared: false}' \
+                | curl --fail-with-body --silent --show-error \
+                  --request POST 'https://api.x.com/2/media/upload' \
+                  --header "Authorization: Bearer ${x_access_token}" \
+                  --header 'Content-Type: application/json' \
+                  --data @-)
+              media_id=$(echo "${image_response}" | jq -r '.data.id')
+              test -n "${media_id}" && test "${media_id}" != 'null'
+            fi
+
+            jq --arg mediaId "${media_id}" '.media = {media_ids: [$mediaId]}' post.json > post.with-media.json
+            mv post.with-media.json post.json
+          fi
+
+          response=$(curl --fail-with-body --silent --show-error \
+            --request POST 'https://api.x.com/2/tweets' \
+            --header "Authorization: Bearer ${x_access_token}" \
+            --header 'Content-Type: application/json' \
+            --data @post.json)
+
+          post_id=$(echo "${response}" | jq -r '.data.id')
+          test -n "${post_id}" && test "${post_id}" != 'null'
+
+          gh issue edit "${ISSUE_NUMBER}" --remove-label x:review --add-label x:posted
+          gh issue comment "${ISSUE_NUMBER}" --body "Posted to X: https://x.com/i/web/status/${post_id}"
