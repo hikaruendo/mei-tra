@@ -42,8 +42,8 @@
   position: relative;
   flex: 0 0 clamp(7rem, 14vw, 10rem);
   width: clamp(7rem, 14vw, 10rem);
-  height: 1.6rem;
-  border-radius: 999px;
+  height: 0.85rem;
+  border-radius: 2px;
   background: var(--mt-border-hairline);
   overflow: hidden;
 }
@@ -213,7 +213,7 @@
   .gameInfoMeter {
     flex-basis: clamp(6rem, 28vw, 8rem);
     width: clamp(6rem, 28vw, 8rem);
-    height: 1.45rem;
+    height: 0.75rem;
   }
 
   .gameInfoMeterAndValue {
@@ -260,7 +260,7 @@
   .gameInfoMeter {
     flex-basis: clamp(8rem, 18vw, 12rem);
     width: clamp(8rem, 18vw, 12rem);
-    height: 2rem;
+    height: 1rem;
   }
 
   @media (min-width: 769px) {
