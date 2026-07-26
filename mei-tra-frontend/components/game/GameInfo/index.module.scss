@@ -97,15 +97,15 @@
 }
 
 .teamBlack {
-  color: var(--mt-card-ink);
+  color: var(--mt-team-black);
 
   .gameInfoScoreFill {
-    background: color-mix(in srgb, var(--mt-card-ink) 88%, transparent);
+    background: color-mix(in srgb, var(--mt-team-black) 88%, transparent);
   }
 
   .gameInfoScoreTeam,
   .gameInfoScoreStatus {
-    color: var(--mt-card-ink);
+    color: var(--mt-team-black);
   }
 }
 
