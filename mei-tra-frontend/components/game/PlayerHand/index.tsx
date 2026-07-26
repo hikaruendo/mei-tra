@@ -185,6 +185,28 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     setDropPlacement({ card, side: getDropSide(event) });
   };
 
+  const updatePointerDropPlacement = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingCard) {
+      return;
+    }
+
+    const targetElement = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-hand-card]');
+    const targetCard = targetElement?.dataset.handCard;
+
+    if (!targetElement || !targetCard || targetCard === draggingCard) {
+      setDropPlacement(null);
+      return;
+    }
+
+    const bounds = targetElement.getBoundingClientRect();
+    setDropPlacement({
+      card: targetCard,
+      side: event.clientX < bounds.left + bounds.width / 2 ? 'before' : 'after',
+    });
+  };
+
   const handleCardClick = (card: string) => {
     if (!canActAsCurrentPlayer) {
       return;
@@ -204,6 +226,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return (
         <div
           className={styles.handContainer}
+          onPointerMove={(event) => {
+            if (canActAsCurrentPlayer) {
+              updatePointerDropPlacement(event);
+            }
+          }}
+          onPointerUp={() => {
+            if (draggingCard && dropPlacement) {
+              reorderDisplayHand(draggingCard, dropPlacement.card, dropPlacement.side);
+            }
+            setDraggingCard(null);
+            setDropPlacement(null);
+          }}
+          onPointerCancel={() => {
+            setDraggingCard(null);
+            setDropPlacement(null);
+          }}
           style={{
             '--player-hand-card-base-width': `${handCardMetrics.width}px`,
             '--player-hand-card-base-overlap': handCardMetrics.overlap,
@@ -244,22 +282,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     setDropPlacement(null);
                   }
                 }}
-                onPointerMove={(event) => {
-                  if (canActAsCurrentPlayer) {
-                    updateDropPlacement(card, event);
-                  }
-                }}
-                onPointerUp={(event) => {
-                  if (draggingCard && dropPlacement?.card === card) {
-                    reorderDisplayHand(draggingCard, card, getDropSide(event));
-                  }
-                  setDraggingCard(null);
-                  setDropPlacement(null);
-                }}
-                onPointerCancel={() => {
-                  setDraggingCard(null);
-                  setDropPlacement(null);
-                }}
+                data-hand-card={card}
                 onDragStart={(event) => {
                   if (!canActAsCurrentPlayer) {
                     event.preventDefault();
