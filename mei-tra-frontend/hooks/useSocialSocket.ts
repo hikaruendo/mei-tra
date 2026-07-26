@@ -91,12 +91,15 @@ export function useChatMessages(roomId: string) {
       return;
     }
 
-    // Auto-load recent messages when joining a room
-    loadMessages(roomId, 50);
-
     const handleMessage = (event: ChatMessageEvent) => {
       if (event.roomId === roomId) {
-        setMessages((prev) => [...prev, event]);
+        setMessages((prev) => {
+          if (prev.some((item) => item.message.id === event.message.id)) {
+            return prev;
+          }
+
+          return [...prev, event];
+        });
       }
     };
 
@@ -121,13 +124,28 @@ export function useChatMessages(roomId: string) {
           roomId: data.roomId,
           message: msg,
         }));
-        setMessages(events);
+        setMessages((prev) => {
+          const messagesById = new Map(
+            prev.map((event) => [event.message.id, event]),
+          );
+          events.forEach((event) => messagesById.set(event.message.id, event));
+
+          return Array.from(messagesById.values()).sort(
+            (left, right) =>
+              new Date(left.message.createdAt).getTime() -
+              new Date(right.message.createdAt).getTime(),
+          );
+        });
       }
     };
 
     socket.on('chat:message', handleMessage);
     socket.on('chat:typing', handleTyping);
     socket.on('chat:messages', handleMessages);
+
+    // Register listeners before requesting history so a live message cannot
+    // arrive during the request and then be overwritten by the response.
+    loadMessages(roomId, 50);
 
     return () => {
       socket.off('chat:message', handleMessage);
