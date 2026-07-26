@@ -256,7 +256,7 @@ describe('PlayerHand', () => {
     expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
   });
 
-  it('shows the taken count in player info and the current-turn clock', () => {
+  it('overlays the animated current-turn clock on the player avatar', () => {
     renderPlayerHand({
       currentPlayerId: 'player-2',
       isCurrentTurn: true,
@@ -264,7 +264,10 @@ describe('PlayerHand', () => {
     });
 
     expect(screen.getByText('3 sets')).toHaveClass('takenCount');
-    expect(screen.getByLabelText('currentTurn')).toBeInTheDocument();
+    const turnBadge = screen.getByLabelText('currentTurn');
+    expect(turnBadge).toHaveClass('avatarTurnBadge');
+    expect(turnBadge.parentElement).toHaveClass('playerAvatar');
+    expect(turnBadge.querySelector('.clockHand')).toBeInTheDocument();
     expect(screen.queryByLabelText('3setsTaken')).not.toBeInTheDocument();
   });
 

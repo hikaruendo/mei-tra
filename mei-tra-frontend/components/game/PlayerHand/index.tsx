@@ -351,6 +351,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     );
   };
 
+  const turnBadge = isCurrentTurn ? (
+    <span
+      className={`${styles.turnBadge} ${styles.avatarTurnBadge}`}
+      role="img"
+      aria-label={t('currentTurn')}
+      title={t('currentTurn')}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.25" />
+        <path className={styles.clockHand} d="M12 12V5.75" />
+        <circle className={styles.clockCenter} cx="12" cy="12" r="1.1" />
+        <path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
+      </svg>
+    </span>
+  ) : null;
+
   const playerInfoContent = (
     <>
       <div className={styles.playerAvatar}>
@@ -359,6 +375,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           size={isCurrentPlayer ? 'medium' : 'small'}
           showName={true}
         />
+        {turnBadge}
       </div>
       {gamePhase && (
         <div className={styles.takenCount}>
@@ -418,25 +435,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
     </div>
   ) : null;
-  const playerMetaBadges = (
+  const playerMetaBadges = isNegriPlayer ? (
     <div className={styles.playerMetaBadges}>
-      {isNegriPlayer && <span className={styles.negriBadge}>{t('negri')}</span>}
-      {isCurrentTurn && (
-        <span
-          className={styles.turnBadge}
-          role="img"
-          aria-label={t('currentTurn')}
-          title={t('currentTurn')}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="8.25" />
-            <path d="M12 7v5.25l3.65 2.25" />
-            <path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
-          </svg>
-        </span>
-      )}
+      <span className={styles.negriBadge}>{t('negri')}</span>
     </div>
-  );
+  ) : null;
 
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>

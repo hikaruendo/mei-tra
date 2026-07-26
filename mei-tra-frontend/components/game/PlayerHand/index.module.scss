@@ -244,8 +244,7 @@
   gap: 0.2rem;
 }
 
-.negriBadge,
-.turnBadge {
+.negriBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -266,18 +265,17 @@
 }
 
 .turnBadge {
-  flex: 0 0 1.75rem;
-  width: 1.75rem;
-  height: 1.75rem;
-  min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
   padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  border: 2px solid var(--mt-accent);
+  border-radius: 50%;
+  background: var(--mt-surface-raised);
+  box-shadow: 0 1px 3px var(--mt-accent-subtle);
   color: var(--mt-accent-strong);
-  filter: drop-shadow(0 1px 2px var(--mt-accent-subtle));
-  font-size: typography.scale(1.75rem);
   line-height: 1;
 }
 
@@ -290,6 +288,17 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.6;
+}
+
+.clockHand {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: turn-clock-hand 3s linear infinite;
+}
+
+.clockCenter {
+  fill: currentColor;
+  stroke: none;
 }
 
 .spectatorPerspectiveButton {
@@ -311,7 +320,22 @@
 }
 
 .playerAvatar{
+  position: relative;
   width: calc(100% - 8px);
+}
+
+.avatarTurnBadge {
+  position: absolute;
+  top: -0.32rem;
+  right: -0.4rem;
+  z-index: 4;
+  pointer-events: none;
+}
+
+@keyframes turn-clock-hand {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .currentTurn{
