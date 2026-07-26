@@ -73,7 +73,7 @@
 }
 
 .negriCard{
-  border: 0;
+  border: 2px solid var(--mt-accent);
   box-shadow: 0 0 8px var(--mt-accent-subtle);
   box-sizing: border-box;
 }
@@ -271,7 +271,7 @@
   width: 1.6rem;
   height: 1.6rem;
   padding: 0;
-  border: 2px solid var(--mt-accent);
+  border: 0;
   border-radius: 50%;
   background: var(--mt-surface-raised);
   box-shadow: 0 1px 3px var(--mt-accent-subtle);
