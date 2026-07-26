@@ -11,7 +11,15 @@ Run the **Initialize X Posting Labels** workflow once from the Actions tab. It c
 - `x:review` — created drafts waiting for editorial review.
 - `x:posted` — drafts that have already been published.
 
-Add the `X_USER_ACCESS_TOKEN` repository secret. It must be an X API user-context token with permission to create posts. Keep `X_POSTING_ENABLED` unset until the first draft and approval flow have been tested. Set the repository variable to `true` only when publishing is intended.
+In **Settings → Secrets and variables → Actions**, add these repository secrets from the X Developer Console. The OAuth 2.0 token must have `tweet.write` and `offline.access` scopes; no DM scope is needed.
+
+- `X_CLIENT_ID` — OAuth 2.0 Client ID.
+- `X_CLIENT_SECRET` — OAuth 2.0 Client Secret for the confidential client.
+- `X_REFRESH_TOKEN` — OAuth 2.0 Refresh Token.
+
+The workflow exchanges the refresh token for a short-lived user access token immediately before it calls the X post endpoint. Do not store tokens in the repository, PRs, issues, or workflow variables. Keep `X_POSTING_ENABLED` unset until the first draft and approval flow have been tested. Set the repository variable to `true` only when publishing is intended.
+
+If X rejects a refresh request, generate a new OAuth 2.0 token pair in the Developer Console and replace `X_REFRESH_TOKEN`. Do not paste either token into an issue or a workflow comment.
 
 ## Individual release post
 
