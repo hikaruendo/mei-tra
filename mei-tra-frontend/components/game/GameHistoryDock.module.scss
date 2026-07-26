@@ -367,6 +367,106 @@
   color: var(--mt-text-secondary);
 }
 
+.roundTableWrapper {
+  overflow: hidden;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 8px;
+}
+
+.roundTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  table-layout: fixed;
+}
+
+.roundTable th,
+.roundTable td {
+  padding: 0.45rem 0.35rem;
+  border-bottom: 1px solid var(--mt-border-hairline);
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.roundTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-secondary);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.roundTable tbody th {
+  color: var(--mt-text-secondary);
+  font-weight: 800;
+}
+
+.roundTable th:nth-child(1) {
+  width: 8%;
+}
+
+.roundTable th:nth-child(2) {
+  width: 20%;
+}
+
+.roundTable th:nth-child(3) {
+  width: 23%;
+}
+
+.roundTable th:nth-child(4) {
+  width: 49%;
+}
+
+.roundTable tbody tr:last-child th,
+.roundTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.roundTeamScores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.roundTeamScore {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.roundTeamLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roundTeamDelta {
+  font-weight: 800;
+}
+
+.roundTeamTotal,
+.roundInProgress {
+  color: var(--mt-text-muted);
+  font-size: 0.64rem;
+  white-space: nowrap;
+}
+
+.teamRed .roundTeamLabel,
+.teamRed .roundTeamDelta {
+  color: var(--mt-card-red);
+}
+
+.teamBlack .roundTeamLabel,
+.teamBlack .roundTeamDelta {
+  color: var(--mt-card-ink);
+}
+
 .breakdown {
   display: flex;
   flex-wrap: wrap;

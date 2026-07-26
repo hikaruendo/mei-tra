@@ -93,6 +93,24 @@ const extractScoreTotals = (
   );
 };
 
+function getTextDetail(
+  event: GameHistoryReplayEvent | undefined,
+  labelKey: string,
+): string | null {
+  const detail = event?.detailItems.find((item) => item.labelKey === labelKey);
+
+  return detail?.value.kind === 'text' ? detail.value.text : null;
+}
+
+function getPlayerDetailId(
+  event: GameHistoryReplayEvent | undefined,
+  labelKey: string,
+): string | null {
+  const detail = event?.detailItems.find((item) => item.labelKey === labelKey);
+
+  return detail?.value.kind === 'player' ? detail.value.playerId : null;
+}
+
 export function GameHistoryDock({
   roomId,
   gameStarted,
@@ -116,15 +134,8 @@ export function GameHistoryDock({
   ) => t(`detailLabels.${key}` as never, values as never);
   const [isMinimized, setIsMinimized] = useState(!defaultOpen);
   const [selectedRound, setSelectedRound] = useState<'all' | number>('all');
-  const entryLimit = variant === 'page' ? undefined : 25;
   const historyEnabled = variant === 'page' || !isMinimized;
-  const replayQuery = useMemo(
-    () => ({
-      limit: entryLimit,
-      roundNumber: selectedRound === 'all' ? undefined : selectedRound,
-    }),
-    [entryLimit, selectedRound],
-  );
+  const replayQuery = useMemo(() => ({}), []);
   const { replay, summary, isLoading, error, refresh } = useGameHistory(
     roomId,
     historyEnabled,
@@ -165,19 +176,6 @@ export function GameHistoryDock({
         ? orderedRounds.filter((round) => round.roundNumber !== null)
         : orderedRounds,
     [orderedRounds, variant],
-  );
-  const latestRound = orderedRounds[0] ?? null;
-  const eventFeed = useMemo(
-    () =>
-      orderedRounds
-        .flatMap((round) =>
-          getRoundReplayEvents(round).map((event) => ({
-            event,
-            roundNumber: round.roundNumber,
-          })),
-        )
-        .slice(0, entryLimit),
-    [entryLimit, orderedRounds],
   );
   const roundOptions = useMemo(() => {
     if (!resolvedSummary) {
@@ -252,18 +250,6 @@ export function GameHistoryDock({
       .filter((entry) => !Number.isNaN(entry.team))
       .sort((left, right) => left.team - right.team);
   }, [replay]);
-  const feedWindow = useMemo(() => {
-    if (eventFeed.length === 0) {
-      return null;
-    }
-
-    return {
-      latest: eventFeed[0]?.event.timestamp ?? null,
-      earliest: eventFeed.at(-1)?.event.timestamp ?? null,
-      };
-    }, [eventFeed]);
-  const hasDisplayEvents =
-    variant === 'page' ? displayRounds.length > 0 : eventFeed.length > 0;
   const formattedHistoryWindow = useMemo(() => {
     if (!resolvedSummary?.firstTimestamp || !resolvedSummary.lastTimestamp) {
       return t('unknownTimeWindow');
@@ -275,6 +261,14 @@ export function GameHistoryDock({
   const formatTeam = (team: number | null | undefined) => {
     if (team === null || team === undefined) {
       return null;
+    }
+
+    if (team === 0) {
+      return t('teamRed');
+    }
+
+    if (team === 1) {
+      return t('teamBlack');
     }
 
     return t('teamValue', { team: team + 1 });
@@ -337,6 +331,80 @@ export function GameHistoryDock({
 
     return [pairsPart ?? null, maybeTrump].filter(Boolean).join(' / ');
   };
+
+  const roundTableRows = useMemo(
+    () =>
+      orderedRounds
+        .filter((round) => round.roundNumber !== null)
+        .map((round) => {
+          const events = [...round.events].sort(
+            (left, right) => left.timestamp.getTime() - right.timestamp.getTime(),
+          );
+          const playStartedEvent = events.find(
+            (event) => event.actionType === 'play_phase_started',
+          );
+          const latestDeclarationEvent = [...events]
+            .reverse()
+            .find((event) => event.actionType === 'blow_declared');
+          const scoreEvent = [...events]
+            .reverse()
+            .find((event) => event.actionType === 'round_completed');
+          const scoreDetail = scoreEvent?.detailItems.find(
+            (detailItem) => detailItem.value.kind === 'scores',
+          );
+          const totals = scoreDetail?.value.kind === 'scores'
+            ? extractScoreTotals(scoreDetail.value.scores)
+            : {};
+          const deltas = scoreEvent
+            ? roundScoreDeltas.get(scoreEvent.id)
+            : undefined;
+          const scores = Object.entries(totals)
+            .map(([teamKey, total]) => {
+              const team = Number(teamKey);
+
+              return Number.isNaN(team)
+                ? null
+                : { team, total, delta: deltas?.[teamKey] ?? null };
+            })
+            .filter(
+              (score): score is { team: number; total: number; delta: number | null } =>
+                Boolean(score),
+            )
+            .sort((left, right) => left.team - right.team);
+          const blowerId =
+            getPlayerDetailId(playStartedEvent, 'winner')
+            ?? playStartedEvent?.playerId
+            ?? latestDeclarationEvent?.playerId
+            ?? null;
+          const declarationValue =
+            getTextDetail(latestDeclarationEvent, 'highestDeclaration')
+            ?? getTextDetail(latestDeclarationEvent, 'declaration');
+          const [pairsPart, trumpPart] = declarationValue?.split(' / ') ?? [];
+          const declaration = declarationValue
+            ? [
+                pairsPart,
+                trumpPart ? trumpT(trumpPart as never) : null,
+              ].filter(Boolean).join(' / ')
+            : t('unknownValue');
+
+          return {
+            roundNumber: round.roundNumber!,
+            blower: blowerId
+              ? players.find((player) => player.playerId === blowerId)?.name
+                ?? t('participant')
+              : t('participant'),
+            declaration,
+            scores,
+          };
+        }),
+    [orderedRounds, players, roundScoreDeltas, t, trumpT],
+  );
+  const displayedRoundTableRows =
+    selectedRound === 'all'
+      ? roundTableRows
+      : roundTableRows.filter((row) => row.roundNumber === selectedRound);
+  const hasDisplayEvents =
+    variant === 'page' ? displayRounds.length > 0 : roundTableRows.length > 0;
 
   const formatScores = (
     value: Record<string, unknown> | null,
@@ -735,20 +803,6 @@ export function GameHistoryDock({
             </div>
           </div>
           ) : null}
-          {variant !== 'page' ? (
-            <div className={styles.roundMeta}>
-            <span className={styles.roundTitle}>
-              {selectedRound === 'all'
-                ? t('allRounds')
-                : latestRound?.roundNumber === null
-                ? t('preGame')
-                : t('round', { round: latestRound?.roundNumber ?? selectedRound })}
-            </span>
-            <span className={styles.roundWindow}>
-              {formatEventWindow(feedWindow?.earliest, feedWindow?.latest)}
-            </span>
-          </div>
-          ) : null}
           {variant === 'page' && displayRounds.length > 0 ? (
             <section className={styles.roundSections}>
               <h4 className={styles.breakdownTitle}>{t('roundBreakdown')}</h4>
@@ -816,7 +870,57 @@ export function GameHistoryDock({
               </div>
             </section>
           ) : null}
-          {variant !== 'page' ? renderEventList(eventFeed) : null}
+          {variant !== 'page' ? (
+            <div className={styles.roundTableWrapper}>
+              <table className={styles.roundTable}>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('roundTableRound')}</th>
+                    <th scope="col">{t('roundTableBlower')}</th>
+                    <th scope="col">{t('roundTableBid')}</th>
+                    <th scope="col">{t('roundTableScore')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedRoundTableRows.map((row) => (
+                    <tr key={row.roundNumber}>
+                      <th scope="row">{row.roundNumber}</th>
+                      <td>{row.blower}</td>
+                      <td>{row.declaration}</td>
+                      <td>
+                        {row.scores.length > 0 ? (
+                          <div className={styles.roundTeamScores}>
+                            {row.scores.map(({ team, total, delta }) => (
+                              <div
+                                key={team}
+                                className={`${styles.roundTeamScore} ${
+                                  team === 0 ? styles.teamRed : styles.teamBlack
+                                }`}
+                              >
+                                <span className={styles.roundTeamLabel}>
+                                  {formatTeam(team)}
+                                </span>
+                                <strong className={styles.roundTeamDelta}>
+                                  {delta === null ? '—' : delta > 0 ? `+${delta}` : delta}
+                                </strong>
+                                <span className={styles.roundTeamTotal}>
+                                  {t('scoreTotalShort', { total })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className={styles.roundInProgress}>
+                            {t('roundInProgress')}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
