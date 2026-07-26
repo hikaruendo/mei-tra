@@ -893,9 +893,10 @@
   }
 
   .playerInfoBadges {
+    flex-direction: column;
     gap: 0.15rem;
     min-width: 0;
-    flex-wrap: nowrap;
+    align-items: center;
   }
 
   .playerPosition.top .playerInfo,
