@@ -14,7 +14,6 @@ interface GameDockProps {
   currentTrump: TrumpType | null;
   gamePhase?: string | null;
   players?: Player[];
-  currentPlayerId?: string | null;
   onLeaveRequest?: () => void;
 }
 
@@ -24,7 +23,6 @@ export function GameDock({
   currentTrump,
   gamePhase,
   players,
-  currentPlayerId,
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
@@ -33,9 +31,6 @@ export function GameDock({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const primaryTeam = players?.find(
-    (player) => player.playerId === currentPlayerId,
-  )?.team ?? 0;
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') {
@@ -156,7 +151,6 @@ export function GameDock({
               roomId={roomId}
               gameStarted={gameStarted}
               players={players}
-              primaryTeam={primaryTeam}
               defaultOpen
               hideOpenPage
               onClose={() => setIsHistoryOpen(false)}
@@ -176,7 +170,6 @@ export function GameDock({
             roomId={roomId}
             gameStarted={gameStarted}
             players={players}
-            primaryTeam={primaryTeam}
             defaultOpen
             hideOpenPage
             onClose={() => setIsHistoryOpen(false)}

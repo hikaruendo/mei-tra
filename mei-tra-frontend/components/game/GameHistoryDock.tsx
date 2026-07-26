@@ -18,7 +18,6 @@ interface GameHistoryDockProps {
   roomId: string;
   gameStarted: boolean;
   players?: Player[];
-  primaryTeam?: Player['team'];
   variant?: 'dock' | 'page';
   showOverview?: boolean;
   summaryOverride?: GameHistorySummary | null;
@@ -114,7 +113,6 @@ export function GameHistoryDock({
   roomId,
   gameStarted,
   players = [],
-  primaryTeam = 0,
   variant = 'dock',
   showOverview = true,
   summaryOverride = null,
@@ -218,11 +216,11 @@ export function GameHistoryDock({
       return null;
     }
 
-    if (team === primaryTeam) {
+    if (team === 0) {
       return t('teamRed');
     }
 
-    if (team === 0 || team === 1) {
+    if (team === 1) {
       return t('teamBlack');
     }
 
@@ -813,7 +811,7 @@ export function GameHistoryDock({
                               <div
                                 key={team}
                                 className={`${styles.roundTeamScore} ${
-                                  team === primaryTeam ? styles.teamRed : styles.teamBlack
+                                  team === 0 ? styles.teamRed : styles.teamBlack
                                 }`}
                               >
                                 <span className={styles.roundTeamLabel}>

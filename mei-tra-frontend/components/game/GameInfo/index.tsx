@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  TeamScores,
-  Player,
-} from '@/types/game.types';
+import { TeamScores } from '@/types/game.types';
 import styles from './index.module.scss';
 import { useTranslations } from 'next-intl';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
@@ -12,7 +9,6 @@ type ScoreStatus = 'normal' | 'leading' | 'reach' | 'win';
 interface GameInfoProps {
   teamScores: TeamScores;
   pointsToWin: number;
-  primaryTeam?: Player['team'];
   actionSlot?: (onLeaveRequest: () => void) => React.ReactNode;
   onLeave?: () => void;
 }
@@ -20,7 +16,6 @@ interface GameInfoProps {
 export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   pointsToWin,
-  primaryTeam = 0,
   actionSlot,
   onLeave,
 }) => {
@@ -28,7 +23,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const getTeamLabel = (teamNumber: number) =>
-    teamNumber === primaryTeam ? t('gameInfo.teamRed') : t('gameInfo.teamBlack');
+    t(teamNumber === 0 ? 'gameInfo.teamRed' : 'gameInfo.teamBlack');
   const getScoreProgress = (score: number) => {
     if (pointsToWin <= 0) {
       return 0;
@@ -69,7 +64,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
     return {
       teamNumber,
       teamName: getTeamLabel(teamNumber),
-      teamColor: teamNumber === primaryTeam ? 'red' : 'black',
+      teamColor: teamNumber === 0 ? 'red' : 'black',
       score,
       progress: getScoreProgress(score),
       status,
