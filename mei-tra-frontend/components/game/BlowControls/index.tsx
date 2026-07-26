@@ -309,7 +309,7 @@ export function BlowControls({
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
                 >
-                  {player.name}: {entry.trumpType?.toUpperCase()} {formatSetOption(declaration.numberOfPairs)}
+                  {player.name}: {entry.trumpType ? t(entry.trumpType) : ''} {formatSetOption(declaration.numberOfPairs)}
                 </div>
               );
             })}
