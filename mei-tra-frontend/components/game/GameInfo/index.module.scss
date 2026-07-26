@@ -31,8 +31,9 @@
 
 .gameInfoScoreContent {
   display: grid;
-  grid-template-columns: minmax(0, 5rem) auto;
+  grid-template-columns: 5rem minmax(0, 1fr);
   height: 100%;
+  width: 100%;
   align-items: center;
   justify-content: flex-start;
   column-gap: 0.55rem;
@@ -60,6 +61,7 @@
 .gameInfoMeterAndValue {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 0.45rem;
 }
 
@@ -221,7 +223,7 @@
   }
 
   .gameInfoScoreContent {
-    grid-template-columns: minmax(3.5rem, 4.75rem) auto;
+    grid-template-columns: 4.75rem minmax(0, 1fr);
     column-gap: 0.4rem;
   }
 
