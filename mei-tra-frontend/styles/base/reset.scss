@@ -31,9 +31,16 @@ button {
   color: inherit;
 }
 
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
 // 画像のスタイルリセット
 img {
   max-width: 100%;
   height: auto;
   display: block;
-} 
+}

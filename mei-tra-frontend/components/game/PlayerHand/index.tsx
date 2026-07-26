@@ -430,7 +430,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="8.25" />
-            <path d="M12 7.5v4.9l3.35 2.1" />
+            <path d="M12 7v5.25l3.65 2.25" />
+            <path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
           </svg>
         </span>
       )}
