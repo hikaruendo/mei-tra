@@ -3,6 +3,12 @@ name: Create X Post Draft
 on:
   pull_request:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Merged PR number to capture
+        required: true
+        type: number
 
 permissions:
   contents: read
@@ -12,12 +18,14 @@ permissions:
 jobs:
   capture_media:
     if: >-
-      github.event.pull_request.merged == true &&
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
-      contains(github.event.pull_request.labels.*.name, 'x:share')
+      contains(github.event.pull_request.labels.*.name, 'x:share'))
     runs-on: ubuntu-latest
     outputs:
       media_available: ${{ steps.capture.outputs.media_available }}
+      pr_number: ${{ steps.pr.outputs.number }}
     steps:
       - name: Check out the merged source
         uses: actions/checkout@v4
@@ -36,11 +44,28 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Save the PR body for the capture script
+        id: pr
         uses: actions/github-script@v7
+        env:
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
         with:
           script: |
             const fs = require('node:fs');
-            fs.writeFileSync('demo-pr-body.md', context.payload.pull_request.body || '', 'utf8');
+            const prNumber = context.eventName === 'workflow_dispatch'
+              ? Number(process.env.MANUAL_PR_NUMBER)
+              : context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const labels = pr.labels.map((label) => label.name);
+            if (!pr.merged_at || pr.base.ref !== 'main' || !labels.includes('x:share')) {
+              core.setFailed(`PR #${prNumber} must be a merged main PR with the x:share label.`);
+              return;
+            }
+            fs.writeFileSync('demo-pr-body.md', pr.body || '', 'utf8');
+            core.setOutput('number', String(pr.number));
 
       - name: Capture the changed surface
         id: capture
@@ -74,16 +99,17 @@ jobs:
         if: steps.capture.outputs.media_available == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: x-media-pr-${{ github.event.pull_request.number }}
+          name: x-media-pr-${{ steps.pr.outputs.number }}
           path: x-media
           if-no-files-found: error
           retention-days: 30
 
   create-draft:
     if: >-
-      github.event.pull_request.merged == true &&
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
-      contains(github.event.pull_request.labels.*.name, 'x:share')
+      contains(github.event.pull_request.labels.*.name, 'x:share'))
     needs: capture_media
     runs-on: ubuntu-latest
 
@@ -92,13 +118,32 @@ jobs:
         uses: actions/github-script@v7
         env:
           MEDIA_AVAILABLE: ${{ needs.capture_media.outputs.media_available }}
-          MEDIA_ARTIFACT_NAME: x-media-pr-${{ github.event.pull_request.number }}
+          MEDIA_ARTIFACT_NAME: x-media-pr-${{ needs.capture_media.outputs.pr_number }}
           MEDIA_RUN_ID: ${{ github.run_id }}
+          PR_NUMBER: ${{ needs.capture_media.outputs.pr_number }}
         with:
           script: |
-            const pr = context.payload.pull_request;
+            const prNumber = Number(process.env.PR_NUMBER);
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
             const mediaAvailable = process.env.MEDIA_AVAILABLE === 'true';
             const mediaArtifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.MEDIA_RUN_ID}/artifacts`;
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'x:review',
+              per_page: 100,
+            });
+            const existingIssue = openIssues.find((issue) =>
+              issue.body?.includes(`Source PR: #${pr.number} `),
+            );
+            const existingCandidate = existingIssue?.body?.match(
+              /<!-- x-post:start -->\s*([\s\S]*?)\s*<!-- x-post:end -->/,
+            )?.[1]?.trim();
             const candidate = [
               'Mei-Traをアップデートしました。',
               '',
@@ -106,6 +151,7 @@ jobs:
               '',
               'これからも遊びやすさを高めていきます。',
             ].join('\n');
+            const copy = existingCandidate || candidate;
 
             const body = [
               `Source PR: #${pr.number} (${pr.html_url})`,
@@ -117,7 +163,7 @@ jobs:
                 : 'No capture was generated. Add media manually only if it accurately demonstrates this change.',
               '',
               '<!-- x-post:start -->',
-              candidate,
+              copy,
               '<!-- x-post:end -->',
               mediaAvailable
                 ? `<!-- x-media:run=${process.env.MEDIA_RUN_ID} name=${process.env.MEDIA_ARTIFACT_NAME} -->`
@@ -126,10 +172,20 @@ jobs:
               'When the copy and media are ready, comment exactly `/post-x` to publish. This action is irreversible.',
             ].join('\n');
 
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `X draft: ${pr.title}`,
-              body,
-              labels: ['x:review'],
-            });
+            if (existingIssue) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body,
+              });
+              core.notice(`Updated existing X draft issue #${existingIssue.number}.`);
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `X draft: ${pr.title}`,
+                body,
+                labels: ['x:review'],
+              });
+            }
