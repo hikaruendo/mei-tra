@@ -16,7 +16,9 @@
   },
   "gameInfo": {
     "reach": "Reach",
-    "win": "WIN"
+    "win": "WIN",
+    "teamRed": "Red team",
+    "teamBlack": "Black team"
   },
   "nav": {
     "rooms": "Rooms",

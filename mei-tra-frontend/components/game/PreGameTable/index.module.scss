@@ -143,14 +143,16 @@
   font-weight: 600;
 }
 
-.team0 {
-  background: var(--mt-accent-subtle);
-  color: var(--mt-accent);
+.teamRed .teamBadge {
+  border: 1px solid color-mix(in srgb, var(--mt-card-red) 48%, transparent);
+  background: color-mix(in srgb, var(--mt-card-red) 14%, var(--mt-surface-raised));
+  color: var(--mt-card-red);
 }
 
-.team1 {
-  background: var(--mt-accent-subtle);
-  color: var(--mt-card-red);
+.teamBlack .teamBadge {
+  border: 1px solid color-mix(in srgb, var(--mt-card-ink) 42%, transparent);
+  background: color-mix(in srgb, var(--mt-card-ink) 10%, var(--mt-surface-raised));
+  color: var(--mt-card-ink);
 }
 
 .waitingText {

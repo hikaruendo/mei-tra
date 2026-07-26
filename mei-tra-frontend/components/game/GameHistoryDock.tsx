@@ -19,6 +19,7 @@ interface GameHistoryDockProps {
   roomId: string;
   gameStarted: boolean;
   players?: Player[];
+  primaryTeam?: Player['team'];
   variant?: 'dock' | 'page';
   showOverview?: boolean;
   summaryOverride?: GameHistorySummary | null;
@@ -115,6 +116,7 @@ export function GameHistoryDock({
   roomId,
   gameStarted,
   players = [],
+  primaryTeam = 0,
   variant = 'dock',
   showOverview = true,
   summaryOverride = null,
@@ -125,7 +127,7 @@ export function GameHistoryDock({
   hideOpenPage = false,
 }: GameHistoryDockProps) {
   const t = useTranslations('gameHistoryDock');
-  const trumpT = useTranslations('trump');
+  const trumpT = useTranslations('blowControls');
   const getActionLabel = (actionType: GameHistoryActionType) =>
     t(ACTION_TYPE_MESSAGE_KEYS[actionType] as never);
   const getDetailLabel = (
@@ -263,11 +265,11 @@ export function GameHistoryDock({
       return null;
     }
 
-    if (team === 0) {
+    if (team === primaryTeam) {
       return t('teamRed');
     }
 
-    if (team === 1) {
+    if (team === 0 || team === 1) {
       return t('teamBlack');
     }
 
@@ -735,7 +737,7 @@ export function GameHistoryDock({
                     <div className={styles.scoreComparisonTrack} aria-hidden="true">
                       <span
                         className={`${styles.scoreComparisonFill} ${
-                          team === 0 ? styles.teamZero : styles.teamOne
+                          team === primaryTeam ? styles.teamZero : styles.teamOne
                         }`}
                         style={{ width: `${progress}%` }}
                       />
@@ -894,7 +896,7 @@ export function GameHistoryDock({
                               <div
                                 key={team}
                                 className={`${styles.roundTeamScore} ${
-                                  team === 0 ? styles.teamRed : styles.teamBlack
+                                  team === primaryTeam ? styles.teamRed : styles.teamBlack
                                 }`}
                               >
                                 <span className={styles.roundTeamLabel}>

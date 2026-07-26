@@ -133,7 +133,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         <GameInfo
           teamScores={teamScores}
           pointsToWin={pointsToWin}
-          players={players}
+          primaryTeam={perspectivePlayerTeam}
           actionSlot={
             currentRoomId ? (onLeaveRequest) => (
               <GameDock
@@ -142,6 +142,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 currentTrump={currentTrump}
                 gamePhase={gamePhase}
                 players={players}
+                currentPlayerId={tablePerspectivePlayerId}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined

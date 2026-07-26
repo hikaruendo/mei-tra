@@ -12,7 +12,7 @@ type ScoreStatus = 'normal' | 'leading' | 'reach' | 'win';
 interface GameInfoProps {
   teamScores: TeamScores;
   pointsToWin: number;
-  players: Player[];
+  primaryTeam?: Player['team'];
   actionSlot?: (onLeaveRequest: () => void) => React.ReactNode;
   onLeave?: () => void;
 }
@@ -20,17 +20,15 @@ interface GameInfoProps {
 export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   pointsToWin,
-  players,
+  primaryTeam = 0,
   actionSlot,
   onLeave,
 }) => {
   const t = useTranslations();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const getTeamPlayerNames = (teamNumber: number): string => {
-    const teamPlayers = players.filter(player => player.team === teamNumber);
-    return teamPlayers.map(player => player.isCOM ? 'COM' : player.name).join('・');
-  };
+  const getTeamLabel = (teamNumber: number) =>
+    teamNumber === primaryTeam ? t('gameInfo.teamRed') : t('gameInfo.teamBlack');
   const getScoreProgress = (score: number) => {
     if (pointsToWin <= 0) {
       return 0;
@@ -70,7 +68,8 @@ export const GameInfo: React.FC<GameInfoProps> = ({
 
     return {
       teamNumber,
-      teamName: getTeamPlayerNames(teamNumber),
+      teamName: getTeamLabel(teamNumber),
+      teamColor: teamNumber === primaryTeam ? 'red' : 'black',
       score,
       progress: getScoreProgress(score),
       status,
@@ -103,14 +102,14 @@ export const GameInfo: React.FC<GameInfoProps> = ({
       <div className={styles.gameInfoContainer}>
         <div className={styles.gameInfoContent}>
           <div className={styles.gameInfoScores}>
-            {scoreTeams.map(({ teamNumber, teamName, score, progress, status, statusLabel }) => {
+            {scoreTeams.map(({ teamNumber, teamName, teamColor, score, progress, status, statusLabel }) => {
               const hasScoreEmphasis = status === 'reach' || status === 'win';
 
               return (
                 <div
                   key={teamNumber}
                   className={`${styles.gameInfoScore} ${
-                    teamNumber === 0 ? styles.team0 : styles.team1
+                    teamColor === 'red' ? styles.teamRed : styles.teamBlack
                   } ${hasScoreEmphasis ? styles.scoreEmphasis : ''} ${
                     status === 'reach' ? styles.reachingTeam : ''
                   } ${status === 'win' ? styles.winningTeam : ''}`}

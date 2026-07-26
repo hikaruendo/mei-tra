@@ -81,21 +81,24 @@
   }
 }
 
-.team0 {
+.teamRed {
   .gameInfoScoreFill {
-    background: color-mix(in srgb, var(--mt-text-secondary) 52%, transparent);
+    background: color-mix(in srgb, var(--mt-card-red) 72%, transparent);
+  }
+
+  .gameInfoScoreTeam {
+    color: var(--mt-card-red);
   }
 }
 
-.team1 {
+.teamBlack {
   .gameInfoScoreFill {
-    background: color-mix(in srgb, var(--mt-text-secondary) 52%, transparent);
+    background: color-mix(in srgb, var(--mt-card-ink) 72%, transparent);
   }
-}
 
-.reachingTeam .gameInfoScoreFill,
-.winningTeam .gameInfoScoreFill {
-  background: color-mix(in srgb, var(--mt-accent) 52%, transparent);
+  .gameInfoScoreTeam {
+    color: var(--mt-card-ink);
+  }
 }
 
 .gameInfoScoreTeam {

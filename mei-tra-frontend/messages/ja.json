@@ -16,7 +16,9 @@
   },
   "gameInfo": {
     "reach": "リーチ",
-    "win": "WIN"
+    "win": "WIN",
+    "teamRed": "チーム赤",
+    "teamBlack": "チーム黒"
   },
   "nav": {
     "rooms": "ルーム一覧",
