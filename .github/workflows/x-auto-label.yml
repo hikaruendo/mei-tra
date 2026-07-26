@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   label:
-    if: startsWith(github.event.pull_request.head.ref, 'codex/')
     runs-on: ubuntu-latest
 
     steps:
