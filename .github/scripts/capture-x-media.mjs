@@ -104,7 +104,8 @@ const runPlayDemo = async (maxActions = 8, maxDurationMs = 90_000) => {
     const selects = page.locator('select');
     const declare = page.getByRole('button', { name: '宣言', exact: true });
     const pass = page.getByRole('button', { name: 'パス', exact: true });
-    const playable = page.locator('[data-hand-card].playable');
+    // CSS modules hash the class name, so match the stable semantic fragment.
+    const playable = page.locator('[data-hand-card][class*="playable"]');
     const negri = page.getByRole('button', { name: 'ネグリ', exact: true });
 
     if (await selects.count() >= 2 && await isEnabled(selects.nth(0))) {
