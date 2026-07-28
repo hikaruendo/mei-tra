@@ -3,6 +3,12 @@ name: Create X Post Draft
 on:
   pull_request:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Merged PR number to regenerate the X draft'
+        required: true
+        type: number
 
 permissions:
   contents: read
@@ -12,15 +18,57 @@ permissions:
 jobs:
   capture_media:
     if: >-
-      github.event.pull_request.merged == true &&
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
-      contains(github.event.pull_request.labels.*.name, 'x:share')
+      contains(github.event.pull_request.labels.*.name, 'x:share'))
     runs-on: ubuntu-latest
     outputs:
       media_available: ${{ steps.capture.outputs.media_available }}
+      eligible: ${{ steps.pr.outputs.eligible }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
     steps:
       - name: Check out the merged source
         uses: actions/checkout@v4
+
+      - name: Load and validate the source PR
+        id: pr
+        uses: actions/github-script@v7
+        env:
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const prNumber = Number(process.env.MANUAL_PR_NUMBER || context.payload.pull_request?.number);
+            if (!prNumber) throw new Error('A pull request number is required.');
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const eligible = Boolean(
+              pr.merged_at &&
+              pr.base.ref === 'main' &&
+              pr.labels.some((label) => label.name === 'x:share'),
+            );
+            core.setOutput('eligible', String(eligible));
+            core.setOutput('pr_number', String(pr.number));
+            if (!eligible) {
+              core.warning(`PR #${pr.number} is not a merged main PR with the x:share label.`);
+              return;
+            }
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            fs.writeFileSync('demo-pr-body.md', pr.body || '', 'utf8');
+            fs.writeFileSync('demo-pr.json', JSON.stringify({
+              title: pr.title,
+              body: pr.body || '',
+              files: files.map((file) => file.filename),
+            }), 'utf8');
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -30,22 +78,22 @@ jobs:
           cache-dependency-path: mei-tra-frontend/package-lock.json
 
       - name: Install browser test dependencies
+        if: steps.pr.outputs.eligible == 'true'
         run: |
           npm ci --prefix mei-tra-frontend
           cd mei-tra-frontend
           npx playwright install --with-deps chromium
 
       - name: Save the PR body for the capture script
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('node:fs');
-            fs.writeFileSync('demo-pr-body.md', context.payload.pull_request.body || '', 'utf8');
+        if: steps.pr.outputs.eligible == 'true'
+        run: test -f demo-pr-body.md && test -f demo-pr.json
 
       - name: Capture the changed surface
         id: capture
+        if: steps.pr.outputs.eligible == 'true'
         env:
           DEMO_BODY_FILE: demo-pr-body.md
+          DEMO_METADATA_FILE: demo-pr.json
           PLAYWRIGHT_BASE_URL: https://meitra.kando1.com
           MEDIA_OUTPUT_DIR: x-media
         run: |
@@ -71,20 +119,17 @@ jobs:
           fi
 
       - name: Upload captured media
-        if: steps.capture.outputs.media_available == 'true'
+        if: steps.pr.outputs.eligible == 'true' && steps.capture.outputs.media_available == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: x-media-pr-${{ github.event.pull_request.number }}
+          name: x-media-pr-${{ steps.pr.outputs.pr_number }}
           path: x-media
           if-no-files-found: error
           retention-days: 30
 
   create-draft:
-    if: >-
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'main' &&
-      contains(github.event.pull_request.labels.*.name, 'x:share')
     needs: capture_media
+    if: needs.capture_media.outputs.eligible == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -92,19 +137,34 @@ jobs:
         uses: actions/github-script@v7
         env:
           MEDIA_AVAILABLE: ${{ needs.capture_media.outputs.media_available }}
-          MEDIA_ARTIFACT_NAME: x-media-pr-${{ github.event.pull_request.number }}
+          MEDIA_ARTIFACT_NAME: x-media-pr-${{ needs.capture_media.outputs.pr_number }}
           MEDIA_RUN_ID: ${{ github.run_id }}
+          PR_NUMBER: ${{ needs.capture_media.outputs.pr_number }}
         with:
           script: |
-            const pr = context.payload.pull_request;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(process.env.PR_NUMBER),
+            });
             const mediaAvailable = process.env.MEDIA_AVAILABLE === 'true';
             const mediaArtifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.MEDIA_RUN_ID}/artifacts`;
+            const title = pr.title.trim().replace(/[。．.！!？?]+$/u, '');
+            const benefit = /得点|score/i.test(title)
+              ? '得点の状況を正しく確認できます。'
+              : /履歴|history/i.test(title)
+                ? '対局の振り返りが、より分かりやすくなりました。'
+                : /操作|ui|画面|操作性/i.test(title)
+                  ? 'ゲーム中の操作が、より分かりやすくなりました。'
+                  : /待機|room|com|プレイ速度/i.test(title)
+                    ? '対戦をよりスムーズに始められます。'
+                    : '明専トランプを、より快適に楽しめるようになりました。';
             const candidate = [
               'Mei-Traをアップデートしました。',
               '',
-              'より快適に遊べるよう、プレイ体験を改善しています。',
+              `「${title}」を反映しました。`,
               '',
-              'これからも遊びやすさを高めていきます。',
+              benefit,
             ].join('\n');
 
             const body = [
