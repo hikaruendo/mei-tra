@@ -64,13 +64,25 @@ jobs:
               core.setFailed(`PR #${prNumber} must be a merged main PR with the x:share label.`);
               return;
             }
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
             fs.writeFileSync('demo-pr-body.md', pr.body || '', 'utf8');
+            fs.writeFileSync('demo-pr.json', JSON.stringify({
+              title: pr.title,
+              body: pr.body || '',
+              files: files.map((file) => file.filename),
+            }), 'utf8');
             core.setOutput('number', String(pr.number));
 
       - name: Capture the changed surface
         id: capture
         env:
           DEMO_BODY_FILE: demo-pr-body.md
+          DEMO_METADATA_FILE: demo-pr.json
           PLAYWRIGHT_BASE_URL: https://meitra.kando1.com
           MEDIA_OUTPUT_DIR: x-media
         run: |
@@ -144,14 +156,25 @@ jobs:
             const existingCandidate = existingIssue?.body?.match(
               /<!-- x-post:start -->\s*([\s\S]*?)\s*<!-- x-post:end -->/,
             )?.[1]?.trim();
+            const title = pr.title.trim().replace(/[。．.！!？?]+$/u, '');
+            const benefit = /得点|score/i.test(title)
+              ? '得点の状況を正しく確認できます。'
+              : /履歴|history/i.test(title)
+                ? '対局の振り返りが、より分かりやすくなりました。'
+                : /操作|ui|画面|操作性/i.test(title)
+                  ? 'ゲーム中の操作が、より分かりやすくなりました。'
+                  : /待機|room|com|プレイ速度/i.test(title)
+                    ? '対戦をよりスムーズに始められます。'
+                    : '明専トランプを、より快適に楽しめるようになりました。';
             const candidate = [
               'Mei-Traをアップデートしました。',
               '',
-              'より快適に遊べるよう、プレイ体験を改善しています。',
+              `「${title}」を反映しました。`,
               '',
-              'これからも遊びやすさを高めていきます。',
+              benefit,
             ].join('\n');
-            const copy = existingCandidate || candidate;
+            const oldGenericCopy = existingCandidate?.includes('より快適に遊べるよう、プレイ体験を改善しています。');
+            const copy = existingCandidate && !oldGenericCopy ? existingCandidate : candidate;
 
             const body = [
               `Source PR: #${pr.number} (${pr.html_url})`,
