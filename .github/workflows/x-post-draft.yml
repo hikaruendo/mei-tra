@@ -78,11 +78,22 @@ jobs:
             }), 'utf8');
             core.setOutput('number', String(pr.number));
 
+      - name: Restore the optional demo authentication state
+        if: steps.pr.outcome == 'success'
+        env:
+          DEMO_STORAGE_STATE_B64: ${{ secrets.MEITRA_DEMO_STORAGE_STATE_B64 }}
+        run: |
+          if [ -n "$DEMO_STORAGE_STATE_B64" ]; then
+            printf '%s' "$DEMO_STORAGE_STATE_B64" | base64 --decode > demo-storage-state.json
+            chmod 600 demo-storage-state.json
+          fi
+
       - name: Capture the changed surface
         id: capture
         env:
           DEMO_BODY_FILE: demo-pr-body.md
           DEMO_METADATA_FILE: demo-pr.json
+          PLAYWRIGHT_STORAGE_STATE_FILE: demo-storage-state.json
           PLAYWRIGHT_BASE_URL: https://meitra.kando1.com
           MEDIA_OUTPUT_DIR: x-media
         run: |

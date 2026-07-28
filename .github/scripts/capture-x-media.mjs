@@ -10,6 +10,7 @@ const baseUrl = (process.env.PLAYWRIGHT_BASE_URL || 'https://meitra.kando1.com')
 const bodyFile = process.env.DEMO_BODY_FILE || 'demo-pr-body.md';
 const metadataFile = process.env.DEMO_METADATA_FILE || 'demo-pr.json';
 const outputDir = process.env.MEDIA_OUTPUT_DIR || 'x-media';
+const storageStateFile = process.env.PLAYWRIGHT_STORAGE_STATE_FILE || '';
 
 const body = await fs.readFile(bodyFile, 'utf8');
 const match = body.match(/<!-- x-demo:start -->\s*([\s\S]*?)\s*<!-- x-demo:end -->/);
@@ -74,11 +75,19 @@ await fs.rm(outputDir, { recursive: true, force: true });
 await fs.mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext(
-  spec.media === 'video'
-    ? { recordVideo: { dir: outputDir, size: { width: 1280, height: 720 } }, viewport: { width: 1280, height: 720 } }
-    : { viewport: { width: 1280, height: 720 } },
-);
+const contextOptions = spec.media === 'video'
+  ? { recordVideo: { dir: outputDir, size: { width: 1280, height: 720 } }, viewport: { width: 1280, height: 720 } }
+  : { viewport: { width: 1280, height: 720 } };
+if (storageStateFile) {
+  try {
+    await fs.access(storageStateFile);
+    contextOptions.storageState = storageStateFile;
+    console.log('Using the configured Playwright authentication state.');
+  } catch {
+    console.log('No Playwright authentication state found; continuing anonymously.');
+  }
+}
+const context = await browser.newContext(contextOptions);
 const page = await context.newPage();
 
 try {
