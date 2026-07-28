@@ -8,23 +8,47 @@ const { chromium } = require(path.resolve('mei-tra-frontend/node_modules/playwri
 
 const baseUrl = (process.env.PLAYWRIGHT_BASE_URL || 'https://meitra.kando1.com').replace(/\/$/, '');
 const bodyFile = process.env.DEMO_BODY_FILE || 'demo-pr-body.md';
+const metadataFile = process.env.DEMO_METADATA_FILE || 'demo-pr.json';
 const outputDir = process.env.MEDIA_OUTPUT_DIR || 'x-media';
 
 const body = await fs.readFile(bodyFile, 'utf8');
 const match = body.match(/<!-- x-demo:start -->\s*([\s\S]*?)\s*<!-- x-demo:end -->/);
 
-if (!match) {
-  console.log('No x-demo specification found; skipping media capture.');
-  await fs.mkdir(outputDir, { recursive: true });
-  await fs.writeFile(path.join(outputDir, 'media.json'), JSON.stringify({ media: 'none' }));
-  process.exit(0);
-}
-
 let spec;
-try {
-  spec = JSON.parse(match[1]);
-} catch (error) {
-  throw new Error(`The x-demo block must contain valid JSON: ${error.message}`);
+if (match) {
+  try {
+    spec = JSON.parse(match[1]);
+  } catch (error) {
+    throw new Error(`The x-demo block must contain valid JSON: ${error.message}`);
+  }
+} else {
+  let metadata = { files: [], title: '', body };
+  try {
+    metadata = JSON.parse(await fs.readFile(metadataFile, 'utf8'));
+  } catch {
+    // Older/manual runs may only provide the PR body.
+  }
+
+  const changed = (metadata.files || []).map((file) => typeof file === 'string' ? file : file.filename).filter(Boolean);
+  const changedText = `${metadata.title || ''}\n${metadata.body || body}\n${changed.join('\n')}`.toLowerCase();
+  let route;
+  if (/docs|documentation|tutorial|アクセシビリティ|説明書/.test(changedText)) route = '/ja/docs';
+  else if (/profile|プロフィール/.test(changedText)) route = '/ja/profile';
+  else if (/landing|home|トップ|ランディング/.test(changedText)) route = '/ja';
+  // Game/room screens require an authenticated room. Use the public entry point
+  // for automatic captures; an explicit x-demo block can provide a judge-safe
+  // public route when a PR includes one.
+  else if (/game|room|score|trick|card|chat|history|履歴|得点|カード|対局|ゲーム|ルーム/.test(changedText)) route = '/ja';
+
+  if (!route) {
+    console.log('No changed user-facing surface found; skipping media capture.');
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.writeFile(path.join(outputDir, 'media.json'), JSON.stringify({ media: 'none' }));
+    process.exit(0);
+  }
+
+  spec = { route, media: 'screenshot', steps: [], filename: 'capture.png' };
+  console.log(`No x-demo block found; inferred ${route} from changed files.`);
 }
 
 if (!spec || typeof spec.route !== 'string' || !spec.route.startsWith('/')) {
