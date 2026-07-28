@@ -84,15 +84,7 @@ jobs:
           DEMO_STORAGE_STATE_B64: ${{ secrets.MEITRA_DEMO_STORAGE_STATE_B64 }}
         run: |
           if [ -n "$DEMO_STORAGE_STATE_B64" ]; then
-            python3 - <<'PY'
-            import base64
-            import os
-
-            encoded = ''.join(os.environ['DEMO_STORAGE_STATE_B64'].split())
-            encoded += '=' * (-len(encoded) % 4)
-            with open('demo-storage-state.json', 'wb') as output:
-                output.write(base64.b64decode(encoded, validate=False))
-            PY
+            python3 -c "import base64, os; s = ''.join(os.environ['DEMO_STORAGE_STATE_B64'].split()); s += '=' * (-len(s) % 4); open('demo-storage-state.json', 'wb').write(base64.b64decode(s, validate=False))"
             chmod 600 demo-storage-state.json
           fi
 
