@@ -26,6 +26,24 @@ If X rejects a refresh request, generate a new OAuth 2.0 token pair in the Devel
 Every newly opened PR receives `x:share` automatically. GitHub does not reliably distinguish Codex, Claude, and a human when they use the same account, so this keeps the behavior consistent across agents. Remove the label before merging when the change is private, operational, or not worth announcing.
 
 1. For the most accurate demo, add or update the `x-demo` JSON block in the PR body so it describes the changed screen and interaction. If the block is omitted, the workflow infers a public route from the PR's changed paths. Use `"media": "screenshot"` for an image, `"media": "video"` for a short recording, or `"media": "none"` when no UI can demonstrate the change.
+
+For a playable authenticated demo, the capture steps can use `fill` (with a `placeholder` and `value`), `clickRole`, `wait`, and `playDemo`. `playDemo` automatically handles the bidding controls and plays valid cards for a bounded number of actions. For example:
+
+```json
+{
+  "route": "/ja",
+  "media": "screenshot",
+  "steps": [
+    { "action": "fill", "placeholder": "ルーム名を入力", "value": "CI Demo {{timestamp}}" },
+    { "action": "clickRole", "role": "button", "name": "ルーム作成" },
+    { "action": "wait", "ms": 2500 },
+    { "action": "clickRole", "role": "button", "name": "ゲーム開始" },
+    { "action": "wait", "ms": 4500 },
+    { "action": "playDemo", "maxActions": 8, "maxDurationMs": 60000 }
+  ],
+  "filename": "capture.png"
+}
+```
 2. Merge the labeled PR into `main`. Playwright runs the per-PR demo steps against the deployed app and uploads the result as a 30-day GitHub Actions artifact. The workflow then creates an issue labeled `x:review`.
 3. Edit the Japanese text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. The generated post contains no URL. Review the attached screenshot or video and remove it from the draft if it does not accurately show the change.
 4. Comment exactly `/post-x` on the issue. The workflow uploads the approved media to X and attaches it to the post.

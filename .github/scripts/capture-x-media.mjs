@@ -90,6 +90,73 @@ if (storageStateFile) {
 const context = await browser.newContext(contextOptions);
 const page = await context.newPage();
 
+const resolveStepValue = (value) => {
+  if (value === '{{timestamp}}') return String(Date.now());
+  return value;
+};
+
+const runPlayDemo = async (maxActions = 8, maxDurationMs = 90_000) => {
+  const startedAt = Date.now();
+  let completedActions = 0;
+  const isEnabled = async (locator) => (await locator.count()) > 0 && await locator.isEnabled({ timeout: 250 }).catch(() => false);
+  const isVisible = async (locator) => (await locator.count()) > 0 && await locator.isVisible({ timeout: 250 }).catch(() => false);
+  while (completedActions < maxActions && Date.now() - startedAt < maxDurationMs) {
+    const selects = page.locator('select');
+    const declare = page.getByRole('button', { name: '宣言', exact: true });
+    const pass = page.getByRole('button', { name: 'パス', exact: true });
+    const playable = page.locator('[data-hand-card].playable');
+    const negri = page.getByRole('button', { name: 'ネグリ', exact: true });
+
+    if (await selects.count() >= 2 && await isEnabled(selects.nth(0))) {
+      const trumpOptions = await selects.nth(0).locator('option').evaluateAll((options) =>
+        options.map((option) => option.value).filter(Boolean),
+      );
+      const pairOptions = await selects.nth(1).locator('option').evaluateAll((options) =>
+        options.map((option) => option.value).filter(Boolean),
+      );
+      if (trumpOptions[0] && pairOptions[0]) {
+        await selects.nth(0).selectOption(trumpOptions[0]);
+        await selects.nth(1).selectOption(pairOptions[0]);
+        if (await isEnabled(declare)) {
+          await declare.click();
+          completedActions += 1;
+          await page.waitForTimeout(900);
+          continue;
+        }
+      }
+    }
+
+    if (await isEnabled(pass)) {
+      await pass.click();
+      completedActions += 1;
+      await page.waitForTimeout(900);
+      continue;
+    }
+
+    if (await isVisible(negri) && await playable.count()) {
+      await playable.first().click();
+      await negri.click();
+      completedActions += 1;
+      await page.waitForTimeout(900);
+      continue;
+    }
+
+    if (await playable.count()) {
+      await playable.first().click();
+      const play = page.getByRole('button', { name: 'プレイ', exact: true });
+      if (await isVisible(play)) {
+        await play.click();
+        completedActions += 1;
+        await page.waitForTimeout(900);
+        continue;
+      }
+    }
+
+    await page.waitForTimeout(900);
+  }
+  console.log(`Demo actions completed: ${completedActions}/${maxActions}`);
+};
+
 try {
   const url = `${baseUrl}${spec.route}`;
   let loaded = false;
@@ -117,6 +184,18 @@ try {
     if (step.action === 'clickRole' && typeof step.role === 'string' && typeof step.name === 'string') {
       await page.getByRole(step.role, { name: step.name }).first().click({ timeout: 15_000 });
       await page.waitForTimeout(700);
+      continue;
+    }
+    if (step.action === 'fill' && typeof step.placeholder === 'string' && typeof step.value === 'string') {
+      await page.getByPlaceholder(step.placeholder).first().fill(resolveStepValue(step.value), { timeout: 15_000 });
+      continue;
+    }
+    if (step.action === 'select' && Number.isInteger(step.index) && typeof step.value === 'string') {
+      await page.locator('select').nth(step.index).selectOption(resolveStepValue(step.value), { timeout: 15_000 });
+      continue;
+    }
+    if (step.action === 'playDemo') {
+      await runPlayDemo(Number.isInteger(step.maxActions) ? step.maxActions : 8, Number.isInteger(step.maxDurationMs) ? step.maxDurationMs : 90_000);
       continue;
     }
     if (step.action === 'wait' && Number.isFinite(step.ms)) {
