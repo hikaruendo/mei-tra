@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { GameInfo } from '@/components/game/GameInfo';
+import type React from 'react';
 import type { TeamScores } from '@/types/game.types';
 
 jest.mock('next-intl', () => ({
@@ -23,11 +24,15 @@ jest.mock('@/components/shared/ConfirmModal', () => ({
   ConfirmModal: () => null,
 }));
 
-const renderGameInfo = (teamScores: TeamScores) =>
+const renderGameInfo = (
+  teamScores: TeamScores,
+  props: Partial<React.ComponentProps<typeof GameInfo>> = {},
+) =>
   render(
     <GameInfo
       pointsToWin={5}
       teamScores={teamScores}
+      {...props}
     />,
   );
 
@@ -68,6 +73,30 @@ describe('GameInfo', () => {
       '3/5',
     );
     expect(screen.getByRole('meter', { name: 'Black team' })).toHaveAttribute(
+      'aria-valuetext',
+      '1/5',
+    );
+  });
+
+  it('uses custom team names without changing backend team order', () => {
+    renderGameInfo(
+      {
+        0: { deal: 0, blow: 0, play: 3, total: 3 },
+        1: { deal: 0, blow: 0, play: 1, total: 1 },
+      },
+      {
+        teamNames: {
+          0: '東軍',
+          1: '西軍',
+        },
+      },
+    );
+
+    expect(screen.getByRole('meter', { name: '東軍' })).toHaveAttribute(
+      'aria-valuetext',
+      '3/5',
+    );
+    expect(screen.getByRole('meter', { name: '西軍' })).toHaveAttribute(
       'aria-valuetext',
       '1/5',
     );

@@ -47,6 +47,7 @@ import { SpectatorGatewayEffectsService } from './services/spectator-gateway-eff
 import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
+import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { GameEventLogService } from './services/game-event-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
@@ -214,6 +215,7 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
     ReconnectionUseCase,
     ModeratePlayerUseCase,
     ShuffleTeamsUseCase,
+    UpdateTeamNamesUseCase,
   ],
   exports: ['IActivityTrackerService', 'IGetUserRecentGameHistoryUseCase'],
 })

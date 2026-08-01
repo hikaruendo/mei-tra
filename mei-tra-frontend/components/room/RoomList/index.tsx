@@ -179,7 +179,7 @@ export const RoomList: React.FC<RoomListProps> = ({
             return (
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
-                  <h3>{room.name}</h3>
+                  <h3 title={room.name}>{room.name}</h3>
                   <p>{t('room.players')}: {actualPlayerCount}/{room.settings.maxPlayers}</p>
                   <p className={`${styles.status} ${getStatusClass(room.status)}`}>
                     {t('room.status')}: {getStatusText(room.status, t)}
@@ -190,7 +190,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                         key={`${player.playerId}-${index}`}
                         className={styles.playerItem}
                       >
-                        <span className={styles.playerName}>{player.name}</span>
+                        <span className={styles.playerName} title={player.name}>{player.name}</span>
                         {player.isHost && <span className={styles.hostLabel}>{t('room.host')}</span>}
                       </li>
                     ))}

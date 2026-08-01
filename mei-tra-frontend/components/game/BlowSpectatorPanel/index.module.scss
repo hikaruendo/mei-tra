@@ -101,6 +101,7 @@
 .historyItem {
   justify-content: space-between;
   gap: 0.5rem;
+  min-width: 0;
   padding: 0.25rem 0.4rem;
   border-radius: var(--mt-radius);
   background: var(--mt-surface-raised-2);
@@ -127,8 +128,10 @@
 }
 
 .declarationValue {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .trump {

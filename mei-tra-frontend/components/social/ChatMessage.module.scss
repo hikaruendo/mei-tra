@@ -11,6 +11,7 @@
 .message {
   display: flex;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .avatar {
@@ -46,15 +47,22 @@
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .senderName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   font-weight: 500;
   color: var(--mt-text-primary);
   font-size: typography.scale(0.875rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timestamp {
+  flex: 0 0 auto;
   font-size: typography.scale(0.75rem);
   color: var(--mt-text-muted);
 }
@@ -64,4 +72,5 @@
   font-size: typography.scale(0.875rem);
   margin-top: 0.25rem;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }

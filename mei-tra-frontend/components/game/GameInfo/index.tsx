@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { TeamScores } from '@/types/game.types';
+import { Team, TeamNames, TeamScores } from '@/types/game.types';
 import styles from './index.module.scss';
 import { useTranslations } from 'next-intl';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 
 type ScoreStatus = 'normal' | 'leading' | 'reach' | 'win';
 
 interface GameInfoProps {
   teamScores: TeamScores;
   pointsToWin: number;
+  teamNames?: TeamNames;
   actionSlot?: (onLeaveRequest: () => void) => React.ReactNode;
   onLeave?: () => void;
 }
@@ -16,14 +18,17 @@ interface GameInfoProps {
 export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   pointsToWin,
+  teamNames,
   actionSlot,
   onLeave,
 }) => {
   const t = useTranslations();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const getTeamLabel = (teamNumber: number) =>
-    t(teamNumber === 0 ? 'gameInfo.teamRed' : 'gameInfo.teamBlack');
+  const getTeamLabel = (teamNumber: Team) =>
+    getTeamDisplayName(teamNumber, teamNames, (team) =>
+      t(team === 0 ? 'gameInfo.teamRed' : 'gameInfo.teamBlack'),
+    );
   const getScoreProgress = (score: number) => {
     if (pointsToWin <= 0) {
       return 0;
@@ -56,7 +61,7 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         return null;
     }
   };
-  const scoreTeams = [0, 1].map((teamNumber) => {
+  const scoreTeams = ([0, 1] as Team[]).map((teamNumber) => {
     const score = teamScores[teamNumber].total;
     const opposingScore = teamScores[teamNumber === 0 ? 1 : 0].total;
     const status = getScoreStatus(score, opposingScore);

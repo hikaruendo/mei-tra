@@ -34,6 +34,7 @@ jest.mock('next-intl', () => ({
       roundTableBlower: '吹き手',
       roundTableBid: '宣言',
       roundTableScore: '得点',
+      'actionTypes.card_played': 'カードプレイ',
       teamRed: 'チーム赤',
       teamBlack: 'チーム黒',
       roundInProgress: '進行中',
@@ -264,5 +265,74 @@ describe('GameHistoryDock', () => {
     expect(blackScore).not.toBeNull();
     expect(within(redScore as HTMLElement).getByText('+1')).toBeInTheDocument();
     expect(within(blackScore as HTMLElement).getByText('+4')).toBeInTheDocument();
+  });
+
+  it('shows detailed replay events on the profile history page', () => {
+    mockUseGameHistory.mockReturnValue({
+      replay: {
+        roomId: 'room-123',
+        totalEntries: 3,
+        rounds: [
+          {
+            roundNumber: 1,
+            startedAt: new Date('2026-07-26T00:00:00.000Z'),
+            endedAt: new Date('2026-07-26T00:03:00.000Z'),
+            actionTypes: ['play_phase_started', 'card_played', 'round_completed'],
+            playerIds: ['player-1'],
+            entries: [],
+            events: [
+              {
+                id: 'play-started-1',
+                timestamp: new Date('2026-07-26T00:01:00.000Z'),
+                actionType: 'play_phase_started',
+                playerId: 'player-1',
+                roundNumber: 1,
+                gamePhase: 'play',
+                kind: 'blow',
+                summary: '',
+                details: {},
+                actionData: {},
+                detailItems: [],
+              },
+              {
+                id: 'card-played-1',
+                timestamp: new Date('2026-07-26T00:02:00.000Z'),
+                actionType: 'card_played',
+                playerId: 'player-1',
+                roundNumber: 1,
+                gamePhase: 'play',
+                kind: 'card',
+                summary: '',
+                details: {},
+                actionData: {},
+                detailItems: [],
+              },
+              {
+                id: 'score-1',
+                timestamp: new Date('2026-07-26T00:03:00.000Z'),
+                actionType: 'round_completed',
+                playerId: null,
+                roundNumber: 1,
+                gamePhase: 'score',
+                kind: 'round',
+                summary: '',
+                details: {},
+                actionData: {},
+                detailItems: [],
+              },
+            ],
+          },
+        ],
+      },
+      summary: null,
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+
+    render(<GameHistoryDock {...baseProps} gameStarted={false} variant="page" />);
+
+    expect(screen.getByText('カードプレイ')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });

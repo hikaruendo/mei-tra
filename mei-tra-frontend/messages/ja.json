@@ -17,8 +17,8 @@
   "gameInfo": {
     "reach": "リーチ",
     "win": "WIN",
-    "teamRed": "チーム赤",
-    "teamBlack": "チーム黒"
+    "teamRed": "赤",
+    "teamBlack": "黒"
   },
   "nav": {
     "rooms": "ルーム一覧",
@@ -293,7 +293,12 @@
     },
     "shuffleTeams": "シャッフル",
     "fillWithCOM": "COM追加",
-    "removePlayer": "退出させる"
+    "removePlayer": "退出させる",
+    "teamNames": "チーム名",
+    "editTeamNames": "編集",
+    "teamRedName": "赤",
+    "teamBlackName": "黒",
+    "saveTeamNames": "保存"
   },
   "game": {
     "initializing": "ゲームを初期化中...",
@@ -307,8 +312,8 @@
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
     "orderButton": "強さ順",
-    "teamRed": "チーム赤",
-    "teamBlack": "チーム黒",
+    "teamRed": "赤",
+    "teamBlack": "黒",
     "phaseResult": "{teamName} が {phase} フェーズに勝利しました",
     "phaseNames": {
       "deal": "配布",
@@ -372,8 +377,8 @@
   "scoreBoard": {
     "round": "ラウンド",
     "team": "チーム",
-    "teamRed": "チーム赤",
-    "teamBlack": "チーム黒",
+    "teamRed": "赤",
+    "teamBlack": "黒",
     "points": "ポイント",
     "thisRound": "今ラウンド:",
     "declared": "宣言:",
@@ -419,8 +424,8 @@
     "roundTableBid": "宣言",
     "roundTableScore": "得点",
     "setCount": "{count}組",
-    "teamRed": "チーム赤",
-    "teamBlack": "チーム黒",
+    "teamRed": "赤",
+    "teamBlack": "黒",
     "roundInProgress": "進行中",
     "actionFilter": "アクション",
     "allActions": "全アクション",

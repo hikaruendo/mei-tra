@@ -1,4 +1,4 @@
-import type { PlayerContract, Team } from './game';
+import type { PlayerContract, Team, TeamNames } from './game';
 
 export type RoomStatusContract =
   | 'waiting'
@@ -20,6 +20,13 @@ export interface RoomSettingsContract {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
+  teamNames?: TeamNames;
+}
+
+export interface UpdateTeamNamesPayload {
+  roomId: string;
+  playerId: string;
+  teamNames: TeamNames;
 }
 
 export interface RoomContract {

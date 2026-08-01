@@ -25,6 +25,7 @@ jest.mock('next-intl', () => ({
       },
       blowControls: {
         tra: 'No Tra',
+        daiya: 'Daiya (♦)',
       },
     };
 
@@ -212,6 +213,19 @@ describe('PlayerHand', () => {
     });
 
     expect(screen.getByText('No Tra')).toHaveClass('declarationSuit');
+  });
+
+  it('omits the suit symbol from the declaration badge', () => {
+    renderPlayerHand({
+      currentHighestDeclaration: {
+        playerId: 'player-2',
+        trumpType: 'daiya',
+        numberOfPairs: 7,
+      },
+    });
+
+    expect(screen.getByText('Daiya')).toHaveClass('declarationSuit');
+    expect(screen.queryByText('Daiya (♦)')).not.toBeInTheDocument();
   });
 
   it('shows a black team badge for team one', () => {

@@ -31,7 +31,7 @@
 
 .gameInfoScoreContent {
   display: grid;
-  grid-template-columns: minmax(0, 5rem) auto;
+  grid-template-columns: minmax(0, 140px) auto;
   height: 100%;
   align-items: center;
   justify-content: flex-start;
@@ -110,16 +110,23 @@
 }
 
 .gameInfoScoreTeam {
+  display: block;
   width: 100%;
   max-width: 100%;
+  min-height: 1.05rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid color-mix(in srgb, currentColor 58%, var(--mt-border-hairline));
+  border-radius: 999px;
+  background: var(--mt-surface-raised);
+  box-sizing: border-box;
   min-width: 0;
   justify-self: end;
   overflow: hidden;
   color: var(--mt-text-secondary);
-  font-size: typography.scale(0.82rem);
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: right;
+  font-size: typography.scale(0.62rem);
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -207,7 +214,7 @@
   }
 
   .gameInfoContent {
-    padding-right: 10rem;
+    padding-right: 3.25rem;
     flex-basis: auto;
   }
 
@@ -221,7 +228,7 @@
   }
 
   .gameInfoScoreContent {
-    grid-template-columns: minmax(3.5rem, 4.75rem) auto;
+    grid-template-columns: minmax(0, 8.5rem) auto;
     column-gap: 0.4rem;
   }
 
@@ -292,6 +299,6 @@
 
 @media (max-width: 420px) {
   .gameInfoContent {
-    padding-right: 9.75rem;
+    padding-right: 3rem;
   }
 }

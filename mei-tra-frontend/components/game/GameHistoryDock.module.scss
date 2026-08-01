@@ -24,6 +24,11 @@
   gap: 0.75rem;
   padding: 0.9rem 1rem 0.75rem;
   border-bottom: 1px solid var(--mt-border-hairline);
+  min-width: 0;
+}
+
+.header > div:first-child {
+  min-width: 0;
 }
 
 .title {
@@ -36,6 +41,7 @@
   margin: 0.25rem 0 0;
   font-size: 0.75rem;
   color: var(--mt-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .actions {
@@ -114,7 +120,10 @@
 
 .scoreComparisonLabel,
 .scoreComparisonValue {
+  min-width: 0;
+  overflow: hidden;
   font-size: 0.72rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -298,6 +307,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .roundSectionTitle {
@@ -314,6 +324,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .roundSectionBody {
@@ -386,7 +397,10 @@
   border-bottom: 1px solid var(--mt-border-hairline);
   text-align: left;
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .roundTable thead th {
@@ -434,7 +448,7 @@
 
 .roundTeamScore {
   display: grid;
-  grid-template-columns: max-content auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 0.3rem;
   justify-content: start;
@@ -506,6 +520,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .eventBadges {
@@ -516,6 +531,7 @@
 }
 
 .eventTimestamp {
+  flex: 0 0 auto;
   font-size: 0.7rem;
   color: var(--mt-text-muted);
 }
@@ -543,6 +559,7 @@
 .eventSummary {
   font-size: 0.78rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .eventDetails {
@@ -554,12 +571,14 @@
 .detailChip {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   border-radius: 8px;
   border: 1px solid var(--mt-border-hairline);
   background: var(--mt-surface-raised-2);
   padding: 0.24rem 0.45rem;
   font-size: 0.68rem;
   color: var(--mt-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .state,
@@ -582,7 +601,8 @@
 
 .minimizedButton {
   padding: 0.55rem 0.9rem;
-  font-size: 0.78rem;
+  font-size: typography.scale(0.875rem);
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -619,8 +639,7 @@
   }
 
   .breakdownTitle,
-  .eventSummary,
-  .minimizedButton {
+  .eventSummary {
     font-size: typography.scale(0.78rem);
   }
 

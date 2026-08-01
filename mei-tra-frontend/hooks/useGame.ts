@@ -40,6 +40,8 @@ import {
   Field,
   GamePhase,
   Player,
+  Team,
+  TeamNames,
   TeamScores,
   TrumpType,
   fromPlayerContracts,
@@ -47,6 +49,7 @@ import {
 import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
+import { getTeamDisplayName } from '../lib/utils/teamLabels';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -216,6 +219,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idlePlayerIds, setIdlePlayerIds] = useState<string[]>([]);
   const [disconnectedPlayerIds, setDisconnectedPlayerIds] = useState<string[]>([]);
 
@@ -241,8 +245,17 @@ export const useGame = () => {
     setDisconnectedPlayerIds([]);
     setPlayers([]);
     setTeamScores(createEmptyTeamScores());
+    setTeamNames(undefined);
     sessionStorage.removeItem('roomId');
   }, []);
+
+  const getTeamLabel = useCallback(
+    (team: Team) =>
+      getTeamDisplayName(team, teamNames, (fallbackTeam) =>
+        t(fallbackTeam === 0 ? 'teamRed' : 'teamBlack'),
+      ),
+    [teamNames, t],
+  );
 
   const syncDisconnectedPlayerIdsFromPlayers = useCallback(
     (nextPlayers: Array<Pick<Player, 'playerId' | 'isCOM' | 'socketId'>>) => {
@@ -492,6 +505,7 @@ export const useGame = () => {
         }
 
         setCurrentHostId(nextRoom.hostId);
+        setTeamNames(nextRoom.settings.teamNames);
         if (selfPlayerId) {
           setCurrentPlayerId(selfPlayerId);
         }
@@ -528,6 +542,7 @@ export const useGame = () => {
         }
 
         setCurrentHostId(nextRoom.hostId);
+        setTeamNames(nextRoom.settings.teamNames);
         if (selfPlayerId) {
           setCurrentPlayerId(selfPlayerId);
         }
@@ -545,6 +560,7 @@ export const useGame = () => {
         roomId,
         hostId,
         pointsToWin,
+        teamNames,
         isSpectator,
       }: GameStatePayload) => {
         const nextPlayers = mergePlayersPreservingIdentity(
@@ -576,6 +592,7 @@ export const useGame = () => {
         }
         setGameStarted(true);
         setPointsToWin(pointsToWin);
+        setTeamNames(teamNames);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
             nextPlayers.some((player) => player.playerId === playerId),
@@ -640,6 +657,7 @@ export const useGame = () => {
         roomId,
         players: playerContracts,
         pointsToWin,
+        teamNames,
       }: GameStartedPayload) => {
         const nextPlayers = mergePlayersPreservingIdentity(
           players,
@@ -674,6 +692,7 @@ export const useGame = () => {
 
         setCurrentRoomId(roomId);
         setPointsToWin(pointsToWin);
+        setTeamNames(teamNames);
         setGameStarted(true);
         setGamePhase('blow');
       },
@@ -699,7 +718,7 @@ export const useGame = () => {
         if (winner !== null && nextPhase !== 'play' && nextPhase !== 'blow') {
           setNotification({
             message: t('phaseResult', {
-              teamName: t(winner === 0 ? 'teamRed' : 'teamBlack'),
+              teamName: getTeamLabel(winner),
               phase: t(`phaseNames.${nextPhase}` as 'phaseNames.deal'),
             }),
             type: 'success',
@@ -723,8 +742,8 @@ export const useGame = () => {
         }
         gameOverShownRef.current = gameOverKey;
 
-        const teamRedName = t('teamRed');
-        const teamBlackName = t('teamBlack');
+        const teamRedName = getTeamLabel(0);
+        const teamBlackName = getTeamLabel(1);
         const winnerTeam = winner === 'Team 0' ? teamRedName : teamBlackName;
         setGameOverModal({
           title: t('gameOver.title'),
@@ -1073,6 +1092,7 @@ export const useGame = () => {
     shouldSkipLegacyUpdatePlayers,
     resetRoomState,
     syncDisconnectedPlayerIdsFromPlayers,
+    getTeamLabel,
     t,
     tStatus,
     user?.id,
@@ -1124,6 +1144,15 @@ export const useGame = () => {
     socket.emit('shuffle-teams', {
       roomId: currentRoomId,
       playerId: currentPlayerId,
+    });
+  };
+
+  const updateTeamNames = (nextTeamNames: TeamNames) => {
+    if (!socket || !currentRoomId || !currentPlayerId) return;
+    socket.emit('update-team-names', {
+      roomId: currentRoomId,
+      playerId: currentPlayerId,
+      teamNames: nextTeamNames,
     });
   };
 
@@ -1253,8 +1282,10 @@ export const useGame = () => {
     currentRoomId,
     isHost,
     isSpectator,
+    teamNames,
     startGame,
     shuffleTeams,
+    updateTeamNames,
     removePlayerFromRoom,
     replacePlayerWithCOM,
     idlePlayerIds,

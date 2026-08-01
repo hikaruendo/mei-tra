@@ -30,11 +30,16 @@
 }
 
 .currentTurn {
-  display: inline-block;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.5rem 1rem;
   border-radius: var(--mt-radius);
+  overflow: hidden;
   font-size: typography.scale(0.875rem);
   line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .currentTurn.active {
@@ -161,12 +166,32 @@
 }
 
 .declarationItem {
+  display: flex;
+  align-items: baseline;
+  gap: 0.18rem;
   background-color: var(--mt-surface-raised-2);
   color: var(--mt-text-primary);
   padding: 0.35rem 0.5rem;
   border-radius: var(--mt-radius);
   font-size: typography.scale(0.875rem);
   line-height: 1.4;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.declarationPlayerName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.declarationSeparator,
+.declarationText {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .declarationItem.pass {

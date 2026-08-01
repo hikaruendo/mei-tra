@@ -143,6 +143,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         fields: state.playState?.fields,
         roomId,
         pointsToWin: room.settings.pointsToWin,
+        teamNames: room.settings.teamNames,
       },
     };
   }

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
+import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration, TeamNames } from '@/types/game.types';
 import { CardFace } from '@/components/game/CardFace';
 import { CompletedFields, TakenCardPreview } from '@/components/game/CompletedFields';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 
 const HAND_CARD_METRICS = {
   width: 80,
@@ -44,6 +45,7 @@ interface PlayerHandProps {
   onSpectatorPerspectiveChange?: (playerId: string) => void;
   onReplaceWithCOM?: (playerId: string) => void;
   takenCount?: number;
+  teamNames?: TeamNames;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -68,6 +70,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   onSpectatorPerspectiveChange,
   onReplaceWithCOM,
   takenCount = 0,
+  teamNames,
 }) => {
   const t = useTranslations('playerHand');
   const tGameInfo = useTranslations('gameInfo');
@@ -109,7 +112,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : locale === 'ja'
       ? `${takenCount}組`
       : `${takenCount} sets`;
-  const teamLabel = tGameInfo(player.team === 0 ? 'teamRed' : 'teamBlack');
+  const teamLabel = getTeamDisplayName(player.team, teamNames, (team) =>
+    tGameInfo(team === 0 ? 'teamRed' : 'teamBlack'),
+  );
 
   useEffect(() => {
     if (
@@ -190,9 +195,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return;
     }
 
-    const targetElement = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-hand-card]');
+    const elementAtPointer =
+      typeof document.elementFromPoint === 'function'
+        ? document.elementFromPoint(event.clientX, event.clientY)
+        : event.target instanceof Element
+          ? event.target
+          : null;
+    const targetElement = elementAtPointer?.closest<HTMLElement>('[data-hand-card]');
     const targetCard = targetElement?.dataset.handCard;
 
     if (!targetElement || !targetCard || targetCard === draggingCard) {
@@ -426,7 +435,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           className={styles.declarationSuit}
           data-trump={playerDeclaration.trumpType}
         >
-          {tBlow(playerDeclaration.trumpType)}
+          {tBlow(playerDeclaration.trumpType).replace(/（[^）]*）|\([^)]*\)/g, '').trim()}
         </span>
         <span className={styles.declarationPairs}>{playerDeclaration.numberOfPairs}</span>
       </span>

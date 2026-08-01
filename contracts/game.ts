@@ -1,5 +1,7 @@
 export type Team = 0 | 1;
 
+export type TeamNames = Partial<Record<Team, string>>;
+
 export type TransportGamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
@@ -87,6 +89,7 @@ export interface GameStatePayload {
   roomId: string;
   hostId?: string;
   pointsToWin: number;
+  teamNames?: TeamNames;
 }
 
 export interface SyncGameStatePayload {
@@ -192,4 +195,5 @@ export interface GameStartedPayload {
   roomId: string;
   players: PlayerContract[];
   pointsToWin: number;
+  teamNames?: TeamNames;
 }

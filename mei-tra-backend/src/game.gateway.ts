@@ -15,6 +15,7 @@ import type {
   RevealAgariPayload,
   SyncGameStatePayload,
 } from '@contracts/game';
+import type { UpdateTeamNamesPayload } from '@contracts/room';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { TrumpType } from './types/game.types';
@@ -54,6 +55,7 @@ import { TurnMonitorService } from './services/turn-monitor.service';
 import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
+import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { Room } from './types/room.types';
 import { toRoomContract, toRoomContracts } from './types/room-adapters';
 import {
@@ -128,6 +130,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly reconnectionUseCase: ReconnectionUseCase,
     private readonly moderatePlayerUseCase: ModeratePlayerUseCase,
     private readonly shuffleTeamsUseCase: ShuffleTeamsUseCase,
+    private readonly updateTeamNamesUseCase: UpdateTeamNamesUseCase,
     private readonly joinRoomGatewayEffectsService: JoinRoomGatewayEffectsService,
     private readonly disconnectGatewayEffectsService: DisconnectGatewayEffectsService,
     private readonly roomUpdateGatewayEffectsService: RoomUpdateGatewayEffectsService,
@@ -1180,6 +1183,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: true };
     } catch (error) {
       console.error('Error in handleShuffleTeams:', error);
+      client.emit('error-message', 'Internal server error');
+      return { success: false };
+    }
+  }
+
+  @SubscribeMessage('update-team-names')
+  async handleUpdateTeamNames(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: UpdateTeamNamesPayload,
+  ): Promise<{ success: boolean }> {
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(
+        client,
+        'update team names',
+      )
+    ) {
+      return { success: false };
+    }
+
+    try {
+      const result = await this.updateTeamNamesUseCase.execute(data);
+      if (!result.success || !result.updatedRoom) {
+        client.emit(
+          'error-message',
+          result.error || 'Failed to update team names',
+        );
+        return { success: false };
+      }
+
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleUpdateTeamNames:', error);
       client.emit('error-message', 'Internal server error');
       return { success: false };
     }

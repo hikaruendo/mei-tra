@@ -226,15 +226,22 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 0.18rem;
   align-items: center;
   justify-content: center;
+  text-align: center;
   background: var(--mt-surface-raised-2);
   border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
-  padding: 4px;
+  box-sizing: border-box;
+  padding: 0.25rem;
   min-width: 132px;
+  max-width: 100%;
   backdrop-filter: blur(2px);
+}
+
+.playerInfoContainer > * {
+  max-width: 100%;
 }
 
 .playerInfoBadges {
@@ -249,32 +256,29 @@
 }
 
 .teamBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 1.05rem;
-  border: 1px solid var(--mt-border-hairline);
-  border-radius: 999px;
-  background: var(--mt-surface-raised);
+  display: block;
+  flex: 0 1 auto;
+  border: 0;
+  background: transparent;
+  box-sizing: border-box;
   color: var(--mt-text-primary);
-  font-size: typography.scale(0.62rem);
-  font-weight: 800;
-  line-height: 1;
-  padding: 0.1rem 0.3rem;
+  font-size: typography.scale(0.72rem);
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0;
   min-width: 0;
-  max-width: 100%;
+  max-width: min(100px, 100%);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: center;
 }
 
 .teamRedBadge {
-  border-color: color-mix(in srgb, var(--mt-danger) 60%, var(--mt-border-hairline));
   color: var(--mt-danger);
 }
 
 .teamBlackBadge {
-  border-color: var(--mt-team-black);
   color: var(--mt-team-black);
 }
 
@@ -335,7 +339,10 @@
 
 .playerAvatar{
   position: relative;
-  width: calc(100% - 8px);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
 }
 
 .avatarTurnBadge {
@@ -619,8 +626,9 @@
 .playerPosition.top .playerInfoContainer,
 .playerPosition.left .playerInfoContainer,
 .playerPosition.right .playerInfoContainer {
-  min-width: 5.5rem;
-  padding: 0.16rem;
+  min-width: 4.9rem;
+  max-width: 8.75rem;
+  padding: 0.16rem 0.22rem;
   background: var(--mt-surface-raised-2);
 }
 
@@ -888,7 +896,9 @@
 
   .teamBadge {
     flex: 0 1 auto;
+    width: auto;
     min-width: 0;
+    max-width: 100%;
     font-size: typography.scale(0.52rem);
     padding-inline: 0.14rem;
   }
