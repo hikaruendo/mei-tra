@@ -90,7 +90,7 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
 
   const compactSummaryContent = (
     <>
-      <span className={styles.compactDisplayName}>{displayName}</span>
+      <span className={styles.compactDisplayName} title={displayName}>{displayName}</span>
       {secondaryEmail ? (
         <span className={styles.compactMeta}>{secondaryEmail}</span>
       ) : null}
@@ -103,7 +103,7 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
         {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
       </div>
       <div className={styles.userInfo}>
-        <span className={styles.displayName}>{displayName}</span>
+        <span className={styles.displayName} title={displayName}>{displayName}</span>
         <span className={styles.profileEditHint}>
           {t('edit')}
         </span>

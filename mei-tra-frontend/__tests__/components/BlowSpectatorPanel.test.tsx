@@ -88,6 +88,17 @@ describe('BlowSpectatorPanel', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
+  it('puts player names in truncatable spans', () => {
+    renderPanel();
+
+    const historyName = screen.getAllByText('Player 1').find((element) =>
+      element.className.includes('playerName'),
+    );
+
+    expect(historyName).toBeDefined();
+    expect(historyName).toHaveAttribute('title', 'Player 1');
+  });
+
   it('updates from a later socket snapshot without exposing controls', () => {
     const { rerender } = renderPanel({
       blowActionHistory: [],

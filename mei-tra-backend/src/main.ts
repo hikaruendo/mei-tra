@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as Sentry from '@sentry/nestjs';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { isAllowedFrontendOrigin } from './config/frontend-origins';
 
 async function bootstrap() {
   if (process.env.SENTRY_DSN) {
@@ -13,12 +15,17 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   app.enableCors({
-    origin:
-      process.env.NODE_ENV === 'development'
-        ? process.env.FRONTEND_URL_DEV
-        : process.env.FRONTEND_URL_PROD,
+    origin: (origin, callback) => {
+      if (!origin || isAllowedFrontendOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Origin not allowed by CORS'));
+    },
     credentials: true,
   });
 

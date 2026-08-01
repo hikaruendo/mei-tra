@@ -45,6 +45,7 @@ export class StartGameGatewayEffectsService {
       roomId,
       players: transportPlayers,
       pointsToWin,
+      teamNames: room?.settings.teamNames,
     };
     const roomEvents = room
       ? await this.roomUpdateGatewayEffectsService.buildRoomEvents({

@@ -2,6 +2,8 @@ import type { PlayerContract } from '@contracts/game';
 
 export type Team = 0 | 1;
 
+export type TeamNames = Partial<Record<Team, string>>;
+
 export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
 
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';

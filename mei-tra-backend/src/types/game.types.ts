@@ -1,5 +1,7 @@
 export type Team = 0 | 1;
 
+export type TeamNames = Partial<Record<Team, string>>;
+
 export interface PlayerIdentity {
   playerId: string; // Table participant identifier (future participantId equivalent)
   name: string;

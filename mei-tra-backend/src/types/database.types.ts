@@ -14,6 +14,10 @@ export interface Database {
             teamAssignmentMethod: 'random' | 'host-choice';
             pointsToWin: number;
             allowSpectators: boolean;
+            teamNames?: {
+              0?: string;
+              1?: string;
+            };
           };
           created_at: string;
           updated_at: string;
@@ -31,6 +35,10 @@ export interface Database {
             teamAssignmentMethod?: 'random' | 'host-choice';
             pointsToWin?: number;
             allowSpectators?: boolean;
+            teamNames?: {
+              0?: string;
+              1?: string;
+            };
           };
           created_at?: string;
           updated_at?: string;
@@ -48,6 +56,10 @@ export interface Database {
             teamAssignmentMethod?: 'random' | 'host-choice';
             pointsToWin?: number;
             allowSpectators?: boolean;
+            teamNames?: {
+              0?: string;
+              1?: string;
+            };
           };
           created_at?: string;
           updated_at?: string;

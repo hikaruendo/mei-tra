@@ -342,6 +342,7 @@ export class ReconnectionUseCase {
         roomId,
         hostId: room.hostId,
         pointsToWin: state.pointsToWin,
+        teamNames: room.settings.teamNames,
       },
     };
   }

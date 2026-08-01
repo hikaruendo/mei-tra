@@ -17,8 +17,8 @@
   "gameInfo": {
     "reach": "Reach",
     "win": "WIN",
-    "teamRed": "Red team",
-    "teamBlack": "Black team"
+    "teamRed": "Red",
+    "teamBlack": "Black"
   },
   "nav": {
     "rooms": "Rooms",
@@ -293,7 +293,12 @@
     },
     "shuffleTeams": "Shuffle",
     "fillWithCOM": "Add COM",
-    "removePlayer": "Remove"
+    "removePlayer": "Remove",
+    "teamNames": "Teams",
+    "editTeamNames": "Edit",
+    "teamRedName": "Red",
+    "teamBlackName": "Black",
+    "saveTeamNames": "Save"
   },
   "game": {
     "initializing": "Initializing game...",
@@ -307,8 +312,8 @@
     "yourTurn": "Your turn",
     "waiting": "Waiting...",
     "orderButton": "Order",
-    "teamRed": "Red team",
-    "teamBlack": "Black team",
+    "teamRed": "Red",
+    "teamBlack": "Black",
     "phaseResult": "{teamName} won the {phase} phase",
     "phaseNames": {
       "deal": "deal",
@@ -372,8 +377,8 @@
   "scoreBoard": {
     "round": "Round",
     "team": "Team",
-    "teamRed": "Red team",
-    "teamBlack": "Black team",
+    "teamRed": "Red",
+    "teamBlack": "Black",
     "points": "points",
     "thisRound": "This round:",
     "declared": "Declared:",
@@ -419,8 +424,8 @@
     "roundTableBid": "Bid",
     "roundTableScore": "Score",
     "setCount": "{count, plural, one {# set} other {# sets}}",
-    "teamRed": "Red team",
-    "teamBlack": "Black team",
+    "teamRed": "Red",
+    "teamBlack": "Black",
     "roundInProgress": "In progress",
     "actionFilter": "Action",
     "allActions": "All actions",

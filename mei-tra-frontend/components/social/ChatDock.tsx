@@ -89,66 +89,64 @@ export function ChatDock({
     sendMessage(roomId, content);
   };
 
-  if (isMinimized) {
-    return (
-      <div className={styles.minimized}>
-        <button
-          onClick={() => setIsMinimized(false)}
-          className={styles.minimizedButton}
-        >
-          {t('title')} {messages.length > 0 && `(${messages.length})`}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className={`${styles.chatDock} ${placement === 'topbar' ? styles.topbar : ''} ${placement === 'menu' ? styles.menu : ''}`}
-      ref={chatRef}
-    >
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={`${styles.statusIndicator} ${isConnected ? styles.connected : styles.disconnected}`} />
-          <h3 className={styles.headerTitle}>{t('title')}</h3>
-        </div>
-        <button
-          onClick={() => setIsMinimized(true)}
-          className={styles.minimizeButton}
+    <div className={styles.chatShell} ref={chatRef}>
+      <button
+        onClick={() => setIsMinimized((current) => !current)}
+        className={`${styles.minimizedButton} ${!isMinimized ? styles.minimizedButtonActive : ''}`}
+        aria-expanded={!isMinimized}
+      >
+        {t('title')} {messages.length > 0 && `(${messages.length})`}
+      </button>
+
+      {!isMinimized && (
+        <div
+          className={`${styles.chatDock} ${placement === 'topbar' ? styles.topbar : ''} ${placement === 'menu' ? styles.menu : ''}`}
         >
-          <ChevronDownIcon className={styles.icon} />
-        </button>
-      </div>
-
-      {/* Messages */}
-      <div className={styles.messagesContainer}>
-        {messages.length === 0 ? (
-          <div className={styles.emptyState}>
-            {t('empty')}
+          {/* Header */}
+          <div className={styles.header}>
+            <div className={styles.headerLeft}>
+              <div className={`${styles.statusIndicator} ${isConnected ? styles.connected : styles.disconnected}`} />
+              <h3 className={styles.headerTitle}>{t('title')}</h3>
+            </div>
+            <button
+              onClick={() => setIsMinimized(true)}
+              className={styles.minimizeButton}
+            >
+              <ChevronDownIcon className={styles.icon} />
+            </button>
           </div>
-        ) : (
-          messages.map((msg) => (
-            <ChatMessage key={msg.message.id} message={msg.message} />
-          ))
-        )}
-        {typingUsers.size > 0 && (
-          <div className={styles.typingIndicator}>
-            {typingUsers.size === 1
-              ? t('typingOne')
-              : t('typingMany', { count: typingUsers.size })}
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Composer */}
-      <ChatComposer
-        onSend={handleSendMessage}
-        disabled={!isConnected}
-        connectingPlaceholder={t('connectingPlaceholder')}
-        inputPlaceholder={t('inputPlaceholder')}
-      />
+          {/* Messages */}
+          <div className={styles.messagesContainer}>
+            {messages.length === 0 ? (
+              <div className={styles.emptyState}>
+                {t('empty')}
+              </div>
+            ) : (
+              messages.map((msg) => (
+                <ChatMessage key={msg.message.id} message={msg.message} />
+              ))
+            )}
+            {typingUsers.size > 0 && (
+              <div className={styles.typingIndicator}>
+                {typingUsers.size === 1
+                  ? t('typingOne')
+                  : t('typingMany', { count: typingUsers.size })}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Composer */}
+          <ChatComposer
+            onSend={handleSendMessage}
+            disabled={!isConnected}
+            connectingPlaceholder={t('connectingPlaceholder')}
+            inputPlaceholder={t('inputPlaceholder')}
+          />
+        </div>
+      )}
     </div>
   );
 }

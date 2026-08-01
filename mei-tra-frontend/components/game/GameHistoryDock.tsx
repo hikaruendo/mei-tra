@@ -11,13 +11,15 @@ import type {
   GameHistoryReplayRound,
   GameHistorySummary,
 } from '@/types/game-history.types';
-import type { Player } from '@/types/game.types';
+import type { Player, Team, TeamNames } from '@/types/game.types';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 import styles from './GameHistoryDock.module.scss';
 
 interface GameHistoryDockProps {
   roomId: string;
   gameStarted: boolean;
   players?: Player[];
+  teamNames?: TeamNames;
   variant?: 'dock' | 'page';
   showOverview?: boolean;
   summaryOverride?: GameHistorySummary | null;
@@ -41,31 +43,6 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   game_over: 'actionTypes.game_over',
   player_stats_updated: 'actionTypes.player_stats_updated',
 } as const;
-
-function getRoundReplayEvents(round: GameHistoryReplayRound) {
-  const chronologicalEvents = [...round.events].sort(
-    (left, right) => left.timestamp.getTime() - right.timestamp.getTime(),
-  );
-  const blowEvent =
-    chronologicalEvents.find(
-      (event) => event.actionType === 'play_phase_started',
-    ) ??
-    [...chronologicalEvents]
-      .reverse()
-      .find((event) => event.actionType === 'blow_declared');
-  const scoreEvent = [...chronologicalEvents]
-    .reverse()
-    .find(
-      (event) =>
-        event.actionType === 'round_completed' ||
-        event.actionType === 'round_cancelled' ||
-        event.actionType === 'game_over',
-    );
-
-  return [blowEvent, scoreEvent].filter(
-    (event): event is GameHistoryReplayEvent => Boolean(event),
-  );
-}
 
 const extractScoreTotals = (
   value: Record<string, unknown> | null,
@@ -113,6 +90,7 @@ export function GameHistoryDock({
   roomId,
   gameStarted,
   players = [],
+  teamNames,
   variant = 'dock',
   showOverview = true,
   summaryOverride = null,
@@ -216,12 +194,10 @@ export function GameHistoryDock({
       return null;
     }
 
-    if (team === 0) {
-      return t('teamRed');
-    }
-
-    if (team === 1) {
-      return t('teamBlack');
+    if (team === 0 || team === 1) {
+      return getTeamDisplayName(team as Team, teamNames, (fallbackTeam) =>
+        t(fallbackTeam === 0 ? 'teamRed' : 'teamBlack'),
+      );
     }
 
     return t('teamValue', { team: team + 1 });
@@ -775,7 +751,7 @@ export function GameHistoryDock({
                           </div>
                         ) : null}
                         {renderEventList(
-                          getRoundReplayEvents(round).map((event) => ({
+                          chronologicalEvents.map((event) => ({
                             event,
                             roundNumber: round.roundNumber,
                           })),

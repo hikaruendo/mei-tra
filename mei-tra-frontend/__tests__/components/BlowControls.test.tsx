@@ -80,4 +80,15 @@ describe('BlowControls', () => {
     expect(historyTrumpLabel as HTMLElement).toBeInTheDocument();
     expect(historyTrumpLabel as HTMLElement).toHaveAttribute('data-trump', 'daiya');
   });
+
+  it('separates long player names from declaration text', () => {
+    renderBlowControls();
+
+    const playerName = screen.getByText('Player 1');
+    const historyItem = playerName.closest('div');
+
+    expect(playerName.className).toContain('declarationPlayerName');
+    expect(historyItem).toHaveAttribute('title', 'Player 1: Daiya 6 sets');
+    expect(screen.getByText(/6 sets/).className).toContain('declarationText');
+  });
 });

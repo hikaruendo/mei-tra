@@ -218,7 +218,10 @@ export function BlowControls({
     <div className={styles.blowControlsContainer}>
       <div className={styles.content}>
         <div className={styles.title}>
-          <div className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}>
+          <div
+            className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}
+            title={currentPlayerName ?? undefined}
+          >
             {t('currentTurn')} {currentPlayerName}
           </div>
         </div>
@@ -289,11 +292,18 @@ export function BlowControls({
 
               if (entry.type === 'pass') {
                 return (
-                  <div 
+                  <div
                     key={`pass-${entry.playerId}-${index}`}
                     className={`${styles.declarationItem} ${styles.pass}`}
+                    title={`${player.name}: ${t('passed')}`}
                   >
-                    {player.name}: {t('passed')}
+                    <span className={styles.declarationPlayerName}>
+                      {player.name}
+                    </span>
+                    <span className={styles.declarationSeparator}>:</span>
+                    <span className={styles.declarationText}>
+                      {t('passed')}
+                    </span>
                   </div>
                 );
               }
@@ -309,14 +319,20 @@ export function BlowControls({
                 <div
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
+                  title={`${player.name}: ${entry.trumpType ? t(entry.trumpType) : ''} ${formatSetOption(declaration.numberOfPairs)}`}
                 >
-                  {player.name}:{' '}
-                  {entry.trumpType ? (
-                    <span className={styles.trumpLabel} data-trump={entry.trumpType}>
-                      {t(entry.trumpType)}
-                    </span>
-                  ) : null}{' '}
-                  {formatSetOption(declaration.numberOfPairs)}
+                  <span className={styles.declarationPlayerName}>
+                    {player.name}
+                  </span>
+                  <span className={styles.declarationSeparator}>:</span>
+                  <span className={styles.declarationText}>
+                    {entry.trumpType ? (
+                      <span className={styles.trumpLabel} data-trump={entry.trumpType}>
+                        {t(entry.trumpType)}
+                      </span>
+                    ) : null}{' '}
+                    {formatSetOption(declaration.numberOfPairs)}
+                  </span>
                 </div>
               );
             })}
