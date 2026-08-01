@@ -5,9 +5,13 @@
 ## Demo evidence
 
 <!--
-The agent should update this JSON for UI changes. The capture workflow uses it
-to show the changed surface; it does not use a fixed screen list.
+The agent may update this JSON for UI changes when a precise interaction is
+known. If it is omitted, the capture workflow infers a public route from the
+PR's changed paths; it does not use a fixed screen list.
 Use media "none" for backend-only or non-demonstrable changes.
+
+Supported interaction steps include `fill`, `clickRole`, `wait`, and
+`playDemo` (which runs a bounded bidding/card-play sequence with COM players).
 -->
 <!-- x-demo:start -->
 {
