@@ -203,7 +203,7 @@
 .declarationSuit[data-trump='club'],
 .declarationSuit[data-trump='zuppe'],
 .declarationSuit[data-trump='tra'] {
-  color: var(--mt-card-ink);
+  color: var(--mt-team-black);
 }
 
 .declarationPairs {
@@ -515,30 +515,79 @@
 }
 
 .brokenButton{
-  position: absolute;
-  top: 46px;
-  right: -86px;
-  background-color: var(--mt-danger);
-  color: var(--mt-on-danger);
-  padding: 0.5rem 1rem;
-  border-radius: var(--mt-radius);
-  font-weight: bold;
-  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  width: 100%;
+  max-width: 8.5rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--mt-accent) 62%, var(--mt-border-hairline));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mt-accent) 24%, var(--mt-surface-raised));
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.7rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--mt-shadow-btn);
+  animation: broken-button-pulse 0.95s ease-in-out infinite;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+
+  &::before {
+    content: '↻';
+    flex: 0 0 auto;
+    font-size: typography.scale(0.82rem);
+    line-height: 1;
+  }
 
   &:hover{
-    background-color: var(--mt-danger);
-    filter: brightness(0.9);
+    border-color: var(--mt-accent);
+    background: color-mix(in srgb, var(--mt-accent) 28%, var(--mt-surface-raised));
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 8px var(--mt-accent-subtle);
   }
 
   &:active{
-    transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(0);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mt-accent);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes broken-button-pulse {
+  0%,
+  100% {
+    border-color: color-mix(in srgb, var(--mt-accent) 64%, var(--mt-border-hairline));
+    background: color-mix(in srgb, var(--mt-accent) 24%, var(--mt-surface-raised));
+    box-shadow: var(--mt-shadow-btn);
+    transform: scale(1);
+  }
+
+  50% {
+    border-color: var(--mt-accent);
+    background: color-mix(in srgb, var(--mt-accent) 52%, var(--mt-surface-raised));
+    box-shadow:
+      var(--mt-shadow-btn),
+      0 0 0 5px var(--mt-accent-subtle),
+      0 0 20px color-mix(in srgb, var(--mt-accent) 52%, transparent);
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brokenButton {
+    animation: none;
   }
 }
 
