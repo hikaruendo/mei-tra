@@ -515,30 +515,39 @@
 }
 
 .brokenButton{
-  position: absolute;
-  top: 46px;
-  right: -86px;
-  background-color: var(--mt-danger);
-  color: var(--mt-on-danger);
-  padding: 0.5rem 1rem;
-  border-radius: var(--mt-radius);
-  font-weight: bold;
-  margin-top: 0.5rem;
+  width: 100%;
+  max-width: 7.5rem;
+  min-height: 1.8rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 999px;
+  background: var(--mt-surface-raised);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.72rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--mt-shadow-btn);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 
   &:hover{
-    background-color: var(--mt-danger);
-    filter: brightness(0.9);
+    border-color: var(--mt-accent);
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 8px var(--mt-accent-subtle);
   }
 
   &:active{
-    transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(0);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mt-accent);
+    outline-offset: 2px;
   }
 }
 
