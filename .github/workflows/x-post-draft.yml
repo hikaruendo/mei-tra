@@ -156,7 +156,9 @@ jobs:
               pull_number: prNumber,
             });
             const mediaAvailable = process.env.MEDIA_AVAILABLE === 'true';
-            const mediaArtifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.MEDIA_RUN_ID}/artifacts`;
+            // The run page is stable in authenticated browsers; GitHub's
+            // artifact listing URL can redirect to a 404 suite page.
+            const mediaArtifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.MEDIA_RUN_ID}`;
             const openIssues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -196,7 +198,7 @@ jobs:
               'Edit the copy between the markers. Keep it concise, user-facing, and under X’s post limit.',
               'Do not include private implementation details, commit hashes, or unannounced work.',
               mediaAvailable
-                ? `A capture is attached as the GitHub Actions artifact [${process.env.MEDIA_ARTIFACT_NAME}](${mediaArtifactUrl}). Review it before publishing.`
+                ? `A capture is attached to the GitHub Actions run [${process.env.MEDIA_ARTIFACT_NAME}](${mediaArtifactUrl}). Open the run and download the artifact before publishing.`
                 : 'No capture was generated. Add media manually only if it accurately demonstrates this change.',
               '',
               '<!-- x-post:start -->',
