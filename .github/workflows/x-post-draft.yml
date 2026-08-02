@@ -43,6 +43,9 @@ jobs:
           cd mei-tra-frontend
           npx playwright install --with-deps chromium
 
+      - name: Install media conversion tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Save the PR body for the capture script
         id: pr
         uses: actions/github-script@v7
