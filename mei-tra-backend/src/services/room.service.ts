@@ -684,6 +684,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   async getRoomGameState(roomId: string): Promise<GameStateService> {
     let gameState = this.roomGameStates.get(roomId);
     if (!gameState) {
+      const room = await this.getRoom(roomId);
+      if (!room) {
+        throw new Error(`Room not found: ${roomId}`);
+      }
+
       gameState = this.gameStateFactory.createGameState();
       gameState.setRoomId(roomId);
       await gameState.loadState(roomId);

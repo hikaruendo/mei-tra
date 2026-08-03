@@ -74,7 +74,6 @@ export class ReconnectionUseCase {
     const { roomId, socketId, authenticatedUser } = request;
 
     try {
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return {
@@ -85,6 +84,7 @@ export class ReconnectionUseCase {
             'Your previous room session is no longer available. Please join or create a room again.',
         };
       }
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
 
       const state = roomGameState.getState();
       const isActiveGame =
@@ -250,11 +250,11 @@ export class ReconnectionUseCase {
     const { roomId, authenticatedUser } = request;
 
     try {
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return null;
       }
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
 
       const state = roomGameState.getState();
       const isActiveGame =

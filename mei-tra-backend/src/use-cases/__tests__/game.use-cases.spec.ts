@@ -658,6 +658,7 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         startGame: jest.fn().mockResolvedValue(undefined),
+        persistRoster: jest.fn().mockResolvedValue(undefined),
       } as unknown as GameStateService;
 
       roomService.getRoom.mockResolvedValue(room);
@@ -728,6 +729,7 @@ describe('Game Use Cases', () => {
       const roomGameState = {
         getState: jest.fn(() => state),
         startGame: jest.fn().mockResolvedValue(undefined),
+        persistRoster: jest.fn().mockResolvedValue(undefined),
         updateState: jest.fn(async (updates) => {
           state.currentPlayerIndex = updates.currentPlayerIndex;
           state.blowState = updates.blowState;
@@ -774,10 +776,10 @@ describe('Game Use Cases', () => {
             joinedAt: new Date(),
           },
           {
-            socketId: 'socket-3',
-            playerId: 'player-3',
-            name: 'Player 3',
-            team: 1 as const,
+            socketId: 'socket-2',
+            playerId: 'player-2',
+            name: 'Player 2',
+            team: 0 as const,
             hand: [],
             isPasser: false,
             isReady: true,
@@ -786,10 +788,10 @@ describe('Game Use Cases', () => {
             joinedAt: new Date(),
           },
           {
-            socketId: 'socket-2',
-            playerId: 'player-2',
-            name: 'Player 2',
-            team: 0 as const,
+            socketId: 'socket-3',
+            playerId: 'player-3',
+            name: 'Player 3',
+            team: 1 as const,
             hand: [],
             isPasser: false,
             isReady: true,
@@ -855,6 +857,7 @@ describe('Game Use Cases', () => {
       };
 
       const registerPlayerTokenMock = jest.fn();
+      const persistRosterMock = jest.fn().mockResolvedValue(undefined);
       const startGameMock = jest.fn(() => {
         state.players = [
           state.players[0],
@@ -867,6 +870,7 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         registerPlayerToken: registerPlayerTokenMock,
         startGame: startGameMock,
+        persistRoster: persistRosterMock,
       } as unknown as GameStateService;
 
       roomService.getRoom.mockResolvedValue(room);
@@ -901,6 +905,33 @@ describe('Game Use Cases', () => {
         'player-3',
       );
       expect(registerPlayerTokenMock).toHaveBeenCalledTimes(1);
+      const persistedPlayers = persistRosterMock.mock.calls[0]?.[0] as
+        | RoomPlayer[]
+        | undefined;
+      expect(persistedPlayers?.map((player) => player.playerId)).toEqual([
+        'player-1',
+        'player-3',
+        'player-2',
+        'player-4',
+      ]);
+      expect(
+        persistedPlayers?.map((player) => ({
+          playerId: player.playerId,
+          seatIndex: player.seatIndex,
+        })),
+      ).toEqual([
+        { playerId: 'player-1', seatIndex: 0 },
+        { playerId: 'player-3', seatIndex: 1 },
+        { playerId: 'player-2', seatIndex: 2 },
+        { playerId: 'player-4', seatIndex: 3 },
+      ]);
+      expect(persistRosterMock).toHaveBeenCalledWith(
+        expect.any(Array),
+        room.hostId,
+      );
+      expect(persistRosterMock.mock.invocationCallOrder[0]).toBeLessThan(
+        startGameMock.mock.invocationCallOrder[0],
+      );
     });
 
     it('returns failure when canStartGame denies', async () => {
@@ -935,6 +966,64 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(false);
       expect(result.errorMessage).toBe('Need more players');
+    });
+
+    it('does not start when the room status cannot be updated', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new StartGameUseCase(roomService);
+      const room: Room = {
+        ...baseRoom,
+        status: RoomStatus.READY,
+        players: baseRoom.players.map((player) => ({
+          ...player,
+          isReady: true,
+        })) as RoomPlayer[],
+      };
+      const state = {
+        players: room.players.map((player) => ({
+          ...player,
+          hand: [],
+        })) as DomainPlayer[],
+        currentPlayerIndex: 0,
+        blowState: {
+          currentBlowIndex: 0,
+          currentTrump: null,
+          currentHighestDeclaration: null,
+          declarations: [],
+          lastPasser: null,
+          isRoundCancelled: false,
+        },
+        teamScores: {
+          0: { play: 0, total: 0 },
+          1: { play: 0, total: 0 },
+        } as TeamScores,
+        teamAssignments: {},
+        pointsToWin: 0,
+        gamePhase: null,
+      };
+      const startGame = jest.fn().mockResolvedValue(undefined);
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        startGame,
+        persistRoster: jest.fn().mockResolvedValue(undefined),
+      } as unknown as GameStateService;
+
+      roomService.getRoom.mockResolvedValue(room);
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.canStartGame.mockResolvedValue({ canStart: true });
+      roomService.fillVacantSeatsWithCOM.mockResolvedValue(undefined);
+      roomService.updateRoomStatus.mockResolvedValue(false);
+
+      const result = await useCase.execute({
+        playerId: room.hostId,
+        roomId: room.id,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        errorMessage: 'Failed to mark room as playing',
+      });
+      expect(startGame).not.toHaveBeenCalled();
     });
 
     it('rejects starting a full room with unbalanced teams', async () => {

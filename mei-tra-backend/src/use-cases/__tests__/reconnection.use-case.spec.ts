@@ -5,6 +5,58 @@ import { RoomStatus } from '../../types/room.types';
 import { UserProfile } from '../../types/user.types';
 
 describe('ReconnectionUseCase', () => {
+  it('does not load game state after the room has been deleted', async () => {
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(null),
+      getRoomGameState: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const gameState = {
+      upsertSessionUser: jest.fn(),
+    } as Partial<IGameStateService> as IGameStateService;
+    const useCase = new ReconnectionUseCase(roomService, gameState);
+
+    const result = await useCase.execute({
+      roomId: 'deleted-room',
+      socketId: 'socket-1',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: false,
+        code: 'roomUnavailable',
+      }),
+    );
+    expect(roomService.getRoomGameState).not.toHaveBeenCalled();
+  });
+
+  it('does not load an active snapshot after the room has been deleted', async () => {
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(null),
+      getRoomGameState: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const gameState = {
+      upsertSessionUser: jest.fn(),
+    } as Partial<IGameStateService> as IGameStateService;
+    const useCase = new ReconnectionUseCase(roomService, gameState);
+
+    const snapshot = await useCase.getActiveGameSnapshot({
+      roomId: 'deleted-room',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(snapshot).toBeNull();
+    expect(roomService.getRoomGameState).not.toHaveBeenCalled();
+  });
+
   it('uses the persisted room player mapping after an active-game restart', async () => {
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
@@ -61,6 +113,7 @@ describe('ReconnectionUseCase', () => {
         id: 'room-1',
         hostId: 'seat-1',
         status: RoomStatus.PLAYING,
+        settings: { teamNames: undefined },
         players: [
           {
             playerId: 'seat-1',
@@ -185,6 +238,7 @@ describe('ReconnectionUseCase', () => {
         id: 'room-1',
         hostId: 'seat-1',
         status: RoomStatus.PLAYING,
+        settings: { teamNames: undefined },
         players: [
           {
             playerId: 'seat-1',

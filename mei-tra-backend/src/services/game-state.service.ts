@@ -563,49 +563,6 @@ export class GameStateService implements IGameStateService {
     return this.state.players[this.state.currentPlayerIndex] || null;
   }
 
-  private arrangePlayersForSeatOrder(): void {
-    if (this.state.players.length <= 1) {
-      return;
-    }
-
-    const currentPlayerId =
-      this.state.players[this.state.currentPlayerIndex]?.playerId || null;
-
-    const team0 = this.state.players.filter((player) => player.team === 0);
-    const team1 = this.state.players.filter((player) => player.team === 1);
-
-    if (team0.length === 0 || team1.length === 0) {
-      return;
-    }
-
-    const maxTeamSize = Math.max(team0.length, team1.length);
-    const ordered: DomainPlayer[] = [];
-
-    for (let i = 0; i < maxTeamSize; i++) {
-      if (team0[i]) {
-        ordered.push(team0[i]);
-      }
-      if (team1[i]) {
-        ordered.push(team1[i]);
-      }
-    }
-
-    if (ordered.length !== this.state.players.length) {
-      return;
-    }
-
-    this.state.players = ordered;
-
-    if (currentPlayerId) {
-      const newIndex = this.state.players.findIndex(
-        (player) => player.playerId === currentPlayerId,
-      );
-      this.state.currentPlayerIndex = newIndex === -1 ? 0 : newIndex;
-    } else {
-      this.state.currentPlayerIndex = 0;
-    }
-  }
-
   isPlayerTurn(playerId: string): boolean {
     const currentPlayer = this.getCurrentPlayer();
     return currentPlayer?.playerId === playerId;
@@ -708,9 +665,6 @@ export class GameStateService implements IGameStateService {
   async startGame(): Promise<void> {
     await this.transitionPhase('blow');
     let state = this.getState();
-
-    // Arrange seats so partners sit opposite and turns follow seat order
-    this.arrangePlayersForSeatOrder();
 
     // Initialize game state
     state.deck = this.cardService.generateDeck();
