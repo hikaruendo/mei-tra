@@ -88,6 +88,10 @@ export class DisconnectGatewayEffectsService {
 
     if (timeoutMode === 'remove-player') {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
+      if (roomGameState.getPlayerConnectionState(playerId)?.socketId) {
+        return [];
+      }
+
       roomGameState.removePlayer(playerId);
       return [
         this.roomUpdateGatewayEffectsService.buildPlayersEvent({
@@ -105,6 +109,7 @@ export class DisconnectGatewayEffectsService {
     const converted = await this.roomService.convertPlayerToCOM(
       roomId,
       playerId,
+      { requireDisconnected: true },
     );
     if (!converted) {
       return [];

@@ -188,6 +188,7 @@ describe('DisconnectGatewayEffectsService', () => {
   it('removes lobby players on disconnect timeout', async () => {
     const roomGameState = {
       removePlayer: jest.fn(),
+      getPlayerConnectionState: jest.fn(() => ({ socketId: '' })),
       getTransportPlayers: jest.fn(() => [{ playerId: 'player-1' }]),
     };
     const roomService = {
@@ -226,5 +227,56 @@ describe('DisconnectGatewayEffectsService', () => {
         payload: [{ playerId: 'player-1' }],
       },
     ]);
+  });
+
+  it('keeps a reconnected lobby player when an old timeout fires', async () => {
+    const roomGameState = {
+      removePlayer: jest.fn(),
+      getPlayerConnectionState: jest.fn(() => ({ socketId: 'socket-new' })),
+      getTransportPlayers: jest.fn(),
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest.fn().mockResolvedValue({ id: 'room-1' }),
+    } as unknown as IRoomService;
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {} as never,
+    );
+
+    const events = await service.buildTimeoutEvents({
+      roomId: 'room-1',
+      playerId: 'player-1',
+      playerName: 'Player 1',
+      timeoutMode: 'remove-player',
+    });
+
+    expect(events).toEqual([]);
+    expect(roomGameState.removePlayer).not.toHaveBeenCalled();
+  });
+
+  it('requires the player to still be disconnected before timeout conversion', async () => {
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({ id: 'room-1', status: 'playing' }),
+      convertPlayerToCOM: jest.fn().mockResolvedValue(false),
+    } as unknown as IRoomService;
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {} as never,
+    );
+
+    const events = await service.buildTimeoutEvents({
+      roomId: 'room-1',
+      playerId: 'player-1',
+      playerName: 'Player 1',
+      timeoutMode: 'convert-to-com',
+    });
+
+    expect(events).toEqual([]);
+    expect(roomService.convertPlayerToCOM).toHaveBeenCalledWith(
+      'room-1',
+      'player-1',
+      { requireDisconnected: true },
+    );
   });
 });

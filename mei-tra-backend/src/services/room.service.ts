@@ -362,10 +362,21 @@ export class RoomService implements IRoomService, OnModuleDestroy {
    * プレイヤーをCOMに変換（タイムアウト時など）
    * reconnectTokenは保持したまま、席をvacantにする
    */
-  async convertPlayerToCOM(roomId: string, playerId: string): Promise<boolean> {
+  async convertPlayerToCOM(
+    roomId: string,
+    playerId: string,
+    options?: { requireDisconnected?: boolean },
+  ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) return false;
     const gameState = await this.getRoomGameState(roomId);
+    if (
+      options?.requireDisconnected &&
+      gameState.getPlayerConnectionState(playerId)?.socketId
+    ) {
+      return false;
+    }
+
     return this.comSessionService.convertPlayerToCOM(
       roomId,
       playerId,
@@ -727,6 +738,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       connectionState.isAuthenticated = true;
     }
 
+    roomGameState.clearDisconnectTimeout(playerId);
     await roomGameState.applyPlayerConnectionState(playerId, connectionState);
 
     const roomPlayerUpdates: {

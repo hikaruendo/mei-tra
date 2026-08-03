@@ -608,6 +608,43 @@ describe('Reconnection Token Management', () => {
     });
 
     describe('convertPlayerToCOM', () => {
+      it('does not convert a player who reconnected before timeout handling', async () => {
+        const roomId = 'room-123';
+        const playerId = 'player-1';
+        const player: RoomPlayer = {
+          socketId: 'socket-new',
+          playerId,
+          name: 'Test Player',
+          team: 0,
+          hand: ['H2'],
+          isPasser: false,
+          hasBroken: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        };
+        const room: Room = { ...baseRoom, players: [player] };
+        roomRepository.findById.mockResolvedValue(room);
+
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().players = [
+          makeGamePlayer(playerId, player.name, player.team, {
+            hand: [...player.hand],
+          }),
+        ];
+        await gameState.applyPlayerConnectionState(playerId, {
+          socketId: 'socket-new',
+        });
+
+        const result = await roomService.convertPlayerToCOM(roomId, playerId, {
+          requireDisconnected: true,
+        });
+
+        expect(result).toBe(false);
+        expect(room.players[0]).toEqual(player);
+        expect(gameStateRepository.persistRoomRoster).not.toHaveBeenCalled();
+      });
+
       it('should convert player to com and save to vacantSeats', async () => {
         const roomId = 'room-123';
         const playerId = 'player-1';
