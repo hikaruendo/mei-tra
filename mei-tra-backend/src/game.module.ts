@@ -55,6 +55,7 @@ import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-gam
 import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
 import { RoomMembershipService } from './services/room-membership.service';
 import { DatabaseModule } from './database/database.module';
+import { RoomMembershipReconcilerService } from './services/room-membership-reconciler.service';
 
 @Module({
   imports: [DatabaseModule, RepositoriesModule, AuthModule, SocialModule],
@@ -70,6 +71,7 @@ import { DatabaseModule } from './database/database.module';
     SeatRestorationService,
     RoomJoinService,
     RoomMembershipService,
+    RoomMembershipReconcilerService,
     JoinRoomGatewayEffectsService,
     DisconnectGatewayEffectsService,
     RoomUpdateGatewayEffectsService,

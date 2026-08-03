@@ -399,7 +399,10 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   async convertPlayerToCOM(
     roomId: string,
     playerId: string,
-    options?: { requireDisconnected?: boolean },
+    options?: {
+      requireDisconnected?: boolean;
+      releaseMembership?: boolean;
+    },
   ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) return false;
@@ -418,13 +421,17 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       gameState,
       this.vacantSeats,
     );
-    if (converted) {
+    if (converted && options?.releaseMembership !== false) {
       await this.releasePlayerMembership(roomId, playerId);
     }
     return converted;
   }
 
-  async leaveRoom(roomId: string, playerId: string): Promise<boolean> {
+  async leaveRoom(
+    roomId: string,
+    playerId: string,
+    options?: { releaseMembership?: boolean },
+  ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
       return false;
@@ -554,7 +561,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       player.isHost = player.playerId === room.hostId;
     });
     await gameState.persistRoster(room.players, room.hostId);
-    await this.releasePlayerMembership(roomId, playerId);
+    if (options?.releaseMembership !== false) {
+      await this.releasePlayerMembership(roomId, playerId);
+    }
     return true;
   }
 

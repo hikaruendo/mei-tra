@@ -1,5 +1,16 @@
 import { DisconnectGatewayEffectsService } from '../disconnect-gateway-effects.service';
 import { IRoomService } from '../interfaces/room-service.interface';
+import { RoomMembershipService } from '../room-membership.service';
+
+const membershipServiceStub = (
+  overrides: Partial<RoomMembershipService> = {},
+): RoomMembershipService =>
+  ({
+    markDisconnected: jest.fn(),
+    startDisconnectTimeout: jest.fn(),
+    finishDisconnectTimeout: jest.fn(),
+    ...overrides,
+  }) as unknown as RoomMembershipService;
 
 describe('DisconnectGatewayEffectsService', () => {
   it('ignores disconnect cleanup after the room has been deleted', async () => {
@@ -10,6 +21,7 @@ describe('DisconnectGatewayEffectsService', () => {
     const service = new DisconnectGatewayEffectsService(
       roomService,
       {} as never,
+      membershipServiceStub(),
     );
 
     const result = await service.prepareDisconnect({
@@ -46,6 +58,11 @@ describe('DisconnectGatewayEffectsService', () => {
         isAuthenticated: true,
       })),
       applyPlayerConnectionState: jest.fn().mockResolvedValue(undefined),
+      getPlayerConnectionState: jest.fn(() => ({
+        socketId: 'socket-1',
+        userId: 'user-1',
+        isAuthenticated: true,
+      })),
       getTransportPlayers: jest.fn(() => [{ playerId: 'player-1' }]),
       setDisconnectTimeout: jest.fn(),
     };
@@ -136,6 +153,19 @@ describe('DisconnectGatewayEffectsService', () => {
     const service = new DisconnectGatewayEffectsService(
       roomService,
       roomUpdateGatewayEffectsService as never,
+      membershipServiceStub({
+        markDisconnected: jest.fn().mockResolvedValue({
+          userId: 'user-1',
+          roomId: 'room-1',
+          playerId: 'player-1',
+          status: 'disconnected',
+          membershipVersion: 3,
+          transitionId: 'transition-disconnect',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSeenAt: new Date(),
+        }),
+      }),
     );
 
     const result = await service.prepareDisconnect({
@@ -187,28 +217,28 @@ describe('DisconnectGatewayEffectsService', () => {
 
   it('removes lobby players on disconnect timeout', async () => {
     const roomGameState = {
-      removePlayer: jest.fn(),
       getPlayerConnectionState: jest.fn(() => ({ socketId: '' })),
-      getTransportPlayers: jest.fn(() => [{ playerId: 'player-1' }]),
+      getState: jest.fn(() => ({ players: [] })),
     };
     const roomService = {
       getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
       getRoom: jest.fn().mockResolvedValue({ id: 'room-1' }),
+      leaveRoom: jest.fn().mockResolvedValue(true),
+      listRooms: jest.fn().mockResolvedValue([]),
     } as unknown as IRoomService;
     const roomUpdateGatewayEffectsService = {
-      buildRoomEvents: jest.fn(),
-      buildRoomsListEvent: jest.fn(),
-      buildPlayersEvent: jest.fn(({ players }: { players: unknown[] }) => ({
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: players,
+      buildRoomEvents: jest.fn().mockResolvedValue([]),
+      buildRoomsListEvent: jest.fn(() => ({
+        scope: 'all',
+        event: 'rooms-list',
+        payload: [],
       })),
     };
 
     const service = new DisconnectGatewayEffectsService(
       roomService,
       roomUpdateGatewayEffectsService as never,
+      membershipServiceStub(),
     );
 
     const events = await service.buildTimeoutEvents({
@@ -218,30 +248,31 @@ describe('DisconnectGatewayEffectsService', () => {
       timeoutMode: 'remove-player',
     });
 
-    expect(roomGameState.removePlayer).toHaveBeenCalledWith('player-1');
+    expect(roomService.leaveRoom).toHaveBeenCalledWith('room-1', 'player-1', {
+      releaseMembership: false,
+    });
     expect(events).toEqual([
       {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [{ playerId: 'player-1' }],
+        scope: 'all',
+        event: 'rooms-list',
+        payload: [],
       },
     ]);
   });
 
   it('keeps a reconnected lobby player when an old timeout fires', async () => {
     const roomGameState = {
-      removePlayer: jest.fn(),
       getPlayerConnectionState: jest.fn(() => ({ socketId: 'socket-new' })),
-      getTransportPlayers: jest.fn(),
     };
     const roomService = {
       getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
       getRoom: jest.fn().mockResolvedValue({ id: 'room-1' }),
+      leaveRoom: jest.fn(),
     } as unknown as IRoomService;
     const service = new DisconnectGatewayEffectsService(
       roomService,
       {} as never,
+      membershipServiceStub(),
     );
 
     const events = await service.buildTimeoutEvents({
@@ -252,7 +283,7 @@ describe('DisconnectGatewayEffectsService', () => {
     });
 
     expect(events).toEqual([]);
-    expect(roomGameState.removePlayer).not.toHaveBeenCalled();
+    expect(roomService.leaveRoom).not.toHaveBeenCalled();
   });
 
   it('requires the player to still be disconnected before timeout conversion', async () => {
@@ -263,6 +294,7 @@ describe('DisconnectGatewayEffectsService', () => {
     const service = new DisconnectGatewayEffectsService(
       roomService,
       {} as never,
+      membershipServiceStub(),
     );
 
     const events = await service.buildTimeoutEvents({
@@ -276,7 +308,153 @@ describe('DisconnectGatewayEffectsService', () => {
     expect(roomService.convertPlayerToCOM).toHaveBeenCalledWith(
       'room-1',
       'player-1',
-      { requireDisconnected: true },
+      { requireDisconnected: true, releaseMembership: false },
+    );
+  });
+
+  it('ignores a stale socket disconnect after a newer socket reconnects', async () => {
+    const roomGameState = {
+      getState: jest.fn(() => ({
+        players: [{ playerId: 'player-1', name: 'Player 1', team: 0 }],
+        teamAssignments: {},
+        gamePhase: 'play',
+      })),
+      findSessionUserBySocketId: jest.fn(() => ({
+        socketId: 'socket-old',
+        playerId: 'player-1',
+        userId: 'user-1',
+        name: 'Player 1',
+      })),
+      getPlayerConnectionState: jest.fn(() => ({
+        socketId: 'socket-new',
+        userId: 'user-1',
+      })),
+      applyPlayerConnectionState: jest.fn(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({
+        id: 'room-1',
+        players: [
+          {
+            playerId: 'player-1',
+            userId: 'user-1',
+            socketId: 'socket-new',
+          },
+        ],
+      }),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+    } as unknown as IRoomService;
+    const markDisconnected = jest.fn();
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {} as never,
+      membershipServiceStub({ markDisconnected }),
+    );
+
+    const result = await service.prepareDisconnect({
+      roomId: 'room-1',
+      socketId: 'socket-old',
+    });
+
+    expect(result).toBeNull();
+    expect(markDisconnected).not.toHaveBeenCalled();
+    expect(roomGameState.applyPlayerConnectionState).not.toHaveBeenCalled();
+  });
+
+  it('ignores an old timeout after membership version changes', async () => {
+    const convertPlayerToCOM = jest.fn();
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({ id: 'room-1', status: 'playing' }),
+      convertPlayerToCOM,
+    } as unknown as IRoomService;
+    const startDisconnectTimeout = jest.fn().mockResolvedValue(null);
+    const finishDisconnectTimeout = jest.fn();
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {} as never,
+      membershipServiceStub({
+        startDisconnectTimeout,
+        finishDisconnectTimeout,
+      }),
+    );
+
+    const events = await service.buildTimeoutEvents({
+      roomId: 'room-1',
+      playerId: 'player-1',
+      playerName: 'Player 1',
+      timeoutMode: 'convert-to-com',
+      membership: {
+        userId: 'user-1',
+        roomId: 'room-1',
+        playerId: 'player-1',
+        status: 'disconnected',
+        membershipVersion: 3,
+        transitionId: 'disconnect-transition',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSeenAt: new Date(),
+      },
+    });
+
+    expect(events).toEqual([]);
+    expect(convertPlayerToCOM).not.toHaveBeenCalled();
+    expect(finishDisconnectTimeout).not.toHaveBeenCalled();
+  });
+
+  it('finishes the timeout lease only after COM conversion succeeds', async () => {
+    const movingMembership = {
+      userId: 'user-1',
+      roomId: 'room-1',
+      playerId: 'player-1',
+      status: 'moving' as const,
+      membershipVersion: 4,
+      transitionId: 'timeout-transition',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const roomGameState = {
+      getState: jest.fn(() => ({ players: [] })),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({ id: 'room-1', status: 'playing' }),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      convertPlayerToCOM: jest.fn().mockResolvedValue(true),
+      listRooms: jest.fn().mockResolvedValue([]),
+    } as unknown as IRoomService;
+    const finishDisconnectTimeout = jest.fn().mockResolvedValue('completed');
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {
+        buildRoomEvents: jest.fn().mockResolvedValue([]),
+        buildRoomsListEvent: jest.fn(() => ({
+          scope: 'all',
+          event: 'rooms-list',
+          payload: [],
+        })),
+      } as never,
+      membershipServiceStub({
+        startDisconnectTimeout: jest.fn().mockResolvedValue(movingMembership),
+        finishDisconnectTimeout,
+      }),
+    );
+
+    await service.buildTimeoutEvents({
+      roomId: 'room-1',
+      playerId: 'player-1',
+      playerName: 'Player 1',
+      timeoutMode: 'convert-to-com',
+      membership: { ...movingMembership, status: 'disconnected' },
+    });
+
+    expect(roomService.convertPlayerToCOM).toHaveBeenCalledWith(
+      'room-1',
+      'player-1',
+      { requireDisconnected: true, releaseMembership: false },
+    );
+    expect(finishDisconnectTimeout).toHaveBeenCalledWith(
+      movingMembership,
+      true,
     );
   });
 });

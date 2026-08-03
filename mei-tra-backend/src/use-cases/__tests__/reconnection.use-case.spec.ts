@@ -3,6 +3,29 @@ import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IGameStateService } from '../../services/interfaces/game-state-service.interface';
 import { RoomStatus } from '../../types/room.types';
 import { UserProfile } from '../../types/user.types';
+import { RoomMembershipService } from '../../services/room-membership.service';
+
+const createRoomMembershipService = (): RoomMembershipService =>
+  ({
+    claim: jest
+      .fn()
+      .mockImplementation((userId: string, roomId: string, playerId: string) =>
+        Promise.resolve({
+          result: 'reconnected',
+          membership: {
+            userId,
+            roomId,
+            playerId,
+            status: 'active',
+            membershipVersion: 2,
+            transitionId: 'transition-1',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastSeenAt: new Date(),
+          },
+        }),
+      ),
+  }) as unknown as RoomMembershipService;
 
 describe('ReconnectionUseCase', () => {
   it('does not load game state after the room has been deleted', async () => {
@@ -13,7 +36,11 @@ describe('ReconnectionUseCase', () => {
     const gameState = {
       upsertSessionUser: jest.fn(),
     } as Partial<IGameStateService> as IGameStateService;
-    const useCase = new ReconnectionUseCase(roomService, gameState);
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
 
     const result = await useCase.execute({
       roomId: 'deleted-room',
@@ -42,7 +69,11 @@ describe('ReconnectionUseCase', () => {
     const gameState = {
       upsertSessionUser: jest.fn(),
     } as Partial<IGameStateService> as IGameStateService;
-    const useCase = new ReconnectionUseCase(roomService, gameState);
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
 
     const snapshot = await useCase.getActiveGameSnapshot({
       roomId: 'deleted-room',
@@ -139,7 +170,11 @@ describe('ReconnectionUseCase', () => {
     const gameState = {
       upsertSessionUser: jest.fn(),
     } as Partial<IGameStateService> as IGameStateService;
-    const useCase = new ReconnectionUseCase(roomService, gameState);
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
     const profile: UserProfile = {
       id: 'user-1',
       username: 'user-1',
@@ -261,7 +296,11 @@ describe('ReconnectionUseCase', () => {
     const gameState = {
       upsertSessionUser: jest.fn(),
     } as Partial<IGameStateService> as IGameStateService;
-    const useCase = new ReconnectionUseCase(roomService, gameState);
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
 
     const snapshot = await useCase.getActiveGameSnapshot({
       roomId: 'room-1',
@@ -353,7 +392,11 @@ describe('ReconnectionUseCase', () => {
       upsertSessionUser: jest.fn(),
     } as Partial<IGameStateService> as IGameStateService;
 
-    const useCase = new ReconnectionUseCase(roomService, gameState);
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
 
     const result = await useCase.execute({
       roomId: 'room-1',
@@ -403,5 +446,77 @@ describe('ReconnectionUseCase', () => {
         selfPlayerId: 'p1',
       }),
     );
+  });
+
+  it('rejects a stale room reconnect when membership belongs to another room', async () => {
+    const roomGameState = {
+      getState: jest.fn(() => ({
+        players: [
+          {
+            playerId: 'seat-1',
+            name: 'User 1',
+            team: 0,
+            hand: [],
+          },
+        ],
+        gamePhase: 'play',
+        currentPlayerIndex: 0,
+      })),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({
+        id: 'room-stale',
+        hostId: 'seat-1',
+        status: RoomStatus.PLAYING,
+        players: [
+          {
+            playerId: 'seat-1',
+            userId: 'user-1',
+            isAuthenticated: true,
+          },
+        ],
+      }),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      handlePlayerReconnection: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const membershipService = {
+      claim: jest.fn().mockResolvedValue({
+        result: 'conflict',
+        membership: {
+          userId: 'user-1',
+          roomId: 'room-current',
+          playerId: 'seat-current',
+          status: 'active',
+          membershipVersion: 4,
+          transitionId: 'transition-current',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSeenAt: new Date(),
+        },
+      }),
+    } as unknown as RoomMembershipService;
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      { upsertSessionUser: jest.fn() } as unknown as IGameStateService,
+      membershipService,
+    );
+
+    const result = await useCase.execute({
+      roomId: 'room-stale',
+      socketId: 'socket-1',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: false,
+        code: 'sessionInvalid',
+      }),
+    );
+    expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
   });
 });

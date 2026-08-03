@@ -16,7 +16,11 @@ export interface IRoomService {
     teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room>;
   cancelRoomMembershipReservation(userId: string): Promise<boolean>;
-  leaveRoom(roomId: string, playerId: string): Promise<boolean>;
+  leaveRoom(
+    roomId: string,
+    playerId: string,
+    options?: { releaseMembership?: boolean },
+  ): Promise<boolean>;
   joinRoom(roomId: string, user: SessionUser): Promise<boolean>;
   updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean>;
   updatePlayerInRoom(
@@ -33,7 +37,10 @@ export interface IRoomService {
   convertPlayerToCOM(
     roomId: string,
     playerId: string,
-    options?: { requireDisconnected?: boolean },
+    options?: {
+      requireDisconnected?: boolean;
+      releaseMembership?: boolean;
+    },
   ): Promise<boolean>;
   restorePlayerFromVacantSeat(
     roomId: string,
