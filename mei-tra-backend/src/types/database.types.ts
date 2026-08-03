@@ -110,6 +110,76 @@ export interface Database {
           user_id?: string | null;
         };
       };
+      active_room_memberships: {
+        Row: {
+          user_id: string;
+          room_id: string | null;
+          player_id: string;
+          status: 'moving' | 'active' | 'disconnected';
+          membership_version: number;
+          transition_id: string;
+          created_at: string;
+          updated_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          user_id: string;
+          room_id?: string | null;
+          player_id: string;
+          status: 'moving' | 'active' | 'disconnected';
+          membership_version?: number;
+          transition_id: string;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          room_id?: string | null;
+          player_id?: string;
+          status?: 'moving' | 'active' | 'disconnected';
+          membership_version?: number;
+          transition_id?: string;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+        };
+      };
+      room_membership_events: {
+        Row: {
+          id: number;
+          transition_id: string;
+          user_id: string;
+          from_room_id: string | null;
+          to_room_id: string | null;
+          event_type: string;
+          membership_version: number | null;
+          metadata: Record<string, any>;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          transition_id: string;
+          user_id: string;
+          from_room_id?: string | null;
+          to_room_id?: string | null;
+          event_type: string;
+          membership_version?: number | null;
+          metadata?: Record<string, any>;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          transition_id?: string;
+          user_id?: string;
+          from_room_id?: string | null;
+          to_room_id?: string | null;
+          event_type?: string;
+          membership_version?: number | null;
+          metadata?: Record<string, any>;
+          created_at?: string;
+        };
+      };
       game_states: {
         Row: {
           id: string;
