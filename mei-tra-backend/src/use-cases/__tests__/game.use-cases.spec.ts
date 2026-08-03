@@ -39,6 +39,7 @@ import {
   BROKEN_HAND_REVEAL_PENDING_TTL_MS,
   REQUIRED_BROKEN_HAND_REVEAL_ERROR,
 } from '../helpers/broken-hand.helper';
+import { ActiveRoomMembershipConflictError } from '../../types/room-membership.types';
 describe('Game Use Cases', () => {
   const createRoomServiceMock = () => {
     const mock: Partial<jest.Mocked<IRoomService>> = {
@@ -52,6 +53,7 @@ describe('Game Use Cases', () => {
       updatePlayersInRoom: jest.fn().mockResolvedValue(true),
       canStartGame: jest.fn(),
       createNewRoom: jest.fn(),
+      cancelRoomMembershipReservation: jest.fn().mockResolvedValue(false),
       leaveRoom: jest.fn(),
       updateRoom: jest.fn(),
       deleteRoom: jest.fn(),
@@ -256,6 +258,41 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(false);
       expect(result.errorMessage).toBe('Failed to join room');
+    });
+
+    it('returns a stable conflict when the user is active in another room', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new JoinRoomUseCase(roomService);
+      roomService.joinRoom.mockRejectedValue(
+        new ActiveRoomMembershipConflictError({
+          userId: 'user-1',
+          roomId: 'room-existing',
+          playerId: 'player-1',
+          status: 'active',
+          membershipVersion: 3,
+          transitionId: 'transition-existing',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastSeenAt: new Date(),
+        }),
+      );
+
+      const result = await useCase.execute({
+        socketId: 'socket-1',
+        targetRoomId: 'room-new',
+        user: {
+          socketId: 'socket-1',
+          playerId: 'player-1',
+          userId: 'user-1',
+          name: 'Player 1',
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.errorMessage).toBe(
+        'You are already active in another room.',
+      );
+      expect(roomService.getRoom).not.toHaveBeenCalled();
     });
   });
 
@@ -3316,7 +3353,9 @@ describe('Game Use Cases', () => {
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
         transitionPhase: jest.fn(async () => {}),
-        updateState: jest.fn(async (updates) => Object.assign(state, updates)),
+        updateState: jest.fn(async (updates) => {
+          Object.assign(state, updates);
+        }),
       } as unknown as GameStateService;
 
       roomService.getRoomGameState.mockResolvedValue(roomGameState);
@@ -3370,7 +3409,9 @@ describe('Game Use Cases', () => {
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
         transitionPhase: jest.fn(async () => {}),
-        updateState: jest.fn(async (updates) => Object.assign(state, updates)),
+        updateState: jest.fn(async (updates) => {
+          Object.assign(state, updates);
+        }),
       } as unknown as GameStateService;
 
       roomService.getRoomGameState.mockResolvedValue(roomGameState);

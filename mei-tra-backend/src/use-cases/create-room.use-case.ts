@@ -7,6 +7,7 @@ import {
 } from './interfaces/create-room.use-case.interface';
 import { ChatService } from '../services/chat.service';
 import { SessionUser } from '../types/session.types';
+import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
 
 type ChatRoomCreator = {
   createRoom(
@@ -29,6 +30,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
   }
 
   async execute(request: CreateRoomRequest): Promise<CreateRoomResponse> {
+    let createdRoomId: string | null = null;
+    let creatingUserId: string | null = null;
     try {
       const {
         roomName,
@@ -56,6 +59,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
           errorMessage: 'Authentication required to create a room.',
         };
       }
+      creatingUserId = playerId;
 
       const room = await this.roomService.createNewRoom(
         roomName,
@@ -63,6 +67,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         pointsToWin,
         teamAssignmentMethod,
       );
+      createdRoomId = room.id;
 
       const hostUser: SessionUser = {
         socketId: '',
@@ -74,6 +79,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
       const joined = await this.roomService.joinRoom(room.id, hostUser);
       if (!joined) {
+        await this.cleanupFailedCreation(room.id, playerId);
         return {
           success: false,
           errorMessage: 'Failed to join created room',
@@ -83,6 +89,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       await this.roomService.initCOMPlaceholders(room.id);
       const updatedRoom = await this.roomService.getRoom(room.id);
       if (!updatedRoom) {
+        await this.cleanupFailedCreation(room.id, playerId);
         return {
           success: false,
           errorMessage: 'Failed to load created room',
@@ -93,6 +100,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         (player) => player.playerId === hostUser.playerId,
       );
       if (!hostPlayer) {
+        await this.cleanupFailedCreation(room.id, playerId);
         return {
           success: false,
           errorMessage: 'Host player not found in created room',
@@ -125,6 +133,17 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         },
       };
     } catch (error) {
+      if (createdRoomId && creatingUserId) {
+        await this.cleanupFailedCreation(createdRoomId, creatingUserId);
+      } else if (creatingUserId) {
+        await this.roomService.cancelRoomMembershipReservation(creatingUserId);
+      }
+      if (error instanceof ActiveRoomMembershipConflictError) {
+        return {
+          success: false,
+          errorMessage: 'You are already active in another room.',
+        };
+      }
       this.logger.error(
         'Unexpected error while executing CreateRoomUseCase',
         error instanceof Error ? error.stack : String(error),
@@ -133,6 +152,28 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         success: false,
         errorMessage: 'Failed to create room',
       };
+    }
+  }
+
+  private async cleanupFailedCreation(
+    roomId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      await this.roomService.deleteRoom(roomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete incomplete room ${roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+    try {
+      await this.roomService.cancelRoomMembershipReservation(userId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to cancel incomplete room reservation for user ${userId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 }

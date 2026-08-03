@@ -10,6 +10,7 @@ import {
 import { AuthenticatedUser } from '../types/user.types';
 import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
+import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
 
 @Injectable()
 export class JoinRoomUseCase implements IJoinRoomUseCase {
@@ -78,6 +79,12 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         data,
       };
     } catch (error) {
+      if (error instanceof ActiveRoomMembershipConflictError) {
+        return {
+          success: false,
+          errorMessage: 'You are already active in another room.',
+        };
+      }
       this.logger.error(
         'Unexpected error while executing JoinRoomUseCase',
         error instanceof Error ? error.stack : String(error),
