@@ -561,6 +561,16 @@ describe('Reconnection Token Management', () => {
       };
     };
 
+    it('does not create game state for a deleted room', async () => {
+      roomRepository.findById.mockResolvedValue(null);
+
+      await expect(
+        roomService.getRoomGameState('deleted-room'),
+      ).rejects.toThrow('Room not found: deleted-room');
+      expect(gameStateRepository.findByRoomId).not.toHaveBeenCalled();
+      expect(gameStateRepository.create).not.toHaveBeenCalled();
+    });
+
     it('does not overwrite current gameplay when updating roster metadata', async () => {
       const player = makeGamePlayer('player-1', 'Player 1', 0, {
         hand: ['stale-card'],

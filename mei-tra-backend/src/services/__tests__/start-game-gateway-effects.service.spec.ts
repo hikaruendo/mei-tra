@@ -8,6 +8,7 @@ describe('StartGameGatewayEffectsService', () => {
       getRoom: jest.fn().mockResolvedValue({
         id: 'room-1',
         name: 'Room 1',
+        settings: { teamNames: undefined },
         players: [
           {
             playerId: 'player-1',

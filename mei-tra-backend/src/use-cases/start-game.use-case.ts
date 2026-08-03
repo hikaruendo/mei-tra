@@ -83,9 +83,25 @@ export class StartGameUseCase implements IStartGameUseCase {
         };
       }
 
+      roomWithFilledSeats.players = this.arrangeRoomPlayersForSeatOrder(
+        roomWithFilledSeats.players,
+      );
       this.syncStatePlayersFromRoom(roomGameState, roomWithFilledSeats);
+      await roomGameState.persistRoster(
+        roomWithFilledSeats.players,
+        roomWithFilledSeats.hostId,
+      );
 
-      await this.roomService.updateRoomStatus(roomId, RoomStatus.PLAYING);
+      const statusUpdated = await this.roomService.updateRoomStatus(
+        roomId,
+        RoomStatus.PLAYING,
+      );
+      if (!statusUpdated) {
+        return {
+          success: false,
+          errorMessage: 'Failed to mark room as playing',
+        };
+      }
       await roomGameState.startGame();
 
       let updatedState = roomGameState.getState();
@@ -214,6 +230,40 @@ export class StartGameUseCase implements IStartGameUseCase {
     );
 
     return state;
+  }
+
+  private arrangeRoomPlayersForSeatOrder(
+    players: Room['players'],
+  ): Room['players'] {
+    const team0Players = players.filter((player) => player.team === 0);
+    const team1Players = players.filter((player) => player.team === 1);
+
+    if (team0Players.length === 0 || team1Players.length === 0) {
+      return players.map((player, seatIndex) => ({ ...player, seatIndex }));
+    }
+
+    const orderedPlayers: Room['players'] = [];
+    const maxTeamSize = Math.max(team0Players.length, team1Players.length);
+
+    for (let teamIndex = 0; teamIndex < maxTeamSize; teamIndex += 1) {
+      const team0Player = team0Players[teamIndex];
+      const team1Player = team1Players[teamIndex];
+      if (team0Player) {
+        orderedPlayers.push(team0Player);
+      }
+      if (team1Player) {
+        orderedPlayers.push(team1Player);
+      }
+    }
+
+    if (orderedPlayers.length !== players.length) {
+      throw new Error('Failed to arrange the complete room roster');
+    }
+
+    return orderedPlayers.map((player, seatIndex) => ({
+      ...player,
+      seatIndex,
+    }));
   }
 
   private validateFullRoomTeamBalance(room: Room): string | null {

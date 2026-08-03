@@ -2,6 +2,25 @@ import { DisconnectGatewayEffectsService } from '../disconnect-gateway-effects.s
 import { IRoomService } from '../interfaces/room-service.interface';
 
 describe('DisconnectGatewayEffectsService', () => {
+  it('ignores disconnect cleanup after the room has been deleted', async () => {
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(null),
+      getRoomGameState: jest.fn(),
+    } as unknown as IRoomService;
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {} as never,
+    );
+
+    const result = await service.prepareDisconnect({
+      roomId: 'deleted-room',
+      socketId: 'socket-1',
+    });
+
+    expect(result).toBeNull();
+    expect(roomService.getRoomGameState).not.toHaveBeenCalled();
+  });
+
   it('reassigns host and emits disconnect events', async () => {
     const state = {
       players: [
@@ -173,6 +192,7 @@ describe('DisconnectGatewayEffectsService', () => {
     };
     const roomService = {
       getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest.fn().mockResolvedValue({ id: 'room-1' }),
     } as unknown as IRoomService;
     const roomUpdateGatewayEffectsService = {
       buildRoomEvents: jest.fn(),

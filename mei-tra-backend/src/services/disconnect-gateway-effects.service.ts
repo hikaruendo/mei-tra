@@ -30,6 +30,10 @@ export class DisconnectGatewayEffectsService {
     displayName?: string;
   }): Promise<DisconnectPreparation | null> {
     const { roomId, socketId, displayName } = params;
+    const room = await this.roomService.getRoom(roomId);
+    if (!room) {
+      return null;
+    }
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const players = await this.sanitizePlayers(
@@ -37,7 +41,6 @@ export class DisconnectGatewayEffectsService {
       state.players,
       roomGameState,
     );
-    const room = await this.roomService.getRoom(roomId);
     const player = this.findPlayerForDisconnect(
       socketId,
       roomGameState,
@@ -78,6 +81,10 @@ export class DisconnectGatewayEffectsService {
     timeoutMode: DisconnectTimeoutMode;
   }): Promise<GatewayEvent[]> {
     const { roomId, playerId, playerName, timeoutMode } = params;
+    const room = await this.roomService.getRoom(roomId);
+    if (!room) {
+      return [];
+    }
 
     if (timeoutMode === 'remove-player') {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
@@ -91,7 +98,6 @@ export class DisconnectGatewayEffectsService {
       ];
     }
 
-    const room = await this.roomService.getRoom(roomId);
     if (room?.status !== RoomStatus.PLAYING) {
       return [];
     }

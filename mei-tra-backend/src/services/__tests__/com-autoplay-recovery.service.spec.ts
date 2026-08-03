@@ -16,6 +16,7 @@ const flushPromises = async (): Promise<void> => {
 
 const createService = () => {
   const roomService = {
+    getRoom: jest.fn().mockResolvedValue({ id: 'room-1' }),
     getRoomGameState: jest.fn(),
   };
   const comAutoPlayUseCase = {
@@ -44,6 +45,53 @@ const createService = () => {
 };
 
 describe('ComAutoPlayRecoveryService', () => {
+  it('stops recovery when the room no longer exists', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoom.mockResolvedValue(null);
+    roomService.getRoomGameState.mockRejectedValue(
+      new Error('Room not found: room-1'),
+    );
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(roomService.getRoomGameState).toHaveBeenCalledTimes(1);
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+    jest.useRealTimers();
+  });
+
+  it('stops a delayed auto-play retry when the room is deleted', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'play',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute.mockRejectedValue(
+      new Error('Room not found: room-1'),
+    );
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    roomService.getRoom.mockResolvedValue(null);
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+    jest.useRealTimers();
+  });
+
   it('completes a persisted full field when its timer was lost', async () => {
     jest.useFakeTimers();
     const {

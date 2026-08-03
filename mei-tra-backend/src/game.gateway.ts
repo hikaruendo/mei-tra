@@ -906,6 +906,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.playerRooms.delete(client.id);
 
       if (roomDeleted) {
+        this.clearTurnAckMonitor(data.roomId);
+        this.comAutoPlayRecoveryService.clearRoom(data.roomId);
         this.server.to(client.id).emit('back-to-lobby');
         this.emitRoomsListToAll(roomsList);
         return { success: true };
@@ -999,6 +1001,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (result.mode === 'remove') {
         if (result.roomDeleted) {
+          this.clearTurnAckMonitor(data.roomId);
+          this.comAutoPlayRecoveryService.clearRoom(data.roomId);
           this.emitRoomsListToAll(result.roomsList);
           return { success: true };
         }
