@@ -136,6 +136,7 @@ export class ModeratePlayerUseCase {
     if (!converted) {
       return { success: false, error: 'Failed to replace player with COM' };
     }
+    roomGameState.clearDisconnectTimeout(request.targetPlayerId);
 
     const updatedRoom = await this.roomService.getRoom(request.roomId);
     if (!updatedRoom) {

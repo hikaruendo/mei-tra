@@ -29,7 +29,11 @@ export interface IRoomService {
   ): Promise<boolean>;
   canStartGame(roomId: string): Promise<{ canStart: boolean; reason?: string }>;
   getRoomGameState(roomId: string): Promise<GameStateService>;
-  convertPlayerToCOM(roomId: string, playerId: string): Promise<boolean>;
+  convertPlayerToCOM(
+    roomId: string,
+    playerId: string,
+    options?: { requireDisconnected?: boolean },
+  ): Promise<boolean>;
   restorePlayerFromVacantSeat(
     roomId: string,
     playerId: string,

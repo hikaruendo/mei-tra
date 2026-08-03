@@ -75,6 +75,7 @@ export class RoomJoinService {
           updatedPlayer.playerId,
         );
       }
+      gameState.clearDisconnectTimeout(updatedPlayer.playerId);
       await gameState.applyPlayerConnectionState(updatedPlayer.playerId, {
         socketId: updatedPlayer.socketId,
         userId: updatedPlayer.userId,

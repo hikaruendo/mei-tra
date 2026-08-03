@@ -31,6 +31,7 @@ describe('ModeratePlayerUseCase', () => {
   });
 
   it('replaces idle or disconnected players with COM', async () => {
+    const clearDisconnectTimeout = jest.fn();
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(createRoom()),
       getRoomGameState: jest.fn().mockResolvedValue({
@@ -46,6 +47,7 @@ describe('ModeratePlayerUseCase', () => {
           ],
         }),
         getPlayerConnectionState: () => ({ socketId: '' }),
+        clearDisconnectTimeout,
       }),
       convertPlayerToCOM: jest.fn().mockResolvedValue(true),
       listRooms: jest.fn().mockResolvedValue([]),
@@ -70,5 +72,6 @@ describe('ModeratePlayerUseCase', () => {
       'room-1',
       'target',
     );
+    expect(clearDisconnectTimeout).toHaveBeenCalledWith('target');
   });
 });
