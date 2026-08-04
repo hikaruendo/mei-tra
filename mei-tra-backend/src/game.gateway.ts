@@ -8,9 +8,7 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import type {
-  BackToLobbyPayload,
   PlayCardPayload,
-  ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
   SyncGameStatePayload,
@@ -62,6 +60,7 @@ import {
   ComAutoPlayRecoveryHandlers,
   ComAutoPlayRecoveryService,
 } from './services/com-autoplay-recovery.service';
+import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 
 const DISCONNECT_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
 
@@ -136,6 +135,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly roomUpdateGatewayEffectsService: RoomUpdateGatewayEffectsService,
     private readonly startGameGatewayEffectsService: StartGameGatewayEffectsService,
     private readonly spectatorGatewayEffectsService: SpectatorGatewayEffectsService,
+    private readonly connectionGatewayEffectsService: ConnectionGatewayEffectsService,
   ) {}
 
   /**
@@ -407,25 +407,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private async sendBackToLobby(
-    client: Socket,
-    reason: string,
-    code: ReconnectionFailureCode,
-    roomId?: string,
-  ): Promise<void> {
-    console.warn(
-      `[Reconnection] Sending back-to-lobby for socket=${client.id} room=${roomId ?? 'none'} reason=${reason}`,
-    );
-    if (roomId) {
-      await client.leave(roomId);
-    }
-    this.playerRooms.delete(client.id);
-    await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
-    const payload: BackToLobbyPayload = { code };
-    client.emit('back-to-lobby', payload);
-    this.emitRoomsListToSocket(client, await this.roomService.listRooms());
-  }
-
   private triggerComAutoPlayIfNeeded(roomId: string): void {
     this.comAutoPlayRecoveryService.trigger(
       roomId,
@@ -482,7 +463,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (roomId && authenticatedUser) {
       const previousControllerSocketId =
-        await this.findExistingControllerSocketId(roomId, authenticatedUser.id);
+        await this.connectionGatewayEffectsService.findExistingControllerSocketId(
+          {
+            server: this.server,
+            playerRooms: this.playerRooms,
+            roomId,
+            userId: authenticatedUser.id,
+          },
+        );
       const result = await this.reconnectionUseCase.execute({
         roomId,
         socketId: client.id,
@@ -490,7 +478,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
-        await this.sendBackToLobby(client, result.reason, result.code, roomId);
+        await this.connectionGatewayEffectsService.sendBackToLobby({
+          client,
+          playerRooms: this.playerRooms,
+          reason: result.reason,
+          code: result.code,
+          roomId,
+        });
         return;
       }
 
@@ -498,7 +492,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         previousControllerSocketId &&
         previousControllerSocketId !== client.id
       ) {
-        await this.sendSocketBackToLobby(previousControllerSocketId, roomId);
+        await this.connectionGatewayEffectsService.sendSocketBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          socketId: previousControllerSocketId,
+          roomId,
+        });
       }
 
       this.playerRooms.set(client.id, roomId);
@@ -731,9 +730,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const currentRoomId = this.playerRooms.get(client.id);
       const authenticatedUser = this.getAuthenticatedUser(client);
       const previousControllerSocketId = authenticatedUser
-        ? await this.findExistingControllerSocketId(
-            data.roomId,
-            authenticatedUser.id,
+        ? await this.connectionGatewayEffectsService.findExistingControllerSocketId(
+            {
+              server: this.server,
+              playerRooms: this.playerRooms,
+              roomId: data.roomId,
+              userId: authenticatedUser.id,
+            },
           )
         : null;
       await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
@@ -758,10 +761,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         previousControllerSocketId &&
         previousControllerSocketId !== client.id
       ) {
-        await this.sendSocketBackToLobby(
-          previousControllerSocketId,
-          data.roomId,
-        );
+        await this.connectionGatewayEffectsService.sendSocketBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          socketId: previousControllerSocketId,
+          roomId: data.roomId,
+        });
       }
 
       if (currentRoomId && currentRoomId !== data.roomId) {
@@ -932,7 +937,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (roomDeleted) {
         this.clearTurnAckMonitor(data.roomId);
         this.comAutoPlayRecoveryService.clearRoom(data.roomId);
-        await this.sendRoomPlayersBackToLobby(data.roomId);
+        await this.connectionGatewayEffectsService.sendRoomPlayersBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          roomId: data.roomId,
+        });
         await this.spectatorGatewayEffectsService.sendRoomBackToLobby(
           this.server,
           data.roomId,
@@ -941,11 +950,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: true };
       }
 
-      await this.sendUserSocketsBackToLobby(
-        data.roomId,
-        authenticatedUser?.id,
-        client.id,
-      );
+      await this.connectionGatewayEffectsService.sendUserSocketsBackToLobby({
+        server: this.server,
+        playerRooms: this.playerRooms,
+        roomId: data.roomId,
+        userId: authenticatedUser?.id,
+        fallbackSocketId: client.id,
+      });
 
       this.server.to(data.roomId).emit('player-left', {
         playerId,
@@ -977,100 +988,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       console.error('Error in handleLeaveRoom:', error);
       return { success: false, error: 'Internal server error' };
-    }
-  }
-
-  private async sendRoomPlayersBackToLobby(roomId: string): Promise<void> {
-    const socketIds = Array.from(this.playerRooms.entries())
-      .filter(([, mappedRoomId]) => mappedRoomId === roomId)
-      .map(([socketId]) => socketId);
-
-    for (const socketId of socketIds) {
-      await this.sendSocketBackToLobby(socketId, roomId);
-    }
-  }
-
-  private async sendUserSocketsBackToLobby(
-    roomId: string,
-    userId: string | undefined,
-    fallbackSocketId: string,
-  ): Promise<void> {
-    const socketIds = Array.from(this.playerRooms.entries())
-      .filter(([socketId, mappedRoomId]) => {
-        if (mappedRoomId !== roomId) {
-          return false;
-        }
-        if (!userId) {
-          return socketId === fallbackSocketId;
-        }
-        const socket = this.server.sockets.sockets.get(socketId);
-        return socket
-          ? this.getAuthenticatedUser(socket)?.id === userId
-          : false;
-      })
-      .map(([socketId]) => socketId);
-
-    if (!socketIds.includes(fallbackSocketId)) {
-      socketIds.push(fallbackSocketId);
-    }
-
-    for (const socketId of socketIds) {
-      await this.sendSocketBackToLobby(socketId, roomId);
-    }
-  }
-
-  private async sendSocketBackToLobby(
-    socketId: string,
-    roomId: string,
-  ): Promise<void> {
-    this.playerRooms.delete(socketId);
-    const socket = this.server.sockets.sockets.get(socketId);
-    if (socket) {
-      await socket.leave(roomId);
-      socket.emit('back-to-lobby');
-      return;
-    }
-    this.server.to(socketId).emit('back-to-lobby');
-  }
-
-  private async findExistingControllerSocketId(
-    roomId: string,
-    userId: string,
-  ): Promise<string | null> {
-    const mappedSocketId = Array.from(this.playerRooms.entries()).find(
-      ([socketId, mappedRoomId]) => {
-        if (mappedRoomId !== roomId) {
-          return false;
-        }
-        const socket = this.server.sockets.sockets.get(socketId);
-        return socket
-          ? this.getAuthenticatedUser(socket)?.id === userId
-          : false;
-      },
-    )?.[0];
-    if (mappedSocketId) {
-      return mappedSocketId;
-    }
-
-    try {
-      const room = await this.roomService.getRoom(roomId);
-      const player = room?.players.find(
-        (candidate) => candidate.isAuthenticated && candidate.userId === userId,
-      );
-      if (!player) {
-        return null;
-      }
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
-      return (
-        roomGameState.getPlayerConnectionState(player.playerId)?.socketId ||
-        player.socketId ||
-        null
-      );
-    } catch (error) {
-      this.logger.warn(
-        `[Connection] Failed to resolve controller socket room=${roomId} user=${userId}: ${String(error)}`,
-      );
-      return null;
     }
   }
 

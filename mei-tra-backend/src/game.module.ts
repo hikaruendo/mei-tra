@@ -56,6 +56,7 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
 import { RoomMembershipService } from './services/room-membership.service';
 import { DatabaseModule } from './database/database.module';
 import { RoomMembershipReconcilerService } from './services/room-membership-reconciler.service';
+import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 
 @Module({
   imports: [DatabaseModule, RepositoriesModule, AuthModule, SocialModule],
@@ -72,6 +73,7 @@ import { RoomMembershipReconcilerService } from './services/room-membership-reco
     RoomJoinService,
     RoomMembershipService,
     RoomMembershipReconcilerService,
+    ConnectionGatewayEffectsService,
     JoinRoomGatewayEffectsService,
     DisconnectGatewayEffectsService,
     RoomUpdateGatewayEffectsService,
