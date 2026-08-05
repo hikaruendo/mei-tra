@@ -587,10 +587,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       }
       return joined;
     } catch (error) {
-      if (
-        joiningUser.userId &&
-        membershipTransition?.result === 'claimed'
-      ) {
+      if (joiningUser.userId && membershipTransition?.result === 'claimed') {
         await this.rollbackMembershipClaim(
           joiningUser.userId,
           roomId,
@@ -616,6 +613,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (roomMatches.length === 1) {
       return { ...user, playerId: roomMatches[0].playerId };
     }
+    if (roomMatches.length > 1) {
+      throw new Error(
+        `Ambiguous room player identity: room=${roomId} user=${user.userId} matches=${roomMatches.length}`,
+      );
+    }
 
     const vacantMatches = Object.values(this.vacantSeats[roomId] ?? {}).filter(
       (seat) => seat.roomPlayer.userId === user.userId,
@@ -625,6 +627,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         ...user,
         playerId: vacantMatches[0].roomPlayer.playerId,
       };
+    }
+    if (vacantMatches.length > 1) {
+      throw new Error(
+        `Ambiguous vacant seat identity: room=${roomId} user=${user.userId} matches=${vacantMatches.length}`,
+      );
     }
 
     const membership = await this.roomMembershipService.get(user.userId);

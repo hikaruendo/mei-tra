@@ -136,21 +136,20 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     const room = await this.roomService.getRoom(currentRoomId);
     const authenticatedRoomPlayers =
       room?.players.filter(
-        (player) =>
-          !player.isCOM && player.userId === authenticatedUser.id,
+        (player) => !player.isCOM && player.userId === authenticatedUser.id,
       ) ?? [];
     const roomPlayer =
       authenticatedRoomPlayers.length === 1
         ? authenticatedRoomPlayers[0]
         : null;
+    const roomStatePlayer = roomPlayer
+      ? (roomGameState
+          .getState()
+          .players.find((player) => player.playerId === roomPlayer.playerId) ??
+        null)
+      : null;
     const currentPlayer =
-      (roomPlayer
-        ? roomGameState
-            .getState()
-            .players.find(
-              (player) => player.playerId === roomPlayer.playerId,
-            ) ?? null
-        : null) ??
+      roomStatePlayer ??
       resolvePlayerByActorId(roomGameState, authenticatedUser.id) ??
       resolvePlayerBySocketId(roomGameState, socketId);
 

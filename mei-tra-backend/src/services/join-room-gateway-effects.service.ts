@@ -291,16 +291,11 @@ export class JoinRoomGatewayEffectsService {
     gamePlayers: DomainPlayer[],
     normalizedUser: SessionUser,
   ): string {
-    const gamePlayerIds = new Set(
-      gamePlayers.map((player) => player.playerId),
-    );
+    const gamePlayerIds = new Set(gamePlayers.map((player) => player.playerId));
 
     const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
-    if (selfRoomPlayer) {
-      const roomPlayer = selfRoomPlayer;
-      if (roomPlayer && gamePlayerIds.has(roomPlayer.playerId)) {
-        return roomPlayer.playerId;
-      }
+    if (selfRoomPlayer && gamePlayerIds.has(selfRoomPlayer.playerId)) {
+      return selfRoomPlayer.playerId;
     }
 
     if (gamePlayerIds.has(normalizedUser.playerId)) {

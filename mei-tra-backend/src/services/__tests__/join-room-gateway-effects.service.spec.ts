@@ -423,27 +423,25 @@ describe('JoinRoomGatewayEffectsService', () => {
       },
     });
 
-    expect(result.events).toContainEqual(
-      expect.objectContaining({
-        scope: 'socket',
-        socketId: 'socket-1',
-        event: 'game-player-joined',
-        payload: expect.objectContaining({
-          playerId: 'actual-seat',
-          isSelf: true,
-        }),
-      }),
+    const selfJoinedEvent = result.events.find(
+      (event) =>
+        event.scope === 'socket' && event.event === 'game-player-joined',
     );
-    expect(result.events).toContainEqual(
-      expect.objectContaining({
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-player-joined',
-        payload: expect.objectContaining({
-          playerId: 'actual-seat',
-        }),
-      }),
+    expect(selfJoinedEvent).toMatchObject({
+      socketId: 'socket-1',
+      payload: {
+        playerId: 'actual-seat',
+        isSelf: true,
+      },
+    });
+    const roomPlayerJoinedEvent = result.events.find(
+      (event) => event.event === 'room-player-joined',
     );
+    expect(roomPlayerJoinedEvent).toMatchObject({
+      scope: 'room',
+      roomId: 'room-1',
+      payload: { playerId: 'actual-seat' },
+    });
   });
 
   it('uses the authenticated room player id when masking active resume hands', async () => {
@@ -491,8 +489,7 @@ describe('JoinRoomGatewayEffectsService', () => {
               hand: [...player.hand],
               team: player.team,
               isPasser: player.isPasser,
-              userId:
-                player.playerId === 'actual-seat' ? 'user-1' : undefined,
+              userId: player.playerId === 'actual-seat' ? 'user-1' : undefined,
             }),
           ),
       ),

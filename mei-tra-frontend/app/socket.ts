@@ -5,6 +5,28 @@ let socket: Socket | null = null;
 let latestAuthToken: string | undefined;
 let authTokenProvider: (() => Promise<string | null>) | undefined;
 
+type WindowWithGameSocket = Window & {
+  __MEITRA_GAME_SOCKET__?: Socket;
+};
+
+function getWindowSocket(): Socket | null {
+  if (typeof window === 'undefined') return null;
+
+  return (window as WindowWithGameSocket).__MEITRA_GAME_SOCKET__ ?? null;
+}
+
+function setWindowSocket(nextSocket: Socket | null): void {
+  if (typeof window === 'undefined') return;
+
+  const gameWindow = window as WindowWithGameSocket;
+  if (nextSocket) {
+    gameWindow.__MEITRA_GAME_SOCKET__ = nextSocket;
+    return;
+  }
+
+  delete gameWindow.__MEITRA_GAME_SOCKET__;
+}
+
 export function setSocketAuthTokenProvider(
   provider: (() => Promise<string | null>) | undefined,
 ): void {
@@ -23,6 +45,7 @@ function detectSafari(): boolean {
 
 export function getSocket(authToken?: string): Socket {
   latestAuthToken = authToken ?? latestAuthToken;
+  socket = getWindowSocket() ?? socket;
 
   if (!socket && typeof window !== 'undefined') {
     const socketUrl = getSocketBaseUrl();
@@ -56,6 +79,7 @@ export function getSocket(authToken?: string): Socket {
     };
 
     socket = io(socketUrl, socketOptions);
+    setWindowSocket(socket);
 
     console.log('[Socket] Creating new connection to:', socketUrl);
     console.log('[Socket] Browser:', isSafari ? 'Safari/iOS' : 'Other');
@@ -87,14 +111,16 @@ export function getSocket(authToken?: string): Socket {
 }
 
 export function getExistingSocket(): Socket | null {
+  socket = getWindowSocket() ?? socket;
   return socket;
 }
 
 export function reconnectSocket(authToken?: string): Socket {
   latestAuthToken = authToken ?? latestAuthToken;
+  const existingSocket = getExistingSocket();
 
-  if (socket) {
-    socket.auth = async (cb: (data: { roomId: string; token?: string }) => void) => {
+  if (existingSocket) {
+    existingSocket.auth = async (cb: (data: { roomId: string; token?: string }) => void) => {
       const currentRoomId = sessionStorage.getItem('roomId') || '';
       console.log('[Socket] Reconnect auth callback — roomId from sessionStorage:', currentRoomId || 'none');
       if (authTokenProvider) {
@@ -102,9 +128,9 @@ export function reconnectSocket(authToken?: string): Socket {
       }
       cb({ roomId: currentRoomId, token: latestAuthToken });
     };
-    socket.disconnect();
-    socket.connect();
-    return socket;
+    existingSocket.disconnect();
+    existingSocket.connect();
+    return existingSocket;
   }
 
   const nextSocket = getSocket(authToken);
@@ -113,9 +139,9 @@ export function reconnectSocket(authToken?: string): Socket {
 }
 
 export function disconnectSocket(): void {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
+  const existingSocket = getExistingSocket();
+  existingSocket?.disconnect();
+  socket = null;
+  setWindowSocket(null);
   latestAuthToken = undefined;
 }

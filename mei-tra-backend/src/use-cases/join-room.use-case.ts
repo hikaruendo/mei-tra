@@ -26,11 +26,10 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       const { currentRoomId, targetRoomId, user, authenticatedUser } = request;
 
       const normalizedUser = this.normalizeUser(user, authenticatedUser);
-      const previousRoomNotification =
-        await this.buildPreviousRoomNotification(
-          currentRoomId,
-          normalizedUser,
-        );
+      const previousRoomNotification = await this.buildPreviousRoomNotification(
+        currentRoomId,
+        normalizedUser,
+      );
 
       const joinSucceeded = await this.roomService.joinRoom(
         targetRoomId,
@@ -137,6 +136,9 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       );
       if (playersByUserId.length === 1) {
         return playersByUserId[0];
+      }
+      if (playersByUserId.length > 1) {
+        return null;
       }
     }
 

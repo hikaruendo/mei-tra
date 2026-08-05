@@ -552,6 +552,89 @@ describe('ReconnectionUseCase', () => {
     );
   });
 
+  it('prefers the unique authenticated room seat over a stale waiting-room session', async () => {
+    const roomPlayers = [
+      {
+        playerId: 'seat-1',
+        socketId: 'stale-socket',
+        userId: 'user-1',
+        isAuthenticated: true,
+        name: 'User 1',
+        hand: [],
+        team: 0 as const,
+        isReady: true,
+        isHost: true,
+        isPasser: false,
+        joinedAt: new Date(),
+      },
+      {
+        playerId: 'seat-2',
+        socketId: 'other-socket',
+        userId: 'user-2',
+        isAuthenticated: true,
+        name: 'User 2',
+        hand: [],
+        team: 1 as const,
+        isReady: true,
+        isHost: false,
+        isPasser: false,
+        joinedAt: new Date(),
+      },
+    ];
+    const roomGameState = {
+      findSessionUserByUserId: jest.fn().mockReturnValue({
+        playerId: 'seat-2',
+      }),
+      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
+      getState: () => ({ players: [], gamePhase: 'waiting' }),
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest.fn().mockResolvedValue({
+        id: 'room-1',
+        hostId: 'seat-1',
+        status: RoomStatus.WAITING,
+        players: roomPlayers,
+      }),
+      handlePlayerReconnection: jest.fn().mockResolvedValue({ success: true }),
+      listRooms: jest.fn().mockResolvedValue([]),
+      initCOMPlaceholders: jest.fn().mockResolvedValue(undefined),
+    } as Partial<IRoomService> as IRoomService;
+    const gameState = {
+      upsertSessionUser: jest.fn(),
+    } as Partial<IGameStateService> as IGameStateService;
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      socketId: 'socket-new',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+        mode: 'waiting-room',
+        selfPlayerId: 'seat-1',
+      }),
+    );
+    expect(roomService.handlePlayerReconnection).toHaveBeenCalledWith(
+      'room-1',
+      'seat-1',
+      'socket-new',
+      'user-1',
+    );
+  });
+
   it('rejects a stale room reconnect when membership belongs to another room', async () => {
     const roomGameState = {
       getState: jest.fn(() => ({

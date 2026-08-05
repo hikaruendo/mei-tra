@@ -148,12 +148,45 @@ describe('RoomService active membership lifecycle', () => {
       'room-1',
       'seat-1',
     );
-    expect(roomJoinService.joinRoom).toHaveBeenCalledWith(
-      expect.objectContaining({
-        user: expect.objectContaining({ playerId: 'seat-1' }),
-      }),
-    );
+    const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
+    expect(joinRequest).toMatchObject({
+      user: { playerId: 'seat-1' },
+    });
     expect(membershipService.get).not.toHaveBeenCalled();
+  });
+
+  it('rejects an ambiguous authenticated room identity before claiming membership', async () => {
+    const duplicatePlayer = {
+      socketId: 'socket-old',
+      userId: 'user-1',
+      isAuthenticated: true,
+      name: 'Player 1',
+      hand: [],
+      team: 0 as const,
+      isPasser: false,
+      isReady: true,
+      isHost: false,
+      joinedAt: new Date(),
+    };
+    jest.spyOn(service, 'getRoom').mockResolvedValue({
+      ...room,
+      players: [
+        { ...duplicatePlayer, playerId: 'seat-1' },
+        { ...duplicatePlayer, playerId: 'seat-2' },
+      ],
+    });
+
+    await expect(
+      service.joinRoom('room-1', {
+        socketId: 'socket-new',
+        playerId: 'user-1',
+        userId: 'user-1',
+        name: 'Player 1',
+      }),
+    ).rejects.toThrow('Ambiguous room player identity');
+
+    expect(membershipService.claim).not.toHaveBeenCalled();
+    expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
   });
 
   it('rolls back a fresh claim with its membership version when joining fails', async () => {

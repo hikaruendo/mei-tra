@@ -350,8 +350,8 @@ export class ReconnectionUseCase {
         ? state.currentPlayerId
         : state.currentPlayerIndex !== -1 &&
             state.players[state.currentPlayerIndex]
-        ? state.players[state.currentPlayerIndex].playerId
-        : null;
+          ? state.players[state.currentPlayerIndex].playerId
+          : null;
 
     return {
       selfPlayerId: player.playerId,
@@ -431,6 +431,16 @@ export class ReconnectionUseCase {
     roomPlayers: RoomPlayer[],
     authenticatedUserId: string,
   ): RoomPlayer | null {
+    const authenticatedMatches = roomPlayers.filter(
+      (player) => !player.isCOM && player.userId === authenticatedUserId,
+    );
+    if (authenticatedMatches.length === 1) {
+      return authenticatedMatches[0];
+    }
+    if (authenticatedMatches.length > 1) {
+      return null;
+    }
+
     const sessionUser =
       roomGameState.findSessionUserByUserId(authenticatedUserId) ??
       roomGameState.findSessionUserByPlayerId(authenticatedUserId);
@@ -445,12 +455,7 @@ export class ReconnectionUseCase {
       }
     }
 
-    const authenticatedMatches = roomPlayers.filter(
-      (player) =>
-        !player.isCOM && player.userId === authenticatedUserId,
-    );
-
-    return authenticatedMatches.length === 1 ? authenticatedMatches[0] : null;
+    return null;
   }
 
   private resolveAuthenticatedRoomPlayer(
@@ -458,8 +463,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const matches = roomPlayers.filter(
-      (player) =>
-        !player.isCOM && player.userId === authenticatedUserId,
+      (player) => !player.isCOM && player.userId === authenticatedUserId,
     );
 
     return matches.length === 1 ? matches[0] : null;
