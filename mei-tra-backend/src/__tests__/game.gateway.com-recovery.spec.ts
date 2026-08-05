@@ -234,6 +234,7 @@ describe('GameGateway COM recovery integration', () => {
       turnMonitorService: { clearMonitor: jest.Mock };
       comAutoPlayRecoveryService: { clearRoom: jest.Mock };
       spectatorGatewayEffectsService: { sendRoomBackToLobby: jest.Mock };
+      roomService: { getRoom: jest.Mock };
       connectionGatewayEffectsService: {
         sendRoomPlayersBackToLobby: jest.Mock;
       };
@@ -257,6 +258,17 @@ describe('GameGateway COM recovery integration', () => {
     testGateway.comAutoPlayRecoveryService = { clearRoom: jest.fn() };
     testGateway.spectatorGatewayEffectsService = {
       sendRoomBackToLobby: jest.fn().mockResolvedValue(undefined),
+    };
+    testGateway.roomService = {
+      getRoom: jest.fn().mockResolvedValue({
+        players: [
+          {
+            playerId: 'user-1',
+            userId: 'user-1',
+            isCOM: false,
+          },
+        ],
+      }),
     };
     testGateway.connectionGatewayEffectsService = {
       sendRoomPlayersBackToLobby: jest.fn(

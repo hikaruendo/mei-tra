@@ -165,6 +165,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.getAuthenticatedUser(client)?.id ?? client.id;
   }
 
+  private async resolveClientRoomPlayerId(
+    roomId: string,
+    client: Socket,
+    fallbackPlayerId: string,
+  ): Promise<string> {
+    const authenticatedUser = this.getAuthenticatedUser(client);
+    if (!authenticatedUser) {
+      return fallbackPlayerId;
+    }
+
+    const room = await this.roomService.getRoom(roomId);
+    const roomPlayer = room?.players.find(
+      (player) => !player.isCOM && player.userId === authenticatedUser.id,
+    );
+
+    return roomPlayer?.playerId ?? fallbackPlayerId;
+  }
+
   private normalizeGatewayPayload(event: GatewayEvent): unknown {
     if (event.event === 'room-updated' && event.payload) {
       return toRoomContract(event.payload as Room);
@@ -883,9 +901,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.togglePlayerReadyUseCase.execute({
         roomId: data.roomId,
-        playerId: data.playerId,
+        playerId,
       });
 
       if (!result.success || !result.updatedRoom) {
@@ -915,8 +938,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       const authenticatedUser = this.getAuthenticatedUser(client);
+      const resolvedPlayerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.leaveRoomUseCase.execute({
-        playerId: data.playerId,
+        playerId: resolvedPlayerId,
         roomId: data.roomId,
       });
 
@@ -1021,9 +1049,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      const requesterPlayerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.requesterPlayerId,
+      );
       const result = await this.moderatePlayerUseCase.execute({
         roomId: data.roomId,
-        requesterPlayerId: data.requesterPlayerId,
+        requesterPlayerId,
         targetPlayerId: data.targetPlayerId,
         action: data.action,
         isPlayerIdle: this.isPlayerIdle(data.roomId, data.targetPlayerId),
@@ -1186,9 +1219,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.changePlayerTeamUseCase.execute({
         roomId: data.roomId,
-        playerId: data.playerId,
+        playerId,
         teamChanges: data.teamChanges,
       });
 
@@ -1226,9 +1264,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.shuffleTeamsUseCase.execute({
         roomId: data.roomId,
-        playerId: data.playerId,
+        playerId,
       });
       if (!result.success || !result.updatedRoom) {
         client.emit('error-message', result.error || 'Failed to change teams');
@@ -1265,7 +1308,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const result = await this.updateTeamNamesUseCase.execute(data);
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
+      const result = await this.updateTeamNamesUseCase.execute({
+        ...data,
+        playerId,
+      });
       if (!result.success || !result.updatedRoom) {
         client.emit(
           'error-message',
@@ -1301,9 +1352,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.fillWithComUseCase.execute({
         roomId: data.roomId,
-        playerId: data.playerId,
+        playerId,
       });
 
       if (!result.success || !result.updatedRoom) {
@@ -1342,8 +1398,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false, error: 'Spectators cannot start the game' };
     }
 
+    const playerId = await this.resolveClientRoomPlayerId(
+      data.roomId,
+      client,
+      data.playerId,
+    );
     const result = await this.startGameUseCase.execute({
-      playerId: data.playerId,
+      playerId,
       roomId: data.roomId,
     });
 
@@ -1621,10 +1682,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const preparation = await this.revealBrokenHandUseCase.prepare({
         roomId: data.roomId,
         actorId,
-        playerId: data.playerId,
+        playerId,
       });
 
       if (!preparation.success || !preparation.followUp) {
