@@ -975,10 +975,11 @@ export const useGame = () => {
         setRevealedAgari(null);
         setNegriCard(negriCard);
         setNegriPlayerId(startingPlayer);
+        const selfPlayerId = getCurrentUserPlayerId();
         // Remove Negri card from player's hand
         updatePlayersLocally((prev) =>
           prev.map((p) =>
-            p.playerId === currentPlayerId
+            p.playerId === selfPlayerId
               ? { ...p, hand: p.hand.filter((card) => card !== negriCard) }
               : p,
           ),
@@ -1231,6 +1232,7 @@ export const useGame = () => {
     markRoomSyncHandled,
     commitPlayers,
     resolveCurrentUserPlayerId,
+    getCurrentUserPlayerId,
     updatePlayersLocally,
     syncCurrentPlayerIdentity,
     shouldSkipLegacyRoomUpdated,
