@@ -98,12 +98,14 @@ export class GameHistoryController {
       throw new NotFoundException('Room not found');
     }
 
-    const participant = room.players.find((player) => player.userId === userId);
-    if (!participant) {
+    const participants = room.players.filter(
+      (player) => !player.isCOM && player.userId === userId,
+    );
+    if (participants.length !== 1) {
       throw new ForbiddenException('Cannot access another user game history');
     }
 
-    return participant;
+    return participants[0];
   }
 
   private withViewerStartingHands(

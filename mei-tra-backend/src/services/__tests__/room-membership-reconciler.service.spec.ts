@@ -90,6 +90,50 @@ describe('RoomMembershipReconcilerService', () => {
     );
   });
 
+  it('repairs a same-room membership that points to a stale player id', async () => {
+    const repairedMembership: ActiveRoomMembership = {
+      ...membership,
+      playerId: 'seat-1',
+      membershipVersion: 5,
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({
+        id: 'room-authoritative',
+        players: [
+          {
+            playerId: 'seat-1',
+            userId: 'user-1',
+            isAuthenticated: true,
+          },
+        ],
+      }),
+      listRooms: jest.fn().mockResolvedValue([]),
+      leaveRoom: jest.fn(),
+    } as unknown as IRoomService;
+    const membershipService = {
+      list: jest.fn().mockResolvedValue([membership]),
+      claim: jest.fn().mockResolvedValue({
+        result: 'reconnected',
+        membership: repairedMembership,
+      }),
+      release: jest.fn(),
+      cancelReservation: jest.fn(),
+    } as unknown as RoomMembershipService;
+    const service = new RoomMembershipReconcilerService(
+      roomService,
+      membershipService,
+    );
+
+    await service.reconcile();
+
+    expect(membershipService.claim).toHaveBeenCalledWith(
+      'user-1',
+      'room-authoritative',
+      'seat-1',
+    );
+    expect(membershipService.release).not.toHaveBeenCalled();
+  });
+
   it('cancels an expired room-creation reservation', async () => {
     const expiredReservation: ActiveRoomMembership = {
       ...membership,

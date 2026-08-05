@@ -40,7 +40,13 @@ describe('Reconnection Token Management', () => {
       gameStateRepository = {
         findByRoomId: jest.fn(),
         create: jest.fn(),
-        update: jest.fn().mockResolvedValue({} as GameState),
+        update: jest.fn().mockImplementation(
+          async (_roomId: string, state: Partial<GameState>) =>
+            ({
+              ...state,
+              version: ((state as GameState).version ?? 0) + 1,
+            }) as GameState,
+        ),
         persistRoomRoster: jest
           .fn()
           .mockImplementation(
@@ -386,7 +392,13 @@ describe('Reconnection Token Management', () => {
       gameStateRepository = {
         findByRoomId: jest.fn(),
         create: jest.fn(),
-        update: jest.fn().mockResolvedValue({} as GameState),
+        update: jest.fn().mockImplementation(
+          async (_roomId: string, state: Partial<GameState>) =>
+            ({
+              ...state,
+              version: ((state as GameState).version ?? 0) + 1,
+            }) as GameState,
+        ),
         persistRoomRoster: jest
           .fn()
           .mockImplementation(
@@ -1147,7 +1159,7 @@ describe('Reconnection Token Management', () => {
 
         const result = await roomService.joinRoom(roomId, {
           socketId: 'socket-new',
-          playerId: 'player-1',
+          playerId: 'stale-player',
           userId: 'user-1',
           isAuthenticated: true,
           name: 'Test Player',
@@ -1156,6 +1168,9 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         expect(roomRepository.addPlayer).not.toHaveBeenCalled();
         expect(roomRepository.updatePlayer).not.toHaveBeenCalled();
+        expect(roomState.getPersistedRoom()?.players[0].playerId).toBe(
+          'player-1',
+        );
         expect(roomState.getPersistedRoom()?.players[0].socketId).toBe('');
         expect(gameStateRepository.persistRoomRoster).toHaveBeenCalledWith(
           roomId,
@@ -1848,6 +1863,186 @@ describe('Reconnection Token Management', () => {
         expect(gameStateRepository.update).toHaveBeenCalledWith(
           roomId,
           expect.objectContaining({ currentPlayerId: nextPlayerId }),
+          expect.any(Number),
+        );
+      });
+
+      it('should inherit the original seat blow action when a different player takes a vacant blow seat', async () => {
+        const roomId = 'room-123';
+        const originalPlayerId = 'player-left';
+        const replacingComId = 'com-left';
+        const joiningPlayerId = 'player-join';
+        const nextPlayerId = 'player-next';
+        const user = {
+          socketId: 'socket-join',
+          playerId: joiningPlayerId,
+          name: 'Joining Player',
+        };
+        const comPlayer: RoomPlayer = {
+          socketId: 'com-socket',
+          playerId: replacingComId,
+          name: 'COM',
+          team: 0,
+          hand: ['H2', 'D3'],
+          isCOM: true,
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date('2026-03-13T10:01:00.000Z'),
+        };
+        const nextRoomPlayer: RoomPlayer = {
+          socketId: 'socket-next',
+          playerId: nextPlayerId,
+          name: 'Next Player',
+          team: 1,
+          hand: ['C4', 'S5'],
+          isCOM: false,
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: false,
+          joinedAt: new Date('2026-03-13T10:02:00.000Z'),
+        };
+        const room: Room = {
+          ...baseRoom,
+          players: [comPlayer, nextRoomPlayer],
+        };
+
+        roomRepository.findById.mockResolvedValue(room);
+
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameStateRepository.update.mockImplementation(
+          async (_roomId, state) => ({
+            ...gameState.getState(),
+            ...state,
+            version: (gameState.getState().version ?? 0) + 1,
+          }),
+        );
+        gameState.getState().gamePhase = 'blow';
+        gameState.getState().players = [
+          {
+            playerId: replacingComId,
+            name: 'COM',
+            team: 0,
+            hand: ['H2', 'D3'],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+            isCOM: true,
+          },
+          {
+            playerId: nextPlayerId,
+            name: 'Next Player',
+            team: 1,
+            hand: ['C4', 'S5'],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ];
+        gameState.getState().currentPlayerId = replacingComId;
+        gameState.getState().currentPlayerIndex = 0;
+        gameState.getState().blowState = {
+          currentTrump: null,
+          currentHighestDeclaration: {
+            playerId: originalPlayerId,
+            trumpType: 'club',
+            numberOfPairs: 7,
+            timestamp: 1,
+          },
+          declarations: [
+            {
+              playerId: originalPlayerId,
+              trumpType: 'club',
+              numberOfPairs: 7,
+              timestamp: 1,
+            },
+          ],
+          actionHistory: [
+            {
+              type: 'declare',
+              playerId: originalPlayerId,
+              trumpType: 'club',
+              numberOfPairs: 7,
+              timestamp: 1,
+            },
+          ],
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        };
+        const stalePersistedBlowState = JSON.parse(
+          JSON.stringify(gameState.getState().blowState),
+        ) as GameState['blowState'];
+        gameStateRepository.persistRoomRoster.mockImplementationOnce(
+          async (_roomId, _roomPlayers, state) => ({
+            ...state,
+            currentPlayerId: replacingComId,
+            currentPlayerIndex: 0,
+            blowState: stalePersistedBlowState,
+            version: (state.version ?? 0) + 1,
+          }),
+        );
+        (roomService as any)['vacantSeats'][roomId] = {
+          0: {
+            roomPlayer: {
+              socketId: 'socket-left',
+              playerId: originalPlayerId,
+              name: 'Left Player',
+              team: 0,
+              hand: ['H2', 'D3'],
+              isPasser: false,
+              hasBroken: false,
+              hasRequiredBroken: false,
+              isReady: true,
+              isHost: false,
+              joinedAt: new Date('2026-03-13T09:59:00.000Z'),
+            },
+            gamePlayer: {
+              playerId: originalPlayerId,
+              name: 'Left Player',
+              team: 0,
+              hand: ['H2', 'D3'],
+              isPasser: false,
+              hasBroken: false,
+              hasRequiredBroken: false,
+            },
+            replacementPlayerId: replacingComId,
+          },
+        };
+
+        const result = await roomService.joinRoom(roomId, user);
+
+        expect(result).toBe(true);
+        expect(gameState.getState().players[0]?.playerId).toBe(joiningPlayerId);
+        expect(
+          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+        ).toBe(joiningPlayerId);
+        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+          joiningPlayerId,
+        );
+        expect(gameState.getState().blowState.actionHistory[0]?.playerId).toBe(
+          joiningPlayerId,
+        );
+        expect(gameState.getState().currentPlayerId).toBe(nextPlayerId);
+        expect(gameState.getState().currentPlayerIndex).toBe(1);
+        expect(gameStateRepository.update).toHaveBeenCalledWith(
+          roomId,
+          expect.objectContaining({ currentPlayerId: nextPlayerId }),
+          expect.any(Number),
+        );
+        expect(gameStateRepository.update).toHaveBeenCalledWith(
+          roomId,
+          expect.objectContaining({
+            blowState: expect.objectContaining({
+              currentHighestDeclaration: expect.objectContaining({
+                playerId: joiningPlayerId,
+              }),
+            }),
+          }),
           expect.any(Number),
         );
       });

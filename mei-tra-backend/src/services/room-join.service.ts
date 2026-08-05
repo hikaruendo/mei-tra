@@ -37,9 +37,7 @@ export class RoomJoinService {
     void roomId;
     const state = gameState.getState();
 
-    const existingPlayer = room.players.find(
-      (player) => player.playerId === user.playerId,
-    );
+    const existingPlayer = this.findExistingRoomPlayer(room.players, user);
     if (existingPlayer) {
       const statePlayer = state.players.find(
         (player) => player.playerId === existingPlayer.playerId,
@@ -53,8 +51,10 @@ export class RoomJoinService {
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
         ...user,
+        playerId: existingPlayer.playerId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
+        isHost: room.hostId === existingPlayer.playerId,
       };
       Object.assign(existingPlayer, updatedPlayer);
       if (statePlayer) {
@@ -300,16 +300,22 @@ export class RoomJoinService {
       }
     }
 
+    const seatReferencePlayerIds = new Set<string>();
     if (replacingComId) {
-      this.playerReferenceRemapperService.remapGameStatePlayerIdReferences(
-        state,
-        replacingComId,
-        player.playerId,
-      );
-      if (state.teamAssignments[replacingComId] != null) {
-        delete state.teamAssignments[replacingComId];
-      }
+      seatReferencePlayerIds.add(replacingComId);
     }
+    if (seatRoomSnapshot?.playerId) {
+      seatReferencePlayerIds.add(seatRoomSnapshot.playerId);
+    }
+    if (seatGameSnapshot?.playerId) {
+      seatReferencePlayerIds.add(seatGameSnapshot.playerId);
+    }
+
+    const remappedSeatReferences = this.remapSeatReferences(
+      state,
+      seatReferencePlayerIds,
+      player.playerId,
+    );
     state.teamAssignments[player.playerId] = player.team;
 
     gameState.registerPlayerToken(player.playerId, player.playerId);
@@ -322,7 +328,18 @@ export class RoomJoinService {
       isAuthenticated: player.isAuthenticated,
     });
     await gameState.persistRoster(room.players, room.hostId);
-    if (this.advanceBlowTurnPastActedPlayer(gameState.getState())) {
+    const persistedState = gameState.getState();
+    if (remappedSeatReferences) {
+      this.remapSeatReferences(
+        persistedState,
+        seatReferencePlayerIds,
+        player.playerId,
+      );
+      persistedState.teamAssignments[player.playerId] = player.team;
+    }
+    const advancedBlowTurn =
+      this.advanceBlowTurnPastActedPlayer(persistedState);
+    if (remappedSeatReferences || advancedBlowTurn) {
       await gameState.saveState();
     }
     return true;
@@ -330,6 +347,48 @@ export class RoomJoinService {
 
   private countActualPlayers(players: RoomPlayer[]): number {
     return players.filter((player) => !player.isCOM).length;
+  }
+
+  private findExistingRoomPlayer(
+    players: RoomPlayer[],
+    user: SessionUser,
+  ): RoomPlayer | undefined {
+    if (user.userId) {
+      const playerByUserId = players.find(
+        (player) => !player.isCOM && player.userId === user.userId,
+      );
+      if (playerByUserId) {
+        return playerByUserId;
+      }
+    }
+
+    return players.find((player) => player.playerId === user.playerId);
+  }
+
+  private remapSeatReferences(
+    state: GameState,
+    seatReferencePlayerIds: Set<string>,
+    playerId: string,
+  ): boolean {
+    let remapped = false;
+
+    seatReferencePlayerIds.forEach((fromPlayerId) => {
+      if (fromPlayerId === playerId) {
+        return;
+      }
+
+      this.playerReferenceRemapperService.remapGameStatePlayerIdReferences(
+        state,
+        fromPlayerId,
+        playerId,
+      );
+      if (state.teamAssignments[fromPlayerId] != null) {
+        delete state.teamAssignments[fromPlayerId];
+      }
+      remapped = true;
+    });
+
+    return remapped;
   }
 
   private advanceBlowTurnPastActedPlayer(state: GameState): boolean {

@@ -180,6 +180,93 @@ describe('SupabaseGameStateRepository', () => {
     ]);
   });
 
+  it('remaps an orphan blow actor to the only roster player without a blow action', async () => {
+    const secondRoomPlayer = {
+      ...roomPlayerRow,
+      id: 'room-player-2',
+      player_id: 'player-2',
+      name: 'Second player',
+      team: 0,
+      seat_index: 1,
+    };
+    const thirdRoomPlayer = {
+      ...roomPlayerRow,
+      id: 'room-player-3',
+      player_id: 'player-3',
+      name: 'Third player',
+      team: 1,
+      seat_index: 2,
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          game_phase: 'blow',
+          state_data: {
+            ...gameStateRow.state_data,
+            playerStates: {
+              ...gameStateRow.state_data.playerStates,
+              'player-2': { hand: ['H2'], isPasser: false },
+              'player-3': { hand: ['D3'], isPasser: true },
+            },
+            blowState: {
+              ...gameStateRow.state_data.blowState,
+              currentHighestDeclaration: {
+                playerId: 'com-orphan',
+                team: 0,
+                trumpType: 'zuppe',
+                numberOfPairs: 6,
+                timestamp: 1,
+              },
+              declarations: [
+                {
+                  playerId: 'com-orphan',
+                  team: 0,
+                  trumpType: 'zuppe',
+                  numberOfPairs: 6,
+                  timestamp: 1,
+                },
+              ],
+              actionHistory: [
+                {
+                  type: 'pass',
+                  playerId: 'player-1',
+                  timestamp: 1,
+                },
+                {
+                  type: 'declare',
+                  playerId: 'com-orphan',
+                  trumpType: 'zuppe',
+                  numberOfPairs: 6,
+                  timestamp: 2,
+                },
+                {
+                  type: 'pass',
+                  playerId: 'player-3',
+                  timestamp: 3,
+                },
+              ],
+            },
+          },
+        },
+        roomPlayers: [roomPlayerRow, secondRoomPlayer, thirdRoomPlayer],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    const state = await repository.findByRoomId(gameStateRow.room_id);
+
+    expect(state?.blowState.currentHighestDeclaration?.playerId).toBe(
+      'player-2',
+    );
+    expect(state?.blowState.currentHighestDeclaration?.team).toBe(0);
+    expect(state?.blowState.declarations[0]?.playerId).toBe('player-2');
+    expect(state?.blowState.actionHistory[1]?.playerId).toBe('player-2');
+  });
+
   it('ignores player order entries when authoritative roster is empty', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: {

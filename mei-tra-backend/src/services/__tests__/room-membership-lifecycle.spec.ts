@@ -43,6 +43,7 @@ describe('RoomService active membership lifecycle', () => {
 
   let roomRepository: jest.Mocked<IRoomRepository>;
   let membershipService: {
+    get: jest.Mock;
     claim: jest.Mock;
     release: jest.Mock;
     releaseByPlayer: jest.Mock;
@@ -58,6 +59,7 @@ describe('RoomService active membership lifecycle', () => {
       updateLastActivity: jest.fn(),
     } as unknown as jest.Mocked<IRoomRepository>;
     membershipService = {
+      get: jest.fn().mockResolvedValue(null),
       claim: jest.fn(),
       release: jest.fn().mockResolvedValue('released'),
       releaseByPlayer: jest.fn().mockResolvedValue(true),
@@ -102,6 +104,88 @@ describe('RoomService active membership lifecycle', () => {
     ).rejects.toBeInstanceOf(ActiveRoomMembershipConflictError);
 
     expect(service.getRoomGameState).not.toHaveBeenCalled();
+    expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
+  });
+
+  it('claims and joins with the persisted room seat id', async () => {
+    const roomWithResolvedSeat: Room = {
+      ...room,
+      hostId: 'seat-1',
+      players: [
+        {
+          socketId: 'socket-old',
+          playerId: 'seat-1',
+          userId: 'user-1',
+          isAuthenticated: true,
+          name: 'Player 1',
+          hand: [],
+          team: 0,
+          isPasser: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        },
+      ],
+    };
+    jest.spyOn(service, 'getRoom').mockResolvedValue(roomWithResolvedSeat);
+    membershipService.claim.mockResolvedValue({
+      result: 'reconnected',
+      membership: { ...membership, playerId: 'seat-1' },
+    });
+    roomJoinService.joinRoom.mockResolvedValue(true);
+
+    await expect(
+      service.joinRoom('room-1', {
+        socketId: 'socket-new',
+        playerId: 'user-1',
+        userId: 'user-1',
+        name: 'Player 1',
+      }),
+    ).resolves.toBe(true);
+
+    expect(membershipService.claim).toHaveBeenCalledWith(
+      'user-1',
+      'room-1',
+      'seat-1',
+    );
+    const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
+    expect(joinRequest).toMatchObject({
+      user: { playerId: 'seat-1' },
+    });
+    expect(membershipService.get).not.toHaveBeenCalled();
+  });
+
+  it('rejects an ambiguous authenticated room identity before claiming membership', async () => {
+    const duplicatePlayer = {
+      socketId: 'socket-old',
+      userId: 'user-1',
+      isAuthenticated: true,
+      name: 'Player 1',
+      hand: [],
+      team: 0 as const,
+      isPasser: false,
+      isReady: true,
+      isHost: false,
+      joinedAt: new Date(),
+    };
+    jest.spyOn(service, 'getRoom').mockResolvedValue({
+      ...room,
+      players: [
+        { ...duplicatePlayer, playerId: 'seat-1' },
+        { ...duplicatePlayer, playerId: 'seat-2' },
+      ],
+    });
+
+    await expect(
+      service.joinRoom('room-1', {
+        socketId: 'socket-new',
+        playerId: 'user-1',
+        userId: 'user-1',
+        name: 'Player 1',
+      }),
+    ).rejects.toThrow('Ambiguous room player identity');
+
+    expect(membershipService.claim).not.toHaveBeenCalled();
     expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
   });
 

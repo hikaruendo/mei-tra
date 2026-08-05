@@ -416,6 +416,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </span>
         </div>
       )}
+      {gamePhase && isDisconnected && !player.isCOM && (
+        <span
+          className={styles.disconnectedBadge}
+          title={tStatus('disconnectedNotice', { playerName: player.name })}
+        >
+          {tStatus('reconnecting')}
+        </span>
+      )}
       {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
         <button
           className={styles.brokenButton}

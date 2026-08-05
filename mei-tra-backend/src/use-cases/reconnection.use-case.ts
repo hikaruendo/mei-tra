@@ -169,7 +169,11 @@ export class ReconnectionUseCase {
           };
         }
 
-        this.syncGlobalConnectionUser(socketId, authenticatedUser);
+        this.syncGlobalConnectionUser(
+          socketId,
+          authenticatedUser,
+          existingWaitingPlayer.playerId,
+        );
 
         return {
           success: true,
@@ -236,7 +240,11 @@ export class ReconnectionUseCase {
         };
       }
 
-      this.syncGlobalConnectionUser(socketId, authenticatedUser);
+      this.syncGlobalConnectionUser(
+        socketId,
+        authenticatedUser,
+        existingPlayer.playerId,
+      );
 
       return {
         success: true,
@@ -337,9 +345,13 @@ export class ReconnectionUseCase {
   ): ActiveGameSnapshot {
     const state = roomGameState.getState();
     const currentTurnPlayerId =
-      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
-        ? state.players[state.currentPlayerIndex].playerId
-        : null;
+      state.currentPlayerId &&
+      state.players.some((player) => player.playerId === state.currentPlayerId)
+        ? state.currentPlayerId
+        : state.currentPlayerIndex !== -1 &&
+            state.players[state.currentPlayerIndex]
+          ? state.players[state.currentPlayerIndex].playerId
+          : null;
 
     return {
       selfPlayerId: player.playerId,
@@ -372,6 +384,7 @@ export class ReconnectionUseCase {
   private syncGlobalConnectionUser(
     socketId: string,
     authenticatedUser: AuthenticatedUser,
+    playerId: string,
   ): void {
     const displayName =
       authenticatedUser.profile?.displayName ||
@@ -380,7 +393,7 @@ export class ReconnectionUseCase {
 
     this.gameState.upsertSessionUser({
       socketId,
-      playerId: authenticatedUser.id,
+      playerId,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -418,6 +431,16 @@ export class ReconnectionUseCase {
     roomPlayers: RoomPlayer[],
     authenticatedUserId: string,
   ): RoomPlayer | null {
+    const authenticatedMatches = roomPlayers.filter(
+      (player) => !player.isCOM && player.userId === authenticatedUserId,
+    );
+    if (authenticatedMatches.length === 1) {
+      return authenticatedMatches[0];
+    }
+    if (authenticatedMatches.length > 1) {
+      return null;
+    }
+
     const sessionUser =
       roomGameState.findSessionUserByUserId(authenticatedUserId) ??
       roomGameState.findSessionUserByPlayerId(authenticatedUserId);
@@ -432,12 +455,7 @@ export class ReconnectionUseCase {
       }
     }
 
-    const authenticatedMatches = roomPlayers.filter(
-      (player) =>
-        player.isAuthenticated && player.userId === authenticatedUserId,
-    );
-
-    return authenticatedMatches.length === 1 ? authenticatedMatches[0] : null;
+    return null;
   }
 
   private resolveAuthenticatedRoomPlayer(
@@ -445,8 +463,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const matches = roomPlayers.filter(
-      (player) =>
-        player.isAuthenticated && player.userId === authenticatedUserId,
+      (player) => !player.isCOM && player.userId === authenticatedUserId,
     );
 
     return matches.length === 1 ? matches[0] : null;

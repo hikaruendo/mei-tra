@@ -56,6 +56,48 @@ describe('PlayService', () => {
     expect(winner?.playerId).toBe('com-1');
   });
 
+  it('uses playedBy as the source of truth when card attribution differs from current seat order', () => {
+    const players = [
+      makePlayer('player-1'),
+      makePlayer('player-2'),
+      makePlayer('player-3'),
+      makePlayer('player-4'),
+    ];
+
+    const field: Field = {
+      cards: ['5♣', 'A♣', '6♣', 'K♣'],
+      playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+      baseCard: '5♣',
+      dealerId: 'player-1',
+      isComplete: true,
+    };
+
+    const winner = playService.determineFieldWinner(field, players, null);
+
+    expect(winner?.playerId).toBe('player-3');
+  });
+
+  it('falls back to dealer order for legacy fields without playedBy attribution', () => {
+    const players = [
+      makePlayer('player-1'),
+      makePlayer('player-2'),
+      makePlayer('player-3'),
+      makePlayer('player-4'),
+    ];
+
+    const field: Field = {
+      cards: ['5♣', 'A♣', '6♣', 'K♣'],
+      playedBy: [],
+      baseCard: '5♣',
+      dealerId: 'player-1',
+      isComplete: true,
+    };
+
+    const winner = playService.determineFieldWinner(field, players, null);
+
+    expect(winner?.playerId).toBe('player-2');
+  });
+
   it('returns only base-suit cards when the hand can follow suit', () => {
     const field: Field = {
       cards: ['K♠'],

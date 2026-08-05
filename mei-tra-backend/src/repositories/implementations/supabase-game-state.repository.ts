@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
 import { IGameStateRepository } from '../interfaces/game-state.repository.interface';
 import {
+  BlowState,
   GameState,
   DomainPlayer,
   PlayerConnectionMetadata,
@@ -436,6 +437,18 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       currentPlayerId === null
         ? 0
         : players.findIndex((player) => player.playerId === currentPlayerId);
+    const blowState = this.reconcileBlowStateForRoster(
+      (stateData.blowState ?? {
+        currentTrump: null,
+        currentHighestDeclaration: null,
+        declarations: [],
+        actionHistory: [],
+        lastPasser: null,
+        isRoundCancelled: false,
+        currentBlowIndex: 0,
+      }) as BlowState,
+      players,
+    );
 
     return {
       version: dbGameState.version,
@@ -451,7 +464,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       teamScoreRecords: this.convertTimestampRecords(
         dbGameState.team_score_records,
       ),
-      blowState: stateData.blowState,
+      blowState,
       playState: stateData.playState,
       pendingBrokenHandReveal: stateData.pendingBrokenHandReveal ?? null,
       agari: stateData.agari,
@@ -461,6 +474,94 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         players.map((player) => [player.playerId, player.team]),
       ),
     };
+  }
+
+  private reconcileBlowStateForRoster(
+    blowState: BlowState,
+    players: DomainPlayer[],
+  ): BlowState {
+    if (players.length === 0) {
+      return blowState;
+    }
+
+    const rosterPlayerIds = new Set(players.map((player) => player.playerId));
+    const referencedPlayerIds = new Set<string>();
+
+    blowState.declarations.forEach((declaration) => {
+      referencedPlayerIds.add(declaration.playerId);
+    });
+    (blowState.actionHistory ?? []).forEach((action) => {
+      referencedPlayerIds.add(action.playerId);
+    });
+    if (blowState.currentHighestDeclaration?.playerId) {
+      referencedPlayerIds.add(blowState.currentHighestDeclaration.playerId);
+    }
+    if (blowState.lastPasser) {
+      referencedPlayerIds.add(blowState.lastPasser);
+    }
+
+    const orphanPlayerIds = [...referencedPlayerIds].filter(
+      (playerId) => !rosterPlayerIds.has(playerId),
+    );
+    if (orphanPlayerIds.length !== 1) {
+      return blowState;
+    }
+
+    const actedRosterPlayerIds = new Set(
+      [...referencedPlayerIds].filter((playerId) =>
+        rosterPlayerIds.has(playerId),
+      ),
+    );
+    const missingPlayers = players.filter(
+      (player) => !actedRosterPlayerIds.has(player.playerId),
+    );
+    if (missingPlayers.length !== 1) {
+      return blowState;
+    }
+
+    const fromPlayerId = orphanPlayerIds[0];
+    const toPlayer = missingPlayers[0];
+    const remappedBlowState: BlowState = {
+      ...blowState,
+      declarations: blowState.declarations.map((declaration) =>
+        declaration.playerId === fromPlayerId
+          ? {
+              ...declaration,
+              playerId: toPlayer.playerId,
+              team: toPlayer.team,
+            }
+          : declaration,
+      ),
+      actionHistory: (blowState.actionHistory ?? []).map((action) =>
+        action.playerId === fromPlayerId
+          ? { ...action, playerId: toPlayer.playerId }
+          : action,
+      ),
+      currentHighestDeclaration:
+        blowState.currentHighestDeclaration?.playerId === fromPlayerId
+          ? {
+              ...blowState.currentHighestDeclaration,
+              playerId: toPlayer.playerId,
+              team: toPlayer.team,
+            }
+          : blowState.currentHighestDeclaration,
+      lastPasser:
+        blowState.lastPasser === fromPlayerId
+          ? toPlayer.playerId
+          : blowState.lastPasser,
+    };
+
+    if (
+      remappedBlowState.lastPasser === toPlayer.playerId ||
+      remappedBlowState.actionHistory.some(
+        (action) =>
+          action.type === 'pass' && action.playerId === toPlayer.playerId,
+      )
+    ) {
+      toPlayer.isPasser = true;
+    }
+
+    return remappedBlowState;
   }
 
   private resolveCurrentPlayerId(gameState: GameState): string | null {

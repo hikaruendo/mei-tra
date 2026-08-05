@@ -317,6 +317,35 @@ describe('GameHistoryController', () => {
     expect(getGameHistoryUseCase.summarize).not.toHaveBeenCalled();
   });
 
+  it('rejects an ambiguous participant identity', async () => {
+    const getGameHistoryUseCase: IGetGameHistoryUseCase = {
+      execute: jest.fn(),
+      replay: jest.fn(),
+      summarize: jest.fn(),
+    };
+    const roomRepository = createRoomRepository({
+      ...room,
+      players: [
+        room.players[0],
+        {
+          ...room.players[0],
+          playerId: 'player-duplicate',
+          socketId: 'socket-duplicate',
+          isHost: false,
+        },
+      ],
+    });
+    const controller = new GameHistoryController(
+      getGameHistoryUseCase,
+      roomRepository,
+    );
+
+    await expect(
+      controller.listByRoomId('room-1', {}, currentUser),
+    ).rejects.toThrow('Cannot access another user game history');
+    expect(getGameHistoryUseCase.execute).not.toHaveBeenCalled();
+  });
+
   it('returns 404 when the room does not exist', async () => {
     const getGameHistoryUseCase: IGetGameHistoryUseCase = {
       execute: jest.fn(),

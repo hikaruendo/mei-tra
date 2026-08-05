@@ -288,17 +288,17 @@ export function BlowControls({
           <div className={styles.declarationList}>
             {chronologicalDeclarations.map((entry, index) => {
               const player = playerMap.get(entry.playerId);
-              if (!player) return null;
+              const playerName = player?.name ?? entry.playerId;
 
               if (entry.type === 'pass') {
                 return (
                   <div
                     key={`pass-${entry.playerId}-${index}`}
                     className={`${styles.declarationItem} ${styles.pass}`}
-                    title={`${player.name}: ${t('passed')}`}
+                    title={`${playerName}: ${t('passed')}`}
                   >
                     <span className={styles.declarationPlayerName}>
-                      {player.name}
+                      {playerName}
                     </span>
                     <span className={styles.declarationSeparator}>:</span>
                     <span className={styles.declarationText}>
@@ -319,10 +319,10 @@ export function BlowControls({
                 <div
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
-                  title={`${player.name}: ${entry.trumpType ? t(entry.trumpType) : ''} ${formatSetOption(declaration.numberOfPairs)}`}
+                  title={`${playerName}: ${entry.trumpType ? t(entry.trumpType) : ''} ${formatSetOption(declaration.numberOfPairs)}`}
                 >
                   <span className={styles.declarationPlayerName}>
-                    {player.name}
+                    {playerName}
                   </span>
                   <span className={styles.declarationSeparator}>:</span>
                   <span className={styles.declarationText}>

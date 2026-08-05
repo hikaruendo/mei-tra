@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 import {
   disconnectSocket,
+  getExistingSocket,
   getSocket,
   setSocketAuthTokenProvider,
 } from '@/app/socket';
@@ -40,5 +41,23 @@ describe('game socket authentication', () => {
       roomId: 'room-1',
       token: 'fresh-token',
     });
+  });
+
+  it('reuses one browser socket across callers', () => {
+    const firstSocket = getSocket('first-token');
+    const secondSocket = getSocket('second-token');
+
+    expect(secondSocket).toBe(firstSocket);
+    expect(getExistingSocket()).toBe(firstSocket);
+    expect(mockedIo).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the browser socket when disconnected', () => {
+    const currentSocket = getSocket('token');
+
+    disconnectSocket();
+
+    expect(currentSocket.disconnect).toHaveBeenCalledTimes(1);
+    expect(getExistingSocket()).toBeNull();
   });
 });

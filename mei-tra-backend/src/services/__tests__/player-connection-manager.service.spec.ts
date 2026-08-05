@@ -43,4 +43,66 @@ describe('PlayerConnectionManager', () => {
     );
     expect(manager.getSessionUsers()).toHaveLength(3);
   });
+
+  it('collapses a stale auth session into the resolved room seat', () => {
+    const manager = new PlayerConnectionManager({
+      log: jest.fn(),
+    } as unknown as Logger);
+    manager.upsertSessionUser({
+      socketId: 'old-socket',
+      playerId: 'user-1',
+      name: 'Player',
+      userId: 'user-1',
+      isAuthenticated: true,
+    });
+    manager.upsertSessionUser({
+      socketId: 'room-socket',
+      playerId: 'seat-1',
+      name: 'Player',
+    });
+
+    manager.upsertSessionUser({
+      socketId: 'new-socket',
+      playerId: 'seat-1',
+      name: 'Player',
+      userId: 'user-1',
+      isAuthenticated: true,
+    });
+
+    expect(manager.getSessionUsers()).toEqual([
+      {
+        socketId: 'new-socket',
+        playerId: 'seat-1',
+        name: 'Player',
+        userId: 'user-1',
+        isAuthenticated: true,
+      },
+    ]);
+    expect(manager.findSessionUserByUserId('user-1')?.playerId).toBe('seat-1');
+  });
+
+  it('removes a stale user mapping when one socket changes identity', () => {
+    const manager = new PlayerConnectionManager({
+      log: jest.fn(),
+    } as unknown as Logger);
+    manager.upsertSessionUser({
+      socketId: 'shared-socket',
+      playerId: 'seat-1',
+      name: 'Player 1',
+      userId: 'user-1',
+      isAuthenticated: true,
+    });
+
+    manager.upsertSessionUser({
+      socketId: 'shared-socket',
+      playerId: 'seat-2',
+      name: 'Player 2',
+      userId: 'user-2',
+      isAuthenticated: true,
+    });
+
+    expect(manager.findSessionUserByUserId('user-1')).toBeNull();
+    expect(manager.playerIds.has('user-1')).toBe(false);
+    expect(manager.playerIds.get('user-2')).toBe('seat-2');
+  });
 });

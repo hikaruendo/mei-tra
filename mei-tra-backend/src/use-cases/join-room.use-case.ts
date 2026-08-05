@@ -5,6 +5,7 @@ import {
   JoinRoomRequest,
   JoinRoomResponse,
   JoinRoomSuccess,
+  PreviousRoomNotification,
   ResumeGamePayload,
 } from './interfaces/join-room.use-case.interface';
 import { AuthenticatedUser } from '../types/user.types';
@@ -25,6 +26,10 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       const { currentRoomId, targetRoomId, user, authenticatedUser } = request;
 
       const normalizedUser = this.normalizeUser(user, authenticatedUser);
+      const previousRoomNotification = await this.buildPreviousRoomNotification(
+        currentRoomId,
+        normalizedUser,
+      );
 
       const joinSucceeded = await this.roomService.joinRoom(
         targetRoomId,
@@ -38,12 +43,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
           success: false,
           errorMessage: 'Failed to join room',
           normalizedUser,
-          previousRoomNotification: currentRoomId
-            ? {
-                roomId: currentRoomId,
-                playerId: normalizedUser.playerId,
-              }
-            : undefined,
+          previousRoomNotification,
         };
       }
 
@@ -59,9 +59,25 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         };
       }
 
+      const joinedPlayer = this.resolveJoinedRoomPlayer(room, normalizedUser);
+      if (!joinedPlayer) {
+        this.logger.error(
+          `Joined player could not be resolved for user ${normalizedUser.userId ?? normalizedUser.playerId} in room ${targetRoomId}`,
+        );
+        return {
+          success: false,
+          errorMessage: 'Failed to resolve joined player',
+          normalizedUser,
+          previousRoomNotification,
+        };
+      }
+      const resolvedUser: SessionUser = {
+        ...normalizedUser,
+        playerId: joinedPlayer.playerId,
+      };
       const data: JoinRoomSuccess = {
         room,
-        isHost: room.hostId === normalizedUser.playerId,
+        isHost: room.hostId === joinedPlayer.playerId,
         roomStatus: room.status,
         roomsList: await this.roomService.listRooms(),
         resumeGame: await this.buildResumePayloadIfNeeded(room.id, room),
@@ -69,13 +85,8 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
       return {
         success: true,
-        normalizedUser,
-        previousRoomNotification: currentRoomId
-          ? {
-              roomId: currentRoomId,
-              playerId: normalizedUser.playerId,
-            }
-          : undefined,
+        normalizedUser: resolvedUser,
+        previousRoomNotification,
         data,
       };
     } catch (error) {
@@ -112,6 +123,48 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       name: displayName || user.name,
       userId: authenticatedUser.id,
       isAuthenticated: true,
+    };
+  }
+
+  private resolveJoinedRoomPlayer(
+    room: JoinRoomSuccess['room'],
+    normalizedUser: SessionUser,
+  ) {
+    if (normalizedUser.userId) {
+      const playersByUserId = room.players.filter(
+        (player) => !player.isCOM && player.userId === normalizedUser.userId,
+      );
+      if (playersByUserId.length === 1) {
+        return playersByUserId[0];
+      }
+      if (playersByUserId.length > 1) {
+        return null;
+      }
+    }
+
+    return (
+      room.players.find(
+        (player) => player.playerId === normalizedUser.playerId,
+      ) ?? null
+    );
+  }
+
+  private async buildPreviousRoomNotification(
+    currentRoomId: string | undefined,
+    normalizedUser: SessionUser,
+  ): Promise<PreviousRoomNotification | undefined> {
+    if (!currentRoomId) {
+      return undefined;
+    }
+
+    const currentRoom = await this.roomService.getRoom(currentRoomId);
+    const currentRoomPlayer = currentRoom
+      ? this.resolveJoinedRoomPlayer(currentRoom, normalizedUser)
+      : null;
+
+    return {
+      roomId: currentRoomId,
+      playerId: currentRoomPlayer?.playerId ?? normalizedUser.playerId,
     };
   }
 

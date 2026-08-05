@@ -100,4 +100,44 @@ describe('playerReferenceRemap', () => {
     expect(resolveBlowActionsForRoster(actions, players, replacements)[0])
       .toMatchObject({ playerId: 'new-lead' });
   });
+
+  it('resolves an orphan pass action to the only current roster passer without an action', () => {
+    const players = [
+      createPlayer('player-2', 0, { isPasser: true }),
+      createPlayer('host', 1),
+      createPlayer('com-2', 0, { isCOM: true }),
+      createPlayer('com-3', 1, { isCOM: true, isPasser: true }),
+    ];
+    const actions: BlowAction[] = [
+      {
+        type: 'declare',
+        playerId: 'com-2',
+        trumpType: 'zuppe',
+        numberOfPairs: 6,
+        timestamp: 1,
+      },
+      { type: 'pass', playerId: 'com-3', timestamp: 2 },
+      { type: 'pass', playerId: 'old-player-2', timestamp: 3 },
+    ];
+
+    expect(resolveBlowActionsForRoster(actions, players, new Map())).toEqual([
+      actions[0],
+      actions[1],
+      { type: 'pass', playerId: 'player-2', timestamp: 3 },
+    ]);
+  });
+
+  it('does not guess an orphan pass action when multiple passers are possible', () => {
+    const players = [
+      createPlayer('player-2', 0, { isPasser: true }),
+      createPlayer('host', 1, { isPasser: true }),
+    ];
+    const actions: BlowAction[] = [
+      { type: 'pass', playerId: 'old-player', timestamp: 1 },
+    ];
+
+    expect(resolveBlowActionsForRoster(actions, players, new Map())).toEqual(
+      actions,
+    );
+  });
 });

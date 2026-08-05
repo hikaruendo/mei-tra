@@ -45,6 +45,26 @@ export class RoomMembershipReconcilerService implements OnModuleInit {
         continue;
       }
 
+      const authenticatedRoomPlayers =
+        room?.players.filter(
+          (candidate) =>
+            !candidate.isCOM && candidate.userId === membership.userId,
+        ) ?? [];
+      if (authenticatedRoomPlayers.length === 1) {
+        const repaired = await this.roomMembershipService.claim(
+          membership.userId,
+          membership.roomId,
+          authenticatedRoomPlayers[0].playerId,
+        );
+        if (repaired.result !== 'conflict') {
+          authoritativeMemberships.set(membership.userId, repaired.membership);
+          this.logger.warn(
+            `[MembershipReconcile] Repaired player identity user=${membership.userId} room=${membership.roomId} from=${membership.playerId} to=${authenticatedRoomPlayers[0].playerId}`,
+          );
+          continue;
+        }
+      }
+
       const result = await this.roomMembershipService.release(
         membership.userId,
         membership.roomId,

@@ -84,8 +84,9 @@ export const resolveBlowActionsForRoster = (
   actions: BlowAction[],
   players: Player[],
   replacements: PlayerReplacementMap,
-): BlowAction[] =>
-  actions.map((action) => {
+): BlowAction[] => {
+  const rosterPlayerIds = new Set(players.map((player) => player.playerId));
+  const resolvedActions = actions.map((action) => {
     const resolvedPlayerId = resolvePlayerIdForRoster(
       action.playerId,
       players,
@@ -96,3 +97,29 @@ export const resolveBlowActionsForRoster = (
       ? action
       : { ...action, playerId: resolvedPlayerId };
   });
+
+  const representedPlayerIds = new Set(
+    resolvedActions
+      .map((action) => action.playerId)
+      .filter((playerId) => rosterPlayerIds.has(playerId)),
+  );
+
+  return resolvedActions.map((action) => {
+    if (rosterPlayerIds.has(action.playerId) || action.type !== 'pass') {
+      return action;
+    }
+
+    const passerCandidates = players.filter(
+      (player) => player.isPasser && !representedPlayerIds.has(player.playerId),
+    );
+
+    if (passerCandidates.length !== 1) {
+      return action;
+    }
+
+    const [passer] = passerCandidates;
+    representedPlayerIds.add(passer.playerId);
+
+    return { ...action, playerId: passer.playerId };
+  });
+};

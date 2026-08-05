@@ -17,7 +17,7 @@ import { IGameEventLogService } from '../services/interfaces/game-event-log.serv
 import { IPlayService } from '../services/interfaces/play-service.interface';
 import { IScoreService } from '../services/interfaces/score-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
-import { Team, GameState } from '../types/game.types';
+import { Team, GameState, Field } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { RoomStatus } from '../types/room.types';
 import {
@@ -43,6 +43,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       const { roomId, field } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+
+      const fieldValidationError = this.validateFieldAttribution(state, field);
+      if (fieldValidationError) {
+        return { success: false, error: fieldValidationError };
+      }
 
       const winner = this.playService.determineFieldWinner(
         field,
@@ -234,6 +239,51 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     state.players.forEach((player) => {
       player.hand = player.hand.filter((card) => !cards.includes(card));
     });
+  }
+
+  private validateFieldAttribution(
+    state: GameState,
+    field: Field,
+  ): string | null {
+    if (field.cards.length !== field.playedBy.length) {
+      return 'Field card/player attribution mismatch';
+    }
+
+    if (field.cards.length !== 4) {
+      return 'Field is not complete';
+    }
+
+    const playerIds = new Set(state.players.map((player) => player.playerId));
+    if (field.playedBy.some((playerId) => !playerIds.has(playerId))) {
+      return 'Field contains unknown player attribution';
+    }
+
+    if (new Set(field.playedBy).size !== field.playedBy.length) {
+      return 'Field contains duplicate player attribution';
+    }
+
+    const currentField = state.playState?.currentField;
+    if (currentField && currentField.cards.length > 0) {
+      const isSameField =
+        this.isSameSequence(currentField.cards, field.cards) &&
+        this.isSameSequence(currentField.playedBy, field.playedBy) &&
+        currentField.dealerId === field.dealerId &&
+        currentField.baseCard === field.baseCard &&
+        currentField.baseSuit === field.baseSuit;
+
+      if (!isSameField) {
+        return 'Field completion request is stale or mismatched';
+      }
+    }
+
+    return null;
+  }
+
+  private isSameSequence(left: string[], right: string[]): boolean {
+    return (
+      left.length === right.length &&
+      left.every((value, index) => value === right[index])
+    );
   }
 
   private setNextDealer(state: GameState, playerId: string) {
