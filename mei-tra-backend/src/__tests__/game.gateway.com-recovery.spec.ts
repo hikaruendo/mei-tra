@@ -46,6 +46,10 @@ interface ActiveReconnectGatewayHarness {
 }
 
 describe('GameGateway COM recovery integration', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('retries COM progress after a turn acknowledgement', async () => {
     const gateway = createGateway();
     const testGateway = gateway as unknown as {
@@ -166,6 +170,79 @@ describe('GameGateway COM recovery integration', () => {
     expect(previousSocket.leave).toHaveBeenCalledWith('room-1');
     expect(previousSocket.emit).toHaveBeenCalledWith('back-to-lobby');
     expect(testGateway.playerRooms.has('socket-old')).toBe(false);
+  });
+
+  it('delegates COM recovery after disconnect timeout converts the current player to COM', async () => {
+    jest.useFakeTimers();
+
+    const gateway = createGateway();
+    const testGateway = gateway as unknown as {
+      activityTracker: { decrementConnections: jest.Mock };
+      spectatorGatewayEffectsService: { handleDisconnect: jest.Mock };
+      disconnectGatewayEffectsService: {
+        prepareDisconnect: jest.Mock;
+        buildTimeoutEvents: jest.Mock;
+      };
+      turnMonitorService: { isMonitoringPlayer: jest.Mock };
+      clearTurnAckMonitor: jest.Mock;
+      dispatchEvents: jest.Mock;
+      comAutoPlayRecoveryService: { trigger: jest.Mock };
+      playerRooms: Map<string, string>;
+    };
+    const triggerRecovery = jest.fn();
+    const roomGameState = {
+      setDisconnectTimeout: jest.fn(),
+    };
+
+    testGateway.activityTracker = { decrementConnections: jest.fn() };
+    testGateway.spectatorGatewayEffectsService = {
+      handleDisconnect: jest.fn().mockResolvedValue(false),
+    };
+    testGateway.disconnectGatewayEffectsService = {
+      prepareDisconnect: jest.fn().mockResolvedValue({
+        playerId: 'player-1',
+        playerName: 'Player 1',
+        roomGameState,
+        timeoutMode: 'convert-to-com',
+        membership: null,
+        events: [],
+      }),
+      buildTimeoutEvents: jest.fn().mockResolvedValue([
+        {
+          scope: 'room',
+          roomId: 'room-1',
+          event: 'player-converted-to-com',
+          payload: { playerId: 'player-1' },
+        },
+      ]),
+    };
+    testGateway.turnMonitorService = {
+      isMonitoringPlayer: jest.fn().mockReturnValue(false),
+    };
+    testGateway.clearTurnAckMonitor = jest.fn();
+    testGateway.dispatchEvents = jest.fn();
+    testGateway.comAutoPlayRecoveryService = { trigger: triggerRecovery };
+    testGateway.playerRooms = new Map([['socket-1', 'room-1']]);
+
+    const client = {
+      id: 'socket-1',
+      data: { user: { profile: { displayName: 'Player 1' } } },
+      leave: jest.fn().mockResolvedValue(undefined),
+    } as unknown as Socket;
+
+    await gateway.handleDisconnect(client);
+    await jest.advanceTimersByTimeAsync(2 * 60 * 1000);
+
+    expect(
+      testGateway.disconnectGatewayEffectsService.buildTimeoutEvents,
+    ).toHaveBeenCalledWith({
+      roomId: 'room-1',
+      playerId: 'player-1',
+      playerName: 'Player 1',
+      timeoutMode: 'convert-to-com',
+      membership: null,
+    });
+    expect(triggerRecovery).toHaveBeenCalledWith('room-1', expect.anything());
   });
 
   it('returns an authoritative active-game snapshot after the client registers handlers', async () => {

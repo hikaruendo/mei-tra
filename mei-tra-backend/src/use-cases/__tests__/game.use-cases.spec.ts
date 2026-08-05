@@ -27,6 +27,7 @@ import {
   GamePhase,
   TeamScores,
   Field,
+  CompletedField,
   Team,
 } from '../../types/game.types';
 import { ICardService } from '../../services/interfaces/card-service.interface';
@@ -3209,9 +3210,23 @@ describe('Game Use Cases', () => {
           team: 1 as const,
           isPasser: false,
         },
+        {
+          playerId: 'player-3',
+          name: 'Player 3',
+          hand: [],
+          team: 0 as const,
+          isPasser: false,
+        },
+        {
+          playerId: 'player-4',
+          name: 'Player 4',
+          hand: [],
+          team: 1 as const,
+          isPasser: false,
+        },
       ] as DomainPlayer[],
       playState: {
-        fields: [] as Field[],
+        fields: [] as CompletedField[],
         currentField: {
           cards: [],
           playedBy: [],
@@ -3258,7 +3273,7 @@ describe('Game Use Cases', () => {
       );
 
       const state = buildState();
-      state.playState.fields = [{ winnerTeam: 0 } as unknown as Field];
+      state.playState.fields = [{ winnerTeam: 0 } as unknown as CompletedField];
       const completeFieldMock = jest.fn(() => ({
         cards: ['A', 'B', 'C', 'D'],
         winnerId: 'player-1',
@@ -3302,6 +3317,174 @@ describe('Game Use Cases', () => {
         result.events?.find((e) => e.event === 'update-turn'),
       ).toBeDefined();
       expect(result.gameOver).toBeUndefined();
+    });
+
+    it('rejects completing a field when cards and playedBy are not aligned', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      const completeFieldMock = jest.fn();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: completeFieldMock,
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: {
+          cards: ['A', 'B', 'C', 'D'],
+          playedBy: ['player-1', 'player-2', 'player-3'],
+          baseCard: 'A',
+          dealerId: 'player-1',
+          isComplete: true,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Field card/player attribution mismatch');
+      expect(playService.determineFieldWinner).not.toHaveBeenCalled();
+      expect(completeFieldMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects completing a stale field that differs from current field attribution', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      state.playState.currentField = {
+        cards: ['A', 'B', 'C', 'D'],
+        playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+        baseCard: 'A',
+        dealerId: 'player-1',
+        isComplete: true,
+      };
+
+      const completeFieldMock = jest.fn();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: completeFieldMock,
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: {
+          cards: ['A', 'B', 'C', 'D'],
+          playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+          baseCard: 'A',
+          dealerId: 'player-1',
+          isComplete: true,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(
+        'Field completion request is stale or mismatched',
+      );
+      expect(playService.determineFieldWinner).not.toHaveBeenCalled();
+      expect(completeFieldMock).not.toHaveBeenCalled();
+    });
+
+    it('adds completed sets to the team of the player who actually won the field', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayRulesService();
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      state.players.forEach((player) => {
+        player.hand = [];
+      });
+      state.blowState.currentHighestDeclaration = {
+        ...state.blowState.currentHighestDeclaration,
+        playerId: 'player-2',
+        team: 1,
+      };
+
+      const field: Field = {
+        cards: ['5♣', 'A♣', '6♣', 'K♣'],
+        playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+        baseCard: '5♣',
+        dealerId: 'player-1',
+        isComplete: true,
+      };
+      state.playState.currentField = {
+        ...field,
+        cards: [...field.cards],
+        playedBy: [...field.playedBy],
+      };
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: jest.fn((completedField: Field, winnerId: string) => {
+          const winner = state.players.find(
+            (player) => player.playerId === winnerId,
+          );
+          if (!winner) {
+            return null;
+          }
+          const persistedField = {
+            cards: [...completedField.cards],
+            winnerId,
+            winnerTeam: winner.team,
+            dealerId: completedField.dealerId,
+          };
+          state.playState.fields.push(persistedField);
+          return persistedField;
+        }),
+        saveState: jest.fn(),
+        resetRoundState: jest.fn(async () => {}),
+        transitionPhase: jest.fn(async () => {}),
+        updateState: jest.fn(async (updates) => {
+          Object.assign(state, updates);
+        }),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field,
+      });
+
+      expect(result.success).toBe(true);
+      expect(roomGameState.completeField).toHaveBeenCalledWith(
+        field,
+        'player-3',
+      );
+      expect(
+        result.events?.find((event) => event.event === 'field-complete')
+          ?.payload,
+      ).toEqual(
+        expect.objectContaining({
+          field: expect.objectContaining({
+            winnerId: 'player-3',
+            winnerTeam: 0,
+          }),
+          winnerId: 'player-3',
+        }),
+      );
+      expect(scoreService.calculatePlayPoints).toHaveBeenCalledWith(6, 0);
     });
 
     it('persists the next round number before starting the next round', async () => {
@@ -3366,7 +3549,7 @@ describe('Game Use Cases', () => {
       const state = buildState();
       state.players[0].hand = [];
       state.players[1].hand = [];
-      state.playState.fields = [{ winnerTeam: 0 } as unknown as Field];
+      state.playState.fields = [{ winnerTeam: 0 } as unknown as CompletedField];
 
       const roomGameState = {
         getState: jest.fn(() => state),
@@ -3421,7 +3604,7 @@ describe('Game Use Cases', () => {
       };
       state.players[0].hand = [];
       state.players[1].hand = [];
-      state.playState.fields = [{ winnerTeam: 1 } as unknown as Field];
+      state.playState.fields = [{ winnerTeam: 1 } as unknown as CompletedField];
 
       const roomGameState = {
         getState: jest.fn(() => state),
@@ -3478,7 +3661,7 @@ describe('Game Use Cases', () => {
       };
       state.players[0].hand = [];
       state.players[1].hand = [];
-      state.playState.fields = [{ winnerTeam: 1 } as unknown as Field];
+      state.playState.fields = [{ winnerTeam: 1 } as unknown as CompletedField];
 
       const roomGameState = {
         getState: jest.fn(() => state),
@@ -3534,7 +3717,7 @@ describe('Game Use Cases', () => {
       };
       state.players[0].hand = [];
       state.players[1].hand = [];
-      state.playState.fields = [{ winnerTeam: 0 } as unknown as Field];
+      state.playState.fields = [{ winnerTeam: 0 } as unknown as CompletedField];
 
       const roomGameState = {
         getState: jest.fn(() => state),

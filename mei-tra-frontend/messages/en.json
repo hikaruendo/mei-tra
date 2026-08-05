@@ -324,6 +324,7 @@
     "errors": {
       "notYourTurnDeclare": "It's not your turn to declare",
       "selectTrumpAndPairs": "Please select a trump type and number of sets",
+      "alreadyActedInBlow": "You have already acted in this bid phase",
       "notYourTurnPass": "It's not your turn to pass",
       "notYourTurnPlay": "It's not your turn",
       "notYourTurnBaseSuit": "It's not your turn to select a base suit"
@@ -720,6 +721,7 @@
   },
   "playerStatus": {
     "disconnected": "Disconnected",
+    "reconnecting": "Reconnecting",
     "idle": "Unresponsive",
     "replaceWithCom": "Replace with COM",
     "disconnectedNotice": "{playerName} disconnected. They will be replaced with COM after the timeout.",

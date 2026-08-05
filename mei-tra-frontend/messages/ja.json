@@ -324,6 +324,7 @@
     "errors": {
       "notYourTurnDeclare": "宣言するターンではありません",
       "selectTrumpAndPairs": "キリ（切り札）と組数を選択してください",
+      "alreadyActedInBlow": "この吹きフェーズではすでに行動済みです",
       "notYourTurnPass": "パスするターンではありません",
       "notYourTurnPlay": "あなたのターンではありません",
       "notYourTurnBaseSuit": "ベーススートを選択するターンではありません"
@@ -720,6 +721,7 @@
   },
   "playerStatus": {
     "disconnected": "切断中",
+    "reconnecting": "再接続待ち",
     "idle": "応答なし",
     "replaceWithCom": "COMに切り替え",
     "disconnectedNotice": "{playerName} の接続が切れました。一定時間後にCOMへ切り替わります。",

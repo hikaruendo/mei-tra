@@ -661,7 +661,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             timeoutMode: preparation.timeoutMode,
             membership: preparation.membership,
           })
-          .then((events) => this.dispatchEvents(events))
+          .then((events) => {
+            this.dispatchEvents(events);
+            if (
+              events.some((event) => event.event === 'player-converted-to-com')
+            ) {
+              this.triggerComAutoPlayIfNeeded(roomId);
+            }
+          })
           .catch((error) => {
             console.error(
               '[Disconnect] Error processing disconnect timeout:',

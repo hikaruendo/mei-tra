@@ -43,9 +43,22 @@ export class PlayService implements IPlayService {
       field.dealerId = players[0].playerId;
     }
 
-    // field.cards is stored in actual play order, so winner attribution must use
-    // the full seat order, including COM players.
+    const playersById = new Map(
+      players.map((player) => [player.playerId, player]),
+    );
+    const playedByOrder =
+      field.playedBy.length === field.cards.length
+        ? field.playedBy.map((playerId) => playersById.get(playerId))
+        : [];
+
+    // Prefer the explicit card -> player attribution recorded when each card was
+    // played. Fall back to legacy dealer order only for older field snapshots.
     const updatedPlayerOrder = field.cards.map((_, i) => {
+      const playedByPlayer = playedByOrder[i];
+      if (playedByPlayer) {
+        return playedByPlayer;
+      }
+
       const index = (dealerIndex + i) % players.length;
       return players[index];
     });

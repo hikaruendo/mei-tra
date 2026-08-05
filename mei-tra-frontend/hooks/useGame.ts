@@ -270,11 +270,10 @@ export const useGame = () => {
 
   const syncDisconnectedPlayerIdsFromPlayers = useCallback(
     (nextPlayers: Array<Pick<Player, 'playerId' | 'isCOM' | 'socketId'>>) => {
-      setDisconnectedPlayerIds((prev) =>
-        prev.filter((playerId) => {
-          const player = nextPlayers.find((candidate) => candidate.playerId === playerId);
-          return Boolean(player && !player.isCOM && !player.socketId);
-        }),
+      setDisconnectedPlayerIds(
+        nextPlayers
+          .filter((player) => !player.isCOM && !player.socketId)
+          .map((player) => player.playerId),
       );
     },
     [],
@@ -310,6 +309,23 @@ export const useGame = () => {
   const getCurrentUserPlayerId = useCallback(
     () => resolveCurrentUserPlayerId(playersRef.current, currentPlayerId),
     [currentPlayerId, resolveCurrentUserPlayerId],
+  );
+
+  const hasPlayerActedInCurrentBlow = useCallback(
+    (playerId: string): boolean => {
+      const player = playersRef.current.find(
+        (candidate) => candidate.playerId === playerId,
+      );
+
+      return (
+        Boolean(player?.isPasser) ||
+        blowDeclarations.some(
+          (declaration) => declaration.playerId === playerId,
+        ) ||
+        blowActionHistory.some((action) => action.playerId === playerId)
+      );
+    },
+    [blowActionHistory, blowDeclarations],
   );
 
   const updatePlayersLocally = useCallback((
@@ -1294,6 +1310,10 @@ export const useGame = () => {
         setNotification({ message: t('errors.notYourTurnDeclare'), type: 'error' });
         return;
       }
+      if (hasPlayerActedInCurrentBlow(currentPlayerId)) {
+        setNotification({ message: t('errors.alreadyActedInBlow'), type: 'error' });
+        return;
+      }
       if (!selectedTrump || numberOfPairs < 1) {
         setNotification({ message: t('errors.selectTrumpAndPairs'), type: 'error' });
         return;
@@ -1309,6 +1329,10 @@ export const useGame = () => {
     passBlow: () => {
       if (!currentPlayerId || whoseTurn !== currentPlayerId) {
         setNotification({ message: t('errors.notYourTurnPass'), type: 'error' });
+        return;
+      }
+      if (hasPlayerActedInCurrentBlow(currentPlayerId)) {
+        setNotification({ message: t('errors.alreadyActedInBlow'), type: 'error' });
         return;
       }
       socket?.emit('pass-blow', {

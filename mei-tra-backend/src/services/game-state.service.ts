@@ -587,12 +587,15 @@ export class GameStateService implements IGameStateService {
     }
 
     field.isComplete = true;
-    const winnerTeam =
-      state.players.find((p) => p.playerId === winnerId)?.team ?? (0 as const);
+    const winner = state.players.find((p) => p.playerId === winnerId);
+    if (!winner) {
+      return null;
+    }
+
     const completedField: CompletedField = {
       cards: [...field.cards],
       winnerId: winnerId,
-      winnerTeam,
+      winnerTeam: winner.team,
       dealerId: field.dealerId,
     };
 
