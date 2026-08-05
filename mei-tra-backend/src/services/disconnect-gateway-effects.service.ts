@@ -198,6 +198,7 @@ export class DisconnectGatewayEffectsService {
             roomId,
           })
         : [];
+      const blowState = roomGameState.getState().blowState;
 
       return [
         {
@@ -211,6 +212,17 @@ export class DisconnectGatewayEffectsService {
           },
         },
         ...roomEvents,
+        {
+          scope: 'room',
+          roomId,
+          event: 'blow-updated',
+          payload: {
+            declarations: blowState.declarations,
+            actionHistory: blowState.actionHistory,
+            currentHighest: blowState.currentHighestDeclaration,
+            lastPasser: blowState.lastPasser,
+          },
+        },
         this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
           rooms: await this.roomService.listRooms(),
           scope: 'all',

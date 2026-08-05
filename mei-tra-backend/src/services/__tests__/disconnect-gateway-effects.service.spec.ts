@@ -413,8 +413,22 @@ describe('DisconnectGatewayEffectsService', () => {
       updatedAt: new Date(),
       lastSeenAt: new Date(),
     };
+    const blowState = {
+      currentTrump: null,
+      currentHighestDeclaration: {
+        playerId: 'com-timeout',
+        trumpType: 'herz',
+        numberOfPairs: 7,
+        timestamp: 1,
+      },
+      declarations: [],
+      actionHistory: [],
+      lastPasser: null,
+      isRoundCancelled: false,
+      currentBlowIndex: 0,
+    };
     const roomGameState = {
-      getState: jest.fn(() => ({ players: [] })),
+      getState: jest.fn(() => ({ players: [], blowState })),
     };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue({ id: 'room-1', status: 'playing' }),
@@ -439,7 +453,7 @@ describe('DisconnectGatewayEffectsService', () => {
       }),
     );
 
-    await service.buildTimeoutEvents({
+    const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
       playerId: 'player-1',
       playerName: 'Player 1',
@@ -456,5 +470,16 @@ describe('DisconnectGatewayEffectsService', () => {
       movingMembership,
       true,
     );
+    expect(events).toContainEqual({
+      scope: 'room',
+      roomId: 'room-1',
+      event: 'blow-updated',
+      payload: {
+        declarations: [],
+        actionHistory: [],
+        currentHighest: blowState.currentHighestDeclaration,
+        lastPasser: null,
+      },
+    });
   });
 });

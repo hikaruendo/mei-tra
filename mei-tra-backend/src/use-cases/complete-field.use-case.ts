@@ -251,6 +251,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       return null;
     }
 
+    if (highestDeclaration.team === 0 || highestDeclaration.team === 1) {
+      return highestDeclaration.team;
+    }
+
     const player = state.players.find(
       (p) => p.playerId === highestDeclaration.playerId,
     );

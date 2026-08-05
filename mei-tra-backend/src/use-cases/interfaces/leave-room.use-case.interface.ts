@@ -1,5 +1,6 @@
 import { Room } from '../../types/room.types';
 import { TransportPlayer } from '../../types/player-adapters';
+import { BlowState } from '../../types/game.types';
 
 export interface LeaveRoomRequest {
   playerId: string;
@@ -11,6 +12,7 @@ export interface LeaveRoomSuccessData {
   roomDeleted: boolean;
   roomsList: Room[];
   updatedPlayers?: TransportPlayer[];
+  blowState?: BlowState;
   gamePausedMessage?: string;
 }
 

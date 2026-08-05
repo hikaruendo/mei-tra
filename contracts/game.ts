@@ -26,6 +26,7 @@ export interface PlayerContract extends ConnectionUserContract {
 
 export interface BlowDeclarationContract {
   playerId: string;
+  team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
   timestamp: number;

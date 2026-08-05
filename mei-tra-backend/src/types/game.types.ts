@@ -37,6 +37,7 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface BlowDeclaration {
   playerId: string;
+  team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
   timestamp: number;

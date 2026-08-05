@@ -932,6 +932,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomsList,
         updatedPlayers,
         gamePausedMessage,
+        blowState,
       } = result.data;
 
       if (roomDeleted) {
@@ -973,6 +974,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             roomId: data.roomId,
           }),
         ]);
+      }
+      if (blowState) {
+        this.server.to(data.roomId).emit('blow-updated', {
+          declarations: blowState.declarations,
+          actionHistory: blowState.actionHistory,
+          currentHighest: blowState.currentHighestDeclaration,
+          lastPasser: blowState.lastPasser,
+        });
       }
 
       if (gamePausedMessage) {
@@ -1082,6 +1091,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           roomId: data.roomId,
         }),
       );
+      this.server.to(data.roomId).emit('blow-updated', {
+        declarations: result.blowState.declarations,
+        actionHistory: result.blowState.actionHistory,
+        currentHighest: result.blowState.currentHighestDeclaration,
+        lastPasser: result.blowState.lastPasser,
+      });
       this.emitRoomsListToAll(result.roomsList);
       this.triggerComAutoPlayIfNeeded(data.roomId);
       return { success: true };

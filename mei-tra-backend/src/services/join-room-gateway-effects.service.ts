@@ -236,6 +236,18 @@ export class JoinRoomGatewayEffectsService {
           },
         ),
       });
+      events.push({
+        scope: 'room',
+        roomId,
+        event: 'blow-updated',
+        payload: {
+          declarations: joinData.resumeGame.gameState.blowState.declarations,
+          actionHistory: joinData.resumeGame.gameState.blowState.actionHistory,
+          currentHighest:
+            joinData.resumeGame.gameState.blowState.currentHighestDeclaration,
+          lastPasser: joinData.resumeGame.gameState.blowState.lastPasser,
+        },
+      });
     }
 
     return {

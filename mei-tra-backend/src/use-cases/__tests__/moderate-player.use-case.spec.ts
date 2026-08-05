@@ -32,6 +32,20 @@ describe('ModeratePlayerUseCase', () => {
 
   it('replaces idle or disconnected players with COM', async () => {
     const clearDisconnectTimeout = jest.fn();
+    const blowState = {
+      currentTrump: null,
+      currentHighestDeclaration: {
+        playerId: 'com-target',
+        trumpType: 'herz',
+        numberOfPairs: 7,
+        timestamp: 1,
+      },
+      declarations: [],
+      actionHistory: [],
+      lastPasser: null,
+      isRoundCancelled: false,
+      currentBlowIndex: 0,
+    };
     const roomService = {
       getRoom: jest.fn().mockResolvedValue(createRoom()),
       getRoomGameState: jest.fn().mockResolvedValue({
@@ -45,6 +59,7 @@ describe('ModeratePlayerUseCase', () => {
               isPasser: false,
             },
           ],
+          blowState,
         }),
         getPlayerConnectionState: () => ({ socketId: '' }),
         clearDisconnectTimeout,
@@ -68,6 +83,9 @@ describe('ModeratePlayerUseCase', () => {
     expect(result).toEqual(
       expect.objectContaining({ success: true, mode: 'replace-with-com' }),
     );
+    if (result.success && result.mode === 'replace-with-com') {
+      expect(result.blowState).toBe(blowState);
+    }
     expect(roomService.convertPlayerToCOM).toHaveBeenCalledWith(
       'room-1',
       'target',

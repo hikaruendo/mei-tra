@@ -51,6 +51,7 @@ export interface Player extends ConnectionUser {
 
 export interface BlowDeclaration {
   playerId: string;
+  team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
   timestamp: number;

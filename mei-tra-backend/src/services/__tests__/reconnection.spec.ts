@@ -812,6 +812,11 @@ describe('Reconnection Token Management', () => {
           openDeclared: false,
           openDeclarerId: playerId,
         };
+        gameState.getState().pendingBrokenHandReveal = {
+          playerId,
+          handSnapshot: ['JOKER', '9♣'],
+          startedAt: 100,
+        };
         gameState.getState().teamAssignments[playerId] = 0;
 
         const result = await roomService.convertPlayerToCOM(roomId, playerId);
@@ -822,6 +827,9 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.currentField?.dealerId).toBe(
           comPlayerId,
         );
+        expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
+          comPlayerId,
+        ]);
         expect(gameState.getState().playState?.fields[0]?.winnerId).toBe(
           comPlayerId,
         );
@@ -830,6 +838,9 @@ describe('Reconnection Token Management', () => {
         );
         expect(gameState.getState().playState?.lastWinnerId).toBe(comPlayerId);
         expect(gameState.getState().playState?.openDeclarerId).toBe(
+          comPlayerId,
+        );
+        expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
           comPlayerId,
         );
         expect(gameState.getState().playState?.neguri[comPlayerId]).toBe('9♣');
@@ -1527,6 +1538,11 @@ describe('Reconnection Token Management', () => {
           openDeclared: false,
           openDeclarerId: targetCom.playerId,
         };
+        gameState.getState().pendingBrokenHandReveal = {
+          playerId: targetCom.playerId,
+          handSnapshot: ['H2', 'D3'],
+          startedAt: 100,
+        };
         gameState.getState().teamAssignments[targetCom.playerId] = 0;
 
         (roomService as any)['vacantSeats'][roomId] = {
@@ -1564,6 +1580,9 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.currentField?.dealerId).toBe(
           playerId,
         );
+        expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
+          playerId,
+        ]);
         expect(gameState.getState().playState?.fields[0]?.winnerId).toBe(
           playerId,
         );
@@ -1572,6 +1591,9 @@ describe('Reconnection Token Management', () => {
         );
         expect(gameState.getState().playState?.lastWinnerId).toBe(playerId);
         expect(gameState.getState().playState?.openDeclarerId).toBe(playerId);
+        expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
+          playerId,
+        );
         expect(gameState.getState().playState?.neguri[playerId]).toBe('5♦');
         expect(
           gameState.getState().teamAssignments[targetCom.playerId],
