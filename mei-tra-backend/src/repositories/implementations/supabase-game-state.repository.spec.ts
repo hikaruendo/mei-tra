@@ -37,6 +37,7 @@ describe('SupabaseGameStateRepository', () => {
         openDeclarerId: null,
       },
     },
+    current_player_id: 'player-1',
     current_player_index: 0,
     game_phase: 'waiting' as const,
     round_number: 1,
@@ -81,6 +82,7 @@ describe('SupabaseGameStateRepository', () => {
           hasRequiredBroken: false,
         },
       ],
+      currentPlayerId: 'player-1',
       currentPlayerIndex: 0,
       gamePhase: 'waiting',
       deck: [],
@@ -160,6 +162,43 @@ describe('SupabaseGameStateRepository', () => {
     expect(state?.players).toEqual([]);
   });
 
+  it('uses current_player_id instead of stale current_player_index when restoring current turn', async () => {
+    const secondRoomPlayer = {
+      ...roomPlayerRow,
+      id: 'room-player-2',
+      player_id: 'player-2',
+      name: 'Second player',
+      team: 0,
+      seat_index: 1,
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          current_player_id: 'player-2',
+          current_player_index: 0,
+          state_data: {
+            ...gameStateRow.state_data,
+            playerStates: {
+              ...gameStateRow.state_data.playerStates,
+              'player-2': { hand: ['H2'] },
+            },
+          },
+        },
+        roomPlayers: [roomPlayerRow, secondRoomPlayer],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    const state = await repository.findByRoomId(gameStateRow.room_id);
+
+    expect(state?.currentPlayerId).toBe('player-2');
+    expect(state?.currentPlayerIndex).toBe(1);
+  });
+
   it('passes the expected version to atomic state updates', async () => {
     const order = jest.fn().mockResolvedValue({
       data: [roomPlayerRow],
@@ -191,6 +230,50 @@ describe('SupabaseGameStateRepository', () => {
       p_expected_version: 4,
     });
     expect(state?.version).toBe(5);
+  });
+
+  it('persists current player id with a derived index fallback', async () => {
+    const order = jest.fn().mockResolvedValue({
+      data: [roomPlayerRow],
+      error: null,
+    });
+    const eq = jest.fn().mockReturnValue({ order });
+    const select = jest.fn().mockReturnValue({ eq });
+    const rpc = jest.fn().mockResolvedValue({
+      data: { ...gameStateRow, version: 5 },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: {
+        rpc,
+        from: jest.fn().mockReturnValue({ select }),
+      },
+    } as unknown as SupabaseService);
+
+    await repository.update(gameStateRow.room_id, {
+      players: createState().players,
+      currentPlayerIndex: 0,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
+      p_room_id: gameStateRow.room_id,
+      p_state_patch: {
+        playerOrder: ['player-1'],
+        playerStates: {
+          'player-1': {
+            hand: ['S1'],
+            isPasser: true,
+            hasBroken: true,
+            hasRequiredBroken: false,
+          },
+        },
+      },
+      p_scalar_patch: {
+        currentPlayerIndex: 0,
+        currentPlayerId: 'player-1',
+      },
+      p_expected_version: null,
+    });
   });
 
   it('persists the complete roster without socket metadata', async () => {

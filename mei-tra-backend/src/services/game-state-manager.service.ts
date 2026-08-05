@@ -153,13 +153,22 @@ export class GameStateManager {
     state: GameState,
     currentPlayerIndex: number,
   ): Promise<number | undefined> {
+    const currentPlayerId = state.players[currentPlayerIndex]?.playerId ?? null;
+    return this.persistCurrentPlayerId(roomId, state, currentPlayerId);
+  }
+
+  async persistCurrentPlayerId(
+    roomId: string | null,
+    state: GameState,
+    currentPlayerId: string | null,
+  ): Promise<number | undefined> {
     if (!roomId) {
       return state.version;
     }
 
     const persistedState = await this.repository.update(
       roomId,
-      { currentPlayerIndex },
+      { currentPlayerId },
       state.version,
     );
     if (!persistedState) {

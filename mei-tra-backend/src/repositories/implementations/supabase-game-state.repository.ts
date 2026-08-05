@@ -58,6 +58,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
             blowState: gameState.blowState,
             playState: gameState.playState,
           },
+          current_player_id: this.resolveCurrentPlayerId(gameState),
           current_player_index: gameState.currentPlayerIndex,
           game_phase: gameState.gamePhase,
           round_number: gameState.roundNumber,
@@ -251,6 +252,15 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     if (gameState.currentPlayerIndex !== undefined) {
       patch.currentPlayerIndex = gameState.currentPlayerIndex;
     }
+    if (gameState.currentPlayerId !== undefined) {
+      patch.currentPlayerId = gameState.currentPlayerId;
+    } else if (gameState.currentPlayerIndex !== undefined) {
+      const currentPlayerId =
+        gameState.players?.[gameState.currentPlayerIndex]?.playerId;
+      if (currentPlayerId !== undefined) {
+        patch.currentPlayerId = currentPlayerId;
+      }
+    }
     if (gameState.gamePhase !== undefined) {
       patch.gamePhase = gameState.gamePhase;
     }
@@ -308,6 +318,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     if (gameState.currentPlayerIndex !== undefined) {
       updateData.current_player_index = gameState.currentPlayerIndex;
+    }
+    if (gameState.currentPlayerId !== undefined) {
+      updateData.current_player_id = gameState.currentPlayerId;
     }
     if (gameState.gamePhase !== undefined) {
       updateData.game_phase = gameState.gamePhase;
@@ -530,6 +543,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       if (updates.current_player_index !== undefined) {
         gameStateUpdates.currentPlayerIndex = updates.current_player_index;
       }
+      if (updates.current_player_id !== undefined) {
+        gameStateUpdates.currentPlayerId = updates.current_player_id;
+      }
       if (updates.game_phase !== undefined) {
         gameStateUpdates.gamePhase = updates.game_phase;
       }
@@ -618,10 +634,28 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       })
       .filter((player): player is DomainPlayer => Boolean(player));
 
+    const persistedCurrentPlayerId =
+      typeof dbGameState.current_player_id === 'string'
+        ? dbGameState.current_player_id
+        : null;
+    const currentPlayerId =
+      persistedCurrentPlayerId &&
+      players.some((player) => player.playerId === persistedCurrentPlayerId)
+        ? persistedCurrentPlayerId
+        : (players[dbGameState.current_player_index]?.playerId ?? null);
+    const currentPlayerIndex =
+      currentPlayerId === null
+        ? dbGameState.current_player_index
+        : players.findIndex((player) => player.playerId === currentPlayerId);
+
     return {
       version: dbGameState.version,
       players,
-      currentPlayerIndex: dbGameState.current_player_index,
+      currentPlayerId,
+      currentPlayerIndex:
+        currentPlayerIndex === -1
+          ? dbGameState.current_player_index
+          : currentPlayerIndex,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],
       teamScores: dbGameState.team_scores as Record<
@@ -641,6 +675,14 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         players.map((player) => [player.playerId, player.team]),
       ),
     };
+  }
+
+  private resolveCurrentPlayerId(gameState: GameState): string | null {
+    if (gameState.currentPlayerId !== undefined) {
+      return gameState.currentPlayerId;
+    }
+
+    return gameState.players[gameState.currentPlayerIndex]?.playerId ?? null;
   }
 
   private toRosterPlayerSnapshot(

@@ -130,6 +130,7 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 export interface GameState {
   version?: number;
   players: DomainPlayer[];
+  currentPlayerId?: string | null;
   currentPlayerIndex: number;
   gamePhase: GamePhase;
   deck: string[];
