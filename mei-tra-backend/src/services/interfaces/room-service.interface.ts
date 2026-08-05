@@ -15,6 +15,7 @@ export interface IRoomService {
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room>;
+  cancelRoomMembershipReservation(userId: string): Promise<boolean>;
   leaveRoom(roomId: string, playerId: string): Promise<boolean>;
   joinRoom(roomId: string, user: SessionUser): Promise<boolean>;
   updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean>;

@@ -10,6 +10,7 @@ import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';
 import { PlayService } from '../play.service';
 import { IComPlayerService } from '../interfaces/com-player-service.interface';
+import { RoomMembershipService } from '../room-membership.service';
 
 const makeGamePlayer = (
   playerId: string,
@@ -421,11 +422,39 @@ describe('Reconnection Token Management', () => {
         gameStateRepository,
       );
 
+      const roomMembershipService = {
+        reserve: jest.fn(),
+        claim: jest
+          .fn()
+          .mockImplementation(
+            (userId: string, roomId: string, playerId: string) =>
+              Promise.resolve({
+                result: 'reconnected',
+                membership: {
+                  userId,
+                  roomId,
+                  playerId,
+                  status: 'active',
+                  membershipVersion: 1,
+                  transitionId: 'transition-1',
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  lastSeenAt: new Date(),
+                },
+              }),
+          ),
+        cancelReservation: jest.fn().mockResolvedValue(false),
+        release: jest.fn().mockResolvedValue('released'),
+        releaseByPlayer: jest.fn().mockResolvedValue(true),
+        releaseRoom: jest.fn().mockResolvedValue(0),
+      } as unknown as RoomMembershipService;
+
       roomService = new RoomService(
         roomRepository,
         userProfileRepository,
         gameStateFactory,
         comPlayerService,
+        roomMembershipService,
       );
     });
 

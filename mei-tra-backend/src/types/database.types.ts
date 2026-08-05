@@ -65,6 +65,7 @@ export interface Database {
           updated_at?: string;
           last_activity_at?: string;
         };
+        Relationships: [];
       };
       room_players: {
         Row: {
@@ -109,6 +110,94 @@ export interface Database {
           seat_index?: number;
           user_id?: string | null;
         };
+        Relationships: [];
+      };
+      chat_rooms: {
+        Row: {
+          id: string;
+          scope: 'global' | 'lobby' | 'table' | 'private';
+          name: string | null;
+          owner_id: string | null;
+          visibility: 'public' | 'friends' | 'private';
+          message_ttl_hours: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          scope: 'global' | 'lobby' | 'table' | 'private';
+          name?: string | null;
+          owner_id?: string | null;
+          visibility?: 'public' | 'friends' | 'private';
+          message_ttl_hours?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          scope?: 'global' | 'lobby' | 'table' | 'private';
+          name?: string | null;
+          owner_id?: string | null;
+          visibility?: 'public' | 'friends' | 'private';
+          message_ttl_hours?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      chat_members: {
+        Row: {
+          id: string;
+          room_id: string | null;
+          user_id: string | null;
+          role: 'member' | 'moderator';
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id?: string | null;
+          user_id?: string | null;
+          role?: 'member' | 'moderator';
+          joined_at?: string;
+        };
+        Update: {
+          id?: string;
+          room_id?: string | null;
+          user_id?: string | null;
+          role?: 'member' | 'moderator';
+          joined_at?: string;
+        };
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          room_id: string | null;
+          sender_id: string | null;
+          content: string;
+          content_type: 'text' | 'emoji' | 'system';
+          reply_to: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id?: string | null;
+          sender_id?: string | null;
+          content: string;
+          content_type?: 'text' | 'emoji' | 'system';
+          reply_to?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          room_id?: string | null;
+          sender_id?: string | null;
+          content?: string;
+          content_type?: 'text' | 'emoji' | 'system';
+          reply_to?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       active_room_memberships: {
         Row: {
@@ -144,6 +233,7 @@ export interface Database {
           updated_at?: string;
           last_seen_at?: string;
         };
+        Relationships: [];
       };
       room_membership_events: {
         Row: {
@@ -179,6 +269,7 @@ export interface Database {
           metadata?: Record<string, any>;
           created_at?: string;
         };
+        Relationships: [];
       };
       game_states: {
         Row: {
@@ -247,6 +338,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       user_profiles: {
         Row: {
@@ -303,6 +395,7 @@ export interface Database {
             fontSize?: 'standard' | 'large' | 'xlarge' | 'xxlarge';
           };
         };
+        Relationships: [];
       };
       game_history: {
         Row: {
@@ -332,6 +425,58 @@ export interface Database {
           action_data?: Record<string, any>;
           timestamp?: string;
         };
+        Relationships: [];
+      };
+    };
+    Views: { [_ in never]: never };
+    Functions: {
+      reserve_room_membership: {
+        Args: {
+          p_user_id: string;
+          p_player_id: string;
+          p_transition_id: string;
+        };
+        Returns: Record<string, unknown>;
+      };
+      claim_room_membership: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+          p_player_id: string;
+          p_transition_id: string;
+        };
+        Returns: Record<string, unknown>;
+      };
+      cancel_room_membership_reservation: {
+        Args: {
+          p_user_id: string;
+          p_transition_id: string;
+        };
+        Returns: boolean;
+      };
+      release_room_membership: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+          p_expected_version: number;
+          p_transition_id: string;
+        };
+        Returns: Record<string, unknown>;
+      };
+      release_room_membership_by_player: {
+        Args: {
+          p_room_id: string;
+          p_player_id: string;
+          p_transition_id: string;
+        };
+        Returns: boolean;
+      };
+      release_room_memberships_for_room: {
+        Args: {
+          p_room_id: string;
+          p_transition_id: string;
+        };
+        Returns: number;
       };
     };
   };

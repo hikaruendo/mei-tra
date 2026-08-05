@@ -53,9 +53,11 @@ import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
 import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
+import { RoomMembershipService } from './services/room-membership.service';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
-  imports: [RepositoriesModule, AuthModule, SocialModule],
+  imports: [DatabaseModule, RepositoriesModule, AuthModule, SocialModule],
   controllers: [GameHistoryController],
   providers: [
     GameGateway,
@@ -67,6 +69,7 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
     ComSessionService,
     SeatRestorationService,
     RoomJoinService,
+    RoomMembershipService,
     JoinRoomGatewayEffectsService,
     DisconnectGatewayEffectsService,
     RoomUpdateGatewayEffectsService,
