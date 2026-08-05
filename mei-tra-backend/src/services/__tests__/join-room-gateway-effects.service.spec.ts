@@ -351,6 +351,12 @@ describe('JoinRoomGatewayEffectsService', () => {
         lastPasser: null,
       },
     });
+    expect(result.events).toContainEqual({
+      scope: 'room',
+      roomId: 'room-1',
+      event: 'update-turn',
+      payload: 'player-1',
+    });
   });
 
   it('builds socket-scoped room entry events', async () => {

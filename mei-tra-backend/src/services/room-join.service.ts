@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DomainPlayer, Team } from '../types/game.types';
+import { BlowState, DomainPlayer, GameState, Team } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
@@ -82,6 +82,9 @@ export class RoomJoinService {
         isAuthenticated: updatedPlayer.isAuthenticated,
       });
       await gameState.persistRoster(room.players, room.hostId);
+      if (this.advanceBlowTurnPastActedPlayer(gameState.getState())) {
+        await gameState.saveState();
+      }
       return true;
     }
 
@@ -319,10 +322,68 @@ export class RoomJoinService {
       isAuthenticated: player.isAuthenticated,
     });
     await gameState.persistRoster(room.players, room.hostId);
+    if (this.advanceBlowTurnPastActedPlayer(gameState.getState())) {
+      await gameState.saveState();
+    }
     return true;
   }
 
   private countActualPlayers(players: RoomPlayer[]): number {
     return players.filter((player) => !player.isCOM).length;
+  }
+
+  private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
+    if (state.gamePhase !== 'blow' || state.players.length === 0) {
+      return false;
+    }
+
+    const currentIndex = this.resolveCurrentPlayerIndex(state);
+    const currentPlayer = state.players[currentIndex];
+    if (
+      !currentPlayer ||
+      !this.hasActedInBlow(state.blowState, currentPlayer)
+    ) {
+      return false;
+    }
+
+    for (let offset = 1; offset < state.players.length; offset += 1) {
+      const candidateIndex = (currentIndex + offset) % state.players.length;
+      const candidatePlayer = state.players[candidateIndex];
+      if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
+        state.currentPlayerIndex = candidateIndex;
+        state.currentPlayerId = candidatePlayer.playerId;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private resolveCurrentPlayerIndex(state: GameState): number {
+    if (state.currentPlayerId) {
+      const index = state.players.findIndex(
+        (player) => player.playerId === state.currentPlayerId,
+      );
+      if (index !== -1) {
+        return index;
+      }
+    }
+
+    return Math.min(
+      Math.max(state.currentPlayerIndex ?? 0, 0),
+      state.players.length - 1,
+    );
+  }
+
+  private hasActedInBlow(blowState: BlowState, player: DomainPlayer): boolean {
+    return (
+      player.isPasser ||
+      blowState.declarations.some(
+        (declaration) => declaration.playerId === player.playerId,
+      ) ||
+      (blowState.actionHistory ?? []).some(
+        (action) => action.playerId === player.playerId,
+      )
+    );
   }
 }
