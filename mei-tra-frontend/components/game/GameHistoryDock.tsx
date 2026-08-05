@@ -86,6 +86,38 @@ function getPlayerDetailId(
   return detail?.value.kind === 'player' ? detail.value.playerId : null;
 }
 
+function getPlayerNameFromActionData(
+  event: GameHistoryReplayEvent | undefined,
+  playerId: string | null,
+): string | null {
+  if (!event || !playerId) {
+    return null;
+  }
+
+  const playerNames = event.actionData.playerNames;
+  if (
+    typeof playerNames !== 'object' ||
+    playerNames === null ||
+    Array.isArray(playerNames)
+  ) {
+    return null;
+  }
+
+  const playerName = (playerNames as Record<string, unknown>)[playerId];
+  return typeof playerName === 'string' && playerName.length > 0
+    ? playerName
+    : null;
+}
+
+function getPlayerDetailName(
+  event: GameHistoryReplayEvent | undefined,
+  labelKey: string,
+): string | null {
+  const detail = event?.detailItems.find((item) => item.labelKey === labelKey);
+
+  return detail?.value.kind === 'player' ? detail.value.playerName : null;
+}
+
 export function GameHistoryDock({
   roomId,
   gameStarted,
@@ -318,11 +350,19 @@ export function GameHistoryDock({
                 Boolean(score),
             )
             .sort((left, right) => left.team - right.team);
-          const blowerId =
+          const latestDeclarationPlayerId = latestDeclarationEvent?.playerId ?? null;
+          const playStartedPlayerId =
             getPlayerDetailId(playStartedEvent, 'winner')
             ?? playStartedEvent?.playerId
-            ?? latestDeclarationEvent?.playerId
             ?? null;
+          const blowerId = latestDeclarationPlayerId ?? playStartedPlayerId;
+          const blowerName =
+            getPlayerNameFromActionData(
+              latestDeclarationEvent,
+              latestDeclarationPlayerId,
+            )
+            ?? getPlayerDetailName(playStartedEvent, 'winner')
+            ?? getPlayerNameFromActionData(playStartedEvent, playStartedPlayerId);
           const declarationValue =
             getTextDetail(latestDeclarationEvent, 'highestDeclaration')
             ?? getTextDetail(latestDeclarationEvent, 'declaration');
@@ -337,7 +377,8 @@ export function GameHistoryDock({
           return {
             roundNumber: round.roundNumber!,
             blower: blowerId
-              ? players.find((player) => player.playerId === blowerId)?.name
+              ? blowerName
+                ?? players.find((player) => player.playerId === blowerId)?.name
                 ?? t('participant')
               : t('participant'),
             declaration,

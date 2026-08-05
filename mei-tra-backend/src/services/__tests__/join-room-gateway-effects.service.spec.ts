@@ -274,9 +274,29 @@ describe('JoinRoomGatewayEffectsService', () => {
             currentTurn: 'player-1',
             blowState: {
               currentTrump: null,
-              currentHighestDeclaration: null,
-              declarations: [],
-              actionHistory: [],
+              currentHighestDeclaration: {
+                playerId: 'player-1',
+                trumpType: 'daiya',
+                numberOfPairs: 6,
+                timestamp: 1,
+              },
+              declarations: [
+                {
+                  playerId: 'player-1',
+                  trumpType: 'daiya',
+                  numberOfPairs: 6,
+                  timestamp: 1,
+                },
+              ],
+              actionHistory: [
+                {
+                  type: 'declare',
+                  playerId: 'player-1',
+                  trumpType: 'daiya',
+                  numberOfPairs: 6,
+                  timestamp: 1,
+                },
+              ],
               lastPasser: null,
               isRoundCancelled: false,
               currentBlowIndex: 0,
@@ -300,6 +320,37 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(gameStateEvent).toBeDefined();
     expect((gameStateEvent?.payload as any).players[1].hand).toEqual([]);
     expect((gameStateEvent?.payload as any).players[0].hand).toEqual(['A']);
+    expect(result.events).toContainEqual({
+      scope: 'room',
+      roomId: 'room-1',
+      event: 'blow-updated',
+      payload: {
+        declarations: [
+          {
+            playerId: 'player-1',
+            trumpType: 'daiya',
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+        ],
+        actionHistory: [
+          {
+            type: 'declare',
+            playerId: 'player-1',
+            trumpType: 'daiya',
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+        ],
+        currentHighest: {
+          playerId: 'player-1',
+          trumpType: 'daiya',
+          numberOfPairs: 6,
+          timestamp: 1,
+        },
+        lastPasser: null,
+      },
+    });
   });
 
   it('builds socket-scoped room entry events', async () => {

@@ -5,7 +5,17 @@ const createGateway = (): GameGateway => {
   const GatewayConstructor = GameGateway as unknown as new (
     ...dependencies: object[]
   ) => GameGateway;
-  return new GatewayConstructor(...Array.from({ length: 31 }, () => ({})));
+  const connectionGatewayEffectsService = {
+    findExistingControllerSocketId: jest.fn(),
+    sendBackToLobby: jest.fn(),
+    sendRoomPlayersBackToLobby: jest.fn(),
+    sendSocketBackToLobby: jest.fn(),
+    sendUserSocketsBackToLobby: jest.fn(),
+  };
+  return new GatewayConstructor(
+    ...Array.from({ length: 31 }, () => ({})),
+    connectionGatewayEffectsService,
+  );
 };
 
 interface ActiveReconnectGatewayHarness {
@@ -18,9 +28,21 @@ interface ActiveReconnectGatewayHarness {
   joinRoomGatewayEffectsService: {
     buildActiveReconnectEvents: jest.Mock;
   };
+  connectionGatewayEffectsService: {
+    findExistingControllerSocketId: jest.Mock;
+    sendSocketBackToLobby: jest.Mock;
+  };
   comAutoPlayRecoveryService: { trigger: jest.Mock };
   dispatchEvents: jest.Mock;
   startTurnAckMonitor: jest.Mock;
+  roomService: {
+    getRoom: jest.Mock;
+    getRoomGameState: jest.Mock;
+  };
+  playerRooms: Map<string, string>;
+  server: {
+    sockets: { sockets: Map<string, Socket> };
+  };
 }
 
 describe('GameGateway COM recovery integration', () => {
@@ -56,6 +78,18 @@ describe('GameGateway COM recovery integration', () => {
     const testGateway = gateway as unknown as ActiveReconnectGatewayHarness;
     const startTurnAckMonitor = jest.fn().mockResolvedValue(undefined);
     const triggerRecovery = jest.fn();
+    const previousSocket = {
+      id: 'socket-old',
+      data: {
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          profile: { displayName: 'User 1' },
+        },
+      },
+      leave: jest.fn().mockResolvedValue(undefined),
+      emit: jest.fn(),
+    } as unknown as Socket;
     const authenticatedUser = {
       id: 'user-1',
       email: 'user@example.com',
@@ -88,6 +122,33 @@ describe('GameGateway COM recovery integration', () => {
     testGateway.comAutoPlayRecoveryService = { trigger: triggerRecovery };
     testGateway.dispatchEvents = jest.fn();
     testGateway.startTurnAckMonitor = startTurnAckMonitor;
+    testGateway.connectionGatewayEffectsService = {
+      findExistingControllerSocketId: jest.fn().mockResolvedValue('socket-old'),
+      sendSocketBackToLobby: jest.fn(
+        async ({
+          server,
+          playerRooms,
+          socketId,
+          roomId,
+        }: {
+          server: { sockets: { sockets: Map<string, Socket> } };
+          playerRooms: Map<string, string>;
+          socketId: string;
+          roomId: string;
+        }) => {
+          playerRooms.delete(socketId);
+          const socket = server.sockets.sockets.get(socketId);
+          if (socket) {
+            await socket.leave(roomId);
+            socket.emit('back-to-lobby');
+          }
+        },
+      ),
+    };
+    testGateway.playerRooms = new Map([['socket-old', 'room-1']]);
+    testGateway.server = {
+      sockets: { sockets: new Map([['socket-old', previousSocket]]) },
+    };
 
     const client = {
       id: 'socket-1',
@@ -102,6 +163,9 @@ describe('GameGateway COM recovery integration', () => {
 
     expect(startTurnAckMonitor).toHaveBeenCalledWith('room-1', 'com-1');
     expect(triggerRecovery).toHaveBeenCalledWith('room-1', expect.anything());
+    expect(previousSocket.leave).toHaveBeenCalledWith('room-1');
+    expect(previousSocket.emit).toHaveBeenCalledWith('back-to-lobby');
+    expect(testGateway.playerRooms.has('socket-old')).toBe(false);
   });
 
   it('returns an authoritative active-game snapshot after the client registers handlers', async () => {
@@ -150,5 +214,101 @@ describe('GameGateway COM recovery integration', () => {
     expect(client.emit).toHaveBeenCalledWith('game-state', gameState);
     expect(client.emit).toHaveBeenCalledWith('reconnect-token', 'player-1');
     expect(testGateway.startTurnAckMonitor).not.toHaveBeenCalled();
+  });
+
+  it('returns every player tab to the lobby when the room is deleted', async () => {
+    const gateway = createGateway();
+    const socketOne = {
+      id: 'socket-1',
+      data: { user: { id: 'user-1' } },
+      leave: jest.fn().mockResolvedValue(undefined),
+      emit: jest.fn(),
+    } as unknown as Socket;
+    const socketTwo = {
+      id: 'socket-2',
+      leave: jest.fn().mockResolvedValue(undefined),
+      emit: jest.fn(),
+    } as unknown as Socket;
+    const testGateway = gateway as unknown as {
+      leaveRoomUseCase: { execute: jest.Mock };
+      turnMonitorService: { clearMonitor: jest.Mock };
+      comAutoPlayRecoveryService: { clearRoom: jest.Mock };
+      spectatorGatewayEffectsService: { sendRoomBackToLobby: jest.Mock };
+      connectionGatewayEffectsService: {
+        sendRoomPlayersBackToLobby: jest.Mock;
+      };
+      playerRooms: Map<string, string>;
+      server: {
+        sockets: { sockets: Map<string, Socket> };
+      };
+      emitRoomsListToAll: jest.Mock;
+    };
+    testGateway.leaveRoomUseCase = {
+      execute: jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          playerId: 'user-1',
+          roomDeleted: true,
+          roomsList: [],
+        },
+      }),
+    };
+    testGateway.turnMonitorService = { clearMonitor: jest.fn() };
+    testGateway.comAutoPlayRecoveryService = { clearRoom: jest.fn() };
+    testGateway.spectatorGatewayEffectsService = {
+      sendRoomBackToLobby: jest.fn().mockResolvedValue(undefined),
+    };
+    testGateway.connectionGatewayEffectsService = {
+      sendRoomPlayersBackToLobby: jest.fn(
+        async ({
+          server,
+          playerRooms,
+          roomId,
+        }: {
+          server: { sockets: { sockets: Map<string, Socket> } };
+          playerRooms: Map<string, string>;
+          roomId: string;
+        }) => {
+          const socketIds = Array.from(playerRooms.entries())
+            .filter(([, mappedRoomId]) => mappedRoomId === roomId)
+            .map(([socketId]) => socketId);
+          for (const socketId of socketIds) {
+            playerRooms.delete(socketId);
+            const socket = server.sockets.sockets.get(socketId);
+            if (socket) {
+              await socket.leave(roomId);
+              socket.emit('back-to-lobby');
+            }
+          }
+        },
+      ),
+    };
+    testGateway.playerRooms = new Map([
+      ['socket-1', 'room-1'],
+      ['socket-2', 'room-1'],
+      ['socket-other', 'room-2'],
+    ]);
+    testGateway.server = {
+      sockets: {
+        sockets: new Map([
+          ['socket-1', socketOne],
+          ['socket-2', socketTwo],
+        ]),
+      },
+    };
+    testGateway.emitRoomsListToAll = jest.fn();
+
+    await gateway.handleLeaveRoom(socketOne, {
+      roomId: 'room-1',
+      playerId: 'user-1',
+    });
+
+    expect(socketOne.leave).toHaveBeenCalledWith('room-1');
+    expect(socketTwo.leave).toHaveBeenCalledWith('room-1');
+    expect(socketOne.emit).toHaveBeenCalledWith('back-to-lobby');
+    expect(socketTwo.emit).toHaveBeenCalledWith('back-to-lobby');
+    expect(testGateway.playerRooms.has('socket-1')).toBe(false);
+    expect(testGateway.playerRooms.has('socket-2')).toBe(false);
+    expect(testGateway.playerRooms.get('socket-other')).toBe('room-2');
   });
 });

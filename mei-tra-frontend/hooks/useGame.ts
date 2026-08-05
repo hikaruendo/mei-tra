@@ -50,6 +50,12 @@ import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
 import { getTeamDisplayName } from '../lib/utils/teamLabels';
+import {
+  rememberSeatPlayerReplacements,
+  resolveBlowActionsForRoster,
+  resolveDeclarationForRoster,
+  resolveDeclarationsForRoster,
+} from '../lib/utils/playerReferenceRemap';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -226,6 +232,8 @@ export const useGame = () => {
   const [users, setUsers] = useState<ConnectionUser[]>([]);
   // Keep a ref to users so event handlers always see the latest value (avoids stale closure)
   const usersRef = useRef<ConnectionUser[]>([]);
+  const playersRef = useRef<Player[]>([]);
+  const playerReplacementRef = useRef<Map<string, string>>(new Map());
 
   const [paused, setPaused] = useState(false);
 
@@ -243,6 +251,8 @@ export const useGame = () => {
     setIsSpectator(false);
     setIdlePlayerIds([]);
     setDisconnectedPlayerIds([]);
+    playersRef.current = [];
+    playerReplacementRef.current.clear();
     setPlayers([]);
     setTeamScores(createEmptyTeamScores());
     setTeamNames(undefined);
@@ -290,6 +300,65 @@ export const useGame = () => {
       }
     }
   }, [user?.id]);
+
+  const updatePlayersLocally = useCallback((
+    updater: (previousPlayers: Player[]) => Player[],
+  ) => {
+    setPlayers((previousPlayers) => {
+      const nextPlayers = updater(previousPlayers);
+      playersRef.current = nextPlayers;
+      return nextPlayers;
+    });
+  }, []);
+
+  const commitPlayers = useCallback((nextPlayers: Player[]) => {
+    rememberSeatPlayerReplacements(
+      playersRef.current,
+      nextPlayers,
+      playerReplacementRef.current,
+    );
+    playersRef.current = nextPlayers;
+    setPlayers(nextPlayers);
+    setCurrentHighestDeclaration((previous) =>
+      resolveDeclarationForRoster(
+        previous,
+        nextPlayers,
+        playerReplacementRef.current,
+      ),
+    );
+    setBlowDeclarations((previous) =>
+      resolveDeclarationsForRoster(
+        previous,
+        nextPlayers,
+        playerReplacementRef.current,
+      ),
+    );
+    setBlowActionHistory((previous) =>
+      resolveBlowActionsForRoster(
+        previous,
+        nextPlayers,
+        playerReplacementRef.current,
+      ),
+    );
+  }, []);
+
+  const resetBlowState = useCallback((options?: { preservePlayers?: boolean }) => {
+    setBlowDeclarations([]);
+    setBlowActionHistory([]);
+    setCurrentHighestDeclaration(null);
+    setSelectedTrump(null);
+    setNumberOfPairs(0);
+    setNegriCard(null);
+    setNegriPlayerId(null);
+    setCurrentField(null);
+    setCompletedFields([]);
+    setRevealedAgari(null);
+    if (!options?.preservePlayers) {
+      updatePlayersLocally((prev) =>
+        prev.map((player) => ({ ...player, isPasser: false })),
+      );
+    }
+  }, [updatePlayersLocally]);
 
   const markRoomSyncHandled = useCallback((roomId: string) => {
     legacyRoomEventSkipRef.current = {
@@ -462,10 +531,10 @@ export const useGame = () => {
           return;
         }
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
@@ -532,8 +601,11 @@ export const useGame = () => {
           return;
         }
 
-        const mergedPlayers = mergePlayersPreservingIdentity(players, nextPlayers);
-        setPlayers(mergedPlayers);
+        const mergedPlayers = mergePlayersPreservingIdentity(
+          playersRef.current,
+          nextPlayers,
+        );
+        commitPlayers(mergedPlayers);
         syncDisconnectedPlayerIdsFromPlayers(mergedPlayers);
         syncCurrentPlayerIdentity(mergedPlayers, selfPlayerId);
 
@@ -564,10 +636,10 @@ export const useGame = () => {
         isSpectator,
       }: GameStatePayload) => {
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         if (!isSpectator) {
           syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
@@ -576,9 +648,27 @@ export const useGame = () => {
         setWhoseTurn(currentTurn);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
-        setCurrentHighestDeclaration(blowState.currentHighestDeclaration);
-        setBlowDeclarations(blowState.declarations);
-        setBlowActionHistory(blowState.actionHistory ?? []);
+        setCurrentHighestDeclaration(
+          resolveDeclarationForRoster(
+            blowState.currentHighestDeclaration,
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setBlowDeclarations(
+          resolveDeclarationsForRoster(
+            blowState.declarations,
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setBlowActionHistory(
+          resolveBlowActionsForRoster(
+            blowState.actionHistory ?? [],
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
         setTeamScores(toUiTeamScores(teamScores));
         if (you !== undefined) setCurrentPlayerId(you);
         setIsSpectator(Boolean(isSpectator));
@@ -617,7 +707,7 @@ export const useGame = () => {
           // ゲーム中の場合、プレイヤー配列は'game-state'イベントで更新されるため、ここでは更新しない
           return;
         }
-        setPlayers((prev) => {
+        updatePlayersLocally((prev) => {
           const existingPlayer = prev.find(p => p.playerId === data.playerId);
           if (existingPlayer) {
             return prev;
@@ -645,7 +735,7 @@ export const useGame = () => {
         clearPlayerProfileCache(userId);
         const profileRevision = Date.now();
 
-        setPlayers((prev) =>
+        updatePlayersLocally((prev) =>
           prev.map((player) =>
             player.userId === userId || player.playerId === userId
               ? { ...player, profileRevision }
@@ -660,12 +750,12 @@ export const useGame = () => {
         teamNames,
       }: GameStartedPayload) => {
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
         gameOverShownRef.current = null;
         resetBlowState({ preservePlayers: true });
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
 
@@ -767,17 +857,36 @@ export const useGame = () => {
       'blow-started': ({ startingPlayer, players: playerContracts }: BlowStartedPayload) => {
         setGamePhase('blow');
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(startingPlayer);
       },
       'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclaration[]; actionHistory?: BlowAction[]; currentHighest: BlowDeclaration | null }) => {
-        setBlowDeclarations(declarations);
-        setBlowActionHistory(actionHistory ?? []);
-        setCurrentHighestDeclaration(currentHighest);
+        const currentPlayers = playersRef.current;
+        setBlowDeclarations(
+          resolveDeclarationsForRoster(
+            declarations,
+            currentPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setBlowActionHistory(
+          resolveBlowActionsForRoster(
+            actionHistory ?? [],
+            currentPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setCurrentHighestDeclaration(
+          resolveDeclarationForRoster(
+            currentHighest,
+            currentPlayers,
+            playerReplacementRef.current,
+          ),
+        );
         // Note: Player state updates (including isPasser) are handled by 'update-players' event
         // This prevents race conditions and ensures consistency across all blow phase operations
       },
@@ -788,10 +897,10 @@ export const useGame = () => {
         });
         resetBlowState({ preservePlayers: true });
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(nextPlayerId);
         setGamePhase(toUiGamePhase(gamePhase ?? 'blow'));
@@ -823,16 +932,34 @@ export const useGame = () => {
         });
         resetBlowState({ preservePlayers: true });
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(nextDealer);
         setCurrentTrump(currentTrump ?? null);
-        setCurrentHighestDeclaration(currentHighestDeclaration ?? null);
-        setBlowDeclarations(blowDeclarations ?? []);
-        setBlowActionHistory(actionHistory ?? []);
+        setCurrentHighestDeclaration(
+          resolveDeclarationForRoster(
+            currentHighestDeclaration ?? null,
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setBlowDeclarations(
+          resolveDeclarationsForRoster(
+            blowDeclarations ?? [],
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setBlowActionHistory(
+          resolveBlowActionsForRoster(
+            actionHistory ?? [],
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
       },
       'reveal-agari': ({ agari, message }: RevealAgariPayload) => {
         setRevealedAgari(agari);
@@ -846,7 +973,7 @@ export const useGame = () => {
         setNegriCard(negriCard);
         setNegriPlayerId(startingPlayer);
         // Remove Negri card from player's hand
-        setPlayers((prev) =>
+        updatePlayersLocally((prev) =>
           prev.map((p) =>
             p.playerId === currentPlayerId
               ? { ...p, hand: p.hand.filter((card) => card !== negriCard) }
@@ -865,10 +992,10 @@ export const useGame = () => {
       }: CardPlayedPayload) => {
         setCurrentField(field);
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(updatedPlayers),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         const resolvedNextPlayerId =
           nextPlayerId ?? inferNextTurnAfterCardPlayed(nextPlayers, field);
@@ -908,10 +1035,10 @@ export const useGame = () => {
         blowDeclarations,
       }: NewRoundStartedPayload) => {
         const nextPlayers = mergePlayersPreservingIdentity(
-          players,
+          playersRef.current,
           fromPlayerContracts(playerContracts),
         );
-        setPlayers(nextPlayers);
+        commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setWhoseTurn(currentTurn);
         setGamePhase(toUiGamePhase(gamePhase));
@@ -921,8 +1048,20 @@ export const useGame = () => {
         setNegriPlayerId(negriPlayerId);
         setRevealedAgari(revealedAgari);
         setCurrentTrump(currentTrump);
-        setCurrentHighestDeclaration(currentHighestDeclaration);
-        setBlowDeclarations(blowDeclarations);
+        setCurrentHighestDeclaration(
+          resolveDeclarationForRoster(
+            currentHighestDeclaration,
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
+        setBlowDeclarations(
+          resolveDeclarationsForRoster(
+            blowDeclarations,
+            nextPlayers,
+            playerReplacementRef.current,
+          ),
+        );
       },
       'back-to-lobby': (payload?: BackToLobbyPayload) => {
         console.warn('[useGame] back-to-lobby received', {
@@ -958,7 +1097,7 @@ export const useGame = () => {
         playerId: string;
         playerName?: string;
       }) => {
-        setPlayers((prev) =>
+        updatePlayersLocally((prev) =>
           prev.map((player) =>
             player.playerId === playerId
               ? {
@@ -1087,32 +1226,19 @@ export const useGame = () => {
     isSpectator,
     negriPlayerId,
     markRoomSyncHandled,
+    commitPlayers,
+    updatePlayersLocally,
     syncCurrentPlayerIdentity,
     shouldSkipLegacyRoomUpdated,
     shouldSkipLegacyUpdatePlayers,
     resetRoomState,
+    resetBlowState,
     syncDisconnectedPlayerIdsFromPlayers,
     getTeamLabel,
     t,
     tStatus,
     user?.id,
   ]);
-
-  const resetBlowState = (options?: { preservePlayers?: boolean }) => {
-    setBlowDeclarations([]);
-    setBlowActionHistory([]);
-    setCurrentHighestDeclaration(null);
-    setSelectedTrump(null);
-    setNumberOfPairs(0);
-    setNegriCard(null);
-    setNegriPlayerId(null);
-    setCurrentField(null);
-    setCompletedFields([]);
-    setRevealedAgari(null);
-    if (!options?.preservePlayers) {
-      setPlayers(prev => prev.map(player => ({ ...player, isPasser: false })));
-    }
-  };
 
   const startGame = () => {
     if (!currentRoomId || !currentPlayerId) return;

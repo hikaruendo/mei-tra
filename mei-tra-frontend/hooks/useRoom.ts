@@ -542,6 +542,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         });
         if (response.success && response.room) {
           const nextRoom = fromRoomContract(response.room);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('roomId', nextRoom.id);
+          }
           setCurrentRoom(nextRoom);
           return;
         }

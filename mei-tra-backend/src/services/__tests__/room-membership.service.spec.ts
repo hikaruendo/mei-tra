@@ -82,4 +82,83 @@ describe('RoomMembershipService', () => {
 
     await expect(service.release('user-1', 'room-1', 3)).resolves.toBe('stale');
   });
+
+  it('marks only the current active membership as disconnected', async () => {
+    jest.spyOn(service, 'get').mockResolvedValue({
+      userId: 'user-1',
+      roomId: 'room-1',
+      playerId: 'player-1',
+      status: 'active',
+      membershipVersion: 4,
+      transitionId: 'transition-existing',
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+      lastSeenAt: new Date(row.last_seen_at),
+    });
+    rpc.mockResolvedValue({
+      data: {
+        result: 'disconnected',
+        membership: {
+          ...row,
+          status: 'disconnected',
+          membership_version: 5,
+          transition_id: 'transition-disconnect',
+        },
+      },
+      error: null,
+    });
+
+    const result = await service.markDisconnected('user-1', 'room-1');
+
+    expect(result?.status).toBe('disconnected');
+    expect(result?.membershipVersion).toBe(5);
+    expect(rpc).toHaveBeenCalledWith(
+      'mark_room_membership_disconnected',
+      expect.objectContaining({
+        p_user_id: 'user-1',
+        p_room_id: 'room-1',
+        p_expected_version: 4,
+      }),
+    );
+  });
+
+  it('holds a moving lease while a disconnect timeout mutates the room', async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        result: 'started',
+        membership: {
+          ...row,
+          status: 'moving',
+          membership_version: 6,
+          transition_id: 'transition-timeout',
+        },
+      },
+      error: null,
+    });
+
+    const timeoutMembership = await service.startDisconnectTimeout(
+      'user-1',
+      'room-1',
+      5,
+    );
+
+    expect(timeoutMembership?.status).toBe('moving');
+    rpc.mockResolvedValueOnce({
+      data: { result: 'completed' },
+      error: null,
+    });
+    if (!timeoutMembership) {
+      throw new Error('Expected timeout membership');
+    }
+    await expect(
+      service.finishDisconnectTimeout(timeoutMembership, true),
+    ).resolves.toBe('completed');
+    expect(rpc).toHaveBeenLastCalledWith('finish_room_membership_timeout', {
+      p_user_id: 'user-1',
+      p_room_id: 'room-1',
+      p_expected_version: 6,
+      p_transition_id: 'transition-timeout',
+      p_succeeded: true,
+    });
+  });
 });

@@ -300,74 +300,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return toDomainPlayer(player);
   }
 
-  private remapPlayStatePlayerIdReferences(
-    state: GameState,
-    fromPlayerId: string,
-    toPlayerId: string,
-  ): void {
-    const playState = state.playState;
-    if (!playState || fromPlayerId === toPlayerId) {
-      return;
-    }
-
-    if (playState.currentField?.dealerId === fromPlayerId) {
-      playState.currentField.dealerId = toPlayerId;
-    }
-
-    if (playState.lastWinnerId === fromPlayerId) {
-      playState.lastWinnerId = toPlayerId;
-    }
-
-    if (playState.openDeclarerId === fromPlayerId) {
-      playState.openDeclarerId = toPlayerId;
-    }
-
-    playState.fields = playState.fields.map((field) => ({
-      ...field,
-      winnerId: field.winnerId === fromPlayerId ? toPlayerId : field.winnerId,
-      dealerId: field.dealerId === fromPlayerId ? toPlayerId : field.dealerId,
-    }));
-
-    if (playState.neguri[fromPlayerId]) {
-      playState.neguri[toPlayerId] = playState.neguri[fromPlayerId];
-      delete playState.neguri[fromPlayerId];
-    }
-  }
-
-  private remapBlowStatePlayerIdReferences(
-    state: GameState,
-    fromPlayerId: string,
-    toPlayerId: string,
-  ): void {
-    const blowState = state.blowState;
-    if (!blowState || fromPlayerId === toPlayerId) {
-      return;
-    }
-
-    blowState.declarations = blowState.declarations.map((declaration) =>
-      declaration.playerId === fromPlayerId
-        ? { ...declaration, playerId: toPlayerId }
-        : declaration,
-    );
-
-    blowState.actionHistory = blowState.actionHistory.map((action) =>
-      action.playerId === fromPlayerId
-        ? { ...action, playerId: toPlayerId }
-        : action,
-    );
-
-    if (blowState.currentHighestDeclaration?.playerId === fromPlayerId) {
-      blowState.currentHighestDeclaration = {
-        ...blowState.currentHighestDeclaration,
-        playerId: toPlayerId,
-      };
-    }
-
-    if (blowState.lastPasser === fromPlayerId) {
-      blowState.lastPasser = toPlayerId;
-    }
-  }
-
   private remapGameStatePlayerIdReferences(
     state: GameState,
     fromPlayerId: string,
@@ -399,7 +331,10 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   async convertPlayerToCOM(
     roomId: string,
     playerId: string,
-    options?: { requireDisconnected?: boolean },
+    options?: {
+      requireDisconnected?: boolean;
+      releaseMembership?: boolean;
+    },
   ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) return false;
@@ -418,13 +353,17 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       gameState,
       this.vacantSeats,
     );
-    if (converted) {
+    if (converted && options?.releaseMembership !== false) {
       await this.releasePlayerMembership(roomId, playerId);
     }
     return converted;
   }
 
-  async leaveRoom(roomId: string, playerId: string): Promise<boolean> {
+  async leaveRoom(
+    roomId: string,
+    playerId: string,
+    options?: { releaseMembership?: boolean },
+  ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
       return false;
@@ -554,7 +493,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       player.isHost = player.playerId === room.hostId;
     });
     await gameState.persistRoster(room.players, room.hostId);
-    await this.releasePlayerMembership(roomId, playerId);
+    if (options?.releaseMembership !== false) {
+      await this.releasePlayerMembership(roomId, playerId);
+    }
     return true;
   }
 

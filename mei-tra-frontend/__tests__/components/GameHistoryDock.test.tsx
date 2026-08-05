@@ -115,7 +115,11 @@ describe('GameHistoryDock', () => {
                 kind: 'blow',
                 summary: '',
                 details: {},
-                actionData: {},
+                actionData: {
+                  playerNames: {
+                    'player-1': 'Stored Player',
+                  },
+                },
                 detailItems: [
                   {
                     labelKey: 'highestDeclaration',
@@ -137,7 +141,11 @@ describe('GameHistoryDock', () => {
                 detailItems: [
                   {
                     labelKey: 'winner',
-                    value: { kind: 'player', playerId: 'player-1' },
+                    value: {
+                      kind: 'player',
+                      playerId: 'com-replacement',
+                      playerName: 'COM 4',
+                    },
                   },
                 ],
               },
@@ -191,7 +199,7 @@ describe('GameHistoryDock', () => {
         {...baseProps}
         gameStarted
         defaultOpen
-        players={[{ playerId: 'player-1', name: 'Player 1', team: 0, hand: [], socketId: 'socket-1' }]}
+        players={[{ playerId: 'player-1', name: 'Current Player', team: 0, hand: [], socketId: 'socket-1' }]}
       />,
     );
 
@@ -199,7 +207,8 @@ describe('GameHistoryDock', () => {
     expect(screen.getByRole('columnheader', { name: 'ラウンド' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '宣言' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
-    expect(within(roundTable).getByText('Player 1')).toBeInTheDocument();
+    expect(within(roundTable).getByText('Stored Player')).toBeInTheDocument();
+    expect(within(roundTable).queryByText('COM 4')).not.toBeInTheDocument();
     expect(within(roundTable).getByText('6組 / クラブ')).toBeInTheDocument();
     expect(within(roundTable).queryByText(/pairs/i)).not.toBeInTheDocument();
     expect(within(roundTable).queryByText('計4')).not.toBeInTheDocument();

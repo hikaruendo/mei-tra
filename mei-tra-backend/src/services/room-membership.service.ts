@@ -39,6 +39,20 @@ export class RoomMembershipService {
     return data ? this.mapMembership(data) : null;
   }
 
+  async list(): Promise<ActiveRoomMembership[]> {
+    const { data, error } = await this.supabaseService.client
+      .from('active_room_memberships')
+      .select('*');
+
+    if (error) {
+      throw new Error(
+        `Failed to list active room memberships: ${error.message}`,
+      );
+    }
+
+    return (data ?? []).map((row) => this.mapMembership(row));
+  }
+
   async reserve(
     userId: string,
     playerId: string,
@@ -68,6 +82,7 @@ export class RoomMembershipService {
     const currentMembership = await this.get(userId);
     const transitionId =
       currentMembership?.status === 'moving' &&
+      currentMembership.roomId === null &&
       currentMembership.playerId === playerId
         ? currentMembership.transitionId
         : randomUUID();
@@ -176,6 +191,94 @@ export class RoomMembershipService {
     return data;
   }
 
+  async markDisconnected(
+    userId: string,
+    roomId: string,
+  ): Promise<ActiveRoomMembership | null> {
+    const currentMembership = await this.get(userId);
+    if (
+      !currentMembership ||
+      currentMembership.roomId !== roomId ||
+      currentMembership.status !== 'active'
+    ) {
+      return null;
+    }
+
+    const { data, error } = await this.supabaseService.client.rpc(
+      'mark_room_membership_disconnected',
+      {
+        p_user_id: userId,
+        p_room_id: roomId,
+        p_expected_version: currentMembership.membershipVersion,
+        p_transition_id: randomUUID(),
+      },
+    );
+
+    if (error) {
+      throw new Error(
+        `Failed to mark room membership disconnected: ${error.message}`,
+      );
+    }
+
+    return this.readMutationMembership(data, 'disconnected');
+  }
+
+  async startDisconnectTimeout(
+    userId: string,
+    roomId: string,
+    expectedVersion: number,
+  ): Promise<ActiveRoomMembership | null> {
+    const { data, error } = await this.supabaseService.client.rpc(
+      'start_room_membership_timeout',
+      {
+        p_user_id: userId,
+        p_room_id: roomId,
+        p_expected_version: expectedVersion,
+        p_transition_id: randomUUID(),
+      },
+    );
+
+    if (error) {
+      throw new Error(
+        `Failed to start room membership timeout: ${error.message}`,
+      );
+    }
+
+    return this.readMutationMembership(data, 'started');
+  }
+
+  async finishDisconnectTimeout(
+    membership: ActiveRoomMembership,
+    succeeded: boolean,
+  ): Promise<'completed' | 'rolled_back' | 'stale'> {
+    if (!membership.roomId) {
+      return 'stale';
+    }
+
+    const { data, error } = await this.supabaseService.client.rpc(
+      'finish_room_membership_timeout',
+      {
+        p_user_id: membership.userId,
+        p_room_id: membership.roomId,
+        p_expected_version: membership.membershipVersion,
+        p_transition_id: membership.transitionId,
+        p_succeeded: succeeded,
+      },
+    );
+
+    if (error) {
+      throw new Error(
+        `Failed to finish room membership timeout: ${error.message}`,
+      );
+    }
+
+    const result = this.readString(data, 'result');
+    if (!['completed', 'rolled_back', 'stale'].includes(result)) {
+      throw new Error(`Unexpected room membership timeout result: ${result}`);
+    }
+    return result as 'completed' | 'rolled_back' | 'stale';
+  }
+
   private parseTransition(
     data: Record<string, unknown>,
   ): RoomMembershipTransition {
@@ -222,6 +325,20 @@ export class RoomMembershipService {
       throw new Error(`Room membership response omitted ${key}`);
     }
     return value;
+  }
+
+  private readMutationMembership(
+    data: Record<string, unknown>,
+    expectedResult: 'disconnected' | 'started',
+  ): ActiveRoomMembership | null {
+    const result = this.readString(data, 'result');
+    if (result === 'stale') {
+      return null;
+    }
+    if (result !== expectedResult || !this.isRecord(data.membership)) {
+      throw new Error(`Unexpected room membership mutation result: ${result}`);
+    }
+    return this.mapMembership(data.membership);
   }
 
   private isTransitionResult(

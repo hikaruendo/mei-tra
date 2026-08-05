@@ -63,9 +63,6 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
 
-      // Preserve team assignment for returning players
-      state.teamAssignments[player.playerId] = player.team;
-
       const updatedPlayers = resolveRoomTransportPlayers(
         roomGameState,
         roomExists,
@@ -77,6 +74,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         data: {
           ...baseResponse,
           updatedPlayers,
+          blowState: state.blowState,
           // COMが空席を引き継ぐためゲームは継続 (gamePausedMessage は送らない)
         },
       };

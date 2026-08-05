@@ -43,7 +43,7 @@ describe('PlayerReferenceRemapperService', () => {
       playState: {
         currentField: {
           cards: [],
-          playedBy: [],
+          playedBy: ['old', 'other'],
           baseCard: '',
           dealerId: 'old',
           isComplete: false,
@@ -57,20 +57,30 @@ describe('PlayerReferenceRemapperService', () => {
         openDeclared: false,
         openDeclarerId: 'old',
       },
+      pendingBrokenHandReveal: {
+        playerId: 'old',
+        handSnapshot: ['J♠'],
+        startedAt: 100,
+      },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
+      teamAssignments: { old: 0 },
     } as GameState;
 
     service.remapGameStatePlayerIdReferences(state, 'old', 'new');
 
     expect(state.playState?.currentField?.dealerId).toBe('new');
+    expect(state.playState?.currentField?.playedBy).toEqual(['new', 'other']);
     expect(state.playState?.lastWinnerId).toBe('new');
     expect(state.playState?.neguri.new).toBe('J♠');
+    expect(state.playState?.neguri.old).toBeUndefined();
     expect(state.playState?.fields[0].winnerId).toBe('new');
     expect(state.blowState.currentHighestDeclaration?.playerId).toBe('new');
     expect(state.blowState.declarations[0].playerId).toBe('new');
     expect(state.blowState.actionHistory[0].playerId).toBe('new');
     expect(state.blowState.lastPasser).toBe('new');
+    expect(state.pendingBrokenHandReveal?.playerId).toBe('new');
+    expect(state.teamAssignments.old).toBeUndefined();
+    expect(state.teamAssignments.new).toBe(0);
   });
 });

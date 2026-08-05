@@ -13,6 +13,7 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { DomainPlayer, Team } from '../types/game.types';
+import { RoomMembershipService } from '../services/room-membership.service';
 
 export type ReconnectionResult =
   | {
@@ -64,6 +65,7 @@ export class ReconnectionUseCase {
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('IGameStateService')
     private readonly gameState: IGameStateService,
+    private readonly roomMembershipService: RoomMembershipService,
   ) {}
 
   async execute(request: {
@@ -134,6 +136,16 @@ export class ReconnectionUseCase {
           };
         }
 
+        if (
+          !(await this.claimMembership(
+            authenticatedUser.id,
+            roomId,
+            existingWaitingPlayer.playerId,
+          ))
+        ) {
+          return this.buildMembershipConflict(roomId);
+        }
+
         const reconnectResult = await this.roomService.handlePlayerReconnection(
           roomId,
           existingWaitingPlayer.playerId,
@@ -189,6 +201,16 @@ export class ReconnectionUseCase {
           reason:
             'Your previous room session is no longer valid. Please join or create a room again.',
         };
+      }
+
+      if (
+        !(await this.claimMembership(
+          authenticatedUser.id,
+          roomId,
+          existingPlayer.playerId,
+        ))
+      ) {
+        return this.buildMembershipConflict(roomId);
       }
 
       const reconnectResult = await this.roomService.handlePlayerReconnection(
@@ -363,6 +385,29 @@ export class ReconnectionUseCase {
       userId: authenticatedUser.id,
       isAuthenticated: true,
     });
+  }
+
+  private async claimMembership(
+    userId: string,
+    roomId: string,
+    playerId: string,
+  ): Promise<boolean> {
+    const transition = await this.roomMembershipService.claim(
+      userId,
+      roomId,
+      playerId,
+    );
+    return transition.result !== 'conflict';
+  }
+
+  private buildMembershipConflict(roomId: string): ReconnectionResult {
+    return {
+      success: false,
+      code: 'sessionInvalid',
+      roomId,
+      reason:
+        'Your account is active in another room. Leave that room before reconnecting here.',
+    };
   }
 
   private resolveWaitingRoomPlayer(

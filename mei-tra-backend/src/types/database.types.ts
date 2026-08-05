@@ -478,6 +478,34 @@ export interface Database {
         };
         Returns: number;
       };
+      mark_room_membership_disconnected: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+          p_expected_version: number;
+          p_transition_id: string;
+        };
+        Returns: Record<string, unknown>;
+      };
+      start_room_membership_timeout: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+          p_expected_version: number;
+          p_transition_id: string;
+        };
+        Returns: Record<string, unknown>;
+      };
+      finish_room_membership_timeout: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+          p_expected_version: number;
+          p_transition_id: string;
+          p_succeeded: boolean;
+        };
+        Returns: Record<string, unknown>;
+      };
     };
   };
 }

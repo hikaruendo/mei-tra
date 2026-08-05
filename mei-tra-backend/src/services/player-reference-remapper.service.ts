@@ -17,6 +17,12 @@ export class PlayerReferenceRemapperService {
       playState.currentField.dealerId = toPlayerId;
     }
 
+    if (playState.currentField?.playedBy) {
+      playState.currentField.playedBy = playState.currentField.playedBy.map(
+        (playerId) => (playerId === fromPlayerId ? toPlayerId : playerId),
+      );
+    }
+
     if (playState.lastWinnerId === fromPlayerId) {
       playState.lastWinnerId = toPlayerId;
     }
@@ -78,5 +84,17 @@ export class PlayerReferenceRemapperService {
   ): void {
     this.remapPlayStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
     this.remapBlowStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
+
+    if (state.teamAssignments?.[fromPlayerId] != null) {
+      state.teamAssignments[toPlayerId] = state.teamAssignments[fromPlayerId];
+      delete state.teamAssignments[fromPlayerId];
+    }
+
+    if (state.pendingBrokenHandReveal?.playerId === fromPlayerId) {
+      state.pendingBrokenHandReveal = {
+        ...state.pendingBrokenHandReveal,
+        playerId: toPlayerId,
+      };
+    }
   }
 }

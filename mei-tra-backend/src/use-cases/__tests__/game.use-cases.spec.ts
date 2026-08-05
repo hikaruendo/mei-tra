@@ -391,6 +391,35 @@ describe('Game Use Cases', () => {
         players: statePlayers,
         teamAssignments: {} as Record<string, number>,
         gamePhase: 'play' as GamePhase,
+        blowState: {
+          currentTrump: null,
+          currentHighestDeclaration: {
+            playerId: 'player-2',
+            trumpType: 'daiya' as const,
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+          declarations: [
+            {
+              playerId: 'player-2',
+              trumpType: 'daiya' as const,
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+          ],
+          actionHistory: [
+            {
+              type: 'declare' as const,
+              playerId: 'player-2',
+              trumpType: 'daiya' as const,
+              numberOfPairs: 6,
+              timestamp: 1,
+            },
+          ],
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
       };
 
       const gameStateMock = {
@@ -418,6 +447,14 @@ describe('Game Use Cases', () => {
           team: 1,
         }),
       ]);
+      expect(result.data?.blowState?.currentHighestDeclaration).toEqual(
+        expect.objectContaining({
+          playerId: 'player-2',
+          trumpType: 'daiya',
+          numberOfPairs: 6,
+        }),
+      );
+      expect(state.teamAssignments['player-1']).toBeUndefined();
       // gamePausedMessage is no longer sent (COM takes over vacant seats)
 
       const leaveRoomMock = roomService.leaveRoom as jest.Mock;
@@ -573,7 +610,7 @@ describe('Game Use Cases', () => {
         {
           playerId: 'com-0',
           name: 'COM',
-          team: 0 as const,
+          team: 0 as Team,
           hand: [],
           isPasser: false,
         },
@@ -3144,6 +3181,7 @@ describe('Game Use Cases', () => {
       blowState: {
         currentHighestDeclaration: {
           playerId: 'player-1',
+          team: 0 as Team,
           trumpType: 'tra',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -3337,6 +3375,7 @@ describe('Game Use Cases', () => {
       state.blowState.currentHighestDeclaration = {
         ...state.blowState.currentHighestDeclaration,
         playerId: 'player-2',
+        team: 1,
       };
       state.players[0].hand = [];
       state.players[1].hand = [];
@@ -3379,6 +3418,62 @@ describe('Game Use Cases', () => {
       ]);
     });
 
+    it('uses declaration team snapshot when declaring player id is no longer present', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-2');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+
+      const state = buildState();
+      state.blowState.currentHighestDeclaration = {
+        ...state.blowState.currentHighestDeclaration,
+        playerId: 'stale-player-id',
+        team: 1,
+      };
+      state.players[0].hand = [];
+      state.players[1].hand = [];
+      state.playState.fields = [{ winnerTeam: 1 } as unknown as Field];
+
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        completeField: jest.fn(() => ({
+          cards: ['A', 'B', 'C', 'D'],
+          winnerId: 'player-2',
+          winnerTeam: 1,
+          dealerId: 'player-1',
+        })),
+        saveState: jest.fn(),
+        resetRoundState: jest.fn(async () => {}),
+        transitionPhase: jest.fn(async () => {}),
+        updateState: jest.fn(async (updates) => {
+          Object.assign(state, updates);
+        }),
+      } as unknown as GameStateService;
+
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: {
+          cards: ['A', 'B', 'C', 'D'],
+          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          baseCard: 'A',
+          dealerId: 'player-1',
+          isComplete: false,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.teamScores[1].total).toBe(2);
+      expect(state.teamScoreRecords[1]).toEqual([
+        expect.objectContaining({ points: 2, reason: 'Play points' }),
+      ]);
+    });
+
     it('awards failed team one declaration points to team zero', async () => {
       const roomService = createRoomServiceMock();
       const playService = createPlayServiceMock('player-1');
@@ -3393,6 +3488,7 @@ describe('Game Use Cases', () => {
       state.blowState.currentHighestDeclaration = {
         ...state.blowState.currentHighestDeclaration,
         playerId: 'player-2',
+        team: 1,
       };
       state.players[0].hand = [];
       state.players[1].hand = [];
