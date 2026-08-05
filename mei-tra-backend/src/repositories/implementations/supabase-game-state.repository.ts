@@ -52,7 +52,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           room_id: roomId,
           state_data: {
             playerStates: toPersistedPlayerStates(gameState.players),
-            playerOrder: gameState.players.map((player) => player.playerId),
             deck: gameState.deck,
             agari: gameState.agari,
             blowState: gameState.blowState,
@@ -173,7 +172,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     hostId?: string,
   ): Promise<GameState | null> {
     const playerStates = toPersistedPlayerStates(gameState.players);
-    const playerOrder = gameState.players.map((player) => player.playerId);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
       playerId: player.playerId,
       userId: player.userId ?? null,
@@ -193,7 +191,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           p_room_id: roomId,
           p_room_players: persistedRoomPlayers,
           p_player_states: playerStates,
-          p_player_order: playerOrder,
           p_host_id: hostId ?? null,
           p_expected_version: gameState.version ?? null,
         },
@@ -231,7 +228,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     if (gameState.players) {
       patch.playerStates = toPersistedPlayerStates(gameState.players);
-      patch.playerOrder = gameState.players.map((player) => player.playerId);
     }
     if (gameState.deck) patch.deck = gameState.deck;
     if (gameState.agari !== undefined) patch.agari = gameState.agari;
@@ -310,8 +306,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         .select('state_data')
         .eq('room_id', roomId)
         .single();
-      updateData.state_data = {
+      const currentStateData = {
         ...((currentData?.state_data as Record<string, unknown>) ?? {}),
+      };
+      delete currentStateData.players;
+      delete currentStateData.playerOrder;
+      updateData.state_data = {
+        ...currentStateData,
         ...statePatch,
       };
     }
@@ -414,6 +415,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     const persistedState = await this.updateLegacy(roomId, {
       players: gameState.players,
+      currentPlayerId: this.resolveCurrentPlayerId(gameState),
+      currentPlayerIndex: gameState.currentPlayerIndex,
     });
     if (!persistedState) {
       throw new Error(`Game state not found for room ${roomId}`);
@@ -599,21 +602,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const roomPlayersById = new Map(
       rosterPlayers.map((player) => [player.playerId, player]),
     );
-    const persistedOrder = (
-      Array.isArray(stateData.playerOrder)
+    const playerOrder = hasAuthoritativeRoster
+      ? rosterPlayers.map((player) => player.playerId)
+      : Array.isArray(stateData.playerOrder)
         ? stateData.playerOrder.filter(
             (playerId): playerId is string => typeof playerId === 'string',
           )
-        : []
-    ).filter(
-      (playerId) => !hasAuthoritativeRoster || roomPlayersById.has(playerId),
-    );
-    const playerOrder = [
-      ...persistedOrder,
-      ...rosterPlayers
-        .map((player) => player.playerId)
-        .filter((playerId) => !persistedOrder.includes(playerId)),
-    ];
+        : [];
     const players = playerOrder
       .map((playerId) => {
         const roomPlayer = roomPlayersById.get(playerId);

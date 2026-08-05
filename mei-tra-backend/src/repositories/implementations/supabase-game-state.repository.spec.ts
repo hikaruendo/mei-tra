@@ -145,7 +145,45 @@ describe('SupabaseGameStateRepository', () => {
     ]);
   });
 
-  it('ignores player order entries missing from the authoritative roster', async () => {
+  it('uses room_players seat order instead of stale playerOrder when roster is authoritative', async () => {
+    const secondRoomPlayer = {
+      ...roomPlayerRow,
+      id: 'room-player-2',
+      player_id: 'player-2',
+      name: 'Second player',
+      team: 0,
+      seat_index: 1,
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          state_data: {
+            ...gameStateRow.state_data,
+            playerStates: {
+              ...gameStateRow.state_data.playerStates,
+              'player-2': { hand: ['H2'] },
+            },
+            playerOrder: ['player-2', 'player-1'],
+          },
+        },
+        roomPlayers: [roomPlayerRow, secondRoomPlayer],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    const state = await repository.findByRoomId(gameStateRow.room_id);
+
+    expect(state?.players.map((player) => player.playerId)).toEqual([
+      'player-1',
+      'player-2',
+    ]);
+  });
+
+  it('ignores player order entries when authoritative roster is empty', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: {
         gameState: gameStateRow,
@@ -258,7 +296,6 @@ describe('SupabaseGameStateRepository', () => {
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
       p_state_patch: {
-        playerOrder: ['player-1'],
         playerStates: {
           'player-1': {
             hand: ['S1'],
@@ -297,7 +334,6 @@ describe('SupabaseGameStateRepository', () => {
       expect.objectContaining({
         p_expected_version: 4,
         p_host_id: 'player-1',
-        p_player_order: ['player-1'],
         p_player_states: {
           'player-1': {
             hand: ['S1'],
@@ -325,8 +361,102 @@ describe('SupabaseGameStateRepository', () => {
       string,
       Record<string, unknown>,
     ];
+    expect(rosterPayload).not.toHaveProperty('p_player_order');
     expect(rosterPayload).not.toHaveProperty('p_legacy_players');
     expect(rosterPayload).not.toHaveProperty('p_team_assignments');
+    expect(state?.version).toBe(5);
+  });
+
+  it('falls back to legacy roster writes before the new RPC is migrated', async () => {
+    const roomPlayersOrder = jest.fn().mockResolvedValue({
+      data: [roomPlayerRow],
+      error: null,
+    });
+    const roomPlayersEq = jest.fn().mockReturnValue({
+      order: roomPlayersOrder,
+    });
+    const roomPlayersSelect = jest.fn().mockReturnValue({
+      eq: roomPlayersEq,
+    });
+    const roomPlayersUpsert = jest.fn().mockResolvedValue({ error: null });
+    const gameStateSingle = jest.fn().mockResolvedValue({
+      data: { state_data: gameStateRow.state_data },
+      error: null,
+    });
+    const gameStateSelectEq = jest.fn().mockReturnValue({
+      single: gameStateSingle,
+    });
+    const gameStateSelect = jest.fn().mockReturnValue({
+      eq: gameStateSelectEq,
+    });
+    const updatedGameStateSingle = jest.fn().mockResolvedValue({
+      data: { ...gameStateRow, version: 5 },
+      error: null,
+    });
+    const updatedGameStateSelect = jest.fn().mockReturnValue({
+      single: updatedGameStateSingle,
+    });
+    const updatedGameStateEq = jest.fn().mockReturnValue({
+      select: updatedGameStateSelect,
+    });
+    const gameStateUpdate = jest.fn().mockReturnValue({
+      eq: updatedGameStateEq,
+    });
+    const roomUpdateEq = jest.fn().mockResolvedValue({ error: null });
+    const roomUpdate = jest.fn().mockReturnValue({ eq: roomUpdateEq });
+    const rpc = jest.fn().mockImplementation((name: string) => {
+      if (name === 'persist_room_roster_atomic') {
+        return Promise.resolve({
+          data: null,
+          error: { code: 'PGRST202', message: 'function not found' },
+        });
+      }
+      return Promise.resolve({
+        data: {
+          gameState: { ...gameStateRow, version: 5 },
+          roomPlayers: [roomPlayerRow],
+        },
+        error: null,
+      });
+    });
+    const from = jest.fn().mockImplementation((table: string) => {
+      if (table === 'room_players') {
+        return {
+          select: roomPlayersSelect,
+          upsert: roomPlayersUpsert,
+        };
+      }
+      if (table === 'rooms') {
+        return { update: roomUpdate };
+      }
+      return {
+        select: gameStateSelect,
+        update: gameStateUpdate,
+      };
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc, from },
+    } as unknown as SupabaseService);
+
+    const state = await repository.persistRoomRoster(
+      gameStateRow.room_id,
+      [createRoomPlayer()],
+      createState(),
+      'player-1',
+    );
+
+    expect(roomPlayersUpsert).toHaveBeenCalled();
+    const [legacyStateUpdate] = gameStateUpdate.mock.calls[0] as [
+      {
+        current_player_id: string;
+        current_player_index: number;
+        state_data: Record<string, unknown>;
+      },
+    ];
+    expect(legacyStateUpdate.current_player_id).toBe('player-1');
+    expect(legacyStateUpdate.current_player_index).toBe(0);
+    expect(legacyStateUpdate.state_data).toHaveProperty('playerStates');
+    expect(legacyStateUpdate.state_data).not.toHaveProperty('playerOrder');
     expect(state?.version).toBe(5);
   });
 

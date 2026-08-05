@@ -307,7 +307,7 @@ room metadata は `rooms`、参加者の identity と座席情報は `room_playe
 
 ### 7.2 game state
 
-`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ちつつ、current player ID / compatibility index や team scores は別カラムでも持ちます。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存します。移行期間中は `playerOrder` と `current_player_index` を旧backendとの互換用に残し、手番の永続identityには `current_player_id` を使います。identity は `room_players` から合成します。
+`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ちつつ、current player ID / compatibility index や team scores は別カラムでも持ちます。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存します。座席順は `room_players.seat_index` を正本とし、手番の永続identityには `current_player_id` を使います。`current_player_index` は旧backendとの互換用に座席順から派生させます。
 
 この説明が指す主なコードは次です。
 
