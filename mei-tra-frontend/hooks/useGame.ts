@@ -56,6 +56,7 @@ import {
   resolveDeclarationForRoster,
   resolveDeclarationsForRoster,
 } from '../lib/utils/playerReferenceRemap';
+import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -282,29 +283,24 @@ export const useGame = () => {
   const resolveCurrentUserPlayerId = useCallback(<T extends { playerId: string; userId?: string }>(
     nextPlayers: T[],
     fallbackPlayerId?: string | null,
+    serverPlayerId?: string | null,
   ): string | null => {
-    if (user?.id) {
-      const selfByUserId = nextPlayers.find((player) => player.userId === user.id);
-      if (selfByUserId) {
-        return selfByUserId.playerId;
-      }
-    }
-
-    const selfByPlayerId =
-      (fallbackPlayerId &&
-        nextPlayers.find((player) => player.playerId === fallbackPlayerId)) ||
-      null;
-
-    return selfByPlayerId?.playerId ?? null;
+    return resolveSelfPlayerId(nextPlayers, {
+      userId: user?.id,
+      serverPlayerId,
+      fallbackPlayerId,
+    });
   }, [user?.id]);
 
   const syncCurrentPlayerIdentity = useCallback((
     nextPlayers: Player[],
     fallbackPlayerId?: string | null,
+    serverPlayerId?: string | null,
   ) => {
     const nextCurrentPlayerId = resolveCurrentUserPlayerId(
       nextPlayers,
       fallbackPlayerId,
+      serverPlayerId,
     );
     if (nextCurrentPlayerId) {
       setCurrentPlayerId(nextCurrentPlayerId);
@@ -655,7 +651,7 @@ export const useGame = () => {
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         if (!isSpectator) {
-          syncCurrentPlayerIdentity(nextPlayers, you ?? currentPlayerId);
+          syncCurrentPlayerIdentity(nextPlayers, currentPlayerId, you);
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setWhoseTurn(currentTurn);
@@ -683,7 +679,6 @@ export const useGame = () => {
           ),
         );
         setTeamScores(toUiTeamScores(teamScores));
-        if (you !== undefined) setCurrentPlayerId(you);
         setIsSpectator(Boolean(isSpectator));
         setNegriCard(negriCard);
         setCompletedFields(toUiCompletedFields(fields));
