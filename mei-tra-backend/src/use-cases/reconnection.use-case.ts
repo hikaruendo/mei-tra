@@ -169,7 +169,11 @@ export class ReconnectionUseCase {
           };
         }
 
-        this.syncGlobalConnectionUser(socketId, authenticatedUser);
+        this.syncGlobalConnectionUser(
+          socketId,
+          authenticatedUser,
+          existingWaitingPlayer.playerId,
+        );
 
         return {
           success: true,
@@ -236,7 +240,11 @@ export class ReconnectionUseCase {
         };
       }
 
-      this.syncGlobalConnectionUser(socketId, authenticatedUser);
+      this.syncGlobalConnectionUser(
+        socketId,
+        authenticatedUser,
+        existingPlayer.playerId,
+      );
 
       return {
         success: true,
@@ -376,6 +384,7 @@ export class ReconnectionUseCase {
   private syncGlobalConnectionUser(
     socketId: string,
     authenticatedUser: AuthenticatedUser,
+    playerId: string,
   ): void {
     const displayName =
       authenticatedUser.profile?.displayName ||
@@ -384,7 +393,7 @@ export class ReconnectionUseCase {
 
     this.gameState.upsertSessionUser({
       socketId,
-      playerId: authenticatedUser.id,
+      playerId,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -438,7 +447,7 @@ export class ReconnectionUseCase {
 
     const authenticatedMatches = roomPlayers.filter(
       (player) =>
-        player.isAuthenticated && player.userId === authenticatedUserId,
+        !player.isCOM && player.userId === authenticatedUserId,
     );
 
     return authenticatedMatches.length === 1 ? authenticatedMatches[0] : null;
@@ -450,7 +459,7 @@ export class ReconnectionUseCase {
   ): RoomPlayer | null {
     const matches = roomPlayers.filter(
       (player) =>
-        player.isAuthenticated && player.userId === authenticatedUserId,
+        !player.isCOM && player.userId === authenticatedUserId,
     );
 
     return matches.length === 1 ? matches[0] : null;
