@@ -12,7 +12,7 @@ import {
 import { resolveTransportPlayers } from '../use-cases/helpers/player-resolution.helper';
 import { DomainPlayer, Team } from '../types/game.types';
 import { SessionUser } from '../types/session.types';
-import { RoomStatus } from '../types/room.types';
+import { RoomPlayer, RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 
@@ -69,6 +69,8 @@ export class JoinRoomGatewayEffectsService {
   }: BuildJoinRoomEffectsParams): Promise<JoinRoomEffectsResult> {
     const events: GatewayEvent[] = [];
     let room = joinData.room;
+    const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
+    const selfPlayerId = selfRoomPlayer?.playerId ?? normalizedUser.playerId;
 
     if (currentRoomId && currentRoomId !== roomId) {
       events.push({
@@ -83,13 +85,10 @@ export class JoinRoomGatewayEffectsService {
       });
     }
 
-    const joiningPlayer = room.players.find(
-      (player) => player.playerId === normalizedUser.playerId,
-    );
-    const joiningTeam = joiningPlayer?.team;
+    const joiningTeam = selfRoomPlayer?.team;
 
     const roomPlayerJoinedPayload: RoomPlayerJoinedPayload = {
-      playerId: normalizedUser.playerId,
+      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
     };
@@ -102,13 +101,13 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const selfJoinedPayload: GamePlayerJoinedPayload = {
-      playerId: normalizedUser.playerId,
+      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
       isSelf: true,
       team: joiningTeam,
-      name: normalizedUser.name,
+      name: selfRoomPlayer?.name ?? normalizedUser.name,
     };
     events.push({
       scope: 'socket',
@@ -118,12 +117,12 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const otherJoinedPayload: GamePlayerJoinedPayload = {
-      playerId: normalizedUser.playerId,
+      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
       team: joiningTeam,
-      name: normalizedUser.name,
+      name: selfRoomPlayer?.name ?? normalizedUser.name,
     };
     events.push({
       scope: 'room',
@@ -135,7 +134,7 @@ export class JoinRoomGatewayEffectsService {
 
     if (!joinData.resumeGame) {
       for (const existingPlayer of room.players) {
-        if (existingPlayer.playerId === normalizedUser.playerId) {
+        if (existingPlayer.playerId === selfPlayerId) {
           continue;
         }
 
@@ -190,7 +189,7 @@ export class JoinRoomGatewayEffectsService {
 
     if (joinData.resumeGame) {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const selfPlayerId = this.resolveResumeSelfPlayerId(
+      const resumeSelfPlayerId = this.resolveResumeSelfPlayerId(
         room,
         joinData.resumeGame.gameState.players,
         normalizedUser,
@@ -208,9 +207,9 @@ export class JoinRoomGatewayEffectsService {
           },
         ).map((player) => ({
           ...player,
-          hand: player.playerId === selfPlayerId ? player.hand : [],
+          hand: player.playerId === resumeSelfPlayerId ? player.hand : [],
         })),
-        you: selfPlayerId,
+        you: resumeSelfPlayerId,
         hostId: room.hostId,
       };
 
@@ -267,6 +266,24 @@ export class JoinRoomGatewayEffectsService {
       room,
       events,
     };
+  }
+
+  private resolveSelfRoomPlayer(
+    room: JoinRoomSuccess['room'],
+    normalizedUser: SessionUser,
+  ): RoomPlayer | undefined {
+    if (normalizedUser.userId) {
+      const playerByUserId = room.players.find(
+        (player) => !player.isCOM && player.userId === normalizedUser.userId,
+      );
+      if (playerByUserId) {
+        return playerByUserId;
+      }
+    }
+
+    return room.players.find(
+      (player) => player.playerId === normalizedUser.playerId,
+    );
   }
 
   private resolveResumeSelfPlayerId(

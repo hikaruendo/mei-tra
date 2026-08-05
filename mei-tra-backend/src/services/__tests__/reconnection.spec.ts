@@ -1147,7 +1147,7 @@ describe('Reconnection Token Management', () => {
 
         const result = await roomService.joinRoom(roomId, {
           socketId: 'socket-new',
-          playerId: 'player-1',
+          playerId: 'stale-player',
           userId: 'user-1',
           isAuthenticated: true,
           name: 'Test Player',
@@ -1156,6 +1156,9 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         expect(roomRepository.addPlayer).not.toHaveBeenCalled();
         expect(roomRepository.updatePlayer).not.toHaveBeenCalled();
+        expect(roomState.getPersistedRoom()?.players[0].playerId).toBe(
+          'player-1',
+        );
         expect(roomState.getPersistedRoom()?.players[0].socketId).toBe('');
         expect(gameStateRepository.persistRoomRoster).toHaveBeenCalledWith(
           roomId,

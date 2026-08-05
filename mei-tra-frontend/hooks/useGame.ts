@@ -311,6 +311,11 @@ export const useGame = () => {
     }
   }, [resolveCurrentUserPlayerId]);
 
+  const getCurrentUserPlayerId = useCallback(
+    () => resolveCurrentUserPlayerId(playersRef.current, currentPlayerId),
+    [currentPlayerId, resolveCurrentUserPlayerId],
+  );
+
   const updatePlayersLocally = useCallback((
     updater: (previousPlayers: Player[]) => Player[],
   ) => {
@@ -765,27 +770,17 @@ export const useGame = () => {
         resetBlowState({ preservePlayers: true });
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
-
-        // Identify self by playerId (stable across reconnections), not socket.id
-        const index = nextPlayers.findIndex(
-          (player) => player.playerId === currentPlayerId,
+        const selfPlayerId = resolveCurrentUserPlayerId(
+          nextPlayers,
+          currentPlayerId,
         );
-        if (index !== -1) {
-          setCurrentPlayerId(nextPlayers[index].playerId);
-        } else {
-          // Fallback: match by userId for authenticated users
-          console.error('[useGame] Player not found in game-started by playerId', { currentPlayerId });
-          const userIndex = nextPlayers.findIndex(
-            (p) =>
-              p.userId &&
-              usersRef.current.find(
-                (u) => u.userId === p.userId && u.playerId === currentPlayerId,
-              ),
-          );
-          if (userIndex !== -1) {
-            setCurrentPlayerId(nextPlayers[userIndex].playerId);
-          }
+        if (selfPlayerId) {
+          setCurrentPlayerId(selfPlayerId);
+        } else if (currentPlayerId) {
+          console.error('[useGame] Player not found in game-started', {
+            currentPlayerId,
+            userId: user?.id,
+          });
         }
 
         setCurrentRoomId(roomId);
@@ -1250,43 +1245,48 @@ export const useGame = () => {
   ]);
 
   const startGame = () => {
-    if (!currentRoomId || !currentPlayerId) return;
-    socket?.emit('start-game', { roomId: currentRoomId, playerId: currentPlayerId });
+    const selfPlayerId = getCurrentUserPlayerId();
+    if (!currentRoomId || !selfPlayerId) return;
+    socket?.emit('start-game', { roomId: currentRoomId, playerId: selfPlayerId });
   };
 
   const removePlayerFromRoom = (targetPlayerId: string) => {
-    if (!socket || !currentRoomId || !currentPlayerId) return;
+    const selfPlayerId = getCurrentUserPlayerId();
+    if (!socket || !currentRoomId || !selfPlayerId) return;
     socket.emit('moderate-player', {
       roomId: currentRoomId,
-      requesterPlayerId: currentPlayerId,
+      requesterPlayerId: selfPlayerId,
       targetPlayerId,
       action: 'remove',
     });
   };
 
   const replacePlayerWithCOM = (targetPlayerId: string) => {
-    if (!socket || !currentRoomId || !currentPlayerId) return;
+    const selfPlayerId = getCurrentUserPlayerId();
+    if (!socket || !currentRoomId || !selfPlayerId) return;
     socket.emit('moderate-player', {
       roomId: currentRoomId,
-      requesterPlayerId: currentPlayerId,
+      requesterPlayerId: selfPlayerId,
       targetPlayerId,
       action: 'replace-with-com',
     });
   };
 
   const shuffleTeams = () => {
-    if (!socket || !currentRoomId || !currentPlayerId) return;
+    const selfPlayerId = getCurrentUserPlayerId();
+    if (!socket || !currentRoomId || !selfPlayerId) return;
     socket.emit('shuffle-teams', {
       roomId: currentRoomId,
-      playerId: currentPlayerId,
+      playerId: selfPlayerId,
     });
   };
 
   const updateTeamNames = (nextTeamNames: TeamNames) => {
-    if (!socket || !currentRoomId || !currentPlayerId) return;
+    const selfPlayerId = getCurrentUserPlayerId();
+    if (!socket || !currentRoomId || !selfPlayerId) return;
     socket.emit('update-team-names', {
       roomId: currentRoomId,
-      playerId: currentPlayerId,
+      playerId: selfPlayerId,
       teamNames: nextTeamNames,
     });
   };
@@ -1349,9 +1349,13 @@ export const useGame = () => {
       });
     },
     revealBrokenHand: (playerId: string) => {
+      const selfPlayerId = getCurrentUserPlayerId();
+      if (!selfPlayerId || playerId !== selfPlayerId) {
+        return;
+      }
       socket?.emit('reveal-broken-hand', {
         roomId: currentRoomId,
-        playerId,
+        playerId: selfPlayerId,
       });
     }
   };

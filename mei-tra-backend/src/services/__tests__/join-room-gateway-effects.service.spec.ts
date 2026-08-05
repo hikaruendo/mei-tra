@@ -359,6 +359,93 @@ describe('JoinRoomGatewayEffectsService', () => {
     });
   });
 
+  it('uses the authenticated room player id for self join events', async () => {
+    const room = {
+      id: 'room-1',
+      name: 'Room',
+      hostId: 'actual-seat',
+      status: RoomStatus.WAITING,
+      players: [
+        {
+          socketId: 'socket-1',
+          playerId: 'actual-seat',
+          userId: 'user-1',
+          name: 'User 1',
+          hand: [],
+          team: 0 as const,
+          isPasser: false,
+          isReady: true,
+          isHost: true,
+          isCOM: false,
+          joinedAt: new Date(),
+        },
+        {
+          socketId: 'com-1',
+          playerId: 'com-1',
+          name: 'COM 1',
+          hand: [],
+          team: 1 as const,
+          isPasser: false,
+          isReady: false,
+          isHost: false,
+          isCOM: true,
+          joinedAt: new Date(),
+        },
+      ],
+      settings: {
+        maxPlayers: 4,
+        isPrivate: false,
+        password: null,
+        teamAssignmentMethod: 'random' as const,
+        pointsToWin: 10,
+        allowSpectators: false,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastActivityAt: new Date(),
+    };
+
+    const result = await service.buildEffects({
+      clientId: 'socket-1',
+      roomId: 'room-1',
+      normalizedUser: {
+        socketId: 'socket-1',
+        playerId: 'stale-player',
+        userId: 'user-1',
+        name: 'User 1',
+        isAuthenticated: true,
+      },
+      joinData: {
+        room: room as never,
+        isHost: true,
+        roomStatus: RoomStatus.WAITING,
+        roomsList: [room] as never,
+      },
+    });
+
+    expect(result.events).toContainEqual(
+      expect.objectContaining({
+        scope: 'socket',
+        socketId: 'socket-1',
+        event: 'game-player-joined',
+        payload: expect.objectContaining({
+          playerId: 'actual-seat',
+          isSelf: true,
+        }),
+      }),
+    );
+    expect(result.events).toContainEqual(
+      expect.objectContaining({
+        scope: 'room',
+        roomId: 'room-1',
+        event: 'room-player-joined',
+        payload: expect.objectContaining({
+          playerId: 'actual-seat',
+        }),
+      }),
+    );
+  });
+
   it('uses the authenticated room player id when masking active resume hands', async () => {
     const room = {
       id: 'room-1',

@@ -37,9 +37,7 @@ export class RoomJoinService {
     void roomId;
     const state = gameState.getState();
 
-    const existingPlayer = room.players.find(
-      (player) => player.playerId === user.playerId,
-    );
+    const existingPlayer = this.findExistingRoomPlayer(room.players, user);
     if (existingPlayer) {
       const statePlayer = state.players.find(
         (player) => player.playerId === existingPlayer.playerId,
@@ -53,8 +51,10 @@ export class RoomJoinService {
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
         ...user,
+        playerId: existingPlayer.playerId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
+        isHost: room.hostId === existingPlayer.playerId,
       };
       Object.assign(existingPlayer, updatedPlayer);
       if (statePlayer) {
@@ -330,6 +330,22 @@ export class RoomJoinService {
 
   private countActualPlayers(players: RoomPlayer[]): number {
     return players.filter((player) => !player.isCOM).length;
+  }
+
+  private findExistingRoomPlayer(
+    players: RoomPlayer[],
+    user: SessionUser,
+  ): RoomPlayer | undefined {
+    if (user.userId) {
+      const playerByUserId = players.find(
+        (player) => !player.isCOM && player.userId === user.userId,
+      );
+      if (playerByUserId) {
+        return playerByUserId;
+      }
+    }
+
+    return players.find((player) => player.playerId === user.playerId);
   }
 
   private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
