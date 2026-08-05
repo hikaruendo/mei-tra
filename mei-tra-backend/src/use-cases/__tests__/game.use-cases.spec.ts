@@ -240,6 +240,47 @@ describe('Game Use Cases', () => {
       );
     });
 
+    it('returns the room seat id when it differs from the authenticated user id', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new JoinRoomUseCase(roomService);
+      const joinedPlayer: RoomPlayer = {
+        ...basePlayers[0],
+        playerId: 'seat-1',
+        userId: 'user-1',
+        isAuthenticated: true,
+      };
+      const room: Room = {
+        ...baseRoom,
+        hostId: 'seat-1',
+        players: [joinedPlayer, basePlayers[1]],
+      };
+      roomService.joinRoom.mockResolvedValue(true);
+      roomService.getRoom.mockResolvedValue(room);
+      roomService.listRooms.mockResolvedValue([room]);
+      roomService.getRoomGameState.mockResolvedValue({
+        getState: jest.fn(() => ({ players: [], gamePhase: null })),
+      } as unknown as GameStateService);
+
+      const result = await useCase.execute({
+        socketId: 'socket-1',
+        targetRoomId: room.id,
+        user: {
+          socketId: 'socket-1',
+          playerId: 'user-1',
+          userId: 'user-1',
+          name: 'Player 1',
+        },
+        authenticatedUser: {
+          id: 'user-1',
+          email: 'user@example.com',
+        } as AuthenticatedUser,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.normalizedUser?.playerId).toBe('seat-1');
+      expect(result.data?.isHost).toBe(true);
+    });
+
     it('returns failure when repository join fails', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new JoinRoomUseCase(roomService);
