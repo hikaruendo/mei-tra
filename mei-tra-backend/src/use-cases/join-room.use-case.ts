@@ -133,9 +133,13 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     // （プレイ中ルームへの途中参加・COM引き継ぎに対応）
 
     const currentTurn =
-      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
-        ? state.players[state.currentPlayerIndex].playerId
-        : null;
+      state.currentPlayerId &&
+      state.players.some((player) => player.playerId === state.currentPlayerId)
+        ? state.currentPlayerId
+        : state.currentPlayerIndex !== -1 &&
+            state.players[state.currentPlayerIndex]
+          ? state.players[state.currentPlayerIndex].playerId
+          : null;
 
     return {
       message: 'Joined active game.',

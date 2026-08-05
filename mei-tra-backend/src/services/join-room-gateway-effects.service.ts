@@ -248,6 +248,14 @@ export class JoinRoomGatewayEffectsService {
           lastPasser: joinData.resumeGame.gameState.blowState.lastPasser,
         },
       });
+      if (joinData.resumeGame.gameState.currentTurn) {
+        events.push({
+          scope: 'room',
+          roomId,
+          event: 'update-turn',
+          payload: joinData.resumeGame.gameState.currentTurn,
+        });
+      }
     }
 
     return {

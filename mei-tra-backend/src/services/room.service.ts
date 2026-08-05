@@ -280,6 +280,48 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return comPlayer;
   }
 
+  private createWaitingCOMReplacement(
+    preferredIndex: number,
+    fallbackIndex: number,
+    team: Team,
+    roomPlayers: RoomPlayer[],
+    statePlayers: DomainPlayer[],
+    replacingRoomIndex: number,
+    replacingStateIndex: number,
+  ): RoomPlayer {
+    const occupiedPlayerIds = new Set<string>();
+    roomPlayers.forEach((player, index) => {
+      if (index !== replacingRoomIndex) {
+        occupiedPlayerIds.add(player.playerId);
+      }
+    });
+    statePlayers.forEach((player, index) => {
+      if (index !== replacingStateIndex) {
+        occupiedPlayerIds.add(player.playerId);
+      }
+    });
+
+    const candidateIndexes = [
+      preferredIndex,
+      fallbackIndex,
+      ...Array.from(
+        { length: roomPlayers.length + statePlayers.length + 1 },
+        (_, index) => index,
+      ),
+    ];
+    for (const candidateIndex of candidateIndexes) {
+      const candidatePlayerId = `com-${candidateIndex}`;
+      if (!occupiedPlayerIds.has(candidatePlayerId)) {
+        return this.createCOMPlaceholder(candidateIndex, team);
+      }
+    }
+
+    return this.createCOMPlaceholder(
+      `vacant-${fallbackIndex}-${Date.now()}`,
+      team,
+    );
+  }
+
   async initCOMPlaceholders(roomId: string): Promise<void> {
     const room = await this.getRoom(roomId);
     if (!room) return;
@@ -457,9 +499,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         const state = gameState.getState();
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         const seatIndex = gsIndex !== -1 ? gsIndex : playerIndex;
-        const comPlaceholder = this.createCOMPlaceholder(
+        const comPlaceholder = this.createWaitingCOMReplacement(
           seatIndex,
+          playerIndex,
           leavingPlayer.team,
+          room.players,
+          state.players,
+          playerIndex,
+          gsIndex,
         );
         room.players[playerIndex] = comPlaceholder;
 
