@@ -273,11 +273,11 @@ export class JoinRoomGatewayEffectsService {
     normalizedUser: SessionUser,
   ): RoomPlayer | undefined {
     if (normalizedUser.userId) {
-      const playerByUserId = room.players.find(
+      const playersByUserId = room.players.filter(
         (player) => !player.isCOM && player.userId === normalizedUser.userId,
       );
-      if (playerByUserId) {
-        return playerByUserId;
+      if (playersByUserId.length === 1) {
+        return playersByUserId[0];
       }
     }
 
@@ -295,10 +295,9 @@ export class JoinRoomGatewayEffectsService {
       gamePlayers.map((player) => player.playerId),
     );
 
-    if (normalizedUser.userId) {
-      const roomPlayer = room.players.find(
-        (player) => player.userId === normalizedUser.userId,
-      );
+    const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
+    if (selfRoomPlayer) {
+      const roomPlayer = selfRoomPlayer;
       if (roomPlayer && gamePlayerIds.has(roomPlayer.playerId)) {
         return roomPlayer.playerId;
       }

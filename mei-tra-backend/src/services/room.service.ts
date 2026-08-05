@@ -551,11 +551,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (!room) {
       return false;
     }
-    const membershipTransition = user.userId
+    const joiningUser = await this.resolveJoiningUser(roomId, room, user);
+    const membershipTransition = joiningUser.userId
       ? await this.roomMembershipService.claim(
-          user.userId,
+          joiningUser.userId,
           roomId,
-          user.playerId,
+          joiningUser.playerId,
         )
       : null;
     if (membershipTransition?.result === 'conflict') {
@@ -570,31 +571,68 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         roomId,
         room,
         gameState,
-        user,
+        user: joiningUser,
         vacantSeats: this.vacantSeats,
       });
       if (
         !joined &&
-        user.userId &&
+        joiningUser.userId &&
         membershipTransition?.result === 'claimed'
       ) {
         await this.rollbackMembershipClaim(
-          user.userId,
+          joiningUser.userId,
           roomId,
           membershipTransition.membership.membershipVersion,
         );
       }
       return joined;
     } catch (error) {
-      if (user.userId && membershipTransition?.result === 'claimed') {
+      if (
+        joiningUser.userId &&
+        membershipTransition?.result === 'claimed'
+      ) {
         await this.rollbackMembershipClaim(
-          user.userId,
+          joiningUser.userId,
           roomId,
           membershipTransition.membership.membershipVersion,
         );
       }
       throw error;
     }
+  }
+
+  private async resolveJoiningUser(
+    roomId: string,
+    room: Room,
+    user: SessionUser,
+  ): Promise<SessionUser> {
+    if (!user.userId) {
+      return user;
+    }
+
+    const roomMatches = room.players.filter(
+      (player) => !player.isCOM && player.userId === user.userId,
+    );
+    if (roomMatches.length === 1) {
+      return { ...user, playerId: roomMatches[0].playerId };
+    }
+
+    const vacantMatches = Object.values(this.vacantSeats[roomId] ?? {}).filter(
+      (seat) => seat.roomPlayer.userId === user.userId,
+    );
+    if (vacantMatches.length === 1) {
+      return {
+        ...user,
+        playerId: vacantMatches[0].roomPlayer.playerId,
+      };
+    }
+
+    const membership = await this.roomMembershipService.get(user.userId);
+    if (membership?.roomId === roomId) {
+      return { ...user, playerId: membership.playerId };
+    }
+
+    return user;
   }
 
   async restorePlayerFromVacantSeat(

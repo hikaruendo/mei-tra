@@ -61,11 +61,24 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       }
 
       const joinedPlayer = this.resolveJoinedRoomPlayer(room, normalizedUser);
+      if (!joinedPlayer) {
+        this.logger.error(
+          `Joined player could not be resolved for user ${normalizedUser.userId ?? normalizedUser.playerId} in room ${targetRoomId}`,
+        );
+        return {
+          success: false,
+          errorMessage: 'Failed to resolve joined player',
+          normalizedUser,
+          previousRoomNotification,
+        };
+      }
+      const resolvedUser: SessionUser = {
+        ...normalizedUser,
+        playerId: joinedPlayer.playerId,
+      };
       const data: JoinRoomSuccess = {
         room,
-        isHost: joinedPlayer
-          ? room.hostId === joinedPlayer.playerId
-          : room.hostId === normalizedUser.playerId,
+        isHost: room.hostId === joinedPlayer.playerId,
         roomStatus: room.status,
         roomsList: await this.roomService.listRooms(),
         resumeGame: await this.buildResumePayloadIfNeeded(room.id, room),
@@ -73,7 +86,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
       return {
         success: true,
-        normalizedUser,
+        normalizedUser: resolvedUser,
         previousRoomNotification,
         data,
       };
@@ -119,11 +132,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     normalizedUser: SessionUser,
   ) {
     if (normalizedUser.userId) {
-      const playerByUserId = room.players.find(
+      const playersByUserId = room.players.filter(
         (player) => !player.isCOM && player.userId === normalizedUser.userId,
       );
-      if (playerByUserId) {
-        return playerByUserId;
+      if (playersByUserId.length === 1) {
+        return playersByUserId[0];
       }
     }
 
