@@ -109,7 +109,10 @@ export class StartGameUseCase implements IStartGameUseCase {
         updatedState.blowState.currentBlowIndex !==
         updatedState.currentPlayerIndex
       ) {
+        const currentPlayer =
+          updatedState.players[updatedState.currentPlayerIndex] ?? null;
         await roomGameState.updateState({
+          currentPlayerId: currentPlayer?.playerId ?? null,
           currentPlayerIndex: updatedState.currentPlayerIndex,
           blowState: {
             ...updatedState.blowState,

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
 import { IChatMessageRepository } from '../interfaces/chat-message.repository.interface';

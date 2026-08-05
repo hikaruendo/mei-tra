@@ -66,6 +66,7 @@ export class GameStateService implements IGameStateService {
       version: 0,
       players: [],
       deck: [],
+      currentPlayerId: null,
       currentPlayerIndex: 0,
       agari: undefined,
       teamScores: {
@@ -151,19 +152,21 @@ export class GameStateService implements IGameStateService {
       }
     }
 
-    const normalizedIndex =
-      this.state.players.length === 0
-        ? 0
-        : Number.isInteger(this.state.currentPlayerIndex)
-          ? Math.min(
-              Math.max(this.state.currentPlayerIndex, 0),
-              this.state.players.length - 1,
-            )
-          : 0;
+    const normalizedIndex = this.resolveCurrentPlayerIndex();
 
     if (normalizedIndex !== this.state.currentPlayerIndex) {
       this.state.currentPlayerIndex = normalizedIndex;
       changed = true;
+    }
+
+    const normalizedPlayerId =
+      this.state.players[normalizedIndex]?.playerId ?? null;
+    if (this.state.currentPlayerId !== normalizedPlayerId) {
+      const hadStaleCurrentPlayerId = this.state.currentPlayerId != null;
+      this.state.currentPlayerId = normalizedPlayerId;
+      if (hadStaleCurrentPlayerId) {
+        changed = true;
+      }
     }
 
     return changed;
@@ -243,6 +246,7 @@ export class GameStateService implements IGameStateService {
       if (sanitized) {
         this.state = await this.stateManager.updateState(roomId, this.state, {
           players: this.state.players,
+          currentPlayerId: this.state.currentPlayerId,
           currentPlayerIndex: this.state.currentPlayerIndex,
         });
       }
@@ -540,17 +544,20 @@ export class GameStateService implements IGameStateService {
 
   async nextTurn(): Promise<void> {
     if (this.state.players.length === 0) return;
-    this.state.currentPlayerIndex =
-      (this.state.currentPlayerIndex + 1) % this.state.players.length;
+    const currentIndex = this.resolveCurrentPlayerIndex();
+    const nextIndex = (currentIndex + 1) % this.state.players.length;
+    this.state.currentPlayerIndex = nextIndex;
+    this.state.currentPlayerId =
+      this.state.players[nextIndex]?.playerId ?? null;
 
     // Persist the turn change
     if (this.roomId) {
       try {
         this.state.version = await this.enqueuePersistence(() =>
-          this.stateManager.persistCurrentPlayerIndex(
+          this.stateManager.persistCurrentPlayerId(
             this.roomId,
             this.state,
-            this.state.currentPlayerIndex,
+            this.state.currentPlayerId ?? null,
           ),
         );
       } catch {
@@ -560,7 +567,7 @@ export class GameStateService implements IGameStateService {
   }
 
   getCurrentPlayer(): DomainPlayer | null {
-    return this.state.players[this.state.currentPlayerIndex] || null;
+    return this.state.players[this.resolveCurrentPlayerIndex()] || null;
   }
 
   isPlayerTurn(playerId: string): boolean {
@@ -636,8 +643,7 @@ export class GameStateService implements IGameStateService {
   }
 
   get currentTurn(): string | null {
-    const currentPlayer = this.state.players[this.state.currentPlayerIndex];
-    return currentPlayer?.playerId || null;
+    return this.getCurrentPlayer()?.playerId ?? null;
   }
 
   set currentTurn(playerId: string) {
@@ -645,12 +651,13 @@ export class GameStateService implements IGameStateService {
       (p) => p.playerId === playerId,
     );
     if (playerIndex !== -1) {
+      this.state.currentPlayerId = playerId;
       this.state.currentPlayerIndex = playerIndex;
       void this.enqueuePersistence(() =>
-        this.stateManager.persistCurrentPlayerIndex(
+        this.stateManager.persistCurrentPlayerId(
           this.roomId,
           this.state,
-          playerIndex,
+          playerId,
         ),
       )
         .then((version) => {
@@ -660,6 +667,28 @@ export class GameStateService implements IGameStateService {
           this.logger.error('Failed to persist turn change:', error);
         });
     }
+  }
+
+  private resolveCurrentPlayerIndex(): number {
+    if (this.state.players.length === 0) {
+      return 0;
+    }
+
+    if (this.state.currentPlayerId) {
+      const index = this.state.players.findIndex(
+        (player) => player.playerId === this.state.currentPlayerId,
+      );
+      if (index !== -1) {
+        return index;
+      }
+    }
+
+    return Number.isInteger(this.state.currentPlayerIndex)
+      ? Math.min(
+          Math.max(this.state.currentPlayerIndex, 0),
+          this.state.players.length - 1,
+        )
+      : 0;
   }
 
   async startGame(): Promise<void> {
@@ -690,6 +719,7 @@ export class GameStateService implements IGameStateService {
 
     // Randomize the first blow player
     const firstBlowIndex = Math.floor(Math.random() * state.players.length);
+    state.currentPlayerId = state.players[firstBlowIndex]?.playerId ?? null;
     state.currentPlayerIndex = firstBlowIndex;
 
     // Initialize blow state

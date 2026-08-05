@@ -241,6 +241,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       (player) => player.playerId === playerId,
     );
     if (winnerIndex !== -1) {
+      state.currentPlayerId = playerId;
       state.currentPlayerIndex = winnerIndex;
     }
   }
@@ -358,6 +359,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     await roomGameState.updateState({
       playState: newPlayState,
       blowState: newBlowState,
+      currentPlayerId: nextBlowPlayer.playerId,
       currentPlayerIndex: nextBlowIndex,
     });
 

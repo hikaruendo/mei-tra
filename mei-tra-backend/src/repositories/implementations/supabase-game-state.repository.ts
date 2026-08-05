@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
 import { IGameStateRepository } from '../interfaces/game-state.repository.interface';
@@ -52,13 +52,12 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           room_id: roomId,
           state_data: {
             playerStates: toPersistedPlayerStates(gameState.players),
-            playerOrder: gameState.players.map((player) => player.playerId),
             deck: gameState.deck,
             agari: gameState.agari,
             blowState: gameState.blowState,
             playState: gameState.playState,
           },
-          current_player_index: gameState.currentPlayerIndex,
+          current_player_id: this.resolveCurrentPlayerId(gameState),
           game_phase: gameState.gamePhase,
           round_number: gameState.roundNumber,
           points_to_win: gameState.pointsToWin,
@@ -99,28 +98,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         );
       }
 
-      if (!this.isMissingRpcError(loadError)) {
-        throw new Error(`Failed to load room game state: ${loadError.message}`);
-      }
-
-      this.logger.warn(
-        'load_room_game_state RPC is unavailable; using legacy reads',
-      );
-      const { data, error } = await this.supabase
-        .from('game_states')
-        .select('*')
-        .eq('room_id', roomId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null; // Game state not found
-        }
-        throw new Error(`Failed to fetch game state: ${error.message}`);
-      }
-
-      const roomPlayers = await this.fetchRoomPlayers(roomId);
-      return this.mapDatabaseToGameState(data, roomPlayers);
+      throw new Error(`Failed to load room game state: ${loadError.message}`);
     } catch (error) {
       this.logger.error('Error finding game state by room ID:', error);
       throw error;
@@ -144,12 +122,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       );
 
       if (error) {
-        if (this.isMissingRpcError(error)) {
-          this.logger.warn(
-            'atomic_update_game_state RPC is unavailable; using legacy update',
-          );
-          return this.updateLegacy(roomId, gameState);
-        }
         throw new Error(`Failed to update game state: ${error.message}`);
       }
 
@@ -172,7 +144,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     hostId?: string,
   ): Promise<GameState | null> {
     const playerStates = toPersistedPlayerStates(gameState.players);
-    const playerOrder = gameState.players.map((player) => player.playerId);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
       playerId: player.playerId,
       userId: player.userId ?? null,
@@ -192,25 +163,12 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           p_room_id: roomId,
           p_room_players: persistedRoomPlayers,
           p_player_states: playerStates,
-          p_player_order: playerOrder,
           p_host_id: hostId ?? null,
           p_expected_version: gameState.version ?? null,
         },
       );
 
       if (error) {
-        if (this.isMissingRpcError(error)) {
-          this.logger.warn(
-            'persist_room_roster_atomic RPC is unavailable; using legacy roster writes',
-          );
-          await this.persistRoomRosterLegacy(
-            roomId,
-            roomPlayers,
-            gameState,
-            hostId,
-          );
-          return this.findByRoomId(roomId);
-        }
         throw new Error(`Failed to persist room roster: ${error.message}`);
       }
 
@@ -230,7 +188,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     if (gameState.players) {
       patch.playerStates = toPersistedPlayerStates(gameState.players);
-      patch.playerOrder = gameState.players.map((player) => player.playerId);
     }
     if (gameState.deck) patch.deck = gameState.deck;
     if (gameState.agari !== undefined) patch.agari = gameState.agari;
@@ -248,8 +205,14 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
   ): Record<string, unknown> {
     const patch: Record<string, unknown> = {};
 
-    if (gameState.currentPlayerIndex !== undefined) {
-      patch.currentPlayerIndex = gameState.currentPlayerIndex;
+    if (gameState.currentPlayerId !== undefined) {
+      patch.currentPlayerId = gameState.currentPlayerId;
+    } else if (gameState.currentPlayerIndex !== undefined) {
+      const currentPlayerId =
+        gameState.players?.[gameState.currentPlayerIndex]?.playerId;
+      if (currentPlayerId !== undefined) {
+        patch.currentPlayerId = currentPlayerId;
+      }
     }
     if (gameState.gamePhase !== undefined) {
       patch.gamePhase = gameState.gamePhase;
@@ -287,126 +250,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     );
   }
 
-  private async updateLegacy(
-    roomId: string,
-    gameState: Partial<GameState>,
-  ): Promise<GameState | null> {
-    const updateData: Partial<GameStateUpdate> = {};
-    const statePatch = this.buildStatePatch(gameState);
-
-    if (Object.keys(statePatch).length > 0) {
-      const { data: currentData } = await this.supabase
-        .from('game_states')
-        .select('state_data')
-        .eq('room_id', roomId)
-        .single();
-      updateData.state_data = {
-        ...((currentData?.state_data as Record<string, unknown>) ?? {}),
-        ...statePatch,
-      };
-    }
-
-    if (gameState.currentPlayerIndex !== undefined) {
-      updateData.current_player_index = gameState.currentPlayerIndex;
-    }
-    if (gameState.gamePhase !== undefined) {
-      updateData.game_phase = gameState.gamePhase;
-    }
-    if (gameState.roundNumber !== undefined) {
-      updateData.round_number = gameState.roundNumber;
-    }
-    if (gameState.pointsToWin !== undefined) {
-      updateData.points_to_win = gameState.pointsToWin;
-    }
-    if (gameState.teamScores) updateData.team_scores = gameState.teamScores;
-    if (gameState.teamScoreRecords) {
-      updateData.team_score_records = this.convertScoreRecordsForPersistence(
-        gameState.teamScoreRecords,
-      );
-    }
-    const { data, error } = await this.supabase
-      .from('game_states')
-      .update(updateData)
-      .eq('room_id', roomId)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to update game state: ${error.message}`);
-    }
-
-    const roomPlayers = await this.fetchRoomPlayers(roomId);
-    return this.mapDatabaseToGameState(data, roomPlayers);
-  }
-
-  private async persistRoomRosterLegacy(
-    roomId: string,
-    roomPlayers: RoomPlayer[],
-    gameState: GameState,
-    hostId?: string,
-  ): Promise<void> {
-    const existingPlayers = await this.fetchRoomPlayers(roomId);
-    const desiredIds = new Set(roomPlayers.map((player) => player.playerId));
-
-    await Promise.all(
-      existingPlayers
-        .filter((player) => !desiredIds.has(player.player_id))
-        .map((player) =>
-          this.supabase
-            .from('room_players')
-            .delete()
-            .eq('room_id', roomId)
-            .eq('player_id', player.player_id),
-        ),
-    );
-
-    const rows = roomPlayers.map((player, seatIndex) => ({
-      room_id: roomId,
-      player_id: player.playerId,
-      socket_id: null,
-      user_id: player.userId ?? null,
-      name: player.name,
-      team: player.team,
-      is_ready: player.isReady,
-      is_host: player.isHost,
-      is_com: player.isCOM ?? false,
-      joined_at: player.joinedAt.toISOString(),
-      seat_index: seatIndex,
-    }));
-
-    if (rows.length > 0) {
-      const { error } = await this.supabase
-        .from('room_players')
-        .upsert(rows, { onConflict: 'room_id,player_id' });
-      if (error) {
-        throw new Error(
-          `Failed to persist legacy room roster: ${error.message}`,
-        );
-      }
-    }
-
-    const roomUpdate: Record<string, unknown> = {
-      last_activity_at: new Date().toISOString(),
-    };
-    if (hostId) roomUpdate.host_id = hostId;
-    const { error: roomError } = await this.supabase
-      .from('rooms')
-      .update(roomUpdate)
-      .eq('id', roomId);
-    if (roomError) {
-      throw new Error(
-        `Failed to update legacy room roster: ${roomError.message}`,
-      );
-    }
-
-    const persistedState = await this.updateLegacy(roomId, {
-      players: gameState.players,
-    });
-    if (!persistedState) {
-      throw new Error(`Game state not found for room ${roomId}`);
-    }
-  }
-
   private async fetchRoomPlayers(roomId: string): Promise<RoomPlayerRow[]> {
     const { data, error } = await this.supabase
       .from('room_players')
@@ -419,17 +262,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
 
     return (data ?? []) as RoomPlayerRow[];
-  }
-
-  private isMissingRpcError(error: {
-    code?: string;
-    message?: string;
-  }): boolean {
-    return (
-      error.code === 'PGRST202' ||
-      error.code === '42883' ||
-      error.message?.includes('Could not find the function') === true
-    );
   }
 
   async delete(roomId: string): Promise<void> {
@@ -506,18 +338,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  async updateCurrentPlayerIndex(
-    roomId: string,
-    index: number,
-  ): Promise<boolean> {
-    try {
-      return Boolean(await this.update(roomId, { currentPlayerIndex: index }));
-    } catch (error) {
-      this.logger.error('Error updating current player index:', error);
-      return false;
-    }
-  }
-
   async bulkUpdate(
     roomId: string,
     updates: Partial<GameStateUpdate>,
@@ -527,8 +347,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       if (updates.round_number !== undefined) {
         gameStateUpdates.roundNumber = updates.round_number;
       }
-      if (updates.current_player_index !== undefined) {
-        gameStateUpdates.currentPlayerIndex = updates.current_player_index;
+      if (updates.current_player_id !== undefined) {
+        gameStateUpdates.currentPlayerId = updates.current_player_id;
       }
       if (updates.game_phase !== undefined) {
         gameStateUpdates.gamePhase = updates.game_phase;
@@ -576,29 +396,14 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       stateData.playerStates && typeof stateData.playerStates === 'object'
         ? (stateData.playerStates as PersistedPlayerStates)
         : {};
-    const hasAuthoritativeRoster = roomPlayers !== undefined;
     const rosterPlayers = (roomPlayers ?? []).map((player) =>
       this.toRosterPlayerSnapshot(player),
     );
     const roomPlayersById = new Map(
       rosterPlayers.map((player) => [player.playerId, player]),
     );
-    const persistedOrder = (
-      Array.isArray(stateData.playerOrder)
-        ? stateData.playerOrder.filter(
-            (playerId): playerId is string => typeof playerId === 'string',
-          )
-        : []
-    ).filter(
-      (playerId) => !hasAuthoritativeRoster || roomPlayersById.has(playerId),
-    );
-    const playerOrder = [
-      ...persistedOrder,
-      ...rosterPlayers
-        .map((player) => player.playerId)
-        .filter((playerId) => !persistedOrder.includes(playerId)),
-    ];
-    const players = playerOrder
+    const rosterOrder = rosterPlayers.map((player) => player.playerId);
+    const players = rosterOrder
       .map((playerId) => {
         const roomPlayer = roomPlayersById.get(playerId);
         const gameplay = playerStates[playerId] as
@@ -618,10 +423,25 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       })
       .filter((player): player is DomainPlayer => Boolean(player));
 
+    const persistedCurrentPlayerId =
+      typeof dbGameState.current_player_id === 'string'
+        ? dbGameState.current_player_id
+        : null;
+    const currentPlayerId =
+      persistedCurrentPlayerId &&
+      players.some((player) => player.playerId === persistedCurrentPlayerId)
+        ? persistedCurrentPlayerId
+        : null;
+    const currentPlayerIndex =
+      currentPlayerId === null
+        ? 0
+        : players.findIndex((player) => player.playerId === currentPlayerId);
+
     return {
       version: dbGameState.version,
       players,
-      currentPlayerIndex: dbGameState.current_player_index,
+      currentPlayerId,
+      currentPlayerIndex: currentPlayerIndex === -1 ? 0 : currentPlayerIndex,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],
       teamScores: dbGameState.team_scores as Record<
@@ -641,6 +461,14 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         players.map((player) => [player.playerId, player.team]),
       ),
     };
+  }
+
+  private resolveCurrentPlayerId(gameState: GameState): string | null {
+    if (gameState.currentPlayerId !== undefined) {
+      return gameState.currentPlayerId;
+    }
+
+    return gameState.players[gameState.currentPlayerIndex]?.playerId ?? null;
   }
 
   private toRosterPlayerSnapshot(

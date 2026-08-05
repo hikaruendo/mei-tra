@@ -23,7 +23,7 @@ try {
 
   const { error: stateError } = await supabase.from('game_states').insert({
     room_id: roomId,
-    state_data: { players: [], playerStates: {}, playerOrder: [] },
+    state_data: { players: [], playerStates: {} },
     team_assignments: {},
   });
   assert.ifError(stateError);

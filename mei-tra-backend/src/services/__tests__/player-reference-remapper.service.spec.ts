@@ -6,6 +6,7 @@ describe('PlayerReferenceRemapperService', () => {
     const service = new PlayerReferenceRemapperService();
     const state = {
       players: [],
+      currentPlayerId: 'old',
       currentPlayerIndex: 0,
       gamePhase: 'play',
       deck: [],
@@ -80,6 +81,7 @@ describe('PlayerReferenceRemapperService', () => {
     expect(state.blowState.actionHistory[0].playerId).toBe('new');
     expect(state.blowState.lastPasser).toBe('new');
     expect(state.pendingBrokenHandReveal?.playerId).toBe('new');
+    expect(state.currentPlayerId).toBe('new');
     expect(state.teamAssignments.old).toBeUndefined();
     expect(state.teamAssignments.new).toBe(0);
   });
