@@ -359,6 +359,130 @@ describe('JoinRoomGatewayEffectsService', () => {
     });
   });
 
+  it('uses the authenticated room player id when masking active resume hands', async () => {
+    const room = {
+      id: 'room-1',
+      name: 'Room',
+      hostId: 'actual-seat',
+      status: RoomStatus.PLAYING,
+      players: [
+        {
+          socketId: 'socket-1',
+          playerId: 'actual-seat',
+          userId: 'user-1',
+          name: 'User 1',
+          hand: ['A'],
+          team: 0 as const,
+          isPasser: false,
+          isReady: true,
+          isHost: true,
+          isCOM: false,
+          joinedAt: new Date(),
+        },
+      ],
+      settings: {
+        maxPlayers: 4,
+        isPrivate: false,
+        password: null,
+        teamAssignmentMethod: 'random' as const,
+        pointsToWin: 10,
+        allowSpectators: false,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastActivityAt: new Date(),
+    };
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getTransportPlayers: jest.fn(
+        (players: DomainPlayer[]): TransportPlayer[] =>
+          players.map(
+            (player): TransportPlayer => ({
+              socketId: player.playerId === 'actual-seat' ? 'socket-1' : '',
+              playerId: player.playerId,
+              name: player.name,
+              hand: [...player.hand],
+              team: player.team,
+              isPasser: player.isPasser,
+              userId:
+                player.playerId === 'actual-seat' ? 'user-1' : undefined,
+            }),
+          ),
+      ),
+    } as never);
+
+    const result = await service.buildEffects({
+      clientId: 'socket-1',
+      roomId: 'room-1',
+      normalizedUser: {
+        socketId: 'socket-1',
+        playerId: 'stale-player',
+        userId: 'user-1',
+        name: 'User 1',
+        isAuthenticated: true,
+      },
+      joinData: {
+        room: room as never,
+        isHost: true,
+        roomStatus: RoomStatus.PLAYING,
+        roomsList: [room] as never,
+        resumeGame: {
+          message: 'resume',
+          gameState: {
+            players: [
+              {
+                playerId: 'actual-seat',
+                name: 'User 1',
+                hand: ['A'],
+                team: 0 as const,
+                isPasser: false,
+              },
+              {
+                playerId: 'other-seat',
+                name: 'Other',
+                hand: ['B'],
+                team: 1 as const,
+                isPasser: false,
+              },
+            ],
+            gamePhase: 'play',
+            currentField: null,
+            currentTurn: 'actual-seat',
+            blowState: {
+              currentTrump: null,
+              currentHighestDeclaration: null,
+              declarations: [],
+              actionHistory: [],
+              lastPasser: null,
+              isRoundCancelled: false,
+              currentBlowIndex: 0,
+            },
+            teamScores: {
+              0: { play: 0, total: 0 },
+              1: { play: 0, total: 0 },
+            },
+            negriCard: null,
+            fields: [],
+            roomId: 'room-1',
+            pointsToWin: 10,
+          },
+        },
+      },
+    });
+
+    const gameStateEvent = result.events.find(
+      (event) => event.event === 'game-state',
+    );
+
+    expect((gameStateEvent?.payload as any).you).toBe('actual-seat');
+    expect((gameStateEvent?.payload as any).players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ playerId: 'actual-seat', hand: ['A'] }),
+        expect.objectContaining({ playerId: 'other-seat', hand: [] }),
+      ]),
+    );
+  });
+
   it('builds socket-scoped room entry events', async () => {
     const room = {
       id: 'room-1',

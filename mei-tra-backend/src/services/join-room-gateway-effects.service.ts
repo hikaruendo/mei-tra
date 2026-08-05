@@ -10,7 +10,7 @@ import {
   PreviousRoomNotification,
 } from '../use-cases/interfaces/join-room.use-case.interface';
 import { resolveTransportPlayers } from '../use-cases/helpers/player-resolution.helper';
-import { Team } from '../types/game.types';
+import { DomainPlayer, Team } from '../types/game.types';
 import { SessionUser } from '../types/session.types';
 import { RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
@@ -190,6 +190,11 @@ export class JoinRoomGatewayEffectsService {
 
     if (joinData.resumeGame) {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
+      const selfPlayerId = this.resolveResumeSelfPlayerId(
+        room,
+        joinData.resumeGame.gameState.players,
+        normalizedUser,
+      );
       const maskedGameStateForJoiner: GameStatePayload = {
         ...joinData.resumeGame.gameState,
         currentField: joinData.resumeGame.gameState.currentField ?? null,
@@ -203,9 +208,9 @@ export class JoinRoomGatewayEffectsService {
           },
         ).map((player) => ({
           ...player,
-          hand: player.playerId === normalizedUser.playerId ? player.hand : [],
+          hand: player.playerId === selfPlayerId ? player.hand : [],
         })),
-        you: normalizedUser.playerId,
+        you: selfPlayerId,
         hostId: room.hostId,
       };
 
@@ -262,6 +267,31 @@ export class JoinRoomGatewayEffectsService {
       room,
       events,
     };
+  }
+
+  private resolveResumeSelfPlayerId(
+    room: JoinRoomSuccess['room'],
+    gamePlayers: DomainPlayer[],
+    normalizedUser: SessionUser,
+  ): string {
+    const gamePlayerIds = new Set(
+      gamePlayers.map((player) => player.playerId),
+    );
+
+    if (normalizedUser.userId) {
+      const roomPlayer = room.players.find(
+        (player) => player.userId === normalizedUser.userId,
+      );
+      if (roomPlayer && gamePlayerIds.has(roomPlayer.playerId)) {
+        return roomPlayer.playerId;
+      }
+    }
+
+    if (gamePlayerIds.has(normalizedUser.playerId)) {
+      return normalizedUser.playerId;
+    }
+
+    return normalizedUser.playerId;
   }
 
   async buildRoomEntryEvents({

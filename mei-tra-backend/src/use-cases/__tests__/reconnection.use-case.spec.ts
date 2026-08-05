@@ -343,6 +343,103 @@ describe('ReconnectionUseCase', () => {
     expect(gameState.upsertSessionUser).not.toHaveBeenCalled();
   });
 
+  it('prefers currentPlayerId over a stale currentPlayerIndex in active snapshots', async () => {
+    const roomGameState = {
+      findPlayerByActorId: jest.fn().mockReturnValue(null),
+      getState: () => ({
+        players: [
+          {
+            playerId: 'seat-1',
+            name: 'User 1',
+            team: 0,
+            hand: ['A♠'],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+          {
+            playerId: 'player-2',
+            name: 'User 2',
+            team: 1,
+            hand: ['K♠'],
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ],
+        gamePhase: 'blow',
+        currentPlayerId: 'seat-1',
+        currentPlayerIndex: 1,
+        blowState: {
+          declarations: [],
+          actionHistory: [],
+          currentTrump: null,
+          currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
+        playState: {
+          currentField: null,
+          negriCard: null,
+          neguri: {},
+          fields: [],
+          lastWinnerId: null,
+          openDeclared: false,
+          openDeclarerId: null,
+        },
+        teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+        pointsToWin: 10,
+      }),
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest.fn().mockResolvedValue({
+        id: 'room-1',
+        hostId: 'seat-1',
+        status: RoomStatus.PLAYING,
+        settings: { teamNames: undefined },
+        players: [
+          {
+            playerId: 'seat-1',
+            socketId: 'socket-1',
+            userId: 'user-1',
+            isAuthenticated: true,
+            name: 'User 1',
+            hand: ['A♠'],
+            team: 0,
+            isReady: true,
+            isHost: true,
+            isPasser: false,
+            joinedAt: new Date(),
+          },
+        ],
+      }),
+      handlePlayerReconnection: jest.fn(),
+      listRooms: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const gameState = {
+      upsertSessionUser: jest.fn(),
+    } as Partial<IGameStateService> as IGameStateService;
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      createRoomMembershipService(),
+    );
+
+    const snapshot = await useCase.getActiveGameSnapshot({
+      roomId: 'room-1',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(snapshot?.currentTurnPlayerId).toBe('seat-1');
+    expect(snapshot?.gameState.currentTurn).toBe('seat-1');
+  });
+
   it('reconciles persisted players before reconnecting to a waiting room', async () => {
     const roomPlayers = [
       {

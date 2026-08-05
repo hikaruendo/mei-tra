@@ -279,27 +279,37 @@ export const useGame = () => {
     [],
   );
 
-  const syncCurrentPlayerIdentity = useCallback((
-    nextPlayers: Player[],
+  const resolveCurrentUserPlayerId = useCallback(<T extends { playerId: string; userId?: string }>(
+    nextPlayers: T[],
     fallbackPlayerId?: string | null,
-  ) => {
+  ): string | null => {
+    if (user?.id) {
+      const selfByUserId = nextPlayers.find((player) => player.userId === user.id);
+      if (selfByUserId) {
+        return selfByUserId.playerId;
+      }
+    }
+
     const selfByPlayerId =
       (fallbackPlayerId &&
         nextPlayers.find((player) => player.playerId === fallbackPlayerId)) ||
       null;
 
-    if (selfByPlayerId) {
-      setCurrentPlayerId(selfByPlayerId.playerId);
-      return;
-    }
-
-    if (user?.id) {
-      const selfByUserId = nextPlayers.find((player) => player.userId === user.id);
-      if (selfByUserId) {
-        setCurrentPlayerId(selfByUserId.playerId);
-      }
-    }
+    return selfByPlayerId?.playerId ?? null;
   }, [user?.id]);
+
+  const syncCurrentPlayerIdentity = useCallback((
+    nextPlayers: Player[],
+    fallbackPlayerId?: string | null,
+  ) => {
+    const nextCurrentPlayerId = resolveCurrentUserPlayerId(
+      nextPlayers,
+      fallbackPlayerId,
+    );
+    if (nextCurrentPlayerId) {
+      setCurrentPlayerId(nextCurrentPlayerId);
+    }
+  }, [resolveCurrentUserPlayerId]);
 
   const updatePlayersLocally = useCallback((
     updater: (previousPlayers: Player[]) => Player[],
@@ -551,11 +561,10 @@ export const useGame = () => {
         if (shouldSkipLegacyRoomUpdated(nextRoom.id)) {
           return;
         }
-        const selfPlayerId =
-          currentPlayerId ??
-          nextRoom.players.find((player) => player.userId === user?.id)
-            ?.playerId ??
-          null;
+        const selfPlayerId = resolveCurrentUserPlayerId(
+          nextRoom.players,
+          currentPlayerId,
+        );
         const isCurrentRoom =
           nextRoom.id === currentRoomId ||
           Boolean(
@@ -583,11 +592,10 @@ export const useGame = () => {
         const { room: nextRoom, players: nextPlayers } =
           fromRoomSyncPayload(payload);
         markRoomSyncHandled(nextRoom.id);
-        const selfPlayerId =
-          currentPlayerId ??
-          nextRoom.players.find((player) => player.userId === user?.id)
-            ?.playerId ??
-          null;
+        const selfPlayerId = resolveCurrentUserPlayerId(
+          nextRoom.players,
+          currentPlayerId,
+        );
         const isCurrentRoom =
           nextRoom.id === currentRoomId ||
           Boolean(
@@ -1227,6 +1235,7 @@ export const useGame = () => {
     negriPlayerId,
     markRoomSyncHandled,
     commitPlayers,
+    resolveCurrentUserPlayerId,
     updatePlayersLocally,
     syncCurrentPlayerIdentity,
     shouldSkipLegacyRoomUpdated,

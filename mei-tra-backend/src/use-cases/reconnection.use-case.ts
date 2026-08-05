@@ -337,7 +337,11 @@ export class ReconnectionUseCase {
   ): ActiveGameSnapshot {
     const state = roomGameState.getState();
     const currentTurnPlayerId =
-      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
+      state.currentPlayerId &&
+      state.players.some((player) => player.playerId === state.currentPlayerId)
+        ? state.currentPlayerId
+        : state.currentPlayerIndex !== -1 &&
+            state.players[state.currentPlayerIndex]
         ? state.players[state.currentPlayerIndex].playerId
         : null;
 
