@@ -217,6 +217,13 @@ describe('ReconnectionUseCase', () => {
       'socket-1',
       'user-1',
     );
+    expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        socketId: 'socket-1',
+        playerId: 'seat-1',
+        userId: 'user-1',
+      }),
+    );
   });
 
   it('builds an active-game snapshot without reconnecting or mutating state', async () => {

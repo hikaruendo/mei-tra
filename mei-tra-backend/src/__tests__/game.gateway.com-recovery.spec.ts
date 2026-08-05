@@ -248,7 +248,7 @@ describe('GameGateway COM recovery integration', () => {
       execute: jest.fn().mockResolvedValue({
         success: true,
         data: {
-          playerId: 'user-1',
+          playerId: 'seat-1',
           roomDeleted: true,
           roomsList: [],
         },
@@ -263,7 +263,7 @@ describe('GameGateway COM recovery integration', () => {
       getRoom: jest.fn().mockResolvedValue({
         players: [
           {
-            playerId: 'user-1',
+            playerId: 'seat-1',
             userId: 'user-1',
             isCOM: false,
           },
@@ -315,6 +315,10 @@ describe('GameGateway COM recovery integration', () => {
       playerId: 'user-1',
     });
 
+    expect(testGateway.leaveRoomUseCase.execute).toHaveBeenCalledWith({
+      roomId: 'room-1',
+      playerId: 'seat-1',
+    });
     expect(socketOne.leave).toHaveBeenCalledWith('room-1');
     expect(socketTwo.leave).toHaveBeenCalledWith('room-1');
     expect(socketOne.emit).toHaveBeenCalledWith('back-to-lobby');
