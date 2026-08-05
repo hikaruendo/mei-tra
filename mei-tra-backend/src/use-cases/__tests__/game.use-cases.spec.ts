@@ -824,6 +824,7 @@ describe('Game Use Cases', () => {
       expect(result.data?.currentTurnPlayerId).toBe('player-2');
       expect(state.blowState.currentBlowIndex).toBe(1);
       expect(roomGameState.updateState).toHaveBeenCalledWith({
+        currentPlayerId: 'player-2',
         currentPlayerIndex: 1,
         blowState: expect.objectContaining({ currentBlowIndex: 1 }),
       });

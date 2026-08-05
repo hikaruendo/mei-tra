@@ -147,6 +147,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const firstBlowIndex = nextState.blowState.currentBlowIndex;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
+      nextState.currentPlayerId = firstBlowPlayer?.playerId ?? null;
       nextState.currentPlayerIndex = firstBlowIndex;
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;

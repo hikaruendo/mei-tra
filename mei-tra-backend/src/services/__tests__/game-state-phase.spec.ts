@@ -17,7 +17,6 @@ describe('GameStateService phase transitions', () => {
       delete: jest.fn().mockResolvedValue(true),
       updatePlayerConnection: jest.fn().mockResolvedValue(true),
       updateGamePhase: jest.fn().mockResolvedValue(true),
-      updateCurrentPlayerIndex: jest.fn().mockResolvedValue(true),
       bulkUpdate: jest.fn().mockResolvedValue(true),
       updatePlayers: jest.fn().mockResolvedValue(true),
       deleteExpiredGameStates: jest.fn().mockResolvedValue(0),

@@ -17,7 +17,6 @@ export type GameHistoryActionType =
 export interface GameHistoryContextContract {
   roundNumber: number;
   gamePhase: TransportGamePhase | null;
-  currentPlayerIndex: number;
   currentTurnPlayerId: string | null;
   teamScores?: TransportTeamScores;
 }

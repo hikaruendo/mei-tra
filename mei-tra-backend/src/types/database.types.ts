@@ -276,7 +276,7 @@ export interface Database {
           id: string;
           room_id: string;
           state_data: Record<string, any>;
-          current_player_index: number;
+          current_player_id: string | null;
           game_phase: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number: number;
           points_to_win: number;
@@ -298,7 +298,7 @@ export interface Database {
           id?: string;
           room_id: string;
           state_data?: Record<string, any>;
-          current_player_index?: number;
+          current_player_id?: string | null;
           game_phase?: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number?: number;
           points_to_win?: number;
@@ -320,7 +320,7 @@ export interface Database {
           id?: string;
           room_id?: string;
           state_data?: Record<string, any>;
-          current_player_index?: number;
+          current_player_id?: string | null;
           game_phase?: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number?: number;
           points_to_win?: number;

@@ -85,6 +85,10 @@ export class PlayerReferenceRemapperService {
     this.remapPlayStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
     this.remapBlowStatePlayerIdReferences(state, fromPlayerId, toPlayerId);
 
+    if (state.currentPlayerId === fromPlayerId) {
+      state.currentPlayerId = toPlayerId;
+    }
+
     if (state.teamAssignments?.[fromPlayerId] != null) {
       state.teamAssignments[toPlayerId] = state.teamAssignments[fromPlayerId];
       delete state.teamAssignments[fromPlayerId];

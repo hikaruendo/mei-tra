@@ -20,7 +20,6 @@ export type GameHistoryActionType = (typeof GAME_HISTORY_ACTION_TYPES)[number];
 export interface GameHistoryContext {
   roundNumber: number;
   gamePhase: GamePhase;
-  currentPlayerIndex: number;
   currentTurnPlayerId: string | null;
   teamScores?: TeamScores;
 }

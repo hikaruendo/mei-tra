@@ -185,9 +185,7 @@ export class GameEventLogService implements IGameEventLogService {
     return {
       roundNumber: input.roundNumber,
       gamePhase: input.gamePhase,
-      currentPlayerIndex: input.currentPlayerIndex,
-      currentTurnPlayerId:
-        input.players[input.currentPlayerIndex]?.playerId ?? null,
+      currentTurnPlayerId: input.currentPlayerId ?? null,
       teamScores: input.teamScores,
     };
   }
@@ -244,10 +242,6 @@ export class GameEventLogService implements IGameEventLogService {
         context.gamePhase === 'play'
           ? context.gamePhase
           : 'waiting',
-      currentPlayerIndex:
-        typeof context.currentPlayerIndex === 'number'
-          ? context.currentPlayerIndex
-          : 0,
       currentTurnPlayerId:
         typeof context.currentTurnPlayerId === 'string'
           ? context.currentTurnPlayerId

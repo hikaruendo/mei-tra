@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import * as Sentry from '@sentry/nestjs';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { isAllowedFrontendOrigin } from './config/frontend-origins';
+import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
 async function bootstrap() {
   if (process.env.SENTRY_DSN) {
@@ -17,8 +18,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  app.enableCors({
-    origin: (origin, callback) => {
+  const corsOptions: CorsOptions = {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin || isAllowedFrontendOrigin(origin)) {
         callback(null, true);
         return;
@@ -27,7 +31,8 @@ async function bootstrap() {
       callback(new Error('Origin not allowed by CORS'));
     },
     credentials: true,
-  });
+  };
+  app.enableCors(corsOptions);
 
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
