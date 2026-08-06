@@ -25,9 +25,10 @@ If X rejects a refresh request, generate a new OAuth 2.0 token pair in the Devel
 
 Every newly opened PR receives `x:share` automatically. GitHub does not reliably distinguish Codex, Claude, and a human when they use the same account, so this keeps the behavior consistent across agents. Remove the label before merging when the change is private, operational, or not worth announcing.
 
-1. Merge the labeled PR into `main`. The workflow reads the PR title and description, then creates a text-only issue labeled `x:review`.
-2. Edit the Japanese text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. The generated post explains what changed and why it helps players, without including a URL.
-3. Comment exactly `/post-x` on the issue. The approval workflow publishes the text to X without uploading any media.
+1. When opening the PR, fill in `User-facing change`, `User benefit`, and `X post wording` in the PR template. AI coding tools should complete these sections with concrete, verified language; the X wording should be Japanese, under 240 characters, and contain no URL or media reference.
+2. Merge the labeled PR into `main`. The workflow uses `X post wording` first, then the two structured sections, and only then falls back to title/body keyword rules. It creates a text-only issue labeled `x:review`.
+3. Edit the Japanese text between `<!-- x-post:start -->` and `<!-- x-post:end -->`. The generated post explains what changed and why it helps players, without including a URL.
+4. Comment exactly `/post-x` on the issue. The approval workflow publishes the text to X without uploading any media.
 
 ## Weekly devlog
 

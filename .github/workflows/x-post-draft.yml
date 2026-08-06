@@ -45,7 +45,42 @@ jobs:
             }
 
             const titleSource = pr.title.toLowerCase();
-            const bodySource = (pr.body || '').toLowerCase();
+            const prBody = pr.body || '';
+            const bodySource = prBody.toLowerCase();
+            const extractSection = (heading) => {
+              const lines = prBody.split(/\r?\n/);
+              const headingPattern = new RegExp(`^##\\s+${heading}\\s*$`, 'i');
+              const start = lines.findIndex((line) => headingPattern.test(line.trim()));
+              if (start < 0) return '';
+              const section = [];
+              for (let index = start + 1; index < lines.length; index += 1) {
+                if (/^##\s+/.test(lines[index].trim())) break;
+                section.push(lines[index]);
+              }
+              return section.join('\n')
+                .replace(/<!--[\s\S]*?-->/g, '')
+                .trim();
+            };
+            const stripMarkdown = (value) => value
+              .replace(/```[\s\S]*?```/g, '')
+              .replace(/^\s*[-*]\s+/gm, '')
+              .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+              .replace(/\s+/g, ' ')
+              .trim();
+            const normalizeCandidate = (value) => {
+              const text = stripMarkdown(value);
+              return text.startsWith('Mei-Traをアップデートしました。')
+                ? text
+                : ['Mei-Traをアップデートしました。', '', text].join('\n');
+            };
+            const userFacingChange = stripMarkdown(extractSection('User-facing change'));
+            const userBenefit = stripMarkdown(extractSection('User benefit'));
+            const xPostWording = stripMarkdown(extractSection('X post wording'));
+            const explicitCopy = xPostWording
+              && !/^投稿対象外$|^(none|n\/a|no user-facing change)$/i.test(xPostWording)
+              && !/https?:\/\//i.test(xPostWording)
+              ? normalizeCandidate(xPostWording)
+              : '';
             const summaryRules = [
               {
                 test: /customize team names|team names|チーム名/,
@@ -139,12 +174,20 @@ jobs:
               text: 'ゲーム体験を見直し、より遊びやすくしました。',
               detail: '画面の表示や対局中の操作を整え、安心してプレイできるようにしています。',
             };
-            const candidate = [
+            const ruleCandidate = [
               'Mei-Traをアップデートしました。',
               '',
               summary.text,
               summary.detail,
             ].join('\n');
+            const structuredCandidate = userFacingChange && userBenefit
+              ? normalizeCandidate(`${userFacingChange}\n${userBenefit}`)
+              : '';
+            const candidate = explicitCopy && explicitCopy.length <= 260
+              ? explicitCopy
+              : structuredCandidate && structuredCandidate.length <= 260
+                ? structuredCandidate
+                : ruleCandidate;
 
             const openIssues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
