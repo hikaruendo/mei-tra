@@ -51,13 +51,13 @@ jobs:
               'This is a weekly devlog candidate created from merged PRs labeled `x:devlog`.',
               '',
               'Edit the copy between the markers. Prefer a player benefit over implementation detail.',
-              'This weekly workflow is text-first; attach media manually in the draft if it supports the summary.',
+              'This workflow creates a text-only draft for editorial review.',
               '',
               '<!-- x-post:start -->',
               candidate,
               '<!-- x-post:end -->',
               '',
-              'When the copy and media are ready, comment exactly `/post-x` to publish. This action is irreversible.',
+              'When the copy is ready, comment exactly `/post-x` to publish. This action is irreversible.',
             ].join('\n');
 
             const date = new Date().toISOString().slice(0, 10);
