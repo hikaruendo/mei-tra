@@ -48,29 +48,79 @@ jobs:
             const bodySource = (pr.body || '').toLowerCase();
             const summaryRules = [
               {
-                test: /team names|チーム名/,
+                test: /customize team names|team names|チーム名/,
                 text: 'チーム名を分かりやすく設定できるようにしました。',
-                detail: '対局中や履歴画面でも、チームの情報を確認しやすくなっています。',
+                detail: '待機画面・対局中・履歴画面で同じチーム名を表示し、長い名前も崩れにくくしています。',
               },
               {
                 test: /score|得点|スコア/,
-                text: '得点表示を見直し、現在の状況を確認しやすくしました。',
-                detail: '対局中にチームごとの進み具合をすぐ把握できます。',
+                text: 'チームごとの得点表示を正しい色と位置にそろえました。',
+                detail: 'どのチームが何点取ったかを、対局画面と履歴画面で迷わず確認できます。',
               },
               {
-                test: /history|replay|履歴|リプレイ/,
-                text: '対局履歴と振り返り画面を分かりやすくしました。',
-                detail: '過去のプレイ内容を、あとから確認しやすくなっています。',
+                test: /ゲーム画面の操作性と履歴表示|history|replay|履歴|リプレイ/,
+                text: '手札の並べ替え、手番時計、取得組数、得点を対局中に確認しやすくしました。',
+                detail: '右上の履歴からラウンド結果とチーム別得点を振り返れ、横長の小さな画面でも場札を確認できます。',
               },
               {
-                test: /contrast|label|accessib|ui|画面|表示|操作性|アクセシビリティ/,
-                text: 'ゲーム画面の表示と操作を見直し、情報を読み取りやすくしました。',
-                detail: '暗いテーマや小さな画面でも、必要な情報を確認しやすくなっています。',
+                test: /post-158 game ui labels|contrast|label|accessib|dark.mode|表示と操作|操作性|アクセシビリティ/,
+                text: 'ゲーム画面のラベルとコントラストを見直し、状態を読み取りやすくしました。',
+                detail: '暗いテーマでも宣言やボタンの意味が伝わり、チーム名編集などの操作位置も分かりやすくなっています。',
               },
               {
-                test: /reconnect|connection|再接続|接続/,
-                text: '接続が一時的に切れたときの復帰処理を改善しました。',
-                detail: '対局中の席やゲームの状態を保ちやすくなっています。',
+                test: /fix reconnect player identity|再接続.*プレイヤー|プレイヤー.*再接続/,
+                text: '再接続時に、ログイン中のプレイヤーを正しい席へ復元するようにしました。',
+                detail: '画面を更新しても自分の席・手札・手番を保ち、古いセッションによる二重登録も防ぎます。',
+              },
+              {
+                test: /normalize current player identity and seat order|current player identity/,
+                text: '席順と現在の手番の管理方法を一本化しました。',
+                detail: '人間プレイヤーとCOMの入れ替え後も、同じ席の手番を正しく引き継げます。',
+              },
+              {
+                test: /roster conflicts on player leave|player leave/,
+                text: 'プレイヤーが退出したときの席とCOMの割り当てを整理しました。',
+                detail: '重複したCOMや、すでに終わったプレイヤーに戻る手番を防ぎ、途中参加後も対局を続けられます。',
+              },
+              {
+                test: /stabilize active room recovery|active room recovery/,
+                text: '切断やブラウザ再読み込み後のルーム復帰を安定させました。',
+                detail: '同じアカウントの古いタブを整理し、戻るべき席と対局状態を一つに保ちます。',
+              },
+              {
+                test: /unify active room membership transitions|membership transitions|cross-room/,
+                text: 'ルーム参加・退出・COM置き換え時の在籍状態を一貫して管理するようにしました。',
+                detail: '別ルームへの誤参加を防ぎ、退出後は次のルームへ安全に参加できます。',
+              },
+              {
+                test: /add active room membership contract|active room membership contract|advisory locks/,
+                text: '1人1ルームの在籍状態をサーバーで一元管理する仕組みを追加しました。',
+                detail: '同時操作や古い切断処理が新しい参加状態を消さないようにし、競合を追跡できます。',
+              },
+              {
+                test: /immediate com replacement after disconnect|com replacement.*disconnect/,
+                text: '切断直後にCOMへ交代しても、席と手番を正しく保つようにしました。',
+                detail: '再接続した人を誤ってCOM扱いせず、古いタイマーによる二重交代も防ぎます。',
+              },
+              {
+                test: /stabilize player lifecycle and seat order|player lifecycle/,
+                text: 'プレイヤーの参加・切断・退出と席順の扱いを安定させました。',
+                detail: 'ルーム削除後に古いCOM復帰処理が走らず、再読み込み後も正しい順番で遊べます。',
+              },
+              {
+                test: /fix links to x media artifacts|media artifacts/,
+                text: 'X投稿下書きのメディア確認リンクを、実行ページへ正しくつなぎました。',
+                detail: '404になりやすい一覧URLを避け、レビュアーが投稿前に素材を確認しやすくしています。',
+              },
+              {
+                test: /install ffmpeg for x media capture|ffmpeg|media capture/,
+                text: 'X投稿用動画の変換環境を整え、撮影結果をMP4にできるようにしました。',
+                detail: 'Playwrightの撮影後に変換で止まらず、動画付きの下書きを作れるようになります。',
+              },
+              {
+                test: /x投稿のデモ撮影と日本語コピー|demo capture|japanese copy/,
+                text: 'PRの変更内容に合う公開画面を推定し、投稿文を具体的な日本語で作るようにしました。',
+                detail: 'ログイン画面を誤って撮影せず、利用者に伝わる変更点とメリットを下書きに反映します。',
               },
               {
                 test: /spectat|観戦/,
@@ -81,11 +131,6 @@ jobs:
                 test: /com|computer|ai|bot|プレイ速度/,
                 text: 'COM対戦を改善し、ひとりでも遊び始めやすくしました。',
                 detail: '空いている席をAIが補い、対局をスムーズに進められます。',
-              },
-              {
-                test: /ffmpeg|media capture|x media|投稿用|投稿/,
-                text: 'X投稿用の下書き生成を安定化しました。',
-                detail: '変更内容を確認しやすい日本語の投稿文を自動で用意できます。',
               },
             ];
             const matched = summaryRules.find((rule) => rule.test.test(titleSource))
@@ -116,7 +161,18 @@ jobs:
             )?.[1]?.trim();
             const oldGenericCopy = existingCandidate?.includes('より快適に遊べるよう、プレイ体験を改善しています。');
             const oldTitleCopy = existingCandidate?.includes(`「${pr.title.trim()}`);
-            const copy = existingCandidate && !oldGenericCopy && !oldTitleCopy ? existingCandidate : candidate;
+            const oldGeneratedCopy = [
+              'チーム名を分かりやすく設定できるようにしました。',
+              '得点表示を見直し、現在の状況を確認しやすくしました。',
+              '対局履歴と振り返り画面を分かりやすくしました。',
+              'ゲーム画面の表示と操作を見直し、情報を読み取りやすくしました。',
+              '接続が一時的に切れたときの復帰処理を改善しました。',
+              'COM対戦を改善し、ひとりでも遊び始めやすくしました。',
+              'X投稿用の下書き生成を安定化しました。',
+            ].some((text) => existingCandidate?.includes(text));
+            const copy = existingCandidate && !oldGenericCopy && !oldTitleCopy && !oldGeneratedCopy
+              ? existingCandidate
+              : candidate;
 
             const body = [
               `Source PR: #${pr.number} (${pr.html_url})`,
