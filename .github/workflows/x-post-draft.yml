@@ -44,7 +44,8 @@ jobs:
               return;
             }
 
-            const source = `${pr.title}\n${pr.body || ''}`.toLowerCase();
+            const titleSource = pr.title.toLowerCase();
+            const bodySource = (pr.body || '').toLowerCase();
             const summaryRules = [
               {
                 test: /team names|チーム名/,
@@ -87,7 +88,8 @@ jobs:
                 detail: '変更内容を確認しやすい日本語の投稿文を自動で用意できます。',
               },
             ];
-            const matched = summaryRules.find((rule) => rule.test.test(source));
+            const matched = summaryRules.find((rule) => rule.test.test(titleSource))
+              || summaryRules.find((rule) => rule.test.test(bodySource));
             const summary = matched || {
               text: 'ゲーム体験を見直し、より遊びやすくしました。',
               detail: '画面の表示や対局中の操作を整え、安心してプレイできるようにしています。',
