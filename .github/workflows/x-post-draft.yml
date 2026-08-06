@@ -113,7 +113,8 @@ jobs:
               /<!-- x-post:start -->\s*([\s\S]*?)\s*<!-- x-post:end -->/,
             )?.[1]?.trim();
             const oldGenericCopy = existingCandidate?.includes('より快適に遊べるよう、プレイ体験を改善しています。');
-            const copy = existingCandidate && !oldGenericCopy ? existingCandidate : candidate;
+            const oldTitleCopy = existingCandidate?.includes(`「${pr.title.trim()}`);
+            const copy = existingCandidate && !oldGenericCopy && !oldTitleCopy ? existingCandidate : candidate;
 
             const body = [
               `Source PR: #${pr.number} (${pr.html_url})`,
