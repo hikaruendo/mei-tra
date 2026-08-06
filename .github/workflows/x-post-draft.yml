@@ -67,11 +67,9 @@ jobs:
               .trim();
             const userFacingChange = stripMarkdown(extractSection('User-facing change'));
             const userBenefit = stripMarkdown(extractSection('User benefit'));
-            const xPostWording = stripMarkdown(extractSection('X post wording'));
             const missingSections = [
               ['User-facing change', userFacingChange],
               ['User benefit', userBenefit],
-              ['X post wording', xPostWording],
             ].filter(([, value]) => !value);
             if (missingSections.length > 0) {
               core.setFailed(
@@ -79,19 +77,20 @@ jobs:
               );
               return;
             }
-            if (/^投稿対象外$|^(none|n\/a|no user-facing change)$/i.test(xPostWording)) {
-              core.setFailed(`PR #${prNumber} is labeled x:share but its X post wording says it is not for publication.`);
+            if (/^投稿対象外$|^(none|n\/a|no user-facing change)$/i.test(userFacingChange)
+              || /^投稿対象外$|^(none|n\/a|no user-facing change)$/i.test(userBenefit)) {
+              core.setFailed(`PR #${prNumber} is labeled x:share but its AI-written sections say it is not for publication.`);
               return;
             }
-            if (xPostWording.length > 240) {
-              core.setFailed(`PR #${prNumber} X post wording must be 240 characters or fewer.`);
+            const candidate = [userFacingChange, userBenefit].join('\n');
+            if (candidate.length > 240) {
+              core.setFailed(`PR #${prNumber} User-facing change plus User benefit must be 240 characters or fewer.`);
               return;
             }
-            if (/https?:\/\//i.test(xPostWording)) {
-              core.setFailed(`PR #${prNumber} X post wording must not include URLs.`);
+            if (/https?:\/\//i.test(candidate)) {
+              core.setFailed(`PR #${prNumber} AI-written sections must not include URLs.`);
               return;
             }
-            const candidate = xPostWording;
 
             const openIssues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
