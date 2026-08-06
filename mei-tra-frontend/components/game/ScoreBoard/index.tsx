@@ -28,7 +28,9 @@ export const ScoreBoard = ({ teamScores, teamScoreRecords, roundNumber }: ScoreB
           const currentRoundScore = getCurrentRoundScore(parseInt(teamId));
           return (
             <div key={teamId} className="border p-3 rounded">
-              <h3 className="font-semibold mb-2">{t('team')} {parseInt(teamId) + 1}</h3>
+              <h3 className="font-semibold mb-2">
+                {t(parseInt(teamId) === 0 ? 'teamRed' : 'teamBlack')}
+              </h3>
               <p className="text-2xl font-bold">{score.total} {t('points')}</p>
               <div className="mt-2 text-sm">
                 <p>{t('thisRound')}</p>
@@ -48,4 +50,4 @@ export const ScoreBoard = ({ teamScores, teamScoreRecords, roundNumber }: ScoreB
       </div>
     </div>
   );
-}; 
+};

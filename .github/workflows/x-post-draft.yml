@@ -1,0 +1,128 @@
+name: Create X Post Draft
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Merged PR number to summarize
+        required: true
+        type: number
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  create-draft:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      contains(github.event.pull_request.labels.*.name, 'x:share'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create a text-only approval draft
+        uses: actions/github-script@v7
+        env:
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const prNumber = context.eventName === 'workflow_dispatch'
+              ? Number(process.env.MANUAL_PR_NUMBER)
+              : context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const labels = pr.labels.map((label) => label.name);
+            if (!pr.merged_at || pr.base.ref !== 'main' || !labels.includes('x:share')) {
+              core.setFailed(`PR #${prNumber} must be a merged main PR with the x:share label.`);
+              return;
+            }
+
+            const prBody = pr.body || '';
+            const extractSection = (heading) => {
+              const lines = prBody.split(/\r?\n/);
+              const headingPattern = new RegExp(`^##\\s+${heading}\\s*$`, 'i');
+              const start = lines.findIndex((line) => headingPattern.test(line.trim()));
+              if (start < 0) return '';
+              const section = [];
+              for (let index = start + 1; index < lines.length; index += 1) {
+                if (/^##\s+/.test(lines[index].trim())) break;
+                section.push(lines[index]);
+              }
+              return section.join('\n')
+                .replace(/<!--[\s\S]*?-->/g, '')
+                .trim();
+            };
+            const stripMarkdown = (value) => value
+              .replace(/```[\s\S]*?```/g, '')
+              .replace(/^\s*[-*]\s+/gm, '')
+              .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+              .replace(/\s+/g, ' ')
+              .trim();
+            const userFacingChange = stripMarkdown(extractSection('User-facing change'));
+            const userBenefit = stripMarkdown(extractSection('User benefit'));
+            const missingSections = [
+              ['User-facing change', userFacingChange],
+              ['User benefit', userBenefit],
+            ].filter(([, value]) => !value);
+            if (missingSections.length > 0) {
+              core.setFailed(
+                `PR #${prNumber} is missing required AI-written sections: ${missingSections.map(([name]) => name).join(', ')}.`,
+              );
+              return;
+            }
+            if (/^投稿対象外$|^(none|n\/a|no user-facing change)$/i.test(userFacingChange)
+              || /^投稿対象外$|^(none|n\/a|no user-facing change)$/i.test(userBenefit)) {
+              core.setFailed(`PR #${prNumber} is labeled x:share but its AI-written sections say it is not for publication.`);
+              return;
+            }
+            const candidate = [userFacingChange, userBenefit].join('\n');
+            if (candidate.length > 240) {
+              core.setFailed(`PR #${prNumber} User-facing change plus User benefit must be 240 characters or fewer.`);
+              return;
+            }
+            if (/https?:\/\//i.test(candidate)) {
+              core.setFailed(`PR #${prNumber} AI-written sections must not include URLs.`);
+              return;
+            }
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'x:review',
+              per_page: 100,
+            });
+            const existingIssue = openIssues.find((issue) =>
+              issue.body?.includes(`Source PR: #${pr.number} `),
+            );
+
+            const body = [
+              `Source PR: #${pr.number} (${pr.html_url})`,
+              '',
+              candidate,
+            ].join('\n');
+
+            if (existingIssue) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body,
+              });
+              core.notice(`Updated existing text-only X draft issue #${existingIssue.number}.`);
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `X draft: ${pr.title}`,
+                body,
+                labels: ['x:review'],
+              });
+            }

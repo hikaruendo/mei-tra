@@ -10,21 +10,22 @@
 }
 
 .orderButton {
-  background: var(--mt-btn-primary-bg);
-  color: var(--mt-btn-primary-text);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
   padding: 0.5rem 1rem;
+  border: 1px solid var(--mt-border-hairline);
   border-radius: var(--mt-radius);
   min-height: 2.25rem;
   min-width: 5.5rem;
   height: 100%;
   font-size: typography.scale(0.875rem);
-  box-shadow: var(--mt-shadow-btn);
-  border: none;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 
   &:hover {
-    background: var(--mt-btn-primary-bg-hover);
+    background: var(--mt-surface-raised);
+    border-color: var(--mt-text-muted);
   }
 
   @media (max-width: 768px) {

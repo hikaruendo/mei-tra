@@ -1,34 +1,83 @@
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import { CompletedField } from '@/types/game.types';
+import { CardFace } from '@/components/game/CardFace';
 import styles from './index.module.scss';
-import { Card } from '@/components/game/Card';
 
 interface CompletedFieldsProps {
   fields: CompletedField[];
-  players: { playerId: string; name: string }[];
 }
 
-export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields, players }) => {
-  const t = useTranslations('completedFields');
+const SUIT_SYMBOLS: Record<string, string> = {
+  S: '♠',
+  H: '♥',
+  D: '♦',
+  C: '♣',
+};
+
+function getCardMark(card: string) {
+  const prefixedCard = card.match(/^([SHDC])-(.+)$/);
+  if (prefixedCard) {
+    const [, suit, rank] = prefixedCard;
+    return {
+      rank,
+      suit: SUIT_SYMBOLS[suit] ?? suit,
+      isRed: suit === 'H' || suit === 'D',
+    };
+  }
+
+  const suit = card.match(/[♠♣♥♦]/)?.[0] ?? '';
+  return {
+    rank: card.replace(/[♠♣♥♦]/, ''),
+    suit,
+    isRed: suit === '♥' || suit === '♦',
+  };
+}
+
+interface TakenCardPreviewProps {
+  card: string;
+  className?: string;
+}
+
+export const TakenCardPreview: React.FC<TakenCardPreviewProps> = ({
+  card,
+  className = '',
+}) => {
+  if (card === 'JOKER') {
+    return (
+      <span
+        className={`${styles.cardCorner} ${styles.jokerCardCorner} ${className}`}
+        aria-label={card}
+      >
+        <CardFace card={card} className={styles.jokerCardFace} />
+      </span>
+    );
+  }
+
+  const mark = getCardMark(card);
 
   return (
+    <span
+      className={`${styles.cardCorner} ${mark.isRed ? styles.redCardCorner : ''} ${className}`}
+      aria-label={card}
+    >
+      <span className={styles.cardRank}>{mark.rank}</span>
+      <span className={styles.cardSuit}>{mark.suit}</span>
+    </span>
+  );
+};
+
+export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
+  return (
     <div className={styles.completedFieldsPanel}>
-      <div className={styles.summary}>
-        <span>{t('takenLabel')}</span>
-        <strong>{t('takenCount', { count: fields.length })}</strong>
-      </div>
       {fields.length > 0 && (
         <div className={styles.completedFieldsContainer}>
           {fields.map((field, index) => {
-            const winnerName = players.find(p => p.playerId === field.winnerId)?.name || t('unknown');
             return (
               <div key={index} className={styles.completedField}>
-                <div className={styles.winnerName}>{winnerName}</div>
                 <div className={styles.cards}>
                   {field.cards.map((card: string, cardIndex: number) => {
                     return (
-                      <Card
+                      <TakenCardPreview
                         key={cardIndex}
                         card={card}
                       />

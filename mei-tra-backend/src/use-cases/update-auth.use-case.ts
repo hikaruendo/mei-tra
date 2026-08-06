@@ -41,16 +41,17 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         return { success: false, error: 'Token validation failed' };
       }
 
+      const roomSync = await this.syncRoomPlayer(
+        request.currentRoomId,
+        request.socketId,
+        authenticatedUser,
+      );
+
       const { clientEvents, broadcastEvents } = this.ensureUserRegistered(
         request.socketId,
         authenticatedUser,
         request.handshakeName,
-      );
-
-      const roomEvents = await this.syncRoomPlayer(
-        request.currentRoomId,
-        request.socketId,
-        authenticatedUser,
+        roomSync?.playerId,
       );
 
       return {
@@ -58,7 +59,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         authenticatedUser,
         clientEvents,
         broadcastEvents,
-        roomEvents,
+        roomEvents: roomSync?.events,
       };
     } catch (error) {
       this.logger.error('Unexpected error in UpdateAuthUseCase', error);
@@ -70,6 +71,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     socketId: string,
     authenticatedUser: AuthenticatedUser,
     handshakeName?: string,
+    playerId?: string,
   ): {
     clientEvents: GatewayEvent[];
     broadcastEvents: GatewayEvent[];
@@ -95,7 +97,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     const syncResult = this.gameState.upsertSessionUser({
       socketId,
-      playerId: authenticatedUser.id,
+      playerId: playerId ?? authenticatedUser.id,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -124,14 +126,30 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     currentRoomId: string | undefined,
     socketId: string,
     authenticatedUser: AuthenticatedUser,
-  ): Promise<GatewayEvent[] | undefined> {
+  ): Promise<{ playerId: string; events: GatewayEvent[] } | undefined> {
     if (!currentRoomId) {
       return undefined;
     }
 
     const roomGameState =
       await this.roomService.getRoomGameState(currentRoomId);
+    const room = await this.roomService.getRoom(currentRoomId);
+    const authenticatedRoomPlayers =
+      room?.players.filter(
+        (player) => !player.isCOM && player.userId === authenticatedUser.id,
+      ) ?? [];
+    const roomPlayer =
+      authenticatedRoomPlayers.length === 1
+        ? authenticatedRoomPlayers[0]
+        : null;
+    const roomStatePlayer = roomPlayer
+      ? (roomGameState
+          .getState()
+          .players.find((player) => player.playerId === roomPlayer.playerId) ??
+        null)
+      : null;
     const currentPlayer =
+      roomStatePlayer ??
       resolvePlayerByActorId(roomGameState, authenticatedUser.id) ??
       resolvePlayerBySocketId(roomGameState, socketId);
 
@@ -176,6 +194,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       );
     }
 
-    return roomEvents;
+    return { playerId: currentPlayer.playerId, events: roomEvents };
   }
 }

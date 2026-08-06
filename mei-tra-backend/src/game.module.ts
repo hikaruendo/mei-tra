@@ -12,7 +12,6 @@ import { ComPlayerService } from './services/com-player.service';
 import { ComStrategyService } from './services/com-strategy.service';
 import { ComAutoPlayService } from './services/com-autoplay.service';
 import { RepositoriesModule } from './repositories/repositories.module';
-import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social.module';
 import { JoinRoomUseCase } from './use-cases/join-room.use-case';
@@ -48,11 +47,16 @@ import { SpectatorGatewayEffectsService } from './services/spectator-gateway-eff
 import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
+import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { GameEventLogService } from './services/game-event-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
 import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
+import { RoomMembershipService } from './services/room-membership.service';
+import { DatabaseModule } from './database/database.module';
+import { RoomMembershipReconcilerService } from './services/room-membership-reconciler.service';
+import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 import { DeleteAccountUseCase } from './use-cases/delete-account.use-case';
 import { PushNotificationModule } from './push/push-notification.module';
 import { GameplayNotificationService } from './services/gameplay-notification.service';
@@ -60,8 +64,8 @@ import { AccountActionGateService } from './services/account-action-gate.service
 
 @Module({
   imports: [
-    RepositoriesModule,
     DatabaseModule,
+    RepositoriesModule,
     AuthModule,
     SocialModule,
     PushNotificationModule,
@@ -77,14 +81,17 @@ import { AccountActionGateService } from './services/account-action-gate.service
     ComSessionService,
     SeatRestorationService,
     RoomJoinService,
+    RoomMembershipService,
+    RoomMembershipReconcilerService,
+    ConnectionGatewayEffectsService,
+    GameplayNotificationService,
+    AccountActionGateService,
     JoinRoomGatewayEffectsService,
     DisconnectGatewayEffectsService,
     RoomUpdateGatewayEffectsService,
     StartGameGatewayEffectsService,
     SpectatorGatewayEffectsService,
     GameEventLogService,
-    GameplayNotificationService,
-    AccountActionGateService,
     {
       provide: 'IActivityTrackerService',
       useExisting: ActivityTrackerService,
@@ -231,6 +238,7 @@ import { AccountActionGateService } from './services/account-action-gate.service
     ReconnectionUseCase,
     ModeratePlayerUseCase,
     ShuffleTeamsUseCase,
+    UpdateTeamNamesUseCase,
   ],
   exports: [
     'IActivityTrackerService',

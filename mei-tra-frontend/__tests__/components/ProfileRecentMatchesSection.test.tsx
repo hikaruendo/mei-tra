@@ -43,10 +43,9 @@ jest.mock('next-intl', () => ({
     }
 
     if (namespace === 'gameHistoryDock') {
-      return (key: string, values?: { team?: number }) => {
-        if (key === 'teamValue') {
-          return `チーム${values?.team}`;
-        }
+      return (key: string) => {
+        if (key === 'teamRed') return 'チーム赤';
+        if (key === 'teamBlack') return 'チーム黒';
 
         const actionLabels: Record<string, string> = {
           'actionTypes.game_over': 'ゲーム終了',
@@ -109,6 +108,7 @@ describe('ProfileRecentMatchesSection', () => {
 
     expect(screen.getByText('Alpha room')).toBeInTheDocument();
     expect(screen.getByText('ゲーム終了')).toBeInTheDocument();
+    expect(screen.getByText('チーム黒')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /詳細を見る/ })).toHaveAttribute(
       'href',
       '/game-history/room-1',

@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { TrumpType } from '@/types/game.types';
+import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
+import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
 
@@ -12,6 +13,8 @@ interface GameDockProps {
   gameStarted: boolean;
   currentTrump: TrumpType | null;
   gamePhase?: string | null;
+  players?: Player[];
+  teamNames?: TeamNames;
   onLeaveRequest?: () => void;
 }
 
@@ -20,11 +23,15 @@ export function GameDock({
   gameStarted,
   currentTrump,
   gamePhase,
+  players,
+  teamNames,
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
+  const tHistory = useTranslations('gameHistoryDock');
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -60,6 +67,22 @@ export function GameDock({
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    if (!isHistoryOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsHistoryOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isHistoryOpen]);
+
   const tools = (
     <>
       <div className={styles.dockItem}>
@@ -72,6 +95,19 @@ export function GameDock({
           gamePhase={gamePhase}
           placement={isMobile ? 'menu' : 'topbar'}
         />
+      </div>
+      <div className={styles.dockItem}>
+        <button
+          type="button"
+          className={styles.historyButton}
+          onClick={() => {
+            setIsHistoryOpen((previous) => !previous);
+            setIsMenuOpen(false);
+          }}
+          aria-expanded={isHistoryOpen}
+        >
+          {tHistory('title')}
+        </button>
       </div>
       {isMobile && onLeaveRequest && (
         <div className={styles.dockItem}>
@@ -111,13 +147,39 @@ export function GameDock({
         >
           {tools}
         </div>
+        {isHistoryOpen && (
+          <div className={styles.historyPanel}>
+            <GameHistoryDock
+              roomId={roomId}
+              gameStarted={gameStarted}
+              players={players}
+              teamNames={teamNames}
+              defaultOpen
+              hideOpenPage
+              onClose={() => setIsHistoryOpen(false)}
+            />
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} ref={menuRef}>
       {tools}
+      {isHistoryOpen && (
+        <div className={styles.historyPanel}>
+          <GameHistoryDock
+            roomId={roomId}
+            gameStarted={gameStarted}
+            players={players}
+            teamNames={teamNames}
+            defaultOpen
+            hideOpenPage
+            onClose={() => setIsHistoryOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -8,13 +8,12 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import type {
-  BackToLobbyPayload,
   PlayCardPayload,
-  ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
   SyncGameStatePayload,
 } from '@contracts/game';
+import type { UpdateTeamNamesPayload } from '@contracts/room';
 import { IGameStateService } from './services/interfaces/game-state-service.interface';
 import { IRoomService } from './services/interfaces/room-service.interface';
 import { TrumpType } from './types/game.types';
@@ -53,12 +52,14 @@ import { TurnMonitorService } from './services/turn-monitor.service';
 import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
+import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { Room } from './types/room.types';
 import { toRoomContract, toRoomContracts } from './types/room-adapters';
 import {
   ComAutoPlayRecoveryHandlers,
   ComAutoPlayRecoveryService,
 } from './services/com-autoplay-recovery.service';
+import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 import { GameplayNotificationService } from './services/gameplay-notification.service';
 import { AccountActionGateService } from './services/account-action-gate.service';
 
@@ -80,8 +81,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
   private readonly comAutoPlayRecoveryHandlers: ComAutoPlayRecoveryHandlers = {
     dispatchEvents: (events) => this.dispatchGameplayEvents(events),
-    processFieldCompletion: (roomId, response, initiatingActorId) =>
-      this.processFieldCompletionResult(roomId, response, initiatingActorId),
+    processFieldCompletion: (roomId, response) =>
+      this.processFieldCompletionResult(roomId, response),
   };
 
   constructor(
@@ -129,11 +130,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly reconnectionUseCase: ReconnectionUseCase,
     private readonly moderatePlayerUseCase: ModeratePlayerUseCase,
     private readonly shuffleTeamsUseCase: ShuffleTeamsUseCase,
+    private readonly updateTeamNamesUseCase: UpdateTeamNamesUseCase,
     private readonly joinRoomGatewayEffectsService: JoinRoomGatewayEffectsService,
     private readonly disconnectGatewayEffectsService: DisconnectGatewayEffectsService,
     private readonly roomUpdateGatewayEffectsService: RoomUpdateGatewayEffectsService,
     private readonly startGameGatewayEffectsService: StartGameGatewayEffectsService,
     private readonly spectatorGatewayEffectsService: SpectatorGatewayEffectsService,
+    private readonly connectionGatewayEffectsService: ConnectionGatewayEffectsService,
     private readonly gameplayNotificationService: GameplayNotificationService,
     private readonly accountActionGateService: AccountActionGateService,
   ) {}
@@ -165,42 +168,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.getAuthenticatedUser(client)?.id ?? client.id;
   }
 
-  private emitActionError(client: Socket, message: string): void {
-    client.emit('error-message', message);
-  }
-
-  private async resolveSeatedPlayerId(
-    client: Socket,
+  private async resolveClientRoomPlayerId(
     roomId: string,
-  ): Promise<string | null> {
+    client: Socket,
+    fallbackPlayerId: string,
+  ): Promise<string> {
     const authenticatedUser = this.getAuthenticatedUser(client);
+    if (!authenticatedUser) {
+      return fallbackPlayerId;
+    }
+
     const room = await this.roomService.getRoom(roomId);
     if (!room) {
-      this.emitActionError(client, 'Room not found');
-      return null;
+      throw new Error(`Room not found while resolving player: ${roomId}`);
     }
 
-    const authenticatedSeat = authenticatedUser
-      ? (room.players.find(
-          (player) => player.userId === authenticatedUser.id,
-        ) ??
-        room.players.find((player) => player.playerId === authenticatedUser.id))
-      : null;
-    if (authenticatedSeat) {
-      return authenticatedSeat.playerId;
+    const roomPlayers = room.players.filter(
+      (player) => !player.isCOM && player.userId === authenticatedUser.id,
+    );
+    if (roomPlayers.length !== 1) {
+      throw new Error(
+        `Authenticated room player is ambiguous or missing: room=${roomId} user=${authenticatedUser.id} matches=${roomPlayers.length}`,
+      );
     }
 
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-    const socketSeat =
-      roomGameState.findSessionUserBySocketId(client.id) ??
-      room.players.find((player) => player.socketId === client.id) ??
-      null;
-    if (socketSeat) {
-      return socketSeat.playerId;
-    }
-
-    this.emitActionError(client, 'Player not found in room');
-    return null;
+    return roomPlayers[0].playerId;
   }
 
   private async rejectInactiveMutatingAction(
@@ -309,13 +301,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     initiatingActorId?: string,
   ): void {
     this.dispatchEvents(events);
-    this.notifyTurnTransitions(events, initiatingActorId);
-  }
-
-  private notifyTurnTransitions(
-    events?: GatewayEvent[],
-    initiatingActorId?: string,
-  ): void {
     events?.forEach((event) => {
       if (
         event.scope !== 'room' ||
@@ -441,7 +426,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private async processFieldCompletionResult(
     roomId: string,
     response: CompleteFieldResponse,
-    initiatingActorId?: string,
   ) {
     if (!response.success) {
       this.server
@@ -450,8 +434,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    this.dispatchGameplayEvents(response.events, initiatingActorId);
-    this.dispatchGameplayEvents(response.delayedEvents, initiatingActorId);
+    this.dispatchGameplayEvents(response.events);
+    this.dispatchGameplayEvents(response.delayedEvents);
 
     if (response.gameOver) {
       await this.processGameOverUseCase.execute({
@@ -497,25 +481,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       console.error('Failed to close finished room:', error);
     }
-  }
-
-  private async sendBackToLobby(
-    client: Socket,
-    reason: string,
-    code: ReconnectionFailureCode,
-    roomId?: string,
-  ): Promise<void> {
-    console.warn(
-      `[Reconnection] Sending back-to-lobby for socket=${client.id} room=${roomId ?? 'none'} reason=${reason}`,
-    );
-    if (roomId) {
-      await client.leave(roomId);
-    }
-    this.playerRooms.delete(client.id);
-    await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
-    const payload: BackToLobbyPayload = { code };
-    client.emit('back-to-lobby', payload);
-    this.emitRoomsListToSocket(client, await this.roomService.listRooms());
   }
 
   private triggerComAutoPlayIfNeeded(roomId: string): void {
@@ -573,6 +538,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (roomId && authenticatedUser) {
+      const previousControllerSocketId =
+        await this.connectionGatewayEffectsService.findExistingControllerSocketId(
+          {
+            server: this.server,
+            playerRooms: this.playerRooms,
+            roomId,
+            userId: authenticatedUser.id,
+          },
+        );
       const result = await this.reconnectionUseCase.execute({
         roomId,
         socketId: client.id,
@@ -580,8 +554,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success) {
-        await this.sendBackToLobby(client, result.reason, result.code, roomId);
+        await this.connectionGatewayEffectsService.sendBackToLobby({
+          client,
+          playerRooms: this.playerRooms,
+          reason: result.reason,
+          code: result.code,
+          roomId,
+        });
         return;
+      }
+
+      if (
+        previousControllerSocketId &&
+        previousControllerSocketId !== client.id
+      ) {
+        await this.connectionGatewayEffectsService.sendSocketBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          socketId: previousControllerSocketId,
+          roomId,
+        });
       }
 
       this.playerRooms.set(client.id, roomId);
@@ -716,8 +708,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             playerId: preparation.playerId,
             playerName: preparation.playerName,
             timeoutMode: preparation.timeoutMode,
+            membership: preparation.membership,
           })
-          .then((events) => this.dispatchEvents(events))
+          .then((events) => {
+            this.dispatchEvents(events);
+            if (
+              events.some((event) => event.event === 'player-converted-to-com')
+            ) {
+              this.triggerComAutoPlayIfNeeded(roomId);
+            }
+          })
           .catch((error) => {
             console.error(
               '[Disconnect] Error processing disconnect timeout:',
@@ -820,8 +820,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const currentRoomId = this.playerRooms.get(client.id);
-      await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
       const authenticatedUser = this.getAuthenticatedUser(client);
+      const previousControllerSocketId = authenticatedUser
+        ? await this.connectionGatewayEffectsService.findExistingControllerSocketId(
+            {
+              server: this.server,
+              playerRooms: this.playerRooms,
+              roomId: data.roomId,
+              userId: authenticatedUser.id,
+            },
+          )
+        : null;
+      await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
 
       const result = await this.joinRoomUseCase.execute({
         socketId: client.id,
@@ -841,6 +851,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const errorMessage = 'Authentication required to join room';
         client.emit('error-message', errorMessage);
         return { success: false, error: errorMessage };
+      }
+
+      if (
+        previousControllerSocketId &&
+        previousControllerSocketId !== client.id
+      ) {
+        await this.connectionGatewayEffectsService.sendSocketBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          socketId: previousControllerSocketId,
+          roomId: data.roomId,
+        });
       }
 
       if (currentRoomId && currentRoomId !== data.roomId) {
@@ -948,7 +970,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('toggle-player-ready')
   async handleTogglePlayerReady(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ) {
     if (
       this.spectatorGatewayEffectsService.rejectAction(client, 'toggle ready')
@@ -960,10 +982,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const playerId = await this.resolveSeatedPlayerId(client, data.roomId);
-      if (!playerId) {
-        return { success: false, error: 'Player not found in room' };
-      }
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.togglePlayerReadyUseCase.execute({
         roomId: data.roomId,
         playerId,
@@ -992,18 +1015,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('leave-room')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ) {
     try {
-      const playerIdToLeave = await this.resolveSeatedPlayerId(
-        client,
+      const authenticatedUser = this.getAuthenticatedUser(client);
+      const resolvedPlayerId = await this.resolveClientRoomPlayerId(
         data.roomId,
+        client,
+        data.playerId,
       );
-      if (!playerIdToLeave) {
-        return { success: false, error: 'Player not found in room' };
-      }
       const result = await this.leaveRoomUseCase.execute({
-        playerId: playerIdToLeave,
+        playerId: resolvedPlayerId,
         roomId: data.roomId,
       });
 
@@ -1019,16 +1041,32 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomsList,
         updatedPlayers,
         gamePausedMessage,
+        blowState,
       } = result.data;
 
-      await client.leave(data.roomId);
-      this.playerRooms.delete(client.id);
-
       if (roomDeleted) {
-        this.server.to(client.id).emit('back-to-lobby');
+        this.clearTurnAckMonitor(data.roomId);
+        this.comAutoPlayRecoveryService.clearRoom(data.roomId);
+        await this.connectionGatewayEffectsService.sendRoomPlayersBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          roomId: data.roomId,
+        });
+        await this.spectatorGatewayEffectsService.sendRoomBackToLobby(
+          this.server,
+          data.roomId,
+        );
         this.emitRoomsListToAll(roomsList);
         return { success: true };
       }
+
+      await this.connectionGatewayEffectsService.sendUserSocketsBackToLobby({
+        server: this.server,
+        playerRooms: this.playerRooms,
+        roomId: data.roomId,
+        userId: authenticatedUser?.id,
+        fallbackSocketId: client.id,
+      });
 
       this.server.to(data.roomId).emit('player-left', {
         playerId,
@@ -1037,8 +1075,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.queueSpectatorSnapshot(data.roomId);
 
       this.emitRoomsListToAll(roomsList);
-      this.server.to(client.id).emit('back-to-lobby');
-
       if (updatedPlayers) {
         this.dispatchEvents([
           this.roomUpdateGatewayEffectsService.buildPlayersEvent({
@@ -1047,6 +1083,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             roomId: data.roomId,
           }),
         ]);
+      }
+      if (blowState) {
+        this.server.to(data.roomId).emit('blow-updated', {
+          declarations: blowState.declarations,
+          actionHistory: blowState.actionHistory,
+          currentHighest: blowState.currentHighestDeclaration,
+          lastPasser: blowState.lastPasser,
+        });
       }
 
       if (gamePausedMessage) {
@@ -1071,6 +1115,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody()
     data: {
       roomId: string;
+      requesterPlayerId: string;
       targetPlayerId: string;
       action: 'remove' | 'replace-with-com';
     },
@@ -1088,13 +1133,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const requesterPlayerId = await this.resolveSeatedPlayerId(
-        client,
+      const requesterPlayerId = await this.resolveClientRoomPlayerId(
         data.roomId,
+        client,
+        data.requesterPlayerId,
       );
-      if (!requesterPlayerId) {
-        return { success: false, error: 'Player not found in room' };
-      }
       const result = await this.moderatePlayerUseCase.execute({
         roomId: data.roomId,
         requesterPlayerId,
@@ -1127,6 +1170,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (result.mode === 'remove') {
         if (result.roomDeleted) {
+          this.clearTurnAckMonitor(data.roomId);
+          this.comAutoPlayRecoveryService.clearRoom(data.roomId);
           this.emitRoomsListToAll(result.roomsList);
           return { success: true };
         }
@@ -1163,6 +1208,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           roomId: data.roomId,
         }),
       );
+      this.server.to(data.roomId).emit('blow-updated', {
+        declarations: result.blowState.declarations,
+        actionHistory: result.blowState.actionHistory,
+        currentHighest: result.blowState.currentHighestDeclaration,
+        lastPasser: result.blowState.lastPasser,
+      });
       this.emitRoomsListToAll(result.roomsList);
       this.triggerComAutoPlayIfNeeded(data.roomId);
       return { success: true };
@@ -1194,6 +1245,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.id,
       this.getAuthenticatedUser(client)?.id,
     );
+    this.triggerComAutoPlayIfNeeded(roomId);
   }
 
   @SubscribeMessage('sync-game-state')
@@ -1247,6 +1299,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody()
     data: {
       roomId: string;
+      playerId: string;
       teamChanges: { [key: string]: number };
     },
   ): Promise<{ success: boolean }> {
@@ -1260,10 +1313,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const playerId = await this.resolveSeatedPlayerId(client, data.roomId);
-      if (!playerId) {
-        return { success: false };
-      }
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.changePlayerTeamUseCase.execute({
         roomId: data.roomId,
         playerId,
@@ -1295,7 +1349,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('shuffle-teams')
   async handleShuffleTeams(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ): Promise<{ success: boolean }> {
     if (
       this.spectatorGatewayEffectsService.rejectAction(client, 'shuffle teams')
@@ -1307,10 +1361,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const playerId = await this.resolveSeatedPlayerId(client, data.roomId);
-      if (!playerId) {
-        return { success: false };
-      }
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.shuffleTeamsUseCase.execute({
         roomId: data.roomId,
         playerId,
@@ -1335,10 +1390,60 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('update-team-names')
+  async handleUpdateTeamNames(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: UpdateTeamNamesPayload,
+  ): Promise<{ success: boolean }> {
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(
+        client,
+        'update team names',
+      )
+    ) {
+      return { success: false };
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'update team names')) {
+      return { success: false };
+    }
+
+    try {
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
+      const result = await this.updateTeamNamesUseCase.execute({
+        ...data,
+        playerId,
+      });
+      if (!result.success || !result.updatedRoom) {
+        client.emit(
+          'error-message',
+          result.error || 'Failed to update team names',
+        );
+        return { success: false };
+      }
+
+      this.dispatchEvents(
+        await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+          room: result.updatedRoom,
+          scope: 'room',
+          roomId: data.roomId,
+        }),
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('Error in handleUpdateTeamNames:', error);
+      client.emit('error-message', 'Internal server error');
+      return { success: false };
+    }
+  }
+
   @SubscribeMessage('fill-with-com')
   async handleFillWithCom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; playerId: string },
   ): Promise<{ success: boolean }> {
     if (
       this.spectatorGatewayEffectsService.rejectAction(client, 'fill with COM')
@@ -1350,10 +1455,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const playerId = await this.resolveSeatedPlayerId(client, data.roomId);
-      if (!playerId) {
-        return { success: false };
-      }
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const result = await this.fillWithComUseCase.execute({
         roomId: data.roomId,
         playerId,
@@ -1383,7 +1489,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //-------Game-------
   @SubscribeMessage('start-game')
-  async handleStartGame(client: Socket, data: { roomId: string }) {
+  async handleStartGame(
+    client: Socket,
+    data: { roomId: string; playerId: string },
+  ) {
     this.activityTracker.recordActivity();
 
     if (
@@ -1395,43 +1504,49 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false, error: 'Authentication required' };
     }
 
-    const playerId = await this.resolveSeatedPlayerId(client, data.roomId);
-    if (!playerId) {
-      return { success: false, error: 'Player not found in room' };
-    }
-
-    const result = await this.startGameUseCase.execute({
-      playerId,
-      roomId: data.roomId,
-    });
-
-    if (!result.success || !result.data) {
-      const errorMessage = result.errorMessage || 'Failed to start game';
-      client.emit('error-message', errorMessage);
-      return { success: false, error: errorMessage };
-    }
-
-    const { players, pointsToWin, updatePhase, currentTurnPlayerId } =
-      result.data;
-    const startGameEvents =
-      await this.startGameGatewayEffectsService.buildEvents({
+    try {
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
+      const result = await this.startGameUseCase.execute({
+        playerId,
         roomId: data.roomId,
-        players,
-        pointsToWin,
-        updatePhase,
+      });
+
+      if (!result.success || !result.data) {
+        const errorMessage = result.errorMessage || 'Failed to start game';
+        client.emit('error-message', errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      const { players, pointsToWin, updatePhase, currentTurnPlayerId } =
+        result.data;
+      const startGameEvents =
+        await this.startGameGatewayEffectsService.buildEvents({
+          roomId: data.roomId,
+          players,
+          pointsToWin,
+          updatePhase,
+          currentTurnPlayerId,
+        });
+
+      this.dispatchGameplayEvents(startGameEvents, playerId);
+      void this.gameplayNotificationService.notifyGameStarted({
+        roomId: data.roomId,
+        initiatingActorId: playerId,
         currentTurnPlayerId,
       });
 
-    this.dispatchGameplayEvents(startGameEvents, playerId);
-    void this.gameplayNotificationService.notifyGameStarted({
-      roomId: data.roomId,
-      initiatingActorId: playerId,
-      currentTurnPlayerId,
-    });
+      this.triggerComAutoPlayIfNeeded(data.roomId);
 
-    this.triggerComAutoPlayIfNeeded(data.roomId);
-
-    return { success: true };
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Failed to start game', error);
+      client.emit('error-message', 'Failed to start game');
+      return { success: false, error: 'Failed to start game' };
+    }
   }
 
   @SubscribeMessage('declare-blow')
@@ -1570,18 +1685,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       const state = roomGameState.getState();
       const actorId = this.getActorId(client);
-      const room = await this.roomService.getRoom(data.roomId);
-      const sessionUser =
-        roomGameState.findSessionUserByUserId(actorId) ??
-        roomGameState.findSessionUserBySocketId(client.id) ??
-        roomGameState.findSessionUserByPlayerId(actorId);
-      const roomPlayer = room?.players.find(
-        (player) =>
-          player.userId === actorId ||
-          player.socketId === client.id ||
-          player.playerId === sessionUser?.playerId,
+      const requesterPlayerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        actorId,
       );
-      const requesterPlayerId = sessionUser?.playerId ?? roomPlayer?.playerId;
       const winningPlayerId =
         state.blowState.currentHighestDeclaration?.playerId;
 
@@ -1638,10 +1746,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.dispatchGameplayEvents(result.events, actorId);
 
       if (result.completeFieldTrigger) {
-        this.scheduleFieldCompletion({
-          ...result.completeFieldTrigger,
-          initiatingActorId: actorId,
-        });
+        this.scheduleFieldCompletion(result.completeFieldTrigger);
       } else {
         this.triggerComAutoPlayIfNeeded(data.roomId);
       }
@@ -1708,10 +1813,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
+      const playerId = await this.resolveClientRoomPlayerId(
+        data.roomId,
+        client,
+        data.playerId,
+      );
       const preparation = await this.revealBrokenHandUseCase.prepare({
         roomId: data.roomId,
         actorId,
-        playerId: data.playerId,
+        playerId,
       });
 
       if (!preparation.success || !preparation.followUp) {

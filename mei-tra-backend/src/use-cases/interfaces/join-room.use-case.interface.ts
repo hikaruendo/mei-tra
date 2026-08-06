@@ -6,6 +6,7 @@ import {
   GamePhase,
   BlowState,
   CompletedField,
+  TeamNames,
 } from '../../types/game.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { SessionUser } from '../../types/session.types';
@@ -37,6 +38,7 @@ export interface ResumeGamePayload {
     fields: CompletedField[] | undefined;
     roomId: string;
     pointsToWin: number;
+    teamNames?: TeamNames;
   };
 }
 

@@ -18,7 +18,8 @@ describe('Rule service characterization', () => {
   });
 
   it('orders declarations by pairs first and trump strength second', () => {
-    const currentHighest = blowService.createDeclaration('p1', 'club', 7);
+    const currentHighest = blowService.createDeclaration('p1', 0, 'club', 7);
+    expect(currentHighest.team).toBe(0);
     expect(
       blowService.isValidDeclaration(
         { trumpType: 'herz', numberOfPairs: 7 },

@@ -199,10 +199,10 @@ export function ProfilePage() {
                 )}
               </div>
               <div className={styles.profileInfo}>
-                <h1 className={styles.profileName}>
+                <h1 className={styles.profileName} title={profile?.displayName || user?.email || 'User'}>
                   {profile?.displayName || user?.email || 'User'}
                 </h1>
-                <p className={styles.profileEmail}>
+                <p className={styles.profileEmail} title={user.email ?? undefined}>
                   {user.email}
                 </p>
               </div>

@@ -36,6 +36,11 @@ export function useSocket(): UseSocketReturn {
       isInitializingRef.current = true;
       setSocketAuthTokenProvider(getAccessToken);
 
+      const existingSocket = getExistingSocket();
+      if (existingSocket) {
+        socketRef.current = existingSocket;
+      }
+
       // If a socket already exists and is connected, reflect that immediately
       if (socketRef.current?.connected) {
         if (isMounted) {
@@ -71,9 +76,7 @@ export function useSocket(): UseSocketReturn {
         // Initialize or reuse the shared game socket. Multiple hooks can call
         // useSocket on the same page, but only one socket connection should be
         // created and connected.
-        if (!socketRef.current) {
-          socketRef.current = getExistingSocket() ?? getSocket(token);
-        }
+        socketRef.current = getExistingSocket() ?? getSocket(token);
         managedSocket = socketRef.current;
 
         // Set up connection listeners
@@ -144,7 +147,11 @@ export function useSocket(): UseSocketReturn {
           managedSocket.io.on('reconnect_failed', handleReconnectFailed);
 
           // Connect the socket if not already connected
-          if (!managedSocket.connected && !sharedConnectInFlight) {
+          if (
+            !managedSocket.connected
+            && !managedSocket.active
+            && !sharedConnectInFlight
+          ) {
             console.log('[useSocket] Attempting to connect socket with auth token...');
             sharedConnectInFlight = true;
             managedSocket.connect();

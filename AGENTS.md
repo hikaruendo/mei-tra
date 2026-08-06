@@ -33,7 +33,7 @@
 
 ## Commit & Pull Request Guidelines
 - History favors concise, present-tense summaries (English or Japanese), e.g., `"ui fix"`, `"点数調整"`. Reference issue IDs where applicable.
-- Pull requests should include: short summary, validation steps (`npm test`, manual steps), and screenshots/screencasts for UI changes. `main` auto-deploys via `.github/workflows/deploy.yml`, so ensure build/lint/test pass locally before merging.
+- Pull requests should include: short summary, validation steps (`npm test`, manual steps), and screenshots/screencasts for UI changes. AI agents opening PRs must also fill the `User-facing change` and `User benefit` sections from `.github/pull_request_template.md`; keep their combined text factual, under 240 characters, and free of URLs or media claims. `main` auto-deploys via `.github/workflows/deploy.yml`, so ensure build/lint/test pass locally before merging.
 
 ## Additional Notes
 - Fly.io autoscaling is managed via `.github/workflows/auto-scale.yml`; ensure `FLY_API_TOKEN` stays in repository secrets.

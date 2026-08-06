@@ -14,35 +14,35 @@ type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 const scenarios = [
   {
-    currentDeclaration: 'スペード6ペア',
+    currentDeclaration: 'スペード6組',
     options: [
-      { trump: 'club' as TrumpType, pairs: 6, label: 'クラブ6ペア', correct: true },
-      { trump: 'zuppe' as TrumpType, pairs: 7, label: 'スペード7ペア', correct: true },
-      { trump: 'zuppe' as TrumpType, pairs: 5, label: 'スペード5ペア', correct: false },
+      { trump: 'club' as TrumpType, pairs: 6, label: 'クラブ6組', correct: true },
+      { trump: 'zuppe' as TrumpType, pairs: 7, label: 'スペード7組', correct: true },
+      { trump: 'zuppe' as TrumpType, pairs: 5, label: 'スペード5組', correct: false },
     ],
   },
   {
-    currentDeclaration: 'クラブ7ペア',
+    currentDeclaration: 'クラブ7組',
     options: [
-      { trump: 'daiya' as TrumpType, pairs: 7, label: 'ダイヤ7ペア', correct: true },
-      { trump: 'club' as TrumpType, pairs: 8, label: 'クラブ8ペア', correct: true },
-      { trump: 'zuppe' as TrumpType, pairs: 8, label: 'スペード8ペア', correct: false },
+      { trump: 'daiya' as TrumpType, pairs: 7, label: 'ダイヤ7組', correct: true },
+      { trump: 'club' as TrumpType, pairs: 8, label: 'クラブ8組', correct: true },
+      { trump: 'zuppe' as TrumpType, pairs: 8, label: 'スペード8組', correct: false },
     ],
   },
   {
-    currentDeclaration: 'ダイヤ8ペア',
+    currentDeclaration: 'ダイヤ8組',
     options: [
-      { trump: 'herz' as TrumpType, pairs: 8, label: 'ハート8ペア', correct: true },
-      { trump: 'tra' as TrumpType, pairs: 8, label: 'トラ8ペア', correct: true },
-      { trump: 'daiya' as TrumpType, pairs: 7, label: 'ダイヤ7ペア', correct: false },
+      { trump: 'herz' as TrumpType, pairs: 8, label: 'ハート8組', correct: true },
+      { trump: 'tra' as TrumpType, pairs: 8, label: 'トラ8組', correct: true },
+      { trump: 'daiya' as TrumpType, pairs: 7, label: 'ダイヤ7組', correct: false },
     ],
   },
   {
-    currentDeclaration: 'ハート9ペア',
+    currentDeclaration: 'ハート9組',
     options: [
-      { trump: 'tra' as TrumpType, pairs: 9, label: 'トラ9ペア', correct: true },
-      { trump: 'herz' as TrumpType, pairs: 10, label: 'ハート10ペア', correct: true },
-      { trump: 'club' as TrumpType, pairs: 9, label: 'クラブ9ペア', correct: false },
+      { trump: 'tra' as TrumpType, pairs: 9, label: 'トラ9組', correct: true },
+      { trump: 'herz' as TrumpType, pairs: 10, label: 'ハート10組', correct: true },
+      { trump: 'club' as TrumpType, pairs: 9, label: 'クラブ9組', correct: false },
     ],
   },
 ];;;

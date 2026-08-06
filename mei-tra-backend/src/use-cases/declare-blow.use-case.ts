@@ -96,6 +96,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
 
       const newDeclaration = this.blowService.createDeclaration(
         player.playerId,
+        player.team,
         declaration.trumpType,
         declaration.numberOfPairs,
       );

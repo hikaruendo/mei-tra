@@ -1,5 +1,7 @@
 export type Team = 0 | 1;
 
+export type TeamNames = Partial<Record<Team, string>>;
+
 export interface PlayerIdentity {
   playerId: string; // Table participant identifier (future participantId equivalent)
   name: string;
@@ -35,6 +37,7 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface BlowDeclaration {
   playerId: string;
+  team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
   timestamp: number;
@@ -127,6 +130,7 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 export interface GameState {
   version?: number;
   players: DomainPlayer[];
+  currentPlayerId?: string | null;
   currentPlayerIndex: number;
   gamePhase: GamePhase;
   deck: string[];

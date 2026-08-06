@@ -118,6 +118,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
         <PlayerIdentityChip
           name={displayName}
           size={size === 'small' ? 'compact' : 'default'}
+          align="center"
           className={styles.playerName}
         />
       )}

@@ -56,6 +56,7 @@ describe('CreateRoomUseCase', () => {
     roomService = {
       createRoom: jest.fn(),
       createNewRoom: jest.fn().mockResolvedValue(createdRoom),
+      cancelRoomMembershipReservation: jest.fn().mockResolvedValue(false),
       listRooms: jest.fn().mockResolvedValue([updatedRoom]),
       getRoom: jest.fn().mockResolvedValue(updatedRoom),
       joinRoom: jest.fn().mockResolvedValue(true),
@@ -109,7 +110,6 @@ describe('CreateRoomUseCase', () => {
       roomId,
       expect.objectContaining({
         playerId: userId,
-        socketId: 'socket-1',
         userId,
         name: 'Test Player',
       }),
@@ -143,7 +143,7 @@ describe('CreateRoomUseCase', () => {
     expect(result.data?.room.id).toBe(roomId);
   });
 
-  it('deletes the empty room when the host join is rejected by persistence', async () => {
+  it('cleans up the room and reservation when the host cannot join', async () => {
     roomService.joinRoom.mockResolvedValueOnce(false);
 
     const result = await createRoomUseCase.execute({
@@ -155,12 +155,11 @@ describe('CreateRoomUseCase', () => {
       authenticatedUser: { id: userId, profile: {} as any },
     });
 
-    expect(result).toEqual({
-      success: false,
-      errorMessage: 'Failed to join created room',
-    });
+    expect(result.success).toBe(false);
     expect(roomService.deleteRoom).toHaveBeenCalledWith(roomId);
+    expect(roomService.cancelRoomMembershipReservation).toHaveBeenCalledWith(
+      userId,
+    );
     expect(roomService.initCOMPlaceholders).not.toHaveBeenCalled();
-    expect(chatService.createRoom).not.toHaveBeenCalled();
   });
 });

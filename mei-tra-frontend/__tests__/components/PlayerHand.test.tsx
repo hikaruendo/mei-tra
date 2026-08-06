@@ -14,15 +14,35 @@ jest.mock('next-intl', () => ({
         selectNegri: 'Please select your Negri',
         selectNegriWithAgari: 'This card is Agari. Select your Negri.',
       },
+      gameInfo: {
+        teamRed: 'Red team',
+        teamBlack: 'Black team',
+      },
       playerStatus: {
         disconnected: 'Disconnected',
         idle: 'Unresponsive',
         replaceWithCom: 'Replace with COM',
       },
+      blowControls: {
+        tra: 'No Tra',
+        daiya: 'Daiya (♦)',
+      },
     };
 
-    return (key: string) => labels[namespace]?.[key] ?? key;
+    const translator = (key: string, values?: Record<string, number>) => {
+      if (namespace === 'playerHand' && key === 'takenCount') {
+        return `${values?.count ?? 0} sets`;
+      }
+
+      return labels[namespace]?.[key] ?? key;
+    };
+
+    translator.has = (key: string) =>
+      namespace === 'playerHand' && key === 'takenCount';
+
+    return translator;
   },
+  useLocale: () => 'en',
 }));
 
 jest.mock('@/hooks/useAuth', () => ({
@@ -53,12 +73,9 @@ jest.mock('@/components/game/Card', () => ({
   Card: ({ card }: { card: string }) => <div>{card}</div>,
 }));
 
-jest.mock('@/components/game/NegriCard', () => ({
-  NegriCard: () => <div>negri card</div>,
-}));
-
 jest.mock('@/components/game/CompletedFields', () => ({
   CompletedFields: () => <div>completed fields</div>,
+  TakenCardPreview: ({ card }: { card: string }) => <div>{card}</div>,
 }));
 
 jest.mock('@/components/game/PlayAndCancelBtn', () => ({
@@ -93,14 +110,12 @@ const renderPlayerHand = (
       player={otherPlayer}
       isCurrentTurn={false}
       negriCard={null}
-      negriPlayerId={null}
       gamePhase="play"
       whoseTurn="player-1"
       gameActions={gameActions}
       position="left"
       completedFields={[]}
       currentPlayerId="player-1"
-      players={[otherPlayer]}
       currentField={null}
       currentTrump={null}
       isHost
@@ -174,24 +189,113 @@ describe('PlayerHand', () => {
     ).toBeInTheDocument();
   });
 
-  it('places the bottom player Negri card beside the declaration', () => {
+  it('shows taken sets and the red team badge in the player info', () => {
     renderPlayerHand({
       position: 'bottom',
       currentPlayerId: 'player-2',
       negriCard: 'H-A',
-      negriPlayerId: 'player-2',
     });
 
-    expect(screen.getByText('negri card').closest('.declarationContext')).toBeInTheDocument();
+    expect(screen.getByText('0 sets').closest('.playerInfoBadges')).toBe(
+      screen.getByText('Red team').closest('.playerInfoBadges'),
+    );
+    expect(screen.getByText('Red team')).toHaveClass('teamRedBadge');
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
   });
 
-  it('hides the Negri card for another player', () => {
+  it('uses the translated no-trump label in the declaration badge', () => {
     renderPlayerHand({
-      negriCard: 'H-A',
-      negriPlayerId: 'player-2',
+      currentHighestDeclaration: {
+        playerId: 'player-2',
+        trumpType: 'tra',
+        numberOfPairs: 6,
+      },
     });
 
-    expect(screen.queryByText('negri card')).not.toBeInTheDocument();
+    expect(screen.getByText('No Tra')).toHaveClass('declarationSuit');
+  });
+
+  it('omits the suit symbol from the declaration badge', () => {
+    renderPlayerHand({
+      currentHighestDeclaration: {
+        playerId: 'player-2',
+        trumpType: 'daiya',
+        numberOfPairs: 7,
+      },
+    });
+
+    expect(screen.getByText('Daiya')).toHaveClass('declarationSuit');
+    expect(screen.queryByText('Daiya (♦)')).not.toBeInTheDocument();
+  });
+
+  it('shows a black team badge for team one', () => {
+    renderPlayerHand({
+      player: { ...otherPlayer, team: 1 },
+    });
+
+    expect(screen.getByText('Black team')).toHaveClass('teamBlackBadge');
+  });
+
+  it('reorders the current player hand locally with pointer drag', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 170 });
+    fireEvent.pointerUp(targetCard, { clientX: 170 });
+
+    expect(screen.getAllByTestId('card-front').map((card) => card.textContent)).toEqual([
+      'S-2',
+      'H-A',
+    ]);
+  });
+
+  it('shows an insertion marker on the target card while reordering', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 110 });
+
+    expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
+  });
+
+  it('overlays the animated current-turn clock on the player avatar', () => {
+    renderPlayerHand({
+      currentPlayerId: 'player-2',
+      isCurrentTurn: true,
+      takenCount: 3,
+    });
+
+    expect(screen.getByText('3 sets')).toHaveClass('takenCount');
+    expect(screen.getByText('Red team').closest('.playerInfoBadges')).toBe(
+      screen.getByText('3 sets').closest('.playerInfoBadges'),
+    );
+    const turnBadge = screen.getByLabelText('currentTurn');
+    expect(turnBadge).toHaveClass('avatarTurnBadge');
+    expect(turnBadge.parentElement).toHaveClass('playerAvatar');
+    expect(turnBadge.querySelector('.clockHand')).toBeInTheDocument();
+    expect(screen.queryByLabelText('3setsTaken')).not.toBeInTheDocument();
   });
 
   it('shows the selected spectator perspective hand face up', () => {

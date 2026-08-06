@@ -128,6 +128,10 @@ describe('RoomService join rollback', () => {
       {} as never,
       gameStateFactory as never,
       {} as never,
+      {
+        claim: jest.fn().mockResolvedValue(null),
+        get: jest.fn().mockResolvedValue(null),
+      } as never,
       undefined,
       undefined,
       undefined,

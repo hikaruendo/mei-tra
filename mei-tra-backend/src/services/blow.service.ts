@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BlowDeclaration, TrumpType } from '../types/game.types';
+import { BlowDeclaration, Team, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 import { IBlowService } from './interfaces/blow-service.interface';
 
@@ -61,11 +61,13 @@ export class BlowService implements IBlowService {
 
   createDeclaration(
     playerId: string,
+    team: Team,
     trumpType: TrumpType,
     numberOfPairs: number,
   ): BlowDeclaration {
     return {
       playerId,
+      team,
       trumpType,
       numberOfPairs,
       timestamp: Date.now(),

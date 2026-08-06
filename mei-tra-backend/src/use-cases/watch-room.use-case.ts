@@ -97,6 +97,7 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       roomId: room.id,
       hostId: room.hostId,
       pointsToWin: room.settings.pointsToWin,
+      teamNames: room.settings.teamNames,
     };
   }
 }

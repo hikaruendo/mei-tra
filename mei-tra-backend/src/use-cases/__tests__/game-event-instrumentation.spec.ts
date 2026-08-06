@@ -42,11 +42,12 @@ describe('Game event instrumentation', () => {
           blowState: { currentBlowIndex: 0 },
         }),
         startGame: jest.fn().mockResolvedValue(undefined),
+        persistRoster: jest.fn().mockResolvedValue(undefined),
         registerPlayerToken: jest.fn(),
       }),
       canStartGame: jest.fn().mockResolvedValue({ canStart: true }),
+      updateRoomStatus: jest.fn().mockResolvedValue(true),
       fillVacantSeatsWithCOM: jest.fn().mockResolvedValue(undefined),
-      updateRoomStatus: jest.fn().mockResolvedValue(undefined),
     } as unknown as IRoomService;
 
     const gameEventLogService = {

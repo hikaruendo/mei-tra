@@ -1,0 +1,40 @@
+name: Initialize X Posting Labels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create social posting labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              { name: 'x:share', color: '0E8A16', description: 'Create an individual X post draft after merge' },
+              { name: 'x:devlog', color: '1D76DB', description: 'Include this PR in the weekly X devlog draft' },
+              { name: 'x:review', color: 'FBCA04', description: 'X post draft waiting for editorial approval' },
+              { name: 'x:posted', color: '5319E7', description: 'X post draft already published' },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ...label,
+                });
+              }
+            }

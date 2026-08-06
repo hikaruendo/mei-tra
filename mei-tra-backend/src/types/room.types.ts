@@ -1,4 +1,4 @@
-import { PlayerGameplayState } from './game.types';
+import { PlayerGameplayState, TeamNames } from './game.types';
 import { SessionUser } from './session.types';
 
 export enum RoomStatus {
@@ -35,6 +35,7 @@ export interface RoomSettings {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
+  teamNames?: TeamNames;
 }
 
 export interface RoomRepository {

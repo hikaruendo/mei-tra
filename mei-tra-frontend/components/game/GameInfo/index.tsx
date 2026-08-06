@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
-import {
-  TeamScores,
-  Player,
-} from '@/types/game.types';
+import { Team, TeamNames, TeamScores } from '@/types/game.types';
 import styles from './index.module.scss';
 import { useTranslations } from 'next-intl';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 
 type ScoreStatus = 'normal' | 'leading' | 'reach' | 'win';
 
 interface GameInfoProps {
   teamScores: TeamScores;
   pointsToWin: number;
-  players: Player[];
+  teamNames?: TeamNames;
   actionSlot?: (onLeaveRequest: () => void) => React.ReactNode;
   onLeave?: () => void;
 }
@@ -20,17 +18,17 @@ interface GameInfoProps {
 export const GameInfo: React.FC<GameInfoProps> = ({
   teamScores,
   pointsToWin,
-  players,
+  teamNames,
   actionSlot,
   onLeave,
 }) => {
   const t = useTranslations();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const getTeamPlayerNames = (teamNumber: number): string => {
-    const teamPlayers = players.filter(player => player.team === teamNumber);
-    return teamPlayers.map(player => player.isCOM ? 'COM' : player.name).join('・');
-  };
+  const getTeamLabel = (teamNumber: Team) =>
+    getTeamDisplayName(teamNumber, teamNames, (team) =>
+      t(team === 0 ? 'gameInfo.teamRed' : 'gameInfo.teamBlack'),
+    );
   const getScoreProgress = (score: number) => {
     if (pointsToWin <= 0) {
       return 0;
@@ -63,14 +61,15 @@ export const GameInfo: React.FC<GameInfoProps> = ({
         return null;
     }
   };
-  const scoreTeams = [0, 1].map((teamNumber) => {
+  const scoreTeams = ([0, 1] as Team[]).map((teamNumber) => {
     const score = teamScores[teamNumber].total;
     const opposingScore = teamScores[teamNumber === 0 ? 1 : 0].total;
     const status = getScoreStatus(score, opposingScore);
 
     return {
       teamNumber,
-      teamName: getTeamPlayerNames(teamNumber),
+      teamName: getTeamLabel(teamNumber),
+      teamColor: teamNumber === 0 ? 'red' : 'black',
       score,
       progress: getScoreProgress(score),
       status,
@@ -103,15 +102,15 @@ export const GameInfo: React.FC<GameInfoProps> = ({
       <div className={styles.gameInfoContainer}>
         <div className={styles.gameInfoContent}>
           <div className={styles.gameInfoScores}>
-            {scoreTeams.map(({ teamNumber, teamName, score, progress, status, statusLabel }) => {
-              const isLeading = status === 'leading' || status === 'reach' || status === 'win';
+            {scoreTeams.map(({ teamNumber, teamName, teamColor, score, progress, status, statusLabel }) => {
+              const hasScoreEmphasis = status === 'reach' || status === 'win';
 
               return (
                 <div
                   key={teamNumber}
                   className={`${styles.gameInfoScore} ${
-                    teamNumber === 0 ? styles.team0 : styles.team1
-                  } ${isLeading ? styles.leadingTeam : ''} ${
+                    teamColor === 'red' ? styles.teamRed : styles.teamBlack
+                  } ${hasScoreEmphasis ? styles.scoreEmphasis : ''} ${
                     status === 'reach' ? styles.reachingTeam : ''
                   } ${status === 'win' ? styles.winningTeam : ''}`}
                   aria-label={teamName}
@@ -126,16 +125,16 @@ export const GameInfo: React.FC<GameInfoProps> = ({
                     <span className={styles.gameInfoScoreTeam} title={teamName}>
                       {teamName}
                     </span>
-                    <div className={styles.gameInfoMeter}>
-                      <div className={styles.gameInfoScoreFill} aria-hidden="true" />
-                      <div className={styles.gameInfoScoreMeta}>
+                    <div className={styles.gameInfoMeterAndValue}>
+                      <div className={styles.gameInfoMeter}>
+                        <div className={styles.gameInfoScoreFill} aria-hidden="true" />
                         {statusLabel && (
                           <span className={styles.gameInfoScoreStatus}>{statusLabel}</span>
                         )}
-                        <span className={styles.gameInfoScoreValue}>
-                          {score}<span>/{pointsToWin}</span>
-                        </span>
                       </div>
+                      <span className={styles.gameInfoScoreValue}>
+                        {score}<span>/{pointsToWin}</span>
+                      </span>
                     </div>
                   </div>
                 </div>

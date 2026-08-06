@@ -1,10 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { BlowAction, BlowDeclaration, Player, TrumpType } from '@/types/game.types';
-import {
-  getValidBlowPairValues,
-  isBlowDeclarationValid,
-} from '@meitra/game-client/blow';
 import styles from './index.module.scss';
 
 interface BlowControlsProps {
@@ -21,6 +17,26 @@ interface BlowControlsProps {
   currentHighestDeclaration: BlowDeclaration | null;
   players: Player[];
 }
+
+// トランプの強さを定義
+const TRUMP_STRENGTHS: Record<TrumpType, number> = {
+  tra: 5,
+  herz: 4,
+  daiya: 3,
+  club: 2,
+  zuppe: 1,
+};
+
+// ペア数の最小値と最大値
+const MIN_PAIRS = 6;
+const DEFAULT_MAX_PAIRS = 10;
+const MAX_PAIRS = 13;
+
+// 基本のペア数選択肢
+const DEFAULT_PAIR_OPTIONS = Array.from(
+  { length: DEFAULT_MAX_PAIRS - MIN_PAIRS + 1 },
+  (_, index) => MIN_PAIRS + index,
+);
 
 export function BlowControls({
   isCurrentPlayer,
@@ -62,13 +78,103 @@ export function BlowControls({
     passBlow();
   };
 
-  const validPairOptions = getValidBlowPairValues(
-    currentHighestDeclaration,
-    selectedTrump,
-  ).map((pair) => ({
-    value: pair,
-    label: `${pair} ${t('pairs')}`,
-  }));
+  // トランプの強さを取得
+  const getTrumpStrength = (trumpType: TrumpType): number => {
+    return TRUMP_STRENGTHS[trumpType] || 0;
+  };
+
+  const isDeclarationValid = (
+    trumpType: TrumpType,
+    pairs: number,
+  ): boolean => {
+    if (pairs < MIN_PAIRS || pairs > MAX_PAIRS) {
+      return false;
+    }
+
+    if (!currentHighestDeclaration) {
+      return pairs <= DEFAULT_MAX_PAIRS;
+    }
+
+    if (currentHighestDeclaration.numberOfPairs >= DEFAULT_MAX_PAIRS) {
+      return pairs === currentHighestDeclaration.numberOfPairs + 1;
+    }
+
+    if (pairs > currentHighestDeclaration.numberOfPairs) {
+      return true;
+    }
+
+    if (pairs < currentHighestDeclaration.numberOfPairs) {
+      return false;
+    }
+
+    return (
+      getTrumpStrength(trumpType) >
+      getTrumpStrength(currentHighestDeclaration.trumpType)
+    );
+  };
+
+  const formatSetOption = (pair: number) =>
+    pair === DEFAULT_MAX_PAIRS ? t('slami') : `${pair}${t('pairs')}`;
+
+  // 有効なペア数選択肢を生成
+  const getValidPairOptions = () => {
+    if (!currentHighestDeclaration) {
+      return DEFAULT_PAIR_OPTIONS.map(pair => ({
+        value: pair,
+        label: formatSetOption(pair),
+      }));
+    }
+
+    if (currentHighestDeclaration.numberOfPairs >= DEFAULT_MAX_PAIRS) {
+      const nextPair = currentHighestDeclaration.numberOfPairs + 1;
+
+      if (nextPair > MAX_PAIRS) {
+        return [];
+      }
+
+      return [{
+        value: nextPair,
+        label: formatSetOption(nextPair),
+      }];
+    }
+
+    const currentTrumpStrength = getTrumpStrength(currentHighestDeclaration.trumpType);
+    const selectedTrumpStrength = selectedTrump ? getTrumpStrength(selectedTrump) : 0;
+
+    const validPairs = DEFAULT_PAIR_OPTIONS.filter(pair => {
+      // ペア数が現在の最高宣言より大きい場合は有効
+      if (pair > currentHighestDeclaration.numberOfPairs) return true;
+
+      // ペア数が同じ場合、トランプの強さを比較
+      if (pair === currentHighestDeclaration.numberOfPairs && selectedTrumpStrength > currentTrumpStrength) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (validPairs.length === 0) {
+      const nextValidPair = selectedTrumpStrength > currentTrumpStrength
+        ? currentHighestDeclaration.numberOfPairs
+        : currentHighestDeclaration.numberOfPairs + 1;
+
+      if (nextValidPair <= DEFAULT_MAX_PAIRS) {
+        return [{
+          value: nextValidPair,
+          label: nextValidPair === DEFAULT_MAX_PAIRS
+            ? t('slami')
+            : `${nextValidPair}${t('overCall')}`,
+        }];
+      }
+
+      return [];
+    }
+
+    return validPairs.map(pair => ({
+      value: pair,
+      label: formatSetOption(pair),
+    }));
+  };
 
   // 宣言アイテムのクラス名を生成
   const getDeclarationItemClassName = (declaration?: BlowDeclaration) => {
@@ -89,11 +195,7 @@ export function BlowControls({
   const isDisabled = !isCurrentPlayer || currentPlayerAlreadyActed;
   const isSelectedDeclarationValid =
     selectedTrump !== null &&
-    isBlowDeclarationValid(
-      selectedTrump,
-      numberOfPairs,
-      currentHighestDeclaration,
-    );
+    isDeclarationValid(selectedTrump, numberOfPairs);
 
   useEffect(() => {
     if (selectedTrump && numberOfPairs > 0 && !isSelectedDeclarationValid) {
@@ -106,6 +208,8 @@ export function BlowControls({
     setNumberOfPairs,
   ]);
   
+  // 有効なペア数選択肢
+  const validPairOptions = getValidPairOptions();
   const chronologicalDeclarations = [...blowActionHistory].sort(
     (a, b) => a.timestamp - b.timestamp,
   );
@@ -114,7 +218,10 @@ export function BlowControls({
     <div className={styles.blowControlsContainer}>
       <div className={styles.content}>
         <div className={styles.title}>
-          <div className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}>
+          <div
+            className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}
+            title={currentPlayerName ?? undefined}
+          >
             {t('currentTurn')} {currentPlayerName}
           </div>
         </div>
@@ -125,15 +232,16 @@ export function BlowControls({
             <select
               value={selectedTrump || ''}
               onChange={(e) => setSelectedTrump(e.target.value as TrumpType)}
-              className={styles.select}
+              className={`${styles.select} ${styles.trumpSelect}`}
+              data-trump={selectedTrump || undefined}
               disabled={isDisabled}
             >
               <option value="">{t('selectTrump')}</option>
-              <option value="tra">{t('tra')}</option>
-              <option value="herz">{t('herz')}</option>
-              <option value="daiya">{t('daiya')}</option>
-              <option value="club">{t('club')}</option>
-              <option value="zuppe">{t('zuppe')}</option>
+              <option className={styles.trumpOption} data-trump="tra" value="tra">{t('tra')}</option>
+              <option className={styles.trumpOption} data-trump="herz" value="herz">{t('herz')}</option>
+              <option className={styles.trumpOption} data-trump="daiya" value="daiya">{t('daiya')}</option>
+              <option className={styles.trumpOption} data-trump="club" value="club">{t('club')}</option>
+              <option className={styles.trumpOption} data-trump="zuppe" value="zuppe">{t('zuppe')}</option>
             </select>
 
             {/* ペア数選択 */}
@@ -180,15 +288,22 @@ export function BlowControls({
           <div className={styles.declarationList}>
             {chronologicalDeclarations.map((entry, index) => {
               const player = playerMap.get(entry.playerId);
-              if (!player) return null;
+              const playerName = player?.name ?? entry.playerId;
 
               if (entry.type === 'pass') {
                 return (
-                  <div 
+                  <div
                     key={`pass-${entry.playerId}-${index}`}
                     className={`${styles.declarationItem} ${styles.pass}`}
+                    title={`${playerName}: ${t('passed')}`}
                   >
-                    {player.name}: {t('passed')}
+                    <span className={styles.declarationPlayerName}>
+                      {playerName}
+                    </span>
+                    <span className={styles.declarationSeparator}>:</span>
+                    <span className={styles.declarationText}>
+                      {t('passed')}
+                    </span>
                   </div>
                 );
               }
@@ -204,8 +319,20 @@ export function BlowControls({
                 <div
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
+                  title={`${playerName}: ${entry.trumpType ? t(entry.trumpType) : ''} ${formatSetOption(declaration.numberOfPairs)}`}
                 >
-                  {player.name}: {entry.trumpType?.toUpperCase()} {entry.numberOfPairs} pairs
+                  <span className={styles.declarationPlayerName}>
+                    {playerName}
+                  </span>
+                  <span className={styles.declarationSeparator}>:</span>
+                  <span className={styles.declarationText}>
+                    {entry.trumpType ? (
+                      <span className={styles.trumpLabel} data-trump={entry.trumpType}>
+                        {t(entry.trumpType)}
+                      </span>
+                    ) : null}{' '}
+                    {formatSetOption(declaration.numberOfPairs)}
+                  </span>
                 </div>
               );
             })}

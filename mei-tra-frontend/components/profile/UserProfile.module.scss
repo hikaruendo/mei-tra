@@ -131,11 +131,14 @@ $opacity-disabled: 0.5;
 }
 
 .displayName {
+  max-width: 100%;
   font-size: typography.scale(0.9rem);
   font-weight: 700;
   color: var(--mt-text-primary);
   line-height: 1.2;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profileEditHint {
@@ -226,6 +229,7 @@ $opacity-disabled: 0.5;
 .compactTrigger .avatarPlaceholder {
   width: 2.5rem;
   height: 2.5rem;
+  border: none;
 }
 
 .compactTriggerOpen {
@@ -262,6 +266,7 @@ $opacity-disabled: 0.5;
   border-radius: 0.8rem;
   text-decoration: none;
   transition: $transition-button;
+  min-width: 0;
 
   &:hover {
     background: var(--mt-surface-raised-2);
@@ -269,18 +274,24 @@ $opacity-disabled: 0.5;
 }
 
 .compactDisplayName {
+  max-width: 100%;
   font-size: typography.scale(0.95rem);
   font-weight: 700;
   color: var(--mt-text-primary);
   line-height: 1.2;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compactMeta {
+  max-width: 100%;
   font-size: typography.scale(0.78rem);
   color: var(--mt-text-secondary);
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compactActions {

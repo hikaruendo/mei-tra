@@ -4,6 +4,8 @@ import { DomainPlayer, GamePhase } from '../types/game.types';
 import { Room, RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
+import { RoomMembershipService } from './room-membership.service';
+import { ActiveRoomMembership } from '../types/room-membership.types';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 
@@ -12,6 +14,7 @@ export interface DisconnectPreparation {
   playerName: string;
   roomGameState: Awaited<ReturnType<IRoomService['getRoomGameState']>>;
   timeoutMode: DisconnectTimeoutMode;
+  membership: ActiveRoomMembership | null;
   events: GatewayEvent[];
 }
 
@@ -22,6 +25,7 @@ export class DisconnectGatewayEffectsService {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
     private readonly roomUpdateGatewayEffectsService: RoomUpdateGatewayEffectsService,
+    private readonly roomMembershipService: RoomMembershipService,
   ) {}
 
   async prepareDisconnect(params: {
@@ -30,6 +34,10 @@ export class DisconnectGatewayEffectsService {
     displayName?: string;
   }): Promise<DisconnectPreparation | null> {
     const { roomId, socketId, displayName } = params;
+    const room = await this.roomService.getRoom(roomId);
+    if (!room) {
+      return null;
+    }
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const players = await this.sanitizePlayers(
@@ -37,7 +45,6 @@ export class DisconnectGatewayEffectsService {
       state.players,
       roomGameState,
     );
-    const room = await this.roomService.getRoom(roomId);
     const player = this.findPlayerForDisconnect(
       socketId,
       roomGameState,
@@ -46,6 +53,37 @@ export class DisconnectGatewayEffectsService {
     );
 
     if (!player) {
+      return null;
+    }
+
+    const roomPlayer = room.players.find(
+      (candidate) => candidate.playerId === player.playerId,
+    );
+    const initialConnectionState = roomGameState.getPlayerConnectionState(
+      player.playerId,
+    );
+    if (
+      initialConnectionState?.socketId &&
+      initialConnectionState.socketId !== socketId
+    ) {
+      return null;
+    }
+
+    const userId = roomPlayer?.userId ?? initialConnectionState?.userId;
+    const membership = userId
+      ? await this.roomMembershipService.markDisconnected(userId, roomId)
+      : null;
+    if (userId && !membership) {
+      return null;
+    }
+
+    const latestConnectionState = roomGameState.getPlayerConnectionState(
+      player.playerId,
+    );
+    if (
+      latestConnectionState?.socketId &&
+      latestConnectionState.socketId !== socketId
+    ) {
       return null;
     }
 
@@ -67,6 +105,7 @@ export class DisconnectGatewayEffectsService {
       playerName: displayName ?? player.name,
       roomGameState,
       timeoutMode: this.resolveTimeoutMode(state.gamePhase),
+      membership,
       events,
     };
   }
@@ -76,63 +115,127 @@ export class DisconnectGatewayEffectsService {
     playerId: string;
     playerName: string;
     timeoutMode: DisconnectTimeoutMode;
+    membership?: ActiveRoomMembership | null;
   }): Promise<GatewayEvent[]> {
-    const { roomId, playerId, playerName, timeoutMode } = params;
+    const { roomId, playerId, playerName, timeoutMode, membership } = params;
+    const room = await this.roomService.getRoom(roomId);
+    if (!room) {
+      return [];
+    }
 
-    if (timeoutMode === 'remove-player') {
+    const timeoutMembership = membership
+      ? await this.roomMembershipService.startDisconnectTimeout(
+          membership.userId,
+          roomId,
+          membership.membershipVersion,
+        )
+      : null;
+    if (membership && !timeoutMembership) {
+      return [];
+    }
+
+    let succeeded = false;
+    try {
+      if (timeoutMode === 'remove-player') {
+        const roomGameState = await this.roomService.getRoomGameState(roomId);
+        if (roomGameState.getPlayerConnectionState(playerId)?.socketId) {
+          return [];
+        }
+
+        succeeded = await this.roomService.leaveRoom(roomId, playerId, {
+          releaseMembership: false,
+        });
+        if (!succeeded) {
+          return [];
+        }
+
+        const updatedRoom = await this.roomService.getRoom(roomId);
+        if (!updatedRoom) {
+          return [
+            this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
+              rooms: await this.roomService.listRooms(),
+              scope: 'all',
+            }),
+          ];
+        }
+
+        const updatedGameState =
+          await this.roomService.getRoomGameState(roomId);
+        return [
+          ...(await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+            room: updatedRoom,
+            statePlayers: updatedGameState.getState().players,
+            scope: 'room',
+            roomId,
+          })),
+          this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
+            rooms: await this.roomService.listRooms(),
+            scope: 'all',
+          }),
+        ];
+      }
+
+      if (room.status !== RoomStatus.PLAYING) {
+        return [];
+      }
+
+      succeeded = await this.roomService.convertPlayerToCOM(roomId, playerId, {
+        requireDisconnected: true,
+        releaseMembership: false,
+      });
+      if (!succeeded) {
+        return [];
+      }
+
+      const updatedRoom = await this.roomService.getRoom(roomId);
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      roomGameState.removePlayer(playerId);
+
+      const roomEvents = updatedRoom
+        ? await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+            room: updatedRoom,
+            statePlayers: roomGameState.getState().players,
+            scope: 'room',
+            roomId,
+          })
+        : [];
+      const blowState = roomGameState.getState().blowState;
+
       return [
-        this.roomUpdateGatewayEffectsService.buildPlayersEvent({
-          players: roomGameState.getTransportPlayers(),
+        {
           scope: 'room',
           roomId,
+          event: 'player-converted-to-com',
+          payload: {
+            playerId,
+            playerName,
+            message: 'Player disconnected for too long - converted to COM',
+          },
+        },
+        ...roomEvents,
+        {
+          scope: 'room',
+          roomId,
+          event: 'blow-updated',
+          payload: {
+            declarations: blowState.declarations,
+            actionHistory: blowState.actionHistory,
+            currentHighest: blowState.currentHighestDeclaration,
+            lastPasser: blowState.lastPasser,
+          },
+        },
+        this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
+          rooms: await this.roomService.listRooms(),
+          scope: 'all',
         }),
       ];
+    } finally {
+      if (timeoutMembership) {
+        await this.roomMembershipService.finishDisconnectTimeout(
+          timeoutMembership,
+          succeeded,
+        );
+      }
     }
-
-    const room = await this.roomService.getRoom(roomId);
-    if (room?.status !== RoomStatus.PLAYING) {
-      return [];
-    }
-
-    const converted = await this.roomService.convertPlayerToCOM(
-      roomId,
-      playerId,
-    );
-    if (!converted) {
-      return [];
-    }
-
-    const updatedRoom = await this.roomService.getRoom(roomId);
-    const roomGameState = await this.roomService.getRoomGameState(roomId);
-
-    const roomEvents = updatedRoom
-      ? await this.roomUpdateGatewayEffectsService.buildRoomEvents({
-          room: updatedRoom,
-          statePlayers: roomGameState.getState().players,
-          scope: 'room',
-          roomId,
-        })
-      : [];
-
-    return [
-      {
-        scope: 'room',
-        roomId,
-        event: 'player-converted-to-com',
-        payload: {
-          playerId,
-          playerName,
-          message: 'Player disconnected for too long - converted to COM',
-        },
-      },
-      ...roomEvents,
-      this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
-        rooms: await this.roomService.listRooms(),
-        scope: 'all',
-      }),
-    ];
   }
 
   private async sanitizePlayers(
