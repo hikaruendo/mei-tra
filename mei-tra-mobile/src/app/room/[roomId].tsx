@@ -1,4 +1,5 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useKeepAwake } from 'expo-keep-awake';
 import { useCallback } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
@@ -42,6 +43,8 @@ export default function RoomScreen() {
     clearFeedback,
     closeGameOver,
   } = useGame();
+
+  useKeepAwake();
 
   const doLeave = useCallback(async () => {
     const didLeave = await leaveRoom();

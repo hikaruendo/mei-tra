@@ -1,4 +1,5 @@
 import type { TrumpType } from '@meitra/contracts/game';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -16,6 +17,7 @@ import { PlayingCard } from '@/components/game/PlayingCard';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { Button } from '@/components/ui/Button';
 import { isCardPlayable } from '@/lib/cards';
+import { getSeatOrderWithSelfBottom } from '@/lib/table-order';
 import { getStrengthOrderLabel } from '@/lib/trump-display';
 import { colors } from '@/theme/colors';
 import type {
@@ -70,9 +72,20 @@ export function GameBoard({
   const [showStrength, setShowStrength] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const self = game.players.find((player) => player.playerId === game.you);
-  const opponents = game.players.filter(
+  const orderedPlayers = useMemo(
+    () => getSeatOrderWithSelfBottom(game.players, game.you),
+    [game.players, game.you],
+  );
+  const opponents = orderedPlayers.filter(
     (player) => player.playerId !== game.you,
   );
+  const playerNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of game.players) {
+      map.set(p.playerId, p.name);
+    }
+    return map;
+  }, [game.players]);
   const highest = game.blowState.currentHighestDeclaration;
   const mustSelectNegri =
     game.gamePhase === 'play' &&
@@ -127,6 +140,15 @@ export function GameBoard({
     game.negriCard,
   ]);
 
+  const fieldsCount = game.fields.length;
+  const prevFieldsCount = useRef(fieldsCount);
+  useEffect(() => {
+    if (fieldsCount > prevFieldsCount.current) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    prevFieldsCount.current = fieldsCount;
+  }, [fieldsCount]);
+
   useEffect(
     () => () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -148,6 +170,7 @@ export function GameBoard({
 
   const confirmSelected = () => {
     if (actionsDisabled || !selectedCard || pendingAction) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (mustSelectNegri) {
       markPending('negri');
       onSelectNegri(selectedCard);
@@ -266,9 +289,29 @@ export function GameBoard({
           <Text style={styles.sectionLabel}>場</Text>
           <View style={styles.fieldCards}>
             {game.currentField?.cards.length ? (
-              game.currentField.cards.map((card, index) => (
-                <PlayingCard card={card} compact key={`${card}-${index}`} />
-              ))
+              game.currentField.cards.map((card, index) => {
+                const playedById =
+                  game.currentField?.playedBy[index];
+                const playerName = playedById
+                  ? playerNameMap.get(playedById)
+                  : undefined;
+                return (
+                  <View key={`${card}-${index}`} style={styles.fieldCardSlot}>
+                    <PlayingCard card={card} compact />
+                    {playerName ? (
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.fieldCardPlayer,
+                          playedById === game.you && styles.fieldCardPlayerSelf,
+                        ]}
+                      >
+                        {playerName}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })
             ) : (
               <Text style={styles.emptyField}>まだカードはありません</Text>
             )}
@@ -537,11 +580,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   fieldCards: {
-    minHeight: 68,
+    minHeight: 90,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
+  },
+  fieldCardSlot: {
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 70,
+  },
+  fieldCardPlayer: {
+    color: colors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  fieldCardPlayerSelf: {
+    color: colors.gold,
+    fontWeight: '700',
   },
   emptyField: {
     color: colors.textMuted,
