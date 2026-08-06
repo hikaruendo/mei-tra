@@ -28,8 +28,8 @@ clearer, faster, or safer. Use concrete outcomes rather than "improved UX".
 ## X post wording
 
 <!--
-Write the final Japanese post text, preferably in two short sentences. It will
-be used as-is when present, so keep it under 240 characters and omit URLs,
+Write the final Japanese post text, preferably in two short sentences. The
+workflow copies this section into the X-review issue, so keep it under 240 characters and omit URLs,
 media, implementation jargon, and unverified claims. If this change has no
 user-facing announcement, write: 投稿対象外
 -->
