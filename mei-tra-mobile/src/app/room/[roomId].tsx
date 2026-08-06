@@ -1,5 +1,6 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
 import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingRoom } from '@/components/game/WaitingRoom';
@@ -37,9 +38,29 @@ export default function RoomScreen() {
     selectBaseSuit,
     removePlayer,
     replaceWithCOM,
+    updateTeamNames,
     clearFeedback,
     closeGameOver,
   } = useGame();
+
+  const doLeave = useCallback(async () => {
+    const didLeave = await leaveRoom();
+    if (didLeave) {
+      router.replace('/rooms');
+    }
+    return didLeave;
+  }, [leaveRoom, router]);
+
+  const handleLeaveWithConfirm = useCallback(() => {
+    Alert.alert('ゲームから退出', '本当に退出しますか？', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '退出する',
+        style: 'destructive',
+        onPress: () => void doLeave(),
+      },
+    ]);
+  }, [doLeave]);
 
   if (!loading && !user) {
     return <Redirect href="/sign-in" />;
@@ -60,14 +81,6 @@ export default function RoomScreen() {
     roomId === 'current' ? currentRoom?.id ?? game?.roomId : roomId;
   const roomMatches = currentRoom?.id === resolvedRoomId;
   const gameMatches = game?.roomId === resolvedRoomId;
-
-  const handleLeave = async () => {
-    const didLeave = await leaveRoom();
-    if (didLeave) {
-      router.replace('/rooms');
-    }
-    return didLeave;
-  };
 
   if (!roomMatches && !gameMatches) {
     return (
@@ -107,10 +120,13 @@ export default function RoomScreen() {
           currentPlayerId={currentPlayerId}
           isHost={isHost}
           onFillWithCOM={fillWithCOM}
-          onLeave={handleLeave}
+          onLeave={doLeave}
+          onRemovePlayer={removePlayer}
+          onReplaceWithCOM={replaceWithCOM}
           onShuffle={shuffleTeams}
           onStart={startGame}
           onToggleReady={toggleReady}
+          onUpdateTeamNames={updateTeamNames}
           room={currentRoom}
         />
       ) : game ? (
@@ -120,13 +136,13 @@ export default function RoomScreen() {
           gameOver={gameOver}
           isHost={isHost}
           onCloseGameOver={async () => {
-            const didLeave = await handleLeave();
+            const didLeave = await doLeave();
             if (didLeave) {
               closeGameOver();
             }
           }}
           onDeclare={declareBlow}
-          onLeave={handleLeave}
+          onLeave={handleLeaveWithConfirm}
           onPass={passBlow}
           onPlayCard={playCard}
           onRemovePlayer={removePlayer}

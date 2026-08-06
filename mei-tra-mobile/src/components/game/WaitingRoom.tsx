@@ -1,6 +1,14 @@
+import type { TeamNames } from '@meitra/contracts/game';
 import type { RoomContract } from '@meitra/contracts/room';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { colors } from '@/theme/colors';
@@ -14,6 +22,9 @@ interface WaitingRoomProps {
   onShuffle: () => void;
   onStart: () => void;
   onLeave: () => void;
+  onRemovePlayer: (playerId: string) => void;
+  onReplaceWithCOM: (playerId: string) => void;
+  onUpdateTeamNames: (teamNames: TeamNames) => void;
   actionsDisabled?: boolean;
 }
 
@@ -26,6 +37,9 @@ export function WaitingRoom({
   onShuffle,
   onStart,
   onLeave,
+  onRemovePlayer,
+  onReplaceWithCOM,
+  onUpdateTeamNames,
   actionsDisabled = false,
 }: WaitingRoomProps) {
   const currentPlayer = room.players.find(
@@ -74,20 +88,52 @@ export function WaitingRoom({
       </View>
 
       <View style={[styles.teams, width < 380 && styles.teamsNarrow]}>
-        {[0, 1].map((team) => (
+        {([0, 1] as const).map((team) => {
+          const teamLabel =
+            room.settings.teamNames?.[team] || `チーム${team + 1}`;
+          return (
           <View key={team} style={styles.team}>
-            <Text style={styles.teamTitle}>チーム{team + 1}</Text>
+            {isHost ? (
+              <Pressable
+                accessibilityHint="長押しでチーム名を編集"
+                onLongPress={() => {
+                  Alert.prompt(
+                    'チーム名を変更',
+                    `チーム${team + 1}の新しい名前を入力してください`,
+                    (name) => {
+                      if (!name?.trim()) return;
+                      const current = room.settings.teamNames ?? {};
+                      onUpdateTeamNames({
+                        ...current,
+                        [team]: name.trim(),
+                      });
+                    },
+                    'plain-text',
+                    teamLabel,
+                  );
+                }}
+              >
+                <Text style={styles.teamTitle}>{teamLabel}</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.teamTitle}>{teamLabel}</Text>
+            )}
             {[0, 1].map((seat) => {
               const player = room.players.filter(
                 (candidate) => candidate.team === team,
               )[seat];
-              return (
+              const canRemove =
+                isHost &&
+                player &&
+                !player.isHost &&
+                !player.isCOM &&
+                player.playerId !== currentPlayerId;
+              const seatView = (
                 <View
                   accessibilityLabel={`${player?.name ?? '空席'}、${
                     player?.isReady ? '準備OK' : player ? '準備中' : '参加待ち'
                   }`}
                   accessibilityRole="text"
-                  key={seat}
                   style={styles.seat}
                 >
                   <Text style={styles.seatAvatar}>
@@ -111,9 +157,42 @@ export function WaitingRoom({
                   </View>
                 </View>
               );
+              if (canRemove) {
+                return (
+                  <Pressable
+                    key={seat}
+                    onLongPress={() => {
+                      Alert.alert(
+                        player.name,
+                        'プレイヤーの操作を選択してください',
+                        [
+                          {
+                            text: 'COMに置換',
+                            onPress: () =>
+                              onReplaceWithCOM(player.playerId),
+                          },
+                          {
+                            text: '退出させる',
+                            style: 'destructive',
+                            onPress: () =>
+                              onRemovePlayer(player.playerId),
+                          },
+                          { text: 'キャンセル', style: 'cancel' },
+                        ],
+                      );
+                    }}
+                  >
+                    {seatView}
+                  </Pressable>
+                );
+              }
+              return (
+                <View key={seat}>{seatView}</View>
+              );
             })}
           </View>
-        ))}
+          );
+        })}
       </View>
 
       {!isHost && currentPlayer ? (

@@ -16,6 +16,7 @@ import { PlayingCard } from '@/components/game/PlayingCard';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { Button } from '@/components/ui/Button';
 import { isCardPlayable } from '@/lib/cards';
+import { getStrengthOrderLabel } from '@/lib/trump-display';
 import { colors } from '@/theme/colors';
 import type {
   MobileGameOver,
@@ -66,6 +67,7 @@ export function GameBoard({
     'card' | 'negri' | 'suit' | null
   >(null);
   const [leaving, setLeaving] = useState(false);
+  const [showStrength, setShowStrength] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const self = game.players.find((player) => player.playerId === game.you);
   const opponents = game.players.filter(
@@ -191,6 +193,22 @@ export function GameBoard({
           </Text>
         ) : null}
 
+        {currentTrump ? (
+          <Pressable
+            onPress={() => setShowStrength((v) => !v)}
+            style={styles.strengthToggle}
+          >
+            <Text style={styles.strengthToggleText}>
+              {showStrength ? '▼' : '▶'} カード強さ順
+            </Text>
+            {showStrength ? (
+              <Text style={styles.strengthOrder}>
+                {getStrengthOrderLabel(currentTrump)}
+              </Text>
+            ) : null}
+          </Pressable>
+        ) : null}
+
         <ScrollView
           horizontal
           contentContainerStyle={styles.opponents}
@@ -296,6 +314,37 @@ export function GameBoard({
           />
         ) : null}
 
+        {game.gamePhase === 'play' && game.fields.length > 0 ? (
+          <View style={styles.completedFields}>
+            <Text style={styles.sectionLabel}>獲得ペア</Text>
+            <View style={styles.completedTeams}>
+              {([0, 1] as const).map((team) => {
+                const teamFields = game.fields.filter(
+                  (field) => field.winnerTeam === team,
+                );
+                return (
+                  <View key={team} style={styles.completedTeam}>
+                    <Text style={styles.completedTeamLabel}>
+                      T{team + 1}: {teamFields.length}
+                    </Text>
+                    <View style={styles.completedCards}>
+                      {teamFields.map((field, idx) => (
+                        <View key={idx} style={styles.miniCards}>
+                          {field.cards.map((card, ci) => (
+                            <Text key={ci} style={styles.miniCard}>
+                              {card}
+                            </Text>
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+
         {game.gamePhase === 'play' && self ? (
           <View style={styles.handSection}>
             <View style={styles.handHeading}>
@@ -315,10 +364,16 @@ export function GameBoard({
               </Text>
             )}
             {game.revealedAgari ? (
-              <Text style={styles.agari}>アゲ: {game.revealedAgari}</Text>
+              <View style={styles.agariRow}>
+                <Text style={styles.agari}>アゲ:</Text>
+                <PlayingCard card={game.revealedAgari} compact />
+              </View>
             ) : null}
             {game.negriCard ? (
-              <Text style={styles.negri}>ネグリ: {game.negriCard}</Text>
+              <View style={styles.negriRow}>
+                <Text style={styles.negri}>ネグリ:</Text>
+                <PlayingCard card={game.negriCard} compact />
+              </View>
             ) : null}
 
             <ScrollView
@@ -448,6 +503,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  strengthToggle: {
+    gap: 6,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: colors.panelStrong,
+  },
+  strengthToggleText: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  strengthOrder: {
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   opponents: {
     gap: 10,
   },
@@ -492,6 +563,43 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 8,
   },
+  completedFields: {
+    gap: 8,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
+  },
+  completedTeams: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  completedTeam: {
+    flex: 1,
+    gap: 4,
+  },
+  completedTeamLabel: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  completedCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  miniCards: {
+    flexDirection: 'row',
+    gap: 2,
+    padding: 3,
+    borderRadius: 6,
+    backgroundColor: colors.backgroundElevated,
+  },
+  miniCard: {
+    color: colors.text,
+    fontSize: 11,
+  },
   handSection: {
     gap: 10,
     padding: 14,
@@ -514,10 +622,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
   },
+  agariRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   agari: {
     color: colors.success,
     fontSize: 15,
     fontWeight: '700',
+  },
+  negriRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   negri: {
     color: colors.gold,
