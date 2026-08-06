@@ -140,6 +140,8 @@ describe('recovery helpers', () => {
           hostId: null,
           pointsToWin: 5,
           paused: false,
+          disconnectedPlayerIds: [],
+          idlePlayerIds: [],
         },
         {
           id: 'room-1',

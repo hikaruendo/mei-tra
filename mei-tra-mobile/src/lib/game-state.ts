@@ -90,7 +90,16 @@ export const normalizeGameStatePayload = (
   hostId: payload.hostId ?? null,
   paused: false,
   fields: dedupeCompletedFields(payload.fields),
+  disconnectedPlayerIds: extractDisconnectedPlayerIds(payload.players),
+  idlePlayerIds: [],
 });
+
+export const extractDisconnectedPlayerIds = (
+  players: PlayerContract[],
+): string[] =>
+  players
+    .filter((p) => !p.isCOM && !p.socketId)
+    .map((p) => p.playerId);
 
 export const createStartedGameSnapshot = (
   payload: GameStartedPayload,
@@ -113,6 +122,8 @@ export const createStartedGameSnapshot = (
   hostId,
   pointsToWin: payload.pointsToWin,
   paused: false,
+  disconnectedPlayerIds: [],
+  idlePlayerIds: [],
 });
 
 export const shouldAckTurn = (

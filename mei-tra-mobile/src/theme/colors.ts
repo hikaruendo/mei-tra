@@ -9,6 +9,7 @@ export const colors = {
   gold: '#c49a3a',
   goldPressed: '#a77f28',
   danger: '#d66b62',
+  warning: '#d4a839',
   success: '#6bb995',
   card: '#fffdf4',
   cardText: '#15201b',

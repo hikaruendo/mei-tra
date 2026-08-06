@@ -1,7 +1,9 @@
 import type { TrumpType } from '@meitra/contracts/game';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,12 +25,15 @@ import type {
 interface GameBoardProps {
   game: MobileGameSnapshot;
   gameOver: MobileGameOver | null;
+  isHost: boolean;
   onCloseGameOver: () => void;
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
+  onRemovePlayer: (playerId: string) => void;
+  onReplaceWithCOM: (playerId: string) => void;
   onLeave: () => void;
   actionsDisabled?: boolean;
 }
@@ -44,12 +49,15 @@ const trumpLabels: Record<TrumpType, string> = {
 export function GameBoard({
   game,
   gameOver,
+  isHost,
   onCloseGameOver,
   onDeclare,
   onPass,
   onSelectNegri,
   onPlayCard,
   onSelectBaseSuit,
+  onRemovePlayer,
+  onReplaceWithCOM,
   onLeave,
   actionsDisabled = false,
 }: GameBoardProps) {
@@ -188,18 +196,52 @@ export function GameBoard({
           contentContainerStyle={styles.opponents}
           showsHorizontalScrollIndicator={false}
         >
-          {opponents.map((player) => (
-            <PlayerSeat
-              key={player.playerId}
-              declaration={
-                highest?.playerId === player.playerId
-                  ? `${trumpLabels[highest.trumpType]} ${highest.numberOfPairs}`
-                  : undefined
-              }
-              isTurn={game.currentTurn === player.playerId}
-              player={player}
-            />
-          ))}
+          {opponents.map((player) => {
+            const seat = (
+              <PlayerSeat
+                key={player.playerId}
+                declaration={
+                  highest?.playerId === player.playerId
+                    ? `${trumpLabels[highest.trumpType]} ${highest.numberOfPairs}`
+                    : undefined
+                }
+                isDisconnected={game.disconnectedPlayerIds.includes(
+                  player.playerId,
+                )}
+                isIdle={game.idlePlayerIds.includes(player.playerId)}
+                isTurn={game.currentTurn === player.playerId}
+                player={player}
+              />
+            );
+            if (isHost && !player.isCOM) {
+              return (
+                <Pressable
+                  key={player.playerId}
+                  onLongPress={() => {
+                    Alert.alert(
+                      player.name,
+                      'プレイヤーの操作を選択してください',
+                      [
+                        {
+                          text: 'COMに置換',
+                          onPress: () => onReplaceWithCOM(player.playerId),
+                        },
+                        {
+                          text: '退出させる',
+                          style: 'destructive',
+                          onPress: () => onRemovePlayer(player.playerId),
+                        },
+                        { text: 'キャンセル', style: 'cancel' },
+                      ],
+                    );
+                  }}
+                >
+                  {seat}
+                </Pressable>
+              );
+            }
+            return seat;
+          })}
         </ScrollView>
 
         <View style={styles.field}>

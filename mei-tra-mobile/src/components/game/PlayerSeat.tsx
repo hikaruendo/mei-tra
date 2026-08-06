@@ -8,6 +8,8 @@ interface PlayerSeatProps {
   isTurn: boolean;
   isSelf?: boolean;
   declaration?: string;
+  isDisconnected?: boolean;
+  isIdle?: boolean;
 }
 
 export function PlayerSeat({
@@ -15,13 +17,26 @@ export function PlayerSeat({
   isTurn,
   isSelf = false,
   declaration,
+  isDisconnected = false,
+  isIdle = false,
 }: PlayerSeatProps) {
+  const statusLabel = isDisconnected
+    ? '切断中'
+    : isIdle
+      ? '無操作'
+      : isTurn
+        ? '現在の手番'
+        : '手番待ち';
+
   return (
     <View
-      accessibilityLabel={`${player.name}${isSelf ? '、あなた' : ''}、${
-        isTurn ? '現在の手番' : '手番待ち'
-      }、手札${player.hand.length}枚`}
-      style={[styles.container, isTurn && styles.turn]}
+      accessibilityLabel={`${player.name}${isSelf ? '、あなた' : ''}、${statusLabel}、手札${player.hand.length}枚`}
+      style={[
+        styles.container,
+        isTurn && styles.turn,
+        isDisconnected && styles.disconnected,
+        isIdle && styles.idle,
+      ]}
     >
       <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
         <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
@@ -33,6 +48,11 @@ export function PlayerSeat({
       <Text style={styles.meta}>
         {player.hand.length}枚・チーム{player.team + 1}
       </Text>
+      {isDisconnected ? (
+        <Text style={styles.statusBadge}>切断中</Text>
+      ) : isIdle ? (
+        <Text style={styles.statusBadge}>無操作</Text>
+      ) : null}
       {declaration ? <Text style={styles.declaration}>{declaration}</Text> : null}
     </View>
   );
@@ -79,6 +99,18 @@ const styles = StyleSheet.create({
   meta: {
     color: colors.textMuted,
     fontSize: 12,
+  },
+  disconnected: {
+    opacity: 0.5,
+  },
+  idle: {
+    borderColor: colors.warning,
+    borderWidth: 2,
+  },
+  statusBadge: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '700',
   },
   declaration: {
     color: colors.gold,

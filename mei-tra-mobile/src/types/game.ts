@@ -24,6 +24,8 @@ export interface MobileGameSnapshot {
   hostId: string | null;
   pointsToWin: number;
   paused: boolean;
+  disconnectedPlayerIds: string[];
+  idlePlayerIds: string[];
 }
 
 export interface MobileGameOver {

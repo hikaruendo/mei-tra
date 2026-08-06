@@ -35,6 +35,8 @@ export default function RoomScreen() {
     selectNegri,
     playCard,
     selectBaseSuit,
+    removePlayer,
+    replaceWithCOM,
     clearFeedback,
     closeGameOver,
   } = useGame();
@@ -116,6 +118,7 @@ export default function RoomScreen() {
           actionsDisabled={actionsDisabled}
           game={game}
           gameOver={gameOver}
+          isHost={isHost}
           onCloseGameOver={async () => {
             const didLeave = await handleLeave();
             if (didLeave) {
@@ -126,6 +129,8 @@ export default function RoomScreen() {
           onLeave={handleLeave}
           onPass={passBlow}
           onPlayCard={playCard}
+          onRemovePlayer={removePlayer}
+          onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
         />
