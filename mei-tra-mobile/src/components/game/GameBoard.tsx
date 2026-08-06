@@ -1,4 +1,8 @@
 import type { TrumpType } from '@meitra/contracts/game';
+import type {
+  GameHistoryReplayViewContract,
+  GameHistorySummaryContract,
+} from '@meitra/contracts/game-history';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -12,6 +16,7 @@ import {
 } from 'react-native';
 
 import { BlowControls } from '@/components/game/BlowControls';
+import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
@@ -24,6 +29,14 @@ import type {
   MobileGameOver,
   MobileGameSnapshot,
 } from '@/types/game';
+
+interface GameHistoryData {
+  replay: GameHistoryReplayViewContract | null;
+  summary: GameHistorySummaryContract | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+}
 
 interface GameBoardProps {
   game: MobileGameSnapshot;
@@ -39,6 +52,7 @@ interface GameBoardProps {
   onReplaceWithCOM: (playerId: string) => void;
   onLeave: () => void;
   actionsDisabled?: boolean;
+  history?: GameHistoryData;
 }
 
 const trumpLabels: Record<TrumpType, string> = {
@@ -63,6 +77,7 @@ export function GameBoard({
   onReplaceWithCOM,
   onLeave,
   actionsDisabled = false,
+  history,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -70,6 +85,7 @@ export function GameBoard({
   >(null);
   const [leaving, setLeaving] = useState(false);
   const [showStrength, setShowStrength] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const self = game.players.find((player) => player.playerId === game.you);
   const orderedPlayers = useMemo(
@@ -198,15 +214,29 @@ export function GameBoard({
             <Text style={styles.phase}>{phaseLabel}フェーズ</Text>
             <Text style={styles.turn}>順番: {currentTurnName}</Text>
           </View>
-          <Button
-            disabled={actionsDisabled || leaving}
-            loading={leaving}
-            onPress={handleLeave}
-            style={styles.leaveButton}
-            variant="ghost"
-          >
-            退出
-          </Button>
+          <View style={styles.topBarActions}>
+            {history ? (
+              <Button
+                onPress={() => {
+                  history.refresh();
+                  setShowHistory(true);
+                }}
+                style={styles.historyButton}
+                variant="secondary"
+              >
+                履歴
+              </Button>
+            ) : null}
+            <Button
+              disabled={actionsDisabled || leaving}
+              loading={leaving}
+              onPress={handleLeave}
+              style={styles.leaveButton}
+              variant="ghost"
+            >
+              退出
+            </Button>
+          </View>
         </View>
 
         {highest ? (
@@ -507,6 +537,36 @@ export function GameBoard({
           </View>
         </View>
       </Modal>
+
+      {history ? (
+        <Modal
+          animationType="slide"
+          onRequestClose={() => setShowHistory(false)}
+          transparent
+          visible={showHistory}
+        >
+          <View style={styles.historyOverlay}>
+            <View style={styles.historyCard}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyTitle}>ゲーム履歴</Text>
+                <Button
+                  onPress={() => setShowHistory(false)}
+                  variant="ghost"
+                >
+                  閉じる
+                </Button>
+              </View>
+              <GameHistory
+                error={history.error}
+                loading={history.loading}
+                onRefresh={history.refresh}
+                replay={history.replay}
+                summary={history.summary}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
     </View>
   );
 }
@@ -534,6 +594,15 @@ const styles = StyleSheet.create({
   turn: {
     color: colors.text,
     fontSize: 15,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  historyButton: {
+    minHeight: 42,
+    paddingHorizontal: 12,
   },
   leaveButton: {
     minHeight: 42,
@@ -758,5 +827,29 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     lineHeight: 26,
+  },
+  historyOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  historyCard: {
+    maxHeight: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: colors.background,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  historyTitle: {
+    color: colors.gold,
+    fontSize: 20,
+    fontWeight: '800',
   },
 });

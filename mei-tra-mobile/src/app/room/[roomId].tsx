@@ -11,6 +11,7 @@ import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
+import { useGameHistory } from '@/hooks/useGameHistory';
 import { colors } from '@/theme/colors';
 
 export default function RoomScreen() {
@@ -45,6 +46,12 @@ export default function RoomScreen() {
   } = useGame();
 
   useKeepAwake();
+
+  const gameStarted = Boolean(
+    game && game.gamePhase && game.gamePhase !== 'waiting',
+  );
+  const historyRoomId = game?.roomId ?? currentRoom?.id ?? null;
+  const history = useGameHistory(historyRoomId, gameStarted);
 
   const doLeave = useCallback(async () => {
     const didLeave = await leaveRoom();
@@ -152,6 +159,7 @@ export default function RoomScreen() {
           onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
+          history={history}
         />
       ) : (
         <View style={styles.center}>
