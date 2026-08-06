@@ -1,23 +1,31 @@
+<!--
+AI/agent instructions:
+Fill in every section below when opening a PR. Write concrete, user-facing
+language instead of implementation-only descriptions. Keep the combined
+User-facing change and User benefit text factual and under 240 characters;
+do not include URLs, media links, private identifiers, or claims that are not
+demonstrated by this PR.
+-->
+
 ## Summary
 
-<!-- Describe the user-visible change and validation steps. -->
+<!-- Briefly describe the overall change and validation. -->
 
-## Demo evidence
+## User-facing change
 
 <!--
-The agent may update this JSON for UI changes when a precise interaction is
-known. If it is omitted, the capture workflow infers a public route from the
-PR's changed paths; it does not use a fixed screen list.
-Use media "none" for backend-only or non-demonstrable changes.
-
-Supported interaction steps include `fill`, `clickRole`, `wait`, and
-`playDemo` (which runs a bounded bidding/card-play sequence with COM players).
+What changed in the product? Mention the screen, action, or behavior a player
+will notice. For backend-only work, describe the observable reliability or
+failure-mode improvement.
 -->
-<!-- x-demo:start -->
-{
-  "route": "/ja",
-  "media": "none",
-  "steps": [],
-  "filename": "capture.png"
-}
-<!-- x-demo:end -->
+
+## User benefit
+
+<!--
+Why does this matter to a player or reviewer? Explain what is now easier,
+clearer, faster, or safer. Use concrete outcomes rather than "improved UX".
+-->
+
+## Validation
+
+<!-- List tests, lint, build, and relevant manual checks. -->
