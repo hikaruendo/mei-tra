@@ -302,8 +302,10 @@ describe('SupabaseRoomRepository', () => {
       lockMigration.indexOf('select *\n      into current_state'),
     );
 
-    expect(rosterFunction).toContain('select p_host_id::uuid');
+    expect(rosterFunction).toContain('then p_host_id::uuid');
+    expect(rosterFunction).toContain('then player."userId"::uuid');
     expect(rosterFunction).toContain('select distinct candidate.user_id');
+    expect(rosterFunction).toContain('where candidate.user_id is not null');
     expect(rosterFunction).toContain('order by candidate.user_id');
     expect(rosterFunction.match(/pg_advisory_xact_lock/g)).toHaveLength(1);
   });

@@ -145,17 +145,24 @@ begin
       for lock_user_id in
         select distinct candidate.user_id
         from (
-          select nullif(player."userId", '')::uuid as user_id
+          select case
+            when player."userId" ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+              then player."userId"::uuid
+            else null
+          end as user_id
           from jsonb_to_recordset(coalesce(p_room_players, '[]'::jsonb)) as player(
             "userId" text
           )
-          where nullif(player."userId", '') is not null
 
           union all
 
-          select p_host_id::uuid
-          where p_host_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          select case
+            when p_host_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+              then p_host_id::uuid
+            else null
+          end
         ) as candidate
+        where candidate.user_id is not null
         order by candidate.user_id
       loop
         perform pg_advisory_xact_lock(
