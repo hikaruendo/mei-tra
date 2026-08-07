@@ -52,7 +52,9 @@ export function PlayerSeat({
       ]}
     >
       {isBlowWinner && declaration ? (
-        <Text style={styles.agariLabel}>アゲ: {declaration}</Text>
+        <View style={styles.declarationBadge}>
+          <Text style={styles.declarationBadgeText}>アゲ: {declaration}</Text>
+        </View>
       ) : null}
       <View style={styles.avatarRow}>
         <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
@@ -172,9 +174,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  agariLabel: {
+  declarationBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    backgroundColor: colors.backgroundElevated,
+  },
+  declarationBadgeText: {
     color: colors.gold,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     textAlign: 'center',
   },
