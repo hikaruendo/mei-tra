@@ -92,6 +92,7 @@ export const normalizeGameStatePayload = (
   fields: dedupeCompletedFields(payload.fields),
   disconnectedPlayerIds: extractDisconnectedPlayerIds(payload.players),
   idlePlayerIds: [],
+  teamNames: payload.teamNames,
 });
 
 export const extractDisconnectedPlayerIds = (
@@ -124,6 +125,7 @@ export const createStartedGameSnapshot = (
   paused: false,
   disconnectedPlayerIds: [],
   idlePlayerIds: [],
+  teamNames: payload.teamNames,
 });
 
 export const shouldAckTurn = (

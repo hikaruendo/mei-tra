@@ -9,6 +9,7 @@ interface PlayingCardProps {
   selected?: boolean;
   disabled?: boolean;
   compact?: boolean;
+  mini?: boolean;
   onPress?: () => void;
 }
 
@@ -18,9 +19,11 @@ export function PlayingCard({
   selected = false,
   disabled = false,
   compact = false,
+  mini = false,
   onPress,
 }: PlayingCardProps) {
   const parsed = parseCard(card ?? 'JOKER');
+  const sizeStyle = mini ? styles.mini : compact ? styles.compact : styles.regular;
 
   return (
     <Pressable
@@ -34,7 +37,7 @@ export function PlayingCard({
       onPress={onPress}
       style={[
         styles.card,
-        compact ? styles.compact : styles.regular,
+        sizeStyle,
         faceDown && styles.back,
         selected && styles.selected,
         disabled && styles.disabled,
@@ -42,7 +45,7 @@ export function PlayingCard({
     >
       {faceDown ? (
         <View style={styles.backInner}>
-          <Text style={styles.backMark}>M</Text>
+          <Text style={[styles.backMark, mini && styles.miniBackMark]}>M</Text>
         </View>
       ) : (
         <>
@@ -51,7 +54,8 @@ export function PlayingCard({
             numberOfLines={1}
             style={[
               styles.rank,
-              compact && styles.compactRank,
+              (compact || mini) && styles.compactRank,
+              mini && styles.miniRank,
               parsed.isRed && styles.red,
             ]}
           >
@@ -60,7 +64,8 @@ export function PlayingCard({
           <Text
             style={[
               styles.suit,
-              compact && styles.compactSuit,
+              (compact || mini) && styles.compactSuit,
+              mini && styles.miniSuit,
               parsed.isRed && styles.red,
             ]}
           >
@@ -92,6 +97,21 @@ const styles = StyleSheet.create({
     height: 60,
     padding: 4,
     borderRadius: 6,
+  },
+  mini: {
+    width: 30,
+    height: 42,
+    padding: 2,
+    borderRadius: 4,
+  },
+  miniRank: {
+    fontSize: 11,
+  },
+  miniSuit: {
+    fontSize: 13,
+  },
+  miniBackMark: {
+    fontSize: 12,
   },
   rank: {
     color: colors.cardText,

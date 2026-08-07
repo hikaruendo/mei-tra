@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/context/AuthContext';
 import { GameProvider } from '@/context/GameContext';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { SocialProvider } from '@/context/SocialContext';
 import { colors } from '@/theme/colors';
 
 const navigationTheme = {
@@ -27,14 +28,16 @@ export default function RootLayout() {
       <ThemeProvider value={navigationTheme}>
         <AuthProvider>
           <GameProvider>
-            <NotificationProvider>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.background },
-                }}
-              />
-            </NotificationProvider>
+            <SocialProvider>
+              <NotificationProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.background },
+                  }}
+                />
+              </NotificationProvider>
+            </SocialProvider>
           </GameProvider>
         </AuthProvider>
         <StatusBar style="light" />

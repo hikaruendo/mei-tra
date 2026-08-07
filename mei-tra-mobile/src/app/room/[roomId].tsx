@@ -1,7 +1,7 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
-import { useCallback } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingRoom } from '@/components/game/WaitingRoom';
@@ -47,6 +47,13 @@ export default function RoomScreen() {
 
   useKeepAwake();
 
+  useEffect(() => {
+    if (gameOver && !currentRoom && !game) {
+      closeGameOver();
+      router.replace('/rooms');
+    }
+  }, [gameOver, currentRoom, game, closeGameOver, router]);
+
   const gameStarted = Boolean(
     game && game.gamePhase && game.gamePhase !== 'waiting',
   );
@@ -60,17 +67,6 @@ export default function RoomScreen() {
     }
     return didLeave;
   }, [leaveRoom, router]);
-
-  const handleLeaveWithConfirm = useCallback(() => {
-    Alert.alert('ゲームから退出', '本当に退出しますか？', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '退出する',
-        style: 'destructive',
-        onPress: () => void doLeave(),
-      },
-    ]);
-  }, [doLeave]);
 
   if (!loading && !user) {
     return <Redirect href="/sign-in" />;
@@ -114,11 +110,13 @@ export default function RoomScreen() {
 
   return (
     <Screen>
-      <ConnectionBanner
-        onRetry={refreshRooms}
-        retryLabel="再接続を試す"
-        status={connectionStatus}
-      />
+      {connectionStatus !== 'connected' ? (
+        <ConnectionBanner
+          onRetry={refreshRooms}
+          retryLabel="再接続を試す"
+          status={connectionStatus}
+        />
+      ) : null}
       <FeedbackBanner
         error={error}
         notice={notice}
@@ -152,7 +150,7 @@ export default function RoomScreen() {
             }
           }}
           onDeclare={declareBlow}
-          onLeave={handleLeaveWithConfirm}
+          onLeave={() => void doLeave()}
           onPass={passBlow}
           onPlayCard={playCard}
           onRemovePlayer={removePlayer}
@@ -160,6 +158,7 @@ export default function RoomScreen() {
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
           history={history}
+          roomId={resolvedRoomId}
         />
       ) : (
         <View style={styles.center}>

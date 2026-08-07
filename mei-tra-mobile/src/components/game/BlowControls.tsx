@@ -1,4 +1,5 @@
 import type {
+  BlowActionContract,
   BlowDeclarationContract,
   PlayerContract,
   TrumpType,
@@ -14,7 +15,7 @@ const trumpOptions: { value: TrumpType; label: string }[] = [
   { value: 'zuppe', label: 'ズッペ ♠' },
   { value: 'club', label: 'クラブ ♣' },
   { value: 'daiya', label: 'ダイヤ ♦' },
-  { value: 'herz', label: 'ヘルツ ♥' },
+  { value: 'herz', label: 'ヘル ♥' },
   { value: 'tra', label: 'トラ' },
 ];
 
@@ -31,6 +32,7 @@ interface BlowControlsProps {
   currentTurn: string | null;
   currentPlayerId: string | null;
   highest: BlowDeclarationContract | null;
+  actionHistory: BlowActionContract[];
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   actionsDisabled?: boolean;
@@ -41,6 +43,7 @@ export function BlowControls({
   currentTurn,
   currentPlayerId,
   highest,
+  actionHistory,
   onDeclare,
   onPass,
   actionsDisabled = false,
@@ -166,6 +169,52 @@ export function BlowControls({
           パス
         </Button>
       </View>
+
+      {actionHistory.length > 0 ? (
+        <View style={styles.historySection}>
+          <Text style={styles.historyLabel}>宣言履歴</Text>
+          <ScrollView
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+            style={styles.historyScroll}
+          >
+            {actionHistory.map((action, index) => {
+              const name =
+                players.find((p) => p.playerId === action.playerId)?.name ??
+                '—';
+              const isHighest =
+                action.type === 'declare' &&
+                highest?.playerId === action.playerId &&
+                highest?.trumpType === action.trumpType &&
+                highest?.numberOfPairs === action.numberOfPairs;
+              const trump = action.trumpType
+                ? trumpOptions.find((o) => o.value === action.trumpType)
+                : null;
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.historyEntry,
+                    isHighest && styles.historyEntryHighest,
+                  ]}
+                >
+                  <Text style={styles.historyName}>{name}</Text>
+                  <Text
+                    style={[
+                      styles.historyAction,
+                      action.type === 'pass' && styles.historyPass,
+                    ]}
+                  >
+                    {action.type === 'pass'
+                      ? 'パス'
+                      : `${trump?.label ?? action.trumpType} ${action.numberOfPairs}ペア`}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -211,5 +260,45 @@ const styles = StyleSheet.create({
   },
   action: {
     flex: 1,
+  },
+  historySection: {
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 10,
+  },
+  historyLabel: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  historyScroll: {
+    maxHeight: 140,
+  },
+  historyEntry: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  historyEntryHighest: {
+    borderWidth: 1,
+    borderColor: colors.gold,
+    backgroundColor: colors.backgroundElevated,
+  },
+  historyName: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  historyAction: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  historyPass: {
+    color: colors.textMuted,
   },
 });

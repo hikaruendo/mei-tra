@@ -20,9 +20,13 @@ import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
+import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
 import { isCardPlayable } from '@/lib/cards';
-import { getSeatOrderWithSelfBottom } from '@/lib/table-order';
+import {
+  getCardSeatPosition,
+  getSeatOrderWithSelfBottom,
+} from '@/lib/table-order';
 import { getStrengthOrderLabel } from '@/lib/trump-display';
 import { colors } from '@/theme/colors';
 import type {
@@ -53,11 +57,12 @@ interface GameBoardProps {
   onLeave: () => void;
   actionsDisabled?: boolean;
   history?: GameHistoryData;
+  roomId?: string;
 }
 
 const trumpLabels: Record<TrumpType, string> = {
   tra: 'トラ',
-  herz: 'ヘルツ ♥',
+  herz: 'ヘル ♥',
   daiya: 'ダイヤ ♦',
   club: 'クラブ ♣',
   zuppe: 'ズッペ ♠',
@@ -78,6 +83,7 @@ export function GameBoard({
   onLeave,
   actionsDisabled = false,
   history,
+  roomId,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -86,31 +92,39 @@ export function GameBoard({
   const [leaving, setLeaving] = useState(false);
   const [showStrength, setShowStrength] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const self = game.players.find((player) => player.playerId === game.you);
   const orderedPlayers = useMemo(
     () => getSeatOrderWithSelfBottom(game.players, game.you),
     [game.players, game.you],
   );
-  const opponents = orderedPlayers.filter(
-    (player) => player.playerId !== game.you,
+  const leftPlayer = orderedPlayers[1] ?? null;
+  const topPlayer = orderedPlayers[2] ?? null;
+  const rightPlayer = orderedPlayers[3] ?? null;
+  const opponentSlots = useMemo(
+    () =>
+      [
+        { player: leftPlayer, position: 'left' as const },
+        { player: topPlayer, position: 'top' as const },
+        { player: rightPlayer, position: 'right' as const },
+      ].filter((s) => s.player !== null),
+    [leftPlayer, topPlayer, rightPlayer],
   );
-  const playerNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of game.players) {
-      map.set(p.playerId, p.name);
+  const teamFieldCounts = useMemo(() => {
+    const counts: Record<number, number> = { 0: 0, 1: 0 };
+    for (const field of game.fields) {
+      counts[field.winnerTeam] = (counts[field.winnerTeam] ?? 0) + 1;
     }
-    return map;
-  }, [game.players]);
+    return counts;
+  }, [game.fields]);
   const highest = game.blowState.currentHighestDeclaration;
   const mustSelectNegri =
     game.gamePhase === 'play' &&
     highest?.playerId === game.you &&
     !game.negriCard;
   const isMyTurn = game.currentTurn === game.you;
-  const currentTurnName =
-    game.players.find((player) => player.playerId === game.currentTurn)?.name ??
-    '—';
   const phaseLabel =
     game.gamePhase === 'blow'
       ? '吹き'
@@ -199,184 +213,184 @@ export function GameBoard({
 
   return (
     <View style={styles.container}>
-      <ScoreBoard
-        players={game.players}
-        pointsToWin={game.pointsToWin}
-        scores={game.teamScores}
-      />
+      <View style={styles.headerRow}>
+        <ScoreBoard
+          pointsToWin={game.pointsToWin}
+          scores={game.teamScores}
+          teamNames={game.teamNames}
+        />
+        <Pressable
+          onPress={() => setShowOptions(true)}
+          style={styles.optionsButton}
+        >
+          <Text style={styles.optionsButtonText}>···</Text>
+        </Pressable>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topBar}>
-          <View>
-            <Text style={styles.phase}>{phaseLabel}フェーズ</Text>
-            <Text style={styles.turn}>順番: {currentTurnName}</Text>
-          </View>
-          <View style={styles.topBarActions}>
-            {history ? (
-              <Button
-                onPress={() => {
-                  history.refresh();
-                  setShowHistory(true);
-                }}
-                style={styles.historyButton}
-                variant="secondary"
-              >
-                履歴
-              </Button>
-            ) : null}
-            <Button
-              disabled={actionsDisabled || leaving}
-              loading={leaving}
-              onPress={handleLeave}
-              style={styles.leaveButton}
-              variant="ghost"
-            >
-              退出
-            </Button>
-          </View>
+          <Text style={styles.phase}>{phaseLabel}</Text>
+          {highest ? (
+            <Text style={styles.trumpBadge}>
+              {trumpLabels[highest.trumpType]} {highest.numberOfPairs}
+            </Text>
+          ) : null}
         </View>
 
-        {highest ? (
-          <Text style={styles.declaration}>
-            宣言: {trumpLabels[highest.trumpType]}・
-            {highest.numberOfPairs}ペア
-          </Text>
-        ) : null}
 
-        {currentTrump ? (
-          <Pressable
-            onPress={() => setShowStrength((v) => !v)}
-            style={styles.strengthToggle}
-          >
-            <Text style={styles.strengthToggleText}>
-              {showStrength ? '▼' : '▶'} カード強さ順
+        {showStrength && currentTrump ? (
+          <View style={styles.strengthPanel}>
+            <Text style={styles.strengthOrder}>
+              {getStrengthOrderLabel(currentTrump)}
             </Text>
-            {showStrength ? (
-              <Text style={styles.strengthOrder}>
-                {getStrengthOrderLabel(currentTrump)}
-              </Text>
-            ) : null}
-          </Pressable>
+          </View>
         ) : null}
 
-        <ScrollView
-          horizontal
-          contentContainerStyle={styles.opponents}
-          showsHorizontalScrollIndicator={false}
-        >
-          {opponents.map((player) => {
-            const seat = (
+        <View style={styles.opponentsArea}>
+          {opponentSlots.map(({ player, position }) => {
+            const hasNegri =
+              game.gamePhase === 'play' &&
+              game.negriPlayerId === player.playerId;
+            const blowWinnerId = highest?.playerId;
+            const hasAgari =
+              game.gamePhase === 'play' &&
+              game.revealedAgari &&
+              blowWinnerId === player.playerId;
+            const seatEl = (
               <PlayerSeat
                 key={player.playerId}
+                agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
                 declaration={
                   highest?.playerId === player.playerId
                     ? `${trumpLabels[highest.trumpType]} ${highest.numberOfPairs}`
                     : undefined
                 }
+                isBlowWinner={blowWinnerId === player.playerId}
                 isDisconnected={game.disconnectedPlayerIds.includes(
                   player.playerId,
                 )}
                 isIdle={game.idlePlayerIds.includes(player.playerId)}
                 isTurn={game.currentTurn === player.playerId}
+                negriCard={hasNegri ? 'hidden' : undefined}
                 player={player}
+                teamFieldCounts={teamFieldCounts}
+                teamNames={game.teamNames}
               />
             );
-            if (isHost && !player.isCOM) {
-              return (
-                <Pressable
-                  key={player.playerId}
-                  onLongPress={() => {
-                    Alert.alert(
-                      player.name,
-                      'プレイヤーの操作を選択してください',
-                      [
-                        {
-                          text: 'COMに置換',
-                          onPress: () => onReplaceWithCOM(player.playerId),
-                        },
-                        {
-                          text: '退出させる',
-                          style: 'destructive',
-                          onPress: () => onRemovePlayer(player.playerId),
-                        },
-                        { text: 'キャンセル', style: 'cancel' },
-                      ],
-                    );
-                  }}
-                >
-                  {seat}
-                </Pressable>
-              );
-            }
-            return seat;
-          })}
-        </ScrollView>
-
-        <View style={styles.field}>
-          <Text style={styles.sectionLabel}>場</Text>
-          <View style={styles.fieldCards}>
-            {game.currentField?.cards.length ? (
-              game.currentField.cards.map((card, index) => {
-                const playedById =
-                  game.currentField?.playedBy[index];
-                const playerName = playedById
-                  ? playerNameMap.get(playedById)
-                  : undefined;
-                return (
-                  <View key={`${card}-${index}`} style={styles.fieldCardSlot}>
-                    <PlayingCard card={card} compact />
-                    {playerName ? (
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          styles.fieldCardPlayer,
-                          playedById === game.you && styles.fieldCardPlayerSelf,
-                        ]}
-                      >
-                        {playerName}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })
-            ) : (
-              <Text style={styles.emptyField}>まだカードはありません</Text>
-            )}
-          </View>
-          {game.currentField?.baseSuit ? (
-            <Text style={styles.baseSuit}>
-              台札のスート: {game.currentField.baseSuit}
-            </Text>
-          ) : null}
-          {needsBaseSuit ? (
-            <View style={styles.suitSelector}>
-              <Text style={styles.sectionLabel}>台札のスートを選択</Text>
-              <View style={styles.suitButtons}>
-                {['♠', '♥', '♦', '♣'].map((suit) => (
-                  <Button
-                    key={suit}
-                    disabled={actionsDisabled || Boolean(pendingAction)}
-                    loading={pendingAction === 'suit'}
-                    onPress={() => {
-                      markPending('suit');
-                      onSelectBaseSuit(suit);
-                    }}
-                    style={styles.suitButton}
-                    variant="secondary"
-                  >
-                    {suit}
-                  </Button>
-                ))}
+            const posStyle =
+              position === 'top'
+                ? styles.seatTop
+                : position === 'left'
+                  ? styles.seatLeft
+                  : styles.seatRight;
+            const wrapped = isHost && !player.isCOM ? (
+              <Pressable
+                key={player.playerId}
+                onLongPress={() => {
+                  Alert.alert(
+                    player.name,
+                    'プレイヤーの操作を選択してください',
+                    [
+                      {
+                        text: 'COMに置換',
+                        onPress: () => onReplaceWithCOM(player.playerId),
+                      },
+                      {
+                        text: '退出させる',
+                        style: 'destructive',
+                        onPress: () => onRemovePlayer(player.playerId),
+                      },
+                      { text: 'キャンセル', style: 'cancel' },
+                    ],
+                  );
+                }}
+              >
+                {seatEl}
+              </Pressable>
+            ) : seatEl;
+            return (
+              <View key={player.playerId} style={posStyle}>
+                {wrapped}
               </View>
-            </View>
-          ) : null}
+            );
+          })}
         </View>
+
+        {game.gamePhase === 'play' ? (
+          <View style={styles.field}>
+            <View style={styles.fieldCenter}>
+              {game.currentField?.cards.length ? (
+                game.currentField.cards.map((card, index) => {
+                  const playerId = game.currentField!.playedBy[index];
+                  const seat = getCardSeatPosition(
+                    playerId,
+                    orderedPlayers,
+                  );
+                  const seatOffsets: Record<string, { x: number; y: number }> = {
+                    bottom: { x: 0, y: 24 },
+                    top: { x: 0, y: -24 },
+                    left: { x: -36, y: 0 },
+                    right: { x: 36, y: 0 },
+                  };
+                  const offset = seatOffsets[seat];
+                  return (
+                    <View
+                      key={`${card}-${index}`}
+                      style={[
+                        styles.fieldCardAbsolute,
+                        {
+                          transform: [
+                            { translateX: offset.x },
+                            { translateY: offset.y },
+                          ],
+                          zIndex: index + 1,
+                        },
+                      ]}
+                    >
+                      <PlayingCard card={card} compact />
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyField}>まだカードはありません</Text>
+              )}
+            </View>
+            {game.currentField?.baseSuit ? (
+              <Text style={styles.baseSuit}>
+                台札のスート: {game.currentField.baseSuit}
+              </Text>
+            ) : null}
+            {needsBaseSuit ? (
+              <View style={styles.suitSelector}>
+                <Text style={styles.sectionLabel}>台札のスートを選択</Text>
+                <View style={styles.suitButtons}>
+                  {['♠', '♥', '♦', '♣'].map((suit) => (
+                    <Button
+                      key={suit}
+                      disabled={actionsDisabled || Boolean(pendingAction)}
+                      loading={pendingAction === 'suit'}
+                      onPress={() => {
+                        markPending('suit');
+                        onSelectBaseSuit(suit);
+                      }}
+                      style={styles.suitButton}
+                      variant="secondary"
+                    >
+                      {suit}
+                    </Button>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {game.gamePhase === 'blow' ? (
           <BlowControls
+            actionHistory={game.blowState.actionHistory}
             actionsDisabled={actionsDisabled}
             currentPlayerId={game.you}
             currentTurn={game.currentTurn}
@@ -387,75 +401,68 @@ export function GameBoard({
           />
         ) : null}
 
-        {game.gamePhase === 'play' && game.fields.length > 0 ? (
-          <View style={styles.completedFields}>
-            <Text style={styles.sectionLabel}>獲得ペア</Text>
-            <View style={styles.completedTeams}>
-              {([0, 1] as const).map((team) => {
-                const teamFields = game.fields.filter(
-                  (field) => field.winnerTeam === team,
-                );
-                return (
-                  <View key={team} style={styles.completedTeam}>
-                    <Text style={styles.completedTeamLabel}>
-                      T{team + 1}: {teamFields.length}
-                    </Text>
-                    <View style={styles.completedCards}>
-                      {teamFields.map((field, idx) => (
-                        <View key={idx} style={styles.miniCards}>
-                          {field.cards.map((card, ci) => (
-                            <Text key={ci} style={styles.miniCard}>
-                              {card}
-                            </Text>
-                          ))}
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
-        {game.gamePhase === 'play' && self ? (
+        {(game.gamePhase === 'blow' || game.gamePhase === 'play') && self ? (
           <View style={styles.handSection}>
-            <View style={styles.handHeading}>
-              <Text style={styles.sectionLabel}>あなたの手札</Text>
-              <Text style={styles.pairs}>
-                獲得 {game.fields.filter((field) => field.winnerTeam === self.team).length}
-                ペア
-              </Text>
-            </View>
-            {mustSelectNegri ? (
-              <Text style={styles.instruction}>
-                ネグリにするカードを選んでください
-              </Text>
-            ) : (
-              <Text style={styles.instruction}>
-                {isMyTurn ? 'プレイするカードを選んでください' : '順番を待っています'}
-              </Text>
-            )}
-            {game.revealedAgari ? (
-              <View style={styles.agariRow}>
-                <Text style={styles.agari}>アゲ:</Text>
-                <PlayingCard card={game.revealedAgari} compact />
+            <View style={styles.selfRow}>
+              <View
+                style={[
+                  styles.selfCard,
+                  isMyTurn && styles.selfCardTurn,
+                ]}
+              >
+                <View style={[styles.selfAvatar, self.isCOM && styles.selfComAvatar]}>
+                  <Text style={styles.selfAvatarText}>
+                    {self.isCOM ? '🤖' : '●'}
+                  </Text>
+                </View>
+                <Text numberOfLines={1} style={styles.selfName}>
+                  {self.name}
+                </Text>
+                <View style={[styles.selfTeamBadge, { backgroundColor: self.team === 0 ? '#8b2020' : '#1a2a2a' }]}>
+                  <Text style={styles.selfTeamBadgeText}>
+                    {game.teamNames?.[self.team] ?? `${self.team + 1}組`}
+                  </Text>
+                </View>
+                <Text style={styles.selfFieldCountText}>
+                  取得 {teamFieldCounts[self.team] ?? 0}場
+                </Text>
+                {game.gamePhase === 'play' && game.negriCard && highest?.playerId === game.you ? (
+                  <View style={styles.selfSpecialRow}>
+                    <PlayingCard card={game.negriCard} mini />
+                    <Text style={styles.selfSpecialLabel}>ネグリ</Text>
+                  </View>
+                ) : null}
+                {game.gamePhase === 'play' && game.revealedAgari ? (
+                  <View style={styles.selfSpecialRow}>
+                    <PlayingCard card={game.revealedAgari} mini />
+                    <Text style={styles.selfSpecialLabel}>アゲ</Text>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-            {game.negriCard ? (
-              <View style={styles.negriRow}>
-                <Text style={styles.negri}>ネグリ:</Text>
-                <PlayingCard card={game.negriCard} compact />
-              </View>
-            ) : null}
+              <View style={styles.handArea}>
+                {game.gamePhase === 'play' ? (
+                  mustSelectNegri ? (
+                    <Text style={styles.instruction}>
+                      ネグリにするカードを選んでください
+                    </Text>
+                  ) : (
+                    <Text style={styles.instruction}>
+                      {isMyTurn ? 'プレイするカードを選んでください' : '順番を待っています'}
+                    </Text>
+                  )
+                ) : null}
 
-            <ScrollView
-              horizontal
-              contentContainerStyle={styles.hand}
-              showsHorizontalScrollIndicator={false}
-            >
+            <View style={styles.fanContainer}>
               {self.hand.map((card, index) => {
+                const total = self.hand.length;
+                const half = Math.max((total - 1) / 2, 1);
+                const dist = index - (total - 1) / 2;
+                const norm = dist / half;
+                const rotation = norm * 12;
+                const lift = Math.pow(Math.abs(norm), 2) * 14;
+                const isPlayPhase = game.gamePhase === 'play';
                 const playable =
+                  isPlayPhase &&
                   isMyTurn &&
                   isCardPlayable(
                     self.hand,
@@ -463,25 +470,45 @@ export function GameBoard({
                     game.currentField,
                     currentTrump,
                   );
+                const isSelected = selectedCard === card;
                 return (
-                  <PlayingCard
-                    card={card}
-                    disabled={
-                      actionsDisabled || !playable || Boolean(pendingAction)
-                    }
+                  <View
                     key={`${card}-${index}`}
-                    onPress={() =>
-                      setSelectedCard((current) =>
-                        current === card ? null : card,
-                      )
-                    }
-                    selected={selectedCard === card}
-                  />
+                    style={[
+                      styles.fanCard,
+                      total > 1 && { marginHorizontal: -6 },
+                      {
+                        transform: [
+                          { rotate: `${rotation}deg` },
+                          { translateY: lift + (isSelected ? -12 : 0) },
+                        ],
+                      },
+                    ]}
+                  >
+                    <PlayingCard
+                      card={card}
+                      disabled={
+                        isPlayPhase &&
+                        (actionsDisabled ||
+                          !playable ||
+                          Boolean(pendingAction))
+                      }
+                      onPress={
+                        isPlayPhase
+                          ? () =>
+                              setSelectedCard((current) =>
+                                current === card ? null : card,
+                              )
+                          : undefined
+                      }
+                      selected={isSelected}
+                    />
+                  </View>
                 );
               })}
-            </ScrollView>
+            </View>
 
-            {selectedCard ? (
+            {game.gamePhase === 'play' && selectedCard ? (
               <View style={styles.selectedActions}>
                 <Button
                   disabled={
@@ -505,6 +532,30 @@ export function GameBoard({
                 </Button>
               </View>
             ) : null}
+              </View>
+            </View>
+            {game.gamePhase === 'play' && self && (() => {
+              const myFields = game.fields.filter(
+                (field) => field.winnerTeam === self.team,
+              );
+              if (myFields.length === 0) return null;
+              return (
+                <View style={styles.completedWrap}>
+                  {myFields.map((field, idx) => (
+                    <View key={idx} style={styles.completedChip}>
+                      {field.cards.map((card, ci) => (
+                        <View
+                          key={ci}
+                          style={ci > 0 ? styles.completedCardOverlap : undefined}
+                        >
+                          <PlayingCard card={card} mini />
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
         ) : null}
       </ScrollView>
@@ -537,6 +588,98 @@ export function GameBoard({
           </View>
         </View>
       </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+        transparent
+        visible={showOptions}
+      >
+        <View style={styles.optionsOverlay}>
+          <Pressable
+            onPress={() => setShowOptions(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.optionsMenu}>
+            <Pressable
+              onPress={() => setShowOptions(false)}
+              style={styles.optionsClose}
+            >
+              <Text style={styles.optionsCloseText}>×</Text>
+            </Pressable>
+            {currentTrump ? (
+              <Button
+                onPress={() => {
+                  setShowStrength((v) => !v);
+                  setShowOptions(false);
+                }}
+                variant="secondary"
+              >
+                強さ順
+              </Button>
+            ) : null}
+            {roomId ? (
+              <Button
+                onPress={() => {
+                  setShowChat(true);
+                  setShowOptions(false);
+                }}
+                variant="secondary"
+              >
+                チャット
+              </Button>
+            ) : null}
+            {history ? (
+              <Button
+                onPress={() => {
+                  history.refresh();
+                  setShowHistory(true);
+                  setShowOptions(false);
+                }}
+                variant="secondary"
+              >
+                対局ログ
+              </Button>
+            ) : null}
+            <Button
+              disabled={actionsDisabled || leaving}
+              loading={leaving}
+              onPress={() => {
+                setShowOptions(false);
+                handleLeave();
+              }}
+              variant="ghost"
+              style={styles.optionsItemDanger}
+            >
+              退出
+            </Button>
+          </View>
+        </View>
+      </Modal>
+
+      {roomId ? (
+        <Modal
+          animationType="slide"
+          onRequestClose={() => setShowChat(false)}
+          transparent
+          visible={showChat}
+        >
+          <View style={styles.chatOverlay}>
+            <View style={styles.chatCard}>
+              <View style={styles.chatHeader}>
+                <Text style={styles.chatTitle}>チャット</Text>
+                <Button
+                  onPress={() => setShowChat(false)}
+                  variant="ghost"
+                >
+                  閉じる
+                </Button>
+              </View>
+              <ChatPanel roomId={roomId} />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
 
       {history ? (
         <Modal
@@ -576,98 +719,131 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundElevated,
+  },
   scrollContent: {
-    gap: 14,
-    padding: 14,
+    gap: 10,
+    padding: 10,
     paddingBottom: 40,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
   },
   phase: {
     color: colors.gold,
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '800',
   },
-  turn: {
-    color: colors.text,
-    fontSize: 15,
-  },
-  topBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  historyButton: {
-    minHeight: 42,
-    paddingHorizontal: 12,
-  },
-  leaveButton: {
-    minHeight: 42,
-  },
-  declaration: {
-    color: colors.text,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: colors.panelStrong,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  strengthToggle: {
-    gap: 6,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: colors.panelStrong,
-  },
-  strengthToggleText: {
+  trumpBadge: {
     color: colors.gold,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: colors.panelStrong,
+    overflow: 'hidden',
+  },
+  optionsButton: {
+    width: 40,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+  },
+  optionsButtonText: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  optionsOverlay: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: 10,
+    backgroundColor: colors.overlay,
+  },
+  optionsMenu: {
+    position: 'relative',
+    zIndex: 1,
+    width: 200,
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
+  },
+  optionsClose: {
+    alignSelf: 'flex-end',
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  optionsCloseText: {
+    color: colors.textMuted,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  optionsItemDanger: {
+    borderColor: colors.danger,
+  },
+  strengthPanel: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: colors.panelStrong,
   },
   strengthOrder: {
     color: colors.text,
     fontSize: 12,
     lineHeight: 18,
   },
-  opponents: {
-    gap: 10,
+  opponentsArea: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 4,
+  },
+  seatLeft: {
+    marginTop: 24,
+  },
+  seatTop: {
+    marginTop: 0,
+  },
+  seatRight: {
+    marginTop: 24,
   },
   field: {
-    minHeight: 150,
-    gap: 10,
+    minHeight: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
   },
   sectionLabel: {
     color: colors.text,
     fontSize: 17,
     fontWeight: '800',
   },
-  fieldCards: {
-    minHeight: 90,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  fieldCardSlot: {
+  fieldCenter: {
+    width: 180,
+    height: 150,
     alignItems: 'center',
-    gap: 4,
-    maxWidth: 70,
+    justifyContent: 'center',
   },
-  fieldCardPlayer: {
-    color: colors.textMuted,
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  fieldCardPlayerSelf: {
-    color: colors.gold,
-    fontWeight: '700',
+  fieldCardAbsolute: {
+    position: 'absolute',
+    alignItems: 'center',
   },
   emptyField: {
     color: colors.textMuted,
@@ -689,91 +865,109 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 8,
   },
-  completedFields: {
-    gap: 8,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-  },
-  completedTeams: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  completedTeam: {
-    flex: 1,
-    gap: 4,
-  },
-  completedTeamLabel: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  completedCards: {
+  completedWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
+    paddingVertical: 4,
   },
-  miniCards: {
+  completedChip: {
     flexDirection: 'row',
-    gap: 2,
-    padding: 3,
-    borderRadius: 6,
+    padding: 2,
+    borderRadius: 4,
     backgroundColor: colors.backgroundElevated,
   },
-  miniCard: {
-    color: colors.text,
-    fontSize: 11,
+  completedCardOverlap: {
+    marginLeft: -12,
   },
   handSection: {
-    gap: 10,
-    padding: 14,
-    borderRadius: 18,
+    gap: 8,
+  },
+  selfRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selfCard: {
+    width: 80,
+    alignItems: 'center',
+    gap: 3,
+    padding: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel,
   },
-  handHeading: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  selfCardTurn: {
+    borderColor: colors.gold,
+    borderWidth: 2,
   },
-  pairs: {
-    color: colors.gold,
-    fontSize: 15,
-    fontWeight: '800',
+  selfAvatar: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: colors.gold,
+  },
+  selfComAvatar: {
+    backgroundColor: colors.backgroundElevated,
+  },
+  selfAvatarText: {
+    color: colors.text,
+    fontSize: 24,
+  },
+  selfName: {
+    maxWidth: 70,
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  selfTeamBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  selfTeamBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  selfFieldCountText: {
+    color: colors.textMuted,
+    fontSize: 9,
+    marginTop: 1,
+  },
+  selfSpecialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  selfSpecialLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  handArea: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
   },
   instruction: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 13,
   },
-  agariRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  agari: {
-    color: colors.success,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  negriRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  negri: {
-    color: colors.gold,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  hand: {
+  fanContainer: {
     minHeight: 104,
+    flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 6,
-    paddingHorizontal: 4,
-    paddingTop: 12,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  fanCard: {
+    zIndex: 1,
   },
   selectedActions: {
     flexDirection: 'row',
@@ -827,6 +1021,31 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     lineHeight: 26,
+  },
+  chatOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  chatCard: {
+    maxHeight: '80%',
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: colors.background,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  chatTitle: {
+    color: colors.gold,
+    fontSize: 20,
+    fontWeight: '800',
   },
   historyOverlay: {
     flex: 1,

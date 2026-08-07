@@ -1,6 +1,7 @@
-import type { PlayerContract } from '@meitra/contracts/game';
+import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { PlayingCard } from '@/components/game/PlayingCard';
 import { colors } from '@/theme/colors';
 
 interface PlayerSeatProps {
@@ -8,8 +9,13 @@ interface PlayerSeatProps {
   isTurn: boolean;
   isSelf?: boolean;
   declaration?: string;
+  isBlowWinner?: boolean;
   isDisconnected?: boolean;
   isIdle?: boolean;
+  negriCard?: string;
+  agariCard?: string;
+  teamNames?: TeamNames;
+  teamFieldCounts?: Record<number, number>;
 }
 
 export function PlayerSeat({
@@ -17,8 +23,13 @@ export function PlayerSeat({
   isTurn,
   isSelf = false,
   declaration,
+  isBlowWinner = false,
   isDisconnected = false,
   isIdle = false,
+  negriCard,
+  agariCard,
+  teamNames,
+  teamFieldCounts,
 }: PlayerSeatProps) {
   const statusLabel = isDisconnected
     ? '切断中'
@@ -27,6 +38,8 @@ export function PlayerSeat({
       : isTurn
         ? '現在の手番'
         : '手番待ち';
+
+  const faceDownCount = Math.min(player.hand.length, 5);
 
   return (
     <View
@@ -38,35 +51,68 @@ export function PlayerSeat({
         isIdle && styles.idle,
       ]}
     >
-      <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
-        <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
+      {isBlowWinner && declaration ? (
+        <Text style={styles.agariLabel}>アゲ: {declaration}</Text>
+      ) : null}
+      <View style={styles.avatarRow}>
+        <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
+          <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
+        </View>
+        {isTurn ? <Text style={styles.turnIcon}>⏱</Text> : null}
       </View>
       <Text numberOfLines={1} style={styles.name}>
         {player.name}
         {isSelf ? '（あなた）' : ''}
       </Text>
-      <Text style={styles.meta}>
-        {player.hand.length}枚・チーム{player.team + 1}
-      </Text>
+      <View style={[styles.teamBadge, { backgroundColor: player.team === 0 ? '#8b2020' : '#1a2a2a' }]}>
+        <Text style={styles.teamBadgeText}>
+          {teamNames?.[player.team] ?? `${player.team + 1}組`}
+        </Text>
+      </View>
+      {teamFieldCounts ? (
+        <Text style={styles.fieldCountText}>
+          取得 {teamFieldCounts[player.team] ?? 0}場
+        </Text>
+      ) : null}
       {isDisconnected ? (
         <Text style={styles.statusBadge}>切断中</Text>
       ) : isIdle ? (
         <Text style={styles.statusBadge}>無操作</Text>
       ) : null}
-      {declaration ? <Text style={styles.declaration}>{declaration}</Text> : null}
+      {negriCard ? (
+        <View style={styles.specialCardRow}>
+          <PlayingCard mini faceDown />
+          <Text style={styles.specialCardLabel}>ネグリ</Text>
+        </View>
+      ) : null}
+      {agariCard ? (
+        <View style={styles.specialCardRow}>
+          <PlayingCard card={agariCard} mini />
+          <Text style={styles.specialCardLabel}>アゲ</Text>
+        </View>
+      ) : null}
+      {faceDownCount > 0 ? (
+        <View style={styles.faceDownRow}>
+          {Array.from({ length: faceDownCount }).map((_, i) => (
+            <View key={i} style={i > 0 ? styles.faceDownOverlap : undefined}>
+              <PlayingCard mini faceDown />
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    minWidth: 104,
-    maxWidth: 148,
+    minWidth: 88,
+    maxWidth: 110,
     flexShrink: 1,
     alignItems: 'center',
-    gap: 3,
-    padding: 8,
-    borderRadius: 12,
+    gap: 2,
+    padding: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel,
@@ -75,12 +121,17 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
     borderWidth: 2,
   },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   avatar: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: colors.gold,
   },
   comAvatar: {
@@ -88,17 +139,26 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: colors.text,
-    fontSize: 21,
+    fontSize: 17,
+  },
+  turnIcon: {
+    fontSize: 14,
   },
   name: {
-    maxWidth: 132,
+    maxWidth: 96,
     color: colors.text,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
-  meta: {
-    color: colors.textMuted,
-    fontSize: 12,
+  teamBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  teamBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
   },
   disconnected: {
     opacity: 0.5,
@@ -112,9 +172,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  declaration: {
+  agariLabel: {
     color: colors.gold,
-    fontSize: 12,
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  specialCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  specialCardLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
     fontWeight: '700',
+  },
+  fieldCountText: {
+    color: colors.textMuted,
+    fontSize: 9,
+  },
+  faceDownRow: {
+    flexDirection: 'row',
+    marginTop: 2,
+  },
+  faceDownOverlap: {
+    marginLeft: -16,
   },
 });

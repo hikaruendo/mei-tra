@@ -1,38 +1,41 @@
 import type {
-  PlayerContract,
+  TeamNames,
   TransportTeamScores,
 } from '@meitra/contracts/game';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
 
+const TEAM_COLORS = ['#c0392b', '#2c3e50'] as const;
+
 interface ScoreBoardProps {
-  players: PlayerContract[];
   scores: TransportTeamScores;
   pointsToWin: number;
+  teamNames?: TeamNames;
 }
 
 export function ScoreBoard({
-  players,
   scores,
   pointsToWin,
+  teamNames,
 }: ScoreBoardProps) {
   return (
     <View style={styles.container}>
-      {[0, 1].map((team) => {
-        const names = players
-          .filter((player) => player.team === team)
-          .map((player) => player.name)
-          .join('・');
+      {([0, 1] as const).map((team) => {
+        const name = teamNames?.[team] || `チーム${team + 1}`;
         const score = scores[team]?.total ?? 0;
         const isReach = score >= pointsToWin - 1;
         const width = `${Math.min(100, (score / Math.max(pointsToWin, 1)) * 100)}%` as const;
+        const teamColor = TEAM_COLORS[team];
 
         return (
-          <View key={team} style={styles.team}>
+          <View
+            key={team}
+            style={[styles.team, { borderLeftColor: teamColor }]}
+          >
             <View style={styles.row}>
               <Text numberOfLines={1} style={styles.teamName}>
-                {names || `チーム${team + 1}`}
+                {name}
               </Text>
               <Text style={[styles.score, isReach && styles.reach]}>
                 {score}/{pointsToWin}
@@ -56,16 +59,15 @@ export function ScoreBoard({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    gap: 12,
+    flex: 1,
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.backgroundElevated,
   },
   team: {
-    flex: 1,
-    minWidth: 0,
-    gap: 5,
+    gap: 4,
+    paddingLeft: 10,
+    borderLeftWidth: 3,
   },
   row: {
     flexDirection: 'row',
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
     color: colors.gold,
   },
   track: {
-    height: 10,
+    height: 8,
     overflow: 'hidden',
     borderRadius: 8,
     backgroundColor: colors.panel,

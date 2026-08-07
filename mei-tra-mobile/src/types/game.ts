@@ -3,6 +3,7 @@ import type {
   CompletedFieldContract,
   FieldContract,
   PlayerContract,
+  TeamNames,
   TransportGamePhase,
   TransportTeamScores,
 } from '@meitra/contracts/game';
@@ -26,6 +27,7 @@ export interface MobileGameSnapshot {
   paused: boolean;
   disconnectedPlayerIds: string[];
   idlePlayerIds: string[];
+  teamNames?: TeamNames;
 }
 
 export interface MobileGameOver {

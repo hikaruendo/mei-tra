@@ -1,6 +1,9 @@
+import * as ImagePicker from 'expo-image-picker';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
+  Image,
   Linking,
   Modal,
   Pressable,
@@ -19,11 +22,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { config } from '@/lib/config';
+import { updateProfile, uploadAvatar } from '@/lib/profile-api';
 import { colors } from '@/theme/colors';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, loading, deleteAccount, signOut } = useAuth();
+  const { user, loading, deleteAccount, signOut, getAccessToken, refreshProfile } =
+    useAuth();
   const { connectionStatus, refreshRooms } = useGame();
   const { retryRegistration, status: notificationStatus } = useNotifications();
   const [signingOut, setSigningOut] = useState(false);
@@ -33,6 +38,11 @@ export default function SettingsScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [openingLink, setOpeningLink] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   if (!loading && !user) {
     return <Redirect href="/sign-in" />;
@@ -105,6 +115,76 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleStartEditName = () => {
+    setNameInput(displayName);
+    setProfileError(null);
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === displayName) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    setProfileError(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('認証が切れました');
+      await updateProfile(user.id, token, { displayName: trimmed });
+      await refreshProfile();
+      setEditingName(false);
+    } catch (err) {
+      setProfileError(
+        err instanceof Error ? err.message : '表示名の更新に失敗しました',
+      );
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    setProfileError(null);
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        '写真のアクセス許可',
+        'アバターを変更するには、写真ライブラリへのアクセスを許可してください。',
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setUploadingAvatar(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('認証が切れました');
+      await uploadAvatar(
+        user.id,
+        token,
+        asset.uri,
+        asset.mimeType ?? 'image/jpeg',
+      );
+      await refreshProfile();
+    } catch (err) {
+      setProfileError(
+        err instanceof Error ? err.message : 'アバターのアップロードに失敗しました',
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const externalLinks = [
     {
       label: 'プライバシーポリシー',
@@ -134,11 +214,79 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>プロフィール</Text>
-          <Text style={styles.name}>{displayName}</Text>
+
+          <View style={styles.avatarRow}>
+            <Pressable
+              accessibilityLabel="アバターを変更"
+              disabled={uploadingAvatar}
+              onPress={() => void handlePickAvatar()}
+              style={styles.avatarWrapper}
+            >
+              {user.profile?.avatarUrl ? (
+                <Image
+                  source={{ uri: user.profile.avatarUrl }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>
+                    {displayName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.avatarHint}>
+                {uploadingAvatar ? 'アップロード中...' : 'タップで変更'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {editingName ? (
+            <View style={styles.editNameRow}>
+              <TextInput
+                autoFocus
+                maxLength={30}
+                onChangeText={setNameInput}
+                onSubmitEditing={() => void handleSaveName()}
+                placeholder="表示名"
+                placeholderTextColor={colors.textMuted}
+                returnKeyType="done"
+                style={styles.nameInput}
+                value={nameInput}
+              />
+              <Button
+                disabled={savingName || !nameInput.trim()}
+                loading={savingName}
+                onPress={() => void handleSaveName()}
+                style={styles.saveButton}
+              >
+                保存
+              </Button>
+              <Button
+                disabled={savingName}
+                onPress={() => setEditingName(false)}
+                style={styles.cancelButton}
+                variant="ghost"
+              >
+                取消
+              </Button>
+            </View>
+          ) : (
+            <Pressable
+              accessibilityHint="タップして表示名を編集"
+              onPress={handleStartEditName}
+              style={styles.nameRow}
+            >
+              <Text style={styles.name}>{displayName}</Text>
+              <Text style={styles.editIcon}>編集</Text>
+            </Pressable>
+          )}
+
           <Text style={styles.email}>{user.email ?? 'メールアドレス未設定'}</Text>
-          <Text style={styles.hint}>
-            プロフィールの編集は現在Web版で対応しています。
-          </Text>
+          {profileError ? (
+            <Text accessibilityRole="alert" style={styles.profileError}>
+              {profileError}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.card}>
@@ -317,14 +465,86 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '800',
   },
+  avatarRow: {
+    alignItems: 'center',
+  },
+  avatarWrapper: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: colors.gold,
+  },
+  avatarPlaceholder: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.panelStrong,
+  },
+  avatarInitial: {
+    color: colors.gold,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  avatarHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   name: {
     color: colors.text,
     fontSize: 24,
     fontWeight: '800',
   },
+  editIcon: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  editNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nameInput: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    color: colors.text,
+    backgroundColor: colors.backgroundElevated,
+    fontSize: 17,
+  },
+  saveButton: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
+  cancelButton: {
+    minHeight: 44,
+    paddingHorizontal: 10,
+  },
   email: {
     color: colors.textMuted,
     fontSize: 15,
+  },
+  profileError: {
+    color: '#ffb0a8',
+    fontSize: 14,
+    lineHeight: 20,
   },
   hint: {
     color: colors.textMuted,

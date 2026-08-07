@@ -54,6 +54,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: AccountDeletionError | null }>;
   getAccessToken: () => Promise<string | null>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -291,6 +292,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [getAccessToken, user]);
 
+  const refreshProfile = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      await loadProfile(data.user);
+    }
+  }, [loadProfile]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -302,10 +310,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut,
       deleteAccount,
       getAccessToken,
+      refreshProfile,
     }),
     [
       getAccessToken,
       loading,
+      refreshProfile,
       session,
       signIn,
       signInWithGoogle,
