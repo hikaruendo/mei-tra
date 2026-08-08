@@ -86,13 +86,13 @@ export function PlayerSeat({
       ) : null}
       {negriCard ? (
         <View style={styles.specialCardRow}>
-          <PlayingCard mini faceDown />
+          <PlayingCard faceDown size="seat" />
           <Text style={styles.specialCardLabel}>ネグリ</Text>
         </View>
       ) : null}
       {agariCard ? (
         <View style={styles.specialCardRow}>
-          <PlayingCard card={agariCard} mini />
+          <PlayingCard card={agariCard} size="seat" />
           <Text style={styles.specialCardLabel}>アゲ</Text>
         </View>
       ) : null}
@@ -100,7 +100,7 @@ export function PlayerSeat({
         <View style={styles.faceDownRow}>
           {Array.from({ length: faceDownCount }).map((_, i) => (
             <View key={i} style={i > 0 ? styles.faceDownOverlap : undefined}>
-              <PlayingCard mini faceDown />
+              <PlayingCard faceDown size="seat" />
             </View>
           ))}
         </View>

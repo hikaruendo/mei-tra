@@ -402,7 +402,7 @@ export function GameBoard({
                         },
                       ]}
                     >
-                      <PlayingCard card={card} compact />
+                      <PlayingCard card={card} size="field" />
                     </View>
                   );
                 })
@@ -482,13 +482,13 @@ export function GameBoard({
                 </Text>
                 {game.gamePhase === 'play' && game.negriCard && highest?.playerId === self.playerId ? (
                   <View style={styles.selfSpecialRow}>
-                    <PlayingCard card={game.negriCard} mini />
+                    <PlayingCard card={game.negriCard} size="seat" />
                     <Text style={styles.selfSpecialLabel}>ネグリ</Text>
                   </View>
                 ) : null}
                 {game.gamePhase === 'play' && game.revealedAgari ? (
                   <View style={styles.selfSpecialRow}>
-                    <PlayingCard card={game.revealedAgari} mini />
+                    <PlayingCard card={game.revealedAgari} size="seat" />
                     <Text style={styles.selfSpecialLabel}>アゲ</Text>
                   </View>
                 ) : null}
@@ -516,8 +516,8 @@ export function GameBoard({
                 const half = Math.max((total - 1) / 2, 1);
                 const dist = index - (total - 1) / 2;
                 const norm = dist / half;
-                const rotation = norm * 12;
-                const lift = Math.pow(Math.abs(norm), 2) * 14;
+                const rotation = norm * 15;
+                const lift = Math.pow(Math.abs(norm), 2) * 18;
                 const isPlayPhase =
                   game.gamePhase === 'play' && !game.isSpectator;
                 const playable =
@@ -539,7 +539,7 @@ export function GameBoard({
                       {
                         transform: [
                           { rotate: `${rotation}deg` },
-                          { translateY: lift + (isSelected ? -12 : 0) },
+                          { translateY: lift + (isSelected ? -28 : 0) },
                         ],
                       },
                     ]}
@@ -607,7 +607,7 @@ export function GameBoard({
                           key={ci}
                           style={ci > 0 ? styles.completedCardOverlap : undefined}
                         >
-                          <PlayingCard card={card} mini />
+                          <PlayingCard card={card} size="seat" />
                         </View>
                       ))}
                     </View>
@@ -1079,6 +1079,10 @@ const styles = StyleSheet.create({
   },
   fanCard: {
     zIndex: 1,
+    // Web rotates hand cards about their bottom edge
+    // (PlayerHand/index.module.scss: transform-origin: bottom center).
+    // Without this the fan pivots about each card's centre and splays wrongly.
+    transformOrigin: 'bottom center',
   },
   selectedActions: {
     flexDirection: 'row',
