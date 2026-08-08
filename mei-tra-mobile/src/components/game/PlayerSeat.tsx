@@ -1,5 +1,5 @@
 import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { colors } from '@/theme/colors';
@@ -16,6 +16,7 @@ interface PlayerSeatProps {
   agariCard?: string;
   teamNames?: TeamNames;
   teamFieldCounts?: Record<number, number>;
+  onPress?: () => void;
 }
 
 export function PlayerSeat({
@@ -30,6 +31,7 @@ export function PlayerSeat({
   agariCard,
   teamNames,
   teamFieldCounts,
+  onPress,
 }: PlayerSeatProps) {
   const statusLabel = isDisconnected
     ? '切断中'
@@ -41,7 +43,7 @@ export function PlayerSeat({
 
   const faceDownCount = Math.min(player.hand.length, 5);
 
-  return (
+  const content = (
     <View
       accessibilityLabel={`${player.name}${isSelf ? '、あなた' : ''}、${statusLabel}、手札${player.hand.length}枚`}
       style={[
@@ -104,6 +106,19 @@ export function PlayerSeat({
       ) : null}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        accessibilityHint="タップで視点を切り替え"
+        accessibilityRole="button"
+        onPress={onPress}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+  return content;
 }
 
 const styles = StyleSheet.create({

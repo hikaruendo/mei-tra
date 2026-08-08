@@ -94,11 +94,33 @@ export function GameBoard({
   const [showHistory, setShowHistory] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [spectatorPerspectiveId, setSpectatorPerspectiveId] = useState<
+    string | null
+  >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const self = game.players.find((player) => player.playerId === game.you);
+
+  const hostPlayerId =
+    game.players.find((p) => p.isHost)?.playerId ??
+    game.players[0]?.playerId ??
+    null;
+  const perspectivePlayerId = game.isSpectator
+    ? spectatorPerspectiveId ?? hostPlayerId
+    : game.you;
+
+  useEffect(() => {
+    if (!game.isSpectator) return;
+    const valid = game.players.some(
+      (p) => p.playerId === spectatorPerspectiveId,
+    );
+    if (!valid) setSpectatorPerspectiveId(hostPlayerId);
+  }, [game.isSpectator, game.players, hostPlayerId, spectatorPerspectiveId]);
+
+  const self = game.players.find(
+    (player) => player.playerId === perspectivePlayerId,
+  );
   const orderedPlayers = useMemo(
-    () => getSeatOrderWithSelfBottom(game.players, game.you),
-    [game.players, game.you],
+    () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
+    [game.players, perspectivePlayerId],
   );
   const leftPlayer = orderedPlayers[1] ?? null;
   const topPlayer = orderedPlayers[2] ?? null;
@@ -121,10 +143,11 @@ export function GameBoard({
   }, [game.fields]);
   const highest = game.blowState.currentHighestDeclaration;
   const mustSelectNegri =
+    !game.isSpectator &&
     game.gamePhase === 'play' &&
     highest?.playerId === game.you &&
     !game.negriCard;
-  const isMyTurn = game.currentTurn === game.you;
+  const isMyTurn = !game.isSpectator && game.currentTurn === game.you;
   const phaseLabel =
     game.gamePhase === 'blow'
       ? '吹き'
@@ -133,6 +156,7 @@ export function GameBoard({
         : '待機';
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
+    !game.isSpectator &&
     game.currentField?.baseCard === 'JOKER' &&
     !game.currentField.baseSuit &&
     isMyTurn;
@@ -275,6 +299,11 @@ export function GameBoard({
                 isIdle={game.idlePlayerIds.includes(player.playerId)}
                 isTurn={game.currentTurn === player.playerId}
                 negriCard={hasNegri ? 'hidden' : undefined}
+                onPress={
+                  game.isSpectator
+                    ? () => setSpectatorPerspectiveId(player.playerId)
+                    : undefined
+                }
                 player={player}
                 teamFieldCounts={teamFieldCounts}
                 teamNames={game.teamNames}
@@ -311,9 +340,30 @@ export function GameBoard({
                 {seatEl}
               </Pressable>
             ) : seatEl;
+            const isDisconnected = game.disconnectedPlayerIds.includes(
+              player.playerId,
+            );
+            const isIdle = game.idlePlayerIds.includes(player.playerId);
+            const showReplacePanel =
+              isHost && !player.isCOM && (isDisconnected || isIdle);
             return (
               <View key={player.playerId} style={posStyle}>
                 {wrapped}
+                {showReplacePanel ? (
+                  <View style={styles.replacePanel}>
+                    <Text style={styles.replacePanelHeader}>
+                      {isDisconnected ? '切断中' : '無操作'}
+                    </Text>
+                    <Pressable
+                      onPress={() => onReplaceWithCOM(player.playerId)}
+                      style={styles.replacePanelButton}
+                    >
+                      <Text style={styles.replacePanelButtonText}>
+                        COMに置換
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             );
           })}
@@ -391,7 +441,7 @@ export function GameBoard({
         {game.gamePhase === 'blow' ? (
           <BlowControls
             actionHistory={game.blowState.actionHistory}
-            actionsDisabled={actionsDisabled}
+            actionsDisabled={actionsDisabled || game.isSpectator}
             currentPlayerId={game.you}
             currentTurn={game.currentTurn}
             highest={highest}
@@ -407,7 +457,9 @@ export function GameBoard({
               <View
                 style={[
                   styles.selfCard,
-                  isMyTurn && styles.selfCardTurn,
+                  (game.isSpectator
+                    ? game.currentTurn === self.playerId
+                    : isMyTurn) && styles.selfCardTurn,
                 ]}
               >
                 <View style={[styles.selfAvatar, self.isCOM && styles.selfComAvatar]}>
@@ -426,7 +478,7 @@ export function GameBoard({
                 <Text style={styles.selfFieldCountText}>
                   取得 {teamFieldCounts[self.team] ?? 0}場
                 </Text>
-                {game.gamePhase === 'play' && game.negriCard && highest?.playerId === game.you ? (
+                {game.gamePhase === 'play' && game.negriCard && highest?.playerId === self.playerId ? (
                   <View style={styles.selfSpecialRow}>
                     <PlayingCard card={game.negriCard} mini />
                     <Text style={styles.selfSpecialLabel}>ネグリ</Text>
@@ -441,7 +493,11 @@ export function GameBoard({
               </View>
               <View style={styles.handArea}>
                 {game.gamePhase === 'play' ? (
-                  mustSelectNegri ? (
+                  game.isSpectator ? (
+                    <Text style={styles.instruction}>
+                      {self.name} の手札（観戦中）
+                    </Text>
+                  ) : mustSelectNegri ? (
                     <Text style={styles.instruction}>
                       ネグリにするカードを選んでください
                     </Text>
@@ -460,7 +516,8 @@ export function GameBoard({
                 const norm = dist / half;
                 const rotation = norm * 12;
                 const lift = Math.pow(Math.abs(norm), 2) * 14;
-                const isPlayPhase = game.gamePhase === 'play';
+                const isPlayPhase =
+                  game.gamePhase === 'play' && !game.isSpectator;
                 const playable =
                   isPlayPhase &&
                   isMyTurn &&
@@ -564,6 +621,27 @@ export function GameBoard({
         <View style={styles.pausedOverlay}>
           <Text style={styles.pausedTitle}>ゲームを一時停止しています</Text>
           <Text style={styles.pausedText}>プレイヤーの再接続を待っています</Text>
+          {isHost ? (
+            <View style={styles.pausedReplaceSection}>
+              {game.players
+                .filter(
+                  (p) =>
+                    !p.isCOM &&
+                    game.disconnectedPlayerIds.includes(p.playerId),
+                )
+                .map((p) => (
+                  <Pressable
+                    key={p.playerId}
+                    onPress={() => onReplaceWithCOM(p.playerId)}
+                    style={styles.pausedReplaceButton}
+                  >
+                    <Text style={styles.pausedReplaceButtonText}>
+                      {p.name} をCOMに置換
+                    </Text>
+                  </Pressable>
+                ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -824,6 +902,34 @@ const styles = StyleSheet.create({
   seatRight: {
     marginTop: 24,
   },
+  replacePanel: {
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: colors.panelStrong,
+  },
+  replacePanelHeader: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  replacePanelButton: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: colors.danger,
+  },
+  replacePanelButtonText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
   field: {
     minHeight: 160,
     alignItems: 'center',
@@ -994,6 +1100,24 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 16,
     textAlign: 'center',
+  },
+  pausedReplaceSection: {
+    gap: 10,
+    marginTop: 16,
+    width: '80%',
+    maxWidth: 300,
+  },
+  pausedReplaceButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: colors.danger,
+  },
+  pausedReplaceButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
   },
   modalOverlay: {
     flex: 1,

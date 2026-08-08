@@ -28,7 +28,6 @@ export default function RoomScreen() {
     notice,
     refreshRooms,
     gameOver,
-    toggleReady,
     fillWithCOM,
     shuffleTeams,
     startGame,
@@ -127,13 +126,11 @@ export default function RoomScreen() {
           actionsDisabled={actionsDisabled}
           currentPlayerId={currentPlayerId}
           isHost={isHost}
-          onFillWithCOM={fillWithCOM}
           onLeave={doLeave}
           onRemovePlayer={removePlayer}
           onReplaceWithCOM={replaceWithCOM}
           onShuffle={shuffleTeams}
           onStart={startGame}
-          onToggleReady={toggleReady}
           onUpdateTeamNames={updateTeamNames}
           room={currentRoom}
         />

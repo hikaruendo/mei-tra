@@ -22,8 +22,6 @@ interface WaitingRoomProps {
   room: RoomContract;
   currentPlayerId: string | null;
   isHost: boolean;
-  onToggleReady: () => void;
-  onFillWithCOM: () => void;
   onShuffle: () => void;
   onStart: () => void;
   onLeave: () => void;
@@ -37,8 +35,6 @@ export function WaitingRoom({
   room,
   currentPlayerId,
   isHost,
-  onToggleReady,
-  onFillWithCOM,
   onShuffle,
   onStart,
   onLeave,
@@ -47,16 +43,9 @@ export function WaitingRoom({
   onUpdateTeamNames,
   actionsDisabled = false,
 }: WaitingRoomProps) {
-  const currentPlayer = room.players.find(
-    (player) => player.playerId === currentPlayerId,
-  );
-  const humans = room.players.filter((player) => !player.isCOM);
   const canStart =
     isHost &&
-    room.players.length === room.settings.maxPlayers &&
-    humans.every(
-      (player) => player.isHost || player.isReady || player.playerId === currentPlayerId,
-    );
+    room.players.length === room.settings.maxPlayers;
   const { width } = useWindowDimensions();
   const [showChat, setShowChat] = useState(false);
   const [showTeamNameEditor, setShowTeamNameEditor] = useState(false);
@@ -130,7 +119,7 @@ export function WaitingRoom({
               const seatView = (
                 <View
                   accessibilityLabel={`${player?.name ?? '空席'}、${
-                    player?.isReady ? '準備OK' : player ? '準備中' : '参加待ち'
+                    player ? (player.isHost ? 'ホスト' : player.isCOM ? 'COM' : '参加中') : '参加待ち'
                   }`}
                   accessibilityRole="text"
                   style={styles.seat}
@@ -147,11 +136,9 @@ export function WaitingRoom({
                         ? 'ホスト'
                         : player?.isCOM
                           ? 'COM'
-                          : player?.isReady
-                            ? '準備OK'
-                            : player
-                              ? '準備中'
-                              : '参加待ち'}
+                          : player
+                            ? '参加中'
+                            : '参加待ち'}
                     </Text>
                   </View>
                 </View>
@@ -278,26 +265,8 @@ export function WaitingRoom({
         )
       ) : null}
 
-      {!isHost && currentPlayer ? (
-        <Button
-          disabled={actionsDisabled || Boolean(pendingAction)}
-          loading={pendingAction === 'ready'}
-          onPress={() => runAction('ready', onToggleReady)}
-        >
-          {currentPlayer.isReady ? '準備を取り消す' : '準備OK'}
-        </Button>
-      ) : null}
-
       {isHost ? (
         <View style={styles.hostActions}>
-          <Button
-            disabled={actionsDisabled || Boolean(pendingAction)}
-            loading={pendingAction === 'com'}
-            onPress={() => runAction('com', onFillWithCOM)}
-            variant="secondary"
-          >
-            空席をCOMで埋める
-          </Button>
           <Button
             disabled={actionsDisabled || Boolean(pendingAction)}
             loading={pendingAction === 'shuffle'}
@@ -315,7 +284,7 @@ export function WaitingRoom({
           </Button>
           {!canStart ? (
             <Text style={styles.hint}>
-              4席を埋め、参加者が準備すると開始できます
+              4席を埋めると開始できます
             </Text>
           ) : null}
         </View>

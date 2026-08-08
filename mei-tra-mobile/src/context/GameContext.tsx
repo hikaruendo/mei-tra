@@ -78,7 +78,6 @@ type Action =
 
 type CurrentPlayerAckEvent = Extract<
   AckableClientEvent,
-  | 'toggle-player-ready'
   | 'fill-with-com'
   | 'shuffle-teams'
   | 'start-game'
@@ -253,7 +252,6 @@ interface GameContextValue extends MobileState {
   joinRoom: (roomId: string) => Promise<boolean>;
   watchRoom: (roomId: string) => Promise<boolean>;
   leaveRoom: () => Promise<boolean>;
-  toggleReady: () => void;
   fillWithCOM: () => void;
   shuffleTeams: () => void;
   startGame: () => void;
@@ -1094,10 +1092,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     [canSendServerAction, emitAck],
   );
 
-  const toggleReady = useCallback(() => {
-    void withCurrentPlayer('toggle-player-ready');
-  }, [withCurrentPlayer]);
-
   const fillWithCOM = useCallback(() => {
     void withCurrentPlayer('fill-with-com');
   }, [withCurrentPlayer]);
@@ -1274,7 +1268,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       joinRoom,
       watchRoom,
       leaveRoom,
-      toggleReady,
       fillWithCOM,
       shuffleTeams,
       startGame,
@@ -1315,7 +1308,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       shuffleTeams,
       startGame,
       state,
-      toggleReady,
       updateTeamNames,
       watchRoom,
     ],
