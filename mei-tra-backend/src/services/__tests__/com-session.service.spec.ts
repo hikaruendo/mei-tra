@@ -23,6 +23,7 @@ const createGameStateStub = () => {
       },
     ],
     teamAssignments: { [HUMAN_ID]: 0 } as Record<string, number>,
+    currentPlayerId: HUMAN_ID as string | null,
     playState: {
       currentField: {
         cards: ['A♠'],
@@ -102,6 +103,12 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(state.playState!.currentField!.dealerId).toBe(comId);
     expect(state.teamAssignments[HUMAN_ID]).toBeUndefined();
     expect(state.teamAssignments[comId]).toBe(0);
+
+    // In production the roster SQL re-anchors current_player_id to the seat's new
+    // occupant, so this field is not known to go stale on its own. Pinned anyway:
+    // resolveCurrentPlayerIndex() silently falls back to currentPlayerIndex when the
+    // id is unresolvable, so a regression here would be invisible at runtime.
+    expect(state.currentPlayerId).toBe(comId);
 
     expect(saveState).toHaveBeenCalled();
   });
