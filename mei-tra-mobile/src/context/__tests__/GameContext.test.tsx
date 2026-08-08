@@ -398,4 +398,48 @@ describe('GameProvider realtime resync safety', () => {
 
     await screen.unmount();
   });
+
+  it('applies the remapped field after a player is replaced with COM', async () => {
+    const screen = await renderProvider();
+    const comPlayer = player({
+      playerId: 'com-player-2',
+      userId: undefined,
+      name: 'COM 2',
+      team: 1,
+      hand: [],
+      isCOM: true,
+    });
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      mockSocket.trigger('room-sync', {
+        room: createRoom(),
+        players: createGameState().players,
+      });
+      mockSocket.trigger('game-state', createGameState());
+      mockSocket.trigger('update-players', [player(), comPlayer]);
+      mockSocket.trigger('field-updated', {
+        cards: ['J♠'],
+        playedBy: ['com-player-2'],
+        baseCard: 'J♠',
+        dealerId: 'com-player-2',
+        isComplete: false,
+      });
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.game?.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          playerId: 'com-player-2',
+          isCOM: true,
+        }),
+      ]),
+    );
+    expect(screen.latestGame.game?.currentField?.playedBy).toEqual([
+      'com-player-2',
+    ]);
+
+    await screen.unmount();
+  });
 });

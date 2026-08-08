@@ -18,6 +18,16 @@ describe('RoomUpdateGatewayEffectsService', () => {
               isPasser: false,
             },
           ],
+          gamePhase: 'play',
+          playState: {
+            currentField: {
+              cards: ['J♠'],
+              playedBy: ['com-player-1'],
+              baseCard: 'J♠',
+              dealerId: 'com-player-1',
+              isComplete: false,
+            },
+          },
         })),
         getTransportPlayers: jest.fn(
           (players?: DomainPlayer[]): TransportPlayer[] =>
@@ -97,5 +107,71 @@ describe('RoomUpdateGatewayEffectsService', () => {
         isHost: true,
       }),
     ]);
+    expect(roomView.currentField).toEqual({
+      cards: ['J♠'],
+      playedBy: ['com-player-1'],
+      baseCard: 'J♠',
+      dealerId: 'com-player-1',
+      isComplete: false,
+    });
+  });
+
+  it('emits the remapped field after the updated player roster', async () => {
+    const currentField = {
+      cards: ['J♠'],
+      playedBy: ['com-player-1'],
+      baseCard: 'J♠',
+      dealerId: 'com-player-1',
+      isComplete: false,
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue({
+        getState: jest.fn(() => ({
+          players: [],
+          gamePhase: 'play',
+          playState: { currentField },
+        })),
+        getTransportPlayers: jest.fn(() => []),
+      }),
+    } as Partial<IRoomService> as IRoomService;
+    const service = new RoomUpdateGatewayEffectsService(roomService);
+    const room = {
+      id: 'room-1',
+      name: 'Room',
+      hostId: 'host',
+      status: RoomStatus.PLAYING,
+      players: [],
+      settings: {
+        maxPlayers: 4,
+        isPrivate: false,
+        password: null,
+        teamAssignmentMethod: 'random' as const,
+        pointsToWin: 10,
+        allowSpectators: false,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastActivityAt: new Date(),
+    };
+
+    const events = await service.buildRoomEvents({
+      room: room as never,
+      scope: 'room',
+      roomId: room.id,
+    });
+    const playersEventIndex = events.findIndex(
+      (event) => event.event === 'update-players',
+    );
+    const fieldEventIndex = events.findIndex(
+      (event) => event.event === 'field-updated',
+    );
+
+    expect(fieldEventIndex).toBeGreaterThan(playersEventIndex);
+    expect(events[fieldEventIndex]).toEqual({
+      scope: 'room',
+      roomId: 'room-1',
+      event: 'field-updated',
+      payload: currentField,
+    });
   });
 });

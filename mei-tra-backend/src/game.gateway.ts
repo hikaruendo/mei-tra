@@ -428,9 +428,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     response: CompleteFieldResponse,
   ) {
     if (!response.success) {
-      this.server
-        .to(roomId)
-        .emit('error-message', response.error ?? 'Failed to complete field');
+      this.logger.warn(
+        `Field completion failed for room ${roomId}: ${response.error}`,
+      );
       return;
     }
 
