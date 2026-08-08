@@ -247,6 +247,14 @@ export class ComSessionService {
 
     await gameState.persistRoster(room.players, room.hostId);
     if (gsIndex !== -1) {
+      // persistRoster swaps in a fresh state from its DB round-trip, and that
+      // round-trip carries the stored playState back verbatim — discarding the
+      // remap above. Re-apply it to the refreshed state before persisting.
+      this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
+        gameState.getState(),
+        playerId,
+        comPlayer.playerId,
+      );
       await gameState.saveState();
     }
     return true;
