@@ -361,6 +361,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playerName: targetPlayer?.name ?? playerId,
       message,
     });
+    const updatedField =
+      roomGameState.getState().playState?.currentField ?? null;
+    if (updatedField) {
+      this.server.to(roomId).emit('field-updated', updatedField);
+    }
     this.queueSpectatorSnapshot(roomId);
     if (updatedRoom) {
       this.dispatchEvents(
