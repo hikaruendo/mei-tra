@@ -25,12 +25,22 @@ export interface ComAutoPlayRecoveryHandlers {
   ): Promise<void>;
 }
 
+// 'continuation' / 'initial' timers pace COM against delayed client broadcasts
+// and must not be cancelled. 'retry' timers only back off after a failure, so
+// a reconnect may cancel them to recover sooner.
+type PendingTriggerKind = 'retry' | 'continuation' | 'initial';
+
+interface PendingTrigger {
+  timeout: NodeJS.Timeout;
+  kind: PendingTriggerKind;
+}
+
 @Injectable()
 export class ComAutoPlayRecoveryService {
   private readonly logger = new Logger(ComAutoPlayRecoveryService.name);
   private readonly activeRooms = new Set<string>();
   private readonly pendingReruns = new Set<string>();
-  private readonly retryTimeouts = new Map<string, NodeJS.Timeout>();
+  private readonly retryTimeouts = new Map<string, PendingTrigger>();
   private readonly fieldCompletionTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly retryAttempts = new Map<string, number>();
   private readonly roomGenerations = new Map<string, number>();
@@ -47,6 +57,15 @@ export class ComAutoPlayRecoveryService {
   trigger(roomId: string, handlers: ComAutoPlayRecoveryHandlers): void {
     if (this.activeRooms.has(roomId)) {
       this.pendingReruns.add(roomId);
+      return;
+    }
+
+    // A paced timer already scheduled here (e.g. the post-round-reset delay that
+    // keeps COM from acting before the delayed round-reset broadcasts reach
+    // clients) must run to completion; cancelling it lets a reconnect-driven
+    // trigger move COM early and desync the table. It drives progress on its own.
+    const pending = this.retryTimeouts.get(roomId);
+    if (pending && pending.kind !== 'retry') {
       return;
     }
 
@@ -293,7 +312,7 @@ export class ComAutoPlayRecoveryService {
       delayMs * 2 ** (attempt - 1),
       MAX_COM_AUTO_PLAY_RETRY_DELAY_MS,
     );
-    this.scheduleTrigger(roomId, handlers, retryDelay);
+    this.scheduleTrigger(roomId, handlers, retryDelay, 'retry');
   }
 
   private scheduleContinuation(
@@ -302,7 +321,7 @@ export class ComAutoPlayRecoveryService {
     delayMs: number,
   ): void {
     this.retryAttempts.delete(roomId);
-    this.scheduleTrigger(roomId, handlers, delayMs);
+    this.scheduleTrigger(roomId, handlers, delayMs, 'continuation');
   }
 
   private scheduleInitialAutoPlay(
@@ -330,13 +349,14 @@ export class ComAutoPlayRecoveryService {
         ),
       );
     }, COM_AUTO_PLAY_INITIAL_DELAY_MS);
-    this.retryTimeouts.set(roomId, timeout);
+    this.retryTimeouts.set(roomId, { timeout, kind: 'initial' });
   }
 
   private scheduleTrigger(
     roomId: string,
     handlers: ComAutoPlayRecoveryHandlers,
     delayMs: number,
+    kind: PendingTriggerKind,
   ): void {
     if (this.retryTimeouts.has(roomId)) {
       return;
@@ -350,13 +370,13 @@ export class ComAutoPlayRecoveryService {
       }
       this.trigger(roomId, handlers);
     }, delayMs);
-    this.retryTimeouts.set(roomId, timeout);
+    this.retryTimeouts.set(roomId, { timeout, kind });
   }
 
   private clearRetry(roomId: string): void {
-    const timeout = this.retryTimeouts.get(roomId);
-    if (timeout) {
-      clearTimeout(timeout);
+    const pending = this.retryTimeouts.get(roomId);
+    if (pending) {
+      clearTimeout(pending.timeout);
       this.retryTimeouts.delete(roomId);
     }
   }
