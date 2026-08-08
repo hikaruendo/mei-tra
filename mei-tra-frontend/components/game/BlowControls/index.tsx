@@ -113,12 +113,15 @@ export function BlowControls({
     );
   };
 
+  const formatSetOption = (pair: number) =>
+    pair === DEFAULT_MAX_PAIRS ? t('slami') : `${pair}${t('pairs')}`;
+
   // 有効なペア数選択肢を生成
   const getValidPairOptions = () => {
     if (!currentHighestDeclaration) {
       return DEFAULT_PAIR_OPTIONS.map(pair => ({
         value: pair,
-        label: `${pair} ${t('pairs')}`
+        label: formatSetOption(pair),
       }));
     }
 
@@ -131,7 +134,7 @@ export function BlowControls({
 
       return [{
         value: nextPair,
-        label: `${nextPair} ${t('pairs')}`
+        label: formatSetOption(nextPair),
       }];
     }
 
@@ -158,7 +161,9 @@ export function BlowControls({
       if (nextValidPair <= DEFAULT_MAX_PAIRS) {
         return [{
           value: nextValidPair,
-          label: `${nextValidPair} ${t('overCall')}`
+          label: nextValidPair === DEFAULT_MAX_PAIRS
+            ? t('slami')
+            : `${nextValidPair}${t('overCall')}`,
         }];
       }
 
@@ -167,7 +172,7 @@ export function BlowControls({
 
     return validPairs.map(pair => ({
       value: pair,
-      label: `${pair} ${t('pairs')}`
+      label: formatSetOption(pair),
     }));
   };
 
@@ -213,7 +218,10 @@ export function BlowControls({
     <div className={styles.blowControlsContainer}>
       <div className={styles.content}>
         <div className={styles.title}>
-          <div className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}>
+          <div
+            className={`${styles.currentTurn} ${isCurrentPlayer ? styles.active : styles.inactive}`}
+            title={currentPlayerName ?? undefined}
+          >
             {t('currentTurn')} {currentPlayerName}
           </div>
         </div>
@@ -224,15 +232,16 @@ export function BlowControls({
             <select
               value={selectedTrump || ''}
               onChange={(e) => setSelectedTrump(e.target.value as TrumpType)}
-              className={styles.select}
+              className={`${styles.select} ${styles.trumpSelect}`}
+              data-trump={selectedTrump || undefined}
               disabled={isDisabled}
             >
               <option value="">{t('selectTrump')}</option>
-              <option value="tra">{t('tra')}</option>
-              <option value="herz">{t('herz')}</option>
-              <option value="daiya">{t('daiya')}</option>
-              <option value="club">{t('club')}</option>
-              <option value="zuppe">{t('zuppe')}</option>
+              <option className={styles.trumpOption} data-trump="tra" value="tra">{t('tra')}</option>
+              <option className={styles.trumpOption} data-trump="herz" value="herz">{t('herz')}</option>
+              <option className={styles.trumpOption} data-trump="daiya" value="daiya">{t('daiya')}</option>
+              <option className={styles.trumpOption} data-trump="club" value="club">{t('club')}</option>
+              <option className={styles.trumpOption} data-trump="zuppe" value="zuppe">{t('zuppe')}</option>
             </select>
 
             {/* ペア数選択 */}
@@ -279,15 +288,22 @@ export function BlowControls({
           <div className={styles.declarationList}>
             {chronologicalDeclarations.map((entry, index) => {
               const player = playerMap.get(entry.playerId);
-              if (!player) return null;
+              const playerName = player?.name ?? entry.playerId;
 
               if (entry.type === 'pass') {
                 return (
-                  <div 
+                  <div
                     key={`pass-${entry.playerId}-${index}`}
                     className={`${styles.declarationItem} ${styles.pass}`}
+                    title={`${playerName}: ${t('passed')}`}
                   >
-                    {player.name}: {t('passed')}
+                    <span className={styles.declarationPlayerName}>
+                      {playerName}
+                    </span>
+                    <span className={styles.declarationSeparator}>:</span>
+                    <span className={styles.declarationText}>
+                      {t('passed')}
+                    </span>
                   </div>
                 );
               }
@@ -303,8 +319,20 @@ export function BlowControls({
                 <div
                   key={`${entry.playerId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
+                  title={`${playerName}: ${entry.trumpType ? t(entry.trumpType) : ''} ${formatSetOption(declaration.numberOfPairs)}`}
                 >
-                  {player.name}: {entry.trumpType?.toUpperCase()} {entry.numberOfPairs} pairs
+                  <span className={styles.declarationPlayerName}>
+                    {playerName}
+                  </span>
+                  <span className={styles.declarationSeparator}>:</span>
+                  <span className={styles.declarationText}>
+                    {entry.trumpType ? (
+                      <span className={styles.trumpLabel} data-trump={entry.trumpType}>
+                        {t(entry.trumpType)}
+                      </span>
+                    ) : null}{' '}
+                    {formatSetOption(declaration.numberOfPairs)}
+                  </span>
                 </div>
               );
             })}

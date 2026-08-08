@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions } from '@/types/game.types';
+import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions, TeamNames } from '@/types/game.types';
 import { GameField } from '@/components/game/GameField';
 import { GameInfo } from '@/components/game/GameInfo';
 import { GameDock } from '@/components/game/GameDock';
@@ -19,7 +19,6 @@ interface GameTableProps {
   currentField: Field | null;
   players: Player[];
   negriCard: string | null;
-  negriPlayerId: string | null;
   completedFields: CompletedField[];
   revealedAgari: string | null;
   gameActions: GameActions;
@@ -36,6 +35,7 @@ interface GameTableProps {
   idlePlayerIds?: string[];
   disconnectedPlayerIds?: string[];
   pointsToWin: number;
+  teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
   isHost?: boolean;
@@ -53,7 +53,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentField,
   players,
   negriCard,
-  negriPlayerId,
   completedFields,
   revealedAgari,
   gameActions,
@@ -68,6 +67,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentPlayerId,
   currentRoomId,
   pointsToWin,
+  teamNames,
   idlePlayerIds = [],
   disconnectedPlayerIds = [],
   isWaiting = false,
@@ -133,7 +133,7 @@ export const GameTable: React.FC<GameTableProps> = ({
         <GameInfo
           teamScores={teamScores}
           pointsToWin={pointsToWin}
-          players={players}
+          teamNames={teamNames}
           actionSlot={
             currentRoomId ? (onLeaveRequest) => (
               <GameDock
@@ -141,6 +141,8 @@ export const GameTable: React.FC<GameTableProps> = ({
                 gameStarted={!isWaiting}
                 currentTrump={currentTrump}
                 gamePhase={gamePhase}
+                players={players}
+                teamNames={teamNames}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -200,6 +202,9 @@ export const GameTable: React.FC<GameTableProps> = ({
           const teamCompletedFields = position === 'bottom'
             ? completedFields.filter(field => field.winnerTeam === currentPlayerTeam)
             : [];
+          const takenCount = completedFields.filter(
+            (field) => field.winnerTeam === player_.team,
+          ).length;
 
           return (
             <PlayerHand
@@ -207,7 +212,6 @@ export const GameTable: React.FC<GameTableProps> = ({
               player={player_}
               isCurrentTurn={whoseTurn === player_.playerId}
               negriCard={negriCard}
-              negriPlayerId={negriPlayerId}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
               gameActions={gameActions}
@@ -216,9 +220,10 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentHighestDeclaration={currentHighestDeclaration || undefined}
               completedFields={teamCompletedFields}
               currentPlayerId={tablePerspectivePlayerId || ''}
-              players={players}
               currentField={currentField}
               currentTrump={currentTrump}
+              takenCount={takenCount}
+              teamNames={teamNames}
               isHost={isHost}
               isIdle={idlePlayerIds.includes(player_.playerId)}
               isDisconnected={disconnectedPlayerIds.includes(player_.playerId)}

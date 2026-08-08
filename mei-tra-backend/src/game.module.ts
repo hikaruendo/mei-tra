@@ -47,14 +47,19 @@ import { SpectatorGatewayEffectsService } from './services/spectator-gateway-eff
 import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
+import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { GameEventLogService } from './services/game-event-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
 import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
+import { RoomMembershipService } from './services/room-membership.service';
+import { DatabaseModule } from './database/database.module';
+import { RoomMembershipReconcilerService } from './services/room-membership-reconciler.service';
+import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 
 @Module({
-  imports: [RepositoriesModule, AuthModule, SocialModule],
+  imports: [DatabaseModule, RepositoriesModule, AuthModule, SocialModule],
   controllers: [GameHistoryController],
   providers: [
     GameGateway,
@@ -66,6 +71,9 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
     ComSessionService,
     SeatRestorationService,
     RoomJoinService,
+    RoomMembershipService,
+    RoomMembershipReconcilerService,
+    ConnectionGatewayEffectsService,
     JoinRoomGatewayEffectsService,
     DisconnectGatewayEffectsService,
     RoomUpdateGatewayEffectsService,
@@ -214,6 +222,7 @@ import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.ser
     ReconnectionUseCase,
     ModeratePlayerUseCase,
     ShuffleTeamsUseCase,
+    UpdateTeamNamesUseCase,
   ],
   exports: ['IActivityTrackerService', 'IGetUserRecentGameHistoryUseCase'],
 })

@@ -23,7 +23,7 @@ describe('GameEventLogService', () => {
             name: 'Player One',
           },
         ],
-        currentPlayerIndex: 0,
+        currentPlayerId: 'player-1',
         gamePhase: 'play',
         roundNumber: 2,
         teamScores: { 0: { play: 2, total: 4 }, 1: { play: 1, total: 3 } },
@@ -41,7 +41,6 @@ describe('GameEventLogService', () => {
           context: expect.objectContaining({
             roundNumber: 2,
             gamePhase: 'play',
-            currentPlayerIndex: 0,
             currentTurnPlayerId: 'player-1',
           }),
           playerNames: {
@@ -341,7 +340,6 @@ describe('GameEventLogService', () => {
               context: {
                 roundNumber: 1,
                 gamePhase: 'waiting',
-                currentPlayerIndex: 0,
                 currentTurnPlayerId: null,
                 teamScores: undefined,
               },
@@ -389,7 +387,6 @@ describe('GameEventLogService', () => {
               context: {
                 roundNumber: 1,
                 gamePhase: 'waiting',
-                currentPlayerIndex: 0,
                 currentTurnPlayerId: null,
                 teamScores: undefined,
               },

@@ -1,0 +1,31 @@
+<!--
+AI/agent instructions:
+Fill in every section below when opening a PR. Write concrete, user-facing
+language instead of implementation-only descriptions. Keep the combined
+User-facing change and User benefit text factual and under 240 characters;
+do not include URLs, media links, private identifiers, or claims that are not
+demonstrated by this PR.
+-->
+
+## Summary
+
+<!-- Briefly describe the overall change and validation. -->
+
+## User-facing change
+
+<!--
+What changed in the product? Mention the screen, action, or behavior a player
+will notice. For backend-only work, describe the observable reliability or
+failure-mode improvement.
+-->
+
+## User benefit
+
+<!--
+Why does this matter to a player or reviewer? Explain what is now easier,
+clearer, faster, or safer. Use concrete outcomes rather than "improved UX".
+-->
+
+## Validation
+
+<!-- List tests, lint, build, and relevant manual checks. -->

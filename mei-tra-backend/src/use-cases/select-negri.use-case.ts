@@ -83,6 +83,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       }
 
       state.currentPlayerIndex = winnerIndex;
+      state.currentPlayerId = winner.playerId;
       const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [

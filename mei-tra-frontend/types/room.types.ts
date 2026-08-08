@@ -4,7 +4,7 @@ import type {
   RoomStatusContract,
   RoomSyncPayload,
 } from '@contracts/room';
-import { Player, fromPlayerContracts } from './game.types';
+import { Player, TeamNames, fromPlayerContracts } from './game.types';
 
 export interface Room {
   id: string;
@@ -31,6 +31,7 @@ export interface RoomSettings {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
+  teamNames?: TeamNames;
 }
 
 export enum RoomStatus {

@@ -13,6 +13,7 @@ import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
+const COM_AUTO_PLAY_INITIAL_DELAY_MS = 2_000;
 const COM_AUTO_PLAY_CONTINUE_DELAY_MS = 2_000;
 const MAX_COM_AUTO_PLAY_RETRY_DELAY_MS = 60_000;
 
@@ -63,19 +64,18 @@ export class ComAutoPlayRecoveryService {
         !recoveredInterruptedProgress &&
         this.isCurrentGeneration(roomId, generation)
       ) {
-        await this.runAutoPlayStep(roomId, handlers, generation);
+        this.scheduleInitialAutoPlay(roomId, handlers);
       }
     })()
-      .catch((error) => {
-        if (!this.isCurrentGeneration(roomId, generation)) {
-          return;
-        }
-        this.logger.error(
+      .catch((error) =>
+        this.handleRecoveryError(
+          roomId,
+          generation,
+          handlers,
           `COM auto-play recovery failed for room ${roomId}`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        this.scheduleRetry(roomId, handlers);
-      })
+          error,
+        ),
+      )
       .finally(() => {
         this.activeRooms.delete(roomId);
         if (this.pendingReruns.delete(roomId)) {
@@ -108,16 +108,15 @@ export class ComAutoPlayRecoveryService {
             generation,
           ),
         )
-        .catch((error) => {
-          if (!this.isCurrentGeneration(trigger.roomId, generation)) {
-            return;
-          }
-          this.logger.error(
+        .catch((error) =>
+          this.handleRecoveryError(
+            trigger.roomId,
+            generation,
+            handlers,
             `Error completing field in room ${trigger.roomId}`,
-            error instanceof Error ? error.stack : String(error),
-          );
-          this.scheduleRetry(trigger.roomId, handlers);
-        });
+            error,
+          ),
+        );
     }, trigger.delayMs);
 
     this.fieldCompletionTimeouts.set(trigger.roomId, timeout);
@@ -198,6 +197,9 @@ export class ComAutoPlayRecoveryService {
     }
 
     if (!result.success) {
+      if (await this.stopRecoveryIfRoomMissing(roomId, generation)) {
+        return;
+      }
       this.logger.error(`COM auto-play failed: ${result.error}`);
       this.scheduleRetry(roomId, handlers);
       return;
@@ -242,6 +244,9 @@ export class ComAutoPlayRecoveryService {
     }
 
     if (!response.success) {
+      if (await this.stopRecoveryIfRoomMissing(roomId, generation)) {
+        return;
+      }
       this.scheduleRetry(roomId, handlers);
       return;
     }
@@ -300,6 +305,34 @@ export class ComAutoPlayRecoveryService {
     this.scheduleTrigger(roomId, handlers, delayMs);
   }
 
+  private scheduleInitialAutoPlay(
+    roomId: string,
+    handlers: ComAutoPlayRecoveryHandlers,
+  ): void {
+    if (this.retryTimeouts.has(roomId)) {
+      return;
+    }
+
+    const generation = this.getRoomGeneration(roomId);
+    const timeout = setTimeout(() => {
+      this.retryTimeouts.delete(roomId);
+      if (!this.isCurrentGeneration(roomId, generation)) {
+        return;
+      }
+
+      void this.runAutoPlayStep(roomId, handlers, generation).catch((error) =>
+        this.handleRecoveryError(
+          roomId,
+          generation,
+          handlers,
+          `COM auto-play initial step failed for room ${roomId}`,
+          error,
+        ),
+      );
+    }, COM_AUTO_PLAY_INITIAL_DELAY_MS);
+    this.retryTimeouts.set(roomId, timeout);
+  }
+
   private scheduleTrigger(
     roomId: string,
     handlers: ComAutoPlayRecoveryHandlers,
@@ -325,6 +358,47 @@ export class ComAutoPlayRecoveryService {
     if (timeout) {
       clearTimeout(timeout);
       this.retryTimeouts.delete(roomId);
+    }
+  }
+
+  private async handleRecoveryError(
+    roomId: string,
+    generation: number,
+    handlers: ComAutoPlayRecoveryHandlers,
+    message: string,
+    error: unknown,
+  ): Promise<void> {
+    if (!this.isCurrentGeneration(roomId, generation)) {
+      return;
+    }
+    if (await this.stopRecoveryIfRoomMissing(roomId, generation)) {
+      return;
+    }
+
+    this.logger.error(
+      message,
+      error instanceof Error ? error.stack : String(error),
+    );
+    this.scheduleRetry(roomId, handlers);
+  }
+
+  private async stopRecoveryIfRoomMissing(
+    roomId: string,
+    generation: number,
+  ): Promise<boolean> {
+    try {
+      const room = await this.roomService.getRoom(roomId);
+      if (!this.isCurrentGeneration(roomId, generation)) {
+        return true;
+      }
+      if (room) {
+        return false;
+      }
+
+      this.clearRoom(roomId);
+      return true;
+    } catch {
+      return false;
     }
   }
 

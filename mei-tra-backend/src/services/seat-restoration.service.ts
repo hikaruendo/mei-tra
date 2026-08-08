@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DomainPlayer } from '../types/game.types';
+import { BlowState, DomainPlayer, GameState } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
@@ -107,17 +107,19 @@ export class SeatRestorationService {
       state.players.push(restoredGamePlayerBase);
     }
 
-    this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
-      state,
+    const seatReferencePlayerIds = new Set([
       comPlayerId,
+      seatData.roomPlayer.playerId,
+      seatData.gamePlayer?.playerId,
+    ]);
+    const remappedSeatReferences = this.remapSeatReferences(
+      state,
+      seatReferencePlayerIds,
       playerId,
     );
 
     gameState.registerPlayerToken(playerId, playerId);
     gameState.clearDisconnectTimeout(playerId);
-    if (state.teamAssignments[comPlayerId] != null) {
-      delete state.teamAssignments[comPlayerId];
-    }
     state.teamAssignments[playerId] = restoredRoomPlayer.team;
 
     delete vacantSeatsForRoom[seatIndex];
@@ -126,6 +128,101 @@ export class SeatRestorationService {
     }
 
     await gameState.persistRoster(room.players, room.hostId);
+    const persistedState = gameState.getState();
+    if (remappedSeatReferences) {
+      this.remapSeatReferences(
+        persistedState,
+        seatReferencePlayerIds,
+        playerId,
+      );
+      persistedState.teamAssignments[playerId] = restoredRoomPlayer.team;
+    }
+    const advancedBlowTurn =
+      this.advanceBlowTurnPastActedPlayer(persistedState);
+    if (remappedSeatReferences || advancedBlowTurn) {
+      await gameState.saveState();
+    }
     return true;
+  }
+
+  private remapSeatReferences(
+    state: GameState,
+    seatReferencePlayerIds: Set<string | undefined>,
+    playerId: string,
+  ): boolean {
+    let remapped = false;
+
+    seatReferencePlayerIds.forEach((fromPlayerId) => {
+      if (!fromPlayerId || fromPlayerId === playerId) {
+        return;
+      }
+
+      this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
+        state,
+        fromPlayerId,
+        playerId,
+      );
+      if (state.teamAssignments[fromPlayerId] != null) {
+        delete state.teamAssignments[fromPlayerId];
+      }
+      remapped = true;
+    });
+
+    return remapped;
+  }
+
+  private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
+    if (state.gamePhase !== 'blow' || state.players.length === 0) {
+      return false;
+    }
+
+    const currentIndex = this.resolveCurrentPlayerIndex(state);
+    const currentPlayer = state.players[currentIndex];
+    if (
+      !currentPlayer ||
+      !this.hasActedInBlow(state.blowState, currentPlayer)
+    ) {
+      return false;
+    }
+
+    for (let offset = 1; offset < state.players.length; offset += 1) {
+      const candidateIndex = (currentIndex + offset) % state.players.length;
+      const candidatePlayer = state.players[candidateIndex];
+      if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
+        state.currentPlayerIndex = candidateIndex;
+        state.currentPlayerId = candidatePlayer.playerId;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private resolveCurrentPlayerIndex(state: GameState): number {
+    if (state.currentPlayerId) {
+      const index = state.players.findIndex(
+        (player) => player.playerId === state.currentPlayerId,
+      );
+      if (index !== -1) {
+        return index;
+      }
+    }
+
+    return Math.min(
+      Math.max(state.currentPlayerIndex ?? 0, 0),
+      state.players.length - 1,
+    );
+  }
+
+  private hasActedInBlow(blowState: BlowState, player: DomainPlayer): boolean {
+    return (
+      player.isPasser ||
+      blowState.declarations.some(
+        (declaration) => declaration.playerId === player.playerId,
+      ) ||
+      (blowState.actionHistory ?? []).some(
+        (action) => action.playerId === player.playerId,
+      )
+    );
   }
 }

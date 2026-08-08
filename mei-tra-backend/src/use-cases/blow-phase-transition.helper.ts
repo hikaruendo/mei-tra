@@ -56,6 +56,7 @@ export async function transitionToPlayPhase({
     (p) => p.playerId === winningPlayer.playerId,
   );
   if (winnerIndex !== -1) {
+    nextState.currentPlayerId = winningPlayer.playerId;
     nextState.currentPlayerIndex = winnerIndex;
   }
 

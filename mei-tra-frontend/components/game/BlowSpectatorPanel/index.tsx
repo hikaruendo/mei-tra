@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
 import { BlowAction, BlowDeclaration, Player } from '@/types/game.types';
-import { getTrumpDisplay } from '@/lib/utils/trumpDisplay';
 import styles from './index.module.scss';
 
 interface BlowSpectatorPanelProps {
@@ -57,19 +56,24 @@ export function BlowSpectatorPanel({
       <dl className={styles.summary}>
         <div className={styles.summaryRow}>
           <dt>{t('currentTurn')}</dt>
-          <dd>{currentPlayerName}</dd>
+          <dd title={currentPlayerName}>{currentPlayerName}</dd>
         </div>
         <div className={styles.summaryRow}>
           <dt>{t('highestBid')}</dt>
           <dd>
             {currentHighestDeclaration ? (
               <span className={styles.declarationValue}>
-                <span>{getPlayerName(currentHighestDeclaration.playerId)}</span>
+                <span
+                  className={styles.playerName}
+                  title={getPlayerName(currentHighestDeclaration.playerId)}
+                >
+                  {getPlayerName(currentHighestDeclaration.playerId)}
+                </span>
                 <span
                   className={styles.trump}
                   data-trump={currentHighestDeclaration.trumpType}
                 >
-                  {getTrumpDisplay(currentHighestDeclaration.trumpType)}
+                  {t(currentHighestDeclaration.trumpType)}
                 </span>
                 <span>{currentHighestDeclaration.numberOfPairs}</span>
               </span>
@@ -89,14 +93,19 @@ export function BlowSpectatorPanel({
                   action.type === 'pass' ? styles.pass : ''
                 } ${isHighestDeclaration(action) ? styles.highest : ''}`}
               >
-                <span className={styles.playerName}>{getPlayerName(action.playerId)}</span>
+                <span
+                  className={styles.playerName}
+                  title={getPlayerName(action.playerId)}
+                >
+                  {getPlayerName(action.playerId)}
+                </span>
                 {action.type === 'pass' ? (
                   <span>{t('pass')}</span>
                 ) : (
                   <span className={styles.declarationValue}>
                     <span>{t('bid')}</span>
                     <span className={styles.trump} data-trump={action.trumpType}>
-                      {getTrumpDisplay(action.trumpType ?? null)}
+                      {action.trumpType ? t(action.trumpType) : ''}
                     </span>
                     <span>{action.numberOfPairs}</span>
                   </span>

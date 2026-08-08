@@ -13,6 +13,7 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { DomainPlayer, Team } from '../types/game.types';
+import { RoomMembershipService } from '../services/room-membership.service';
 
 export type ReconnectionResult =
   | {
@@ -64,6 +65,7 @@ export class ReconnectionUseCase {
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('IGameStateService')
     private readonly gameState: IGameStateService,
+    private readonly roomMembershipService: RoomMembershipService,
   ) {}
 
   async execute(request: {
@@ -74,7 +76,6 @@ export class ReconnectionUseCase {
     const { roomId, socketId, authenticatedUser } = request;
 
     try {
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return {
@@ -85,6 +86,7 @@ export class ReconnectionUseCase {
             'Your previous room session is no longer available. Please join or create a room again.',
         };
       }
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
 
       const state = roomGameState.getState();
       const isActiveGame =
@@ -134,6 +136,16 @@ export class ReconnectionUseCase {
           };
         }
 
+        if (
+          !(await this.claimMembership(
+            authenticatedUser.id,
+            roomId,
+            existingWaitingPlayer.playerId,
+          ))
+        ) {
+          return this.buildMembershipConflict(roomId);
+        }
+
         const reconnectResult = await this.roomService.handlePlayerReconnection(
           roomId,
           existingWaitingPlayer.playerId,
@@ -157,7 +169,11 @@ export class ReconnectionUseCase {
           };
         }
 
-        this.syncGlobalConnectionUser(socketId, authenticatedUser);
+        this.syncGlobalConnectionUser(
+          socketId,
+          authenticatedUser,
+          existingWaitingPlayer.playerId,
+        );
 
         return {
           success: true,
@@ -191,6 +207,16 @@ export class ReconnectionUseCase {
         };
       }
 
+      if (
+        !(await this.claimMembership(
+          authenticatedUser.id,
+          roomId,
+          existingPlayer.playerId,
+        ))
+      ) {
+        return this.buildMembershipConflict(roomId);
+      }
+
       const reconnectResult = await this.roomService.handlePlayerReconnection(
         roomId,
         existingPlayer.playerId,
@@ -214,7 +240,11 @@ export class ReconnectionUseCase {
         };
       }
 
-      this.syncGlobalConnectionUser(socketId, authenticatedUser);
+      this.syncGlobalConnectionUser(
+        socketId,
+        authenticatedUser,
+        existingPlayer.playerId,
+      );
 
       return {
         success: true,
@@ -250,11 +280,11 @@ export class ReconnectionUseCase {
     const { roomId, authenticatedUser } = request;
 
     try {
-      const roomGameState = await this.roomService.getRoomGameState(roomId);
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return null;
       }
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
 
       const state = roomGameState.getState();
       const isActiveGame =
@@ -315,9 +345,13 @@ export class ReconnectionUseCase {
   ): ActiveGameSnapshot {
     const state = roomGameState.getState();
     const currentTurnPlayerId =
-      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
-        ? state.players[state.currentPlayerIndex].playerId
-        : null;
+      state.currentPlayerId &&
+      state.players.some((player) => player.playerId === state.currentPlayerId)
+        ? state.currentPlayerId
+        : state.currentPlayerIndex !== -1 &&
+            state.players[state.currentPlayerIndex]
+          ? state.players[state.currentPlayerIndex].playerId
+          : null;
 
     return {
       selfPlayerId: player.playerId,
@@ -342,6 +376,7 @@ export class ReconnectionUseCase {
         roomId,
         hostId: room.hostId,
         pointsToWin: state.pointsToWin,
+        teamNames: room.settings.teamNames,
       },
     };
   }
@@ -349,6 +384,7 @@ export class ReconnectionUseCase {
   private syncGlobalConnectionUser(
     socketId: string,
     authenticatedUser: AuthenticatedUser,
+    playerId: string,
   ): void {
     const displayName =
       authenticatedUser.profile?.displayName ||
@@ -357,11 +393,34 @@ export class ReconnectionUseCase {
 
     this.gameState.upsertSessionUser({
       socketId,
-      playerId: authenticatedUser.id,
+      playerId,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
     });
+  }
+
+  private async claimMembership(
+    userId: string,
+    roomId: string,
+    playerId: string,
+  ): Promise<boolean> {
+    const transition = await this.roomMembershipService.claim(
+      userId,
+      roomId,
+      playerId,
+    );
+    return transition.result !== 'conflict';
+  }
+
+  private buildMembershipConflict(roomId: string): ReconnectionResult {
+    return {
+      success: false,
+      code: 'sessionInvalid',
+      roomId,
+      reason:
+        'Your account is active in another room. Leave that room before reconnecting here.',
+    };
   }
 
   private resolveWaitingRoomPlayer(
@@ -372,6 +431,16 @@ export class ReconnectionUseCase {
     roomPlayers: RoomPlayer[],
     authenticatedUserId: string,
   ): RoomPlayer | null {
+    const authenticatedMatches = roomPlayers.filter(
+      (player) => !player.isCOM && player.userId === authenticatedUserId,
+    );
+    if (authenticatedMatches.length === 1) {
+      return authenticatedMatches[0];
+    }
+    if (authenticatedMatches.length > 1) {
+      return null;
+    }
+
     const sessionUser =
       roomGameState.findSessionUserByUserId(authenticatedUserId) ??
       roomGameState.findSessionUserByPlayerId(authenticatedUserId);
@@ -386,12 +455,7 @@ export class ReconnectionUseCase {
       }
     }
 
-    const authenticatedMatches = roomPlayers.filter(
-      (player) =>
-        player.isAuthenticated && player.userId === authenticatedUserId,
-    );
-
-    return authenticatedMatches.length === 1 ? authenticatedMatches[0] : null;
+    return null;
   }
 
   private resolveAuthenticatedRoomPlayer(
@@ -399,8 +463,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const matches = roomPlayers.filter(
-      (player) =>
-        player.isAuthenticated && player.userId === authenticatedUserId,
+      (player) => !player.isCOM && player.userId === authenticatedUserId,
     );
 
     return matches.length === 1 ? matches[0] : null;

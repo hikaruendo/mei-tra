@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration } from '@/types/game.types';
-import { NegriCard } from '@/components/game/NegriCard';
-import { Card } from '@/components/game/Card';
+import { useLocale, useTranslations } from 'next-intl';
+import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration, TeamNames } from '@/types/game.types';
 import { CardFace } from '@/components/game/CardFace';
-import { CompletedFields } from '@/components/game/CompletedFields';
+import { CompletedFields, TakenCardPreview } from '@/components/game/CompletedFields';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
-import { getTrumpDisplay } from '@/lib/utils/trumpDisplay';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 
 const HAND_CARD_METRICS = {
   width: 80,
@@ -20,11 +18,15 @@ const HAND_CARD_METRICS = {
   minHeight: 160,
 };
 
+type DropPlacement = {
+  card: string;
+  side: 'before' | 'after';
+};
+
 interface PlayerHandProps {
   player: Player;
   isCurrentTurn: boolean;
   negriCard: string | null;
-  negriPlayerId: string | null;
   gamePhase: GamePhase | null;
   whoseTurn: string | null;
   gameActions: GameActions;
@@ -33,7 +35,6 @@ interface PlayerHandProps {
   currentHighestDeclaration?: Pick<BlowDeclaration, 'playerId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
   completedFields: CompletedField[];
   currentPlayerId: string;
-  players: Player[];
   currentField: Field | null;
   currentTrump: TrumpType | null;
   isHost?: boolean;
@@ -43,13 +44,14 @@ interface PlayerHandProps {
   isSpectatorPerspective?: boolean;
   onSpectatorPerspectiveChange?: (playerId: string) => void;
   onReplaceWithCOM?: (playerId: string) => void;
+  takenCount?: number;
+  teamNames?: TeamNames;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
   player,
   isCurrentTurn,
   negriCard,
-  negriPlayerId,
   gamePhase,
   whoseTurn,
   gameActions,
@@ -58,7 +60,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentHighestDeclaration,
   completedFields,
   currentPlayerId,
-  players,
   currentField,
   currentTrump,
   isHost = false,
@@ -68,12 +69,19 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isSpectatorPerspective = false,
   onSpectatorPerspectiveChange,
   onReplaceWithCOM,
+  takenCount = 0,
+  teamNames,
 }) => {
   const t = useTranslations('playerHand');
+  const tGameInfo = useTranslations('gameInfo');
   const tStatus = useTranslations('playerStatus');
   const tBlow = useTranslations('blowControls');
+  const locale = useLocale();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
+  const [displayHand, setDisplayHand] = useState(player.hand);
+  const [draggingCard, setDraggingCard] = useState<string | null>(null);
+  const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null);
   const autoRevealAttemptedRef = useRef(false);
   const handCardMetrics = HAND_CARD_METRICS;
 
@@ -93,16 +101,20 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : null;
   const shouldSelectNegri =
     gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
-  const hasOwnNegriCard = Boolean(
-    isCurrentPlayer && negriCard && negriPlayerId === player.playerId,
-  );
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
-  const showDeclarationNegri = position === 'bottom' && hasOwnNegriCard;
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
   const replaceWithComStatusLabel = isDisconnected
     ? tStatus('disconnected')
     : tStatus('idle');
+  const takenCountLabel = t.has('takenCount')
+    ? t('takenCount', { count: takenCount })
+    : locale === 'ja'
+      ? `${takenCount}組`
+      : `${takenCount} sets`;
+  const teamLabel = getTeamDisplayName(player.team, teamNames, (team) =>
+    tGameInfo(team === 0 ? 'teamRed' : 'teamBlack'),
+  );
 
   useEffect(() => {
     if (
@@ -128,6 +140,82 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     player.playerId,
   ]);
 
+  useEffect(() => {
+    setDisplayHand((previousHand) => {
+      const currentCards = new Set(player.hand);
+      const retainedCards = previousHand.filter((card) => currentCards.has(card));
+      const addedCards = player.hand.filter((card) => !retainedCards.includes(card));
+
+      return [...retainedCards, ...addedCards];
+    });
+  }, [player.hand]);
+
+  const reorderDisplayHand = (
+    sourceCard: string,
+    targetCard: string,
+    side: DropPlacement['side'],
+  ) => {
+    if (sourceCard === targetCard) {
+      return;
+    }
+
+    setDisplayHand((previousHand) => {
+      const sourceIndex = previousHand.indexOf(sourceCard);
+      const targetIndex = previousHand.indexOf(targetCard);
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return previousHand;
+      }
+
+      const nextHand = [...previousHand];
+      nextHand.splice(sourceIndex, 1);
+      const nextTargetIndex = nextHand.indexOf(targetCard);
+      nextHand.splice(nextTargetIndex + (side === 'after' ? 1 : 0), 0, sourceCard);
+      return nextHand;
+    });
+  };
+
+  const getDropSide = (event: React.PointerEvent<HTMLDivElement> | React.DragEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return event.clientX < bounds.left + bounds.width / 2 ? 'before' : 'after';
+  };
+
+  const updateDropPlacement = (
+    card: string,
+    event: React.PointerEvent<HTMLDivElement> | React.DragEvent<HTMLDivElement>,
+  ) => {
+    if (!draggingCard || draggingCard === card) {
+      return;
+    }
+
+    setDropPlacement({ card, side: getDropSide(event) });
+  };
+
+  const updatePointerDropPlacement = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingCard) {
+      return;
+    }
+
+    const elementAtPointer =
+      typeof document.elementFromPoint === 'function'
+        ? document.elementFromPoint(event.clientX, event.clientY)
+        : event.target instanceof Element
+          ? event.target
+          : null;
+    const targetElement = elementAtPointer?.closest<HTMLElement>('[data-hand-card]');
+    const targetCard = targetElement?.dataset.handCard;
+
+    if (!targetElement || !targetCard || targetCard === draggingCard) {
+      setDropPlacement(null);
+      return;
+    }
+
+    const bounds = targetElement.getBoundingClientRect();
+    setDropPlacement({
+      card: targetCard,
+      side: event.clientX < bounds.left + bounds.width / 2 ? 'before' : 'after',
+    });
+  };
+
   const handleCardClick = (card: string) => {
     if (!canActAsCurrentPlayer) {
       return;
@@ -147,19 +235,34 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return (
         <div
           className={styles.handContainer}
+          onPointerMove={(event) => {
+            if (canActAsCurrentPlayer) {
+              updatePointerDropPlacement(event);
+            }
+          }}
+          onPointerUp={() => {
+            if (draggingCard && dropPlacement) {
+              reorderDisplayHand(draggingCard, dropPlacement.card, dropPlacement.side);
+            }
+            setDraggingCard(null);
+            setDropPlacement(null);
+          }}
+          onPointerCancel={() => {
+            setDraggingCard(null);
+            setDropPlacement(null);
+          }}
           style={{
-            '--player-hand-card-width': `${handCardMetrics.width}px`,
-            '--player-hand-card-overlap': handCardMetrics.overlap,
-            '--player-hand-card-hover-lift': `${handCardMetrics.hoverLift}px`,
-            '--player-hand-card-hover-overlap': handCardMetrics.hoverOverlap,
+            '--player-hand-card-base-width': `${handCardMetrics.width}px`,
+            '--player-hand-card-base-overlap': handCardMetrics.overlap,
+            '--player-hand-card-base-hover-lift': `${handCardMetrics.hoverLift}px`,
+            '--player-hand-card-base-hover-overlap': handCardMetrics.hoverOverlap,
             '--player-hand-card-container-min-height': `${handCardMetrics.minHeight}px`,
           } as React.CSSProperties}
         >
-          {player.hand.map((card, index) => {
-            const isNegri = card === negriCard;
+          {displayHand.map((card, index) => {
             const isSelected = card === selectedCard || card === selectedNegriCard;
-            const distanceFromCenter = index - (player.hand.length - 1) / 2;
-            const maxDistance = Math.max((player.hand.length - 1) / 2, 1);
+            const distanceFromCenter = index - (displayHand.length - 1) / 2;
+            const maxDistance = Math.max((displayHand.length - 1) / 2, 1);
             const normalizedDistance = distanceFromCenter / maxDistance;
             const cardRotation = normalizedDistance * 15;
             const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * handCardMetrics.spreadLift;
@@ -170,7 +273,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isNegri ? styles.negriCard : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''}`}
+                className={`${styles.card} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
+                draggable={canActAsCurrentPlayer}
                 onClick={() => {
                   if (
                     canActAsCurrentPlayer &&
@@ -181,15 +285,52 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     handleCardClick(card);
                   }
                 }}
+                onPointerDown={() => {
+                  if (canActAsCurrentPlayer) {
+                    setDraggingCard(card);
+                    setDropPlacement(null);
+                  }
+                }}
+                data-hand-card={card}
+                onDragStart={(event) => {
+                  if (!canActAsCurrentPlayer) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  event.dataTransfer.setData('text/plain', card);
+                  event.dataTransfer.effectAllowed = 'move';
+                  setDraggingCard(card);
+                  setDropPlacement(null);
+                }}
+                onDragOver={(event) => {
+                  if (canActAsCurrentPlayer) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                    updateDropPlacement(card, event);
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const sourceCard = event.dataTransfer.getData('text/plain') || draggingCard;
+                  if (sourceCard && canActAsCurrentPlayer) {
+                    reorderDisplayHand(sourceCard, card, getDropSide(event));
+                  }
+                  setDraggingCard(null);
+                  setDropPlacement(null);
+                }}
+                onDragEnd={() => {
+                  setDraggingCard(null);
+                  setDropPlacement(null);
+                }}
                 style={{
                   '--card-index': index,
-                  '--card-total': player.hand.length,
+                  '--card-total': displayHand.length,
                   '--card-rotation': `${cardRotation}deg`,
                   '--card-translate-y': `${cardLift}px`,
                 } as React.CSSProperties}
               >
                 <CardFace card={card} />
-                {isNegri && <div className={styles.negriLabel}>{t('negri')}</div>}
               </div>
             );
           })}
@@ -235,6 +376,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     );
   };
 
+  const turnBadge = isCurrentTurn ? (
+    <span
+      className={`${styles.turnBadge} ${styles.avatarTurnBadge}`}
+      role="img"
+      aria-label={t('currentTurn')}
+      title={t('currentTurn')}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10.25" />
+        <path className={styles.clockHand} d="M12 12V5.75" />
+        <circle className={styles.clockCenter} cx="12" cy="12" r="1.1" />
+        <path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
+      </svg>
+    </span>
+  ) : null;
+
   const playerInfoContent = (
     <>
       <div className={styles.playerAvatar}>
@@ -243,8 +400,30 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           size={isCurrentPlayer ? 'medium' : 'small'}
           showName={true}
         />
+        {turnBadge}
       </div>
-      {gamePhase && <div className={styles.cardCount}>{player.hand.length}{t('cards')}</div>}
+      {gamePhase && (
+        <div className={styles.playerInfoBadges}>
+          <span className={styles.takenCount}>
+            {takenCountLabel}
+          </span>
+          <span
+            className={`${styles.teamBadge} ${
+              player.team === 0 ? styles.teamRedBadge : styles.teamBlackBadge
+            }`}
+          >
+            {teamLabel}
+          </span>
+        </div>
+      )}
+      {gamePhase && isDisconnected && !player.isCOM && (
+        <span
+          className={styles.disconnectedBadge}
+          title={tStatus('disconnectedNotice', { playerName: player.name })}
+        >
+          {tStatus('reconnecting')}
+        </span>
+      )}
       {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
         <button
           className={styles.brokenButton}
@@ -264,39 +443,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           className={styles.declarationSuit}
           data-trump={playerDeclaration.trumpType}
         >
-          {getTrumpDisplay(playerDeclaration.trumpType)}
+          {tBlow(playerDeclaration.trumpType).replace(/（[^）]*）|\([^)]*\)/g, '').trim()}
         </span>
         <span className={styles.declarationPairs}>{playerDeclaration.numberOfPairs}</span>
       </span>
     </div>
   ) : null;
   const hasBottomStatus = position === 'bottom' && Boolean(
-    declarationBadge || showDeclarationNegri || showDeclarationAgari || showHandStatusPanels,
+    declarationBadge || showDeclarationAgari || showHandStatusPanels,
   );
   const bottomStatusZone = hasBottomStatus ? (
     <div className={styles.bottomStatusZone}>
-      {(declarationBadge || showDeclarationNegri || showDeclarationAgari) && (
+      {(declarationBadge || showDeclarationAgari) && (
         <div className={styles.declarationContext}>
           {showDeclarationAgari && (
-            <div className={`${styles.statusPanel} ${styles.agariStatusPanel} ${styles.declarationAgariPanel}`}>
-              <div className={styles.statusHeader}>{t('agari')}</div>
-              <div className={styles.statusCardFrame}>
-                <Card card={agariCard!} />
-              </div>
+            <div className={`${styles.agariTakenCard} ${styles.declarationAgariCard}`}>
+              <span className={styles.agariTakenLabel}>{t('agari')}</span>
+              <TakenCardPreview card={agariCard!} />
             </div>
           )}
-          {(declarationBadge || showDeclarationNegri) && (
-            <div className={styles.declarationRow}>
-              {declarationBadge}
-              {showDeclarationNegri && (
-                <NegriCard
-                  negriCard={negriCard!}
-                  negriPlayerId={negriPlayerId!}
-                  currentPlayerId={currentPlayerId}
-                />
-              )}
-            </div>
-          )}
+          {declarationBadge && <div className={styles.declarationRow}>{declarationBadge}</div>}
         </div>
       )}
       {showHandStatusPanels && (
@@ -309,7 +475,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       )}
     </div>
   ) : null;
-
   return (
     <div className={`${styles.playerPosition} ${styles[position]}`}>
       <div className={`${styles.playerInfo} ${hasBottomStatus ? styles.hasBottomStatus : ''}`}>
@@ -329,13 +494,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
               {playerInfoContent}
             </div>
-          )}
-          {hasOwnNegriCard && !showHandStatusPanels && !showDeclarationNegri && (
-            <NegriCard
-              negriCard={negriCard!}
-              negriPlayerId={negriPlayerId!}
-              currentPlayerId={currentPlayerId}
-            />
           )}
           {shouldSelectNegri && !showHandStatusPanels && (
             <div className={styles.statusPanel}>
@@ -360,20 +518,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               </div>
             )}
           {showAgariPanel && position !== 'bottom' && (
-            <div className={`${styles.statusPanel} ${styles.agariStatusPanel}`}>
-              <div className={styles.statusHeader}>{t('agari')}</div>
-              <div className={styles.statusCardFrame}>
-                <Card card={agariCard!} />
-              </div>
+            <div className={styles.agariTakenCard}>
+              <span className={styles.agariTakenLabel}>{t('agari')}</span>
+              <TakenCardPreview card={agariCard!} />
             </div>
           )}
         </div>
         {renderPlayerHand(isCurrentPlayer)}
-        {(completedFields.length > 0 || (position === 'bottom' && gamePhase === 'play')) && (
+        {completedFields.length > 0 && (
           <div className={styles.completedFields}>
             <CompletedFields
               fields={completedFields}
-              players={players}
             />
           </div>
         )}

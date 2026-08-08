@@ -164,6 +164,7 @@ describe('UpdateAuthUseCase', () => {
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
         socketId: 'socket-1',
+        playerId: 'player-1',
         name: 'User Display',
         userId: 'user-1',
         isAuthenticated: true,

@@ -32,7 +32,6 @@ export interface IGameStateRepository {
 
   // Game phase management
   updateGamePhase(roomId: string, phase: string): Promise<boolean>;
-  updateCurrentPlayerIndex(roomId: string, index: number): Promise<boolean>;
 
   // Bulk operations for performance
   bulkUpdate(roomId: string, updates: Record<string, any>): Promise<boolean>;

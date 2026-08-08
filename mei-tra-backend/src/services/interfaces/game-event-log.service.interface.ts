@@ -13,11 +13,7 @@ export interface LogGameEventInput {
   playerId?: string | null;
   state?: Pick<
     GameState,
-    | 'players'
-    | 'currentPlayerIndex'
-    | 'gamePhase'
-    | 'roundNumber'
-    | 'teamScores'
+    'players' | 'currentPlayerId' | 'gamePhase' | 'roundNumber' | 'teamScores'
   >;
   actionData?: Record<string, unknown>;
 }

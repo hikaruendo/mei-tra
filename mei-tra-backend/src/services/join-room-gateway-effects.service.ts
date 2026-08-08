@@ -10,9 +10,9 @@ import {
   PreviousRoomNotification,
 } from '../use-cases/interfaces/join-room.use-case.interface';
 import { resolveTransportPlayers } from '../use-cases/helpers/player-resolution.helper';
-import { Team } from '../types/game.types';
+import { DomainPlayer, Team } from '../types/game.types';
 import { SessionUser } from '../types/session.types';
-import { RoomStatus } from '../types/room.types';
+import { RoomPlayer, RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 
@@ -69,6 +69,8 @@ export class JoinRoomGatewayEffectsService {
   }: BuildJoinRoomEffectsParams): Promise<JoinRoomEffectsResult> {
     const events: GatewayEvent[] = [];
     let room = joinData.room;
+    const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
+    const selfPlayerId = selfRoomPlayer?.playerId ?? normalizedUser.playerId;
 
     if (currentRoomId && currentRoomId !== roomId) {
       events.push({
@@ -83,13 +85,10 @@ export class JoinRoomGatewayEffectsService {
       });
     }
 
-    const joiningPlayer = room.players.find(
-      (player) => player.playerId === normalizedUser.playerId,
-    );
-    const joiningTeam = joiningPlayer?.team;
+    const joiningTeam = selfRoomPlayer?.team;
 
     const roomPlayerJoinedPayload: RoomPlayerJoinedPayload = {
-      playerId: normalizedUser.playerId,
+      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
     };
@@ -102,13 +101,13 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const selfJoinedPayload: GamePlayerJoinedPayload = {
-      playerId: normalizedUser.playerId,
+      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
       isSelf: true,
       team: joiningTeam,
-      name: normalizedUser.name,
+      name: selfRoomPlayer?.name ?? normalizedUser.name,
     };
     events.push({
       scope: 'socket',
@@ -118,12 +117,12 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const otherJoinedPayload: GamePlayerJoinedPayload = {
-      playerId: normalizedUser.playerId,
+      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
       team: joiningTeam,
-      name: normalizedUser.name,
+      name: selfRoomPlayer?.name ?? normalizedUser.name,
     };
     events.push({
       scope: 'room',
@@ -135,7 +134,7 @@ export class JoinRoomGatewayEffectsService {
 
     if (!joinData.resumeGame) {
       for (const existingPlayer of room.players) {
-        if (existingPlayer.playerId === normalizedUser.playerId) {
+        if (existingPlayer.playerId === selfPlayerId) {
           continue;
         }
 
@@ -190,6 +189,11 @@ export class JoinRoomGatewayEffectsService {
 
     if (joinData.resumeGame) {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
+      const resumeSelfPlayerId = this.resolveResumeSelfPlayerId(
+        room,
+        joinData.resumeGame.gameState.players,
+        normalizedUser,
+      );
       const maskedGameStateForJoiner: GameStatePayload = {
         ...joinData.resumeGame.gameState,
         currentField: joinData.resumeGame.gameState.currentField ?? null,
@@ -203,9 +207,9 @@ export class JoinRoomGatewayEffectsService {
           },
         ).map((player) => ({
           ...player,
-          hand: player.playerId === normalizedUser.playerId ? player.hand : [],
+          hand: player.playerId === resumeSelfPlayerId ? player.hand : [],
         })),
-        you: normalizedUser.playerId,
+        you: resumeSelfPlayerId,
         hostId: room.hostId,
       };
 
@@ -236,12 +240,69 @@ export class JoinRoomGatewayEffectsService {
           },
         ),
       });
+      events.push({
+        scope: 'room',
+        roomId,
+        event: 'blow-updated',
+        payload: {
+          declarations: joinData.resumeGame.gameState.blowState.declarations,
+          actionHistory: joinData.resumeGame.gameState.blowState.actionHistory,
+          currentHighest:
+            joinData.resumeGame.gameState.blowState.currentHighestDeclaration,
+          lastPasser: joinData.resumeGame.gameState.blowState.lastPasser,
+        },
+      });
+      if (joinData.resumeGame.gameState.currentTurn) {
+        events.push({
+          scope: 'room',
+          roomId,
+          event: 'update-turn',
+          payload: joinData.resumeGame.gameState.currentTurn,
+        });
+      }
     }
 
     return {
       room,
       events,
     };
+  }
+
+  private resolveSelfRoomPlayer(
+    room: JoinRoomSuccess['room'],
+    normalizedUser: SessionUser,
+  ): RoomPlayer | undefined {
+    if (normalizedUser.userId) {
+      const playersByUserId = room.players.filter(
+        (player) => !player.isCOM && player.userId === normalizedUser.userId,
+      );
+      if (playersByUserId.length === 1) {
+        return playersByUserId[0];
+      }
+    }
+
+    return room.players.find(
+      (player) => player.playerId === normalizedUser.playerId,
+    );
+  }
+
+  private resolveResumeSelfPlayerId(
+    room: JoinRoomSuccess['room'],
+    gamePlayers: DomainPlayer[],
+    normalizedUser: SessionUser,
+  ): string {
+    const gamePlayerIds = new Set(gamePlayers.map((player) => player.playerId));
+
+    const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
+    if (selfRoomPlayer && gamePlayerIds.has(selfRoomPlayer.playerId)) {
+      return selfRoomPlayer.playerId;
+    }
+
+    if (gamePlayerIds.has(normalizedUser.playerId)) {
+      return normalizedUser.playerId;
+    }
+
+    return normalizedUser.playerId;
   }
 
   async buildRoomEntryEvents({

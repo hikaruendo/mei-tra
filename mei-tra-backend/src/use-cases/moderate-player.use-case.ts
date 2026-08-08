@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { ILeaveRoomUseCase } from './interfaces/leave-room.use-case.interface';
 import { RoomStatus } from '../types/room.types';
+import { BlowState } from '../types/game.types';
 import { TransportPlayer } from '../types/player-adapters';
 import { resolveRoomTransportPlayers } from './helpers/player-resolution.helper';
 
@@ -23,6 +24,7 @@ export type ModeratePlayerResult =
       playerId: string;
       playerName: string;
       message: string;
+      blowState: BlowState;
       updatedRoom: NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
       updatedPlayers: TransportPlayer[];
       roomsList: Awaited<ReturnType<IRoomService['listRooms']>>;
@@ -136,6 +138,7 @@ export class ModeratePlayerUseCase {
     if (!converted) {
       return { success: false, error: 'Failed to replace player with COM' };
     }
+    roomGameState.clearDisconnectTimeout(request.targetPlayerId);
 
     const updatedRoom = await this.roomService.getRoom(request.roomId);
     if (!updatedRoom) {
@@ -151,6 +154,7 @@ export class ModeratePlayerUseCase {
       message: canReplaceIdle
         ? 'Host replaced an unresponsive player with COM'
         : 'Host replaced a disconnected player with COM',
+      blowState: roomGameState.getState().blowState,
       updatedRoom,
       updatedPlayers: resolveRoomTransportPlayers(roomGameState, updatedRoom, {
         statePlayers: roomGameState.getState().players,

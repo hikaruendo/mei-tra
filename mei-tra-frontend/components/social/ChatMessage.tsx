@@ -39,7 +39,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* Content */}
       <div className={styles.content}>
         <div className={styles.header}>
-          <span className={styles.senderName}>
+          <span className={styles.senderName} title={message.sender.displayName}>
             {message.sender.displayName}
           </span>
           <span className={styles.timestamp}>

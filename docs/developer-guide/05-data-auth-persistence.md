@@ -307,7 +307,7 @@ room metadata は `rooms`、参加者の identity と座席情報は `room_playe
 
 ### 7.2 game state
 
-`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ちつつ、current player index や team scores は別カラムでも持ちます。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存し、`playerOrder` が座席順を保持します。identity は `room_players` から合成します。
+`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ち、手番の永続 identity は `current_player_id` に保存します。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存します。座席順は `room_players.seat_index` を正本とし、ゲーム進行で必要な index は実行時に座席順から導出します。
 
 この説明が指す主なコードは次です。
 
@@ -343,7 +343,7 @@ room metadata は `rooms`、参加者の identity と座席情報は `room_playe
 - JSON shape と TypeScript 型がずれると runtime bug になる
 - relation と JSONB を跨ぐロスター更新には transaction が必要
 
-新コードは `load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。migration 未適用環境向けに旧 read / write path を一時的に残し、`state_data.players` と `room_players` の旧 gameplay columns も互換データとして同期します。新形式の安定稼働確認後に、この互換データを削除します。
+`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players`、player gameplay は `state_data.playerStates`、current turn は `current_player_id` の各正本だけを参照します。
 
 ### 7.3 chat
 

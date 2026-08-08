@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { GameInfo } from '@/components/game/GameInfo';
-import type { Player, TeamScores } from '@/types/game.types';
+import type React from 'react';
+import type { TeamScores } from '@/types/game.types';
 
 jest.mock('next-intl', () => ({
   useTranslations: () => {
@@ -8,6 +9,8 @@ jest.mock('next-intl', () => ({
       'common.leave': 'Leave',
       'gameInfo.reach': 'Reach',
       'gameInfo.win': 'WIN',
+      'gameInfo.teamRed': 'Red team',
+      'gameInfo.teamBlack': 'Black team',
       'room.leaveConfirm.title': 'Leave room',
       'room.leaveConfirm.message': 'Are you sure?',
       'common.cancel': 'Cancel',
@@ -21,29 +24,15 @@ jest.mock('@/components/shared/ConfirmModal', () => ({
   ConfirmModal: () => null,
 }));
 
-const players: Player[] = [
-  {
-    socketId: 'player-1',
-    playerId: 'player-1',
-    name: 'Player 1',
-    team: 0,
-    hand: [],
-  },
-  {
-    socketId: 'player-2',
-    playerId: 'player-2',
-    name: 'Player 2',
-    team: 1,
-    hand: [],
-  },
-];
-
-const renderGameInfo = (teamScores: TeamScores) =>
+const renderGameInfo = (
+  teamScores: TeamScores,
+  props: Partial<React.ComponentProps<typeof GameInfo>> = {},
+) =>
   render(
     <GameInfo
-      players={players}
       pointsToWin={5}
       teamScores={teamScores}
+      {...props}
     />,
   );
 
@@ -54,10 +43,11 @@ describe('GameInfo', () => {
       1: { deal: 0, blow: 0, play: 0, total: 2 },
     });
 
-    const teamMeter = screen.getByRole('meter', { name: 'Player 1' });
+    const teamMeter = screen.getByRole('meter', { name: 'Red team' });
 
     expect(teamMeter).toHaveAttribute('aria-valuetext', '4/5 Reach');
     expect(screen.getByText('Reach')).toBeInTheDocument();
+    expect(screen.getByText('Reach').closest('.gameInfoMeter')).toBeInTheDocument();
   });
 
   it('marks a team at the target as a winner', () => {
@@ -66,9 +56,49 @@ describe('GameInfo', () => {
       1: { deal: 0, blow: 0, play: 0, total: 5 },
     });
 
-    const teamMeter = screen.getByRole('meter', { name: 'Player 2' });
+    const teamMeter = screen.getByRole('meter', { name: 'Black team' });
 
     expect(teamMeter).toHaveAttribute('aria-valuetext', '5/5 WIN');
     expect(screen.getByText('WIN')).toBeInTheDocument();
+  });
+
+  it('keeps backend team zero red and team one black', () => {
+    renderGameInfo({
+      0: { deal: 0, blow: 0, play: 3, total: 3 },
+      1: { deal: 0, blow: 0, play: 1, total: 1 },
+    });
+
+    expect(screen.getByRole('meter', { name: 'Red team' })).toHaveAttribute(
+      'aria-valuetext',
+      '3/5',
+    );
+    expect(screen.getByRole('meter', { name: 'Black team' })).toHaveAttribute(
+      'aria-valuetext',
+      '1/5',
+    );
+  });
+
+  it('uses custom team names without changing backend team order', () => {
+    renderGameInfo(
+      {
+        0: { deal: 0, blow: 0, play: 3, total: 3 },
+        1: { deal: 0, blow: 0, play: 1, total: 1 },
+      },
+      {
+        teamNames: {
+          0: '東軍',
+          1: '西軍',
+        },
+      },
+    );
+
+    expect(screen.getByRole('meter', { name: '東軍' })).toHaveAttribute(
+      'aria-valuetext',
+      '3/5',
+    );
+    expect(screen.getByRole('meter', { name: '西軍' })).toHaveAttribute(
+      'aria-valuetext',
+      '1/5',
+    );
   });
 });

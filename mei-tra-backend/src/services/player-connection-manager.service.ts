@@ -52,10 +52,19 @@ export class PlayerConnectionManager {
     created: boolean;
     changed: boolean;
   } {
+    const matchingUsers = this.users.filter(
+      (user) =>
+        user.playerId === sessionUser.playerId ||
+        (sessionUser.userId != null && user.userId === sessionUser.userId) ||
+        (sessionUser.socketId !== '' && user.socketId === sessionUser.socketId),
+    );
     const existingUser =
-      (sessionUser.userId
-        ? this.findSessionUserByUserId(sessionUser.userId)
-        : null) ?? this.findSessionUserBySocketId(sessionUser.socketId);
+      matchingUsers.find((user) => user.playerId === sessionUser.playerId) ??
+      matchingUsers.find(
+        (user) =>
+          sessionUser.userId != null && user.userId === sessionUser.userId,
+      ) ??
+      matchingUsers[0];
 
     if (!existingUser) {
       this.users.push(sessionUser);
@@ -69,21 +78,53 @@ export class PlayerConnectionManager {
       };
     }
 
+    const nextUserId = sessionUser.userId ?? existingUser.userId;
+    const nextIsAuthenticated =
+      sessionUser.isAuthenticated ?? existingUser.isAuthenticated;
+    const previousPlayerId = existingUser.playerId;
+    const previousUserId = existingUser.userId;
     const changed =
       existingUser.socketId !== sessionUser.socketId ||
+      existingUser.playerId !== sessionUser.playerId ||
       existingUser.name !== sessionUser.name ||
-      existingUser.userId !== sessionUser.userId ||
-      existingUser.isAuthenticated !== sessionUser.isAuthenticated;
+      existingUser.userId !== nextUserId ||
+      existingUser.isAuthenticated !== nextIsAuthenticated;
 
     if (changed) {
       existingUser.socketId = sessionUser.socketId;
+      existingUser.playerId = sessionUser.playerId;
       existingUser.name = sessionUser.name;
-      existingUser.userId = sessionUser.userId;
-      existingUser.isAuthenticated = sessionUser.isAuthenticated;
+      existingUser.userId = nextUserId;
+      existingUser.isAuthenticated = nextIsAuthenticated;
+    }
+
+    if (
+      previousUserId &&
+      previousUserId !== sessionUser.userId &&
+      this.playerIds.get(previousUserId) === previousPlayerId
+    ) {
+      this.playerIds.delete(previousUserId);
     }
 
     if (sessionUser.userId) {
       this.playerIds.set(sessionUser.userId, sessionUser.playerId);
+    }
+
+    for (const duplicateUser of matchingUsers) {
+      if (duplicateUser === existingUser) {
+        continue;
+      }
+      if (
+        duplicateUser.userId &&
+        duplicateUser.userId !== sessionUser.userId &&
+        this.playerIds.get(duplicateUser.userId) === duplicateUser.playerId
+      ) {
+        this.playerIds.delete(duplicateUser.userId);
+      }
+      const duplicateIndex = this.users.indexOf(duplicateUser);
+      if (duplicateIndex !== -1) {
+        this.users.splice(duplicateIndex, 1);
+      }
     }
 
     return {
@@ -190,17 +231,22 @@ export class PlayerConnectionManager {
       this.disconnectedPlayers.delete(playerId);
     }
 
+    const existingUser = this.findSessionUserByPlayerId(playerId);
+    const resolvedUserId = userId ?? existingUser?.userId;
     const { user } = this.upsertSessionUser({
       socketId,
       playerId,
       name,
-      userId,
-      isAuthenticated: isAuthenticated ?? Boolean(userId),
+      userId: resolvedUserId,
+      isAuthenticated:
+        isAuthenticated ??
+        existingUser?.isAuthenticated ??
+        Boolean(resolvedUserId),
     });
 
-    if (userId) {
+    if (resolvedUserId) {
       this.logger.log(
-        `[GameState] Updated player ${playerId} with userId: ${userId}`,
+        `[GameState] Updated player ${playerId} with userId: ${resolvedUserId}`,
       );
     }
 

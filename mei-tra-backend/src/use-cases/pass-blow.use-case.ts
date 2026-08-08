@@ -235,6 +235,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     }
 
     state.currentPlayerIndex = firstBlowIndex;
+    state.currentPlayerId = firstBlowPlayer.playerId;
     state.deck = this.cardService.generateDeck();
     await roomGameState.dealCards();
 

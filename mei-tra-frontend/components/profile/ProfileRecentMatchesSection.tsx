@@ -63,7 +63,7 @@ export function ProfileRecentMatchesSection({
       return t('recentMatchesNoWinner');
     }
 
-    return historyT('teamValue', { team: item.winningTeam + 1 });
+    return historyT(item.winningTeam === 0 ? 'teamRed' : 'teamBlack');
   };
 
   return (
@@ -88,7 +88,9 @@ export function ProfileRecentMatchesSection({
               className={styles.card}
             >
               <div className={styles.cardHeader}>
-                <h4 className={styles.roomName}>{item.roomName}</h4>
+                <h4 className={styles.roomName} title={item.roomName}>
+                  {item.roomName}
+                </h4>
                 <p className={styles.completedAt}>
                   {dateFormatter.format(item.completedAt)}
                 </p>

@@ -85,7 +85,6 @@ export default function Home() {
     currentField = null,
     players = [],
     negriCard = null,
-    negriPlayerId = null,
     completedFields = [],
     revealedAgari = null,
     gameActions,
@@ -105,8 +104,10 @@ export default function Home() {
     currentRoomId = null,
     isHost = false,
     isSpectator = false,
+    teamNames,
     startGame,
     shuffleTeams,
+    updateTeamNames,
     removePlayerFromRoom,
     replacePlayerWithCOM,
     idlePlayerIds = [],
@@ -199,6 +200,8 @@ export default function Home() {
                     onStart={startGame}
                     onLeave={handleLeaveRoom}
                     shuffleTeams={shuffleTeams}
+                    teamNames={teamNames}
+                    onUpdateTeamNames={updateTeamNames}
                     onRemovePlayer={removePlayerFromRoom}
                   />
                 ) : (
@@ -209,7 +212,6 @@ export default function Home() {
                   currentField={currentField}
                   players={players}
                   negriCard={negriCard}
-                  negriPlayerId={negriPlayerId}
                   completedFields={completedFields}
                   revealedAgari={revealedAgari}
                   gameActions={gameActions}
@@ -225,6 +227,7 @@ export default function Home() {
                   currentRoomId={currentRoomId}
                   isHost={isHost}
                   isSpectator={isSpectator}
+                  teamNames={teamNames}
                   idlePlayerIds={idlePlayerIds}
                   disconnectedPlayerIds={disconnectedPlayerIds}
                   pointsToWin={pointsToWin}

@@ -13,6 +13,7 @@ jest.mock('next-intl', () => ({
       history: 'History',
       noHistory: 'No history yet',
       bid: 'Bid',
+      daiya: 'Diamond',
       pass: 'Pass',
       waiting: 'Waiting',
     };
@@ -81,10 +82,21 @@ describe('BlowSpectatorPanel', () => {
     expect(screen.getByLabelText('Bid Progress')).toBeInTheDocument();
     expect(screen.getByText('Current Turn:').parentElement).toHaveTextContent('Player 2');
     expect(screen.getAllByText('Player 1')).toHaveLength(2);
-    expect(screen.getAllByText('♦')).toHaveLength(2);
+    expect(screen.getAllByText('Diamond')).toHaveLength(2);
     expect(screen.getByText('Pass')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('puts player names in truncatable spans', () => {
+    renderPanel();
+
+    const historyName = screen.getAllByText('Player 1').find((element) =>
+      element.className.includes('playerName'),
+    );
+
+    expect(historyName).toBeDefined();
+    expect(historyName).toHaveAttribute('title', 'Player 1');
   });
 
   it('updates from a later socket snapshot without exposing controls', () => {

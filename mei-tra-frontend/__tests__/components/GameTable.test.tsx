@@ -85,7 +85,6 @@ const renderGameTable = (isSpectator: boolean) =>
       currentField={null}
       players={players}
       negriCard={null}
-      negriPlayerId={null}
       completedFields={[]}
       revealedAgari={null}
       gameActions={gameActions}

@@ -1,4 +1,4 @@
-import { BlowDeclaration, TrumpType } from '../../types/game.types';
+import { BlowDeclaration, Team, TrumpType } from '../../types/game.types';
 
 export interface IBlowService {
   isValidDeclaration(
@@ -8,6 +8,7 @@ export interface IBlowService {
   findHighestDeclaration(declarations: BlowDeclaration[]): BlowDeclaration;
   createDeclaration(
     playerId: string,
+    team: Team,
     trumpType: TrumpType,
     numberOfPairs: number,
   ): BlowDeclaration;

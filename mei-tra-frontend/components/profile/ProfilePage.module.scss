@@ -136,6 +136,7 @@ $transition-button: all 0.3s ease;
   gap: $spacing-lg;
   justify-content: space-between;
   width: 100%;
+  min-width: 0;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -145,6 +146,7 @@ $transition-button: all 0.3s ease;
 }
 
 .avatarContainer {
+  flex: 0 0 auto;
   background-color: var(--mt-surface-raised-2);
   padding: 4px;
   border-radius: 50%;
@@ -177,19 +179,29 @@ $transition-button: all 0.3s ease;
 }
 
 .profileInfo {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--mt-text-primary);
 }
 
 .profileName {
+  max-width: 100%;
   font-size: $font-size-xxl;
   font-weight: bold;
   font-family: var(--mt-font-heading);
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profileEmail {
+  max-width: 100%;
   color: var(--mt-text-muted);
   font-size: $font-size-sm;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profileContent {
@@ -220,10 +232,15 @@ $transition-button: all 0.3s ease;
 }
 
 .statValue {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   font-size: $font-size-xxl;
   font-weight: bold;
   margin-bottom: $spacing-xs;
   color: var(--mt-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .statLabel {
@@ -253,6 +270,8 @@ $transition-button: all 0.3s ease;
 .accountRow {
   display: flex;
   justify-content: space-between;
+  gap: $spacing-md;
+  min-width: 0;
   padding: $spacing-sm 0;
   border-bottom: 1px solid var(--mt-border-hairline);
 
@@ -267,11 +286,21 @@ $transition-button: all 0.3s ease;
 }
 
 .accountLabel {
+  flex: 0 0 auto;
   color: var(--mt-text-muted);
 }
 
 .accountValue {
+  min-width: 0;
+  overflow: hidden;
   color: var(--mt-text-primary);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 480px) {
+    text-align: left;
+  }
 }
 
 .accountActions {
@@ -328,6 +357,7 @@ $transition-button: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: $spacing-sm;
+  flex: 0 0 auto;
 
   @media (max-width: 768px) {
     justify-content: center;

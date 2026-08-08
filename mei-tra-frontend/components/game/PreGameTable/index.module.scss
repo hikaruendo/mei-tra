@@ -8,7 +8,7 @@
     "left center right"
     ".    bottom .";
   grid-template-columns: 280px 240px 280px;
-  grid-template-rows: auto minmax(200px, 240px) auto;
+  grid-template-rows: auto auto auto;
   gap: 0.55rem 1.1rem;
   justify-content: center;
   min-height: calc(100dvh - 6.4rem);
@@ -81,6 +81,134 @@
   margin-top: 0.35rem;
 }
 
+.teamNamePanel {
+  width: min(100%, 240px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.teamNameSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.1rem;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mt-surface-raised) 78%, transparent);
+}
+
+.teamNameSummaryLabel {
+  flex: 0 0 auto;
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.7rem);
+  font-weight: 800;
+  white-space: nowrap;
+  margin-right: 0.05rem;
+}
+
+.teamNamePill {
+  flex: 0 1 auto;
+  max-width: 4.2rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: typography.scale(0.68rem);
+  font-weight: 800;
+}
+
+.teamRedPill {
+  border: 1px solid color-mix(in srgb, var(--mt-card-red) 48%, transparent);
+  background: color-mix(in srgb, var(--mt-card-red) 14%, var(--mt-surface-raised));
+  color: var(--mt-card-red);
+}
+
+.teamBlackPill {
+  border: 1px solid color-mix(in srgb, var(--mt-team-black) 42%, transparent);
+  background: color-mix(in srgb, var(--mt-team-black) 10%, var(--mt-surface-raised));
+  color: var(--mt-team-black);
+}
+
+.teamNameEditButton {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 1.6rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 999px;
+  background: var(--mt-surface);
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.7rem);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.teamNameForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mt-surface-raised) 78%, transparent);
+}
+
+.teamNameFields {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.teamNameField {
+  display: grid;
+  grid-template-columns: 4.4rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  font-size: typography.scale(0.72rem);
+  font-weight: 800;
+
+  span {
+    white-space: nowrap;
+  }
+
+  input {
+    width: 100%;
+    min-width: 0;
+    height: 1.9rem;
+    padding: 0.25rem 0.45rem;
+    border: 1px solid var(--mt-border-hairline);
+    border-radius: 6px;
+    background: var(--mt-surface);
+    color: var(--mt-text-primary);
+    font: inherit;
+    font-weight: 700;
+  }
+}
+
+.teamRedField {
+  color: var(--mt-card-red);
+}
+
+.teamBlackField {
+  color: var(--mt-team-black);
+}
+
+.teamNameSaveButton {
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: 6px;
+  background: var(--mt-surface);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.78rem);
+  font-weight: 800;
+  cursor: pointer;
+  text-shadow: none;
+}
+
 .startButton,
 .shuffleButton,
 .leaveButton {
@@ -136,21 +264,28 @@
 }
 
 .teamBadge {
+  display: block;
   font-size: typography.scale(0.7rem);
   padding: 2px 7px;
   border-radius: 4px;
   margin-top: 4px;
   font-weight: 600;
+  max-width: min(8rem, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.team0 {
-  background: var(--mt-accent-subtle);
-  color: var(--mt-accent);
-}
-
-.team1 {
-  background: var(--mt-accent-subtle);
+.teamRed .teamBadge {
+  border: 1px solid color-mix(in srgb, var(--mt-card-red) 48%, transparent);
+  background: color-mix(in srgb, var(--mt-card-red) 14%, var(--mt-surface-raised));
   color: var(--mt-card-red);
+}
+
+.teamBlack .teamBadge {
+  border: 1px solid color-mix(in srgb, var(--mt-team-black) 42%, transparent);
+  background: color-mix(in srgb, var(--mt-team-black) 10%, var(--mt-surface-raised));
+  color: var(--mt-team-black);
 }
 
 .waitingText {
@@ -193,6 +328,20 @@
   .center {
     gap: 0.625rem;
     width: 100%;
+  }
+
+  .teamNamePanel,
+  .teamNameForm {
+    width: 100%;
+  }
+
+  .teamNameForm {
+    padding: 0.45rem;
+  }
+
+  .teamNameField {
+    grid-template-columns: 3.8rem minmax(0, 1fr);
+    gap: 0.35rem;
   }
 
   .startButton,

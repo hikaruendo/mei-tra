@@ -21,6 +21,8 @@ import { ComSessionService, VacantSeats } from './com-session.service';
 import { SeatRestorationService } from './seat-restoration.service';
 import { RoomJoinService } from './room-join.service';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
+import { RoomMembershipService } from './room-membership.service';
+import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
 
 @Injectable()
 export class RoomService implements IRoomService, OnModuleDestroy {
@@ -57,6 +59,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     private readonly gameStateFactory: GameStateFactory,
     @Inject('IComPlayerService')
     private readonly comPlayerService: IComPlayerService,
+    private readonly roomMembershipService: RoomMembershipService,
     @Optional()
     playerReferenceRemapperService?: PlayerReferenceRemapperService,
     @Optional()
@@ -148,6 +151,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   }
 
   async deleteRoom(roomId: string): Promise<void> {
+    try {
+      await this.roomMembershipService.releaseRoom(roomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to release memberships before deleting room ${roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
     await this.roomRepository.delete(roomId);
     await this.releaseRoomResources(roomId);
   }
@@ -176,6 +187,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room> {
+    const reservation = await this.roomMembershipService.reserve(
+      hostId,
+      hostId,
+    );
+    if (reservation.result === 'conflict') {
+      throw new ActiveRoomMembershipConflictError(reservation.membership);
+    }
+
     const room: Room = {
       id: '', // データベースでUUIDが自動生成される
       name,
@@ -195,19 +214,34 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       lastActivityAt: new Date(),
     };
 
-    const createdRoom = await this.roomRepository.create(room);
+    try {
+      const createdRoom = await this.roomRepository.create(room);
+      const gameState = this.gameStateFactory.createGameState();
+      gameState.setRoomId(createdRoom.id);
+      await gameState.loadState(createdRoom.id);
+      await gameState.configureGameSettings(pointsToWin);
+      this.roomGameStates.set(createdRoom.id, gameState);
+      return createdRoom;
+    } catch (error) {
+      try {
+        await this.roomMembershipService.cancelReservation(
+          hostId,
+          reservation.membership.transitionId,
+        );
+      } catch (reservationError) {
+        this.logger.error(
+          `Failed to cancel room creation reservation for user ${hostId}`,
+          reservationError instanceof Error
+            ? reservationError.stack
+            : String(reservationError),
+        );
+      }
+      throw error;
+    }
+  }
 
-    // ルームごとに新しいゲーム状態を作成
-    const gameState = this.gameStateFactory.createGameState();
-    gameState.setRoomId(createdRoom.id);
-    await gameState.loadState(createdRoom.id);
-
-    // Configure game settings with the room's pointsToWin
-    await gameState.configureGameSettings(pointsToWin);
-
-    this.roomGameStates.set(createdRoom.id, gameState);
-
-    return createdRoom;
+  cancelRoomMembershipReservation(userId: string): Promise<boolean> {
+    return this.roomMembershipService.cancelReservation(userId);
   }
 
   private createCOMPlaceholder(
@@ -246,6 +280,48 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return comPlayer;
   }
 
+  private createWaitingCOMReplacement(
+    preferredIndex: number,
+    fallbackIndex: number,
+    team: Team,
+    roomPlayers: RoomPlayer[],
+    statePlayers: DomainPlayer[],
+    replacingRoomIndex: number,
+    replacingStateIndex: number,
+  ): RoomPlayer {
+    const occupiedPlayerIds = new Set<string>();
+    roomPlayers.forEach((player, index) => {
+      if (index !== replacingRoomIndex) {
+        occupiedPlayerIds.add(player.playerId);
+      }
+    });
+    statePlayers.forEach((player, index) => {
+      if (index !== replacingStateIndex) {
+        occupiedPlayerIds.add(player.playerId);
+      }
+    });
+
+    const candidateIndexes = [
+      preferredIndex,
+      fallbackIndex,
+      ...Array.from(
+        { length: roomPlayers.length + statePlayers.length + 1 },
+        (_, index) => index,
+      ),
+    ];
+    for (const candidateIndex of candidateIndexes) {
+      const candidatePlayerId = `com-${candidateIndex}`;
+      if (!occupiedPlayerIds.has(candidatePlayerId)) {
+        return this.createCOMPlaceholder(candidateIndex, team);
+      }
+    }
+
+    return this.createCOMPlaceholder(
+      `vacant-${fallbackIndex}-${Date.now()}`,
+      team,
+    );
+  }
+
   async initCOMPlaceholders(roomId: string): Promise<void> {
     const room = await this.getRoom(roomId);
     if (!room) return;
@@ -264,74 +340,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   private cloneGamePlayer(player: DomainPlayer): DomainPlayer {
     return toDomainPlayer(player);
-  }
-
-  private remapPlayStatePlayerIdReferences(
-    state: GameState,
-    fromPlayerId: string,
-    toPlayerId: string,
-  ): void {
-    const playState = state.playState;
-    if (!playState || fromPlayerId === toPlayerId) {
-      return;
-    }
-
-    if (playState.currentField?.dealerId === fromPlayerId) {
-      playState.currentField.dealerId = toPlayerId;
-    }
-
-    if (playState.lastWinnerId === fromPlayerId) {
-      playState.lastWinnerId = toPlayerId;
-    }
-
-    if (playState.openDeclarerId === fromPlayerId) {
-      playState.openDeclarerId = toPlayerId;
-    }
-
-    playState.fields = playState.fields.map((field) => ({
-      ...field,
-      winnerId: field.winnerId === fromPlayerId ? toPlayerId : field.winnerId,
-      dealerId: field.dealerId === fromPlayerId ? toPlayerId : field.dealerId,
-    }));
-
-    if (playState.neguri[fromPlayerId]) {
-      playState.neguri[toPlayerId] = playState.neguri[fromPlayerId];
-      delete playState.neguri[fromPlayerId];
-    }
-  }
-
-  private remapBlowStatePlayerIdReferences(
-    state: GameState,
-    fromPlayerId: string,
-    toPlayerId: string,
-  ): void {
-    const blowState = state.blowState;
-    if (!blowState || fromPlayerId === toPlayerId) {
-      return;
-    }
-
-    blowState.declarations = blowState.declarations.map((declaration) =>
-      declaration.playerId === fromPlayerId
-        ? { ...declaration, playerId: toPlayerId }
-        : declaration,
-    );
-
-    blowState.actionHistory = blowState.actionHistory.map((action) =>
-      action.playerId === fromPlayerId
-        ? { ...action, playerId: toPlayerId }
-        : action,
-    );
-
-    if (blowState.currentHighestDeclaration?.playerId === fromPlayerId) {
-      blowState.currentHighestDeclaration = {
-        ...blowState.currentHighestDeclaration,
-        playerId: toPlayerId,
-      };
-    }
-
-    if (blowState.lastPasser === fromPlayerId) {
-      blowState.lastPasser = toPlayerId;
-    }
   }
 
   private remapGameStatePlayerIdReferences(
@@ -362,20 +370,42 @@ export class RoomService implements IRoomService, OnModuleDestroy {
    * プレイヤーをCOMに変換（タイムアウト時など）
    * reconnectTokenは保持したまま、席をvacantにする
    */
-  async convertPlayerToCOM(roomId: string, playerId: string): Promise<boolean> {
+  async convertPlayerToCOM(
+    roomId: string,
+    playerId: string,
+    options?: {
+      requireDisconnected?: boolean;
+      releaseMembership?: boolean;
+    },
+  ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) return false;
     const gameState = await this.getRoomGameState(roomId);
-    return this.comSessionService.convertPlayerToCOM(
+    if (
+      options?.requireDisconnected &&
+      gameState.getPlayerConnectionState(playerId)?.socketId
+    ) {
+      return false;
+    }
+
+    const converted = await this.comSessionService.convertPlayerToCOM(
       roomId,
       playerId,
       room,
       gameState,
       this.vacantSeats,
     );
+    if (converted && options?.releaseMembership !== false) {
+      await this.releasePlayerMembership(roomId, playerId);
+    }
+    return converted;
   }
 
-  async leaveRoom(roomId: string, playerId: string): Promise<boolean> {
+  async leaveRoom(
+    roomId: string,
+    playerId: string,
+    options?: { releaseMembership?: boolean },
+  ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
       return false;
@@ -469,9 +499,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         const state = gameState.getState();
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
         const seatIndex = gsIndex !== -1 ? gsIndex : playerIndex;
-        const comPlaceholder = this.createCOMPlaceholder(
+        const comPlaceholder = this.createWaitingCOMReplacement(
           seatIndex,
+          playerIndex,
           leavingPlayer.team,
+          room.players,
+          state.players,
+          playerIndex,
+          gsIndex,
         );
         room.players[playerIndex] = comPlaceholder;
 
@@ -505,6 +540,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       player.isHost = player.playerId === room.hostId;
     });
     await gameState.persistRoster(room.players, room.hostId);
+    if (options?.releaseMembership !== false) {
+      await this.releasePlayerMembership(roomId, playerId);
+    }
     return true;
   }
 
@@ -513,14 +551,95 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (!room) {
       return false;
     }
+    const joiningUser = await this.resolveJoiningUser(roomId, room, user);
+    const membershipTransition = joiningUser.userId
+      ? await this.roomMembershipService.claim(
+          joiningUser.userId,
+          roomId,
+          joiningUser.playerId,
+        )
+      : null;
+    if (membershipTransition?.result === 'conflict') {
+      throw new ActiveRoomMembershipConflictError(
+        membershipTransition.membership,
+      );
+    }
+
     const gameState = await this.getRoomGameState(roomId);
-    return this.roomJoinService.joinRoom({
-      roomId,
-      room,
-      gameState,
-      user,
-      vacantSeats: this.vacantSeats,
-    });
+    try {
+      const joined = await this.roomJoinService.joinRoom({
+        roomId,
+        room,
+        gameState,
+        user: joiningUser,
+        vacantSeats: this.vacantSeats,
+      });
+      if (
+        !joined &&
+        joiningUser.userId &&
+        membershipTransition?.result === 'claimed'
+      ) {
+        await this.rollbackMembershipClaim(
+          joiningUser.userId,
+          roomId,
+          membershipTransition.membership.membershipVersion,
+        );
+      }
+      return joined;
+    } catch (error) {
+      if (joiningUser.userId && membershipTransition?.result === 'claimed') {
+        await this.rollbackMembershipClaim(
+          joiningUser.userId,
+          roomId,
+          membershipTransition.membership.membershipVersion,
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async resolveJoiningUser(
+    roomId: string,
+    room: Room,
+    user: SessionUser,
+  ): Promise<SessionUser> {
+    if (!user.userId) {
+      return user;
+    }
+
+    const roomMatches = room.players.filter(
+      (player) => !player.isCOM && player.userId === user.userId,
+    );
+    if (roomMatches.length === 1) {
+      return { ...user, playerId: roomMatches[0].playerId };
+    }
+    if (roomMatches.length > 1) {
+      throw new Error(
+        `Ambiguous room player identity: room=${roomId} user=${user.userId} matches=${roomMatches.length}`,
+      );
+    }
+
+    const vacantMatches = Object.values(this.vacantSeats[roomId] ?? {}).filter(
+      (seat) => seat.roomPlayer.userId === user.userId,
+    );
+    if (vacantMatches.length === 1) {
+      return {
+        ...user,
+        playerId: vacantMatches[0].roomPlayer.playerId,
+      };
+    }
+    if (vacantMatches.length > 1) {
+      throw new Error(
+        `Ambiguous vacant seat identity: room=${roomId} user=${user.userId} matches=${vacantMatches.length}`,
+      );
+    }
+
+    const membership = await this.roomMembershipService.get(user.userId);
+    if (membership?.roomId === roomId) {
+      return { ...user, playerId: membership.playerId };
+    }
+
+    return user;
   }
 
   async restorePlayerFromVacantSeat(
@@ -559,7 +678,53 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     const updatedRoom = await this.updateRoom(roomId, { status });
     await this.updateRoomActivity(roomId);
+    if (
+      updatedRoom &&
+      (status === RoomStatus.FINISHED || status === RoomStatus.ABANDONED)
+    ) {
+      try {
+        await this.roomMembershipService.releaseRoom(roomId);
+      } catch (error) {
+        this.logger.error(
+          `Failed to release memberships for inactive room ${roomId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
     return !!updatedRoom;
+  }
+
+  private async releasePlayerMembership(
+    roomId: string,
+    playerId: string,
+  ): Promise<void> {
+    try {
+      await this.roomMembershipService.releaseByPlayer(roomId, playerId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to release membership for player ${playerId} in room ${roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  private async rollbackMembershipClaim(
+    userId: string,
+    roomId: string,
+    membershipVersion: number,
+  ): Promise<void> {
+    try {
+      await this.roomMembershipService.release(
+        userId,
+        roomId,
+        membershipVersion,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to roll back membership claim for user ${userId} in room ${roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   async updatePlayerInRoom(
@@ -684,6 +849,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   async getRoomGameState(roomId: string): Promise<GameStateService> {
     let gameState = this.roomGameStates.get(roomId);
     if (!gameState) {
+      const room = await this.getRoom(roomId);
+      if (!room) {
+        throw new Error(`Room not found: ${roomId}`);
+      }
+
       gameState = this.gameStateFactory.createGameState();
       gameState.setRoomId(roomId);
       await gameState.loadState(roomId);
@@ -722,6 +892,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       connectionState.isAuthenticated = true;
     }
 
+    roomGameState.clearDisconnectTimeout(playerId);
     await roomGameState.applyPlayerConnectionState(playerId, connectionState);
 
     const roomPlayerUpdates: {
