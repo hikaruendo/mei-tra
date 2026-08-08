@@ -60,6 +60,7 @@ describe('GetGameHistoryUseCase', () => {
     expect(gameEventLogService.summarizeByRoomId).toHaveBeenCalledWith(
       'room-1',
       query,
+      undefined,
     );
   });
 
@@ -93,6 +94,7 @@ describe('GetGameHistoryUseCase', () => {
     expect(gameEventLogService.replayByRoomId).toHaveBeenCalledWith(
       'room-1',
       query,
+      undefined,
     );
   });
 });

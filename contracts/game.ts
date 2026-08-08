@@ -86,6 +86,7 @@ export interface GameStatePayload {
   you: string | null;
   isSpectator?: boolean;
   negriCard: string | null;
+  revealedAgari?: string | null;
   fields: CompletedFieldContract[];
   roomId: string;
   hostId?: string;

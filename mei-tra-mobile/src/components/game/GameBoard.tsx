@@ -1,4 +1,4 @@
-import type { TrumpType } from '@meitra/contracts/game';
+import type { PlayerContract, TrumpType } from '@meitra/contracts/game';
 import type {
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
@@ -131,7 +131,15 @@ export function GameBoard({
         { player: leftPlayer, position: 'left' as const },
         { player: topPlayer, position: 'top' as const },
         { player: rightPlayer, position: 'right' as const },
-      ].filter((s) => s.player !== null),
+      ].filter(
+        (
+          slot,
+        ): slot is {
+          player: PlayerContract;
+          position: 'left' | 'top' | 'right';
+        } =>
+          slot.player != null,
+      ),
     [leftPlayer, topPlayer, rightPlayer],
   );
   const teamFieldCounts = useMemo(() => {
@@ -288,7 +296,7 @@ export function GameBoard({
                 key={player.playerId}
                 agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
                 declaration={
-                  highest?.playerId === player.playerId
+                  highest && highest.playerId === player.playerId
                     ? `${trumpLabels[highest.trumpType]} ${highest.numberOfPairs}`
                     : undefined
                 }

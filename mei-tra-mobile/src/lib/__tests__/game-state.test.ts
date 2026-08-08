@@ -103,6 +103,7 @@ describe('recovery helpers', () => {
       you: 'server-player',
       isSpectator: false,
       negriCard: '5♣',
+      revealedAgari: 'J♣',
       fields: [completedField(['J♠', 'Q♠']), completedField(['J♠', 'Q♠'])],
       pointsToWin: 5,
     });
@@ -110,6 +111,7 @@ describe('recovery helpers', () => {
     expect(snapshot.players).toEqual([expect.objectContaining({ playerId: 'server-player' })]);
     expect(snapshot.fields).toHaveLength(1);
     expect(snapshot.you).toBe('server-player');
+    expect(snapshot.revealedAgari).toBe('J♣');
   });
 
   it('resolves the current player by playerId before userId', () => {

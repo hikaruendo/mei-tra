@@ -86,7 +86,7 @@ export const normalizeGameStatePayload = (
   ...payload,
   isSpectator: Boolean(payload.isSpectator),
   negriPlayerId: null,
-  revealedAgari: null,
+  revealedAgari: payload.revealedAgari ?? null,
   hostId: payload.hostId ?? null,
   paused: false,
   fields: dedupeCompletedFields(payload.fields),

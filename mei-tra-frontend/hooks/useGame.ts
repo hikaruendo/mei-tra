@@ -653,6 +653,7 @@ export const useGame = () => {
         teamScores,
         you,
         negriCard,
+        revealedAgari: syncedRevealedAgari,
         fields,
         roomId,
         hostId,
@@ -670,6 +671,7 @@ export const useGame = () => {
           syncCurrentPlayerIdentity(nextPlayers, currentPlayerId, you);
         }
         setGamePhase(toUiGamePhase(gamePhase));
+        setRevealedAgari(syncedRevealedAgari ?? null);
         setWhoseTurn(currentTurn);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);

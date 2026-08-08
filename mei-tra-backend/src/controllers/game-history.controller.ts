@@ -47,8 +47,15 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistorySummary> {
-    await this.assertRoomParticipant(roomId, currentUser.id);
-    return this.getGameHistoryUseCase.summarize(roomId, this.parseQuery(query));
+    const { playerNames } = await this.getRoomParticipantContext(
+      roomId,
+      currentUser.id,
+    );
+    return this.getGameHistoryUseCase.summarize(
+      roomId,
+      this.parseQuery(query),
+      playerNames,
+    );
   }
 
   @Get(':roomId/replay')
@@ -58,13 +65,14 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistoryReplayView> {
-    const participant = await this.assertRoomParticipant(
+    const { participant, playerNames } = await this.getRoomParticipantContext(
       roomId,
       currentUser.id,
     );
     const replay = await this.getGameHistoryUseCase.replay(
       roomId,
       this.parseQuery(query),
+      playerNames,
     );
     return this.withViewerStartingHands(replay, participant.playerId);
   }
@@ -76,7 +84,7 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistoryEntry[]> {
-    const participant = await this.assertRoomParticipant(
+    const { participant } = await this.getRoomParticipantContext(
       roomId,
       currentUser.id,
     );
@@ -89,10 +97,13 @@ export class GameHistoryController {
     );
   }
 
-  private async assertRoomParticipant(
+  private async getRoomParticipantContext(
     roomId: string,
     userId: string,
-  ): Promise<RoomPlayer> {
+  ): Promise<{
+    participant: RoomPlayer;
+    playerNames: Record<string, string>;
+  }> {
     const room = await this.roomRepository.findById(roomId);
     if (!room) {
       throw new NotFoundException('Room not found');
@@ -105,7 +116,12 @@ export class GameHistoryController {
       throw new ForbiddenException('Cannot access another user game history');
     }
 
-    return participants[0];
+    return {
+      participant: participants[0],
+      playerNames: Object.fromEntries(
+        room.players.map((player) => [player.playerId, player.name]),
+      ),
+    };
   }
 
   private withViewerStartingHands(
