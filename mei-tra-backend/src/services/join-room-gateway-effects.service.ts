@@ -210,8 +210,8 @@ export class JoinRoomGatewayEffectsService {
       };
 
       events.push({
-        scope: 'socket',
-        socketId: clientId,
+        scope: 'room',
+        roomId,
         event: 'game-resumed',
         payload: {
           message: joinData.resumeGame.message,

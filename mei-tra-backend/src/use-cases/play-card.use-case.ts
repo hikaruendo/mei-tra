@@ -109,10 +109,15 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         },
       });
 
+      const fieldSnapshot = {
+        ...currentField,
+        cards: [...currentField.cards],
+        playedBy: [...currentField.playedBy],
+      };
       const cardPlayedPayload: CardPlayedPayload = {
         playerId: player.playerId,
         card,
-        field: currentField,
+        field: fieldSnapshot,
         players: resolveTransportPlayers(roomGameState, state.players),
       };
       const events: PlayCardGatewayEvent[] = [
@@ -125,7 +130,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       ];
 
       if (currentField.cards.length === 4) {
-        // Mark field as complete immediately to prevent 5th card
         currentField.isComplete = true;
 
         await roomGameState.saveState();
@@ -135,6 +139,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           field: {
             ...currentField,
             cards: [...currentField.cards],
+            playedBy: [...currentField.playedBy],
           },
         };
         return { success: true, events, completeFieldTrigger: trigger };
