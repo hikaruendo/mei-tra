@@ -23,9 +23,12 @@ describe('getSeatOrderWithSelfBottom', () => {
     expect(result.map((p) => p.playerId)).toEqual(['C', 'B', 'A', 'D']);
   });
 
-  it('returns original order for empty or missing self', () => {
-    expect(getSeatOrderWithSelfBottom(players, null)).toBe(players);
-    expect(getSeatOrderWithSelfBottom(players, 'X')).toBe(players);
+  it('applies swap even when self is null or missing', () => {
+    // [A,B,C,D] -> no rotation, swap to [0,3,2,1] -> [A,D,C,B]
+    const resultNull = getSeatOrderWithSelfBottom(players, null);
+    expect(resultNull.map((p) => p.playerId)).toEqual(['A', 'D', 'C', 'B']);
+    const resultMissing = getSeatOrderWithSelfBottom(players, 'X');
+    expect(resultMissing.map((p) => p.playerId)).toEqual(['A', 'D', 'C', 'B']);
   });
 
   it('handles self already at index 0', () => {

@@ -28,7 +28,6 @@ export default function RoomScreen() {
     notice,
     refreshRooms,
     gameOver,
-    fillWithCOM,
     shuffleTeams,
     startGame,
     leaveRoom,
