@@ -28,7 +28,7 @@ import {
   getSeatOrderWithSelfBottom,
 } from '@/lib/table-order';
 import { getStrengthOrderLabel } from '@/lib/trump-display';
-import { colors } from '@/theme/colors';
+import { colors, teamColors } from '@/theme/colors';
 import type {
   MobileGameOver,
   MobileGameSnapshot,
@@ -478,8 +478,8 @@ export function GameBoard({
                 <Text numberOfLines={1} style={styles.selfName}>
                   {self.name}
                 </Text>
-                <View style={[styles.selfTeamBadge, { backgroundColor: self.team === 0 ? '#8b2020' : '#1a2a2a' }]}>
-                  <Text style={styles.selfTeamBadgeText}>
+                <View style={[styles.selfTeamBadge, { borderColor: teamColors[self.team] }]}>
+                  <Text style={[styles.selfTeamBadgeText, { color: teamColors[self.team] }]}>
                     {game.teamNames?.[self.team] ?? `${self.team + 1}組`}
                   </Text>
                 </View>
@@ -934,7 +934,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   replacePanelButtonText: {
-    color: '#fff',
+    color: colors.onDanger,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1041,9 +1041,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
+    backgroundColor: colors.panelStrong,
+    borderWidth: 1,
   },
   selfTeamBadgeText: {
-    color: '#fff',
     fontSize: 9,
     fontWeight: '700',
   },
@@ -1123,7 +1124,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   pausedReplaceButtonText: {
-    color: '#fff',
+    color: colors.onDanger,
     fontSize: 15,
     fontWeight: '800',
   },

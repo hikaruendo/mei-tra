@@ -4,9 +4,7 @@ import type {
 } from '@meitra/contracts/game';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/theme/colors';
-
-const TEAM_COLORS = ['#c0392b', '#2c3e50'] as const;
+import { colors, teamColors } from '@/theme/colors';
 
 interface ScoreBoardProps {
   scores: TransportTeamScores;
@@ -26,7 +24,7 @@ export function ScoreBoard({
         const score = scores[team]?.total ?? 0;
         const isReach = score >= pointsToWin - 1;
         const width = `${Math.min(100, (score / Math.max(pointsToWin, 1)) * 100)}%` as const;
-        const teamColor = TEAM_COLORS[team];
+        const teamColor = teamColors[team];
 
         return (
           <View

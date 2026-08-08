@@ -14,9 +14,7 @@ import {
 
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
-import { colors } from '@/theme/colors';
-
-const TEAM_COLORS = ['#c0392b', '#2c3e50'] as const;
+import { colors, teamColors } from '@/theme/colors';
 
 interface WaitingRoomProps {
   room: RoomContract;
@@ -98,12 +96,14 @@ export function WaitingRoom({
         {([0, 1] as const).map((team) => {
           const teamLabel =
             room.settings.teamNames?.[team] || `チーム${team + 1}`;
-          const teamColor = TEAM_COLORS[team];
+          const teamColor = teamColors[team];
           return (
           <View key={team} style={styles.team}>
             <View style={styles.teamHeader}>
-              <View style={[styles.teamBadge, { backgroundColor: teamColor }]}>
-                <Text style={styles.teamBadgeText}>{teamLabel}</Text>
+              <View style={[styles.teamBadge, { borderColor: teamColor }]}>
+                <Text style={[styles.teamBadgeText, { color: teamColor }]}>
+                  {teamLabel}
+                </Text>
               </View>
             </View>
             {[0, 1].map((seat) => {
@@ -191,10 +191,10 @@ export function WaitingRoom({
                   key={t}
                   style={[
                     styles.teamColorDot,
-                    { backgroundColor: TEAM_COLORS[t] },
+                    { borderColor: teamColors[t] },
                   ]}
                 >
-                  <Text style={styles.teamColorDotText}>
+                  <Text style={[styles.teamColorDotText, { color: teamColors[t] }]}>
                     {draftTeamNames[t].slice(0, 1) || `${t + 1}`}
                   </Text>
                 </View>
@@ -208,10 +208,10 @@ export function WaitingRoom({
                 <View
                   style={[
                     styles.teamColorLabel,
-                    { backgroundColor: TEAM_COLORS[t] },
+                    { borderColor: teamColors[t] },
                   ]}
                 >
-                  <Text style={styles.teamColorLabelText}>
+                  <Text style={[styles.teamColorLabelText, { color: teamColors[t] }]}>
                     {t === 0 ? '赤' : '黒'}
                   </Text>
                 </View>
@@ -252,10 +252,10 @@ export function WaitingRoom({
                 key={t}
                 style={[
                   styles.teamColorDot,
-                  { backgroundColor: TEAM_COLORS[t] },
+                  { borderColor: teamColors[t] },
                 ]}
               >
-                <Text style={styles.teamColorDotText}>
+                <Text style={[styles.teamColorDotText, { color: teamColors[t] }]}>
                   {(room.settings.teamNames?.[t] || `チーム${t + 1}`).slice(0, 1)}
                 </Text>
               </View>
@@ -380,9 +380,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 8,
+    backgroundColor: colors.panelStrong,
+    borderWidth: 1,
   },
   teamBadgeText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '800',
   },
@@ -414,9 +415,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
+    backgroundColor: colors.panelStrong,
+    borderWidth: 1.5,
   },
   teamColorDotText: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -456,9 +458,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 6,
+    backgroundColor: colors.panelStrong,
+    borderWidth: 1.5,
   },
   teamColorLabelText: {
-    color: '#fff',
     fontSize: 13,
     fontWeight: '800',
   },

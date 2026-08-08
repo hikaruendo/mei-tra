@@ -69,11 +69,11 @@ const styles = StyleSheet.create({
   },
   pending: {
     borderColor: colors.gold,
-    backgroundColor: 'rgba(196, 154, 58, 0.14)',
+    backgroundColor: colors.goldSubtle,
   },
   offline: {
     borderColor: colors.danger,
-    backgroundColor: 'rgba(214, 107, 98, 0.16)',
+    backgroundColor: colors.dangerSubtle,
   },
   dot: {
     width: 9,
