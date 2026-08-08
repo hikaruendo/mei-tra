@@ -139,7 +139,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           field: {
             ...currentField,
             cards: [...currentField.cards],
-            playedBy: [...currentField.playedBy],
+            playedBy: [...(currentField.playedBy ?? [])],
           },
         };
         return { success: true, events, completeFieldTrigger: trigger };

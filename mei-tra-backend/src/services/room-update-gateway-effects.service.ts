@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { FieldContract } from '@contracts/game';
 import type { RoomContract, RoomSyncPayload } from '@contracts/room';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { resolveRoomTransportPlayers } from '../use-cases/helpers/player-resolution.helper';
@@ -11,6 +12,7 @@ import { IRoomService } from './interfaces/room-service.interface';
 interface RoomUpdateGatewayView {
   room: RoomContract;
   players: TransportPlayer[];
+  currentField: FieldContract | null;
 }
 
 interface BuildRoomsListEventParams {
@@ -45,8 +47,8 @@ export class RoomUpdateGatewayEffectsService {
     options?: { statePlayers?: DomainPlayer[] },
   ): Promise<RoomUpdateGatewayView> {
     const roomGameState = await this.roomService.getRoomGameState(room.id);
-    const statePlayers =
-      options?.statePlayers ?? roomGameState.getState().players;
+    const state = roomGameState.getState();
+    const statePlayers = options?.statePlayers ?? state.players;
     const players = resolveRoomTransportPlayers(roomGameState, room, {
       statePlayers,
     });
@@ -54,6 +56,14 @@ export class RoomUpdateGatewayEffectsService {
     return {
       players,
       room: toRoomContract(room, { players }),
+      currentField:
+        state.gamePhase === 'play' && state.playState?.currentField
+          ? {
+              ...state.playState.currentField,
+              cards: [...state.playState.currentField.cards],
+              playedBy: [...state.playState.currentField.playedBy],
+            }
+          : null,
     };
   }
 
@@ -141,6 +151,16 @@ export class RoomUpdateGatewayEffectsService {
             roomId: roomId ?? room.id,
           }),
         },
+        ...(roomView.currentField
+          ? [
+              {
+                scope: 'room' as const,
+                roomId: roomId ?? room.id,
+                event: 'field-updated',
+                payload: roomView.currentField,
+              },
+            ]
+          : []),
       ];
     }
 
@@ -159,6 +179,16 @@ export class RoomUpdateGatewayEffectsService {
           socketId,
         }),
       },
+      ...(roomView.currentField
+        ? [
+            {
+              scope: 'socket' as const,
+              socketId,
+              event: 'field-updated',
+              payload: roomView.currentField,
+            },
+          ]
+        : []),
     ];
   }
 }
