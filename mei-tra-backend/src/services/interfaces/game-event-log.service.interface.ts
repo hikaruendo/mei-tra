@@ -27,10 +27,12 @@ export interface IGameEventLogService {
   summarizeByRoomId(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistorySummary>;
   replayByRoomId(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistoryReplayView>;
   pruneFinishedRoomHistory?(keepRecentRooms?: number): Promise<number>;
 }

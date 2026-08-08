@@ -12,9 +12,18 @@ const createGateway = (): GameGateway => {
     sendSocketBackToLobby: jest.fn(),
     sendUserSocketsBackToLobby: jest.fn(),
   };
+  const gameplayNotificationService = {
+    notifyGameStarted: jest.fn(),
+    notifyTurnChanged: jest.fn(),
+  };
+  const accountActionGateService = {
+    ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
+  };
   return new GatewayConstructor(
     ...Array.from({ length: 31 }, () => ({})),
     connectionGatewayEffectsService,
+    gameplayNotificationService,
+    accountActionGateService,
   );
 };
 

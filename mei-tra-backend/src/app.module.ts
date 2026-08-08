@@ -12,6 +12,7 @@ import { DatabaseModule } from './database/database.module';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { APP_FILTER } from '@nestjs/core';
+import { PushNotificationModule } from './push/push-notification.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { APP_FILTER } from '@nestjs/core';
     GameModule,
     SocialModule,
     RepositoriesModule,
+    PushNotificationModule,
   ],
   controllers: [AppController, HealthController, UserProfileController],
   providers: [

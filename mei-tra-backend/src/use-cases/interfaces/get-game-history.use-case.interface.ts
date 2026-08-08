@@ -13,9 +13,11 @@ export interface IGetGameHistoryUseCase {
   summarize(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistorySummary>;
   replay(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistoryReplayView>;
 }

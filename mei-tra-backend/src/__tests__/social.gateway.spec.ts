@@ -3,6 +3,7 @@ import { SocialGateway } from '../social.gateway';
 import { ChatService } from '../services/chat.service';
 import { AuthService } from '../auth/auth.service';
 import { AuthenticatedUser } from '../types/user.types';
+import { AccountActionGateService } from '../services/account-action-gate.service';
 
 type MockSocket = {
   id: string;
@@ -21,6 +22,9 @@ describe('SocialGateway', () => {
     Pick<ChatService, 'postMessage' | 'listMessages'>
   >;
   let authService: jest.Mocked<Pick<AuthService, 'getUserFromSocketToken'>>;
+  let accountActionGateService: jest.Mocked<
+    Pick<AccountActionGateService, 'ensureActiveSocketActor'>
+  >;
   let serverEmit: jest.Mock;
   let serverTo: jest.Mock;
   let serverExcept: jest.Mock;
@@ -74,6 +78,12 @@ describe('SocialGateway', () => {
     authService = {
       getUserFromSocketToken: jest.fn(),
     };
+    accountActionGateService = {
+      ensureActiveSocketActor: jest.fn().mockResolvedValue({
+        allowed: true,
+        authenticatedUser,
+      }),
+    };
     serverEmit = jest.fn();
     serverExcept = jest.fn().mockReturnValue({ emit: serverEmit });
     serverTo = jest.fn().mockReturnValue({
@@ -84,6 +94,7 @@ describe('SocialGateway', () => {
     gateway = new SocialGateway(
       chatService as unknown as ChatService,
       authService as unknown as AuthService,
+      accountActionGateService as unknown as AccountActionGateService,
     );
     gateway.server = {
       to: serverTo,
@@ -163,6 +174,9 @@ describe('SocialGateway', () => {
       contentType: 'text',
       replyTo: undefined,
     });
+    expect(
+      accountActionGateService.ensureActiveSocketActor,
+    ).toHaveBeenCalledWith(socket, 'post a chat message');
     expect(socket.emit).toHaveBeenCalledWith('chat:message', event);
     expect(serverTo).toHaveBeenCalledWith('room-1');
     expect(serverExcept).toHaveBeenCalledWith('socket-1');
@@ -178,6 +192,9 @@ describe('SocialGateway', () => {
       userId: 'attacker-user',
     });
 
+    expect(
+      accountActionGateService.ensureActiveSocketActor,
+    ).toHaveBeenCalledWith(socket, 'send a typing event');
     expect(socket.to).toHaveBeenCalledWith('room-1');
     const socketToTarget = socket.to.mock.results[0].value as {
       emit: jest.Mock;
@@ -190,5 +207,42 @@ describe('SocialGateway', () => {
         userId: 'user-1',
       }),
     );
+  });
+
+  it('rejects a cached socket when account deletion is in progress', async () => {
+    const socket = createSocket('valid-token');
+    socket.data.user = authenticatedUser;
+    accountActionGateService.ensureActiveSocketActor.mockResolvedValue({
+      allowed: false,
+      errorMessage:
+        'Account deletion is in progress. Please finish deleting this account before continuing.',
+    });
+
+    await gateway.handlePostMessage(asSocket(socket), {
+      roomId: 'room-1',
+      content: 'should not be saved',
+    });
+
+    expect(chatService.postMessage).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith('chat:error', {
+      message:
+        'Account deletion is in progress. Please finish deleting this account before continuing.',
+    });
+  });
+
+  it('does not emit typing events for a cached socket rejected by the gate', async () => {
+    const socket = createSocket('valid-token');
+    socket.data.user = authenticatedUser;
+    accountActionGateService.ensureActiveSocketActor.mockResolvedValue({
+      allowed: false,
+      errorMessage: 'Account deletion is in progress.',
+    });
+
+    await gateway.handleTyping(asSocket(socket), { roomId: 'room-1' });
+
+    expect(socket.to).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith('chat:error', {
+      message: 'Account deletion is in progress.',
+    });
   });
 });

@@ -372,6 +372,13 @@ export class ReconnectionUseCase {
         teamScores: state.teamScores,
         you: player.playerId,
         negriCard: state.playState?.negriCard ?? null,
+        revealedAgari:
+          state.gamePhase === 'play' &&
+          !state.playState?.negriCard &&
+          state.blowState.currentHighestDeclaration?.playerId ===
+          player.playerId
+            ? (state.agari ?? null)
+            : null,
         fields: state.playState?.fields ?? [],
         roomId,
         hostId: room.hostId,

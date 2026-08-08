@@ -88,7 +88,7 @@ export function getSocket(authToken?: string): Socket {
     console.log('[Socket] Auth roomId will be read dynamically from sessionStorage on each connect');
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected successfully with transport:', socket?.io.engine.transport.name, {
+      console.log('[Socket] Connected successfully with transport:', socket?.io?.engine?.transport?.name ?? 'unknown', {
         socketId: socket?.id ?? null,
         storedRoomId: sessionStorage.getItem('roomId') || null,
       });

@@ -1,0 +1,1206 @@
+import type { PlayerContract, TrumpType } from '@meitra/contracts/game';
+import type {
+  GameHistoryReplayViewContract,
+  GameHistorySummaryContract,
+} from '@meitra/contracts/game-history';
+import * as Haptics from 'expo-haptics';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import { BlowControls } from '@/components/game/BlowControls';
+import { GameHistory } from '@/components/game/GameHistory';
+import { PlayerSeat } from '@/components/game/PlayerSeat';
+import { PlayingCard } from '@/components/game/PlayingCard';
+import { ScoreBoard } from '@/components/game/ScoreBoard';
+import { ChatPanel } from '@/components/social/ChatPanel';
+import { Button } from '@/components/ui/Button';
+import { isCardPlayable } from '@/lib/cards';
+import {
+  getCardSeatPosition,
+  getSeatOrderWithSelfBottom,
+} from '@/lib/table-order';
+import { getStrengthOrderLabel } from '@/lib/trump-display';
+import { colors } from '@/theme/colors';
+import type {
+  MobileGameOver,
+  MobileGameSnapshot,
+} from '@/types/game';
+
+interface GameHistoryData {
+  replay: GameHistoryReplayViewContract | null;
+  summary: GameHistorySummaryContract | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+}
+
+interface GameBoardProps {
+  game: MobileGameSnapshot;
+  gameOver: MobileGameOver | null;
+  isHost: boolean;
+  onCloseGameOver: () => void;
+  onDeclare: (trump: TrumpType, pairs: number) => void;
+  onPass: () => void;
+  onSelectNegri: (card: string) => void;
+  onPlayCard: (card: string) => void;
+  onSelectBaseSuit: (suit: string) => void;
+  onRemovePlayer: (playerId: string) => void;
+  onReplaceWithCOM: (playerId: string) => void;
+  onLeave: () => void;
+  actionsDisabled?: boolean;
+  history?: GameHistoryData;
+  roomId?: string;
+}
+
+const trumpLabels: Record<TrumpType, string> = {
+  tra: 'トラ',
+  herz: 'ヘル ♥',
+  daiya: 'ダイヤ ♦',
+  club: 'クラブ ♣',
+  zuppe: 'ズッペ ♠',
+};
+
+export function GameBoard({
+  game,
+  gameOver,
+  isHost,
+  onCloseGameOver,
+  onDeclare,
+  onPass,
+  onSelectNegri,
+  onPlayCard,
+  onSelectBaseSuit,
+  onRemovePlayer,
+  onReplaceWithCOM,
+  onLeave,
+  actionsDisabled = false,
+  history,
+  roomId,
+}: GameBoardProps) {
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    'card' | 'negri' | 'suit' | null
+  >(null);
+  const [leaving, setLeaving] = useState(false);
+  const [showStrength, setShowStrength] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [spectatorPerspectiveId, setSpectatorPerspectiveId] = useState<
+    string | null
+  >(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hostPlayerId =
+    game.players.find((p) => p.isHost)?.playerId ??
+    game.players[0]?.playerId ??
+    null;
+  const perspectivePlayerId = game.isSpectator
+    ? spectatorPerspectiveId ?? hostPlayerId
+    : game.you;
+
+  useEffect(() => {
+    if (!game.isSpectator) return;
+    const valid = game.players.some(
+      (p) => p.playerId === spectatorPerspectiveId,
+    );
+    if (!valid) setSpectatorPerspectiveId(hostPlayerId);
+  }, [game.isSpectator, game.players, hostPlayerId, spectatorPerspectiveId]);
+
+  const self = game.players.find(
+    (player) => player.playerId === perspectivePlayerId,
+  );
+  const orderedPlayers = useMemo(
+    () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
+    [game.players, perspectivePlayerId],
+  );
+  const leftPlayer = orderedPlayers[1] ?? null;
+  const topPlayer = orderedPlayers[2] ?? null;
+  const rightPlayer = orderedPlayers[3] ?? null;
+  const opponentSlots = useMemo(
+    () =>
+      [
+        { player: leftPlayer, position: 'left' as const },
+        { player: topPlayer, position: 'top' as const },
+        { player: rightPlayer, position: 'right' as const },
+      ].filter(
+        (
+          slot,
+        ): slot is {
+          player: PlayerContract;
+          position: 'left' | 'top' | 'right';
+        } =>
+          slot.player != null,
+      ),
+    [leftPlayer, topPlayer, rightPlayer],
+  );
+  const teamFieldCounts = useMemo(() => {
+    const counts: Record<number, number> = { 0: 0, 1: 0 };
+    for (const field of game.fields) {
+      counts[field.winnerTeam] = (counts[field.winnerTeam] ?? 0) + 1;
+    }
+    return counts;
+  }, [game.fields]);
+  const highest = game.blowState.currentHighestDeclaration;
+  const mustSelectNegri =
+    !game.isSpectator &&
+    game.gamePhase === 'play' &&
+    highest?.playerId === game.you &&
+    !game.negriCard;
+  const isMyTurn = !game.isSpectator && game.currentTurn === game.you;
+  const phaseLabel =
+    game.gamePhase === 'blow'
+      ? '吹き'
+      : game.gamePhase === 'play'
+        ? 'プレイ'
+        : '待機';
+  const currentTrump = game.blowState.currentTrump;
+  const needsBaseSuit =
+    !game.isSpectator &&
+    game.currentField?.baseCard === 'JOKER' &&
+    !game.currentField.baseSuit &&
+    isMyTurn;
+  const selectedPlayable = useMemo(
+    () =>
+      Boolean(
+        selectedCard &&
+          self &&
+          isCardPlayable(
+            self.hand,
+            selectedCard,
+            game.currentField,
+            currentTrump,
+          ),
+      ),
+    [currentTrump, game.currentField, selectedCard, self],
+  );
+  const fieldCardsKey = game.currentField?.cards.join(',') ?? '';
+
+  useEffect(() => {
+    setSelectedCard(null);
+    setPendingAction(null);
+  }, [game.gamePhase, game.you]);
+
+  useEffect(() => {
+    setPendingAction(null);
+    if (actionsDisabled) {
+      setSelectedCard(null);
+    }
+  }, [
+    actionsDisabled,
+    game.currentTurn,
+    fieldCardsKey,
+    game.blowState.currentHighestDeclaration?.timestamp,
+    game.negriCard,
+  ]);
+
+  const fieldsCount = game.fields.length;
+  const prevFieldsCount = useRef(fieldsCount);
+  useEffect(() => {
+    if (fieldsCount > prevFieldsCount.current) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    prevFieldsCount.current = fieldsCount;
+  }, [fieldsCount]);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
+
+  const markPending = (action: 'card' | 'negri' | 'suit') => {
+    setPendingAction(action);
+    timeoutRef.current = setTimeout(() => setPendingAction(null), 1800);
+  };
+
+  const handleLeave = () => {
+    if (actionsDisabled || leaving) return;
+    setLeaving(true);
+    onLeave();
+    timeoutRef.current = setTimeout(() => setLeaving(false), 1800);
+  };
+
+  const confirmSelected = () => {
+    if (actionsDisabled || !selectedCard || pendingAction) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (mustSelectNegri) {
+      markPending('negri');
+      onSelectNegri(selectedCard);
+    } else {
+      markPending('card');
+      onPlayCard(selectedCard);
+    }
+    setSelectedCard(null);
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <ScoreBoard
+          pointsToWin={game.pointsToWin}
+          scores={game.teamScores}
+          teamNames={game.teamNames}
+        />
+        <Pressable
+          onPress={() => setShowOptions(true)}
+          style={styles.optionsButton}
+        >
+          <Text style={styles.optionsButtonText}>···</Text>
+        </Pressable>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topBar}>
+          <Text style={styles.phase}>{phaseLabel}</Text>
+          {highest ? (
+            <Text style={styles.trumpBadge}>
+              {trumpLabels[highest.trumpType]} {highest.numberOfPairs}
+            </Text>
+          ) : null}
+        </View>
+
+
+        {showStrength && currentTrump ? (
+          <View style={styles.strengthPanel}>
+            <Text style={styles.strengthOrder}>
+              {getStrengthOrderLabel(currentTrump)}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.opponentsArea}>
+          {opponentSlots.map(({ player, position }) => {
+            const hasNegri =
+              game.gamePhase === 'play' &&
+              game.negriPlayerId === player.playerId;
+            const blowWinnerId = highest?.playerId;
+            const hasAgari =
+              game.gamePhase === 'play' &&
+              game.revealedAgari &&
+              blowWinnerId === player.playerId;
+            const seatEl = (
+              <PlayerSeat
+                key={player.playerId}
+                agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
+                declaration={
+                  highest && highest.playerId === player.playerId
+                    ? `${trumpLabels[highest.trumpType]} ${highest.numberOfPairs}`
+                    : undefined
+                }
+                isBlowWinner={blowWinnerId === player.playerId}
+                isDisconnected={game.disconnectedPlayerIds.includes(
+                  player.playerId,
+                )}
+                isIdle={game.idlePlayerIds.includes(player.playerId)}
+                isTurn={game.currentTurn === player.playerId}
+                negriCard={hasNegri ? 'hidden' : undefined}
+                onPress={
+                  game.isSpectator
+                    ? () => setSpectatorPerspectiveId(player.playerId)
+                    : undefined
+                }
+                player={player}
+                teamFieldCounts={teamFieldCounts}
+                teamNames={game.teamNames}
+              />
+            );
+            const posStyle =
+              position === 'top'
+                ? styles.seatTop
+                : position === 'left'
+                  ? styles.seatLeft
+                  : styles.seatRight;
+            const wrapped = isHost && !player.isCOM ? (
+              <Pressable
+                key={player.playerId}
+                onLongPress={() => {
+                  Alert.alert(
+                    player.name,
+                    'プレイヤーの操作を選択してください',
+                    [
+                      {
+                        text: 'COMに置換',
+                        onPress: () => onReplaceWithCOM(player.playerId),
+                      },
+                      {
+                        text: '退出させる',
+                        style: 'destructive',
+                        onPress: () => onRemovePlayer(player.playerId),
+                      },
+                      { text: 'キャンセル', style: 'cancel' },
+                    ],
+                  );
+                }}
+              >
+                {seatEl}
+              </Pressable>
+            ) : seatEl;
+            const isDisconnected = game.disconnectedPlayerIds.includes(
+              player.playerId,
+            );
+            const isIdle = game.idlePlayerIds.includes(player.playerId);
+            const showReplacePanel =
+              isHost && !player.isCOM && (isDisconnected || isIdle);
+            return (
+              <View key={player.playerId} style={posStyle}>
+                {wrapped}
+                {showReplacePanel ? (
+                  <View style={styles.replacePanel}>
+                    <Text style={styles.replacePanelHeader}>
+                      {isDisconnected ? '切断中' : '無操作'}
+                    </Text>
+                    <Pressable
+                      onPress={() => onReplaceWithCOM(player.playerId)}
+                      style={styles.replacePanelButton}
+                    >
+                      <Text style={styles.replacePanelButtonText}>
+                        COMに置換
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+
+        {game.gamePhase === 'play' ? (
+          <View style={styles.field}>
+            <View style={styles.fieldCenter}>
+              {game.currentField?.cards.length ? (
+                game.currentField.cards.map((card, index) => {
+                  const playerId = game.currentField!.playedBy[index];
+                  const seat = getCardSeatPosition(
+                    playerId,
+                    orderedPlayers,
+                  );
+                  const seatOffsets: Record<string, { x: number; y: number }> = {
+                    bottom: { x: 0, y: 24 },
+                    top: { x: 0, y: -24 },
+                    left: { x: -36, y: 0 },
+                    right: { x: 36, y: 0 },
+                  };
+                  const offset = seatOffsets[seat];
+                  return (
+                    <View
+                      key={`${card}-${index}`}
+                      style={[
+                        styles.fieldCardAbsolute,
+                        {
+                          transform: [
+                            { translateX: offset.x },
+                            { translateY: offset.y },
+                          ],
+                          zIndex: index + 1,
+                        },
+                      ]}
+                    >
+                      <PlayingCard card={card} compact />
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyField}>まだカードはありません</Text>
+              )}
+            </View>
+            {game.currentField?.baseSuit ? (
+              <Text style={styles.baseSuit}>
+                台札のスート: {game.currentField.baseSuit}
+              </Text>
+            ) : null}
+            {needsBaseSuit ? (
+              <View style={styles.suitSelector}>
+                <Text style={styles.sectionLabel}>台札のスートを選択</Text>
+                <View style={styles.suitButtons}>
+                  {['♠', '♥', '♦', '♣'].map((suit) => (
+                    <Button
+                      key={suit}
+                      disabled={actionsDisabled || Boolean(pendingAction)}
+                      loading={pendingAction === 'suit'}
+                      onPress={() => {
+                        markPending('suit');
+                        onSelectBaseSuit(suit);
+                      }}
+                      style={styles.suitButton}
+                      variant="secondary"
+                    >
+                      {suit}
+                    </Button>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {game.gamePhase === 'blow' ? (
+          <BlowControls
+            actionHistory={game.blowState.actionHistory}
+            actionsDisabled={actionsDisabled || game.isSpectator}
+            currentPlayerId={game.you}
+            currentTurn={game.currentTurn}
+            highest={highest}
+            onDeclare={onDeclare}
+            onPass={onPass}
+            players={game.players}
+          />
+        ) : null}
+
+        {(game.gamePhase === 'blow' || game.gamePhase === 'play') && self ? (
+          <View style={styles.handSection}>
+            <View style={styles.selfRow}>
+              <View
+                style={[
+                  styles.selfCard,
+                  (game.isSpectator
+                    ? game.currentTurn === self.playerId
+                    : isMyTurn) && styles.selfCardTurn,
+                ]}
+              >
+                <View style={[styles.selfAvatar, self.isCOM && styles.selfComAvatar]}>
+                  <Text style={styles.selfAvatarText}>
+                    {self.isCOM ? '🤖' : '●'}
+                  </Text>
+                </View>
+                <Text numberOfLines={1} style={styles.selfName}>
+                  {self.name}
+                </Text>
+                <View style={[styles.selfTeamBadge, { backgroundColor: self.team === 0 ? '#8b2020' : '#1a2a2a' }]}>
+                  <Text style={styles.selfTeamBadgeText}>
+                    {game.teamNames?.[self.team] ?? `${self.team + 1}組`}
+                  </Text>
+                </View>
+                <Text style={styles.selfFieldCountText}>
+                  取得 {teamFieldCounts[self.team] ?? 0}場
+                </Text>
+                {game.gamePhase === 'play' && game.negriCard && highest?.playerId === self.playerId ? (
+                  <View style={styles.selfSpecialRow}>
+                    <PlayingCard card={game.negriCard} mini />
+                    <Text style={styles.selfSpecialLabel}>ネグリ</Text>
+                  </View>
+                ) : null}
+                {game.gamePhase === 'play' && game.revealedAgari ? (
+                  <View style={styles.selfSpecialRow}>
+                    <PlayingCard card={game.revealedAgari} mini />
+                    <Text style={styles.selfSpecialLabel}>アゲ</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.handArea}>
+                {game.gamePhase === 'play' ? (
+                  game.isSpectator ? (
+                    <Text style={styles.instruction}>
+                      {self.name} の手札（観戦中）
+                    </Text>
+                  ) : mustSelectNegri ? (
+                    <Text style={styles.instruction}>
+                      ネグリにするカードを選んでください
+                    </Text>
+                  ) : (
+                    <Text style={styles.instruction}>
+                      {isMyTurn ? 'プレイするカードを選んでください' : '順番を待っています'}
+                    </Text>
+                  )
+                ) : null}
+
+            <View style={styles.fanContainer}>
+              {self.hand.map((card, index) => {
+                const total = self.hand.length;
+                const half = Math.max((total - 1) / 2, 1);
+                const dist = index - (total - 1) / 2;
+                const norm = dist / half;
+                const rotation = norm * 12;
+                const lift = Math.pow(Math.abs(norm), 2) * 14;
+                const isPlayPhase =
+                  game.gamePhase === 'play' && !game.isSpectator;
+                const playable =
+                  isPlayPhase &&
+                  isMyTurn &&
+                  isCardPlayable(
+                    self.hand,
+                    card,
+                    game.currentField,
+                    currentTrump,
+                  );
+                const isSelected = selectedCard === card;
+                return (
+                  <View
+                    key={`${card}-${index}`}
+                    style={[
+                      styles.fanCard,
+                      total > 1 && { marginHorizontal: -6 },
+                      {
+                        transform: [
+                          { rotate: `${rotation}deg` },
+                          { translateY: lift + (isSelected ? -12 : 0) },
+                        ],
+                      },
+                    ]}
+                  >
+                    <PlayingCard
+                      card={card}
+                      disabled={
+                        isPlayPhase &&
+                        (actionsDisabled ||
+                          !playable ||
+                          Boolean(pendingAction))
+                      }
+                      onPress={
+                        isPlayPhase
+                          ? () =>
+                              setSelectedCard((current) =>
+                                current === card ? null : card,
+                              )
+                          : undefined
+                      }
+                      selected={isSelected}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+
+            {game.gamePhase === 'play' && selectedCard ? (
+              <View style={styles.selectedActions}>
+                <Button
+                  disabled={
+                    actionsDisabled ||
+                    !selectedPlayable ||
+                    Boolean(pendingAction)
+                  }
+                  loading={pendingAction === 'card' || pendingAction === 'negri'}
+                  onPress={confirmSelected}
+                  style={styles.actionButton}
+                >
+                  {mustSelectNegri ? 'ネグリにする' : 'プレイ'}
+                </Button>
+                <Button
+                  disabled={actionsDisabled || Boolean(pendingAction)}
+                  onPress={() => setSelectedCard(null)}
+                  style={styles.actionButton}
+                  variant="secondary"
+                >
+                  キャンセル
+                </Button>
+              </View>
+            ) : null}
+              </View>
+            </View>
+            {game.gamePhase === 'play' && self && (() => {
+              const myFields = game.fields.filter(
+                (field) => field.winnerTeam === self.team,
+              );
+              if (myFields.length === 0) return null;
+              return (
+                <View style={styles.completedWrap}>
+                  {myFields.map((field, idx) => (
+                    <View key={idx} style={styles.completedChip}>
+                      {field.cards.map((card, ci) => (
+                        <View
+                          key={ci}
+                          style={ci > 0 ? styles.completedCardOverlap : undefined}
+                        >
+                          <PlayingCard card={card} mini />
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
+          </View>
+        ) : null}
+      </ScrollView>
+
+      {game.paused ? (
+        <View style={styles.pausedOverlay}>
+          <Text style={styles.pausedTitle}>ゲームを一時停止しています</Text>
+          <Text style={styles.pausedText}>プレイヤーの再接続を待っています</Text>
+          {isHost ? (
+            <View style={styles.pausedReplaceSection}>
+              {game.players
+                .filter(
+                  (p) =>
+                    !p.isCOM &&
+                    game.disconnectedPlayerIds.includes(p.playerId),
+                )
+                .map((p) => (
+                  <Pressable
+                    key={p.playerId}
+                    onPress={() => onReplaceWithCOM(p.playerId)}
+                    style={styles.pausedReplaceButton}
+                  >
+                    <Text style={styles.pausedReplaceButtonText}>
+                      {p.name} をCOMに置換
+                    </Text>
+                  </Pressable>
+                ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      <Modal
+        animationType="fade"
+        onRequestClose={onCloseGameOver}
+        transparent
+        visible={Boolean(gameOver)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>ゲーム終了</Text>
+            <Text style={styles.modalText}>
+              勝者: {gameOver?.winner}
+              {'\n'}
+              チーム1 {gameOver?.finalScores[0]?.total ?? 0}点 / チーム2{' '}
+              {gameOver?.finalScores[1]?.total ?? 0}点
+            </Text>
+            <Button disabled={actionsDisabled} onPress={onCloseGameOver}>
+              ルーム一覧へ
+            </Button>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+        transparent
+        visible={showOptions}
+      >
+        <View style={styles.optionsOverlay}>
+          <Pressable
+            onPress={() => setShowOptions(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.optionsMenu}>
+            <Pressable
+              onPress={() => setShowOptions(false)}
+              style={styles.optionsClose}
+            >
+              <Text style={styles.optionsCloseText}>×</Text>
+            </Pressable>
+            {currentTrump ? (
+              <Button
+                onPress={() => {
+                  setShowStrength((v) => !v);
+                  setShowOptions(false);
+                }}
+                variant="secondary"
+              >
+                強さ順
+              </Button>
+            ) : null}
+            {roomId ? (
+              <Button
+                onPress={() => {
+                  setShowChat(true);
+                  setShowOptions(false);
+                }}
+                variant="secondary"
+              >
+                チャット
+              </Button>
+            ) : null}
+            {history ? (
+              <Button
+                onPress={() => {
+                  history.refresh();
+                  setShowHistory(true);
+                  setShowOptions(false);
+                }}
+                variant="secondary"
+              >
+                対局ログ
+              </Button>
+            ) : null}
+            <Button
+              disabled={actionsDisabled || leaving}
+              loading={leaving}
+              onPress={() => {
+                setShowOptions(false);
+                handleLeave();
+              }}
+              variant="ghost"
+              style={styles.optionsItemDanger}
+            >
+              退出
+            </Button>
+          </View>
+        </View>
+      </Modal>
+
+      {roomId ? (
+        <Modal
+          animationType="slide"
+          onRequestClose={() => setShowChat(false)}
+          transparent
+          visible={showChat}
+        >
+          <View style={styles.chatOverlay}>
+            <View style={styles.chatCard}>
+              <View style={styles.chatHeader}>
+                <Text style={styles.chatTitle}>チャット</Text>
+                <Button
+                  onPress={() => setShowChat(false)}
+                  variant="ghost"
+                >
+                  閉じる
+                </Button>
+              </View>
+              <ChatPanel roomId={roomId} />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
+      {history ? (
+        <Modal
+          animationType="slide"
+          onRequestClose={() => setShowHistory(false)}
+          transparent
+          visible={showHistory}
+        >
+          <View style={styles.historyOverlay}>
+            <View style={styles.historyCard}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyTitle}>ゲーム履歴</Text>
+                <Button
+                  onPress={() => setShowHistory(false)}
+                  variant="ghost"
+                >
+                  閉じる
+                </Button>
+              </View>
+              <GameHistory
+                error={history.error}
+                loading={history.loading}
+                onRefresh={history.refresh}
+                replay={history.replay}
+                summary={history.summary}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundElevated,
+  },
+  scrollContent: {
+    gap: 10,
+    padding: 10,
+    paddingBottom: 40,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  phase: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  trumpBadge: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: colors.panelStrong,
+    overflow: 'hidden',
+  },
+  optionsButton: {
+    width: 40,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+  },
+  optionsButtonText: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  optionsOverlay: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: 10,
+    backgroundColor: colors.overlay,
+  },
+  optionsMenu: {
+    position: 'relative',
+    zIndex: 1,
+    width: 200,
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
+  },
+  optionsClose: {
+    alignSelf: 'flex-end',
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  optionsCloseText: {
+    color: colors.textMuted,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  optionsItemDanger: {
+    borderColor: colors.danger,
+  },
+  strengthPanel: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: colors.panelStrong,
+  },
+  strengthOrder: {
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  opponentsArea: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 4,
+  },
+  seatLeft: {
+    marginTop: 24,
+  },
+  seatTop: {
+    marginTop: 0,
+  },
+  seatRight: {
+    marginTop: 24,
+  },
+  replacePanel: {
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: colors.panelStrong,
+  },
+  replacePanelHeader: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  replacePanelButton: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: colors.danger,
+  },
+  replacePanelButtonText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  field: {
+    minHeight: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+  },
+  sectionLabel: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  fieldCenter: {
+    width: 180,
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldCardAbsolute: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  emptyField: {
+    color: colors.textMuted,
+  },
+  baseSuit: {
+    color: colors.gold,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  suitSelector: {
+    gap: 8,
+  },
+  suitButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  suitButton: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 8,
+  },
+  completedWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    paddingVertical: 4,
+  },
+  completedChip: {
+    flexDirection: 'row',
+    padding: 2,
+    borderRadius: 4,
+    backgroundColor: colors.backgroundElevated,
+  },
+  completedCardOverlap: {
+    marginLeft: -12,
+  },
+  handSection: {
+    gap: 8,
+  },
+  selfRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selfCard: {
+    width: 80,
+    alignItems: 'center',
+    gap: 3,
+    padding: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
+  },
+  selfCardTurn: {
+    borderColor: colors.gold,
+    borderWidth: 2,
+  },
+  selfAvatar: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: colors.gold,
+  },
+  selfComAvatar: {
+    backgroundColor: colors.backgroundElevated,
+  },
+  selfAvatarText: {
+    color: colors.text,
+    fontSize: 24,
+  },
+  selfName: {
+    maxWidth: 70,
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  selfTeamBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  selfTeamBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  selfFieldCountText: {
+    color: colors.textMuted,
+    fontSize: 9,
+    marginTop: 1,
+  },
+  selfSpecialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  selfSpecialLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  handArea: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  instruction: {
+    color: colors.textMuted,
+    fontSize: 13,
+  },
+  fanContainer: {
+    minHeight: 104,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  fanCard: {
+    zIndex: 1,
+  },
+  selectedActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  pausedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 30,
+    backgroundColor: colors.overlay,
+  },
+  pausedTitle: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  pausedText: {
+    color: colors.textMuted,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  pausedReplaceSection: {
+    gap: 10,
+    marginTop: 16,
+    width: '80%',
+    maxWidth: 300,
+  },
+  pausedReplaceButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: colors.danger,
+  },
+  pausedReplaceButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  modalOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: colors.overlay,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 440,
+    gap: 16,
+    padding: 22,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    backgroundColor: colors.panel,
+  },
+  modalTitle: {
+    color: colors.gold,
+    fontSize: 26,
+    fontWeight: '900',
+  },
+  modalText: {
+    color: colors.text,
+    fontSize: 17,
+    lineHeight: 26,
+  },
+  chatOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  chatCard: {
+    maxHeight: '80%',
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: colors.background,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  chatTitle: {
+    color: colors.gold,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  historyOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  historyCard: {
+    maxHeight: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: colors.background,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  historyTitle: {
+    color: colors.gold,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+});

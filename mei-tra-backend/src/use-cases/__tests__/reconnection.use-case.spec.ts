@@ -250,13 +250,18 @@ describe('ReconnectionUseCase', () => {
             hasRequiredBroken: false,
           },
         ],
-        gamePhase: 'blow',
+        gamePhase: 'play',
         currentPlayerIndex: 1,
         blowState: {
           declarations: [],
           actionHistory: [],
           currentTrump: null,
-          currentHighestDeclaration: null,
+          currentHighestDeclaration: {
+            playerId: 'seat-1',
+            trumpType: 'zuppe',
+            numberOfPairs: 7,
+            timestamp: 1,
+          },
           lastPasser: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
@@ -271,6 +276,7 @@ describe('ReconnectionUseCase', () => {
           openDeclarerId: null,
         },
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+        agari: 'J♠',
         pointsToWin: 10,
       }),
     };
@@ -339,6 +345,7 @@ describe('ReconnectionUseCase', () => {
     expect(snapshot?.currentTurnPlayerId).toBe('player-2');
     expect(snapshot?.gameState.currentTurn).toBe('player-2');
     expect(snapshot?.gameState.you).toBe('seat-1');
+    expect(snapshot?.gameState.revealedAgari).toBe('J♠');
     expect(snapshot?.gameState.players).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ playerId: 'seat-1', hand: ['A♠'] }),

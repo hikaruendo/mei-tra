@@ -1,0 +1,112 @@
+name: Mobile CI
+
+on:
+  pull_request:
+    paths:
+      - 'mei-tra-mobile/**'
+      - 'contracts/**'
+      - 'shared/game-client/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'mei-tra-mobile/**'
+      - 'contracts/**'
+      - 'shared/game-client/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: mei-tra-mobile
+
+env:
+  CI: '1'
+  EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+  EXPO_PUBLIC_BACKEND_URL: https://ci-placeholder.invalid
+
+jobs:
+  quality:
+    name: Lint, typecheck, and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate EAS monorepo packaging
+        run: npm run validate:eas-monorepo
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test -- --ci
+
+  platform-exports:
+    name: Expo ${{ matrix.platform }} export
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ios
+          - android
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate EAS monorepo packaging
+        run: npm run validate:eas-monorepo
+
+      - name: Validate Expo configuration
+        run: |
+          node - <<'NODE'
+          const app = require('./app.json').expo;
+
+          if (app.ios?.bundleIdentifier !== 'com.kando1.meitra') {
+            throw new Error(`Unexpected iOS bundle identifier: ${app.ios?.bundleIdentifier}`);
+          }
+
+          if (app.android?.package !== 'com.kando1.meitra') {
+            throw new Error(`Unexpected Android package: ${app.android?.package}`);
+          }
+          NODE
+
+      - name: Export JavaScript bundle
+        run: npm run export:${{ matrix.platform }}

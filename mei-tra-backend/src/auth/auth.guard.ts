@@ -8,12 +8,17 @@ import {
 import { AuthService } from './auth.service';
 import { Socket } from 'socket.io';
 import { Request } from 'express';
+import { Reflector } from '@nestjs/core';
+import { ALLOW_DELETING_ACCOUNT_AUTH } from './decorators/allow-deleting-account.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -25,7 +30,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('No authentication token provided');
     }
 
-    const user = await this.authService.validateToken(token);
+    const allowDeletingAccount = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_DELETING_ACCOUNT_AUTH,
+      [context.getHandler(), context.getClass()],
+    );
+    const user = await this.authService.validateToken(token, {
+      allowDeletingAccount: Boolean(allowDeletingAccount),
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid or expired token');
     }

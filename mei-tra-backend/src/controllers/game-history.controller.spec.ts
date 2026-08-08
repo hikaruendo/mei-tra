@@ -148,14 +148,20 @@ describe('GameHistoryController', () => {
       ),
     ).resolves.toEqual(summary);
 
-    expect(getGameHistoryUseCase.summarize).toHaveBeenCalledWith('room-1', {
-      actionType: 'card_played',
-      playerId: 'player-1',
-      roundNumber: 2,
-      since: new Date('2026-04-16T00:00:00.000Z'),
-      until: new Date('2026-04-16T01:00:00.000Z'),
-      limit: 10,
-    });
+    expect(getGameHistoryUseCase.summarize).toHaveBeenCalledWith(
+      'room-1',
+      {
+        actionType: 'card_played',
+        playerId: 'player-1',
+        roundNumber: 2,
+        since: new Date('2026-04-16T00:00:00.000Z'),
+        until: new Date('2026-04-16T01:00:00.000Z'),
+        limit: 10,
+      },
+      {
+        'player-1': 'Player 1',
+      },
+    );
   });
 
   it('returns replay groups from the use-case', async () => {
@@ -249,14 +255,20 @@ describe('GameHistoryController', () => {
         }),
       ],
     });
-    expect(getGameHistoryUseCase.replay).toHaveBeenCalledWith('room-1', {
-      actionType: undefined,
-      limit: 5,
-      playerId: undefined,
-      roundNumber: undefined,
-      since: undefined,
-      until: undefined,
-    });
+    expect(getGameHistoryUseCase.replay).toHaveBeenCalledWith(
+      'room-1',
+      {
+        actionType: undefined,
+        limit: 5,
+        playerId: undefined,
+        roundNumber: undefined,
+        since: undefined,
+        until: undefined,
+      },
+      {
+        'player-1': 'Player 1',
+      },
+    );
   });
 
   it('sanitizes invalid query params before delegating', async () => {

@@ -33,7 +33,7 @@ repo 直下には複数のディレクトリがありますが、現行の主実
 | `.github/workflows/` | CI/CD と運用補助 | Fly.io deploy、auto-scale、Claude workflow |
 | `docs/` | 設計メモやロードマップ | 一部は今も有効だが、現行実装の導線としては散在している |
 | `../archive/2025-06-zenn-meitra-project-memo.md` | 2025-06 に公開した Zenn 記事のアーカイブ | 当時のプロジェクト説明・備忘録として参照可。ただし現行の一次資料ではない |
-| `mei-tra-mobile/` | スコープ外寄り | 現時点では主開発対象ではない |
+| `mei-tra-mobile/` | Mobile frontend | Expo / React Native。Supabase Authと既存Socket.IO backendを共有する |
 | `mei-tra-cloudflare/` | スコープ外寄り | 現時点では主開発対象ではない |
 
 現行 repo では transport 契約をトップレベル `contracts/` に寄せています。ここには profile REST DTO、social socket payload、game socket payload など、frontend と backend が wire で共有する shape だけを置きます。一方で UI state は frontend 側 `types/`、domain / persistence 型は backend 側 `src/types/` に残します。
@@ -51,7 +51,6 @@ repo root を用途ベースで見直すと、温度感は次のように分か�
   - `../archive/2025-06-zenn-meitra-project-memo.md`
   - `public/`
 - いまは主対象ではない領域:
-  - `mei-tra-mobile/`
   - `mei-tra-cloudflare/`
 
 この分類を最初に持っておくと、repo 内の全ディレクトリを同じ優先度で追わずに済みます。

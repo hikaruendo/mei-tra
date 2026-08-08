@@ -43,7 +43,6 @@ import { IUpdateAuthUseCase } from './use-cases/interfaces/update-auth.use-case.
 import { IWatchRoomUseCase } from './use-cases/interfaces/watch-room.use-case.interface';
 import { IActivityTrackerService } from './services/interfaces/activity-tracker-service.interface';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
-import { SessionUser } from './types/session.types';
 import { JoinRoomGatewayEffectsService } from './services/join-room-gateway-effects.service';
 import { DisconnectGatewayEffectsService } from './services/disconnect-gateway-effects.service';
 import { RoomUpdateGatewayEffectsService } from './services/room-update-gateway-effects.service';
@@ -61,6 +60,8 @@ import {
   ComAutoPlayRecoveryService,
 } from './services/com-autoplay-recovery.service';
 import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
+import { GameplayNotificationService } from './services/gameplay-notification.service';
+import { AccountActionGateService } from './services/account-action-gate.service';
 
 const DISCONNECT_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
 
@@ -79,7 +80,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(GameGateway.name);
   private playerRooms: Map<string, string> = new Map(); // socketId -> roomId
   private readonly comAutoPlayRecoveryHandlers: ComAutoPlayRecoveryHandlers = {
-    dispatchEvents: (events) => this.dispatchEvents(events),
+    dispatchEvents: (events) => this.dispatchGameplayEvents(events),
     processFieldCompletion: (roomId, response) =>
       this.processFieldCompletionResult(roomId, response),
   };
@@ -136,6 +137,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly startGameGatewayEffectsService: StartGameGatewayEffectsService,
     private readonly spectatorGatewayEffectsService: SpectatorGatewayEffectsService,
     private readonly connectionGatewayEffectsService: ConnectionGatewayEffectsService,
+    private readonly gameplayNotificationService: GameplayNotificationService,
+    private readonly accountActionGateService: AccountActionGateService,
   ) {}
 
   /**
@@ -190,6 +193,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     return roomPlayers[0].playerId;
+  }
+
+  private async rejectInactiveMutatingAction(
+    client: Socket,
+    action: string,
+  ): Promise<boolean> {
+    const gate = await this.accountActionGateService.ensureActiveSocketActor(
+      client,
+      action,
+    );
+    if (gate.allowed) {
+      if (gate.authenticatedUser) {
+        (client.data as { user?: AuthenticatedUser }).user =
+          gate.authenticatedUser;
+      }
+      return false;
+    }
+
+    const errorMessage = gate.errorMessage ?? 'Authentication required';
+    client.emit('error-message', errorMessage);
+    client.emit('auth-error', errorMessage);
+    return true;
   }
 
   private normalizeGatewayPayload(event: GatewayEvent): unknown {
@@ -271,6 +296,30 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  private dispatchGameplayEvents(
+    events?: GatewayEvent[],
+    initiatingActorId?: string,
+  ): void {
+    this.dispatchEvents(events);
+    events?.forEach((event) => {
+      if (
+        event.scope !== 'room' ||
+        !event.roomId ||
+        event.event !== 'update-turn' ||
+        typeof event.payload !== 'string'
+      ) {
+        return;
+      }
+
+      void this.gameplayNotificationService.notifyTurnChanged({
+        roomId: event.roomId,
+        playerId: event.payload,
+        initiatingActorId,
+        delayMs: event.delayMs,
+      });
+    });
+  }
+
   private clearTurnAckMonitor(roomId: string): void {
     this.turnMonitorService.clearMonitor(roomId);
   }
@@ -312,6 +361,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playerName: targetPlayer?.name ?? playerId,
       message,
     });
+    const updatedField =
+      roomGameState.getState().playState?.currentField ?? null;
+    if (updatedField) {
+      this.server.to(roomId).emit('field-updated', updatedField);
+    }
     this.queueSpectatorSnapshot(roomId);
     if (updatedRoom) {
       this.dispatchEvents(
@@ -365,7 +419,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
           }
 
-          this.dispatchEvents(completion.events);
+          this.dispatchGameplayEvents(completion.events, followUp.playerId);
           this.triggerComAutoPlayIfNeeded(followUp.roomId);
         })
         .catch((error) =>
@@ -379,14 +433,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     response: CompleteFieldResponse,
   ) {
     if (!response.success) {
-      this.server
-        .to(roomId)
-        .emit('error-message', response.error ?? 'Failed to complete field');
+      this.logger.warn(
+        `Field completion failed for room ${roomId}: ${response.error}`,
+      );
       return;
     }
 
-    this.dispatchEvents(response.events);
-    this.dispatchEvents(response.delayedEvents);
+    this.dispatchGameplayEvents(response.events);
+    this.dispatchGameplayEvents(response.delayedEvents);
 
     if (response.gameOver) {
       await this.processGameOverUseCase.execute({
@@ -698,6 +752,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     this.activityTracker.recordActivity();
 
+    if (await this.rejectInactiveMutatingAction(client, 'create room')) {
+      return { success: false, error: 'Authentication required' };
+    }
+
     try {
       const auth = client.handshake.auth || {};
 
@@ -711,6 +769,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         pointsToWin: data.pointsToWin,
         teamAssignmentMethod: data.teamAssignmentMethod,
         playerName,
+        socketId: client.id,
         authenticatedUser,
       });
 
@@ -756,9 +815,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join-room')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; user: SessionUser },
+    @MessageBody() data: { roomId: string },
   ) {
     this.activityTracker.recordActivity();
+
+    if (await this.rejectInactiveMutatingAction(client, 'join room')) {
+      return { success: false, error: 'Authentication required' };
+    }
 
     try {
       const currentRoomId = this.playerRooms.get(client.id);
@@ -779,7 +842,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         socketId: client.id,
         targetRoomId: data.roomId,
         currentRoomId,
-        user: data.user,
         authenticatedUser,
       });
 
@@ -789,7 +851,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      const normalizedUser = result.normalizedUser ?? data.user;
+      const normalizedUser = result.normalizedUser;
+      if (!normalizedUser) {
+        const errorMessage = 'Authentication required to join room';
+        client.emit('error-message', errorMessage);
+        return { success: false, error: errorMessage };
+      }
 
       if (
         previousControllerSocketId &&
@@ -914,6 +981,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.spectatorGatewayEffectsService.rejectAction(client, 'toggle ready')
     ) {
       return { success: false, error: 'Spectators cannot toggle ready' };
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'toggle ready')) {
+      return { success: false, error: 'Authentication required' };
     }
 
     try {
@@ -1063,6 +1133,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return { success: false, error: 'Spectators cannot moderate players' };
     }
+    if (await this.rejectInactiveMutatingAction(client, 'moderate players')) {
+      return { success: false, error: 'Authentication required' };
+    }
 
     try {
       const requesterPlayerId = await this.resolveClientRoomPlayerId(
@@ -1164,6 +1237,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (this.spectatorGatewayEffectsService.isSpectatorSocket(client.id)) {
       return;
     }
+    if (await this.rejectInactiveMutatingAction(client, 'acknowledge turn')) {
+      return;
+    }
 
     const roomId = data.roomId || this.playerRooms.get(client.id);
     if (!roomId) {
@@ -1182,6 +1258,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SyncGameStatePayload,
   ): Promise<void> {
+    if (await this.rejectInactiveMutatingAction(client, 'sync game state')) {
+      return;
+    }
+
     const roomId = data.roomId ?? this.playerRooms.get(client.id);
     if (!roomId) {
       return;
@@ -1233,6 +1313,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return { success: false };
     }
+    if (await this.rejectInactiveMutatingAction(client, 'change teams')) {
+      return { success: false };
+    }
 
     try {
       const playerId = await this.resolveClientRoomPlayerId(
@@ -1276,6 +1359,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (
       this.spectatorGatewayEffectsService.rejectAction(client, 'shuffle teams')
     ) {
+      return { success: false };
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'shuffle teams')) {
       return { success: false };
     }
 
@@ -1322,6 +1408,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return { success: false };
     }
+    if (await this.rejectInactiveMutatingAction(client, 'update team names')) {
+      return { success: false };
+    }
 
     try {
       const playerId = await this.resolveClientRoomPlayerId(
@@ -1364,6 +1453,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (
       this.spectatorGatewayEffectsService.rejectAction(client, 'fill with COM')
     ) {
+      return { success: false };
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'fill with COM')) {
       return { success: false };
     }
 
@@ -1413,6 +1505,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return { success: false, error: 'Spectators cannot start the game' };
     }
+    if (await this.rejectInactiveMutatingAction(client, 'start the game')) {
+      return { success: false, error: 'Authentication required' };
+    }
 
     try {
       const playerId = await this.resolveClientRoomPlayerId(
@@ -1442,7 +1537,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           currentTurnPlayerId,
         });
 
-      this.dispatchEvents(startGameEvents);
+      this.dispatchGameplayEvents(startGameEvents, playerId);
+      void this.gameplayNotificationService.notifyGameStarted({
+        roomId: data.roomId,
+        initiatingActorId: playerId,
+        currentTurnPlayerId,
+      });
 
       this.triggerComAutoPlayIfNeeded(data.roomId);
 
@@ -1469,6 +1569,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return;
     }
+    if (await this.rejectInactiveMutatingAction(client, 'declare blow')) {
+      return;
+    }
 
     try {
       const actorId = this.getActorId(client);
@@ -1486,8 +1589,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchEvents(result.events);
-      this.dispatchEvents(result.delayedEvents);
+      this.dispatchGameplayEvents(result.events, actorId);
+      this.dispatchGameplayEvents(result.delayedEvents, actorId);
       this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleDeclareBlow:', error);
@@ -1503,6 +1606,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.activityTracker.recordActivity();
 
     if (this.spectatorGatewayEffectsService.rejectAction(client, 'pass blow')) {
+      return;
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'pass blow')) {
       return;
     }
 
@@ -1521,8 +1627,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchEvents(result.events);
-      this.dispatchEvents(result.delayedEvents);
+      this.dispatchGameplayEvents(result.events, actorId);
+      this.dispatchGameplayEvents(result.delayedEvents, actorId);
       this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handlePassBlow:', error);
@@ -1540,6 +1646,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return;
     }
+    if (await this.rejectInactiveMutatingAction(client, 'select Negri')) {
+      return;
+    }
 
     try {
       const actorId = this.getActorId(client);
@@ -1554,7 +1663,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchEvents(result.events);
+      this.dispatchGameplayEvents(result.events, actorId);
     } catch (error) {
       console.error('Error in handleSelectNegri:', error);
       client.emit('error-message', 'Failed to select Negri');
@@ -1569,6 +1678,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (
       this.spectatorGatewayEffectsService.rejectAction(client, 'request Agari')
     ) {
+      return;
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'request Agari')) {
       return;
     }
 
@@ -1619,6 +1731,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return;
     }
+    if (await this.rejectInactiveMutatingAction(client, 'play a card')) {
+      return;
+    }
 
     try {
       const actorId = this.getActorId(client);
@@ -1633,7 +1748,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchEvents(result.events);
+      this.dispatchGameplayEvents(result.events, actorId);
 
       if (result.completeFieldTrigger) {
         this.scheduleFieldCompletion(result.completeFieldTrigger);
@@ -1659,6 +1774,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
       return;
     }
+    if (await this.rejectInactiveMutatingAction(client, 'select base suit')) {
+      return;
+    }
 
     try {
       const actorId = this.getActorId(client);
@@ -1673,7 +1791,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchEvents(result.events);
+      this.dispatchGameplayEvents(result.events, actorId);
       this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleSelectBaseSuit:', error);
@@ -1692,6 +1810,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         'reveal broken hand',
       )
     ) {
+      return;
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'reveal broken hand')) {
       return;
     }
 

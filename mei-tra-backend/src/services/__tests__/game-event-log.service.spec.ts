@@ -456,4 +456,49 @@ describe('GameEventLogService', () => {
       },
     ]);
   });
+
+  it('projects current seat names onto replay summaries and details', async () => {
+    const repository = {
+      create: jest.fn(),
+      findByRoomId: jest.fn().mockResolvedValue([
+        {
+          id: 'history-1',
+          roomId: 'room-1',
+          gameStateId: 'state-1',
+          actionType: 'field_completed' as const,
+          playerId: 'player-3',
+          actionData: {
+            winnerPlayerId: 'player-3',
+            winnerTeam: 0,
+            playerNames: { 'player-3': 'COM 3' },
+          },
+          timestamp: new Date('2026-04-16T00:00:00.000Z'),
+        },
+      ]),
+    } as unknown as IGameHistoryRepository;
+    const service = new GameEventLogService(repository);
+
+    const replay = await service.replayByRoomId('room-1', undefined, {
+      'player-3': 'Player3',
+    });
+    const event = replay.rounds[0]?.events[0];
+
+    expect(event?.summary).toBe('Field completed by Player3 for Team 1');
+    expect(event?.detailItems).toContainEqual({
+      labelKey: 'winner',
+      value: {
+        kind: 'player',
+        playerId: 'player-3',
+        playerName: 'Player3',
+      },
+    });
+    expect(event?.actionData.playerNames).toEqual({
+      'player-3': 'Player3',
+    });
+
+    const summary = await service.summarizeByRoomId('room-1', undefined, {
+      'player-3': 'Player3',
+    });
+    expect(summary.playerNames).toEqual({ 'player-3': 'Player3' });
+  });
 });

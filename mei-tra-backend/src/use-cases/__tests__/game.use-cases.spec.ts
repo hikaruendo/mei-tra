@@ -178,7 +178,19 @@ describe('Game Use Cases', () => {
       const roomService = createRoomServiceMock();
       const useCase = new JoinRoomUseCase(roomService);
 
-      const room: Room = { ...baseRoom };
+      const room: Room = {
+        ...baseRoom,
+        hostId: 'user-1',
+        players: [
+          {
+            ...basePlayers[0],
+            playerId: 'user-1',
+            userId: 'user-1',
+            isAuthenticated: true,
+          },
+          basePlayers[1],
+        ],
+      };
       const roomsList = [room];
 
       const gameStateMock = {
@@ -218,11 +230,6 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         socketId: 'socket-1',
         targetRoomId: room.id,
-        user: {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          name: 'Fallback Name',
-        },
         authenticatedUser,
       });
 
@@ -235,6 +242,8 @@ describe('Game Use Cases', () => {
         room.id,
         expect.objectContaining({
           name: 'Display Name',
+          socketId: 'socket-1',
+          playerId: 'user-1',
           userId: 'user-1',
           isAuthenticated: true,
         }),
@@ -265,12 +274,6 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         socketId: 'socket-1',
         targetRoomId: room.id,
-        user: {
-          socketId: 'socket-1',
-          playerId: 'user-1',
-          userId: 'user-1',
-          name: 'Player 1',
-        },
         authenticatedUser: {
           id: 'user-1',
           email: 'user@example.com',
@@ -291,11 +294,10 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         socketId: 'socket-1',
         targetRoomId: 'room-unknown',
-        user: {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          name: 'Player 1',
-        },
+        authenticatedUser: {
+          id: 'user-1',
+          email: 'user@example.com',
+        } as AuthenticatedUser,
       });
 
       expect(result.success).toBe(false);
@@ -322,12 +324,10 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         socketId: 'socket-1',
         targetRoomId: 'room-new',
-        user: {
-          socketId: 'socket-1',
-          playerId: 'player-1',
-          userId: 'user-1',
-          name: 'Player 1',
-        },
+        authenticatedUser: {
+          id: 'user-1',
+          email: 'user@example.com',
+        } as AuthenticatedUser,
       });
 
       expect(result.success).toBe(false);
@@ -347,6 +347,7 @@ describe('Game Use Cases', () => {
         roomName: 'Room',
         pointsToWin: 30,
         teamAssignmentMethod: 'random',
+        socketId: 'socket-1',
         authenticatedUser: { id: 'user-1' } as any,
       });
 
@@ -382,6 +383,7 @@ describe('Game Use Cases', () => {
         pointsToWin: 30,
         teamAssignmentMethod: 'random',
         playerName: 'Host',
+        socketId: 'socket-1',
         authenticatedUser: { id: 'player-1' } as any,
       });
 

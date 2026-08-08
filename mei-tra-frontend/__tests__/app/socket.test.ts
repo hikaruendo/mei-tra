@@ -10,6 +10,9 @@ type SocketAuthPayload = { roomId: string; token?: string };
 type SocketOptions = {
   auth: (callback: (data: SocketAuthPayload) => void) => Promise<void>;
 };
+type MockSocket = {
+  on: jest.Mock;
+};
 
 const mockedIo = io as jest.Mock;
 
@@ -50,6 +53,17 @@ describe('game socket authentication', () => {
     expect(secondSocket).toBe(firstSocket);
     expect(getExistingSocket()).toBe(firstSocket);
     expect(mockedIo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not crash when transport metadata is unavailable on connect', () => {
+    getSocket('token');
+    const mockSocket = mockedIo.mock.results[0].value as MockSocket;
+    const connectHandler = mockSocket.on.mock.calls.find(
+      ([event]) => event === 'connect',
+    )?.[1] as (() => void) | undefined;
+
+    expect(connectHandler).toBeDefined();
+    expect(() => connectHandler?.()).not.toThrow();
   });
 
   it('clears the browser socket when disconnected', () => {

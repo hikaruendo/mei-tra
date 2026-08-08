@@ -8,7 +8,6 @@ import {
   PreviousRoomNotification,
   ResumeGamePayload,
 } from './interfaces/join-room.use-case.interface';
-import { AuthenticatedUser } from '../types/user.types';
 import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
@@ -23,9 +22,15 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
   async execute(request: JoinRoomRequest): Promise<JoinRoomResponse> {
     try {
-      const { currentRoomId, targetRoomId, user, authenticatedUser } = request;
+      const { currentRoomId, targetRoomId } = request;
 
-      const normalizedUser = this.normalizeUser(user, authenticatedUser);
+      const normalizedUser = this.normalizeUser(request);
+      if (!normalizedUser) {
+        return {
+          success: false,
+          errorMessage: 'Authentication required to join room',
+        };
+      }
       const previousRoomNotification = await this.buildPreviousRoomNotification(
         currentRoomId,
         normalizedUser,
@@ -107,20 +112,21 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     }
   }
 
-  private normalizeUser(
-    user: SessionUser,
-    authenticatedUser?: AuthenticatedUser | null,
-  ): SessionUser {
+  private normalizeUser(request: JoinRoomRequest): SessionUser | null {
+    const authenticatedUser = request.authenticatedUser;
     if (!authenticatedUser) {
-      return { ...user };
+      return null;
     }
 
     const displayName =
-      authenticatedUser.profile?.displayName || authenticatedUser.email;
+      authenticatedUser.profile?.displayName ||
+      authenticatedUser.email ||
+      'User';
 
     return {
-      ...user,
-      name: displayName || user.name,
+      socketId: request.socketId,
+      playerId: authenticatedUser.id,
+      name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
     };

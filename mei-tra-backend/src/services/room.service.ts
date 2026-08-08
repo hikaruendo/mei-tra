@@ -566,6 +566,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     const gameState = await this.getRoomGameState(roomId);
+    const vacantSeatSnapshot = this.cloneVacantSeatsForRoom(roomId);
     try {
       const joined = await this.roomJoinService.joinRoom({
         roomId,
@@ -585,6 +586,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           membershipTransition.membership.membershipVersion,
         );
       }
+      if (!joined) {
+        await this.rollbackJoinRoomState(roomId, vacantSeatSnapshot);
+      }
       return joined;
     } catch (error) {
       if (joiningUser.userId && membershipTransition?.result === 'claimed') {
@@ -594,8 +598,59 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           membershipTransition.membership.membershipVersion,
         );
       }
-      throw error;
+      this.logger.error(
+        `Failed to join room ${roomId}; reloading in-memory state from persistence`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      await this.rollbackJoinRoomState(roomId, vacantSeatSnapshot);
+      return false;
     }
+  }
+
+  private cloneVacantSeatsForRoom(roomId: string): VacantSeats[string] | null {
+    const roomVacantSeats = this.vacantSeats[roomId];
+    if (!roomVacantSeats) {
+      return null;
+    }
+
+    return Object.fromEntries(
+      Object.entries(roomVacantSeats).map(([seatIndex, seatData]) => [
+        Number(seatIndex),
+        {
+          roomPlayer: {
+            ...seatData.roomPlayer,
+            hand: [...seatData.roomPlayer.hand],
+            joinedAt: new Date(seatData.roomPlayer.joinedAt),
+          },
+          ...(seatData.gamePlayer && {
+            gamePlayer: {
+              ...seatData.gamePlayer,
+              hand: [...seatData.gamePlayer.hand],
+            },
+          }),
+          ...(seatData.replacementPlayerId && {
+            replacementPlayerId: seatData.replacementPlayerId,
+          }),
+        },
+      ]),
+    );
+  }
+
+  private async rollbackJoinRoomState(
+    roomId: string,
+    vacantSeatSnapshot: VacantSeats[string] | null,
+  ): Promise<void> {
+    if (vacantSeatSnapshot) {
+      this.vacantSeats[roomId] = vacantSeatSnapshot;
+    } else {
+      delete this.vacantSeats[roomId];
+    }
+
+    this.roomGameStates.delete(roomId);
+    const reloadedGameState = this.gameStateFactory.createGameState();
+    reloadedGameState.setRoomId(roomId);
+    await reloadedGameState.loadState(roomId);
+    this.roomGameStates.set(roomId, reloadedGameState);
   }
 
   private async resolveJoiningUser(

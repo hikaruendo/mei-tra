@@ -349,6 +349,7 @@ export interface Database {
           created_at: string;
           updated_at: string;
           last_seen_at: string;
+          account_deletion_started_at: string | null;
           games_played: number;
           games_won: number;
           total_score: number;
@@ -367,6 +368,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           last_seen_at?: string;
+          account_deletion_started_at?: string | null;
           games_played?: number;
           games_won?: number;
           total_score?: number;
@@ -385,6 +387,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           last_seen_at?: string;
+          account_deletion_started_at?: string | null;
           games_played?: number;
           games_won?: number;
           total_score?: number;

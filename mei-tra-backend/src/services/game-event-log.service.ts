@@ -88,8 +88,12 @@ export class GameEventLogService implements IGameEventLogService {
   async summarizeByRoomId(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistorySummary> {
-    const history = await this.listByRoomId(roomId, query);
+    const history = this.withPlayerNameOverrides(
+      await this.listByRoomId(roomId, query),
+      playerNameOverrides,
+    );
     const byActionType: Partial<
       Record<GameHistoryEntry['actionType'], number>
     > = {};
@@ -132,8 +136,12 @@ export class GameEventLogService implements IGameEventLogService {
   async replayByRoomId(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistoryReplayView> {
-    const history = await this.listByRoomId(roomId, query);
+    const history = this.withPlayerNameOverrides(
+      await this.listByRoomId(roomId, query),
+      playerNameOverrides,
+    );
     const rounds = new Map<number | null, GameHistoryReplayRound>();
 
     history.forEach((entry) => {
@@ -177,6 +185,26 @@ export class GameEventLogService implements IGameEventLogService {
         return left.roundNumber - right.roundNumber;
       }),
     };
+  }
+
+  private withPlayerNameOverrides(
+    history: GameHistoryEntry[],
+    playerNameOverrides?: Readonly<Record<string, string>>,
+  ): GameHistoryEntry[] {
+    if (!playerNameOverrides || Object.keys(playerNameOverrides).length === 0) {
+      return history;
+    }
+
+    return history.map((entry) => ({
+      ...entry,
+      actionData: {
+        ...entry.actionData,
+        playerNames: {
+          ...this.extractPlayerNames(entry),
+          ...playerNameOverrides,
+        },
+      },
+    }));
   }
 
   private buildContext(
