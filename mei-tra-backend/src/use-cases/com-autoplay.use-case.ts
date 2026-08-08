@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   IComAutoPlayUseCase,
   ComAutoPlayRequest,
@@ -37,6 +37,8 @@ type ResponseWithDelayed<T> = T & {
 
 @Injectable()
 export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
+  private readonly logger = new Logger(ComAutoPlayUseCase.name);
+
   constructor(
     @Inject('IRoomService')
     private readonly roomService: IRoomService,
@@ -56,6 +58,43 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     private readonly revealBrokenHandUseCase: IRevealBrokenHandUseCase,
   ) {}
 
+  // Skipping a human's turn is normal, so this stays quiet unless nobody can act:
+  // auto-play declines (not a COM) AND the turn holder has no live socket. That
+  // combination is a stalled table, and it is otherwise completely silent.
+  private warnIfTurnIsUnplayable(
+    roomId: string,
+    gameState: GameStateService,
+    currentPlayer: DomainPlayer | null,
+  ): void {
+    const state = gameState.getState();
+    if (state.gamePhase !== 'play' && state.gamePhase !== 'blow') {
+      return;
+    }
+
+    if (!currentPlayer) {
+      this.logger.warn(
+        `Turn unplayable in room ${roomId}: no current player resolved ` +
+          `(currentPlayerId=${state.currentPlayerId ?? 'null'}, ` +
+          `roster=[${state.players.map((player) => player.playerId).join(', ')}])`,
+      );
+      return;
+    }
+
+    const isConnected = Boolean(
+      gameState.getPlayerConnectionState(currentPlayer.playerId)?.socketId,
+    );
+    if (isConnected) {
+      return;
+    }
+
+    this.logger.warn(
+      `Turn unplayable in room ${roomId}: auto-play skipped non-COM player ` +
+        `${currentPlayer.playerId} which has no live socket ` +
+        `(phase=${state.gamePhase}, currentPlayerId=${state.currentPlayerId ?? 'null'}, ` +
+        `isCOM=${String(currentPlayer.isCOM)})`,
+    );
+  }
+
   async execute(request: ComAutoPlayRequest): Promise<ComAutoPlayResponse> {
     const { roomId } = request;
 
@@ -70,6 +109,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
       // 2. COMプレイヤーでなければスキップ
       if (!currentPlayer || !this.comPlayerService.isComPlayer(currentPlayer)) {
+        this.warnIfTurnIsUnplayable(roomId, gameState, currentPlayer);
         return { success: true, events: [], shouldContinue: false };
       }
 
