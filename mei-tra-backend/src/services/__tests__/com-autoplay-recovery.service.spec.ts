@@ -261,6 +261,113 @@ describe('ComAutoPlayRecoveryService', () => {
     jest.useRealTimers();
   });
 
+  it('keeps a paced continuation when a reconnect re-triggers recovery', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'play',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute
+      .mockResolvedValueOnce({
+        success: true,
+        events: [],
+        delayedEvents: [
+          {
+            scope: 'room',
+            roomId: 'room-1',
+            event: 'new-round-started',
+            payload: {},
+            delayMs: 3_000,
+          },
+        ],
+        shouldContinue: false,
+      })
+      .mockResolvedValue({
+        success: true,
+        events: [],
+        shouldContinue: false,
+      });
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    // Round transition scheduled a 3100ms continuation so COM cannot act before
+    // the delayed round-reset broadcasts reach clients.
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    // A host reconnect re-triggers recovery mid-transition.
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    // The reconnect must not have replaced the pacing delay with a shorter one.
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(5_000);
+    await flushPromises();
+
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
+    service.clearRoom('room-1');
+    jest.useRealTimers();
+  });
+
+  it('lets a reconnect cancel a failure backoff instead of waiting it out', async () => {
+    jest.useFakeTimers();
+    const loggerError = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'play',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute
+      .mockResolvedValueOnce({
+        success: false,
+        events: [],
+        shouldContinue: false,
+        error: 'temporary persistence error',
+      })
+      .mockResolvedValue({
+        success: true,
+        events: [],
+        shouldContinue: false,
+      });
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    // Failure scheduled a 5000ms backoff.
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    // Reconnect supersedes the backoff and recovers on the shorter initial delay.
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
+    service.clearRoom('room-1');
+    loggerError.mockRestore();
+    jest.useRealTimers();
+  });
+
   it('suppresses events from an in-flight run after the room is cleared', async () => {
     jest.useFakeTimers();
     const { service, roomService, comAutoPlayUseCase, handlers } =
