@@ -246,6 +246,9 @@ export class ComSessionService {
     }
 
     await gameState.persistRoster(room.players, room.hostId);
+    if (gsIndex !== -1) {
+      await gameState.saveState();
+    }
     return true;
   }
 }

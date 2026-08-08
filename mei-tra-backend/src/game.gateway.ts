@@ -312,6 +312,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playerName: targetPlayer?.name ?? playerId,
       message,
     });
+    const updatedField =
+      roomGameState.getState().playState?.currentField ?? null;
+    if (updatedField) {
+      this.server.to(roomId).emit('field-updated', updatedField);
+    }
     this.queueSpectatorSnapshot(roomId);
     if (updatedRoom) {
       this.dispatchEvents(
@@ -379,9 +384,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     response: CompleteFieldResponse,
   ) {
     if (!response.success) {
-      this.server
-        .to(roomId)
-        .emit('error-message', response.error ?? 'Failed to complete field');
+      this.logger.warn(
+        `Field completion failed for room ${roomId}: ${response.error}`,
+      );
       return;
     }
 

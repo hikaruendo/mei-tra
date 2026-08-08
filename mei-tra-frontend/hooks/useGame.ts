@@ -181,6 +181,7 @@ export const useGame = () => {
     roomUpdated: false,
     updatePlayers: false,
   });
+  const gameStateHandledRef = useRef(false);
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -243,6 +244,7 @@ export const useGame = () => {
     agariRequestKeyRef.current = null;
     roomBootstrapRef.current = null;
     gameStateSyncKeyRef.current = null;
+    gameStateHandledRef.current = false;
     setGameStarted(false);
     setGamePhase(null);
     setCurrentRoomId(null);
@@ -257,6 +259,18 @@ export const useGame = () => {
     setPlayers([]);
     setTeamScores(createEmptyTeamScores());
     setTeamNames(undefined);
+    setCurrentField(null);
+    setCompletedFields([]);
+    setCurrentTrump(null);
+    setWhoseTurn(null);
+    setBlowDeclarations([]);
+    setBlowActionHistory([]);
+    setCurrentHighestDeclaration(null);
+    setRevealedAgari(null);
+    setNegriCard(null);
+    setNegriPlayerId(null);
+    setPointsToWin(0);
+    setPaused(false);
     sessionStorage.removeItem('roomId');
   }, []);
 
@@ -626,13 +640,17 @@ export const useGame = () => {
           return;
         }
 
-        const mergedPlayers = mergePlayersPreservingIdentity(
-          playersRef.current,
-          nextPlayers,
-        );
-        commitPlayers(mergedPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(mergedPlayers);
-        syncCurrentPlayerIdentity(mergedPlayers, selfPlayerId);
+        if (gameStateHandledRef.current) {
+          gameStateHandledRef.current = false;
+        } else {
+          const mergedPlayers = mergePlayersPreservingIdentity(
+            playersRef.current,
+            nextPlayers,
+          );
+          commitPlayers(mergedPlayers);
+          syncDisconnectedPlayerIdsFromPlayers(mergedPlayers);
+          syncCurrentPlayerIdentity(mergedPlayers, selfPlayerId);
+        }
 
         if (!currentRoomId) {
           setCurrentRoomId(nextRoom.id);
@@ -660,6 +678,7 @@ export const useGame = () => {
         teamNames,
         isSpectator,
       }: GameStatePayload) => {
+        gameStateHandledRef.current = true;
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
