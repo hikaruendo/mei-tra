@@ -33,6 +33,7 @@ import {
   createStartedGameSnapshot,
   dedupeCompletedFields,
   extractDisconnectedPlayerIds,
+  inferNextTurnAfterCardPlayed,
   mergePlayersByIdentity,
   normalizeGameStatePayload,
   resolvePlayerId,
@@ -53,6 +54,7 @@ interface MobileState {
   rooms: RoomContract[];
   currentRoom: RoomContract | null;
   game: MobileGameSnapshot | null;
+  pendingGamePatches: Partial<MobileGameSnapshot> | null;
   connectionStatus: ConnectionStatus;
   error: string | null;
   notice: string | null;
@@ -89,6 +91,7 @@ const initialState: MobileState = {
   rooms: [],
   currentRoom: null,
   game: null,
+  pendingGamePatches: null,
   connectionStatus: 'disconnected',
   error: null,
   notice: null,
@@ -134,14 +137,24 @@ function reducer(state: MobileState, action: Action): MobileState {
     case 'game':
       return {
         ...state,
-        game: action.game,
+        game: state.pendingGamePatches
+          ? { ...action.game, ...state.pendingGamePatches }
+          : action.game,
+        pendingGamePatches: null,
         error: null,
         gameOver: null,
       };
     case 'patchGame':
-      return state.game
-        ? { ...state, game: { ...state.game, ...action.patch } }
-        : state;
+      if (state.game) {
+        return { ...state, game: { ...state.game, ...action.patch } };
+      }
+      return {
+        ...state,
+        pendingGamePatches: {
+          ...state.pendingGamePatches,
+          ...action.patch,
+        },
+      };
     case 'players': {
       const gamePlayers = state.game
         ? mergePlayersByIdentity(state.game.players, action.players)
@@ -234,6 +247,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         ...state,
         currentRoom: null,
         game: null,
+        pendingGamePatches: null,
         error: null,
         notice: null,
         gameOver: null,
@@ -742,12 +756,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     );
     socket.on('card-played', ({ field, players, nextPlayerId }) => {
       dispatch({ type: 'players', players });
+      const resolvedNextPlayerId =
+        nextPlayerId ??
+        inferNextTurnAfterCardPlayed(
+          stateRef.current.game?.players ?? players,
+          field,
+        );
       dispatch({
         type: 'patchGame',
         patch: {
           currentField: field,
-          currentTurn:
-            nextPlayerId ?? stateRef.current.game?.currentTurn ?? null,
+          ...(resolvedNextPlayerId ? { currentTurn: resolvedNextPlayerId } : {}),
         },
       });
     });

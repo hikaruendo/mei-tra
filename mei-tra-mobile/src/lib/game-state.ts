@@ -128,6 +128,29 @@ export const createStartedGameSnapshot = (
   teamNames: payload.teamNames,
 });
 
+export const inferNextTurnAfterCardPlayed = (
+  players: PlayerContract[],
+  field: { isComplete: boolean; cards: string[]; playedBy: string[]; baseCard: string; baseSuit?: string },
+): string | null => {
+  if (
+    field.isComplete ||
+    field.cards.length === 0 ||
+    (field.baseCard === 'JOKER' && !field.baseSuit)
+  ) {
+    return null;
+  }
+
+  const lastPlayerId = field.playedBy[field.playedBy.length - 1];
+  if (!lastPlayerId || players.length === 0) return null;
+
+  const lastPlayerIndex = players.findIndex(
+    (p) => p.playerId === lastPlayerId,
+  );
+  if (lastPlayerIndex === -1) return null;
+
+  return players[(lastPlayerIndex + 1) % players.length]?.playerId ?? null;
+};
+
 export const shouldAckTurn = (
   game: MobileGameSnapshot | null,
   roomId: string | null | undefined,

@@ -8,18 +8,22 @@ export function getSeatOrderWithSelfBottom(
   players: PlayerContract[],
   selfPlayerId: string | null,
 ): PlayerContract[] {
-  if (!selfPlayerId || players.length === 0) return players;
-  const selfIndex = players.findIndex((p) => p.playerId === selfPlayerId);
-  if (selfIndex < 0) return players;
+  if (players.length === 0) return players;
 
-  const rotated = [
-    ...players.slice(selfIndex),
-    ...players.slice(0, selfIndex),
-  ];
-  if (rotated.length === 4) {
-    [rotated[1], rotated[3]] = [rotated[3], rotated[1]];
+  const order = [...players.slice(0, 4)];
+  while (order.length < 4) {
+    order.push(order[0]);
   }
-  return rotated;
+
+  const selfIndex = selfPlayerId
+    ? order.findIndex((p) => p.playerId === selfPlayerId)
+    : -1;
+
+  if (selfIndex > 0) {
+    const rotated = [...order.slice(selfIndex), ...order.slice(0, selfIndex)];
+    return [rotated[0], rotated[3], rotated[2], rotated[1]];
+  }
+  return [order[0], order[3], order[2], order[1]];
 }
 
 export function getCardSeatPosition(
