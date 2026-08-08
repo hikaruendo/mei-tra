@@ -1,10 +1,9 @@
+import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
 import type {
-  GameHistoryActionType,
-  GameHistoryReplayEventContract,
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
 } from '@meitra/contracts/game-history';
-import { useState } from 'react';
+import { useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,22 +13,8 @@ import {
   View,
 } from 'react-native';
 
-import { colors } from '@/theme/colors';
-
-const ACTION_LABELS: Record<GameHistoryActionType, string> = {
-  game_started: '開始',
-  blow_declared: '宣言',
-  blow_passed: 'パス',
-  play_phase_started: 'プレイ開始',
-  card_played: 'カード',
-  field_completed: 'ペア獲得',
-  round_completed: 'ラウンド終了',
-  round_cancelled: 'ラウンド中止',
-  round_reset: 'ラウンドリセット',
-  broken_hand_revealed: '役なし公開',
-  game_over: 'ゲーム終了',
-  player_stats_updated: '成績更新',
-};
+import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
+import { colors, teamColors } from '@/theme/colors';
 
 interface GameHistoryProps {
   replay: GameHistoryReplayViewContract | null;
@@ -37,25 +22,44 @@ interface GameHistoryProps {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+  players?: PlayerContract[];
+  teamNames?: TeamNames;
 }
 
-function EventRow({ event }: { event: GameHistoryReplayEventContract }) {
-  const time = new Date(event.timestamp).toLocaleTimeString('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+/** Column weights, tuned so the bid cell survives a 320pt screen. */
+const COL = {
+  round: 0.8,
+  blower: 2,
+  bid: 2.4,
+  score: 2.2,
+} as const;
+
+function Row({ row }: { row: RoundRow }) {
   return (
-    <View style={styles.eventRow}>
-      <Text style={styles.eventTime}>{time}</Text>
-      <View style={styles.eventBadge}>
-        <Text style={styles.eventBadgeText}>
-          {ACTION_LABELS[event.actionType]}
-        </Text>
-      </View>
-      <Text numberOfLines={2} style={styles.eventSummary}>
-        {event.summary}
+    <View style={styles.row}>
+      <Text style={[styles.cell, styles.roundCell, { flex: COL.round }]}>
+        {row.roundNumber}
       </Text>
+      <Text numberOfLines={1} style={[styles.cell, { flex: COL.blower }]}>
+        {row.blower}
+      </Text>
+      <Text numberOfLines={2} style={[styles.cell, { flex: COL.bid }]}>
+        {row.bid}
+      </Text>
+      <View style={[styles.scoreCell, { flex: COL.score }]}>
+        {row.inProgress ? (
+          <Text style={styles.inProgress}>進行中</Text>
+        ) : (
+          row.scores.map((score) => (
+            <Text key={score.team} style={styles.scoreLine}>
+              <Text style={{ color: teamColors[score.team] }}>
+                {score.label}
+              </Text>
+              <Text style={styles.scoreValue}> {score.delta}</Text>
+            </Text>
+          ))
+        )}
+      </View>
     </View>
   );
 }
@@ -66,14 +70,19 @@ export function GameHistory({
   loading,
   error,
   onRefresh,
+  players,
+  teamNames,
 }: GameHistoryProps) {
-  const [expandedRound, setExpandedRound] = useState<number | null>(null);
+  const rows = useMemo(
+    () => buildRoundTableRows(replay, players ?? [], teamNames),
+    [replay, players, teamNames],
+  );
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.gold} size="small" />
-        <Text style={styles.loadingText}>履歴を読み込み中</Text>
+        <Text style={styles.loadingText}>ログを読み込み中...</Text>
       </View>
     );
   }
@@ -89,166 +98,122 @@ export function GameHistory({
     );
   }
 
-  if (!replay || !summary) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyText}>履歴はまだありません</Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>ゲーム概要</Text>
-        <Text style={styles.summaryText}>
-          {summary.status === 'completed' ? '終了' : '進行中'}
-          {summary.winningTeam != null
-            ? ` — 勝者: チーム${summary.winningTeam + 1}`
-            : ''}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.subtitle}>
+          {rows.length > 0
+            ? `${rows.length}ラウンド / ${summary?.totalEntries ?? 0}件`
+            : 'まだログはありません'}
         </Text>
-        <Text style={styles.summaryText}>
-          ラウンド数: {summary.roundNumbers.length} / アクション数:{' '}
-          {summary.totalEntries}
-        </Text>
+        <Pressable hitSlop={8} onPress={onRefresh}>
+          <Text style={styles.refresh}>更新</Text>
+        </Pressable>
       </View>
 
-      {replay.rounds.map((round, index) => {
-        const roundLabel = round.roundNumber
-          ? `ラウンド ${round.roundNumber}`
-          : `ラウンド ${index + 1}`;
-        const isExpanded = expandedRound === index;
-        return (
-          <View key={index} style={styles.roundCard}>
-            <Pressable
-              onPress={() => setExpandedRound(isExpanded ? null : index)}
-              style={styles.roundHeader}
-            >
-              <Text style={styles.roundTitle}>
-                {isExpanded ? '▼' : '▶'} {roundLabel}
-              </Text>
-              <Text style={styles.roundCount}>
-                {round.events.length}件
-              </Text>
-            </Pressable>
-            {isExpanded ? (
-              <View style={styles.eventList}>
-                {round.events.map((event) => (
-                  <EventRow event={event} key={event.id} />
-                ))}
-              </View>
-            ) : null}
+      {rows.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>表示できる対局ログがありません</Text>
+        </View>
+      ) : (
+        <>
+          <View style={[styles.row, styles.headRow]}>
+            <Text style={[styles.headCell, { flex: COL.round }]}>ラウンド</Text>
+            <Text style={[styles.headCell, { flex: COL.blower }]}>吹き手</Text>
+            <Text style={[styles.headCell, { flex: COL.bid }]}>宣言</Text>
+            <Text style={[styles.headCell, { flex: COL.score }]}>得点</Text>
           </View>
-        );
-      })}
-    </ScrollView>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {rows.map((row) => (
+              <Row key={row.roundNumber} row={row} />
+            ))}
+          </ScrollView>
+        </>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
-    padding: 14,
-    paddingBottom: 40,
+    flex: 1,
+    gap: 8,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  refresh: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  headRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingVertical: 6,
+  },
+  headCell: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  cell: {
+    color: colors.text,
+    fontSize: 13,
+  },
+  roundCell: {
+    fontVariant: ['tabular-nums'],
+    fontWeight: '700',
+  },
+  scoreCell: {
+    gap: 2,
+  },
+  scoreLine: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  scoreValue: {
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  inProgress: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    padding: 24,
+    gap: 10,
+    paddingVertical: 32,
   },
   loadingText: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 13,
   },
   errorText: {
-    color: colors.danger,
-    fontSize: 14,
+    color: colors.dangerText,
+    fontSize: 13,
     textAlign: 'center',
   },
   retryText: {
     color: colors.gold,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   emptyText: {
     color: colors.textMuted,
-    fontSize: 14,
-  },
-  summaryCard: {
-    gap: 6,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-  },
-  summaryTitle: {
-    color: colors.gold,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  summaryText: {
-    color: colors.text,
-    fontSize: 14,
-  },
-  roundCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    overflow: 'hidden',
-  },
-  roundHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-  },
-  roundTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  roundCount: {
-    color: colors.textMuted,
-    fontSize: 13,
-  },
-  eventList: {
-    gap: 2,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-  },
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  eventTime: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontVariant: ['tabular-nums'],
-  },
-  eventBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: colors.backgroundElevated,
-  },
-  eventBadgeText: {
-    color: colors.gold,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  eventSummary: {
-    flex: 1,
-    color: colors.text,
     fontSize: 13,
   },
 });
