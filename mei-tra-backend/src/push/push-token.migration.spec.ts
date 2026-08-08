@@ -5,14 +5,14 @@ describe('push token migration security', () => {
   const createSql = readFileSync(
     join(
       __dirname,
-      '../../supabase/migrations/20260723090000_create_push_tokens.sql',
+      '../../supabase/migrations/20260806090000_create_push_tokens.sql',
     ),
     'utf8',
   );
   const hardeningSql = readFileSync(
     join(
       __dirname,
-      '../../supabase/migrations/20260723150938_harden_push_token_access.sql',
+      '../../supabase/migrations/20260806150938_harden_push_token_access.sql',
     ),
     'utf8',
   );

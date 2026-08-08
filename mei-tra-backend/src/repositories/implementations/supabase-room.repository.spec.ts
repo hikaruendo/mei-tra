@@ -266,14 +266,14 @@ describe('SupabaseRoomRepository', () => {
     const triggerMigration = readFileSync(
       join(
         __dirname,
-        '../../../supabase/migrations/20260723162619_reject_deleting_room_players.sql',
+        '../../../supabase/migrations/20260806162619_reject_deleting_room_players.sql',
       ),
       'utf8',
     );
     const lockMigration = readFileSync(
       join(
         __dirname,
-        '../../../supabase/migrations/20260723165711_serialize_account_deletion_room_membership.sql',
+        '../../../supabase/migrations/20260806165711_serialize_account_deletion_room_membership.sql',
       ),
       'utf8',
     );

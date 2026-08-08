@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 const migration = readFileSync(
   resolve(
     __dirname,
-    '../../supabase/migrations/20260723165611_push_receipt_tracking.sql',
+    '../../supabase/migrations/20260806165611_push_receipt_tracking.sql',
   ),
   'utf8',
 );

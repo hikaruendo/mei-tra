@@ -23,7 +23,7 @@ development buildには、SDK 55対応の公式パッケージ `expo-dev-client`
 - mobileは14 suites / 63 tests、lint、typecheck、Expo Doctor 19/19、iOS / Android exportに成功した。
 - backendは52 suites / 300 tests、lint、buildに成功した。
 - frontendは27 suites / 78 tests、lint、buildに成功し、Web dev serverはHTTP 200を返した。
-- local Supabase migration historyは`20260723165611_push_receipt_tracking.sql`と`20260723165711_serialize_account_deletion_room_membership.sql`を含む`20260723165711`まで適用し、push token register / delete smokeに成功した。
+- local Supabase migration historyは`20260806165611_push_receipt_tracking.sql`と`20260806165711_serialize_account_deletion_room_membership.sql`を含む`20260806165711`まで適用し、push token register / delete smokeに成功した。
 - transactional `account_anonymization`を含む全SQL self-testに成功した。
 - seat identityのserver derivation後に390×844のPlaywright final normal flowを再実行し、signup、room作成、COM補充、shuffle、start、blow pass、合法card play、reload後のauthoritative restore、leave、settings/legal links、account deletion HTTP 200と成功後redirect、parameterなしcallbackの安全なredirectを確認した。
 - active game reloadでは、標準のdevelopment情報を除きerror / warnを検出していない。
@@ -134,8 +134,8 @@ CIの `--freeze-credentials` は、CIが署名資格情報を自動更新しな�
 - [ ] background復帰、アプリkill後復帰、Wi-Fi/モバイル回線切替、WebSocket失敗時のpolling fallbackを確認する。
 - [ ] 最新JWTで再接続し、古いsocket IDを本人判定に使わないことを確認する。
 - [ ] production backend、Supabase Auth redirect、CORS、health endpointを確認する。
-- [x] local migration historyを`20260723165711`まで揃え、transactional `account_anonymization`を含む全SQL self-testに成功する。
-- [ ] production Supabaseへ`20260723160844_add_account_deletion_started_at.sql`、`20260723162505_anonymize_account_references_atomically.sql`、`20260723162619_reject_deleting_room_players.sql`、`20260723165611_push_receipt_tracking.sql`、`20260723165711_serialize_account_deletion_room_membership.sql`を適用し、linked history、schema、RLS、receipt RPC、atomic RPC、room / Socket gate、room membership直列化を確認する。
+- [x] local migration historyを`20260806165711`まで揃え、transactional `account_anonymization`を含む全SQL self-testに成功する。
+- [ ] production Supabaseへ`20260806160844_add_account_deletion_started_at.sql`、`20260806162505_anonymize_account_references_atomically.sql`、`20260806162619_reject_deleting_room_players.sql`、`20260806165611_push_receipt_tracking.sql`、`20260806165711_serialize_account_deletion_room_membership.sql`を適用し、linked history、schema、RLS、receipt RPC、atomic RPC、room / Socket gate、room membership直列化を確認する。
 
 ### プライバシーとアカウント
 
@@ -192,7 +192,7 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 
 1. EAS login未実施、`app.json`のEAS `projectId`未登録。
 2. EAS environment、`EXPO_TOKEN`、iOS / Android署名・提出資格情報が未設定または未確認。
-3. production Supabase migrationはこのworktreeから未適用・未検証。localではpush receipt trackingとaccount deletion room membership直列化を含む`20260723165711`まで適用済み。productionへ`20260723165611_push_receipt_tracking.sql`と`20260723165711_serialize_account_deletion_room_membership.sql`を適用・確認する必要がある。
+3. production Supabase migrationはこのworktreeから未適用・未検証。localではpush receipt trackingとaccount deletion room membership直列化を含む`20260806165711`まで適用済み。productionへ`20260806165611_push_receipt_tracking.sql`と`20260806165711_serialize_account_deletion_room_membership.sql`を適用・確認する必要がある。
 4. `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストを未実施。
 5. 実端末のpush token取得・通知受信・通知tap、background / foreground、process kill、Wi-Fi / mobile回線切替を未実施。
 6. `app.json`の`runtimeVersion` / `updates.url`未設定。OTAを開始する場合にだけ設計・追加する。

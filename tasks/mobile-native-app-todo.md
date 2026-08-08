@@ -29,7 +29,7 @@
 | 390×844 browser smoke | **[検証済み]** | seat identityのserver derivation後にfinal normal flowを再実行し、signupから合法card play、reload復元、leave、settings/legal、削除HTTP 200、callback fallbackまで確認 |
 | production dependency audit | **[検証済み]** | `npm audit --omit=dev`はmoderate 10件、high / critical 0件。Expoの`xcode`→`uuid`経路はupstream review継続 |
 | EAS project link / credentials | **[外部作業]** | `app.json`に`expo.extra.eas.projectId`がない。署名資格情報も未確認 |
-| production migrations | **[外部作業]** | localでは`20260723165711`まで適用済み。本番は未適用・未検証 |
+| production migrations | **[外部作業]** | localでは`20260806165711`まで適用済み。本番は未適用・未検証 |
 | TestFlight / Play内部テスト実機run | **[外部作業]** | まだ実施していない。実機runをリリースゲートにする |
 | Store release | 未完了 | このチェックリストは公開・審査提出を完了扱いにしない |
 
@@ -152,19 +152,19 @@
 - [x] **[実装済み]** `push_receipts`、claim / reschedule / complete RPCと30秒起動のreceipt workerを実装する。accepted ticketのqueryはおよそT+15 / 20 / 35 / 65 / 125 / 245 / 485 / 965分（30秒jitter）、最大8回で、最終queryのおよそ16時間5分にExpo receipt retention内でexpireする。
 - [x] **[実装済み]** ticket response時点の`DeviceNotRegistered`は即時cleanupし、Gameplay処理自身はreceiptをpollしない。
 - [x] **[実装済み]** push用Supabase migration、account deletion marker、atomic anonymization RPC、deleting-account room / Socket gate、room membership直列化のmigrationとspecをリポジトリへ追加する。
-- [x] **[検証済み]** local Supabase migration historyを`20260723165711_serialize_account_deletion_room_membership.sql`まで揃える。
+- [x] **[検証済み]** local Supabase migration historyを`20260806165711_serialize_account_deletion_room_membership.sql`まで揃える。
 - [x] **[検証済み]** transactional `account_anonymization`を含む全SQL self-testに成功する。
 - [x] **[検証済み]** local push token register / delete smokeを完了する。
 
 ### 5.2 外部作業と検証
 
-- [ ] **[外部作業]** `20260723090000_create_push_tokens.sql`をproduction Supabaseへ適用する。
-- [ ] **[外部作業]** `20260723150938_harden_push_token_access.sql`をproduction Supabaseへ適用する。
-- [ ] **[外部作業]** `20260723160844_add_account_deletion_started_at.sql`をproduction Supabaseへ適用する。
-- [ ] **[外部作業]** `20260723162505_anonymize_account_references_atomically.sql`をproduction Supabaseへ適用する。
-- [ ] **[外部作業]** `20260723162619_reject_deleting_room_players.sql`をproduction Supabaseへ適用する。
-- [ ] **[外部作業]** `20260723165611_push_receipt_tracking.sql`をproduction Supabaseへ適用する。
-- [ ] **[外部作業]** `20260723165711_serialize_account_deletion_room_membership.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806090000_create_push_tokens.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806150938_harden_push_token_access.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806160844_add_account_deletion_started_at.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806162505_anonymize_account_references_atomically.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806162619_reject_deleting_room_players.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806165611_push_receipt_tracking.sql`をproduction Supabaseへ適用する。
+- [ ] **[外部作業]** `20260806165711_serialize_account_deletion_room_membership.sql`をproduction Supabaseへ適用する。
 - [ ] **[外部作業]** linked migration history、`push_tokens` / `push_receipts` table、RLS、service-role grant、push receipt RPC、atomic anonymization RPC、deleting-account room / Socket gate、room membership直列化をproductionで確認する。
 - [ ] **[外部作業]** EAS project IDを作成・linkし、`app.json`の`expo.extra.eas.projectId`へ登録する。
 - [ ] **[外部作業]** EAS development / preview / production environmentへSupabase URL、publishable key、backend URLを登録する。
@@ -235,7 +235,7 @@
 - [x] localでbackend 52 suites / 300 tests、frontend 27 suites / 78 tests、両方のlint / buildが成功している。
 - [ ] Expoの`xcode`→`uuid`経路に残るmoderate advisory 10件をupstream更新時に再評価する。high / criticalは0件で、Expo downgradeを伴う強制fixは適用しない。
 - [ ] shared contractのWeb・backend・mobile棚卸しが完了し、backend互換性を確認している。
-- [ ] production migrationsが`20260723165711`まで適用され、schema / RLS / receipt worker RPC / atomic anonymization / deleting-account room・Socket gate / room membership直列化 / registration smokeを確認している。
+- [ ] production migrationsが`20260806165711`まで適用され、schema / RLS / receipt worker RPC / atomic anonymization / deleting-account room・Socket gate / room membership直列化 / registration smokeを確認している。
 - [ ] EAS project ID、EAS environments、`EXPO_TOKEN`、Apple / Google署名・提出資格情報が設定されている。
 - [ ] preview buildをiOS / Android実機で受入し、TestFlight / Play internal buildを各1回実施している。
 - [ ] background、process kill、回線切替、Web + mobile混在、COM置換、次roundを実機で確認している。

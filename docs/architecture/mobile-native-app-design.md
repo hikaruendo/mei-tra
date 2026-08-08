@@ -252,7 +252,7 @@ mobileの参加payloadは`user.id`を`playerId` / `userId`として送るが、�
 - `PushNotificationService`はExpoへ最大100件単位で送信し、受理されたticketを`push_receipts`へ記録する。ticket response時点の`DeviceNotRegistered`は即時に無効tokenをcleanupする。
 - `PushReceiptService`はaccepted ticketだけを対象に、初回をおよそT+15分、その後をT+20 / 35 / 65 / 125 / 245 / 485 / 965分でqueryする。30秒worker起動によるjitterを許容し、最大8回、最終queryのおよそ16時間5分でExpo receipt retention内に`expired`とする。Gameplay処理自身はreceiptをpollしない。
 - `GameplayNotificationService`はゲーム開始と手番を対象にし、COM・spectator・通知拒否profileを除外し、process内bounded dedupeを使う。
-- `20260723090000_create_push_tokens.sql`、`20260723150938_harden_push_token_access.sql`、`20260723165611_push_receipt_tracking.sql`はlocal Supabaseへ適用済みである。本番Supabaseへの適用・schema確認は未完了である。
+- `20260806090000_create_push_tokens.sql`、`20260806150938_harden_push_token_access.sql`、`20260806165611_push_receipt_tracking.sql`はlocal Supabaseへ適用済みである。本番Supabaseへの適用・schema確認は未完了である。
 
 push送信・receipt workerのunit/spec、SQL self-test、local push tokenのregister / delete smokeは検証済みである。ただし、本番migration、実機token登録、Expo受信、通知tap、無効token cleanup、delivery metricsは外部作業または実機検証の対象である。`push_receipts`はprovider delivery結果を追跡するが、Gameplay通知のin-memory dedupeは再起動・複数backend instanceをまたぐ重複event抑止ではない。
 
@@ -267,7 +267,7 @@ push送信・receipt workerのunit/spec、SQL self-test、local push tokenのreg
 5. Supabase Auth userをadmin APIで削除し、auth cacheをinvalidateする。
 6. 成功後、push token削除・room recovery削除・local sign outを行う。
 
-削除処理のbackend spec、controller spec、mobile account API specに加え、`20260723160844_add_account_deletion_started_at.sql`、`20260723162505_anonymize_account_references_atomically.sql`、`20260723162619_reject_deleting_room_players.sql`、`20260723165711_serialize_account_deletion_room_membership.sql`をlocal Supabaseへ適用済みである。local migration historyは`20260723165711`まで揃い、transactional `account_anonymization`を含む全SQL self-testが成功している。seat identityのserver derivation後にPlaywrightのfinal normal flowを再実行し、Settingsからのaccount deletionがHTTP 200を返してsign-inへredirectすることを確認済みである。active roomの409、実端末、production data、store審査の削除要件は別途確認する。
+削除処理のbackend spec、controller spec、mobile account API specに加え、`20260806160844_add_account_deletion_started_at.sql`、`20260806162505_anonymize_account_references_atomically.sql`、`20260806162619_reject_deleting_room_players.sql`、`20260806165711_serialize_account_deletion_room_membership.sql`をlocal Supabaseへ適用済みである。local migration historyは`20260806165711`まで揃い、transactional `account_anonymization`を含む全SQL self-testが成功している。seat identityのserver derivation後にPlaywrightのfinal normal flowを再実行し、Settingsからのaccount deletionがHTTP 200を返してsign-inへredirectすることを確認済みである。active roomの409、実端末、production data、store審査の削除要件は別途確認する。
 
 ## 9. EASとCI
 
@@ -291,7 +291,7 @@ push送信・receipt workerのunit/spec、SQL self-test、local push tokenのreg
 
 - `app.json`に`expo.extra.eas.projectId`がないため、EAS project linkは未完了である。
 - EAS login、EAS environment、`EXPO_TOKEN`、Apple Developer / App Store Connect、Android keystore / Play Console資格情報は未設定または未確認である。
-- `20260723162505_anonymize_account_references_atomically.sql`、`20260723162619_reject_deleting_room_players.sql`、`20260723165611_push_receipt_tracking.sql`、`20260723165711_serialize_account_deletion_room_membership.sql`を含むlocal migration historyは本番Supabaseへ未適用・未検証である。
+- `20260806162505_anonymize_account_references_atomically.sql`、`20260806162619_reject_deleting_room_players.sql`、`20260806165611_push_receipt_tracking.sql`、`20260806165711_serialize_account_deletion_room_membership.sql`を含むlocal migration historyは本番Supabaseへ未適用・未検証である。
 - `runtimeVersion`と`updates.url`がないため、EAS Updateは開始しない。channel定義だけではOTAは有効にならない。
 - `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストは未実施である。
 
