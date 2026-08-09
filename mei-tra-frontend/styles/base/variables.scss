@@ -163,6 +163,7 @@ $z-index-tooltip: 50;
   --mt-raw-ink-600: #4a5142;
   --mt-raw-card-red: #c0362c;
   --mt-raw-card-red-dk: #9e2a22;
+  --mt-raw-card-red-lt: #eda79d;
 
   // Font stacks — JP fallback ordering is load-bearing (Latin faces render no CJK)
   --mt-font-heading: var(--font-fraunces), var(--font-shippori-mincho), 'Shippori Mincho', serif;
@@ -205,6 +206,14 @@ $z-index-tooltip: 50;
   --mt-card-ink: #23281f;
   --mt-card-red: #c0362c;
   --mt-card-back: #173d30;
+
+  // Team identity ink. NOT the same role as --mt-card-red: these are read as
+  // TEXT on felt, so both sides are chosen for legibility rather than for
+  // matching the card artwork. --mt-team-black has always been light for that
+  // reason; --mt-team-red is its counterpart (--mt-card-red as text on
+  // --mt-surface-raised-2 is 2.18:1, against 7.68:1 for the black side).
+  // Unlike the card tokens above these flip per theme — see the light block.
+  --mt-team-red: var(--mt-raw-card-red-lt);
   --mt-team-black: #c8d1c8;
 
   // Shadows
@@ -246,6 +255,7 @@ html[data-theme='light'] {
   --mt-success: #3b7a57;
   --mt-warning: #8a6c2e;
   --mt-on-success: var(--mt-raw-pale-100);
+  --mt-team-red: var(--mt-raw-card-red-dk);
   --mt-team-black: var(--mt-raw-ink-900);
 
   --mt-shadow-panel: 0 6px 20px rgba(35, 40, 31, 0.2), 0 1px 2px rgba(35, 40, 31, 0.14);

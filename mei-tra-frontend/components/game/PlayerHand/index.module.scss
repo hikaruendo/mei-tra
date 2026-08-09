@@ -275,7 +275,9 @@
 }
 
 .teamRedBadge {
-  color: var(--mt-danger);
+  // Was --mt-danger, which is an error-state role that happened to share the
+  // dark theme's hex with the card red. Team identity is its own role.
+  color: var(--mt-team-red);
 }
 
 .teamBlackBadge {
@@ -303,8 +305,13 @@
 
 .turnBadge svg {
   display: block;
-  width: 78%;
-  height: 78%;
+  // Full-bleed, with the ring's outer edge (r 11 + half of stroke-width 2)
+  // landing exactly on the 12-unit viewBox radius, so the dial rim and the
+  // brass disc read as one shape. At 78% the dial floated inside the disc.
+  // Kept in step with mei-tra-mobile TurnClock.tsx, which uses the same
+  // geometry — changing one without the other makes the platforms diverge.
+  width: 100%;
+  height: 100%;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;

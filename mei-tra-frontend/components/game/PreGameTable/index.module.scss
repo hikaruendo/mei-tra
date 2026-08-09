@@ -121,9 +121,9 @@
 }
 
 .teamRedPill {
-  border: 1px solid color-mix(in srgb, var(--mt-card-red) 48%, transparent);
-  background: color-mix(in srgb, var(--mt-card-red) 14%, var(--mt-surface-raised));
-  color: var(--mt-card-red);
+  border: 1px solid color-mix(in srgb, var(--mt-team-red) 48%, transparent);
+  background: color-mix(in srgb, var(--mt-team-red) 14%, var(--mt-surface-raised));
+  color: var(--mt-team-red);
 }
 
 .teamBlackPill {
@@ -189,7 +189,7 @@
 }
 
 .teamRedField {
-  color: var(--mt-card-red);
+  color: var(--mt-team-red);
 }
 
 .teamBlackField {
@@ -277,9 +277,9 @@
 }
 
 .teamRed .teamBadge {
-  border: 1px solid color-mix(in srgb, var(--mt-card-red) 48%, transparent);
-  background: color-mix(in srgb, var(--mt-card-red) 14%, var(--mt-surface-raised));
-  color: var(--mt-card-red);
+  border: 1px solid color-mix(in srgb, var(--mt-team-red) 48%, transparent);
+  background: color-mix(in srgb, var(--mt-team-red) 14%, var(--mt-surface-raised));
+  color: var(--mt-team-red);
 }
 
 .teamBlack .teamBadge {

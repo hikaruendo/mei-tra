@@ -384,7 +384,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       title={t('currentTurn')}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="10.25" />
+        <circle cx="12" cy="12" r="11" />
         <path className={styles.clockHand} d="M12 12V5.75" />
         <circle className={styles.clockCenter} cx="12" cy="12" r="1.1" />
         <path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
