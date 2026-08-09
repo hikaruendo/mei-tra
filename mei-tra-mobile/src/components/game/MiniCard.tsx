@@ -16,10 +16,21 @@ export function MiniCard({ card }: { card: string }) {
   const { rank, suit, isRed } = parseCard(card);
   const ink = isRed ? palette.card.red : palette.card.ink;
 
+  // parseCard gives JOKER the five-character rank "JOKER", which overflows a
+  // 22pt chip. Web sidesteps this by falling back to the artwork; a text chip
+  // needs its own compact mark.
+  if (card === 'JOKER') {
+    return (
+      <View accessibilityLabel="ジョーカー" style={styles.chip}>
+        <Text style={[styles.joker, { color: ink }]}>★</Text>
+      </View>
+    );
+  }
+
   return (
     <View accessibilityLabel={card} style={styles.chip}>
       <Text style={[styles.rank, { color: ink }]}>{rank}</Text>
-      <Text style={[styles.suit, { color: ink }]}>{suit || '★'}</Text>
+      <Text style={[styles.suit, { color: ink }]}>{suit}</Text>
     </View>
   );
 }
@@ -53,5 +64,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     lineHeight: 13,
+  },
+  joker: {
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 17,
   },
 });
