@@ -1204,12 +1204,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
+    // Horizontal inset lives on historyCard so the header, the table and the
+    // sheet edge all line up.
     paddingTop: 16,
     paddingBottom: 8,
   },
