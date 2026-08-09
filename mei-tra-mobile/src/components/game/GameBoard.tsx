@@ -12,6 +12,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -19,6 +20,7 @@ import { BlowControls } from '@/components/game/BlowControls';
 import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
@@ -112,6 +114,14 @@ export function GameBoard({
   const self = game.players.find(
     (player) => player.playerId === perspectivePlayerId,
   );
+  const { width: windowWidth } = useWindowDimensions();
+  const selfHandCount = game.players.find(
+    (player) => player.playerId === game.you,
+  )?.hand.length ?? 0;
+  // board padding (20) + self panel (~86) + fan padding (20)
+  const fanAvailableWidth = windowWidth - 126;
+  const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
+    useHandFanMetrics(fanAvailableWidth, selfHandCount);
   const orderedPlayers = useMemo(
     () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
     [game.players, perspectivePlayerId],
@@ -535,7 +545,7 @@ export function GameBoard({
                     key={`${card}-${index}`}
                     style={[
                       styles.fanCard,
-                      total > 1 && { marginHorizontal: -6 },
+                      total > 1 && { marginHorizontal: handCardMargin },
                       {
                         transform: [
                           { rotate: `${rotation}deg` },
@@ -546,6 +556,7 @@ export function GameBoard({
                   >
                     <PlayingCard
                       card={card}
+                      width={handCardWidth}
                       disabled={
                         isPlayPhase &&
                         (actionsDisabled ||
@@ -998,7 +1009,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selfCard: {
-    width: 80,
+    minWidth: 64,
+    maxWidth: 92,
+    flexBasis: '22%',
     alignItems: 'center',
     gap: 3,
     padding: 6,
@@ -1070,6 +1083,7 @@ const styles = StyleSheet.create({
   },
   fanContainer: {
     minHeight: 104,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',

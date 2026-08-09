@@ -14,6 +14,7 @@ import {
 
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
+import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors, teamColors } from '@/theme/colors';
 
 interface WaitingRoomProps {
@@ -94,8 +95,7 @@ export function WaitingRoom({
 
       <View style={[styles.teams, width < 380 && styles.teamsNarrow]}>
         {([0, 1] as const).map((team) => {
-          const teamLabel =
-            room.settings.teamNames?.[team] || `チーム${team + 1}`;
+          const teamLabel = getTeamDisplayName(team, room.settings.teamNames);
           const teamColor = teamColors[team];
           return (
           <View key={team} style={styles.team}>

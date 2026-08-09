@@ -124,7 +124,8 @@ export function PlayerSeat({
 
 const styles = StyleSheet.create({
   container: {
-    minWidth: 88,
+    minWidth: 0,
+    flex: 1,
     maxWidth: 110,
     flexShrink: 1,
     alignItems: 'center',
