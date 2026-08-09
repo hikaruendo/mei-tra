@@ -1,5 +1,7 @@
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { resolveCardArt } from '@/lib/card-art-assets';
 import { parseCard } from '@/lib/cards';
 import { palette } from '@/theme/palette';
 import { radius } from '@/theme/radius';
@@ -9,20 +11,30 @@ import { radius } from '@/theme/radius';
  * (mei-tra-frontend/components/game/CompletedFields: .cardCorner).
  *
  * Won tricks are a tally, not something you read card by card, so web
- * deliberately drops the artwork here. Rendering full SVG faces at this size
- * was both noisier and more expensive than the information warranted.
+ * deliberately drops the artwork for ordinary cards. JOKER is its one
+ * exception, and this follows it — see below.
  */
 export function MiniCard({ card }: { card: string }) {
   const { rank, suit, isRed } = parseCard(card);
   const ink = isRed ? palette.card.red : palette.card.ink;
 
-  // parseCard gives JOKER the five-character rank "JOKER", which overflows a
-  // 22pt chip. Web sidesteps this by falling back to the artwork; a text chip
-  // needs its own compact mark.
+  // JOKER has no rank/suit pair to print, so web drops the text treatment and
+  // stretches the artwork across the chip instead (TakenCardPreview ->
+  // .jokerCardFace, an <img> at 100%/100%, i.e. object-fit: fill).
+  // preserveAspectRatio="none" is what reproduces that fill on the SVG side.
   if (card === 'JOKER') {
+    const art = resolveCardArt(card);
     return (
       <View accessibilityLabel="ジョーカー" style={styles.chip}>
-        <Text style={[styles.joker, { color: ink }]}>★</Text>
+        {art.kind === 'vector' ? (
+          <art.Svg height="100%" preserveAspectRatio="none" width="100%" />
+        ) : (
+          <Image
+            contentFit="fill"
+            source={art.source}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
       </View>
     );
   }
@@ -45,6 +57,9 @@ const styles = StyleSheet.create({
     marginHorizontal: -2,
     alignItems: 'center',
     justifyContent: 'center',
+    // Web's .cardCorner clips with overflow: hidden so the joker artwork takes
+    // the chip's rounded corners instead of squaring them off.
+    overflow: 'hidden',
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: palette.border.hairline,
@@ -64,10 +79,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     lineHeight: 13,
-  },
-  joker: {
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 17,
   },
 });
