@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   profileError: {
-    color: '#ffb0a8',
+    color: colors.dangerText,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   linkError: {
-    color: '#ffb0a8',
+    color: colors.dangerText,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   deleteError: {
-    color: '#ffb0a8',
+    color: colors.dangerText,
     fontSize: 14,
     lineHeight: 20,
   },

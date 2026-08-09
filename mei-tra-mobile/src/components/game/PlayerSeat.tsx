@@ -2,7 +2,8 @@ import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
-import { colors } from '@/theme/colors';
+import { getTeamDisplayName } from '@/lib/team-labels';
+import { colors, teamColors } from '@/theme/colors';
 
 interface PlayerSeatProps {
   player: PlayerContract;
@@ -68,9 +69,9 @@ export function PlayerSeat({
         {player.name}
         {isSelf ? '（あなた）' : ''}
       </Text>
-      <View style={[styles.teamBadge, { backgroundColor: player.team === 0 ? '#8b2020' : '#1a2a2a' }]}>
-        <Text style={styles.teamBadgeText}>
-          {teamNames?.[player.team] ?? `${player.team + 1}組`}
+      <View style={[styles.teamBadge, { borderColor: teamColors[player.team] }]}>
+        <Text style={[styles.teamBadgeText, { color: teamColors[player.team] }]}>
+          {getTeamDisplayName(player.team, teamNames)}
         </Text>
       </View>
       {teamFieldCounts ? (
@@ -171,9 +172,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
+    backgroundColor: colors.panelStrong,
+    borderWidth: 1,
   },
   teamBadgeText: {
-    color: '#fff',
     fontSize: 9,
     fontWeight: '700',
   },

@@ -28,7 +28,9 @@ import {
   getSeatOrderWithSelfBottom,
 } from '@/lib/table-order';
 import { getStrengthOrderLabel } from '@/lib/trump-display';
-import { colors } from '@/theme/colors';
+import { getTeamDisplayName } from '@/lib/team-labels';
+import { TRUMP_LABELS } from '@/lib/trump-labels';
+import { colors, teamColors } from '@/theme/colors';
 import type {
   MobileGameOver,
   MobileGameSnapshot,
@@ -59,14 +61,6 @@ interface GameBoardProps {
   history?: GameHistoryData;
   roomId?: string;
 }
-
-const trumpLabels: Record<TrumpType, string> = {
-  tra: 'トラ',
-  herz: 'ヘル ♥',
-  daiya: 'ダイヤ ♦',
-  club: 'クラブ ♣',
-  zuppe: 'ズッペ ♠',
-};
 
 export function GameBoard({
   game,
@@ -267,7 +261,7 @@ export function GameBoard({
           <Text style={styles.phase}>{phaseLabel}</Text>
           {highest ? (
             <Text style={styles.trumpBadge}>
-              {trumpLabels[highest.trumpType]} {highest.numberOfPairs}
+              {TRUMP_LABELS[highest.trumpType]} {highest.numberOfPairs}
             </Text>
           ) : null}
         </View>
@@ -297,7 +291,7 @@ export function GameBoard({
                 agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
                 declaration={
                   highest && highest.playerId === player.playerId
-                    ? `${trumpLabels[highest.trumpType]} ${highest.numberOfPairs}`
+                    ? `${TRUMP_LABELS[highest.trumpType]} ${highest.numberOfPairs}`
                     : undefined
                 }
                 isBlowWinner={blowWinnerId === player.playerId}
@@ -478,9 +472,9 @@ export function GameBoard({
                 <Text numberOfLines={1} style={styles.selfName}>
                   {self.name}
                 </Text>
-                <View style={[styles.selfTeamBadge, { backgroundColor: self.team === 0 ? '#8b2020' : '#1a2a2a' }]}>
-                  <Text style={styles.selfTeamBadgeText}>
-                    {game.teamNames?.[self.team] ?? `${self.team + 1}組`}
+                <View style={[styles.selfTeamBadge, { borderColor: teamColors[self.team] }]}>
+                  <Text style={[styles.selfTeamBadgeText, { color: teamColors[self.team] }]}>
+                    {getTeamDisplayName(self.team, game.teamNames)}
                   </Text>
                 </View>
                 <Text style={styles.selfFieldCountText}>
@@ -665,7 +659,9 @@ export function GameBoard({
             <Text style={styles.modalText}>
               勝者: {gameOver?.winner}
               {'\n'}
-              チーム1 {gameOver?.finalScores[0]?.total ?? 0}点 / チーム2{' '}
+              {getTeamDisplayName(0, game.teamNames)}{' '}
+              {gameOver?.finalScores[0]?.total ?? 0}点 /{' '}
+              {getTeamDisplayName(1, game.teamNames)}{' '}
               {gameOver?.finalScores[1]?.total ?? 0}点
             </Text>
             <Button disabled={actionsDisabled} onPress={onCloseGameOver}>
@@ -777,7 +773,7 @@ export function GameBoard({
           <View style={styles.historyOverlay}>
             <View style={styles.historyCard}>
               <View style={styles.historyHeader}>
-                <Text style={styles.historyTitle}>ゲーム履歴</Text>
+                <Text style={styles.historyTitle}>対局ログ</Text>
                 <Button
                   onPress={() => setShowHistory(false)}
                   variant="ghost"
@@ -789,8 +785,10 @@ export function GameBoard({
                 error={history.error}
                 loading={history.loading}
                 onRefresh={history.refresh}
+                players={game.players}
                 replay={history.replay}
                 summary={history.summary}
+                teamNames={game.teamNames}
               />
             </View>
           </View>
@@ -934,7 +932,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   replacePanelButtonText: {
-    color: '#fff',
+    color: colors.onDanger,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1041,9 +1039,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
+    backgroundColor: colors.panelStrong,
+    borderWidth: 1,
   },
   selfTeamBadgeText: {
-    color: '#fff',
     fontSize: 9,
     fontWeight: '700',
   },
@@ -1123,7 +1122,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   pausedReplaceButtonText: {
-    color: '#fff',
+    color: colors.onDanger,
     fontSize: 15,
     fontWeight: '800',
   },

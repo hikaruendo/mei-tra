@@ -252,7 +252,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   error: {
-    color: colors.danger,
+    // dangerText, not danger: `danger` is a fill colour and only reaches ~2.4:1
+    // as text on the felt panel behind this card. See theme/palette.ts.
+    color: colors.dangerText,
     fontSize: 15,
   },
   message: {

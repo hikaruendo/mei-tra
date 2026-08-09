@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "scheme": "meitra",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#082f26",
+    "backgroundColor": "#0e2a21",
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/images/meitra-icon.png",
@@ -16,7 +16,7 @@
     "android": {
       "package": "com.kando1.meitra",
       "adaptiveIcon": {
-        "backgroundColor": "#082f26",
+        "backgroundColor": "#0e2a21",
         "foregroundImage": "./assets/images/meitra-adaptive-foreground.png"
       },
       "permissions": ["POST_NOTIFICATIONS"],
@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#082f26",
+          "backgroundColor": "#0e2a21",
           "image": "./assets/images/meitra-splash.png",
           "imageWidth": 240
         }

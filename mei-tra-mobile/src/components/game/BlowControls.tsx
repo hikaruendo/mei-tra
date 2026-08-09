@@ -8,16 +8,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { TRUMP_LABELS } from '@/lib/trump-labels';
 import { colors } from '@/theme/colors';
 import { getValidBlowPairValues } from '@meitra/game-client/blow';
 
-const trumpOptions: { value: TrumpType; label: string }[] = [
-  { value: 'zuppe', label: 'ズッペ ♠' },
-  { value: 'club', label: 'クラブ ♣' },
-  { value: 'daiya', label: 'ダイヤ ♦' },
-  { value: 'herz', label: 'ヘル ♥' },
-  { value: 'tra', label: 'トラ' },
-];
+const TRUMP_ORDER: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz', 'tra'];
+
+const trumpOptions: { value: TrumpType; label: string }[] = TRUMP_ORDER.map(
+  (value) => ({ value, label: TRUMP_LABELS[value] }),
+);
 
 const declarationLabel = (declaration: BlowDeclarationContract | null) => {
   if (!declaration) return 'まだ宣言はありません';
