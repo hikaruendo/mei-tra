@@ -43,6 +43,8 @@ const buildUseCase = (options: {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
+    {} as never,
   );
 };
 

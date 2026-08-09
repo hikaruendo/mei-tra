@@ -1976,6 +1976,8 @@ describe('Game Use Cases', () => {
         playCardUseCase as never,
         declareBlowUseCase as never,
         passBlowUseCase as never,
+        { isValidDeclaration: () => true } as never,
+        { getCardSuit: (c: string) => c.slice(-1) } as never,
         selectNegriUseCase as never,
         revealBrokenHandUseCase as never,
       );
@@ -2112,6 +2114,8 @@ describe('Game Use Cases', () => {
         playCardUseCase as never,
         declareBlowUseCase as never,
         passBlowUseCase as never,
+        { isValidDeclaration: () => true } as never,
+        { getCardSuit: (c: string) => c.slice(-1) } as never,
         selectNegriUseCase as never,
         revealBrokenHandUseCase as never,
       );
@@ -2249,6 +2253,8 @@ describe('Game Use Cases', () => {
         playCardUseCase as never,
         declareBlowUseCase as never,
         passBlowUseCase as never,
+        { isValidDeclaration: () => true } as never,
+        { getCardSuit: (c: string) => c.slice(-1) } as never,
         selectNegriUseCase as never,
         revealBrokenHandUseCase as never,
       );
@@ -2350,6 +2356,8 @@ describe('Game Use Cases', () => {
         playCardUseCase as never,
         declareBlowUseCase as never,
         passBlowUseCase as never,
+        { isValidDeclaration: () => true } as never,
+        { getCardSuit: (c: string) => c.slice(-1) } as never,
         selectNegriUseCase as never,
         revealBrokenHandUseCase as never,
       );
