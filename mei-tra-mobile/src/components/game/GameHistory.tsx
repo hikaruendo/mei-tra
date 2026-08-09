@@ -26,12 +26,17 @@ interface GameHistoryProps {
   teamNames?: TeamNames;
 }
 
-/** Column weights, tuned so the bid cell survives a 320pt screen. */
+/**
+ * Column weights, tuned so the "ラウンド" heading fits on one line down to 320pt
+ * (it needs ~44pt at 11px). It was 0.8, which left ~34pt and wrapped it to two
+ * lines. The cell itself only ever holds a one or two digit number, so the
+ * heading is what sets this column's width.
+ */
 const COL = {
-  round: 0.8,
-  blower: 2,
-  bid: 2.4,
-  score: 2.2,
+  round: 1.3,
+  blower: 1.8,
+  bid: 2.3,
+  score: 2.0,
 } as const;
 
 function Row({ row, index }: { row: RoundRow; index: number }) {
@@ -113,10 +118,18 @@ export function GameHistory({
       ) : (
         <>
           <View style={[styles.row, styles.headRow]}>
-            <Text style={[styles.headCell, { flex: COL.round }]}>ラウンド</Text>
-            <Text style={[styles.headCell, { flex: COL.blower }]}>吹き手</Text>
-            <Text style={[styles.headCell, { flex: COL.bid }]}>宣言</Text>
-            <Text style={[styles.headCell, { flex: COL.score }]}>得点</Text>
+            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
+              ラウンド
+            </Text>
+            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.blower }]}>
+              吹き手
+            </Text>
+            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.bid }]}>
+              宣言
+            </Text>
+            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.score }]}>
+              得点
+            </Text>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             {rows.map((row, index) => (
