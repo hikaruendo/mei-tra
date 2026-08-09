@@ -42,7 +42,10 @@ export function TurnClock({ size = 26 }: { size?: number }) {
     outputRange: ['0deg', '360deg'],
   });
 
-  const inner = Math.round(size * 0.78);
+  // The dial fills the disc: its outer stroke is the badge's visible edge, so
+  // the ring and the brass circle read as one shape rather than a small clock
+  // floating inside a larger button.
+  const inner = size;
 
   return (
     <View
@@ -61,7 +64,8 @@ export function TurnClock({ size = 26 }: { size?: number }) {
           strokeLinejoin="round"
           strokeWidth={2}
         >
-          <Circle cx={12} cy={12} r={10.25} />
+          {/* r + half the stroke = 12, so the ring sits flush with the disc. */}
+          <Circle cx={12} cy={12} r={11} />
           {/* Ticks at 12 / 3 / 6 / 9. */}
           <Path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
         </G>
