@@ -29,4 +29,5 @@ export const raw = {
 
   cardRed: '#c0362c',
   cardRedDark: '#9e2a22',
+  cardRedLight: '#eda79d',
 } as const;

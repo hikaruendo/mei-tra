@@ -1272,9 +1272,15 @@ export function GameProvider({ children }: PropsWithChildren) {
     () => resolvePlayerId(state.game, state.currentRoom, user?.id),
     [state.currentRoom, state.game, user?.id],
   );
+  // Prefer the room's hostId: room-sync/room-updated keep it current, while
+  // game.hostId is captured once at game start and never refreshed. Without
+  // this, a host transfer (e.g. the host disconnects) leaves every client
+  // believing the departed player is still host, so nobody can replace them
+  // with a COM. The web client reads a single currentHostId that both room and
+  // game events write, which is the behaviour mirrored here.
   const isHost =
     Boolean(currentPlayerId) &&
-    (state.game?.hostId ?? state.currentRoom?.hostId) === currentPlayerId;
+    (state.currentRoom?.hostId ?? state.game?.hostId) === currentPlayerId;
 
   const value = useMemo<GameContextValue>(
     () => ({

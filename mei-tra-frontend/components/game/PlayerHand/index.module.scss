@@ -197,7 +197,7 @@
 
 .declarationSuit[data-trump='herz'],
 .declarationSuit[data-trump='daiya'] {
-  color: var(--mt-card-red);
+  color: var(--mt-suit-red);
 }
 
 .declarationSuit[data-trump='club'],
@@ -275,7 +275,9 @@
 }
 
 .teamRedBadge {
-  color: var(--mt-danger);
+  // Was --mt-danger, which is an error-state role that happened to share the
+  // dark theme's hex with the card red. Team identity is its own role.
+  color: var(--mt-team-red);
 }
 
 .teamBlackBadge {
@@ -289,23 +291,32 @@
   width: 1.6rem;
   height: 1.6rem;
   padding: 0;
-  border: 0;
   border-radius: 50%;
-  background: var(--mt-surface-raised);
-  box-shadow: 0 1px 3px var(--mt-accent-subtle);
-  color: var(--mt-accent-strong);
+  // Inverted on purpose: a solid brass disc with an ivory dial. A light disc
+  // sat on a light card in light mode and read as the card's fill bleeding past
+  // its border-radius, and no amount of outline fixed that — the fill itself
+  // was the problem. Brass also carries the "your turn" accent semantics.
+  background: var(--mt-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  color: var(--mt-raw-pale-100);
   line-height: 1;
+  box-sizing: border-box;
 }
 
 .turnBadge svg {
   display: block;
+  // Full-bleed, with the ring's outer edge (r 11 + half of stroke-width 2)
+  // landing exactly on the 12-unit viewBox radius, so the dial rim and the
+  // brass disc read as one shape. At 78% the dial floated inside the disc.
+  // Kept in step with mei-tra-mobile TurnClock.tsx, which uses the same
+  // geometry — changing one without the other makes the platforms diverge.
   width: 100%;
   height: 100%;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.6;
+  stroke-width: 2;
 }
 
 .clockHand {

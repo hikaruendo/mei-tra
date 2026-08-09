@@ -84,15 +84,15 @@
 }
 
 .teamRed {
-  color: var(--mt-card-red);
+  color: var(--mt-team-red);
 
   .gameInfoScoreFill {
-    background: color-mix(in srgb, var(--mt-card-red) 88%, var(--mt-text-primary) 12%);
+    background: color-mix(in srgb, var(--mt-team-red) 88%, var(--mt-text-primary) 12%);
   }
 
   .gameInfoScoreTeam,
   .gameInfoScoreStatus {
-    color: var(--mt-card-red);
+    color: var(--mt-team-red);
   }
 }
 

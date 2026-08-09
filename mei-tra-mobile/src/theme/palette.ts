@@ -72,11 +72,17 @@ export const palette = {
    * Team identity. Indexed by the `Team` value (0 | 1) used across the
    * contracts, so `team[player.team]` reads naturally at call sites.
    *
-   * NOTE: team[1] is intentionally LIGHT (web uses these as text colours, not
-   * fills). Badges must therefore be outline-style — a tinted border and
-   * matching text on a raised surface — never a solid fill with white text.
+   * NOTE: BOTH entries are intentionally LIGHT (web uses these as text
+   * colours, not fills). Badges must therefore be outline-style — a tinted
+   * border and matching text on a raised surface — never a solid fill with
+   * white text.
+   *
+   * team[0] is raw.cardRedLight, not raw.cardRed: the card ink reads at 2.18:1
+   * as text on surface.raised2, against 7.68:1 for the black side. Team
+   * identity and card ink are separate roles — web splits them the same way,
+   * as --mt-team-red vs --mt-card-red.
    */
-  team: [raw.cardRed, '#c8d1c8'] as const,
+  team: [raw.cardRedLight, '#c8d1c8'] as const,
 
   trump: {
     tra: '#e0b24a',

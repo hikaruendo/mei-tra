@@ -2,7 +2,9 @@ import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { TurnClock } from '@/components/game/TurnClock';
 import { getTeamDisplayName } from '@/lib/team-labels';
+import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { colors, teamColors } from '@/theme/colors';
 
 interface PlayerSeatProps {
@@ -59,11 +61,15 @@ export function PlayerSeat({
           <Text style={styles.declarationBadgeText}>アゲ: {declaration}</Text>
         </View>
       ) : null}
+      {isTurn ? (
+        <View style={styles.turnBadgeSlot}>
+          <TurnClock size={22} />
+        </View>
+      ) : null}
       <View style={styles.avatarRow}>
         <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
           <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
         </View>
-        {isTurn ? <Text style={styles.turnIcon}>⏱</Text> : null}
       </View>
       <Text numberOfLines={1} style={styles.name}>
         {player.name}
@@ -123,8 +129,17 @@ export function PlayerSeat({
 }
 
 const styles = StyleSheet.create({
+  turnBadgeSlot: {
+    // Overhangs the seat's top-right corner, matching web's .avatarTurnBadge
+    // (top: -0.32rem; right: -0.4rem).
+    position: 'absolute',
+    top: -6,
+    right: -7,
+    zIndex: 4,
+  },
   container: {
-    minWidth: 88,
+    minWidth: 0,
+    flex: 1,
     maxWidth: 110,
     flexShrink: 1,
     alignItems: 'center',
@@ -158,9 +173,6 @@ const styles = StyleSheet.create({
   avatarText: {
     color: colors.text,
     fontSize: 17,
-  },
-  turnIcon: {
-    fontSize: 14,
   },
   name: {
     maxWidth: 96,
@@ -224,6 +236,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   faceDownOverlap: {
-    marginLeft: -16,
+    marginLeft: cardStackMargin(CARD_BASE_WIDTHS.seat),
   },
 });

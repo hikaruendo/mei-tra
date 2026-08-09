@@ -12,13 +12,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import { BlowControls } from '@/components/game/BlowControls';
 import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
+import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
@@ -112,6 +115,15 @@ export function GameBoard({
   const self = game.players.find(
     (player) => player.playerId === perspectivePlayerId,
   );
+  const { width: windowWidth } = useWindowDimensions();
+  // Size the fan from the hand it actually renders. Spectators have no
+  // `game.you`, so keying off that collapsed the count to 0 and the metrics
+  // fell through to the single-card branch (max width, zero overlap).
+  const selfHandCount = self?.hand.length ?? 0;
+  // board padding (20) + self panel (~86) + fan padding (20)
+  const fanAvailableWidth = windowWidth - 126;
+  const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
+    useHandFanMetrics(fanAvailableWidth, selfHandCount);
   const orderedPlayers = useMemo(
     () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
     [game.players, perspectivePlayerId],
@@ -346,8 +358,13 @@ export function GameBoard({
               player.playerId,
             );
             const isIdle = game.idlePlayerIds.includes(player.playerId);
+            // Matches the web condition (PlayerHand/index.tsx): the host never
+            // sees the control on their own seat.
             const showReplacePanel =
-              isHost && !player.isCOM && (isDisconnected || isIdle);
+              isHost &&
+              !player.isCOM &&
+              player.playerId !== game.you &&
+              (isDisconnected || isIdle);
             return (
               <View key={player.playerId} style={posStyle}>
                 {wrapped}
@@ -535,7 +552,7 @@ export function GameBoard({
                     key={`${card}-${index}`}
                     style={[
                       styles.fanCard,
-                      total > 1 && { marginHorizontal: -6 },
+                      total > 1 && { marginHorizontal: handCardMargin },
                       {
                         transform: [
                           { rotate: `${rotation}deg` },
@@ -546,6 +563,7 @@ export function GameBoard({
                   >
                     <PlayingCard
                       card={card}
+                      width={handCardWidth}
                       disabled={
                         isPlayPhase &&
                         (actionsDisabled ||
@@ -569,6 +587,16 @@ export function GameBoard({
 
             {game.gamePhase === 'play' && selectedCard ? (
               <View style={styles.selectedActions}>
+                {/* Cancel sits left, confirm right — the destructive/back action
+                    on the outside, the primary action under the thumb. */}
+                <Button
+                  disabled={actionsDisabled || Boolean(pendingAction)}
+                  onPress={() => setSelectedCard(null)}
+                  style={styles.actionButton}
+                  variant="secondary"
+                >
+                  キャンセル
+                </Button>
                 <Button
                   disabled={
                     actionsDisabled ||
@@ -580,14 +608,6 @@ export function GameBoard({
                   style={styles.actionButton}
                 >
                   {mustSelectNegri ? 'ネグリにする' : 'プレイ'}
-                </Button>
-                <Button
-                  disabled={actionsDisabled || Boolean(pendingAction)}
-                  onPress={() => setSelectedCard(null)}
-                  style={styles.actionButton}
-                  variant="secondary"
-                >
-                  キャンセル
                 </Button>
               </View>
             ) : null}
@@ -603,12 +623,7 @@ export function GameBoard({
                   {myFields.map((field, idx) => (
                     <View key={idx} style={styles.completedChip}>
                       {field.cards.map((card, ci) => (
-                        <View
-                          key={ci}
-                          style={ci > 0 ? styles.completedCardOverlap : undefined}
-                        >
-                          <PlayingCard card={card} size="seat" />
-                        </View>
+                        <MiniCard card={card} key={ci} />
                       ))}
                     </View>
                   ))}
@@ -989,9 +1004,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.backgroundElevated,
   },
-  completedCardOverlap: {
-    marginLeft: -12,
-  },
   handSection: {
     gap: 8,
   },
@@ -1000,7 +1012,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selfCard: {
-    width: 80,
+    minWidth: 64,
+    maxWidth: 92,
+    flexBasis: '22%',
     alignItems: 'center',
     gap: 3,
     padding: 6,
@@ -1072,6 +1086,7 @@ const styles = StyleSheet.create({
   },
   fanContainer: {
     minHeight: 104,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
@@ -1192,12 +1207,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
+    // Horizontal inset lives on historyCard so the header, the table and the
+    // sheet edge all line up.
     paddingTop: 16,
     paddingBottom: 8,
   },
