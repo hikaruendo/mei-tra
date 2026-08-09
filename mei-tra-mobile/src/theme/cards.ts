@@ -28,6 +28,23 @@ export const CARD_SCALES = {
   xlarge: 1.2,
 } as const;
 
+/**
+ * How much of a card the next one covers in an overlapped row, matching the web
+ * app's face-down stack (margin-left -0.7rem on a 1.55rem card).
+ */
+export const CARD_STACK_OVERLAP = 0.45;
+
 export const cardHeight = (width: number): number => width * CARD_ASPECT;
+
+/**
+ * The artwork rounds its own corners at 15/210, but at seat sizes (~30pt) that
+ * is barely 2px and reads as a sharp rectangle. Web compensates the same way —
+ * its face-down card uses a 0.25rem radius on a 1.55rem card — so enforce a
+ * floor that keeps small cards looking like cards.
+ */
 export const cardRadius = (width: number): number =>
-  Math.round(width * CARD_RADIUS_RATIO);
+  Math.max(4, Math.round(width * CARD_RADIUS_RATIO));
+
+/** Negative margin that overlaps stacked cards by CARD_STACK_OVERLAP. */
+export const cardStackMargin = (width: number): number =>
+  -Math.round(width * CARD_STACK_OVERLAP);

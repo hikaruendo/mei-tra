@@ -34,9 +34,9 @@ const COL = {
   score: 2.2,
 } as const;
 
-function Row({ row }: { row: RoundRow }) {
+function Row({ row, index }: { row: RoundRow; index: number }) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, index % 2 === 1 && styles.rowAlt]}>
       <Text style={[styles.cell, styles.roundCell, { flex: COL.round }]}>
         {row.roundNumber}
       </Text>
@@ -101,11 +101,6 @@ export function GameHistory({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.subtitle}>
-          {rows.length > 0
-            ? `${rows.length}ラウンド / ${summary?.totalEntries ?? 0}件`
-            : 'まだログはありません'}
-        </Text>
         <Pressable hitSlop={8} onPress={onRefresh}>
           <Text style={styles.refresh}>更新</Text>
         </Pressable>
@@ -124,8 +119,8 @@ export function GameHistory({
             <Text style={[styles.headCell, { flex: COL.score }]}>得点</Text>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {rows.map((row) => (
-              <Row key={row.roundNumber} row={row} />
+            {rows.map((row, index) => (
+              <Row index={index} key={row.roundNumber} row={row} />
             ))}
           </ScrollView>
         </>
@@ -142,11 +137,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 12,
+    justifyContent: 'flex-end',
   },
   refresh: {
     color: colors.gold,
@@ -157,12 +148,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  rowAlt: {
+    backgroundColor: colors.panelStrong,
   },
   headRow: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 6,
+    borderBottomColor: colors.gold,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
   },
   headCell: {
     color: colors.textMuted,
@@ -172,6 +170,7 @@ const styles = StyleSheet.create({
   cell: {
     color: colors.text,
     fontSize: 13,
+    lineHeight: 18,
   },
   roundCell: {
     fontVariant: ['tabular-nums'],

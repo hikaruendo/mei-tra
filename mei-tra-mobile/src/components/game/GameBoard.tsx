@@ -21,6 +21,7 @@ import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
+import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
@@ -580,6 +581,16 @@ export function GameBoard({
 
             {game.gamePhase === 'play' && selectedCard ? (
               <View style={styles.selectedActions}>
+                {/* Cancel sits left, confirm right — the destructive/back action
+                    on the outside, the primary action under the thumb. */}
+                <Button
+                  disabled={actionsDisabled || Boolean(pendingAction)}
+                  onPress={() => setSelectedCard(null)}
+                  style={styles.actionButton}
+                  variant="secondary"
+                >
+                  キャンセル
+                </Button>
                 <Button
                   disabled={
                     actionsDisabled ||
@@ -591,14 +602,6 @@ export function GameBoard({
                   style={styles.actionButton}
                 >
                   {mustSelectNegri ? 'ネグリにする' : 'プレイ'}
-                </Button>
-                <Button
-                  disabled={actionsDisabled || Boolean(pendingAction)}
-                  onPress={() => setSelectedCard(null)}
-                  style={styles.actionButton}
-                  variant="secondary"
-                >
-                  キャンセル
                 </Button>
               </View>
             ) : null}
@@ -999,7 +1002,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundElevated,
   },
   completedCardOverlap: {
-    marginLeft: -12,
+    marginLeft: cardStackMargin(CARD_BASE_WIDTHS.seat),
   },
   handSection: {
     gap: 8,
