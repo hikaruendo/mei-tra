@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0e2a21",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "icon": "./assets/images/meitra-icon.png",
       "bundleIdentifier": "com.kando1.meitra"
     },

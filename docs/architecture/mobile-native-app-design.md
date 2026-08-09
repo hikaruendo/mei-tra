@@ -15,7 +15,7 @@
 | **外部作業** | EAS、Apple、Google、Supabase本番など、このリポジトリだけでは完了できない作業 |
 | **未実装** | 設計上は必要だが、現行コードに対応する実装がない |
 
-現時点で、認証・ルーム・対局UI・再接続、通知、退会、共有Socket契約は**実装済み**である。npm workspace解決、自動テスト、build/export、390×844のbrowser smokeは**ローカル検証済み**である。一方、TestFlight / Google Play内部テスト、実端末のpush・background復帰、EAS project・署名資格情報、本番Supabase migrationは未完了である。したがって、この文書はストアリリース済み、またはリリース可能と宣言しない。
+現時点で、認証・ルーム・対局UI・再接続、通知、退会、共有Socket契約は**実装済み**である。npm workspace解決、自動テスト、build/export、390×844のbrowser smokeは**ローカル検証済み**である。本番Supabase migrationは適用済みである。一方、TestFlight / Google Play内部テスト、実端末のpush・background復帰、EAS project・署名資格情報は未完了である。したがって、この文書はストアリリース済み、またはリリース可能と宣言しない。
 
 ### 2026-07-24 ローカル検証スナップショット
 
@@ -289,11 +289,25 @@ push送信・receipt workerのunit/spec、SQL self-test、local push tokenのreg
 
 ### リリースを止める設定
 
-- `app.json`に`expo.extra.eas.projectId`がないため、EAS project linkは未完了である。
-- EAS login、EAS environment、`EXPO_TOKEN`、Apple Developer / App Store Connect、Android keystore / Play Console資格情報は未設定または未確認である。
-- `20260806162505_anonymize_account_references_atomically.sql`、`20260806162619_reject_deleting_room_players.sql`、`20260806165611_push_receipt_tracking.sql`、`20260806165711_serialize_account_deletion_room_membership.sql`を含むlocal migration historyは本番Supabaseへ未適用・未検証である。
-- `runtimeVersion`と`updates.url`がないため、EAS Updateは開始しない。channel定義だけではOTAは有効にならない。
-- `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストは未実施である。
+残っているブロッカーは次のとおりである。上2件は資格情報を要するため、リポジトリ側の変更では解消できない。
+
+- `app.json`に`expo.extra.eas.projectId`がないため、EAS project linkは未完了である。`eas init`はExpoアカウントへのloginを前提とし、現在このマシンは未login (`eas whoami` → Not logged in) である。
+- Apple Developer Program、App Store Connectのapp record、APNs key、Android keystore / Play Console資格情報は未設定または未確認である。`EXPO_TOKEN`、`EXPO_APPLE_ID`、`EXPO_ASC_APP_ID`、`EXPO_APPLE_TEAM_ID`はGitHub environmentへ未投入である。
+- `runtimeVersion`と`updates.url`がないため、EAS Updateは開始しない。channel定義だけではOTAは有効にならない。`updates.url`は`https://u.expo.dev/<projectId>`の形なので、EAS project link後でなければ正しい値を書けない。
+- `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストは未実施である。このリポジトリを開発しているマシンにはXcodeが入っておらず (`xcode-select -p` → CommandLineTools)、iOS simulator buildもローカルでは実行できない。
+
+次の項目は解消済みである。
+
+- **本番Supabase migration**: `20260806162505_anonymize_account_references_atomically.sql`以降を含め、`20260809074500_release_stale_room_membership.sql`まで本番へ適用済みである。`supabase_migrations.schema_migrations`と、`reserve_room_membership` / `claim_room_membership`のsource照合で確認した。
+- **GitHub environment**: `mobile-release.yml`が参照する`mobile-preview`と`mobile-production`を作成済みである（secretの投入は別途）。
+- **iOS submit profile**: `eas.json`の`submit.production.ios`を追加した。値は`$EXPO_APPLE_ID` / `$EXPO_ASC_APP_ID` / `$EXPO_APPLE_TEAM_ID`のenv var参照とし、Apple accountの識別子をリポジトリへ持ち込まない。
+- **`ios.supportsTablet`**: 非目標(§ 対象外)に合わせて`false`にした。`true`のままだとAppleはiPadでも審査し、iPad screenshotの提出も要求する。
+
+### 審査で確認が要る点
+
+- サインイン画面はGoogle loginを提供する (`signInWithGoogle`)。App Store Guideline 4.8はthird-party loginを使う場合に同等のprivacy優先の選択肢を求める。email / password (`signUp`・`signInWithPassword`) が実装済みなのでこれで満たせる可能性はあるが、Sign in with Appleの追加を求められる可能性は残る。
+- アプリ内account deletion (Guideline 5.1.1(v)) は`src/app/settings.tsx`に実装済みである。
+- privacy policy / terms は web の `/ja/privacy` `/ja/terms` に実在し、設定画面からリンクしている。
 
 ## 10. テスト戦略と完了条件
 
