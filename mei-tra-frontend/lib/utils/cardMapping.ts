@@ -1,23 +1,12 @@
-const SUIT_MAP: Record<string, string> = {
-  '♠': 'S',
-  '♥': 'H',
-  '♦': 'D',
-  '♣': 'C',
-};
+import { CARD_BACK_ID, cardToSvgId } from '@meitra/game-client/card-art';
 
-export function cardToSvgId(card: string): string {
-  if (card === 'JOKER') return 'joker_red';
-
-  const suit = card.match(/[♠♣♥♦]/)?.[0];
-  const rank = card.replace(/[♠♣♥♦]/, '');
-
-  if (!suit || !rank) return 'card_back';
-  return `${rank}_${SUIT_MAP[suit]}`;
-}
+// The wire-string -> artwork-id mapping is shared with mobile, which keys its
+// static require map from the same ids. Web keeps only the URL shape, which is
+// its own concern (mobile has no /cards/ route).
+export { cardToSvgId };
 
 export function cardToSvgPath(card: string): string {
-  const id = cardToSvgId(card);
-  return `/cards/${id}.svg`;
+  return `/cards/${cardToSvgId(card)}.svg`;
 }
 
-export const CARD_BACK_PATH = '/cards/card_back.svg';
+export const CARD_BACK_PATH = `/cards/${CARD_BACK_ID}.svg`;
