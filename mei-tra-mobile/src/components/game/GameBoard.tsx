@@ -659,7 +659,9 @@ export function GameBoard({
             <Text style={styles.modalText}>
               勝者: {gameOver?.winner}
               {'\n'}
-              チーム1 {gameOver?.finalScores[0]?.total ?? 0}点 / チーム2{' '}
+              {getTeamDisplayName(0, game.teamNames)}{' '}
+              {gameOver?.finalScores[0]?.total ?? 0}点 /{' '}
+              {getTeamDisplayName(1, game.teamNames)}{' '}
               {gameOver?.finalScores[1]?.total ?? 0}点
             </Text>
             <Button disabled={actionsDisabled} onPress={onCloseGameOver}>

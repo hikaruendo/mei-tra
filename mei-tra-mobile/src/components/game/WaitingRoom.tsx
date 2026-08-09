@@ -14,6 +14,7 @@ import {
 
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
+import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors, teamColors } from '@/theme/colors';
 
 interface WaitingRoomProps {
@@ -56,8 +57,8 @@ export function WaitingRoom({
 
   useEffect(() => {
     setDraftTeamNames({
-      0: room.settings.teamNames?.[0] || `チーム1`,
-      1: room.settings.teamNames?.[1] || `チーム2`,
+      0: getTeamDisplayName(0, room.settings.teamNames),
+      1: getTeamDisplayName(1, room.settings.teamNames),
     });
   }, [room.settings.teamNames]);
 
@@ -94,8 +95,7 @@ export function WaitingRoom({
 
       <View style={[styles.teams, width < 380 && styles.teamsNarrow]}>
         {([0, 1] as const).map((team) => {
-          const teamLabel =
-            room.settings.teamNames?.[team] || `チーム${team + 1}`;
+          const teamLabel = getTeamDisplayName(team, room.settings.teamNames);
           const teamColor = teamColors[team];
           return (
           <View key={team} style={styles.team}>
@@ -220,7 +220,7 @@ export function WaitingRoom({
                   onChangeText={(text) =>
                     setDraftTeamNames((prev) => ({ ...prev, [t]: text }))
                   }
-                  placeholder={`チーム${t + 1}`}
+                  placeholder={getTeamDisplayName(t)}
                   placeholderTextColor={colors.textMuted}
                   style={styles.teamNameInput}
                   value={draftTeamNames[t]}
@@ -256,7 +256,7 @@ export function WaitingRoom({
                 ]}
               >
                 <Text style={[styles.teamColorDotText, { color: teamColors[t] }]}>
-                  {(room.settings.teamNames?.[t] || `チーム${t + 1}`).slice(0, 1)}
+                  {getTeamDisplayName(t, room.settings.teamNames).slice(0, 1)}
                 </Text>
               </View>
             ))}
