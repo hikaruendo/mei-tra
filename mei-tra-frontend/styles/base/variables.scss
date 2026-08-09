@@ -163,6 +163,7 @@ $z-index-tooltip: 50;
   --mt-raw-ink-600: #4a5142;
   --mt-raw-card-red: #c0362c;
   --mt-raw-card-red-dk: #9e2a22;
+  --mt-raw-card-red-md: #e88b80;
   --mt-raw-card-red-lt: #eda79d;
 
   // Font stacks — JP fallback ordering is load-bearing (Latin faces render no CJK)
@@ -216,6 +217,12 @@ $z-index-tooltip: 50;
   --mt-team-red: var(--mt-raw-card-red-lt);
   --mt-team-black: #c8d1c8;
 
+  // A red suit glyph drawn on felt rather than on a card. Same reasoning as
+  // --mt-team-red: --mt-card-red is ink for the ivory card face (4.84:1 there),
+  // and only reaches 2.18:1 once the same glyph is lifted onto
+  // --mt-surface-raised-2. Anything rendered ON a card keeps --mt-card-red.
+  --mt-suit-red: var(--mt-raw-card-red-md);
+
   // Shadows
   --mt-shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.35);
   --mt-shadow-btn: 0 4px 10px rgba(0, 0, 0, 0.28);
@@ -257,6 +264,7 @@ html[data-theme='light'] {
   --mt-on-success: var(--mt-raw-pale-100);
   --mt-team-red: var(--mt-raw-card-red-dk);
   --mt-team-black: var(--mt-raw-ink-900);
+  --mt-suit-red: var(--mt-raw-card-red-dk);
 
   --mt-shadow-panel: 0 6px 20px rgba(35, 40, 31, 0.2), 0 1px 2px rgba(35, 40, 31, 0.14);
   --mt-shadow-btn: 0 3px 8px rgba(35, 40, 31, 0.18);
