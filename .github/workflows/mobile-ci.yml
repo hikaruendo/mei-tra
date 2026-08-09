@@ -6,6 +6,7 @@ on:
       - 'mei-tra-mobile/**'
       - 'contracts/**'
       - 'shared/game-client/**'
+      - 'mei-tra-frontend/public/cards/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/mobile-ci.yml'
@@ -16,6 +17,7 @@ on:
       - 'mei-tra-mobile/**'
       - 'contracts/**'
       - 'shared/game-client/**'
+      - 'mei-tra-frontend/public/cards/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/mobile-ci.yml'
@@ -58,6 +60,9 @@ jobs:
 
       - name: Validate EAS monorepo packaging
         run: npm run validate:eas-monorepo
+
+      - name: Card assets are current
+        run: npm run assets:cards:check
 
       - name: Lint
         run: npm run lint

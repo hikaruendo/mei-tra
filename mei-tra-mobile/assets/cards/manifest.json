@@ -1,0 +1,221 @@
+{
+  "source": "mei-tra-frontend/public/cards",
+  "cards": {
+    "10_C": {
+      "out": "10_C.svg",
+      "sourceSha": "244ea95196fe"
+    },
+    "10_D": {
+      "out": "10_D.svg",
+      "sourceSha": "3b284a243878"
+    },
+    "10_H": {
+      "out": "10_H.svg",
+      "sourceSha": "238b66f1320f"
+    },
+    "10_S": {
+      "out": "10_S.svg",
+      "sourceSha": "792b96a5cce3"
+    },
+    "2_C": {
+      "out": "2_C.svg",
+      "sourceSha": "49770ec3bdb1"
+    },
+    "2_D": {
+      "out": "2_D.svg",
+      "sourceSha": "329578367ccf"
+    },
+    "2_H": {
+      "out": "2_H.svg",
+      "sourceSha": "303fc2451250"
+    },
+    "2_S": {
+      "out": "2_S.svg",
+      "sourceSha": "d79c76a292fe"
+    },
+    "3_C": {
+      "out": "3_C.svg",
+      "sourceSha": "ca05eacaec15"
+    },
+    "3_D": {
+      "out": "3_D.svg",
+      "sourceSha": "763495e7780a"
+    },
+    "3_H": {
+      "out": "3_H.svg",
+      "sourceSha": "770a3b4b50ad"
+    },
+    "3_S": {
+      "out": "3_S.svg",
+      "sourceSha": "7e9c2ad8b61f"
+    },
+    "4_C": {
+      "out": "4_C.svg",
+      "sourceSha": "a87dec94a1e6"
+    },
+    "4_D": {
+      "out": "4_D.svg",
+      "sourceSha": "fb5965e45b11"
+    },
+    "4_H": {
+      "out": "4_H.svg",
+      "sourceSha": "56281c6d2704"
+    },
+    "4_S": {
+      "out": "4_S.svg",
+      "sourceSha": "c5cb6396ba29"
+    },
+    "5_C": {
+      "out": "5_C.svg",
+      "sourceSha": "bd78d0e76036"
+    },
+    "5_D": {
+      "out": "5_D.svg",
+      "sourceSha": "cbe7cd0b003a"
+    },
+    "5_H": {
+      "out": "5_H.svg",
+      "sourceSha": "d6236572d8dc"
+    },
+    "5_S": {
+      "out": "5_S.svg",
+      "sourceSha": "cc1bfd4c1646"
+    },
+    "6_C": {
+      "out": "6_C.svg",
+      "sourceSha": "5e6e00db9346"
+    },
+    "6_D": {
+      "out": "6_D.svg",
+      "sourceSha": "0bc3ef5e4886"
+    },
+    "6_H": {
+      "out": "6_H.svg",
+      "sourceSha": "5cfaf24a7afd"
+    },
+    "6_S": {
+      "out": "6_S.svg",
+      "sourceSha": "e89b44525c23"
+    },
+    "7_C": {
+      "out": "7_C.svg",
+      "sourceSha": "8d55cff17681"
+    },
+    "7_D": {
+      "out": "7_D.svg",
+      "sourceSha": "a50650fedf2a"
+    },
+    "7_H": {
+      "out": "7_H.svg",
+      "sourceSha": "8829962eec13"
+    },
+    "7_S": {
+      "out": "7_S.svg",
+      "sourceSha": "9b3c3f81aabc"
+    },
+    "8_C": {
+      "out": "8_C.svg",
+      "sourceSha": "ad2d0df7d62a"
+    },
+    "8_D": {
+      "out": "8_D.svg",
+      "sourceSha": "76a9dd2f641c"
+    },
+    "8_H": {
+      "out": "8_H.svg",
+      "sourceSha": "12cc62347c0f"
+    },
+    "8_S": {
+      "out": "8_S.svg",
+      "sourceSha": "24874c5eb929"
+    },
+    "9_C": {
+      "out": "9_C.svg",
+      "sourceSha": "e99e3b684759"
+    },
+    "9_D": {
+      "out": "9_D.svg",
+      "sourceSha": "7bff1271f632"
+    },
+    "9_H": {
+      "out": "9_H.svg",
+      "sourceSha": "00c31a1b8b05"
+    },
+    "9_S": {
+      "out": "9_S.svg",
+      "sourceSha": "4957114048f6"
+    },
+    "A_C": {
+      "out": "A_C.svg",
+      "sourceSha": "e0de83f92a7e"
+    },
+    "A_D": {
+      "out": "A_D.svg",
+      "sourceSha": "a548fd3824a0"
+    },
+    "A_H": {
+      "out": "A_H.svg",
+      "sourceSha": "16ad7e231a7c"
+    },
+    "A_S": {
+      "out": "A_S.svg",
+      "sourceSha": "9beab2bfe21e"
+    },
+    "J_C": {
+      "out": "J_C.webp",
+      "sourceSha": "2e08641953cd"
+    },
+    "J_D": {
+      "out": "J_D.webp",
+      "sourceSha": "55c1de300918"
+    },
+    "J_H": {
+      "out": "J_H.webp",
+      "sourceSha": "351fbdecb2e0"
+    },
+    "J_S": {
+      "out": "J_S.webp",
+      "sourceSha": "da9efb934449"
+    },
+    "K_C": {
+      "out": "K_C.webp",
+      "sourceSha": "702169f25084"
+    },
+    "K_D": {
+      "out": "K_D.webp",
+      "sourceSha": "86491d61f3a6"
+    },
+    "K_H": {
+      "out": "K_H.webp",
+      "sourceSha": "fc5894fa3f87"
+    },
+    "K_S": {
+      "out": "K_S.webp",
+      "sourceSha": "97e8ac5bf28c"
+    },
+    "Q_C": {
+      "out": "Q_C.webp",
+      "sourceSha": "b66e3f2927c0"
+    },
+    "Q_D": {
+      "out": "Q_D.webp",
+      "sourceSha": "d523b02d2d63"
+    },
+    "Q_H": {
+      "out": "Q_H.webp",
+      "sourceSha": "02035555169e"
+    },
+    "Q_S": {
+      "out": "Q_S.webp",
+      "sourceSha": "9b4724468e2b"
+    },
+    "card_back": {
+      "out": "card_back.svg",
+      "sourceSha": "40cf54f8b30b"
+    },
+    "joker_red": {
+      "out": "joker_red.svg",
+      "sourceSha": "68940cbba857"
+    }
+  }
+}

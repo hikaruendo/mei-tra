@@ -11,6 +11,10 @@
       "types": "./blow.ts",
       "default": "./blow.ts"
     },
+    "./card-art": {
+      "types": "./card-art.ts",
+      "default": "./card-art.ts"
+    },
     "./card-legality": {
       "types": "./card-legality.ts",
       "default": "./card-legality.ts"

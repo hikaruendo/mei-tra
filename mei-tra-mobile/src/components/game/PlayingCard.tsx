@@ -1,161 +1,105 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { memo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { parseCard } from '@/lib/cards';
+import { resolveCardArt } from '@/lib/card-art-assets';
 import { colors } from '@/theme/colors';
+import {
+  CARD_BASE_WIDTHS,
+  cardHeight,
+  cardRadius,
+  type CardSize,
+} from '@/theme/cards';
+import { shadows } from '@/theme/shadows';
 
 interface PlayingCardProps {
   card?: string;
   faceDown?: boolean;
   selected?: boolean;
   disabled?: boolean;
-  compact?: boolean;
-  mini?: boolean;
+  /** Named size preset. Ignored when `width` is given. */
+  size?: CardSize;
+  /** Explicit width; the hand fan uses this to fit the screen. */
+  width?: number;
   onPress?: () => void;
 }
 
-export function PlayingCard({
+function accessibilityLabelFor(card: string | undefined, faceDown: boolean) {
+  if (faceDown) return '裏向きのカード';
+  if (card === 'JOKER') return 'ジョーカー';
+  return card;
+}
+
+function PlayingCardComponent({
   card,
   faceDown = false,
   selected = false,
   disabled = false,
-  compact = false,
-  mini = false,
+  size = 'hand',
+  width,
   onPress,
 }: PlayingCardProps) {
-  const parsed = parseCard(card ?? 'JOKER');
-  const sizeStyle = mini ? styles.mini : compact ? styles.compact : styles.regular;
+  const w = width ?? CARD_BASE_WIDTHS[size];
+  const h = cardHeight(w);
+  const radius = cardRadius(w);
+  const art = resolveCardArt(card ?? '', faceDown);
 
   return (
     <Pressable
-      accessibilityLabel={faceDown ? '裏向きのカード' : card}
-      accessibilityState={{ disabled, selected }}
       accessibilityHint={
         onPress && !disabled ? 'タップしてカードを選択します' : undefined
       }
+      accessibilityLabel={accessibilityLabelFor(card, faceDown)}
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled || !onPress}
       onPress={onPress}
+      // The ring and shadow live outside the clipping view so that selecting a
+      // card does not crop the artwork.
       style={[
-        styles.card,
-        sizeStyle,
-        faceDown && styles.back,
-        selected && styles.selected,
-        disabled && styles.disabled,
+        { width: w, height: h, borderRadius: radius },
+        selected ? styles.selected : styles.resting,
+        selected && { borderRadius: radius, transform: [{ scale: 1.06 }] },
       ]}
     >
-      {faceDown ? (
-        <View style={styles.backInner}>
-          <Text style={[styles.backMark, mini && styles.miniBackMark]}>M</Text>
-        </View>
-      ) : (
-        <>
-          <Text
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            style={[
-              styles.rank,
-              (compact || mini) && styles.compactRank,
-              mini && styles.miniRank,
-              parsed.isRed && styles.red,
-            ]}
-          >
-            {parsed.rank}
-          </Text>
-          <Text
-            style={[
-              styles.suit,
-              (compact || mini) && styles.compactSuit,
-              mini && styles.miniSuit,
-              parsed.isRed && styles.red,
-            ]}
-          >
-            {parsed.suit || '★'}
-          </Text>
-        </>
-      )}
+      <View style={[styles.clip, { borderRadius: radius }]}>
+        {art.kind === 'vector' ? (
+          <art.Svg height="100%" width="100%" />
+        ) : (
+          <Image
+            contentFit="cover"
+            source={art.source}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        {disabled ? (
+          // Web dims with `filter: brightness(.45) saturate(.3)`, which React
+          // Native has no dependable cross-platform equivalent for. A scrim
+          // reads far closer than `opacity`, which would let the felt show
+          // through and make the card look translucent instead of dimmed.
+          <View pointerEvents="none" style={styles.disabledScrim} />
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
+export const PlayingCard = memo(PlayingCardComponent);
+
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d4d0c4',
-    backgroundColor: colors.card,
-    padding: 6,
-    justifyContent: 'space-between',
-    boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.24)',
-    elevation: 4,
-  },
-  regular: {
-    width: 58,
-    height: 84,
-  },
-  compact: {
-    width: 42,
-    height: 60,
-    padding: 4,
-    borderRadius: 6,
-  },
-  mini: {
-    width: 30,
-    height: 42,
-    padding: 2,
-    borderRadius: 4,
-  },
-  miniRank: {
-    fontSize: 11,
-  },
-  miniSuit: {
-    fontSize: 13,
-  },
-  miniBackMark: {
-    fontSize: 12,
-  },
-  rank: {
-    color: colors.cardText,
-    fontSize: 21,
-    fontWeight: '800',
-  },
-  compactRank: {
-    fontSize: 15,
-  },
-  suit: {
-    color: colors.cardText,
-    fontSize: 25,
-    textAlign: 'center',
-  },
-  compactSuit: {
-    fontSize: 18,
-  },
-  red: {
-    color: colors.redSuit,
-  },
-  back: {
-    backgroundColor: '#133f36',
-    borderColor: colors.gold,
-    padding: 4,
-  },
-  backInner: {
+  clip: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: colors.gold,
+    overflow: 'hidden',
+    backgroundColor: colors.card,
   },
-  backMark: {
-    color: colors.gold,
-    fontSize: 18,
-    fontWeight: '900',
-  },
+  resting: shadows.card,
   selected: {
+    ...shadows.cardSelected,
+    borderWidth: 2,
     borderColor: colors.gold,
-    borderWidth: 3,
-    transform: [{ translateY: -8 }],
   },
-  disabled: {
-    opacity: 0.44,
+  disabledScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.cardDisabled,
   },
 });
