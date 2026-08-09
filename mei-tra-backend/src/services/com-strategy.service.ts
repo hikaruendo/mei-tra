@@ -8,6 +8,7 @@ import {
   Team,
   TrumpType,
 } from '../types/game.types';
+import { hasPlayerDeclaredInBlow } from '../use-cases/helpers/blow-action.helper';
 import { IBlowService } from './interfaces/blow-service.interface';
 import { ICardService } from './interfaces/card-service.interface';
 import { IPlayService } from './interfaces/play-service.interface';
@@ -73,6 +74,16 @@ export class ComStrategyService implements IComStrategyService {
   }
 
   chooseBlowAction(state: GameState, comPlayer: DomainPlayer): ComBlowAction {
+    // A seat that already declared has no legal action left: declare-blow and
+    // pass-blow both reject it (hasPlayerDeclaredInBlow). This is reachable
+    // because a COM inherits the declaration of the human it replaced — the
+    // remap correctly moves the bid to the seat, so the COM sees its own bid.
+    // Returning 'skip' lets the caller advance the turn instead of retrying an
+    // action the rules forbid.
+    if (hasPlayerDeclaredInBlow(state.blowState, comPlayer.playerId)) {
+      return { type: 'skip' };
+    }
+
     if (comPlayer.hasBroken || comPlayer.hasRequiredBroken) {
       return { type: 'pass' };
     }
@@ -81,8 +92,12 @@ export class ComStrategyService implements IComStrategyService {
     const currentHighestPlayer = currentHighest
       ? this.findPlayer(state, currentHighest.playerId)
       : null;
+    // Never treat one's own bid as a partner's — an inherited declaration would
+    // otherwise make the COM defer to itself and pass.
     const currentHighestIsPartner =
-      currentHighestPlayer?.team === comPlayer.team;
+      currentHighestPlayer != null &&
+      currentHighestPlayer.playerId !== comPlayer.playerId &&
+      currentHighestPlayer.team === comPlayer.team;
     const evaluations = TRUMP_TYPES.map((trumpType) =>
       this.evaluateHandForTrump(comPlayer.hand, trumpType),
     ).sort((a, b) => {
