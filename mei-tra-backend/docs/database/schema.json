@@ -1,0 +1,2537 @@
+{
+  "name": "Meitra",
+  "desc": "Meitra の Supabase public スキーマ。認証の正本は Supabase Auth の auth.users、アプリケーション側のユーザー表示は public.user_profiles で管理する。",
+  "tables": [
+    {
+      "name": "public.active_room_memberships",
+      "type": "BASE TABLE",
+      "comment": "認証ユーザーが現在保持しているルーム所属のリース。二重参加を防ぐ。",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "membership_version",
+          "type": "bigint",
+          "nullable": false,
+          "default": "1"
+        },
+        {
+          "name": "player_id",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "active_room_membership_status",
+          "nullable": false
+        },
+        {
+          "name": "transition_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "active_room_memberships_pkey",
+          "def": "CREATE UNIQUE INDEX active_room_memberships_pkey ON public.active_room_memberships USING btree (user_id)",
+          "table": "public.active_room_memberships",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "active_room_memberships_room_id_idx",
+          "def": "CREATE INDEX active_room_memberships_room_id_idx ON public.active_room_memberships USING btree (room_id) WHERE (room_id IS NOT NULL)",
+          "table": "public.active_room_memberships",
+          "columns": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "active_room_memberships_room_player_key",
+          "def": "CREATE UNIQUE INDEX active_room_memberships_room_player_key ON public.active_room_memberships USING btree (room_id, player_id) WHERE (room_id IS NOT NULL)",
+          "table": "public.active_room_memberships",
+          "columns": [
+            "room_id",
+            "player_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "active_room_memberships_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (user_id)",
+          "table": "public.active_room_memberships",
+          "referenced_table": "",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "active_room_memberships_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE",
+          "table": "public.active_room_memberships",
+          "referenced_table": "public.rooms",
+          "columns": [
+            "room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "active_room_memberships_room_required",
+          "type": "CHECK",
+          "def": "CHECK (((status = 'moving'::active_room_membership_status) OR (room_id IS NOT NULL)))",
+          "table": "public.active_room_memberships",
+          "referenced_table": "",
+          "columns": [
+            "status",
+            "room_id"
+          ]
+        },
+        {
+          "name": "active_room_memberships_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE",
+          "table": "public.active_room_memberships",
+          "referenced_table": "public.user_profiles",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "active_room_memberships_version_positive",
+          "type": "CHECK",
+          "def": "CHECK ((membership_version \u003e 0))",
+          "table": "public.active_room_memberships",
+          "referenced_table": "",
+          "columns": [
+            "membership_version"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "update_active_room_memberships_updated_at",
+          "def": "CREATE TRIGGER update_active_room_memberships_updated_at BEFORE UPDATE ON public.active_room_memberships FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    },
+    {
+      "name": "public.chat_members",
+      "type": "BASE TABLE",
+      "comment": "チャットルームのメンバーシップとロール。",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "role",
+          "type": "chat_member_role",
+          "nullable": false,
+          "default": "'member'::chat_member_role"
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_members_pkey",
+          "def": "CREATE UNIQUE INDEX chat_members_pkey ON public.chat_members USING btree (id)",
+          "table": "public.chat_members",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_members_room_id_user_id_key",
+          "def": "CREATE UNIQUE INDEX chat_members_room_id_user_id_key ON public.chat_members USING btree (room_id, user_id)",
+          "table": "public.chat_members",
+          "columns": [
+            "room_id",
+            "user_id"
+          ]
+        },
+        {
+          "name": "idx_chat_members_room_id",
+          "def": "CREATE INDEX idx_chat_members_room_id ON public.chat_members USING btree (room_id)",
+          "table": "public.chat_members",
+          "columns": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "idx_chat_members_user_id",
+          "def": "CREATE INDEX idx_chat_members_user_id ON public.chat_members USING btree (user_id)",
+          "table": "public.chat_members",
+          "columns": [
+            "user_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chat_members_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.chat_members",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_members_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE",
+          "table": "public.chat_members",
+          "referenced_table": "public.chat_rooms",
+          "columns": [
+            "room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_members_room_id_user_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (room_id, user_id)",
+          "table": "public.chat_members",
+          "referenced_table": "",
+          "columns": [
+            "room_id",
+            "user_id"
+          ]
+        },
+        {
+          "name": "chat_members_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+          "table": "public.chat_members",
+          "referenced_table": "auth.users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.chat_messages",
+      "type": "BASE TABLE",
+      "comment": "チャットメッセージと返信先メッセージ。",
+      "columns": [
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "content_type",
+          "type": "chat_content_type",
+          "nullable": false,
+          "default": "'text'::chat_content_type"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "reply_to",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "sender_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_messages_pkey",
+          "def": "CREATE UNIQUE INDEX chat_messages_pkey ON public.chat_messages USING btree (id)",
+          "table": "public.chat_messages",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "idx_chat_messages_created_at",
+          "def": "CREATE INDEX idx_chat_messages_created_at ON public.chat_messages USING btree (created_at)",
+          "table": "public.chat_messages",
+          "columns": [
+            "created_at"
+          ]
+        },
+        {
+          "name": "idx_chat_messages_room_created",
+          "def": "CREATE INDEX idx_chat_messages_room_created ON public.chat_messages USING btree (room_id, created_at DESC)",
+          "table": "public.chat_messages",
+          "columns": [
+            "room_id",
+            "created_at"
+          ]
+        },
+        {
+          "name": "idx_chat_messages_room_id",
+          "def": "CREATE INDEX idx_chat_messages_room_id ON public.chat_messages USING btree (room_id)",
+          "table": "public.chat_messages",
+          "columns": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "idx_chat_messages_sender_id",
+          "def": "CREATE INDEX idx_chat_messages_sender_id ON public.chat_messages USING btree (sender_id)",
+          "table": "public.chat_messages",
+          "columns": [
+            "sender_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chat_messages_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.chat_messages",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_messages_reply_to_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (reply_to) REFERENCES chat_messages(id) ON DELETE SET NULL",
+          "table": "public.chat_messages",
+          "referenced_table": "public.chat_messages",
+          "columns": [
+            "reply_to"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_messages_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE",
+          "table": "public.chat_messages",
+          "referenced_table": "public.chat_rooms",
+          "columns": [
+            "room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_messages_sender_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (sender_id) REFERENCES auth.users(id) ON DELETE SET NULL",
+          "table": "public.chat_messages",
+          "referenced_table": "auth.users",
+          "columns": [
+            "sender_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.chat_rooms",
+      "type": "BASE TABLE",
+      "comment": "グローバル、ロビー、卓、プライベートのチャットルーム。",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "message_ttl_hours",
+          "type": "integer",
+          "nullable": false,
+          "default": "24"
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "scope",
+          "type": "chat_room_scope",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "visibility",
+          "type": "chat_room_visibility",
+          "nullable": false,
+          "default": "'public'::chat_room_visibility"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_rooms_pkey",
+          "def": "CREATE UNIQUE INDEX chat_rooms_pkey ON public.chat_rooms USING btree (id)",
+          "table": "public.chat_rooms",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "idx_chat_rooms_owner_id",
+          "def": "CREATE INDEX idx_chat_rooms_owner_id ON public.chat_rooms USING btree (owner_id)",
+          "table": "public.chat_rooms",
+          "columns": [
+            "owner_id"
+          ]
+        },
+        {
+          "name": "idx_chat_rooms_scope",
+          "def": "CREATE INDEX idx_chat_rooms_scope ON public.chat_rooms USING btree (scope)",
+          "table": "public.chat_rooms",
+          "columns": [
+            "scope"
+          ]
+        },
+        {
+          "name": "idx_chat_rooms_visibility",
+          "def": "CREATE INDEX idx_chat_rooms_visibility ON public.chat_rooms USING btree (visibility)",
+          "table": "public.chat_rooms",
+          "columns": [
+            "visibility"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chat_rooms_owner_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE SET NULL",
+          "table": "public.chat_rooms",
+          "referenced_table": "auth.users",
+          "columns": [
+            "owner_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "chat_rooms_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.chat_rooms",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "update_chat_rooms_updated_at",
+          "def": "CREATE TRIGGER update_chat_rooms_updated_at BEFORE UPDATE ON public.chat_rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    },
+    {
+      "name": "public.game_history",
+      "type": "BASE TABLE",
+      "comment": "リプレイと戦績表示に使うゲームイベント履歴。",
+      "columns": [
+        {
+          "name": "action_data",
+          "type": "jsonb",
+          "nullable": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "action_type",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "game_state_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "player_id",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "game_history_pkey",
+          "def": "CREATE UNIQUE INDEX game_history_pkey ON public.game_history USING btree (id)",
+          "table": "public.game_history",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "idx_game_history_room_id",
+          "def": "CREATE INDEX idx_game_history_room_id ON public.game_history USING btree (room_id)",
+          "table": "public.game_history",
+          "columns": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "idx_game_history_timestamp",
+          "def": "CREATE INDEX idx_game_history_timestamp ON public.game_history USING btree (\"timestamp\")",
+          "table": "public.game_history",
+          "columns": [
+            "timestamp"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "game_history_game_state_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (game_state_id) REFERENCES game_states(id) ON DELETE CASCADE",
+          "table": "public.game_history",
+          "referenced_table": "public.game_states",
+          "columns": [
+            "game_state_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "game_history_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.game_history",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "game_history_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE",
+          "table": "public.game_history",
+          "referenced_table": "public.rooms",
+          "columns": [
+            "room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.game_states",
+      "type": "BASE TABLE",
+      "comment": "ルームごとのバージョン付きゲーム状態スナップショット。詳細な進行状態は state_data JSONB に保持する。",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "current_player_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "game_phase",
+          "type": "game_phase",
+          "nullable": true
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "points_to_win",
+          "type": "integer",
+          "nullable": true,
+          "default": "10"
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "round_number",
+          "type": "integer",
+          "nullable": true,
+          "default": "1"
+        },
+        {
+          "name": "state_data",
+          "type": "jsonb",
+          "nullable": false,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "team_score_records",
+          "type": "jsonb",
+          "nullable": true,
+          "default": "'{\"0\": [], \"1\": []}'::jsonb"
+        },
+        {
+          "name": "team_scores",
+          "type": "jsonb",
+          "nullable": true,
+          "default": "'{\"0\": {\"play\": 0, \"total\": 0}, \"1\": {\"play\": 0, \"total\": 0}}'::jsonb"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "version",
+          "type": "bigint",
+          "nullable": false,
+          "default": "0"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "game_states_pkey",
+          "def": "CREATE UNIQUE INDEX game_states_pkey ON public.game_states USING btree (id)",
+          "table": "public.game_states",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "game_states_room_id_key",
+          "def": "CREATE UNIQUE INDEX game_states_room_id_key ON public.game_states USING btree (room_id)",
+          "table": "public.game_states",
+          "columns": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "idx_game_states_room_id",
+          "def": "CREATE INDEX idx_game_states_room_id ON public.game_states USING btree (room_id)",
+          "table": "public.game_states",
+          "columns": [
+            "room_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "game_states_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.game_states",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "game_states_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE",
+          "table": "public.game_states",
+          "referenced_table": "public.rooms",
+          "columns": [
+            "room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "game_states_room_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (room_id)",
+          "table": "public.game_states",
+          "referenced_table": "",
+          "columns": [
+            "room_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "update_game_states_updated_at",
+          "def": "CREATE TRIGGER update_game_states_updated_at BEFORE UPDATE ON public.game_states FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    },
+    {
+      "name": "public.push_receipts",
+      "type": "BASE TABLE",
+      "comment": "Push 配信結果の再試行キュー。処理中レコードは worker_id と locked_until で排他する。",
+      "columns": [
+        {
+          "name": "attempt_count",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "device_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "expo_push_token",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "expo_receipt_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "locked_until",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "(now() + '00:15:00'::interval)"
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "provider_error_code",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "push_token_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": "'pending'::text"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "worker_id",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_push_receipts_pending",
+          "def": "CREATE INDEX idx_push_receipts_pending ON public.push_receipts USING btree (next_attempt_at, created_at) WHERE (status = 'pending'::text)",
+          "table": "public.push_receipts",
+          "columns": [
+            "next_attempt_at",
+            "created_at"
+          ]
+        },
+        {
+          "name": "idx_push_receipts_processing_lock",
+          "def": "CREATE INDEX idx_push_receipts_processing_lock ON public.push_receipts USING btree (locked_until) WHERE (status = 'processing'::text)",
+          "table": "public.push_receipts",
+          "columns": [
+            "locked_until"
+          ]
+        },
+        {
+          "name": "idx_push_receipts_user_id",
+          "def": "CREATE INDEX idx_push_receipts_user_id ON public.push_receipts USING btree (user_id)",
+          "table": "public.push_receipts",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "push_receipts_expo_receipt_id_key",
+          "def": "CREATE UNIQUE INDEX push_receipts_expo_receipt_id_key ON public.push_receipts USING btree (expo_receipt_id)",
+          "table": "public.push_receipts",
+          "columns": [
+            "expo_receipt_id"
+          ]
+        },
+        {
+          "name": "push_receipts_pkey",
+          "def": "CREATE UNIQUE INDEX push_receipts_pkey ON public.push_receipts USING btree (id)",
+          "table": "public.push_receipts",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "push_receipts_attempt_count_check",
+          "type": "CHECK",
+          "def": "CHECK ((attempt_count \u003e= 0))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "attempt_count"
+          ]
+        },
+        {
+          "name": "push_receipts_device_id_check",
+          "type": "CHECK",
+          "def": "CHECK (((char_length(device_id) \u003e= 1) AND (char_length(device_id) \u003c= 255)))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "device_id"
+          ]
+        },
+        {
+          "name": "push_receipts_expo_receipt_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (expo_receipt_id)",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "expo_receipt_id"
+          ]
+        },
+        {
+          "name": "push_receipts_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "push_receipts_platform_check",
+          "type": "CHECK",
+          "def": "CHECK ((platform = ANY (ARRAY['ios'::text, 'android'::text])))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "platform"
+          ]
+        },
+        {
+          "name": "push_receipts_provider_error_check",
+          "type": "CHECK",
+          "def": "CHECK (((provider_error_code IS NULL) OR ((char_length(provider_error_code) \u003e= 1) AND (char_length(provider_error_code) \u003c= 100))))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "provider_error_code"
+          ]
+        },
+        {
+          "name": "push_receipts_push_token_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (push_token_id) REFERENCES push_tokens(id) ON DELETE SET NULL",
+          "table": "public.push_receipts",
+          "referenced_table": "public.push_tokens",
+          "columns": [
+            "push_token_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "push_receipts_status_check",
+          "type": "CHECK",
+          "def": "CHECK ((status = ANY (ARRAY['pending'::text, 'processing'::text, 'delivered'::text, 'failed'::text, 'expired'::text])))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "push_receipts_token_check",
+          "type": "CHECK",
+          "def": "CHECK ((expo_push_token ~ '^(Expo|Exponent)PushToken\\[[^]]+\\]$'::text))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "expo_push_token"
+          ]
+        },
+        {
+          "name": "push_receipts_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+          "table": "public.push_receipts",
+          "referenced_table": "auth.users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "push_receipts_worker_id_check",
+          "type": "CHECK",
+          "def": "CHECK (((worker_id IS NULL) OR ((char_length(worker_id) \u003e= 1) AND (char_length(worker_id) \u003c= 128))))",
+          "table": "public.push_receipts",
+          "referenced_table": "",
+          "columns": [
+            "worker_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "update_push_receipts_updated_at",
+          "def": "CREATE TRIGGER update_push_receipts_updated_at BEFORE UPDATE ON public.push_receipts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    },
+    {
+      "name": "public.push_tokens",
+      "type": "BASE TABLE",
+      "comment": "モバイル端末ごとの Expo Push Token。サービスロールだけが操作する。",
+      "columns": [
+        {
+          "name": "app_version",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "device_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "expo_push_token",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_push_tokens_last_seen_at",
+          "def": "CREATE INDEX idx_push_tokens_last_seen_at ON public.push_tokens USING btree (last_seen_at)",
+          "table": "public.push_tokens",
+          "columns": [
+            "last_seen_at"
+          ]
+        },
+        {
+          "name": "idx_push_tokens_user_id",
+          "def": "CREATE INDEX idx_push_tokens_user_id ON public.push_tokens USING btree (user_id)",
+          "table": "public.push_tokens",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "push_tokens_device_platform_unique",
+          "def": "CREATE UNIQUE INDEX push_tokens_device_platform_unique ON public.push_tokens USING btree (user_id, device_id, platform)",
+          "table": "public.push_tokens",
+          "columns": [
+            "user_id",
+            "device_id",
+            "platform"
+          ]
+        },
+        {
+          "name": "push_tokens_pkey",
+          "def": "CREATE UNIQUE INDEX push_tokens_pkey ON public.push_tokens USING btree (id)",
+          "table": "public.push_tokens",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "push_tokens_token_unique",
+          "def": "CREATE UNIQUE INDEX push_tokens_token_unique ON public.push_tokens USING btree (expo_push_token)",
+          "table": "public.push_tokens",
+          "columns": [
+            "expo_push_token"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "push_tokens_device_platform_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (user_id, device_id, platform)",
+          "table": "public.push_tokens",
+          "referenced_table": "",
+          "columns": [
+            "user_id",
+            "device_id",
+            "platform"
+          ]
+        },
+        {
+          "name": "push_tokens_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.push_tokens",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "push_tokens_platform_check",
+          "type": "CHECK",
+          "def": "CHECK ((platform = ANY (ARRAY['ios'::text, 'android'::text])))",
+          "table": "public.push_tokens",
+          "referenced_table": "",
+          "columns": [
+            "platform"
+          ]
+        },
+        {
+          "name": "push_tokens_token_format_check",
+          "type": "CHECK",
+          "def": "CHECK ((expo_push_token ~ '^(Expo|Exponent)PushToken\\[[^]]+\\]$'::text))",
+          "table": "public.push_tokens",
+          "referenced_table": "",
+          "columns": [
+            "expo_push_token"
+          ]
+        },
+        {
+          "name": "push_tokens_token_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (expo_push_token)",
+          "table": "public.push_tokens",
+          "referenced_table": "",
+          "columns": [
+            "expo_push_token"
+          ]
+        },
+        {
+          "name": "push_tokens_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+          "table": "public.push_tokens",
+          "referenced_table": "auth.users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "update_push_tokens_updated_at",
+          "def": "CREATE TRIGGER update_push_tokens_updated_at BEFORE UPDATE ON public.push_tokens FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    },
+    {
+      "name": "public.room_membership_events",
+      "type": "BASE TABLE",
+      "comment": "ルーム所属リースの遷移を追跡する監査イベント。",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "event_type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "from_room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "membership_version",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "metadata",
+          "type": "jsonb",
+          "nullable": false,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "to_room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "transition_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "room_membership_events_pkey",
+          "def": "CREATE UNIQUE INDEX room_membership_events_pkey ON public.room_membership_events USING btree (id)",
+          "table": "public.room_membership_events",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_membership_events_transition_idx",
+          "def": "CREATE INDEX room_membership_events_transition_idx ON public.room_membership_events USING btree (transition_id)",
+          "table": "public.room_membership_events",
+          "columns": [
+            "transition_id"
+          ]
+        },
+        {
+          "name": "room_membership_events_user_created_idx",
+          "def": "CREATE INDEX room_membership_events_user_created_idx ON public.room_membership_events USING btree (user_id, created_at DESC)",
+          "table": "public.room_membership_events",
+          "columns": [
+            "user_id",
+            "created_at"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "room_membership_events_from_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (from_room_id) REFERENCES rooms(id) ON DELETE SET NULL",
+          "table": "public.room_membership_events",
+          "referenced_table": "public.rooms",
+          "columns": [
+            "from_room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_membership_events_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.room_membership_events",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_membership_events_to_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (to_room_id) REFERENCES rooms(id) ON DELETE SET NULL",
+          "table": "public.room_membership_events",
+          "referenced_table": "public.rooms",
+          "columns": [
+            "to_room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_membership_events_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE",
+          "table": "public.room_membership_events",
+          "referenced_table": "public.user_profiles",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.room_players",
+      "type": "BASE TABLE",
+      "comment": "ルーム内の座席、チーム、COM 状態、参加者識別子を保持するロスター。",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "is_com",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false"
+        },
+        {
+          "name": "is_host",
+          "type": "boolean",
+          "nullable": true,
+          "default": "false"
+        },
+        {
+          "name": "is_ready",
+          "type": "boolean",
+          "nullable": true,
+          "default": "false"
+        },
+        {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "player_id",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "seat_index",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "socket_id",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "team",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_room_players_player_id",
+          "def": "CREATE INDEX idx_room_players_player_id ON public.room_players USING btree (player_id)",
+          "table": "public.room_players",
+          "columns": [
+            "player_id"
+          ]
+        },
+        {
+          "name": "idx_room_players_room_id",
+          "def": "CREATE INDEX idx_room_players_room_id ON public.room_players USING btree (room_id)",
+          "table": "public.room_players",
+          "columns": [
+            "room_id"
+          ]
+        },
+        {
+          "name": "idx_room_players_socket_id",
+          "def": "CREATE INDEX idx_room_players_socket_id ON public.room_players USING btree (socket_id)",
+          "table": "public.room_players",
+          "columns": [
+            "socket_id"
+          ]
+        },
+        {
+          "name": "idx_room_players_user_id",
+          "def": "CREATE INDEX idx_room_players_user_id ON public.room_players USING btree (user_id)",
+          "table": "public.room_players",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "room_players_pkey",
+          "def": "CREATE UNIQUE INDEX room_players_pkey ON public.room_players USING btree (id)",
+          "table": "public.room_players",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_players_room_id_player_id_key",
+          "def": "CREATE UNIQUE INDEX room_players_room_id_player_id_key ON public.room_players USING btree (room_id, player_id)",
+          "table": "public.room_players",
+          "columns": [
+            "room_id",
+            "player_id"
+          ]
+        },
+        {
+          "name": "room_players_room_id_seat_index_key",
+          "def": "CREATE UNIQUE INDEX room_players_room_id_seat_index_key ON public.room_players USING btree (room_id, seat_index)",
+          "table": "public.room_players",
+          "columns": [
+            "room_id",
+            "seat_index"
+          ]
+        },
+        {
+          "name": "room_players_room_user_key",
+          "def": "CREATE UNIQUE INDEX room_players_room_user_key ON public.room_players USING btree (room_id, user_id) WHERE (user_id IS NOT NULL)",
+          "table": "public.room_players",
+          "columns": [
+            "room_id",
+            "user_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "room_players_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.room_players",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_players_room_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE",
+          "table": "public.room_players",
+          "referenced_table": "public.rooms",
+          "columns": [
+            "room_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "room_players_room_id_player_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (room_id, player_id)",
+          "table": "public.room_players",
+          "referenced_table": "",
+          "columns": [
+            "room_id",
+            "player_id"
+          ]
+        },
+        {
+          "name": "room_players_room_id_seat_index_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (room_id, seat_index) DEFERRABLE INITIALLY DEFERRED",
+          "table": "public.room_players",
+          "referenced_table": "",
+          "columns": [
+            "room_id",
+            "seat_index"
+          ]
+        },
+        {
+          "name": "room_players_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE",
+          "table": "public.room_players",
+          "referenced_table": "public.user_profiles",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "reject_deleting_room_player_user",
+          "def": "CREATE TRIGGER reject_deleting_room_player_user BEFORE INSERT OR UPDATE OF user_id ON public.room_players FOR EACH ROW EXECUTE FUNCTION reject_deleting_room_player_user()"
+        }
+      ]
+    },
+    {
+      "name": "public.rooms",
+      "type": "BASE TABLE",
+      "comment": "対局ルームの設定・状態・ホストを保持する。",
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "host_id",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "last_activity_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "settings",
+          "type": "jsonb",
+          "nullable": false,
+          "default": "'{\"password\": null, \"isPrivate\": false, \"maxPlayers\": 4, \"pointsToWin\": 10, \"allowSpectators\": true, \"teamAssignmentMethod\": \"random\"}'::jsonb"
+        },
+        {
+          "name": "status",
+          "type": "room_status",
+          "nullable": false,
+          "default": "'waiting'::room_status"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_rooms_host_id",
+          "def": "CREATE INDEX idx_rooms_host_id ON public.rooms USING btree (host_id)",
+          "table": "public.rooms",
+          "columns": [
+            "host_id"
+          ]
+        },
+        {
+          "name": "idx_rooms_last_activity",
+          "def": "CREATE INDEX idx_rooms_last_activity ON public.rooms USING btree (last_activity_at)",
+          "table": "public.rooms",
+          "columns": [
+            "last_activity_at"
+          ]
+        },
+        {
+          "name": "idx_rooms_status",
+          "def": "CREATE INDEX idx_rooms_status ON public.rooms USING btree (status)",
+          "table": "public.rooms",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "rooms_pkey",
+          "def": "CREATE UNIQUE INDEX rooms_pkey ON public.rooms USING btree (id)",
+          "table": "public.rooms",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "rooms_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.rooms",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "reject_deleting_room_host",
+          "def": "CREATE TRIGGER reject_deleting_room_host BEFORE INSERT OR UPDATE OF host_id ON public.rooms FOR EACH ROW EXECUTE FUNCTION reject_deleting_room_host()"
+        },
+        {
+          "name": "update_rooms_updated_at",
+          "def": "CREATE TRIGGER update_rooms_updated_at BEFORE UPDATE ON public.rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    },
+    {
+      "name": "public.user_profiles",
+      "type": "BASE TABLE",
+      "comment": "アプリケーションで表示・集計に使うユーザープロフィール。auth.users と 1:1 で対応する。",
+      "columns": [
+        {
+          "name": "account_deletion_started_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "avatar_url",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "display_name",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "games_played",
+          "type": "integer",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "games_won",
+          "type": "integer",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "preferences",
+          "type": "jsonb",
+          "nullable": true,
+          "default": "'{\"sound\": true, \"theme\": \"light\", \"fontSize\": \"standard\", \"notifications\": true}'::jsonb"
+        },
+        {
+          "name": "total_score",
+          "type": "numeric(10,1)",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "username",
+          "type": "varchar(50)",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_user_profiles_account_deletion_started_at",
+          "def": "CREATE INDEX idx_user_profiles_account_deletion_started_at ON public.user_profiles USING btree (account_deletion_started_at) WHERE (account_deletion_started_at IS NOT NULL)",
+          "table": "public.user_profiles",
+          "columns": [
+            "account_deletion_started_at"
+          ]
+        },
+        {
+          "name": "idx_user_profiles_last_seen",
+          "def": "CREATE INDEX idx_user_profiles_last_seen ON public.user_profiles USING btree (last_seen_at)",
+          "table": "public.user_profiles",
+          "columns": [
+            "last_seen_at"
+          ]
+        },
+        {
+          "name": "idx_user_profiles_username",
+          "def": "CREATE INDEX idx_user_profiles_username ON public.user_profiles USING btree (username)",
+          "table": "public.user_profiles",
+          "columns": [
+            "username"
+          ]
+        },
+        {
+          "name": "user_profiles_pkey",
+          "def": "CREATE UNIQUE INDEX user_profiles_pkey ON public.user_profiles USING btree (id)",
+          "table": "public.user_profiles",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_profiles_username_key",
+          "def": "CREATE UNIQUE INDEX user_profiles_username_key ON public.user_profiles USING btree (username)",
+          "table": "public.user_profiles",
+          "columns": [
+            "username"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "display_name_length",
+          "type": "CHECK",
+          "def": "CHECK ((char_length((display_name)::text) \u003e= 1))",
+          "table": "public.user_profiles",
+          "referenced_table": "",
+          "columns": [
+            "display_name"
+          ]
+        },
+        {
+          "name": "user_profiles_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
+          "table": "public.user_profiles",
+          "referenced_table": "auth.users",
+          "columns": [
+            "id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_profiles_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.user_profiles",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_profiles_username_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (username)",
+          "table": "public.user_profiles",
+          "referenced_table": "",
+          "columns": [
+            "username"
+          ]
+        },
+        {
+          "name": "username_length",
+          "type": "CHECK",
+          "def": "CHECK ((char_length((username)::text) \u003e= 3))",
+          "table": "public.user_profiles",
+          "referenced_table": "",
+          "columns": [
+            "username"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "update_user_profiles_updated_at",
+          "def": "CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON public.user_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "public.active_room_memberships",
+      "columns": [
+        "room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.active_room_memberships",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.chat_members",
+      "columns": [
+        "room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.chat_rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.chat_members",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "chat member",
+      "virtual": true
+    },
+    {
+      "table": "public.chat_messages",
+      "columns": [
+        "room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.chat_rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.chat_messages",
+      "columns": [
+        "reply_to"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.chat_messages",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (reply_to) REFERENCES chat_messages(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.chat_messages",
+      "columns": [
+        "sender_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "message sender",
+      "virtual": true
+    },
+    {
+      "table": "public.chat_rooms",
+      "columns": [
+        "owner_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "chat room owner",
+      "virtual": true
+    },
+    {
+      "table": "public.game_history",
+      "columns": [
+        "room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.game_history",
+      "columns": [
+        "game_state_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.game_states",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (game_state_id) REFERENCES game_states(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.game_states",
+      "columns": [
+        "room_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.push_receipts",
+      "columns": [
+        "push_token_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.push_tokens",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (push_token_id) REFERENCES push_tokens(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.push_receipts",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "push receipt owner",
+      "virtual": true
+    },
+    {
+      "table": "public.push_tokens",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "push token owner",
+      "virtual": true
+    },
+    {
+      "table": "public.room_membership_events",
+      "columns": [
+        "from_room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (from_room_id) REFERENCES rooms(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.room_membership_events",
+      "columns": [
+        "to_room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (to_room_id) REFERENCES rooms(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.room_membership_events",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.room_players",
+      "columns": [
+        "room_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.rooms",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.room_players",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.user_profiles",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE"
+    }
+  ],
+  "functions": [
+    {
+      "name": "public.anonymize_account_references",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.atomic_update_game_state",
+      "return_type": "jsonb",
+      "arguments": "p_room_id uuid, p_state_patch jsonb DEFAULT '{}'::jsonb, p_scalar_patch jsonb DEFAULT '{}'::jsonb, p_expected_version bigint DEFAULT NULL::bigint",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.cancel_room_membership_reservation",
+      "return_type": "bool",
+      "arguments": "p_user_id uuid, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.claim_push_receipts",
+      "return_type": "push_receipts",
+      "arguments": "p_limit integer, p_worker_id text, p_lock_seconds integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.claim_room_membership",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_player_id text, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.cleanup_abandoned_private_rooms",
+      "return_type": "void",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.cleanup_old_game_data",
+      "return_type": "void",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.complete_push_receipt",
+      "return_type": "bool",
+      "arguments": "p_receipt_row_id uuid, p_worker_id text, p_status text, p_provider_error_code text DEFAULT NULL::text",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.finish_room_membership_timeout",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_expected_version bigint, p_transition_id uuid, p_succeeded boolean",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.handle_new_user",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.load_room_game_state",
+      "return_type": "jsonb",
+      "arguments": "p_room_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.mark_account_deletion_started",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.mark_room_membership_disconnected",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_expected_version bigint, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.persist_room_roster_atomic",
+      "return_type": "jsonb",
+      "arguments": "p_room_id uuid, p_room_players jsonb, p_player_states jsonb, p_host_id text DEFAULT NULL::text, p_expected_version bigint DEFAULT NULL::bigint",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.reject_deleting_room_host",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.reject_deleting_room_player_user",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.release_room_membership",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_expected_version bigint, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.release_room_membership_by_player",
+      "return_type": "bool",
+      "arguments": "p_room_id uuid, p_player_id text, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.release_room_memberships_for_room",
+      "return_type": "int4",
+      "arguments": "p_room_id uuid, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.release_stale_room_membership",
+      "return_type": "bool",
+      "arguments": "p_membership active_room_memberships, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.reschedule_push_receipt",
+      "return_type": "bool",
+      "arguments": "p_receipt_row_id uuid, p_worker_id text, p_next_attempt_at timestamp with time zone, p_provider_error_code text DEFAULT NULL::text",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.reserve_room_membership",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid, p_player_id text, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.start_room_membership_timeout",
+      "return_type": "jsonb",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_expected_version bigint, p_transition_id uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.update_updated_at_column",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.update_user_last_seen",
+      "return_type": "void",
+      "arguments": "user_uuid uuid",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.upsert_push_token",
+      "return_type": "push_tokens",
+      "arguments": "p_user_id uuid, p_device_id text, p_platform text, p_expo_push_token text, p_app_version text DEFAULT NULL::text",
+      "type": "FUNCTION"
+    }
+  ],
+  "enums": [
+    {
+      "name": "auth.aal_level",
+      "values": [
+        "aal1",
+        "aal2",
+        "aal3"
+      ]
+    },
+    {
+      "name": "auth.code_challenge_method",
+      "values": [
+        "plain",
+        "s256"
+      ]
+    },
+    {
+      "name": "auth.factor_status",
+      "values": [
+        "unverified",
+        "verified"
+      ]
+    },
+    {
+      "name": "auth.factor_type",
+      "values": [
+        "phone",
+        "totp",
+        "webauthn"
+      ]
+    },
+    {
+      "name": "auth.oauth_registration_type",
+      "values": [
+        "dynamic",
+        "manual"
+      ]
+    },
+    {
+      "name": "auth.one_time_token_type",
+      "values": [
+        "confirmation_token",
+        "email_change_token_current",
+        "email_change_token_new",
+        "phone_change_token",
+        "reauthentication_token",
+        "recovery_token"
+      ]
+    },
+    {
+      "name": "net.request_status",
+      "values": [
+        "ERROR",
+        "PENDING",
+        "SUCCESS"
+      ]
+    },
+    {
+      "name": "public.active_room_membership_status",
+      "values": [
+        "active",
+        "disconnected",
+        "moving"
+      ]
+    },
+    {
+      "name": "public.chat_content_type",
+      "values": [
+        "emoji",
+        "system",
+        "text"
+      ]
+    },
+    {
+      "name": "public.chat_member_role",
+      "values": [
+        "member",
+        "moderator"
+      ]
+    },
+    {
+      "name": "public.chat_room_scope",
+      "values": [
+        "global",
+        "lobby",
+        "private",
+        "table"
+      ]
+    },
+    {
+      "name": "public.chat_room_visibility",
+      "values": [
+        "friends",
+        "private",
+        "public"
+      ]
+    },
+    {
+      "name": "public.game_phase",
+      "values": [
+        "blow",
+        "deal",
+        "play",
+        "waiting"
+      ]
+    },
+    {
+      "name": "public.room_status",
+      "values": [
+        "abandoned",
+        "finished",
+        "playing",
+        "ready",
+        "waiting"
+      ]
+    },
+    {
+      "name": "public.team_assignment_method",
+      "values": [
+        "host-choice",
+        "random"
+      ]
+    },
+    {
+      "name": "public.trump_type",
+      "values": [
+        "club",
+        "daiya",
+        "herz",
+        "tra",
+        "zuppe"
+      ]
+    },
+    {
+      "name": "realtime.action",
+      "values": [
+        "DELETE",
+        "ERROR",
+        "INSERT",
+        "TRUNCATE",
+        "UPDATE"
+      ]
+    },
+    {
+      "name": "realtime.equality_op",
+      "values": [
+        "eq",
+        "gt",
+        "gte",
+        "in",
+        "lt",
+        "lte",
+        "neq"
+      ]
+    },
+    {
+      "name": "storage.buckettype",
+      "values": [
+        "ANALYTICS",
+        "STANDARD"
+      ]
+    }
+  ],
+  "driver": {
+    "name": "postgres",
+    "database_version": "PostgreSQL 17.4 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit",
+    "meta": {
+      "current_schema": "public",
+      "search_paths": [
+        "\"\\$user\"",
+        "public",
+        "extensions"
+      ],
+      "dict": {
+        "Functions": "Stored procedures and functions"
+      }
+    }
+  },
+  "viewpoints": [
+    {
+      "id": "gameplay",
+      "name": "ゲーム進行",
+      "desc": "ルーム、座席、ゲーム状態、リプレイ履歴の関係。",
+      "tables": [
+        "public.user_profiles",
+        "public.rooms",
+        "public.room_players",
+        "public.game_states",
+        "public.game_history"
+      ],
+      "groups": [
+        {
+          "name": "参加者とルーム",
+          "desc": "ユーザー、ルーム、卓上の座席を結ぶテーブル。",
+          "tables": [
+            "public.user_profiles",
+            "public.rooms",
+            "public.room_players"
+          ]
+        },
+        {
+          "name": "進行と履歴",
+          "desc": "ライブ状態スナップショットと完了済みアクションの履歴。",
+          "tables": [
+            "public.game_states",
+            "public.game_history"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "room-membership",
+      "name": "ルーム所属リース",
+      "desc": "同一ユーザーの多重入室を防ぎ、再接続・退出を監査するための所属管理。",
+      "tables": [
+        "public.user_profiles",
+        "public.rooms",
+        "public.active_room_memberships",
+        "public.room_membership_events"
+      ],
+      "groups": [
+        {
+          "name": "現在の所属",
+          "desc": "ユーザーが現在予約または保持しているルーム所属。",
+          "tables": [
+            "public.active_room_memberships"
+          ]
+        },
+        {
+          "name": "遷移履歴",
+          "desc": "所属の予約、確定、解放を追跡するイベント。",
+          "tables": [
+            "public.room_membership_events"
+          ]
+        },
+        {
+          "name": "関連エンティティ",
+          "desc": "所属リースが参照するアプリケーションユーザーと対局ルーム。",
+          "tables": [
+            "public.user_profiles",
+            "public.rooms"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "social-notifications",
+      "name": "ソーシャルと通知",
+      "desc": "チャットとモバイル Push 通知の永続化。",
+      "tables": [
+        "public.user_profiles",
+        "public.chat_rooms",
+        "public.chat_members",
+        "public.chat_messages",
+        "public.push_tokens",
+        "public.push_receipts"
+      ],
+      "groups": [
+        {
+          "name": "チャット",
+          "desc": "ルーム、参加者、メッセージのチャット基盤。",
+          "tables": [
+            "public.chat_rooms",
+            "public.chat_members",
+            "public.chat_messages"
+          ]
+        },
+        {
+          "name": "Push 通知",
+          "desc": "端末トークンと配信結果の再試行キュー。",
+          "tables": [
+            "public.push_tokens",
+            "public.push_receipts"
+          ]
+        },
+        {
+          "name": "通知先ユーザー",
+          "desc": "チャットと Push 通知の送受信対象となるアプリケーションユーザー。",
+          "tables": [
+            "public.user_profiles"
+          ]
+        }
+      ]
+    }
+  ]
+}

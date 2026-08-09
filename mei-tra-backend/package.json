@@ -21,6 +21,7 @@
     "deploy:production": "./scripts/set-production-mode.sh",
     "deploy:standby": "./scripts/set-standby-mode.sh",
     "supabase:start": "./scripts/start-local-supabase.sh",
+    "db:docs": "bash scripts/generate-db-docs.sh",
     "clear:rooms": "ts-node scripts/clear-dev-rooms.ts"
   },
   "dependencies": {

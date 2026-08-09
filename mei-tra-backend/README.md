@@ -160,6 +160,20 @@ ConfigModule.forFeature(supabaseConfig)
 
 - **[Supabaseマイグレーションガイド](./SUPABASE_MIGRATION.md)** - Supabase移行の全体概要とトラブルシューティング
 - **[Supabase運用操作手順書](./SUPABASE_OPERATIONS.md)** - 日常運用での具体的な操作手順
+
+## Database documentation
+
+`tbls` で `public` スキーマのテーブル定義と ER 図を生成します。生成物は
+[`docs/database/`](./docs/database/) にコミットし、migration を追加・変更した後に更新します。
+
+```bash
+brew install tbls
+npm run db:docs
+```
+
+標準ではローカル Supabase の DB (`127.0.0.1:54322`) を参照します。別の安全な
+開発用 DB を使う場合だけ、接続先を `TBLS_DSN` で明示してください。本番 DB の接続情報を
+ドキュメントや設定ファイルへ書き込まないでください。
 - **[デプロイメントガイド](./DEPLOYMENT.md)** - 本番環境へのデプロイ手順
 
 ## Project setup
