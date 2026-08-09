@@ -19,6 +19,7 @@ import {
 import { BlowControls } from '@/components/game/BlowControls';
 import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
+import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
@@ -626,7 +627,7 @@ export function GameBoard({
                           key={ci}
                           style={ci > 0 ? styles.completedCardOverlap : undefined}
                         >
-                          <PlayingCard card={card} size="seat" />
+                          <MiniCard card={card} />
                         </View>
                       ))}
                     </View>

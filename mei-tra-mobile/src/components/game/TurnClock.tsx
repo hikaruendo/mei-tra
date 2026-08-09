@@ -27,7 +27,10 @@ export function TurnClock({ size = 26 }: { size?: number }) {
         toValue: 1,
         duration: 3000,
         easing: Easing.linear,
-        useNativeDriver: true,
+        // JS driver on purpose: the native driver does not reliably drive this
+        // on react-native-web, and the hand simply never moved. One small icon
+        // is not worth a platform fork.
+        useNativeDriver: false,
       }),
     );
     loop.start();
@@ -100,9 +103,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   hand: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 'auto',
   },
 });

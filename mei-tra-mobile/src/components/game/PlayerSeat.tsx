@@ -61,11 +61,15 @@ export function PlayerSeat({
           <Text style={styles.declarationBadgeText}>アゲ: {declaration}</Text>
         </View>
       ) : null}
+      {isTurn ? (
+        <View style={styles.turnBadgeSlot}>
+          <TurnClock size={22} />
+        </View>
+      ) : null}
       <View style={styles.avatarRow}>
         <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
           <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
         </View>
-        {isTurn ? <TurnClock size={22} /> : null}
       </View>
       <Text numberOfLines={1} style={styles.name}>
         {player.name}
@@ -125,6 +129,14 @@ export function PlayerSeat({
 }
 
 const styles = StyleSheet.create({
+  turnBadgeSlot: {
+    // Overhangs the seat's top-right corner, matching web's .avatarTurnBadge
+    // (top: -0.32rem; right: -0.4rem).
+    position: 'absolute',
+    top: -6,
+    right: -7,
+    zIndex: 4,
+  },
   container: {
     minWidth: 0,
     flex: 1,
