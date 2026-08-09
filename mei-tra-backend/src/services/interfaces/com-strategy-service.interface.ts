@@ -8,7 +8,13 @@ export type ComBlowAction =
         numberOfPairs: number;
       };
     }
-  | { type: 'pass' };
+  | { type: 'pass' }
+  /**
+   * The seat has no legal blow action left — it already declared, so both
+   * declare-blow and pass-blow reject it. The caller must advance the turn
+   * rather than submit an action.
+   */
+  | { type: 'skip' };
 
 export interface IComStrategyService {
   chooseBlowAction(state: GameState, comPlayer: DomainPlayer): ComBlowAction;

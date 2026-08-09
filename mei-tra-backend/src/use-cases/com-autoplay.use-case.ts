@@ -28,6 +28,10 @@ import { DomainPlayer } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { CompleteFieldTrigger } from './interfaces/play-card.use-case.interface';
+import {
+  hasPlayerDeclaredInBlow,
+  hasPlayerPassedInBlow,
+} from './helpers/blow-action.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
 
 type ResponseWithDelayed<T> = T & {
@@ -264,6 +268,14 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       gameState.getState(),
       comPlayer,
     );
+
+    if (action.type === 'skip') {
+      // The seat already declared, so the rules leave it no action. Move the
+      // turn on instead of submitting one that will be rejected — retrying a
+      // forbidden action is what previously wedged the table.
+      return this.advanceBlowTurnPastActedPlayer(roomId, comPlayer, gameState);
+    }
+
     const result: PassBlowResponse | DeclareBlowResponse =
       action.type === 'declare'
         ? await this.declareBlowUseCase.execute({
@@ -292,6 +304,55 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       delayedEvents,
       shouldContinue,
       error: result.error,
+    };
+  }
+
+  /**
+   * Advances the blow turn past a seat that has already acted, mirroring the
+   * skip loop in declare-blow/pass-blow, and emits the resulting turn.
+   */
+  private async advanceBlowTurnPastActedPlayer(
+    roomId: string,
+    comPlayer: DomainPlayer,
+    gameState: GameStateService,
+  ): Promise<ComAutoPlayResponse> {
+    this.logger.warn(
+      `Blow turn sat on ${comPlayer.playerId} in room ${roomId}, which has already declared; advancing the turn`,
+    );
+
+    const state = gameState.getState();
+    const maxAttempts = state.players.length;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      await gameState.nextTurn();
+      const candidate = gameState.getCurrentPlayer();
+      if (!candidate) break;
+
+      const acted =
+        hasPlayerDeclaredInBlow(state.blowState, candidate.playerId) ||
+        hasPlayerPassedInBlow(state.blowState, candidate);
+      if (!acted) break;
+    }
+
+    await gameState.saveState();
+
+    const nextPlayer = gameState.getCurrentPlayer();
+    const events: GatewayEvent[] = nextPlayer
+      ? [
+          {
+            scope: 'room',
+            roomId,
+            event: 'update-turn',
+            payload: nextPlayer.playerId,
+          },
+        ]
+      : [];
+
+    return {
+      success: true,
+      events,
+      shouldContinue:
+        !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
     };
   }
 
