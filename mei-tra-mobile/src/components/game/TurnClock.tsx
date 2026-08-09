@@ -24,16 +24,21 @@ export function TurnClock({ size = 26 }: { size?: number }) {
         toValue: 1,
         duration: 3000,
         easing: Easing.linear,
-        useNativeDriver: true,
+        // The native driver only handles style props; this animates an SVG
+        // `rotation` prop, so it has to run on the JS driver or the hand
+        // never moves.
+        useNativeDriver: false,
       }),
     );
     loop.start();
     return () => loop.stop();
   }, [spin]);
 
+  // SVG's rotate() takes a bare number — a 'deg' suffix is a parse error
+  // ("Expected ')'"), which silently killed the animation.
   const rotation = spin.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: [0, 360],
   });
 
   return (
@@ -45,13 +50,13 @@ export function TurnClock({ size = 26 }: { size?: number }) {
         { width: size, height: size, borderRadius: size / 2 },
       ]}
     >
-      <Svg height="100%" viewBox="0 0 24 24" width="100%">
+      <Svg height="78%" viewBox="0 0 24 24" width="78%">
         <G
           fill="none"
-          stroke={palette.accent.strong}
+          stroke={palette.text.primary}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={2.6}
+          strokeWidth={2}
         >
           <Circle cx={12} cy={12} r={10.25} />
           {/* Tick marks at 12 / 3 / 6 / 9. */}
@@ -60,14 +65,14 @@ export function TurnClock({ size = 26 }: { size?: number }) {
           <AnimatedG
             originX={12}
             originY={12}
-            rotation={rotation as unknown as number}
+            rotation={rotation}
           >
             <Path d="M12 12V5.75" />
           </AnimatedG>
           <Circle
             cx={12}
             cy={12}
-            fill={palette.accent.strong}
+            fill={palette.text.primary}
             r={1.1}
             stroke="none"
           />
@@ -81,16 +86,13 @@ const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.surface.raised,
-    // Web adds the same hairline so the disc keeps a defined edge where it
-    // overhangs the seat corner.
-    borderWidth: 1,
-    borderColor: palette.border.hairline,
+    // Solid brass disc with an ivory dial, matching web. A light disc on a
+    // light card read as the card's fill bleeding past its border-radius.
+    backgroundColor: palette.accent.base,
     borderCurve: 'circular',
-    padding: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: radius.sm / 2,
     elevation: 2,
   },
