@@ -5,15 +5,18 @@ import Svg, { Circle, G, Path } from 'react-native-svg';
 import { palette } from '@/theme/palette';
 import { radius } from '@/theme/radius';
 
-const AnimatedG = Animated.createAnimatedComponent(G);
+const DIAL = palette.text.primary;
 
 /**
  * The "it's your turn" clock, matching the web badge
  * (mei-tra-frontend/components/game/PlayerHand: .turnBadge + inline svg):
- * a brass clock on a raised disc, with the hand sweeping once every 3s.
+ * a brass disc with an ivory dial, the hand sweeping once every 3s.
  *
- * Replaces the previous ⏱ emoji, which rendered in the system font and did not
- * match web on either platform.
+ * The hand lives in its own layer rotated by an Animated.View rather than an
+ * animated <G>. Wrapping G in createAnimatedComponent leaks `collapsable` and
+ * `transform-origin` into the DOM on react-native-web ("Invalid DOM property
+ * transform-origin"), and a View transform rotates about its centre on both
+ * platforms — which is exactly the pivot the dial needs.
  */
 export function TurnClock({ size = 26 }: { size?: number }) {
   const spin = useRef(new Animated.Value(0)).current;
@@ -24,22 +27,19 @@ export function TurnClock({ size = 26 }: { size?: number }) {
         toValue: 1,
         duration: 3000,
         easing: Easing.linear,
-        // The native driver only handles style props; this animates an SVG
-        // `rotation` prop, so it has to run on the JS driver or the hand
-        // never moves.
-        useNativeDriver: false,
+        useNativeDriver: true,
       }),
     );
     loop.start();
     return () => loop.stop();
   }, [spin]);
 
-  // SVG's rotate() takes a bare number — a 'deg' suffix is a parse error
-  // ("Expected ')'"), which silently killed the animation.
-  const rotation = spin.interpolate({
+  const rotate = spin.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 360],
+    outputRange: ['0deg', '360deg'],
   });
+
+  const inner = Math.round(size * 0.78);
 
   return (
     <View
@@ -50,34 +50,37 @@ export function TurnClock({ size = 26 }: { size?: number }) {
         { width: size, height: size, borderRadius: size / 2 },
       ]}
     >
-      <Svg height="78%" viewBox="0 0 24 24" width="78%">
+      <Svg height={inner} viewBox="0 0 24 24" width={inner}>
         <G
           fill="none"
-          stroke={palette.text.primary}
+          stroke={DIAL}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
         >
           <Circle cx={12} cy={12} r={10.25} />
-          {/* Tick marks at 12 / 3 / 6 / 9. */}
+          {/* Ticks at 12 / 3 / 6 / 9. */}
           <Path d="M12 4.5v1M19.5 12h-1M12 19.5v-1M4.5 12h1" />
-          {/* The hand pivots on the dial centre, as transform-origin does on web. */}
-          <AnimatedG
-            originX={12}
-            originY={12}
-            rotation={rotation}
-          >
-            <Path d="M12 12V5.75" />
-          </AnimatedG>
-          <Circle
-            cx={12}
-            cy={12}
-            fill={palette.text.primary}
-            r={1.1}
-            stroke="none"
-          />
         </G>
+        <Circle cx={12} cy={12} fill={DIAL} r={1.1} />
       </Svg>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.hand,
+          { width: inner, height: inner, transform: [{ rotate }] },
+        ]}
+      >
+        <Svg height={inner} viewBox="0 0 24 24" width={inner}>
+          <Path
+            d="M12 12V5.75"
+            stroke={DIAL}
+            strokeLinecap="round"
+            strokeWidth={2}
+          />
+        </Svg>
+      </Animated.View>
     </View>
   );
 }
@@ -95,5 +98,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: radius.sm / 2,
     elevation: 2,
+  },
+  hand: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 'auto',
   },
 });
