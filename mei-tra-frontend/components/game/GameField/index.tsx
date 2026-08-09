@@ -1,11 +1,12 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import { Player, Field } from '@/types/game.types';
-import { getSeatOrderWithSelfBottom } from '@/lib/utils/tableOrder';
+import {
+  getCardSeatPosition,
+  getSeatOrderWithSelfBottom,
+} from '@/lib/utils/tableOrder';
 import { CardFace } from '@/components/game/CardFace';
 import styles from './index.module.scss';
-
-const SEAT_POSITIONS = ['bottom', 'left', 'top', 'right'] as const;
 
 interface GameFieldProps {
   currentField: Field | null;
@@ -13,14 +14,6 @@ interface GameFieldProps {
   onBaseSuitSelect: (suit: string) => void;
   isCurrentPlayer: boolean;
   currentPlayerId: string;
-}
-
-function getCardSeatPosition(
-  playedByPlayerId: string,
-  orderedPlayers: (Player | undefined)[],
-): string {
-  const idx = orderedPlayers.findIndex(p => p?.playerId === playedByPlayerId);
-  return idx >= 0 ? SEAT_POSITIONS[idx] : 'bottom';
 }
 
 export const GameField: React.FC<GameFieldProps> = ({

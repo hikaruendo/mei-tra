@@ -69,7 +69,12 @@ describe('RoomService active membership lifecycle', () => {
     service = new RoomService(
       roomRepository,
       {} as IUserProfileRepository,
-      {} as GameStateFactory,
+      {
+        createGameState: jest.fn(() => ({
+          setRoomId: jest.fn(),
+          loadState: jest.fn().mockResolvedValue(undefined),
+        })),
+      } as unknown as GameStateFactory,
       {} as IComPlayerService,
       membershipService as unknown as RoomMembershipService,
       undefined,

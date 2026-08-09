@@ -25,14 +25,24 @@ export class GetGameHistoryUseCase implements IGetGameHistoryUseCase {
   summarize(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistorySummary> {
-    return this.gameEventLogService.summarizeByRoomId(roomId, query);
+    return this.gameEventLogService.summarizeByRoomId(
+      roomId,
+      query,
+      playerNameOverrides,
+    );
   }
 
   replay(
     roomId: string,
     query?: GameHistoryQuery,
+    playerNameOverrides?: Readonly<Record<string, string>>,
   ): Promise<GameHistoryReplayView> {
-    return this.gameEventLogService.replayByRoomId(roomId, query);
+    return this.gameEventLogService.replayByRoomId(
+      roomId,
+      query,
+      playerNameOverrides,
+    );
   }
 }

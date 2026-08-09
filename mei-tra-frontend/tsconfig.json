@@ -28,6 +28,12 @@
       ],
       "@contracts/*": [
         "../contracts/*"
+      ],
+      "@meitra/contracts/*": [
+        "../contracts/*"
+      ],
+      "@meitra/game-client/*": [
+        "../shared/game-client/*"
       ]
     }
   },

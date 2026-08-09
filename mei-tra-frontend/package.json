@@ -13,6 +13,8 @@
     "vercel-build": "next build"
   },
   "dependencies": {
+    "@meitra/contracts": "file:../contracts",
+    "@meitra/game-client": "file:../shared/game-client",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
     "next": "15.2.6",

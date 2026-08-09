@@ -95,6 +95,7 @@ describe('CreateRoomUseCase', () => {
       pointsToWin: 10,
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
+      socketId: 'socket-1',
       authenticatedUser: { id: userId, profile: {} as any },
     });
 
@@ -134,6 +135,7 @@ describe('CreateRoomUseCase', () => {
       pointsToWin: 10,
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
+      socketId: 'socket-1',
       authenticatedUser: { id: userId, profile: {} as any },
     });
 
@@ -149,6 +151,7 @@ describe('CreateRoomUseCase', () => {
       pointsToWin: 10,
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
+      socketId: 'socket-1',
       authenticatedUser: { id: userId, profile: {} as any },
     });
 

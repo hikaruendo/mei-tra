@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
-import { IUserProfileRepository } from '../interfaces/user-profile.repository.interface';
+import {
+  AccountDeletionBlocker,
+  AccountDeletionCleanupResult,
+  AccountDeletionRpcResult,
+  IAccountDeletionRepository,
+  IUserProfileRepository,
+} from '../interfaces/user-profile.repository.interface';
 import {
   UserProfile,
   UserProfileRow,
@@ -10,9 +16,27 @@ import {
   UserPreferences,
   ChatProfileDto,
 } from '../../types/user.types';
+import { RoomStatus } from '../../types/room.types';
+
+const ACTIVE_ACCOUNT_ROOM_STATUSES = [
+  RoomStatus.WAITING,
+  RoomStatus.READY,
+  RoomStatus.PLAYING,
+];
+interface DeletableRoomRow {
+  id: string;
+  status?: RoomStatus;
+}
+
+interface DeletableJoinedRoomPlayerRow {
+  room_id: string;
+  rooms?: { status?: RoomStatus } | { status?: RoomStatus }[];
+}
 
 @Injectable()
-export class SupabaseUserProfileRepository implements IUserProfileRepository {
+export class SupabaseUserProfileRepository
+  implements IUserProfileRepository, IAccountDeletionRepository
+{
   private readonly logger = new Logger(SupabaseUserProfileRepository.name);
 
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -267,6 +291,153 @@ export class SupabaseUserProfileRepository implements IUserProfileRepository {
     }
   }
 
+  async findAccountDeletionBlockers(
+    userId: string,
+  ): Promise<AccountDeletionBlocker[]> {
+    try {
+      const { data: participantRows, error: participantError } =
+        await this.supabase
+          .from('room_players')
+          .select('room_id, rooms!inner(status)')
+          .eq('user_id', userId)
+          .in('rooms.status', ACTIVE_ACCOUNT_ROOM_STATUSES);
+
+      if (participantError) {
+        throw participantError;
+      }
+
+      const { data: hostedRows, error: hostedError } = await this.supabase
+        .from('rooms')
+        .select('id, status')
+        .eq('host_id', userId)
+        .in('status', ACTIVE_ACCOUNT_ROOM_STATUSES);
+
+      if (hostedError) {
+        throw hostedError;
+      }
+
+      const blockersByKey = new Map<string, AccountDeletionBlocker>();
+
+      for (const row of (participantRows ??
+        []) as DeletableJoinedRoomPlayerRow[]) {
+        const status = this.extractJoinedRoomStatus(row);
+        if (!status) {
+          continue;
+        }
+        blockersByKey.set(`participant:${row.room_id}`, {
+          roomId: row.room_id,
+          status,
+          reason: 'participant',
+        });
+      }
+
+      for (const row of (hostedRows ?? []) as DeletableRoomRow[]) {
+        if (!row.status) {
+          continue;
+        }
+        blockersByKey.set(`host:${row.id}`, {
+          roomId: row.id,
+          status: row.status,
+          reason: 'host',
+        });
+      }
+
+      return [...blockersByKey.values()];
+    } catch (error) {
+      this.logger.error(
+        `Failed to inspect active account deletion blockers for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async anonymizeAccountReferences(
+    userId: string,
+  ): Promise<AccountDeletionCleanupResult> {
+    try {
+      const { data, error } = await this.supabase.rpc(
+        'anonymize_account_references',
+        { p_user_id: userId },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Account anonymization RPC returned no cleanup result');
+      }
+
+      const result = data as AccountDeletionRpcResult;
+
+      return {
+        anonymizedRoomPlayerCount: Number(result.anonymized_room_player_count),
+        anonymizedRoomCount: Number(result.anonymized_room_count),
+        anonymizedGameStateCount: Number(result.anonymized_game_state_count),
+        anonymizedGameHistoryCount: Number(
+          result.anonymized_game_history_count,
+        ),
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to anonymize account references for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async markAccountDeletionStarted(
+    userId: string,
+  ): Promise<UserProfile | null> {
+    try {
+      const { data, error } = await this.supabase.rpc(
+        'mark_account_deletion_started',
+        { p_user_id: userId },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        return this.mapRowToUserProfile(data as UserProfileRow);
+      }
+
+      return this.findById(userId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to mark account deletion started for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async isAccountActive(userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', userId)
+        .is('account_deletion_started_at', null)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return Boolean(data);
+    } catch (error) {
+      this.logger.error(
+        `Failed to inspect account active status for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
   private mapRowToUserProfile(row: UserProfileRow): UserProfile {
     return {
       id: row.id,
@@ -276,10 +447,20 @@ export class SupabaseUserProfileRepository implements IUserProfileRepository {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       lastSeenAt: new Date(row.last_seen_at),
+      accountDeletionStartedAt: row.account_deletion_started_at
+        ? new Date(row.account_deletion_started_at)
+        : undefined,
       gamesPlayed: Number(row.games_played),
       gamesWon: Number(row.games_won),
       totalScore: Number(row.total_score),
       preferences: row.preferences,
     };
+  }
+
+  private extractJoinedRoomStatus(
+    row: DeletableJoinedRoomPlayerRow,
+  ): RoomStatus | null {
+    const joinedRoom = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+    return joinedRoom?.status ?? null;
   }
 }

@@ -38,6 +38,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         pointsToWin,
         teamAssignmentMethod,
         playerName,
+        socketId,
         authenticatedUser,
       } = request;
 
@@ -70,7 +71,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       createdRoomId = room.id;
 
       const hostUser: SessionUser = {
-        socketId: '',
+        socketId,
         playerId: authenticatedUser.id,
         name: playerName,
         userId: authenticatedUser.id,

@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Meitra",
+    "slug": "meitra",
+    "version": "0.1.0",
+    "icon": "./assets/images/meitra-icon.png",
+    "orientation": "portrait",
+    "scheme": "meitra",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#082f26",
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/images/meitra-icon.png",
+      "bundleIdentifier": "com.kando1.meitra"
+    },
+    "android": {
+      "package": "com.kando1.meitra",
+      "adaptiveIcon": {
+        "backgroundColor": "#082f26",
+        "foregroundImage": "./assets/images/meitra-adaptive-foreground.png"
+      },
+      "permissions": ["POST_NOTIFICATIONS"],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/meitra-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#082f26",
+          "image": "./assets/images/meitra-splash.png",
+          "imageWidth": 240
+        }
+      ],
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

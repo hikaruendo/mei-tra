@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 - `mei-tra-frontend/` hosts the Next.js app (App Router). Routes live under `app/`, feature-oriented React components live under `components/` (`game/`, `room/`, `shared/`, `auth/`, `social/`, etc.), styles in `styles/`, and hooks/utilities in `hooks/` / `lib/`. Static assets sit in `public/`.
 - `mei-tra-backend/` contains the NestJS gateway plus Socket.IO hub (`src/`). Scripts for Fly.io and Supabase maintenance live in `scripts/`. Database resources are under `supabase/`.
-- `contracts/` is the shared transport layer for REST DTOs and Socket.IO payloads. Keep UI-only types in `mei-tra-frontend/types/` and backend domain/persistence types in `mei-tra-backend/src/types/`. Legacy assets remain at the repo root `public/`. Mobile experiments live in `mei-tra-mobile/`.
+- `contracts/` is the shared transport layer for REST DTOs and Socket.IO payloads. Keep UI-only types in `mei-tra-frontend/types/`, mobile UI types in `mei-tra-mobile/src/types/`, and backend domain/persistence types in `mei-tra-backend/src/types/`. The Expo mobile app lives in `mei-tra-mobile/`.
 
 ## AI Agent Documentation Policy
 - Treat `README.md`, `AGENTS.md`, and the code itself as the first sources for day-to-day work. Do not preload all human-facing docs by default.
@@ -20,6 +20,7 @@
 ## Build, Test, and Development Commands
 - Frontend: `cd mei-tra-frontend && npm run dev` (Turbopack dev server), `npm run build` (Next production build), `npm run lint` (ESLint), `npm run test` (Jest/RTL) when applicable.
 - Backend: `cd mei-tra-backend && npm run start:dev` (Nest hot reload), `npm run build` (tsc), `npm run lint` (ESLint + Prettier), `npm test` and `npm run test:cov` for core game logic.
+- Mobile: `cd mei-tra-mobile && npm run ios` or `npm run android`, then `npm run typecheck`, `npm run lint`, and `npm test`.
 - Supabase workflows rely on `supabase start/stop` from the repo root. Run `bash scripts/create-test-users.sh` after reseeding.
 
 ## Coding Style & Naming Conventions

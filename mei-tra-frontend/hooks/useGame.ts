@@ -257,6 +257,18 @@ export const useGame = () => {
     setPlayers([]);
     setTeamScores(createEmptyTeamScores());
     setTeamNames(undefined);
+    setCurrentField(null);
+    setCompletedFields([]);
+    setCurrentTrump(null);
+    setWhoseTurn(null);
+    setBlowDeclarations([]);
+    setBlowActionHistory([]);
+    setCurrentHighestDeclaration(null);
+    setRevealedAgari(null);
+    setNegriCard(null);
+    setNegriPlayerId(null);
+    setPointsToWin(0);
+    setPaused(false);
     sessionStorage.removeItem('roomId');
   }, []);
 
@@ -653,6 +665,7 @@ export const useGame = () => {
         teamScores,
         you,
         negriCard,
+        revealedAgari: syncedRevealedAgari,
         fields,
         roomId,
         hostId,
@@ -670,6 +683,7 @@ export const useGame = () => {
           syncCurrentPlayerIdentity(nextPlayers, currentPlayerId, you);
         }
         setGamePhase(toUiGamePhase(gamePhase));
+        setRevealedAgari(syncedRevealedAgari ?? null);
         setWhoseTurn(currentTurn);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);

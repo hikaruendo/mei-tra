@@ -86,11 +86,18 @@ export interface GameStatePayload {
   you: string | null;
   isSpectator?: boolean;
   negriCard: string | null;
+  revealedAgari?: string | null;
   fields: CompletedFieldContract[];
   roomId: string;
   hostId?: string;
   pointsToWin: number;
   teamNames?: TeamNames;
+}
+
+export interface BlowUpdatedPayload {
+  declarations: BlowDeclarationContract[];
+  actionHistory?: BlowActionContract[];
+  currentHighest: BlowDeclarationContract | null;
 }
 
 export interface SyncGameStatePayload {
@@ -156,6 +163,10 @@ export interface CardPlayedPayload {
 
 export type UpdateTurnPayload = string;
 
+export interface TurnAckPayload {
+  roomId?: string;
+}
+
 export interface RoundResultsPayload {
   scores: TransportTeamScores;
 }
@@ -197,4 +208,34 @@ export interface GameStartedPayload {
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
+}
+
+export interface PlaySetupCompletePayload {
+  negriCard: string;
+  startingPlayer: string;
+}
+
+export interface GameMessagePayload {
+  message: string;
+}
+
+export interface PlayerLeftPayload {
+  playerId: string;
+  roomId: string;
+}
+
+export interface PlayerConvertedToComPayload {
+  playerId: string;
+  playerName: string;
+  message: string;
+}
+
+export interface TurnPingPayload {
+  roomId: string;
+}
+
+export interface PlayerIdlePayload {
+  roomId: string;
+  playerId: string;
+  idleMs?: number;
 }

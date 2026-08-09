@@ -16,12 +16,14 @@ interface CachedTokenValidation {
 
 interface TokenValidationOptions {
   bypassCache?: boolean;
+  allowDeletingAccount?: boolean;
 }
 
 @Injectable()
 export class AuthService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AuthService.name);
   private readonly tokenCache = new Map<string, CachedTokenValidation>();
+  private readonly invalidatedUserIds = new Set<string>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_CACHE_SIZE = 100;
   private cleanupInterval: ReturnType<typeof setInterval>;
@@ -51,6 +53,23 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       // Check cache first
       const cached = this.tokenCache.get(token);
       if (!options?.bypassCache && cached && cached.expiresAt > Date.now()) {
+        if (this.invalidatedUserIds.has(cached.user.id)) {
+          this.tokenCache.delete(token);
+          return null;
+        }
+
+        const profile = await this.userProfileRepository.findById(
+          cached.user.id,
+        );
+        if (!profile || this.isAccountDeleting(profile, options)) {
+          this.logger.warn(
+            `[AuthService] Cached token rejected because profile is unavailable for user ${cached.user.id}`,
+          );
+          this.tokenCache.delete(token);
+          return null;
+        }
+
+        cached.user.profile = profile;
         this.logger.debug(
           `[AuthService] Using cached token for user: ${cached.user.id}`,
         );
@@ -88,27 +107,22 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         `[AuthService] Token validated for user: ${user.user.id}`,
       );
 
-      // Get user profile from database, create if missing
-      let profile = await this.userProfileRepository.findById(user.user.id);
-
-      if (!profile) {
+      if (this.invalidatedUserIds.has(user.user.id)) {
         this.logger.warn(
-          `[AuthService] User profile not found for user ${user.user.id}, creating default profile`,
+          `[AuthService] Token rejected for invalidated user: ${user.user.id}`,
         );
+        this.tokenCache.delete(token);
+        return null;
+      }
 
-        // Create profile using existing method
-        try {
-          profile = await this.createOrUpdateUserProfile(
-            user.user.id,
-            user.user.email,
-            user.user.user_metadata,
-          );
-        } catch {
-          this.logger.error(
-            `[AuthService] Failed to create profile for user ${user.user.id}`,
-          );
-          return null;
-        }
+      const profile = await this.userProfileRepository.findById(user.user.id);
+
+      if (!profile || this.isAccountDeleting(profile, options)) {
+        this.logger.warn(
+          `[AuthService] Token rejected because profile is unavailable for user ${user.user.id}`,
+        );
+        this.tokenCache.delete(token);
+        return null;
       }
 
       // Update last seen timestamp
@@ -150,6 +164,26 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       );
       return null;
     }
+  }
+
+  invalidateUser(userId: string): void {
+    this.invalidatedUserIds.add(userId);
+
+    for (const [token, cached] of this.tokenCache.entries()) {
+      if (cached.user.id === userId) {
+        this.tokenCache.delete(token);
+      }
+    }
+  }
+
+  private isAccountDeleting(
+    profile: UserProfile,
+    options?: TokenValidationOptions,
+  ): boolean {
+    return (
+      Boolean(profile.accountDeletionStartedAt) &&
+      !options?.allowDeletingAccount
+    );
   }
 
   private cleanupExpiredCache(): void {
