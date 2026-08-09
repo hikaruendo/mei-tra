@@ -26,15 +26,20 @@ export function MiniCard({ card }: { card: string }) {
     const art = resolveCardArt(card);
     return (
       <View accessibilityLabel="ジョーカー" style={styles.chip}>
-        {art.kind === 'vector' ? (
-          <art.Svg height="100%" preserveAspectRatio="none" width="100%" />
-        ) : (
-          <Image
-            contentFit="fill"
-            source={art.source}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
+        {/* The clip lives on an inner view, as in PlayingCard: `overflow:
+            hidden` on the chip itself would set masksToBounds and swallow the
+            iOS layer shadow, which is painted outside the layer bounds. */}
+        <View style={styles.artClip}>
+          {art.kind === 'vector' ? (
+            <art.Svg height="100%" preserveAspectRatio="none" width="100%" />
+          ) : (
+            <Image
+              contentFit="fill"
+              source={art.source}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+        </View>
       </View>
     );
   }
@@ -57,9 +62,6 @@ const styles = StyleSheet.create({
     marginHorizontal: -2,
     alignItems: 'center',
     justifyContent: 'center',
-    // Web's .cardCorner clips with overflow: hidden so the joker artwork takes
-    // the chip's rounded corners instead of squaring them off.
-    overflow: 'hidden',
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: palette.border.hairline,
@@ -69,6 +71,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 1,
     elevation: 1,
+  },
+  artClip: {
+    ...StyleSheet.absoluteFillObject,
+    // Web's .cardCorner clips with overflow: hidden so the joker artwork takes
+    // the chip's rounded corners instead of squaring them off.
+    overflow: 'hidden',
+    borderRadius: radius.sm,
   },
   rank: {
     fontSize: 11,

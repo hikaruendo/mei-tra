@@ -116,9 +116,10 @@ export function GameBoard({
     (player) => player.playerId === perspectivePlayerId,
   );
   const { width: windowWidth } = useWindowDimensions();
-  const selfHandCount = game.players.find(
-    (player) => player.playerId === game.you,
-  )?.hand.length ?? 0;
+  // Size the fan from the hand it actually renders. Spectators have no
+  // `game.you`, so keying off that collapsed the count to 0 and the metrics
+  // fell through to the single-card branch (max width, zero overlap).
+  const selfHandCount = self?.hand.length ?? 0;
   // board padding (20) + self panel (~86) + fan padding (20)
   const fanAvailableWidth = windowWidth - 126;
   const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
