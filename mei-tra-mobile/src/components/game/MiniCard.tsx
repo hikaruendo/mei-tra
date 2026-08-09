@@ -28,6 +28,10 @@ const styles = StyleSheet.create({
   chip: {
     width: 22,
     height: 28,
+    // Web's .cardCorner uses margin: 0 -0.16rem — barely overlapping, so every
+    // card in a won set stays readable. A face-down-style stack would hide all
+    // but the last one.
+    marginHorizontal: -2,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,

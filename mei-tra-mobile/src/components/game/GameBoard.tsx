@@ -22,7 +22,6 @@ import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
-import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
@@ -623,12 +622,7 @@ export function GameBoard({
                   {myFields.map((field, idx) => (
                     <View key={idx} style={styles.completedChip}>
                       {field.cards.map((card, ci) => (
-                        <View
-                          key={ci}
-                          style={ci > 0 ? styles.completedCardOverlap : undefined}
-                        >
-                          <MiniCard card={card} />
-                        </View>
+                        <MiniCard card={card} key={ci} />
                       ))}
                     </View>
                   ))}
@@ -1006,9 +1000,6 @@ const styles = StyleSheet.create({
     padding: 2,
     borderRadius: 4,
     backgroundColor: colors.backgroundElevated,
-  },
-  completedCardOverlap: {
-    marginLeft: cardStackMargin(CARD_BASE_WIDTHS.seat),
   },
   handSection: {
     gap: 8,
