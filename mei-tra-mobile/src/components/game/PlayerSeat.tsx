@@ -2,6 +2,7 @@ import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { TurnClock } from '@/components/game/TurnClock';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { colors, teamColors } from '@/theme/colors';
@@ -64,7 +65,7 @@ export function PlayerSeat({
         <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
           <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
         </View>
-        {isTurn ? <Text style={styles.turnIcon}>⏱</Text> : null}
+        {isTurn ? <TurnClock size={22} /> : null}
       </View>
       <Text numberOfLines={1} style={styles.name}>
         {player.name}
@@ -160,9 +161,6 @@ const styles = StyleSheet.create({
   avatarText: {
     color: colors.text,
     fontSize: 17,
-  },
-  turnIcon: {
-    fontSize: 14,
   },
   name: {
     maxWidth: 96,

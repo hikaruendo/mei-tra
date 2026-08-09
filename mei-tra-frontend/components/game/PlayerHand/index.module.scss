@@ -289,12 +289,16 @@
   width: 1.6rem;
   height: 1.6rem;
   padding: 0;
-  border: 0;
   border-radius: 50%;
   background: var(--mt-surface-raised);
+  // The badge deliberately overhangs the seat corner. Without a defined edge it
+  // reads as the card's fill bleeding past the border-radius — very visible in
+  // light mode, where surface-raised is near-white against the sage felt.
+  border: 1px solid var(--mt-border-hairline);
   box-shadow: 0 1px 3px var(--mt-accent-subtle);
   color: var(--mt-accent-strong);
   line-height: 1;
+  box-sizing: border-box;
 }
 
 .turnBadge svg {
