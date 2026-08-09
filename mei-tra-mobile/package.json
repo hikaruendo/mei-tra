@@ -14,7 +14,8 @@
     "export:android": "expo export --platform android",
     "validate:eas-monorepo": "node scripts/validate-eas-monorepo.mjs",
     "test": "jest --runInBand",
-    "assets:cards": "node scripts/build-card-assets.mjs"
+    "assets:cards": "node scripts/build-card-assets.mjs",
+    "assets:cards:check": "node scripts/build-card-assets.mjs --check"
   },
   "dependencies": {
     "@meitra/contracts": "file:../contracts",

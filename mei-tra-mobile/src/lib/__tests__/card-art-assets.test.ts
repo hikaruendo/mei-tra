@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   CARD_ART_IDS,
   CARD_BACK_ID,
@@ -6,6 +9,11 @@ import {
 } from '@meitra/game-client/card-art';
 
 import { CARD_ART_KEYS, resolveCardArt } from '../card-art-assets';
+
+const ASSET_DIR = join(__dirname, '../../../assets/cards');
+const MANIFEST = JSON.parse(
+  readFileSync(join(ASSET_DIR, 'manifest.json'), 'utf8'),
+) as { cards: Record<string, { out: string; sourceSha: string }> };
 
 const SUITS = ['♠', '♥', '♦', '♣'] as const;
 const RANKS = [
@@ -68,5 +76,39 @@ describe('card art registry', () => {
   it('falls back to the card back rather than throwing on junk input', () => {
     const art = resolveCardArt('not-a-card');
     expect(art.kind).toBe('vector');
+  });
+});
+
+/**
+ * The build script derives its work list by listing the web's card directory,
+ * so a source card that disappears is indistinguishable from a smaller deck —
+ * it just produces one file fewer, silently. These tie the generated art back
+ * to CARD_ART_IDS, which is the canonical deck.
+ */
+describe('generated card assets', () => {
+  it('covers exactly the ids the mapping can produce', () => {
+    expect(Object.keys(MANIFEST.cards).sort()).toEqual([...CARD_ART_IDS].sort());
+  });
+
+  it('rasterises courts and vectorises everything else', () => {
+    for (const [id, entry] of Object.entries(MANIFEST.cards)) {
+      expect(entry.out).toBe(`${id}.${isCourtArtId(id) ? 'webp' : 'svg'}`);
+    }
+  });
+
+  it('ships no file the manifest does not account for', () => {
+    const onDisk = readdirSync(ASSET_DIR).filter((f) => f !== 'manifest.json');
+    const expected = Object.values(MANIFEST.cards).map((e) => e.out);
+    expect(onDisk.sort()).toEqual(expected.sort());
+  });
+
+  it('keeps the viewBox on every vector, which react-native-svg needs to scale', () => {
+    const withoutViewBox = Object.values(MANIFEST.cards)
+      .filter((e) => e.out.endsWith('.svg'))
+      .filter(
+        (e) => !readFileSync(join(ASSET_DIR, e.out), 'utf8').includes('viewBox'),
+      )
+      .map((e) => e.out);
+    expect(withoutViewBox).toEqual([]);
   });
 });
