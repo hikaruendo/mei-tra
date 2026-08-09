@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
 import {
   IComAutoPlayUseCase,
   ComAutoPlayRequest,
@@ -24,6 +24,11 @@ import {
   SelectNegriResponse,
 } from './interfaces/select-negri.use-case.interface';
 import { IRevealBrokenHandUseCase } from './interfaces/reveal-broken-hand.use-case.interface';
+import { transitionToPlayPhase } from './blow-phase-transition.helper';
+import { countPlayersActedInBlow } from './helpers/blow-action.helper';
+import { IBlowService } from '../services/interfaces/blow-service.interface';
+import { ICardService } from '../services/interfaces/card-service.interface';
+import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { DomainPlayer } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
@@ -56,10 +61,17 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     private readonly declareBlowUseCase: IDeclareBlowUseCase,
     @Inject('IPassBlowUseCase')
     private readonly passBlowUseCase: IPassBlowUseCase,
+    @Inject('IBlowService')
+    private readonly blowService: IBlowService,
+    @Inject('ICardService')
+    private readonly cardService: ICardService,
     @Inject('ISelectNegriUseCase')
     private readonly selectNegriUseCase: ISelectNegriUseCase,
     @Inject('IRevealBrokenHandUseCase')
     private readonly revealBrokenHandUseCase: IRevealBrokenHandUseCase,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   // Skipping a human's turn is normal, so this stays quiet unless nobody can act:
@@ -316,11 +328,45 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     comPlayer: DomainPlayer,
     gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
+    const state = gameState.getState();
+
+    // Everyone has acted, so there is no turn to move to — the blow phase is
+    // over and simply never transitioned. This is reachable because the
+    // all-acted check lives inside declare-blow/pass-blow, and a COM
+    // replacement changes the roster without either of them running.
+    if (countPlayersActedInBlow(state.players, state.blowState) >=
+      state.players.length) {
+      this.logger.warn(
+        `Blow phase in room ${roomId} had all players acted but never transitioned; completing it`,
+      );
+
+      const room = await this.roomService.getRoom(roomId);
+      if (!room) {
+        return { success: false, events: [], shouldContinue: false, error: 'Room not found' };
+      }
+
+      const transition = await transitionToPlayPhase({
+        roomId,
+        roomGameState: gameState,
+        room,
+        state,
+        blowService: this.blowService,
+        cardService: this.cardService,
+        gameEventLogService: this.gameEventLogService,
+      });
+
+      return {
+        success: true,
+        events: transition.events,
+        delayedEvents: transition.delayedEvents,
+        shouldContinue: false,
+      };
+    }
+
     this.logger.warn(
       `Blow turn sat on ${comPlayer.playerId} in room ${roomId}, which has already declared; advancing the turn`,
     );
 
-    const state = gameState.getState();
     const maxAttempts = state.players.length;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
