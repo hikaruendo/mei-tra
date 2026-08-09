@@ -357,8 +357,13 @@ export function GameBoard({
               player.playerId,
             );
             const isIdle = game.idlePlayerIds.includes(player.playerId);
+            // Matches the web condition (PlayerHand/index.tsx): the host never
+            // sees the control on their own seat.
             const showReplacePanel =
-              isHost && !player.isCOM && (isDisconnected || isIdle);
+              isHost &&
+              !player.isCOM &&
+              player.playerId !== game.you &&
+              (isDisconnected || isIdle);
             return (
               <View key={player.playerId} style={posStyle}>
                 {wrapped}
