@@ -289,15 +289,16 @@ push送信・receipt workerのunit/spec、SQL self-test、local push tokenのreg
 
 ### リリースを止める設定
 
-残っているブロッカーは次のとおりである。上2件は資格情報を要するため、リポジトリ側の変更では解消できない。
+残っているブロッカーは次のとおりである。資格情報を要するため、リポジトリ側の変更では解消できない。
 
-- `app.json`に`expo.extra.eas.projectId`がないため、EAS project linkは未完了である。`eas init`はExpoアカウントへのloginを前提とし、現在このマシンは未login (`eas whoami` → Not logged in) である。
 - Apple Developer Program、App Store Connectのapp record、APNs key、Android keystore / Play Console資格情報は未設定または未確認である。`EXPO_TOKEN`、`EXPO_APPLE_ID`、`EXPO_ASC_APP_ID`、`EXPO_APPLE_TEAM_ID`はGitHub environmentへ未投入である。
-- `runtimeVersion`と`updates.url`がないため、EAS Updateは開始しない。channel定義だけではOTAは有効にならない。`updates.url`は`https://u.expo.dev/<projectId>`の形なので、EAS project link後でなければ正しい値を書けない。
 - `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストは未実施である。このリポジトリを開発しているマシンにはXcodeが入っておらず (`xcode-select -p` → CommandLineTools)、iOS simulator buildもローカルでは実行できない。
+
+EAS Updateは初回リリースの要件ではないため、意図的に着手していない。`expo-updates`が未導入で、`runtimeVersion`だけを書いても効果はない。native依存の追加は署名済みbuildを一度も通していない段階では検証対象を増やすだけなので、初回提出後に切り出す。
 
 次の項目は解消済みである。
 
+- **EAS project link**: `eas init`で`@hikaruendo/meitra` (projectId `70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681`) をリンクし、`app.json`に`extra.eas.projectId`と`owner`が入った。`mobile-release.yml`のpreflightが要求する唯一の必須項目はこれで満たされる。
 - **本番Supabase migration**: `20260806162505_anonymize_account_references_atomically.sql`以降を含め、`20260809074500_release_stale_room_membership.sql`まで本番へ適用済みである。`supabase_migrations.schema_migrations`と、`reserve_room_membership` / `claim_room_membership`のsource照合で確認した。
 - **GitHub environment**: `mobile-release.yml`が参照する`mobile-preview`と`mobile-production`を作成済みである（secretの投入は別途）。
 - **iOS submit profile**: `eas.json`の`submit.production.ios`を追加した。値は`$EXPO_APPLE_ID` / `$EXPO_ASC_APP_ID` / `$EXPO_APPLE_TEAM_ID`のenv var参照とし、Apple accountの識別子をリポジトリへ持ち込まない。

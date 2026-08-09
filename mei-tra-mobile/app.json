@@ -19,7 +19,9 @@
         "backgroundColor": "#0e2a21",
         "foregroundImage": "./assets/images/meitra-adaptive-foreground.png"
       },
-      "permissions": ["POST_NOTIFICATIONS"],
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -42,6 +44,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681"
+      }
+    },
+    "owner": "hikaruendo"
   }
 }
