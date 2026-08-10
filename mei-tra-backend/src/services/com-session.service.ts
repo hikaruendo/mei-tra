@@ -239,6 +239,11 @@ export class ComSessionService {
       room.players[playerIndex],
       [...originalHand],
     );
+    if (membershipMutation?.type === 'complete-disconnect-timeout') {
+      comPlayer.userId = room.players[playerIndex].userId;
+      comPlayer.isAuthenticated = room.players[playerIndex].isAuthenticated;
+      comPlayer.participantKey = room.players[playerIndex].participantKey;
+    }
 
     vacantSeats[roomId][playerIndex] = {
       roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),

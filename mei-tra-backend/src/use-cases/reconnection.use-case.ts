@@ -163,6 +163,7 @@ export class ReconnectionUseCase {
           existingWaitingPlayer.playerId,
           socketId,
           authenticatedUser.id,
+          this.resolveDisplayName(authenticatedUser),
         );
         if (!reconnectResult.success) {
           this.logStateMismatch(
@@ -187,17 +188,30 @@ export class ReconnectionUseCase {
           existingWaitingPlayer.playerId,
         );
 
+        const reconnectedRoom = await this.roomService.getRoom(roomId);
+        const reconnectedPlayer = reconnectedRoom?.players.find(
+          (player) => player.playerId === existingWaitingPlayer.playerId,
+        );
+        if (!reconnectedRoom || !reconnectedPlayer) {
+          return {
+            success: false,
+            code: 'stateInconsistent',
+            roomId,
+            reason: 'Failed to reload the reconnected waiting-room player',
+          };
+        }
+
         return {
           success: true,
           mode: 'waiting-room',
           roomId,
           roomsList: await this.roomService.listRooms(),
-          room: updatedRoom,
-          selfSeatId: asSeatId(existingWaitingPlayer.playerId),
-          selfPlayerId: existingWaitingPlayer.playerId,
-          selfName: existingWaitingPlayer.name,
-          selfTeam: existingWaitingPlayer.team,
-          isHost: updatedRoom.hostId === existingWaitingPlayer.playerId,
+          room: reconnectedRoom,
+          selfSeatId: asSeatId(reconnectedPlayer.playerId),
+          selfPlayerId: reconnectedPlayer.playerId,
+          selfName: reconnectedPlayer.name,
+          selfTeam: reconnectedPlayer.team,
+          isHost: reconnectedRoom.hostId === reconnectedPlayer.playerId,
         };
       }
 
@@ -235,6 +249,7 @@ export class ReconnectionUseCase {
         existingPlayer.playerId,
         socketId,
         authenticatedUser.id,
+        this.resolveDisplayName(authenticatedUser),
       );
       if (!reconnectResult.success) {
         this.logStateMismatch(
@@ -259,17 +274,30 @@ export class ReconnectionUseCase {
         existingPlayer.playerId,
       );
 
+      const reconnectedRoom = await this.roomService.getRoom(roomId);
+      const reconnectedPlayer = roomGameState
+        .getState()
+        .players.find((player) => player.playerId === existingPlayer.playerId);
+      if (!reconnectedRoom || !reconnectedPlayer) {
+        return {
+          success: false,
+          code: 'stateInconsistent',
+          roomId,
+          reason: 'Failed to reload the reconnected active-game player',
+        };
+      }
+
       return {
         success: true,
         mode: 'active-game',
         roomId,
         roomsList: await this.roomService.listRooms(),
-        room,
+        room: reconnectedRoom,
         ...this.buildActiveGameSnapshot(
           roomId,
-          room,
+          reconnectedRoom,
           roomGameState,
-          existingPlayer,
+          reconnectedPlayer,
         ),
       };
     } catch (error) {
@@ -420,10 +448,7 @@ export class ReconnectionUseCase {
     authenticatedUser: AuthenticatedUser,
     playerId: string,
   ): void {
-    const displayName =
-      authenticatedUser.profile?.displayName ||
-      authenticatedUser.email ||
-      'User';
+    const displayName = this.resolveDisplayName(authenticatedUser);
 
     this.gameState.upsertSessionUser({
       socketId,
@@ -432,6 +457,14 @@ export class ReconnectionUseCase {
       userId: authenticatedUser.id,
       isAuthenticated: true,
     });
+  }
+
+  private resolveDisplayName(authenticatedUser: AuthenticatedUser): string {
+    return (
+      authenticatedUser.profile?.displayName ||
+      authenticatedUser.email ||
+      'User'
+    );
   }
 
   private async claimMembership(
@@ -466,7 +499,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const authenticatedMatches = roomPlayers.filter(
-      (player) => !player.isCOM && player.userId === authenticatedUserId,
+      (player) => player.userId === authenticatedUserId,
     );
     if (authenticatedMatches.length === 1) {
       return authenticatedMatches[0];
@@ -497,7 +530,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const matches = roomPlayers.filter(
-      (player) => !player.isCOM && player.userId === authenticatedUserId,
+      (player) => player.userId === authenticatedUserId,
     );
 
     return matches.length === 1 ? matches[0] : null;

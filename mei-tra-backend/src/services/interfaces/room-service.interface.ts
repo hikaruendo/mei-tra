@@ -55,6 +55,7 @@ export interface IRoomService {
     playerId: string,
     socketId: string,
     userId?: string,
+    name?: string,
   ): Promise<{ success: boolean; error?: string }>;
   updateUserGameStats(
     userId: string,

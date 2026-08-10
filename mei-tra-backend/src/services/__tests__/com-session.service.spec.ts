@@ -99,4 +99,40 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(state.teamAssignments[comId]).toBe(0);
     expect(state.currentPlayerId).toBe(comId);
   });
+
+  it('keeps the seat owner only for a disconnect-timeout COM replacement', async () => {
+    const service = new ComSessionService({
+      createComPlayer: jest.fn(),
+    } as unknown as IComPlayerService);
+    const { gameState } = createGameStateStub();
+    const room = createRoom();
+    room.players[0].userId = 'user-1';
+    room.players[0].isAuthenticated = true;
+    room.players[0].participantKey = 'user-1';
+
+    const converted = await service.convertPlayerToCOM(
+      'room-1',
+      HUMAN_ID,
+      room,
+      gameState,
+      {},
+      {
+        type: 'complete-disconnect-timeout',
+        userId: 'user-1',
+        expectedVersion: 2,
+        transitionId: 'transition-timeout',
+      },
+    );
+
+    expect(converted).toBe(true);
+    expect(room.players[0]).toEqual(
+      expect.objectContaining({
+        playerId: HUMAN_ID,
+        userId: 'user-1',
+        participantKey: 'user-1',
+        isAuthenticated: true,
+        isCOM: true,
+      }),
+    );
+  });
 });

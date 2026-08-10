@@ -130,6 +130,101 @@ create trigger sync_room_membership_event_seat
 before insert on public.room_membership_events
 for each row execute function public.sync_room_membership_event_seat();
 
+create or replace function public.finish_room_membership_timeout(
+  p_user_id uuid,
+  p_room_id uuid,
+  p_expected_version bigint,
+  p_transition_id uuid,
+  p_succeeded boolean
+)
+returns jsonb
+language plpgsql
+set search_path to ''
+as $function$
+declare
+  current_membership public.active_room_memberships%rowtype;
+begin
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0));
+
+  select *
+  into current_membership
+  from public.active_room_memberships
+  where user_id = p_user_id
+  for update;
+
+  if not found
+    or current_membership.room_id is distinct from p_room_id
+    or current_membership.membership_version <> p_expected_version
+    or current_membership.status <> 'moving'
+    or current_membership.transition_id <> p_transition_id then
+    return jsonb_build_object(
+      'result', 'stale',
+      'membership', case
+        when current_membership.user_id is null then null
+        else to_jsonb(current_membership)
+      end
+    );
+  end if;
+
+  if p_succeeded then
+    delete from public.active_room_memberships
+    where user_id = p_user_id;
+
+    insert into public.room_membership_events (
+      transition_id,
+      user_id,
+      from_room_id,
+      seat_id,
+      event_type,
+      membership_version
+    ) values (
+      p_transition_id,
+      p_user_id,
+      p_room_id,
+      current_membership.seat_id,
+      'disconnect_timeout_completed',
+      current_membership.membership_version
+    );
+
+    return jsonb_build_object('result', 'completed');
+  end if;
+
+  update public.active_room_memberships
+  set
+    status = 'disconnected',
+    membership_version = membership_version + 1,
+    last_seen_at = now()
+  where user_id = p_user_id
+  returning * into current_membership;
+
+  insert into public.room_membership_events (
+    transition_id,
+    user_id,
+    from_room_id,
+    to_room_id,
+    seat_id,
+    event_type,
+    membership_version
+  ) values (
+    p_transition_id,
+    p_user_id,
+    p_room_id,
+    p_room_id,
+    current_membership.seat_id,
+    'disconnect_timeout_rolled_back',
+    current_membership.membership_version
+  );
+
+  return jsonb_build_object(
+    'result', 'rolled_back',
+    'membership', to_jsonb(current_membership)
+  );
+end;
+$function$;
+
+comment on column public.room_players.user_id is
+  'Authenticated seat owner. A timeout-controlled COM keeps this value so the same user can reclaim the seat after a process restart.';
+
 create or replace function public.sync_game_history_actor_seat()
 returns trigger
 language plpgsql

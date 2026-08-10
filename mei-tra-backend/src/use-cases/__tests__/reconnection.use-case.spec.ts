@@ -216,6 +216,7 @@ describe('ReconnectionUseCase', () => {
       'seat-1',
       'socket-1',
       'user-1',
+      'User 1',
     );
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -223,6 +224,130 @@ describe('ReconnectionUseCase', () => {
         playerId: 'seat-1',
         userId: 'user-1',
       }),
+    );
+  });
+
+  it('reclaims a persisted timeout COM after an active-game restart', async () => {
+    const roomGameState = {
+      findSessionUserByUserId: jest.fn().mockReturnValue(null),
+      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findPlayerByActorId: jest.fn().mockReturnValue(null),
+      getState: () => ({
+        players: [
+          {
+            playerId: 'seat-1',
+            name: 'COM',
+            team: 0,
+            hand: ['A♠'],
+            isCOM: true,
+            isPasser: false,
+            hasBroken: false,
+            hasRequiredBroken: false,
+          },
+        ],
+        gamePhase: 'play',
+        currentPlayerIndex: 0,
+        currentPlayerId: 'seat-1',
+        blowState: {
+          declarations: [],
+          actionHistory: [],
+          currentTrump: null,
+          currentHighestDeclaration: null,
+          lastPasser: null,
+          isRoundCancelled: false,
+          currentBlowIndex: 0,
+        },
+        playState: {
+          currentField: null,
+          negriCard: null,
+          neguri: {},
+          fields: [],
+          lastWinnerId: null,
+          openDeclared: false,
+          openDeclarerId: null,
+        },
+        teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+        pointsToWin: 10,
+      }),
+    };
+    const room = {
+      id: 'room-1',
+      hostId: 'seat-1',
+      status: RoomStatus.PLAYING,
+      settings: { teamNames: undefined },
+      players: [
+        {
+          playerId: 'seat-1',
+          socketId: '',
+          userId: 'user-1',
+          isAuthenticated: true,
+          name: 'COM',
+          hand: ['A♠'],
+          team: 0,
+          isCOM: true,
+          isReady: true,
+          isHost: true,
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          joinedAt: new Date(),
+        },
+      ],
+    };
+    const reconnectedRoom = {
+      ...room,
+      players: [
+        {
+          ...room.players[0],
+          socketId: 'socket-new',
+          name: 'Restored User',
+          isCOM: false,
+        },
+      ],
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest
+        .fn()
+        .mockResolvedValueOnce(room)
+        .mockResolvedValue(reconnectedRoom),
+      handlePlayerReconnection: jest.fn().mockResolvedValue({ success: true }),
+      listRooms: jest.fn().mockResolvedValue([]),
+    } as Partial<IRoomService> as IRoomService;
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      { upsertSessionUser: jest.fn() } as unknown as IGameStateService,
+      createRoomMembershipService(),
+    );
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      socketId: 'socket-new',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        profile: { displayName: 'Restored User' } as UserProfile,
+      },
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+        mode: 'active-game',
+        selfPlayerId: 'seat-1',
+      }),
+    );
+    if (!result.success || result.mode !== 'active-game') {
+      throw new Error('Expected an active-game reconnection result');
+    }
+    expect(result.room.players[0]?.name).toBe('Restored User');
+    expect(result.room.players[0]?.isCOM).toBe(false);
+    expect(roomService.handlePlayerReconnection).toHaveBeenCalledWith(
+      'room-1',
+      'seat-1',
+      'socket-new',
+      'user-1',
+      'Restored User',
     );
   });
 
@@ -494,6 +619,12 @@ describe('ReconnectionUseCase', () => {
           hostId: 'p1',
           status: RoomStatus.WAITING,
           players: roomPlayers,
+        })
+        .mockResolvedValue({
+          id: 'room-1',
+          hostId: 'p1',
+          status: RoomStatus.WAITING,
+          players: roomPlayers,
         }),
       handlePlayerReconnection: jest.fn().mockResolvedValue({ success: true }),
       listRooms: jest.fn().mockResolvedValue([]),
@@ -540,6 +671,7 @@ describe('ReconnectionUseCase', () => {
       'p1',
       'socket-1',
       'user-1',
+      'User 1',
     );
     expect(roomGameState.reconcileWaitingRoomPlayers).toHaveBeenCalledWith(
       roomPlayers,
@@ -639,6 +771,7 @@ describe('ReconnectionUseCase', () => {
       'seat-1',
       'socket-new',
       'user-1',
+      'user@example.com',
     );
   });
 

@@ -646,10 +646,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     const roomMatches = room.players.filter(
-      (player) => !player.isCOM && player.userId === user.userId,
+      (player) => player.userId === user.userId,
     );
     if (roomMatches.length === 1) {
-      return { ...user, playerId: roomMatches[0].playerId };
+      const seatId = asSeatId(roomMatches[0].playerId);
+      return { ...user, seatId, playerId: seatId };
     }
     if (roomMatches.length > 1) {
       throw new Error(
@@ -661,9 +662,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       (seat) => seat.roomPlayer.userId === user.userId,
     );
     if (vacantMatches.length === 1) {
+      const seatId = asSeatId(vacantMatches[0].roomPlayer.playerId);
       return {
         ...user,
-        playerId: vacantMatches[0].roomPlayer.playerId,
+        seatId,
+        playerId: seatId,
       };
     }
     if (vacantMatches.length > 1) {
@@ -675,12 +678,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const membership = await this.roomMembershipService.get(user.userId);
     if (membership?.roomId === roomId) {
       const seatId = membership.seatId ?? asSeatId(membership.playerId);
-      return { ...user, seatId, playerId: seatId };
-    }
-
-    const availableSeat = room.players.find((player) => player.isCOM);
-    if (availableSeat) {
-      const seatId = asSeatId(availableSeat.playerId);
       return { ...user, seatId, playerId: seatId };
     }
 
@@ -887,6 +884,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     playerId: string,
     socketId: string,
     userId?: string,
+    name?: string,
   ): Promise<{ success: boolean; error?: string }> {
     // Get room's game state first (has the most up-to-date player info)
     const roomGameState = await this.getRoomGameState(roomId);
@@ -898,6 +896,20 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const player = state.players.find((p) => p.playerId === playerId);
     if (!player) {
       return { success: false, error: 'Player not found in room' };
+    }
+
+    const room = await this.getRoom(roomId);
+    const roomPlayer = room?.players.find(
+      (candidate) => candidate.playerId === playerId,
+    );
+    if (!roomPlayer) {
+      return { success: false, error: 'Room player not found' };
+    }
+    const reclaimingTimedOutSeat = Boolean(
+      roomPlayer.isCOM && userId && roomPlayer.userId === userId,
+    );
+    if (roomPlayer.isCOM && !reclaimingTimedOutSeat) {
+      return { success: false, error: 'COM seat is not reclaimable' };
     }
 
     this.logger.log(
@@ -919,6 +931,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       socketId: string;
       userId?: string;
       isAuthenticated?: boolean;
+      name?: string;
+      isCOM?: boolean;
+      participantKey?: string;
     } = {
       socketId,
     };
@@ -927,6 +942,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
     if (connectionState.isAuthenticated !== undefined) {
       roomPlayerUpdates.isAuthenticated = connectionState.isAuthenticated;
+    }
+    if (name) {
+      roomPlayerUpdates.name = name;
+    }
+    if (reclaimingTimedOutSeat) {
+      roomPlayerUpdates.isCOM = false;
+      roomPlayerUpdates.participantKey = userId;
     }
 
     const updated = await this.updatePlayerInRoom(
@@ -938,7 +960,29 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return { success: false, error: 'Failed to persist player connection' };
     }
 
+    this.clearVacantSeatSnapshot(roomId, playerId);
+
     return { success: true };
+  }
+
+  private clearVacantSeatSnapshot(roomId: string, playerId: string): void {
+    const roomVacantSeats = this.vacantSeats[roomId];
+    if (!roomVacantSeats) {
+      return;
+    }
+
+    for (const [seatIndex, seatData] of Object.entries(roomVacantSeats)) {
+      if (
+        seatData.roomPlayer.playerId === playerId ||
+        seatData.replacementPlayerId === playerId
+      ) {
+        delete roomVacantSeats[Number(seatIndex)];
+      }
+    }
+
+    if (Object.keys(roomVacantSeats).length === 0) {
+      delete this.vacantSeats[roomId];
+    }
   }
 
   async updateUserGameStats(

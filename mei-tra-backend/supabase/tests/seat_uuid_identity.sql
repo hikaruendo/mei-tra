@@ -1,6 +1,6 @@
 begin;
 
-select plan(46);
+select plan(48);
 
 select has_column('rooms', 'host_seat_id');
 select has_column('game_states', 'current_seat_id');
@@ -343,6 +343,88 @@ select is(
   ),
   '00000000-0000-0000-0000-000000000a03',
   'legacy current-player alias mirrors current_seat_id'
+);
+
+select public.claim_room_membership(
+  '00000000-0000-0000-0000-000000000a01',
+  '00000000-0000-0000-0000-000000000a02',
+  '00000000-0000-0000-0000-000000000a03',
+  '00000000-0000-0000-0000-000000000a07'
+);
+
+select public.mark_room_membership_disconnected(
+  '00000000-0000-0000-0000-000000000a01',
+  '00000000-0000-0000-0000-000000000a02',
+  1,
+  '00000000-0000-0000-0000-000000000a08'
+);
+
+select public.start_room_membership_timeout(
+  '00000000-0000-0000-0000-000000000a01',
+  '00000000-0000-0000-0000-000000000a02',
+  2,
+  '00000000-0000-0000-0000-000000000a09'
+);
+
+select public.persist_room_roster_atomic(
+  '00000000-0000-0000-0000-000000000a02',
+  '[{
+    "seatId":"00000000-0000-0000-0000-000000000a03",
+    "playerId":"00000000-0000-0000-0000-000000000a03",
+    "participantKey":"com-timeout-a",
+    "userId":"00000000-0000-0000-0000-000000000a01",
+    "name":"COM",
+    "team":0,
+    "isReady":true,
+    "isHost":true,
+    "isCOM":true,
+    "joinedAt":"2026-08-10T00:00:00.000Z",
+    "seatIndex":0
+  }]'::jsonb,
+  '{
+    "00000000-0000-0000-0000-000000000a03": {
+      "hand":["S1"],
+      "isPasser":false,
+      "hasBroken":false,
+      "hasRequiredBroken":false
+    }
+  }'::jsonb,
+  '00000000-0000-0000-0000-000000000a03',
+  2,
+  '{}'::jsonb,
+  '{
+    "currentSeatId":"00000000-0000-0000-0000-000000000a03",
+    "gamePhase":"blow"
+  }'::jsonb,
+  '{
+    "type":"complete-disconnect-timeout",
+    "userId":"00000000-0000-0000-0000-000000000a01",
+    "expectedVersion":3,
+    "transitionId":"00000000-0000-0000-0000-000000000a09"
+  }'::jsonb
+);
+
+select is(
+  (
+    select user_id
+    from public.room_players
+    where id = '00000000-0000-0000-0000-000000000a03'
+  ),
+  '00000000-0000-0000-0000-000000000a01'::uuid,
+  'disconnect timeout COM keeps the authenticated seat owner'
+);
+
+select is(
+  (
+    select seat_id
+    from public.room_membership_events
+    where transition_id = '00000000-0000-0000-0000-000000000a09'
+      and event_type = 'disconnect_timeout_completed'
+    order by created_at desc
+    limit 1
+  ),
+  '00000000-0000-0000-0000-000000000a03'::uuid,
+  'disconnect timeout completion keeps the durable seat reference'
 );
 
 select is(

@@ -39,15 +39,23 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Game state not found for room ${entry.roomId}`);
     }
 
+    const requestedActorId = entry.actorSeatId ?? entry.playerId ?? null;
+    const actorSeatId =
+      requestedActorId && this.isUuid(requestedActorId)
+        ? requestedActorId
+        : null;
+    const actorKeySnapshot =
+      entry.actorKeySnapshot ?? entry.playerId ?? requestedActorId;
+
     const { data, error } = await this.supabase
       .from('game_history')
       .insert({
         room_id: entry.roomId,
         game_state_id: gameStateId,
         action_type: entry.actionType,
-        actor_seat_id: entry.actorSeatId ?? entry.playerId ?? null,
-        actor_key_snapshot: entry.actorKeySnapshot ?? entry.playerId ?? null,
-        player_id: entry.actorSeatId ?? entry.playerId ?? null,
+        actor_seat_id: actorSeatId,
+        actor_key_snapshot: actorKeySnapshot,
+        player_id: actorSeatId ?? actorKeySnapshot,
         action_data: entry.actionData ?? {},
       })
       .select()
@@ -75,9 +83,11 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     }
 
     if (query?.playerId) {
-      request = request.or(
-        `actor_seat_id.eq.${query.playerId},player_id.eq.${query.playerId}`,
-      );
+      request = this.isUuid(query.playerId)
+        ? request.or(
+            `actor_seat_id.eq.${query.playerId},actor_key_snapshot.eq.${query.playerId},player_id.eq.${query.playerId}`,
+          )
+        : request.eq('actor_key_snapshot', query.playerId);
     }
 
     if (query?.since) {
@@ -215,5 +225,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     return typeof context?.roundNumber === 'number'
       ? context.roundNumber
       : null;
+  }
+
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
   }
 }
