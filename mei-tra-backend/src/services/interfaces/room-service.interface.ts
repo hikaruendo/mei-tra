@@ -1,9 +1,9 @@
 import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
+import { RosterMembershipMutation } from '../../types/room-membership.types';
 import { GameStateService } from '../game-state.service';
 import { SessionUser } from '../../types/session.types';
 
 export interface IRoomService {
-  createRoom(room: Room): Promise<Room>;
   getRoom(roomId: string): Promise<Room | null>;
   updateRoom(roomId: string, updates: Partial<Room>): Promise<Room | null>;
   deleteRoom(roomId: string): Promise<void>;
@@ -11,7 +11,7 @@ export interface IRoomService {
   listRooms(): Promise<Room[]>;
   createNewRoom(
     name: string,
-    hostId: string,
+    hostUser: SessionUser,
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
   ): Promise<Room>;
@@ -19,7 +19,10 @@ export interface IRoomService {
   leaveRoom(
     roomId: string,
     playerId: string,
-    options?: { releaseMembership?: boolean },
+    options?: {
+      releaseMembership?: boolean;
+      membershipMutation?: RosterMembershipMutation;
+    },
   ): Promise<boolean>;
   joinRoom(roomId: string, user: SessionUser): Promise<boolean>;
   updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean>;
@@ -40,6 +43,7 @@ export interface IRoomService {
     options?: {
       requireDisconnected?: boolean;
       releaseMembership?: boolean;
+      membershipMutation?: RosterMembershipMutation;
     },
   ): Promise<boolean>;
   restorePlayerFromVacantSeat(

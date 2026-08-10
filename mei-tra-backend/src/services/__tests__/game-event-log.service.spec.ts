@@ -2,6 +2,7 @@
 import { Logger } from '@nestjs/common';
 import { GameEventLogService } from '../game-event-log.service';
 import { IGameHistoryRepository } from '../../repositories/interfaces/game-history.repository.interface';
+import { asSeatId } from '../../types/identity.types';
 
 describe('GameEventLogService', () => {
   it('enriches log entries with snapshot context', async () => {
@@ -15,14 +16,17 @@ describe('GameEventLogService', () => {
     await service.log({
       roomId: 'room-1',
       actionType: 'card_played',
+      actorSeatId: asSeatId('seat-1'),
       playerId: 'player-1',
       state: {
         players: [
           {
+            seatId: asSeatId('seat-1'),
             playerId: 'player-1',
             name: 'Player One',
           },
         ],
+        currentSeatId: asSeatId('seat-1'),
         currentPlayerId: 'player-1',
         gamePhase: 'play',
         roundNumber: 2,
@@ -35,16 +39,19 @@ describe('GameEventLogService', () => {
       expect.objectContaining({
         roomId: 'room-1',
         actionType: 'card_played',
-        playerId: 'player-1',
+        actorSeatId: 'seat-1',
+        actorKeySnapshot: 'player-1',
+        playerId: 'seat-1',
         actionData: expect.objectContaining({
           card: 'AS',
           context: expect.objectContaining({
             roundNumber: 2,
             gamePhase: 'play',
-            currentTurnPlayerId: 'player-1',
+            currentTurnSeatId: 'seat-1',
+            currentTurnPlayerId: 'seat-1',
           }),
           playerNames: {
-            'player-1': 'Player One',
+            'seat-1': 'Player One',
           },
         }),
       }),
@@ -280,12 +287,15 @@ describe('GameEventLogService', () => {
               timestamp: new Date('2026-04-16T00:00:00.000Z'),
               actionType: 'game_started',
               kind: 'lifecycle',
+              actorSeatId: null,
               playerId: null,
               roundNumber: null,
               gamePhase: null,
               summary: 'Game started',
               details: {
+                firstBlowSeatId: null,
                 firstBlowPlayerId: null,
+                startedBySeatId: null,
                 startedByPlayerId: null,
                 pointsToWin: null,
               },
@@ -312,6 +322,7 @@ describe('GameEventLogService', () => {
               timestamp: new Date('2026-04-16T00:05:00.000Z'),
               actionType: 'card_played',
               kind: 'play',
+              actorSeatId: 'player-1',
               playerId: 'player-1',
               roundNumber: 1,
               gamePhase: 'waiting',
@@ -340,6 +351,7 @@ describe('GameEventLogService', () => {
               context: {
                 roundNumber: 1,
                 gamePhase: 'waiting',
+                currentTurnSeatId: null,
                 currentTurnPlayerId: null,
                 teamScores: undefined,
               },
@@ -358,11 +370,13 @@ describe('GameEventLogService', () => {
               timestamp: new Date('2026-04-16T00:06:00.000Z'),
               actionType: 'field_completed',
               kind: 'play',
+              actorSeatId: 'player-2',
               playerId: 'player-2',
               roundNumber: 1,
               gamePhase: 'waiting',
               summary: 'Field completed by Player Two for Team 2',
               details: {
+                winnerSeatId: 'player-2',
                 winnerPlayerId: 'player-2',
                 winnerTeam: 1,
                 cards: [],
@@ -372,6 +386,7 @@ describe('GameEventLogService', () => {
                   labelKey: 'winner',
                   value: {
                     kind: 'player',
+                    seatId: 'player-2',
                     playerId: 'player-2',
                     playerName: 'Player Two',
                   },
@@ -387,6 +402,7 @@ describe('GameEventLogService', () => {
               context: {
                 roundNumber: 1,
                 gamePhase: 'waiting',
+                currentTurnSeatId: null,
                 currentTurnPlayerId: null,
                 teamScores: undefined,
               },
@@ -488,6 +504,7 @@ describe('GameEventLogService', () => {
       labelKey: 'winner',
       value: {
         kind: 'player',
+        seatId: 'player-3',
         playerId: 'player-3',
         playerName: 'Player3',
       },

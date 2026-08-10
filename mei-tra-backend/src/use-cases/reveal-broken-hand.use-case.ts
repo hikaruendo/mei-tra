@@ -15,6 +15,7 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
@@ -67,6 +68,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       const handSnapshot = [...player.hand];
       state.pendingBrokenHandReveal = {
+        seatId: asSeatId(playerId),
         playerId,
         handSnapshot,
         startedAt: Date.now(),
@@ -130,6 +132,8 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       nextState.playState = {
         currentField: null,
         negriCard: null,
+        negriSeatId: null,
+        negriPlayerId: null,
         neguri: {},
         fields: [],
         lastWinnerId: null,
@@ -148,6 +152,9 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
       nextState.currentPlayerId = firstBlowPlayer?.playerId ?? null;
+      nextState.currentSeatId = firstBlowPlayer
+        ? asSeatId(firstBlowPlayer.playerId)
+        : null;
       nextState.currentPlayerIndex = firstBlowIndex;
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;
@@ -170,6 +177,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         });
 
         const brokenPayload: BrokenPayload = {
+          nextSeatId: asSeatId(firstBlowPlayer.playerId),
           nextPlayerId: firstBlowPlayer.playerId,
           players: resolveTransportPlayers(roomGameState, nextState.players),
           gamePhase: 'blow',
@@ -192,12 +200,20 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'broken_hand_revealed',
+        actorSeatId: asSeatId(playerId),
         playerId,
         state: nextState,
         actionData: {
+          nextSeatId: firstBlowPlayer?.playerId ?? null,
           nextPlayerId: firstBlowPlayer?.playerId ?? null,
           nextBlowIndex: firstBlowIndex,
           startingHandsByPlayerId: Object.fromEntries(
+            nextState.players.map((statePlayer) => [
+              statePlayer.playerId,
+              [...statePlayer.hand],
+            ]),
+          ),
+          startingHandsBySeatId: Object.fromEntries(
             nextState.players.map((statePlayer) => [
               statePlayer.playerId,
               [...statePlayer.hand],

@@ -9,6 +9,7 @@ import {
   GameHistoryQuery,
 } from '../../types/game-history.types';
 import { Database } from '../../types/database.types';
+import { asSeatId } from '../../types/identity.types';
 
 type GameHistoryRow = Database['public']['Tables']['game_history']['Row'];
 type GameStateIdRow = Pick<
@@ -44,7 +45,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
         room_id: entry.roomId,
         game_state_id: gameStateId,
         action_type: entry.actionType,
-        player_id: entry.playerId ?? null,
+        actor_seat_id: entry.actorSeatId ?? entry.playerId ?? null,
+        actor_key_snapshot: entry.actorKeySnapshot ?? entry.playerId ?? null,
+        player_id: entry.actorSeatId ?? entry.playerId ?? null,
         action_data: entry.actionData ?? {},
       })
       .select()
@@ -72,7 +75,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     }
 
     if (query?.playerId) {
-      request = request.eq('player_id', query.playerId);
+      request = request.or(
+        `actor_seat_id.eq.${query.playerId},player_id.eq.${query.playerId}`,
+      );
     }
 
     if (query?.since) {
@@ -191,7 +196,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       roomId: row.room_id,
       gameStateId: row.game_state_id,
       actionType: row.action_type as GameHistoryActionType,
-      playerId: row.player_id,
+      actorSeatId: row.actor_seat_id ? asSeatId(row.actor_seat_id) : null,
+      actorKeySnapshot: row.actor_key_snapshot,
+      playerId: row.actor_seat_id ?? row.player_id,
       actionData: row.action_data ?? {},
       timestamp: new Date(row.timestamp),
     };

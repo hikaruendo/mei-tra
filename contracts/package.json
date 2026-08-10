@@ -4,6 +4,10 @@
   "private": true,
   "sideEffects": false,
   "exports": {
+    "./ids": {
+      "types": "./ids.ts",
+      "default": "./ids.ts"
+    },
     "./game": {
       "types": "./game.ts",
       "default": "./game.ts"

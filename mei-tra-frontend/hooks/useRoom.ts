@@ -18,6 +18,7 @@ import { ConnectionUser, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
+import { resolveSeatAlias } from '@meitra/game-client/identity';
 
 interface UseRoomOptions {
   users?: ConnectionUser[];
@@ -217,10 +218,12 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     // プレイヤー参加（ルーム関連）
     const handleRoomPlayerJoined = ({
+      seatId,
       playerId,
       roomId,
       isHost,
     }: RoomPlayerJoinedPayload) => {
+      const joinedSeatId = resolveSeatAlias(seatId, playerId)!;
       setAvailableRooms(prevRooms => {
         const updatedRooms = prevRooms.map(room => {
           if (room.id !== roomId) return room;
@@ -229,6 +232,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             if (typeof p === 'string') {
               return {
                 socketId: '',
+                seatId: resolveSeatAlias(undefined, p)!,
                 playerId: p,
                 name: p,
                 hand: [],
@@ -242,15 +246,16 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           });
 
           // 既存プレイヤーチェック（重複防止）
-          const alreadyInRoom = existingPlayers.some(p => p.playerId === playerId);
+          const alreadyInRoom = existingPlayers.some(
+            (player) => player.playerId === joinedSeatId,
+          );
           if (alreadyInRoom) return room;
 
-          // 空いている席（COMプレースホルダー）を探す
-          const comIndex = existingPlayers.findIndex(p => p.isCOM === true && !p.isReady);
           const newPlayer: RoomPlayer = {
             socketId: '',
-            playerId,
-            name: playerId,
+            seatId: joinedSeatId,
+            playerId: joinedSeatId,
+            name: joinedSeatId,
             hand: [],
             team: (existingPlayers.length % 2) as Team,
             isReady: false,
@@ -258,12 +263,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             joinedAt: new Date()
           };
 
-          const updatedPlayers = [...existingPlayers];
-          if (comIndex !== -1) {
-            updatedPlayers[comIndex] = newPlayer;
-          } else {
-            updatedPlayers.push(newPlayer);
-          }
+          const updatedPlayers = [...existingPlayers, newPlayer];
 
           const updatedRoom = {
             ...room,
@@ -282,7 +282,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
       setPlayerReadyStatus(prev => ({
         ...prev,
-        [playerId]: false
+        [joinedSeatId]: false
       }));
     };
 
@@ -301,15 +301,15 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           const updatedPlayers = prev.players.map(p =>
             p.playerId === playerId
               ? {
+                  ...p,
                   socketId: '',
-                  playerId: `com-disconnected-${playerId}`,
                   name: 'COM',
                   hand: [],
                   team: (p.team ?? 0) as Team,
                   isReady: false,
                   isHost: false,
                   isCOM: true,
-                  joinedAt: new Date(),
+                  joinedAt: p.joinedAt,
                   isPasser: true,
                   hasBroken: false,
                 }

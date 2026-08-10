@@ -10,6 +10,7 @@ import { IGameEventLogService } from '../services/interfaces/game-event-log.serv
 import { toDomainPlayer } from '../types/player-adapters';
 import { GameStateService } from '../services/game-state.service';
 import { GameState } from '../types/game.types';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {
@@ -112,6 +113,9 @@ export class StartGameUseCase implements IStartGameUseCase {
         const currentPlayer =
           updatedState.players[updatedState.currentPlayerIndex] ?? null;
         await roomGameState.updateState({
+          currentSeatId: currentPlayer
+            ? asSeatId(currentPlayer.playerId)
+            : null,
           currentPlayerId: currentPlayer?.playerId ?? null,
           currentPlayerIndex: updatedState.currentPlayerIndex,
           blowState: {
@@ -146,14 +150,23 @@ export class StartGameUseCase implements IStartGameUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'game_started',
+        actorSeatId: asSeatId(playerId),
         playerId,
         state: updatedState,
         actionData: {
+          startedBySeatId: playerId,
           startedByPlayerId: playerId,
+          firstBlowSeatId: firstBlowPlayer?.playerId ?? null,
           firstBlowPlayerId: firstBlowPlayer?.playerId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
           startingHandsByPlayerId: Object.fromEntries(
+            updatedState.players.map((player) => [
+              player.playerId,
+              [...player.hand],
+            ]),
+          ),
+          startingHandsBySeatId: Object.fromEntries(
             updatedState.players.map((player) => [
               player.playerId,
               [...player.hand],
@@ -172,6 +185,7 @@ export class StartGameUseCase implements IStartGameUseCase {
             scores: updatedState.teamScores,
             winner: null,
           },
+          currentTurnSeatId: asSeatId(currentTurnPlayer.playerId),
           currentTurnPlayerId: currentTurnPlayer.playerId,
         },
       };

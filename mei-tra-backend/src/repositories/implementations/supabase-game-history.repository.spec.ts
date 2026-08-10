@@ -53,6 +53,8 @@ describe('SupabaseGameHistoryRepository', () => {
       room_id: 'room-1',
       game_state_id: 'state-1',
       action_type: 'card_played',
+      actor_seat_id: 'player-1',
+      actor_key_snapshot: 'player-1',
       player_id: 'player-1',
       action_data: { card: 'A' },
     });

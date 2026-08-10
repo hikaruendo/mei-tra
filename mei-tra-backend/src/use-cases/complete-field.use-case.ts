@@ -24,6 +24,7 @@ import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {
@@ -73,10 +74,12 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'field_completed',
+        actorSeatId: asSeatId(winner.playerId),
         playerId: winner.playerId,
         state,
         actionData: {
           completedField,
+          winnerSeatId: winner.playerId,
           winnerPlayerId: winner.playerId,
           winnerTeam: winner.team,
           cards: [...field.cards],
@@ -93,15 +96,19 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         state.playState.currentField = {
           cards: [],
           playedBy: [],
+          playedBySeatIds: [],
           baseCard: '',
+          dealerSeatId: asSeatId(winner.playerId),
           dealerId: winner.playerId,
           isComplete: false,
         };
       }
 
       const fieldCompletePayload: FieldCompletePayload = {
+        winnerSeatId: asSeatId(winner.playerId),
         winnerId: winner.playerId,
         field: completedField,
+        nextSeatId: asSeatId(winner.playerId),
         nextPlayerId: winner.playerId,
       };
       const room = await this.roomService.getRoom(roomId);
@@ -147,6 +154,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'round_completed',
+        actorSeatId: state.blowState.currentHighestDeclaration?.playerId
+          ? asSeatId(state.blowState.currentHighestDeclaration.playerId)
+          : null,
         playerId: state.blowState.currentHighestDeclaration?.playerId ?? null,
         state,
         actionData: {
@@ -195,6 +205,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         await this.gameEventLogService?.log({
           roomId,
           actionType: 'game_over',
+          actorSeatId: null,
           playerId: null,
           state,
           actionData: {
@@ -292,6 +303,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     );
     if (winnerIndex !== -1) {
       state.currentPlayerId = playerId;
+      state.currentSeatId = asSeatId(playerId);
       state.currentPlayerIndex = winnerIndex;
     }
   }
@@ -383,11 +395,15 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentField: {
         cards: [],
         playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
+        dealerSeatId: asSeatId(nextBlowPlayer.playerId),
         dealerId: nextBlowPlayer.playerId,
         isComplete: false,
       },
       negriCard: null,
+      negriSeatId: null,
+      negriPlayerId: null,
       neguri: {},
       fields: [],
       lastWinnerId: null,
@@ -409,17 +425,20 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     await roomGameState.updateState({
       playState: newPlayState,
       blowState: newBlowState,
+      currentSeatId: asSeatId(nextBlowPlayer.playerId),
       currentPlayerId: nextBlowPlayer.playerId,
       currentPlayerIndex: nextBlowIndex,
     });
 
     const newRoundPayload: NewRoundStartedPayload = {
       players: resolveTransportPlayers(roomGameState, updatedState.players),
+      currentTurnSeatId: asSeatId(nextBlowPlayer.playerId),
       currentTurn: nextBlowPlayer.playerId,
       gamePhase: 'blow',
       currentField: null,
       completedFields: [],
       negriCard: null,
+      negriSeatId: null,
       negriPlayerId: null,
       revealedAgari: null,
       currentTrump: null,
@@ -468,13 +487,21 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     await this.gameEventLogService?.log({
       roomId,
       actionType: 'round_reset',
+      actorSeatId: asSeatId(nextBlowPlayer.playerId),
       playerId: nextBlowPlayer.playerId,
       state: updatedState,
       actionData: {
+        nextDealerSeatId: nextBlowPlayer.playerId,
         nextDealerPlayerId: nextBlowPlayer.playerId,
         nextRoundNumber: updatedState.roundNumber,
         nextBlowIndex,
         startingHandsByPlayerId: Object.fromEntries(
+          updatedState.players.map((player) => [
+            player.playerId,
+            [...player.hand],
+          ]),
+        ),
+        startingHandsBySeatId: Object.fromEntries(
           updatedState.players.map((player) => [
             player.playerId,
             [...player.hand],

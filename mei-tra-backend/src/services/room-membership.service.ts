@@ -6,10 +6,12 @@ import {
   RoomMembershipTransition,
   RoomMembershipTransitionResult,
 } from '../types/room-membership.types';
+import { asSeatId } from '../types/identity.types';
 
 type MembershipRow = {
   user_id: string;
   room_id: string | null;
+  seat_id: string | null;
   player_id: string;
   status: 'moving' | 'active' | 'disconnected';
   membership_version: number;
@@ -55,14 +57,14 @@ export class RoomMembershipService {
 
   async reserve(
     userId: string,
-    playerId: string,
+    seatId: string,
   ): Promise<RoomMembershipTransition> {
     const transitionId = randomUUID();
     const { data, error } = await this.supabaseService.client.rpc(
       'reserve_room_membership',
       {
         p_user_id: userId,
-        p_player_id: playerId,
+        p_player_id: seatId,
         p_transition_id: transitionId,
       },
     );
@@ -77,13 +79,14 @@ export class RoomMembershipService {
   async claim(
     userId: string,
     roomId: string,
-    playerId: string,
+    seatId: string,
   ): Promise<RoomMembershipTransition> {
     const currentMembership = await this.get(userId);
     const transitionId =
       currentMembership?.status === 'moving' &&
       currentMembership.roomId === null &&
-      currentMembership.playerId === playerId
+      (currentMembership.seatId === seatId ||
+        currentMembership.playerId === seatId)
         ? currentMembership.transitionId
         : randomUUID();
     const { data, error } = await this.supabaseService.client.rpc(
@@ -91,7 +94,7 @@ export class RoomMembershipService {
       {
         p_user_id: userId,
         p_room_id: roomId,
-        p_player_id: playerId,
+        p_player_id: seatId,
         p_transition_id: transitionId,
       },
     );
@@ -309,6 +312,7 @@ export class RoomMembershipService {
     return {
       userId: row.user_id,
       roomId: row.room_id,
+      seatId: row.seat_id ? asSeatId(row.seat_id) : null,
       playerId: row.player_id,
       status: row.status,
       membershipVersion: row.membership_version,
@@ -357,6 +361,7 @@ export class RoomMembershipService {
     return (
       typeof value.user_id === 'string' &&
       (typeof value.room_id === 'string' || value.room_id === null) &&
+      (typeof value.seat_id === 'string' || value.seat_id === null) &&
       typeof value.player_id === 'string' &&
       ['moving', 'active', 'disconnected'].includes(String(value.status)) &&
       typeof value.membership_version === 'number' &&

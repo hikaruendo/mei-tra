@@ -41,6 +41,7 @@ import {
   REQUIRED_BROKEN_HAND_REVEAL_ERROR,
 } from '../helpers/broken-hand.helper';
 import { ActiveRoomMembershipConflictError } from '../../types/room-membership.types';
+import { asSeatId } from '../../types/identity.types';
 describe('Game Use Cases', () => {
   const createRoomServiceMock = () => {
     const mock: Partial<jest.Mocked<IRoomService>> = {
@@ -311,6 +312,7 @@ describe('Game Use Cases', () => {
         new ActiveRoomMembershipConflictError({
           userId: 'user-1',
           roomId: 'room-existing',
+          seatId: asSeatId('player-1'),
           playerId: 'player-1',
           status: 'active',
           membershipVersion: 3,
@@ -393,7 +395,11 @@ describe('Game Use Cases', () => {
       const createRoomMock = roomService.createNewRoom as jest.Mock;
       expect(createRoomMock).toHaveBeenCalledWith(
         'Room',
-        'player-1',
+        expect.objectContaining({
+          playerId: 'player-1',
+          userId: 'player-1',
+          socketId: 'socket-1',
+        }),
         30,
         'random',
       );
@@ -868,6 +874,7 @@ describe('Game Use Cases', () => {
       expect(result.data?.currentTurnPlayerId).toBe('player-2');
       expect(state.blowState.currentBlowIndex).toBe(1);
       expect(roomGameState.updateState).toHaveBeenCalledWith({
+        currentSeatId: 'player-2',
         currentPlayerId: 'player-2',
         currentPlayerIndex: 1,
         blowState: expect.objectContaining({ currentBlowIndex: 1 }),
@@ -2666,6 +2673,7 @@ describe('Game Use Cases', () => {
       expect(preparation.delayMs).toBe(3000);
       expect(preparation.followUp).toBeDefined();
       expect(state.pendingBrokenHandReveal).toEqual({
+        seatId: 'player-1',
         playerId: 'player-1',
         handSnapshot: ['C1'],
         startedAt: expect.any(Number),
@@ -3036,6 +3044,7 @@ describe('Game Use Cases', () => {
 
       expect(preparation.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toEqual({
+        seatId: 'player-1',
         playerId: 'player-1',
         handSnapshot: ['C1'],
         startedAt: expect.any(Number),

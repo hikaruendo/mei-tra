@@ -4,11 +4,17 @@ import type {
   RoomStatusContract,
   RoomSyncPayload,
 } from '@contracts/room';
+import type { SeatId } from '@contracts/ids';
+import {
+  normalizePlayerIdentity,
+  normalizeRoomIdentity,
+} from '@meitra/game-client/identity';
 import { Player, TeamNames, fromPlayerContracts } from './game.types';
 
 export interface Room {
   id: string;
   name: string;
+  hostSeatId: SeatId;
   hostId: string;
   status: RoomStatus;
   players: RoomPlayer[];
@@ -49,38 +55,42 @@ function toRoomStatus(status: RoomStatusContract): RoomStatus {
 export function fromRoomPlayerContract(
   player: RoomPlayerContract,
 ): RoomPlayer {
+  const normalized = normalizePlayerIdentity(player);
   return {
-    socketId: player.socketId,
-    playerId: player.playerId,
-    name: player.name,
-    userId: player.userId,
-    isAuthenticated: player.isAuthenticated,
-    team: player.team,
-    hand: [...player.hand],
-    isHost: player.isHost,
-    isPasser: player.isPasser,
-    isCOM: player.isCOM,
-    hasBroken: player.hasBroken ?? false,
-    hasRequiredBroken: player.hasRequiredBroken ?? false,
-    isReady: player.isReady,
-    joinedAt: new Date(player.joinedAt),
+    socketId: normalized.socketId,
+    seatId: normalized.seatId,
+    playerId: normalized.playerId,
+    name: normalized.name,
+    userId: normalized.userId,
+    isAuthenticated: normalized.isAuthenticated,
+    team: normalized.team,
+    hand: [...normalized.hand],
+    isHost: normalized.isHost,
+    isPasser: normalized.isPasser,
+    isCOM: normalized.isCOM,
+    hasBroken: normalized.hasBroken ?? false,
+    hasRequiredBroken: normalized.hasRequiredBroken ?? false,
+    isReady: normalized.isReady,
+    joinedAt: new Date(normalized.joinedAt),
   };
 }
 
 export function fromRoomContract(room: RoomContract): Room {
+  const normalized = normalizeRoomIdentity(room);
   return {
-    id: room.id,
-    name: room.name,
-    hostId: room.hostId,
-    status: toRoomStatus(room.status),
-    players: room.players.map(fromRoomPlayerContract),
+    id: normalized.id,
+    name: normalized.name,
+    hostSeatId: normalized.hostSeatId!,
+    hostId: normalized.hostId,
+    status: toRoomStatus(normalized.status),
+    players: normalized.players.map(fromRoomPlayerContract),
     settings: {
-      ...room.settings,
-      password: room.settings.password ?? null,
+      ...normalized.settings,
+      password: normalized.settings.password ?? null,
     },
-    createdAt: new Date(room.createdAt),
-    updatedAt: new Date(room.updatedAt),
-    lastActivityAt: new Date(room.lastActivityAt),
+    createdAt: new Date(normalized.createdAt),
+    updatedAt: new Date(normalized.updatedAt),
+    lastActivityAt: new Date(normalized.lastActivityAt),
   };
 }
 

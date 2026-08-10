@@ -14,6 +14,7 @@ import {
 } from './helpers/player-resolution.helper';
 import { DomainPlayer, Team } from '../types/game.types';
 import { RoomMembershipService } from '../services/room-membership.service';
+import { asSeatId, type SeatId } from '../types/identity.types';
 
 export type ReconnectionResult =
   | {
@@ -22,6 +23,8 @@ export type ReconnectionResult =
       roomsList: Awaited<ReturnType<IRoomService['listRooms']>>;
       mode: 'waiting-room';
       room: NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
+      selfSeatId: SeatId;
+      /** @deprecated Use selfSeatId. */
       selfPlayerId: string;
       selfName: string;
       selfTeam: Team;
@@ -35,7 +38,11 @@ export type ReconnectionResult =
       room: NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
       gameState: GameStatePayload;
       reconnectToken: string;
+      currentTurnSeatId: SeatId | null;
+      /** @deprecated Use currentTurnSeatId. */
       currentTurnPlayerId: string | null;
+      selfSeatId: SeatId;
+      /** @deprecated Use selfSeatId. */
       selfPlayerId: string;
     }
   | {
@@ -52,7 +59,12 @@ type ActiveGameReconnection = Extract<
 
 export type ActiveGameSnapshot = Pick<
   ActiveGameReconnection,
-  'gameState' | 'reconnectToken' | 'currentTurnPlayerId' | 'selfPlayerId'
+  | 'gameState'
+  | 'reconnectToken'
+  | 'currentTurnSeatId'
+  | 'currentTurnPlayerId'
+  | 'selfSeatId'
+  | 'selfPlayerId'
 >;
 
 type ActiveRoom = NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
@@ -181,6 +193,7 @@ export class ReconnectionUseCase {
           roomId,
           roomsList: await this.roomService.listRooms(),
           room: updatedRoom,
+          selfSeatId: asSeatId(existingWaitingPlayer.playerId),
           selfPlayerId: existingWaitingPlayer.playerId,
           selfName: existingWaitingPlayer.name,
           selfTeam: existingWaitingPlayer.team,
@@ -354,8 +367,12 @@ export class ReconnectionUseCase {
           : null;
 
     return {
+      selfSeatId: asSeatId(player.playerId),
       selfPlayerId: player.playerId,
       reconnectToken: player.playerId,
+      currentTurnSeatId: currentTurnPlayerId
+        ? asSeatId(currentTurnPlayerId)
+        : null,
       currentTurnPlayerId,
       gameState: {
         players: resolveTransportPlayers(roomGameState, state.players, {
@@ -367,20 +384,30 @@ export class ReconnectionUseCase {
         }),
         gamePhase: state.gamePhase || 'waiting',
         currentField: state.playState?.currentField ?? null,
+        currentTurnSeatId: currentTurnPlayerId
+          ? asSeatId(currentTurnPlayerId)
+          : null,
         currentTurn: currentTurnPlayerId,
         blowState: state.blowState,
         teamScores: state.teamScores,
+        youSeatId: asSeatId(player.playerId),
         you: player.playerId,
         negriCard: state.playState?.negriCard ?? null,
+        negriSeatId: state.playState?.negriSeatId ?? null,
+        negriPlayerId:
+          state.playState?.negriSeatId ??
+          state.playState?.negriPlayerId ??
+          null,
         revealedAgari:
           state.gamePhase === 'play' &&
           !state.playState?.negriCard &&
           state.blowState.currentHighestDeclaration?.playerId ===
-          player.playerId
+            player.playerId
             ? (state.agari ?? null)
             : null,
         fields: state.playState?.fields ?? [],
         roomId,
+        hostSeatId: asSeatId(room.hostId),
         hostId: room.hostId,
         pointsToWin: state.pointsToWin,
         teamNames: room.settings.teamNames,

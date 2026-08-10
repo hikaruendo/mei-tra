@@ -5,6 +5,7 @@ import {
 } from './game.types';
 import { RoomPlayer } from './room.types';
 import { SessionUser } from './session.types';
+import { asSeatId, resolveSeatId } from './identity.types';
 
 export type PersistedGamePlayer = DomainPlayer & {
   id?: string;
@@ -30,6 +31,7 @@ export type TransportPlayer = DomainPlayer &
 export function toDomainPlayer(
   player: Pick<
     RoomPlayer | DomainPlayer,
+    | 'seatId'
     | 'playerId'
     | 'name'
     | 'hand'
@@ -40,8 +42,10 @@ export function toDomainPlayer(
     | 'hasRequiredBroken'
   >,
 ): DomainPlayer {
+  const seatId = resolveSeatId(player);
   return {
-    playerId: player.playerId,
+    seatId,
+    playerId: seatId,
     name: player.name,
     hand: [...player.hand],
     team: player.team,
@@ -137,8 +141,10 @@ export function toRuntimePlayer(
     return null;
   }
 
+  const seatId = player.seatId ?? asSeatId(player.playerId);
   return {
-    playerId: player.playerId,
+    seatId,
+    playerId: seatId,
     name: player.name,
     hand: Array.isArray(player.hand) ? [...player.hand] : [],
     team,
@@ -151,14 +157,24 @@ export function toRuntimePlayer(
 
 export function toRoomPlayer(params: {
   session: SessionUser;
-  gameplay: PlayerGameplayState & Pick<DomainPlayer, 'name' | 'playerId'>;
+  gameplay: PlayerGameplayState &
+    Pick<DomainPlayer, 'name' | 'playerId' | 'seatId'>;
+  participantKey?: string;
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;
 }): RoomPlayer {
+  const seatId =
+    params.session.seatId ??
+    (params.gameplay.seatId
+      ? params.gameplay.seatId
+      : asSeatId(params.gameplay.playerId));
   return {
     socketId: params.session.socketId,
-    playerId: params.session.playerId,
+    seatId,
+    playerId: seatId,
+    participantKey:
+      params.participantKey ?? params.session.userId ?? params.session.playerId,
     name: params.gameplay.name,
     userId: params.session.userId,
     isAuthenticated: params.session.isAuthenticated,

@@ -1,4 +1,5 @@
 import { GamePhase, TeamScores } from './game.types';
+import type { SeatId } from './identity.types';
 
 export const GAME_HISTORY_ACTION_TYPES = [
   'game_started',
@@ -20,6 +21,8 @@ export type GameHistoryActionType = (typeof GAME_HISTORY_ACTION_TYPES)[number];
 export interface GameHistoryContext {
   roundNumber: number;
   gamePhase: GamePhase;
+  currentTurnSeatId: SeatId | null;
+  /** @deprecated Use currentTurnSeatId. */
   currentTurnPlayerId: string | null;
   teamScores?: TeamScores;
 }
@@ -29,6 +32,9 @@ export interface GameHistoryEntry {
   roomId: string;
   gameStateId: string;
   actionType: GameHistoryActionType;
+  actorSeatId: SeatId | null;
+  actorKeySnapshot: string | null;
+  /** @deprecated Use actorSeatId. */
   playerId: string | null;
   actionData: Record<string, unknown>;
   timestamp: Date;
@@ -85,7 +91,11 @@ export interface GameHistoryReplayView {
 }
 
 export interface GameStartedReplayDetails {
+  firstBlowSeatId: SeatId | null;
+  startedBySeatId: SeatId | null;
+  /** @deprecated Use firstBlowSeatId. */
   firstBlowPlayerId: string | null;
+  /** @deprecated Use startedBySeatId. */
   startedByPlayerId: string | null;
   pointsToWin: number | null;
 }
@@ -96,11 +106,15 @@ export interface BlowDeclaredReplayDetails {
 }
 
 export interface BlowPassedReplayDetails {
+  lastPasserSeatId: SeatId | null;
+  /** @deprecated Use lastPasserSeatId. */
   lastPasser: string | null;
   actedCount: number | null;
 }
 
 export interface PlayPhaseStartedReplayDetails {
+  winnerSeatId: SeatId | null;
+  /** @deprecated Use winnerSeatId. */
   winnerPlayerId: string | null;
   currentTrump: string | null;
   revealBrokenRequired: boolean;
@@ -113,6 +127,8 @@ export interface CardPlayedReplayDetails {
 }
 
 export interface FieldCompletedReplayDetails {
+  winnerSeatId: SeatId | null;
+  /** @deprecated Use winnerSeatId. */
   winnerPlayerId: string | null;
   winnerTeam: number | null;
   cards: string[];
@@ -128,10 +144,14 @@ export interface RoundCancelledReplayDetails {
 }
 
 export interface RoundResetReplayDetails {
+  nextDealerSeatId: SeatId | null;
+  /** @deprecated Use nextDealerSeatId. */
   nextDealerId: string | null;
 }
 
 export interface BrokenHandRevealedReplayDetails {
+  nextSeatId: SeatId | null;
+  /** @deprecated Use nextSeatId. */
   nextPlayerId: string | null;
   nextBlowIndex: number | null;
 }
@@ -156,6 +176,8 @@ export type GameHistoryReplayDetailValue =
     }
   | {
       kind: 'player';
+      seatId: SeatId | null;
+      /** @deprecated Use seatId. */
       playerId: string | null;
       playerName: string | null;
     }
@@ -194,6 +216,8 @@ type GameHistoryReplayEventBase<
   timestamp: Date;
   actionType: TAction;
   kind: TKind;
+  actorSeatId: SeatId | null;
+  /** @deprecated Use actorSeatId. */
   playerId: string | null;
   roundNumber: number | null;
   gamePhase: GamePhase | null;
@@ -254,6 +278,9 @@ export interface CreateGameHistoryEntry {
   roomId: string;
   gameStateId?: string;
   actionType: GameHistoryActionType;
+  actorSeatId?: SeatId | null;
+  actorKeySnapshot?: string | null;
+  /** @deprecated Use actorSeatId. */
   playerId?: string | null;
   actionData?: Record<string, unknown>;
 }

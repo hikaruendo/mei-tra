@@ -26,6 +26,7 @@ export function BlowSpectatorPanel({
     ? blowActionHistory
     : blowDeclarations.map((declaration) => ({
       type: 'declare' as const,
+      seatId: declaration.seatId,
       playerId: declaration.playerId,
       trumpType: declaration.trumpType,
       numberOfPairs: declaration.numberOfPairs,

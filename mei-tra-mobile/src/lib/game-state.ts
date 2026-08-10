@@ -7,6 +7,13 @@ import type {
   TransportTeamScores,
 } from '@meitra/contracts/game';
 import type { RoomContract } from '@meitra/contracts/room';
+import {
+  normalizeCompletedFieldIdentity,
+  normalizeGameStateIdentity,
+  normalizePlayerIdentities,
+  normalizeRoomIdentity,
+  resolveSeatAlias,
+} from '@meitra/game-client/identity';
 
 import type { MobileGameSnapshot } from '@/types/game';
 
@@ -29,11 +36,13 @@ export const mergePlayersByIdentity = (
   previous: PlayerContract[],
   next: PlayerContract[],
 ): PlayerContract[] => {
+  const normalizedPrevious = normalizePlayerIdentities(previous);
+  const normalizedNext = normalizePlayerIdentities(next);
   const previousByPlayerId = new Map(
-    previous.map((player) => [player.playerId, player]),
+    normalizedPrevious.map((player) => [player.playerId, player]),
   );
 
-  return next.map((player) => {
+  return normalizedNext.map((player) => {
     const oldPlayer = previousByPlayerId.get(player.playerId);
     if (!oldPlayer || player.isCOM) {
       return player;
@@ -53,7 +62,7 @@ export const dedupeCompletedFields = (
   fields: CompletedFieldContract[],
 ): CompletedFieldContract[] => {
   const seen = new Set<string>();
-  return fields.filter((field) => {
+  return fields.map(normalizeCompletedFieldIdentity).filter((field) => {
     const key = [
       field.dealerId,
       field.winnerId,
@@ -71,34 +80,36 @@ export const resolvePlayerId = (
   room: RoomContract | null,
   authenticatedUserId?: string | null,
 ): string | null => {
-  if (game?.you) return game.you;
+  if (game?.youSeatId ?? game?.you) return game?.youSeatId ?? game?.you ?? null;
   if (!authenticatedUserId) return null;
 
-  return (
-    room?.players.find((player) => player.userId === authenticatedUserId)
-      ?.playerId ?? null
-  );
+  if (!room) return null;
+  const normalizedRoom = normalizeRoomIdentity(room);
+  return normalizedRoom.players.find(
+    (player) => player.userId === authenticatedUserId,
+  )?.seatId ?? null;
 };
 
 export const normalizeGameStatePayload = (
   payload: GameStatePayload,
-): MobileGameSnapshot => ({
-  ...payload,
-  isSpectator: Boolean(payload.isSpectator),
-  negriPlayerId: null,
-  revealedAgari: payload.revealedAgari ?? null,
-  hostId: payload.hostId ?? null,
-  paused: false,
-  fields: dedupeCompletedFields(payload.fields),
-  disconnectedPlayerIds: extractDisconnectedPlayerIds(payload.players),
-  idlePlayerIds: [],
-  teamNames: payload.teamNames,
-});
+): MobileGameSnapshot => {
+  const normalized = normalizeGameStateIdentity(payload);
+  return {
+    ...normalized,
+    isSpectator: Boolean(payload.isSpectator),
+    revealedAgari: payload.revealedAgari ?? null,
+    paused: false,
+    fields: dedupeCompletedFields(normalized.fields),
+    disconnectedPlayerIds: extractDisconnectedPlayerIds(normalized.players),
+    idlePlayerIds: [],
+    teamNames: payload.teamNames,
+  };
+};
 
 export const extractDisconnectedPlayerIds = (
   players: PlayerContract[],
 ): string[] =>
-  players
+  normalizePlayerIdentities(players)
     .filter((p) => !p.isCOM && !p.socketId)
     .map((p) => p.playerId);
 
@@ -106,27 +117,36 @@ export const createStartedGameSnapshot = (
   payload: GameStartedPayload,
   currentPlayerId: string | null,
   hostId: string | null,
-): MobileGameSnapshot => ({
+): MobileGameSnapshot => {
+  const players = normalizePlayerIdentities(payload.players);
+  const youSeatId = resolveSeatAlias(undefined, currentPlayerId);
+  const hostSeatId = resolveSeatAlias(undefined, hostId);
+  return {
   roomId: payload.roomId,
-  players: payload.players,
+  players,
   gamePhase: 'blow',
   currentField: null,
+  currentTurnSeatId: null,
   currentTurn: null,
   blowState: createEmptyBlowState(),
   teamScores: createEmptyScores(),
-  you: currentPlayerId,
+  youSeatId,
+  you: youSeatId,
   isSpectator: false,
   negriCard: null,
+  negriSeatId: null,
   negriPlayerId: null,
   revealedAgari: null,
   fields: [],
-  hostId,
+  hostSeatId,
+  hostId: hostSeatId,
   pointsToWin: payload.pointsToWin,
   paused: false,
   disconnectedPlayerIds: [],
   idlePlayerIds: [],
   teamNames: payload.teamNames,
-});
+  };
+};
 
 export const inferNextTurnAfterCardPlayed = (
   players: PlayerContract[],

@@ -11,6 +11,7 @@ import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
 import { getSeatOrderWithSelfBottom } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
+import { asSeatId } from '@contracts/ids';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -120,6 +121,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   // During waiting, fill undefined slots with COM placeholders
   const createCOMSlot = (idx: number): Player => ({
     socketId: `com-${idx}`,
+    seatId: asSeatId(`com-${idx}`),
     playerId: `com-${idx}`,
     name: 'COM',
     team: (idx % 2) as Player['team'],

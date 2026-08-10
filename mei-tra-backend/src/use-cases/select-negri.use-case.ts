@@ -11,6 +11,7 @@ import {
   buildPlayerSyncEvents,
   resolvePlayerByActorId,
 } from './helpers/player-resolution.helper';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {
@@ -48,11 +49,15 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         currentField: {
           cards: [],
           playedBy: [],
+          playedBySeatIds: [],
           baseCard: '',
+          dealerSeatId: asSeatId(player.playerId),
           dealerId: player.playerId,
           isComplete: false,
         },
         negriCard: card,
+        negriSeatId: asSeatId(player.playerId),
+        negriPlayerId: player.playerId,
         neguri: {},
         fields: [],
         lastWinnerId: null,
@@ -84,6 +89,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
 
       state.currentPlayerIndex = winnerIndex;
       state.currentPlayerId = winner.playerId;
+      state.currentSeatId = asSeatId(winner.playerId);
       const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
@@ -96,6 +102,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           event: 'play-setup-complete',
           payload: {
             negriCard: card,
+            startingSeatId: asSeatId(state.players[winnerIndex].playerId),
             startingPlayer: state.players[winnerIndex].playerId,
           },
         },

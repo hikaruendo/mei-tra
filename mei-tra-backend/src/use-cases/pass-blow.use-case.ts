@@ -30,6 +30,7 @@ import {
   hasPlayerDeclaredInBlow,
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class PassBlowUseCase implements IPassBlowUseCase {
@@ -93,18 +94,22 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       player.isPasser = true;
       state.blowState.actionHistory.push({
         type: 'pass',
+        seatId: asSeatId(player.playerId),
         playerId: player.playerId,
         timestamp: Date.now(),
       });
+      state.blowState.lastPasserSeatId = asSeatId(player.playerId);
       state.blowState.lastPasser = player.playerId;
 
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'blow_passed',
+        actorSeatId: asSeatId(player.playerId),
         playerId: player.playerId,
         state,
         actionData: {
           declarationsCount: state.blowState.declarations.length,
+          lastPasserSeatId: state.blowState.lastPasserSeatId,
           lastPasser: state.blowState.lastPasser,
           actedCount: countPlayersActedInBlow(state.players, state.blowState),
         },
@@ -219,6 +224,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
   ): Promise<{ events: GatewayEvent[] }> {
     state.players.forEach((p) => (p.isPasser = false));
     state.blowState.lastPasser = null;
+    state.blowState.lastPasserSeatId = null;
     state.blowState.declarations = [];
     state.blowState.actionHistory = [];
     state.blowState.currentHighestDeclaration = null;
@@ -236,16 +242,19 @@ export class PassBlowUseCase implements IPassBlowUseCase {
 
     state.currentPlayerIndex = firstBlowIndex;
     state.currentPlayerId = firstBlowPlayer.playerId;
+    state.currentSeatId = asSeatId(firstBlowPlayer.playerId);
     state.deck = this.cardService.generateDeck();
     await roomGameState.dealCards();
 
     await this.gameEventLogService?.log({
       roomId,
       actionType: 'round_cancelled',
+      actorSeatId: null,
       playerId: null,
       state,
       actionData: {
         reason: 'no_declarations',
+        nextDealerSeatId: firstBlowPlayer.playerId,
         nextDealerPlayerId: firstBlowPlayer.playerId,
         nextBlowIndex: firstBlowIndex,
       },
@@ -263,6 +272,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       },
     );
     const roundCancelledPayload: RoundCancelledPayload = {
+      nextDealerSeatId: asSeatId(firstBlowPlayer.playerId),
       nextDealer: firstBlowPlayer.playerId,
       players: resolveTransportPlayers(roomGameState, state.players),
     };

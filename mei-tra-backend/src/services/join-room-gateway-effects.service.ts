@@ -3,6 +3,7 @@ import type {
   GamePlayerJoinedPayload,
   RoomPlayerJoinedPayload,
 } from '@contracts/room';
+import type { SeatId } from '@contracts/ids';
 import { Inject, Injectable } from '@nestjs/common';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import {
@@ -15,6 +16,7 @@ import { SessionUser } from '../types/session.types';
 import { RoomPlayer, RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
+import { asSeatId } from '../types/identity.types';
 
 interface BuildJoinRoomEffectsParams {
   clientId: string;
@@ -34,6 +36,7 @@ interface BuildRoomEntryEventsParams {
   clientId: string;
   room: JoinRoomSuccess['room'];
   selfPlayer: {
+    seatId: SeatId;
     playerId: string;
     name: string;
     team: Team;
@@ -78,6 +81,9 @@ export class JoinRoomGatewayEffectsService {
         roomId: currentRoomId,
         event: 'player-left',
         payload: {
+          seatId: asSeatId(
+            previousRoomNotification?.playerId ?? normalizedUser.playerId,
+          ),
           playerId:
             previousRoomNotification?.playerId ?? normalizedUser.playerId,
           roomId: currentRoomId,
@@ -88,6 +94,7 @@ export class JoinRoomGatewayEffectsService {
     const joiningTeam = selfRoomPlayer?.team;
 
     const roomPlayerJoinedPayload: RoomPlayerJoinedPayload = {
+      seatId: asSeatId(selfPlayerId),
       playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
@@ -101,6 +108,7 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const selfJoinedPayload: GamePlayerJoinedPayload = {
+      seatId: asSeatId(selfPlayerId),
       playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
@@ -117,6 +125,7 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const otherJoinedPayload: GamePlayerJoinedPayload = {
+      seatId: asSeatId(selfPlayerId),
       playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
@@ -139,6 +148,7 @@ export class JoinRoomGatewayEffectsService {
         }
 
         const existingPlayerJoinedPayload: GamePlayerJoinedPayload = {
+          seatId: asSeatId(existingPlayer.playerId),
           playerId: existingPlayer.playerId,
           roomId,
           isHost: existingPlayer.isHost,
@@ -196,6 +206,9 @@ export class JoinRoomGatewayEffectsService {
       );
       const maskedGameStateForJoiner: GameStatePayload = {
         ...joinData.resumeGame.gameState,
+        currentTurnSeatId: joinData.resumeGame.gameState.currentTurn
+          ? asSeatId(joinData.resumeGame.gameState.currentTurn)
+          : null,
         currentField: joinData.resumeGame.gameState.currentField ?? null,
         negriCard: joinData.resumeGame.gameState.negriCard ?? null,
         fields: joinData.resumeGame.gameState.fields ?? [],
@@ -209,7 +222,9 @@ export class JoinRoomGatewayEffectsService {
           ...player,
           hand: player.playerId === resumeSelfPlayerId ? player.hand : [],
         })),
+        youSeatId: resumeSelfPlayerId ? asSeatId(resumeSelfPlayerId) : null,
         you: resumeSelfPlayerId,
+        hostSeatId: asSeatId(room.hostId),
         hostId: room.hostId,
       };
 
@@ -325,6 +340,7 @@ export class JoinRoomGatewayEffectsService {
       socketId: clientId,
       event: 'game-player-joined',
       payload: {
+        seatId: selfPlayer.seatId,
         playerId: selfPlayer.playerId,
         roomId: room.id,
         isHost,

@@ -1,5 +1,6 @@
 import type { UpdatePhasePayload } from '@contracts/game';
 import { DomainPlayer } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface StartGameRequest {
   playerId: string;
@@ -10,6 +11,8 @@ export interface StartGameSuccessData {
   players: DomainPlayer[];
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
+  currentTurnSeatId: SeatId;
+  /** @deprecated Use currentTurnSeatId. */
   currentTurnPlayerId: string;
 }
 

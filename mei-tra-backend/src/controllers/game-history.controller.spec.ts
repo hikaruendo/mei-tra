@@ -183,8 +183,12 @@ describe('GameHistoryController', () => {
               actionType: 'game_started' as const,
               playerId: 'player-1',
               actionData: {
-                startingHandsByPlayerId: {
+                startingHandsBySeatId: {
                   'player-1': ['S-A', 'H-9'],
+                  'player-2': ['D-5'],
+                },
+                startingHandsByPlayerId: {
+                  'player-1': ['C-2'],
                   'player-2': ['D-5'],
                 },
               },
@@ -208,8 +212,12 @@ describe('GameHistoryController', () => {
               },
               detailItems: [],
               actionData: {
-                startingHandsByPlayerId: {
+                startingHandsBySeatId: {
                   'player-1': ['S-A', 'H-9'],
+                  'player-2': ['D-5'],
+                },
+                startingHandsByPlayerId: {
+                  'player-1': ['C-2'],
                   'player-2': ['D-5'],
                 },
               },

@@ -6,6 +6,7 @@ import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 import { RoomMembershipService } from './room-membership.service';
 import { ActiveRoomMembership } from '../types/room-membership.types';
+import { asSeatId } from '../types/identity.types';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 
@@ -133,6 +134,14 @@ export class DisconnectGatewayEffectsService {
     if (membership && !timeoutMembership) {
       return [];
     }
+    const timeoutMembershipMutation = timeoutMembership
+      ? {
+          type: 'complete-disconnect-timeout' as const,
+          userId: timeoutMembership.userId,
+          expectedVersion: timeoutMembership.membershipVersion,
+          transitionId: timeoutMembership.transitionId,
+        }
+      : undefined;
 
     let succeeded = false;
     try {
@@ -144,6 +153,7 @@ export class DisconnectGatewayEffectsService {
 
         succeeded = await this.roomService.leaveRoom(roomId, playerId, {
           releaseMembership: false,
+          membershipMutation: timeoutMembershipMutation,
         });
         if (!succeeded) {
           return [];
@@ -182,6 +192,7 @@ export class DisconnectGatewayEffectsService {
       succeeded = await this.roomService.convertPlayerToCOM(roomId, playerId, {
         requireDisconnected: true,
         releaseMembership: false,
+        membershipMutation: timeoutMembershipMutation,
       });
       if (!succeeded) {
         return [];
@@ -206,6 +217,7 @@ export class DisconnectGatewayEffectsService {
           roomId,
           event: 'player-converted-to-com',
           payload: {
+            seatId: asSeatId(playerId),
             playerId,
             playerName,
             message: 'Player disconnected for too long - converted to COM',
@@ -220,6 +232,7 @@ export class DisconnectGatewayEffectsService {
             declarations: blowState.declarations,
             actionHistory: blowState.actionHistory,
             currentHighest: blowState.currentHighestDeclaration,
+            lastPasserSeatId: blowState.lastPasserSeatId,
             lastPasser: blowState.lastPasser,
           },
         },
@@ -229,10 +242,10 @@ export class DisconnectGatewayEffectsService {
         }),
       ];
     } finally {
-      if (timeoutMembership) {
+      if (timeoutMembership && !succeeded) {
         await this.roomMembershipService.finishDisconnectTimeout(
           timeoutMembership,
-          succeeded,
+          false,
         );
       }
     }
@@ -356,6 +369,7 @@ export class DisconnectGatewayEffectsService {
         roomId,
         event: 'player-left',
         payload: {
+          seatId: asSeatId(player.playerId),
           playerId: player.playerId,
           roomId,
         },
@@ -365,6 +379,7 @@ export class DisconnectGatewayEffectsService {
         roomId,
         event: 'player-disconnected',
         payload: {
+          seatId: asSeatId(player.playerId),
           playerId: player.playerId,
           playerName,
           roomId,

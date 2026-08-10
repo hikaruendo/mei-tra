@@ -25,6 +25,15 @@ import {
   useRef,
 } from 'react';
 import { AppState } from 'react-native';
+import {
+  normalizeBlowActionIdentity,
+  normalizeBlowDeclarationIdentity,
+  normalizeCompletedFieldIdentity,
+  normalizeFieldIdentity,
+  normalizePlayerIdentities,
+  normalizeRoomIdentity,
+  resolveSeatAlias,
+} from '@meitra/game-client/identity';
 
 import { useAuth } from '@/context/AuthContext';
 import { config } from '@/lib/config';
@@ -102,38 +111,42 @@ function reducer(state: MobileState, action: Action): MobileState {
   switch (action.type) {
     case 'connection':
       return { ...state, connectionStatus: action.status };
-    case 'rooms':
+    case 'rooms': {
+      const rooms = action.rooms.map(normalizeRoomIdentity);
       return {
         ...state,
-        rooms: action.rooms,
+        rooms,
         currentRoom: state.currentRoom
-          ? action.rooms.find((room) => room.id === state.currentRoom?.id) ??
+          ? rooms.find((room) => room.id === state.currentRoom?.id) ??
             state.currentRoom
           : null,
       };
-    case 'room':
+    }
+    case 'room': {
+      const room = action.room ? normalizeRoomIdentity(action.room) : null;
       return {
         ...state,
-        currentRoom: action.room,
-        rooms: action.room
+        currentRoom: room,
+        rooms: room
           ? [
-              ...state.rooms.filter((room) => room.id !== action.room?.id),
-              action.room,
+              ...state.rooms.filter((item) => item.id !== room.id),
+              room,
             ]
           : state.rooms,
       };
-    case 'roomUpdated':
+    }
+    case 'roomUpdated': {
+      const room = normalizeRoomIdentity(action.room);
       return {
         ...state,
         rooms: [
-          ...state.rooms.filter((room) => room.id !== action.room.id),
-          action.room,
+          ...state.rooms.filter((item) => item.id !== room.id),
+          room,
         ],
         currentRoom:
-          state.currentRoom?.id === action.room.id
-            ? action.room
-            : state.currentRoom,
+          state.currentRoom?.id === room.id ? room : state.currentRoom,
       };
+    }
     case 'game':
       return {
         ...state,
@@ -156,12 +169,13 @@ function reducer(state: MobileState, action: Action): MobileState {
         },
       };
     case 'players': {
+      const players = normalizePlayerIdentities(action.players);
       const gamePlayers = state.game
-        ? mergePlayersByIdentity(state.game.players, action.players)
-        : action.players;
+        ? mergePlayersByIdentity(state.game.players, players)
+        : players;
       const roomPlayers = state.currentRoom
         ? state.currentRoom.players.map((roomPlayer) => {
-            const updated = action.players.find(
+            const updated = players.find(
               (player) => player.playerId === roomPlayer.playerId,
             );
             return updated ? { ...roomPlayer, ...updated } : roomPlayer;
@@ -595,7 +609,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       finishResyncFlight(payload.roomId);
     });
     socket.on('reconnect-token', (playerId) => {
-      dispatch({ type: 'patchGame', patch: { you: playerId } });
+      const youSeatId = resolveSeatAlias(undefined, playerId);
+      dispatch({
+        type: 'patchGame',
+        patch: { youSeatId, you: youSeatId },
+      });
     });
     socket.on('game-started', (payload) => {
       const currentPlayerId = resolvePlayerId(
@@ -608,7 +626,9 @@ export function GameProvider({ children }: PropsWithChildren) {
         game: createStartedGameSnapshot(
           payload,
           currentPlayerId,
-          stateRef.current.currentRoom?.hostId ?? null,
+          stateRef.current.currentRoom?.hostSeatId ??
+            stateRef.current.currentRoom?.hostId ??
+            null,
         ),
       });
       void roomStorage.set(payload.roomId);
@@ -635,17 +655,32 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
     });
     socket.on('update-turn', (playerId) => {
-      dispatch({ type: 'patchGame', patch: { currentTurn: playerId } });
+      const currentTurnSeatId = resolveSeatAlias(undefined, playerId);
+      dispatch({
+        type: 'patchGame',
+        patch: {
+          currentTurnSeatId,
+          currentTurn: currentTurnSeatId,
+        },
+      });
       const roomId = stateRef.current.game?.roomId;
       if (shouldAckTurn(stateRef.current.game, roomId)) {
         socket.emit('turn-ack', { roomId });
       }
     });
-    socket.on('blow-started', ({ startingPlayer, players }) => {
+    socket.on('blow-started', ({ startingSeatId, startingPlayer, players }) => {
+      const currentTurnSeatId = resolveSeatAlias(
+        startingSeatId,
+        startingPlayer,
+      );
       dispatch({ type: 'players', players });
       dispatch({
         type: 'patchGame',
-        patch: { gamePhase: 'blow', currentTurn: startingPlayer },
+        patch: {
+          gamePhase: 'blow',
+          currentTurnSeatId,
+          currentTurn: currentTurnSeatId,
+        },
       });
     });
     socket.on(
@@ -662,24 +697,31 @@ export function GameProvider({ children }: PropsWithChildren) {
           patch: {
             blowState: {
               ...current,
-              declarations,
-              actionHistory: actionHistory ?? [],
-              currentHighestDeclaration: currentHighest,
+              declarations: declarations.map(normalizeBlowDeclarationIdentity),
+              actionHistory: (actionHistory ?? []).map(
+                normalizeBlowActionIdentity,
+              ),
+              currentHighestDeclaration: currentHighest
+                ? normalizeBlowDeclarationIdentity(currentHighest)
+                : null,
             },
           },
         });
       },
     );
-    socket.on('broken', ({ nextPlayerId, players, gamePhase }) => {
+    socket.on('broken', ({ nextSeatId, nextPlayerId, players, gamePhase }) => {
+      const currentTurnSeatId = resolveSeatAlias(nextSeatId, nextPlayerId);
       dispatch({ type: 'players', players });
       dispatch({
         type: 'patchGame',
         patch: {
-          currentTurn: nextPlayerId,
+          currentTurnSeatId,
+          currentTurn: currentTurnSeatId,
           gamePhase: gamePhase ?? 'blow',
           currentField: null,
           blowState: createEmptyBlowState(),
           negriCard: null,
+          negriSeatId: null,
           negriPlayerId: null,
           revealedAgari: null,
           fields: [],
@@ -690,6 +732,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on(
       'round-cancelled',
       ({
+        nextDealerSeatId,
         nextDealer,
         players,
         currentTrump,
@@ -697,24 +740,37 @@ export function GameProvider({ children }: PropsWithChildren) {
         blowDeclarations,
         actionHistory,
       }) => {
+        const currentTurnSeatId = resolveSeatAlias(
+          nextDealerSeatId,
+          nextDealer,
+        );
         dispatch({ type: 'players', players });
         dispatch({
           type: 'patchGame',
           patch: {
             gamePhase: 'blow',
-            currentTurn: nextDealer,
+            currentTurnSeatId,
+            currentTurn: currentTurnSeatId,
             currentField: null,
             negriCard: null,
+            negriSeatId: null,
             negriPlayerId: null,
             revealedAgari: null,
             fields: [],
             blowState: {
               ...createEmptyBlowState(),
               currentTrump: currentTrump ?? null,
-              currentHighestDeclaration:
-                currentHighestDeclaration ?? null,
-              declarations: blowDeclarations ?? [],
-              actionHistory: actionHistory ?? [],
+              currentHighestDeclaration: currentHighestDeclaration
+                ? normalizeBlowDeclarationIdentity(
+                    currentHighestDeclaration,
+                  )
+                : null,
+              declarations: (blowDeclarations ?? []).map(
+                normalizeBlowDeclarationIdentity,
+              ),
+              actionHistory: (actionHistory ?? []).map(
+                normalizeBlowActionIdentity,
+              ),
             },
           },
         });
@@ -729,8 +785,13 @@ export function GameProvider({ children }: PropsWithChildren) {
       'play-setup-complete',
       ({
         negriCard,
+        startingSeatId,
         startingPlayer,
       }) => {
+        const resolvedStartingSeatId = resolveSeatAlias(
+          startingSeatId,
+          startingPlayer,
+        );
         const game = stateRef.current.game;
         const players = game
           ? game.players.map((player) =>
@@ -747,48 +808,68 @@ export function GameProvider({ children }: PropsWithChildren) {
           type: 'patchGame',
           patch: {
             negriCard,
-            negriPlayerId: startingPlayer,
+            negriSeatId: resolvedStartingSeatId,
+            negriPlayerId: resolvedStartingSeatId,
             revealedAgari: null,
-            currentTurn: startingPlayer,
+            currentTurnSeatId: resolvedStartingSeatId,
+            currentTurn: resolvedStartingSeatId,
           },
         });
       },
     );
-    socket.on('card-played', ({ field, players, nextPlayerId }) => {
+    socket.on('card-played', ({ field, players, nextSeatId, nextPlayerId }) => {
+      const normalizedField = normalizeFieldIdentity(field);
       dispatch({ type: 'players', players });
       const resolvedNextPlayerId =
-        nextPlayerId ??
+        resolveSeatAlias(nextSeatId, nextPlayerId) ??
         inferNextTurnAfterCardPlayed(
           stateRef.current.game?.players ?? players,
-          field,
+          normalizedField,
         );
       dispatch({
         type: 'patchGame',
         patch: {
-          currentField: field,
-          ...(resolvedNextPlayerId ? { currentTurn: resolvedNextPlayerId } : {}),
+          currentField: normalizedField,
+          ...(resolvedNextPlayerId
+            ? {
+                currentTurnSeatId: resolveSeatAlias(
+                  undefined,
+                  resolvedNextPlayerId,
+                ),
+                currentTurn: resolvedNextPlayerId,
+              }
+            : {}),
         },
       });
     });
     socket.on('field-updated', (field) => {
-      dispatch({ type: 'patchGame', patch: { currentField: field } });
+      dispatch({
+        type: 'patchGame',
+        patch: { currentField: normalizeFieldIdentity(field) },
+      });
     });
     socket.on(
       'field-complete',
-      ({ field, nextPlayerId }) => {
+      ({ field, nextSeatId, nextPlayerId }) => {
+        const normalizedField = normalizeCompletedFieldIdentity(field);
+        const nextTurnSeatId = resolveSeatAlias(nextSeatId, nextPlayerId)!;
         const fields = dedupeCompletedFields([
           ...(stateRef.current.game?.fields ?? []),
-          field,
+          normalizedField,
         ]);
         dispatch({
           type: 'patchGame',
           patch: {
             fields,
+            currentTurnSeatId: nextTurnSeatId,
+            currentTurn: nextTurnSeatId,
             currentField: {
               cards: [],
               playedBy: [],
+              playedBySeatIds: [],
               baseCard: '',
-              dealerId: nextPlayerId,
+              dealerSeatId: nextTurnSeatId,
+              dealerId: nextTurnSeatId,
               isComplete: false,
             },
           },
@@ -799,23 +880,40 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'patchGame', patch: { teamScores: scores } });
     });
     socket.on('new-round-started', (payload) => {
+      const currentTurnSeatId = resolveSeatAlias(
+        payload.currentTurnSeatId,
+        payload.currentTurn,
+      );
+      const negriSeatId = resolveSeatAlias(
+        payload.negriSeatId,
+        payload.negriPlayerId,
+      );
       dispatch({ type: 'players', players: payload.players });
       dispatch({
         type: 'patchGame',
         patch: {
-          currentTurn: payload.currentTurn,
+          currentTurnSeatId,
+          currentTurn: currentTurnSeatId,
           gamePhase: payload.gamePhase,
-          currentField: payload.currentField,
+          currentField: payload.currentField
+            ? normalizeFieldIdentity(payload.currentField)
+            : null,
           fields: dedupeCompletedFields(payload.completedFields),
           negriCard: payload.negriCard,
-          negriPlayerId: payload.negriPlayerId,
+          negriSeatId,
+          negriPlayerId: negriSeatId,
           revealedAgari: payload.revealedAgari,
           blowState: {
             ...createEmptyBlowState(),
             currentTrump: payload.currentTrump,
-            currentHighestDeclaration:
-              payload.currentHighestDeclaration,
-            declarations: payload.blowDeclarations,
+            currentHighestDeclaration: payload.currentHighestDeclaration
+              ? normalizeBlowDeclarationIdentity(
+                  payload.currentHighestDeclaration,
+                )
+              : null,
+            declarations: payload.blowDeclarations.map(
+              normalizeBlowDeclarationIdentity,
+            ),
           },
         },
       });
@@ -963,6 +1061,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     brokenRequestRef.current = key;
     socketRef.current?.emit('reveal-broken-hand', {
       roomId: game.roomId,
+      targetSeatId: resolveSeatAlias(undefined, game.you)!,
       playerId: game.you,
     });
   }, [canSendServerAction, state.connectionStatus, state.game]);
@@ -1207,6 +1306,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     emitOneWayAction('reveal-broken-hand', game.roomId, () => {
       socketRef.current?.emit('reveal-broken-hand', {
         roomId: game.roomId,
+        targetSeatId: resolveSeatAlias(undefined, playerId)!,
         playerId,
       });
     });
@@ -1220,6 +1320,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!roomId) return;
       const payload: ModeratePlayerPayload = {
         roomId,
+        targetSeatId: resolveSeatAlias(undefined, targetPlayerId)!,
         targetPlayerId,
         action: 'remove',
       };
@@ -1236,6 +1337,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!roomId) return;
       const payload: ModeratePlayerPayload = {
         roomId,
+        targetSeatId: resolveSeatAlias(undefined, targetPlayerId)!,
         targetPlayerId,
         action: 'replace-with-com',
       };

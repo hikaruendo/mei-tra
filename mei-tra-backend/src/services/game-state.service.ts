@@ -26,6 +26,8 @@ import {
   TransportPlayer,
 } from '../types/player-adapters';
 import { RoomPlayer } from '../types/room.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class GameStateService implements IGameStateService {
@@ -64,8 +66,10 @@ export class GameStateService implements IGameStateService {
   private initializeState(pointsToWin: number = 10): void {
     this.state = {
       version: 0,
+      identitySchemaVersion: 2,
       players: [],
       deck: [],
+      currentSeatId: null,
       currentPlayerId: null,
       currentPlayerIndex: 0,
       agari: undefined,
@@ -103,6 +107,8 @@ export class GameStateService implements IGameStateService {
     return {
       currentField: null,
       negriCard: null,
+      negriSeatId: null,
+      negriPlayerId: null,
       neguri: {},
       fields: [],
       lastWinnerId: null,
@@ -167,6 +173,13 @@ export class GameStateService implements IGameStateService {
       if (hadStaleCurrentPlayerId) {
         changed = true;
       }
+    }
+    const normalizedSeatId = normalizedPlayerId
+      ? asSeatId(normalizedPlayerId)
+      : null;
+    if (this.state.currentSeatId !== normalizedSeatId) {
+      this.state.currentSeatId = normalizedSeatId;
+      changed = true;
     }
 
     return changed;
@@ -281,6 +294,7 @@ export class GameStateService implements IGameStateService {
   async persistRoster(
     roomPlayers: RoomPlayer[],
     hostId?: string,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<void> {
     this.state = await this.enqueuePersistence(() =>
       this.stateManager.persistRoster(
@@ -288,6 +302,7 @@ export class GameStateService implements IGameStateService {
         roomPlayers,
         this.state,
         hostId,
+        membershipMutation,
       ),
     );
   }
@@ -391,10 +406,6 @@ export class GameStateService implements IGameStateService {
         (player) => player.playerId === sessionUser.playerId,
       ) ?? null
     );
-  }
-
-  removePlayer(playerId: string) {
-    this.connectionManager.removePlayer(this.state.players, playerId);
   }
 
   // プレイヤーの再接続トークンを登録
@@ -549,6 +560,9 @@ export class GameStateService implements IGameStateService {
     this.state.currentPlayerIndex = nextIndex;
     this.state.currentPlayerId =
       this.state.players[nextIndex]?.playerId ?? null;
+    this.state.currentSeatId = this.state.currentPlayerId
+      ? asSeatId(this.state.currentPlayerId)
+      : null;
 
     // Persist the turn change
     if (this.roomId) {
@@ -594,8 +608,10 @@ export class GameStateService implements IGameStateService {
 
     const completedField: CompletedField = {
       cards: [...field.cards],
+      winnerSeatId: asSeatId(winnerId),
       winnerId: winnerId,
       winnerTeam: winner.team,
+      dealerSeatId: asSeatId(field.dealerSeatId ?? field.dealerId),
       dealerId: field.dealerId,
     };
 
@@ -655,6 +671,7 @@ export class GameStateService implements IGameStateService {
     );
     if (playerIndex !== -1) {
       this.state.currentPlayerId = playerId;
+      this.state.currentSeatId = asSeatId(playerId);
       this.state.currentPlayerIndex = playerIndex;
       void this.enqueuePersistence(() =>
         this.stateManager.persistCurrentPlayerId(
@@ -708,11 +725,15 @@ export class GameStateService implements IGameStateService {
       currentField: {
         cards: [],
         playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
+        dealerSeatId: asSeatId(state.players[0].playerId),
         dealerId: state.players[0].playerId,
         isComplete: false,
       },
       negriCard: null,
+      negriSeatId: null,
+      negriPlayerId: null,
       neguri: {},
       fields: [],
       lastWinnerId: null,
@@ -723,6 +744,9 @@ export class GameStateService implements IGameStateService {
     // Randomize the first blow player
     const firstBlowIndex = Math.floor(Math.random() * state.players.length);
     state.currentPlayerId = state.players[firstBlowIndex]?.playerId ?? null;
+    state.currentSeatId = state.currentPlayerId
+      ? asSeatId(state.currentPlayerId)
+      : null;
     state.currentPlayerIndex = firstBlowIndex;
 
     // Initialize blow state

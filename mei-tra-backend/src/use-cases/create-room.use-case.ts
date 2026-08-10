@@ -62,14 +62,6 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       }
       creatingUserId = playerId;
 
-      const room = await this.roomService.createNewRoom(
-        roomName,
-        playerId,
-        pointsToWin,
-        teamAssignmentMethod,
-      );
-      createdRoomId = room.id;
-
       const hostUser: SessionUser = {
         socketId,
         playerId: authenticatedUser.id,
@@ -77,6 +69,14 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         userId: authenticatedUser.id,
         isAuthenticated: true,
       };
+
+      const room = await this.roomService.createNewRoom(
+        roomName,
+        hostUser,
+        pointsToWin,
+        teamAssignmentMethod,
+      );
+      createdRoomId = room.id;
 
       const joined = await this.roomService.joinRoom(room.id, hostUser);
       if (!joined) {
@@ -98,7 +98,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       }
 
       const hostPlayer = updatedRoom.players.find(
-        (player) => player.playerId === hostUser.playerId,
+        (player) => player.userId === authenticatedUser.id,
       );
       if (!hostPlayer) {
         await this.cleanupFailedCreation(room.id, playerId);

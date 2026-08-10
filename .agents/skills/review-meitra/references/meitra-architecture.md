@@ -58,7 +58,6 @@ socket handshake、auth、payload parse、room join/leave、UseCase呼び出し�
 - `GameStateManager`
 - `PlayerConnectionManager`
 - `SeatRestorationService`
-- `PlayerReferenceRemapperService`
 - `ComSessionService`
 - `ComAutoPlayService`
 - `ComAutoPlayRecoveryService`

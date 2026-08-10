@@ -21,6 +21,7 @@ import {
   GameHistorySummary,
 } from '../types/game-history.types';
 import { RoomPlayer } from '../types/room.types';
+import { resolveSeatId } from '../types/identity.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 
@@ -74,7 +75,7 @@ export class GameHistoryController {
       this.parseQuery(query),
       playerNames,
     );
-    return this.withViewerStartingHands(replay, participant.playerId);
+    return this.withViewerStartingHands(replay, resolveSeatId(participant));
   }
 
   @Get(':roomId')
@@ -93,7 +94,7 @@ export class GameHistoryController {
       this.parseQuery(query),
     );
     return history.map((entry) =>
-      this.withSanitizedActionData(entry, participant.playerId),
+      this.withSanitizedActionData(entry, resolveSeatId(participant)),
     );
   }
 
@@ -171,6 +172,7 @@ export class GameHistoryController {
     viewerPlayerId: string,
   ): Record<string, unknown> {
     const safeActionData = { ...actionData };
+    delete safeActionData.startingHandsBySeatId;
     delete safeActionData.startingHandsByPlayerId;
     const viewerStartingHand = this.extractViewerStartingHand(
       actionData,
@@ -186,7 +188,8 @@ export class GameHistoryController {
     actionData: Record<string, unknown>,
     viewerPlayerId: string,
   ): string[] | null {
-    const handsByPlayerId = actionData.startingHandsByPlayerId;
+    const handsByPlayerId =
+      actionData.startingHandsBySeatId ?? actionData.startingHandsByPlayerId;
     if (
       !handsByPlayerId ||
       typeof handsByPlayerId !== 'object' ||

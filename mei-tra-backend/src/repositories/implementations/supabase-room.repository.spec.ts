@@ -119,11 +119,11 @@ describe('SupabaseRoomRepository', () => {
     expect(rooms).toHaveLength(2);
     expect(rooms[0].id).toBe('room-2');
     expect(rooms[0].players.map((player) => player.playerId)).toEqual([
-      'player-3',
+      'room-2-player-3',
     ]);
     expect(rooms[1].players.map((player) => player.playerId)).toEqual([
-      'player-1',
-      'player-2',
+      'room-1-player-1',
+      'room-1-player-2',
     ]);
   });
 
@@ -182,84 +182,6 @@ describe('SupabaseRoomRepository', () => {
     expect(limitMock).toHaveBeenCalledWith(10);
     expect(rooms).toHaveLength(1);
     expect(rooms[0].status).toBe(RoomStatus.FINISHED);
-  });
-
-  it('returns false when the DB rejects adding a deleting user to room_players', async () => {
-    const existingSingle = jest.fn().mockResolvedValue({
-      data: null,
-      error: null,
-    });
-    const existingEqPlayerId = jest.fn().mockReturnValue({
-      single: existingSingle,
-    });
-    const existingEqRoomId = jest.fn().mockReturnValue({
-      eq: existingEqPlayerId,
-    });
-    const seatLimit = jest.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-    const seatOrder = jest.fn().mockReturnValue({
-      limit: seatLimit,
-    });
-    const seatEq = jest.fn().mockReturnValue({
-      order: seatOrder,
-    });
-    const select = jest.fn((columns: string) => {
-      if (columns === 'player_id') {
-        return { eq: existingEqRoomId };
-      }
-      if (columns === 'seat_index') {
-        return { eq: seatEq };
-      }
-
-      throw new Error(`Unexpected select: ${columns}`);
-    });
-    const insert = jest.fn().mockResolvedValue({
-      error: {
-        message: 'account_deletion_in_progress user=user-1',
-        code: 'PT403',
-      },
-    });
-    const from = jest.fn((table: string) => {
-      if (table === 'room_players') {
-        return { select, insert };
-      }
-
-      if (table === 'rooms') {
-        return {
-          update: jest.fn(),
-        };
-      }
-
-      throw new Error(`Unexpected table: ${table}`);
-    });
-    const repository = new SupabaseRoomRepository({
-      client: { from },
-    } as unknown as SupabaseService);
-
-    await expect(
-      repository.addPlayer('room-1', {
-        socketId: 'socket-1',
-        playerId: 'player-1',
-        userId: 'user-1',
-        name: 'User',
-        team: 0,
-        isReady: false,
-        isHost: false,
-        isCOM: false,
-        hand: [],
-        isPasser: false,
-        joinedAt: new Date('2026-04-01T00:00:00.000Z'),
-      }),
-    ).resolves.toBe(false);
-    expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        room_id: 'room-1',
-        player_id: 'player-1',
-        user_id: 'user-1',
-      }),
-    );
   });
 
   it('installs a room_players trigger so roster RPC writes cannot race account deletion', () => {

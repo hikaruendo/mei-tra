@@ -5,6 +5,7 @@ describe('RoomMembershipService', () => {
   const row = {
     user_id: 'user-1',
     room_id: 'room-1',
+    seat_id: '00000000-0000-0000-0000-000000000101',
     player_id: 'player-1',
     status: 'active' as const,
     membership_version: 4,
@@ -29,6 +30,7 @@ describe('RoomMembershipService', () => {
     jest.spyOn(service, 'get').mockResolvedValue({
       userId: 'user-1',
       roomId: null,
+      seatId: null,
       playerId: 'player-1',
       status: 'moving',
       membershipVersion: 1,
@@ -87,6 +89,7 @@ describe('RoomMembershipService', () => {
     jest.spyOn(service, 'get').mockResolvedValue({
       userId: 'user-1',
       roomId: 'room-1',
+      seatId: '00000000-0000-0000-0000-000000000101' as never,
       playerId: 'player-1',
       status: 'active',
       membershipVersion: 4,

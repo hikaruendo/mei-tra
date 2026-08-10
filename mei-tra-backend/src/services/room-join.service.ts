@@ -3,9 +3,11 @@ import { BlowState, DomainPlayer, GameState, Team } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
-import { PlayerReferenceRemapperService } from './player-reference-remapper.service';
 import { VacantSeats } from './com-session.service';
 import { SessionUser } from '../types/session.types';
+import { randomUUID } from 'crypto';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
 
 interface JoinRoomParams {
   roomId: string;
@@ -23,10 +25,6 @@ interface RestoredSeatData {
 
 @Injectable()
 export class RoomJoinService {
-  constructor(
-    private readonly playerReferenceRemapperService: PlayerReferenceRemapperService,
-  ) {}
-
   async joinRoom({
     roomId,
     room,
@@ -51,7 +49,10 @@ export class RoomJoinService {
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
         ...user,
-        playerId: existingPlayer.playerId,
+        seatId: resolveSeatId(existingPlayer),
+        playerId: resolveSeatId(existingPlayer),
+        participantKey:
+          user.userId ?? existingPlayer.participantKey ?? user.playerId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
         isHost: room.hostId === existingPlayer.playerId,
@@ -81,7 +82,11 @@ export class RoomJoinService {
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
       });
-      await gameState.persistRoster(room.players, room.hostId);
+      await gameState.persistRoster(
+        room.players,
+        room.hostId,
+        this.buildMembershipClaim(user),
+      );
       if (this.advanceBlowTurnPastActedPlayer(gameState.getState())) {
         await gameState.saveState();
       }
@@ -210,11 +215,18 @@ export class RoomJoinService {
         ? currentSeatRoomPlayer.hand
         : undefined;
 
+    const assignedSeatId = currentSeatRoomPlayer
+      ? resolveSeatId(currentSeatRoomPlayer)
+      : seatRoomSnapshot
+        ? resolveSeatId(seatRoomSnapshot)
+        : asSeatId(randomUUID());
     const player: RoomPlayer = {
       ...(seatRoomSnapshot ?? {}),
       ...user,
       socketId: user.socketId,
-      playerId: user.playerId,
+      seatId: assignedSeatId,
+      playerId: assignedSeatId,
+      participantKey: user.userId ?? user.playerId,
       team: currentSeatRoomPlayer?.team ?? team,
       hand: [...(currentSeatRoomHand ?? hand)],
       isPasser:
@@ -234,7 +246,7 @@ export class RoomJoinService {
         false,
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
-      isHost: room.hostId === user.playerId,
+      isHost: room.hostId === assignedSeatId,
       joinedAt: seatRoomSnapshot?.joinedAt
         ? new Date(seatRoomSnapshot.joinedAt)
         : new Date(),
@@ -300,22 +312,6 @@ export class RoomJoinService {
       }
     }
 
-    const seatReferencePlayerIds = new Set<string>();
-    if (replacingComId) {
-      seatReferencePlayerIds.add(replacingComId);
-    }
-    if (seatRoomSnapshot?.playerId) {
-      seatReferencePlayerIds.add(seatRoomSnapshot.playerId);
-    }
-    if (seatGameSnapshot?.playerId) {
-      seatReferencePlayerIds.add(seatGameSnapshot.playerId);
-    }
-
-    const remappedSeatReferences = this.remapSeatReferences(
-      state,
-      seatReferencePlayerIds,
-      player.playerId,
-    );
     state.teamAssignments[player.playerId] = player.team;
 
     gameState.registerPlayerToken(player.playerId, player.playerId);
@@ -327,19 +323,15 @@ export class RoomJoinService {
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,
     });
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(
+      room.players,
+      room.hostId,
+      this.buildMembershipClaim(user),
+    );
     const persistedState = gameState.getState();
-    if (remappedSeatReferences) {
-      this.remapSeatReferences(
-        persistedState,
-        seatReferencePlayerIds,
-        player.playerId,
-      );
-      persistedState.teamAssignments[player.playerId] = player.team;
-    }
     const advancedBlowTurn =
       this.advanceBlowTurnPastActedPlayer(persistedState);
-    if (remappedSeatReferences || advancedBlowTurn) {
+    if (advancedBlowTurn) {
       await gameState.saveState();
     }
     return true;
@@ -347,6 +339,18 @@ export class RoomJoinService {
 
   private countActualPlayers(players: RoomPlayer[]): number {
     return players.filter((player) => !player.isCOM).length;
+  }
+
+  private buildMembershipClaim(
+    user: SessionUser,
+  ): RosterMembershipMutation | undefined {
+    return user.userId
+      ? {
+          type: 'claim',
+          userId: user.userId,
+          transitionId: randomUUID(),
+        }
+      : undefined;
   }
 
   private findExistingRoomPlayer(
@@ -363,32 +367,6 @@ export class RoomJoinService {
     }
 
     return players.find((player) => player.playerId === user.playerId);
-  }
-
-  private remapSeatReferences(
-    state: GameState,
-    seatReferencePlayerIds: Set<string>,
-    playerId: string,
-  ): boolean {
-    let remapped = false;
-
-    seatReferencePlayerIds.forEach((fromPlayerId) => {
-      if (fromPlayerId === playerId) {
-        return;
-      }
-
-      this.playerReferenceRemapperService.remapGameStatePlayerIdReferences(
-        state,
-        fromPlayerId,
-        playerId,
-      );
-      if (state.teamAssignments[fromPlayerId] != null) {
-        delete state.teamAssignments[fromPlayerId];
-      }
-      remapped = true;
-    });
-
-    return remapped;
   }
 
   private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
@@ -411,6 +389,7 @@ export class RoomJoinService {
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
         state.currentPlayerIndex = candidateIndex;
         state.currentPlayerId = candidatePlayer.playerId;
+        state.currentSeatId = asSeatId(candidatePlayer.playerId);
         return true;
       }
     }

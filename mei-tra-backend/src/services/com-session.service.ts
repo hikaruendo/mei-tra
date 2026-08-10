@@ -4,7 +4,9 @@ import { toDomainPlayer, toRoomPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { IComPlayerService } from './interfaces/com-player-service.interface';
 import { GameStateService } from './game-state.service';
-import { PlayerReferenceRemapperService } from './player-reference-remapper.service';
+import { randomUUID } from 'crypto';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
 
 export type VacantSeats = Record<
   string,
@@ -23,23 +25,26 @@ export class ComSessionService {
   constructor(
     @Inject('IComPlayerService')
     private readonly comPlayerService: IComPlayerService,
-    private readonly playerReferenceRemapper: PlayerReferenceRemapperService,
   ) {}
 
   private createCOMPlaceholder(
     index: number | string,
     team: Team,
     hand: string[] = [],
+    seatId = asSeatId(randomUUID()),
   ): RoomPlayer {
     const idStr = String(index);
     return toRoomPlayer({
       session: {
         socketId: `com-${idStr}`,
-        playerId: `com-${idStr}`,
+        seatId,
+        playerId: seatId,
         name: 'COM',
       },
+      participantKey: `com-${idStr}-${seatId}`,
       gameplay: {
-        playerId: `com-${idStr}`,
+        seatId,
+        playerId: seatId,
         name: 'COM',
         isCOM: true,
         hand,
@@ -58,11 +63,21 @@ export class ComSessionService {
     index: number | string,
     sourcePlayer: Pick<
       DomainPlayer,
-      'team' | 'isPasser' | 'hasBroken' | 'hasRequiredBroken'
+      | 'seatId'
+      | 'playerId'
+      | 'team'
+      | 'isPasser'
+      | 'hasBroken'
+      | 'hasRequiredBroken'
     >,
     hand: string[] = [],
   ): RoomPlayer {
-    const comPlayer = this.createCOMPlaceholder(index, sourcePlayer.team, hand);
+    const comPlayer = this.createCOMPlaceholder(
+      index,
+      sourcePlayer.team,
+      hand,
+      resolveSeatId(sourcePlayer),
+    );
     comPlayer.isPasser = sourcePlayer.isPasser;
     comPlayer.hasBroken = sourcePlayer.hasBroken ?? false;
     comPlayer.hasRequiredBroken = sourcePlayer.hasRequiredBroken ?? false;
@@ -125,20 +140,22 @@ export class ComSessionService {
     gameState: GameStateService,
   ): Promise<void> {
     void roomId;
-    const lobbyComPlaceholders = room.players.filter((player) => player.isCOM);
-
-    const placeholderIds = new Set(
-      lobbyComPlaceholders.map((player) => player.playerId),
-    );
-    room.players = room.players.filter(
-      (player) => !placeholderIds.has(player.playerId),
-    );
     const state = gameState.getState();
-    state.players = state.players.filter(
-      (player) => !placeholderIds.has(player.playerId),
-    );
-    placeholderIds.forEach((playerId) => {
-      delete state.teamAssignments[playerId];
+    room.players.forEach((roomPlayer) => {
+      if (!roomPlayer.isCOM) {
+        return;
+      }
+      roomPlayer.isReady = true;
+      const statePlayer = state.players.find(
+        (player) => player.playerId === roomPlayer.playerId,
+      );
+      if (statePlayer) {
+        statePlayer.isCOM = true;
+        statePlayer.isPasser = roomPlayer.isPasser;
+      } else {
+        state.players.push(toDomainPlayer(roomPlayer));
+      }
+      state.teamAssignments[roomPlayer.playerId] = roomPlayer.team;
     });
 
     const maxPlayers = room.settings?.maxPlayers ?? 4;
@@ -160,20 +177,27 @@ export class ComSessionService {
         startingPlayerCount + i,
         team,
       );
+      const seatId = asSeatId(randomUUID());
       const roomComPlayer = toRoomPlayer({
         session: {
           socketId: `com-${startingPlayerCount + i}`,
-          playerId: comPlayer.playerId,
+          seatId,
+          playerId: seatId,
           name: comPlayer.name,
         },
-        gameplay: comPlayer,
+        participantKey: comPlayer.playerId,
+        gameplay: {
+          ...comPlayer,
+          seatId,
+          playerId: seatId,
+        },
         isReady: true,
         isHost: false,
         joinedAt: new Date(),
       });
 
       room.players.push(roomComPlayer);
-      state.players.push(toDomainPlayer(comPlayer));
+      state.players.push(toDomainPlayer(roomComPlayer));
       state.teamAssignments[roomComPlayer.playerId] = roomComPlayer.team;
       gameState.registerPlayerToken(
         roomComPlayer.playerId,
@@ -190,6 +214,7 @@ export class ComSessionService {
     room: Room,
     gameState: GameStateService,
     vacantSeats: VacantSeats,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<boolean> {
     const playerIndex = room.players.findIndex(
       (player) => player.playerId === playerId,
@@ -234,29 +259,14 @@ export class ComSessionService {
         [...originalGameHand],
       );
       state.players[gsIndex] = toDomainPlayer(comGamePlayer);
-      this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
-        state,
-        playerId,
-        comGamePlayer.playerId,
-      );
-      if (state.teamAssignments[playerId] != null) {
-        delete state.teamAssignments[playerId];
-      }
       state.teamAssignments[comGamePlayer.playerId] = comGamePlayer.team;
     }
 
-    await gameState.persistRoster(room.players, room.hostId);
-    if (gsIndex !== -1) {
-      // persistRoster swaps in a fresh state from its DB round-trip, and that
-      // round-trip carries the stored playState back verbatim — discarding the
-      // remap above. Re-apply it to the refreshed state before persisting.
-      this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
-        gameState.getState(),
-        playerId,
-        comPlayer.playerId,
-      );
-      await gameState.saveState();
-    }
+    await gameState.persistRoster(
+      room.players,
+      room.hostId,
+      membershipMutation,
+    );
     return true;
   }
 }

@@ -6,7 +6,10 @@ import {
   PlayerConnectionMetadata,
 } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
+import { asSeatId } from '../types/identity.types';
+import { normalizeGameStateIdentityAliases } from '../types/game-state-identity';
 
 export class GameStateManager {
   constructor(
@@ -27,15 +30,51 @@ export class GameStateManager {
       );
     }
 
-    const nextState = {
+    let nextState: GameState = {
       ...currentState,
       ...newState,
     };
+    if (
+      Object.prototype.hasOwnProperty.call(newState, 'currentPlayerId') &&
+      !Object.prototype.hasOwnProperty.call(newState, 'currentSeatId')
+    ) {
+      nextState.currentSeatId = newState.currentPlayerId
+        ? asSeatId(newState.currentPlayerId)
+        : null;
+    }
+    nextState = normalizeGameStateIdentityAliases(nextState);
 
     if (roomId) {
+      const persistencePatch: Partial<GameState> = { ...newState };
+      if (
+        Object.prototype.hasOwnProperty.call(newState, 'currentSeatId') ||
+        Object.prototype.hasOwnProperty.call(newState, 'currentPlayerId') ||
+        Object.prototype.hasOwnProperty.call(newState, 'currentPlayerIndex')
+      ) {
+        persistencePatch.currentSeatId = nextState.currentSeatId;
+        persistencePatch.currentPlayerId = nextState.currentPlayerId;
+      }
+      if (newState.players) {
+        persistencePatch.players = nextState.players;
+      }
+      if (newState.blowState) {
+        persistencePatch.blowState = nextState.blowState;
+      }
+      if (newState.playState) {
+        persistencePatch.playState = nextState.playState;
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(
+          newState,
+          'pendingBrokenHandReveal',
+        )
+      ) {
+        persistencePatch.pendingBrokenHandReveal =
+          nextState.pendingBrokenHandReveal;
+      }
       const persistedState = await this.repository.update(
         roomId,
-        newState,
+        persistencePatch,
         currentState.version,
       );
       if (!persistedState) {
@@ -94,13 +133,14 @@ export class GameStateManager {
   }
 
   async saveState(roomId: string | null, state: GameState): Promise<GameState> {
+    const normalizedState = normalizeGameStateIdentityAliases(state);
     if (!roomId) {
-      return state;
+      return normalizedState;
     }
 
     const persistedState = await this.repository.update(
       roomId,
-      state,
+      normalizedState,
       state.version,
     );
     if (!persistedState) {
@@ -114,6 +154,7 @@ export class GameStateManager {
     roomPlayers: RoomPlayer[],
     state: GameState,
     hostId?: string,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState> {
     if (!roomId) {
       throw new Error('Cannot persist roster without a room ID');
@@ -124,6 +165,7 @@ export class GameStateManager {
       roomPlayers,
       state,
       hostId,
+      membershipMutation,
     );
 
     if (!persistedState) {

@@ -1,4 +1,5 @@
 import type { PlayerContract, Team, TeamNames } from './game';
+import type { SeatId } from './ids';
 
 export type RoomStatusContract =
   | 'waiting'
@@ -32,6 +33,8 @@ export interface UpdateTeamNamesPayload {
 export interface RoomContract {
   id: string;
   name: string;
+  hostSeatId?: SeatId;
+  /** @deprecated Use hostSeatId. */
   hostId: string;
   status: RoomStatusContract;
   players: RoomPlayerContract[];
@@ -47,12 +50,16 @@ export interface RoomSyncPayload {
 }
 
 export interface RoomPlayerJoinedPayload {
+  seatId?: SeatId;
+  /** @deprecated Use seatId. */
   playerId: string;
   roomId: string;
   isHost: boolean;
 }
 
 export interface GamePlayerJoinedPayload {
+  seatId?: SeatId;
+  /** @deprecated Use seatId. */
   playerId: string;
   roomId: string;
   isHost: boolean;

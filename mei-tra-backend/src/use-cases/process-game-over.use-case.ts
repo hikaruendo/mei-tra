@@ -86,6 +86,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
     await this.gameEventLogService?.log({
       roomId,
       actionType: 'player_stats_updated',
+      actorSeatId: null,
       playerId: null,
       actionData: {
         winningTeam,
