@@ -84,9 +84,9 @@ Meitra の Supabase public スキーマ。認証の正本は Supabase Auth の a
 | realtime.equality_op | eq, gt, gte, in, lt, lte, neq |
 | storage.buckettype | ANALYTICS, STANDARD |
 
-## Relations
+## 全体 ER 図（全テーブル・全カラム）
 
-![er](schema.svg)
+![全カラム ER 図](schema.svg)
 
 ---
 

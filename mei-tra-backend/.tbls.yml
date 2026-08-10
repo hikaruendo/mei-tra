@@ -19,9 +19,6 @@ er:
   format: svg
   comment: true
   hideDef: true
-  showColumnTypes:
-    primary: true
-    related: true
   distance: 2
 
 comments:

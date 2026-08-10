@@ -12,3 +12,5 @@ cd "$script_dir/.."
 export TBLS_DSN="${TBLS_DSN:-postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable}"
 
 tbls doc --config .tbls.yml --rm-dist
+
+perl -0pi -e 's/## Relations\n\n!\[er\]\(schema\.svg\)/## 全体 ER 図（全テーブル・全カラム）\n\n![全カラム ER 図](schema.svg)/' docs/database/README.md
