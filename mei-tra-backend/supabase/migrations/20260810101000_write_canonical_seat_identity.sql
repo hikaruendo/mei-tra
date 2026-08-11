@@ -682,7 +682,6 @@ declare
   requested_seat_id uuid;
   resolved_seat_id uuid;
   resolved_room_id uuid;
-  resolved_seat_index integer;
   incoming_seat_ids uuid[] := array[]::uuid[];
   incoming_seat_indexes integer[] := array[]::integer[];
   player_seat_index integer;
@@ -788,7 +787,6 @@ begin
     requested_seat_id := null;
     resolved_seat_id := null;
     resolved_room_id := null;
-    resolved_seat_index := null;
 
     if nullif(player_entry->>'seatId', '') is not null then
       begin
@@ -800,8 +798,8 @@ begin
           using errcode = 'PT422';
       end;
 
-      select room_id, seat_index
-      into resolved_room_id, resolved_seat_index
+      select room_id
+      into resolved_room_id
       from public.room_players
       where id = requested_seat_id
       for update;
@@ -811,14 +809,6 @@ begin
           raise exception 'roster_seat_belongs_to_other_room room=% seat=%',
             p_room_id,
             requested_seat_id
-            using errcode = 'PT422';
-        end if;
-        if resolved_seat_index <> player_seat_index then
-          raise exception 'roster_seat_index_is_immutable room=% seat=% expected=% actual=%',
-            p_room_id,
-            requested_seat_id,
-            resolved_seat_index,
-            player_seat_index
             using errcode = 'PT422';
         end if;
         resolved_seat_id := requested_seat_id;
@@ -900,9 +890,9 @@ begin
       team = excluded.team,
       is_ready = excluded.is_ready,
       is_com = excluded.is_com,
-      joined_at = excluded.joined_at
-    where room_players.room_id = excluded.room_id
-      and room_players.seat_index = excluded.seat_index;
+      joined_at = excluded.joined_at,
+      seat_index = excluded.seat_index
+    where room_players.room_id = excluded.room_id;
 
     get diagnostics upserted_count = row_count;
     if upserted_count <> 1 then

@@ -1,4 +1,8 @@
-import { toPersistedPlayerStates, toRuntimePlayer } from './player-adapters';
+import {
+  toPersistedPlayerStates,
+  toRuntimePlayer,
+  toTransportPlayers,
+} from './player-adapters';
 
 describe('player-adapters', () => {
   describe('toRuntimePlayer', () => {
@@ -54,6 +58,56 @@ describe('player-adapters', () => {
       expect(states['player-1']).not.toHaveProperty('name');
       expect(states['player-1']).not.toHaveProperty('team');
       expect(states['player-1']).not.toHaveProperty('isCOM');
+    });
+  });
+
+  describe('toTransportPlayers', () => {
+    it('does not expose stale human profile metadata for a COM-controlled seat', () => {
+      const [player] = toTransportPlayers(
+        [
+          {
+            playerId: 'seat-1',
+            name: 'Player2',
+            hand: ['S1'],
+            team: 0,
+            isPasser: false,
+            isCOM: false,
+          },
+        ],
+        {
+          getConnectionState: () => ({
+            socketId: 'stale-socket',
+            userId: 'user-2',
+            isAuthenticated: true,
+          }),
+          roomPlayers: [
+            {
+              socketId: '',
+              playerId: 'seat-1',
+              participantKey: 'com-seat-1',
+              name: 'COM',
+              team: 0,
+              hand: ['S1'],
+              isPasser: false,
+              isCOM: true,
+              isReady: true,
+              isHost: false,
+              joinedAt: new Date('2026-08-11T00:00:00.000Z'),
+            },
+          ],
+        },
+      );
+
+      expect(player).toEqual(
+        expect.objectContaining({
+          playerId: 'seat-1',
+          name: 'COM',
+          socketId: '',
+          userId: undefined,
+          isAuthenticated: false,
+          isCOM: true,
+        }),
+      );
     });
   });
 });

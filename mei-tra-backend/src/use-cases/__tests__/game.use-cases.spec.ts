@@ -1794,6 +1794,93 @@ describe('Game Use Cases', () => {
       expect(result.completeFieldTrigger?.delayMs).toBe(3000);
     });
 
+    it('keeps a vacated seat displayed as COM on every card update', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
+      const state = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0 as Team,
+            isPasser: false,
+            isCOM: false,
+          },
+          {
+            playerId: 'player-2',
+            name: 'Player 2',
+            hand: ['D1'],
+            team: 1 as Team,
+            isPasser: false,
+            isCOM: false,
+          },
+        ],
+        blowState: { currentTrump: null },
+        playState: {
+          currentField: {
+            cards: [],
+            playedBy: [],
+            baseCard: '',
+            dealerId: 'player-1',
+            isComplete: false,
+          } as Field,
+        },
+        currentPlayerIndex: 0,
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+        nextTurn: jest.fn(() => {
+          state.currentPlayerIndex = 1;
+        }),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.getRoom.mockResolvedValue({
+        ...baseRoom,
+        status: RoomStatus.PLAYING,
+        players: [
+          {
+            ...basePlayers[0],
+            hand: ['C1'],
+            isCOM: false,
+          },
+          {
+            ...basePlayers[1],
+            socketId: '',
+            name: 'COM',
+            hand: ['D1'],
+            isCOM: true,
+          },
+        ],
+      });
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'user-1',
+        card: 'C1',
+      });
+
+      const cardPlayedEvent = result.events?.find(
+        (event) => event.event === 'card-played',
+      );
+      expect(cardPlayedEvent?.payload).toMatchObject({
+        players: expect.arrayContaining([
+          expect.objectContaining({
+            playerId: 'player-2',
+            name: 'COM',
+            socketId: '',
+            isCOM: true,
+          }),
+        ]),
+      });
+    });
+
     it('rejects off-suit play when the player has the base suit', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PlayCardUseCase(

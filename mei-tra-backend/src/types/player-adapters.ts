@@ -92,10 +92,21 @@ export function toTransportPlayers(
       options?.getConnectionState?.(player.playerId) ?? roomPlayer,
     );
 
+    const visiblePlayer = roomPlayer?.isCOM
+      ? {
+          ...transportPlayer,
+          socketId: roomPlayer.socketId,
+          name: roomPlayer.name,
+          userId: undefined,
+          isAuthenticated: false,
+          isCOM: true,
+        }
+      : transportPlayer;
+
     return {
-      ...transportPlayer,
+      ...visiblePlayer,
       isHost: roomPlayer?.isHost,
-      hand: options?.mapHand ? options.mapHand(player) : transportPlayer.hand,
+      hand: options?.mapHand ? options.mapHand(player) : visiblePlayer.hand,
     };
   });
 }

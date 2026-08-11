@@ -1,6 +1,6 @@
 begin;
 
-select plan(48);
+select plan(50);
 
 select has_column('rooms', 'host_seat_id');
 select has_column('game_states', 'current_seat_id');
@@ -33,6 +33,11 @@ select ok(
     'execute'
   ),
   'anonymous clients cannot create canonical rooms directly'
+);
+
+select ok(
+  has_schema_privilege('service_role', 'meitra_private', 'usage'),
+  'service role can resolve private helpers used by canonical write triggers'
 );
 
 insert into auth.users (
@@ -494,15 +499,44 @@ select throws_ok(
   'an existing seat UUID cannot be changed'
 );
 
-select throws_ok(
+select lives_ok(
   $$
     update public.room_players
     set seat_index = 7
     where id = '00000000-0000-0000-0000-000000000a03'
   $$,
-  'PT422',
-  null,
-  'an existing seat index cannot be changed'
+  'seat order can change without replacing the seat UUID'
+);
+
+select lives_ok(
+  $$
+    select public.persist_room_roster_atomic(
+      '00000000-0000-0000-0000-000000000a02',
+      '[{
+        "seatId":"00000000-0000-0000-0000-000000000a03",
+        "playerId":"00000000-0000-0000-0000-000000000a03",
+        "participantKey":"com-timeout-a",
+        "userId":"00000000-0000-0000-0000-000000000a01",
+        "name":"COM",
+        "team":0,
+        "isReady":true,
+        "isHost":true,
+        "isCOM":true,
+        "seatIndex":0
+      }]'::jsonb,
+      '{
+        "00000000-0000-0000-0000-000000000a03": {
+          "hand":["S1"],
+          "isPasser":false,
+          "hasBroken":false,
+          "hasRequiredBroken":false
+        }
+      }'::jsonb,
+      '00000000-0000-0000-0000-000000000a03',
+      null
+    )
+  $$,
+  'atomic roster persistence can reorder a seat without changing its UUID'
 );
 
 select throws_ok(

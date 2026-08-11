@@ -274,7 +274,9 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     const roundCancelledPayload: RoundCancelledPayload = {
       nextDealerSeatId: asSeatId(firstBlowPlayer.playerId),
       nextDealer: firstBlowPlayer.playerId,
-      players: resolveTransportPlayers(roomGameState, state.players),
+      players: resolveTransportPlayers(roomGameState, state.players, {
+        roomPlayers: room?.players,
+      }),
     };
 
     const events: GatewayEvent[] = [

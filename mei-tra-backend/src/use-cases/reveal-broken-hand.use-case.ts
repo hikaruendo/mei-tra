@@ -98,6 +98,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const { roomId, playerId } = followUp;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      const room = await this.roomService.getRoom(roomId);
       const player = state.players.find((p) => p.playerId === playerId);
 
       if (!player) {
@@ -179,7 +180,9 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         const brokenPayload: BrokenPayload = {
           nextSeatId: asSeatId(firstBlowPlayer.playerId),
           nextPlayerId: firstBlowPlayer.playerId,
-          players: resolveTransportPlayers(roomGameState, nextState.players),
+          players: resolveTransportPlayers(roomGameState, nextState.players, {
+            roomPlayers: room?.players,
+          }),
           gamePhase: 'blow',
         };
 

@@ -274,14 +274,6 @@ begin
       old.id
       using errcode = 'PT422';
   end if;
-  if new.seat_index is distinct from old.seat_index then
-    raise exception 'room_player_seat_index_is_immutable room=% seat=% index=%',
-      old.room_id,
-      old.id,
-      old.seat_index
-      using errcode = 'PT422';
-  end if;
-
   return new;
 end;
 $function$;
@@ -290,7 +282,7 @@ drop trigger if exists reject_room_player_seat_id_change
   on public.room_players;
 
 create trigger reject_room_player_seat_id_change
-before update of id, room_id, seat_index on public.room_players
+before update of id, room_id on public.room_players
 for each row execute function public.reject_room_player_seat_id_change();
 
 create or replace function public.reject_room_player_seat_delete()

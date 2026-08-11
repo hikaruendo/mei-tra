@@ -19,7 +19,7 @@ import { IScoreService } from '../services/interfaces/score-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { Team, GameState, Field } from '../types/game.types';
 import { GameStateService } from '../services/game-state.service';
-import { RoomStatus } from '../types/room.types';
+import { Room, RoomStatus } from '../types/room.types';
 import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
@@ -231,6 +231,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         roomId,
         roomGameState,
         state,
+        room,
       );
 
       response.delayedEvents = roundResetEvents;
@@ -379,6 +380,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     roomId: string,
     roomGameState: GameStateService,
     state: GameState,
+    room: Room | null,
   ): Promise<GatewayEvent[]> {
     await roomGameState.resetRoundState();
     await roomGameState.updateState({
@@ -431,7 +433,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     });
 
     const newRoundPayload: NewRoundStartedPayload = {
-      players: resolveTransportPlayers(roomGameState, updatedState.players),
+      players: resolveTransportPlayers(roomGameState, updatedState.players, {
+        roomPlayers: room?.players,
+      }),
       currentTurnSeatId: asSeatId(nextBlowPlayer.playerId),
       currentTurn: nextBlowPlayer.playerId,
       gamePhase: 'blow',

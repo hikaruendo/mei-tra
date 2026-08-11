@@ -82,6 +82,8 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: false, error: legalPlayError };
       }
 
+      const room = await this.roomService.getRoom(roomId);
+
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
 
@@ -122,7 +124,9 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         playerId: player.playerId,
         card,
         field: currentField,
-        players: resolveTransportPlayers(roomGameState, state.players),
+        players: resolveTransportPlayers(roomGameState, state.players, {
+          roomPlayers: room?.players,
+        }),
       };
       const events: PlayCardGatewayEvent[] = [
         {
