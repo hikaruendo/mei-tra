@@ -6,6 +6,7 @@ import type {
 } from '@contracts/game';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { DomainPlayer } from '../types/game.types';
+import type { SeatId } from '../types/identity.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 
@@ -14,6 +15,8 @@ interface BuildStartGameEventsParams {
   players: DomainPlayer[];
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
+  currentTurnSeatId: SeatId;
+  /** @deprecated Use currentTurnSeatId. */
   currentTurnPlayerId: string;
 }
 
@@ -29,6 +32,7 @@ export class StartGameGatewayEffectsService {
     players,
     pointsToWin,
     updatePhase,
+    currentTurnSeatId,
     currentTurnPlayerId,
   }: BuildStartGameEventsParams): Promise<GatewayEvent[]> {
     const room = await this.roomService.getRoom(roomId);
@@ -85,7 +89,7 @@ export class StartGameGatewayEffectsService {
         scope: 'room',
         roomId,
         event: 'update-turn',
-        payload: currentTurnPlayerId,
+        payload: currentTurnSeatId ?? currentTurnPlayerId,
       },
     ];
   }

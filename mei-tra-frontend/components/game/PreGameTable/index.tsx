@@ -7,6 +7,7 @@ import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import { getConsistentTableOrderWithSelfBottom } from '@/lib/utils/tableOrder';
 import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 import styles from './index.module.scss';
+import { asSeatId } from '@contracts/ids';
 
 interface PreGameTableProps {
   players: Player[];
@@ -25,6 +26,7 @@ const positions = ['bottom', 'left', 'top', 'right'] as const;
 function createEmptySlot(index: number): Player {
   return {
     socketId: `empty-${index}`,
+    seatId: asSeatId(`empty-${index}`),
     playerId: `empty-${index}`,
     name: 'COM',
     team: (index % 2) as Player['team'],

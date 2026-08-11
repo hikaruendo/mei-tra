@@ -135,7 +135,6 @@ describe('RoomService join rollback', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       roomJoinService as never,
     );
     const originalVacantSeat = createRoomPlayer({

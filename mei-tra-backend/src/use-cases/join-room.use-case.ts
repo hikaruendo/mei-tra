@@ -210,6 +210,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         blowState: state.blowState,
         teamScores: state.teamScores,
         negriCard: state.playState?.negriCard ?? null,
+        negriSeatId: state.playState?.negriSeatId ?? null,
+        negriPlayerId:
+          state.playState?.negriSeatId ??
+          state.playState?.negriPlayerId ??
+          null,
         fields: state.playState?.fields,
         roomId,
         pointsToWin: room.settings.pointsToWin,

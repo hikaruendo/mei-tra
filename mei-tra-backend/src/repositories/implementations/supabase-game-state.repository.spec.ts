@@ -36,6 +36,7 @@ describe('SupabaseGameStateRepository', () => {
         openDeclarerId: null,
       },
     },
+    current_seat_id: null,
     current_player_id: 'player-1',
     game_phase: 'waiting' as const,
     round_number: 1,
@@ -70,7 +71,7 @@ describe('SupabaseGameStateRepository', () => {
       version: 4,
       players: [
         {
-          playerId: 'player-1',
+          playerId: 'room-player-1',
           name: 'Current name',
           hand: ['S1'],
           team: 1,
@@ -80,7 +81,7 @@ describe('SupabaseGameStateRepository', () => {
           hasRequiredBroken: false,
         },
       ],
-      currentPlayerId: 'player-1',
+      currentPlayerId: 'room-player-1',
       currentPlayerIndex: 0,
       gamePhase: 'waiting',
       deck: [],
@@ -93,14 +94,15 @@ describe('SupabaseGameStateRepository', () => {
       playState: gameStateRow.state_data.playState,
       roundNumber: 1,
       pointsToWin: 8,
-      teamAssignments: { 'player-1': 1 },
+      teamAssignments: { 'room-player-1': 1 },
     };
   }
 
   function createRoomPlayer(): RoomPlayer {
     return {
       socketId: 'transient-socket',
-      playerId: 'player-1',
+      playerId: 'room-player-1',
+      participantKey: 'player-1',
       userId: roomPlayerRow.user_id,
       isAuthenticated: true,
       name: 'Current name',
@@ -133,7 +135,7 @@ describe('SupabaseGameStateRepository', () => {
     expect(state?.version).toBe(4);
     expect(state?.players).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        playerId: 'room-player-1',
         name: 'Current name',
         team: 1,
         hand: ['S1'],
@@ -175,12 +177,12 @@ describe('SupabaseGameStateRepository', () => {
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
     expect(state?.players.map((player) => player.playerId)).toEqual([
-      'player-1',
-      'player-2',
+      'room-player-1',
+      'room-player-2',
     ]);
   });
 
-  it('remaps an orphan blow actor to the only roster player without a blow action', async () => {
+  it('does not guess a seat for an unresolved legacy blow actor', async () => {
     const secondRoomPlayer = {
       ...roomPlayerRow,
       id: 'room-player-2',
@@ -260,11 +262,11 @@ describe('SupabaseGameStateRepository', () => {
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
     expect(state?.blowState.currentHighestDeclaration?.playerId).toBe(
-      'player-2',
+      'com-orphan',
     );
     expect(state?.blowState.currentHighestDeclaration?.team).toBe(0);
-    expect(state?.blowState.declarations[0]?.playerId).toBe('player-2');
-    expect(state?.blowState.actionHistory[1]?.playerId).toBe('player-2');
+    expect(state?.blowState.declarations[0]?.playerId).toBe('com-orphan');
+    expect(state?.blowState.actionHistory[1]?.playerId).toBe('com-orphan');
   });
 
   it('ignores player order entries when authoritative roster is empty', async () => {
@@ -316,8 +318,107 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
-    expect(state?.currentPlayerId).toBe('player-2');
+    expect(state?.currentPlayerId).toBe('room-player-2');
     expect(state?.currentPlayerIndex).toBe(1);
+  });
+
+  it('prefers canonical seat references over stale legacy aliases', async () => {
+    const secondRoomPlayer = {
+      ...roomPlayerRow,
+      id: 'room-player-2',
+      player_id: 'player-2',
+      name: 'Second player',
+      team: 0,
+      seat_index: 1,
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          current_seat_id: 'room-player-2',
+          current_player_id: 'stale-current-player',
+          state_data: {
+            ...gameStateRow.state_data,
+            identitySchemaVersion: 2,
+            playerStates: {
+              'room-player-1': { hand: ['S1'] },
+              'room-player-2': { hand: ['H2'] },
+            },
+            blowState: {
+              ...gameStateRow.state_data.blowState,
+              declarations: [
+                {
+                  seatId: 'room-player-2',
+                  playerId: 'stale-declarer',
+                  trumpType: 'herz',
+                  numberOfPairs: 5,
+                  timestamp: 1,
+                },
+              ],
+              actionHistory: [],
+              lastPasserSeatId: 'room-player-1',
+              lastPasser: 'stale-passer',
+            },
+            playState: {
+              currentField: {
+                cards: ['S1'],
+                playedBySeatIds: ['room-player-1'],
+                playedBy: ['stale-played-by'],
+                baseCard: 'S1',
+                dealerSeatId: 'room-player-2',
+                dealerId: 'stale-dealer',
+                isComplete: false,
+              },
+              negriCard: '5♣',
+              negriSeatId: 'room-player-2',
+              negriPlayerId: 'stale-negri-player',
+              neguri: {},
+              fields: [
+                {
+                  cards: ['S1'],
+                  winnerSeatId: 'room-player-1',
+                  winnerId: 'stale-winner',
+                  winnerTeam: 1,
+                  dealerSeatId: 'room-player-2',
+                  dealerId: 'stale-dealer',
+                },
+              ],
+              lastWinnerSeatId: 'room-player-1',
+              lastWinnerId: 'stale-last-winner',
+              openDeclared: true,
+              openDeclarerSeatId: 'room-player-2',
+              openDeclarerId: 'stale-open-declarer',
+            },
+            pendingBrokenHandReveal: {
+              seatId: 'room-player-2',
+              playerId: 'stale-broken-player',
+              handSnapshot: ['H2'],
+              startedAt: 1,
+            },
+          },
+        },
+        roomPlayers: [roomPlayerRow, secondRoomPlayer],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    const state = await repository.findByRoomId(gameStateRow.room_id);
+
+    expect(state?.currentPlayerId).toBe('room-player-2');
+    expect(state?.blowState.declarations[0]?.playerId).toBe('room-player-2');
+    expect(state?.blowState.lastPasser).toBe('room-player-1');
+    expect(state?.playState?.currentField?.playedBy).toEqual(['room-player-1']);
+    expect(state?.playState?.currentField?.dealerId).toBe('room-player-2');
+    expect(state?.playState?.negriSeatId).toBe('room-player-2');
+    expect(state?.playState?.negriPlayerId).toBe('room-player-2');
+    expect(state?.playState?.fields[0]?.winnerId).toBe('room-player-1');
+    expect(state?.playState?.fields[0]?.dealerId).toBe('room-player-2');
+    expect(state?.playState?.lastWinnerId).toBe('room-player-1');
+    expect(state?.playState?.openDeclarerId).toBe('room-player-2');
+    expect(state?.pendingBrokenHandReveal?.playerId).toBe('room-player-2');
   });
 
   it('passes the expected version to atomic state updates', async () => {
@@ -346,7 +447,7 @@ describe('SupabaseGameStateRepository', () => {
 
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
-      p_state_patch: {},
+      p_state_patch: { identitySchemaVersion: 2 },
       p_scalar_patch: { roundNumber: 2 },
       p_expected_version: 4,
     });
@@ -379,8 +480,9 @@ describe('SupabaseGameStateRepository', () => {
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
       p_state_patch: {
+        identitySchemaVersion: 2,
         playerStates: {
-          'player-1': {
+          'room-player-1': {
             hand: ['S1'],
             isPasser: true,
             hasBroken: true,
@@ -389,7 +491,8 @@ describe('SupabaseGameStateRepository', () => {
         },
       },
       p_scalar_patch: {
-        currentPlayerId: 'player-1',
+        currentSeatId: 'room-player-1',
+        currentPlayerId: 'room-player-1',
       },
       p_expected_version: null,
     });
@@ -397,7 +500,7 @@ describe('SupabaseGameStateRepository', () => {
 
   it('persists the complete roster without socket metadata', async () => {
     const rpc = jest.fn().mockResolvedValue({
-      data: { ...gameStateRow, version: 5 },
+      data: { ...gameStateRow, version: 5, roomPlayers: [roomPlayerRow] },
       error: null,
     });
     const repository = new SupabaseGameStateRepository({
@@ -408,16 +511,17 @@ describe('SupabaseGameStateRepository', () => {
       gameStateRow.room_id,
       [createRoomPlayer()],
       createState(),
-      'player-1',
+      'room-player-1',
     );
 
     expect(rpc).toHaveBeenCalledWith(
       'persist_room_roster_atomic',
       expect.objectContaining({
         p_expected_version: 4,
-        p_host_id: 'player-1',
+        p_host_id: 'room-player-1',
+        p_membership_mutation: null,
         p_player_states: {
-          'player-1': {
+          'room-player-1': {
             hand: ['S1'],
             isPasser: true,
             hasBroken: true,
@@ -426,7 +530,9 @@ describe('SupabaseGameStateRepository', () => {
         },
         p_room_players: [
           {
-            playerId: 'player-1',
+            seatId: 'room-player-1',
+            playerId: 'room-player-1',
+            participantKey: 'player-1',
             userId: roomPlayerRow.user_id,
             name: 'Current name',
             team: 1,
@@ -450,7 +556,7 @@ describe('SupabaseGameStateRepository', () => {
 
   it('reassigns sequential seat indexes when persisting a roster', async () => {
     const rpc = jest.fn().mockResolvedValue({
-      data: { ...gameStateRow, version: 5 },
+      data: { ...gameStateRow, version: 5, roomPlayers: [roomPlayerRow] },
       error: null,
     });
     const repository = new SupabaseGameStateRepository({
@@ -458,7 +564,8 @@ describe('SupabaseGameStateRepository', () => {
     } as unknown as SupabaseService);
     const secondPlayer = {
       ...createRoomPlayer(),
-      playerId: 'player-2',
+      playerId: 'room-player-2',
+      participantKey: 'player-2',
       name: 'Player 2',
       seatIndex: 0,
     };
@@ -467,7 +574,7 @@ describe('SupabaseGameStateRepository', () => {
       gameStateRow.room_id,
       [{ ...createRoomPlayer(), seatIndex: 7 }, secondPlayer],
       createState(),
-      'player-1',
+      'room-player-1',
     );
 
     const [, rosterPayload] = rpc.mock.calls[0] as [
@@ -480,8 +587,8 @@ describe('SupabaseGameStateRepository', () => {
         seatIndex: player.seatIndex,
       })),
     ).toEqual([
-      { playerId: 'player-1', seatIndex: 0 },
-      { playerId: 'player-2', seatIndex: 1 },
+      { playerId: 'room-player-1', seatIndex: 0 },
+      { playerId: 'room-player-2', seatIndex: 1 },
     ]);
   });
 });

@@ -1,4 +1,5 @@
 import type { TransportGamePhase, TransportTeamScores } from './game';
+import type { SeatId } from './ids';
 
 export type GameHistoryActionType =
   | 'game_started'
@@ -17,6 +18,8 @@ export type GameHistoryActionType =
 export interface GameHistoryContextContract {
   roundNumber: number;
   gamePhase: TransportGamePhase | null;
+  currentTurnSeatId?: SeatId | null;
+  /** @deprecated Use currentTurnSeatId. */
   currentTurnPlayerId: string | null;
   teamScores?: TransportTeamScores;
 }
@@ -26,6 +29,9 @@ export interface GameHistoryEntryContract {
   roomId: string;
   gameStateId: string;
   actionType: GameHistoryActionType;
+  actorSeatId?: SeatId | null;
+  actorKeySnapshot?: string | null;
+  /** @deprecated Use actorSeatId. */
   playerId: string | null;
   actionData: Record<string, unknown>;
   timestamp: string;
@@ -73,7 +79,11 @@ export interface GameHistoryReplayViewContract {
 }
 
 export interface GameStartedReplayDetailsContract {
+  firstBlowSeatId?: SeatId | null;
+  startedBySeatId?: SeatId | null;
+  /** @deprecated Use firstBlowSeatId. */
   firstBlowPlayerId: string | null;
+  /** @deprecated Use startedBySeatId. */
   startedByPlayerId: string | null;
   pointsToWin: number | null;
 }
@@ -84,11 +94,15 @@ export interface BlowDeclaredReplayDetailsContract {
 }
 
 export interface BlowPassedReplayDetailsContract {
+  lastPasserSeatId?: SeatId | null;
+  /** @deprecated Use lastPasserSeatId. */
   lastPasser: string | null;
   actedCount: number | null;
 }
 
 export interface PlayPhaseStartedReplayDetailsContract {
+  winnerSeatId?: SeatId | null;
+  /** @deprecated Use winnerSeatId. */
   winnerPlayerId: string | null;
   currentTrump: string | null;
   revealBrokenRequired: boolean;
@@ -101,6 +115,8 @@ export interface CardPlayedReplayDetailsContract {
 }
 
 export interface FieldCompletedReplayDetailsContract {
+  winnerSeatId?: SeatId | null;
+  /** @deprecated Use winnerSeatId. */
   winnerPlayerId: string | null;
   winnerTeam: number | null;
   cards: string[];
@@ -116,10 +132,14 @@ export interface RoundCancelledReplayDetailsContract {
 }
 
 export interface RoundResetReplayDetailsContract {
+  nextDealerSeatId?: SeatId | null;
+  /** @deprecated Use nextDealerSeatId. */
   nextDealerId: string | null;
 }
 
 export interface BrokenHandRevealedReplayDetailsContract {
+  nextSeatId?: SeatId | null;
+  /** @deprecated Use nextSeatId. */
   nextPlayerId: string | null;
   nextBlowIndex: number | null;
 }
@@ -144,6 +164,8 @@ export type GameHistoryReplayDetailValueContract =
     }
   | {
       kind: 'player';
+      seatId?: SeatId | null;
+      /** @deprecated Use seatId. */
       playerId: string | null;
       playerName: string | null;
     }
@@ -182,6 +204,8 @@ type GameHistoryReplayEventBaseContract<
   timestamp: string;
   actionType: TAction;
   kind: TKind;
+  actorSeatId?: SeatId | null;
+  /** @deprecated Use actorSeatId. */
   playerId: string | null;
   roundNumber: number | null;
   gamePhase: TransportGamePhase | null;

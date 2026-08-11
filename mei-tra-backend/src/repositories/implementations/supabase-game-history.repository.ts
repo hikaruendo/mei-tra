@@ -9,6 +9,7 @@ import {
   GameHistoryQuery,
 } from '../../types/game-history.types';
 import { Database } from '../../types/database.types';
+import { asSeatId } from '../../types/identity.types';
 
 type GameHistoryRow = Database['public']['Tables']['game_history']['Row'];
 type GameStateIdRow = Pick<
@@ -38,13 +39,23 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Game state not found for room ${entry.roomId}`);
     }
 
+    const requestedActorId = entry.actorSeatId ?? entry.playerId ?? null;
+    const actorSeatId =
+      requestedActorId && this.isUuid(requestedActorId)
+        ? requestedActorId
+        : null;
+    const actorKeySnapshot =
+      entry.actorKeySnapshot ?? entry.playerId ?? requestedActorId;
+
     const { data, error } = await this.supabase
       .from('game_history')
       .insert({
         room_id: entry.roomId,
         game_state_id: gameStateId,
         action_type: entry.actionType,
-        player_id: entry.playerId ?? null,
+        actor_seat_id: actorSeatId,
+        actor_key_snapshot: actorKeySnapshot,
+        player_id: actorSeatId ?? actorKeySnapshot,
         action_data: entry.actionData ?? {},
       })
       .select()
@@ -72,7 +83,11 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     }
 
     if (query?.playerId) {
-      request = request.eq('player_id', query.playerId);
+      request = this.isUuid(query.playerId)
+        ? request.or(
+            `actor_seat_id.eq.${query.playerId},actor_key_snapshot.eq.${query.playerId},player_id.eq.${query.playerId}`,
+          )
+        : request.eq('actor_key_snapshot', query.playerId);
     }
 
     if (query?.since) {
@@ -191,7 +206,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       roomId: row.room_id,
       gameStateId: row.game_state_id,
       actionType: row.action_type as GameHistoryActionType,
-      playerId: row.player_id,
+      actorSeatId: row.actor_seat_id ? asSeatId(row.actor_seat_id) : null,
+      actorKeySnapshot: row.actor_key_snapshot,
+      playerId: row.actor_seat_id ?? row.player_id,
       actionData: row.action_data ?? {},
       timestamp: new Date(row.timestamp),
     };
@@ -208,5 +225,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     return typeof context?.roundNumber === 'number'
       ? context.roundNumber
       : null;
+  }
+
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
   }
 }

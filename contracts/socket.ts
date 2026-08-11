@@ -35,6 +35,7 @@ import type {
   RoomPlayerJoinedPayload,
   RoomSyncPayload,
 } from './room';
+import type { SeatId } from './ids';
 
 export interface GatewayAck {
   success: boolean;
@@ -77,6 +78,8 @@ export interface ChangePlayerTeamPayload extends RoomActionPayload {
 
 export interface ModeratePlayerPayload {
   roomId: string;
+  targetSeatId?: SeatId;
+  /** @deprecated Use targetSeatId. */
   targetPlayerId: string;
   action: 'remove' | 'replace-with-com';
 }
@@ -105,6 +108,8 @@ export interface SelectBaseSuitPayload {
 
 export interface RevealBrokenHandPayload {
   roomId: string;
+  targetSeatId?: SeatId;
+  /** @deprecated Use targetSeatId. */
   playerId: string;
 }
 
@@ -120,6 +125,8 @@ export type NameUpdatedPayload =
   | {
       success: true;
       name: string;
+      seatId?: SeatId;
+      /** @deprecated Use seatId. */
       playerId?: string;
     }
   | {
@@ -214,7 +221,7 @@ export interface ServerToClientEvents {
   'update-players': (players: PlayerContract[]) => void;
   'room-playing': (payload: { players: PlayerContract[] }) => void;
   'game-state': (payload: GameStatePayload) => void;
-  'reconnect-token': (playerId: string) => void;
+  'reconnect-token': (reconnectToken: string) => void;
   'game-started': (payload: GameStartedPayload) => void;
   'update-phase': (payload: UpdatePhasePayload) => void;
   'update-turn': (payload: UpdateTurnPayload) => void;
@@ -251,5 +258,7 @@ export interface ServerToClientEvents {
 
 export interface SocketData {
   userId?: string;
+  seatId?: SeatId;
+  /** @deprecated Use seatId. */
   playerId?: string;
 }

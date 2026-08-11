@@ -26,6 +26,7 @@ import {
   hasPlayerDeclaredInBlow,
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -105,6 +106,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       state.blowState.declarations.push(newDeclaration);
       state.blowState.actionHistory.push({
         type: 'declare',
+        seatId: asSeatId(player.playerId),
         playerId: player.playerId,
         trumpType: declaration.trumpType,
         numberOfPairs: declaration.numberOfPairs,
@@ -115,6 +117,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'blow_declared',
+        actorSeatId: asSeatId(player.playerId),
         playerId: player.playerId,
         state,
         actionData: {

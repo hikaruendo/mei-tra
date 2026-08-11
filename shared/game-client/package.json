@@ -22,6 +22,10 @@
     "./table-order": {
       "types": "./table-order.ts",
       "default": "./table-order.ts"
+    },
+    "./identity": {
+      "types": "./identity.ts",
+      "default": "./identity.ts"
     }
   }
 }

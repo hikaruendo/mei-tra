@@ -14,6 +14,7 @@ import {
 } from './helpers/player-resolution.helper';
 import { DomainPlayer, Team } from '../types/game.types';
 import { RoomMembershipService } from '../services/room-membership.service';
+import { asSeatId, type SeatId } from '../types/identity.types';
 
 export type ReconnectionResult =
   | {
@@ -22,6 +23,8 @@ export type ReconnectionResult =
       roomsList: Awaited<ReturnType<IRoomService['listRooms']>>;
       mode: 'waiting-room';
       room: NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
+      selfSeatId: SeatId;
+      /** @deprecated Use selfSeatId. */
       selfPlayerId: string;
       selfName: string;
       selfTeam: Team;
@@ -35,7 +38,11 @@ export type ReconnectionResult =
       room: NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
       gameState: GameStatePayload;
       reconnectToken: string;
+      currentTurnSeatId: SeatId | null;
+      /** @deprecated Use currentTurnSeatId. */
       currentTurnPlayerId: string | null;
+      selfSeatId: SeatId;
+      /** @deprecated Use selfSeatId. */
       selfPlayerId: string;
     }
   | {
@@ -52,7 +59,12 @@ type ActiveGameReconnection = Extract<
 
 export type ActiveGameSnapshot = Pick<
   ActiveGameReconnection,
-  'gameState' | 'reconnectToken' | 'currentTurnPlayerId' | 'selfPlayerId'
+  | 'gameState'
+  | 'reconnectToken'
+  | 'currentTurnSeatId'
+  | 'currentTurnPlayerId'
+  | 'selfSeatId'
+  | 'selfPlayerId'
 >;
 
 type ActiveRoom = NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
@@ -151,6 +163,7 @@ export class ReconnectionUseCase {
           existingWaitingPlayer.playerId,
           socketId,
           authenticatedUser.id,
+          this.resolveDisplayName(authenticatedUser),
         );
         if (!reconnectResult.success) {
           this.logStateMismatch(
@@ -175,16 +188,30 @@ export class ReconnectionUseCase {
           existingWaitingPlayer.playerId,
         );
 
+        const reconnectedRoom = await this.roomService.getRoom(roomId);
+        const reconnectedPlayer = reconnectedRoom?.players.find(
+          (player) => player.playerId === existingWaitingPlayer.playerId,
+        );
+        if (!reconnectedRoom || !reconnectedPlayer) {
+          return {
+            success: false,
+            code: 'stateInconsistent',
+            roomId,
+            reason: 'Failed to reload the reconnected waiting-room player',
+          };
+        }
+
         return {
           success: true,
           mode: 'waiting-room',
           roomId,
           roomsList: await this.roomService.listRooms(),
-          room: updatedRoom,
-          selfPlayerId: existingWaitingPlayer.playerId,
-          selfName: existingWaitingPlayer.name,
-          selfTeam: existingWaitingPlayer.team,
-          isHost: updatedRoom.hostId === existingWaitingPlayer.playerId,
+          room: reconnectedRoom,
+          selfSeatId: asSeatId(reconnectedPlayer.playerId),
+          selfPlayerId: reconnectedPlayer.playerId,
+          selfName: reconnectedPlayer.name,
+          selfTeam: reconnectedPlayer.team,
+          isHost: reconnectedRoom.hostId === reconnectedPlayer.playerId,
         };
       }
 
@@ -222,6 +249,7 @@ export class ReconnectionUseCase {
         existingPlayer.playerId,
         socketId,
         authenticatedUser.id,
+        this.resolveDisplayName(authenticatedUser),
       );
       if (!reconnectResult.success) {
         this.logStateMismatch(
@@ -246,17 +274,30 @@ export class ReconnectionUseCase {
         existingPlayer.playerId,
       );
 
+      const reconnectedRoom = await this.roomService.getRoom(roomId);
+      const reconnectedPlayer = roomGameState
+        .getState()
+        .players.find((player) => player.playerId === existingPlayer.playerId);
+      if (!reconnectedRoom || !reconnectedPlayer) {
+        return {
+          success: false,
+          code: 'stateInconsistent',
+          roomId,
+          reason: 'Failed to reload the reconnected active-game player',
+        };
+      }
+
       return {
         success: true,
         mode: 'active-game',
         roomId,
         roomsList: await this.roomService.listRooms(),
-        room,
+        room: reconnectedRoom,
         ...this.buildActiveGameSnapshot(
           roomId,
-          room,
+          reconnectedRoom,
           roomGameState,
-          existingPlayer,
+          reconnectedPlayer,
         ),
       };
     } catch (error) {
@@ -354,8 +395,12 @@ export class ReconnectionUseCase {
           : null;
 
     return {
+      selfSeatId: asSeatId(player.playerId),
       selfPlayerId: player.playerId,
       reconnectToken: player.playerId,
+      currentTurnSeatId: currentTurnPlayerId
+        ? asSeatId(currentTurnPlayerId)
+        : null,
       currentTurnPlayerId,
       gameState: {
         players: resolveTransportPlayers(roomGameState, state.players, {
@@ -367,20 +412,30 @@ export class ReconnectionUseCase {
         }),
         gamePhase: state.gamePhase || 'waiting',
         currentField: state.playState?.currentField ?? null,
+        currentTurnSeatId: currentTurnPlayerId
+          ? asSeatId(currentTurnPlayerId)
+          : null,
         currentTurn: currentTurnPlayerId,
         blowState: state.blowState,
         teamScores: state.teamScores,
+        youSeatId: asSeatId(player.playerId),
         you: player.playerId,
         negriCard: state.playState?.negriCard ?? null,
+        negriSeatId: state.playState?.negriSeatId ?? null,
+        negriPlayerId:
+          state.playState?.negriSeatId ??
+          state.playState?.negriPlayerId ??
+          null,
         revealedAgari:
           state.gamePhase === 'play' &&
           !state.playState?.negriCard &&
           state.blowState.currentHighestDeclaration?.playerId ===
-          player.playerId
+            player.playerId
             ? (state.agari ?? null)
             : null,
         fields: state.playState?.fields ?? [],
         roomId,
+        hostSeatId: asSeatId(room.hostId),
         hostId: room.hostId,
         pointsToWin: state.pointsToWin,
         teamNames: room.settings.teamNames,
@@ -393,10 +448,7 @@ export class ReconnectionUseCase {
     authenticatedUser: AuthenticatedUser,
     playerId: string,
   ): void {
-    const displayName =
-      authenticatedUser.profile?.displayName ||
-      authenticatedUser.email ||
-      'User';
+    const displayName = this.resolveDisplayName(authenticatedUser);
 
     this.gameState.upsertSessionUser({
       socketId,
@@ -405,6 +457,14 @@ export class ReconnectionUseCase {
       userId: authenticatedUser.id,
       isAuthenticated: true,
     });
+  }
+
+  private resolveDisplayName(authenticatedUser: AuthenticatedUser): string {
+    return (
+      authenticatedUser.profile?.displayName ||
+      authenticatedUser.email ||
+      'User'
+    );
   }
 
   private async claimMembership(
@@ -439,7 +499,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const authenticatedMatches = roomPlayers.filter(
-      (player) => !player.isCOM && player.userId === authenticatedUserId,
+      (player) => player.userId === authenticatedUserId,
     );
     if (authenticatedMatches.length === 1) {
       return authenticatedMatches[0];
@@ -470,7 +530,7 @@ export class ReconnectionUseCase {
     authenticatedUserId: string,
   ): RoomPlayer | null {
     const matches = roomPlayers.filter(
-      (player) => !player.isCOM && player.userId === authenticatedUserId,
+      (player) => player.userId === authenticatedUserId,
     );
 
     return matches.length === 1 ? matches[0] : null;

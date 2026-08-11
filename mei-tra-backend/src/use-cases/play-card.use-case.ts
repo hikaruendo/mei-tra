@@ -14,6 +14,7 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { IPlayService } from '../services/interfaces/play-service.interface';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -81,6 +82,8 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: false, error: legalPlayError };
       }
 
+      const room = await this.roomService.getRoom(roomId);
+
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
 
@@ -89,8 +92,13 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         ? currentField.playedBy
         : [];
       currentField.playedBy = playedBy;
+      const playedBySeatIds = Array.isArray(currentField.playedBySeatIds)
+        ? currentField.playedBySeatIds
+        : playedBy.map(asSeatId);
+      currentField.playedBySeatIds = playedBySeatIds;
       currentField.cards.push(card);
       playedBy.push(player.playerId);
+      playedBySeatIds.push(asSeatId(player.playerId));
       if (currentField.cards.length === 1) {
         currentField.baseCard = card;
       }
@@ -98,22 +106,27 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'card_played',
+        actorSeatId: asSeatId(player.playerId),
         playerId: player.playerId,
         state,
         actionData: {
           card,
           fieldCards: [...currentField.cards],
           baseCard: currentField.baseCard,
+          playedBySeatIds: [...playedBySeatIds],
           playedBy: [...playedBy],
           isFieldComplete: currentField.cards.length === 4,
         },
       });
 
       const cardPlayedPayload: CardPlayedPayload = {
+        seatId: asSeatId(player.playerId),
         playerId: player.playerId,
         card,
         field: currentField,
-        players: resolveTransportPlayers(roomGameState, state.players),
+        players: resolveTransportPlayers(roomGameState, state.players, {
+          roomPlayers: room?.players,
+        }),
       };
       const events: PlayCardGatewayEvent[] = [
         {
@@ -149,6 +162,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       await roomGameState.nextTurn();
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
+        cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.playerId);
         cardPlayedPayload.nextPlayerId = nextPlayer.playerId;
         events.push({
           scope: 'room',

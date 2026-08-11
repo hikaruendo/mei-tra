@@ -403,7 +403,7 @@ RoomService は backend の中でも特に重要です。役割は単なる CRUD
 - `ComSessionService` を使った COM placeholder / COM 置換
 - `RoomJoinService` を使った join orchestration
 - join / leave / reconnect 周りの補助
-- `SeatRestorationService` と `PlayerReferenceRemapperService` を使った vacant seat / playerId 参照修復
+- `SeatRestorationService` を使った同一 `seatId` の vacant seat 復元
 - `UserGameStatsService` への stats 更新委譲
 
 また current `main` では、ゲーム終了後すぐに room row を削除しません。socket/timer などの in-memory resource は `releaseRoomResources()` で解放しつつ、finished room 自体は一定期間残して profile の recent matches から参照できるようにしています。

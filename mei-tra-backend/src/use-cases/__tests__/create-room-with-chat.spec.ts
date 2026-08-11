@@ -54,7 +54,6 @@ describe('CreateRoomUseCase', () => {
 
   beforeEach(() => {
     roomService = {
-      createRoom: jest.fn(),
       createNewRoom: jest.fn().mockResolvedValue(createdRoom),
       cancelRoomMembershipReservation: jest.fn().mockResolvedValue(false),
       listRooms: jest.fn().mockResolvedValue([updatedRoom]),
@@ -102,7 +101,11 @@ describe('CreateRoomUseCase', () => {
     expect(result.success).toBe(true);
     expect(roomService.createNewRoom).toHaveBeenCalledWith(
       'Test Game Room',
-      userId,
+      expect.objectContaining({
+        playerId: userId,
+        userId,
+        socketId: 'socket-1',
+      }),
       10,
       'random',
     );

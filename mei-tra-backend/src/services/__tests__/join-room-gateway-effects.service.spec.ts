@@ -14,7 +14,6 @@ describe('JoinRoomGatewayEffectsService', () => {
 
   beforeEach(() => {
     roomService = {
-      createRoom: jest.fn(),
       getRoom: jest.fn(),
       updateRoom: jest.fn(),
       deleteRoom: jest.fn(),
@@ -306,6 +305,8 @@ describe('JoinRoomGatewayEffectsService', () => {
               1: { play: 0, total: 0 },
             },
             negriCard: null,
+            negriSeatId: null,
+            negriPlayerId: null,
             fields: [],
             roomId: 'room-1',
             pointsToWin: 10,
@@ -546,6 +547,8 @@ describe('JoinRoomGatewayEffectsService', () => {
               1: { play: 0, total: 0 },
             },
             negriCard: null,
+            negriSeatId: null,
+            negriPlayerId: null,
             fields: [],
             roomId: 'room-1',
             pointsToWin: 10,
@@ -613,6 +616,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       clientId: 'socket-1',
       room: room as never,
       selfPlayer: {
+        seatId: 'player-1' as never,
         playerId: 'player-1',
         name: 'Host',
         team: 0,

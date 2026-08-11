@@ -1,4 +1,5 @@
 import { PlayerGameplayState, TeamNames } from './game.types';
+import type { SeatId } from './identity.types';
 import { SessionUser } from './session.types';
 
 export enum RoomStatus {
@@ -10,6 +11,7 @@ export enum RoomStatus {
 }
 
 export interface RoomPlayer extends SessionUser, PlayerGameplayState {
+  participantKey?: string;
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;
@@ -19,6 +21,8 @@ export interface RoomPlayer extends SessionUser, PlayerGameplayState {
 export interface Room {
   id: string;
   name: string;
+  hostSeatId?: SeatId;
+  /** @deprecated Use hostSeatId. */
   hostId: string;
   status: RoomStatus;
   players: RoomPlayer[];
@@ -36,12 +40,4 @@ export interface RoomSettings {
   pointsToWin: number;
   allowSpectators: boolean;
   teamNames?: TeamNames;
-}
-
-export interface RoomRepository {
-  createRoom(room: Room): Promise<Room>;
-  getRoom(roomId: string): Promise<Room | null>;
-  updateRoom(roomId: string, updates: Partial<Room>): Promise<Room | null>;
-  deleteRoom(roomId: string): Promise<void>;
-  listRooms(): Promise<Room[]>;
 }

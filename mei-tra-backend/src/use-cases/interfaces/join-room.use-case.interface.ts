@@ -8,6 +8,7 @@ import {
   CompletedField,
   TeamNames,
 } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { SessionUser } from '../../types/session.types';
 
@@ -35,6 +36,8 @@ export interface ResumeGamePayload {
     blowState: BlowState;
     teamScores: TeamScores;
     negriCard: string | null;
+    negriSeatId: SeatId | null;
+    negriPlayerId: string | null;
     fields: CompletedField[] | undefined;
     roomId: string;
     pointsToWin: number;

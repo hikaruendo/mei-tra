@@ -2,11 +2,13 @@ import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomMembershipReconcilerService } from '../room-membership-reconciler.service';
 import { RoomMembershipService } from '../room-membership.service';
 import { ActiveRoomMembership } from '../../types/room-membership.types';
+import { asSeatId } from '../../types/identity.types';
 
 describe('RoomMembershipReconcilerService', () => {
   const membership: ActiveRoomMembership = {
     userId: 'user-1',
     roomId: 'room-authoritative',
+    seatId: asSeatId('player-1'),
     playerId: 'player-1',
     status: 'active',
     membershipVersion: 4,

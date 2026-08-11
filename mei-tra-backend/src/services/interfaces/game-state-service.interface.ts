@@ -1,6 +1,7 @@
 import { DomainPlayer } from '../../types/game.types';
 import { PlayerConnectionState, SessionUser } from '../../types/session.types';
 import { RoomPlayer } from '../../types/room.types';
+import { RosterMembershipMutation } from '../../types/room-membership.types';
 
 export interface IGameStateService {
   addPlayer(
@@ -31,6 +32,10 @@ export interface IGameStateService {
     connectionState: PlayerConnectionState,
   ): Promise<void>;
   getPlayerConnectionState(playerId: string): PlayerConnectionState | null;
-  persistRoster(roomPlayers: RoomPlayer[], hostId?: string): Promise<void>;
+  persistRoster(
+    roomPlayers: RoomPlayer[],
+    hostId?: string,
+    membershipMutation?: RosterMembershipMutation,
+  ): Promise<void>;
   reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void>;
 }

@@ -3,9 +3,11 @@ import { BlowState, DomainPlayer, GameState, Team } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
-import { PlayerReferenceRemapperService } from './player-reference-remapper.service';
 import { VacantSeats } from './com-session.service';
 import { SessionUser } from '../types/session.types';
+import { randomUUID } from 'crypto';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
 
 interface JoinRoomParams {
   roomId: string;
@@ -23,10 +25,6 @@ interface RestoredSeatData {
 
 @Injectable()
 export class RoomJoinService {
-  constructor(
-    private readonly playerReferenceRemapperService: PlayerReferenceRemapperService,
-  ) {}
-
   async joinRoom({
     roomId,
     room,
@@ -48,18 +46,38 @@ export class RoomJoinService {
         return false;
       }
 
+      const reclaimingVacantSeatIndex = Object.entries(
+        vacantSeats[roomId] ?? {},
+      ).find(([, seatData]) => {
+        if (seatData.replacementPlayerId !== existingPlayer.playerId) {
+          return false;
+        }
+        return user.userId
+          ? seatData.roomPlayer.userId === user.userId
+          : seatData.roomPlayer.playerId === user.playerId;
+      })?.[0];
+      const reclaimingCOMSeat = Boolean(
+        existingPlayer.isCOM &&
+          ((user.userId && existingPlayer.userId === user.userId) ||
+            reclaimingVacantSeatIndex !== undefined),
+      );
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
         ...user,
-        playerId: existingPlayer.playerId,
+        seatId: resolveSeatId(existingPlayer),
+        playerId: resolveSeatId(existingPlayer),
+        participantKey:
+          user.userId ?? existingPlayer.participantKey ?? user.playerId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
         isHost: room.hostId === existingPlayer.playerId,
+        isCOM: reclaimingCOMSeat ? false : existingPlayer.isCOM,
       };
       Object.assign(existingPlayer, updatedPlayer);
       if (statePlayer) {
         statePlayer.name = updatedPlayer.name;
         statePlayer.team = updatedPlayer.team;
+        statePlayer.isCOM = updatedPlayer.isCOM;
       } else {
         state.players.push(toDomainPlayer(updatedPlayer));
       }
@@ -81,7 +99,17 @@ export class RoomJoinService {
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
       });
-      await gameState.persistRoster(room.players, room.hostId);
+      await gameState.persistRoster(
+        room.players,
+        room.hostId,
+        this.buildMembershipClaim(user),
+      );
+      if (reclaimingVacantSeatIndex !== undefined) {
+        delete vacantSeats[roomId][Number(reclaimingVacantSeatIndex)];
+        if (Object.keys(vacantSeats[roomId] ?? {}).length === 0) {
+          delete vacantSeats[roomId];
+        }
+      }
       if (this.advanceBlowTurnPastActedPlayer(gameState.getState())) {
         await gameState.saveState();
       }
@@ -123,28 +151,42 @@ export class RoomJoinService {
       if (Object.keys(roomVacant).length === 0) {
         delete vacantSeats[roomId];
       }
-    } else if (vacantIndexes.length > 0) {
-      assignedIndex = vacantIndexes[0];
-      const seatData = roomVacant[assignedIndex];
-      const seatRoomPlayer = seatData?.roomPlayer;
-      hand = seatRoomPlayer ? [...seatRoomPlayer.hand] : [];
-      team = seatRoomPlayer ? seatRoomPlayer.team : team;
-
-      const originalPlayerId = seatRoomPlayer?.playerId;
-      if (originalPlayerId) {
-        gameState.removePlayerToken(originalPlayerId);
-        gameState.clearDisconnectTimeout(originalPlayerId);
-      }
-
-      restoredSeatData = seatData ?? null;
-      delete roomVacant[assignedIndex];
-      if (Object.keys(roomVacant).length === 0) {
-        delete vacantSeats[roomId];
-      }
     } else {
+      const availableVacantIndex = vacantIndexes.find((index) => {
+        const seatData = roomVacant[index];
+        const currentSeat = seatData?.replacementPlayerId
+          ? room.players.find(
+              (player) => player.playerId === seatData.replacementPlayerId,
+            )
+          : room.players[index];
+        return !currentSeat?.userId;
+      });
+
+      if (availableVacantIndex !== undefined) {
+        assignedIndex = availableVacantIndex;
+        const seatData = roomVacant[assignedIndex];
+        const seatRoomPlayer = seatData?.roomPlayer;
+        hand = seatRoomPlayer ? [...seatRoomPlayer.hand] : [];
+        team = seatRoomPlayer ? seatRoomPlayer.team : team;
+
+        const originalPlayerId = seatRoomPlayer?.playerId;
+        if (originalPlayerId) {
+          gameState.removePlayerToken(originalPlayerId);
+          gameState.clearDisconnectTimeout(originalPlayerId);
+        }
+
+        restoredSeatData = seatData ?? null;
+        delete roomVacant[assignedIndex];
+        if (Object.keys(roomVacant).length === 0) {
+          delete vacantSeats[roomId];
+        }
+      }
+    }
+
+    if (assignedIndex === -1) {
       if (state.gamePhase !== null) {
-        const comIndex = room.players.findIndex(
-          (player) => player.isCOM === true,
+        const comIndex = room.players.findIndex((player) =>
+          this.isReplaceableCOMSeat(player),
         );
         if (comIndex !== -1) {
           const comPlayerId = room.players[comIndex].playerId;
@@ -174,13 +216,20 @@ export class RoomJoinService {
 
       if (!replacingComId && assignedIndex === -1) {
         const waitingComIndex = room.players.findIndex(
-          (player) => player.isCOM === true && !player.isReady,
+          (player) => this.isReplaceableCOMSeat(player) && !player.isReady,
         );
         if (waitingComIndex !== -1) {
           replacingComId = room.players[waitingComIndex].playerId;
           assignedIndex = waitingComIndex;
         }
       }
+    }
+
+    if (
+      assignedIndex === -1 &&
+      room.players.length >= room.settings.maxPlayers
+    ) {
+      return false;
     }
 
     const seatRoomSnapshot = restoredSeatData?.roomPlayer;
@@ -210,11 +259,18 @@ export class RoomJoinService {
         ? currentSeatRoomPlayer.hand
         : undefined;
 
+    const assignedSeatId = currentSeatRoomPlayer
+      ? resolveSeatId(currentSeatRoomPlayer)
+      : seatRoomSnapshot
+        ? resolveSeatId(seatRoomSnapshot)
+        : asSeatId(randomUUID());
     const player: RoomPlayer = {
       ...(seatRoomSnapshot ?? {}),
       ...user,
       socketId: user.socketId,
-      playerId: user.playerId,
+      seatId: assignedSeatId,
+      playerId: assignedSeatId,
+      participantKey: user.userId ?? user.playerId,
       team: currentSeatRoomPlayer?.team ?? team,
       hand: [...(currentSeatRoomHand ?? hand)],
       isPasser:
@@ -234,7 +290,8 @@ export class RoomJoinService {
         false,
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
-      isHost: room.hostId === user.playerId,
+      isHost: room.hostId === assignedSeatId,
+      isCOM: false,
       joinedAt: seatRoomSnapshot?.joinedAt
         ? new Date(seatRoomSnapshot.joinedAt)
         : new Date(),
@@ -244,7 +301,8 @@ export class RoomJoinService {
       room.players[assignedIndex] = player;
     } else {
       const comIndex = room.players.findIndex(
-        (roomPlayer) => roomPlayer.isCOM === true && !roomPlayer.isReady,
+        (roomPlayer) =>
+          this.isReplaceableCOMSeat(roomPlayer) && !roomPlayer.isReady,
       );
       if (comIndex !== -1) {
         room.players[comIndex] = player;
@@ -290,32 +348,9 @@ export class RoomJoinService {
     if (gsAssignedIndex !== -1) {
       state.players[gsAssignedIndex] = gamePlayer;
     } else {
-      const comIndex = state.players.findIndex(
-        (statePlayer) => statePlayer.isCOM === true,
-      );
-      if (comIndex !== -1) {
-        state.players[comIndex] = gamePlayer;
-      } else {
-        state.players.push(gamePlayer);
-      }
+      state.players.push(gamePlayer);
     }
 
-    const seatReferencePlayerIds = new Set<string>();
-    if (replacingComId) {
-      seatReferencePlayerIds.add(replacingComId);
-    }
-    if (seatRoomSnapshot?.playerId) {
-      seatReferencePlayerIds.add(seatRoomSnapshot.playerId);
-    }
-    if (seatGameSnapshot?.playerId) {
-      seatReferencePlayerIds.add(seatGameSnapshot.playerId);
-    }
-
-    const remappedSeatReferences = this.remapSeatReferences(
-      state,
-      seatReferencePlayerIds,
-      player.playerId,
-    );
     state.teamAssignments[player.playerId] = player.team;
 
     gameState.registerPlayerToken(player.playerId, player.playerId);
@@ -327,19 +362,15 @@ export class RoomJoinService {
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,
     });
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(
+      room.players,
+      room.hostId,
+      this.buildMembershipClaim(user),
+    );
     const persistedState = gameState.getState();
-    if (remappedSeatReferences) {
-      this.remapSeatReferences(
-        persistedState,
-        seatReferencePlayerIds,
-        player.playerId,
-      );
-      persistedState.teamAssignments[player.playerId] = player.team;
-    }
     const advancedBlowTurn =
       this.advanceBlowTurnPastActedPlayer(persistedState);
-    if (remappedSeatReferences || advancedBlowTurn) {
+    if (advancedBlowTurn) {
       await gameState.saveState();
     }
     return true;
@@ -349,13 +380,25 @@ export class RoomJoinService {
     return players.filter((player) => !player.isCOM).length;
   }
 
+  private buildMembershipClaim(
+    user: SessionUser,
+  ): RosterMembershipMutation | undefined {
+    return user.userId
+      ? {
+          type: 'claim',
+          userId: user.userId,
+          transitionId: randomUUID(),
+        }
+      : undefined;
+  }
+
   private findExistingRoomPlayer(
     players: RoomPlayer[],
     user: SessionUser,
   ): RoomPlayer | undefined {
     if (user.userId) {
       const playerByUserId = players.find(
-        (player) => !player.isCOM && player.userId === user.userId,
+        (player) => player.userId === user.userId,
       );
       if (playerByUserId) {
         return playerByUserId;
@@ -365,30 +408,8 @@ export class RoomJoinService {
     return players.find((player) => player.playerId === user.playerId);
   }
 
-  private remapSeatReferences(
-    state: GameState,
-    seatReferencePlayerIds: Set<string>,
-    playerId: string,
-  ): boolean {
-    let remapped = false;
-
-    seatReferencePlayerIds.forEach((fromPlayerId) => {
-      if (fromPlayerId === playerId) {
-        return;
-      }
-
-      this.playerReferenceRemapperService.remapGameStatePlayerIdReferences(
-        state,
-        fromPlayerId,
-        playerId,
-      );
-      if (state.teamAssignments[fromPlayerId] != null) {
-        delete state.teamAssignments[fromPlayerId];
-      }
-      remapped = true;
-    });
-
-    return remapped;
+  private isReplaceableCOMSeat(player: RoomPlayer): boolean {
+    return player.isCOM === true && !player.userId;
   }
 
   private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
@@ -411,6 +432,7 @@ export class RoomJoinService {
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
         state.currentPlayerIndex = candidateIndex;
         state.currentPlayerId = candidatePlayer.playerId;
+        state.currentSeatId = asSeatId(candidatePlayer.playerId);
         return true;
       }
     }

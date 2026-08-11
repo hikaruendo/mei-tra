@@ -7,6 +7,7 @@ import { ICardService } from '../services/interfaces/card-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
+import { asSeatId } from '../types/identity.types';
 
 export interface TransitionResult {
   events: GatewayEvent[];
@@ -57,6 +58,7 @@ export async function transitionToPlayPhase({
   );
   if (winnerIndex !== -1) {
     nextState.currentPlayerId = winningPlayer.playerId;
+    nextState.currentSeatId = asSeatId(winningPlayer.playerId);
     nextState.currentPlayerIndex = winnerIndex;
   }
 
@@ -103,6 +105,7 @@ export async function transitionToPlayPhase({
     const revealAgariPayload: RevealAgariPayload = {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
+      seatId: asSeatId(winningPlayer.playerId),
       playerId: winningPlayer.playerId,
     };
     delayedEvents.unshift({
@@ -117,11 +120,13 @@ export async function transitionToPlayPhase({
   await gameEventLogService?.log({
     roomId,
     actionType: 'play_phase_started',
+    actorSeatId: asSeatId(winningPlayer.playerId),
     playerId: winningPlayer.playerId,
     state: nextState,
     actionData: {
       currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
       currentTrump: nextState.blowState.currentTrump,
+      winnerSeatId: winningPlayer.playerId,
       winnerPlayerId: winningPlayer.playerId,
     },
   });

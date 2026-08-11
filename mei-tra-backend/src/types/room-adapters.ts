@@ -1,6 +1,7 @@
 import type { RoomContract, RoomPlayerContract } from '@contracts/room';
 import { Room, RoomPlayer } from './room.types';
 import { TransportPlayer } from './player-adapters';
+import { resolveSeatId } from './identity.types';
 
 function toIsoString(value: Date | string): string {
   if (value instanceof Date) {
@@ -16,6 +17,7 @@ export function toRoomPlayerContract(
 ): RoomPlayerContract {
   return {
     socketId: transportPlayer?.socketId ?? roomPlayer.socketId,
+    seatId: resolveSeatId(roomPlayer),
     playerId: roomPlayer.playerId,
     name: transportPlayer?.name ?? roomPlayer.name,
     userId: transportPlayer?.userId ?? roomPlayer.userId,
@@ -47,6 +49,7 @@ export function toRoomContract(
   return {
     id: room.id,
     name: room.name,
+    hostSeatId: room.hostSeatId ?? resolveSeatId({ playerId: room.hostId }),
     hostId: room.hostId,
     status: room.status,
     players: room.players.map((roomPlayer) =>

@@ -3,15 +3,11 @@ import { BlowState, DomainPlayer, GameState } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
-import { PlayerReferenceRemapperService } from './player-reference-remapper.service';
 import { VacantSeats } from './com-session.service';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
 
 @Injectable()
 export class SeatRestorationService {
-  constructor(
-    private readonly playerReferenceRemapper: PlayerReferenceRemapperService,
-  ) {}
-
   async restorePlayerFromVacantSeat(
     roomId: string,
     playerId: string,
@@ -51,10 +47,12 @@ export class SeatRestorationService {
     }
 
     const comPlayerId = currentSeatPlayer.playerId;
+    const seatId = resolveSeatId(currentSeatPlayer);
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
       socketId: '',
-      playerId,
+      seatId,
+      playerId: seatId,
       hand: [
         ...(currentSeatPlayer.hand.length
           ? currentSeatPlayer.hand
@@ -74,7 +72,8 @@ export class SeatRestorationService {
     const restoredGamePlayerBase: DomainPlayer = seatData.gamePlayer
       ? {
           ...toDomainPlayer(seatData.gamePlayer),
-          playerId,
+          seatId,
+          playerId: seatId,
           hand: [
             ...(state.players[gsIndex]?.hand.length
               ? state.players[gsIndex].hand
@@ -86,7 +85,8 @@ export class SeatRestorationService {
     if (gsIndex !== -1) {
       state.players[gsIndex] = toDomainPlayer({
         ...restoredGamePlayerBase,
-        playerId,
+        seatId,
+        playerId: seatId,
         name: restoredRoomPlayer.name,
         team: restoredRoomPlayer.team,
         hand: [...restoredRoomPlayer.hand],
@@ -107,20 +107,9 @@ export class SeatRestorationService {
       state.players.push(restoredGamePlayerBase);
     }
 
-    const seatReferencePlayerIds = new Set([
-      comPlayerId,
-      seatData.roomPlayer.playerId,
-      seatData.gamePlayer?.playerId,
-    ]);
-    const remappedSeatReferences = this.remapSeatReferences(
-      state,
-      seatReferencePlayerIds,
-      playerId,
-    );
-
-    gameState.registerPlayerToken(playerId, playerId);
-    gameState.clearDisconnectTimeout(playerId);
-    state.teamAssignments[playerId] = restoredRoomPlayer.team;
+    gameState.registerPlayerToken(seatId, seatId);
+    gameState.clearDisconnectTimeout(seatId);
+    state.teamAssignments[seatId] = restoredRoomPlayer.team;
 
     delete vacantSeatsForRoom[seatIndex];
     if (Object.keys(vacantSeatsForRoom).length === 0) {
@@ -129,46 +118,12 @@ export class SeatRestorationService {
 
     await gameState.persistRoster(room.players, room.hostId);
     const persistedState = gameState.getState();
-    if (remappedSeatReferences) {
-      this.remapSeatReferences(
-        persistedState,
-        seatReferencePlayerIds,
-        playerId,
-      );
-      persistedState.teamAssignments[playerId] = restoredRoomPlayer.team;
-    }
     const advancedBlowTurn =
       this.advanceBlowTurnPastActedPlayer(persistedState);
-    if (remappedSeatReferences || advancedBlowTurn) {
+    if (advancedBlowTurn) {
       await gameState.saveState();
     }
     return true;
-  }
-
-  private remapSeatReferences(
-    state: GameState,
-    seatReferencePlayerIds: Set<string | undefined>,
-    playerId: string,
-  ): boolean {
-    let remapped = false;
-
-    seatReferencePlayerIds.forEach((fromPlayerId) => {
-      if (!fromPlayerId || fromPlayerId === playerId) {
-        return;
-      }
-
-      this.playerReferenceRemapper.remapGameStatePlayerIdReferences(
-        state,
-        fromPlayerId,
-        playerId,
-      );
-      if (state.teamAssignments[fromPlayerId] != null) {
-        delete state.teamAssignments[fromPlayerId];
-      }
-      remapped = true;
-    });
-
-    return remapped;
   }
 
   private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
@@ -191,6 +146,7 @@ export class SeatRestorationService {
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
         state.currentPlayerIndex = candidateIndex;
         state.currentPlayerId = candidatePlayer.playerId;
+        state.currentSeatId = asSeatId(candidatePlayer.playerId);
         return true;
       }
     }

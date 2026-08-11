@@ -80,7 +80,6 @@ describe('RoomService active membership lifecycle', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       roomJoinService as unknown as RoomJoinService,
     );
     jest.spyOn(service, 'getRoom').mockResolvedValue(room);
@@ -94,9 +93,9 @@ describe('RoomService active membership lifecycle', () => {
   });
 
   it('rejects a cross-room conflict before mutating the target room', async () => {
-    membershipService.claim.mockResolvedValue({
-      result: 'conflict',
-      membership: { ...membership, roomId: 'room-existing' },
+    membershipService.get.mockResolvedValue({
+      ...membership,
+      roomId: 'room-existing',
     });
 
     await expect(
@@ -112,7 +111,7 @@ describe('RoomService active membership lifecycle', () => {
     expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
   });
 
-  it('claims and joins with the persisted room seat id', async () => {
+  it('joins with the persisted room seat id and leaves claiming to the atomic writer', async () => {
     const roomWithResolvedSeat: Room = {
       ...room,
       hostId: 'seat-1',
@@ -133,10 +132,6 @@ describe('RoomService active membership lifecycle', () => {
       ],
     };
     jest.spyOn(service, 'getRoom').mockResolvedValue(roomWithResolvedSeat);
-    membershipService.claim.mockResolvedValue({
-      result: 'reconnected',
-      membership: { ...membership, playerId: 'seat-1' },
-    });
     roomJoinService.joinRoom.mockResolvedValue(true);
 
     await expect(
@@ -148,16 +143,12 @@ describe('RoomService active membership lifecycle', () => {
       }),
     ).resolves.toBe(true);
 
-    expect(membershipService.claim).toHaveBeenCalledWith(
-      'user-1',
-      'room-1',
-      'seat-1',
-    );
+    expect(membershipService.claim).not.toHaveBeenCalled();
     const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
     expect(joinRequest).toMatchObject({
       user: { playerId: 'seat-1' },
     });
-    expect(membershipService.get).not.toHaveBeenCalled();
+    expect(membershipService.get).toHaveBeenCalledWith('user-1');
   });
 
   it('rejects an ambiguous authenticated room identity before claiming membership', async () => {
@@ -194,11 +185,7 @@ describe('RoomService active membership lifecycle', () => {
     expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
   });
 
-  it('rolls back a fresh claim with its membership version when joining fails', async () => {
-    membershipService.claim.mockResolvedValue({
-      result: 'claimed',
-      membership,
-    });
+  it('does not release membership separately when the atomic join fails', async () => {
     roomJoinService.joinRoom.mockResolvedValue(false);
 
     await expect(
@@ -210,19 +197,11 @@ describe('RoomService active membership lifecycle', () => {
       }),
     ).resolves.toBe(false);
 
-    expect(membershipService.release).toHaveBeenCalledWith(
-      'user-1',
-      'room-1',
-      2,
-    );
+    expect(membershipService.release).not.toHaveBeenCalled();
     expect(membershipService.releaseByPlayer).not.toHaveBeenCalled();
   });
 
   it('preserves an existing same-room membership when reconnect joining fails', async () => {
-    membershipService.claim.mockResolvedValue({
-      result: 'reconnected',
-      membership: { ...membership, membershipVersion: 3 },
-    });
     roomJoinService.joinRoom.mockResolvedValue(false);
 
     await service.joinRoom('room-1', {

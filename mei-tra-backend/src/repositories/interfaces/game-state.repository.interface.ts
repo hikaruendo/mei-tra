@@ -4,6 +4,7 @@ import {
   PlayerConnectionMetadata,
 } from '../../types/game.types';
 import { RoomPlayer } from '../../types/room.types';
+import { RosterMembershipMutation } from '../../types/room-membership.types';
 
 export interface IGameStateRepository {
   // Game state CRUD operations
@@ -19,6 +20,7 @@ export interface IGameStateRepository {
     roomPlayers: RoomPlayer[],
     gameState: GameState,
     hostId?: string,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState | null>;
   delete(roomId: string): Promise<void>;
 

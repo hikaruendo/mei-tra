@@ -28,6 +28,26 @@ const makeGamePlayer = (
   ...overrides,
 });
 
+const makeRoomPlayer = (
+  playerId: string,
+  name: string,
+  team: 0 | 1,
+  overrides: Partial<RoomPlayer> = {},
+): RoomPlayer => ({
+  socketId: '',
+  playerId,
+  name,
+  team,
+  hand: [],
+  isPasser: false,
+  hasBroken: false,
+  hasRequiredBroken: false,
+  isReady: true,
+  isHost: false,
+  joinedAt: new Date(),
+  ...overrides,
+});
+
 describe('Reconnection Token Management', () => {
   describe('GameStateService', () => {
     let gameStateService: GameStateService;
@@ -229,7 +249,14 @@ describe('Reconnection Token Management', () => {
 
         expect(foundPlayer1?.playerId).toBe('player-1');
         expect(foundPlayer2?.playerId).toBe('player-2');
-        expect(gameStateRepository.update).not.toHaveBeenCalled();
+        expect(gameStateRepository.update).toHaveBeenCalledWith(
+          roomId,
+          expect.objectContaining({
+            currentPlayerId: 'player-1',
+            currentPlayerIndex: 0,
+          }),
+          undefined,
+        );
       });
 
       it('should handle empty players array', async () => {
@@ -327,6 +354,7 @@ describe('Reconnection Token Management', () => {
             teamAssignments: { 'seat-1': 1 },
           }),
           'seat-1',
+          undefined,
         );
       });
     });
@@ -362,12 +390,9 @@ describe('Reconnection Token Management', () => {
       roomRepository = {
         findAll: jest.fn(),
         findById: jest.fn(),
-        create: jest.fn(),
+        createWithHostSeat: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
-        addPlayer: jest.fn(),
-        removePlayer: jest.fn(),
-        updatePlayer: jest.fn(),
         findRoomsOlderThan: jest.fn(),
         findByStatus: jest.fn(),
         findByHostId: jest.fn(),
@@ -433,6 +458,7 @@ describe('Reconnection Token Management', () => {
       );
 
       const roomMembershipService = {
+        get: jest.fn().mockResolvedValue(null),
         reserve: jest.fn(),
         claim: jest
           .fn()
@@ -497,28 +523,6 @@ describe('Reconnection Token Management', () => {
         return cloneRoom(persistedRoom);
       });
 
-      roomRepository.addPlayer.mockImplementation(async (roomId, player) => {
-        if (!persistedRoom || persistedRoom.id !== roomId) {
-          return false;
-        }
-
-        persistedRoom.players.push(cloneRoomPlayer(player));
-        return true;
-      });
-
-      roomRepository.removePlayer.mockImplementation(
-        async (roomId, playerId) => {
-          if (!persistedRoom || persistedRoom.id !== roomId) {
-            return false;
-          }
-
-          persistedRoom.players = persistedRoom.players.filter(
-            (player) => player.playerId !== playerId,
-          );
-          return true;
-        },
-      );
-
       roomRepository.update.mockImplementation(async (roomId, updates) => {
         if (!persistedRoom || persistedRoom.id !== roomId) {
           return null;
@@ -532,36 +536,6 @@ describe('Reconnection Token Management', () => {
         });
         return cloneRoom(persistedRoom);
       });
-
-      roomRepository.updatePlayer.mockImplementation(
-        async (roomId, playerId, updates) => {
-          if (!persistedRoom || persistedRoom.id !== roomId) {
-            return false;
-          }
-
-          const playerIndex = persistedRoom.players.findIndex(
-            (player) => player.playerId === playerId,
-          );
-          if (playerIndex === -1) {
-            return false;
-          }
-
-          persistedRoom.players[playerIndex] = cloneRoomPlayer({
-            ...persistedRoom.players[playerIndex],
-            ...updates,
-            hand:
-              updates.hand != null
-                ? [...updates.hand]
-                : persistedRoom.players[playerIndex].hand,
-            joinedAt:
-              updates.joinedAt != null
-                ? new Date(updates.joinedAt)
-                : persistedRoom.players[playerIndex].joinedAt,
-          } as RoomPlayer);
-
-          return true;
-        },
-      );
 
       roomRepository.updateLastActivity.mockImplementation(async (roomId) => {
         if (persistedRoom && persistedRoom.id === roomId) {
@@ -707,8 +681,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const result = await roomService.convertPlayerToCOM(roomId, playerId);
 
@@ -716,7 +688,8 @@ describe('Reconnection Token Management', () => {
 
         const persistedRoster =
           gameStateRepository.persistRoomRoster.mock.calls[0][1];
-        expect(persistedRoster[0].playerId).toContain('com-');
+        expect(persistedRoster[0].playerId).toBe(playerId);
+        expect(persistedRoster[0].isCOM).toBe(true);
         expect(persistedRoster[0].name).toBe('COM');
       });
 
@@ -743,8 +716,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         // Register token first
         const gameState = await roomService.getRoomGameState(roomId);
@@ -785,8 +756,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
@@ -833,7 +802,7 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
         const comPlayerId = gameState.getState().players[0].playerId;
-        expect(comPlayerId).toContain('com-');
+        expect(comPlayerId).toBe(playerId);
         expect(gameState.getState().playState?.currentField?.dealerId).toBe(
           comPlayerId,
         );
@@ -854,7 +823,6 @@ describe('Reconnection Token Management', () => {
           comPlayerId,
         );
         expect(gameState.getState().playState?.neguri[comPlayerId]).toBe('9♣');
-        expect(gameState.getState().teamAssignments[playerId]).toBeUndefined();
         expect(gameState.getState().teamAssignments[comPlayerId]).toBe(0);
       });
 
@@ -882,8 +850,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
@@ -936,7 +902,7 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
         const comPlayerId = gameState.getState().players[0].playerId;
-        expect(comPlayerId).toContain('com-');
+        expect(comPlayerId).toBe(playerId);
         expect(
           gameState.getState().blowState.currentHighestDeclaration?.playerId,
         ).toBe(comPlayerId);
@@ -1020,7 +986,7 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         const convertedPlayerId =
           roomState.getPersistedRoom()?.players[1]?.playerId ?? '';
-        expect(convertedPlayerId).toMatch(/^com-timeout-1-/);
+        expect(convertedPlayerId).toBe(playerId);
         expect(convertedPlayerId).not.toBe(existingCom.playerId);
         expect(
           new Set(
@@ -1060,6 +1026,254 @@ describe('Reconnection Token Management', () => {
     });
 
     describe('joinRoom with playerId matching', () => {
+      it('replaces a waiting COM with an authenticated newcomer as a human', async () => {
+        const roomId = 'room-newcomer';
+        const host = {
+          socketId: 'socket-host',
+          playerId: 'seat-host',
+          userId: 'user-host',
+          isAuthenticated: true,
+          name: 'Host',
+          team: 0 as const,
+          hand: [],
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        };
+        const comSeat = {
+          socketId: 'com-1',
+          playerId: 'seat-com',
+          name: 'COM',
+          team: 1 as const,
+          hand: [],
+          isPasser: true,
+          isCOM: true,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: false,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+        const roomState = bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostId: host.playerId,
+          status: RoomStatus.WAITING,
+          players: [host, comSeat],
+        });
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-new',
+          playerId: 'user-new',
+          userId: 'user-new',
+          isAuthenticated: true,
+          name: 'New Player',
+        });
+
+        expect(joined).toBe(true);
+        expect(roomState.getPersistedRoom()?.players[1]).toEqual(
+          expect.objectContaining({
+            playerId: comSeat.playerId,
+            userId: 'user-new',
+            name: 'New Player',
+            isCOM: false,
+          }),
+        );
+      });
+
+      it('does not let a newcomer replace a timeout-owned COM seat', async () => {
+        const roomId = 'room-reserved-timeout-seat';
+        const host: RoomPlayer = {
+          socketId: 'socket-host',
+          playerId: 'seat-host',
+          userId: 'user-host',
+          isAuthenticated: true,
+          name: 'Host',
+          team: 0,
+          hand: [],
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        };
+        const timeoutSeat: RoomPlayer = {
+          socketId: '',
+          playerId: 'seat-timeout',
+          userId: 'user-disconnected',
+          isAuthenticated: true,
+          participantKey: 'user-disconnected',
+          name: 'COM',
+          team: 1,
+          hand: [],
+          isPasser: false,
+          isCOM: true,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: false,
+          isHost: false,
+          joinedAt: new Date(),
+        };
+        const roomState = bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostId: host.playerId,
+          status: RoomStatus.WAITING,
+          settings: { ...baseRoom.settings, maxPlayers: 2 },
+          players: [host, timeoutSeat],
+        });
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-new',
+          playerId: 'user-new',
+          userId: 'user-new',
+          isAuthenticated: true,
+          name: 'New Player',
+        });
+
+        expect(joined).toBe(false);
+        expect(roomState.getPersistedRoom()?.players[1]).toEqual(timeoutSeat);
+      });
+
+      it('adds a newcomer without overwriting a reserved COM game state', async () => {
+        const roomId = 'room-reserved-seat-with-capacity';
+        const host = makeRoomPlayer('seat-host', 'Host', 0, {
+          userId: 'user-host',
+          isAuthenticated: true,
+          isHost: true,
+        });
+        const timeoutSeat = makeRoomPlayer('seat-timeout', 'COM', 1, {
+          userId: 'user-disconnected',
+          isAuthenticated: true,
+          participantKey: 'user-disconnected',
+          isCOM: true,
+        });
+        const roomState = bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostId: host.playerId,
+          status: RoomStatus.PLAYING,
+          settings: { ...baseRoom.settings, maxPlayers: 3 },
+          players: [host, timeoutSeat],
+        });
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().gamePhase = 'play';
+        gameState.getState().players = [
+          makeGamePlayer(host.playerId, host.name, host.team),
+          makeGamePlayer(
+            timeoutSeat.playerId,
+            timeoutSeat.name,
+            timeoutSeat.team,
+            {
+              isCOM: true,
+            },
+          ),
+        ];
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-new',
+          playerId: 'user-new',
+          userId: 'user-new',
+          isAuthenticated: true,
+          name: 'New Player',
+        });
+
+        expect(joined).toBe(true);
+        expect(roomState.getPersistedRoom()?.players).toHaveLength(3);
+        expect(
+          gameState
+            .getState()
+            .players.find((player) => player.playerId === timeoutSeat.playerId),
+        ).toEqual(expect.objectContaining({ isCOM: true }));
+        expect(
+          gameState
+            .getState()
+            .players.find((player) => player.name === 'New Player'),
+        ).toEqual(expect.objectContaining({ isCOM: false }));
+      });
+
+      it('restores the owner of an in-memory vacant seat as a human', async () => {
+        const roomId = 'room-vacant-owner';
+        const seatId = 'seat-owner';
+        const timeoutCOM: RoomPlayer = {
+          socketId: 'com-timeout',
+          playerId: seatId,
+          name: 'COM',
+          team: 0,
+          hand: ['H2'],
+          isPasser: false,
+          isCOM: true,
+          hasBroken: false,
+          hasRequiredBroken: false,
+          isReady: true,
+          isHost: true,
+          joinedAt: new Date(),
+        };
+        const roomState = bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostId: seatId,
+          status: RoomStatus.PLAYING,
+          players: [timeoutCOM],
+        });
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().gamePhase = 'play';
+        gameState.getState().players = [
+          makeGamePlayer(seatId, 'COM', 0, {
+            hand: ['H2'],
+            isCOM: true,
+          }),
+        ];
+        (
+          roomService as unknown as {
+            vacantSeats: Record<string, Record<number, unknown>>;
+          }
+        ).vacantSeats[roomId] = {
+          0: {
+            roomPlayer: {
+              ...timeoutCOM,
+              socketId: '',
+              userId: 'user-owner',
+              isAuthenticated: true,
+              participantKey: 'user-owner',
+              name: 'Owner',
+              isCOM: false,
+            },
+            replacementPlayerId: seatId,
+          },
+        };
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-owner',
+          playerId: 'stale-player-id',
+          userId: 'user-owner',
+          isAuthenticated: true,
+          name: 'Owner',
+        });
+
+        expect(joined).toBe(true);
+        expect(roomState.getPersistedRoom()?.players[0]).toEqual(
+          expect.objectContaining({
+            playerId: seatId,
+            userId: 'user-owner',
+            name: 'Owner',
+            isCOM: false,
+          }),
+        );
+        expect(gameState.getState().players[0]?.isCOM).toBe(false);
+        expect(
+          (
+            roomService as unknown as {
+              vacantSeats: Record<string, unknown>;
+            }
+          ).vacantSeats[roomId],
+        ).toBeUndefined();
+      });
+
       it('should restore same player to their previous seat', async () => {
         const roomId = 'room-123';
         const playerId = 'player-1';
@@ -1127,7 +1341,7 @@ describe('Reconnection Token Management', () => {
 
         // Verify player was restored to index 0
         const restoredRoom = roomState.getPersistedRoom();
-        expect(restoredRoom?.players[0].playerId).toBe(playerId);
+        expect(restoredRoom?.players[0].playerId).toBe(comPlayer.playerId);
         expect(restoredRoom?.players[0].hand).toEqual(['H2', 'D3', 'C4']);
         expect(restoredRoom?.players[0].team).toBe(0);
       });
@@ -1166,8 +1380,6 @@ describe('Reconnection Token Management', () => {
         });
 
         expect(result).toBe(true);
-        expect(roomRepository.addPlayer).not.toHaveBeenCalled();
-        expect(roomRepository.updatePlayer).not.toHaveBeenCalled();
         expect(roomState.getPersistedRoom()?.players[0].playerId).toBe(
           'player-1',
         );
@@ -1179,6 +1391,10 @@ describe('Reconnection Token Management', () => {
             players: [expect.objectContaining({ playerId: 'player-1' })],
           }),
           'player-1',
+          expect.objectContaining({
+            type: 'claim',
+            userId: 'user-1',
+          }),
         );
       });
 
@@ -1207,13 +1423,12 @@ describe('Reconnection Token Management', () => {
 
         const room: Room = {
           ...baseRoom,
+          hostId: comPlayer.playerId,
           status: RoomStatus.WAITING,
           players: [comPlayer],
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const result = await roomService.joinRoom(roomId, hostUser);
 
@@ -1222,12 +1437,13 @@ describe('Reconnection Token Management', () => {
           roomId,
           [
             expect.objectContaining({
-              playerId: 'player-1',
+              playerId: 'com-0',
               isHost: true,
             }),
           ],
           expect.any(Object),
-          'player-1',
+          'com-0',
+          undefined,
         );
       });
 
@@ -1387,12 +1603,14 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         const updatedRoom = roomState.getPersistedRoom();
         expect(updatedRoom?.players[0].playerId).toBe(otherCom.playerId);
-        expect(updatedRoom?.players[1].playerId).toBe(playerId);
+        expect(updatedRoom?.players[1].playerId).toBe(targetCom.playerId);
         expect(updatedRoom?.players[1].hand).toEqual(['H2', 'D3', 'C4']);
         expect(gameState.getState().players[0].playerId).toBe(
           otherCom.playerId,
         );
-        expect(gameState.getState().players[1].playerId).toBe(playerId);
+        expect(gameState.getState().players[1].playerId).toBe(
+          targetCom.playerId,
+        );
       });
 
       it('should restore the latest com hand after cards were played while disconnected', async () => {
@@ -1476,9 +1694,11 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
         const updatedRoom = roomState.getPersistedRoom();
-        expect(updatedRoom?.players[0].playerId).toBe(playerId);
+        expect(updatedRoom?.players[0].playerId).toBe(targetCom.playerId);
         expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
-        expect(gameState.getState().players[0].playerId).toBe(playerId);
+        expect(gameState.getState().players[0].playerId).toBe(
+          targetCom.playerId,
+        );
         expect(gameState.getState().players[0].hand).toEqual(['H2', 'D3']);
         expect(gameState.getState().players[0].isPasser).toBe(true);
       });
@@ -1513,8 +1733,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
@@ -1591,27 +1809,32 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
         expect(gameState.getState().playState?.currentField?.dealerId).toBe(
-          playerId,
+          targetCom.playerId,
         );
         expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
-          playerId,
+          targetCom.playerId,
         ]);
         expect(gameState.getState().playState?.fields[0]?.winnerId).toBe(
-          playerId,
+          targetCom.playerId,
         );
         expect(gameState.getState().playState?.fields[0]?.dealerId).toBe(
-          playerId,
+          targetCom.playerId,
         );
-        expect(gameState.getState().playState?.lastWinnerId).toBe(playerId);
-        expect(gameState.getState().playState?.openDeclarerId).toBe(playerId);
+        expect(gameState.getState().playState?.lastWinnerId).toBe(
+          targetCom.playerId,
+        );
+        expect(gameState.getState().playState?.openDeclarerId).toBe(
+          targetCom.playerId,
+        );
         expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
-          playerId,
+          targetCom.playerId,
         );
-        expect(gameState.getState().playState?.neguri[playerId]).toBe('5♦');
-        expect(
-          gameState.getState().teamAssignments[targetCom.playerId],
-        ).toBeUndefined();
-        expect(gameState.getState().teamAssignments[playerId]).toBe(0);
+        expect(gameState.getState().playState?.neguri[targetCom.playerId]).toBe(
+          '5♦',
+        );
+        expect(gameState.getState().teamAssignments[targetCom.playerId]).toBe(
+          0,
+        );
       });
 
       it('should remap blow state references from COM back to the player on rejoin', async () => {
@@ -1644,8 +1867,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
@@ -1729,16 +1950,18 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         expect(
           gameState.getState().blowState.currentHighestDeclaration?.playerId,
-        ).toBe(playerId);
+        ).toBe(targetCom.playerId);
         expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
-          playerId,
+          targetCom.playerId,
         );
         expect(
           gameState
             .getState()
             .blowState.actionHistory.map((action) => action.playerId),
-        ).toEqual([playerId, playerId]);
-        expect(gameState.getState().blowState.lastPasser).toBe(playerId);
+        ).toEqual([targetCom.playerId, targetCom.playerId]);
+        expect(gameState.getState().blowState.lastPasser).toBe(
+          targetCom.playerId,
+        );
       });
 
       it('should advance blow turn when a joining player replaces a COM that already acted', async () => {
@@ -1851,12 +2074,12 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.joinRoom(roomId, user);
 
         expect(result).toBe(true);
-        expect(gameState.getState().players[0]?.playerId).toBe(joiningPlayerId);
+        expect(gameState.getState().players[0]?.playerId).toBe(replacingComId);
         expect(
           gameState.getState().blowState.currentHighestDeclaration?.playerId,
-        ).toBe(joiningPlayerId);
+        ).toBe(replacingComId);
         expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
-          joiningPlayerId,
+          replacingComId,
         );
         expect(gameState.getState().currentPlayerId).toBe(nextPlayerId);
         expect(gameState.getState().currentPlayerIndex).toBe(1);
@@ -1948,14 +2171,14 @@ describe('Reconnection Token Management', () => {
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: originalPlayerId,
+            playerId: replacingComId,
             trumpType: 'club',
             numberOfPairs: 7,
             timestamp: 1,
           },
           declarations: [
             {
-              playerId: originalPlayerId,
+              playerId: replacingComId,
               trumpType: 'club',
               numberOfPairs: 7,
               timestamp: 1,
@@ -1964,7 +2187,7 @@ describe('Reconnection Token Management', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId: originalPlayerId,
+              playerId: replacingComId,
               trumpType: 'club',
               numberOfPairs: 7,
               timestamp: 1,
@@ -2017,15 +2240,15 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.joinRoom(roomId, user);
 
         expect(result).toBe(true);
-        expect(gameState.getState().players[0]?.playerId).toBe(joiningPlayerId);
+        expect(gameState.getState().players[0]?.playerId).toBe(replacingComId);
         expect(
           gameState.getState().blowState.currentHighestDeclaration?.playerId,
-        ).toBe(joiningPlayerId);
+        ).toBe(replacingComId);
         expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
-          joiningPlayerId,
+          replacingComId,
         );
         expect(gameState.getState().blowState.actionHistory[0]?.playerId).toBe(
-          joiningPlayerId,
+          replacingComId,
         );
         expect(gameState.getState().currentPlayerId).toBe(nextPlayerId);
         expect(gameState.getState().currentPlayerIndex).toBe(1);
@@ -2034,17 +2257,13 @@ describe('Reconnection Token Management', () => {
           expect.objectContaining({ currentPlayerId: nextPlayerId }),
           expect.any(Number),
         );
-        expect(gameStateRepository.update).toHaveBeenCalledWith(
-          roomId,
-          expect.objectContaining({
-            blowState: expect.objectContaining({
-              currentHighestDeclaration: expect.objectContaining({
-                playerId: joiningPlayerId,
-              }),
-            }),
-          }),
-          expect.any(Number),
-        );
+        expect(
+          gameStateRepository.update.mock.calls.some(
+            ([, update]) =>
+              update.blowState?.currentHighestDeclaration?.playerId ===
+              replacingComId,
+          ),
+        ).toBe(true);
       });
 
       it('should allow different player to take vacant seat and remove original token', async () => {
@@ -2115,7 +2334,8 @@ describe('Reconnection Token Management', () => {
 
         // New player should get the seat
         const updatedRoom = roomState.getPersistedRoom();
-        expect(updatedRoom?.players[0].playerId).toBe('player-2');
+        expect(updatedRoom?.players[0].playerId).toBe(comPlayer.playerId);
+        expect(updatedRoom?.players[0].participantKey).toBe('player-2');
         expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
 
         // Original player's token should be removed
@@ -2127,6 +2347,79 @@ describe('Reconnection Token Management', () => {
             .players.find((p) => p.playerId === originalPlayerId),
         ).toBeUndefined();
       });
+    });
+
+    it('restores a timeout-owned COM seat and clears the in-memory snapshot', async () => {
+      const roomId = 'room-timeout-reconnect';
+      const playerId = 'seat-timeout';
+      const roomState = bindRoomRepositoryToState({
+        ...baseRoom,
+        id: roomId,
+        hostId: playerId,
+        status: RoomStatus.PLAYING,
+        players: [
+          {
+            socketId: '',
+            playerId,
+            userId: 'user-1',
+            isAuthenticated: true,
+            participantKey: 'user-1',
+            name: 'COM',
+            team: 0,
+            hand: ['A♠'],
+            isPasser: false,
+            isCOM: true,
+            hasBroken: false,
+            hasRequiredBroken: false,
+            isReady: true,
+            isHost: true,
+            joinedAt: new Date(),
+          },
+        ],
+      });
+      const gameState = await roomService.getRoomGameState(roomId);
+      gameState.getState().players = [
+        makeGamePlayer(playerId, 'COM', 0, {
+          hand: ['A♠'],
+          isCOM: true,
+        }),
+      ];
+      (
+        roomService as unknown as { vacantSeats: Record<string, unknown> }
+      ).vacantSeats[roomId] = {
+        0: {
+          roomPlayer: {
+            ...roomState.getPersistedRoom()!.players[0],
+            name: 'Original Player',
+          },
+          replacementPlayerId: playerId,
+        },
+      };
+
+      const result = await roomService.handlePlayerReconnection(
+        roomId,
+        playerId,
+        'socket-new',
+        'user-1',
+        'Original Player',
+      );
+
+      expect(result).toEqual({ success: true });
+      expect(roomState.getPersistedRoom()?.players[0]).toEqual(
+        expect.objectContaining({
+          playerId,
+          userId: 'user-1',
+          name: 'Original Player',
+          isCOM: false,
+        }),
+      );
+      expect(gameState.getState().players[0]).toEqual(
+        expect.objectContaining({ name: 'Original Player', isCOM: false }),
+      );
+      expect(
+        (roomService as unknown as { vacantSeats: Record<string, unknown> })
+          .vacantSeats[roomId],
+      ).toBeUndefined();
     });
 
     describe('restorePlayerFromVacantSeat', () => {
@@ -2209,9 +2502,11 @@ describe('Reconnection Token Management', () => {
 
         expect(restored).toBe(true);
         const updatedRoom = roomState.getPersistedRoom();
-        expect(updatedRoom?.players[0].playerId).toBe(playerId);
+        expect(updatedRoom?.players[0].playerId).toBe(comPlayer.playerId);
         expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
-        expect(gameState.getState().players[0].playerId).toBe(playerId);
+        expect(gameState.getState().players[0].playerId).toBe(
+          comPlayer.playerId,
+        );
         expect(gameState.getState().players[0].isPasser).toBe(true);
         expect((roomService as any)['vacantSeats'][roomId]).toBeUndefined();
       });
@@ -2319,7 +2614,7 @@ describe('Reconnection Token Management', () => {
 
         const updatedRoom = roomState.getPersistedRoom();
         const replacementCom = updatedRoom?.players.find(
-          (player) => player.playerId === 'com-1',
+          (player) => player.playerId === playerId,
         );
         expect(
           new Set(updatedRoom?.players.map((player) => player.playerId)).size,
@@ -2332,7 +2627,7 @@ describe('Reconnection Token Management', () => {
         expect(
           gameState.getState().teamAssignments[replacementCom?.playerId ?? ''],
         ).toBe(1);
-        expect(gameState.getState().teamAssignments[playerId]).toBeUndefined();
+        expect(gameState.getState().teamAssignments[playerId]).toBe(1);
       });
 
       it('should avoid duplicate COM player ids when waiting-room state order is stale', async () => {
@@ -2418,9 +2713,9 @@ describe('Reconnection Token Management', () => {
 
         const updatedRoom = roomState.getPersistedRoom();
         const playerIds = updatedRoom?.players.map((player) => player.playerId);
-        expect(playerIds).toContain('com-1');
+        expect(playerIds).toContain(playerId);
         expect(new Set(playerIds).size).toBe(playerIds?.length);
-        expect(gameState.getState().players[2].playerId).toBe('com-1');
+        expect(gameState.getState().players[2].playerId).toBe(playerId);
       });
 
       it('should not remove reconnectToken when leaving during play', async () => {
@@ -2496,8 +2791,6 @@ describe('Reconnection Token Management', () => {
         };
 
         roomRepository.findById.mockResolvedValue(room);
-        roomRepository.removePlayer.mockResolvedValue(true);
-        roomRepository.addPlayer.mockResolvedValue(true);
 
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().gamePhase = 'blow';
@@ -2555,8 +2848,9 @@ describe('Reconnection Token Management', () => {
         // Verify player was converted to com
         const comPlayer = roomState
           .getPersistedRoom()
-          ?.players.find((p) => p.playerId.startsWith('com-'));
+          ?.players.find((player) => player.playerId === playerId);
         expect(comPlayer).toBeDefined();
+        expect(comPlayer?.isCOM).toBe(true);
 
         // Verify vacantSeats contains the player's data
         /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */

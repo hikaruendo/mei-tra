@@ -1,6 +1,7 @@
 import { DisconnectGatewayEffectsService } from '../disconnect-gateway-effects.service';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomMembershipService } from '../room-membership.service';
+import { asSeatId } from '../../types/identity.types';
 
 const membershipServiceStub = (
   overrides: Partial<RoomMembershipService> = {},
@@ -207,6 +208,7 @@ describe('DisconnectGatewayEffectsService', () => {
     expect(disconnectEvent).toEqual(
       expect.objectContaining({
         payload: {
+          seatId: 'player-1',
           playerId: 'player-1',
           playerName: 'Host Display',
           roomId: 'room-1',
@@ -215,7 +217,7 @@ describe('DisconnectGatewayEffectsService', () => {
     );
   });
 
-  it('removes lobby players on disconnect timeout', async () => {
+  it('converts lobby players to vacant COM seats on disconnect timeout', async () => {
     const roomGameState = {
       getPlayerConnectionState: jest.fn(() => ({ socketId: '' })),
       getState: jest.fn(() => ({ players: [] })),
@@ -386,6 +388,7 @@ describe('DisconnectGatewayEffectsService', () => {
       membership: {
         userId: 'user-1',
         roomId: 'room-1',
+        seatId: asSeatId('player-1'),
         playerId: 'player-1',
         status: 'disconnected',
         membershipVersion: 3,
@@ -401,10 +404,11 @@ describe('DisconnectGatewayEffectsService', () => {
     expect(finishDisconnectTimeout).not.toHaveBeenCalled();
   });
 
-  it('finishes the timeout lease only after COM conversion succeeds', async () => {
+  it('finishes the timeout lease inside the atomic COM conversion', async () => {
     const movingMembership = {
       userId: 'user-1',
       roomId: 'room-1',
+      seatId: asSeatId('player-1'),
       playerId: 'player-1',
       status: 'moving' as const,
       membershipVersion: 4,
@@ -464,12 +468,18 @@ describe('DisconnectGatewayEffectsService', () => {
     expect(roomService.convertPlayerToCOM).toHaveBeenCalledWith(
       'room-1',
       'player-1',
-      { requireDisconnected: true, releaseMembership: false },
+      {
+        requireDisconnected: true,
+        releaseMembership: false,
+        membershipMutation: {
+          type: 'complete-disconnect-timeout',
+          userId: 'user-1',
+          expectedVersion: 4,
+          transitionId: 'timeout-transition',
+        },
+      },
     );
-    expect(finishDisconnectTimeout).toHaveBeenCalledWith(
-      movingMembership,
-      true,
-    );
+    expect(finishDisconnectTimeout).not.toHaveBeenCalled();
     expect(events).toContainEqual({
       scope: 'room',
       roomId: 'room-1',

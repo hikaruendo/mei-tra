@@ -198,13 +198,32 @@ Supabase Auth の canonical user は `auth.users` です。一方、このアプ
 ### 5.4 game room / player の source of truth
 
 - room metadata: `rooms`
-- player identity / seat / team / ready / host: `room_players`
+- canonical seat identity / team / ready / occupant: `room_players`
+- host seat: `rooms.host_seat_id`
+- current turn seat: `game_states.current_seat_id`
 - player gameplay state: `game_states.state_data.playerStates`
-- socket 接続情報: `GameStateService` 内の memory state
+- socket 接続情報: `GameStateService` / `PlayerConnectionManager` 内の memory state
 - runtime: room ごとの `GameStateService`
 - frontend 表示: `types/room.types.ts`, `types/game.types.ts`
 
-### 5.5 social chat の source of truth
+部屋内の正本 identity は `seatId = room_players.id` です。`seatId` は部屋が削除されるまで変わらず、人間から COM、人間への復帰、再接続では同じ席行の占有情報だけを更新します。
+
+- `userId`: Supabase Auth の認証アカウント
+- `seatId`: ゲーム上の席を表す UUID
+- `socketId`: 接続ごとに変わる一時 transport ID
+- `playerId`: 移行中だけ残す `seatId` と同値の deprecated alias
+
+この区別により、アカウント削除や接続切断が起きても、進行中の席と対局履歴を同じ UUID で追跡できます。Gateway は自分の席を client payload から信用せず、認証済み `userId`、active membership、socket session から解決します。
+
+### 5.5 ID 命名規約
+
+内部 relation の `*_id` は原則として UUID と FK を持たせます。特に席を参照する列は `(room_id, seat_id)` の複合 FK にし、別ルームの席を誤って参照できないようにします。
+
+UUID ではない ID は外部システムまたは実行単位の opaque ID に限定します。現在の許可対象は `device_id`、`expo_receipt_id`、`worker_id` です。新しい内部 text ID を追加すると `supabase/tests/seat_uuid_identity.sql` が失敗します。
+
+JSON と Socket payload でも意味を列名に合わせ、`currentSeatId`、`winnerSeatId`、`dealerSeatId`、`negriSeatId`、`targetSeatId`、`youSeatId` を使用します。Web / Mobile の移行期間だけ旧名を同値 alias として読み書きします。
+
+### 5.6 social chat の source of truth
 
 - persistence: `chat_rooms`, `chat_members`, `chat_messages`
 - runtime / domain: `ChatService` と repository 実装
@@ -278,7 +297,9 @@ profile は現在も進化中の schema です。
 
 ### 7.1 room と room players
 
-room metadata は `rooms`、参加者の identity と座席情報は `room_players` にあります。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が `room_players`、`rooms.host_id`、`game_states` を一つの transaction で更新します。
+room metadata は `rooms`、canonical seat と占有者情報は `room_players` にあります。`room_players.id` が不変の席 UUID で、`room_players.player_id` は互換移行専用の legacy key です。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が席行を削除・再作成せず、`room_players`、`rooms.host_seat_id`、`game_states.current_seat_id`、membership を一つの transaction で更新します。
+
+room 作成は room UUID と host seat UUID を先に生成し、deferred FK を使う `create_room_with_host_seat_atomic()` で原子的に保存します。COM 置換・再接続・退出でも `seatId` は維持されるため、ゲーム状態や履歴を横断して参照置換する処理は不要です。
 
 この説明が指す主なコードは次です。
 

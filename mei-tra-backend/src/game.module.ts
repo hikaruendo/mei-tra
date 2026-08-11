@@ -34,7 +34,6 @@ import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
 import { ComAutoPlayUseCase } from './use-cases/com-autoplay.use-case';
 import { ActivityTrackerService } from './services/activity-tracker.service';
 import { TurnMonitorService } from './services/turn-monitor.service';
-import { PlayerReferenceRemapperService } from './services/player-reference-remapper.service';
 import { UserGameStatsService } from './services/user-game-stats.service';
 import { ComSessionService } from './services/com-session.service';
 import { SeatRestorationService } from './services/seat-restoration.service';
@@ -76,7 +75,6 @@ import { AccountActionGateService } from './services/account-action-gate.service
     ActivityTrackerService,
     TurnMonitorService,
     ComAutoPlayRecoveryService,
-    PlayerReferenceRemapperService,
     UserGameStatsService,
     ComSessionService,
     SeatRestorationService,

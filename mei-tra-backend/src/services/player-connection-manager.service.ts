@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { DomainPlayer } from '../types/game.types';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
+import { asSeatId } from '../types/identity.types';
 
 export class PlayerConnectionManager {
   readonly users: SessionUser[] = [];
@@ -85,6 +86,7 @@ export class PlayerConnectionManager {
     const previousUserId = existingUser.userId;
     const changed =
       existingUser.socketId !== sessionUser.socketId ||
+      existingUser.seatId !== sessionUser.seatId ||
       existingUser.playerId !== sessionUser.playerId ||
       existingUser.name !== sessionUser.name ||
       existingUser.userId !== nextUserId ||
@@ -92,6 +94,7 @@ export class PlayerConnectionManager {
 
     if (changed) {
       existingUser.socketId = sessionUser.socketId;
+      existingUser.seatId = sessionUser.seatId;
       existingUser.playerId = sessionUser.playerId;
       existingUser.name = sessionUser.name;
       existingUser.userId = nextUserId;
@@ -142,28 +145,6 @@ export class PlayerConnectionManager {
 
     user.name = name;
     return true;
-  }
-
-  removePlayer(players: DomainPlayer[], playerId: string): void {
-    const playerIndex = players.findIndex(
-      (candidate) => candidate.playerId === playerId,
-    );
-    if (playerIndex === -1) {
-      return;
-    }
-
-    this.disconnectedPlayers.set(
-      playerId,
-      setTimeout(() => {
-        this.disconnectedPlayers.delete(playerId);
-        const index = players.findIndex(
-          (candidate) => candidate.playerId === playerId,
-        );
-        if (index !== -1) {
-          players.splice(index, 1);
-        }
-      }, 15000),
-    );
   }
 
   registerPlayerToken(token: string, playerId: string): void {
@@ -235,6 +216,7 @@ export class PlayerConnectionManager {
     const resolvedUserId = userId ?? existingUser?.userId;
     const { user } = this.upsertSessionUser({
       socketId,
+      seatId: asSeatId(playerId),
       playerId,
       name,
       userId: resolvedUserId,

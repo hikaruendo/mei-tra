@@ -1,4 +1,6 @@
 import type { PlayerContract } from '@contracts/game';
+import type { SeatId } from '@contracts/ids';
+import { normalizePlayerIdentity } from '@meitra/game-client/identity';
 
 export type Team = 0 | 1;
 
@@ -10,7 +12,9 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface ConnectionUser {
   socketId: string; // Connection/session identifier only
-  playerId: string; // Table participant identifier (future participantId equivalent)
+  seatId: SeatId;
+  /** @deprecated Use seatId. */
+  playerId: string;
   name: string;
   userId?: string; // Canonical authenticated account ID
   isAuthenticated?: boolean;
@@ -19,23 +23,30 @@ export interface ConnectionUser {
 
 export interface CompletedField {
   cards: string[];
+  winnerSeatId: SeatId;
   winnerId: string;
   winnerTeam: Team;
+  dealerSeatId: SeatId;
+  dealerId: string;
 }
 
 export interface Field {
   cards: string[];
   playedBy: string[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
+  dealerSeatId: SeatId;
   dealerId: string;
   isComplete: boolean;
 }
 
 // Update socket event types
 export interface FieldCompleteEvent {
+  winnerSeatId: SeatId;
   winnerId: string;
   field: CompletedField;
+  nextSeatId: SeatId;
   nextPlayerId: string;
 }
 
@@ -50,6 +61,7 @@ export interface Player extends ConnectionUser {
 }
 
 export interface BlowDeclaration {
+  seatId: SeatId;
   playerId: string;
   team?: Team;
   trumpType: TrumpType;
@@ -59,6 +71,7 @@ export interface BlowDeclaration {
 
 export interface BlowAction {
   type: 'declare' | 'pass';
+  seatId: SeatId;
   playerId: string;
   trumpType?: TrumpType;
   numberOfPairs?: number;
@@ -111,19 +124,21 @@ export interface GameActions {
 } 
 
 export function fromPlayerContract(player: PlayerContract): Player {
+  const normalized = normalizePlayerIdentity(player);
   return {
-    socketId: player.socketId,
-    playerId: player.playerId,
-    name: player.name,
-    userId: player.userId,
-    isAuthenticated: player.isAuthenticated,
-    team: player.team,
-    hand: [...player.hand],
-    isHost: player.isHost,
-    isPasser: player.isPasser,
-    isCOM: player.isCOM,
-    hasBroken: player.hasBroken ?? false,
-    hasRequiredBroken: player.hasRequiredBroken ?? false,
+    socketId: normalized.socketId,
+    seatId: normalized.seatId,
+    playerId: normalized.playerId,
+    name: normalized.name,
+    userId: normalized.userId,
+    isAuthenticated: normalized.isAuthenticated,
+    team: normalized.team,
+    hand: [...normalized.hand],
+    isHost: normalized.isHost,
+    isPasser: normalized.isPasser,
+    isCOM: normalized.isCOM,
+    hasBroken: normalized.hasBroken ?? false,
+    hasRequiredBroken: normalized.hasRequiredBroken ?? false,
   };
 }
 
