@@ -132,16 +132,6 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
       updatedState.pointsToWin = room.settings.pointsToWin;
 
-      // Synchronize hands with room representation
-      roomWithFilledSeats.players.forEach((roomPlayer) => {
-        const statePlayer = updatedState.players.find(
-          (p) => p.playerId === roomPlayer.playerId,
-        );
-        if (statePlayer) {
-          roomPlayer.hand = [...statePlayer.hand];
-        }
-      });
-
       // Reset all players' isPasser flag at blow phase start
       updatedState.players.forEach((p) => {
         p.isPasser = false;
@@ -237,10 +227,6 @@ export class StartGameUseCase implements IStartGameUseCase {
         }
         return {
           ...toDomainPlayer(roomPlayer),
-          hand: [...roomPlayer.hand],
-          isPasser: roomPlayer.isPasser ?? false,
-          hasBroken: roomPlayer.hasBroken ?? false,
-          hasRequiredBroken: roomPlayer.hasRequiredBroken ?? false,
         };
       }
 

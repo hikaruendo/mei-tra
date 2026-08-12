@@ -20,7 +20,6 @@ import { PlayerConnectionManager } from './player-connection-manager.service';
 import { GamePhaseService } from './game-phase.service';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
 import {
-  toDomainPlayer,
   toRuntimePlayer,
   toTransportPlayers,
   TransportPlayer,
@@ -34,6 +33,7 @@ import {
   resolveCurrentSeatId,
   setCurrentSeat,
 } from '../types/current-turn';
+import { reconcileRuntimeRoster } from './runtime-seat-roster';
 
 @Injectable()
 export class GameStateService implements IGameStateService {
@@ -291,27 +291,7 @@ export class GameStateService implements IGameStateService {
   async reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void> {
     const previousPlayers = this.state.players;
     const previousTeamAssignments = this.state.teamAssignments;
-    const currentPlayers = new Map(
-      this.state.players.map((player) => [player.playerId, player]),
-    );
-
-    this.state.players = roomPlayers.map((roomPlayer) => {
-      const currentPlayer = currentPlayers.get(roomPlayer.playerId);
-      if (!currentPlayer) {
-        return toDomainPlayer(roomPlayer);
-      }
-
-      return toDomainPlayer({
-        ...roomPlayer,
-        hand: currentPlayer.hand,
-        isPasser: currentPlayer.isPasser,
-        hasBroken: currentPlayer.hasBroken,
-        hasRequiredBroken: currentPlayer.hasRequiredBroken,
-      });
-    });
-    this.state.teamAssignments = Object.fromEntries(
-      roomPlayers.map((player) => [player.playerId, player.team]),
-    );
+    reconcileRuntimeRoster(this.state, roomPlayers);
 
     roomPlayers.forEach((player) => {
       this.connectionManager.registerPlayerToken(
