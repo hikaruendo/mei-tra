@@ -237,20 +237,35 @@ export function GameHistoryDock({
     return t('teamValue', { team: team + 1 });
   };
 
-  const formatPlayer = (playerId: string | null | undefined) => {
+  const resolvePlayerName = useCallback(
+    (
+      playerId: string | null | undefined,
+      fallbackName?: string | null,
+    ): string | null => {
+      if (!playerId) {
+        return null;
+      }
+
+      const currentName = players
+        .find((player) => player.playerId === playerId)
+        ?.name.trim();
+      const summaryName = resolvedSummary?.playerNames[playerId]?.trim();
+      const storedName = fallbackName?.trim();
+
+      return currentName || summaryName || storedName || null;
+    },
+    [players, resolvedSummary?.playerNames],
+  );
+
+  const formatPlayer = (
+    playerId: string | null | undefined,
+    fallbackName?: string | null,
+  ) => {
     if (!playerId) {
       return null;
     }
 
-    const playerIndex = players.length > 0
-      ? players.findIndex((player) => player.playerId === playerId)
-      : resolvedSummary?.playerIds.findIndex(
-          (summaryPlayerId) => summaryPlayerId === playerId,
-        ) ?? -1;
-
-    return playerIndex >= 0
-      ? t('participantNumber', { number: playerIndex + 1 })
-      : t('participant');
+    return resolvePlayerName(playerId, fallbackName) ?? t('participant');
   };
 
   const formatTrump = (trump: unknown) => {
@@ -359,7 +374,8 @@ export function GameHistoryDock({
             ?? null;
           const blowerId = latestDeclarationPlayerId ?? playStartedPlayerId;
           const blowerName =
-            getPlayerNameFromActionData(
+            resolvePlayerName(blowerId)
+            ?? getPlayerNameFromActionData(
               latestDeclarationEvent,
               latestDeclarationPlayerId,
             )
@@ -387,7 +403,15 @@ export function GameHistoryDock({
             scores,
           };
         }),
-    [formatDeclarationSetCount, orderedRounds, players, roundScoreDeltas, t, trumpT],
+    [
+      formatDeclarationSetCount,
+      orderedRounds,
+      players,
+      resolvePlayerName,
+      roundScoreDeltas,
+      t,
+      trumpT,
+    ],
   );
   const hasDisplayEvents =
     variant === 'page' ? displayRounds.length > 0 : roundTableRows.length > 0;
@@ -452,7 +476,10 @@ export function GameHistoryDock({
         }
         return detailItem.value.text;
       case 'player':
-        return formatPlayer(detailItem.value.playerId);
+        return formatPlayer(
+          detailItem.value.playerId,
+          detailItem.value.playerName,
+        );
       case 'team':
         return formatTeam(detailItem.value.team);
       case 'trump':

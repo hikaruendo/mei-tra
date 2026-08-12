@@ -46,9 +46,16 @@ jest.mock('next-intl', () => ({
       noStartingHand: '手札ログなし',
     };
 
-    return (key: string, values?: Record<string, number>) => {
+    return (
+      key: string,
+      values?: Record<string, number | string>,
+    ) => {
       if (key === 'setCount') {
         return `${values?.count ?? 0}組`;
+      }
+
+      if (key === 'summaries.card_played') {
+        return `${values?.player} played ${values?.card}`;
       }
 
       return labels[key] ?? key;
@@ -185,6 +192,7 @@ describe('GameHistoryDock', () => {
         totalEntries: 3,
         byActionType: {},
         playerIds: ['player-1'],
+        playerNames: { 'player-1': 'Summary Player' },
         roundNumbers: [1],
         status: 'in_progress',
         winningTeam: null,
@@ -210,7 +218,8 @@ describe('GameHistoryDock', () => {
     expect(screen.getByRole('columnheader', { name: 'ラウンド' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '宣言' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
-    expect(within(roundTable).getByText('Stored Player')).toBeInTheDocument();
+    expect(within(roundTable).getByText('Current Player')).toBeInTheDocument();
+    expect(within(roundTable).queryByText('Stored Player')).not.toBeInTheDocument();
     expect(within(roundTable).queryByText('COM 4')).not.toBeInTheDocument();
     expect(within(roundTable).getByText('6組 / クラブ')).toBeInTheDocument();
     expect(within(roundTable).queryByText(/pairs/i)).not.toBeInTheDocument();
@@ -339,15 +348,36 @@ describe('GameHistoryDock', () => {
           },
         ],
       },
-      summary: null,
+      summary: {
+        roomId: 'room-123',
+        totalEntries: 3,
+        byActionType: { card_played: 1 },
+        playerIds: ['player-1'],
+        playerNames: { 'player-1': 'Hikaru' },
+        roundNumbers: [1],
+        status: 'completed',
+        winningTeam: 0,
+        lastActionType: 'round_completed',
+        firstTimestamp: new Date('2026-07-26T00:00:00.000Z'),
+        lastTimestamp: new Date('2026-07-26T00:03:00.000Z'),
+      },
       isLoading: false,
       error: null,
       refresh: jest.fn(),
     });
 
-    render(<GameHistoryDock {...baseProps} gameStarted={false} variant="page" />);
+    render(
+      <GameHistoryDock
+        {...baseProps}
+        gameStarted={false}
+        variant="page"
+        showOverview={false}
+      />,
+    );
 
     expect(screen.getByText('カードプレイ')).toBeInTheDocument();
+    expect(screen.getByText('Hikaru played 不明')).toBeInTheDocument();
+    expect(screen.queryByText('プレイヤー1')).not.toBeInTheDocument();
     expect(
       screen.getByText('このラウンドの自分の手札'),
     ).toBeInTheDocument();
