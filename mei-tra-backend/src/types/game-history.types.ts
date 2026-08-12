@@ -1,4 +1,4 @@
-import { GamePhase, TeamScores } from './game.types';
+import { GamePhase, TeamNames, TeamScores } from './game.types';
 import type { SeatId } from './identity.types';
 
 export const GAME_HISTORY_ACTION_TYPES = [
@@ -55,6 +55,7 @@ export interface GameHistorySummary {
   byActionType: Partial<Record<GameHistoryActionType, number>>;
   playerIds: string[];
   playerNames: Record<string, string>;
+  teamNames?: TeamNames;
   status: 'completed' | 'in_progress';
   winningTeam: number | null;
   lastActionType: GameHistoryActionType | null;
@@ -69,6 +70,7 @@ export interface RecentGameHistoryItem {
   completedAt: Date;
   roundCount: number;
   totalEntries: number;
+  teamNames?: TeamNames;
   winningTeam: number | null;
   lastActionType: GameHistoryActionType | null;
 }

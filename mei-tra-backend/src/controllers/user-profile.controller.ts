@@ -351,6 +351,7 @@ export class UserProfileController {
       completedAt: item.completedAt.toISOString(),
       roundCount: item.roundCount,
       totalEntries: item.totalEntries,
+      teamNames: item.teamNames,
       winningTeam: item.winningTeam,
       lastActionType: item.lastActionType,
     };

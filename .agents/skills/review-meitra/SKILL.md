@@ -1,6 +1,6 @@
 ---
 name: review-meitra
-description: Meitra（明専トランプ / old-maid）の設計・コードレビュー用。frontend、NestJS/Socket.IO、Supabase、game state、再接続/COM、migration、UI変更を、seat identity、phase、永続化、transport契約の不変条件で評価する時に使う。修正・refactorは明示依頼時だけ実装する。
+description: Meitra（明専トランプ / old-maid）の設計・コードレビュー用。frontend、NestJS/Socket.IO、Supabase、game state、再接続/COM、migration、UI変更を、seat identity、phase、永続化、transport契約、層・型配置の平仄、重複remapやsource of truthの分裂から評価する時に使う。修正・refactorは明示依頼時だけ実装する。
 ---
 
 # Meitra Change Review
@@ -23,7 +23,13 @@ Review before editing. Do not change code, commit, push, or update a PR unless t
 ## Review workflow
 
 1. Trace each changed input through state transition, persistence, Socket emit, and UI projection.
-2. Check the applicable invariants:
+2. Run an architecture coherence pass before judging local correctness:
+   - Name the concept being changed and identify its canonical owner: `contracts/`, backend `src/types/`, Domain, UseCase/service, repository, frontend hook, or UI.
+   - Search sibling implementations before accepting a new type, helper, service, mapper, or adapter. Require equivalent concepts to use the same layer, folder, naming, error contract, and dependency direction.
+   - Count transformations of the same identity or state. One boundary adapter is acceptable; repeated `remap`, alias builders, dual shapes, fallback chains, or object reconstruction across Domain, UseCase, Gateway, persistence, Web, and Mobile indicate a split source of truth.
+   - Distinguish migration compatibility from permanent design. Keep legacy aliases and dual-read/write at an explicit boundary with telemetry, removal criteria, and a cleanup path; flag them when they leak into core logic.
+   - Review stacked or adjacent changes cumulatively. If several fixes translate or repair the same concept in different places, recommend a canonical representation and deletion of the repair paths instead of another local mapper.
+3. Check the applicable invariants:
    - Preserve four-player/two-team seat order, turn order, and team membership.
    - Keep `playerId`, `userId`, and `socketId` distinct.
    - Preserve seat identity across human, COM, vacant-seat, and reconnect transitions.
@@ -32,9 +38,9 @@ Review before editing. Do not change code, commit, push, or update a PR unless t
    - Keep cross-table and JSONB writes atomic or explicitly compatible during migration.
    - Keep Socket payloads in `contracts/` and avoid domain, DB, and UI type leakage.
    - Verify layout changes at the requested text scale and viewport when visual evidence is available.
-3. Check adjacent paths: join/leave/auth update, COM replacement/autoplay, full-room recovery/team shuffle, spectator/chat/profile overlap, cold start, and timer resumption.
-4. Check that Gateway code remains limited to auth, parsing, room membership, UseCase calls, and event dispatch; keep game rules, recovery policy, and DB merges outside it.
-5. Run the narrowest relevant tests when review scope or user request requires validation. Separate new failures from existing failures.
+4. Check adjacent paths: join/leave/auth update, COM replacement/autoplay, full-room recovery/team shuffle, spectator/chat/profile overlap, cold start, and timer resumption.
+5. Check that Gateway code remains limited to auth, parsing, room membership, UseCase calls, and event dispatch; keep game rules, recovery policy, and DB merges outside it.
+6. Run the narrowest relevant tests when review scope or user request requires validation. Separate new failures from existing failures.
 
 ## Review output
 
@@ -46,6 +52,8 @@ Return findings in priority order. For each actionable P1/P2 finding, provide:
 - the smallest safe fix.
 
 Do not report style preferences or speculative issues. If none are actionable, state that directly. List completed validation and untested production, cold-start, multi-session, or UI scenarios separately.
+
+Treat consistency as actionable only when the change creates a second owner, bypasses a canonical boundary, duplicates behavior that can diverge, or makes future fixes require synchronized edits. Do not report naming or folder taste alone.
 
 ## Fix mode
 

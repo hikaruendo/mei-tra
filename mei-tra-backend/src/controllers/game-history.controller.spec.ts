@@ -56,6 +56,7 @@ describe('GameHistoryController', () => {
       teamAssignmentMethod: 'random' as const,
       pointsToWin: 10,
       allowSpectators: false,
+      teamNames: { 0: '111', 1: '222' },
     },
     createdAt: new Date('2026-04-16T00:00:00.000Z'),
     updatedAt: new Date('2026-04-16T00:00:00.000Z'),
@@ -146,7 +147,10 @@ describe('GameHistoryController', () => {
         },
         currentUser,
       ),
-    ).resolves.toEqual(summary);
+    ).resolves.toEqual({
+      ...summary,
+      teamNames: { 0: '111', 1: '222' },
+    });
 
     expect(getGameHistoryUseCase.summarize).toHaveBeenCalledWith(
       'room-1',

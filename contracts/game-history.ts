@@ -1,4 +1,8 @@
-import type { TransportGamePhase, TransportTeamScores } from './game';
+import type {
+  TeamNames,
+  TransportGamePhase,
+  TransportTeamScores,
+} from './game';
 import type { SeatId } from './ids';
 
 export type GameHistoryActionType =
@@ -43,6 +47,7 @@ export interface GameHistorySummaryContract {
   byActionType: Partial<Record<GameHistoryActionType, number>>;
   playerIds: string[];
   playerNames: Record<string, string>;
+  teamNames?: TeamNames;
   status: 'completed' | 'in_progress';
   winningTeam: number | null;
   lastActionType: GameHistoryActionType | null;
@@ -57,6 +62,7 @@ export interface RecentGameHistoryItemContract {
   completedAt: string;
   roundCount: number;
   totalEntries: number;
+  teamNames?: TeamNames;
   winningTeam: number | null;
   lastActionType: GameHistoryActionType | null;
 }

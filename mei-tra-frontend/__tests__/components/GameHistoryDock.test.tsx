@@ -41,11 +41,21 @@ jest.mock('next-intl', () => ({
       participant: 'プレイヤー',
       unknownValue: '不明',
       club: 'クラブ',
+      startingHand: 'このラウンドの自分の手札',
+      redealtHand: '繰り直し後の自分の手札',
+      noStartingHand: '手札ログなし',
     };
 
-    return (key: string, values?: Record<string, number>) => {
+    return (
+      key: string,
+      values?: Record<string, number | string>,
+    ) => {
       if (key === 'setCount') {
         return `${values?.count ?? 0}組`;
+      }
+
+      if (key === 'summaries.card_played') {
+        return `${values?.player} played ${values?.card}`;
       }
 
       return labels[key] ?? key;
@@ -182,6 +192,7 @@ describe('GameHistoryDock', () => {
         totalEntries: 3,
         byActionType: {},
         playerIds: ['player-1'],
+        playerNames: { 'player-1': 'Summary Player' },
         roundNumbers: [1],
         status: 'in_progress',
         winningTeam: null,
@@ -207,7 +218,8 @@ describe('GameHistoryDock', () => {
     expect(screen.getByRole('columnheader', { name: 'ラウンド' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '宣言' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
-    expect(within(roundTable).getByText('Stored Player')).toBeInTheDocument();
+    expect(within(roundTable).getByText('Current Player')).toBeInTheDocument();
+    expect(within(roundTable).queryByText('Stored Player')).not.toBeInTheDocument();
     expect(within(roundTable).queryByText('COM 4')).not.toBeInTheDocument();
     expect(within(roundTable).getByText('6組 / クラブ')).toBeInTheDocument();
     expect(within(roundTable).queryByText(/pairs/i)).not.toBeInTheDocument();
@@ -289,6 +301,7 @@ describe('GameHistoryDock', () => {
             actionTypes: ['play_phase_started', 'card_played', 'round_completed'],
             playerIds: ['player-1'],
             entries: [],
+            viewerStartingHand: ['A♠', '9♥'],
             events: [
               {
                 id: 'play-started-1',
@@ -300,7 +313,9 @@ describe('GameHistoryDock', () => {
                 kind: 'blow',
                 summary: '',
                 details: {},
-                actionData: {},
+                actionData: {
+                  viewerStartingHand: ['A♠', '9♥'],
+                },
                 detailItems: [],
               },
               {
@@ -333,6 +348,93 @@ describe('GameHistoryDock', () => {
           },
         ],
       },
+      summary: {
+        roomId: 'room-123',
+        totalEntries: 3,
+        byActionType: { card_played: 1 },
+        playerIds: ['player-1'],
+        playerNames: { 'player-1': 'Hikaru' },
+        roundNumbers: [1],
+        status: 'completed',
+        winningTeam: 0,
+        lastActionType: 'round_completed',
+        firstTimestamp: new Date('2026-07-26T00:00:00.000Z'),
+        lastTimestamp: new Date('2026-07-26T00:03:00.000Z'),
+      },
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+
+    render(
+      <GameHistoryDock
+        {...baseProps}
+        gameStarted={false}
+        variant="page"
+        showOverview={false}
+      />,
+    );
+
+    expect(screen.getByText('カードプレイ')).toBeInTheDocument();
+    expect(screen.getByText('Hikaru played 不明')).toBeInTheDocument();
+    expect(screen.queryByText('プレイヤー1')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('このラウンドの自分の手札'),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText('A♠')).toBeInTheDocument();
+    expect(screen.getByAltText('9♥')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('shows a redealt hand after a broken hand event', () => {
+    mockUseGameHistory.mockReturnValue({
+      replay: {
+        roomId: 'room-123',
+        totalEntries: 2,
+        rounds: [
+          {
+            roundNumber: 1,
+            startedAt: new Date('2026-07-26T00:00:00.000Z'),
+            endedAt: null,
+            actionTypes: ['game_started', 'broken_hand_revealed'],
+            playerIds: ['player-1'],
+            entries: [],
+            viewerStartingHand: ['Q♦'],
+            events: [
+              {
+                id: 'game-started-1',
+                timestamp: new Date('2026-07-26T00:00:00.000Z'),
+                actionType: 'game_started',
+                playerId: 'player-1',
+                roundNumber: 1,
+                gamePhase: 'blow',
+                kind: 'game',
+                summary: '',
+                details: {},
+                actionData: {
+                  viewerStartingHand: ['A♠'],
+                },
+                detailItems: [],
+              },
+              {
+                id: 'broken-1',
+                timestamp: new Date('2026-07-26T00:01:00.000Z'),
+                actionType: 'broken_hand_revealed',
+                playerId: 'player-1',
+                roundNumber: 1,
+                gamePhase: 'blow',
+                kind: 'blow',
+                summary: '',
+                details: {},
+                actionData: {
+                  viewerStartingHand: ['Q♦'],
+                },
+                detailItems: [],
+              },
+            ],
+          },
+        ],
+      },
       summary: null,
       isLoading: false,
       error: null,
@@ -341,7 +443,8 @@ describe('GameHistoryDock', () => {
 
     render(<GameHistoryDock {...baseProps} gameStarted={false} variant="page" />);
 
-    expect(screen.getByText('カードプレイ')).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByAltText('A♠')).toBeInTheDocument();
+    expect(screen.getByText('繰り直し後の自分の手札')).toBeInTheDocument();
+    expect(screen.getByAltText('Q♦')).toBeInTheDocument();
   });
 });

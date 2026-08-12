@@ -200,7 +200,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     try {
       const { data: roomsData, error } = await this.supabase
         .from('rooms')
-        .select('*, room_players!inner(user_id)')
+        .select('*, room_players!room_players_room_id_fkey!inner(user_id)')
         .eq('status', RoomStatus.FINISHED)
         .eq('room_players.user_id', userId)
         .order('last_activity_at', { ascending: false })

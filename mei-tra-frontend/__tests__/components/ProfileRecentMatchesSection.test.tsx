@@ -91,6 +91,7 @@ describe('ProfileRecentMatchesSection', () => {
           completedAt: new Date('2026-04-16T01:00:00.000Z'),
           roundCount: 4,
           totalEntries: 18,
+          teamNames: { 0: '111', 1: '222' },
           winningTeam: 1,
           lastActionType: 'game_over',
         },
@@ -108,7 +109,8 @@ describe('ProfileRecentMatchesSection', () => {
 
     expect(screen.getByText('Alpha room')).toBeInTheDocument();
     expect(screen.getByText('ゲーム終了')).toBeInTheDocument();
-    expect(screen.getByText('チーム黒')).toBeInTheDocument();
+    expect(screen.getByText('222')).toBeInTheDocument();
+    expect(screen.queryByText('チーム黒')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /詳細を見る/ })).toHaveAttribute(
       'href',
       '/game-history/room-1',

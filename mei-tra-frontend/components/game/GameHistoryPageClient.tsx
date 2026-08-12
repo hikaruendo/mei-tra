@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { useGameHistory } from '@/hooks/useGameHistory';
+import type { Team } from '@/types/game.types';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 import styles from './GameHistoryPageClient.module.scss';
 
 interface GameHistoryPageClientProps {
@@ -23,13 +25,14 @@ export function GameHistoryPageClient({
     : summary.status === 'completed'
       ? t('statusCompleted')
       : t('statusInProgress');
-  const winnerLabel = !summary
-    ? t('noWinner')
-    : summary.winningTeam === null
+  const winnerLabel =
+    !summary || summary.winningTeam === null
       ? t('noWinner')
-      : summary.winningTeam === 0
-        ? t('teamRed')
-        : t('teamBlack');
+      : getTeamDisplayName(
+          summary.winningTeam as Team,
+          summary.teamNames,
+          (team) => t(team === 0 ? 'teamRed' : 'teamBlack'),
+        );
   const historyWindowLabel = useMemo(() => {
     if (!summary?.firstTimestamp || !summary.lastTimestamp) {
       return t('unknownTimeWindow');
@@ -75,6 +78,7 @@ export function GameHistoryPageClient({
         roomId={roomId}
         gameStarted={false}
         players={[]}
+        teamNames={summary?.teamNames}
         variant="page"
         showOverview={false}
         summaryOverride={summary}

@@ -7,6 +7,8 @@ import type {
   GameHistoryActionType,
   RecentGameHistoryItem,
 } from '@/types/game-history.types';
+import type { Team } from '@/types/game.types';
+import { getTeamDisplayName } from '@/lib/utils/teamLabels';
 import styles from './ProfileRecentMatchesSection.module.scss';
 
 interface ProfileRecentMatchesSectionProps {
@@ -63,7 +65,11 @@ export function ProfileRecentMatchesSection({
       return t('recentMatchesNoWinner');
     }
 
-    return historyT(item.winningTeam === 0 ? 'teamRed' : 'teamBlack');
+    return getTeamDisplayName(
+      item.winningTeam as Team,
+      item.teamNames,
+      (team) => historyT(team === 0 ? 'teamRed' : 'teamBlack'),
+    );
   };
 
   return (
