@@ -11,6 +11,10 @@ import { toDomainPlayer } from '../types/player-adapters';
 import { GameStateService } from '../services/game-state.service';
 import { GameState } from '../types/game.types';
 import { asSeatId } from '../types/identity.types';
+import {
+  resolveCurrentPlayer,
+  resolveCurrentPlayerIndex,
+} from '../types/current-turn';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {
@@ -106,21 +110,22 @@ export class StartGameUseCase implements IStartGameUseCase {
       roomGameState.startGame();
 
       let updatedState = roomGameState.getState();
-      if (
-        updatedState.blowState.currentBlowIndex !==
-        updatedState.currentPlayerIndex
-      ) {
-        const currentPlayer =
-          updatedState.players[updatedState.currentPlayerIndex] ?? null;
+      const currentPlayerIndex = resolveCurrentPlayerIndex(updatedState);
+      if (currentPlayerIndex === -1) {
+        return {
+          success: false,
+          errorMessage: 'Current turn seat was not initialized',
+        };
+      }
+      if (updatedState.blowState.currentBlowIndex !== currentPlayerIndex) {
+        const currentPlayer = resolveCurrentPlayer(updatedState);
         roomGameState.updateState({
           currentSeatId: currentPlayer
             ? asSeatId(currentPlayer.playerId)
             : null,
-          currentPlayerId: currentPlayer?.playerId ?? null,
-          currentPlayerIndex: updatedState.currentPlayerIndex,
           blowState: {
             ...updatedState.blowState,
-            currentBlowIndex: updatedState.currentPlayerIndex,
+            currentBlowIndex: currentPlayerIndex,
           },
         });
         updatedState = roomGameState.getState();
@@ -142,8 +147,13 @@ export class StartGameUseCase implements IStartGameUseCase {
         p.isPasser = false;
       });
 
-      const currentTurnPlayer =
-        updatedState.players[updatedState.currentPlayerIndex];
+      const currentTurnPlayer = resolveCurrentPlayer(updatedState);
+      if (!currentTurnPlayer) {
+        return {
+          success: false,
+          errorMessage: 'Current turn seat was not initialized',
+        };
+      }
       const firstBlowPlayer =
         updatedState.players[updatedState.blowState.currentBlowIndex];
 

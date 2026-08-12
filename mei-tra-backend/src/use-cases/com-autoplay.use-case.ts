@@ -26,6 +26,7 @@ import {
 import { IRevealBrokenHandUseCase } from './interfaces/reveal-broken-hand.use-case.interface';
 import { transitionToPlayPhase } from './blow-phase-transition.helper';
 import { countPlayersActedInBlow } from './helpers/blow-action.helper';
+import { resolveCurrentSeatId } from '../types/current-turn';
 import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
@@ -90,7 +91,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     if (!currentPlayer) {
       this.logger.warn(
         `Turn unplayable in room ${roomId}: no current player resolved ` +
-          `(currentPlayerId=${state.currentPlayerId ?? 'null'}, ` +
+          `(currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
           `roster=[${state.players.map((player) => player.playerId).join(', ')}])`,
       );
       return;
@@ -106,7 +107,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     this.logger.warn(
       `Turn unplayable in room ${roomId}: auto-play skipped non-COM player ` +
         `${currentPlayer.playerId} which has no live socket ` +
-        `(phase=${state.gamePhase}, currentPlayerId=${state.currentPlayerId ?? 'null'}, ` +
+        `(phase=${state.gamePhase}, currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
         `isCOM=${String(currentPlayer.isCOM)})`,
     );
   }
@@ -239,7 +240,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       });
 
       gameState.nextTurn();
-      const nextPlayer = updatedState.players[updatedState.currentPlayerIndex];
+      const nextPlayer = gameState.getCurrentPlayer();
       if (nextPlayer) {
         events.push({
           scope: 'room',
@@ -252,7 +253,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       await gameState.saveState();
     }
 
-    const nextPlayer = updatedState.players[updatedState.currentPlayerIndex];
+    const nextPlayer = gameState.getCurrentPlayer();
     // Continue from the persisted turn owner instead of trusting only emitted
     // events; this keeps autoplay alive even when a use-case emits no turn event.
     const shouldContinue =

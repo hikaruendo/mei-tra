@@ -8,6 +8,7 @@ import { IGameEventLogService } from '../services/interfaces/game-event-log.serv
 import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { asSeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../types/current-turn';
 
 export interface TransitionResult {
   events: GatewayEvent[];
@@ -53,14 +54,7 @@ export async function transitionToPlayPhase({
   const nextState = roomGameState.getState();
 
   nextState.blowState.currentTrump = highestDeclaration.trumpType;
-  const winnerIndex = nextState.players.findIndex(
-    (p) => p.playerId === winningPlayer.playerId,
-  );
-  if (winnerIndex !== -1) {
-    nextState.currentPlayerId = winningPlayer.playerId;
-    nextState.currentSeatId = asSeatId(winningPlayer.playerId);
-    nextState.currentPlayerIndex = winnerIndex;
-  }
+  setCurrentSeat(nextState, winningPlayer.playerId);
 
   const events: GatewayEvent[] = buildPlayerSyncEvents(
     roomGameState,

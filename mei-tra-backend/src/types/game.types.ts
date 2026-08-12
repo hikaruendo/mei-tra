@@ -160,7 +160,8 @@ export interface GameState {
   currentSeatId?: SeatId | null;
   /** @deprecated Use currentSeatId. */
   currentPlayerId?: string | null;
-  currentPlayerIndex: number;
+  /** @deprecated Derive the index from currentSeatId and players. */
+  currentPlayerIndex?: number;
   gamePhase: GamePhase;
   deck: string[];
   teamScores: Record<Team, { play: number; total: number }>;

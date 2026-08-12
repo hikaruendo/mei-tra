@@ -7,6 +7,7 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
+import { resolveCurrentPlayer } from '../types/current-turn';
 
 @Injectable()
 export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
@@ -55,7 +56,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
       ];
 
       roomGameState.nextTurn();
-      const nextPlayer = state.players[state.currentPlayerIndex];
+      const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
         events.push({
           scope: 'room',

@@ -8,6 +8,10 @@ import { SessionUser } from '../types/session.types';
 import { randomUUID } from 'crypto';
 import { asSeatId, resolveSeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
+import {
+  resolveCurrentPlayerIndex,
+  setCurrentSeat,
+} from '../types/current-turn';
 
 interface JoinRoomParams {
   roomId: string;
@@ -417,7 +421,7 @@ export class RoomJoinService {
       return false;
     }
 
-    const currentIndex = this.resolveCurrentPlayerIndex(state);
+    const currentIndex = resolveCurrentPlayerIndex(state);
     const currentPlayer = state.players[currentIndex];
     if (
       !currentPlayer ||
@@ -430,30 +434,12 @@ export class RoomJoinService {
       const candidateIndex = (currentIndex + offset) % state.players.length;
       const candidatePlayer = state.players[candidateIndex];
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
-        state.currentPlayerIndex = candidateIndex;
-        state.currentPlayerId = candidatePlayer.playerId;
-        state.currentSeatId = asSeatId(candidatePlayer.playerId);
+        setCurrentSeat(state, candidatePlayer.playerId);
         return true;
       }
     }
 
     return false;
-  }
-
-  private resolveCurrentPlayerIndex(state: GameState): number {
-    if (state.currentPlayerId) {
-      const index = state.players.findIndex(
-        (player) => player.playerId === state.currentPlayerId,
-      );
-      if (index !== -1) {
-        return index;
-      }
-    }
-
-    return Math.min(
-      Math.max(state.currentPlayerIndex ?? 0, 0),
-      state.players.length - 1,
-    );
   }
 
   private hasActedInBlow(blowState: BlowState, player: DomainPlayer): boolean {

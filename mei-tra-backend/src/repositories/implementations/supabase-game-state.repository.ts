@@ -77,7 +77,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
               canonicalGameState.pendingBrokenHandReveal,
             ),
           },
-          current_seat_id: this.resolveCurrentPlayerId(canonicalGameState),
+          current_seat_id: canonicalGameState.currentSeatId,
           game_phase: canonicalGameState.gamePhase,
           round_number: canonicalGameState.roundNumber,
           points_to_win: canonicalGameState.pointsToWin,
@@ -243,14 +243,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     if (gameState.currentSeatId !== undefined) {
       patch.currentSeatId = gameState.currentSeatId;
-    } else if (gameState.currentPlayerId !== undefined) {
-      patch.currentSeatId = gameState.currentPlayerId;
-    } else if (gameState.currentPlayerIndex !== undefined) {
-      const currentPlayerId =
-        gameState.players?.[gameState.currentPlayerIndex]?.playerId;
-      if (currentPlayerId !== undefined) {
-        patch.currentSeatId = currentPlayerId;
-      }
     }
     if (gameState.gamePhase !== undefined) {
       patch.gamePhase = gameState.gamePhase;
@@ -389,7 +381,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         gameStateUpdates.currentSeatId = updates.current_seat_id
           ? asSeatId(updates.current_seat_id)
           : null;
-        gameStateUpdates.currentPlayerId = updates.current_seat_id;
       }
       if (updates.game_phase !== undefined) {
         gameStateUpdates.gamePhase = updates.game_phase;
@@ -487,12 +478,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         `Current seat ${canonicalCurrentPlayerId} is outside room ${dbGameState.room_id}`,
       );
     }
-    const currentPlayerIndex =
-      canonicalCurrentPlayerId === null
-        ? 0
-        : players.findIndex(
-            (player) => player.playerId === canonicalCurrentPlayerId,
-          );
     const blowState = (stateData.blowState ?? {
       currentTrump: null,
       currentHighestDeclaration: null,
@@ -511,8 +496,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       currentSeatId: canonicalCurrentPlayerId
         ? asSeatId(canonicalCurrentPlayerId)
         : null,
-      currentPlayerId: canonicalCurrentPlayerId,
-      currentPlayerIndex: currentPlayerIndex === -1 ? 0 : currentPlayerIndex,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],
       teamScores: dbGameState.team_scores as Record<
@@ -532,17 +515,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         players.map((player) => [player.playerId, player.team]),
       ),
     });
-  }
-
-  private resolveCurrentPlayerId(gameState: GameState): string | null {
-    if (gameState.currentSeatId !== undefined) {
-      return gameState.currentSeatId;
-    }
-    if (gameState.currentPlayerId !== undefined) {
-      return gameState.currentPlayerId;
-    }
-
-    return gameState.players[gameState.currentPlayerIndex]?.playerId ?? null;
   }
 
   private toRosterPlayerSnapshot(

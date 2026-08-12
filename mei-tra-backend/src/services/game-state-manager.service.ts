@@ -4,7 +4,6 @@ import { GameState, PlayerConnectionMetadata } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
-import { asSeatId } from '../types/identity.types';
 import { normalizeGameStateIdentityAliases } from '../types/game-state-identity';
 
 export class GameStateManager {
@@ -25,21 +24,11 @@ export class GameStateManager {
       );
     }
 
-    let nextState: GameState = {
+    const nextState: GameState = {
       ...currentState,
       ...newState,
     };
-    if (
-      Object.prototype.hasOwnProperty.call(newState, 'currentPlayerId') &&
-      !Object.prototype.hasOwnProperty.call(newState, 'currentSeatId')
-    ) {
-      nextState.currentSeatId = newState.currentPlayerId
-        ? asSeatId(newState.currentPlayerId)
-        : null;
-    }
-    nextState = normalizeGameStateIdentityAliases(nextState);
-
-    return nextState;
+    return normalizeGameStateIdentityAliases(nextState);
   }
 
   async updateState(
@@ -51,13 +40,10 @@ export class GameStateManager {
 
     if (roomId) {
       const persistencePatch: Partial<GameState> = { ...newState };
-      if (
-        Object.prototype.hasOwnProperty.call(newState, 'currentSeatId') ||
-        Object.prototype.hasOwnProperty.call(newState, 'currentPlayerId') ||
-        Object.prototype.hasOwnProperty.call(newState, 'currentPlayerIndex')
-      ) {
+      delete persistencePatch.currentPlayerId;
+      delete persistencePatch.currentPlayerIndex;
+      if (Object.prototype.hasOwnProperty.call(newState, 'currentSeatId')) {
         persistencePatch.currentSeatId = nextState.currentSeatId;
-        persistencePatch.currentPlayerId = nextState.currentPlayerId;
       }
       if (newState.players) {
         persistencePatch.players = nextState.players;

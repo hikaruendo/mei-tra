@@ -68,7 +68,8 @@ describe('normalizeGameStateIdentityAliases', () => {
       expect.objectContaining({ seatId: 'seat-1', playerId: 'seat-1' }),
     );
     expect(normalized.currentSeatId).toBe('seat-1');
-    expect(normalized.currentPlayerId).toBe('seat-1');
+    expect(normalized.currentPlayerId).toBeUndefined();
+    expect(normalized.currentPlayerIndex).toBeUndefined();
     expect(normalized.blowState.lastPasserSeatId).toBe('seat-1');
     expect(normalized.blowState.lastPasser).toBe('seat-1');
     expect(normalized.playState?.currentField?.playedBy).toEqual(['seat-1']);

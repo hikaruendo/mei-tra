@@ -733,7 +733,7 @@ describe('Game Use Cases', () => {
 
       const state: {
         players: DomainPlayer[];
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
         blowState: {
           currentBlowIndex: number;
           currentTrump: string | null;
@@ -762,7 +762,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
         ],
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
         blowState: {
           currentBlowIndex: 0,
           currentTrump: null,
@@ -781,8 +781,11 @@ describe('Game Use Cases', () => {
 
       const roomGameState = {
         getState: jest.fn(() => state),
-        startGame: jest.fn().mockResolvedValue(undefined),
+        startGame: jest.fn(() => {
+          state.currentSeatId = asSeatId('player-1');
+        }),
         persistRoster: jest.fn().mockResolvedValue(undefined),
+        saveState: jest.fn().mockResolvedValue(undefined),
       } as unknown as GameStateService;
 
       roomService.getRoom.mockResolvedValue(room);
@@ -834,7 +837,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
         ] as DomainPlayer[],
-        currentPlayerIndex: 1,
+        currentSeatId: asSeatId('player-2'),
         blowState: {
           currentBlowIndex: 0,
           currentTrump: null,
@@ -852,10 +855,13 @@ describe('Game Use Cases', () => {
       };
       const roomGameState = {
         getState: jest.fn(() => state),
-        startGame: jest.fn().mockResolvedValue(undefined),
+        startGame: jest.fn(() => {
+          state.currentSeatId = asSeatId('player-2');
+        }),
         persistRoster: jest.fn().mockResolvedValue(undefined),
+        saveState: jest.fn().mockResolvedValue(undefined),
         updateState: jest.fn(async (updates) => {
-          state.currentPlayerIndex = updates.currentPlayerIndex;
+          state.currentSeatId = updates.currentSeatId ?? state.currentSeatId;
           state.blowState = updates.blowState;
         }),
       } as unknown as GameStateService;
@@ -875,8 +881,6 @@ describe('Game Use Cases', () => {
       expect(state.blowState.currentBlowIndex).toBe(1);
       expect(roomGameState.updateState).toHaveBeenCalledWith({
         currentSeatId: 'player-2',
-        currentPlayerId: 'player-2',
-        currentPlayerIndex: 1,
         blowState: expect.objectContaining({ currentBlowIndex: 1 }),
       });
     });
@@ -964,7 +968,7 @@ describe('Game Use Cases', () => {
             isPasser: false,
           },
         ] as DomainPlayer[],
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
         blowState: {
           currentBlowIndex: 0,
           currentTrump: null,
@@ -991,12 +995,14 @@ describe('Game Use Cases', () => {
           state.players[2],
           state.players[3],
         ];
+        state.currentSeatId = asSeatId('player-1');
       });
       const roomGameState = {
         getState: jest.fn(() => state),
         registerPlayerToken: registerPlayerTokenMock,
         startGame: startGameMock,
         persistRoster: persistRosterMock,
+        saveState: jest.fn().mockResolvedValue(undefined),
       } as unknown as GameStateService;
 
       roomService.getRoom.mockResolvedValue(room);
@@ -1652,7 +1658,7 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         playState: { currentField: Field };
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
       } = {
         players: [
           {
@@ -1673,15 +1679,14 @@ describe('Game Use Cases', () => {
         playState: {
           currentField,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
 
       const roomGameState = {
         getState: jest.fn(() => state),
         saveState: jest.fn(),
         nextTurn: jest.fn(() => {
-          state.currentPlayerIndex =
-            (state.currentPlayerIndex + 1) % state.players.length;
+          state.currentSeatId = asSeatId('player-2');
         }),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
@@ -1696,7 +1701,7 @@ describe('Game Use Cases', () => {
         ),
         isPlayerTurn: jest.fn(
           (playerId: string) =>
-            state.players[state.currentPlayerIndex]?.playerId === playerId,
+            state.currentSeatId === asSeatId(playerId),
         ),
       } as unknown as GameStateService;
 
@@ -1798,7 +1803,7 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         playState: { currentField: Field };
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
       } = {
         players: [
           {
@@ -1812,7 +1817,7 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: fieldBefore,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
 
       const roomGameState = {
@@ -1828,7 +1833,7 @@ describe('Game Use Cases', () => {
         ),
         isPlayerTurn: jest.fn(
           (playerId: string) =>
-            state.players[state.currentPlayerIndex]?.playerId === playerId,
+            state.currentSeatId === asSeatId(playerId),
         ),
       } as unknown as GameStateService;
 
@@ -1880,13 +1885,13 @@ describe('Game Use Cases', () => {
             isComplete: false,
           } as Field,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
       const roomGameState = {
         getState: jest.fn(() => state),
         saveState: jest.fn(),
         nextTurn: jest.fn(() => {
-          state.currentPlayerIndex = 1;
+          state.currentSeatId = asSeatId('player-2');
         }),
         findPlayerByActorId: jest.fn(() => state.players[0]),
         isPlayerTurn: jest.fn(() => true),
@@ -2648,7 +2653,7 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         playState: { currentField: Field };
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
       } = {
         players: [
           {
@@ -2677,14 +2682,14 @@ describe('Game Use Cases', () => {
             isComplete: false,
           },
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
 
       const roomGameState = {
         getState: jest.fn(() => state),
         saveState: jest.fn(),
         nextTurn: jest.fn(() => {
-          state.currentPlayerIndex = 1;
+          state.currentSeatId = asSeatId('player-2');
         }),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
@@ -2736,10 +2741,11 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         blowState: BlowState;
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
+          seatId?: ReturnType<typeof asSeatId>;
           playerId: string;
           handSnapshot: string[];
           startedAt: number;
@@ -2772,7 +2778,7 @@ describe('Game Use Cases', () => {
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
         gamePhase: 'blow' as const,
         deck: [],
       };
@@ -2988,10 +2994,11 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         blowState: BlowState;
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
+          seatId?: ReturnType<typeof asSeatId>;
           playerId: string;
           handSnapshot: string[];
           startedAt: number;
@@ -3064,7 +3071,7 @@ describe('Game Use Cases', () => {
           isRoundCancelled: false,
           currentBlowIndex: 2,
         },
-        currentPlayerIndex: 1,
+        currentSeatId: asSeatId('player-2'),
         gamePhase: 'blow',
         deck: [],
         pendingBrokenHandReveal: {
@@ -3100,7 +3107,7 @@ describe('Game Use Cases', () => {
       expect(completion.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toBeNull();
       expect(state.blowState.currentBlowIndex).toBe(2);
-      expect(state.currentPlayerIndex).toBe(2);
+      expect(state.currentSeatId).toBe(asSeatId('player-3'));
       expect(state.blowState.declarations).toEqual([]);
       expect(state.blowState.actionHistory).toEqual([]);
       expect(state.blowState.currentHighestDeclaration).toBeNull();

@@ -18,7 +18,6 @@ export interface LogGameEventInput {
     GameState,
     | 'players'
     | 'currentSeatId'
-    | 'currentPlayerId'
     | 'gamePhase'
     | 'roundNumber'
     | 'teamScores'

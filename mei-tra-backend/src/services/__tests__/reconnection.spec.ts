@@ -11,6 +11,7 @@ import { ChomboService } from '../chombo.service';
 import { PlayService } from '../play.service';
 import { IComPlayerService } from '../interfaces/com-player-service.interface';
 import { RoomMembershipService } from '../room-membership.service';
+import { asSeatId } from '../../types/identity.types';
 
 const makeGamePlayer = (
   playerId: string,
@@ -212,7 +213,7 @@ describe('Reconnection Token Management', () => {
               hasRequiredBroken: false,
             },
           ],
-          currentPlayerIndex: 0,
+          currentSeatId: asSeatId('player-1'),
           gamePhase: 'play',
           deck: [],
           blowState: {
@@ -249,14 +250,8 @@ describe('Reconnection Token Management', () => {
 
         expect(foundPlayer1?.playerId).toBe('player-1');
         expect(foundPlayer2?.playerId).toBe('player-2');
-        expect(gameStateRepository.update).toHaveBeenCalledWith(
-          roomId,
-          expect.objectContaining({
-            currentPlayerId: 'player-1',
-            currentPlayerIndex: 0,
-          }),
-          undefined,
-        );
+        expect(gameStateService.getState().currentSeatId).toBe('player-1');
+        expect(gameStateRepository.update).not.toHaveBeenCalled();
       });
 
       it('should handle empty players array', async () => {
@@ -2039,8 +2034,7 @@ describe('Reconnection Token Management', () => {
             hasRequiredBroken: false,
           },
         ];
-        gameState.getState().currentPlayerId = replacingComId;
-        gameState.getState().currentPlayerIndex = 0;
+        gameState.getState().currentSeatId = asSeatId(replacingComId);
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
@@ -2081,11 +2075,11 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
           replacingComId,
         );
-        expect(gameState.getState().currentPlayerId).toBe(nextPlayerId);
-        expect(gameState.getState().currentPlayerIndex).toBe(1);
+        expect(gameState.getState().currentSeatId).toBe(nextPlayerId);
+        expect(gameState.getCurrentPlayerIndex()).toBe(1);
         expect(gameStateRepository.update).toHaveBeenCalledWith(
           roomId,
-          expect.objectContaining({ currentPlayerId: nextPlayerId }),
+          expect.objectContaining({ currentSeatId: nextPlayerId }),
           expect.any(Number),
         );
       });
@@ -2166,8 +2160,7 @@ describe('Reconnection Token Management', () => {
             hasRequiredBroken: false,
           },
         ];
-        gameState.getState().currentPlayerId = replacingComId;
-        gameState.getState().currentPlayerIndex = 0;
+        gameState.getState().currentSeatId = asSeatId(replacingComId);
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
@@ -2250,11 +2243,11 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().blowState.actionHistory[0]?.playerId).toBe(
           replacingComId,
         );
-        expect(gameState.getState().currentPlayerId).toBe(nextPlayerId);
-        expect(gameState.getState().currentPlayerIndex).toBe(1);
+        expect(gameState.getState().currentSeatId).toBe(nextPlayerId);
+        expect(gameState.getCurrentPlayerIndex()).toBe(1);
         expect(gameStateRepository.update).toHaveBeenCalledWith(
           roomId,
-          expect.objectContaining({ currentPlayerId: nextPlayerId }),
+          expect.objectContaining({ currentSeatId: nextPlayerId }),
           expect.any(Number),
         );
         expect(

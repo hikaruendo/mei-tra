@@ -11,6 +11,7 @@ import {
 import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
+import { resolveCurrentSeatId } from '../types/current-turn';
 
 @Injectable()
 export class JoinRoomUseCase implements IJoinRoomUseCase {
@@ -191,14 +192,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     // COMが残っていても、ゲーム中フェーズ（blow/play）でも game-state を送る
     // （プレイ中ルームへの途中参加・COM引き継ぎに対応）
 
-    const currentTurn =
-      state.currentPlayerId &&
-      state.players.some((player) => player.playerId === state.currentPlayerId)
-        ? state.currentPlayerId
-        : state.currentPlayerIndex !== -1 &&
-            state.players[state.currentPlayerIndex]
-          ? state.players[state.currentPlayerIndex].playerId
-          : null;
+    const currentTurn = resolveCurrentSeatId(state);
 
     return {
       message: 'Joined active game.',
