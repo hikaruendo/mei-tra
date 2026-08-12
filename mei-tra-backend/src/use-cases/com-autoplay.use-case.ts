@@ -238,7 +238,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
         payload: updatedField,
       });
 
-      await gameState.nextTurn();
+      gameState.nextTurn();
       const nextPlayer = updatedState.players[updatedState.currentPlayerIndex];
       if (nextPlayer) {
         events.push({
@@ -334,15 +334,22 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     // over and simply never transitioned. This is reachable because the
     // all-acted check lives inside declare-blow/pass-blow, and a COM
     // replacement changes the roster without either of them running.
-    if (countPlayersActedInBlow(state.players, state.blowState) >=
-      state.players.length) {
+    if (
+      countPlayersActedInBlow(state.players, state.blowState) >=
+      state.players.length
+    ) {
       this.logger.warn(
         `Blow phase in room ${roomId} had all players acted but never transitioned; completing it`,
       );
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
-        return { success: false, events: [], shouldContinue: false, error: 'Room not found' };
+        return {
+          success: false,
+          events: [],
+          shouldContinue: false,
+          error: 'Room not found',
+        };
       }
 
       const transition = await transitionToPlayPhase({
@@ -370,7 +377,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     const maxAttempts = state.players.length;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      await gameState.nextTurn();
+      gameState.nextTurn();
       const candidate = gameState.getCurrentPlayer();
       if (!candidate) break;
 

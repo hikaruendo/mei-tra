@@ -49,7 +49,7 @@ export async function transitionToPlayPhase({
   }
   winningPlayer.hand.sort((a, b) => cardService.compareCards(a, b));
 
-  await roomGameState.transitionPhase('play');
+  roomGameState.transitionPhase('play');
   const nextState = roomGameState.getState();
 
   nextState.blowState.currentTrump = highestDeclaration.trumpType;

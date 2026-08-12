@@ -103,7 +103,7 @@ export class StartGameUseCase implements IStartGameUseCase {
           errorMessage: 'Failed to mark room as playing',
         };
       }
-      await roomGameState.startGame();
+      roomGameState.startGame();
 
       let updatedState = roomGameState.getState();
       if (
@@ -112,7 +112,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       ) {
         const currentPlayer =
           updatedState.players[updatedState.currentPlayerIndex] ?? null;
-        await roomGameState.updateState({
+        roomGameState.updateState({
           currentSeatId: currentPlayer
             ? asSeatId(currentPlayer.playerId)
             : null,
@@ -146,6 +146,8 @@ export class StartGameUseCase implements IStartGameUseCase {
         updatedState.players[updatedState.currentPlayerIndex];
       const firstBlowPlayer =
         updatedState.players[updatedState.blowState.currentBlowIndex];
+
+      await roomGameState.saveState();
 
       await this.gameEventLogService?.log({
         roomId,

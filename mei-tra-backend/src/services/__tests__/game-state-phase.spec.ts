@@ -34,21 +34,25 @@ describe('GameStateService phase transitions', () => {
     jest.restoreAllMocks();
   });
 
-  it('persists a legal transition', async () => {
-    await service.transitionPhase('blow');
+  it('keeps a legal transition in memory until the action is saved', async () => {
+    service.transitionPhase('blow');
 
     expect(service.getState().gamePhase).toBe('blow');
+    expect(repository.update).not.toHaveBeenCalled();
+
+    await service.saveState();
+
     expect(repository.update).toHaveBeenCalledWith(
       'room-1',
-      { gamePhase: 'blow' },
+      expect.objectContaining({ gamePhase: 'blow' }),
       0,
     );
   });
 
-  it('rejects an illegal transition and keeps the previous phase', async () => {
-    await service.transitionPhase('blow');
+  it('rejects an illegal transition and keeps the previous phase', () => {
+    service.transitionPhase('blow');
 
-    await expect(service.transitionPhase('deal')).rejects.toThrow(
+    expect(() => service.transitionPhase('deal')).toThrow(
       'Invalid game phase transition: blow -> deal',
     );
     expect(service.getState().gamePhase).toBe('blow');
@@ -78,7 +82,7 @@ describe('GameStateService phase transitions', () => {
     state.version = 96;
     state.teamAssignments = { 'player-1': 0 };
 
-    await service.resetRoundState();
+    service.resetRoundState();
     expect(service.getState().version).toBe(96);
     expect(service.getState().teamAssignments).toEqual({ 'player-1': 0 });
 
@@ -91,17 +95,54 @@ describe('GameStateService phase transitions', () => {
     );
   });
 
-  it('persists round changes through an explicit state update', async () => {
+  it('keeps explicit state updates in memory until the action is saved', async () => {
     const state = service.getState();
     state.version = 96;
 
-    await service.updateState({ roundNumber: 2 });
+    service.updateState({ roundNumber: 2 });
+
+    expect(service.getState().roundNumber).toBe(2);
+    expect(repository.update).not.toHaveBeenCalled();
+
+    await service.saveState();
 
     expect(repository.update).toHaveBeenCalledWith(
       'room-1',
-      { roundNumber: 2 },
+      expect.objectContaining({ roundNumber: 2 }),
       96,
     );
+  });
+
+  it('advances the turn without persisting an intermediate snapshot', async () => {
+    const state = service.getState();
+    state.players = [
+      {
+        playerId: 'player-1',
+        name: 'Player 1',
+        team: 0,
+        hand: [],
+        isPasser: false,
+      },
+      {
+        playerId: 'player-2',
+        name: 'Player 2',
+        team: 1,
+        hand: [],
+        isPasser: false,
+      },
+    ];
+    state.currentPlayerId = 'player-1';
+    state.currentPlayerIndex = 0;
+
+    service.nextTurn();
+
+    expect(state.currentPlayerId).toBe('player-2');
+    expect(state.currentPlayerIndex).toBe(1);
+    expect(repository.update).not.toHaveBeenCalled();
+
+    await service.saveState();
+
+    expect(repository.update).toHaveBeenCalledTimes(1);
   });
 
   it('records a completed field without persisting an intermediate snapshot', () => {
@@ -182,7 +223,7 @@ describe('GameStateService phase transitions', () => {
     ];
     jest.spyOn(Math, 'random').mockReturnValue(0.6);
 
-    await service.startGame();
+    service.startGame();
 
     const startedState = service.getState();
     expect(startedState.currentPlayerIndex).toBe(2);
@@ -190,5 +231,6 @@ describe('GameStateService phase transitions', () => {
       'player-3',
     );
     expect(startedState.blowState.currentBlowIndex).toBe(2);
+    expect(repository.update).not.toHaveBeenCalled();
   });
 });

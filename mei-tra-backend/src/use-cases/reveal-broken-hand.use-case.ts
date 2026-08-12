@@ -161,7 +161,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         statePlayer.isPasser = false;
       });
       nextState.deck = this.cardService.generateDeck();
-      await roomGameState.dealCards();
+      roomGameState.dealCards();
 
       const events: GatewayEvent[] = [];
       if (firstBlowPlayer) {

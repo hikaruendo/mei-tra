@@ -1726,7 +1726,7 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'update-turn',
       );
       expect(updateTurnEvent?.payload).toBe('player-2');
-      expect(roomGameState.saveState).toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
     });
 
     it('adds one attribution when legacy and canonical arrays share a reference', async () => {
@@ -2716,6 +2716,7 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'update-turn',
       );
       expect(updateTurn?.payload).toBe('player-2');
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
     });
   });
 

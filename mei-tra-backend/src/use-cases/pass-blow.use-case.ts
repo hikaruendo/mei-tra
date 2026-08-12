@@ -175,7 +175,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       }
 
       // 3. Not all players have acted yet → continue to next player
-      await roomGameState.nextTurn();
+      roomGameState.nextTurn();
 
       // Skip players who have already acted (passed or declared)
       let attempts = 0;
@@ -190,7 +190,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           break; // Found a player who hasn't acted yet
         }
 
-        await roomGameState.nextTurn();
+        roomGameState.nextTurn();
         attempts++;
       }
 
@@ -231,7 +231,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.blowState.currentBlowIndex =
       (state.blowState.currentBlowIndex + 1) % state.players.length;
 
-    await roomGameState.nextTurn();
+    roomGameState.nextTurn();
     const nextDealerIndex = state.currentPlayerIndex;
     const firstBlowIndex = (nextDealerIndex + 1) % state.players.length;
     const firstBlowPlayer = state.players[firstBlowIndex];
@@ -244,7 +244,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.currentPlayerId = firstBlowPlayer.playerId;
     state.currentSeatId = asSeatId(firstBlowPlayer.playerId);
     state.deck = this.cardService.generateDeck();
-    await roomGameState.dealCards();
+    roomGameState.dealCards();
 
     await this.gameEventLogService?.log({
       roomId,
