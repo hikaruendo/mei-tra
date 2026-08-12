@@ -187,7 +187,9 @@ describe('SupabaseRoomRepository', () => {
 
     const rooms = await repository.findRecentFinishedByUserId('user-1', 10);
 
-    expect(roomsSelect).toHaveBeenCalledWith('*, room_players!inner(user_id)');
+    expect(roomsSelect).toHaveBeenCalledWith(
+      '*, room_players!room_players_room_id_fkey!inner(user_id)',
+    );
     expect(eqStatusMock).toHaveBeenCalledWith('status', RoomStatus.FINISHED);
     expect(eqUserMock).toHaveBeenCalledWith('room_players.user_id', 'user-1');
     expect(orderMock).toHaveBeenCalledWith('last_activity_at', {
