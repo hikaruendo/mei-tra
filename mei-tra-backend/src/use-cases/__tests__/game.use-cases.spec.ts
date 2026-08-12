@@ -491,7 +491,7 @@ describe('Game Use Cases', () => {
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual([
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: 'player-2',
           socketId: 'socket-2',
           name: 'Player 2',
           team: 1,
@@ -592,19 +592,19 @@ describe('Game Use Cases', () => {
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual([
         expect.objectContaining({
-          playerId: 'com-0',
+          seatId: 'com-0',
           socketId: 'com-0',
           isHost: false,
         }),
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: 'player-2',
           socketId: 'socket-2',
           isHost: true,
         }),
       ]);
       expect(result.data?.updatedPlayers).toContainEqual(
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: 'player-2',
           isHost: true,
         }),
       );
@@ -698,11 +698,11 @@ describe('Game Use Cases', () => {
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual([
         expect.objectContaining({
-          playerId: expect.stringContaining('com-'),
+          seatId: expect.stringContaining('com-'),
           team: 0,
         }),
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: 'player-2',
           socketId: 'socket-2',
           team: 1,
         }),
@@ -800,7 +800,7 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.players.length).toBe(2);
-      expect(result.data?.currentTurnPlayerId).toBe('player-1');
+      expect(result.data?.currentTurnSeatId).toBe('player-1');
 
       const updateRoomStatusMock = roomService.updateRoomStatus as jest.Mock;
       expect(updateRoomStatusMock).toHaveBeenCalledWith(
@@ -877,7 +877,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.data?.currentTurnPlayerId).toBe('player-2');
+      expect(result.data?.currentTurnSeatId).toBe('player-2');
       expect(state.blowState.currentBlowIndex).toBe(1);
       expect(roomGameState.updateState).toHaveBeenCalledWith({
         currentSeatId: 'player-2',
@@ -1700,8 +1700,7 @@ describe('Game Use Cases', () => {
                 null),
         ),
         isPlayerTurn: jest.fn(
-          (playerId: string) =>
-            state.currentSeatId === asSeatId(playerId),
+          (playerId: string) => state.currentSeatId === asSeatId(playerId),
         ),
       } as unknown as GameStateService;
 
@@ -1718,14 +1717,14 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'card-played',
       );
       expect(cardPlayedEvent?.payload).toMatchObject({
-        playerId: 'player-1',
+        seatId: 'player-1',
         card: 'C1',
         field: expect.objectContaining({
           cards: ['C1'],
-          playedBy: ['player-1'],
+          playedBySeatIds: ['player-1'],
         }),
         players: expect.any(Array),
-        nextPlayerId: 'player-2',
+        nextSeatId: 'player-2',
       });
       const updateTurnEvent = result.events?.find(
         (evt) => evt.event === 'update-turn',
@@ -1832,8 +1831,7 @@ describe('Game Use Cases', () => {
               null),
         ),
         isPlayerTurn: jest.fn(
-          (playerId: string) =>
-            state.currentSeatId === asSeatId(playerId),
+          (playerId: string) => state.currentSeatId === asSeatId(playerId),
         ),
       } as unknown as GameStateService;
 
@@ -1928,7 +1926,7 @@ describe('Game Use Cases', () => {
       expect(cardPlayedEvent?.payload).toMatchObject({
         players: expect.arrayContaining([
           expect.objectContaining({
-            playerId: 'player-2',
+            seatId: 'player-2',
             name: 'COM',
             socketId: '',
             isCOM: true,
@@ -2332,7 +2330,7 @@ describe('Game Use Cases', () => {
             event: 'play-setup-complete',
             payload: {
               negriCard: '6♥',
-              startingPlayer: 'com-timeout-1',
+              startingSeatId: 'com-timeout-1',
             },
           },
         ],
@@ -2358,7 +2356,7 @@ describe('Game Use Cases', () => {
           event: 'play-setup-complete',
           payload: {
             negriCard: '6♥',
-            startingPlayer: 'com-timeout-1',
+            startingSeatId: 'com-timeout-1',
           },
         },
       ]);
@@ -2636,7 +2634,7 @@ describe('Game Use Cases', () => {
             event: 'play-setup-complete',
             payload: expect.objectContaining({
               negriCard: '6♥',
-              startingPlayer: 'com-timeout-1',
+              startingSeatId: 'com-timeout-1',
             }),
           }),
         ]),
@@ -3123,14 +3121,14 @@ describe('Game Use Cases', () => {
         declarations: [],
         actionHistory: [],
         currentHighest: null,
-        lastPasser: null,
+        lastPasserSeatId: null,
       });
 
       const brokenEvent = completion.events?.find(
         (evt) => evt.event === 'broken',
       );
       expect(brokenEvent?.payload).toMatchObject({
-        nextPlayerId: 'player-3',
+        nextSeatId: 'player-3',
         gamePhase: 'blow',
       });
 
@@ -3643,10 +3641,11 @@ describe('Game Use Cases', () => {
       ).toEqual(
         expect.objectContaining({
           field: expect.objectContaining({
-            winnerId: 'player-3',
+            winnerSeatId: 'player-3',
             winnerTeam: 0,
           }),
-          winnerId: 'player-3',
+          winnerSeatId: 'player-3',
+          nextSeatId: 'player-3',
         }),
       );
       expect(scoreService.calculatePlayPoints).toHaveBeenCalledWith(6, 0);

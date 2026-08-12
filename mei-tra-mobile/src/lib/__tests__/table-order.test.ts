@@ -1,17 +1,11 @@
-import type { PlayerContract } from '@meitra/contracts/game';
-
 import {
   getCardSeatPosition,
   getSeatOrderWithSelfBottom,
 } from '@/lib/table-order';
 
-const player = (id: string): PlayerContract => ({
-  socketId: `socket-${id}`,
+const player = (id: string) => ({
   playerId: id,
-  name: id,
-  userId: `user-${id}`,
   team: 0,
-  hand: [],
 });
 
 describe('getSeatOrderWithSelfBottom', () => {

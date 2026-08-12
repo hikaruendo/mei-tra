@@ -110,7 +110,6 @@ describe('StartGameGatewayEffectsService', () => {
         winner: null,
       },
       currentTurnSeatId: 'player-1' as never,
-      currentTurnPlayerId: 'player-1',
     });
 
     expect(events).toEqual([

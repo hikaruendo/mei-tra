@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomStatus } from '../types/room.types';
 import { resolveCurrentPlayer } from '../types/current-turn';
+import { asSeatId } from '../types/identity.types';
 
 const TURN_ACK_PING_INTERVAL_MS = 15 * 1000;
 const TURN_IDLE_WARNING_MS = 45 * 1000;
@@ -92,7 +93,7 @@ export class TurnMonitorService implements OnModuleDestroy {
     const emitPing = () => {
       server.to(currentPlayerConnection.socketId).emit('turn-ping', {
         roomId,
-        playerId,
+        seatId: asSeatId(playerId),
       });
     };
 
@@ -117,7 +118,7 @@ export class TurnMonitorService implements OnModuleDestroy {
           if (!monitor.idleEmitted && silenceMs >= TURN_IDLE_WARNING_MS) {
             monitor.idleEmitted = true;
             server.to(roomId).emit('player-idle', {
-              playerId,
+              seatId: asSeatId(playerId),
               playerName: monitor.playerName,
               roomId,
             });
@@ -180,7 +181,7 @@ export class TurnMonitorService implements OnModuleDestroy {
     if (monitor.idleEmitted) {
       monitor.idleEmitted = false;
       monitor.server.to(roomId).emit('player-idle-cleared', {
-        playerId: monitor.playerId,
+        seatId: asSeatId(monitor.playerId),
         roomId,
       });
     }

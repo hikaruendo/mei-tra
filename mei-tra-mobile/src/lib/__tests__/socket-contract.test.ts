@@ -6,6 +6,7 @@ import type {
   NameUpdatedPayload,
   RoomActionPayload,
 } from '@meitra/contracts/socket';
+import { asSeatId } from '@meitra/contracts/ids';
 
 describe('socket contract client payload shapes', () => {
   it('keeps lobby action identity out of client payloads', () => {
@@ -18,7 +19,7 @@ describe('socket contract client payload shapes', () => {
     };
     const moderationPayload: ModeratePlayerPayload = {
       roomId: 'room-1',
-      targetPlayerId: 'player-2',
+      targetSeatId: asSeatId('player-2'),
       action: 'remove',
     };
 
@@ -31,7 +32,7 @@ describe('socket contract client payload shapes', () => {
     });
     expect(moderationPayload).toEqual({
       roomId: 'room-1',
-      targetPlayerId: 'player-2',
+      targetSeatId: 'player-2',
       action: 'remove',
     });
   });

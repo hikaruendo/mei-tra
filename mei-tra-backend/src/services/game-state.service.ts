@@ -658,7 +658,6 @@ export class GameStateService implements IGameStateService {
       isRoundCancelled: false,
       currentBlowIndex: firstBlowIndex,
     };
-
   }
 
   setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {

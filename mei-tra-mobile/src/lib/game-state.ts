@@ -1,5 +1,4 @@
 import type {
-  BlowStateContract,
   CompletedFieldContract,
   GameStartedPayload,
   GameStatePayload,
@@ -7,35 +6,42 @@ import type {
   TransportTeamScores,
 } from '@meitra/contracts/game';
 import type { RoomContract } from '@meitra/contracts/room';
+import { asSeatId } from '@meitra/contracts/ids';
 import {
+  type CanonicalBlowState,
+  type CanonicalCompletedFieldContract,
   normalizeCompletedFieldIdentity,
   normalizeGameStateIdentity,
   normalizePlayerIdentities,
   normalizeRoomIdentity,
-  resolveSeatAlias,
 } from '@meitra/game-client/identity';
 
-import type { MobileGameSnapshot } from '@/types/game';
+import type {
+  MobileGameSnapshot,
+  MobilePlayer,
+  MobileRoom,
+} from '@/types/game';
 
 export const createEmptyScores = (): TransportTeamScores => ({
   0: { play: 0, total: 0 },
   1: { play: 0, total: 0 },
 });
 
-export const createEmptyBlowState = (): BlowStateContract => ({
+export const createEmptyBlowState = (): CanonicalBlowState => ({
   currentTrump: null,
   currentHighestDeclaration: null,
   declarations: [],
   actionHistory: [],
+  lastPasserSeatId: null,
   lastPasser: null,
   isRoundCancelled: false,
   currentBlowIndex: 0,
 });
 
 export const mergePlayersByIdentity = (
-  previous: PlayerContract[],
+  previous: MobilePlayer[],
   next: PlayerContract[],
-): PlayerContract[] => {
+): MobilePlayer[] => {
   const normalizedPrevious = normalizePlayerIdentities(previous);
   const normalizedNext = normalizePlayerIdentities(next);
   const previousByPlayerId = new Map(
@@ -60,7 +66,7 @@ export const mergePlayersByIdentity = (
 
 export const dedupeCompletedFields = (
   fields: CompletedFieldContract[],
-): CompletedFieldContract[] => {
+): CanonicalCompletedFieldContract[] => {
   const seen = new Set<string>();
   return fields.map(normalizeCompletedFieldIdentity).filter((field) => {
     const key = [
@@ -77,10 +83,10 @@ export const dedupeCompletedFields = (
 
 export const resolvePlayerId = (
   game: MobileGameSnapshot | null,
-  room: RoomContract | null,
+  room: MobileRoom | RoomContract | null,
   authenticatedUserId?: string | null,
 ): string | null => {
-  if (game?.youSeatId ?? game?.you) return game?.youSeatId ?? game?.you ?? null;
+  if (game?.youSeatId) return game.youSeatId;
   if (!authenticatedUserId) return null;
 
   if (!room) return null;
@@ -119,37 +125,33 @@ export const createStartedGameSnapshot = (
   hostId: string | null,
 ): MobileGameSnapshot => {
   const players = normalizePlayerIdentities(payload.players);
-  const youSeatId = resolveSeatAlias(undefined, currentPlayerId);
-  const hostSeatId = resolveSeatAlias(undefined, hostId);
+  const youSeatId = currentPlayerId ? asSeatId(currentPlayerId) : null;
+  const hostSeatId = hostId ? asSeatId(hostId) : null;
   return {
-  roomId: payload.roomId,
-  players,
-  gamePhase: 'blow',
-  currentField: null,
-  currentTurnSeatId: null,
-  currentTurn: null,
-  blowState: createEmptyBlowState(),
-  teamScores: createEmptyScores(),
-  youSeatId,
-  you: youSeatId,
-  isSpectator: false,
-  negriCard: null,
-  negriSeatId: null,
-  negriPlayerId: null,
-  revealedAgari: null,
-  fields: [],
-  hostSeatId,
-  hostId: hostSeatId,
-  pointsToWin: payload.pointsToWin,
-  paused: false,
-  disconnectedPlayerIds: [],
-  idlePlayerIds: [],
-  teamNames: payload.teamNames,
+    roomId: payload.roomId,
+    players,
+    gamePhase: 'blow',
+    currentField: null,
+    currentTurnSeatId: null,
+    blowState: createEmptyBlowState(),
+    teamScores: createEmptyScores(),
+    youSeatId,
+    isSpectator: false,
+    negriCard: null,
+    negriSeatId: null,
+    revealedAgari: null,
+    fields: [],
+    hostSeatId,
+    pointsToWin: payload.pointsToWin,
+    paused: false,
+    disconnectedPlayerIds: [],
+    idlePlayerIds: [],
+    teamNames: payload.teamNames,
   };
 };
 
 export const inferNextTurnAfterCardPlayed = (
-  players: PlayerContract[],
+  players: MobilePlayer[],
   field: { isComplete: boolean; cards: string[]; playedBy: string[]; baseCard: string; baseSuit?: string },
 ): string | null => {
   if (

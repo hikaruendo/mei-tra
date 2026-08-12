@@ -3,6 +3,7 @@ import { DomainPlayer } from '../../types/game.types';
 import { TransportPlayer } from '../../types/player-adapters';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { JoinRoomGatewayEffectsService } from '../join-room-gateway-effects.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('JoinRoomGatewayEffectsService', () => {
   let service: JoinRoomGatewayEffectsService;
@@ -118,7 +119,7 @@ describe('JoinRoomGatewayEffectsService', () => {
           players.map(
             (player): TransportPlayer => ({
               socketId: player.playerId === 'player-1' ? 'socket-1' : '',
-              playerId: player.playerId,
+              seatId: asSeatId(player.playerId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
@@ -226,7 +227,7 @@ describe('JoinRoomGatewayEffectsService', () => {
           players.map(
             (player): TransportPlayer => ({
               socketId: player.playerId === 'player-1' ? 'socket-1' : '',
-              playerId: player.playerId,
+              seatId: asSeatId(player.playerId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
@@ -270,7 +271,7 @@ describe('JoinRoomGatewayEffectsService', () => {
             ],
             gamePhase: 'play',
             currentField: null,
-            currentTurn: 'player-1',
+            currentTurnSeatId: asSeatId('player-1'),
             blowState: {
               currentTrump: null,
               currentHighestDeclaration: {
@@ -306,7 +307,6 @@ describe('JoinRoomGatewayEffectsService', () => {
             },
             negriCard: null,
             negriSeatId: null,
-            negriPlayerId: null,
             fields: [],
             roomId: 'room-1',
             pointsToWin: 10,
@@ -328,7 +328,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       payload: {
         declarations: [
           {
-            playerId: 'player-1',
+            seatId: 'player-1',
             trumpType: 'daiya',
             numberOfPairs: 6,
             timestamp: 1,
@@ -337,19 +337,19 @@ describe('JoinRoomGatewayEffectsService', () => {
         actionHistory: [
           {
             type: 'declare',
-            playerId: 'player-1',
+            seatId: 'player-1',
             trumpType: 'daiya',
             numberOfPairs: 6,
             timestamp: 1,
           },
         ],
         currentHighest: {
-          playerId: 'player-1',
+          seatId: 'player-1',
           trumpType: 'daiya',
           numberOfPairs: 6,
           timestamp: 1,
         },
-        lastPasser: null,
+        lastPasserSeatId: null,
       },
     });
     expect(result.events).toContainEqual({
@@ -431,7 +431,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(selfJoinedEvent).toMatchObject({
       socketId: 'socket-1',
       payload: {
-        playerId: 'actual-seat',
+        seatId: 'actual-seat',
         isSelf: true,
       },
     });
@@ -441,7 +441,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(roomPlayerJoinedEvent).toMatchObject({
       scope: 'room',
       roomId: 'room-1',
-      payload: { playerId: 'actual-seat' },
+      payload: { seatId: 'actual-seat' },
     });
   });
 
@@ -485,7 +485,7 @@ describe('JoinRoomGatewayEffectsService', () => {
           players.map(
             (player): TransportPlayer => ({
               socketId: player.playerId === 'actual-seat' ? 'socket-1' : '',
-              playerId: player.playerId,
+              seatId: asSeatId(player.playerId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
@@ -532,7 +532,7 @@ describe('JoinRoomGatewayEffectsService', () => {
             ],
             gamePhase: 'play',
             currentField: null,
-            currentTurn: 'actual-seat',
+            currentTurnSeatId: asSeatId('actual-seat'),
             blowState: {
               currentTrump: null,
               currentHighestDeclaration: null,
@@ -548,7 +548,6 @@ describe('JoinRoomGatewayEffectsService', () => {
             },
             negriCard: null,
             negriSeatId: null,
-            negriPlayerId: null,
             fields: [],
             roomId: 'room-1',
             pointsToWin: 10,
@@ -561,11 +560,11 @@ describe('JoinRoomGatewayEffectsService', () => {
       (event) => event.event === 'game-state',
     );
 
-    expect((gameStateEvent?.payload as any).you).toBe('actual-seat');
+    expect((gameStateEvent?.payload as any).youSeatId).toBe('actual-seat');
     expect((gameStateEvent?.payload as any).players).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ playerId: 'actual-seat', hand: ['A'] }),
-        expect.objectContaining({ playerId: 'other-seat', hand: [] }),
+        expect.objectContaining({ seatId: 'actual-seat', hand: ['A'] }),
+        expect.objectContaining({ seatId: 'other-seat', hand: [] }),
       ]),
     );
   });
@@ -723,13 +722,13 @@ describe('JoinRoomGatewayEffectsService', () => {
         players: [],
         gamePhase: 'play',
         currentField: null,
-        currentTurn: 'player-1',
+        currentTurnSeatId: asSeatId('player-1'),
         blowState: {
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
           actionHistory: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -737,10 +736,12 @@ describe('JoinRoomGatewayEffectsService', () => {
           0: { play: 0, total: 0 },
           1: { play: 0, total: 0 },
         },
-        you: 'player-1',
+        youSeatId: asSeatId('player-1'),
         negriCard: null,
+        negriSeatId: null,
         fields: [],
         roomId: 'room-1',
+        hostSeatId: asSeatId('player-1'),
         pointsToWin: 10,
       },
       reconnectToken: 'player-1',

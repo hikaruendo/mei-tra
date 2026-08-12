@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { RoundCancelledPayload } from '@contracts/game';
+import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
 import {
   IPassBlowUseCase,
   PassBlowRequest,
@@ -126,12 +127,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           scope: 'room',
           roomId,
           event: 'blow-updated',
-          payload: {
-            declarations: state.blowState.declarations,
-            actionHistory: state.blowState.actionHistory,
-            currentHighest: state.blowState.currentHighestDeclaration,
-            lastPasser: player.playerId,
-          },
+          payload: toBlowUpdatedPayload(state.blowState),
         },
       ];
       events.push(
@@ -279,7 +275,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     );
     const roundCancelledPayload: RoundCancelledPayload = {
       nextDealerSeatId: asSeatId(firstBlowPlayer.playerId),
-      nextDealer: firstBlowPlayer.playerId,
       players: resolveTransportPlayers(roomGameState, state.players, {
         roomPlayers: room?.players,
       }),
@@ -295,7 +290,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           declarations: [],
           actionHistory: [],
           currentHighest: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
         },
       },
       {

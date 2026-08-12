@@ -18,7 +18,6 @@ export function toRoomPlayerContract(
   return {
     socketId: transportPlayer?.socketId ?? roomPlayer.socketId,
     seatId: resolveSeatId(roomPlayer),
-    playerId: roomPlayer.playerId,
     name: transportPlayer?.name ?? roomPlayer.name,
     userId: transportPlayer?.userId ?? roomPlayer.userId,
     isAuthenticated:
@@ -40,19 +39,18 @@ export function toRoomContract(
   options?: { players?: TransportPlayer[] },
 ): RoomContract {
   const transportPlayersById = new Map(
-    (options?.players ?? []).map((player) => [player.playerId, player]),
+    (options?.players ?? []).map((player) => [player.seatId, player]),
   );
 
   return {
     id: room.id,
     name: room.name,
     hostSeatId: room.hostSeatId ?? resolveSeatId({ playerId: room.hostId }),
-    hostId: room.hostId,
     status: room.status,
     players: room.players.map((roomPlayer) =>
       toRoomPlayerContract(
         roomPlayer,
-        transportPlayersById.get(roomPlayer.playerId),
+        transportPlayersById.get(resolveSeatId(roomPlayer)),
       ),
     ),
     settings: {

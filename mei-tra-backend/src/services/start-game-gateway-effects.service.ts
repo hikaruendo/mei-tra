@@ -16,8 +16,6 @@ interface BuildStartGameEventsParams {
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
   currentTurnSeatId: SeatId;
-  /** @deprecated Use currentTurnSeatId. */
-  currentTurnPlayerId: string;
 }
 
 @Injectable()
@@ -33,7 +31,6 @@ export class StartGameGatewayEffectsService {
     pointsToWin,
     updatePhase,
     currentTurnSeatId,
-    currentTurnPlayerId,
   }: BuildStartGameEventsParams): Promise<GatewayEvent[]> {
     const room = await this.roomService.getRoom(roomId);
     const roomGameState = await this.roomService.getRoomGameState(roomId);
@@ -89,7 +86,7 @@ export class StartGameGatewayEffectsService {
         scope: 'room',
         roomId,
         event: 'update-turn',
-        payload: currentTurnSeatId ?? currentTurnPlayerId,
+        payload: currentTurnSeatId,
       },
     ];
   }

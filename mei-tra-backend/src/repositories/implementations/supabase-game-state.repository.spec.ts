@@ -297,11 +297,12 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
-    expect(state?.currentPlayerId).toBe(secondSeatId);
-    expect(state?.currentPlayerIndex).toBe(1);
+    expect(state?.currentSeatId).toBe(secondSeatId);
+    expect(state?.currentPlayerId).toBeUndefined();
+    expect(state?.currentPlayerIndex).toBeUndefined();
   });
 
-  it('restores runtime aliases from canonical seat references', async () => {
+  it('restores canonical seat references', async () => {
     const secondRoomPlayer = {
       ...roomPlayerRow,
       id: secondSeatId,
@@ -374,18 +375,19 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
-    expect(state?.currentPlayerId).toBe(secondSeatId);
-    expect(state?.blowState.declarations[0]?.playerId).toBe(secondSeatId);
-    expect(state?.blowState.lastPasser).toBe(firstSeatId);
-    expect(state?.playState?.currentField?.playedBy).toEqual([firstSeatId]);
-    expect(state?.playState?.currentField?.dealerId).toBe(secondSeatId);
+    expect(state?.currentSeatId).toBe(secondSeatId);
+    expect(state?.blowState.declarations[0]?.seatId).toBe(secondSeatId);
+    expect(state?.blowState.lastPasserSeatId).toBe(firstSeatId);
+    expect(state?.playState?.currentField?.playedBySeatIds).toEqual([
+      firstSeatId,
+    ]);
+    expect(state?.playState?.currentField?.dealerSeatId).toBe(secondSeatId);
     expect(state?.playState?.negriSeatId).toBe(secondSeatId);
-    expect(state?.playState?.negriPlayerId).toBe(secondSeatId);
-    expect(state?.playState?.fields[0]?.winnerId).toBe(firstSeatId);
-    expect(state?.playState?.fields[0]?.dealerId).toBe(secondSeatId);
-    expect(state?.playState?.lastWinnerId).toBe(firstSeatId);
-    expect(state?.playState?.openDeclarerId).toBe(secondSeatId);
-    expect(state?.pendingBrokenHandReveal?.playerId).toBe(secondSeatId);
+    expect(state?.playState?.fields[0]?.winnerSeatId).toBe(firstSeatId);
+    expect(state?.playState?.fields[0]?.dealerSeatId).toBe(secondSeatId);
+    expect(state?.playState?.lastWinnerSeatId).toBe(firstSeatId);
+    expect(state?.playState?.openDeclarerSeatId).toBe(secondSeatId);
+    expect(state?.pendingBrokenHandReveal?.seatId).toBe(secondSeatId);
   });
 
   it('passes the expected version to atomic state updates', async () => {
@@ -421,7 +423,7 @@ describe('SupabaseGameStateRepository', () => {
     expect(state?.version).toBe(5);
   });
 
-  it('persists current player id with a derived index fallback', async () => {
+  it('persists the canonical current seat id', async () => {
     const order = jest.fn().mockResolvedValue({
       data: [roomPlayerRow],
       error: null,
@@ -441,7 +443,7 @@ describe('SupabaseGameStateRepository', () => {
 
     await repository.update(gameStateRow.room_id, {
       players: createState().players,
-      currentPlayerIndex: 0,
+      currentSeatId: firstSeatId,
     });
 
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {

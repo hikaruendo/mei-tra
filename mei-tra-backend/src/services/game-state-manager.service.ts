@@ -13,10 +13,7 @@ export class GameStateManager {
     private readonly gamePhaseService: GamePhaseService,
   ) {}
 
-  applyState(
-    currentState: GameState,
-    newState: Partial<GameState>,
-  ): GameState {
+  applyState(currentState: GameState, newState: Partial<GameState>): GameState {
     if (Object.prototype.hasOwnProperty.call(newState, 'gamePhase')) {
       this.gamePhaseService.assertTransition(
         currentState.gamePhase,

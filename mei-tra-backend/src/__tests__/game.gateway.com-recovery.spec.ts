@@ -123,10 +123,8 @@ describe('GameGateway COM recovery integration', () => {
         roomsList: [],
         room: { id: 'room-1', players: [] },
         selfSeatId: 'user-1',
-        selfPlayerId: 'user-1',
         reconnectToken: 'user-1',
         currentTurnSeatId: 'com-1',
-        currentTurnPlayerId: 'com-1',
         gameState: { players: [], gamePhase: 'play' },
       }),
       getActiveGameSnapshot: jest.fn(),
@@ -273,9 +271,9 @@ describe('GameGateway COM recovery integration', () => {
     testGateway.reconnectionUseCase = {
       execute: jest.fn(),
       getActiveGameSnapshot: jest.fn().mockResolvedValue({
-        selfPlayerId: 'user-1',
+        selfSeatId: 'user-1',
         reconnectToken: 'player-1',
-        currentTurnPlayerId: 'player-2',
+        currentTurnSeatId: 'player-2',
         gameState,
       }),
     };

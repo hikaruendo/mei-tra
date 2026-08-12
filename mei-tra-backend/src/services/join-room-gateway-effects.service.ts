@@ -1,8 +1,8 @@
-import type { GameStatePayload } from '@contracts/game';
 import type {
   GamePlayerJoinedPayload,
   RoomPlayerJoinedPayload,
 } from '@contracts/room';
+import type { GameStatePayload } from '@contracts/game';
 import type { SeatId } from '@contracts/ids';
 import { Inject, Injectable } from '@nestjs/common';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
@@ -17,6 +17,12 @@ import { RoomPlayer, RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 import { asSeatId } from '../types/identity.types';
+import {
+  toBlowStateContract,
+  toBlowUpdatedPayload,
+  toCompletedFieldContract,
+  toFieldContract,
+} from '../types/game-contract-adapters';
 
 interface BuildJoinRoomEffectsParams {
   clientId: string;
@@ -84,8 +90,6 @@ export class JoinRoomGatewayEffectsService {
           seatId: asSeatId(
             previousRoomNotification?.playerId ?? normalizedUser.playerId,
           ),
-          playerId:
-            previousRoomNotification?.playerId ?? normalizedUser.playerId,
           roomId: currentRoomId,
         },
       });
@@ -95,7 +99,6 @@ export class JoinRoomGatewayEffectsService {
 
     const roomPlayerJoinedPayload: RoomPlayerJoinedPayload = {
       seatId: asSeatId(selfPlayerId),
-      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
     };
@@ -109,7 +112,6 @@ export class JoinRoomGatewayEffectsService {
 
     const selfJoinedPayload: GamePlayerJoinedPayload = {
       seatId: asSeatId(selfPlayerId),
-      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
@@ -126,7 +128,6 @@ export class JoinRoomGatewayEffectsService {
 
     const otherJoinedPayload: GamePlayerJoinedPayload = {
       seatId: asSeatId(selfPlayerId),
-      playerId: selfPlayerId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
@@ -149,7 +150,6 @@ export class JoinRoomGatewayEffectsService {
 
         const existingPlayerJoinedPayload: GamePlayerJoinedPayload = {
           seatId: asSeatId(existingPlayer.playerId),
-          playerId: existingPlayer.playerId,
           roomId,
           isHost: existingPlayer.isHost,
           roomStatus: joinData.roomStatus,
@@ -206,12 +206,15 @@ export class JoinRoomGatewayEffectsService {
       );
       const maskedGameStateForJoiner: GameStatePayload = {
         ...joinData.resumeGame.gameState,
-        currentTurnSeatId: joinData.resumeGame.gameState.currentTurn
-          ? asSeatId(joinData.resumeGame.gameState.currentTurn)
+        currentTurnSeatId:
+          joinData.resumeGame.gameState.currentTurnSeatId ?? null,
+        currentField: joinData.resumeGame.gameState.currentField
+          ? toFieldContract(joinData.resumeGame.gameState.currentField)
           : null,
-        currentField: joinData.resumeGame.gameState.currentField ?? null,
         negriCard: joinData.resumeGame.gameState.negriCard ?? null,
-        fields: joinData.resumeGame.gameState.fields ?? [],
+        fields: (joinData.resumeGame.gameState.fields ?? []).map(
+          toCompletedFieldContract,
+        ),
         players: resolveTransportPlayers(
           roomGameState,
           joinData.resumeGame.gameState.players,
@@ -220,12 +223,12 @@ export class JoinRoomGatewayEffectsService {
           },
         ).map((player) => ({
           ...player,
-          hand: player.playerId === resumeSelfPlayerId ? player.hand : [],
+          hand:
+            player.seatId === asSeatId(resumeSelfPlayerId) ? player.hand : [],
         })),
+        blowState: toBlowStateContract(joinData.resumeGame.gameState.blowState),
         youSeatId: resumeSelfPlayerId ? asSeatId(resumeSelfPlayerId) : null,
-        you: resumeSelfPlayerId,
         hostSeatId: asSeatId(room.hostId),
-        hostId: room.hostId,
       };
 
       events.push({
@@ -259,20 +262,14 @@ export class JoinRoomGatewayEffectsService {
         scope: 'room',
         roomId,
         event: 'blow-updated',
-        payload: {
-          declarations: joinData.resumeGame.gameState.blowState.declarations,
-          actionHistory: joinData.resumeGame.gameState.blowState.actionHistory,
-          currentHighest:
-            joinData.resumeGame.gameState.blowState.currentHighestDeclaration,
-          lastPasser: joinData.resumeGame.gameState.blowState.lastPasser,
-        },
+        payload: toBlowUpdatedPayload(joinData.resumeGame.gameState.blowState),
       });
-      if (joinData.resumeGame.gameState.currentTurn) {
+      if (joinData.resumeGame.gameState.currentTurnSeatId) {
         events.push({
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: joinData.resumeGame.gameState.currentTurn,
+          payload: joinData.resumeGame.gameState.currentTurnSeatId,
         });
       }
     }
@@ -341,7 +338,6 @@ export class JoinRoomGatewayEffectsService {
       event: 'game-player-joined',
       payload: {
         seatId: selfPlayer.seatId,
-        playerId: selfPlayer.playerId,
         roomId: room.id,
         isHost,
         roomStatus,

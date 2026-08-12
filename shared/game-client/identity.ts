@@ -8,7 +8,6 @@ import type {
   GameStatePayload,
 } from '@meitra/contracts/game';
 import type { SeatId } from '@meitra/contracts/ids';
-import { asSeatId } from '@meitra/contracts/ids';
 import type { RoomContract } from '@meitra/contracts/room';
 
 export type CanonicalPlayerContract<T extends ConnectionUserContract> = T & {
@@ -16,64 +15,58 @@ export type CanonicalPlayerContract<T extends ConnectionUserContract> = T & {
   playerId: SeatId;
 };
 
-export type CanonicalRoomContract = Omit<
-  RoomContract,
-  'hostSeatId' | 'hostId' | 'players'
-> & {
-  hostSeatId: SeatId;
+export type CanonicalRoomContract = Omit<RoomContract, 'players'> & {
   hostId: SeatId;
   players: Array<CanonicalPlayerContract<RoomContract['players'][number]>>;
+};
+
+export type CanonicalBlowDeclaration = BlowDeclarationContract & {
+  playerId: SeatId;
+};
+
+export type CanonicalBlowAction = BlowActionContract & {
+  playerId: SeatId;
+};
+
+export type CanonicalBlowState = Omit<
+  BlowStateContract,
+  'currentHighestDeclaration' | 'declarations' | 'actionHistory'
+> & {
+  currentHighestDeclaration: CanonicalBlowDeclaration | null;
+  declarations: CanonicalBlowDeclaration[];
+  actionHistory: CanonicalBlowAction[];
+  lastPasser: SeatId | null;
+};
+
+export type CanonicalFieldContract = FieldContract & {
+  playedBy: SeatId[];
+  dealerId: SeatId;
+};
+
+export type CanonicalCompletedFieldContract = CompletedFieldContract & {
+  winnerId: SeatId;
+  dealerId: SeatId;
 };
 
 export type CanonicalGameStatePayload = Omit<
   GameStatePayload,
   | 'players'
-  | 'currentTurnSeatId'
-  | 'currentTurn'
-  | 'youSeatId'
-  | 'you'
-  | 'hostSeatId'
-  | 'hostId'
-  | 'negriSeatId'
-  | 'negriPlayerId'
   | 'blowState'
   | 'currentField'
   | 'fields'
 > & {
   players: Array<CanonicalPlayerContract<GameStatePayload['players'][number]>>;
-  currentTurnSeatId: SeatId | null;
-  currentTurn: SeatId | null;
-  youSeatId: SeatId | null;
-  you: SeatId | null;
-  hostSeatId: SeatId | null;
-  hostId: SeatId | null;
-  negriSeatId: SeatId | null;
-  negriPlayerId: SeatId | null;
-  blowState: BlowStateContract;
-  currentField: FieldContract | null;
-  fields: CompletedFieldContract[];
-};
-
-export const resolveSeatAlias = (
-  seatId: SeatId | string | null | undefined,
-  legacyPlayerId: string | null | undefined,
-): SeatId | null => {
-  const value = seatId ?? legacyPlayerId;
-  return value ? asSeatId(value) : null;
+  blowState: CanonicalBlowState;
+  currentField: CanonicalFieldContract | null;
+  fields: CanonicalCompletedFieldContract[];
 };
 
 export const normalizePlayerIdentity = <T extends ConnectionUserContract>(
   player: T,
 ): CanonicalPlayerContract<T> => {
-  const seatId = resolveSeatAlias(player.seatId, player.playerId);
-  if (!seatId) {
-    throw new Error('Player payload omitted both seatId and playerId');
-  }
-
   return {
     ...player,
-    seatId,
-    playerId: seatId,
+    playerId: player.seatId,
   };
 };
 
@@ -84,21 +77,19 @@ export const normalizePlayerIdentities = <T extends ConnectionUserContract>(
 
 export const normalizeBlowDeclarationIdentity = (
   declaration: BlowDeclarationContract,
-): BlowDeclarationContract & { seatId: SeatId; playerId: SeatId } => {
-  const seatId = resolveSeatAlias(declaration.seatId, declaration.playerId)!;
-  return { ...declaration, seatId, playerId: seatId };
+): CanonicalBlowDeclaration => {
+  return { ...declaration, playerId: declaration.seatId };
 };
 
 export const normalizeBlowActionIdentity = (
   action: BlowActionContract,
-): BlowActionContract & { seatId: SeatId; playerId: SeatId } => {
-  const seatId = resolveSeatAlias(action.seatId, action.playerId)!;
-  return { ...action, seatId, playerId: seatId };
+): CanonicalBlowAction => {
+  return { ...action, playerId: action.seatId };
 };
 
 export const normalizeBlowStateIdentity = (
   blowState: BlowStateContract,
-): BlowStateContract => {
+): CanonicalBlowState => {
   const declarations = (blowState.declarations ?? []).map(
     normalizeBlowDeclarationIdentity,
   );
@@ -108,46 +99,32 @@ export const normalizeBlowStateIdentity = (
   const currentHighestDeclaration = blowState.currentHighestDeclaration
     ? normalizeBlowDeclarationIdentity(blowState.currentHighestDeclaration)
     : null;
-  const lastPasserSeatId = resolveSeatAlias(
-    blowState.lastPasserSeatId,
-    blowState.lastPasser,
-  );
-
   return {
     ...blowState,
     declarations,
     actionHistory,
     currentHighestDeclaration,
-    lastPasserSeatId,
-    lastPasser: lastPasserSeatId,
+    lastPasser: blowState.lastPasserSeatId,
   };
 };
 
-export const normalizeFieldIdentity = (field: FieldContract): FieldContract => {
-  const playedBySeatIds = (field.playedBySeatIds ?? field.playedBy).map(
-    (seatId) => asSeatId(seatId),
-  );
-  const dealerSeatId = resolveSeatAlias(field.dealerSeatId, field.dealerId)!;
+export const normalizeFieldIdentity = (
+  field: FieldContract,
+): CanonicalFieldContract => {
   return {
     ...field,
-    playedBy: playedBySeatIds,
-    playedBySeatIds,
-    dealerSeatId,
-    dealerId: dealerSeatId,
+    playedBy: [...field.playedBySeatIds],
+    dealerId: field.dealerSeatId,
   };
 };
 
 export const normalizeCompletedFieldIdentity = (
   field: CompletedFieldContract,
-): CompletedFieldContract => {
-  const winnerSeatId = resolveSeatAlias(field.winnerSeatId, field.winnerId)!;
-  const dealerSeatId = resolveSeatAlias(field.dealerSeatId, field.dealerId)!;
+): CanonicalCompletedFieldContract => {
   return {
     ...field,
-    winnerSeatId,
-    winnerId: winnerSeatId,
-    dealerSeatId,
-    dealerId: dealerSeatId,
+    winnerId: field.winnerSeatId,
+    dealerId: field.dealerSeatId,
   };
 };
 
@@ -155,15 +132,10 @@ export const normalizeRoomIdentity = (
   room: RoomContract,
 ): CanonicalRoomContract => {
   const players = normalizePlayerIdentities(room.players);
-  const hostSeatId = resolveSeatAlias(room.hostSeatId, room.hostId);
-  if (!hostSeatId) {
-    throw new Error(`Room payload omitted host identity: ${room.id}`);
-  }
 
   return {
     ...room,
-    hostSeatId,
-    hostId: hostSeatId,
+    hostId: room.hostSeatId,
     players,
   };
 };
@@ -171,33 +143,11 @@ export const normalizeRoomIdentity = (
 export const normalizeGameStateIdentity = (
   payload: GameStatePayload,
 ): CanonicalGameStatePayload => {
-  const currentTurnSeatId = resolveSeatAlias(
-    payload.currentTurnSeatId,
-    payload.currentTurn,
-  );
-  const youSeatId = resolveSeatAlias(payload.youSeatId, payload.you);
-  const hostSeatId = resolveSeatAlias(payload.hostSeatId, payload.hostId);
   const blowState = normalizeBlowStateIdentity(payload.blowState);
-  const negriSeatId =
-    resolveSeatAlias(payload.negriSeatId, payload.negriPlayerId) ??
-    (payload.negriCard && blowState.currentHighestDeclaration
-      ? resolveSeatAlias(
-          blowState.currentHighestDeclaration.seatId,
-          blowState.currentHighestDeclaration.playerId,
-        )
-      : null);
 
   return {
     ...payload,
     players: normalizePlayerIdentities(payload.players),
-    currentTurnSeatId,
-    currentTurn: currentTurnSeatId,
-    youSeatId,
-    you: youSeatId,
-    hostSeatId,
-    hostId: hostSeatId,
-    negriSeatId,
-    negriPlayerId: negriSeatId,
     blowState,
     currentField: payload.currentField
       ? normalizeFieldIdentity(payload.currentField)

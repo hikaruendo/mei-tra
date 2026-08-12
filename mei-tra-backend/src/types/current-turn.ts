@@ -7,14 +7,10 @@ function playerSeatId(player: DomainPlayer): SeatId {
   return player.seatId ?? asSeatId(player.playerId);
 }
 
-export function resolveCurrentSeatId(
-  state: CurrentTurnState,
-): SeatId | null {
+export function resolveCurrentSeatId(state: CurrentTurnState): SeatId | null {
   if (
     state.currentSeatId &&
-    state.players.some(
-      (player) => playerSeatId(player) === state.currentSeatId,
-    )
+    state.players.some((player) => playerSeatId(player) === state.currentSeatId)
   ) {
     return state.currentSeatId;
   }

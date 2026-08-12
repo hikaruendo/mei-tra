@@ -1,7 +1,6 @@
 import type {
   BlowActionContract,
   BlowDeclarationContract,
-  PlayerContract,
   TrumpType,
 } from '@meitra/contracts/game';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { TRUMP_LABELS } from '@/lib/trump-labels';
 import { colors } from '@/theme/colors';
 import { getValidBlowPairValues } from '@meitra/game-client/blow';
+import type { MobilePlayer } from '@/types/game';
 
 const TRUMP_ORDER: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz', 'tra'];
 
@@ -27,7 +27,7 @@ const declarationLabel = (declaration: BlowDeclarationContract | null) => {
 };
 
 interface BlowControlsProps {
-  players: PlayerContract[];
+  players: MobilePlayer[];
   currentTurn: string | null;
   currentPlayerId: string | null;
   highest: BlowDeclarationContract | null;
@@ -179,11 +179,11 @@ export function BlowControls({
           >
             {actionHistory.map((action, index) => {
               const name =
-                players.find((p) => p.playerId === action.playerId)?.name ??
+                players.find((p) => p.seatId === action.seatId)?.name ??
                 '—';
               const isHighest =
                 action.type === 'declare' &&
-                highest?.playerId === action.playerId &&
+                highest?.seatId === action.seatId &&
                 highest?.trumpType === action.trumpType &&
                 highest?.numberOfPairs === action.numberOfPairs;
               const trump = action.trumpType

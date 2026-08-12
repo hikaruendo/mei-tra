@@ -1,4 +1,4 @@
-import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
+import type { TeamNames } from '@meitra/contracts/game';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
@@ -6,9 +6,10 @@ import { TurnClock } from '@/components/game/TurnClock';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { colors, teamColors } from '@/theme/colors';
+import type { MobilePlayer } from '@/types/game';
 
 interface PlayerSeatProps {
-  player: PlayerContract;
+  player: MobilePlayer;
   isTurn: boolean;
   isSelf?: boolean;
   declaration?: string;

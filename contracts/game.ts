@@ -10,9 +10,7 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface ConnectionUserContract {
   socketId: string;
-  seatId?: SeatId;
-  /** @deprecated Use seatId. This alias has the same value during migration. */
-  playerId: string;
+  seatId: SeatId;
   name: string;
   userId?: string;
   isAuthenticated?: boolean;
@@ -29,9 +27,7 @@ export interface PlayerContract extends ConnectionUserContract {
 }
 
 export interface BlowDeclarationContract {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -40,9 +36,7 @@ export interface BlowDeclarationContract {
 
 export interface BlowActionContract {
   type: 'declare' | 'pass';
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -53,35 +47,26 @@ export interface BlowStateContract {
   currentHighestDeclaration: BlowDeclarationContract | null;
   declarations: BlowDeclarationContract[];
   actionHistory: BlowActionContract[];
-  lastPasserSeatId?: SeatId | null;
-  /** @deprecated Use lastPasserSeatId. */
-  lastPasser: string | null;
+  lastPasserSeatId: SeatId | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
 }
 
 export interface FieldContract {
   cards: string[];
-  playedBy: string[];
-  playedBySeatIds?: SeatId[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
-  dealerSeatId?: SeatId;
-  /** @deprecated Use dealerSeatId. */
-  dealerId: string;
+  dealerSeatId: SeatId;
   declaredSuit?: string;
   isComplete: boolean;
 }
 
 export interface CompletedFieldContract {
   cards: string[];
-  winnerSeatId?: SeatId;
-  /** @deprecated Use winnerSeatId. */
-  winnerId: string;
+  winnerSeatId: SeatId;
   winnerTeam: Team;
-  dealerSeatId?: SeatId;
-  /** @deprecated Use dealerSeatId. */
-  dealerId: string;
+  dealerSeatId: SeatId;
 }
 
 export interface TransportTeamScore {
@@ -97,25 +82,17 @@ export interface GameStatePayload {
   players: PlayerContract[];
   gamePhase: TransportGamePhase;
   currentField: FieldContract | null;
-  currentTurnSeatId?: SeatId | null;
-  /** @deprecated Use currentTurnSeatId. */
-  currentTurn: string | null;
+  currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
-  youSeatId?: SeatId | null;
-  /** @deprecated Use youSeatId. */
-  you: string | null;
+  youSeatId: SeatId | null;
   isSpectator?: boolean;
   negriCard: string | null;
-  negriSeatId?: SeatId | null;
-  /** @deprecated Use negriSeatId. */
-  negriPlayerId?: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari?: string | null;
   fields: CompletedFieldContract[];
   roomId: string;
-  hostSeatId?: SeatId;
-  /** @deprecated Use hostSeatId. */
-  hostId?: string;
+  hostSeatId: SeatId;
   pointsToWin: number;
   teamNames?: TeamNames;
 }
@@ -124,9 +101,7 @@ export interface BlowUpdatedPayload {
   declarations: BlowDeclarationContract[];
   actionHistory?: BlowActionContract[];
   currentHighest: BlowDeclarationContract | null;
-  lastPasserSeatId?: SeatId | null;
-  /** @deprecated Use lastPasserSeatId. */
-  lastPasser?: string | null;
+  lastPasserSeatId: SeatId | null;
 }
 
 export interface SyncGameStatePayload {
@@ -157,34 +132,24 @@ export interface RequestAgariPayload {
 export interface RevealAgariPayload {
   agari: string;
   message: string;
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
 }
 
 export interface BrokenPayload {
-  nextSeatId?: SeatId;
-  /** @deprecated Use nextSeatId. */
-  nextPlayerId: string;
+  nextSeatId: SeatId;
   players: PlayerContract[];
   gamePhase?: TransportGamePhase;
 }
 
 export interface BlowStartedPayload {
-  startingSeatId?: SeatId;
-  /** @deprecated Use startingSeatId. */
-  startingPlayer: string;
+  startingSeatId: SeatId;
   players: PlayerContract[];
 }
 
 export interface FieldCompletePayload {
-  winnerSeatId?: SeatId;
-  /** @deprecated Use winnerSeatId. */
-  winnerId: string;
+  winnerSeatId: SeatId;
   field: CompletedFieldContract;
-  nextSeatId?: SeatId;
-  /** @deprecated Use nextSeatId. */
-  nextPlayerId: string;
+  nextSeatId: SeatId;
 }
 
 export interface PlayCardPayload {
@@ -193,18 +158,14 @@ export interface PlayCardPayload {
 }
 
 export interface CardPlayedPayload {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   card: string;
   field: FieldContract;
   players: PlayerContract[];
   nextSeatId?: SeatId;
-  /** @deprecated Use nextSeatId. */
-  nextPlayerId?: string;
 }
 
-export type UpdateTurnPayload = string;
+export type UpdateTurnPayload = SeatId;
 
 export interface TurnAckPayload {
   roomId?: string;
@@ -215,9 +176,7 @@ export interface RoundResultsPayload {
 }
 
 export interface RoundCancelledPayload {
-  nextDealerSeatId?: SeatId;
-  /** @deprecated Use nextDealerSeatId. */
-  nextDealer: string;
+  nextDealerSeatId: SeatId;
   players: PlayerContract[];
   currentTrump?: TrumpType | null;
   currentHighestDeclaration?: BlowDeclarationContract | null;
@@ -227,16 +186,12 @@ export interface RoundCancelledPayload {
 
 export interface NewRoundStartedPayload {
   players: PlayerContract[];
-  currentTurnSeatId?: SeatId;
-  /** @deprecated Use currentTurnSeatId. */
-  currentTurn: string;
+  currentTurnSeatId: SeatId;
   gamePhase: TransportGamePhase;
   currentField: FieldContract | null;
   completedFields: CompletedFieldContract[];
   negriCard: string | null;
-  negriSeatId?: SeatId | null;
-  /** @deprecated Use negriSeatId. */
-  negriPlayerId: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari: string | null;
   currentTrump: TrumpType | null;
   currentHighestDeclaration: BlowDeclarationContract | null;
@@ -261,9 +216,7 @@ export interface GameStartedPayload {
 
 export interface PlaySetupCompletePayload {
   negriCard: string;
-  startingSeatId?: SeatId;
-  /** @deprecated Use startingSeatId. */
-  startingPlayer: string;
+  startingSeatId: SeatId;
 }
 
 export interface GameMessagePayload {
@@ -271,28 +224,23 @@ export interface GameMessagePayload {
 }
 
 export interface PlayerLeftPayload {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   roomId: string;
 }
 
 export interface PlayerConvertedToComPayload {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   playerName: string;
   message: string;
 }
 
 export interface TurnPingPayload {
   roomId: string;
+  seatId: SeatId;
 }
 
 export interface PlayerIdlePayload {
   roomId: string;
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   idleMs?: number;
 }

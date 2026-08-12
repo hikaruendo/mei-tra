@@ -1,4 +1,4 @@
-import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
+import type { TeamNames } from '@meitra/contracts/game';
 import type {
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
@@ -15,6 +15,7 @@ import {
 
 import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
 import { colors, teamColors } from '@/theme/colors';
+import type { MobilePlayer } from '@/types/game';
 
 interface GameHistoryProps {
   replay: GameHistoryReplayViewContract | null;
@@ -22,7 +23,7 @@ interface GameHistoryProps {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
-  players?: PlayerContract[];
+  players?: MobilePlayer[];
   teamNames?: TeamNames;
 }
 

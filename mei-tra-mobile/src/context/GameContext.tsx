@@ -13,6 +13,7 @@ import type {
   RoomActionPayload,
 } from '@meitra/contracts/socket';
 import type { RoomContract } from '@meitra/contracts/room';
+import { asSeatId } from '@meitra/contracts/ids';
 import { io } from 'socket.io-client';
 import {
   createContext,
@@ -32,7 +33,6 @@ import {
   normalizeFieldIdentity,
   normalizePlayerIdentities,
   normalizeRoomIdentity,
-  resolveSeatAlias,
 } from '@meitra/game-client/identity';
 
 import { useAuth } from '@/context/AuthContext';
@@ -57,11 +57,12 @@ import type {
   ConnectionStatus,
   MobileGameOver,
   MobileGameSnapshot,
+  MobileRoom,
 } from '@/types/game';
 
 interface MobileState {
-  rooms: RoomContract[];
-  currentRoom: RoomContract | null;
+  rooms: MobileRoom[];
+  currentRoom: MobileRoom | null;
   game: MobileGameSnapshot | null;
   pendingGamePatches: Partial<MobileGameSnapshot> | null;
   connectionStatus: ConnectionStatus;
@@ -609,10 +610,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       finishResyncFlight(payload.roomId);
     });
     socket.on('reconnect-token', (playerId) => {
-      const youSeatId = resolveSeatAlias(undefined, playerId);
       dispatch({
         type: 'patchGame',
-        patch: { youSeatId, you: youSeatId },
+        patch: { youSeatId: asSeatId(playerId) },
       });
     });
     socket.on('game-started', (payload) => {
@@ -626,9 +626,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         game: createStartedGameSnapshot(
           payload,
           currentPlayerId,
-          stateRef.current.currentRoom?.hostSeatId ??
-            stateRef.current.currentRoom?.hostId ??
-            null,
+          stateRef.current.currentRoom?.hostSeatId ?? null,
         ),
       });
       void roomStorage.set(payload.roomId);
@@ -647,20 +645,22 @@ export function GameProvider({ children }: PropsWithChildren) {
                     ? (payload.currentHighestDeclaration?.trumpType ?? null)
                     : null,
                 currentHighestDeclaration:
-                  payload.currentHighestDeclaration ??
+                  (payload.currentHighestDeclaration
+                    ? normalizeBlowDeclarationIdentity(
+                        payload.currentHighestDeclaration,
+                      )
+                    : null) ??
                   stateRef.current.game.blowState.currentHighestDeclaration,
               }
             : createEmptyBlowState(),
         },
       });
     });
-    socket.on('update-turn', (playerId) => {
-      const currentTurnSeatId = resolveSeatAlias(undefined, playerId);
+    socket.on('update-turn', (currentTurnSeatId) => {
       dispatch({
         type: 'patchGame',
         patch: {
           currentTurnSeatId,
-          currentTurn: currentTurnSeatId,
         },
       });
       const roomId = stateRef.current.game?.roomId;
@@ -668,18 +668,13 @@ export function GameProvider({ children }: PropsWithChildren) {
         socket.emit('turn-ack', { roomId });
       }
     });
-    socket.on('blow-started', ({ startingSeatId, startingPlayer, players }) => {
-      const currentTurnSeatId = resolveSeatAlias(
-        startingSeatId,
-        startingPlayer,
-      );
+    socket.on('blow-started', ({ startingSeatId, players }) => {
       dispatch({ type: 'players', players });
       dispatch({
         type: 'patchGame',
         patch: {
           gamePhase: 'blow',
-          currentTurnSeatId,
-          currentTurn: currentTurnSeatId,
+          currentTurnSeatId: startingSeatId,
         },
       });
     });
@@ -709,20 +704,17 @@ export function GameProvider({ children }: PropsWithChildren) {
         });
       },
     );
-    socket.on('broken', ({ nextSeatId, nextPlayerId, players, gamePhase }) => {
-      const currentTurnSeatId = resolveSeatAlias(nextSeatId, nextPlayerId);
+    socket.on('broken', ({ nextSeatId, players, gamePhase }) => {
       dispatch({ type: 'players', players });
       dispatch({
         type: 'patchGame',
         patch: {
-          currentTurnSeatId,
-          currentTurn: currentTurnSeatId,
+          currentTurnSeatId: nextSeatId,
           gamePhase: gamePhase ?? 'blow',
           currentField: null,
           blowState: createEmptyBlowState(),
           negriCard: null,
           negriSeatId: null,
-          negriPlayerId: null,
           revealedAgari: null,
           fields: [],
         } as Partial<MobileGameSnapshot>,
@@ -733,28 +725,21 @@ export function GameProvider({ children }: PropsWithChildren) {
       'round-cancelled',
       ({
         nextDealerSeatId,
-        nextDealer,
         players,
         currentTrump,
         currentHighestDeclaration,
         blowDeclarations,
         actionHistory,
       }) => {
-        const currentTurnSeatId = resolveSeatAlias(
-          nextDealerSeatId,
-          nextDealer,
-        );
         dispatch({ type: 'players', players });
         dispatch({
           type: 'patchGame',
           patch: {
             gamePhase: 'blow',
-            currentTurnSeatId,
-            currentTurn: currentTurnSeatId,
+            currentTurnSeatId: nextDealerSeatId,
             currentField: null,
             negriCard: null,
             negriSeatId: null,
-            negriPlayerId: null,
             revealedAgari: null,
             fields: [],
             blowState: {
@@ -786,16 +771,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       ({
         negriCard,
         startingSeatId,
-        startingPlayer,
       }) => {
-        const resolvedStartingSeatId = resolveSeatAlias(
-          startingSeatId,
-          startingPlayer,
-        );
         const game = stateRef.current.game;
         const players = game
           ? game.players.map((player) =>
-              player.playerId === game.you
+              player.seatId === game.youSeatId
                 ? {
                     ...player,
                     hand: player.hand.filter((card) => card !== negriCard),
@@ -808,22 +788,20 @@ export function GameProvider({ children }: PropsWithChildren) {
           type: 'patchGame',
           patch: {
             negriCard,
-            negriSeatId: resolvedStartingSeatId,
-            negriPlayerId: resolvedStartingSeatId,
+            negriSeatId: startingSeatId,
             revealedAgari: null,
-            currentTurnSeatId: resolvedStartingSeatId,
-            currentTurn: resolvedStartingSeatId,
+            currentTurnSeatId: startingSeatId,
           },
         });
       },
     );
-    socket.on('card-played', ({ field, players, nextSeatId, nextPlayerId }) => {
+    socket.on('card-played', ({ field, players, nextSeatId }) => {
       const normalizedField = normalizeFieldIdentity(field);
       dispatch({ type: 'players', players });
       const resolvedNextPlayerId =
-        resolveSeatAlias(nextSeatId, nextPlayerId) ??
+        nextSeatId ??
         inferNextTurnAfterCardPlayed(
-          stateRef.current.game?.players ?? players,
+          stateRef.current.game?.players ?? normalizePlayerIdentities(players),
           normalizedField,
         );
       dispatch({
@@ -832,11 +810,7 @@ export function GameProvider({ children }: PropsWithChildren) {
           currentField: normalizedField,
           ...(resolvedNextPlayerId
             ? {
-                currentTurnSeatId: resolveSeatAlias(
-                  undefined,
-                  resolvedNextPlayerId,
-                ),
-                currentTurn: resolvedNextPlayerId,
+                currentTurnSeatId: asSeatId(resolvedNextPlayerId),
               }
             : {}),
         },
@@ -850,9 +824,9 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on(
       'field-complete',
-      ({ field, nextSeatId, nextPlayerId }) => {
+      ({ field, nextSeatId }) => {
         const normalizedField = normalizeCompletedFieldIdentity(field);
-        const nextTurnSeatId = resolveSeatAlias(nextSeatId, nextPlayerId)!;
+        const nextTurnSeatId = nextSeatId;
         const fields = dedupeCompletedFields([
           ...(stateRef.current.game?.fields ?? []),
           normalizedField,
@@ -862,7 +836,6 @@ export function GameProvider({ children }: PropsWithChildren) {
           patch: {
             fields,
             currentTurnSeatId: nextTurnSeatId,
-            currentTurn: nextTurnSeatId,
             currentField: {
               cards: [],
               playedBy: [],
@@ -880,28 +853,18 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'patchGame', patch: { teamScores: scores } });
     });
     socket.on('new-round-started', (payload) => {
-      const currentTurnSeatId = resolveSeatAlias(
-        payload.currentTurnSeatId,
-        payload.currentTurn,
-      );
-      const negriSeatId = resolveSeatAlias(
-        payload.negriSeatId,
-        payload.negriPlayerId,
-      );
       dispatch({ type: 'players', players: payload.players });
       dispatch({
         type: 'patchGame',
         patch: {
-          currentTurnSeatId,
-          currentTurn: currentTurnSeatId,
+          currentTurnSeatId: payload.currentTurnSeatId,
           gamePhase: payload.gamePhase,
           currentField: payload.currentField
             ? normalizeFieldIdentity(payload.currentField)
             : null,
           fields: dedupeCompletedFields(payload.completedFields),
           negriCard: payload.negriCard,
-          negriSeatId,
-          negriPlayerId: negriSeatId,
+          negriSeatId: payload.negriSeatId,
           revealedAgari: payload.revealedAgari,
           blowState: {
             ...createEmptyBlowState(),
@@ -941,8 +904,8 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'notice', message: reconnectMessages[payload.code] });
       }
     });
-    socket.on('player-left', ({ playerId }) => {
-      if (playerId === resolveCurrentPlayerId()) {
+    socket.on('player-left', ({ seatId }) => {
+      if (seatId === asSeatId(resolveCurrentPlayerId() ?? '')) {
         void roomStorage.clear();
         dispatch({ type: 'resetRoom' });
       }
@@ -961,7 +924,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
     });
     socket.on('player-disconnected', (payload) => {
-      const { playerId } = payload;
+      const playerId = payload.seatId;
       const playerName = (payload as { playerName?: string }).playerName;
       dispatch({ type: 'playerDisconnected', playerId });
       dispatch({
@@ -970,7 +933,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
     });
     socket.on('player-idle', (payload) => {
-      const { playerId } = payload;
+      const playerId = payload.seatId;
       const playerName = (payload as { playerName?: string }).playerName;
       dispatch({ type: 'playerIdle', playerId });
       dispatch({
@@ -978,28 +941,28 @@ export function GameProvider({ children }: PropsWithChildren) {
         message: `${playerName ?? playerId} が無操作です`,
       });
     });
-    socket.on('player-idle-cleared', ({ playerId }) => {
-      dispatch({ type: 'playerIdleCleared', playerId });
+    socket.on('player-idle-cleared', ({ seatId }) => {
+      dispatch({ type: 'playerIdleCleared', playerId: seatId });
     });
     socket.on(
       'player-converted-to-com',
-      ({ playerId, playerName, message }) => {
-        dispatch({ type: 'playerConvertedToCom', playerId });
-        if (playerId === resolveCurrentPlayerId()) {
+      ({ seatId, playerName, message }) => {
+        dispatch({ type: 'playerConvertedToCom', playerId: seatId });
+        if (seatId === asSeatId(resolveCurrentPlayerId() ?? '')) {
           void roomStorage.clear();
           dispatch({ type: 'resetRoom' });
         }
-        dispatch({ type: 'notice', message: message ?? `${playerName ?? playerId} がCOMに置換されました` });
+        dispatch({ type: 'notice', message: message ?? `${playerName ?? seatId} がCOMに置換されました` });
       },
     );
     socket.on('name-updated', (payload) => {
-      if (!payload.success || !payload.playerId || !payload.name) return;
+      if (!payload.success || !payload.seatId || !payload.name) return;
       const game = stateRef.current.game;
       if (!game) return;
       dispatch({
         type: 'players',
         players: game.players.map((p) =>
-          p.playerId === payload.playerId
+          p.seatId === payload.seatId
             ? { ...p, name: payload.name! }
             : p,
         ),
@@ -1043,26 +1006,25 @@ export function GameProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const game = state.game;
     if (!canSendServerAction(false)) return;
-    if (!game || game.gamePhase !== 'blow' || !game.you) {
+    if (!game || game.gamePhase !== 'blow' || !game.youSeatId) {
       brokenRequestRef.current = null;
       return;
     }
 
     const currentPlayer = game.players.find(
-      (player) => player.playerId === game.you,
+      (player) => player.seatId === game.youSeatId,
     );
     if (!currentPlayer?.hasRequiredBroken) {
       brokenRequestRef.current = null;
       return;
     }
 
-    const key = `${game.roomId}:${game.you}:${currentPlayer.hand.join(',')}`;
+    const key = `${game.roomId}:${game.youSeatId}:${currentPlayer.hand.join(',')}`;
     if (brokenRequestRef.current === key) return;
     brokenRequestRef.current = key;
     socketRef.current?.emit('reveal-broken-hand', {
       roomId: game.roomId,
-      targetSeatId: resolveSeatAlias(undefined, game.you)!,
-      playerId: game.you,
+      targetSeatId: game.youSeatId,
     });
   }, [canSendServerAction, state.connectionStatus, state.game]);
 
@@ -1073,8 +1035,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (
       !game ||
       game.gamePhase !== 'play' ||
-      !game.you ||
-      declaration?.playerId !== game.you ||
+      !game.youSeatId ||
+      declaration?.seatId !== game.youSeatId ||
       game.revealedAgari ||
       game.negriCard
     ) {
@@ -1229,7 +1191,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       const actionKey = [
         actionName,
         roomId,
-        game?.currentTurn ?? '',
+        game?.currentTurnSeatId ?? '',
         game?.currentField?.cards.join(',') ?? '',
         game?.blowState.actionHistory.length ?? 0,
       ].join(':');
@@ -1244,7 +1206,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const declareBlow = useCallback(
     (trumpType: TrumpType, numberOfPairs: number) => {
       const game = stateRef.current.game;
-      if (!game || game.currentTurn !== game.you) {
+      if (!game || game.currentTurnSeatId !== game.youSeatId) {
         dispatch({ type: 'error', message: 'あなたの宣言順ではありません' });
         return;
       }
@@ -1260,7 +1222,7 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const passBlow = useCallback(() => {
     const game = stateRef.current.game;
-    if (!game || game.currentTurn !== game.you) {
+    if (!game || game.currentTurnSeatId !== game.youSeatId) {
       dispatch({ type: 'error', message: 'あなたの宣言順ではありません' });
       return;
     }
@@ -1279,7 +1241,7 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const playCard = useCallback((card: string) => {
     const game = stateRef.current.game;
-    if (!game || game.currentTurn !== game.you) {
+    if (!game || game.currentTurnSeatId !== game.youSeatId) {
       dispatch({ type: 'error', message: 'あなたのプレイ順ではありません' });
       return;
     }
@@ -1301,13 +1263,12 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const revealBrokenHand = useCallback(() => {
     const game = stateRef.current.game;
-    if (!game?.you) return;
-    const playerId = game.you;
+    if (!game?.youSeatId) return;
+    const selfSeatId = game.youSeatId;
     emitOneWayAction('reveal-broken-hand', game.roomId, () => {
       socketRef.current?.emit('reveal-broken-hand', {
         roomId: game.roomId,
-        targetSeatId: resolveSeatAlias(undefined, playerId)!,
-        playerId,
+        targetSeatId: selfSeatId,
       });
     });
   }, [emitOneWayAction]);
@@ -1320,8 +1281,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!roomId) return;
       const payload: ModeratePlayerPayload = {
         roomId,
-        targetSeatId: resolveSeatAlias(undefined, targetPlayerId)!,
-        targetPlayerId,
+        targetSeatId: asSeatId(targetPlayerId),
         action: 'remove',
       };
       void emitAck('moderate-player', payload);
@@ -1337,8 +1297,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!roomId) return;
       const payload: ModeratePlayerPayload = {
         roomId,
-        targetSeatId: resolveSeatAlias(undefined, targetPlayerId)!,
-        targetPlayerId,
+        targetSeatId: asSeatId(targetPlayerId),
         action: 'replace-with-com',
       };
       void emitAck('moderate-player', payload);
@@ -1374,15 +1333,16 @@ export function GameProvider({ children }: PropsWithChildren) {
     () => resolvePlayerId(state.game, state.currentRoom, user?.id),
     [state.currentRoom, state.game, user?.id],
   );
-  // Prefer the room's hostId: room-sync/room-updated keep it current, while
-  // game.hostId is captured once at game start and never refreshed. Without
+  // Prefer the room's host seat: room-sync/room-updated keep it current, while
+  // the game snapshot is captured once at game start and never refreshed. Without
   // this, a host transfer (e.g. the host disconnects) leaves every client
   // believing the departed player is still host, so nobody can replace them
   // with a COM. The web client reads a single currentHostId that both room and
   // game events write, which is the behaviour mirrored here.
   const isHost =
     Boolean(currentPlayerId) &&
-    (state.currentRoom?.hostId ?? state.game?.hostId) === currentPlayerId;
+    (state.currentRoom?.hostSeatId ?? state.game?.hostSeatId) ===
+      currentPlayerId;
 
   const value = useMemo<GameContextValue>(
     () => ({

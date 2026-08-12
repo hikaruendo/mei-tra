@@ -7,6 +7,7 @@ import { DomainPlayer } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { TransportPlayer } from '../types/player-adapters';
 import { toRoomContract, toRoomContracts } from '../types/room-adapters';
+import { toFieldContract } from '../types/game-contract-adapters';
 import { IRoomService } from './interfaces/room-service.interface';
 
 interface RoomUpdateGatewayView {
@@ -58,11 +59,7 @@ export class RoomUpdateGatewayEffectsService {
       room: toRoomContract(room, { players }),
       currentField:
         state.gamePhase === 'play' && state.playState?.currentField
-          ? {
-              ...state.playState.currentField,
-              cards: [...state.playState.currentField.cards],
-              playedBy: [...state.playState.currentField.playedBy],
-            }
+          ? toFieldContract(state.playState.currentField)
           : null,
     };
   }

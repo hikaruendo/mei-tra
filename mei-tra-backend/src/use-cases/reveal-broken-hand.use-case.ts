@@ -170,13 +170,12 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
             declarations: [],
             actionHistory: [],
             currentHighest: null,
-            lastPasser: null,
+            lastPasserSeatId: null,
           },
         });
 
         const brokenPayload: BrokenPayload = {
           nextSeatId: asSeatId(firstBlowPlayer.playerId),
-          nextPlayerId: firstBlowPlayer.playerId,
           players: resolveTransportPlayers(roomGameState, nextState.players, {
             roomPlayers: room?.players,
           }),

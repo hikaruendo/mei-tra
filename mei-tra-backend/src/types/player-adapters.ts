@@ -6,6 +6,7 @@ import {
 import { RoomPlayer } from './room.types';
 import { SessionUser } from './session.types';
 import { asSeatId, resolveSeatId } from './identity.types';
+import type { PlayerContract } from '@contracts/game';
 
 export type PersistedGamePlayer = DomainPlayer & {
   id?: string;
@@ -23,19 +24,12 @@ export type PersistedPlayerStates = Record<
   PersistedPlayerGameplayState
 >;
 
-export type TransportPlayer = DomainPlayer &
-  PlayerConnectionMetadata & {
-    isHost?: boolean;
-  };
+export type TransportPlayer = PlayerContract;
 
 export function toDomainPlayer(
   player: Pick<
     RoomPlayer | DomainPlayer,
-    | 'seatId'
-    | 'playerId'
-    | 'name'
-    | 'team'
-    | 'isCOM'
+    'seatId' | 'playerId' | 'name' | 'team' | 'isCOM'
   > &
     Partial<PlayerGameplayState>,
 ): DomainPlayer {
@@ -57,8 +51,16 @@ export function withConnectionMetadata(
   player: DomainPlayer,
   connection?: Partial<PlayerConnectionMetadata>,
 ): TransportPlayer {
+  const domainPlayer = toDomainPlayer(player);
   return {
-    ...toDomainPlayer(player),
+    seatId: resolveSeatId(domainPlayer),
+    name: domainPlayer.name,
+    hand: [...domainPlayer.hand],
+    team: domainPlayer.team,
+    isPasser: domainPlayer.isPasser,
+    isCOM: domainPlayer.isCOM,
+    hasBroken: domainPlayer.hasBroken,
+    hasRequiredBroken: domainPlayer.hasRequiredBroken,
     socketId: connection?.socketId ?? '',
     userId: connection?.userId,
     isAuthenticated: connection?.isAuthenticated,

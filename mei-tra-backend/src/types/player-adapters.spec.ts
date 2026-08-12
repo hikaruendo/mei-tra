@@ -100,7 +100,7 @@ describe('player-adapters', () => {
 
       expect(player).toEqual(
         expect.objectContaining({
-          playerId: 'seat-1',
+          seatId: 'seat-1',
           name: 'COM',
           socketId: '',
           userId: undefined,

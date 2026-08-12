@@ -1,18 +1,19 @@
 import { Server, Socket } from 'socket.io';
 import { SpectatorGatewayEffectsService } from '../spectator-gateway-effects.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('SpectatorGatewayEffectsService', () => {
   const gameState = {
     players: [],
     gamePhase: 'play' as const,
     currentField: null,
-    currentTurn: null,
+    currentTurnSeatId: null,
     blowState: {
       currentTrump: null,
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     },
@@ -20,11 +21,13 @@ describe('SpectatorGatewayEffectsService', () => {
       0: { play: 0, total: 0 },
       1: { play: 0, total: 0 },
     },
-    you: null,
+    youSeatId: null,
     isSpectator: true,
     negriCard: null,
+    negriSeatId: null,
     fields: [],
     roomId: 'room-1',
+    hostSeatId: asSeatId('player-1'),
     pointsToWin: 5,
   };
 

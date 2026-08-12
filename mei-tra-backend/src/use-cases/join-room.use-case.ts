@@ -192,7 +192,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     // COMが残っていても、ゲーム中フェーズ（blow/play）でも game-state を送る
     // （プレイ中ルームへの途中参加・COM引き継ぎに対応）
 
-    const currentTurn = resolveCurrentSeatId(state);
+    const currentTurnSeatId = resolveCurrentSeatId(state);
 
     return {
       message: 'Joined active game.',
@@ -200,15 +200,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         players: state.players,
         gamePhase: state.gamePhase,
         currentField: state.playState?.currentField ?? null,
-        currentTurn,
+        currentTurnSeatId,
         blowState: state.blowState,
         teamScores: state.teamScores,
         negriCard: state.playState?.negriCard ?? null,
         negriSeatId: state.playState?.negriSeatId ?? null,
-        negriPlayerId:
-          state.playState?.negriSeatId ??
-          state.playState?.negriPlayerId ??
-          null,
         fields: state.playState?.fields,
         roomId,
         pointsToWin: room.settings.pointsToWin,

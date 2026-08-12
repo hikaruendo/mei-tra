@@ -53,8 +53,8 @@ import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
 import { getTeamDisplayName } from '../lib/utils/teamLabels';
-import { resolveSeatAlias } from '@meitra/game-client/identity';
 import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
+import { asSeatId } from '@contracts/ids';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -95,12 +95,12 @@ const toUiGamePhase = (phase: TransportGamePhase): GamePhase =>
 const toUiBlowDeclaration = (
   declaration: BlowDeclarationContract,
 ): BlowDeclaration => {
-  const seatId = resolveSeatAlias(declaration.seatId, declaration.playerId)!;
+  const seatId = declaration.seatId;
   return { ...declaration, seatId, playerId: seatId };
 };
 
 const toUiBlowAction = (action: BlowActionContract): BlowAction => {
-  const seatId = resolveSeatAlias(action.seatId, action.playerId)!;
+  const seatId = action.seatId;
   return { ...action, seatId, playerId: seatId };
 };
 
@@ -109,10 +109,8 @@ const toUiField = (field: FieldContract | null): Field | null => {
     return null;
   }
 
-  const dealerSeatId = resolveSeatAlias(field.dealerSeatId, field.dealerId)!;
-  const playedBySeatIds = (field.playedBySeatIds ?? field.playedBy).map(
-    (seatId) => resolveSeatAlias(seatId, seatId)!,
-  );
+  const dealerSeatId = field.dealerSeatId;
+  const playedBySeatIds = [...field.playedBySeatIds];
   return {
     cards: field.cards,
     playedBySeatIds,
@@ -128,8 +126,8 @@ const toUiField = (field: FieldContract | null): Field | null => {
 const toUiCompletedField = (
   field: CompletedFieldContract,
 ): CompletedField => {
-  const winnerSeatId = resolveSeatAlias(field.winnerSeatId, field.winnerId)!;
-  const dealerSeatId = resolveSeatAlias(field.dealerSeatId, field.dealerId)!;
+  const winnerSeatId = field.winnerSeatId;
+  const dealerSeatId = field.dealerSeatId;
   return {
     cards: field.cards,
     winnerSeatId,
@@ -543,7 +541,7 @@ export const useGame = () => {
             const existingIndex = prev.findIndex((u) => u.playerId === playerId);
             const baseUser = {
               socketId: '',
-              seatId: resolveSeatAlias(undefined, playerId)!,
+              seatId: asSeatId(playerId),
               playerId,
               name,
               isAuthenticated: false,
@@ -657,29 +655,19 @@ export const useGame = () => {
         gamePhase,
         currentField,
         currentTurnSeatId,
-        currentTurn,
         blowState,
         teamScores,
         youSeatId,
-        you,
         negriCard,
         negriSeatId,
-        negriPlayerId: legacyNegriPlayerId,
         revealedAgari: syncedRevealedAgari,
         fields,
         roomId,
         hostSeatId,
-        hostId,
         pointsToWin,
         teamNames,
         isSpectator,
       }: GameStatePayload) => {
-        const resolvedCurrentTurn = resolveSeatAlias(
-          currentTurnSeatId,
-          currentTurn,
-        );
-        const resolvedYou = resolveSeatAlias(youSeatId, you);
-        const resolvedHost = resolveSeatAlias(hostSeatId, hostId);
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -687,11 +675,11 @@ export const useGame = () => {
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         if (!isSpectator) {
-          syncCurrentPlayerIdentity(nextPlayers, currentPlayerId, resolvedYou);
+          syncCurrentPlayerIdentity(nextPlayers, currentPlayerId, youSeatId);
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setRevealedAgari(syncedRevealedAgari ?? null);
-        setWhoseTurn(resolvedCurrentTurn);
+        setWhoseTurn(currentTurnSeatId);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
         setCurrentHighestDeclaration(
@@ -707,11 +695,9 @@ export const useGame = () => {
         setIsSpectator(Boolean(isSpectator));
         setNegriCard(negriCard);
         setCompletedFields(toUiCompletedFields(fields));
-        setNegriPlayerId(
-          resolveSeatAlias(negriSeatId, legacyNegriPlayerId),
-        );
+        setNegriPlayerId(negriSeatId);
         setCurrentRoomId(roomId);
-        setCurrentHostId(resolvedHost);
+        setCurrentHostId(hostSeatId);
         if (isSpectator) {
           setIsHost(false);
         }
@@ -725,7 +711,7 @@ export const useGame = () => {
         );
       },
       'game-player-joined': (data: GamePlayerJoinedPayload) => {
-        const joinedSeatId = resolveSeatAlias(data.seatId, data.playerId)!;
+        const joinedSeatId = data.seatId;
         // isSelf: true means the backend confirmed "this is YOUR player ID".
         // Only set currentPlayerId from this explicit self-identification event.
         if (data.isSelf) {
@@ -881,7 +867,7 @@ export const useGame = () => {
 
         // Keep ref set until the next game starts (game-started handler clears it)
       },
-      'blow-started': ({ startingSeatId, startingPlayer, players: playerContracts }: BlowStartedPayload) => {
+      'blow-started': ({ startingSeatId, players: playerContracts }: BlowStartedPayload) => {
         setGamePhase('blow');
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
@@ -889,7 +875,7 @@ export const useGame = () => {
         );
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(resolveSeatAlias(startingSeatId, startingPlayer));
+        setWhoseTurn(startingSeatId);
       },
       'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclarationContract[]; actionHistory?: BlowActionContract[]; currentHighest: BlowDeclarationContract | null }) => {
         setBlowDeclarations(declarations.map(toUiBlowDeclaration));
@@ -900,7 +886,7 @@ export const useGame = () => {
         // Note: Player state updates (including isPasser) are handled by 'update-players' event
         // This prevents race conditions and ensures consistency across all blow phase operations
       },
-      'broken': ({ nextSeatId, nextPlayerId, players: playerContracts, gamePhase }: BrokenPayload) => {
+      'broken': ({ nextSeatId, players: playerContracts, gamePhase }: BrokenPayload) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
@@ -912,7 +898,7 @@ export const useGame = () => {
         );
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(resolveSeatAlias(nextSeatId, nextPlayerId));
+        setWhoseTurn(nextSeatId);
         setGamePhase(toUiGamePhase(gamePhase ?? 'blow'));
         setCurrentTrump(null);
       },
@@ -930,7 +916,6 @@ export const useGame = () => {
       },
       'round-cancelled': ({
         nextDealerSeatId,
-        nextDealer,
         players: playerContracts,
         currentTrump,
         currentHighestDeclaration,
@@ -948,7 +933,7 @@ export const useGame = () => {
         );
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(resolveSeatAlias(nextDealerSeatId, nextDealer));
+        setWhoseTurn(nextDealerSeatId);
         setCurrentTrump(currentTrump ?? null);
         setCurrentHighestDeclaration(
           currentHighestDeclaration
@@ -965,10 +950,10 @@ export const useGame = () => {
           type: 'success'
         });
       },
-      'play-setup-complete': ({ negriCard, startingSeatId, startingPlayer }: PlaySetupCompletePayload) => {
+      'play-setup-complete': ({ negriCard, startingSeatId }: PlaySetupCompletePayload) => {
         setRevealedAgari(null);
         setNegriCard(negriCard);
-        setNegriPlayerId(resolveSeatAlias(startingSeatId, startingPlayer));
+        setNegriPlayerId(startingSeatId);
         const selfPlayerId = getCurrentUserPlayerId();
         // Remove Negri card from player's hand
         updatePlayersLocally((prev) =>
@@ -987,7 +972,6 @@ export const useGame = () => {
         field,
         players: updatedPlayers,
         nextSeatId,
-        nextPlayerId,
       }: CardPlayedPayload) => {
         const nextField = toUiField(field)!;
         setCurrentField(nextField);
@@ -998,8 +982,7 @@ export const useGame = () => {
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         const resolvedNextPlayerId =
-          resolveSeatAlias(nextSeatId, nextPlayerId) ??
-          inferNextTurnAfterCardPlayed(nextPlayers, nextField);
+          nextSeatId ?? inferNextTurnAfterCardPlayed(nextPlayers, nextField);
         if (resolvedNextPlayerId) {
           setWhoseTurn(resolvedNextPlayerId);
         }
@@ -1007,8 +990,8 @@ export const useGame = () => {
       'field-updated': (field: FieldContract) => {
         setCurrentField(toUiField(field));
       },
-      'field-complete': ({ field, nextSeatId, nextPlayerId }: FieldCompletePayload) => {
-        const resolvedNextSeatId = resolveSeatAlias(nextSeatId, nextPlayerId)!;
+      'field-complete': ({ field, nextSeatId }: FieldCompletePayload) => {
+        const resolvedNextSeatId = nextSeatId;
         setCompletedFields((prev) =>
           dedupeCompletedFields([...prev, toUiCompletedField(field)]),
         );
@@ -1028,13 +1011,11 @@ export const useGame = () => {
       'new-round-started': ({
         players: playerContracts,
         currentTurnSeatId,
-        currentTurn,
         gamePhase,
         currentField,
         completedFields,
         negriCard,
         negriSeatId,
-        negriPlayerId: legacyNegriPlayerId,
         revealedAgari,
         currentTrump,
         currentHighestDeclaration,
@@ -1046,14 +1027,12 @@ export const useGame = () => {
         );
         commitPlayers(nextPlayers);
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(resolveSeatAlias(currentTurnSeatId, currentTurn));
+        setWhoseTurn(currentTurnSeatId);
         setGamePhase(toUiGamePhase(gamePhase));
         setCurrentField(toUiField(currentField));
         setCompletedFields(toUiCompletedFields(completedFields));
         setNegriCard(negriCard);
-        setNegriPlayerId(
-          resolveSeatAlias(negriSeatId, legacyNegriPlayerId),
-        );
+        setNegriPlayerId(negriSeatId);
         setRevealedAgari(revealedAgari);
         setCurrentTrump(currentTrump);
         setCurrentHighestDeclaration(

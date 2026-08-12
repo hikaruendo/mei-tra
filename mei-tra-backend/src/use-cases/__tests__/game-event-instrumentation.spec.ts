@@ -5,6 +5,7 @@ import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
 import { CardService } from '../../services/card.service';
 import { PlayService } from '../../services/play.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('Game event instrumentation', () => {
   it('logs game_started when a game begins', async () => {
@@ -36,12 +37,14 @@ describe('Game event instrumentation', () => {
             },
           ],
           teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+          currentSeatId: asSeatId('host-1'),
           currentPlayerIndex: 0,
           gamePhase: 'blow',
           roundNumber: 1,
           blowState: { currentBlowIndex: 0 },
         }),
         startGame: jest.fn().mockResolvedValue(undefined),
+        saveState: jest.fn().mockResolvedValue(undefined),
         persistRoster: jest.fn().mockResolvedValue(undefined),
         registerPlayerToken: jest.fn(),
       }),
