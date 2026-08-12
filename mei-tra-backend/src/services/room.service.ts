@@ -16,7 +16,7 @@ import { IUserProfileRepository } from '../repositories/interfaces/user-profile.
 import { IRoomService } from './interfaces/room-service.interface';
 import { IComPlayerService } from './interfaces/com-player-service.interface';
 import { UserGameStatsService } from './user-game-stats.service';
-import { ComSessionService, VacantSeats } from './com-session.service';
+import { ComSessionService } from './com-session.service';
 import { SeatRestorationService } from './seat-restoration.service';
 import { RoomJoinService } from './room-join.service';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
@@ -26,14 +26,15 @@ import {
   RosterMembershipMutation,
 } from '../types/room-membership.types';
 import { randomUUID } from 'crypto';
-import { asSeatId } from '../types/identity.types';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import type { VacantSeats } from '../types/vacant-seat.types';
 
 @Injectable()
 export class RoomService implements IRoomService, OnModuleDestroy {
   private readonly logger = new Logger(RoomService.name);
   private roomGameStates: Map<string, GameStateService> = new Map();
-  // 退出席情報（ルームIDごとに席番号ベースで元プレイヤーのスナップショットを保存）
+  // 退出席情報（ルームIDごとに不変の席UUIDをキーとして保存）
   private vacantSeats: VacantSeats = {};
 
   private readonly ROOM_EXPIRY_TIME = 6 * 60 * 60 * 1000; // 6時間
@@ -437,21 +438,21 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
         const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
 
-        // プレイヤーをCOMに置き換え（手札を引き継いでCOMが続行できるようにする）
-        // タイムスタンプ付きIDで既存COMとのID衝突を防ぐ
+        // 席UUIDを維持したまま占有者をCOMへ切り替える。
+        // uniqueIdxはsocket/participant metadataだけを識別する。
         const uniqueIdx = `left-${Date.now()}`;
         const comPlayer = this.createActiveCOMReplacement(
           uniqueIdx,
           room.players[playerIndex],
         );
 
-        this.vacantSeats[roomId][playerIndex] = {
+        const seatId = resolveSeatId(room.players[playerIndex]);
+        this.vacantSeats[roomId][seatId] = {
           roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
           gamePlayer:
             gsIndex !== -1
               ? this.cloneGamePlayer(state.players[gsIndex])
               : undefined,
-          replacementPlayerId: comPlayer.playerId,
         };
 
         upsertRuntimeSeat(room, state, comPlayer, {
@@ -562,8 +563,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     return Object.fromEntries(
-      Object.entries(roomVacantSeats).map(([seatIndex, seatData]) => [
-        Number(seatIndex),
+      Object.entries(roomVacantSeats).map(([seatId, seatData]) => [
+        seatId,
         {
           roomPlayer: {
             ...seatData.roomPlayer,
@@ -574,9 +575,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
               ...seatData.gamePlayer,
               hand: [...seatData.gamePlayer.hand],
             },
-          }),
-          ...(seatData.replacementPlayerId && {
-            replacementPlayerId: seatData.replacementPlayerId,
           }),
         },
       ]),
@@ -918,12 +916,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return;
     }
 
-    for (const [seatIndex, seatData] of Object.entries(roomVacantSeats)) {
-      if (
-        seatData.roomPlayer.playerId === playerId ||
-        seatData.replacementPlayerId === playerId
-      ) {
-        delete roomVacantSeats[Number(seatIndex)];
+    for (const [seatId, seatData] of Object.entries(roomVacantSeats)) {
+      if (seatId === playerId || seatData.roomPlayer.playerId === playerId) {
+        delete roomVacantSeats[asSeatId(seatId)];
       }
     }
 

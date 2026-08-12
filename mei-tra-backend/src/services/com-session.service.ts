@@ -8,18 +8,7 @@ import { randomUUID } from 'crypto';
 import { asSeatId, resolveSeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
-
-export type VacantSeats = Record<
-  string,
-  Record<
-    number,
-    {
-      roomPlayer: RoomPlayer;
-      gamePlayer?: DomainPlayer;
-      replacementPlayerId?: string;
-    }
-  >
->;
+import type { VacantSeats } from '../types/vacant-seat.types';
 
 @Injectable()
 export class ComSessionService {
@@ -222,13 +211,13 @@ export class ComSessionService {
       comPlayer.participantKey = room.players[playerIndex].participantKey;
     }
 
-    vacantSeats[roomId][playerIndex] = {
+    const seatId = resolveSeatId(room.players[playerIndex]);
+    vacantSeats[roomId][seatId] = {
       roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
       gamePlayer:
         gsIndex !== -1
           ? this.cloneGamePlayer(state.players[gsIndex])
           : undefined,
-      replacementPlayerId: comPlayer.playerId,
     };
 
     upsertRuntimeSeat(room, state, comPlayer, {

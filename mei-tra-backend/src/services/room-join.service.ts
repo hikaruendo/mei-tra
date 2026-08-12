@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { BlowState, DomainPlayer, GameState, Team } from '../types/game.types';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
-import { VacantSeats } from './com-session.service';
+import type {
+  VacantSeats,
+  VacantSeatSnapshot,
+} from '../types/vacant-seat.types';
 import { SessionUser } from '../types/session.types';
 import { randomUUID } from 'crypto';
 import { asSeatId, resolveSeatId } from '../types/identity.types';
@@ -21,11 +24,7 @@ interface JoinRoomParams {
   vacantSeats: VacantSeats;
 }
 
-interface RestoredSeatData {
-  roomPlayer: RoomPlayer;
-  gamePlayer?: DomainPlayer;
-  replacementPlayerId?: string;
-}
+type RestoredSeatData = VacantSeatSnapshot;
 
 @Injectable()
 export class RoomJoinService {
@@ -36,7 +35,6 @@ export class RoomJoinService {
     user,
     vacantSeats,
   }: JoinRoomParams): Promise<boolean> {
-    void roomId;
     const state = gameState.getState();
 
     const existingPlayer = this.findExistingRoomPlayer(room.players, user);
@@ -50,10 +48,10 @@ export class RoomJoinService {
         return false;
       }
 
-      const reclaimingVacantSeatIndex = Object.entries(
+      const reclaimingVacantSeatId = Object.entries(
         vacantSeats[roomId] ?? {},
-      ).find(([, seatData]) => {
-        if (seatData.replacementPlayerId !== existingPlayer.playerId) {
+      ).find(([seatId, seatData]) => {
+        if (seatId !== existingPlayer.playerId) {
           return false;
         }
         return user.userId
@@ -63,7 +61,7 @@ export class RoomJoinService {
       const reclaimingCOMSeat = Boolean(
         existingPlayer.isCOM &&
           ((user.userId && existingPlayer.userId === user.userId) ||
-            reclaimingVacantSeatIndex !== undefined),
+            reclaimingVacantSeatId !== undefined),
       );
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
@@ -102,8 +100,8 @@ export class RoomJoinService {
         room.hostId,
         this.buildMembershipClaim(user),
       );
-      if (reclaimingVacantSeatIndex !== undefined) {
-        delete vacantSeats[roomId][Number(reclaimingVacantSeatIndex)];
+      if (reclaimingVacantSeatId !== undefined) {
+        delete vacantSeats[roomId][asSeatId(reclaimingVacantSeatId)];
         if (Object.keys(vacantSeats[roomId] ?? {}).length === 0) {
           delete vacantSeats[roomId];
         }
@@ -119,54 +117,52 @@ export class RoomJoinService {
     }
 
     const roomVacant = vacantSeats[roomId] || {};
-    const vacantIndexes = Object.keys(roomVacant).map(Number);
+    const vacantEntries = Object.entries(roomVacant);
     let assignedIndex = -1;
     let gsAssignedIndex = -1;
     let team: Team = 0;
     let replacingComId: string | null = null;
     let restoredSeatData: RestoredSeatData | null = null;
 
-    const matchingVacantIndex = vacantIndexes.find(
-      (index) => roomVacant[index]?.roomPlayer.playerId === user.playerId,
+    const matchingVacantEntry = vacantEntries.find(
+      ([, seatData]) => seatData.roomPlayer.playerId === user.playerId,
     );
 
-    if (matchingVacantIndex !== undefined) {
-      assignedIndex = matchingVacantIndex;
-      const seatData = roomVacant[assignedIndex];
-      const seatRoomPlayer = seatData?.roomPlayer;
+    if (matchingVacantEntry) {
+      const [vacantSeatId, seatData] = matchingVacantEntry;
+      assignedIndex = this.resolveVacantSeatIndex(room, vacantSeatId);
+      if (assignedIndex === -1) {
+        return false;
+      }
+      const seatRoomPlayer = seatData.roomPlayer;
 
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
-      restoredSeatData = seatData ?? null;
+      restoredSeatData = seatData;
       gameState.clearDisconnectTimeout(user.playerId);
-      delete roomVacant[assignedIndex];
+      delete roomVacant[asSeatId(vacantSeatId)];
       if (Object.keys(roomVacant).length === 0) {
         delete vacantSeats[roomId];
       }
     } else {
-      const availableVacantIndex = vacantIndexes.find((index) => {
-        const seatData = roomVacant[index];
-        const currentSeat = seatData?.replacementPlayerId
-          ? room.players.find(
-              (player) => player.playerId === seatData.replacementPlayerId,
-            )
-          : room.players[index];
-        return !currentSeat?.userId;
+      const availableVacantEntry = vacantEntries.find(([vacantSeatId]) => {
+        const currentSeat = room.players.find(
+          (player) => player.playerId === vacantSeatId,
+        );
+        return Boolean(currentSeat && !currentSeat.userId);
       });
 
-      if (availableVacantIndex !== undefined) {
-        assignedIndex = availableVacantIndex;
-        const seatData = roomVacant[assignedIndex];
-        const seatRoomPlayer = seatData?.roomPlayer;
-        team = seatRoomPlayer ? seatRoomPlayer.team : team;
+      if (availableVacantEntry) {
+        const [vacantSeatId, seatData] = availableVacantEntry;
+        assignedIndex = this.resolveVacantSeatIndex(room, vacantSeatId);
+        const seatRoomPlayer = seatData.roomPlayer;
+        team = seatRoomPlayer.team;
 
-        const originalPlayerId = seatRoomPlayer?.playerId;
-        if (originalPlayerId) {
-          gameState.removePlayerToken(originalPlayerId);
-          gameState.clearDisconnectTimeout(originalPlayerId);
-        }
+        const originalPlayerId = seatRoomPlayer.playerId;
+        gameState.removePlayerToken(originalPlayerId);
+        gameState.clearDisconnectTimeout(originalPlayerId);
 
-        restoredSeatData = seatData ?? null;
-        delete roomVacant[assignedIndex];
+        restoredSeatData = seatData;
+        delete roomVacant[asSeatId(vacantSeatId)];
         if (Object.keys(roomVacant).length === 0) {
           delete vacantSeats[roomId];
         }
@@ -219,17 +215,8 @@ export class RoomJoinService {
 
     const seatRoomSnapshot = restoredSeatData?.roomPlayer;
     const seatGameSnapshot = restoredSeatData?.gamePlayer;
-    const replacementPlayerId = restoredSeatData?.replacementPlayerId;
 
-    if (replacementPlayerId) {
-      const currentRoomSeatIndex = room.players.findIndex(
-        (player) => player.playerId === replacementPlayerId,
-      );
-      if (currentRoomSeatIndex !== -1) {
-        assignedIndex = currentRoomSeatIndex;
-        replacingComId = replacementPlayerId;
-      }
-    } else if (assignedIndex !== -1) {
+    if (assignedIndex !== -1) {
       replacingComId = room.players[assignedIndex]?.playerId || null;
     }
 
@@ -265,11 +252,6 @@ export class RoomJoinService {
         : new Date(),
     };
 
-    if (replacementPlayerId) {
-      gsAssignedIndex = state.players.findIndex(
-        (statePlayer) => statePlayer.playerId === replacementPlayerId,
-      );
-    }
     if (gsAssignedIndex === -1 && replacingComId) {
       gsAssignedIndex = state.players.findIndex(
         (statePlayer) => statePlayer.playerId === replacingComId,
@@ -316,6 +298,10 @@ export class RoomJoinService {
 
   private countActualPlayers(players: RoomPlayer[]): number {
     return players.filter((player) => !player.isCOM).length;
+  }
+
+  private resolveVacantSeatIndex(room: Room, vacantSeatId: string): number {
+    return room.players.findIndex((player) => player.playerId === vacantSeatId);
   }
 
   private buildMembershipClaim(
