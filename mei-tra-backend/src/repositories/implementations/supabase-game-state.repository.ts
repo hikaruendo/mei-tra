@@ -21,6 +21,12 @@ import { RoomPlayer } from '../../types/room.types';
 import { asSeatId, resolveSeatId } from '../../types/identity.types';
 import { normalizeGameStateIdentityAliases } from '../../types/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
+import {
+  findUnknownPersistedSeatReferences,
+  toPersistedBlowState,
+  toPersistedPendingBrokenHandReveal,
+  toPersistedPlayState,
+} from '../../types/game-state-persistence';
 
 type GameStateRow = Database['public']['Tables']['game_states']['Row'];
 type GameStateUpdate = Database['public']['Tables']['game_states']['Update'];
@@ -37,8 +43,6 @@ type PersistedRosterResult = GameStateRow & {
 
 interface RosterPlayerSnapshot {
   seatId: string;
-  participantKey: string;
-  playerId: string;
   name: string;
   team: number;
   isCOM?: boolean;
@@ -67,10 +71,12 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
             playerStates: toPersistedPlayerStates(canonicalGameState.players),
             deck: canonicalGameState.deck,
             agari: canonicalGameState.agari,
-            blowState: canonicalGameState.blowState,
-            playState: canonicalGameState.playState,
+            blowState: toPersistedBlowState(canonicalGameState.blowState),
+            playState: toPersistedPlayState(canonicalGameState.playState),
+            pendingBrokenHandReveal: toPersistedPendingBrokenHandReveal(
+              canonicalGameState.pendingBrokenHandReveal,
+            ),
           },
-          current_player_id: this.resolveCurrentPlayerId(canonicalGameState),
           current_seat_id: this.resolveCurrentPlayerId(canonicalGameState),
           game_phase: canonicalGameState.gamePhase,
           round_number: canonicalGameState.roundNumber,
@@ -162,14 +168,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const playerStates = toPersistedPlayerStates(canonicalGameState.players);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
       seatId: resolveSeatId(player),
-      playerId: resolveSeatId(player),
-      participantKey:
-        player.participantKey ?? player.userId ?? resolveSeatId(player),
       userId: player.userId ?? null,
       name: player.name,
       team: player.team,
       isReady: player.isReady,
-      isHost: player.isHost,
       isCOM: player.isCOM ?? false,
       joinedAt: player.joinedAt.toISOString(),
       seatIndex,
@@ -219,10 +221,16 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
     if (gameState.deck) patch.deck = gameState.deck;
     if (gameState.agari !== undefined) patch.agari = gameState.agari;
-    if (gameState.blowState) patch.blowState = gameState.blowState;
-    if (gameState.playState) patch.playState = gameState.playState;
+    if (gameState.blowState) {
+      patch.blowState = toPersistedBlowState(gameState.blowState);
+    }
+    if (gameState.playState) {
+      patch.playState = toPersistedPlayState(gameState.playState);
+    }
     if (gameState.pendingBrokenHandReveal !== undefined) {
-      patch.pendingBrokenHandReveal = gameState.pendingBrokenHandReveal;
+      patch.pendingBrokenHandReveal = toPersistedPendingBrokenHandReveal(
+        gameState.pendingBrokenHandReveal,
+      );
     }
 
     return patch;
@@ -235,16 +243,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     if (gameState.currentSeatId !== undefined) {
       patch.currentSeatId = gameState.currentSeatId;
-      patch.currentPlayerId = gameState.currentSeatId;
     } else if (gameState.currentPlayerId !== undefined) {
       patch.currentSeatId = gameState.currentPlayerId;
-      patch.currentPlayerId = gameState.currentPlayerId;
     } else if (gameState.currentPlayerIndex !== undefined) {
       const currentPlayerId =
         gameState.players?.[gameState.currentPlayerIndex]?.playerId;
       if (currentPlayerId !== undefined) {
         patch.currentSeatId = currentPlayerId;
-        patch.currentPlayerId = currentPlayerId;
       }
     }
     if (gameState.gamePhase !== undefined) {
@@ -380,11 +385,11 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       if (updates.round_number !== undefined) {
         gameStateUpdates.roundNumber = updates.round_number;
       }
-      if (updates.current_player_id !== undefined) {
-        gameStateUpdates.currentSeatId = updates.current_player_id
-          ? asSeatId(updates.current_player_id)
+      if (updates.current_seat_id !== undefined) {
+        gameStateUpdates.currentSeatId = updates.current_seat_id
+          ? asSeatId(updates.current_seat_id)
           : null;
-        gameStateUpdates.currentPlayerId = updates.current_player_id;
+        gameStateUpdates.currentPlayerId = updates.current_seat_id;
       }
       if (updates.game_phase !== undefined) {
         gameStateUpdates.gamePhase = updates.game_phase;
@@ -428,11 +433,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     roomPlayers?: Array<RoomPlayerRow | RoomPlayer>,
   ): GameState {
     const stateData = dbGameState.state_data || {};
-    const fallbackSources = new Set<string>();
-    const unresolvedReferences = new Set<string>();
-    const identitySchemaVersion = stateData.identitySchemaVersion === 2 ? 2 : 1;
-    if (identitySchemaVersion !== 2) {
-      fallbackSources.add('state_data.identitySchemaVersion');
+    if (stateData.identitySchemaVersion !== 2) {
+      throw new Error(
+        `Unsupported game-state identity schema for room ${dbGameState.room_id}`,
+      );
     }
     const playerStates =
       stateData.playerStates && typeof stateData.playerStates === 'object'
@@ -444,27 +448,20 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const roomPlayersById = new Map(
       rosterPlayers.map((player) => [player.seatId, player]),
     );
-    const legacySeatMap = new Map<string, string>();
-    rosterPlayers.forEach((player) => {
-      legacySeatMap.set(player.seatId, player.seatId);
-      legacySeatMap.set(player.playerId, player.seatId);
-      legacySeatMap.set(player.participantKey, player.seatId);
-    });
-    Object.keys(playerStates).forEach((identity) => {
-      if (!legacySeatMap.has(identity)) {
-        unresolvedReferences.add(identity);
-      }
-    });
+    const unknownStateSeats = findUnknownPersistedSeatReferences(
+      stateData,
+      new Set(roomPlayersById.keys()),
+    );
+    if (unknownStateSeats.length > 0) {
+      throw new Error(
+        `Game state references seats outside room ${dbGameState.room_id}: ${unknownStateSeats.join(',')}`,
+      );
+    }
     const rosterOrder = rosterPlayers.map((player) => player.seatId);
     const players = rosterOrder
       .map((seatId) => {
         const roomPlayer = roomPlayersById.get(seatId);
-        const canonicalGameplay = playerStates[seatId];
-        const legacyGameplay = playerStates[roomPlayer?.participantKey ?? ''];
-        if (!canonicalGameplay && legacyGameplay) {
-          fallbackSources.add('state_data.playerStates');
-        }
-        const gameplay = (canonicalGameplay ?? legacyGameplay) as
+        const gameplay = playerStates[seatId] as
           | PersistedPlayerGameplayState
           | undefined;
 
@@ -481,91 +478,35 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         });
       })
       .filter((player): player is DomainPlayer => Boolean(player));
-
-    const persistedCurrentIdentity =
-      typeof dbGameState.current_seat_id === 'string'
-        ? dbGameState.current_seat_id
-        : typeof dbGameState.current_player_id === 'string'
-          ? (() => {
-              fallbackSources.add('game_states.current_player_id');
-              return dbGameState.current_player_id;
-            })()
-          : null;
-    const currentPlayerId = persistedCurrentIdentity
-      ? this.remapSeatReference(
-          persistedCurrentIdentity,
-          legacySeatMap,
-          unresolvedReferences,
-        )
-      : null;
-    const canonicalCurrentPlayerId =
-      currentPlayerId &&
-      players.some((player) => player.playerId === currentPlayerId)
-        ? currentPlayerId
-        : null;
+    const canonicalCurrentPlayerId = dbGameState.current_seat_id;
+    if (
+      canonicalCurrentPlayerId &&
+      !players.some((player) => player.playerId === canonicalCurrentPlayerId)
+    ) {
+      throw new Error(
+        `Current seat ${canonicalCurrentPlayerId} is outside room ${dbGameState.room_id}`,
+      );
+    }
     const currentPlayerIndex =
       canonicalCurrentPlayerId === null
         ? 0
         : players.findIndex(
             (player) => player.playerId === canonicalCurrentPlayerId,
           );
-    const blowState = this.remapBlowStateReferences(
-      (stateData.blowState ?? {
-        currentTrump: null,
-        currentHighestDeclaration: null,
-        declarations: [],
-        actionHistory: [],
-        lastPasser: null,
-        isRoundCancelled: false,
-        currentBlowIndex: 0,
-      }) as BlowState,
-      legacySeatMap,
-      fallbackSources,
-      unresolvedReferences,
-    );
-    const playState = this.remapPlayStateReferences(
-      stateData.playState as PlayState | undefined,
-      legacySeatMap,
-      fallbackSources,
-      unresolvedReferences,
-      blowState.currentHighestDeclaration?.playerId,
-    );
-    const pendingBrokenHandReveal = stateData.pendingBrokenHandReveal
-      ? (() => {
-          const pending = stateData.pendingBrokenHandReveal as {
-            seatId?: string;
-            playerId: string;
-            handSnapshot: string[];
-            startedAt: number;
-          };
-          const persistedSeatId = this.readPersistedSeatAlias(
-            pending.seatId,
-            pending.playerId,
-            'state_data.pendingBrokenHandReveal.playerId',
-            fallbackSources,
-          );
-          const seatId = this.remapSeatReference(
-            persistedSeatId,
-            legacySeatMap,
-            unresolvedReferences,
-          )!;
-          return {
-            ...pending,
-            seatId: asSeatId(seatId),
-            playerId: seatId,
-          };
-        })()
-      : null;
+    const blowState = (stateData.blowState ?? {
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      declarations: [],
+      actionHistory: [],
+      lastPasserSeatId: null,
+      lastPasser: null,
+      isRoundCancelled: false,
+      currentBlowIndex: 0,
+    }) as BlowState;
 
-    this.logIdentityCompatibility(
-      dbGameState.room_id,
-      fallbackSources,
-      unresolvedReferences,
-    );
-
-    return {
+    return normalizeGameStateIdentityAliases({
       version: dbGameState.version,
-      identitySchemaVersion,
+      identitySchemaVersion: 2,
       players,
       currentSeatId: canonicalCurrentPlayerId
         ? asSeatId(canonicalCurrentPlayerId)
@@ -582,15 +523,15 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         dbGameState.team_score_records,
       ),
       blowState,
-      playState,
-      pendingBrokenHandReveal,
+      playState: stateData.playState as PlayState | undefined,
+      pendingBrokenHandReveal: stateData.pendingBrokenHandReveal ?? null,
       agari: stateData.agari ?? undefined,
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
       teamAssignments: Object.fromEntries(
         players.map((player) => [player.playerId, player.team]),
       ),
-    };
+    });
   }
 
   private resolveCurrentPlayerId(gameState: GameState): string | null {
@@ -607,12 +548,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
   private toRosterPlayerSnapshot(
     player: RoomPlayerRow | RoomPlayer,
   ): RosterPlayerSnapshot {
-    if ('player_id' in player) {
+    if ('room_id' in player) {
       const seatId = player.id;
       return {
         seatId,
-        participantKey: player.player_id,
-        playerId: seatId,
         name: player.name,
         team: player.team,
         isCOM: player.is_com,
@@ -621,275 +560,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     return {
       seatId: resolveSeatId(player),
-      participantKey: player.participantKey ?? player.userId ?? player.playerId,
-      playerId: resolveSeatId(player),
       name: player.name,
       team: player.team,
       isCOM: player.isCOM,
     };
-  }
-
-  private remapSeatReference(
-    value: string | null | undefined,
-    legacySeatMap: Map<string, string>,
-    unresolvedReferences?: Set<string>,
-  ): string | null {
-    if (!value) {
-      return null;
-    }
-    const resolved = legacySeatMap.get(value);
-    if (resolved) {
-      return resolved;
-    }
-    unresolvedReferences?.add(value);
-    return value;
-  }
-
-  private readPersistedSeatAlias(
-    canonicalSeatId: string | null | undefined,
-    legacyPlayerId: string | null | undefined,
-    fallbackSource: string,
-    fallbackSources: Set<string>,
-  ): string | null {
-    if (canonicalSeatId) {
-      return canonicalSeatId;
-    }
-    if (legacyPlayerId) {
-      fallbackSources.add(fallbackSource);
-      return legacyPlayerId;
-    }
-    return null;
-  }
-
-  private remapBlowStateReferences(
-    blowState: BlowState,
-    legacySeatMap: Map<string, string>,
-    fallbackSources: Set<string>,
-    unresolvedReferences: Set<string>,
-  ): BlowState {
-    return {
-      ...blowState,
-      declarations: (blowState.declarations ?? []).map((declaration) => {
-        const persistedSeatId = this.readPersistedSeatAlias(
-          declaration.seatId,
-          declaration.playerId,
-          'state_data.blowState.declarations.playerId',
-          fallbackSources,
-        );
-        const seatId = this.remapSeatReference(
-          persistedSeatId,
-          legacySeatMap,
-          unresolvedReferences,
-        )!;
-        return { ...declaration, seatId: asSeatId(seatId), playerId: seatId };
-      }),
-      actionHistory: (blowState.actionHistory ?? []).map((action) => {
-        const persistedSeatId = this.readPersistedSeatAlias(
-          action.seatId,
-          action.playerId,
-          'state_data.blowState.actionHistory.playerId',
-          fallbackSources,
-        );
-        const seatId = this.remapSeatReference(
-          persistedSeatId,
-          legacySeatMap,
-          unresolvedReferences,
-        )!;
-        return { ...action, seatId: asSeatId(seatId), playerId: seatId };
-      }),
-      currentHighestDeclaration: blowState.currentHighestDeclaration
-        ? (() => {
-            const declaration = blowState.currentHighestDeclaration;
-            const persistedSeatId = this.readPersistedSeatAlias(
-              declaration.seatId,
-              declaration.playerId,
-              'state_data.blowState.currentHighestDeclaration.playerId',
-              fallbackSources,
-            );
-            const seatId = this.remapSeatReference(
-              persistedSeatId,
-              legacySeatMap,
-              unresolvedReferences,
-            )!;
-            return {
-              ...blowState.currentHighestDeclaration,
-              seatId: asSeatId(seatId),
-              playerId: seatId,
-            };
-          })()
-        : null,
-      ...(() => {
-        const persistedSeatId = this.readPersistedSeatAlias(
-          blowState.lastPasserSeatId,
-          blowState.lastPasser,
-          'state_data.blowState.lastPasser',
-          fallbackSources,
-        );
-        const seatId = this.remapSeatReference(
-          persistedSeatId,
-          legacySeatMap,
-          unresolvedReferences,
-        );
-        return {
-          lastPasser: seatId,
-          lastPasserSeatId: seatId ? asSeatId(seatId) : null,
-        };
-      })(),
-    };
-  }
-
-  private remapPlayStateReferences(
-    playState: PlayState | undefined,
-    legacySeatMap: Map<string, string>,
-    fallbackSources: Set<string>,
-    unresolvedReferences: Set<string>,
-    fallbackNegriSeatId?: string | null,
-  ): PlayState | undefined {
-    if (!playState) {
-      return undefined;
-    }
-
-    const remapRequired = (value: string): string =>
-      this.remapSeatReference(value, legacySeatMap, unresolvedReferences) ??
-      value;
-    const persistedNegriSeatId = this.readPersistedSeatAlias(
-      playState.negriSeatId,
-      playState.negriPlayerId,
-      'state_data.playState.negriPlayerId',
-      fallbackSources,
-    );
-    if (playState.negriCard && !persistedNegriSeatId && fallbackNegriSeatId) {
-      fallbackSources.add(
-        'state_data.blowState.currentHighestDeclaration (negri owner)',
-      );
-    }
-    const negriSeatId = this.remapSeatReference(
-      persistedNegriSeatId ??
-        (playState.negriCard ? fallbackNegriSeatId : null),
-      legacySeatMap,
-      unresolvedReferences,
-    );
-    return {
-      ...playState,
-      negriSeatId: negriSeatId ? asSeatId(negriSeatId) : null,
-      negriPlayerId: negriSeatId,
-      currentField: playState.currentField
-        ? {
-            ...playState.currentField,
-            ...(() => {
-              const field = playState.currentField;
-              const persistedPlayedBy = field.playedBySeatIds ?? field.playedBy;
-              if (!field.playedBySeatIds && field.playedBy.length > 0) {
-                fallbackSources.add(
-                  'state_data.playState.currentField.playedBy',
-                );
-              }
-              const playedBy = persistedPlayedBy.map(remapRequired);
-              const persistedDealerSeatId = this.readPersistedSeatAlias(
-                field.dealerSeatId,
-                field.dealerId,
-                'state_data.playState.currentField.dealerId',
-                fallbackSources,
-              );
-              const dealerSeatId = remapRequired(persistedDealerSeatId!);
-              return {
-                playedBy,
-                playedBySeatIds: playedBy.map(asSeatId),
-                dealerSeatId: asSeatId(dealerSeatId),
-                dealerId: dealerSeatId,
-              };
-            })(),
-          }
-        : null,
-      neguri: Object.fromEntries(
-        Object.entries(playState.neguri ?? {}).map(([identity, card]) => [
-          remapRequired(identity),
-          card,
-        ]),
-      ),
-      fields: (playState.fields ?? []).map((field) => ({
-        ...field,
-        ...(() => {
-          const winnerSeatId = remapRequired(
-            this.readPersistedSeatAlias(
-              field.winnerSeatId,
-              field.winnerId,
-              'state_data.playState.fields.winnerId',
-              fallbackSources,
-            )!,
-          );
-          const dealerSeatId = remapRequired(
-            this.readPersistedSeatAlias(
-              field.dealerSeatId,
-              field.dealerId,
-              'state_data.playState.fields.dealerId',
-              fallbackSources,
-            )!,
-          );
-          return {
-            winnerSeatId: asSeatId(winnerSeatId),
-            winnerId: winnerSeatId,
-            dealerSeatId: asSeatId(dealerSeatId),
-            dealerId: dealerSeatId,
-          };
-        })(),
-      })),
-      ...(() => {
-        const persistedLastWinner = this.readPersistedSeatAlias(
-          playState.lastWinnerSeatId,
-          playState.lastWinnerId,
-          'state_data.playState.lastWinnerId',
-          fallbackSources,
-        );
-        const lastWinnerSeatId = this.remapSeatReference(
-          persistedLastWinner,
-          legacySeatMap,
-          unresolvedReferences,
-        );
-        const persistedOpenDeclarer = this.readPersistedSeatAlias(
-          playState.openDeclarerSeatId,
-          playState.openDeclarerId,
-          'state_data.playState.openDeclarerId',
-          fallbackSources,
-        );
-        const openDeclarerSeatId = this.remapSeatReference(
-          persistedOpenDeclarer,
-          legacySeatMap,
-          unresolvedReferences,
-        );
-        return {
-          lastWinnerId: lastWinnerSeatId,
-          lastWinnerSeatId: lastWinnerSeatId
-            ? asSeatId(lastWinnerSeatId)
-            : null,
-          openDeclarerId: openDeclarerSeatId,
-          openDeclarerSeatId: openDeclarerSeatId
-            ? asSeatId(openDeclarerSeatId)
-            : null,
-        };
-      })(),
-    };
-  }
-
-  private logIdentityCompatibility(
-    roomId: string,
-    fallbackSources: Set<string>,
-    unresolvedReferences: Set<string>,
-  ): void {
-    if (fallbackSources.size > 0) {
-      this.logger.warn(
-        `[SeatIdentityFallback] room=${roomId} sources=${[
-          ...fallbackSources,
-        ].join(',')}`,
-      );
-    }
-    if (unresolvedReferences.size > 0) {
-      this.logger.error(
-        `[SeatIdentityUnresolved] room=${roomId} references=${[
-          ...unresolvedReferences,
-        ].join(',')}`,
-      );
-    }
   }
 
   private convertTimestampRecords(

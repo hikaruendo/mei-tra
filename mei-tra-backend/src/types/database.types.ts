@@ -5,7 +5,6 @@ export interface Database {
         Row: {
           id: string;
           name: string;
-          host_id: string;
           host_seat_id: string | null;
           status: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
           settings: {
@@ -27,7 +26,6 @@ export interface Database {
         Insert: {
           id?: string;
           name: string;
-          host_id: string;
           host_seat_id?: string | null;
           status?: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
           settings?: {
@@ -49,7 +47,6 @@ export interface Database {
         Update: {
           id?: string;
           name?: string;
-          host_id?: string;
           host_seat_id?: string | null;
           status?: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
           settings?: {
@@ -74,12 +71,9 @@ export interface Database {
         Row: {
           id: string;
           room_id: string;
-          player_id: string;
-          socket_id: string | null;
           name: string;
           team: number;
           is_ready: boolean;
-          is_host: boolean;
           is_com: boolean;
           joined_at: string;
           seat_index: number;
@@ -88,12 +82,9 @@ export interface Database {
         Insert: {
           id?: string;
           room_id: string;
-          player_id: string;
-          socket_id?: string | null;
           name: string;
           team?: number;
           is_ready?: boolean;
-          is_host?: boolean;
           is_com?: boolean;
           joined_at?: string;
           seat_index?: number;
@@ -102,12 +93,9 @@ export interface Database {
         Update: {
           id?: string;
           room_id?: string;
-          player_id?: string;
-          socket_id?: string | null;
           name?: string;
           team?: number;
           is_ready?: boolean;
-          is_host?: boolean;
           is_com?: boolean;
           joined_at?: string;
           seat_index?: number;
@@ -206,8 +194,7 @@ export interface Database {
         Row: {
           user_id: string;
           room_id: string | null;
-          seat_id: string | null;
-          player_id: string;
+          seat_id: string;
           status: 'moving' | 'active' | 'disconnected';
           membership_version: number;
           transition_id: string;
@@ -218,8 +205,7 @@ export interface Database {
         Insert: {
           user_id: string;
           room_id?: string | null;
-          seat_id?: string | null;
-          player_id: string;
+          seat_id: string;
           status: 'moving' | 'active' | 'disconnected';
           membership_version?: number;
           transition_id: string;
@@ -230,8 +216,7 @@ export interface Database {
         Update: {
           user_id?: string;
           room_id?: string | null;
-          seat_id?: string | null;
-          player_id?: string;
+          seat_id?: string;
           status?: 'moving' | 'active' | 'disconnected';
           membership_version?: number;
           transition_id?: string;
@@ -285,7 +270,6 @@ export interface Database {
           id: string;
           room_id: string;
           state_data: Record<string, any>;
-          current_player_id: string | null;
           current_seat_id: string | null;
           game_phase: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number: number;
@@ -308,7 +292,6 @@ export interface Database {
           id?: string;
           room_id: string;
           state_data?: Record<string, any>;
-          current_player_id?: string | null;
           current_seat_id?: string | null;
           game_phase?: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number?: number;
@@ -331,7 +314,6 @@ export interface Database {
           id?: string;
           room_id?: string;
           state_data?: Record<string, any>;
-          current_player_id?: string | null;
           current_seat_id?: string | null;
           game_phase?: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number?: number;
@@ -420,7 +402,6 @@ export interface Database {
           action_type: string;
           actor_seat_id: string | null;
           actor_key_snapshot: string | null;
-          player_id: string | null;
           action_data: Record<string, any>;
           timestamp: string;
         };
@@ -431,7 +412,6 @@ export interface Database {
           action_type: string;
           actor_seat_id?: string | null;
           actor_key_snapshot?: string | null;
-          player_id?: string | null;
           action_data?: Record<string, any>;
           timestamp?: string;
         };
@@ -442,7 +422,6 @@ export interface Database {
           action_type?: string;
           actor_seat_id?: string | null;
           actor_key_snapshot?: string | null;
-          player_id?: string | null;
           action_data?: Record<string, any>;
           timestamp?: string;
         };

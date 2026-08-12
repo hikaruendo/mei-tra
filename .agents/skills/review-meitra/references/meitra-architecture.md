@@ -89,32 +89,34 @@ query、RPC、row / JSONB mapping、互換read/writeを担当する。
 | Auth account | Supabase Auth | `userId`は認証identity |
 | Profile | `user_profiles` | 表示名、avatar、preferences、stats |
 | Room | `rooms` | metadata、host参照、lifecycle |
-| Seat / roster | `room_players` | `playerId`、seat、team、ready、host、COM |
-| Gameplay state | `game_states` | deck、phase、turn、scores、`playerStates`、`playerOrder` |
+| Seat / roster | `room_players` | `id = seatId`、occupant、team、ready、COM |
+| Gameplay state | `game_states` | deck、phase、`current_seat_id`、scores、`playerStates[seatId]` |
 | Connection | process memory | `socketId`、接続中フラグ、timerは再生成可能にする |
 | Audit / replay | `game_history` | snapshotの代替ではなくaction log |
 | Transport shape | `contracts/` | DB rowやdomain typeを置かない |
 
-- `playerId`: room / game内でseatを指す安定identity。
+- `seatId`: `room_players.id` と同値の canonical seat UUID。部屋削除まで変更しない。
+- `playerId`: 旧Web/Mobileとの互換用alias。新しい永続化では必ず`seatId`と同値にする。
 - `userId`: Supabase Auth account。guestやCOMには存在しない場合がある。
 - `socketId`: 接続ごとに変わる一時identity。永続化やseat復旧のkeyにしない。
-- `playerOrder`: seat / turn順を保持する。
-- `playerStates[playerId]`: hand、pass、broken flagsなどgameplay stateを保持する。
+- `seat_index`: `room_players`に保存するseat / turn順の正本。
+- `playerStates[seatId]`: hand、pass、broken flagsなどgameplay stateを保持する。
 
 ## 必須の不変条件
 
 ### Roster
 
-- player数は最大4人で、seatと`playerId`が重複しない。
+- player数は最大4人で、`seatId`と`seat_index`が重複しない。
 - COM placeholder IDが衝突しない。
 - team値`0`をfalse扱いしない。
 - partnerが対面になるseat orderを保つ。
-- `rooms.host_id`とplayerのhost flagを一致させる。
+- `rooms.host_seat_id`が同じroomの`room_players.id`を参照する。
+- host表示は`host_seat_id`から導出し、重複したhost flagを保存しない。
 
 ### Replacement / reconnection
 
-- 人間とCOMの置換でhand、turn、team、宣言参照を失わない。
-- player ID変更時はturn、field、blow、winner、idle、timer参照を一括remapする。
+- 人間とCOMの置換で`seatId`を変更せず、hand、turn、team、宣言参照を失わない。
+- occupant変更を理由にturn、field、blow、winnerのseat参照をremapしない。
 - backend再起動後、DB snapshotとrosterからroomを再構成する。
 - socket room membershipとtimerをreconnect時に再登録する。
 

@@ -99,6 +99,7 @@ describe('Game event instrumentation', () => {
     };
 
     const roomService = {
+      getRoom: jest.fn().mockResolvedValue(null),
       getRoomGameState: jest.fn().mockResolvedValue({
         getState: () => state,
         isPlayerTurn: jest.fn().mockReturnValue(true),

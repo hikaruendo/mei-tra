@@ -1,5 +1,7 @@
 begin;
 
+select plan(1);
+
 do $$
 begin
   if has_function_privilege(
@@ -66,42 +68,42 @@ set username = 'account_anonymization_test',
     display_name = 'Account anonymization test'
 where id = '00000000-0000-0000-0000-000000000921';
 
-insert into public.rooms (id, name, host_id, status)
+insert into public.rooms (id, name, host_seat_id, status)
 values (
   '00000000-0000-0000-0000-000000000922',
   'Account anonymization test room',
-  '00000000-0000-0000-0000-000000000921',
+  '00000000-0000-0000-0000-000000000925',
   'finished'
 );
 
-insert into public.game_states (id, room_id, state_data)
+insert into public.game_states (id, room_id, state_data, current_seat_id)
 values (
   '00000000-0000-0000-0000-000000000923',
   '00000000-0000-0000-0000-000000000922',
   '{
-    "currentTurnPlayerId": "original-player",
+    "identitySchemaVersion": 2,
     "playerStates": {
-      "original-player": {"hand": ["A_SPADE"]}
+      "00000000-0000-0000-0000-000000000925": {"hand": ["A_SPADE"]}
+    },
+    "playerNames": {
+      "00000000-0000-0000-0000-000000000925": "Account anonymization test"
     }
-  }'::jsonb
+  }'::jsonb,
+  '00000000-0000-0000-0000-000000000925'
 );
 
 insert into public.room_players (
   id,
   room_id,
-  player_id,
   user_id,
   name,
-  is_host,
   seat_index
 )
 values (
   '00000000-0000-0000-0000-000000000925',
   '00000000-0000-0000-0000-000000000922',
-  'original-player',
   '00000000-0000-0000-0000-000000000921',
   'Account anonymization test',
-  true,
   0
 );
 
@@ -110,7 +112,7 @@ insert into public.game_history (
   room_id,
   game_state_id,
   action_type,
-  player_id,
+  actor_seat_id,
   action_data
 )
 values (
@@ -118,10 +120,12 @@ values (
   '00000000-0000-0000-0000-000000000922',
   '00000000-0000-0000-0000-000000000923',
   'play',
-  'original-player',
+  '00000000-0000-0000-0000-000000000925',
   '{
-    "winnerPlayerId": "original-player",
-    "playerNames": {"original-player": "Account anonymization test"}
+    "winnerSeatId": "00000000-0000-0000-0000-000000000925",
+    "playerNames": {
+      "00000000-0000-0000-0000-000000000925": "Account anonymization test"
+    }
   }'::jsonb
 );
 
@@ -165,8 +169,8 @@ begin
     select 1
     from public.room_players
     where id = '00000000-0000-0000-0000-000000000925'
-      and player_id = 'original-player'
       and user_id = '00000000-0000-0000-0000-000000000921'
+      and name = 'Account anonymization test'
   ) then
     raise exception 'Failed anonymization changed room_players';
   end if;
@@ -175,7 +179,7 @@ begin
     select 1
     from public.rooms
     where id = '00000000-0000-0000-0000-000000000922'
-      and host_id = '00000000-0000-0000-0000-000000000921'
+      and host_seat_id = '00000000-0000-0000-0000-000000000925'
   ) then
     raise exception 'Failed anonymization changed rooms';
   end if;
@@ -184,7 +188,9 @@ begin
     select 1
     from public.game_states
     where id = '00000000-0000-0000-0000-000000000923'
-      and state_data->>'currentTurnPlayerId' = 'original-player'
+      and state_data->'playerNames'
+        ->>'00000000-0000-0000-0000-000000000925'
+        = 'Account anonymization test'
   ) then
     raise exception 'Failed anonymization changed game_states';
   end if;
@@ -193,7 +199,10 @@ begin
     select 1
     from public.game_history
     where id = '00000000-0000-0000-0000-000000000924'
-      and player_id = 'original-player'
+      and actor_seat_id = '00000000-0000-0000-0000-000000000925'
+      and action_data->'playerNames'
+        ->>'00000000-0000-0000-0000-000000000925'
+        = 'Account anonymization test'
   ) then
     raise exception 'Failed anonymization changed game_history';
   end if;
@@ -221,7 +230,7 @@ begin
 
   if result <> '{
     "anonymized_room_player_count": 1,
-    "anonymized_room_count": 1,
+    "anonymized_room_count": 0,
     "anonymized_game_state_count": 1,
     "anonymized_game_history_count": 1
   }'::jsonb then
@@ -232,21 +241,20 @@ $$;
 
 do $$
 declare
-  room_host_id text;
-  room_player_id text;
+  room_host_seat_id uuid;
+  room_player_id uuid;
   result jsonb;
 begin
-  select room.host_id, room_player.player_id
-  into room_host_id, room_player_id
+  select room.host_seat_id, room_player.id
+  into room_host_seat_id, room_player_id
   from public.rooms as room
   join public.room_players as room_player
     on room_player.room_id = room.id
-   and room_player.is_host = false
   where room.id = '00000000-0000-0000-0000-000000000922'
     and room_player.id = '00000000-0000-0000-0000-000000000925';
 
-  if room_host_id is distinct from room_player_id
-    or room_player_id <> 'deleted-player-00000000-0000-0000-0000-000000000925'
+  if room_host_seat_id is distinct from room_player_id
+    or room_player_id <> '00000000-0000-0000-0000-000000000925'
   then
     raise exception 'Host and anonymized roster identity diverged';
   end if;
@@ -255,10 +263,11 @@ begin
     select 1
     from public.game_states
     where id = '00000000-0000-0000-0000-000000000923'
-      and state_data->>'currentTurnPlayerId'
-        = 'deleted-player-00000000-0000-0000-0000-000000000925'
       and state_data->'playerStates' ?
-        'deleted-player-00000000-0000-0000-0000-000000000925'
+        '00000000-0000-0000-0000-000000000925'
+      and state_data->'playerNames'
+        ->>'00000000-0000-0000-0000-000000000925'
+        = 'Deleted user'
   ) then
     raise exception 'game_states references were not anonymized';
   end if;
@@ -267,11 +276,14 @@ begin
     select 1
     from public.game_history
     where id = '00000000-0000-0000-0000-000000000924'
-      and player_id = 'deleted-player-00000000-0000-0000-0000-000000000925'
-      and action_data->>'winnerPlayerId'
-        = 'deleted-player-00000000-0000-0000-0000-000000000925'
+      and actor_seat_id = '00000000-0000-0000-0000-000000000925'
+      and action_data->>'winnerSeatId'
+        = '00000000-0000-0000-0000-000000000925'
       and action_data->'playerNames' ?
-        'deleted-player-00000000-0000-0000-0000-000000000925'
+        '00000000-0000-0000-0000-000000000925'
+      and action_data->'playerNames'
+        ->>'00000000-0000-0000-0000-000000000925'
+        = 'Deleted user'
   ) then
     raise exception 'game_history references were not anonymized';
   end if;
@@ -298,5 +310,8 @@ begin
   end if;
 end;
 $$;
+
+select pass('account anonymization preserves canonical seat identity');
+select * from finish();
 
 rollback;

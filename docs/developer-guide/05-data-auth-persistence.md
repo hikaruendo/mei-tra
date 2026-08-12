@@ -297,7 +297,7 @@ profile は現在も進化中の schema です。
 
 ### 7.1 room と room players
 
-room metadata は `rooms`、canonical seat と占有者情報は `room_players` にあります。`room_players.id` が不変の席 UUID で、`room_players.player_id` は互換移行専用の legacy key です。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が席行を削除・再作成せず、`room_players`、`rooms.host_seat_id`、`game_states.current_seat_id`、membership を一つの transaction で更新します。
+room metadata は `rooms`、canonical seat と占有者情報は `room_players` にあります。`room_players.id` が部屋削除まで不変の席 UUID です。認証アカウントは nullable な `user_id` で席を占有し、COM 化や再接続では席行を入れ替えません。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が席行を削除・再作成せず、`room_players`、`rooms.host_seat_id`、`game_states.current_seat_id`、membership を一つの transaction で更新します。
 
 room 作成は room UUID と host seat UUID を先に生成し、deferred FK を使う `create_room_with_host_seat_atomic()` で原子的に保存します。COM 置換・再接続・退出でも `seatId` は維持されるため、ゲーム状態や履歴を横断して参照置換する処理は不要です。
 
@@ -321,14 +321,15 @@ room 作成は room UUID と host seat UUID を先に生成し、deferred FK を
 
 - room に player が複数いるので read path が重い
 - runtime 上の `room.players` と waiting room UI が強く結び付いている
-- `isCOM`, `isReady`, `isHost`, `team`, `userId`, `name` は `room_players` が正である
+- `isCOM`, `isReady`, `team`, `userId`, `name` は `room_players` が正である
+- `isHost` は `rooms.host_seat_id === room_players.id` から導出する
 - `socketId` と認証済み接続状態は再接続ごとに変わるため永続化せず、memory 上で管理する
 - application service から `room_players` を個別 CRUD せず、完成したロスターを原子的に保存する
 - finished room も一定期間残し、プロフィールの recent matches から参照する
 
 ### 7.2 game state
 
-`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ち、手番の永続 identity は `current_player_id` に保存します。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存します。座席順は `room_players.seat_index` を正本とし、ゲーム進行で必要な index は実行時に座席順から導出します。
+`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ち、手番の永続 identity は `current_seat_id` に保存します。`identitySchemaVersion: 2` の `playerStates` は `seatId` を key にして hand / pass / broken flags だけを保存します。座席順は `room_players.seat_index` を正本とし、ゲーム進行で必要な index は実行時に座席順から導出します。
 
 この説明が指す主なコードは次です。
 
@@ -364,7 +365,7 @@ room 作成は room UUID と host seat UUID を先に生成し、deferred FK を
 - JSON shape と TypeScript 型がずれると runtime bug になる
 - relation と JSONB を跨ぐロスター更新には transaction が必要
 
-`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players`、player gameplay は `state_data.playerStates`、current turn は `current_player_id` の各正本だけを参照します。
+`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players.id`、player gameplay は `state_data.playerStates[seatId]`、current turn は `current_seat_id` の各正本だけを参照します。旧クライアント向けの `playerId` は transport / runtime 上で `seatId` と同値の alias としてだけ残し、DB には旧 identity 列や旧 JSON shape を保存しません。
 
 ### 7.3 chat
 

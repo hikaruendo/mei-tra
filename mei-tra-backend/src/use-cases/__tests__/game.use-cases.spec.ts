@@ -1729,6 +1729,57 @@ describe('Game Use Cases', () => {
       expect(roomGameState.saveState).toHaveBeenCalled();
     });
 
+    it('adds one attribution when legacy and canonical arrays share a reference', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
+      const sharedPlayedBy: ReturnType<typeof asSeatId>[] = [];
+      const currentField: Field = {
+        cards: [],
+        playedBy: sharedPlayedBy,
+        playedBySeatIds: sharedPlayedBy,
+        baseCard: '',
+        dealerId: 'player-1',
+        isComplete: false,
+      };
+      const state = {
+        players: [
+          {
+            playerId: 'player-1',
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0 as Team,
+            isPasser: false,
+          },
+        ],
+        blowState: { currentTrump: null },
+        playState: { currentField },
+        currentPlayerIndex: 0,
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+        nextTurn: jest.fn(),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        card: 'C1',
+      });
+
+      expect(result.success).toBe(true);
+      expect(currentField.cards).toEqual(['C1']);
+      expect(currentField.playedBy).toEqual(['player-1']);
+      expect(currentField.playedBySeatIds).toEqual(['player-1']);
+      expect(currentField.playedBy).not.toBe(currentField.playedBySeatIds);
+    });
+
     it('returns complete field trigger when field reaches four cards', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PlayCardUseCase(

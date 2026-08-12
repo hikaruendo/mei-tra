@@ -91,10 +91,10 @@ export class SupabaseRoomRepository implements IRoomRepository {
       const updateData: Partial<RoomUpdate> = {};
 
       if (updates.name) updateData.name = updates.name;
-      if (updates.hostId) updateData.host_id = updates.hostId;
       if (updates.hostSeatId) {
         updateData.host_seat_id = updates.hostSeatId;
-        updateData.host_id = updates.hostSeatId;
+      } else if (updates.hostId) {
+        updateData.host_seat_id = updates.hostId;
       }
       if (updates.status) updateData.status = updates.status;
       if (updates.settings) updateData.settings = updates.settings;
@@ -179,7 +179,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       const { data: roomsData, error } = await this.supabase
         .from('rooms')
         .select('*')
-        .or(`host_seat_id.eq.${hostId},host_id.eq.${hostId}`)
+        .eq('host_seat_id', hostId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -297,22 +297,21 @@ export class SupabaseRoomRepository implements IRoomRepository {
   }
 
   private mapDatabaseToRoom(dbRoom: RoomRow, players: RoomPlayer[]): Room {
-    const hostSeatId =
-      dbRoom.host_seat_id ??
-      players.find(
-        (player) =>
-          player.participantKey === dbRoom.host_id ||
-          player.userId === dbRoom.host_id ||
-          player.playerId === dbRoom.host_id,
-      )?.playerId ??
-      dbRoom.host_id;
+    const hostSeatId = dbRoom.host_seat_id ?? players[0]?.playerId;
+    if (!hostSeatId) {
+      throw new Error(`Room ${dbRoom.id} has no canonical host seat`);
+    }
+    const canonicalPlayers = players.map((player) => ({
+      ...player,
+      isHost: player.playerId === hostSeatId,
+    }));
     return {
       id: dbRoom.id,
       name: dbRoom.name,
       hostSeatId: asSeatId(hostSeatId),
       hostId: hostSeatId,
       status: dbRoom.status as RoomStatus,
-      players,
+      players: canonicalPlayers,
       settings: dbRoom.settings,
       createdAt: new Date(dbRoom.created_at),
       updatedAt: new Date(dbRoom.updated_at),
@@ -370,7 +369,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       socketId: '',
       seatId,
       playerId: seatId,
-      participantKey: dbPlayer.player_id,
+      participantKey: dbPlayer.user_id ?? dbPlayer.id,
       userId: dbPlayer.user_id ?? undefined,
       isAuthenticated: Boolean(dbPlayer.user_id),
       name: dbPlayer.name,
@@ -380,7 +379,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       hasBroken: false,
       hasRequiredBroken: false,
       isReady: dbPlayer.is_ready,
-      isHost: dbPlayer.is_host,
+      isHost: false,
       isCOM: dbPlayer.is_com,
       joinedAt: new Date(dbPlayer.joined_at),
       seatIndex: dbPlayer.seat_index,

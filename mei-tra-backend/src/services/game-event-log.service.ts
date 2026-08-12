@@ -58,8 +58,6 @@ export class GameEventLogService implements IGameEventLogService {
         roomId: input.roomId,
         actionType: input.actionType,
         actorSeatId,
-        actorKeySnapshot: input.playerId ?? actorSeatId,
-        playerId: actorSeatId,
         actionData,
       });
     } catch (error) {

@@ -4,6 +4,7 @@ import { asSeatId } from '../../types/identity.types';
 
 describe('SupabaseGameHistoryRepository', () => {
   it('resolves game_state_id before inserting a history entry', async () => {
+    const actorSeatId = '00000000-0000-0000-0000-000000000101';
     const gameStateSingle = jest.fn().mockResolvedValue({
       data: { id: 'state-1' },
       error: null,
@@ -17,7 +18,8 @@ describe('SupabaseGameHistoryRepository', () => {
         room_id: 'room-1',
         game_state_id: 'state-1',
         action_type: 'card_played',
-        player_id: 'player-1',
+        actor_seat_id: actorSeatId,
+        actor_key_snapshot: null,
         action_data: { card: 'A' },
         timestamp: '2026-04-16T00:00:00.000Z',
       },
@@ -46,7 +48,7 @@ describe('SupabaseGameHistoryRepository', () => {
     const entry = await repository.create({
       roomId: 'room-1',
       actionType: 'card_played',
-      playerId: 'player-1',
+      actorSeatId: asSeatId(actorSeatId),
       actionData: { card: 'A' },
     });
 
@@ -54,9 +56,8 @@ describe('SupabaseGameHistoryRepository', () => {
       room_id: 'room-1',
       game_state_id: 'state-1',
       action_type: 'card_played',
-      actor_seat_id: null,
-      actor_key_snapshot: 'player-1',
-      player_id: 'player-1',
+      actor_seat_id: actorSeatId,
+      actor_key_snapshot: null,
       action_data: { card: 'A' },
     });
     expect(entry.gameStateId).toBe('state-1');
@@ -77,8 +78,7 @@ describe('SupabaseGameHistoryRepository', () => {
         game_state_id: 'state-1',
         action_type: 'card_played',
         actor_seat_id: '00000000-0000-0000-0000-000000000101',
-        actor_key_snapshot: 'legacy-player',
-        player_id: '00000000-0000-0000-0000-000000000101',
+        actor_key_snapshot: null,
         action_data: {},
         timestamp: '2026-04-16T00:00:00.000Z',
       },
@@ -98,16 +98,39 @@ describe('SupabaseGameHistoryRepository', () => {
       roomId: 'room-1',
       actionType: 'card_played',
       actorSeatId: asSeatId(actorSeatId),
-      actorKeySnapshot: 'legacy-player',
     });
 
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({
         actor_seat_id: actorSeatId,
-        actor_key_snapshot: 'legacy-player',
-        player_id: actorSeatId,
+        actor_key_snapshot: null,
       }),
     );
+  });
+
+  it('rejects a non-UUID actor instead of creating a legacy snapshot', async () => {
+    const gameStateSingle = jest.fn().mockResolvedValue({
+      data: { id: 'state-1' },
+      error: null,
+    });
+    const gameStateEq = jest.fn().mockReturnValue({ single: gameStateSingle });
+    const gameStateSelect = jest.fn().mockReturnValue({ eq: gameStateEq });
+    const insert = jest.fn();
+    const from = jest.fn((table: string) =>
+      table === 'game_states' ? { select: gameStateSelect } : { insert },
+    );
+    const repository = new SupabaseGameHistoryRepository({
+      client: { from },
+    } as unknown as SupabaseService);
+
+    await expect(
+      repository.create({
+        roomId: 'room-1',
+        actionType: 'card_played',
+        actorSeatId: asSeatId('legacy-player'),
+      }),
+    ).rejects.toThrow('Game history actor must be a canonical seat UUID');
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it('filters history entries by roundNumber after loading rows', async () => {
@@ -118,7 +141,8 @@ describe('SupabaseGameHistoryRepository', () => {
           room_id: 'room-1',
           game_state_id: 'state-1',
           action_type: 'card_played',
-          player_id: 'player-1',
+          actor_seat_id: null,
+          actor_key_snapshot: 'player-1',
           action_data: { context: { roundNumber: 1 } },
           timestamp: '2026-04-16T00:00:00.000Z',
         },
@@ -127,7 +151,8 @@ describe('SupabaseGameHistoryRepository', () => {
           room_id: 'room-1',
           game_state_id: 'state-1',
           action_type: 'field_completed',
-          player_id: 'player-2',
+          actor_seat_id: null,
+          actor_key_snapshot: 'player-2',
           action_data: { context: { roundNumber: 2 } },
           timestamp: '2026-04-16T00:01:00.000Z',
         },
@@ -173,7 +198,7 @@ describe('SupabaseGameHistoryRepository', () => {
     expect(request.or).not.toHaveBeenCalled();
   });
 
-  it('filters a UUID player key through canonical and legacy history columns', async () => {
+  it('filters a UUID player key through canonical and snapshot columns', async () => {
     const order = jest.fn().mockResolvedValue({ data: [], error: null });
     const request = {
       eq: jest.fn(),
@@ -192,7 +217,7 @@ describe('SupabaseGameHistoryRepository', () => {
     await repository.findByRoomId('room-1', { playerId });
 
     expect(request.or).toHaveBeenCalledWith(
-      `actor_seat_id.eq.${playerId},actor_key_snapshot.eq.${playerId},player_id.eq.${playerId}`,
+      `actor_seat_id.eq.${playerId},actor_key_snapshot.eq.${playerId}`,
     );
   });
 

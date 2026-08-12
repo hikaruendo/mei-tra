@@ -12,8 +12,8 @@
 
 | Name                                                                | Columns | Comment                                                                        | Type       |
 | ------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------ | ---------- |
-| [public.active_room_memberships](public.active_room_memberships.md) | 10      | 認証ユーザーが現在保持しているルーム所属リース。seat_id で実際の席を参照する。                                    | BASE TABLE |
-| [public.room_players](public.room_players.md)                       | 12      | ルーム内の席ロスター。id が部屋削除まで不変の canonical seat UUID。                                  | BASE TABLE |
+| [public.active_room_memberships](public.active_room_memberships.md) | 9       | 認証ユーザーが現在保持しているルーム所属リース。seat_id で実際の席を参照する。                                    | BASE TABLE |
+| [public.room_players](public.room_players.md)                       | 9       | ルーム内の席ロスター。id が部屋削除まで不変の canonical seat UUID。                                  | BASE TABLE |
 
 ### 遷移履歴
 
@@ -29,7 +29,7 @@
 
 | Name                                            | Columns | Comment                                                                                | Type       |
 | ----------------------------------------------- | ------- | -------------------------------------------------------------------------------------- | ---------- |
-| [public.rooms](public.rooms.md)                 | 9       | 対局ルームの設定・状態を保持する。host_seat_id がホスト席の正本。                                                | BASE TABLE |
+| [public.rooms](public.rooms.md)                 | 8       | 対局ルームの設定・状態を保持する。host_seat_id がホスト席の正本。                                                | BASE TABLE |
 | [public.user_profiles](public.user_profiles.md) | 12      | アプリケーションで表示・集計に使うユーザープロフィール。auth.users と 1:1 で対応する。                                    | BASE TABLE |
 
 ## Relations

@@ -39,13 +39,13 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Game state not found for room ${entry.roomId}`);
     }
 
-    const requestedActorId = entry.actorSeatId ?? entry.playerId ?? null;
-    const actorSeatId =
-      requestedActorId && this.isUuid(requestedActorId)
-        ? requestedActorId
-        : null;
-    const actorKeySnapshot =
-      entry.actorKeySnapshot ?? entry.playerId ?? requestedActorId;
+    const requestedActorId = entry.actorSeatId ?? null;
+    if (requestedActorId && !this.isUuid(requestedActorId)) {
+      throw new Error(
+        `Game history actor must be a canonical seat UUID: ${requestedActorId}`,
+      );
+    }
+    const actorSeatId = requestedActorId;
 
     const { data, error } = await this.supabase
       .from('game_history')
@@ -54,8 +54,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
         game_state_id: gameStateId,
         action_type: entry.actionType,
         actor_seat_id: actorSeatId,
-        actor_key_snapshot: actorKeySnapshot,
-        player_id: actorSeatId ?? actorKeySnapshot,
+        actor_key_snapshot: null,
         action_data: entry.actionData ?? {},
       })
       .select()
@@ -85,7 +84,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     if (query?.playerId) {
       request = this.isUuid(query.playerId)
         ? request.or(
-            `actor_seat_id.eq.${query.playerId},actor_key_snapshot.eq.${query.playerId},player_id.eq.${query.playerId}`,
+            `actor_seat_id.eq.${query.playerId},actor_key_snapshot.eq.${query.playerId}`,
           )
         : request.eq('actor_key_snapshot', query.playerId);
     }
@@ -208,7 +207,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       actionType: row.action_type as GameHistoryActionType,
       actorSeatId: row.actor_seat_id ? asSeatId(row.actor_seat_id) : null,
       actorKeySnapshot: row.actor_key_snapshot,
-      playerId: row.actor_seat_id ?? row.player_id,
+      playerId: row.actor_seat_id ?? row.actor_key_snapshot,
       actionData: row.action_data ?? {},
       timestamp: new Date(row.timestamp),
     };

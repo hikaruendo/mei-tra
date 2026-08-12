@@ -38,7 +38,7 @@ export class RoomMembershipReconcilerService implements OnModuleInit {
       const room = await this.roomService.getRoom(membership.roomId);
       const player = room?.players.find(
         (candidate) =>
-          candidate.playerId === membership.playerId &&
+          candidate.playerId === membership.seatId &&
           candidate.userId === membership.userId,
       );
       if (player) {
@@ -59,7 +59,7 @@ export class RoomMembershipReconcilerService implements OnModuleInit {
         if (repaired.result !== 'conflict') {
           authoritativeMemberships.set(membership.userId, repaired.membership);
           this.logger.warn(
-            `[MembershipReconcile] Repaired player identity user=${membership.userId} room=${membership.roomId} from=${membership.playerId} to=${authenticatedRoomPlayers[0].playerId}`,
+            `[MembershipReconcile] Repaired seat identity user=${membership.userId} room=${membership.roomId} from=${membership.seatId} to=${authenticatedRoomPlayers[0].playerId}`,
           );
           continue;
         }
@@ -88,7 +88,7 @@ export class RoomMembershipReconcilerService implements OnModuleInit {
         if (
           !membership?.roomId ||
           (membership.roomId === room.id &&
-            membership.playerId === player.playerId)
+            membership.seatId === player.playerId)
         ) {
           continue;
         }

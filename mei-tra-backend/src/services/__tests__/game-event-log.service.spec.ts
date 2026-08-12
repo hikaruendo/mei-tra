@@ -40,8 +40,6 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         actionType: 'card_played',
         actorSeatId: 'seat-1',
-        actorKeySnapshot: 'player-1',
-        playerId: 'seat-1',
         actionData: expect.objectContaining({
           card: 'AS',
           context: expect.objectContaining({

@@ -237,7 +237,7 @@ The project uses environment-specific configuration:
 - `game.gateway.ts`: Central WebSocket event handler
 - `game.types.ts`: TypeScript definitions for game entities
 - `repositories/`: Data access layer with interface/implementation separation
-- Database schema in `database/schema.sql` and `supabase/migrations/`
+- Versioned database schema in `mei-tra-backend/supabase/migrations/`; generated ER documentation in `mei-tra-backend/docs/database/`
 - Deployment configuration in `fly.toml` and `DEPLOYMENT.md`
 
 ## Testing Strategy
@@ -304,7 +304,7 @@ export function Component() {
 ## Code Quality Guidelines
 
 - Use comments sparingly. Only comment complex code.
-- The database schema is defined in `@mei-tra-backend/database/schema.sql` and `@mei-tra-backend/supabase/migrations/` files. Reference these anytime you need to understand the structure of data stored in the database.
+- The database schema is defined by `@mei-tra-backend/supabase/migrations/`. Use `@mei-tra-backend/docs/database/` for generated ER documentation, and trust migrations when generated docs are stale.
 - **Always run lint and TypeScript checks after modifying code**: `npm run lint && npx tsc --noEmit`
 - If bug fixes fail three or more times, analyse using Codex CLI.
 - Architecture design consultations via Codex CLI.

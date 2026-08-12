@@ -5,8 +5,8 @@ export type ActiveRoomMembershipStatus = 'moving' | 'active' | 'disconnected';
 export interface ActiveRoomMembership {
   userId: string;
   roomId: string | null;
-  seatId: SeatId | null;
-  /** @deprecated Use seatId while roomId is non-null. */
+  seatId: SeatId;
+  /** @deprecated Use seatId. */
   playerId: string;
   status: ActiveRoomMembershipStatus;
   membershipVersion: number;

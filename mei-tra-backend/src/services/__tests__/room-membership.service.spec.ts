@@ -1,12 +1,13 @@
 import { SupabaseService } from '../../database/supabase.service';
+import { asSeatId } from '../../types/identity.types';
 import { RoomMembershipService } from '../room-membership.service';
 
 describe('RoomMembershipService', () => {
+  const seatId = asSeatId('00000000-0000-0000-0000-000000000101');
   const row = {
     user_id: 'user-1',
     room_id: 'room-1',
-    seat_id: '00000000-0000-0000-0000-000000000101',
-    player_id: 'player-1',
+    seat_id: seatId,
     status: 'active' as const,
     membership_version: 4,
     transition_id: 'transition-existing',
@@ -30,8 +31,8 @@ describe('RoomMembershipService', () => {
     jest.spyOn(service, 'get').mockResolvedValue({
       userId: 'user-1',
       roomId: null,
-      seatId: null,
-      playerId: 'player-1',
+      seatId,
+      playerId: seatId,
       status: 'moving',
       membershipVersion: 1,
       transitionId: 'transition-moving',
@@ -50,12 +51,12 @@ describe('RoomMembershipService', () => {
       error: null,
     });
 
-    const result = await service.claim('user-1', 'room-1', 'player-1');
+    const result = await service.claim('user-1', 'room-1', seatId);
 
     expect(rpc).toHaveBeenCalledWith('claim_room_membership', {
       p_user_id: 'user-1',
       p_room_id: 'room-1',
-      p_player_id: 'player-1',
+      p_player_id: seatId,
       p_transition_id: 'transition-moving',
     });
     expect(result.result).toBe('claimed');
@@ -69,7 +70,7 @@ describe('RoomMembershipService', () => {
       error: null,
     });
 
-    const result = await service.claim('user-1', 'room-2', 'player-1');
+    const result = await service.claim('user-1', 'room-2', seatId);
 
     expect(result.result).toBe('conflict');
     expect(result.membership.roomId).toBe('room-1');
@@ -89,8 +90,8 @@ describe('RoomMembershipService', () => {
     jest.spyOn(service, 'get').mockResolvedValue({
       userId: 'user-1',
       roomId: 'room-1',
-      seatId: '00000000-0000-0000-0000-000000000101' as never,
-      playerId: 'player-1',
+      seatId,
+      playerId: seatId,
       status: 'active',
       membershipVersion: 4,
       transitionId: 'transition-existing',
