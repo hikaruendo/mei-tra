@@ -167,6 +167,10 @@ PR Cを日付だけで開始せず、観測証拠とrollback条件で開始す�
 | UseCaseごとにrule判定が違う | ゲーム用語のpure helperへ統合する |
 | rosterとJSON playerを別々に更新する | atomic roster RPCへ統合する |
 | `socketId`でDB playerを復元する | stable identityを使う |
+| 同じidentityを複数serviceでremap / alias化する | canonicalな`seatId`を維持し、互換変換はtransport / migration境界の1箇所へ限定する |
+| 既存型・helperと同義のものを別の階層へ追加する | canonical ownerを決め、既存の型配置・依存方向へ統合する |
+| 修正のたびにmapper、fallback、object再構築が増える | 横断して同じ根因を探し、source of truthを一本化してrepair pathを削除する |
+| legacy alias / dual-readを終了条件なしで残す | telemetry、removal criteria、cleanup PRを定義してcore logicから隔離する |
 | Repositoryがgame phaseを判断する | domain / UseCaseへ移す |
 | Componentがruleを再計算する | hookとserver authorityを使う |
 | `team || 0`のfallback | `team ?? 0`またはvalidationを使う |

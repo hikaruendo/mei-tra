@@ -1,4 +1,4 @@
 interface:
   display_name: "Review Meitra"
-  short_description: "Review Meitra gameplay and realtime changes"
-  default_prompt: "Use $review-meitra to review this Meitra change for gameplay, realtime, and persistence risks."
+  short_description: "Review Meitra architecture and realtime changes"
+  default_prompt: "Use $review-meitra to review this Meitra change for architecture consistency, duplicated mappings, gameplay, realtime, and persistence risks."
