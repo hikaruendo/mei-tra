@@ -2,6 +2,8 @@ import { ComSessionService } from '../com-session.service';
 import { IComPlayerService } from '../interfaces/com-player-service.interface';
 import { GameStateService } from '../game-state.service';
 import { Room } from '../../types/room.types';
+import type { VacantSeats } from '../../types/vacant-seat.types';
+import { asSeatId } from '../../types/identity.types';
 
 const HUMAN_ID = 'human-1';
 
@@ -79,13 +81,14 @@ describe('ComSessionService.convertPlayerToCOM', () => {
       createComPlayer: jest.fn(),
     } as unknown as IComPlayerService);
     const { gameState } = createGameStateStub();
+    const vacantSeats: VacantSeats = {};
 
     const converted = await service.convertPlayerToCOM(
       'room-1',
       HUMAN_ID,
       createRoom(),
       gameState,
-      {},
+      vacantSeats,
     );
 
     expect(converted).toBe(true);
@@ -98,6 +101,10 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(state.playState!.currentField!.dealerId).toBe(comId);
     expect(state.teamAssignments[comId]).toBe(0);
     expect(state.currentPlayerId).toBe(comId);
+    expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);
+    expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.playerId).toBe(
+      HUMAN_ID,
+    );
   });
 
   it('keeps the seat owner only for a disconnect-timeout COM replacement', async () => {

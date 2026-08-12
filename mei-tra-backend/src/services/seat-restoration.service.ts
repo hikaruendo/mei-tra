@@ -3,8 +3,8 @@ import { BlowState, DomainPlayer, GameState } from '../types/game.types';
 import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
-import { VacantSeats } from './com-session.service';
-import { resolveSeatId } from '../types/identity.types';
+import type { VacantSeats } from '../types/vacant-seat.types';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
@@ -32,14 +32,10 @@ export class SeatRestorationService {
       return false;
     }
 
-    const [seatIndexKey, seatData] = vacancyEntry;
-    const seatIndex = Number(seatIndexKey);
-    const currentSeatPlayer =
-      seatData.replacementPlayerId != null
-        ? room.players.find(
-            (player) => player.playerId === seatData.replacementPlayerId,
-          )
-        : room.players[seatIndex];
+    const [vacantSeatId, seatData] = vacancyEntry;
+    const currentSeatPlayer = room.players.find(
+      (player) => player.playerId === vacantSeatId,
+    );
     if (!currentSeatPlayer || !currentSeatPlayer.isCOM) {
       return false;
     }
@@ -90,7 +86,7 @@ export class SeatRestorationService {
 
     gameState.registerPlayerToken(seatId, seatId);
     gameState.clearDisconnectTimeout(seatId);
-    delete vacantSeatsForRoom[seatIndex];
+    delete vacantSeatsForRoom[asSeatId(vacantSeatId)];
     if (Object.keys(vacantSeatsForRoom).length === 0) {
       delete vacantSeats[roomId];
     }

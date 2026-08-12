@@ -1,7 +1,8 @@
 import { RoomService } from '../room.service';
 import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
 import { DomainPlayer, Team } from '../../types/game.types';
-import { VacantSeats } from '../com-session.service';
+import type { VacantSeats } from '../../types/vacant-seat.types';
+import { asSeatId } from '../../types/identity.types';
 
 const createRoomPlayer = (overrides: Partial<RoomPlayer> = {}): RoomPlayer => ({
   socketId: 'socket-1',
@@ -144,10 +145,11 @@ describe('RoomService join rollback', () => {
       name: 'Vacant',
       isHost: false,
     });
+    const vacantSeatId = asSeatId(originalVacantSeat.playerId);
     (
       service as unknown as { vacantSeats: Record<string, unknown> }
     ).vacantSeats['room-1'] = {
-      2: {
+      [vacantSeatId]: {
         roomPlayer: originalVacantSeat,
       },
     };
@@ -164,14 +166,16 @@ describe('RoomService join rollback', () => {
 
     const internals = service as unknown as {
       roomGameStates: Map<string, unknown>;
-      vacantSeats: Record<string, Record<number, { roomPlayer: RoomPlayer }>>;
+      vacantSeats: VacantSeats;
     };
     expect(internals.roomGameStates.get('room-1')).toBe(reloadedGameState);
-    expect(internals.vacantSeats['room-1'][2].roomPlayer).toMatchObject({
+    expect(
+      internals.vacantSeats['room-1'][vacantSeatId].roomPlayer,
+    ).toMatchObject({
       playerId: 'vacant-player',
       userId: 'vacant-user',
     });
-    expect(internals.vacantSeats['room-1'][2].roomPlayer).not.toBe(
+    expect(internals.vacantSeats['room-1'][vacantSeatId].roomPlayer).not.toBe(
       originalVacantSeat,
     );
     expect(reloadedGameState.loadState).toHaveBeenCalledWith('room-1');

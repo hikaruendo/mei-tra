@@ -77,7 +77,7 @@ export class ComStrategyService implements IComStrategyService {
     // A seat that already declared has no legal action left: declare-blow and
     // pass-blow both reject it (hasPlayerDeclaredInBlow). This is reachable
     // because a COM inherits the declaration of the human it replaced — the
-    // remap correctly moves the bid to the seat, so the COM sees its own bid.
+    // The bid already belongs to the stable seat, so the COM sees it directly.
     // Returning 'skip' lets the caller advance the turn instead of retrying an
     // action the rules forbid.
     if (hasPlayerDeclaredInBlow(state.blowState, comPlayer.playerId)) {
