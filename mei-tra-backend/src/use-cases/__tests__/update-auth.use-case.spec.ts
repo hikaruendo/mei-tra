@@ -6,7 +6,6 @@ import { AuthenticatedUser } from '../../types/user.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { GameStateService } from '../../services/game-state.service';
 import { PlayerConnectionState, SessionUser } from '../../types/session.types';
-import { TransportPlayer } from '../../types/player-adapters';
 
 describe('UpdateAuthUseCase', () => {
   const createAuthServiceMock = () =>
@@ -78,7 +77,7 @@ describe('UpdateAuthUseCase', () => {
           hand: [],
           team: 0,
           isPasser: false,
-        } as TransportPlayer,
+        },
       ],
     };
     const roomGameState = {
@@ -102,9 +101,10 @@ describe('UpdateAuthUseCase', () => {
         .mockImplementation(
           async (_playerId: string, connectionState: PlayerConnectionState) => {
             roomState.players[0].socketId = connectionState.socketId;
-            roomState.players[0].userId = connectionState.userId;
-            roomState.players[0].isAuthenticated =
-              connectionState.isAuthenticated;
+            roomState.players[0].userId = connectionState.userId ?? '';
+            roomState.players[0].isAuthenticated = Boolean(
+              connectionState.isAuthenticated,
+            );
           },
         ),
       saveState: jest.fn().mockResolvedValue(undefined),
@@ -192,7 +192,7 @@ describe('UpdateAuthUseCase', () => {
         payload: [
           expect.objectContaining({
             socketId: 'socket-1',
-            playerId: 'player-1',
+            seatId: 'player-1',
             name: 'User Display',
             userId: 'user-1',
             isAuthenticated: true,
@@ -207,7 +207,7 @@ describe('UpdateAuthUseCase', () => {
     expect(roomUpdatedEvent).toBeDefined();
     expect(roomUpdatedEvent?.payload).toMatchObject({
       id: updatedRoom.id,
-      hostId: updatedRoom.hostId,
+      hostSeatId: updatedRoom.hostId,
       name: updatedRoom.name,
       status: updatedRoom.status,
     });
@@ -218,12 +218,12 @@ describe('UpdateAuthUseCase', () => {
     expect(roomSyncEvent?.payload).toMatchObject({
       room: {
         id: 'room-1',
-        hostId: 'player-1',
+        hostSeatId: 'player-1',
       },
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: 'player-1',
           name: 'User Display',
         },
       ],

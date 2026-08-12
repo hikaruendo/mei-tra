@@ -78,9 +78,7 @@ export interface ChangePlayerTeamPayload extends RoomActionPayload {
 
 export interface ModeratePlayerPayload {
   roomId: string;
-  targetSeatId?: SeatId;
-  /** @deprecated Use targetSeatId. */
-  targetPlayerId: string;
+  targetSeatId: SeatId;
   action: 'remove' | 'replace-with-com';
 }
 
@@ -108,9 +106,7 @@ export interface SelectBaseSuitPayload {
 
 export interface RevealBrokenHandPayload {
   roomId: string;
-  targetSeatId?: SeatId;
-  /** @deprecated Use targetSeatId. */
-  playerId: string;
+  targetSeatId: SeatId;
 }
 
 export interface UpdateAuthPayload {
@@ -126,8 +122,6 @@ export type NameUpdatedPayload =
       success: true;
       name: string;
       seatId?: SeatId;
-      /** @deprecated Use seatId. */
-      playerId?: string;
     }
   | {
       success: false;
@@ -259,6 +253,4 @@ export interface ServerToClientEvents {
 export interface SocketData {
   userId?: string;
   seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId?: string;
 }

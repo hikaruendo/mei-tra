@@ -27,6 +27,7 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { asSeatId } from '../types/identity.types';
+import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
 import { resolveCurrentPlayer } from '../types/current-turn';
 
 @Injectable()
@@ -137,12 +138,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           scope: 'room',
           roomId,
           event: 'blow-updated',
-          payload: {
-            declarations: state.blowState.declarations,
-            actionHistory: state.blowState.actionHistory,
-            currentHighest: state.blowState.currentHighestDeclaration,
-            lastPasser: state.blowState.lastPasser,
-          },
+          payload: toBlowUpdatedPayload(state.blowState),
         },
       ];
       events.push(

@@ -1,4 +1,4 @@
-import type { RevealAgariPayload, UpdatePhasePayload } from '@contracts/game';
+import type { UpdatePhasePayload } from '@contracts/game';
 import { GameState } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { GameStateService } from '../services/game-state.service';
@@ -9,6 +9,8 @@ import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../types/current-turn';
+import type { RevealAgariPayload } from '@contracts/game';
+import { toBlowDeclarationContract } from '../types/game-contract-adapters';
 
 export interface TransitionResult {
   events: GatewayEvent[];
@@ -67,7 +69,9 @@ export async function transitionToPlayPhase({
     phase: 'play',
     scores: nextState.teamScores,
     winner: winningPlayer.team,
-    currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
+    currentHighestDeclaration: nextState.blowState.currentHighestDeclaration
+      ? toBlowDeclarationContract(nextState.blowState.currentHighestDeclaration)
+      : null,
   };
 
   const delayedEvents: GatewayEvent[] = [
@@ -75,7 +79,7 @@ export async function transitionToPlayPhase({
       scope: 'room',
       roomId,
       event: 'update-turn',
-      payload: winningPlayer.playerId,
+      payload: asSeatId(winningPlayer.playerId),
       delayMs: 3000,
     },
     {
@@ -100,7 +104,6 @@ export async function transitionToPlayPhase({
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
       seatId: asSeatId(winningPlayer.playerId),
-      playerId: winningPlayer.playerId,
     };
     delayedEvents.unshift({
       scope: 'socket',

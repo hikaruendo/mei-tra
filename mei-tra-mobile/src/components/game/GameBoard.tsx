@@ -1,4 +1,4 @@
-import type { PlayerContract, TrumpType } from '@meitra/contracts/game';
+import type { TrumpType } from '@meitra/contracts/game';
 import type {
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
@@ -37,6 +37,7 @@ import { colors, teamColors } from '@/theme/colors';
 import type {
   MobileGameOver,
   MobileGameSnapshot,
+  MobilePlayer,
 } from '@/types/game';
 
 interface GameHistoryData {
@@ -102,7 +103,7 @@ export function GameBoard({
     null;
   const perspectivePlayerId = game.isSpectator
     ? spectatorPerspectiveId ?? hostPlayerId
-    : game.you;
+    : game.youSeatId;
 
   useEffect(() => {
     if (!game.isSpectator) return;
@@ -117,7 +118,7 @@ export function GameBoard({
   );
   const { width: windowWidth } = useWindowDimensions();
   // Size the fan from the hand it actually renders. Spectators have no
-  // `game.you`, so keying off that collapsed the count to 0 and the metrics
+  // `game.youSeatId`, so keying off that collapsed the count to 0 and the metrics
   // fell through to the single-card branch (max width, zero overlap).
   const selfHandCount = self?.hand.length ?? 0;
   // board padding (20) + self panel (~86) + fan padding (20)
@@ -141,7 +142,7 @@ export function GameBoard({
         (
           slot,
         ): slot is {
-          player: PlayerContract;
+          player: MobilePlayer;
           position: 'left' | 'top' | 'right';
         } =>
           slot.player != null,
@@ -159,9 +160,10 @@ export function GameBoard({
   const mustSelectNegri =
     !game.isSpectator &&
     game.gamePhase === 'play' &&
-    highest?.playerId === game.you &&
+    highest?.playerId === game.youSeatId &&
     !game.negriCard;
-  const isMyTurn = !game.isSpectator && game.currentTurn === game.you;
+  const isMyTurn =
+    !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
   const phaseLabel =
     game.gamePhase === 'blow'
       ? '吹き'
@@ -193,7 +195,7 @@ export function GameBoard({
   useEffect(() => {
     setSelectedCard(null);
     setPendingAction(null);
-  }, [game.gamePhase, game.you]);
+  }, [game.gamePhase, game.youSeatId]);
 
   useEffect(() => {
     setPendingAction(null);
@@ -202,7 +204,7 @@ export function GameBoard({
     }
   }, [
     actionsDisabled,
-    game.currentTurn,
+    game.currentTurnSeatId,
     fieldCardsKey,
     game.blowState.currentHighestDeclaration?.timestamp,
     game.negriCard,
@@ -291,7 +293,7 @@ export function GameBoard({
           {opponentSlots.map(({ player, position }) => {
             const hasNegri =
               game.gamePhase === 'play' &&
-              game.negriPlayerId === player.playerId;
+              game.negriSeatId === player.playerId;
             const blowWinnerId = highest?.playerId;
             const hasAgari =
               game.gamePhase === 'play' &&
@@ -311,7 +313,7 @@ export function GameBoard({
                   player.playerId,
                 )}
                 isIdle={game.idlePlayerIds.includes(player.playerId)}
-                isTurn={game.currentTurn === player.playerId}
+                isTurn={game.currentTurnSeatId === player.playerId}
                 negriCard={hasNegri ? 'hidden' : undefined}
                 onPress={
                   game.isSpectator
@@ -363,7 +365,7 @@ export function GameBoard({
             const showReplacePanel =
               isHost &&
               !player.isCOM &&
-              player.playerId !== game.you &&
+              player.playerId !== game.youSeatId &&
               (isDisconnected || isIdle);
             return (
               <View key={player.playerId} style={posStyle}>
@@ -461,8 +463,8 @@ export function GameBoard({
           <BlowControls
             actionHistory={game.blowState.actionHistory}
             actionsDisabled={actionsDisabled || game.isSpectator}
-            currentPlayerId={game.you}
-            currentTurn={game.currentTurn}
+            currentPlayerId={game.youSeatId}
+            currentTurn={game.currentTurnSeatId}
             highest={highest}
             onDeclare={onDeclare}
             onPass={onPass}
@@ -477,7 +479,7 @@ export function GameBoard({
                 style={[
                   styles.selfCard,
                   (game.isSpectator
-                    ? game.currentTurn === self.playerId
+                    ? game.currentTurnSeatId === self.playerId
                     : isMyTurn) && styles.selfCardTurn,
                 ]}
               >

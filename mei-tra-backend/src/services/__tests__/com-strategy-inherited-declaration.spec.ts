@@ -2,11 +2,15 @@ import { ComStrategyService } from '../com-strategy.service';
 import { IBlowService } from '../interfaces/blow-service.interface';
 import { ICardService } from '../interfaces/card-service.interface';
 import { IPlayService } from '../interfaces/play-service.interface';
-import { BlowDeclaration, DomainPlayer, GameState } from '../../types/game.types';
+import {
+  BlowDeclaration,
+  DomainPlayer,
+  GameState,
+} from '../../types/game.types';
 
 /**
  * A COM that replaces a human inherits that human's blow declaration — the
- * player-reference remap deliberately moves the bid to the seat.
+ * declaration remains attached to that stable seat.
  *
  * Both declare-blow and pass-blow reject a player who has already declared
  * (hasPlayerDeclaredInBlow), so such a seat has NO legal action. If the
@@ -18,7 +22,18 @@ const comPlayer = (over: Partial<DomainPlayer> = {}): DomainPlayer =>
   ({
     playerId: 'com-timeout-0-123',
     name: 'COM',
-    hand: ['A♠', 'K♠', 'Q♠', 'J♠', '10♠', '9♠', '8♠', '7♠', '6♠', '5♠'],
+    hand: [
+      'A♠',
+      'K♠',
+      'Q♠',
+      'J♠',
+      '10♠',
+      '9♠',
+      '8♠',
+      '7♠',
+      '6♠',
+      '5♠',
+    ],
     team: 0,
     isPasser: false,
     isCOM: true,

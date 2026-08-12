@@ -2,7 +2,8 @@ import type {
   GameHistoryReplayEventContract,
   GameHistoryReplayViewContract,
 } from '@meitra/contracts/game-history';
-import type { PlayerContract, Team, TeamNames } from '@meitra/contracts/game';
+import type { Team, TeamNames } from '@meitra/contracts/game';
+import type { MobilePlayer } from '@/types/game';
 
 import { getTeamDisplayName } from './team-labels';
 import { trumpLabel } from './trump-labels';
@@ -132,7 +133,7 @@ function formatDelta(delta: number | undefined): string {
 
 export function buildRoundTableRows(
   replay: GameHistoryReplayViewContract | null,
-  players: PlayerContract[] = [],
+  players: MobilePlayer[] = [],
   teamNames?: TeamNames,
 ): RoundRow[] {
   if (!replay) return [];

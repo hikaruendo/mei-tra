@@ -4,10 +4,7 @@ import { IGameStateRepository } from '../../repositories/interfaces/game-state.r
 import { IRoomRepository } from '../../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
 import { GameStateFactory } from '../game-state.factory';
-import {
-  DomainPlayer,
-  GameState,
-} from '../../types/game.types';
+import { DomainPlayer, GameState } from '../../types/game.types';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';

@@ -1,4 +1,5 @@
 import type { BlowDeclarationContract } from '@meitra/contracts/game';
+import { asSeatId } from '@meitra/contracts/ids';
 
 import {
   getValidBlowPairValues,
@@ -9,7 +10,7 @@ import {
 const declaration = (
   overrides: Partial<BlowDeclarationContract> = {},
 ): BlowDeclarationContract => ({
-  playerId: 'player-1',
+  seatId: asSeatId('player-1'),
   trumpType: 'zuppe',
   numberOfPairs: 6,
   timestamp: 1,

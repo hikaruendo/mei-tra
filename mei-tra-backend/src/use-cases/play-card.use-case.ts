@@ -16,6 +16,7 @@ import {
 import { IPlayService } from '../services/interfaces/play-service.interface';
 import { asSeatId } from '../types/identity.types';
 import { resolveCurrentPlayer } from '../types/current-turn';
+import { toFieldContract } from '../types/game-contract-adapters';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -120,9 +121,8 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
       const cardPlayedPayload: CardPlayedPayload = {
         seatId: asSeatId(player.playerId),
-        playerId: player.playerId,
         card,
-        field: currentField,
+        field: toFieldContract(currentField),
         players: resolveTransportPlayers(roomGameState, state.players, {
           roomPlayers: room?.players,
         }),
@@ -162,12 +162,11 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
         cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.playerId);
-        cardPlayedPayload.nextPlayerId = nextPlayer.playerId;
         events.push({
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: asSeatId(nextPlayer.playerId),
         });
       }
 

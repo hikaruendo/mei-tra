@@ -1,10 +1,12 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type {
-  FieldCompletePayload,
   GameOverPayload,
-  NewRoundStartedPayload,
   RoundResultsPayload,
   UpdatePhasePayload,
+} from '@contracts/game';
+import type {
+  FieldCompletePayload,
+  NewRoundStartedPayload,
 } from '@contracts/game';
 import {
   ICompleteFieldUseCase,
@@ -24,6 +26,7 @@ import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
+import { toCompletedFieldContract } from '../types/game-contract-adapters';
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../types/current-turn';
 
@@ -107,10 +110,8 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
 
       const fieldCompletePayload: FieldCompletePayload = {
         winnerSeatId: asSeatId(winner.playerId),
-        winnerId: winner.playerId,
-        field: completedField,
+        field: toCompletedFieldContract(completedField),
         nextSeatId: asSeatId(winner.playerId),
-        nextPlayerId: winner.playerId,
       };
       const room = await this.roomService.getRoom(roomId);
 
@@ -424,13 +425,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         roomPlayers: room?.players,
       }),
       currentTurnSeatId: asSeatId(nextBlowPlayer.playerId),
-      currentTurn: nextBlowPlayer.playerId,
       gamePhase: 'blow',
       currentField: null,
       completedFields: [],
       negriCard: null,
       negriSeatId: null,
-      negriPlayerId: null,
       revealedAgari: null,
       currentTrump: null,
       currentHighestDeclaration: null,

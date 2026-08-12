@@ -188,7 +188,6 @@ export class StartGameUseCase implements IStartGameUseCase {
             winner: null,
           },
           currentTurnSeatId: asSeatId(currentTurnPlayer.playerId),
-          currentTurnPlayerId: currentTurnPlayer.playerId,
         },
       };
     } catch (error) {

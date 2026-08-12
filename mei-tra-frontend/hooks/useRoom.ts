@@ -18,7 +18,7 @@ import { ConnectionUser, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
-import { resolveSeatAlias } from '@meitra/game-client/identity';
+import { asSeatId } from '@contracts/ids';
 
 interface UseRoomOptions {
   users?: ConnectionUser[];
@@ -219,11 +219,10 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // プレイヤー参加（ルーム関連）
     const handleRoomPlayerJoined = ({
       seatId,
-      playerId,
       roomId,
       isHost,
     }: RoomPlayerJoinedPayload) => {
-      const joinedSeatId = resolveSeatAlias(seatId, playerId)!;
+      const joinedSeatId = seatId;
       setAvailableRooms(prevRooms => {
         const updatedRooms = prevRooms.map(room => {
           if (room.id !== roomId) return room;
@@ -232,7 +231,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             if (typeof p === 'string') {
               return {
                 socketId: '',
-                seatId: resolveSeatAlias(undefined, p)!,
+                seatId: asSeatId(p),
                 playerId: p,
                 name: p,
                 hand: [],
@@ -353,7 +352,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           status: RoomStatus.PLAYING,
           players: currentRoomRef.current.players.map(p => {
             const updatedPlayer = players.find(
-              (player) => player.playerId === p.playerId,
+              (player) => player.seatId === p.seatId,
             );
             return updatedPlayer ? { ...p, hand: updatedPlayer.hand } : p;
           })
@@ -380,7 +379,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         const updatedRoom = {
           ...currentRoomRef.current,
           players: currentRoomRef.current.players.map(roomPlayer => {
-            const updatedPlayer = players.find(p => p.playerId === roomPlayer.playerId);
+            const updatedPlayer = players.find(
+              (player) => player.seatId === roomPlayer.seatId,
+            );
             if (updatedPlayer) {
               return {
                 ...roomPlayer,

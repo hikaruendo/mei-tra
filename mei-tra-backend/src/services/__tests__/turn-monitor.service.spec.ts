@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { TurnMonitorService } from '../turn-monitor.service';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomStatus } from '../../types/room.types';
+import { asSeatId } from '../../types/identity.types';
 
 describe('TurnMonitorService', () => {
   beforeEach(() => {
@@ -27,6 +28,7 @@ describe('TurnMonitorService', () => {
               name: 'Player 1',
             },
           ],
+          currentSeatId: asSeatId('p1'),
           currentPlayerIndex: 0,
           gamePhase: 'play',
         }),
@@ -49,7 +51,7 @@ describe('TurnMonitorService', () => {
     await service.acknowledge('room-1', 'socket-1', 'user-1');
 
     expect(emit).toHaveBeenCalledWith('player-idle-cleared', {
-      playerId: 'p1',
+      seatId: 'p1',
       roomId: 'room-1',
     });
   });
@@ -72,6 +74,7 @@ describe('TurnMonitorService', () => {
               name: 'Player 1',
             },
           ],
+          currentSeatId: asSeatId('p1'),
           currentPlayerIndex: 0,
           gamePhase: 'play',
         }),
@@ -115,6 +118,7 @@ describe('TurnMonitorService', () => {
               name: 'Player 1',
             },
           ],
+          currentSeatId: asSeatId('p1'),
           currentPlayerIndex: 0,
           gamePhase: 'play',
         }),

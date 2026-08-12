@@ -7,6 +7,7 @@ import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.s
 import { RoomMembershipService } from './room-membership.service';
 import { ActiveRoomMembership } from '../types/room-membership.types';
 import { asSeatId } from '../types/identity.types';
+import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 
@@ -217,7 +218,6 @@ export class DisconnectGatewayEffectsService {
           event: 'player-converted-to-com',
           payload: {
             seatId: asSeatId(playerId),
-            playerId,
             playerName,
             message: 'Player disconnected for too long - converted to COM',
           },
@@ -227,13 +227,7 @@ export class DisconnectGatewayEffectsService {
           scope: 'room',
           roomId,
           event: 'blow-updated',
-          payload: {
-            declarations: blowState.declarations,
-            actionHistory: blowState.actionHistory,
-            currentHighest: blowState.currentHighestDeclaration,
-            lastPasserSeatId: blowState.lastPasserSeatId,
-            lastPasser: blowState.lastPasser,
-          },
+          payload: toBlowUpdatedPayload(blowState),
         },
         this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
           rooms: await this.roomService.listRooms(),
@@ -369,7 +363,6 @@ export class DisconnectGatewayEffectsService {
         event: 'player-left',
         payload: {
           seatId: asSeatId(player.playerId),
-          playerId: player.playerId,
           roomId,
         },
       },
@@ -379,7 +372,6 @@ export class DisconnectGatewayEffectsService {
         event: 'player-disconnected',
         payload: {
           seatId: asSeatId(player.playerId),
-          playerId: player.playerId,
           playerName,
           roomId,
         },

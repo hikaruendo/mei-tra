@@ -7,6 +7,7 @@ import {
   Team,
 } from '../../types/game.types';
 import { TransportPlayer } from '../../types/player-adapters';
+import { asSeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 
 describe('WatchRoomUseCase', () => {
@@ -100,7 +101,7 @@ describe('WatchRoomUseCase', () => {
         (players: DomainPlayer[]): TransportPlayer[] =>
           players.map((domainPlayer) => ({
             socketId: `${domainPlayer.playerId}-socket`,
-            playerId: domainPlayer.playerId,
+            seatId: asSeatId(domainPlayer.playerId),
             name: domainPlayer.name,
             userId: domainPlayer.playerId,
             isAuthenticated: true,
@@ -126,7 +127,7 @@ describe('WatchRoomUseCase', () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.gameState.isSpectator).toBe(true);
-    expect(result.data?.gameState.you).toBeNull();
+    expect(result.data?.gameState.youSeatId).toBeNull();
     expect(result.data?.gameState.negriCard).toBe('A♠');
     expect(result.data?.gameState.players.map((p) => p.hand)).toEqual([
       ['A♠', 'K♠'],

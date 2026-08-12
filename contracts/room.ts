@@ -33,9 +33,7 @@ export interface UpdateTeamNamesPayload {
 export interface RoomContract {
   id: string;
   name: string;
-  hostSeatId?: SeatId;
-  /** @deprecated Use hostSeatId. */
-  hostId: string;
+  hostSeatId: SeatId;
   status: RoomStatusContract;
   players: RoomPlayerContract[];
   settings: RoomSettingsContract;
@@ -50,17 +48,13 @@ export interface RoomSyncPayload {
 }
 
 export interface RoomPlayerJoinedPayload {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   roomId: string;
   isHost: boolean;
 }
 
 export interface GamePlayerJoinedPayload {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   roomId: string;
   isHost: boolean;
   roomStatus?: RoomStatusContract;

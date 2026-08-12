@@ -11,6 +11,11 @@ import {
 import { resolveTransportPlayers } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
 import { resolveCurrentSeatId } from '../types/current-turn';
+import {
+  toBlowStateContract,
+  toCompletedFieldContract,
+  toFieldContract,
+} from '../types/game-contract-adapters';
 
 @Injectable()
 export class WatchRoomUseCase implements IWatchRoomUseCase {
@@ -85,22 +90,19 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
     return {
       players: spectatorPlayers,
       gamePhase: state.gamePhase ?? 'waiting',
-      currentField: state.playState?.currentField ?? null,
+      currentField: state.playState?.currentField
+        ? toFieldContract(state.playState.currentField)
+        : null,
       currentTurnSeatId: currentTurn ? asSeatId(currentTurn) : null,
-      currentTurn,
-      blowState: state.blowState,
+      blowState: toBlowStateContract(state.blowState),
       teamScores: state.teamScores,
       youSeatId: null,
-      you: null,
       isSpectator: true,
       negriCard: state.playState?.negriCard ?? null,
       negriSeatId: state.playState?.negriSeatId ?? null,
-      negriPlayerId:
-        state.playState?.negriSeatId ?? state.playState?.negriPlayerId ?? null,
-      fields: state.playState?.fields ?? [],
+      fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
       roomId: room.id,
       hostSeatId: asSeatId(room.hostId),
-      hostId: room.hostId,
       pointsToWin: room.settings.pointsToWin,
       teamNames: room.settings.teamNames,
     };

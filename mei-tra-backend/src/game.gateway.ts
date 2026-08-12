@@ -1537,13 +1537,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      const {
-        players,
-        pointsToWin,
-        updatePhase,
-        currentTurnSeatId,
-        currentTurnPlayerId,
-      } = result.data;
+      const { players, pointsToWin, updatePhase, currentTurnSeatId } =
+        result.data;
       const startGameEvents =
         await this.startGameGatewayEffectsService.buildEvents({
           roomId: data.roomId,
@@ -1551,7 +1546,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           pointsToWin,
           updatePhase,
           currentTurnSeatId,
-          currentTurnPlayerId,
         });
 
       this.dispatchGameplayEvents(startGameEvents, playerId);
@@ -1728,7 +1722,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         agari: state.agari,
         message: 'Select a card from your hand as Negri',
         seatId: asSeatId(requesterPlayerId),
-        playerId: requesterPlayerId,
       };
       client.emit('reveal-agari', payload);
     } catch (error) {

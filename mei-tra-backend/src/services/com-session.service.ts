@@ -62,10 +62,7 @@ export class ComSessionService {
 
   private createActiveCOMReplacement(
     index: number | string,
-    sourcePlayer: Pick<
-      RoomPlayer,
-      'seatId' | 'playerId' | 'team'
-    >,
+    sourcePlayer: Pick<RoomPlayer, 'seatId' | 'playerId' | 'team'>,
   ): RoomPlayer {
     return this.createCOMPlaceholder(
       index,

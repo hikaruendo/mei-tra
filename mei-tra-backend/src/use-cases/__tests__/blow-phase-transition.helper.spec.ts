@@ -137,7 +137,7 @@ describe('transitionToPlayPhase', () => {
       event: 'reveal-agari',
       payload: {
         agari: 'H-A',
-        playerId: 'player-1',
+        seatId: 'player-1',
       },
     });
     const updatePhaseEvent = result.delayedEvents.find(

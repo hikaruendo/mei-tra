@@ -1,5 +1,4 @@
 import type { TeamNames } from '@meitra/contracts/game';
-import type { RoomContract } from '@meitra/contracts/room';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -16,9 +15,10 @@ import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors, teamColors } from '@/theme/colors';
+import type { MobileRoom } from '@/types/game';
 
 interface WaitingRoomProps {
-  room: RoomContract;
+  room: MobileRoom;
   currentPlayerId: string | null;
   isHost: boolean;
   onShuffle: () => void;

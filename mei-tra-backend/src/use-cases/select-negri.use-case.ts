@@ -102,7 +102,6 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           payload: {
             negriCard: card,
             startingSeatId: asSeatId(state.players[winnerIndex].playerId),
-            startingPlayer: state.players[winnerIndex].playerId,
           },
         },
         {

@@ -209,7 +209,6 @@ describe('DisconnectGatewayEffectsService', () => {
       expect.objectContaining({
         payload: {
           seatId: 'player-1',
-          playerId: 'player-1',
           playerName: 'Host Display',
           roomId: 'room-1',
         },
@@ -487,8 +486,14 @@ describe('DisconnectGatewayEffectsService', () => {
       payload: {
         declarations: [],
         actionHistory: [],
-        currentHighest: blowState.currentHighestDeclaration,
-        lastPasser: null,
+        currentHighest: {
+          seatId: 'com-timeout',
+          team: undefined,
+          trumpType: 'herz',
+          numberOfPairs: 7,
+          timestamp: 1,
+        },
+        lastPasserSeatId: null,
       },
     });
   });

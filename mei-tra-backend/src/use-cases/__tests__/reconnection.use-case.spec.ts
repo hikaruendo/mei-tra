@@ -4,6 +4,7 @@ import { IGameStateService } from '../../services/interfaces/game-state-service.
 import { RoomStatus } from '../../types/room.types';
 import { UserProfile } from '../../types/user.types';
 import { RoomMembershipService } from '../../services/room-membership.service';
+import { asSeatId } from '../../types/identity.types';
 
 const createRoomMembershipService = (): RoomMembershipService =>
   ({
@@ -334,7 +335,7 @@ describe('ReconnectionUseCase', () => {
       expect.objectContaining({
         success: true,
         mode: 'active-game',
-        selfPlayerId: 'seat-1',
+        selfSeatId: 'seat-1',
       }),
     );
     if (!result.success || result.mode !== 'active-game') {
@@ -376,6 +377,7 @@ describe('ReconnectionUseCase', () => {
           },
         ],
         gamePhase: 'play',
+        currentSeatId: asSeatId('player-2'),
         currentPlayerIndex: 1,
         blowState: {
           declarations: [],
@@ -465,16 +467,15 @@ describe('ReconnectionUseCase', () => {
       },
     });
 
-    expect(snapshot?.selfPlayerId).toBe('seat-1');
     expect(snapshot?.reconnectToken).toBe('seat-1');
-    expect(snapshot?.currentTurnPlayerId).toBe('player-2');
-    expect(snapshot?.gameState.currentTurn).toBe('player-2');
-    expect(snapshot?.gameState.you).toBe('seat-1');
+    expect(snapshot?.currentTurnSeatId).toBe('player-2');
+    expect(snapshot?.gameState.currentTurnSeatId).toBe('player-2');
+    expect(snapshot?.gameState.youSeatId).toBe('seat-1');
     expect(snapshot?.gameState.revealedAgari).toBe('J♠');
     expect(snapshot?.gameState.players).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ playerId: 'seat-1', hand: ['A♠'] }),
-        expect.objectContaining({ playerId: 'player-2', hand: [] }),
+        expect.objectContaining({ seatId: 'seat-1', hand: ['A♠'] }),
+        expect.objectContaining({ seatId: 'player-2', hand: [] }),
       ]),
     );
     expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
@@ -482,7 +483,7 @@ describe('ReconnectionUseCase', () => {
     expect(gameState.upsertSessionUser).not.toHaveBeenCalled();
   });
 
-  it('prefers currentPlayerId over a stale currentPlayerIndex in active snapshots', async () => {
+  it('uses currentSeatId and ignores stale legacy turn fields', async () => {
     const roomGameState = {
       findPlayerByActorId: jest.fn().mockReturnValue(null),
       getState: () => ({
@@ -507,6 +508,7 @@ describe('ReconnectionUseCase', () => {
           },
         ],
         gamePhase: 'blow',
+        currentSeatId: asSeatId('seat-1'),
         currentPlayerId: 'seat-1',
         currentPlayerIndex: 1,
         blowState: {
@@ -575,8 +577,8 @@ describe('ReconnectionUseCase', () => {
       },
     });
 
-    expect(snapshot?.currentTurnPlayerId).toBe('seat-1');
-    expect(snapshot?.gameState.currentTurn).toBe('seat-1');
+    expect(snapshot?.currentTurnSeatId).toBe('seat-1');
+    expect(snapshot?.gameState.currentTurnSeatId).toBe('seat-1');
   });
 
   it('reconciles persisted players before reconnecting to a waiting room', async () => {
@@ -686,7 +688,7 @@ describe('ReconnectionUseCase', () => {
       expect.objectContaining({
         success: true,
         mode: 'waiting-room',
-        selfPlayerId: 'p1',
+        selfSeatId: 'p1',
       }),
     );
   });
@@ -763,7 +765,7 @@ describe('ReconnectionUseCase', () => {
       expect.objectContaining({
         success: true,
         mode: 'waiting-room',
-        selfPlayerId: 'seat-1',
+        selfSeatId: 'seat-1',
       }),
     );
     expect(roomService.handlePlayerReconnection).toHaveBeenCalledWith(

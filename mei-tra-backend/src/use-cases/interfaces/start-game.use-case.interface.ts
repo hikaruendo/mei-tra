@@ -12,8 +12,6 @@ export interface StartGameSuccessData {
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
   currentTurnSeatId: SeatId;
-  /** @deprecated Use currentTurnSeatId. */
-  currentTurnPlayerId: string;
 }
 
 export interface StartGameResponse {
