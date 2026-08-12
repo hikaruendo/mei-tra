@@ -40,6 +40,7 @@ export class GetUserRecentGameHistoryUseCase
           completedAt,
           roundCount: summary.roundNumbers.length,
           totalEntries: summary.totalEntries,
+          teamNames: room.settings.teamNames,
           winningTeam: summary.winningTeam,
           lastActionType: summary.lastActionType,
         } satisfies RecentGameHistoryItem;

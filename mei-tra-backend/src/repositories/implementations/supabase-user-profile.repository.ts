@@ -296,7 +296,9 @@ export class SupabaseUserProfileRepository
       const { data: participantRows, error: participantError } =
         await this.supabase
           .from('room_players')
-          .select('id, room_id, rooms!inner(status, host_seat_id)')
+          .select(
+            'id, room_id, rooms!room_players_room_id_fkey!inner(status, host_seat_id)',
+          )
           .eq('user_id', userId)
           .in('rooms.status', ACTIVE_ACCOUNT_ROOM_STATUSES);
 

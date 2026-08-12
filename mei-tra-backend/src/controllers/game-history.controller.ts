@@ -20,7 +20,7 @@ import {
   GameHistoryReplayView,
   GameHistorySummary,
 } from '../types/game-history.types';
-import { RoomPlayer } from '../types/room.types';
+import { Room, RoomPlayer } from '../types/room.types';
 import { resolveSeatId } from '../types/identity.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
@@ -48,15 +48,20 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistorySummary> {
-    const { playerNames } = await this.getRoomParticipantContext(
+    const { playerNames, teamNames } = await this.getRoomParticipantContext(
       roomId,
       currentUser.id,
     );
-    return this.getGameHistoryUseCase.summarize(
+    const summary = await this.getGameHistoryUseCase.summarize(
       roomId,
       this.parseQuery(query),
       playerNames,
     );
+
+    return {
+      ...summary,
+      teamNames,
+    };
   }
 
   @Get(':roomId/replay')
@@ -104,6 +109,7 @@ export class GameHistoryController {
   ): Promise<{
     participant: RoomPlayer;
     playerNames: Record<string, string>;
+    teamNames: Room['settings']['teamNames'];
   }> {
     const room = await this.roomRepository.findById(roomId);
     if (!room) {
@@ -122,6 +128,7 @@ export class GameHistoryController {
       playerNames: Object.fromEntries(
         room.players.map((player) => [player.playerId, player.name]),
       ),
+      teamNames: room.settings.teamNames,
     };
   }
 

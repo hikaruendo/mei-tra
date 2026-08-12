@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { Link } from '@/i18n/routing';
+import { CardFace } from '@/components/game/CardFace';
 import type {
   GameHistoryActionType,
   GameHistoryReplayDetailItem,
@@ -619,13 +621,99 @@ export function GameHistoryDock({
     );
   };
 
-  const renderEventList = (
-    items: Array<{ event: GameHistoryReplayEvent; roundNumber: number | null }>,
+  const extractViewerHand = (event: GameHistoryReplayEvent): string[] => {
+    const hand = event.actionData.viewerStartingHand;
+
+    return Array.isArray(hand)
+      ? hand.filter((card): card is string => typeof card === 'string')
+      : [];
+  };
+
+  const renderHandSnapshot = (
+    label: string,
+    hand: string[],
+    keyPrefix: string,
   ) => (
-    <ul className={styles.eventList}>
-      {items.map(({ event, roundNumber }) => renderEventItem(event, roundNumber))}
-    </ul>
+    <div className={styles.startingHandPanel}>
+      <span className={styles.startingHandLabel}>{label}</span>
+      {hand.length > 0 ? (
+        <div className={styles.startingHandCards}>
+          {hand.map((card, index) => (
+            <CardFace
+              key={`${keyPrefix}-${card}-${index}`}
+              card={card}
+              className={styles.startingHandCard}
+            />
+          ))}
+        </div>
+      ) : (
+        <span className={styles.startingHandEmpty}>{t('noStartingHand')}</span>
+      )}
+    </div>
   );
+
+  const renderRoundTimeline = (
+    round: GameHistoryReplayRound,
+    events: GameHistoryReplayEvent[],
+  ) => {
+    const items: ReactNode[] = [];
+    let renderedInitialHand = false;
+
+    events.forEach((event) => {
+      const hand = extractViewerHand(event);
+      const isBrokenHand = event.actionType === 'broken_hand_revealed';
+
+      if (hand.length > 0 && !isBrokenHand && !renderedInitialHand) {
+        items.push(
+          <li
+            key={`${event.id}-starting-hand`}
+            className={styles.handSnapshotItem}
+          >
+            {renderHandSnapshot(
+              t('startingHand'),
+              hand,
+              `${event.id}-starting-hand`,
+            )}
+          </li>,
+        );
+        renderedInitialHand = true;
+      }
+
+      items.push(renderEventItem(event, round.roundNumber));
+
+      if (hand.length > 0 && isBrokenHand) {
+        items.push(
+          <li
+            key={`${event.id}-redealt-hand`}
+            className={styles.handSnapshotItem}
+          >
+            {renderHandSnapshot(
+              t('redealtHand'),
+              hand,
+              `${event.id}-redealt-hand`,
+            )}
+          </li>,
+        );
+      }
+    });
+
+    if (!renderedInitialHand && items.length > 0) {
+      items.unshift(
+        <li
+          key={`${round.roundNumber ?? 'pre-game'}-starting-hand-fallback`}
+          className={styles.handSnapshotItem}
+        >
+          {renderHandSnapshot(
+            t('startingHand'),
+            round.viewerStartingHand ?? [],
+            `${round.roundNumber ?? 'pre-game'}-starting-hand-fallback`,
+          )}
+        </li>,
+      );
+    }
+
+    return <ul className={styles.eventList}>{items}</ul>;
+  };
 
   if (variant === 'dock' && isMinimized) {
     return (
@@ -791,12 +879,7 @@ export function GameHistoryDock({
                             ))}
                           </div>
                         ) : null}
-                        {renderEventList(
-                          chronologicalEvents.map((event) => ({
-                            event,
-                            roundNumber: round.roundNumber,
-                          })),
-                        )}
+                        {renderRoundTimeline(round, chronologicalEvents)}
                       </div>
                     </details>
                   );

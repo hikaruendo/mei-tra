@@ -140,7 +140,7 @@ describe('SupabaseUserProfileRepository account deletion helpers', () => {
       RoomStatus.PLAYING,
     ]);
     expect(roomPlayersSelect).toHaveBeenCalledWith(
-      'id, room_id, rooms!inner(status, host_seat_id)',
+      'id, room_id, rooms!room_players_room_id_fkey!inner(status, host_seat_id)',
     );
   });
 
