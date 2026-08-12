@@ -25,6 +25,7 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../types/current-turn';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {
@@ -90,7 +91,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         (player) => player.hand.length === 0,
       );
 
-      this.setNextDealer(state, winner.playerId);
+      setCurrentSeat(state, winner.playerId);
 
       if (state.playState) {
         state.playState.currentField = {
@@ -297,17 +298,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     );
   }
 
-  private setNextDealer(state: GameState, playerId: string) {
-    const winnerIndex = state.players.findIndex(
-      (player) => player.playerId === playerId,
-    );
-    if (winnerIndex !== -1) {
-      state.currentPlayerId = playerId;
-      state.currentSeatId = asSeatId(playerId);
-      state.currentPlayerIndex = winnerIndex;
-    }
-  }
-
   private findDeclaringTeam(state: GameState): Team | null {
     const highestDeclaration = state.blowState.currentHighestDeclaration;
     if (!highestDeclaration) {
@@ -427,8 +417,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       playState: newPlayState,
       blowState: newBlowState,
       currentSeatId: asSeatId(nextBlowPlayer.playerId),
-      currentPlayerId: nextBlowPlayer.playerId,
-      currentPlayerIndex: nextBlowIndex,
     });
 
     const newRoundPayload: NewRoundStartedPayload = {

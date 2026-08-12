@@ -216,10 +216,8 @@ export class GameEventLogService implements IGameEventLogService {
     return {
       roundNumber: input.roundNumber,
       gamePhase: input.gamePhase,
-      currentTurnSeatId:
-        input.currentSeatId ??
-        (input.currentPlayerId ? asSeatId(input.currentPlayerId) : null),
-      currentTurnPlayerId: input.currentSeatId ?? input.currentPlayerId ?? null,
+      currentTurnSeatId: input.currentSeatId ?? null,
+      currentTurnPlayerId: input.currentSeatId ?? null,
       teamScores: input.teamScores,
     };
   }

@@ -10,6 +10,7 @@ import {
 } from './interfaces/watch-room.use-case.interface';
 import { resolveTransportPlayers } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
+import { resolveCurrentSeatId } from '../types/current-turn';
 
 @Injectable()
 export class WatchRoomUseCase implements IWatchRoomUseCase {
@@ -72,10 +73,7 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       state.players.length > 0
         ? state.players
         : room.players.map((player) => toDomainPlayer(player));
-    const currentTurn =
-      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
-        ? state.players[state.currentPlayerIndex].playerId
-        : null;
+    const currentTurn = resolveCurrentSeatId(state);
     const spectatorPlayers = resolveTransportPlayers(
       roomGameState,
       statePlayers,

@@ -31,6 +31,11 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { asSeatId } from '../types/identity.types';
+import {
+  resolveCurrentPlayer,
+  resolveCurrentPlayerIndex,
+  setCurrentSeat,
+} from '../types/current-turn';
 
 @Injectable()
 export class PassBlowUseCase implements IPassBlowUseCase {
@@ -181,7 +186,10 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       let attempts = 0;
       const maxAttempts = state.players.length;
       while (attempts < maxAttempts) {
-        const currentPlayer = state.players[state.currentPlayerIndex];
+        const currentPlayer = resolveCurrentPlayer(state);
+        if (!currentPlayer) {
+          break;
+        }
         const hasActed =
           hasPlayerDeclaredInBlow(state.blowState, currentPlayer.playerId) ||
           hasPlayerPassedInBlow(state.blowState, currentPlayer);
@@ -197,7 +205,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       // Save the final turn state after skipping
       await roomGameState.saveState();
 
-      const nextPlayer = state.players[state.currentPlayerIndex];
+      const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
         events.push({
           scope: 'room',
@@ -232,7 +240,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       (state.blowState.currentBlowIndex + 1) % state.players.length;
 
     roomGameState.nextTurn();
-    const nextDealerIndex = state.currentPlayerIndex;
+    const nextDealerIndex = resolveCurrentPlayerIndex(state);
     const firstBlowIndex = (nextDealerIndex + 1) % state.players.length;
     const firstBlowPlayer = state.players[firstBlowIndex];
 
@@ -240,9 +248,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       return { events: [] };
     }
 
-    state.currentPlayerIndex = firstBlowIndex;
-    state.currentPlayerId = firstBlowPlayer.playerId;
-    state.currentSeatId = asSeatId(firstBlowPlayer.playerId);
+    setCurrentSeat(state, firstBlowPlayer.playerId);
     state.deck = this.cardService.generateDeck();
     roomGameState.dealCards();
 

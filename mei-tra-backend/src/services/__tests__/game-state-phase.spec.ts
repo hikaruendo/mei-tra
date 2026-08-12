@@ -3,6 +3,7 @@ import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';
 import { PlayService } from '../play.service';
 import { IGameStateRepository } from '../../repositories/interfaces/game-state.repository.interface';
+import { asSeatId } from '../../types/identity.types';
 
 describe('GameStateService phase transitions', () => {
   let service: GameStateService;
@@ -131,13 +132,12 @@ describe('GameStateService phase transitions', () => {
         isPasser: false,
       },
     ];
-    state.currentPlayerId = 'player-1';
-    state.currentPlayerIndex = 0;
+    state.currentSeatId = asSeatId('player-1');
 
     service.nextTurn();
 
-    expect(state.currentPlayerId).toBe('player-2');
-    expect(state.currentPlayerIndex).toBe(1);
+    expect(state.currentSeatId).toBe('player-2');
+    expect(service.getCurrentPlayerIndex()).toBe(1);
     expect(repository.update).not.toHaveBeenCalled();
 
     await service.saveState();
@@ -226,10 +226,8 @@ describe('GameStateService phase transitions', () => {
     service.startGame();
 
     const startedState = service.getState();
-    expect(startedState.currentPlayerIndex).toBe(2);
-    expect(startedState.players[startedState.currentPlayerIndex].playerId).toBe(
-      'player-3',
-    );
+    expect(service.getCurrentPlayerIndex()).toBe(2);
+    expect(startedState.currentSeatId).toBe('player-3');
     expect(startedState.blowState.currentBlowIndex).toBe(2);
     expect(repository.update).not.toHaveBeenCalled();
   });

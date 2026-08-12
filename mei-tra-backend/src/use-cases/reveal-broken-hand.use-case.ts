@@ -16,6 +16,7 @@ import {
 } from './helpers/player-resolution.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
 import { asSeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../types/current-turn';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
@@ -152,11 +153,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const firstBlowIndex = nextState.blowState.currentBlowIndex;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
-      nextState.currentPlayerId = firstBlowPlayer?.playerId ?? null;
-      nextState.currentSeatId = firstBlowPlayer
-        ? asSeatId(firstBlowPlayer.playerId)
-        : null;
-      nextState.currentPlayerIndex = firstBlowIndex;
+      setCurrentSeat(nextState, firstBlowPlayer?.playerId ?? null);
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;
       });

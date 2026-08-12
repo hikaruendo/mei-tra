@@ -27,6 +27,7 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { asSeatId } from '../types/identity.types';
+import { resolveCurrentPlayer } from '../types/current-turn';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -182,7 +183,10 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       let attempts = 0;
       const maxAttempts = state.players.length;
       while (attempts < maxAttempts) {
-        const currentPlayer = state.players[state.currentPlayerIndex];
+        const currentPlayer = resolveCurrentPlayer(state);
+        if (!currentPlayer) {
+          break;
+        }
         const hasActed =
           hasPlayerDeclaredInBlow(state.blowState, currentPlayer.playerId) ||
           hasPlayerPassedInBlow(state.blowState, currentPlayer);
@@ -198,7 +202,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       // Save the final turn state after skipping
       await roomGameState.saveState();
 
-      const nextPlayer = state.players[state.currentPlayerIndex];
+      const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
         events.push({
           scope: 'room',

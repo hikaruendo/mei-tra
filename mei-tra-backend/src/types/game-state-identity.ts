@@ -19,12 +19,9 @@ function normalizePlayedBySeatIds(field: Field) {
 }
 
 export function normalizeGameStateIdentityAliases(state: GameState): GameState {
-  const currentSeatValue =
-    state.currentSeatId ??
-    state.currentPlayerId ??
-    state.players[state.currentPlayerIndex]?.playerId ??
-    null;
-  const currentSeatId = currentSeatValue ? asSeatId(currentSeatValue) : null;
+  const currentSeatId = state.currentSeatId
+    ? asSeatId(state.currentSeatId)
+    : null;
   const players = state.players.map((player) => {
     const seatId = player.seatId ?? asSeatId(player.playerId);
     return { ...player, seatId, playerId: seatId };
@@ -129,12 +126,11 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
       })()
     : state.pendingBrokenHandReveal;
 
-  return {
+  const normalizedState: GameState = {
     ...state,
     identitySchemaVersion: 2,
     players,
     currentSeatId,
-    currentPlayerId: currentSeatId,
     blowState,
     playState,
     pendingBrokenHandReveal,
@@ -142,4 +138,8 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
       players.map((player) => [player.playerId, player.team]),
     ),
   };
+
+  delete normalizedState.currentPlayerId;
+  delete normalizedState.currentPlayerIndex;
+  return normalizedState;
 }

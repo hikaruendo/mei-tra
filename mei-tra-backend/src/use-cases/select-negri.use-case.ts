@@ -12,6 +12,7 @@ import {
   resolvePlayerByActorId,
 } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../types/current-turn';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {
@@ -87,9 +88,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         };
       }
 
-      state.currentPlayerIndex = winnerIndex;
-      state.currentPlayerId = winner.playerId;
-      state.currentSeatId = asSeatId(winner.playerId);
+      setCurrentSeat(state, winner.playerId);
       const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [

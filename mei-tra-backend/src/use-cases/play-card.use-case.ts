@@ -15,6 +15,7 @@ import {
 } from './helpers/player-resolution.helper';
 import { IPlayService } from '../services/interfaces/play-service.interface';
 import { asSeatId } from '../types/identity.types';
+import { resolveCurrentPlayer } from '../types/current-turn';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -158,7 +159,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       }
 
       roomGameState.nextTurn();
-      const nextPlayer = state.players[state.currentPlayerIndex];
+      const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
         cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.playerId);
         cardPlayedPayload.nextPlayerId = nextPlayer.playerId;

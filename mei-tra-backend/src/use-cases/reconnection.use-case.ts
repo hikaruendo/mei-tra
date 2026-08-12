@@ -15,6 +15,7 @@ import {
 import { DomainPlayer, Team } from '../types/game.types';
 import { RoomMembershipService } from '../services/room-membership.service';
 import { asSeatId, type SeatId } from '../types/identity.types';
+import { resolveCurrentSeatId } from '../types/current-turn';
 
 export type ReconnectionResult =
   | {
@@ -385,14 +386,7 @@ export class ReconnectionUseCase {
     player: DomainPlayer,
   ): ActiveGameSnapshot {
     const state = roomGameState.getState();
-    const currentTurnPlayerId =
-      state.currentPlayerId &&
-      state.players.some((player) => player.playerId === state.currentPlayerId)
-        ? state.currentPlayerId
-        : state.currentPlayerIndex !== -1 &&
-            state.players[state.currentPlayerIndex]
-          ? state.players[state.currentPlayerIndex].playerId
-          : null;
+    const currentTurnPlayerId = resolveCurrentSeatId(state);
 
     return {
       selfSeatId: asSeatId(player.playerId),

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomStatus } from '../types/room.types';
+import { resolveCurrentPlayer } from '../types/current-turn';
 
 const TURN_ACK_PING_INTERVAL_MS = 15 * 1000;
 const TURN_IDLE_WARNING_MS = 45 * 1000;
@@ -196,7 +197,7 @@ export class TurnMonitorService implements OnModuleDestroy {
 
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
-    const currentPlayer = state.players[state.currentPlayerIndex];
+    const currentPlayer = resolveCurrentPlayer(state);
 
     return (
       (state.gamePhase === 'play' || state.gamePhase === 'blow') &&
