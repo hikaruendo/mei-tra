@@ -4,6 +4,7 @@ import type {
   BackToLobbyPayload,
   BlowActionContract,
   BlowDeclarationContract,
+  BlowUpdatedPayload,
   BlowStartedPayload,
   BrokenPayload,
   CardPlayedPayload,
@@ -51,8 +52,16 @@ import {
 } from '../types/game.types';
 import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
-import { inferNextTurnAfterCardPlayed } from '../lib/utils/turnInference';
 import { getTeamDisplayName } from '../lib/utils/teamLabels';
+import {
+  createEmptyGameEventState,
+  createGameEventStateFromSnapshot,
+  createGameEventStateFromStartedGame,
+  reduceGameEvent,
+  type GameEventState,
+  type GameServerEvent,
+} from '@meitra/game-client/game-event-reducer';
+import { normalizePlayerIdentities } from '@meitra/game-client/identity';
 import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
 import { asSeatId } from '@contracts/ids';
 
@@ -190,6 +199,7 @@ export const useGame = () => {
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
   const gameOverShownRef = useRef<string | null>(null);
+  const gameEventStateRef = useRef(createEmptyGameEventState());
   const agariRequestKeyRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
   const gameStateSyncKeyRef = useRef<string | null>(null);
@@ -259,6 +269,7 @@ export const useGame = () => {
   const [paused, setPaused] = useState(false);
 
   const resetRoomState = useCallback(() => {
+    gameEventStateRef.current = createEmptyGameEventState();
     gameOverShownRef.current = null;
     agariRequestKeyRef.current = null;
     roomBootstrapRef.current = null;
@@ -529,6 +540,59 @@ export const useGame = () => {
 
     if (!socket) return;
 
+    const commitGameEventState = (
+      previous: GameEventState,
+      next: GameEventState,
+    ) => {
+      if (next.players !== previous.players) {
+        const nextPlayers = mergePlayersPreservingIdentity(
+          playersRef.current,
+          fromPlayerContracts(next.players),
+        );
+        commitPlayers(nextPlayers);
+        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
+        setIdlePlayerIds((idleIds) =>
+          idleIds.filter((playerId) =>
+            nextPlayers.some((player) => player.playerId === playerId),
+          ),
+        );
+        if (!isSpectator) {
+          syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
+        }
+      }
+
+      setGamePhase(toUiGamePhase(next.gamePhase));
+      setWhoseTurn(next.currentTurnSeatId);
+      setCurrentField(toUiField(next.currentField));
+      setCurrentTrump(next.blowState.currentTrump);
+      setCurrentHighestDeclaration(
+        next.blowState.currentHighestDeclaration
+          ? toUiBlowDeclaration(next.blowState.currentHighestDeclaration)
+          : null,
+      );
+      setBlowDeclarations(
+        next.blowState.declarations.map(toUiBlowDeclaration),
+      );
+      setBlowActionHistory(
+        (next.blowState.actionHistory ?? []).map(toUiBlowAction),
+      );
+      setTeamScores(toUiTeamScores(next.teamScores));
+      setNegriCard(next.negriCard);
+      setNegriPlayerId(next.negriSeatId);
+      setRevealedAgari(next.revealedAgari);
+      setCompletedFields(toUiCompletedFields(next.fields));
+    };
+
+    const applyGameServerEvent = (event: GameServerEvent) => {
+      const previous = gameEventStateRef.current;
+      const next = reduceGameEvent(previous, event, {
+        selfSeatId: getCurrentUserPlayerId(),
+      });
+      gameEventStateRef.current = next;
+      commitGameEventState(previous, next);
+      return next;
+    };
+
     const socketHandlers = {
       // ユーザーの更新
       'update-users': (users: ConnectionUser[]) => {
@@ -563,6 +627,10 @@ export const useGame = () => {
         if (shouldSkipLegacyUpdatePlayers(currentRoomId)) {
           return;
         }
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          players: normalizePlayerIdentities(playerContracts),
+        };
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -668,6 +736,24 @@ export const useGame = () => {
         teamNames,
         isSpectator,
       }: GameStatePayload) => {
+        gameEventStateRef.current = createGameEventStateFromSnapshot({
+          players: playerContracts,
+          gamePhase,
+          currentField,
+          currentTurnSeatId,
+          blowState,
+          teamScores,
+          youSeatId,
+          negriCard,
+          negriSeatId,
+          revealedAgari: syncedRevealedAgari,
+          fields,
+          roomId,
+          hostSeatId,
+          pointsToWin,
+          teamNames,
+          isSpectator,
+        });
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -772,6 +858,12 @@ export const useGame = () => {
         pointsToWin,
         teamNames,
       }: GameStartedPayload) => {
+        gameEventStateRef.current = createGameEventStateFromStartedGame({
+          roomId,
+          players: playerContracts,
+          pointsToWin,
+          teamNames,
+        });
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -805,18 +897,12 @@ export const useGame = () => {
         winner,
         currentHighestDeclaration,
       }: UpdatePhasePayload) => {
+        applyGameServerEvent({
+          type: 'update-phase',
+          payload: { phase, scores, winner, currentHighestDeclaration },
+        });
         const nextPhase = toUiGamePhase(phase);
-        setGamePhase(nextPhase);
-        setTeamScores(toUiTeamScores(scores));
-        
-        // Set current trump when transitioning to play phase
-        if (nextPhase === 'play' && currentHighestDeclaration) {
-          setCurrentTrump(currentHighestDeclaration.trumpType);
-        } else {
-          // Reset current trump when not in play phase
-          setCurrentTrump(null);
-        }
-        
+
         // Only show alert for phases other than 'play' and when not transitioning to a new round
         if (winner !== null && nextPhase !== 'play' && nextPhase !== 'blow') {
           setNotification({
@@ -832,7 +918,7 @@ export const useGame = () => {
         setNotification({ message, type: 'error' });
       },
       'update-turn': (playerId: UpdateTurnPayload) => {
-        setWhoseTurn(playerId);
+        applyGameServerEvent({ type: 'update-turn', payload: playerId });
         if (socket && currentRoomId && !isSpectator) {
           socket.emit('turn-ack', { roomId: currentRoomId });
         }
@@ -867,40 +953,18 @@ export const useGame = () => {
 
         // Keep ref set until the next game starts (game-started handler clears it)
       },
-      'blow-started': ({ startingSeatId, players: playerContracts }: BlowStartedPayload) => {
-        setGamePhase('blow');
-        const nextPlayers = mergePlayersPreservingIdentity(
-          playersRef.current,
-          fromPlayerContracts(playerContracts),
-        );
-        commitPlayers(nextPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(startingSeatId);
+      'blow-started': (payload: BlowStartedPayload) => {
+        applyGameServerEvent({ type: 'blow-started', payload });
       },
-      'blow-updated': ({ declarations, actionHistory, currentHighest }: { declarations: BlowDeclarationContract[]; actionHistory?: BlowActionContract[]; currentHighest: BlowDeclarationContract | null }) => {
-        setBlowDeclarations(declarations.map(toUiBlowDeclaration));
-        setBlowActionHistory((actionHistory ?? []).map(toUiBlowAction));
-        setCurrentHighestDeclaration(
-          currentHighest ? toUiBlowDeclaration(currentHighest) : null,
-        );
-        // Note: Player state updates (including isPasser) are handled by 'update-players' event
-        // This prevents race conditions and ensures consistency across all blow phase operations
+      'blow-updated': (payload: BlowUpdatedPayload) => {
+        applyGameServerEvent({ type: 'blow-updated', payload });
       },
-      'broken': ({ nextSeatId, players: playerContracts, gamePhase }: BrokenPayload) => {
+      'broken': (payload: BrokenPayload) => {
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
         });
-        resetBlowState({ preservePlayers: true });
-        const nextPlayers = mergePlayersPreservingIdentity(
-          playersRef.current,
-          fromPlayerContracts(playerContracts),
-        );
-        commitPlayers(nextPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(nextSeatId);
-        setGamePhase(toUiGamePhase(gamePhase ?? 'blow'));
-        setCurrentTrump(null);
+        applyGameServerEvent({ type: 'broken', payload });
       },
       // TODO: 実装
       // 'reveal-hands': ({ players }: { players: { playerId: string; hand: string[] }[] }) => {
@@ -912,135 +976,48 @@ export const useGame = () => {
       //   );
       // },
       'round-reset': () => {
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          blowState: createEmptyGameEventState().blowState,
+          currentField: null,
+          fields: [],
+          negriCard: null,
+          negriSeatId: null,
+          revealedAgari: null,
+        };
         resetBlowState();
       },
-      'round-cancelled': ({
-        nextDealerSeatId,
-        players: playerContracts,
-        currentTrump,
-        currentHighestDeclaration,
-        blowDeclarations,
-        actionHistory,
-      }: RoundCancelledPayload) => {
+      'round-cancelled': (payload: RoundCancelledPayload) => {
         setNotification({
           message: 'Round cancelled! All players passed.',
           type: 'warning'
         });
-        resetBlowState({ preservePlayers: true });
-        const nextPlayers = mergePlayersPreservingIdentity(
-          playersRef.current,
-          fromPlayerContracts(playerContracts),
-        );
-        commitPlayers(nextPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(nextDealerSeatId);
-        setCurrentTrump(currentTrump ?? null);
-        setCurrentHighestDeclaration(
-          currentHighestDeclaration
-            ? toUiBlowDeclaration(currentHighestDeclaration)
-            : null,
-        );
-        setBlowDeclarations((blowDeclarations ?? []).map(toUiBlowDeclaration));
-        setBlowActionHistory((actionHistory ?? []).map(toUiBlowAction));
+        applyGameServerEvent({ type: 'round-cancelled', payload });
       },
-      'reveal-agari': ({ agari, message }: RevealAgariPayload) => {
-        setRevealedAgari(agari);
+      'reveal-agari': (payload: RevealAgariPayload) => {
+        applyGameServerEvent({ type: 'reveal-agari', payload });
         setNotification({
-          message,
+          message: payload.message,
           type: 'success'
         });
       },
-      'play-setup-complete': ({ negriCard, startingSeatId }: PlaySetupCompletePayload) => {
-        setRevealedAgari(null);
-        setNegriCard(negriCard);
-        setNegriPlayerId(startingSeatId);
-        const selfPlayerId = getCurrentUserPlayerId();
-        // Remove Negri card from player's hand
-        updatePlayersLocally((prev) =>
-          prev.map((p) =>
-            p.playerId === selfPlayerId
-              ? { ...p, hand: p.hand.filter((card) => card !== negriCard) }
-              : p,
-          ),
-        );
-        // Get the current trump from the highest declaration
-        if (currentHighestDeclaration) {
-          setCurrentTrump(currentHighestDeclaration.trumpType);
-        }
+      'play-setup-complete': (payload: PlaySetupCompletePayload) => {
+        applyGameServerEvent({ type: 'play-setup-complete', payload });
       },
-      'card-played': ({
-        field,
-        players: updatedPlayers,
-        nextSeatId,
-      }: CardPlayedPayload) => {
-        const nextField = toUiField(field)!;
-        setCurrentField(nextField);
-        const nextPlayers = mergePlayersPreservingIdentity(
-          playersRef.current,
-          fromPlayerContracts(updatedPlayers),
-        );
-        commitPlayers(nextPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        const resolvedNextPlayerId =
-          nextSeatId ?? inferNextTurnAfterCardPlayed(nextPlayers, nextField);
-        if (resolvedNextPlayerId) {
-          setWhoseTurn(resolvedNextPlayerId);
-        }
+      'card-played': (payload: CardPlayedPayload) => {
+        applyGameServerEvent({ type: 'card-played', payload });
       },
       'field-updated': (field: FieldContract) => {
-        setCurrentField(toUiField(field));
+        applyGameServerEvent({ type: 'field-updated', payload: field });
       },
-      'field-complete': ({ field, nextSeatId }: FieldCompletePayload) => {
-        const resolvedNextSeatId = nextSeatId;
-        setCompletedFields((prev) =>
-          dedupeCompletedFields([...prev, toUiCompletedField(field)]),
-        );
-        setCurrentField({
-          cards: [],
-          playedBy: [],
-          playedBySeatIds: [],
-          baseCard: '',
-          dealerSeatId: resolvedNextSeatId,
-          dealerId: resolvedNextSeatId,
-          isComplete: false,
-        });
+      'field-complete': (payload: FieldCompletePayload) => {
+        applyGameServerEvent({ type: 'field-complete', payload });
       },
-      'round-results': ({ scores }: RoundResultsPayload) => {
-        setTeamScores(toUiTeamScores(scores));
+      'round-results': (payload: RoundResultsPayload) => {
+        applyGameServerEvent({ type: 'round-results', payload });
       },
-      'new-round-started': ({
-        players: playerContracts,
-        currentTurnSeatId,
-        gamePhase,
-        currentField,
-        completedFields,
-        negriCard,
-        negriSeatId,
-        revealedAgari,
-        currentTrump,
-        currentHighestDeclaration,
-        blowDeclarations,
-      }: NewRoundStartedPayload) => {
-        const nextPlayers = mergePlayersPreservingIdentity(
-          playersRef.current,
-          fromPlayerContracts(playerContracts),
-        );
-        commitPlayers(nextPlayers);
-        syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
-        setWhoseTurn(currentTurnSeatId);
-        setGamePhase(toUiGamePhase(gamePhase));
-        setCurrentField(toUiField(currentField));
-        setCompletedFields(toUiCompletedFields(completedFields));
-        setNegriCard(negriCard);
-        setNegriPlayerId(negriSeatId);
-        setRevealedAgari(revealedAgari);
-        setCurrentTrump(currentTrump);
-        setCurrentHighestDeclaration(
-          currentHighestDeclaration
-            ? toUiBlowDeclaration(currentHighestDeclaration)
-            : null,
-        );
-        setBlowDeclarations(blowDeclarations.map(toUiBlowDeclaration));
+      'new-round-started': (payload: NewRoundStartedPayload) => {
+        applyGameServerEvent({ type: 'new-round-started', payload });
       },
       'back-to-lobby': (payload?: BackToLobbyPayload) => {
         console.warn('[useGame] back-to-lobby received', {
@@ -1076,6 +1053,18 @@ export const useGame = () => {
         playerId: string;
         playerName?: string;
       }) => {
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          players: gameEventStateRef.current.players.map((player) =>
+            player.playerId === playerId
+              ? {
+                  ...player,
+                  socketId: '',
+                  name: playerName ?? player.name,
+                }
+              : player,
+          ),
+        };
         updatePlayersLocally((prev) =>
           prev.map((player) =>
             player.playerId === playerId
@@ -1128,6 +1117,14 @@ export const useGame = () => {
         message: string;
       }) => {
         console.log('[useGame] Player converted to COM:', playerId, message);
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          players: gameEventStateRef.current.players.map((player) =>
+            player.playerId === playerId
+              ? { ...player, isCOM: true, socketId: '' }
+              : player,
+          ),
+        };
         setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
         setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== playerId));
         if (playerId === currentPlayerId) {

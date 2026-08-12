@@ -27,22 +27,24 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 import {
-  normalizeBlowActionIdentity,
-  normalizeBlowDeclarationIdentity,
-  normalizeCompletedFieldIdentity,
-  normalizeFieldIdentity,
   normalizePlayerIdentities,
   normalizeRoomIdentity,
 } from '@meitra/game-client/identity';
+import {
+  createEmptyGameEventState,
+  createGameEventStateFromSnapshot,
+  createGameEventStateFromStartedGame,
+  reduceGameEvent,
+  type GameEventState,
+  type GameServerEvent,
+} from '@meitra/game-client/game-event-reducer';
 
 import { useAuth } from '@/context/AuthContext';
 import { config } from '@/lib/config';
 import {
   createEmptyBlowState,
   createStartedGameSnapshot,
-  dedupeCompletedFields,
   extractDisconnectedPlayerIds,
-  inferNextTurnAfterCardPlayed,
   mergePlayersByIdentity,
   normalizeGameStatePayload,
   resolvePlayerId,
@@ -308,6 +310,20 @@ const reconnectMessages: Record<ReconnectionFailureCode, string> = {
 
 const RESYNC_TIMEOUT_MS = 10000;
 
+const toMobileGamePatch = (
+  game: GameEventState,
+): Partial<MobileGameSnapshot> => ({
+  gamePhase: game.gamePhase,
+  currentField: game.currentField,
+  currentTurnSeatId: game.currentTurnSeatId,
+  blowState: game.blowState,
+  teamScores: game.teamScores,
+  negriCard: game.negriCard,
+  negriSeatId: game.negriSeatId,
+  revealedAgari: game.revealedAgari,
+  fields: game.fields,
+});
+
 interface ResyncFlight {
   id: number;
   promise: Promise<void>;
@@ -324,6 +340,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<MobileSocket | null>(null);
   const stateRef = useRef(state);
+  const gameEventStateRef = useRef(createEmptyGameEventState());
   const userRef = useRef(user);
   const brokenRequestRef = useRef<string | null>(null);
   const agariRequestRef = useRef<string | null>(null);
@@ -334,6 +351,12 @@ export function GameProvider({ children }: PropsWithChildren) {
   const hasSession = session !== null;
   stateRef.current = state;
   userRef.current = user;
+
+  useEffect(() => {
+    if (!state.game && !state.currentRoom) {
+      gameEventStateRef.current = createEmptyGameEventState();
+    }
+  }, [state.currentRoom, state.game]);
 
   const resolveCurrentPlayerId = useCallback(() => {
     const snapshot = stateRef.current;
@@ -549,6 +572,19 @@ export function GameProvider({ children }: PropsWithChildren) {
       void roomStorage.set(room.id);
     };
 
+    const applyGameServerEvent = (event: GameServerEvent) => {
+      const previous = gameEventStateRef.current;
+      const next = reduceGameEvent(previous, event, {
+        selfSeatId: resolveCurrentPlayerId(),
+      });
+      gameEventStateRef.current = next;
+      if (next.players !== previous.players) {
+        dispatch({ type: 'players', players: next.players });
+      }
+      dispatch({ type: 'patchGame', patch: toMobileGamePatch(next) });
+      return next;
+    };
+
     socket.on('connect', () => {
       dispatch({ type: 'error', message: null });
       void resyncActiveRoom();
@@ -588,6 +624,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('update-players', (players) => {
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players: normalizePlayerIdentities(players),
+      };
       dispatch({ type: 'players', players });
       if (stateRef.current.game) {
         dispatch({
@@ -599,9 +639,14 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('room-playing', ({ players }) => {
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players: normalizePlayerIdentities(players),
+      };
       dispatch({ type: 'players', players });
     });
     socket.on('game-state', (payload) => {
+      gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       dispatch({
         type: 'game',
         game: normalizeGameStatePayload(payload),
@@ -621,6 +666,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         stateRef.current.currentRoom,
         userRef.current?.id,
       );
+      gameEventStateRef.current = createGameEventStateFromStartedGame(payload);
       dispatch({
         type: 'game',
         game: createStartedGameSnapshot(
@@ -632,254 +678,50 @@ export function GameProvider({ children }: PropsWithChildren) {
       void roomStorage.set(payload.roomId);
     });
     socket.on('update-phase', (payload) => {
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          gamePhase: payload.phase,
-          teamScores: payload.scores,
-          blowState: stateRef.current.game
-            ? {
-                ...stateRef.current.game.blowState,
-                currentTrump:
-                  payload.phase === 'play'
-                    ? (payload.currentHighestDeclaration?.trumpType ?? null)
-                    : null,
-                currentHighestDeclaration:
-                  (payload.currentHighestDeclaration
-                    ? normalizeBlowDeclarationIdentity(
-                        payload.currentHighestDeclaration,
-                      )
-                    : null) ??
-                  stateRef.current.game.blowState.currentHighestDeclaration,
-              }
-            : createEmptyBlowState(),
-        },
-      });
+      applyGameServerEvent({ type: 'update-phase', payload });
     });
     socket.on('update-turn', (currentTurnSeatId) => {
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentTurnSeatId,
-        },
-      });
+      applyGameServerEvent({ type: 'update-turn', payload: currentTurnSeatId });
       const roomId = stateRef.current.game?.roomId;
       if (shouldAckTurn(stateRef.current.game, roomId)) {
         socket.emit('turn-ack', { roomId });
       }
     });
-    socket.on('blow-started', ({ startingSeatId, players }) => {
-      dispatch({ type: 'players', players });
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          gamePhase: 'blow',
-          currentTurnSeatId: startingSeatId,
-        },
-      });
+    socket.on('blow-started', (payload) => {
+      applyGameServerEvent({ type: 'blow-started', payload });
     });
-    socket.on(
-      'blow-updated',
-      ({
-        declarations,
-        actionHistory,
-        currentHighest,
-      }) => {
-        const current =
-          stateRef.current.game?.blowState ?? createEmptyBlowState();
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            blowState: {
-              ...current,
-              declarations: declarations.map(normalizeBlowDeclarationIdentity),
-              actionHistory: (actionHistory ?? []).map(
-                normalizeBlowActionIdentity,
-              ),
-              currentHighestDeclaration: currentHighest
-                ? normalizeBlowDeclarationIdentity(currentHighest)
-                : null,
-            },
-          },
-        });
-      },
-    );
-    socket.on('broken', ({ nextSeatId, players, gamePhase }) => {
-      dispatch({ type: 'players', players });
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentTurnSeatId: nextSeatId,
-          gamePhase: gamePhase ?? 'blow',
-          currentField: null,
-          blowState: createEmptyBlowState(),
-          negriCard: null,
-          negriSeatId: null,
-          revealedAgari: null,
-          fields: [],
-        } as Partial<MobileGameSnapshot>,
-      });
+    socket.on('blow-updated', (payload) => {
+      applyGameServerEvent({ type: 'blow-updated', payload });
+    });
+    socket.on('broken', (payload) => {
+      applyGameServerEvent({ type: 'broken', payload });
       dispatch({ type: 'notice', message: '手役が成立したため配り直しました' });
     });
-    socket.on(
-      'round-cancelled',
-      ({
-        nextDealerSeatId,
-        players,
-        currentTrump,
-        currentHighestDeclaration,
-        blowDeclarations,
-        actionHistory,
-      }) => {
-        dispatch({ type: 'players', players });
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            gamePhase: 'blow',
-            currentTurnSeatId: nextDealerSeatId,
-            currentField: null,
-            negriCard: null,
-            negriSeatId: null,
-            revealedAgari: null,
-            fields: [],
-            blowState: {
-              ...createEmptyBlowState(),
-              currentTrump: currentTrump ?? null,
-              currentHighestDeclaration: currentHighestDeclaration
-                ? normalizeBlowDeclarationIdentity(
-                    currentHighestDeclaration,
-                  )
-                : null,
-              declarations: (blowDeclarations ?? []).map(
-                normalizeBlowDeclarationIdentity,
-              ),
-              actionHistory: (actionHistory ?? []).map(
-                normalizeBlowActionIdentity,
-              ),
-            },
-          },
-        });
-        dispatch({ type: 'notice', message: '全員パスのため配り直しました' });
-      },
-    );
-    socket.on('reveal-agari', ({ agari, message }) => {
-      dispatch({ type: 'patchGame', patch: { revealedAgari: agari } });
-      dispatch({ type: 'notice', message });
+    socket.on('round-cancelled', (payload) => {
+      applyGameServerEvent({ type: 'round-cancelled', payload });
+      dispatch({ type: 'notice', message: '全員パスのため配り直しました' });
     });
-    socket.on(
-      'play-setup-complete',
-      ({
-        negriCard,
-        startingSeatId,
-      }) => {
-        const game = stateRef.current.game;
-        const players = game
-          ? game.players.map((player) =>
-              player.seatId === game.youSeatId
-                ? {
-                    ...player,
-                    hand: player.hand.filter((card) => card !== negriCard),
-                  }
-                : player,
-            )
-          : [];
-        dispatch({ type: 'players', players });
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            negriCard,
-            negriSeatId: startingSeatId,
-            revealedAgari: null,
-            currentTurnSeatId: startingSeatId,
-          },
-        });
-      },
-    );
-    socket.on('card-played', ({ field, players, nextSeatId }) => {
-      const normalizedField = normalizeFieldIdentity(field);
-      dispatch({ type: 'players', players });
-      const resolvedNextPlayerId =
-        nextSeatId ??
-        inferNextTurnAfterCardPlayed(
-          stateRef.current.game?.players ?? normalizePlayerIdentities(players),
-          normalizedField,
-        );
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentField: normalizedField,
-          ...(resolvedNextPlayerId
-            ? {
-                currentTurnSeatId: asSeatId(resolvedNextPlayerId),
-              }
-            : {}),
-        },
-      });
+    socket.on('reveal-agari', (payload) => {
+      applyGameServerEvent({ type: 'reveal-agari', payload });
+      dispatch({ type: 'notice', message: payload.message });
+    });
+    socket.on('play-setup-complete', (payload) => {
+      applyGameServerEvent({ type: 'play-setup-complete', payload });
+    });
+    socket.on('card-played', (payload) => {
+      applyGameServerEvent({ type: 'card-played', payload });
     });
     socket.on('field-updated', (field) => {
-      dispatch({
-        type: 'patchGame',
-        patch: { currentField: normalizeFieldIdentity(field) },
-      });
+      applyGameServerEvent({ type: 'field-updated', payload: field });
     });
-    socket.on(
-      'field-complete',
-      ({ field, nextSeatId }) => {
-        const normalizedField = normalizeCompletedFieldIdentity(field);
-        const nextTurnSeatId = nextSeatId;
-        const fields = dedupeCompletedFields([
-          ...(stateRef.current.game?.fields ?? []),
-          normalizedField,
-        ]);
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            fields,
-            currentTurnSeatId: nextTurnSeatId,
-            currentField: {
-              cards: [],
-              playedBy: [],
-              playedBySeatIds: [],
-              baseCard: '',
-              dealerSeatId: nextTurnSeatId,
-              dealerId: nextTurnSeatId,
-              isComplete: false,
-            },
-          },
-        });
-      },
-    );
-    socket.on('round-results', ({ scores }) => {
-      dispatch({ type: 'patchGame', patch: { teamScores: scores } });
+    socket.on('field-complete', (payload) => {
+      applyGameServerEvent({ type: 'field-complete', payload });
+    });
+    socket.on('round-results', (payload) => {
+      applyGameServerEvent({ type: 'round-results', payload });
     });
     socket.on('new-round-started', (payload) => {
-      dispatch({ type: 'players', players: payload.players });
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentTurnSeatId: payload.currentTurnSeatId,
-          gamePhase: payload.gamePhase,
-          currentField: payload.currentField
-            ? normalizeFieldIdentity(payload.currentField)
-            : null,
-          fields: dedupeCompletedFields(payload.completedFields),
-          negriCard: payload.negriCard,
-          negriSeatId: payload.negriSeatId,
-          revealedAgari: payload.revealedAgari,
-          blowState: {
-            ...createEmptyBlowState(),
-            currentTrump: payload.currentTrump,
-            currentHighestDeclaration: payload.currentHighestDeclaration
-              ? normalizeBlowDeclarationIdentity(
-                  payload.currentHighestDeclaration,
-                )
-              : null,
-            declarations: payload.blowDeclarations.map(
-              normalizeBlowDeclarationIdentity,
-            ),
-          },
-        },
-      });
+      applyGameServerEvent({ type: 'new-round-started', payload });
     });
     socket.on('game-over', (payload) => {
       dispatch({ type: 'gameOver', gameOver: payload });
@@ -916,6 +758,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('round-reset', () => {
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        blowState: createEmptyBlowState(),
+      };
       dispatch({
         type: 'patchGame',
         patch: {
@@ -926,6 +772,18 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('player-disconnected', (payload) => {
       const playerId = payload.seatId;
       const playerName = (payload as { playerName?: string }).playerName;
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players: gameEventStateRef.current.players.map((player) =>
+          player.playerId === playerId
+            ? {
+                ...player,
+                socketId: '',
+                name: playerName ?? player.name,
+              }
+            : player,
+        ),
+      };
       dispatch({ type: 'playerDisconnected', playerId });
       dispatch({
         type: 'notice',
@@ -947,6 +805,14 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on(
       'player-converted-to-com',
       ({ seatId, playerName, message }) => {
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          players: gameEventStateRef.current.players.map((player) =>
+            player.seatId === seatId
+              ? { ...player, isCOM: true, socketId: '' }
+              : player,
+          ),
+        };
         dispatch({ type: 'playerConvertedToCom', playerId: seatId });
         if (seatId === asSeatId(resolveCurrentPlayerId() ?? '')) {
           void roomStorage.clear();
@@ -957,6 +823,14 @@ export function GameProvider({ children }: PropsWithChildren) {
     );
     socket.on('name-updated', (payload) => {
       if (!payload.success || !payload.seatId || !payload.name) return;
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players: gameEventStateRef.current.players.map((player) =>
+          player.seatId === payload.seatId
+            ? { ...player, name: payload.name! }
+            : player,
+        ),
+      };
       const game = stateRef.current.game;
       if (!game) return;
       dispatch({

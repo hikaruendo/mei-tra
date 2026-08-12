@@ -1,5 +1,4 @@
 import type {
-  CompletedFieldContract,
   GameStartedPayload,
   GameStatePayload,
   PlayerContract,
@@ -8,34 +7,28 @@ import type {
 import type { RoomContract } from '@meitra/contracts/room';
 import { asSeatId } from '@meitra/contracts/ids';
 import {
-  type CanonicalBlowState,
-  type CanonicalCompletedFieldContract,
-  normalizeCompletedFieldIdentity,
   normalizeGameStateIdentity,
   normalizePlayerIdentities,
   normalizeRoomIdentity,
 } from '@meitra/game-client/identity';
-
+import {
+  createEmptyBlowState,
+  dedupeCompletedFields,
+} from '@meitra/game-client/game-event-reducer';
 import type {
   MobileGameSnapshot,
   MobilePlayer,
   MobileRoom,
 } from '@/types/game';
 
+export {
+  createEmptyBlowState,
+  dedupeCompletedFields,
+} from '@meitra/game-client/game-event-reducer';
+
 export const createEmptyScores = (): TransportTeamScores => ({
   0: { play: 0, total: 0 },
   1: { play: 0, total: 0 },
-});
-
-export const createEmptyBlowState = (): CanonicalBlowState => ({
-  currentTrump: null,
-  currentHighestDeclaration: null,
-  declarations: [],
-  actionHistory: [],
-  lastPasserSeatId: null,
-  lastPasser: null,
-  isRoundCancelled: false,
-  currentBlowIndex: 0,
 });
 
 export const mergePlayersByIdentity = (
@@ -61,23 +54,6 @@ export const mergePlayersByIdentity = (
       name: player.name || oldPlayer.name,
       isHost: player.isHost ?? oldPlayer.isHost,
     };
-  });
-};
-
-export const dedupeCompletedFields = (
-  fields: CompletedFieldContract[],
-): CanonicalCompletedFieldContract[] => {
-  const seen = new Set<string>();
-  return fields.map(normalizeCompletedFieldIdentity).filter((field) => {
-    const key = [
-      field.dealerId,
-      field.winnerId,
-      field.winnerTeam,
-      field.cards.join(','),
-    ].join('|');
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
   });
 };
 
@@ -148,29 +124,6 @@ export const createStartedGameSnapshot = (
     idlePlayerIds: [],
     teamNames: payload.teamNames,
   };
-};
-
-export const inferNextTurnAfterCardPlayed = (
-  players: MobilePlayer[],
-  field: { isComplete: boolean; cards: string[]; playedBy: string[]; baseCard: string; baseSuit?: string },
-): string | null => {
-  if (
-    field.isComplete ||
-    field.cards.length === 0 ||
-    (field.baseCard === 'JOKER' && !field.baseSuit)
-  ) {
-    return null;
-  }
-
-  const lastPlayerId = field.playedBy[field.playedBy.length - 1];
-  if (!lastPlayerId || players.length === 0) return null;
-
-  const lastPlayerIndex = players.findIndex(
-    (p) => p.playerId === lastPlayerId,
-  );
-  if (lastPlayerIndex === -1) return null;
-
-  return players[(lastPlayerIndex + 1) % players.length]?.playerId ?? null;
 };
 
 export const shouldAckTurn = (
