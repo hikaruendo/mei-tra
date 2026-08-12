@@ -4,7 +4,10 @@ import { IGameStateRepository } from '../../repositories/interfaces/game-state.r
 import { IRoomRepository } from '../../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
 import { GameStateFactory } from '../game-state.factory';
-import { DomainPlayer, GameState } from '../../types/game.types';
+import {
+  DomainPlayer,
+  GameState,
+} from '../../types/game.types';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { CardService } from '../card.service';
 import { ChomboService } from '../chombo.service';
@@ -1337,7 +1340,13 @@ describe('Reconnection Token Management', () => {
         // Verify player was restored to index 0
         const restoredRoom = roomState.getPersistedRoom();
         expect(restoredRoom?.players[0].playerId).toBe(comPlayer.playerId);
-        expect(restoredRoom?.players[0].hand).toEqual(['H2', 'D3', 'C4']);
+        expect(restoredRoom?.players[0].hand).toEqual([]);
+        const restoredState = await roomService.getRoomGameState(roomId);
+        expect(restoredState.getState().players[0].hand).toEqual([
+          'H2',
+          'D3',
+          'C4',
+        ]);
         expect(restoredRoom?.players[0].team).toBe(0);
       });
 
@@ -1599,13 +1608,18 @@ describe('Reconnection Token Management', () => {
         const updatedRoom = roomState.getPersistedRoom();
         expect(updatedRoom?.players[0].playerId).toBe(otherCom.playerId);
         expect(updatedRoom?.players[1].playerId).toBe(targetCom.playerId);
-        expect(updatedRoom?.players[1].hand).toEqual(['H2', 'D3', 'C4']);
+        expect(updatedRoom?.players[1].hand).toEqual([]);
         expect(gameState.getState().players[0].playerId).toBe(
           otherCom.playerId,
         );
         expect(gameState.getState().players[1].playerId).toBe(
           targetCom.playerId,
         );
+        expect(gameState.getState().players[1].hand).toEqual([
+          'H2',
+          'D3',
+          'C4',
+        ]);
       });
 
       it('should restore the latest com hand after cards were played while disconnected', async () => {
@@ -1690,7 +1704,7 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         const updatedRoom = roomState.getPersistedRoom();
         expect(updatedRoom?.players[0].playerId).toBe(targetCom.playerId);
-        expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
+        expect(updatedRoom?.players[0].hand).toEqual([]);
         expect(gameState.getState().players[0].playerId).toBe(
           targetCom.playerId,
         );
@@ -2329,7 +2343,8 @@ describe('Reconnection Token Management', () => {
         const updatedRoom = roomState.getPersistedRoom();
         expect(updatedRoom?.players[0].playerId).toBe(comPlayer.playerId);
         expect(updatedRoom?.players[0].participantKey).toBe('player-2');
-        expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
+        expect(updatedRoom?.players[0].hand).toEqual([]);
+        expect(gameState.getState().players[0].hand).toEqual(['H2', 'D3']);
 
         // Original player's token should be removed
         // Token is gone, so findPlayerByReconnectToken uses fallback (playerId direct search)
@@ -2496,10 +2511,11 @@ describe('Reconnection Token Management', () => {
         expect(restored).toBe(true);
         const updatedRoom = roomState.getPersistedRoom();
         expect(updatedRoom?.players[0].playerId).toBe(comPlayer.playerId);
-        expect(updatedRoom?.players[0].hand).toEqual(['H2', 'D3']);
+        expect(updatedRoom?.players[0].hand).toEqual([]);
         expect(gameState.getState().players[0].playerId).toBe(
           comPlayer.playerId,
         );
+        expect(gameState.getState().players[0].hand).toEqual(['H2', 'D3']);
         expect(gameState.getState().players[0].isPasser).toBe(true);
         expect((roomService as any)['vacantSeats'][roomId]).toBeUndefined();
       });

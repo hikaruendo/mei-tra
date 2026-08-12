@@ -34,22 +34,19 @@ export function toDomainPlayer(
     | 'seatId'
     | 'playerId'
     | 'name'
-    | 'hand'
     | 'team'
-    | 'isPasser'
     | 'isCOM'
-    | 'hasBroken'
-    | 'hasRequiredBroken'
-  >,
+  > &
+    Partial<PlayerGameplayState>,
 ): DomainPlayer {
   const seatId = resolveSeatId(player);
   return {
     seatId,
     playerId: seatId,
     name: player.name,
-    hand: [...player.hand],
+    hand: [...(player.hand ?? [])],
     team: player.team,
-    isPasser: player.isPasser,
+    isPasser: player.isPasser ?? false,
     isCOM: player.isCOM,
     hasBroken: player.hasBroken ?? false,
     hasRequiredBroken: player.hasRequiredBroken ?? false,
@@ -189,12 +186,12 @@ export function toRoomPlayer(params: {
     name: params.gameplay.name,
     userId: params.session.userId,
     isAuthenticated: params.session.isAuthenticated,
-    hand: [...params.gameplay.hand],
+    hand: [],
     team: params.gameplay.team,
-    isPasser: params.gameplay.isPasser,
+    isPasser: false,
     isCOM: params.gameplay.isCOM,
-    hasBroken: params.gameplay.hasBroken ?? false,
-    hasRequiredBroken: params.gameplay.hasRequiredBroken ?? false,
+    hasBroken: false,
+    hasRequiredBroken: false,
     isReady: params.isReady,
     isHost: params.isHost,
     joinedAt: params.joinedAt,

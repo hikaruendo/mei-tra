@@ -9,6 +9,7 @@ import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
 } from '../types/current-turn';
+import { upsertRuntimeSeat } from './runtime-seat-roster';
 
 @Injectable()
 export class SeatRestorationService {
@@ -57,15 +58,8 @@ export class SeatRestorationService {
       socketId: '',
       seatId,
       playerId: seatId,
-      hand: [
-        ...(currentSeatPlayer.hand.length
-          ? currentSeatPlayer.hand
-          : seatData.roomPlayer.hand),
-      ],
       joinedAt: new Date(seatData.roomPlayer.joinedAt),
     };
-
-    room.players[currentSeatIndex] = restoredRoomPlayer;
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
@@ -84,37 +78,18 @@ export class SeatRestorationService {
               : seatData.gamePlayer.hand),
           ],
         }
-      : toDomainPlayer(restoredRoomPlayer);
+      : toDomainPlayer({
+          ...restoredRoomPlayer,
+          hand: state.players[gsIndex]?.hand ?? [],
+        });
 
-    if (gsIndex !== -1) {
-      state.players[gsIndex] = toDomainPlayer({
-        ...restoredGamePlayerBase,
-        seatId,
-        playerId: seatId,
-        name: restoredRoomPlayer.name,
-        team: restoredRoomPlayer.team,
-        hand: [...restoredRoomPlayer.hand],
-        isPasser:
-          restoredGamePlayerBase.isPasser ??
-          restoredRoomPlayer.isPasser ??
-          false,
-        hasBroken:
-          restoredGamePlayerBase.hasBroken ??
-          restoredRoomPlayer.hasBroken ??
-          false,
-        hasRequiredBroken:
-          restoredGamePlayerBase.hasRequiredBroken ??
-          restoredRoomPlayer.hasRequiredBroken ??
-          false,
-      });
-    } else {
-      state.players.push(restoredGamePlayerBase);
-    }
+    upsertRuntimeSeat(room, state, restoredRoomPlayer, {
+      replaceSeatId: comPlayerId,
+      gameplaySource: restoredGamePlayerBase,
+    });
 
     gameState.registerPlayerToken(seatId, seatId);
     gameState.clearDisconnectTimeout(seatId);
-    state.teamAssignments[seatId] = restoredRoomPlayer.team;
-
     delete vacantSeatsForRoom[seatIndex];
     if (Object.keys(vacantSeatsForRoom).length === 0) {
       delete vacantSeats[roomId];

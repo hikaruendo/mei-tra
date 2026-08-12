@@ -88,7 +88,6 @@ export class DisconnectGatewayEffectsService {
       return null;
     }
 
-    state.teamAssignments[player.playerId] = player.team;
     await roomGameState.applyPlayerConnectionState(player.playerId, {
       socketId: '',
     });

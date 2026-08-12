@@ -24,15 +24,12 @@ export function toRoomPlayerContract(
     isAuthenticated:
       transportPlayer?.isAuthenticated ?? roomPlayer.isAuthenticated,
     team: transportPlayer?.team ?? roomPlayer.team,
-    hand: transportPlayer?.hand ?? [...roomPlayer.hand],
+    hand: transportPlayer?.hand ?? [],
     isHost: roomPlayer.isHost,
-    isPasser: transportPlayer?.isPasser ?? roomPlayer.isPasser,
+    isPasser: transportPlayer?.isPasser ?? false,
     isCOM: transportPlayer?.isCOM ?? roomPlayer.isCOM,
-    hasBroken: transportPlayer?.hasBroken ?? roomPlayer.hasBroken ?? false,
-    hasRequiredBroken:
-      transportPlayer?.hasRequiredBroken ??
-      roomPlayer.hasRequiredBroken ??
-      false,
+    hasBroken: transportPlayer?.hasBroken ?? false,
+    hasRequiredBroken: transportPlayer?.hasRequiredBroken ?? false,
     isReady: roomPlayer.isReady,
     joinedAt: toIsoString(roomPlayer.joinedAt),
   };

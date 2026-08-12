@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { BlowState, DomainPlayer, GameState, Team } from '../types/game.types';
-import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { VacantSeats } from './com-session.service';
@@ -12,6 +11,7 @@ import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
 } from '../types/current-turn';
+import { upsertRuntimeSeat } from './runtime-seat-roster';
 
 interface JoinRoomParams {
   roomId: string;
@@ -77,15 +77,9 @@ export class RoomJoinService {
         isHost: room.hostId === existingPlayer.playerId,
         isCOM: reclaimingCOMSeat ? false : existingPlayer.isCOM,
       };
-      Object.assign(existingPlayer, updatedPlayer);
-      if (statePlayer) {
-        statePlayer.name = updatedPlayer.name;
-        statePlayer.team = updatedPlayer.team;
-        statePlayer.isCOM = updatedPlayer.isCOM;
-      } else {
-        state.players.push(toDomainPlayer(updatedPlayer));
-      }
-      state.teamAssignments[updatedPlayer.playerId] = updatedPlayer.team;
+      upsertRuntimeSeat(room, state, updatedPlayer, {
+        gameplaySource: statePlayer,
+      });
 
       gameState.registerPlayerToken(
         updatedPlayer.playerId,
@@ -128,7 +122,6 @@ export class RoomJoinService {
     const vacantIndexes = Object.keys(roomVacant).map(Number);
     let assignedIndex = -1;
     let gsAssignedIndex = -1;
-    let hand: string[] = [];
     let team: Team = 0;
     let replacingComId: string | null = null;
     let restoredSeatData: RestoredSeatData | null = null;
@@ -141,13 +134,7 @@ export class RoomJoinService {
       assignedIndex = matchingVacantIndex;
       const seatData = roomVacant[assignedIndex];
       const seatRoomPlayer = seatData?.roomPlayer;
-      const seatGamePlayer = seatData?.gamePlayer;
 
-      hand = seatGamePlayer
-        ? [...seatGamePlayer.hand]
-        : seatRoomPlayer
-          ? [...seatRoomPlayer.hand]
-          : [];
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
       restoredSeatData = seatData ?? null;
       gameState.clearDisconnectTimeout(user.playerId);
@@ -170,7 +157,6 @@ export class RoomJoinService {
         assignedIndex = availableVacantIndex;
         const seatData = roomVacant[assignedIndex];
         const seatRoomPlayer = seatData?.roomPlayer;
-        hand = seatRoomPlayer ? [...seatRoomPlayer.hand] : [];
         team = seatRoomPlayer ? seatRoomPlayer.team : team;
 
         const originalPlayerId = seatRoomPlayer?.playerId;
@@ -200,15 +186,10 @@ export class RoomJoinService {
           gsAssignedIndex = state.players.findIndex(
             (player) => player.playerId === comPlayerId,
           );
-          const currentGamePlayer =
-            gsAssignedIndex !== -1 ? state.players[gsAssignedIndex] : null;
-          hand = currentGamePlayer
-            ? [...(currentGamePlayer.hand ?? [])]
-            : [...(room.players[comIndex].hand ?? [])];
         }
       }
 
-      if (hand.length === 0) {
+      if (assignedIndex === -1 && replacingComId === null) {
         const team0Count = room.players.filter(
           (player) => !player.isCOM && player.team === 0,
         ).length;
@@ -258,11 +239,6 @@ export class RoomJoinService {
         : assignedIndex !== -1
           ? room.players[assignedIndex]
           : undefined;
-    const currentSeatRoomHand =
-      currentSeatRoomPlayer && currentSeatRoomPlayer.hand.length > 0
-        ? currentSeatRoomPlayer.hand
-        : undefined;
-
     const assignedSeatId = currentSeatRoomPlayer
       ? resolveSeatId(currentSeatRoomPlayer)
       : seatRoomSnapshot
@@ -276,22 +252,10 @@ export class RoomJoinService {
       playerId: assignedSeatId,
       participantKey: user.userId ?? user.playerId,
       team: currentSeatRoomPlayer?.team ?? team,
-      hand: [...(currentSeatRoomHand ?? hand)],
-      isPasser:
-        seatGameSnapshot?.isPasser ??
-        currentSeatRoomPlayer?.isPasser ??
-        seatRoomSnapshot?.isPasser ??
-        false,
-      hasBroken:
-        seatGameSnapshot?.hasBroken ??
-        currentSeatRoomPlayer?.hasBroken ??
-        seatRoomSnapshot?.hasBroken ??
-        false,
-      hasRequiredBroken:
-        seatGameSnapshot?.hasRequiredBroken ??
-        currentSeatRoomPlayer?.hasRequiredBroken ??
-        seatRoomSnapshot?.hasRequiredBroken ??
-        false,
+      hand: [],
+      isPasser: false,
+      hasBroken: false,
+      hasRequiredBroken: false,
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
       isHost: room.hostId === assignedSeatId,
@@ -300,20 +264,6 @@ export class RoomJoinService {
         ? new Date(seatRoomSnapshot.joinedAt)
         : new Date(),
     };
-
-    if (assignedIndex !== -1) {
-      room.players[assignedIndex] = player;
-    } else {
-      const comIndex = room.players.findIndex(
-        (roomPlayer) =>
-          this.isReplaceableCOMSeat(roomPlayer) && !roomPlayer.isReady,
-      );
-      if (comIndex !== -1) {
-        room.players[comIndex] = player;
-      } else {
-        room.players.push(player);
-      }
-    }
 
     if (replacementPlayerId) {
       gsAssignedIndex = state.players.findIndex(
@@ -333,29 +283,13 @@ export class RoomJoinService {
           )
         : undefined;
 
-    player.hand = [
-      ...(currentSeatGamePlayer?.hand.length
-        ? currentSeatGamePlayer.hand
-        : player.hand),
-    ];
-    player.isPasser =
-      currentSeatGamePlayer?.isPasser ?? player.isPasser ?? false;
-    player.hasBroken =
-      currentSeatGamePlayer?.hasBroken ?? player.hasBroken ?? false;
-    player.hasRequiredBroken =
-      currentSeatGamePlayer?.hasRequiredBroken ??
-      player.hasRequiredBroken ??
-      false;
-
-    const gamePlayer = toDomainPlayer(player);
-
-    if (gsAssignedIndex !== -1) {
-      state.players[gsAssignedIndex] = gamePlayer;
-    } else {
-      state.players.push(gamePlayer);
-    }
-
-    state.teamAssignments[player.playerId] = player.team;
+    upsertRuntimeSeat(room, state, player, {
+      replaceSeatId: replacingComId ?? player.playerId,
+      gameplaySource:
+        currentSeatGamePlayer ??
+        seatGameSnapshot ??
+        (gsAssignedIndex === -1 ? null : state.players[gsAssignedIndex]),
+    });
 
     gameState.registerPlayerToken(player.playerId, player.playerId);
     if (player.userId) {
