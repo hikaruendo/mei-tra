@@ -44,12 +44,6 @@
 | room_membership_events_transition_idx   | CREATE INDEX room_membership_events_transition_idx ON public.room_membership_events USING btree (transition_id)                                          |
 | room_membership_events_user_created_idx | CREATE INDEX room_membership_events_user_created_idx ON public.room_membership_events USING btree (user_id, created_at DESC)                             |
 
-## Triggers
-
-| Name                            | Definition                                                                                                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| sync_room_membership_event_seat | CREATE TRIGGER sync_room_membership_event_seat BEFORE INSERT ON public.room_membership_events FOR EACH ROW EXECUTE FUNCTION sync_room_membership_event_seat() |
-
 ## Relations
 
 ![er](public.room_membership_events.svg)

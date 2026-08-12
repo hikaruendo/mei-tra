@@ -1,5 +1,22 @@
 import { asSeatId } from './identity.types';
-import type { GameState } from './game.types';
+import type { Field, GameState } from './game.types';
+
+function normalizePlayedBySeatIds(field: Field) {
+  const playedBySeatIds = (field.playedBySeatIds ?? field.playedBy).map(
+    asSeatId,
+  );
+  const hasDuplicatedAttributions =
+    field.cards.length > 0 &&
+    playedBySeatIds.length === field.cards.length * 2 &&
+    field.cards.every(
+      (_, cardIndex) =>
+        playedBySeatIds[cardIndex * 2] === playedBySeatIds[cardIndex * 2 + 1],
+    );
+
+  return hasDuplicatedAttributions
+    ? field.cards.map((_, cardIndex) => playedBySeatIds[cardIndex * 2])
+    : playedBySeatIds;
+}
 
 export function normalizeGameStateIdentityAliases(state: GameState): GameState {
   const currentSeatValue =
@@ -56,15 +73,13 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
         currentField: state.playState.currentField
           ? (() => {
               const field = state.playState.currentField;
-              const playedBy =
-                field.playedBySeatIds?.map(asSeatId) ??
-                field.playedBy.map(asSeatId);
+              const playedBySeatIds = normalizePlayedBySeatIds(field);
               const dealerSeatId =
                 field.dealerSeatId ?? asSeatId(field.dealerId);
               return {
                 ...field,
-                playedBy,
-                playedBySeatIds: playedBy,
+                playedBy: [...playedBySeatIds],
+                playedBySeatIds: [...playedBySeatIds],
                 dealerSeatId,
                 dealerId: dealerSeatId,
               };

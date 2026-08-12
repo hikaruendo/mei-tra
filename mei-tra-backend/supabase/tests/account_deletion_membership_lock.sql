@@ -1,5 +1,7 @@
 begin;
 
+select plan(1);
+
 do $$
 begin
   if has_function_privilege(
@@ -54,11 +56,11 @@ set username = 'account_membership_lock_test',
     display_name = 'Account membership lock test'
 where id = '00000000-0000-0000-0000-000000000931';
 
-insert into public.rooms (id, name, host_id, status)
+insert into public.rooms (id, name, host_seat_id, status)
 values (
   '00000000-0000-0000-0000-000000000932',
   'Account membership active blocker room',
-  '00000000-0000-0000-0000-000000000931',
+  '00000000-0000-0000-0000-000000000934',
   'waiting'
 );
 
@@ -72,19 +74,15 @@ values (
 insert into public.room_players (
   id,
   room_id,
-  player_id,
   user_id,
   name,
-  is_host,
   seat_index
 )
 values (
   '00000000-0000-0000-0000-000000000934',
   '00000000-0000-0000-0000-000000000932',
   '00000000-0000-0000-0000-000000000931',
-  '00000000-0000-0000-0000-000000000931',
   'Account membership lock test',
-  true,
   0
 );
 
@@ -143,15 +141,15 @@ declare
 begin
   begin
     insert into public.room_players (
+      id,
       room_id,
-      player_id,
       user_id,
       name,
       seat_index
     )
     values (
+      '00000000-0000-4000-8000-000000000935',
       '00000000-0000-0000-0000-000000000932',
-      'rejected-after-marker',
       '00000000-0000-0000-0000-000000000931',
       'Should be rejected',
       1
@@ -166,5 +164,8 @@ begin
   end if;
 end;
 $$;
+
+select pass('account deletion and room membership updates remain serialized');
+select * from finish();
 
 rollback;

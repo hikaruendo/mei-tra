@@ -26,11 +26,6 @@
           "default": "1"
         },
         {
-          "name": "player_id",
-          "type": "varchar(255)",
-          "nullable": false
-        },
-        {
           "name": "room_id",
           "type": "uuid",
           "nullable": true
@@ -38,7 +33,7 @@
         {
           "name": "seat_id",
           "type": "uuid",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "status",
@@ -77,15 +72,6 @@
           "table": "public.active_room_memberships",
           "columns": [
             "room_id"
-          ]
-        },
-        {
-          "name": "active_room_memberships_room_player_key",
-          "def": "CREATE UNIQUE INDEX active_room_memberships_room_player_key ON public.active_room_memberships USING btree (room_id, player_id) WHERE (room_id IS NOT NULL)",
-          "table": "public.active_room_memberships",
-          "columns": [
-            "room_id",
-            "player_id"
           ]
         },
         {
@@ -173,10 +159,6 @@
         }
       ],
       "triggers": [
-        {
-          "name": "sync_active_room_membership_seat",
-          "def": "CREATE TRIGGER sync_active_room_membership_seat BEFORE INSERT OR UPDATE OF room_id, player_id, user_id, seat_id ON public.active_room_memberships FOR EACH ROW EXECUTE FUNCTION sync_active_room_membership_seat()"
-        },
         {
           "name": "update_active_room_memberships_updated_at",
           "def": "CREATE TRIGGER update_active_room_memberships_updated_at BEFORE UPDATE ON public.active_room_memberships FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
@@ -584,7 +566,7 @@
           "name": "actor_seat_id",
           "type": "uuid",
           "nullable": true,
-          "comment": "Canonical actor seat UUID when the source row can be resolved."
+          "comment": "Canonical actor seat UUID. actor_key_snapshot is reserved for unresolved legacy actors."
         },
         {
           "name": "game_state_id",
@@ -596,11 +578,6 @@
           "type": "uuid",
           "nullable": false,
           "default": "uuid_generate_v4()"
-        },
-        {
-          "name": "player_id",
-          "type": "varchar(255)",
-          "nullable": true
         },
         {
           "name": "room_id",
@@ -700,12 +677,6 @@
             "id"
           ]
         }
-      ],
-      "triggers": [
-        {
-          "name": "sync_game_history_actor_seat",
-          "def": "CREATE TRIGGER sync_game_history_actor_seat BEFORE INSERT OR UPDATE OF room_id, player_id, actor_seat_id ON public.game_history FOR EACH ROW EXECUTE FUNCTION sync_game_history_actor_seat()"
-        }
       ]
     },
     {
@@ -720,15 +691,10 @@
           "default": "now()"
         },
         {
-          "name": "current_player_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
           "name": "current_seat_id",
           "type": "uuid",
           "nullable": true,
-          "comment": "Canonical current-turn seat UUID scoped to this room."
+          "comment": "Canonical current-turn seat UUID."
         },
         {
           "name": "game_phase",
@@ -874,10 +840,6 @@
         }
       ],
       "triggers": [
-        {
-          "name": "sync_game_state_current_seat_identity",
-          "def": "CREATE TRIGGER sync_game_state_current_seat_identity BEFORE INSERT OR UPDATE OF current_player_id, current_seat_id ON public.game_states FOR EACH ROW EXECUTE FUNCTION sync_game_state_current_seat_identity()"
-        },
         {
           "name": "update_game_states_updated_at",
           "def": "CREATE TRIGGER update_game_states_updated_at BEFORE UPDATE ON public.game_states FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
@@ -1474,12 +1436,6 @@
             "id"
           ]
         }
-      ],
-      "triggers": [
-        {
-          "name": "sync_room_membership_event_seat",
-          "def": "CREATE TRIGGER sync_room_membership_event_seat BEFORE INSERT ON public.room_membership_events FOR EACH ROW EXECUTE FUNCTION sync_room_membership_event_seat()"
-        }
       ]
     },
     {
@@ -1492,18 +1448,12 @@
           "type": "uuid",
           "nullable": false,
           "default": "uuid_generate_v4()",
-          "comment": "Canonical immutable seat UUID. Runtime seatId and legacy playerId aliases resolve to this value."
+          "comment": "Canonical immutable seat UUID within a room."
         },
         {
           "name": "is_com",
           "type": "boolean",
           "nullable": false,
-          "default": "false"
-        },
-        {
-          "name": "is_host",
-          "type": "boolean",
-          "nullable": true,
           "default": "false"
         },
         {
@@ -1524,12 +1474,6 @@
           "nullable": false
         },
         {
-          "name": "player_id",
-          "type": "varchar(255)",
-          "nullable": false,
-          "comment": "Legacy occupant key retained during dual-write migration. Do not use as canonical seat identity."
-        },
-        {
           "name": "room_id",
           "type": "uuid",
           "nullable": true
@@ -1540,11 +1484,6 @@
           "nullable": false
         },
         {
-          "name": "socket_id",
-          "type": "varchar(255)",
-          "nullable": true
-        },
-        {
           "name": "team",
           "type": "integer",
           "nullable": false,
@@ -1553,32 +1492,17 @@
         {
           "name": "user_id",
           "type": "uuid",
-          "nullable": true
+          "nullable": true,
+          "comment": "Authenticated seat owner. A timeout-controlled COM keeps this value so the same user can reclaim the seat after a process restart."
         }
       ],
       "indexes": [
-        {
-          "name": "idx_room_players_player_id",
-          "def": "CREATE INDEX idx_room_players_player_id ON public.room_players USING btree (player_id)",
-          "table": "public.room_players",
-          "columns": [
-            "player_id"
-          ]
-        },
         {
           "name": "idx_room_players_room_id",
           "def": "CREATE INDEX idx_room_players_room_id ON public.room_players USING btree (room_id)",
           "table": "public.room_players",
           "columns": [
             "room_id"
-          ]
-        },
-        {
-          "name": "idx_room_players_socket_id",
-          "def": "CREATE INDEX idx_room_players_socket_id ON public.room_players USING btree (socket_id)",
-          "table": "public.room_players",
-          "columns": [
-            "socket_id"
           ]
         },
         {
@@ -1604,15 +1528,6 @@
           "columns": [
             "room_id",
             "id"
-          ]
-        },
-        {
-          "name": "room_players_room_id_player_id_key",
-          "def": "CREATE UNIQUE INDEX room_players_room_id_player_id_key ON public.room_players USING btree (room_id, player_id)",
-          "table": "public.room_players",
-          "columns": [
-            "room_id",
-            "player_id"
           ]
         },
         {
@@ -1670,17 +1585,6 @@
           ]
         },
         {
-          "name": "room_players_room_id_player_id_key",
-          "type": "UNIQUE",
-          "def": "UNIQUE (room_id, player_id)",
-          "table": "public.room_players",
-          "referenced_table": "",
-          "columns": [
-            "room_id",
-            "player_id"
-          ]
-        },
-        {
           "name": "room_players_room_id_seat_index_key",
           "type": "UNIQUE",
           "def": "UNIQUE (room_id, seat_index) DEFERRABLE INITIALLY DEFERRED",
@@ -1716,7 +1620,7 @@
         },
         {
           "name": "reject_room_player_seat_id_change",
-          "def": "CREATE TRIGGER reject_room_player_seat_id_change BEFORE UPDATE OF id, room_id, seat_index ON public.room_players FOR EACH ROW EXECUTE FUNCTION reject_room_player_seat_id_change()"
+          "def": "CREATE TRIGGER reject_room_player_seat_id_change BEFORE UPDATE OF id, room_id ON public.room_players FOR EACH ROW EXECUTE FUNCTION reject_room_player_seat_id_change()"
         }
       ]
     },
@@ -1732,15 +1636,10 @@
           "default": "now()"
         },
         {
-          "name": "host_id",
-          "type": "varchar(255)",
-          "nullable": false
-        },
-        {
           "name": "host_seat_id",
           "type": "uuid",
           "nullable": true,
-          "comment": "Canonical host seat UUID scoped to this room."
+          "comment": "Canonical host seat UUID. Runtime hostId is an alias of this value."
         },
         {
           "name": "id",
@@ -1779,14 +1678,6 @@
         }
       ],
       "indexes": [
-        {
-          "name": "idx_rooms_host_id",
-          "def": "CREATE INDEX idx_rooms_host_id ON public.rooms USING btree (host_id)",
-          "table": "public.rooms",
-          "columns": [
-            "host_id"
-          ]
-        },
         {
           "name": "idx_rooms_last_activity",
           "def": "CREATE INDEX idx_rooms_last_activity ON public.rooms USING btree (last_activity_at)",
@@ -1850,11 +1741,7 @@
       "triggers": [
         {
           "name": "reject_deleting_room_host",
-          "def": "CREATE TRIGGER reject_deleting_room_host BEFORE INSERT OR UPDATE OF host_id ON public.rooms FOR EACH ROW EXECUTE FUNCTION reject_deleting_room_host()"
-        },
-        {
-          "name": "sync_room_host_seat_identity",
-          "def": "CREATE TRIGGER sync_room_host_seat_identity BEFORE INSERT OR UPDATE OF host_id, host_seat_id ON public.rooms FOR EACH ROW EXECUTE FUNCTION sync_room_host_seat_identity()"
+          "def": "CREATE TRIGGER reject_deleting_room_host BEFORE INSERT OR UPDATE OF host_seat_id ON public.rooms FOR EACH ROW EXECUTE FUNCTION reject_deleting_room_host()"
         },
         {
           "name": "update_rooms_updated_at",
@@ -2079,7 +1966,7 @@
         "room_id",
         "id"
       ],
-      "parent_cardinality": "zero_or_one",
+      "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (room_id, seat_id) REFERENCES room_players(room_id, id) DEFERRABLE INITIALLY DEFERRED"
     },
     {
@@ -2522,36 +2409,6 @@
       "name": "public.start_room_membership_timeout",
       "return_type": "jsonb",
       "arguments": "p_user_id uuid, p_room_id uuid, p_expected_version bigint, p_transition_id uuid",
-      "type": "FUNCTION"
-    },
-    {
-      "name": "public.sync_active_room_membership_seat",
-      "return_type": "trigger",
-      "arguments": "",
-      "type": "FUNCTION"
-    },
-    {
-      "name": "public.sync_game_history_actor_seat",
-      "return_type": "trigger",
-      "arguments": "",
-      "type": "FUNCTION"
-    },
-    {
-      "name": "public.sync_game_state_current_seat_identity",
-      "return_type": "trigger",
-      "arguments": "",
-      "type": "FUNCTION"
-    },
-    {
-      "name": "public.sync_room_host_seat_identity",
-      "return_type": "trigger",
-      "arguments": "",
-      "type": "FUNCTION"
-    },
-    {
-      "name": "public.sync_room_membership_event_seat",
-      "return_type": "trigger",
-      "arguments": "",
       "type": "FUNCTION"
     },
     {

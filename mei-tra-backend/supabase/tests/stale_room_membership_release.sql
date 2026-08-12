@@ -1,5 +1,7 @@
 begin;
 
+select plan(1);
+
 insert into auth.users (
   id,
   email,
@@ -15,19 +17,34 @@ values (
   now()
 );
 
-insert into public.rooms (id, name, host_id, status)
+insert into public.rooms (id, name, status)
 values
   (
     '00000000-0000-0000-0000-000000000922',
     'Stale room A',
-    'stale-player',
     'playing'
   ),
   (
     '00000000-0000-0000-0000-000000000923',
     'Stale room B',
-    'stale-player',
     'waiting'
+  );
+
+insert into public.room_players (id, room_id, name, team, seat_index)
+values
+  (
+    '00000000-0000-4000-8000-000000000928',
+    '00000000-0000-0000-0000-000000000922',
+    'Stale seat A',
+    0,
+    0
+  ),
+  (
+    '00000000-0000-4000-8000-000000000929',
+    '00000000-0000-0000-0000-000000000923',
+    'Stale seat B',
+    1,
+    0
   );
 
 do $test$
@@ -38,6 +55,9 @@ declare
   test_user constant uuid := '00000000-0000-0000-0000-000000000921';
   room_a constant uuid := '00000000-0000-0000-0000-000000000922';
   room_b constant uuid := '00000000-0000-0000-0000-000000000923';
+  seat_a constant uuid := '00000000-0000-4000-8000-000000000928';
+  seat_b constant uuid := '00000000-0000-4000-8000-000000000929';
+  next_seat constant uuid := '00000000-0000-4000-8000-000000000930';
   t1 constant uuid := '00000000-0000-4000-8000-000000000924';
   t2 constant uuid := '00000000-0000-4000-8000-000000000925';
   t3 constant uuid := '00000000-0000-4000-8000-000000000926';
@@ -59,23 +79,23 @@ begin
     raise exception 'service_role cannot release stale room memberships';
   end if;
 
-  result := public.claim_room_membership(test_user, room_a, 'stale-player', t1);
+  result := public.claim_room_membership(test_user, room_a, seat_a::text, t1);
   if result->>'result' <> 'claimed' then
     raise exception 'setup claim failed: %', result;
   end if;
 
   -- A live room must keep behaving exactly as before.
-  result := public.reserve_room_membership(test_user, 'stale-player', t2);
+  result := public.reserve_room_membership(test_user, seat_b::text, t2);
   if result->>'result' <> 'conflict' then
     raise exception 'live room did not block reservation: %', result;
   end if;
 
-  result := public.claim_room_membership(test_user, room_b, 'stale-player', t2);
+  result := public.claim_room_membership(test_user, room_b, seat_b::text, t2);
   if result->>'result' <> 'conflict' then
     raise exception 'live room did not block cross-room claim: %', result;
   end if;
 
-  result := public.claim_room_membership(test_user, room_a, 'stale-player', t2);
+  result := public.claim_room_membership(test_user, room_a, seat_a::text, t2);
   if result->>'result' <> 'reconnected' then
     raise exception 'live room reconnect broke: %', result;
   end if;
@@ -84,7 +104,7 @@ begin
   -- write is skipped here, standing in for a crash between the two.
   update public.rooms set status = 'finished' where id = room_a;
 
-  result := public.claim_room_membership(test_user, room_b, 'stale-player', t3);
+  result := public.claim_room_membership(test_user, room_b, seat_b::text, t3);
   if result->>'result' <> 'claimed' then
     raise exception 'finished room still blocked a claim: %', result;
   end if;
@@ -111,7 +131,7 @@ begin
   -- Same check on the reserve path, and for 'abandoned' as well as 'finished'.
   update public.rooms set status = 'abandoned' where id = room_b;
 
-  result := public.reserve_room_membership(test_user, 'stale-player', t4);
+  result := public.reserve_room_membership(test_user, next_seat::text, t4);
   if result->>'result' <> 'reserved' then
     raise exception 'abandoned room still blocked a reservation: %', result;
   end if;
@@ -126,5 +146,8 @@ begin
   end if;
 end;
 $test$;
+
+select pass('stale room membership release keeps the reserved seat identity');
+select * from finish();
 
 rollback;

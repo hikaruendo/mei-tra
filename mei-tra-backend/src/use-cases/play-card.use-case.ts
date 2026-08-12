@@ -88,17 +88,15 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       player.hand = player.hand.filter((c) => c !== card);
 
       const currentField = state.playState.currentField;
-      const playedBy = Array.isArray(currentField.playedBy)
-        ? currentField.playedBy
-        : [];
-      currentField.playedBy = playedBy;
-      const playedBySeatIds = Array.isArray(currentField.playedBySeatIds)
-        ? currentField.playedBySeatIds
-        : playedBy.map(asSeatId);
-      currentField.playedBySeatIds = playedBySeatIds;
-      currentField.cards.push(card);
-      playedBy.push(player.playerId);
+      const playedBySeatIds = (
+        Array.isArray(currentField.playedBySeatIds)
+          ? currentField.playedBySeatIds
+          : currentField.playedBy
+      ).map(asSeatId);
       playedBySeatIds.push(asSeatId(player.playerId));
+      currentField.cards.push(card);
+      currentField.playedBy = [...playedBySeatIds];
+      currentField.playedBySeatIds = [...playedBySeatIds];
       if (currentField.cards.length === 1) {
         currentField.baseCard = card;
       }
@@ -114,7 +112,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           fieldCards: [...currentField.cards],
           baseCard: currentField.baseCard,
           playedBySeatIds: [...playedBySeatIds],
-          playedBy: [...playedBy],
+          playedBy: [...playedBySeatIds],
           isFieldComplete: currentField.cards.length === 4,
         },
       });

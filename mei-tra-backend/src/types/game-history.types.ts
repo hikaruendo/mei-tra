@@ -279,8 +279,5 @@ export interface CreateGameHistoryEntry {
   gameStateId?: string;
   actionType: GameHistoryActionType;
   actorSeatId?: SeatId | null;
-  actorKeySnapshot?: string | null;
-  /** @deprecated Use actorSeatId. */
-  playerId?: string | null;
   actionData?: Record<string, unknown>;
 }

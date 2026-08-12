@@ -1,785 +1,525 @@
 begin;
 
-select plan(50);
+select plan(36);
 
-select has_column('rooms', 'host_seat_id');
-select has_column('game_states', 'current_seat_id');
-select has_column('game_history', 'actor_seat_id');
-select has_column('active_room_memberships', 'seat_id');
+select col_type_is(
+  'public',
+  'room_players',
+  'id',
+  'uuid',
+  'room_players.id is the canonical seat UUID'
+);
 
-select is(
-  (
-    select constraint_type
-    from information_schema.table_constraints
-    where constraint_schema = 'public'
-      and table_name = 'room_players'
-      and constraint_name = 'room_players_user_id_fkey'
-  ),
-  'FOREIGN KEY',
-  'room_players.user_id remains a foreign key'
+select hasnt_column(
+  'public',
+  'room_players',
+  'player_id',
+  'room_players.player_id is removed'
+);
+
+select hasnt_column(
+  'public',
+  'room_players',
+  'socket_id',
+  'room_players.socket_id is removed'
+);
+
+select hasnt_column(
+  'public',
+  'room_players',
+  'is_host',
+  'room_players.is_host is removed'
+);
+
+select hasnt_column(
+  'public',
+  'rooms',
+  'host_id',
+  'rooms.host_id is removed'
+);
+
+select col_type_is(
+  'public',
+  'rooms',
+  'host_seat_id',
+  'uuid',
+  'rooms.host_seat_id stores the canonical host seat'
+);
+
+select hasnt_column(
+  'public',
+  'game_states',
+  'current_player_id',
+  'game_states.current_player_id is removed'
+);
+
+select col_type_is(
+  'public',
+  'game_states',
+  'current_seat_id',
+  'uuid',
+  'game_states.current_seat_id stores the canonical turn seat'
+);
+
+select hasnt_column(
+  'public',
+  'game_history',
+  'player_id',
+  'game_history.player_id is removed'
+);
+
+select col_type_is(
+  'public',
+  'game_history',
+  'actor_seat_id',
+  'uuid',
+  'game_history.actor_seat_id stores the canonical actor seat'
+);
+
+select hasnt_column(
+  'public',
+  'active_room_memberships',
+  'player_id',
+  'active_room_memberships.player_id is removed'
+);
+
+select col_type_is(
+  'public',
+  'active_room_memberships',
+  'seat_id',
+  'uuid',
+  'active_room_memberships.seat_id stores a seat UUID'
 );
 
 select ok(
-  to_regprocedure(
-    'public.create_room_with_host_seat_atomic(uuid,text,uuid,uuid,text,jsonb,integer,uuid)'
-  ) is not null,
-  'atomic room and host-seat creation RPC exists'
+  (
+    select is_nullable = 'NO'
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'active_room_memberships'
+      and column_name = 'seat_id'
+  ),
+  'active room memberships always identify a seat'
+);
+
+select col_type_is(
+  'public',
+  'room_membership_events',
+  'seat_id',
+  'uuid',
+  'membership events optionally retain a seat UUID'
+);
+
+select hasnt_column(
+  'meitra_private',
+  'account_anonymization_player_map',
+  'original_player_id',
+  'account anonymization no longer stores an original player key'
+);
+
+select hasnt_column(
+  'meitra_private',
+  'account_anonymization_player_map',
+  'anonymized_player_id',
+  'account anonymization no longer creates a replacement player key'
 );
 
 select ok(
   not has_function_privilege(
     'anon',
-    'public.create_room_with_host_seat_atomic(uuid,text,uuid,uuid,text,jsonb,integer,uuid)',
+    'meitra_private.canonicalize_state_identity_json(jsonb)',
     'execute'
   ),
-  'anonymous clients cannot create canonical rooms directly'
+  'anonymous clients cannot invoke state identity canonicalization'
 );
 
 select ok(
-  has_schema_privilege('service_role', 'meitra_private', 'usage'),
-  'service role can resolve private helpers used by canonical write triggers'
-);
-
-insert into auth.users (
-  id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  created_at,
-  updated_at
-)
-values (
-  '00000000-0000-0000-0000-000000000a01',
-  'authenticated',
-  'authenticated',
-  'seat-host-1@example.com',
-  '',
-  now(),
-  now(),
-  now()
-);
-
-update public.user_profiles
-set username = 'seat_identity_host_a',
-    display_name = 'Seat Host A'
-where id = '00000000-0000-0000-0000-000000000a01';
-
-insert into auth.users (
-  id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  created_at,
-  updated_at
-)
-values (
-  '00000000-0000-0000-0000-000000000b01',
-  'authenticated',
-  'authenticated',
-  'seat-host-2@example.com',
-  '',
-  now(),
-  now(),
-  now()
-);
-
-update public.user_profiles
-set username = 'seat_identity_host_b',
-    display_name = 'Seat Host B'
-where id = '00000000-0000-0000-0000-000000000b01';
-
-select is(
-  (
-    public.reserve_room_membership(
-      '00000000-0000-0000-0000-000000000a01',
-      '00000000-0000-0000-0000-000000000a03',
-      '00000000-0000-0000-0000-000000000a04'
-    )->>'result'
+  not has_function_privilege(
+    'authenticated',
+    'meitra_private.scrub_account_player_names(jsonb,jsonb,boolean)',
+    'execute'
   ),
-  'reserved',
-  'host membership is reserved before atomic room creation'
+  'authenticated clients cannot invoke account name scrubbing'
 );
 
-select public.create_room_with_host_seat_atomic(
-  '00000000-0000-0000-0000-000000000a02',
-  'Seat identity room A',
-  '00000000-0000-0000-0000-000000000a03',
-  '00000000-0000-0000-0000-000000000a01',
-  'Seat Host A',
-  '{
-    "maxPlayers":4,
-    "isPrivate":false,
-    "password":null,
-    "teamAssignmentMethod":"random",
-    "pointsToWin":10,
-    "allowSpectators":true
-  }'::jsonb,
-  10,
-  '00000000-0000-0000-0000-000000000a04'
+select ok(
+  not has_function_privilege(
+    'anon',
+    'meitra_private.assert_state_identity_references(uuid,jsonb)',
+    'execute'
+  ),
+  'anonymous clients cannot invoke state reference validation'
 );
 
 select is(
   (
-    select host_seat_id
-    from public.rooms
-    where id = '00000000-0000-0000-0000-000000000a02'
+    select count(*)::integer
+    from pg_proc as procedure
+    join pg_namespace as namespace
+      on namespace.oid = procedure.pronamespace
+    where namespace.nspname in ('public', 'meitra_private')
+      and procedure.proname in (
+        'sync_active_room_membership_seat',
+        'sync_room_membership_event_seat',
+        'sync_game_history_actor_seat',
+        'sync_game_state_current_seat_identity',
+        'sync_room_host_seat_identity',
+        'keep_anonymized_host_on_seat_id',
+        'resolve_room_seat_id',
+        'scrub_account_references'
+      )
   ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'room host points at the canonical host seat'
+  0,
+  'legacy identity synchronization functions are removed'
+);
+
+insert into auth.users (
+  id,
+  email,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
+values (
+  '00000000-0000-0000-0000-000000000931',
+  'seat-identity-test@example.com',
+  '{"username":"seat_identity_test","display_name":"Seat Identity Test"}'::jsonb,
+  now(),
+  now()
+);
+
+insert into public.rooms (id, name, host_seat_id)
+values
+  (
+    '00000000-0000-0000-0000-000000000932',
+    'Seat identity room A',
+    '00000000-0000-4000-8000-000000000934'
+  ),
+  (
+    '00000000-0000-0000-0000-000000000933',
+    'Seat identity room B',
+    '00000000-0000-4000-8000-000000000935'
+  );
+
+insert into public.room_players (
+  id,
+  room_id,
+  user_id,
+  name,
+  team,
+  is_com,
+  seat_index
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000934',
+    '00000000-0000-0000-0000-000000000932',
+    '00000000-0000-0000-0000-000000000931',
+    'Player 1',
+    0,
+    false,
+    0
+  ),
+  (
+    '00000000-0000-4000-8000-000000000935',
+    '00000000-0000-0000-0000-000000000933',
+    null,
+    'COM',
+    1,
+    true,
+    0
+  );
+
+insert into public.game_states (
+  room_id,
+  state_data,
+  current_seat_id
+)
+values
+  (
+    '00000000-0000-0000-0000-000000000932',
+    '{"identitySchemaVersion":2,"playerStates":{"00000000-0000-4000-8000-000000000934":{"hand":[]}}}'::jsonb,
+    '00000000-0000-4000-8000-000000000934'
+  ),
+  (
+    '00000000-0000-0000-0000-000000000933',
+    '{"identitySchemaVersion":2,"playerStates":{"00000000-0000-4000-8000-000000000935":{"hand":[]}}}'::jsonb,
+    '00000000-0000-4000-8000-000000000935'
+  );
+
+set constraints all immediate;
+
+select throws_ok(
+  $$
+    update public.rooms
+    set host_seat_id = '00000000-0000-4000-8000-000000000935'
+    where id = '00000000-0000-0000-0000-000000000932'
+  $$,
+  '23503',
+  null,
+  'a room cannot reference another room host seat'
+);
+
+select throws_ok(
+  $$
+    update public.game_states
+    set current_seat_id = '00000000-0000-4000-8000-000000000935'
+    where room_id = '00000000-0000-0000-0000-000000000932'
+  $$,
+  '23503',
+  null,
+  'game state cannot reference another room current seat'
+);
+
+select throws_ok(
+  $$
+    insert into public.game_history (
+      room_id,
+      action_type,
+      actor_seat_id
+    ) values (
+      '00000000-0000-0000-0000-000000000932',
+      'seat-identity-test',
+      '00000000-0000-4000-8000-000000000935'
+    )
+  $$,
+  '23503',
+  null,
+  'game history cannot reference another room actor seat'
+);
+
+select throws_ok(
+  $$
+    insert into public.active_room_memberships (
+      user_id,
+      room_id,
+      seat_id,
+      status,
+      transition_id
+    ) values (
+      '00000000-0000-0000-0000-000000000931',
+      '00000000-0000-0000-0000-000000000932',
+      '00000000-0000-4000-8000-000000000935',
+      'active',
+      '00000000-0000-4000-8000-000000000936'
+    )
+  $$,
+  '23503',
+  null,
+  'active membership cannot reference another room seat'
+);
+
+select throws_ok(
+  $$
+    update public.room_players
+    set id = '00000000-0000-4000-8000-000000000937'
+    where id = '00000000-0000-4000-8000-000000000934'
+  $$,
+  'PT422',
+  null,
+  'a seat UUID cannot change while its room exists'
+);
+
+select throws_ok(
+  $$
+    delete from public.room_players
+    where id = '00000000-0000-4000-8000-000000000934'
+  $$,
+  'PT422',
+  null,
+  'a seat cannot be deleted independently from its room'
+);
+
+select throws_ok(
+  $$
+    select public.persist_room_roster_atomic(
+      '00000000-0000-0000-0000-000000000932',
+      '[{
+        "seatId":"00000000-0000-4000-8000-000000000937",
+        "name":"Replacement",
+        "team":0,
+        "isReady":true,
+        "isCOM":false,
+        "joinedAt":"2026-08-11T00:00:00.000Z",
+        "seatIndex":0
+      }]'::jsonb,
+      '{"00000000-0000-4000-8000-000000000937":{"hand":[]}}'::jsonb,
+      '00000000-0000-4000-8000-000000000937',
+      0
+    )
+  $$,
+  'PT422',
+  null,
+  'roster persistence cannot replace the UUID assigned to a seat index'
+);
+
+select public.persist_room_roster_atomic(
+  '00000000-0000-0000-0000-000000000932',
+  '[{
+    "seatId":"00000000-0000-4000-8000-000000000934",
+    "name":"COM",
+    "team":0,
+    "isReady":true,
+    "isCOM":true,
+    "joinedAt":"2026-08-11T00:00:00.000Z",
+    "seatIndex":0
+  }]'::jsonb,
+  '{"00000000-0000-4000-8000-000000000934":{"hand":["S1"]}}'::jsonb,
+  '00000000-0000-4000-8000-000000000934',
+  0
 );
 
 select is(
   (
     select id
     from public.room_players
-    where room_id = '00000000-0000-0000-0000-000000000a02'
+    where room_id = '00000000-0000-0000-0000-000000000932'
       and seat_index = 0
   ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'host room-player row uses the preallocated seat UUID'
+  '00000000-0000-4000-8000-000000000934'::uuid,
+  'human to COM replacement preserves the seat UUID'
+);
+
+select public.atomic_update_game_state(
+  '00000000-0000-0000-0000-000000000932',
+  '{
+    "roundState": {
+      "winnerId": "00000000-0000-4000-8000-000000000934",
+      "turn": {
+        "playerId": "00000000-0000-4000-8000-000000000934"
+      },
+      "playedBy": ["00000000-0000-4000-8000-000000000934"]
+    }
+  }'::jsonb,
+  '{}'::jsonb,
+  1
+);
+
+select ok(
+  not (
+    select
+      jsonb_path_exists(state_data, '$.**.playerId')
+      or jsonb_path_exists(state_data, '$.**.winnerId')
+      or jsonb_path_exists(state_data, '$.**.playedBy')
+    from public.game_states
+    where room_id = '00000000-0000-0000-0000-000000000932'
+  ),
+  'state persistence recursively removes legacy identity aliases'
 );
 
 select is(
   (
-    select seat_id
-    from public.active_room_memberships
-    where user_id = '00000000-0000-0000-0000-000000000a01'
+    select state_data->'roundState'
+    from public.game_states
+    where room_id = '00000000-0000-0000-0000-000000000932'
   ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'active membership resolves to the same seat UUID'
+  '{
+    "winnerSeatId":"00000000-0000-4000-8000-000000000934",
+    "turn":{"seatId":"00000000-0000-4000-8000-000000000934"},
+    "playedBySeatIds":["00000000-0000-4000-8000-000000000934"]
+  }'::jsonb,
+  'state persistence keeps the canonical nested identity fields'
 );
 
 select is(
   (
     select state_data->>'identitySchemaVersion'
     from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000a02'
+    where room_id = '00000000-0000-0000-0000-000000000932'
   ),
   '2',
-  'new rooms persist identity schema version 2'
-);
-
-select public.persist_room_roster_atomic(
-  '00000000-0000-0000-0000-000000000a02',
-  '[{
-    "seatId":"00000000-0000-0000-0000-000000000a03",
-    "playerId":"00000000-0000-0000-0000-000000000a03",
-    "participantKey":"com-timeout-a",
-    "userId":null,
-    "name":"COM",
-    "team":0,
-    "isReady":true,
-    "isHost":true,
-    "isCOM":true,
-    "joinedAt":"2026-08-10T00:00:00.000Z",
-    "seatIndex":0
-  }]'::jsonb,
-  '{
-    "00000000-0000-0000-0000-000000000a03": {
-      "hand":["S1"],
-      "isPasser":false,
-      "hasBroken":false,
-      "hasRequiredBroken":false
-    }
-  }'::jsonb,
-  '00000000-0000-0000-0000-000000000a03',
-  0,
-  '{
-    "blowState": {
-      "currentTrump": null,
-      "currentHighestDeclaration": null,
-      "declarations": [],
-      "actionHistory": [],
-      "lastPasserSeatId": "00000000-0000-0000-0000-000000000a03",
-      "lastPasser": "00000000-0000-0000-0000-000000000a03",
-      "isRoundCancelled": false,
-      "currentBlowIndex": 0
-    }
-  }'::jsonb,
-  '{
-    "currentSeatId": "00000000-0000-0000-0000-000000000a03",
-    "gamePhase": "blow"
-  }'::jsonb,
-  '{
-    "type": "release",
-    "seatId": "00000000-0000-0000-0000-000000000a03",
-    "transitionId": "00000000-0000-0000-0000-000000000a06"
-  }'::jsonb
-);
-
-select is(
-  (
-    select id
-    from public.room_players
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-      and seat_index = 0
-  ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'human to COM conversion preserves the seat UUID'
-);
-
-select is(
-  (
-    select player_id
-    from public.room_players
-    where id = '00000000-0000-0000-0000-000000000a03'
-  ),
-  'com-timeout-a',
-  'legacy occupant key can change without replacing the seat'
-);
-
-select is(
-  (
-    select host_id
-    from public.rooms
-    where id = '00000000-0000-0000-0000-000000000a02'
-  ),
-  '00000000-0000-0000-0000-000000000a03',
-  'legacy host alias dual-writes the canonical seat UUID'
-);
-
-select is(
-  (
-    select version
-    from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-  ),
-  1::bigint,
-  'roster and game state update share one versioned write'
-);
-
-select is(
-  (
-    select state_data->'blowState'->>'lastPasserSeatId'
-    from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-  ),
-  '00000000-0000-0000-0000-000000000a03',
-  'roster RPC persists canonical JSON seat references atomically'
-);
-
-select is(
-  (
-    select game_phase::text
-    from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-  ),
-  'blow',
-  'roster RPC persists scalar game state atomically'
-);
-
-select ok(
-  not exists (
-    select 1
-    from public.active_room_memberships
-    where user_id = '00000000-0000-0000-0000-000000000a01'
-  ),
-  'roster and membership release commit in the same transaction'
+  'state persistence always writes identity schema version 2'
 );
 
 select throws_ok(
   $$
-    select public.persist_room_roster_atomic(
-      '00000000-0000-0000-0000-000000000a02',
-      '[{
-        "seatId":"00000000-0000-0000-0000-000000000a03",
-        "playerId":"00000000-0000-0000-0000-000000000a03",
-        "participantKey":"must-roll-back",
-        "name":"COM",
-        "team":0,
-        "isReady":true,
-        "isHost":true,
-        "isCOM":true,
-        "seatIndex":0
-      }]'::jsonb,
-      '{
-        "00000000-0000-0000-0000-000000000a03": {
-          "hand":[],
-          "isPasser":false,
-          "hasBroken":false,
-          "hasRequiredBroken":false
-        }
-      }'::jsonb,
-      'missing-host',
-      1
-    )
-  $$,
-  'PT422',
-  null,
-  'a late RPC failure aborts the whole roster transaction'
-);
-
-select is(
-  (
-    select player_id
-    from public.room_players
-    where id = '00000000-0000-0000-0000-000000000a03'
-  ),
-  'com-timeout-a',
-  'failed roster RPC rolls the earlier occupant update back'
-);
-
-select public.atomic_update_game_state(
-  '00000000-0000-0000-0000-000000000a02',
-  '{"deck":["H2"]}'::jsonb,
-  '{"currentSeatId":"00000000-0000-0000-0000-000000000a03"}'::jsonb,
-  1
-);
-
-select is(
-  (
-    select current_seat_id
-    from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-  ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'current turn writes the canonical seat UUID'
-);
-
-select is(
-  (
-    select current_player_id
-    from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-  ),
-  '00000000-0000-0000-0000-000000000a03',
-  'legacy current-player alias mirrors current_seat_id'
-);
-
-select public.claim_room_membership(
-  '00000000-0000-0000-0000-000000000a01',
-  '00000000-0000-0000-0000-000000000a02',
-  '00000000-0000-0000-0000-000000000a03',
-  '00000000-0000-0000-0000-000000000a07'
-);
-
-select public.mark_room_membership_disconnected(
-  '00000000-0000-0000-0000-000000000a01',
-  '00000000-0000-0000-0000-000000000a02',
-  1,
-  '00000000-0000-0000-0000-000000000a08'
-);
-
-select public.start_room_membership_timeout(
-  '00000000-0000-0000-0000-000000000a01',
-  '00000000-0000-0000-0000-000000000a02',
-  2,
-  '00000000-0000-0000-0000-000000000a09'
-);
-
-select public.persist_room_roster_atomic(
-  '00000000-0000-0000-0000-000000000a02',
-  '[{
-    "seatId":"00000000-0000-0000-0000-000000000a03",
-    "playerId":"00000000-0000-0000-0000-000000000a03",
-    "participantKey":"com-timeout-a",
-    "userId":"00000000-0000-0000-0000-000000000a01",
-    "name":"COM",
-    "team":0,
-    "isReady":true,
-    "isHost":true,
-    "isCOM":true,
-    "joinedAt":"2026-08-10T00:00:00.000Z",
-    "seatIndex":0
-  }]'::jsonb,
-  '{
-    "00000000-0000-0000-0000-000000000a03": {
-      "hand":["S1"],
-      "isPasser":false,
-      "hasBroken":false,
-      "hasRequiredBroken":false
-    }
-  }'::jsonb,
-  '00000000-0000-0000-0000-000000000a03',
-  2,
-  '{}'::jsonb,
-  '{
-    "currentSeatId":"00000000-0000-0000-0000-000000000a03",
-    "gamePhase":"blow"
-  }'::jsonb,
-  '{
-    "type":"complete-disconnect-timeout",
-    "userId":"00000000-0000-0000-0000-000000000a01",
-    "expectedVersion":3,
-    "transitionId":"00000000-0000-0000-0000-000000000a09"
-  }'::jsonb
-);
-
-select is(
-  (
-    select user_id
-    from public.room_players
-    where id = '00000000-0000-0000-0000-000000000a03'
-  ),
-  '00000000-0000-0000-0000-000000000a01'::uuid,
-  'disconnect timeout COM keeps the authenticated seat owner'
-);
-
-select is(
-  (
-    select seat_id
-    from public.room_membership_events
-    where transition_id = '00000000-0000-0000-0000-000000000a09'
-      and event_type = 'disconnect_timeout_completed'
-    order by created_at desc
-    limit 1
-  ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'disconnect timeout completion keeps the durable seat reference'
-);
-
-select is(
-  (
-    public.reserve_room_membership(
-      '00000000-0000-0000-0000-000000000b01',
-      '00000000-0000-0000-0000-000000000b03',
-      '00000000-0000-0000-0000-000000000b04'
-    )->>'result'
-  ),
-  'reserved',
-  'second room host membership is reserved'
-);
-
-select public.create_room_with_host_seat_atomic(
-  '00000000-0000-0000-0000-000000000b02',
-  'Seat identity room B',
-  '00000000-0000-0000-0000-000000000b03',
-  '00000000-0000-0000-0000-000000000b01',
-  'Seat Host B',
-  '{
-    "maxPlayers":4,
-    "isPrivate":false,
-    "password":null,
-    "teamAssignmentMethod":"random",
-    "pointsToWin":10,
-    "allowSpectators":true
-  }'::jsonb,
-  10,
-  '00000000-0000-0000-0000-000000000b04'
-);
-
-set constraints game_states_current_seat_same_room_fkey immediate;
-set constraints rooms_host_seat_same_room_fkey immediate;
-set constraints game_history_actor_seat_same_room_fkey immediate;
-
-select throws_ok(
-  $$
-    update public.rooms
-    set host_seat_id = '00000000-0000-0000-0000-000000000b03'
-    where id = '00000000-0000-0000-0000-000000000a02'
-  $$,
-  '23503',
-  null,
-  'a host cannot reference a seat in another room'
-);
-
-select throws_ok(
-  $$
-    update public.game_states
-    set current_seat_id = '00000000-0000-0000-0000-000000000b03'
-    where room_id = '00000000-0000-0000-0000-000000000a02'
-  $$,
-  '23503',
-  null,
-  'a current turn cannot reference a seat in another room'
-);
-
-select throws_ok(
-  $$
-    update public.room_players
-    set id = '00000000-0000-0000-0000-000000000aff'
-    where id = '00000000-0000-0000-0000-000000000a03'
-  $$,
-  'PT422',
-  null,
-  'an existing seat UUID cannot be changed'
-);
-
-select lives_ok(
-  $$
-    update public.room_players
-    set seat_index = 7
-    where id = '00000000-0000-0000-0000-000000000a03'
-  $$,
-  'seat order can change without replacing the seat UUID'
-);
-
-select lives_ok(
-  $$
-    select public.persist_room_roster_atomic(
-      '00000000-0000-0000-0000-000000000a02',
-      '[{
-        "seatId":"00000000-0000-0000-0000-000000000a03",
-        "playerId":"00000000-0000-0000-0000-000000000a03",
-        "participantKey":"com-timeout-a",
-        "userId":"00000000-0000-0000-0000-000000000a01",
-        "name":"COM",
-        "team":0,
-        "isReady":true,
-        "isHost":true,
-        "isCOM":true,
-        "seatIndex":0
-      }]'::jsonb,
-      '{
-        "00000000-0000-0000-0000-000000000a03": {
-          "hand":["S1"],
-          "isPasser":false,
-          "hasBroken":false,
-          "hasRequiredBroken":false
-        }
-      }'::jsonb,
-      '00000000-0000-0000-0000-000000000a03',
-      null
-    )
-  $$,
-  'atomic roster persistence can reorder a seat without changing its UUID'
-);
-
-select throws_ok(
-  $$
-    update public.room_players
-    set room_id = '00000000-0000-0000-0000-000000000b02'
-    where id = '00000000-0000-0000-0000-000000000a03'
-  $$,
-  'PT422',
-  null,
-  'an existing seat cannot move to another room'
-);
-
-select throws_ok(
-  $$
-    select public.persist_room_roster_atomic(
-      '00000000-0000-0000-0000-000000000b02',
-      '[]'::jsonb,
+    select public.atomic_update_game_state(
+      '00000000-0000-0000-0000-000000000932',
+      '{"roundState":{"winnerSeatId":"00000000-0000-4000-8000-000000000935"}}'::jsonb,
       '{}'::jsonb,
-      '00000000-0000-0000-0000-000000000b03',
-      0
+      2
     )
   $$,
   'PT422',
   null,
-  'roster persistence cannot omit an existing seat'
+  'state updates reject nested seat references from another room'
 );
 
-update public.rooms
-set host_id = '00000000-0000-0000-0000-000000000b01'
-where id = '00000000-0000-0000-0000-000000000b02';
+select throws_ok(
+  $$
+    select public.persist_room_roster_atomic(
+      '00000000-0000-0000-0000-000000000932',
+      '[{
+        "seatId":"00000000-0000-4000-8000-000000000934",
+        "name":"Should roll back",
+        "team":1,
+        "isReady":false,
+        "isCOM":false,
+        "joinedAt":"2026-08-11T00:00:00.000Z",
+        "seatIndex":0
+      }]'::jsonb,
+      '{"00000000-0000-4000-8000-000000000934":{"hand":["H2"]}}'::jsonb,
+      '00000000-0000-4000-8000-000000000934',
+      2,
+      '{"deck":["H2"]}'::jsonb,
+      '{"gamePhase":"invalid-phase"}'::jsonb
+    )
+  $$,
+  '22P02',
+  null,
+  'a late roster RPC failure aborts the transaction'
+);
 
 select is(
   (
-    select host_seat_id
-    from public.rooms
-    where id = '00000000-0000-0000-0000-000000000b02'
+    select jsonb_build_object(
+      'name', name,
+      'team', team,
+      'isCOM', is_com
+    )
+    from public.room_players
+    where id = '00000000-0000-4000-8000-000000000934'
   ),
-  '00000000-0000-0000-0000-000000000b03'::uuid,
-  'legacy host writes resolve to the canonical seat'
+  '{"name":"COM","team":0,"isCOM":true}'::jsonb,
+  'a late roster RPC failure rolls back the room player update'
 );
 
 select is(
   (
-    select host_id
-    from public.rooms
-    where id = '00000000-0000-0000-0000-000000000b02'
-  ),
-  '00000000-0000-0000-0000-000000000b03',
-  'legacy host alias is normalized to the canonical seat UUID'
-);
-
-update public.game_states
-set current_player_id = '00000000-0000-0000-0000-000000000b01'
-where room_id = '00000000-0000-0000-0000-000000000b02';
-
-select is(
-  (
-    select current_seat_id
+    select jsonb_build_object(
+      'version', version,
+      'playerStates', state_data->'playerStates',
+      'deck', state_data->'deck'
+    )
     from public.game_states
-    where room_id = '00000000-0000-0000-0000-000000000b02'
+    where room_id = '00000000-0000-0000-0000-000000000932'
   ),
-  '00000000-0000-0000-0000-000000000b03'::uuid,
-  'legacy current-player writes resolve to the canonical seat'
-);
-
-insert into public.game_history (
-  id,
-  room_id,
-  game_state_id,
-  action_type,
-  player_id,
-  action_data
-)
-select
-  '00000000-0000-0000-0000-000000000a05',
-  game_state.room_id,
-  game_state.id,
-  'card_played',
-  'com-timeout-a',
-  '{}'::jsonb
-from public.game_states as game_state
-where game_state.room_id = '00000000-0000-0000-0000-000000000a02';
-
-select is(
-  (
-    select actor_seat_id
-    from public.game_history
-    where id = '00000000-0000-0000-0000-000000000a05'
-  ),
-  '00000000-0000-0000-0000-000000000a03'::uuid,
-  'history resolves its canonical actor seat'
+  '{
+    "version":2,
+    "playerStates":{"00000000-0000-4000-8000-000000000934":{"hand":["S1"]}},
+    "deck":null
+  }'::jsonb,
+  'a late roster RPC failure leaves game state unchanged'
 );
 
 select is(
   (
-    select actor_key_snapshot
-    from public.game_history
-    where id = '00000000-0000-0000-0000-000000000a05'
-  ),
-  'com-timeout-a',
-  'history retains the original actor key snapshot'
-);
-
-select throws_ok(
-  $$
-    update public.game_history
-    set actor_seat_id = '00000000-0000-0000-0000-000000000b03'
-    where id = '00000000-0000-0000-0000-000000000a05'
-  $$,
-  '23503',
-  null,
-  'history cannot reference an actor seat in another room'
-);
-
-insert into public.game_history (
-  id,
-  room_id,
-  game_state_id,
-  action_type,
-  player_id,
-  action_data
-)
-select
-  '00000000-0000-0000-0000-000000000b05',
-  game_state.room_id,
-  game_state.id,
-  'game_started',
-  '00000000-0000-0000-0000-000000000b03',
-  '{}'::jsonb
-from public.game_states as game_state
-where game_state.room_id = '00000000-0000-0000-0000-000000000b02';
-
-update public.rooms
-set status = 'finished'
-where id = '00000000-0000-0000-0000-000000000b02';
-
-select ok(
-  public.mark_account_deletion_started(
-    '00000000-0000-0000-0000-000000000b01'
-  ) is not null,
-  'finished-room account deletion can begin'
-);
-
-select ok(
-  public.anonymize_account_references(
-    '00000000-0000-0000-0000-000000000b01'
-  ) is not null,
-  'account references are anonymized without deleting the seat'
-);
-
-select is(
-  (
-    select host_id
-    from public.rooms
-    where id = '00000000-0000-0000-0000-000000000b02'
-  ),
-  '00000000-0000-0000-0000-000000000b03',
-  'account anonymization keeps the legacy host alias on the seat UUID'
-);
-
-delete from auth.users
-where id = '00000000-0000-0000-0000-000000000b01';
-
-select ok(
-  exists (
-    select 1
-    from public.room_players
-    where id = '00000000-0000-0000-0000-000000000b03'
-  ),
-  'account deletion keeps the seat row'
-);
-
-select ok(
-  exists (
-    select 1
-    from public.room_players
-    where id = '00000000-0000-0000-0000-000000000b03'
-      and user_id is null
-  ),
-  'account deletion clears only the seat occupant account reference'
-);
-
-select is(
-  (
-    select name
-    from public.room_players
-    where id = '00000000-0000-0000-0000-000000000b03'
-  ),
-  'Deleted user',
-  'account deletion anonymizes the seat occupant name'
-);
-
-select ok(
-  exists (
-    select 1
-    from public.game_history
-    where id = '00000000-0000-0000-0000-000000000b05'
-      and actor_seat_id = '00000000-0000-0000-0000-000000000b03'
-  ),
-  'account deletion keeps history linked to the seat snapshot'
-);
-
-select throws_ok(
-  $$
-    delete from public.room_players
-    where id = '00000000-0000-0000-0000-000000000a03'
-  $$,
-  'PT422',
-  null,
-  'a seat row cannot be deleted while its room still exists'
-);
-
-select lives_ok(
-  $$
-    delete from public.rooms
-    where id = '00000000-0000-0000-0000-000000000a02'
-  $$,
-  'room deletion resolves the circular host-seat relation through cascades'
-);
-
-select is(
-  array(
-    select table_name || '.' || column_name
+    select array_agg(
+      table_name || '.' || column_name
+      order by table_name, column_name
+    )
     from information_schema.columns
-    where table_schema = 'public'
+    where table_schema in ('public', 'meitra_private')
       and column_name like '%\_id' escape '\'
-      and data_type not in ('uuid', 'bigint')
-    order by 1
+      and data_type <> 'uuid'
   ),
   array[
-    'active_room_memberships.player_id',
-    'game_history.player_id',
-    'game_states.current_player_id',
     'push_receipts.device_id',
     'push_receipts.expo_receipt_id',
     'push_receipts.worker_id',
-    'push_tokens.device_id',
-    'room_players.player_id',
-    'room_players.socket_id',
-    'rooms.host_id'
+    'push_tokens.device_id'
   ]::text[],
-  'non-UUID internal ID columns cannot grow beyond the migration allowlist'
+  'only approved external opaque identifiers use non-UUID *_id columns'
 );
 
 select * from finish();

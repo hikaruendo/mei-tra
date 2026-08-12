@@ -12,8 +12,8 @@
 
 | Name                                            | Columns | Comment                                                                                | Type       |
 | ----------------------------------------------- | ------- | -------------------------------------------------------------------------------------- | ---------- |
-| [public.room_players](public.room_players.md)   | 12      | ルーム内の席ロスター。id が部屋削除まで不変の canonical seat UUID。                                          | BASE TABLE |
-| [public.rooms](public.rooms.md)                 | 9       | 対局ルームの設定・状態を保持する。host_seat_id がホスト席の正本。                                                | BASE TABLE |
+| [public.room_players](public.room_players.md)   | 9       | ルーム内の席ロスター。id が部屋削除まで不変の canonical seat UUID。                                          | BASE TABLE |
+| [public.rooms](public.rooms.md)                 | 8       | 対局ルームの設定・状態を保持する。host_seat_id がホスト席の正本。                                                | BASE TABLE |
 | [public.user_profiles](public.user_profiles.md) | 12      | アプリケーションで表示・集計に使うユーザープロフィール。auth.users と 1:1 で対応する。                                    | BASE TABLE |
 
 ### 進行と履歴
@@ -22,8 +22,8 @@
 
 | Name                                          | Columns | Comment                                                                                           | Type       |
 | --------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------- | ---------- |
-| [public.game_history](public.game_history.md) | 9       | リプレイと戦績表示に使うイベント履歴。actor_seat_id と表示用 snapshot を保持する。                                             | BASE TABLE |
-| [public.game_states](public.game_states.md)   | 13      | ルームごとのバージョン付きゲーム状態。current_seat_id と identitySchemaVersion 2 が席参照の正本。                             | BASE TABLE |
+| [public.game_history](public.game_history.md) | 8       | リプレイと戦績表示に使うイベント履歴。actor_seat_id と表示用 snapshot を保持する。                                             | BASE TABLE |
+| [public.game_states](public.game_states.md)   | 12      | ルームごとのバージョン付きゲーム状態。current_seat_id と identitySchemaVersion 2 が席参照の正本。                             | BASE TABLE |
 
 ## Relations
 

@@ -5,11 +5,16 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('SupabaseRoomRepository', () => {
-  function createRoomRow(id: string, name: string, createdAt: string) {
+  function createRoomRow(
+    id: string,
+    name: string,
+    createdAt: string,
+    hostSeatId: string,
+  ) {
     return {
       id,
       name,
-      host_id: `${id}-host`,
+      host_seat_id: hostSeatId,
       status: RoomStatus.WAITING,
       settings: {
         maxPlayers: 4,
@@ -30,11 +35,9 @@ describe('SupabaseRoomRepository', () => {
     playerId: string,
     joinedAt: string,
     overrides: Partial<{
-      socket_id: string | null;
       user_id: string | null;
       name: string;
       team: number;
-      is_host: boolean;
       is_ready: boolean;
       is_com: boolean;
       seat_index: number;
@@ -43,13 +46,10 @@ describe('SupabaseRoomRepository', () => {
     return {
       id: `${roomId}-${playerId}`,
       room_id: roomId,
-      player_id: playerId,
-      socket_id: overrides.socket_id ?? `${playerId}-socket`,
       user_id: overrides.user_id ?? playerId,
       name: overrides.name ?? playerId,
       team: overrides.team ?? 0,
       is_ready: overrides.is_ready ?? false,
-      is_host: overrides.is_host ?? false,
       is_com: overrides.is_com ?? false,
       joined_at: joinedAt,
       seat_index: overrides.seat_index ?? 0,
@@ -58,12 +58,21 @@ describe('SupabaseRoomRepository', () => {
 
   it('batches room player lookup for findAll and preserves player ordering', async () => {
     const roomsData = [
-      createRoomRow('room-2', 'Second room', '2026-04-16T01:00:00.000Z'),
-      createRoomRow('room-1', 'First room', '2026-04-16T00:00:00.000Z'),
+      createRoomRow(
+        'room-2',
+        'Second room',
+        '2026-04-16T01:00:00.000Z',
+        'room-2-player-3',
+      ),
+      createRoomRow(
+        'room-1',
+        'First room',
+        '2026-04-16T00:00:00.000Z',
+        'room-1-player-1',
+      ),
     ];
     const roomPlayersData = [
       createPlayerRow('room-1', 'player-1', '2026-04-16T00:00:30.000Z', {
-        is_host: true,
         seat_index: 0,
       }),
       createPlayerRow('room-1', 'player-2', '2026-04-16T00:01:00.000Z', {
@@ -130,7 +139,12 @@ describe('SupabaseRoomRepository', () => {
   it('queries recent finished rooms by user ordered by last activity', async () => {
     const roomsData = [
       {
-        ...createRoomRow('room-1', 'Finished room', '2026-04-16T00:00:00.000Z'),
+        ...createRoomRow(
+          'room-1',
+          'Finished room',
+          '2026-04-16T00:00:00.000Z',
+          'room-1-player-1',
+        ),
         status: RoomStatus.FINISHED,
       },
     ];
@@ -195,7 +209,7 @@ describe('SupabaseRoomRepository', () => {
     const lockMigration = readFileSync(
       join(
         __dirname,
-        '../../../supabase/migrations/20260806165711_serialize_account_deletion_room_membership.sql',
+        '../../../supabase/migrations/20260811121924_remove_legacy_seat_identity.sql',
       ),
       'utf8',
     );
@@ -205,10 +219,10 @@ describe('SupabaseRoomRepository', () => {
       'CREATE TRIGGER reject_deleting_room_player_user',
     );
     expect(migration).toContain('BEFORE INSERT OR UPDATE OF user_id');
-    expect(migration).toContain('CREATE TRIGGER reject_deleting_room_host');
-    expect(migration).toContain('BEFORE INSERT OR UPDATE OF host_id');
-    expect(migration).toContain('account_deletion_started_at IS NOT NULL');
-    expect(migration).toContain("ERRCODE = 'PT403'");
+    expect(migration).toContain('create trigger reject_deleting_room_host');
+    expect(migration).toContain('before insert or update of host_seat_id');
+    expect(migration).toContain('account_deletion_started_at is not null');
+    expect(migration).toContain("using errcode = 'PT403'");
     expect(migration).toContain(
       'create or replace function public.mark_account_deletion_started',
     );
@@ -217,18 +231,23 @@ describe('SupabaseRoomRepository', () => {
     expect(migration).toContain('account_deletion_blocked');
     expect(migration).toContain('persist_room_roster_atomic');
 
+    const rosterFunctionStart = lockMigration.indexOf(
+      'create or replace function public.persist_room_roster_atomic',
+    );
     const rosterFunction = lockMigration.slice(
+      rosterFunctionStart,
       lockMigration.indexOf(
-        'create or replace function public.persist_room_roster_atomic',
+        '  select *\n  into current_state',
+        rosterFunctionStart,
       ),
-      lockMigration.indexOf('select *\n      into current_state'),
     );
 
-    expect(rosterFunction).toContain('then p_host_id::uuid');
-    expect(rosterFunction).toContain('then player."userId"::uuid');
-    expect(rosterFunction).toContain('select distinct candidate.user_id');
-    expect(rosterFunction).toContain('where candidate.user_id is not null');
-    expect(rosterFunction).toContain('order by candidate.user_id');
+    expect(rosterFunction).toContain('select distinct nullif');
+    expect(rosterFunction).toContain("player->>'userId'");
+    expect(rosterFunction).toContain(
+      "where nullif(player->>'userId', '') is not null",
+    );
+    expect(rosterFunction).toContain('order by 1');
     expect(rosterFunction.match(/pg_advisory_xact_lock/g)).toHaveLength(1);
   });
 });

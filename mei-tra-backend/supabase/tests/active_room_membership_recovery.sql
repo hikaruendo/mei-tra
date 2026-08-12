@@ -1,5 +1,7 @@
 begin;
 
+select plan(1);
+
 insert into auth.users (
   id,
   email,
@@ -15,12 +17,22 @@ values (
   now()
 );
 
-insert into public.rooms (id, name, host_id)
+insert into public.rooms (id, name)
 values (
   '00000000-0000-0000-0000-000000000922',
-  'Membership recovery room',
-  'membership-recovery-player'
+  'Membership recovery room'
 );
+
+insert into public.room_players (id, room_id, name, team, seat_index)
+values (
+  '00000000-0000-4000-8000-000000000928',
+  '00000000-0000-0000-0000-000000000922',
+  'Recovery seat',
+  0,
+  0
+);
+
+set constraints all immediate;
 
 do $test$
 declare
@@ -30,6 +42,7 @@ declare
   timeout_transition uuid;
   test_user constant uuid := '00000000-0000-0000-0000-000000000921';
   test_room constant uuid := '00000000-0000-0000-0000-000000000922';
+  test_seat constant uuid := '00000000-0000-4000-8000-000000000928';
   claim_transition constant uuid := '00000000-0000-4000-8000-000000000923';
   disconnect_transition constant uuid := '00000000-0000-4000-8000-000000000924';
   timeout_transition_one constant uuid := '00000000-0000-4000-8000-000000000925';
@@ -47,7 +60,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    'membership-recovery-player',
+    test_seat::text,
     claim_transition
   );
   current_version := (result->'membership'->>'membership_version')::bigint;
@@ -66,7 +79,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    'membership-recovery-player',
+    test_seat::text,
     reconnect_transition
   );
   if result->>'result' <> 'reconnected' then
@@ -107,7 +120,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    'membership-recovery-player',
+    test_seat::text,
     reconnect_transition
   );
   if result->>'result' <> 'conflict' then
@@ -128,7 +141,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    'membership-recovery-player',
+    test_seat::text,
     reconnect_transition
   );
   current_version := (result->'membership'->>'membership_version')::bigint;
@@ -166,7 +179,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    'membership-recovery-player',
+    test_seat::text,
     claim_transition
   );
   current_version := (result->'membership'->>'membership_version')::bigint;
@@ -193,7 +206,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    'membership-recovery-player',
+    test_seat::text,
     reconnect_transition
   );
   if result->>'result' <> 'reconnected' then
@@ -201,5 +214,8 @@ begin
   end if;
 end;
 $test$;
+
+select pass('disconnected memberships recover without changing their seat UUID');
+select * from finish();
 
 rollback;
