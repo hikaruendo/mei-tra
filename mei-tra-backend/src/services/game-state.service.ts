@@ -234,16 +234,12 @@ export class GameStateService implements IGameStateService {
     return result;
   }
 
-  async updateState(newState: Partial<GameState>): Promise<void> {
-    this.state = await this.enqueuePersistence(() =>
-      this.stateManager.updateState(this.roomId, this.state, newState),
-    );
+  updateState(newState: Partial<GameState>): void {
+    this.state = this.stateManager.applyState(this.state, newState);
   }
 
-  async transitionPhase(nextPhase: GamePhase): Promise<void> {
-    this.state = await this.enqueuePersistence(() =>
-      this.stateManager.transitionPhase(this.roomId, this.state, nextPhase),
-    );
+  transitionPhase(nextPhase: GamePhase): void {
+    this.updateState({ gamePhase: nextPhase });
   }
 
   async loadState(roomId: string): Promise<void> {
@@ -491,7 +487,7 @@ export class GameStateService implements IGameStateService {
     return this.connectionManager.getPlayerConnectionState(playerId);
   }
 
-  async dealCards(): Promise<void> {
+  dealCards(): void {
     if (this.state.players.length === 0) return;
 
     // Validate deck exists and has correct size
@@ -548,12 +544,9 @@ export class GameStateService implements IGameStateService {
       this.chomboService.checkForBrokenHand(player);
       this.chomboService.checkForRequiredBrokenHand(player);
     });
-
-    // Persist the updated state
-    await this.saveState();
   }
 
-  async nextTurn(): Promise<void> {
+  nextTurn(): void {
     if (this.state.players.length === 0) return;
     const currentIndex = this.resolveCurrentPlayerIndex();
     const nextIndex = (currentIndex + 1) % this.state.players.length;
@@ -563,21 +556,6 @@ export class GameStateService implements IGameStateService {
     this.state.currentSeatId = this.state.currentPlayerId
       ? asSeatId(this.state.currentPlayerId)
       : null;
-
-    // Persist the turn change
-    if (this.roomId) {
-      try {
-        this.state.version = await this.enqueuePersistence(() =>
-          this.stateManager.persistCurrentPlayerId(
-            this.roomId,
-            this.state,
-            this.state.currentPlayerId ?? null,
-          ),
-        );
-      } catch {
-        // Keep in-memory turn changes even if persistence fails.
-      }
-    }
   }
 
   getCurrentPlayer(): DomainPlayer | null {
@@ -629,7 +607,7 @@ export class GameStateService implements IGameStateService {
     );
   }
 
-  async resetRoundState(): Promise<void> {
+  resetRoundState(): void {
     // Keep the current players, scores, and game settings
     const version = this.state.version;
     const players = [...this.state.players];
@@ -650,7 +628,7 @@ export class GameStateService implements IGameStateService {
 
     // Generate new deck and deal cards
     this.state.deck = this.cardService.generateDeck();
-    await this.dealCards();
+    this.dealCards();
   }
 
   get roundNumber(): number {
@@ -673,19 +651,6 @@ export class GameStateService implements IGameStateService {
       this.state.currentPlayerId = playerId;
       this.state.currentSeatId = asSeatId(playerId);
       this.state.currentPlayerIndex = playerIndex;
-      void this.enqueuePersistence(() =>
-        this.stateManager.persistCurrentPlayerId(
-          this.roomId,
-          this.state,
-          playerId,
-        ),
-      )
-        .then((version) => {
-          this.state.version = version;
-        })
-        .catch((error) => {
-          this.logger.error('Failed to persist turn change:', error);
-        });
     }
   }
 
@@ -711,13 +676,13 @@ export class GameStateService implements IGameStateService {
       : 0;
   }
 
-  async startGame(): Promise<void> {
-    await this.transitionPhase('blow');
+  startGame(): void {
+    this.transitionPhase('blow');
     let state = this.getState();
 
     // Initialize game state
     state.deck = this.cardService.generateDeck();
-    await this.dealCards();
+    this.dealCards();
     state = this.getState();
 
     // Initialize play state
@@ -760,8 +725,6 @@ export class GameStateService implements IGameStateService {
       currentBlowIndex: firstBlowIndex,
     };
 
-    // Persist the game start
-    await this.saveState();
   }
 
   setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {

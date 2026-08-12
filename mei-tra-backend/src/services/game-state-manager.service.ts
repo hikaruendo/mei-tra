@@ -1,10 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
-import {
-  GamePhase,
-  GameState,
-  PlayerConnectionMetadata,
-} from '../types/game.types';
+import { GameState, PlayerConnectionMetadata } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
@@ -18,11 +14,10 @@ export class GameStateManager {
     private readonly gamePhaseService: GamePhaseService,
   ) {}
 
-  async updateState(
-    roomId: string | null,
+  applyState(
     currentState: GameState,
     newState: Partial<GameState>,
-  ): Promise<GameState> {
+  ): GameState {
     if (Object.prototype.hasOwnProperty.call(newState, 'gamePhase')) {
       this.gamePhaseService.assertTransition(
         currentState.gamePhase,
@@ -43,6 +38,16 @@ export class GameStateManager {
         : null;
     }
     nextState = normalizeGameStateIdentityAliases(nextState);
+
+    return nextState;
+  }
+
+  async updateState(
+    roomId: string | null,
+    currentState: GameState,
+    newState: Partial<GameState>,
+  ): Promise<GameState> {
+    const nextState = this.applyState(currentState, newState);
 
     if (roomId) {
       const persistencePatch: Partial<GameState> = { ...newState };
@@ -84,14 +89,6 @@ export class GameStateManager {
     }
 
     return nextState;
-  }
-
-  async transitionPhase(
-    roomId: string | null,
-    currentState: GameState,
-    nextPhase: GamePhase,
-  ): Promise<GameState> {
-    return this.updateState(roomId, currentState, { gamePhase: nextPhase });
   }
 
   async loadState(
@@ -188,46 +185,6 @@ export class GameStateManager {
     } catch (error) {
       this.logger.error('Failed to persist player connection update:', error);
     }
-  }
-
-  async persistCurrentPlayerId(
-    roomId: string | null,
-    state: GameState,
-    currentPlayerId: string | null,
-  ): Promise<number | undefined> {
-    if (!roomId) {
-      return state.version;
-    }
-
-    const persistedState = await this.repository.update(
-      roomId,
-      { currentPlayerId },
-      state.version,
-    );
-    if (!persistedState) {
-      throw new Error(`Game state not found for room ${roomId}`);
-    }
-    return persistedState.version;
-  }
-
-  async persistRoundNumber(
-    roomId: string | null,
-    state: GameState,
-    roundNumber: number,
-  ): Promise<number | undefined> {
-    if (!roomId) {
-      return state.version;
-    }
-
-    const persistedState = await this.repository.update(
-      roomId,
-      { roundNumber },
-      state.version,
-    );
-    if (!persistedState) {
-      throw new Error(`Game state not found for room ${roomId}`);
-    }
-    return persistedState.version;
   }
 
   async resetState(roomId: string | null, state: GameState): Promise<void> {

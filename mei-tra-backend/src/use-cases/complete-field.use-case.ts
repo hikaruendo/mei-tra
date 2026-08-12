@@ -235,7 +235,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       );
 
       response.delayedEvents = roundResetEvents;
-      await roomGameState.saveState();
 
       return response;
     } catch (error) {
@@ -382,8 +381,8 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     state: GameState,
     room: Room | null,
   ): Promise<GatewayEvent[]> {
-    await roomGameState.resetRoundState();
-    await roomGameState.updateState({
+    roomGameState.resetRoundState();
+    roomGameState.updateState({
       roundNumber: state.roundNumber + 1,
     });
 
@@ -423,8 +422,8 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentBlowIndex: nextBlowIndex,
     };
 
-    await roomGameState.transitionPhase('blow');
-    await roomGameState.updateState({
+    roomGameState.transitionPhase('blow');
+    roomGameState.updateState({
       playState: newPlayState,
       blowState: newBlowState,
       currentSeatId: asSeatId(nextBlowPlayer.playerId),
@@ -487,6 +486,8 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         delayMs: 3000,
       },
     ];
+
+    await roomGameState.saveState();
 
     await this.gameEventLogService?.log({
       roomId,

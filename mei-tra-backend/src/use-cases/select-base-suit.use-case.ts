@@ -45,8 +45,6 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
 
       state.playState.currentField.baseSuit = suit;
 
-      await roomGameState.saveState();
-
       const events: GatewayEvent[] = [
         {
           scope: 'room',
@@ -56,7 +54,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
         },
       ];
 
-      await roomGameState.nextTurn();
+      roomGameState.nextTurn();
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
         events.push({

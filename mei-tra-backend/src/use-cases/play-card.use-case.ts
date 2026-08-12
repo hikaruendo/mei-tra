@@ -157,7 +157,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: true, events };
       }
 
-      await roomGameState.nextTurn();
+      roomGameState.nextTurn();
       const nextPlayer = state.players[state.currentPlayerIndex];
       if (nextPlayer) {
         cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.playerId);

@@ -176,7 +176,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       // Not all players have acted yet - continue to next player
-      await roomGameState.nextTurn();
+      roomGameState.nextTurn();
 
       // Skip players who have already acted (passed or declared)
       let attempts = 0;
@@ -191,7 +191,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           break; // Found a player who hasn't acted yet
         }
 
-        await roomGameState.nextTurn();
+        roomGameState.nextTurn();
         attempts++;
       }
 
