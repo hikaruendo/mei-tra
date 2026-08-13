@@ -301,7 +301,7 @@ EAS Updateは初回リリースの要件ではないため、意図的に着手�
 - **EAS project link**: `eas init`で`@hikaruendo/meitra` (projectId `70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681`) をリンクし、`app.json`に`extra.eas.projectId`と`owner`が入った。`mobile-release.yml`のpreflightが要求する唯一の必須項目はこれで満たされる。
 - **本番Supabase migration**: `20260806162505_anonymize_account_references_atomically.sql`以降を含め、`20260809074500_release_stale_room_membership.sql`まで本番へ適用済みである。`supabase_migrations.schema_migrations`と、`reserve_room_membership` / `claim_room_membership`のsource照合で確認した。
 - **GitHub environment**: `mobile-release.yml`が参照する`mobile-preview`と`mobile-production`を作成済みである（secretの投入は別途）。
-- **iOS submit profile**: `eas.json`の`submit.production.ios`を追加した。値は`$EXPO_APPLE_ID` / `$EXPO_ASC_APP_ID` / `$EXPO_APPLE_TEAM_ID`のenv var参照とし、Apple accountの識別子をリポジトリへ持ち込まない。
+- **iOS submit profile**: production submit時にGitHub Actionsが`EXPO_APPLE_ID` / `EXPO_ASC_APP_ID` / `EXPO_APPLE_TEAM_ID`から一時的に`submit.production.ios`を生成する。`eas.json`は環境変数を展開しないため、未解決の`$EXPO_*`を直接記述しない。
 - **`ios.supportsTablet`**: 非目標(§ 対象外)に合わせて`false`にした。`true`のままだとAppleはiPadでも審査し、iPad screenshotの提出も要求する。
 
 ### 審査で確認が要る点

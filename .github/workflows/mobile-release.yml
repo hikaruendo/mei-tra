@@ -46,6 +46,9 @@ jobs:
       name: ${{ inputs.profile == 'production' && 'mobile-production' || 'mobile-preview' }}
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+      EXPO_ASC_APP_ID: ${{ secrets.EXPO_ASC_APP_ID }}
+      EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
       EAS_CLI_VERSION: 21.1.0
       RELEASE_PROFILE: ${{ inputs.profile }}
       RELEASE_PLATFORM: ${{ inputs.platform }}
@@ -86,6 +89,15 @@ jobs:
             exit 1
           fi
 
+          if [ "$RELEASE_SUBMIT" = true ] && [ "$RELEASE_PLATFORM" != android ]; then
+            for name in EXPO_APPLE_ID EXPO_ASC_APP_ID EXPO_APPLE_TEAM_ID; do
+              if [ -z "${!name:-}" ]; then
+                echo "$name is required for an iOS submission." >&2
+                exit 1
+              fi
+            done
+          fi
+
           node - <<'NODE'
           const app = require('./app.json').expo;
 
@@ -100,6 +112,21 @@ jobs:
               'expo.runtimeVersion is not configured. EAS Update is intentionally unavailable until it is added to app.json.',
             );
           }
+          NODE
+
+      - name: Prepare iOS submit profile
+        if: inputs.submit && inputs.platform != 'android'
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+
+          const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          eas.submit.production.ios = {
+            appleId: process.env.EXPO_APPLE_ID,
+            ascAppId: process.env.EXPO_ASC_APP_ID,
+            appleTeamId: process.env.EXPO_APPLE_TEAM_ID,
+          };
+          fs.writeFileSync('eas.json', `${JSON.stringify(eas, null, 2)}\n`);
           NODE
 
       - name: Validate resolved EAS profile
