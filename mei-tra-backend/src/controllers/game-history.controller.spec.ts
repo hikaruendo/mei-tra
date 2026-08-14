@@ -168,6 +168,141 @@ describe('GameHistoryController', () => {
     );
   });
 
+  it('allows an authenticated spectator to read active room history', async () => {
+    const summary = {
+      roomId: 'room-1',
+      totalEntries: 1,
+      byActionType: { card_played: 1 },
+      playerIds: ['player-1'],
+      playerNames: { 'player-1': 'Player 1' },
+      status: 'in_progress' as const,
+      winningTeam: null,
+      lastActionType: 'card_played' as const,
+      roundNumbers: [1],
+      firstTimestamp: new Date('2026-04-16T00:00:00.000Z'),
+      lastTimestamp: new Date('2026-04-16T00:05:00.000Z'),
+    };
+    const getGameHistoryUseCase: IGetGameHistoryUseCase = {
+      execute: jest.fn(),
+      replay: jest.fn(),
+      summarize: jest.fn().mockResolvedValue(summary),
+    };
+    const roomRepository = createRoomRepository({
+      ...room,
+      status: RoomStatus.PLAYING,
+      settings: { ...room.settings, allowSpectators: true },
+      players: [
+        {
+          ...room.players[0],
+          userId: 'other-user',
+        },
+      ],
+    });
+    const controller = new GameHistoryController(
+      getGameHistoryUseCase,
+      roomRepository,
+    );
+
+    await expect(
+      controller.summarizeByRoomId('room-1', {}, currentUser),
+    ).resolves.toEqual({
+      ...summary,
+      teamNames: { 0: '111', 1: '222' },
+    });
+    expect(getGameHistoryUseCase.summarize).toHaveBeenCalledWith(
+      'room-1',
+      {
+        actionType: undefined,
+        limit: undefined,
+        playerId: undefined,
+        roundNumber: undefined,
+        since: undefined,
+        until: undefined,
+      },
+      { 'player-1': 'Player 1' },
+    );
+  });
+
+  it('does not expose starting hands to spectators', async () => {
+    const replay = {
+      roomId: 'room-1',
+      totalEntries: 1,
+      rounds: [
+        {
+          roundNumber: 1,
+          startedAt: new Date('2026-04-16T00:00:00.000Z'),
+          endedAt: null,
+          actionTypes: ['game_started' as const],
+          playerIds: [],
+          entries: [
+            {
+              id: 'history-1',
+              roomId: 'room-1',
+              gameStateId: 'state-1',
+              actionType: 'game_started' as const,
+              playerId: 'player-1',
+              actionData: {
+                startingHandsBySeatId: { 'player-1': ['S-A'] },
+              },
+              timestamp: new Date('2026-04-16T00:00:00.000Z'),
+            },
+          ],
+          events: [
+            {
+              id: 'history-1',
+              timestamp: new Date('2026-04-16T00:00:00.000Z'),
+              actionType: 'game_started' as const,
+              kind: 'lifecycle' as const,
+              playerId: 'player-1',
+              roundNumber: 1,
+              gamePhase: 'blow' as const,
+              summary: 'Game started',
+              details: {},
+              detailItems: [],
+              actionData: {
+                startingHandsBySeatId: { 'player-1': ['S-A'] },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const getGameHistoryUseCase: IGetGameHistoryUseCase = {
+      execute: jest.fn(),
+      replay: jest.fn().mockResolvedValue(replay),
+      summarize: jest.fn(),
+    };
+    const roomRepository = createRoomRepository({
+      ...room,
+      status: RoomStatus.PLAYING,
+      settings: { ...room.settings, allowSpectators: true },
+      players: [
+        {
+          ...room.players[0],
+          userId: 'other-user',
+        },
+      ],
+    });
+    const controller = new GameHistoryController(
+      getGameHistoryUseCase,
+      roomRepository,
+    );
+
+    await expect(
+      controller.replayByRoomId('room-1', {}, currentUser),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        rounds: [
+          expect.objectContaining({
+            viewerStartingHand: [],
+            entries: [expect.objectContaining({ actionData: {} })],
+            events: [expect.objectContaining({ actionData: {} })],
+          }),
+        ],
+      }),
+    );
+  });
+
   it('returns replay groups from the use-case', async () => {
     const replay = {
       roomId: 'room-1',

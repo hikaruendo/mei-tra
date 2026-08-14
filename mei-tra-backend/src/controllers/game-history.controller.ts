@@ -20,7 +20,7 @@ import {
   GameHistoryReplayView,
   GameHistorySummary,
 } from '../types/game-history.types';
-import { Room, RoomPlayer } from '../types/room.types';
+import { Room, RoomPlayer, RoomStatus } from '../types/room.types';
 import { resolveSeatId } from '../types/identity.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
@@ -80,7 +80,10 @@ export class GameHistoryController {
       this.parseQuery(query),
       playerNames,
     );
-    return this.withViewerStartingHands(replay, resolveSeatId(participant));
+    return this.withViewerStartingHands(
+      replay,
+      participant ? resolveSeatId(participant) : null,
+    );
   }
 
   @Get(':roomId')
@@ -99,7 +102,10 @@ export class GameHistoryController {
       this.parseQuery(query),
     );
     return history.map((entry) =>
-      this.withSanitizedActionData(entry, resolveSeatId(participant)),
+      this.withSanitizedActionData(
+        entry,
+        participant ? resolveSeatId(participant) : null,
+      ),
     );
   }
 
@@ -107,7 +113,7 @@ export class GameHistoryController {
     roomId: string,
     userId: string,
   ): Promise<{
-    participant: RoomPlayer;
+    participant: RoomPlayer | null;
     playerNames: Record<string, string>;
     teamNames: Room['settings']['teamNames'];
   }> {
@@ -119,12 +125,19 @@ export class GameHistoryController {
     const participants = room.players.filter(
       (player) => !player.isCOM && player.userId === userId,
     );
-    if (participants.length !== 1) {
+    if (
+      participants.length !== 1 &&
+      !(
+        participants.length === 0 &&
+        room.status === RoomStatus.PLAYING &&
+        room.settings.allowSpectators
+      )
+    ) {
       throw new ForbiddenException('Cannot access another user game history');
     }
 
     return {
-      participant: participants[0],
+      participant: participants[0] ?? null,
       playerNames: Object.fromEntries(
         room.players.map((player) => [player.playerId, player.name]),
       ),
@@ -134,7 +147,7 @@ export class GameHistoryController {
 
   private withViewerStartingHands(
     replay: GameHistoryReplayView,
-    viewerPlayerId: string,
+    viewerPlayerId: string | null,
   ): GameHistoryReplayView {
     return {
       ...replay,
@@ -155,7 +168,7 @@ export class GameHistoryController {
 
   private resolveViewerStartingHand(
     events: GameHistoryReplayEvent[],
-    viewerPlayerId: string,
+    viewerPlayerId: string | null,
   ): string[] | null {
     return events.reduce<string[] | null>((latestHand, event) => {
       return (
@@ -167,7 +180,7 @@ export class GameHistoryController {
 
   private withSanitizedActionData<
     TEntry extends { actionData: Record<string, unknown> },
-  >(entry: TEntry, viewerPlayerId: string): TEntry {
+  >(entry: TEntry, viewerPlayerId: string | null): TEntry {
     return {
       ...entry,
       actionData: this.sanitizeActionData(entry.actionData, viewerPlayerId),
@@ -176,7 +189,7 @@ export class GameHistoryController {
 
   private sanitizeActionData(
     actionData: Record<string, unknown>,
-    viewerPlayerId: string,
+    viewerPlayerId: string | null,
   ): Record<string, unknown> {
     const safeActionData = { ...actionData };
     delete safeActionData.startingHandsBySeatId;
@@ -193,12 +206,13 @@ export class GameHistoryController {
 
   private extractViewerStartingHand(
     actionData: Record<string, unknown>,
-    viewerPlayerId: string,
+    viewerPlayerId: string | null,
   ): string[] | null {
     const handsByPlayerId =
       actionData.startingHandsBySeatId ?? actionData.startingHandsByPlayerId;
     if (
       !handsByPlayerId ||
+      !viewerPlayerId ||
       typeof handsByPlayerId !== 'object' ||
       Array.isArray(handsByPlayerId)
     ) {
