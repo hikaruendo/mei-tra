@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { ConfigService } from '@nestjs/config';
 import { BlowService } from '../blow.service';
 import { CardService } from '../card.service';
@@ -236,7 +237,7 @@ describe('ComStrategyService', () => {
       cards: ['A♠', 'K♠'],
       playedBy: ['partner-0', 'enemy-1'],
       baseCard: 'A♠',
-      dealerId: 'partner-0',
+      dealerSeatId: asSeatId('partner-0'),
       isComplete: false,
     };
     const com = player('com-0', 0, ['5♠', 'JOKER', 'K♥'], { isCOM: true });
@@ -250,7 +251,7 @@ describe('ComStrategyService', () => {
       cards: ['K♠'],
       playedBy: ['enemy-1'],
       baseCard: 'K♠',
-      dealerId: 'enemy-1',
+      dealerSeatId: asSeatId('enemy-1'),
       isComplete: false,
     };
     const com = player('com-0', 0, ['A♠', '5♠', 'JOKER'], { isCOM: true });
@@ -264,7 +265,7 @@ describe('ComStrategyService', () => {
       cards: ['K♠'],
       playedBy: ['enemy-1'],
       baseCard: 'K♠',
-      dealerId: 'enemy-1',
+      dealerSeatId: asSeatId('enemy-1'),
       isComplete: false,
     };
     const com = player('com-0', 0, ['5♣', '6♦', 'Q♥'], { isCOM: true });
@@ -550,9 +551,9 @@ describe('ComStrategyService', () => {
   ): CompletedField {
     return {
       cards,
-      winnerId: 'winner',
+      winnerSeatId: asSeatId('winner'),
       winnerTeam,
-      dealerId: 'leader',
+      dealerSeatId: asSeatId('leader'),
     };
   }
 });

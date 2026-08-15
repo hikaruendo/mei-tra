@@ -37,7 +37,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      if (state.playState.currentField.dealerId !== player.playerId) {
+      if (state.playState.currentField.dealerSeatId !== player.playerId) {
         return {
           success: false,
           error: "It's not your turn to select base suit",

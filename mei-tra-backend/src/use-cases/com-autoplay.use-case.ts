@@ -225,7 +225,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       updatedField &&
       updatedField.baseCard === 'JOKER' &&
       !updatedField.baseSuit &&
-      updatedField.dealerId === comPlayer.playerId
+      updatedField.dealerSeatId === comPlayer.playerId
     ) {
       updatedField.baseSuit = this.comStrategyService.chooseBaseSuit(
         updatedState,

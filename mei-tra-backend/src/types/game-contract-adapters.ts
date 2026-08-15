@@ -69,7 +69,7 @@ export function toFieldContract(field: Field): FieldContract {
     playedBySeatIds: (field.playedBySeatIds ?? field.playedBy).map(asSeatId),
     baseCard: field.baseCard,
     baseSuit: field.baseSuit,
-    dealerSeatId: field.dealerSeatId ?? asSeatId(field.dealerId),
+    dealerSeatId: field.dealerSeatId,
     declaredSuit: field.declaredSuit,
     isComplete: field.isComplete,
   };
@@ -80,8 +80,8 @@ export function toCompletedFieldContract(
 ): CompletedFieldContract {
   return {
     cards: [...field.cards],
-    winnerSeatId: field.winnerSeatId ?? asSeatId(field.winnerId),
+    winnerSeatId: field.winnerSeatId,
     winnerTeam: field.winnerTeam,
-    dealerSeatId: field.dealerSeatId ?? asSeatId(field.dealerId),
+    dealerSeatId: field.dealerSeatId,
   };
 }

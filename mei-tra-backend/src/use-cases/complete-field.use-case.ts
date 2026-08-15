@@ -101,7 +101,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           playedBySeatIds: [],
           baseCard: '',
           dealerSeatId: asSeatId(winner.playerId),
-          dealerId: winner.playerId,
           isComplete: false,
         };
       }
@@ -276,7 +275,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       const isSameField =
         this.isSameSequence(currentField.cards, field.cards) &&
         this.isSameSequence(currentField.playedBy, field.playedBy) &&
-        currentField.dealerId === field.dealerId &&
+        currentField.dealerSeatId === field.dealerSeatId &&
         currentField.baseCard === field.baseCard &&
         currentField.baseSuit === field.baseSuit;
 
@@ -386,7 +385,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         playedBySeatIds: [],
         baseCard: '',
         dealerSeatId: asSeatId(nextBlowPlayer.playerId),
-        dealerId: nextBlowPlayer.playerId,
         isComplete: false,
       },
       negriCard: null,

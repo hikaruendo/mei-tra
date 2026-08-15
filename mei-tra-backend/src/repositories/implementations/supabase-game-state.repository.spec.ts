@@ -340,7 +340,7 @@ describe('SupabaseGameStateRepository', () => {
                 cards: ['S1'],
                 playedBySeatIds: [firstSeatId],
                 baseCard: 'S1',
-                dealerSeatId: secondSeatId,
+                dealerSeatId: asSeatId(secondSeatId),
                 isComplete: false,
               },
               negriCard: '5♣',
@@ -349,9 +349,9 @@ describe('SupabaseGameStateRepository', () => {
               fields: [
                 {
                   cards: ['S1'],
-                  winnerSeatId: firstSeatId,
+                  winnerSeatId: asSeatId(firstSeatId),
                   winnerTeam: 1,
-                  dealerSeatId: secondSeatId,
+                  dealerSeatId: asSeatId(secondSeatId),
                 },
               ],
               lastWinnerSeatId: firstSeatId,

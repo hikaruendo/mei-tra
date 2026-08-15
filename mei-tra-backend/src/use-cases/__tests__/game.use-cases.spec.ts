@@ -97,11 +97,11 @@ describe('Game Use Cases', () => {
 
   const createPlayRulesService = () => new PlayService(new CardService());
 
-  const createPlayServiceMock = (winnerId: string) => {
+  const createPlayServiceMock = (winnerSeatId: string) => {
     const determineFieldWinnerMock = jest.fn<
       ReturnType<IPlayService['determineFieldWinner']>,
       Parameters<IPlayService['determineFieldWinner']>
-    >((_, players) => players.find((p) => p.playerId === winnerId) || null);
+    >((_, players) => players.find((p) => p.playerId === winnerSeatId) || null);
 
     const mock: Partial<jest.Mocked<IPlayService>> = {
       determineFieldWinner: determineFieldWinnerMock,
@@ -1651,7 +1651,7 @@ describe('Game Use Cases', () => {
         cards: [],
         playedBy: [],
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
 
@@ -1745,7 +1745,7 @@ describe('Game Use Cases', () => {
         playedBy: sharedPlayedBy,
         playedBySeatIds: sharedPlayedBy,
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
       const state = {
@@ -1795,7 +1795,7 @@ describe('Game Use Cases', () => {
         cards: ['C1', 'C2', 'C3'],
         playedBy: ['player-1', 'player-2', 'player-3'],
         baseCard: 'C1',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
 
@@ -1879,7 +1879,7 @@ describe('Game Use Cases', () => {
             cards: [],
             playedBy: [],
             baseCard: '',
-            dealerId: 'player-1',
+            dealerSeatId: asSeatId('player-1'),
             isComplete: false,
           } as Field,
         },
@@ -1945,7 +1945,7 @@ describe('Game Use Cases', () => {
         cards: ['K♠'],
         playedBy: ['player-2'],
         baseCard: 'K♠',
-        dealerId: 'player-2',
+        dealerSeatId: asSeatId('player-2'),
         isComplete: false,
       };
       const state = {
@@ -1993,7 +1993,7 @@ describe('Game Use Cases', () => {
         cards: ['K♠'],
         playedBy: ['player-2'],
         baseCard: 'K♠',
-        dealerId: 'player-2',
+        dealerSeatId: asSeatId('player-2'),
         isComplete: false,
       };
       const state = {
@@ -2049,7 +2049,7 @@ describe('Game Use Cases', () => {
         cards: [],
         playedBy: [],
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
       const state = {
@@ -2171,7 +2171,7 @@ describe('Game Use Cases', () => {
             playedBy: ['com-0'],
             baseCard: 'JOKER',
             baseSuit: undefined,
-            dealerId: 'com-0',
+            dealerSeatId: asSeatId('com-0'),
             isComplete: false,
           },
         },
@@ -2306,7 +2306,7 @@ describe('Game Use Cases', () => {
             cards: [],
             playedBy: [],
             baseCard: '',
-            dealerId: 'com-timeout-1',
+            dealerSeatId: asSeatId('com-timeout-1'),
             isComplete: false,
           },
           negriCard: null,
@@ -2676,7 +2676,7 @@ describe('Game Use Cases', () => {
             playedBy: ['player-1'],
             baseCard: 'JOKER',
             baseSuit: undefined,
-            dealerId: 'player-1',
+            dealerSeatId: asSeatId('player-1'),
             isComplete: false,
           },
         },
@@ -3394,7 +3394,7 @@ describe('Game Use Cases', () => {
           cards: [],
           playedBy: [],
           baseCard: '',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         } as Field,
       },
@@ -3439,9 +3439,9 @@ describe('Game Use Cases', () => {
       state.playState.fields = [{ winnerTeam: 0 } as unknown as CompletedField];
       const completeFieldMock = jest.fn(() => ({
         cards: ['A', 'B', 'C', 'D'],
-        winnerId: 'player-1',
+        winnerSeatId: asSeatId('player-1'),
         winnerTeam: 0,
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
       }));
       const saveStateMock = jest.fn();
       let roundNumberValue = state.roundNumber;
@@ -3467,7 +3467,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'C', 'E', 'F'],
           playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3507,7 +3507,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'B', 'C', 'D'],
           playedBy: ['player-1', 'player-2', 'player-3'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: true,
         },
       });
@@ -3533,7 +3533,7 @@ describe('Game Use Cases', () => {
         cards: ['A', 'B', 'C', 'D'],
         playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
         baseCard: 'A',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: true,
       };
 
@@ -3551,7 +3551,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'B', 'C', 'D'],
           playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: true,
         },
       });
@@ -3588,7 +3588,7 @@ describe('Game Use Cases', () => {
         cards: ['5♣', 'A♣', '6♣', 'K♣'],
         playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
         baseCard: '5♣',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: true,
       };
       state.playState.currentField = {
@@ -3599,22 +3599,24 @@ describe('Game Use Cases', () => {
 
       const roomGameState = {
         getState: jest.fn(() => state),
-        completeField: jest.fn((completedField: Field, winnerId: string) => {
-          const winner = state.players.find(
-            (player) => player.playerId === winnerId,
-          );
-          if (!winner) {
-            return null;
-          }
-          const persistedField = {
-            cards: [...completedField.cards],
-            winnerId,
-            winnerTeam: winner.team,
-            dealerId: completedField.dealerId,
-          };
-          state.playState.fields.push(persistedField);
-          return persistedField;
-        }),
+        completeField: jest.fn(
+          (completedField: Field, winnerSeatId: string) => {
+            const winner = state.players.find(
+              (player) => player.playerId === winnerSeatId,
+            );
+            if (!winner) {
+              return null;
+            }
+            const persistedField = {
+              cards: [...completedField.cards],
+              winnerSeatId: asSeatId(winnerSeatId),
+              winnerTeam: winner.team,
+              dealerSeatId: asSeatId(completedField.dealerSeatId),
+            };
+            state.playState.fields.push(persistedField);
+            return persistedField;
+          },
+        ),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
         transitionPhase: jest.fn(async () => {}),
@@ -3641,10 +3643,10 @@ describe('Game Use Cases', () => {
       ).toEqual(
         expect.objectContaining({
           field: expect.objectContaining({
-            winnerSeatId: 'player-3',
+            winnerSeatId: asSeatId('player-3'),
             winnerTeam: 0,
           }),
-          winnerSeatId: 'player-3',
+          winnerSeatId: asSeatId('player-3'),
           nextSeatId: 'player-3',
         }),
       );
@@ -3671,9 +3673,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'C', 'E', 'F'],
-          winnerId: 'player-1',
+          winnerSeatId: asSeatId('player-1'),
           winnerTeam: 0,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3689,7 +3691,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'C', 'E', 'F'],
           playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: true,
         },
       });
@@ -3719,9 +3721,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-1',
+          winnerSeatId: asSeatId('player-1'),
           winnerTeam: 0,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
       } as unknown as GameStateService;
@@ -3734,7 +3736,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'B', 'C', 'D'],
           playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3774,9 +3776,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-2',
+          winnerSeatId: asSeatId('player-2'),
           winnerTeam: 1,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3794,7 +3796,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'B', 'C', 'D'],
           playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3831,9 +3833,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-2',
+          winnerSeatId: asSeatId('player-2'),
           winnerTeam: 1,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3851,7 +3853,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'B', 'C', 'D'],
           playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3887,9 +3889,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-1',
+          winnerSeatId: asSeatId('player-1'),
           winnerTeam: 0,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3907,7 +3909,7 @@ describe('Game Use Cases', () => {
           cards: ['A', 'B', 'C', 'D'],
           playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });

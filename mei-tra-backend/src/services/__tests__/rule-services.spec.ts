@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { CardService } from '../card.service';
 import { BlowService } from '../blow.service';
 import { PlayService } from '../play.service';
@@ -54,7 +55,7 @@ describe('Rule service characterization', () => {
       cards: ['10♠', 'A♠', 'J♣', 'K♠'],
       playedBy: ['p1', 'p2', 'p3', 'p4'],
       baseCard: '10♠',
-      dealerId: 'p1',
+      dealerSeatId: asSeatId('p1'),
       isComplete: false,
     };
 

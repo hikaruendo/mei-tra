@@ -53,21 +53,12 @@ export type PersistedBlowState = Omit<
   lastPasserSeatId: SeatId | null;
 };
 
-export type PersistedField = Omit<
-  Field,
-  'playedBy' | 'playedBySeatIds' | 'dealerId' | 'dealerSeatId'
-> & {
+export type PersistedField = Omit<Field, 'playedBy' | 'playedBySeatIds'> & {
   playedBySeatIds: SeatId[];
   dealerSeatId: SeatId;
 };
 
-export type PersistedCompletedField = Omit<
-  CompletedField,
-  'winnerId' | 'winnerSeatId' | 'dealerId' | 'dealerSeatId'
-> & {
-  winnerSeatId: SeatId;
-  dealerSeatId: SeatId;
-};
+export type PersistedCompletedField = CompletedField;
 
 export type PersistedPlayState = Omit<
   PlayState,
@@ -141,31 +132,17 @@ export function toPersistedBlowState(blowState: BlowState): PersistedBlowState {
 
 function toPersistedField(field: Field): PersistedField {
   return {
-    ...omitKeys(field, [
-      'playedBy',
-      'playedBySeatIds',
-      'dealerId',
-      'dealerSeatId',
-    ]),
+    ...omitKeys(field, ['playedBy', 'playedBySeatIds']),
     playedBySeatIds:
       field.playedBySeatIds ?? field.playedBy.map((seatId) => asSeatId(seatId)),
-    dealerSeatId: field.dealerSeatId ?? asSeatId(field.dealerId),
+    dealerSeatId: field.dealerSeatId,
   } as PersistedField;
 }
 
 function toPersistedCompletedField(
   field: CompletedField,
 ): PersistedCompletedField {
-  return {
-    ...omitKeys(field, [
-      'winnerId',
-      'winnerSeatId',
-      'dealerId',
-      'dealerSeatId',
-    ]),
-    winnerSeatId: field.winnerSeatId ?? asSeatId(field.winnerId),
-    dealerSeatId: field.dealerSeatId ?? asSeatId(field.dealerId),
-  } as PersistedCompletedField;
+  return { ...field };
 }
 
 export function toPersistedPlayState(

@@ -29,7 +29,7 @@ const createGameStateStub = () => {
         cards: ['A♠'],
         playedBy: [HUMAN_ID],
         baseCard: 'A♠',
-        dealerId: HUMAN_ID,
+        dealerSeatId: asSeatId(HUMAN_ID),
         isComplete: false,
       },
       fields: [],
@@ -98,7 +98,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(comId).toBe(HUMAN_ID);
 
     expect(state.playState!.currentField!.playedBy).toEqual([comId]);
-    expect(state.playState!.currentField!.dealerId).toBe(comId);
+    expect(state.playState!.currentField!.dealerSeatId).toBe(comId);
     expect(state.teamAssignments[comId]).toBe(0);
     expect(state.currentPlayerId).toBe(comId);
     expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);

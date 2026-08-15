@@ -769,7 +769,7 @@ describe('Reconnection Token Management', () => {
             cards: ['JOKER'],
             playedBy: [playerId],
             baseCard: 'JOKER',
-            dealerId: playerId,
+            dealerSeatId: asSeatId(playerId),
             isComplete: false,
           },
           negriCard: null,
@@ -777,9 +777,9 @@ describe('Reconnection Token Management', () => {
           fields: [
             {
               cards: ['7♣', '8♣', '9♣', '10♣'],
-              winnerId: playerId,
+              winnerSeatId: asSeatId(playerId),
               winnerTeam: 0,
-              dealerId: playerId,
+              dealerSeatId: asSeatId(playerId),
             },
           ],
           lastWinnerSeatId: asSeatId(playerId),
@@ -798,16 +798,16 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         const comPlayerId = gameState.getState().players[0].playerId;
         expect(comPlayerId).toBe(playerId);
-        expect(gameState.getState().playState?.currentField?.dealerId).toBe(
+        expect(gameState.getState().playState?.currentField?.dealerSeatId).toBe(
           comPlayerId,
         );
         expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
           comPlayerId,
         ]);
-        expect(gameState.getState().playState?.fields[0]?.winnerId).toBe(
+        expect(gameState.getState().playState?.fields[0]?.winnerSeatId).toBe(
           comPlayerId,
         );
-        expect(gameState.getState().playState?.fields[0]?.dealerId).toBe(
+        expect(gameState.getState().playState?.fields[0]?.dealerSeatId).toBe(
           comPlayerId,
         );
         expect(gameState.getState().playState?.lastWinnerSeatId).toBe(
@@ -1765,7 +1765,7 @@ describe('Reconnection Token Management', () => {
             cards: ['9♥'],
             playedBy: [targetCom.playerId],
             baseCard: '9♥',
-            dealerId: targetCom.playerId,
+            dealerSeatId: asSeatId(targetCom.playerId),
             isComplete: false,
           },
           negriCard: null,
@@ -1773,9 +1773,9 @@ describe('Reconnection Token Management', () => {
           fields: [
             {
               cards: ['7♣', '8♣', '9♣', '10♣'],
-              winnerId: targetCom.playerId,
+              winnerSeatId: asSeatId(targetCom.playerId),
               winnerTeam: 0,
-              dealerId: targetCom.playerId,
+              dealerSeatId: asSeatId(targetCom.playerId),
             },
           ],
           lastWinnerSeatId: asSeatId(targetCom.playerId),
@@ -1820,16 +1820,16 @@ describe('Reconnection Token Management', () => {
         const result = await roomService.joinRoom(roomId, user);
 
         expect(result).toBe(true);
-        expect(gameState.getState().playState?.currentField?.dealerId).toBe(
+        expect(gameState.getState().playState?.currentField?.dealerSeatId).toBe(
           targetCom.playerId,
         );
         expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
           targetCom.playerId,
         ]);
-        expect(gameState.getState().playState?.fields[0]?.winnerId).toBe(
+        expect(gameState.getState().playState?.fields[0]?.winnerSeatId).toBe(
           targetCom.playerId,
         );
-        expect(gameState.getState().playState?.fields[0]?.dealerId).toBe(
+        expect(gameState.getState().playState?.fields[0]?.dealerSeatId).toBe(
           targetCom.playerId,
         );
         expect(gameState.getState().playState?.lastWinnerSeatId).toBe(

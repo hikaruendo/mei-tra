@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { GameplayNotificationService } from '../gameplay-notification.service';
 import type { PushNotificationService } from '../../push/push-notification.service';
 import type { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
@@ -31,7 +32,7 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
         cards: [],
         playedBy: [],
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       },
       negriCard: null,

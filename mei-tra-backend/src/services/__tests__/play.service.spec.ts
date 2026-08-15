@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { CardService } from '../card.service';
 import { PlayService } from '../play.service';
 import { DomainPlayer, Field } from '../../types/game.types';
@@ -26,7 +27,7 @@ describe('PlayService', () => {
       cards: ['5♣', 'A♣', 'K♣', '6♣'],
       playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
@@ -47,7 +48,7 @@ describe('PlayService', () => {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
       playedBy: ['player-1', 'com-1', 'player-2', 'com-2'],
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
@@ -68,7 +69,7 @@ describe('PlayService', () => {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
       playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
@@ -89,7 +90,7 @@ describe('PlayService', () => {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
       playedBy: [],
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
@@ -103,7 +104,7 @@ describe('PlayService', () => {
       cards: ['K♠'],
       playedBy: ['player-2'],
       baseCard: 'K♠',
-      dealerId: 'player-2',
+      dealerSeatId: asSeatId('player-2'),
       isComplete: false,
     };
 
@@ -117,7 +118,7 @@ describe('PlayService', () => {
       cards: [],
       playedBy: [],
       baseCard: '',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: false,
     };
 

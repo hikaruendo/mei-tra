@@ -25,7 +25,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
               cards: ['J♠'],
               playedBy: ['com-player-1'],
               baseCard: 'J♠',
-              dealerId: 'com-player-1',
+              dealerSeatId: asSeatId('com-player-1'),
               isComplete: false,
             },
           },
@@ -112,7 +112,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
       cards: ['J♠'],
       playedBySeatIds: ['com-player-1'],
       baseCard: 'J♠',
-      dealerSeatId: 'com-player-1',
+      dealerSeatId: asSeatId('com-player-1'),
       declaredSuit: undefined,
       isComplete: false,
     });
@@ -123,7 +123,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
       cards: ['J♠'],
       playedBy: ['com-player-1'],
       baseCard: 'J♠',
-      dealerId: 'com-player-1',
+      dealerSeatId: asSeatId('com-player-1'),
       isComplete: false,
     };
     const roomService = {
@@ -178,7 +178,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
         playedBySeatIds: ['com-player-1'],
         baseCard: 'J♠',
         baseSuit: undefined,
-        dealerSeatId: 'com-player-1',
+        dealerSeatId: asSeatId('com-player-1'),
         declaredSuit: undefined,
         isComplete: false,
       },

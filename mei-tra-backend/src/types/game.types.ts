@@ -75,22 +75,16 @@ export interface Field {
   playedBySeatIds?: SeatId[];
   baseCard: string;
   baseSuit?: string;
-  dealerSeatId?: SeatId;
-  /** @deprecated Use dealerSeatId. */
-  dealerId: string;
+  dealerSeatId: SeatId;
   declaredSuit?: string;
   isComplete: boolean;
 }
 
 export interface CompletedField {
   cards: string[];
-  winnerSeatId?: SeatId;
-  /** @deprecated Use winnerSeatId. */
-  winnerId: string;
+  winnerSeatId: SeatId;
   winnerTeam: Team;
-  dealerSeatId?: SeatId;
-  /** @deprecated Use dealerSeatId. */
-  dealerId: string;
+  dealerSeatId: SeatId;
 }
 
 export interface PlayState {

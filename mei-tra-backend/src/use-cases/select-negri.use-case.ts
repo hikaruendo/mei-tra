@@ -53,7 +53,6 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           playedBySeatIds: [],
           baseCard: '',
           dealerSeatId: asSeatId(player.playerId),
-          dealerId: player.playerId,
           isComplete: false,
         },
         negriCard: card,

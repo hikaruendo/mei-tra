@@ -95,7 +95,7 @@ describe('Game event instrumentation', () => {
           cards: [],
           playedBy: [],
           baseCard: '',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       },

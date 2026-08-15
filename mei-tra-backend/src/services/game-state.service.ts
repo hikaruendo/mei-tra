@@ -537,7 +537,7 @@ export class GameStateService implements IGameStateService {
     return currentPlayer?.playerId === playerId;
   }
 
-  completeField(field: Field, winnerId: string): CompletedField | null {
+  completeField(field: Field, winnerSeatId: string): CompletedField | null {
     const state = this.getState();
     if (!state.playState) {
       return null;
@@ -549,18 +549,16 @@ export class GameStateService implements IGameStateService {
     }
 
     field.isComplete = true;
-    const winner = state.players.find((p) => p.playerId === winnerId);
+    const winner = state.players.find((p) => p.playerId === winnerSeatId);
     if (!winner) {
       return null;
     }
 
     const completedField: CompletedField = {
       cards: [...field.cards],
-      winnerSeatId: asSeatId(winnerId),
-      winnerId: winnerId,
+      winnerSeatId: asSeatId(winnerSeatId),
       winnerTeam: winner.team,
-      dealerSeatId: asSeatId(field.dealerSeatId ?? field.dealerId),
-      dealerId: field.dealerId,
+      dealerSeatId: field.dealerSeatId,
     };
 
     state.playState.fields.push(completedField);
@@ -630,7 +628,6 @@ export class GameStateService implements IGameStateService {
         playedBySeatIds: [],
         baseCard: '',
         dealerSeatId: asSeatId(state.players[0].playerId),
-        dealerId: state.players[0].playerId,
         isComplete: false,
       },
       negriCard: null,

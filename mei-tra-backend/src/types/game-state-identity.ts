@@ -60,26 +60,18 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
           ? (() => {
               const field = state.playState.currentField;
               const playedBySeatIds = normalizePlayedBySeatIds(field);
-              const dealerSeatId =
-                field.dealerSeatId ?? asSeatId(field.dealerId);
+              const dealerSeatId = field.dealerSeatId;
               return {
                 ...field,
                 playedBy: [...playedBySeatIds],
                 playedBySeatIds: [...playedBySeatIds],
                 dealerSeatId,
-                dealerId: dealerSeatId,
               };
             })()
           : null,
         fields: state.playState.fields.map((field) => {
-          const winnerSeatId = field.winnerSeatId ?? asSeatId(field.winnerId);
-          const dealerSeatId = field.dealerSeatId ?? asSeatId(field.dealerId);
           return {
             ...field,
-            winnerSeatId,
-            winnerId: winnerSeatId,
-            dealerSeatId,
-            dealerId: dealerSeatId,
           };
         }),
         lastWinnerSeatId: state.playState.lastWinnerSeatId ?? null,

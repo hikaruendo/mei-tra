@@ -42,7 +42,6 @@ describe('normalizeGameStateIdentityAliases', () => {
           playedBy: ['legacy-player'],
           baseCard: '',
           dealerSeatId: asSeatId('seat-1'),
-          dealerId: 'legacy-dealer',
           isComplete: false,
         },
         negriCard: '5♣',
@@ -74,7 +73,7 @@ describe('normalizeGameStateIdentityAliases', () => {
     expect(normalized.playState?.currentField?.playedBy).not.toBe(
       normalized.playState?.currentField?.playedBySeatIds,
     );
-    expect(normalized.playState?.currentField?.dealerId).toBe('seat-1');
+    expect(normalized.playState?.currentField?.dealerSeatId).toBe('seat-1');
     expect(normalized.playState?.negriSeatId).toBe('seat-1');
     expect(normalized.playState?.lastWinnerSeatId).toBe('seat-1');
     expect(normalized.playState?.openDeclarerSeatId).toBe('seat-1');
@@ -133,7 +132,6 @@ describe('normalizeGameStateIdentityAliases', () => {
           playedBy: ['seat-1', 'seat-1', 'seat-2', 'seat-2'],
           baseCard: '5♣',
           dealerSeatId: asSeatId('seat-1'),
-          dealerId: 'seat-1',
           isComplete: false,
         },
         negriCard: null,

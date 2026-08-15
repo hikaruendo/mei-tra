@@ -238,7 +238,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
       state.blowState.actionHistory?.length ?? 0,
       state.playState?.fields?.length ?? 0,
       state.playState?.currentField?.cards?.length ?? 0,
-      state.playState?.currentField?.dealerId ?? '',
+      state.playState?.currentField?.dealerSeatId ?? '',
     ].join(':');
   }
 

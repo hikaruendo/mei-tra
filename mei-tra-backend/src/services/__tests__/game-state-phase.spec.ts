@@ -160,7 +160,7 @@ describe('GameStateService phase transitions', () => {
       cards: ['S1', 'S2', 'S3', 'S4'],
       playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
       baseCard: 'S1',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
     state.playState = {
@@ -176,7 +176,10 @@ describe('GameStateService phase transitions', () => {
     const completedField = service.completeField(currentField, 'player-1');
 
     expect(completedField).toEqual(
-      expect.objectContaining({ winnerId: 'player-1', winnerTeam: 0 }),
+      expect.objectContaining({
+        winnerSeatId: asSeatId('player-1'),
+        winnerTeam: 0,
+      }),
     );
     expect(state.playState.fields).toHaveLength(1);
     expect(repository.update).not.toHaveBeenCalled();

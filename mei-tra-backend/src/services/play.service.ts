@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { asSeatId } from '../types/identity.types';
 import { DomainPlayer, Field, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 import { IPlayService } from './interfaces/play-service.interface';
@@ -35,12 +36,14 @@ export class PlayService implements IPlayService {
     let highestStrength = -1;
 
     // ディーラーのインデックスを取得
-    let dealerIndex = players.findIndex((p) => p.playerId === field.dealerId);
+    let dealerIndex = players.findIndex(
+      (p) => p.playerId === field.dealerSeatId,
+    );
 
     // ディーラーが見つからない場合、最初の有効なプレイヤーをディーラーとする
     if (dealerIndex === -1) {
       dealerIndex = 0;
-      field.dealerId = players[0].playerId;
+      field.dealerSeatId = asSeatId(players[0].playerId);
     }
 
     const playersById = new Map(
