@@ -10,13 +10,13 @@ const createRoomMembershipService = (): RoomMembershipService =>
   ({
     claim: jest
       .fn()
-      .mockImplementation((userId: string, roomId: string, playerId: string) =>
+      .mockImplementation((userId: string, roomId: string, seatId: string) =>
         Promise.resolve({
           result: 'reconnected',
           membership: {
             userId,
             roomId,
-            playerId,
+            seatId,
             status: 'active',
             membershipVersion: 2,
             transitionId: 'transition-1',
@@ -92,12 +92,12 @@ describe('ReconnectionUseCase', () => {
   it('uses the persisted room player mapping after an active-game restart', async () => {
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       findPlayerByActorId: jest.fn().mockReturnValue(null),
       getState: () => ({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             name: 'User 1',
             team: 0,
             hand: ['A♠'],
@@ -106,7 +106,7 @@ describe('ReconnectionUseCase', () => {
             hasRequiredBroken: false,
           },
           {
-            playerId: 'p2',
+            seatId: asSeatId('p2'),
             name: 'User 2',
             team: 1,
             hand: ['K♠'],
@@ -122,7 +122,7 @@ describe('ReconnectionUseCase', () => {
           actionHistory: [],
           currentTrump: null,
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -131,9 +131,9 @@ describe('ReconnectionUseCase', () => {
           negriCard: null,
           neguri: {},
           fields: [],
-          lastWinnerId: null,
+          lastWinnerSeatId: null,
           openDeclared: false,
-          openDeclarerId: null,
+          openDeclarerSeatId: null,
         },
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
         pointsToWin: 10,
@@ -148,7 +148,7 @@ describe('ReconnectionUseCase', () => {
         settings: { teamNames: undefined },
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             socketId: 'stale-socket',
             userId: 'user-1',
             isAuthenticated: true,
@@ -222,7 +222,7 @@ describe('ReconnectionUseCase', () => {
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
         socketId: 'socket-1',
-        playerId: 'seat-1',
+        seatId: 'seat-1',
         userId: 'user-1',
       }),
     );
@@ -231,12 +231,12 @@ describe('ReconnectionUseCase', () => {
   it('reclaims a persisted timeout COM after an active-game restart', async () => {
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       findPlayerByActorId: jest.fn().mockReturnValue(null),
       getState: () => ({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             name: 'COM',
             team: 0,
             hand: ['A♠'],
@@ -248,13 +248,13 @@ describe('ReconnectionUseCase', () => {
         ],
         gamePhase: 'play',
         currentPlayerIndex: 0,
-        currentPlayerId: 'seat-1',
+        currentSeatId: 'seat-1',
         blowState: {
           declarations: [],
           actionHistory: [],
           currentTrump: null,
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -263,9 +263,9 @@ describe('ReconnectionUseCase', () => {
           negriCard: null,
           neguri: {},
           fields: [],
-          lastWinnerId: null,
+          lastWinnerSeatId: null,
           openDeclared: false,
-          openDeclarerId: null,
+          openDeclarerSeatId: null,
         },
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
         pointsToWin: 10,
@@ -278,7 +278,7 @@ describe('ReconnectionUseCase', () => {
       settings: { teamNames: undefined },
       players: [
         {
-          playerId: 'seat-1',
+          seatId: asSeatId('seat-1'),
           socketId: '',
           userId: 'user-1',
           isAuthenticated: true,
@@ -358,7 +358,7 @@ describe('ReconnectionUseCase', () => {
       getState: () => ({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             name: 'User 1',
             team: 0,
             hand: ['A♠'],
@@ -367,7 +367,7 @@ describe('ReconnectionUseCase', () => {
             hasRequiredBroken: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'User 2',
             team: 1,
             hand: ['K♠'],
@@ -384,12 +384,12 @@ describe('ReconnectionUseCase', () => {
           actionHistory: [],
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             trumpType: 'zuppe',
             numberOfPairs: 7,
             timestamp: 1,
           },
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -398,9 +398,9 @@ describe('ReconnectionUseCase', () => {
           negriCard: null,
           neguri: {},
           fields: [],
-          lastWinnerId: null,
+          lastWinnerSeatId: null,
           openDeclared: false,
-          openDeclarerId: null,
+          openDeclarerSeatId: null,
         },
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
         agari: 'J♠',
@@ -416,7 +416,7 @@ describe('ReconnectionUseCase', () => {
         settings: { teamNames: undefined },
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             socketId: 'socket-1',
             userId: 'user-1',
             isAuthenticated: true,
@@ -489,7 +489,7 @@ describe('ReconnectionUseCase', () => {
       getState: () => ({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             name: 'User 1',
             team: 0,
             hand: ['A♠'],
@@ -498,7 +498,7 @@ describe('ReconnectionUseCase', () => {
             hasRequiredBroken: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'User 2',
             team: 1,
             hand: ['K♠'],
@@ -509,14 +509,13 @@ describe('ReconnectionUseCase', () => {
         ],
         gamePhase: 'blow',
         currentSeatId: asSeatId('seat-1'),
-        currentPlayerId: 'seat-1',
         currentPlayerIndex: 1,
         blowState: {
           declarations: [],
           actionHistory: [],
           currentTrump: null,
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -525,9 +524,9 @@ describe('ReconnectionUseCase', () => {
           negriCard: null,
           neguri: {},
           fields: [],
-          lastWinnerId: null,
+          lastWinnerSeatId: null,
           openDeclared: false,
-          openDeclarerId: null,
+          openDeclarerSeatId: null,
         },
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
         pointsToWin: 10,
@@ -542,7 +541,7 @@ describe('ReconnectionUseCase', () => {
         settings: { teamNames: undefined },
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             socketId: 'socket-1',
             userId: 'user-1',
             isAuthenticated: true,
@@ -584,7 +583,7 @@ describe('ReconnectionUseCase', () => {
   it('reconciles persisted players before reconnecting to a waiting room', async () => {
     const roomPlayers = [
       {
-        playerId: 'p1',
+        seatId: asSeatId('p1'),
         socketId: 'stale-socket',
         userId: 'user-1',
         isAuthenticated: true,
@@ -599,7 +598,7 @@ describe('ReconnectionUseCase', () => {
     ];
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
       getState: () => ({
         players: [],
@@ -696,7 +695,7 @@ describe('ReconnectionUseCase', () => {
   it('prefers the unique authenticated room seat over a stale waiting-room session', async () => {
     const roomPlayers = [
       {
-        playerId: 'seat-1',
+        seatId: asSeatId('seat-1'),
         socketId: 'stale-socket',
         userId: 'user-1',
         isAuthenticated: true,
@@ -709,7 +708,7 @@ describe('ReconnectionUseCase', () => {
         joinedAt: new Date(),
       },
       {
-        playerId: 'seat-2',
+        seatId: asSeatId('seat-2'),
         socketId: 'other-socket',
         userId: 'user-2',
         isAuthenticated: true,
@@ -724,9 +723,9 @@ describe('ReconnectionUseCase', () => {
     ];
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue({
-        playerId: 'seat-2',
+        seatId: 'seat-2',
       }),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
       getState: () => ({ players: [], gamePhase: 'waiting' }),
     };
@@ -782,7 +781,7 @@ describe('ReconnectionUseCase', () => {
       getState: jest.fn(() => ({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             name: 'User 1',
             team: 0,
             hand: [],
@@ -795,11 +794,11 @@ describe('ReconnectionUseCase', () => {
     const roomService = {
       getRoom: jest.fn().mockResolvedValue({
         id: 'room-stale',
-        hostId: 'seat-1',
+        hostSeatId: asSeatId('seat-1'),
         status: RoomStatus.PLAYING,
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             userId: 'user-1',
             isAuthenticated: true,
           },
@@ -814,7 +813,7 @@ describe('ReconnectionUseCase', () => {
         membership: {
           userId: 'user-1',
           roomId: 'room-current',
-          playerId: 'seat-current',
+          seatId: asSeatId('seat-current'),
           status: 'active',
           membershipVersion: 4,
           transitionId: 'transition-current',

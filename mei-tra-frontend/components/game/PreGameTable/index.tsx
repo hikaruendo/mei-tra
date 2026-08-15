@@ -11,14 +11,14 @@ import { asSeatId } from '@contracts/ids';
 
 interface PreGameTableProps {
   players: Player[];
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   isHost: boolean;
   onStart: () => void;
   onLeave: () => void;
   shuffleTeams?: () => void;
   teamNames?: TeamNames;
   onUpdateTeamNames?: (teamNames: TeamNames) => void;
-  onRemovePlayer?: (playerId: string) => void;
+  onRemovePlayer?: (seatId: string) => void;
 }
 
 const positions = ['bottom', 'left', 'top', 'right'] as const;
@@ -27,7 +27,6 @@ function createEmptySlot(index: number): Player {
   return {
     socketId: `empty-${index}`,
     seatId: asSeatId(`empty-${index}`),
-    playerId: `empty-${index}`,
     name: 'COM',
     team: (index % 2) as Player['team'],
     hand: [],
@@ -37,7 +36,7 @@ function createEmptySlot(index: number): Player {
 
 export const PreGameTable: React.FC<PreGameTableProps> = ({
   players,
-  currentPlayerId,
+  currentSeatId,
   isHost,
   onStart,
   onLeave,
@@ -66,8 +65,8 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
     setDraftTeamNames(resolvedTeamNames);
   }, [resolvedTeamNames]);
 
-  const ordered = currentPlayerId
-    ? getConsistentTableOrderWithSelfBottom(players, currentPlayerId)
+  const ordered = currentSeatId
+    ? getConsistentTableOrderWithSelfBottom(players, currentSeatId)
     : new Array(4).fill(undefined);
 
   const slots: Player[] = ordered.map((p, idx) => {
@@ -91,7 +90,7 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
     <div className={styles.playerPositions}>
       {slots.map((player, idx) => (
         <div
-          key={player.playerId}
+          key={player.seatId}
           className={`${styles.playerSeat} ${styles[positions[idx]]} ${
             player.team === 0 ? styles.teamRed : styles.teamBlack
           }`}
@@ -104,11 +103,11 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
             {isHost &&
               onRemovePlayer &&
               !player.isCOM &&
-              player.playerId !== currentPlayerId && (
+              player.seatId !== currentSeatId && (
                 <button
                   type="button"
                   className={styles.seatActionButton}
-                  onClick={() => onRemovePlayer(player.playerId)}
+                  onClick={() => onRemovePlayer(player.seatId)}
                 >
                   {tRoot('room.removePlayer')}
                 </button>

@@ -12,7 +12,6 @@ export interface UpdateAuthResponse {
   success: boolean;
   error?: string;
   authenticatedUser?: AuthenticatedUser;
-  clientEvents?: GatewayEvent[];
   broadcastEvents?: GatewayEvent[];
   roomEvents?: GatewayEvent[];
 }

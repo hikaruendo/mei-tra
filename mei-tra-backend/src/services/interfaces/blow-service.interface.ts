@@ -1,4 +1,5 @@
 import { BlowDeclaration, Team, TrumpType } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface IBlowService {
   isValidDeclaration(
@@ -7,7 +8,7 @@ export interface IBlowService {
   ): boolean;
   findHighestDeclaration(declarations: BlowDeclaration[]): BlowDeclaration;
   createDeclaration(
-    playerId: string,
+    seatId: SeatId,
     team: Team,
     trumpType: TrumpType,
     numberOfPairs: number,
