@@ -44,12 +44,12 @@ export class PlayService implements IPlayService {
       field.dealerSeatId = asSeatId(players[0].seatId);
     }
 
-    const playersById = new Map(
+    const playersBySeatId = new Map(
       players.map((player) => [player.seatId, player]),
     );
     const playedByOrder =
       field.playedBy.length === field.cards.length
-        ? field.playedBy.map((playerId) => playersById.get(asSeatId(playerId)))
+        ? field.playedBy.map((seatId) => playersBySeatId.get(asSeatId(seatId)))
         : [];
 
     // Prefer the explicit card -> player attribution recorded when each card was

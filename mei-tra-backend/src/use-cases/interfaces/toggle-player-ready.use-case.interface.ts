@@ -1,9 +1,10 @@
 import { Room } from '../../types/room.types';
 import { TransportPlayer } from '../../adapters/player-adapters';
+import type { SeatId } from '../../types/identity.types';
 
 export interface TogglePlayerReadyRequest {
   roomId: string;
-  playerId: string;
+  actorSeatId: SeatId;
 }
 
 export interface TogglePlayerReadyResponse {

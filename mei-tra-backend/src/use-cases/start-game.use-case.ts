@@ -29,7 +29,7 @@ export class StartGameUseCase implements IStartGameUseCase {
 
   async execute(request: StartGameRequest): Promise<StartGameResponse> {
     try {
-      const { roomId, playerId } = request;
+      const { roomId, actorSeatId } = request;
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
@@ -40,10 +40,10 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const player = room.players.find((p) => p.seatId === playerId);
+      const player = room.players.find((p) => p.seatId === actorSeatId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
-          playerId,
+          actorSeatId,
           roomId,
         });
         return {
@@ -54,7 +54,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       // Authorization check: verify the requesting player is the host
-      if (room.hostSeatId !== playerId) {
+      if (room.hostSeatId !== actorSeatId) {
         return {
           success: false,
           errorMessage: 'Only the host can start the game',
@@ -150,10 +150,10 @@ export class StartGameUseCase implements IStartGameUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'game_started',
-        actorSeatId: asSeatId(playerId),
+        actorSeatId,
         state: updatedState,
         actionData: {
-          startedBySeatId: playerId,
+          startedBySeatId: actorSeatId,
           firstBlowSeatId: firstBlowPlayer?.seatId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
@@ -207,11 +207,8 @@ export class StartGameUseCase implements IStartGameUseCase {
       const existingPlayer = existingPlayers.get(roomPlayer.seatId);
 
       if (!existingPlayer) {
-        if (typeof roomGameState.registerPlayerToken === 'function') {
-          roomGameState.registerPlayerToken(
-            roomPlayer.seatId,
-            roomPlayer.seatId,
-          );
+        if (typeof roomGameState.registerSeatToken === 'function') {
+          roomGameState.registerSeatToken(roomPlayer.seatId, roomPlayer.seatId);
         }
         return {
           ...toDomainPlayer(roomPlayer),

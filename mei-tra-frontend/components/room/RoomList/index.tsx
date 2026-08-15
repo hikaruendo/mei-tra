@@ -37,7 +37,7 @@ interface RoomListProps {
   isConnected?: boolean;
   isConnecting?: boolean;
   users?: ConnectionUser[];
-  currentPlayerId?: string | null;
+  currentSeatId?: string | null;
   onRoomEntered?: (roomId: string) => void;
 }
 
@@ -45,7 +45,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   isConnected,
   isConnecting,
   users = [],
-  currentPlayerId: currentPlayerIdProp = null,
+  currentSeatId: currentSeatIdProp = null,
   onRoomEntered,
 }) => {
   const t = useTranslations();
@@ -60,7 +60,7 @@ export const RoomList: React.FC<RoomListProps> = ({
     currentRoom,
     isConnected: roomSocketConnected,
     isConnecting: roomSocketConnecting,
-  } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
+  } = useRoom({ users: memoizedUsers, currentSeatId: currentSeatIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);

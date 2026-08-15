@@ -110,7 +110,7 @@ export interface GameActions {
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
-  revealBrokenHand: (playerId: string) => void;
+  revealBrokenHand: (seatId: string) => void;
 } 
 
 export function fromPlayerContract(player: PlayerContract): Player {

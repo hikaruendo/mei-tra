@@ -170,10 +170,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     return {
       roomId: currentRoomId,
-      playerId:
+      seatId: asSeatId(
         currentRoomPlayer?.seatId ??
-        normalizedUser.seatId ??
-        normalizedUser.userId!,
+          normalizedUser.seatId ??
+          normalizedUser.userId!,
+      ),
     };
   }
 

@@ -223,7 +223,7 @@ domain層はゲームルールの正しさを持ちます。application / sessio
 
 - `broken-hand.helper.ts`: broken hand の pending / required 判定を declare / pass / COM / reveal で同じ意味に保つ
 - `blow-action.helper.ts`: blow phase の「行動済み」判定を `isPasser`, `declarations`, `actionHistory` に分散させない
-- `player-resolution.helper.ts`: actorId / playerId / room player 変換を UseCase ごとに微妙に変えない
+- `player-resolution.helper.ts`: actor identity / seatId / room player 解決を UseCase ごとに微妙に変えない
 
 ### 5.5 Infrastructure
 
@@ -419,7 +419,7 @@ RoomService は backend の中でも特に重要です。役割は単なる CRUD
 - 初期 state の構築
 - `GameStateManager` を介した persisted state の load / save
 - `GamePhaseService` を介した合法な `gamePhase` 遷移の検証
-- `PlayerConnectionManager` を介した `playerIds` / disconnect timeout 管理
+- `PlayerConnectionManager` を介した `seatIdsByToken` / disconnect timeout 管理
 - session concern では `SessionUser` を使い、connection metadata と game rule state を明示的に分け始めている
 - players の sanitize
 - turn 管理

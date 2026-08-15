@@ -5,6 +5,7 @@ import {
 } from '../../types/game.types';
 import { RoomPlayer } from '../../types/room.types';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface IGameStateRepository {
   // Game state CRUD operations
@@ -19,7 +20,7 @@ export interface IGameStateRepository {
     roomId: string,
     roomPlayers: RoomPlayer[],
     gameState: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState | null>;
   delete(roomId: string): Promise<void>;
@@ -28,7 +29,7 @@ export interface IGameStateRepository {
   updatePlayers(roomId: string, players: DomainPlayer[]): Promise<boolean>;
   updatePlayerConnection(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     updates: Partial<PlayerConnectionMetadata>,
   ): Promise<boolean>;
 

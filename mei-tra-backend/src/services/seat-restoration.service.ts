@@ -10,12 +10,13 @@ import {
   setCurrentSeat,
 } from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class SeatRestorationService {
   async restorePlayerFromVacantSeat(
     roomId: string,
-    playerId: string,
+    targetSeatId: SeatId,
     room: Room,
     gameState: GameStateService,
     vacantSeats: VacantSeats,
@@ -26,7 +27,7 @@ export class SeatRestorationService {
     }
 
     const vacancyEntry = Object.entries(vacantSeatsForRoom).find(
-      ([, data]) => data.roomPlayer.seatId === playerId,
+      ([, data]) => data.roomPlayer.seatId === targetSeatId,
     );
     if (!vacancyEntry) {
       return false;
@@ -47,7 +48,7 @@ export class SeatRestorationService {
       return false;
     }
 
-    const comPlayerId = currentSeatPlayer.seatId;
+    const comSeatId = currentSeatPlayer.seatId;
     const seatId = resolveSeatId(currentSeatPlayer);
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
@@ -58,7 +59,7 @@ export class SeatRestorationService {
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
-      (player) => player.seatId === comPlayerId || player.seatId === playerId,
+      (player) => player.seatId === comSeatId || player.seatId === targetSeatId,
     );
 
     const restoredGamePlayerBase: DomainPlayer = seatData.gamePlayer
@@ -77,11 +78,11 @@ export class SeatRestorationService {
         });
 
     upsertRuntimeSeat(room, state, restoredRoomPlayer, {
-      replaceSeatId: comPlayerId,
+      replaceSeatId: comSeatId,
       gameplaySource: restoredGamePlayerBase,
     });
 
-    gameState.registerPlayerToken(seatId, seatId);
+    gameState.registerSeatToken(seatId, seatId);
     gameState.clearDisconnectTimeout(seatId);
     delete vacantSeatsForRoom[asSeatId(vacantSeatId)];
     if (Object.keys(vacantSeatsForRoom).length === 0) {

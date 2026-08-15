@@ -6,9 +6,9 @@ import { DomainPlayer, Field } from '../../types/game.types';
 describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
-  const makePlayer = (playerId: string, isCOM = false): DomainPlayer => ({
-    seatId: asSeatId(playerId),
-    name: playerId,
+  const makePlayer = (seatId: string, isCOM = false): DomainPlayer => ({
+    seatId: asSeatId(seatId),
+    name: seatId,
     hand: [],
     team: isCOM ? 1 : 0,
     isPasser: false,

@@ -168,20 +168,20 @@ interface MobileGameSnapshot {
   players: PlayerContract[];
   gamePhase: TransportGamePhase;        // 'waiting' | 'blow' | 'play' | null
   currentField: FieldContract | null;
-  currentTurn: string | null;
+  currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
-  you: string | null;                   // 自分の playerId
+  youSeatId: SeatId | null;
   isSpectator: boolean;
   negriCard: string | null;
-  negriPlayerId: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari: string | null;
   fields: CompletedFieldContract[];     // 完了した場 (取得セット)
-  hostId: string | null;
+  hostSeatId: SeatId | null;
   pointsToWin: number;
   paused: boolean;
-  disconnectedPlayerIds: string[];
-  idlePlayerIds: string[];
+  disconnectedSeatIds: SeatId[];
+  idleSeatIds: SeatId[];
   teamNames?: TeamNames;
 }
 ```

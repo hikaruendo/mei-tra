@@ -16,6 +16,7 @@ import {
   ComBlowAction,
   IComStrategyService,
 } from './interfaces/com-strategy-service.interface';
+import type { SeatId } from '../types/identity.types';
 
 type TrumpEvaluation = {
   trumpType: TrumpType;
@@ -782,8 +783,8 @@ export class ComStrategyService implements IComStrategyService {
     );
   }
 
-  private findPlayer(state: GameState, playerId: string): DomainPlayer | null {
-    return state.players.find((player) => player.seatId === playerId) ?? null;
+  private findPlayer(state: GameState, seatId: SeatId): DomainPlayer | null {
+    return state.players.find((player) => player.seatId === seatId) ?? null;
   }
 
   private countSuits(

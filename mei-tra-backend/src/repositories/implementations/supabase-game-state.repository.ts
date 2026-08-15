@@ -19,6 +19,7 @@ import {
 import { Database } from '../../types/database.types';
 import { RoomPlayer } from '../../types/room.types';
 import { asSeatId, resolveSeatId } from '../../types/identity.types';
+import type { SeatId } from '../../types/identity.types';
 import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import {
@@ -161,7 +162,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     roomId: string,
     roomPlayers: RoomPlayer[],
     gameState: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState | null> {
     const canonicalGameState = normalizeGameStateIdentity(gameState);
@@ -186,7 +187,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           p_player_states: playerStates,
           p_state_patch: this.buildStatePatch(canonicalGameState),
           p_scalar_patch: this.buildScalarPatch(canonicalGameState),
-          p_host_id: hostId ?? null,
+          p_host_id: hostSeatId ?? null,
           p_expected_version: canonicalGameState.version ?? null,
           p_membership_mutation: membershipMutation ?? null,
         },
@@ -324,10 +325,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async updatePlayerConnection(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     updates: Partial<PlayerConnectionMetadata>,
   ): Promise<boolean> {
-    void playerId;
+    void seatId;
     void updates;
 
     // Connection metadata now lives in room/session state. Keep the method for
@@ -468,13 +469,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         });
       })
       .filter((player): player is DomainPlayer => Boolean(player));
-    const canonicalCurrentPlayerId = dbGameState.current_seat_id;
+    const canonicalCurrentSeatId = dbGameState.current_seat_id;
     if (
-      canonicalCurrentPlayerId &&
-      !players.some((player) => player.seatId === canonicalCurrentPlayerId)
+      canonicalCurrentSeatId &&
+      !players.some((player) => player.seatId === canonicalCurrentSeatId)
     ) {
       throw new Error(
-        `Current seat ${canonicalCurrentPlayerId} is outside room ${dbGameState.room_id}`,
+        `Current seat ${canonicalCurrentSeatId} is outside room ${dbGameState.room_id}`,
       );
     }
     const blowState = (stateData.blowState ?? {
@@ -491,8 +492,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       version: dbGameState.version,
       identitySchemaVersion: 2,
       players,
-      currentSeatId: canonicalCurrentPlayerId
-        ? asSeatId(canonicalCurrentPlayerId)
+      currentSeatId: canonicalCurrentSeatId
+        ? asSeatId(canonicalCurrentSeatId)
         : null,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],

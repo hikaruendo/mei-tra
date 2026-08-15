@@ -291,9 +291,9 @@ frontend の理解で先に見るべきなのは、`hooks/` の責務の切り�
 - `negriCard`
 - `completedFields`
 - `currentRoomId`
-- `currentPlayerId`
+- `currentSeatId`
 - `isHost`
-- `idlePlayerIds`
+- `idleSeatIds`
 - `paused`
 - `users`
 

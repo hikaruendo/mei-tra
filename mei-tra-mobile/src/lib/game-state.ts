@@ -37,12 +37,12 @@ export const mergePlayersByIdentity = (
 ): MobilePlayer[] => {
   const normalizedPrevious = normalizePlayerIdentities(previous);
   const normalizedNext = normalizePlayerIdentities(next);
-  const previousByPlayerId = new Map(
+  const previousBySeatId = new Map(
     normalizedPrevious.map((player) => [player.seatId, player]),
   );
 
   return normalizedNext.map((player) => {
-    const oldPlayer = previousByPlayerId.get(player.seatId);
+    const oldPlayer = previousBySeatId.get(player.seatId);
     if (!oldPlayer || player.isCOM) {
       return player;
     }
@@ -57,7 +57,7 @@ export const mergePlayersByIdentity = (
   });
 };
 
-export const resolvePlayerId = (
+export const resolveSeatId = (
   game: MobileGameSnapshot | null,
   room: MobileRoom | RoomContract | null,
   authenticatedUserId?: string | null,
@@ -82,13 +82,13 @@ export const normalizeGameStatePayload = (
     revealedAgari: payload.revealedAgari ?? null,
     paused: false,
     fields: dedupeCompletedFields(normalized.fields),
-    disconnectedPlayerIds: extractDisconnectedPlayerIds(normalized.players),
-    idlePlayerIds: [],
+    disconnectedSeatIds: extractDisconnectedSeatIds(normalized.players),
+    idleSeatIds: [],
     teamNames: payload.teamNames,
   };
 };
 
-export const extractDisconnectedPlayerIds = (
+export const extractDisconnectedSeatIds = (
   players: PlayerContract[],
 ): string[] =>
   normalizePlayerIdentities(players)
@@ -120,8 +120,8 @@ export const createStartedGameSnapshot = (
     hostSeatId,
     pointsToWin: payload.pointsToWin,
     paused: false,
-    disconnectedPlayerIds: [],
-    idlePlayerIds: [],
+    disconnectedSeatIds: [],
+    idleSeatIds: [],
     teamNames: payload.teamNames,
   };
 };

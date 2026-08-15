@@ -27,7 +27,7 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { toCompletedFieldContract } from '../adapters/game-contract-adapters';
-import { asSeatId } from '../types/identity.types';
+import { asSeatId, type SeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
@@ -258,10 +258,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       return 'Field is not complete';
     }
 
-    const playerIds = new Set<string>(
+    const seatIds = new Set<SeatId>(
       state.players.map((player) => player.seatId),
     );
-    if (field.playedBy.some((playerId) => !playerIds.has(playerId))) {
+    if (field.playedBy.some((seatId) => !seatIds.has(asSeatId(seatId)))) {
       return 'Field contains unknown player attribution';
     }
 

@@ -139,7 +139,7 @@ describe('JoinRoomGatewayEffectsService', () => {
         event: 'room-sync',
         payload: {
           room: { id: 'room-1' },
-          players: [{ playerId: 'player-1' }],
+          players: [{ seatId: 'player-1' }],
         },
       },
       {
@@ -152,7 +152,7 @@ describe('JoinRoomGatewayEffectsService', () => {
         scope: 'room',
         roomId: 'room-1',
         event: 'update-players',
-        payload: [{ playerId: 'player-1' }],
+        payload: [{ seatId: 'player-1' }],
       },
     ]);
 
@@ -699,7 +699,7 @@ describe('JoinRoomGatewayEffectsService', () => {
         event: 'room-sync',
         payload: {
           room: { id: 'room-1' },
-          players: [{ playerId: 'player-1' }],
+          players: [{ seatId: 'player-1' }],
         },
       },
       {
@@ -712,7 +712,7 @@ describe('JoinRoomGatewayEffectsService', () => {
         scope: 'room',
         roomId: 'room-1',
         event: 'update-players',
-        payload: [{ playerId: 'player-1' }],
+        payload: [{ seatId: 'player-1' }],
       },
     ]);
 

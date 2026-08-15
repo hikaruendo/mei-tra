@@ -105,10 +105,7 @@ export interface SelectBaseSuitPayload {
   suit: string;
 }
 
-export interface RevealBrokenHandPayload {
-  roomId: string;
-  targetSeatId: SeatId;
-}
+export type RevealBrokenHandPayload = RoomActionPayload;
 
 export interface UpdateAuthPayload {
   token?: string;

@@ -57,7 +57,7 @@ const forbiddenJoinPayload: JoinRoomPayload = {
   // @ts-expect-error clients must not provide trusted join identity.
   user: {
     socketId: 'attacker-socket',
-    playerId: 'victim-player',
+    seatId: 'victim-player',
     userId: 'victim-user',
     name: 'Victim',
     isAuthenticated: true,
@@ -68,7 +68,7 @@ void forbiddenJoinPayload;
 const forbiddenActionPayload: RoomActionPayload = {
   roomId: 'room-1',
   // @ts-expect-error clients must not provide trusted actor identity.
-  playerId: 'victim-player',
+  seatId: 'victim-player',
 };
 void forbiddenActionPayload;
 

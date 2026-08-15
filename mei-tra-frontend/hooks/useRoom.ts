@@ -21,12 +21,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { ConnectionUser, Team } from '../types/game.types';
 import { RoomStatus } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
-import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
+import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import { asSeatId } from '@contracts/ids';
 
 interface UseRoomOptions {
   users?: ConnectionUser[];
-  currentPlayerId?: string | null;
+  currentSeatId?: string | null;
 }
 
 interface ProfileUpdatedPayload {
@@ -47,22 +47,22 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   const { user } = useAuth();
 
   const users = useMemo(() => options.users ?? [], [options.users]);
-  const currentPlayerId = options.currentPlayerId ?? null;
+  const currentSeatId = options.currentSeatId ?? null;
 
   const resolveSelfRoomPlayer = useCallback(
     (room: Room | null | undefined): RoomPlayer | null => {
       if (!room) {
         return null;
       }
-      const playerId = resolveSelfPlayerId(room.players, {
+      const seatId = resolveSelfSeatId(room.players, {
         userId: user?.id,
-        serverPlayerId: currentPlayerId,
+        serverSeatId: currentSeatId,
       });
       return (
-        room.players.find((player) => player.seatId === playerId) ?? null
+        room.players.find((player) => player.seatId === seatId) ?? null
       );
     },
-    [currentPlayerId, user?.id],
+    [currentSeatId, user?.id],
   );
 
   const currentRoomRef = useRef<Room | null>(null);
@@ -293,7 +293,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         return;
       }
 
-      if (currentPlayerId && currentPlayerId === seatId) {
+      if (currentSeatId && currentSeatId === seatId) {
         setCurrentRoom(null);
       } else {
         setCurrentRoom(prev => {
@@ -508,7 +508,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     };
   }, [
     socket,
-    currentPlayerId,
+    currentSeatId,
     clearStoredRoomState,
     markRoomSyncHandled,
     shouldSkipLegacyRoomUpdated,
@@ -590,7 +590,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     const displayName = user.profile?.displayName || user.email || 'User';
     const userToJoin = {
       socketId: socket.id ?? '',
-      playerId: user.id, // Transport field carries the Supabase user ID during room creation.
       name: displayName,
       userId: user.id,
       isAuthenticated: true
@@ -652,7 +651,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       return;
     }
 
-    socket.emit('leave-room', { roomId, playerId: player.seatId }, (response: { success: boolean; error?: string }) => {
+    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('roomId');
@@ -694,8 +693,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }));
 
     socket.emit('toggle-player-ready', {
-      roomId: currentRoom.id,
-      playerId: player.seatId
+      roomId: currentRoom.id
     });
   }, [socket, currentRoom, resolveSelfRoomPlayer]);
 
@@ -714,8 +712,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     socket.emit('start-game', {
-      roomId: currentRoom.id,
-      playerId: player.seatId
+      roomId: currentRoom.id
     });
   }, [socket, currentRoom, resolveSelfRoomPlayer]);
 
@@ -728,7 +725,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       console.error('[useRoom] Cannot fill with COM: player not found');
       return;
     }
-    socket.emit('fill-with-com', { roomId, playerId: player.seatId });
+    socket.emit('fill-with-com', { roomId });
   }, [socket, currentRoom, availableRooms, resolveSelfRoomPlayer]);
 
   // プレイヤーのチーム変更
@@ -745,7 +742,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     return new Promise((resolve) => {
-      socket.emit('change-player-team', { roomId, playerId: player.seatId, teamChanges }, (response: { success: boolean }) => {
+      socket.emit('change-player-team', { roomId, teamChanges }, (response: { success: boolean }) => {
         resolve(response.success);
       });
     });

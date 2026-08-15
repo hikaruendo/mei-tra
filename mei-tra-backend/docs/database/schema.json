@@ -2282,7 +2282,7 @@
     {
       "name": "public.claim_room_membership",
       "return_type": "jsonb",
-      "arguments": "p_user_id uuid, p_room_id uuid, p_player_id text, p_transition_id uuid",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_seat_id uuid, p_transition_id uuid",
       "type": "FUNCTION"
     },
     {
@@ -2376,9 +2376,9 @@
       "type": "FUNCTION"
     },
     {
-      "name": "public.release_room_membership_by_player",
+      "name": "public.release_room_membership_by_seat",
       "return_type": "bool",
-      "arguments": "p_room_id uuid, p_player_id text, p_transition_id uuid",
+      "arguments": "p_room_id uuid, p_seat_id uuid, p_transition_id uuid",
       "type": "FUNCTION"
     },
     {
@@ -2402,7 +2402,7 @@
     {
       "name": "public.reserve_room_membership",
       "return_type": "jsonb",
-      "arguments": "p_user_id uuid, p_player_id text, p_transition_id uuid",
+      "arguments": "p_user_id uuid, p_seat_id uuid, p_transition_id uuid",
       "type": "FUNCTION"
     },
     {

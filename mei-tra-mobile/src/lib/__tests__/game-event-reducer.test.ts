@@ -9,11 +9,11 @@ import {
   normalizePlayerIdentities,
 } from '@meitra/game-client/identity';
 
-const createPlayer = (playerId: string, hand: string[]): PlayerContract => ({
-  socketId: `socket-${playerId}`,
-  seatId: asSeatId(playerId),
-  name: playerId,
-  team: playerId === 'seat-1' ? 0 : 1,
+const createPlayer = (seatId: string, hand: string[]): PlayerContract => ({
+  socketId: `socket-${seatId}`,
+  seatId: asSeatId(seatId),
+  name: seatId,
+  team: seatId === 'seat-1' ? 0 : 1,
   hand,
   isPasser: false,
 });

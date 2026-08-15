@@ -16,6 +16,7 @@ import {
 } from './helpers/player-resolution.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
 import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
@@ -34,7 +35,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
     request: RevealBrokenHandRequest,
   ): Promise<RevealBrokenHandPreparation> {
     try {
-      const { roomId, actorId, playerId } = request;
+      const { roomId, actorId, seatId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
       const player = resolvePlayerByActorId(roomGameState, actorId);
@@ -43,7 +44,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      if (player.seatId !== playerId) {
+      if (player.seatId !== seatId) {
         return { success: false, error: 'Player mismatch for broken hand' };
       }
 
@@ -52,7 +53,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       const hasDeclared = state.blowState.declarations.some(
-        (declaration) => declaration.seatId === playerId,
+        (declaration) => declaration.seatId === seatId,
       );
       if (player.isPasser || hasDeclared) {
         return { success: false, error: 'Cannot reveal broken hand now' };
@@ -69,7 +70,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       const handSnapshot = [...player.hand];
       state.pendingBrokenHandReveal = {
-        seatId: asSeatId(playerId),
+        seatId,
         handSnapshot,
         startedAt: Date.now(),
       };
@@ -78,7 +79,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       return {
         success: true,
         delayMs: 3000,
-        followUp: { roomId, playerId, handSnapshot },
+        followUp: { roomId, seatId, handSnapshot },
       };
     } catch (error) {
       this.logger.error(
@@ -91,15 +92,15 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
   async finalize(followUp: {
     roomId: string;
-    playerId: string;
+    seatId: SeatId;
     handSnapshot?: string[];
   }): Promise<RevealBrokenHandCompletion> {
     try {
-      const { roomId, playerId } = followUp;
+      const { roomId, seatId } = followUp;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
       const room = await this.roomService.getRoom(roomId);
-      const player = state.players.find((p) => p.seatId === playerId);
+      const player = state.players.find((p) => p.seatId === seatId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -110,7 +111,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       const pendingReveal = state.pendingBrokenHandReveal;
-      if (!pendingReveal || pendingReveal.seatId !== playerId) {
+      if (!pendingReveal || pendingReveal.seatId !== seatId) {
         return { success: false, error: 'Broken hand reveal is not pending' };
       }
 
@@ -197,7 +198,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'broken_hand_revealed',
-        actorSeatId: asSeatId(playerId),
+        actorSeatId: seatId,
         state: nextState,
         actionData: {
           nextSeatId: firstBlowPlayer?.seatId ?? null,

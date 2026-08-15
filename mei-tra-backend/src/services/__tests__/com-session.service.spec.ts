@@ -27,7 +27,7 @@ const createGameStateStub = () => {
     playState: {
       currentField: {
         cards: ['A♠'],
-        playedBy: [HUMAN_ID],
+        playedBy: [asSeatId(HUMAN_ID)],
         baseCard: 'A♠',
         dealerSeatId: asSeatId(HUMAN_ID),
         isComplete: false,
@@ -42,7 +42,7 @@ const createGameStateStub = () => {
 
   const gameState = {
     getState: () => liveState,
-    registerPlayerToken: jest.fn(),
+    registerSeatToken: jest.fn(),
     persistRoster: jest.fn().mockImplementation(() => {
       const persistedPlayers = liveState.players;
       liveState = makeState();
@@ -57,7 +57,7 @@ const createGameStateStub = () => {
 
 const createRoom = (): Room =>
   ({
-    hostId: HUMAN_ID,
+    hostSeatId: asSeatId(HUMAN_ID),
     players: [
       {
         seatId: asSeatId(HUMAN_ID),
@@ -85,7 +85,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
 
     const converted = await service.convertPlayerToCOM(
       'room-1',
-      HUMAN_ID,
+      asSeatId(HUMAN_ID),
       createRoom(),
       gameState,
       vacantSeats,
@@ -103,7 +103,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(state.currentSeatId).toBe(comId);
     expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);
     expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.seatId).toBe(
-      HUMAN_ID,
+      asSeatId(HUMAN_ID),
     );
   });
 
@@ -119,7 +119,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
 
     const converted = await service.convertPlayerToCOM(
       'room-1',
-      HUMAN_ID,
+      asSeatId(HUMAN_ID),
       room,
       gameState,
       {},

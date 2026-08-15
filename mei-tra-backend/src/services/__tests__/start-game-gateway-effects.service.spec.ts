@@ -54,7 +54,7 @@ describe('StartGameGatewayEffectsService', () => {
             room: { id: 'room-1' },
             players: [
               {
-                playerId: 'player-1',
+                seatId: 'player-1',
                 team: 0,
               },
             ],
@@ -72,7 +72,7 @@ describe('StartGameGatewayEffectsService', () => {
           event: 'update-players',
           payload: [
             {
-              playerId: 'player-1',
+              seatId: 'player-1',
               team: 0,
             },
           ],
@@ -122,7 +122,7 @@ describe('StartGameGatewayEffectsService', () => {
           room: { id: 'room-1' },
           players: [
             expect.objectContaining({
-              playerId: 'player-1',
+              seatId: 'player-1',
               team: 0,
             }),
           ],
@@ -140,7 +140,7 @@ describe('StartGameGatewayEffectsService', () => {
         event: 'update-players',
         payload: [
           expect.objectContaining({
-            playerId: 'player-1',
+            seatId: 'player-1',
             team: 0,
           }),
         ],

@@ -31,10 +31,10 @@ interface GameTableProps {
   numberOfPairs: number;
   setNumberOfPairs: (pairs: number) => void;
   teamScores: TeamScores;
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   currentRoomId: string | null;
-  idlePlayerIds?: string[];
-  disconnectedPlayerIds?: string[];
+  idleSeatIds?: string[];
+  disconnectedSeatIds?: string[];
   pointsToWin: number;
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
@@ -43,7 +43,7 @@ interface GameTableProps {
   isSpectator?: boolean;
   onStart?: () => void;
   onLeave?: () => void;
-  onReplaceWithCOM?: (playerId: string) => void;
+  onReplaceWithCOM?: (seatId: string) => void;
 }
 
 
@@ -65,12 +65,12 @@ export const GameTable: React.FC<GameTableProps> = ({
   numberOfPairs,
   setNumberOfPairs,
   teamScores,
-  currentPlayerId,
+  currentSeatId,
   currentRoomId,
   pointsToWin,
   teamNames,
-  idlePlayerIds = [],
-  disconnectedPlayerIds = [],
+  idleSeatIds = [],
+  disconnectedSeatIds = [],
   isWaiting = false,
   isHost = false,
   isSpectator = false,
@@ -80,32 +80,32 @@ export const GameTable: React.FC<GameTableProps> = ({
 }) => {
   const tRoot = useTranslations();
   usePreloadCards();
-  const [spectatorPerspectivePlayerId, setSpectatorPerspectivePlayerId] =
+  const [spectatorPerspectiveSeatId, setSpectatorPerspectiveSeatId] =
     useState<string | null>(null);
 
-  const hostPlayerId = players.find((player) => player.isHost)?.seatId ?? players[0]?.seatId ?? null;
-  const tablePerspectivePlayerId = isSpectator
-    ? spectatorPerspectivePlayerId ?? hostPlayerId
-    : currentPlayerId;
+  const hostSeatId = players.find((player) => player.isHost)?.seatId ?? players[0]?.seatId ?? null;
+  const tablePerspectiveSeatId = isSpectator
+    ? spectatorPerspectiveSeatId ?? hostSeatId
+    : currentSeatId;
   const perspectivePlayerTeam = players.find(
-    (player) => player.seatId === tablePerspectivePlayerId,
+    (player) => player.seatId === tablePerspectiveSeatId,
   )?.team ?? 0;
 
   useEffect(() => {
     if (!isSpectator) {
-      if (spectatorPerspectivePlayerId) {
-        setSpectatorPerspectivePlayerId(null);
+      if (spectatorPerspectiveSeatId) {
+        setSpectatorPerspectiveSeatId(null);
       }
       return;
     }
 
     const hasSelectedPerspective = players.some(
-      (player) => player.seatId === spectatorPerspectivePlayerId,
+      (player) => player.seatId === spectatorPerspectiveSeatId,
     );
     if (!hasSelectedPerspective) {
-      setSpectatorPerspectivePlayerId(hostPlayerId);
+      setSpectatorPerspectiveSeatId(hostSeatId);
     }
-  }, [hostPlayerId, isSpectator, players, spectatorPerspectivePlayerId]);
+  }, [hostSeatId, isSpectator, players, spectatorPerspectiveSeatId]);
 
   if (!players || players.length === 0) {
     return null;
@@ -114,7 +114,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   // Consistent table order for all players, self is always bottom
   const orderedPlayers = getSeatOrderWithSelfBottom(
     players,
-    tablePerspectivePlayerId || '',
+    tablePerspectiveSeatId || '',
   );
   const positions = ['bottom', 'left', 'top', 'right'];
 
@@ -170,7 +170,7 @@ export const GameTable: React.FC<GameTableProps> = ({
 
             return (
               <BlowControls
-                isCurrentPlayer={currentPlayerId === whoseTurn}
+                isCurrentPlayer={currentSeatId === whoseTurn}
                 whoseTurn={whoseTurn}
                 selectedTrump={selectedTrump}
                 setSelectedTrump={setSelectedTrump}
@@ -197,7 +197,7 @@ export const GameTable: React.FC<GameTableProps> = ({
           const position = positions[idx];
           const currentPlayerTeam = isSpectator
             ? perspectivePlayerTeam
-            : players.find(p => p.seatId === currentPlayerId)?.team ?? 0;
+            : players.find(p => p.seatId === currentSeatId)?.team ?? 0;
 
           // Show all team's completed fields only for bottom player
           const teamCompletedFields = position === 'bottom'
@@ -220,20 +220,20 @@ export const GameTable: React.FC<GameTableProps> = ({
               agariCard={revealedAgari || undefined}
               currentHighestDeclaration={currentHighestDeclaration || undefined}
               completedFields={teamCompletedFields}
-              currentPlayerId={tablePerspectivePlayerId || ''}
+              currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
               currentTrump={currentTrump}
               takenCount={takenCount}
               teamNames={teamNames}
               isHost={isHost}
-              isIdle={idlePlayerIds.includes(player_.seatId)}
-              isDisconnected={disconnectedPlayerIds.includes(player_.seatId)}
+              isIdle={idleSeatIds.includes(player_.seatId)}
+              isDisconnected={disconnectedSeatIds.includes(player_.seatId)}
               isSpectator={isSpectator}
               isSpectatorPerspective={
-                isSpectator && tablePerspectivePlayerId === player_.seatId
+                isSpectator && tablePerspectiveSeatId === player_.seatId
               }
               onSpectatorPerspectiveChange={
-                isSpectator ? setSpectatorPerspectivePlayerId : undefined
+                isSpectator ? setSpectatorPerspectiveSeatId : undefined
               }
               onReplaceWithCOM={onReplaceWithCOM}
             />
@@ -259,8 +259,8 @@ export const GameTable: React.FC<GameTableProps> = ({
             currentField={currentField}
             players={players}
             onBaseSuitSelect={gameActions.selectBaseSuit}
-            isCurrentPlayer={!isSpectator && currentPlayerId === whoseTurn}
-            currentPlayerId={tablePerspectivePlayerId || ''}
+            isCurrentPlayer={!isSpectator && currentSeatId === whoseTurn}
+            currentSeatId={tablePerspectiveSeatId || ''}
           />
         )}
       </div>

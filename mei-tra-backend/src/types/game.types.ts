@@ -123,9 +123,9 @@ export interface ChomboViolation {
     | 'last-tanzen'
     | 'wrong-broken'
     | 'wrong-open';
-  playerId: string;
+  violatorSeatId: SeatId;
   timestamp: number;
-  reportedBy: string | null;
+  reportedBySeatId: SeatId | null;
   isExpired: boolean;
 }
 
@@ -147,6 +147,6 @@ export interface GameState {
   roundNumber: number;
   pointsToWin: number;
   teamAssignments: {
-    [playerId: string]: Team;
+    [seatId: string]: Team;
   };
 }

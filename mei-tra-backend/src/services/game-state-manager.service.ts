@@ -5,6 +5,7 @@ import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
 import { normalizeGameStateIdentity } from '../adapters/game-state-identity';
+import type { SeatId } from '../types/identity.types';
 
 export class GameStateManager {
   constructor(
@@ -131,7 +132,7 @@ export class GameStateManager {
     roomId: string | null,
     roomPlayers: RoomPlayer[],
     state: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState> {
     if (!roomId) {
@@ -142,7 +143,7 @@ export class GameStateManager {
       roomId,
       roomPlayers,
       state,
-      hostId,
+      hostSeatId,
       membershipMutation,
     );
 
@@ -154,7 +155,7 @@ export class GameStateManager {
 
   async persistPlayerConnectionUpdate(
     roomId: string | null,
-    playerId: string,
+    seatId: SeatId,
     updates: Partial<PlayerConnectionMetadata>,
   ): Promise<void> {
     if (!roomId) {
@@ -162,7 +163,7 @@ export class GameStateManager {
     }
 
     try {
-      await this.repository.updatePlayerConnection(roomId, playerId, updates);
+      await this.repository.updatePlayerConnection(roomId, seatId, updates);
     } catch (error) {
       this.logger.error('Failed to persist player connection update:', error);
     }

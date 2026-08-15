@@ -446,7 +446,7 @@ export interface Database {
       reserve_room_membership: {
         Args: {
           p_user_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: Record<string, unknown>;
@@ -455,7 +455,7 @@ export interface Database {
         Args: {
           p_user_id: string;
           p_room_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: Record<string, unknown>;
@@ -476,10 +476,10 @@ export interface Database {
         };
         Returns: Record<string, unknown>;
       };
-      release_room_membership_by_player: {
+      release_room_membership_by_seat: {
         Args: {
           p_room_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: boolean;

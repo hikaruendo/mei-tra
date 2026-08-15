@@ -38,7 +38,7 @@ describe('UpdateTeamNamesUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'host',
+      actorSeatId: asSeatId('host'),
       teamNames: {
         0: '  東軍  ',
         1: '西軍',
@@ -63,7 +63,7 @@ describe('UpdateTeamNamesUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'guest',
+      actorSeatId: asSeatId('guest'),
       teamNames: { 0: '東軍', 1: '西軍' },
     });
 
@@ -86,7 +86,7 @@ describe('UpdateTeamNamesUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'host',
+      actorSeatId: asSeatId('host'),
       teamNames: { 0: '東軍', 1: '西軍' },
     });
 

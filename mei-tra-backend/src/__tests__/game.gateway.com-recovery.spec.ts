@@ -210,7 +210,7 @@ describe('GameGateway COM recovery integration', () => {
     };
     testGateway.disconnectGatewayEffectsService = {
       prepareDisconnect: jest.fn().mockResolvedValue({
-        playerId: 'player-1',
+        seatId: 'player-1',
         playerName: 'Player 1',
         roomGameState,
         timeoutMode: 'convert-to-com',
@@ -222,7 +222,7 @@ describe('GameGateway COM recovery integration', () => {
           scope: 'room',
           roomId: 'room-1',
           event: 'player-converted-to-com',
-          payload: { playerId: 'player-1' },
+          payload: { seatId: 'player-1' },
         },
       ]),
     };
@@ -247,7 +247,7 @@ describe('GameGateway COM recovery integration', () => {
       testGateway.disconnectGatewayEffectsService.buildTimeoutEvents,
     ).toHaveBeenCalledWith({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: 'player-1',
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
       membership: null,
@@ -335,7 +335,7 @@ describe('GameGateway COM recovery integration', () => {
       execute: jest.fn().mockResolvedValue({
         success: true,
         data: {
-          playerId: 'seat-1',
+          seatId: 'seat-1',
           roomDeleted: true,
           roomsList: [],
         },
@@ -399,12 +399,11 @@ describe('GameGateway COM recovery integration', () => {
 
     await gateway.handleLeaveRoom(socketOne, {
       roomId: 'room-1',
-      playerId: 'user-1',
     });
 
     expect(testGateway.leaveRoomUseCase.execute).toHaveBeenCalledWith({
       roomId: 'room-1',
-      playerId: 'seat-1',
+      seatId: 'seat-1',
     });
     expect(socketOne.leave).toHaveBeenCalledWith('room-1');
     expect(socketTwo.leave).toHaveBeenCalledWith('room-1');

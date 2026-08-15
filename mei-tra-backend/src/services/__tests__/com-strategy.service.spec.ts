@@ -31,13 +31,13 @@ describe('ComStrategyService', () => {
     } as unknown as ConfigService);
 
   const player = (
-    playerId: string,
+    seatId: string,
     team: Team,
     hand: string[] = [],
     overrides: Partial<DomainPlayer> = {},
   ): DomainPlayer => ({
-    seatId: asSeatId(playerId),
-    name: playerId,
+    seatId: asSeatId(seatId),
+    name: seatId,
     team,
     hand,
     isPasser: false,

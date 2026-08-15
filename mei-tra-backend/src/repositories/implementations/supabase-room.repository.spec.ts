@@ -32,7 +32,7 @@ describe('SupabaseRoomRepository', () => {
 
   function createPlayerRow(
     roomId: string,
-    playerId: string,
+    seatId: string,
     joinedAt: string,
     overrides: Partial<{
       user_id: string | null;
@@ -44,10 +44,10 @@ describe('SupabaseRoomRepository', () => {
     }> = {},
   ) {
     return {
-      id: `${roomId}-${playerId}`,
+      id: `${roomId}-${seatId}`,
       room_id: roomId,
-      user_id: overrides.user_id ?? playerId,
-      name: overrides.name ?? playerId,
+      user_id: overrides.user_id ?? seatId,
+      name: overrides.name ?? seatId,
       team: overrides.team ?? 0,
       is_ready: overrides.is_ready ?? false,
       is_com: overrides.is_com ?? false,

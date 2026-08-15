@@ -28,14 +28,16 @@ describe('PlayerConnectionManager', () => {
       isAuthenticated: true,
     });
 
-    manager.applyConnectionState('target', 'Target', { socketId: '' });
+    manager.applyConnectionState(asSeatId('target'), 'Target', {
+      socketId: '',
+    });
 
-    expect(manager.getPlayerConnectionState('target')).toEqual({
+    expect(manager.getPlayerConnectionState(asSeatId('target'))).toEqual({
       socketId: '',
       userId: 'target-user',
       isAuthenticated: true,
     });
-    expect(manager.findSessionUserByPlayerId('host')).toEqual(
+    expect(manager.findSessionUserBySeatId(asSeatId('host'))).toEqual(
       expect.objectContaining({
         seatId: asSeatId('host'),
         name: 'Host',
@@ -103,7 +105,7 @@ describe('PlayerConnectionManager', () => {
     });
 
     expect(manager.findSessionUserByUserId('user-1')).toBeNull();
-    expect(manager.playerIds.has('user-1')).toBe(false);
-    expect(manager.playerIds.get('user-2')).toBe('seat-2');
+    expect(manager.seatIdsByToken.has('user-1')).toBe(false);
+    expect(manager.seatIdsByToken.get('user-2')).toBe('seat-2');
   });
 });

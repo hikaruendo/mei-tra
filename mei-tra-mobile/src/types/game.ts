@@ -33,8 +33,8 @@ export interface MobileGameSnapshot {
   hostSeatId: SeatId | null;
   pointsToWin: number;
   paused: boolean;
-  disconnectedPlayerIds: string[];
-  idlePlayerIds: string[];
+  disconnectedSeatIds: string[];
+  idleSeatIds: string[];
   teamNames?: TeamNames;
 }
 

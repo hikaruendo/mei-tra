@@ -43,7 +43,7 @@ active game reloadでは、標準のdevelopment情報を除きerror / warnを検
 ### 不変条件
 
 1. フェーズ、手番、合法手、得点、勝敗、ルーム復帰の可否はbackendを正とする。
-2. 座席と本人判定は`playerId` / `userId`で行い、再接続で変わる`socket.id`を識別子にしない。
+2. 座席は`seatId`、本人は`userId`で判定し、再接続で変わる`socket.id`を識別子にしない。
 3. background中のイベント欠落を正常系とし、foreground復帰時に最新JWTとサーバスナップショットへ戻す。
 4. クライアントのvalidatorや表示用stateは入力補助であり、サーバのゲームルールを置き換えない。
 5. 通知や分析の失敗は、確定済みのゲーム進行をロールバックまたは停止させない。
@@ -214,7 +214,7 @@ sequenceDiagram
 
 ### Identity
 
-mobileの参加payloadは`user.id`を`playerId` / `userId`として送るが、接続ごとに`socketId`もtransport payloadに含む。これはtransportの補助情報であり、本人・席・手番の永続識別には使わない。state mergeとcurrent player解決は`playerId` / `userId`を優先する。
+mobileの参加payloadは認証accountを`userId`として送り、参加後にserverが解決した`seatId`を受け取る。接続ごとの`socketId`はtransportの補助情報であり、本人・席・手番の永続識別には使わない。state mergeとcurrent player解決は`seatId`を正本とする。
 
 ## 6. ゲームUIと入力補助
 

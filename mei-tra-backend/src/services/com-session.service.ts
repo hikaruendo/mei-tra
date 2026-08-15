@@ -9,6 +9,7 @@ import { asSeatId, resolveSeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import type { VacantSeats } from '../types/vacant-seat.types';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class ComSessionService {
@@ -97,7 +98,7 @@ export class ComSessionService {
       const team = (team0Count <= team1Count ? 0 : 1) as Team;
       const placeholder = this.createCOMPlaceholder(idx, team);
       upsertRuntimeSeat(room, state, placeholder);
-      gameState.registerPlayerToken(placeholder.seatId, placeholder.seatId);
+      gameState.registerSeatToken(placeholder.seatId, placeholder.seatId);
       rosterChanged = true;
     }
 
@@ -163,7 +164,7 @@ export class ComSessionService {
       });
 
       upsertRuntimeSeat(room, state, roomComPlayer);
-      gameState.registerPlayerToken(roomComPlayer.seatId, roomComPlayer.seatId);
+      gameState.registerSeatToken(roomComPlayer.seatId, roomComPlayer.seatId);
     }
 
     await gameState.persistRoster(room.players, room.hostSeatId);
@@ -171,14 +172,14 @@ export class ComSessionService {
 
   async convertPlayerToCOM(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     room: Room,
     gameState: GameStateService,
     vacantSeats: VacantSeats,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<boolean> {
     const playerIndex = room.players.findIndex(
-      (player) => player.seatId === playerId,
+      (player) => player.seatId === seatId,
     );
     if (playerIndex === -1) {
       return false;
@@ -190,7 +191,7 @@ export class ComSessionService {
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
-      (player) => player.seatId === playerId,
+      (player) => player.seatId === seatId,
     );
 
     const uniqueIdx = `timeout-${playerIndex}-${Date.now()}`;
@@ -204,8 +205,8 @@ export class ComSessionService {
       comPlayer.participantKey = room.players[playerIndex].participantKey;
     }
 
-    const seatId = resolveSeatId(room.players[playerIndex]);
-    vacantSeats[roomId][seatId] = {
+    const resolvedSeatId = resolveSeatId(room.players[playerIndex]);
+    vacantSeats[roomId][resolvedSeatId] = {
       roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
       gamePlayer:
         gsIndex !== -1
@@ -214,7 +215,7 @@ export class ComSessionService {
     };
 
     upsertRuntimeSeat(room, state, comPlayer, {
-      replaceSeatId: playerId,
+      replaceSeatId: seatId,
       gameplaySource: gsIndex === -1 ? null : state.players[gsIndex],
     });
 

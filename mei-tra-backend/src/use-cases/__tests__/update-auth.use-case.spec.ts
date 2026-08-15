@@ -98,7 +98,7 @@ describe('UpdateAuthUseCase', () => {
       applyPlayerConnectionState: jest
         .fn()
         .mockImplementation(
-          async (_playerId: string, connectionState: PlayerConnectionState) => {
+          async (_seatId: string, connectionState: PlayerConnectionState) => {
             roomState.players[0].socketId = connectionState.socketId;
             roomState.players[0].userId = connectionState.userId ?? '';
             roomState.players[0].isAuthenticated = Boolean(

@@ -50,17 +50,15 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         };
       }
 
-      // For authenticated users, playerId === userId (set in addPlayer).
-      // Use the stable userId directly — no socket.id lookup needed.
-      const playerId = authenticatedUser?.id;
-      if (!playerId) {
+      const userId = authenticatedUser?.id;
+      if (!userId) {
         this.logger.error('No authenticated user for room creation');
         return {
           success: false,
           errorMessage: 'Authentication required to create a room.',
         };
       }
-      creatingUserId = playerId;
+      creatingUserId = userId;
 
       const hostUser: SessionUser = {
         socketId,
@@ -79,7 +77,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
       const joined = await this.roomService.joinRoom(room.id, hostUser);
       if (!joined) {
-        await this.cleanupFailedCreation(room.id, playerId);
+        await this.cleanupFailedCreation(room.id, userId);
         return {
           success: false,
           errorMessage: 'Failed to join created room',
@@ -89,7 +87,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       await this.roomService.initCOMPlaceholders(room.id);
       const updatedRoom = await this.roomService.getRoom(room.id);
       if (!updatedRoom) {
-        await this.cleanupFailedCreation(room.id, playerId);
+        await this.cleanupFailedCreation(room.id, userId);
         return {
           success: false,
           errorMessage: 'Failed to load created room',
@@ -100,7 +98,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         (player) => player.userId === authenticatedUser.id,
       );
       if (!hostPlayer) {
-        await this.cleanupFailedCreation(room.id, playerId);
+        await this.cleanupFailedCreation(room.id, userId);
         return {
           success: false,
           errorMessage: 'Host player not found in created room',

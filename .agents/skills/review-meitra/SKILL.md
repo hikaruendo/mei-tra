@@ -32,7 +32,7 @@ Review before editing. Do not change code, commit, push, or update a PR unless t
    - Review stacked or adjacent changes cumulatively. If several fixes translate or repair the same concept in different places, recommend a canonical representation and deletion of the repair paths instead of another local mapper.
 3. Check the applicable invariants:
    - Preserve four-player/two-team seat order, turn order, and team membership.
-   - Keep `playerId`, `userId`, and `socketId` distinct.
+   - Keep canonical `seatId`, authenticated `userId`, and transient `socketId` distinct; reject reintroduction of `playerId` aliases.
    - Preserve seat identity across human, COM, vacant-seat, and reconnect transitions.
    - Advance blow, play, field completion, round end, and game over exactly once.
    - Reconstruct active state from persisted data after a restart; never rely only on memory or `socketId`.

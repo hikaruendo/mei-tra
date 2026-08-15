@@ -98,7 +98,7 @@
 - [x] **[実装済み]** foreground復帰時にtokenを更新し、接続・room一覧・game snapshotを再同期する。
 - [x] **[実装済み]** `game-state`をserver snapshotとしてstateへ適用し、room・field・players・score・phaseを表示する。
 - [x] **[実装済み]** listenerをprovider effect内で登録し、cleanup時に解除・disconnectする。
-- [x] **[実装済み]** `playerId` / `userId`でcurrent playerを解決し、`socket.id`を本人判定の根拠にしない。
+- [x] **[実装済み]** `seatId`でcurrent playerを解決し、`userId`は認証、`socket.id`は一時接続情報として分離する。
 - [x] **[実装済み]** ack操作とone-way game actionに重複送信抑止とtimeout/error表示を入れる。
 - [x] **[実装済み]** 吹き、pass、ネグリ、カードplay、台札suit、field、次round、game overをUIへ反映する。
 

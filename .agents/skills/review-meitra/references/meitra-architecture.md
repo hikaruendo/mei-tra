@@ -96,7 +96,6 @@ query、RPC、row / JSONB mapping、互換read/writeを担当する。
 | Transport shape | `contracts/` | DB rowやdomain typeを置かない |
 
 - `seatId`: `room_players.id` と同値の canonical seat UUID。部屋削除まで変更しない。
-- `playerId`: 旧Web/Mobileとの互換用alias。新しい永続化では必ず`seatId`と同値にする。
 - `userId`: Supabase Auth account。guestやCOMには存在しない場合がある。
 - `socketId`: 接続ごとに変わる一時identity。永続化やseat復旧のkeyにしない。
 - `seat_index`: `room_players`に保存するseat / turn順の正本。

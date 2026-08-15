@@ -62,7 +62,7 @@ UseCase は「何が起きたか」を決めます。EffectsService は、その
 - EffectsService: use-case の結果から `GatewayEvent[]` を組み立てる
 - `dispatchEvents()`: `GatewayEvent[]` を Socket.IO の `emit()` に変換する
 
-例えば game start では、`StartGameUseCase` が `players`, `updatePhase`, `currentTurnPlayerId` を返し、`StartGameGatewayEffectsService` が `room-sync`, `room-playing`, `game-started`, `update-phase`, `update-turn` を組み立てます。その後 `GameGateway.dispatchEvents()` が実際に room へ配信します。
+例えば game start では、`StartGameUseCase` が `players`, `updatePhase`, `currentTurnSeatId` を返し、`StartGameGatewayEffectsService` が `room-sync`, `room-playing`, `game-started`, `update-phase`, `update-turn` を組み立てます。その後 `GameGateway.dispatchEvents()` が実際に room へ配信します。
 
 `GatewayEvent.scope` は送信先を表します。
 
@@ -72,7 +72,7 @@ UseCase は「何が起きたか」を決めます。EffectsService は、その
 
 `room` scope の場合、Gateway は `this.server.to(event.roomId)` で Socket.IO room 向け emitter を作ります。この時点ではまだ送信されず、続く `roomEmitter.emit(event.event, payload)` でその room の参加者へ送信されます。`excludeSocketId` が指定されている場合は `roomEmitter.except(socketId).emit(...)` になり、その socket だけ除外されます。
 
-`update-turn` だけは配信後に追加処理があります。payload が次の playerId の場合、`dispatchEvents()` は `startTurnAckMonitor(roomId, playerId)` を起動し、次の手番プレイヤーの ack / idle を監視します。
+`update-turn` だけは配信後に追加処理があります。payload が次の `seatId` の場合、`dispatchEvents()` は `startTurnAckMonitor(roomId, seatId)` を起動し、次の手番プレイヤーの ack / idle を監視します。
 
 ## 2. 認証と接続開始
 
@@ -175,7 +175,7 @@ frontend はこれを `game-state` 相当として描画し直します。
 
 ### 4.3 `game-player-joined` と `room-sync`
 
-参加時、frontend は `game-player-joined` で「自分の playerId がこれだ」と確定し、`room-sync` で room metadata と player list をまとめて更新します。`room-updated` / `update-players` もまだ送られますが、現在の frontend では fallback です。playerId は reconnect や host 判定の軸なので、単に players 配列を増やすだけでは足りません。
+参加時、frontend は `game-player-joined` で自分の`seatId`を確定し、`room-sync` で room metadata と player list をまとめて更新します。`room-updated` / `update-players` もまだ送られますが、現在の frontend では fallback です。`seatId` は reconnect や host 判定の軸なので、単に players 配列を増やすだけでは足りません。
 
 ## 5. 待機室フェーズ
 
@@ -190,7 +190,7 @@ room に入って game が始まっていない間、frontend は `PreGameTable`
 
 ### 5.1 host と team
 
-host は `room.hostId` と `currentPlayerId` の一致で判断されます。team は `room.players` と `teamAssignments` によって持たれますが、ゲーム開始時には `room.players` の順序がより重要になります。
+host は `room.hostSeatId` と `currentSeatId` の一致で判断されます。team は `room.players` と`team`で持たれ、ゲーム開始時には `room.players` の順序がより重要になります。
 
 ### 5.2 なぜ waiting room の seat order が重要か
 
@@ -417,7 +417,7 @@ frontend は `update-turn` や `turn-ping` を受けると `turn-ack` を返し�
 
 ### 12.2 `player-idle` / `player-idle-cleared`
 
-frontend は idle 状態を `idlePlayerIds` と notification に反映します。これにより、接続断まではしていないが反応のない player を UI で可視化できます。
+frontend は idle 状態を `idleSeatIds` と notification に反映します。これにより、接続断まではしていないが反応のない player を UI で可視化できます。
 
 ### 12.3 disconnect から COM へ
 
@@ -490,17 +490,17 @@ message は `ChatService.postMessage()` を通って `chat_messages` に永続�
 | `create-room` | room 名, pointsToWin, teamAssignmentMethod | ルーム作成 |
 | `join-room` | roomId, user | ルーム参加 |
 | `list-rooms` | なし | 一覧取得 |
-| `toggle-player-ready` | roomId, playerId | ready 切替 |
-| `change-player-team` | roomId, playerId, teamChanges | チーム変更 |
-| `fill-with-com` | roomId, playerId | 空席 COM 補充 |
-| `start-game` | roomId, playerId | ゲーム開始 |
+| `toggle-player-ready` | roomId | ready 切替。actor seatはserverが認証sessionから解決 |
+| `change-player-team` | roomId, teamChanges | チーム変更。actor seatはserverが解決 |
+| `fill-with-com` | roomId | 空席 COM 補充。actor seatはserverが解決 |
+| `start-game` | roomId | ゲーム開始。actor seatはserverが解決 |
 | `declare-blow` | roomId, declaration | blow 宣言 |
 | `pass-blow` | roomId | blow パス |
 | `select-negri` | roomId, card | negri 選択 |
 | `play-card` | roomId, card | カードプレイ |
 | `select-base-suit` | roomId, suit | Joker 開始時の base suit 選択 |
-| `reveal-broken-hand` | roomId, playerId | broken hand 表示 |
-| `moderate-player` | roomId, requesterPlayerId, targetPlayerId, action | 退出 / COM 置換 |
+| `reveal-broken-hand` | roomId | broken hand 表示。actor seatはserverが解決 |
+| `moderate-player` | roomId, targetSeatId, action | 退出 / COM 置換。requester seatはserverが解決 |
 | `turn-ack` | roomId | idle monitor 向け ack |
 | `update-auth` | token | socket 上の auth 同期 |
 
@@ -515,17 +515,17 @@ message は `ChatService.postMessage()` を通って `chat_messages` に永続�
 | `game-state` | players, phase, field, turn, scores, blowState | resume / 初期同期 |
 | `game-started` | roomId, players, pointsToWin | ゲーム開始通知 |
 | `update-phase` | phase, scores, winner? | フェーズ更新 |
-| `update-turn` | playerId | 現在手番更新 |
+| `update-turn` | seatId | 現在手番更新 |
 | `blow-updated` | declarations, actionHistory, currentHighest | blow 状態同期 |
-| `card-played` | playerId, card, field, players | 場と hand 同期 |
+| `card-played` | seatId, card, field, players | 場と hand 同期 |
 | `field-updated` | Field | Joker base suit 補完など |
-| `field-complete` | winnerId, field, nextPlayerId | 1 トリック終了 |
+| `field-complete` | winnerSeatId, field, nextSeatId | 1 トリック終了 |
 | `round-results` | scores | round 得点更新 |
 | `new-round-started` | players, turn, phase, currentField, completedFields など | 次ラウンド準備 |
 | `game-over` | winner, finalScores | ゲーム終了 |
 | `game-paused` / `game-resumed` | message | 進行停止 / 再開 |
-| `player-idle` / `player-idle-cleared` | playerId, playerName? | idle 可視化 |
-| `player-converted-to-com` | playerId, playerName?, message | COM 置換通知 |
+| `player-idle` / `player-idle-cleared` | seatId, playerName? | idle 可視化 |
+| `player-converted-to-com` | seatId, playerName?, message | COM 置換通知 |
 | `back-to-lobby` | なし | 自 room state をクリアして戻す |
 
 ### 14.3 social socket
@@ -581,7 +581,7 @@ reconnect 系バグは通常のプレイバグより観測点が多いです。�
 2. reconnect 時に handshake auth callback が実行されているか
 3. backend が既存 player を `userId` または `socketId` で再特定できているか
 4. `game-state` が再送されているか
-5. frontend が `currentRoomId`, `currentPlayerId`, `players` を再同期できているか
+5. frontend が `currentRoomId`, `currentSeatId`, `players` を再同期できているか
 
 reconnect は transport 問題に見えますが、実際には identity と persistence の問題でもあります。
 
@@ -627,7 +627,7 @@ COM 置換バグでは、room state と game state の両方を見る必要が�
 | `gamePhase` | `game-state`, `update-phase`, `broken`, `new-round-started` |
 | `whoseTurn` | `game-state`, `update-turn`, `blow-started`, `new-round-started` |
 | `completedFields` | `game-state`, `field-complete`, `new-round-started` |
-| `idlePlayerIds` | `player-idle`, `player-idle-cleared`, `player-converted-to-com`, `player-left` |
+| `idleSeatIds` | `player-idle`, `player-idle-cleared`, `player-converted-to-com`, `player-left` |
 
 この表を頭に入れておくと、「どの event が欠けると UI がどう壊れるか」を推測しやすくなります。
 

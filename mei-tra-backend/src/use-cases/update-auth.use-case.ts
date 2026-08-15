@@ -9,7 +9,7 @@ import { IGameStateService } from '../services/interfaces/game-state-service.int
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { AuthenticatedUser } from '../types/user.types';
-import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
 import {
   buildPlayerSyncEvents,
   buildRoomUpdatedEvent,
@@ -52,7 +52,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         request.socketId,
         authenticatedUser,
         request.handshakeName,
-        roomSync?.playerId,
+        roomSync?.seatId,
       );
 
       return {
@@ -72,7 +72,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     socketId: string,
     authenticatedUser: AuthenticatedUser,
     handshakeName?: string,
-    playerId?: string,
+    seatId?: SeatId,
   ): {
     clientEvents: GatewayEvent[];
     broadcastEvents: GatewayEvent[];
@@ -98,7 +98,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     const syncResult = this.gameState.upsertSessionUser({
       socketId,
-      seatId: playerId ? asSeatId(playerId) : undefined,
+      seatId,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -127,7 +127,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     currentRoomId: string | undefined,
     socketId: string,
     authenticatedUser: AuthenticatedUser,
-  ): Promise<{ playerId: string; events: GatewayEvent[] } | undefined> {
+  ): Promise<{ seatId: SeatId; events: GatewayEvent[] } | undefined> {
     if (!currentRoomId) {
       return undefined;
     }
@@ -195,6 +195,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       );
     }
 
-    return { playerId: currentPlayer.seatId, events: roomEvents };
+    return { seatId: currentPlayer.seatId, events: roomEvents };
   }
 }

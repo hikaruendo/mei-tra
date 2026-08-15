@@ -64,7 +64,7 @@ describe('DisconnectGatewayEffectsService', () => {
         userId: 'user-1',
         isAuthenticated: true,
       })),
-      getTransportPlayers: jest.fn(() => [{ playerId: 'player-1' }]),
+      getTransportPlayers: jest.fn(() => [{ seatId: asSeatId('player-1') }]),
       setDisconnectTimeout: jest.fn(),
     };
     const initialRoom = {
@@ -123,7 +123,10 @@ describe('DisconnectGatewayEffectsService', () => {
           scope: 'room',
           roomId: 'room-1',
           event: 'room-sync',
-          payload: { room: updatedRoom, players: [{ playerId: 'player-1' }] },
+          payload: {
+            room: updatedRoom,
+            players: [{ seatId: asSeatId('player-1') }],
+          },
         },
         {
           scope: 'room',
@@ -135,7 +138,7 @@ describe('DisconnectGatewayEffectsService', () => {
           scope: 'room',
           roomId: 'room-1',
           event: 'update-players',
-          payload: [{ playerId: 'player-1' }],
+          payload: [{ seatId: asSeatId('player-1') }],
         },
       ]),
       buildRoomsListEvent: jest.fn(({ rooms }: { rooms: unknown[] }) => ({
@@ -158,7 +161,7 @@ describe('DisconnectGatewayEffectsService', () => {
         markDisconnected: jest.fn().mockResolvedValue({
           userId: 'user-1',
           roomId: 'room-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           status: 'disconnected',
           membershipVersion: 3,
           transitionId: 'transition-disconnect',
@@ -175,7 +178,7 @@ describe('DisconnectGatewayEffectsService', () => {
       displayName: 'Host Display',
     });
 
-    expect(result?.playerId).toBe('player-1');
+    expect(result?.seatId).toBe('player-1');
     expect(result?.timeoutMode).toBe('convert-to-com');
     expect(roomGameState.applyPlayerConnectionState).toHaveBeenCalledWith(
       'player-1',
@@ -244,7 +247,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'remove-player',
     });
@@ -278,7 +281,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'remove-player',
     });
@@ -300,7 +303,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
     });
@@ -337,7 +340,7 @@ describe('DisconnectGatewayEffectsService', () => {
         id: 'room-1',
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             userId: 'user-1',
             socketId: 'socket-new',
           },
@@ -381,7 +384,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
       membership: {
@@ -456,7 +459,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
       membership: { ...movingMembership, status: 'disconnected' },

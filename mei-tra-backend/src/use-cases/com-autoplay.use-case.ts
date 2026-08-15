@@ -418,7 +418,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     const preparation = await this.revealBrokenHandUseCase.prepare({
       roomId,
       actorId: comPlayer.seatId,
-      playerId: comPlayer.seatId,
+      seatId: comPlayer.seatId,
     });
 
     if (!preparation.success || !preparation.followUp) {

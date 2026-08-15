@@ -152,20 +152,20 @@ export class GameHistoryController {
 
   private withViewerStartingHands(
     replay: GameHistoryReplayView,
-    viewerPlayerId: string | null,
+    viewerSeatId: SeatId | null,
   ): GameHistoryReplayView {
     return {
       ...replay,
       rounds: replay.rounds.map((round) => ({
         ...round,
         viewerStartingHand:
-          this.resolveViewerStartingHand(round.events, viewerPlayerId) ?? [],
+          this.resolveViewerStartingHand(round.events, viewerSeatId) ?? [],
         entries: round.entries.map((entry) =>
-          this.withSanitizedActionData(entry, viewerPlayerId),
+          this.withSanitizedActionData(entry, viewerSeatId),
         ),
         events: round.events.map((event) => ({
           ...event,
-          actionData: this.sanitizeActionData(event.actionData, viewerPlayerId),
+          actionData: this.sanitizeActionData(event.actionData, viewerSeatId),
         })),
       })),
     };
@@ -173,11 +173,11 @@ export class GameHistoryController {
 
   private resolveViewerStartingHand(
     events: GameHistoryReplayEvent[],
-    viewerPlayerId: string | null,
+    viewerSeatId: SeatId | null,
   ): string[] | null {
     return events.reduce<string[] | null>((latestHand, event) => {
       return (
-        this.extractViewerStartingHand(event.actionData, viewerPlayerId) ??
+        this.extractViewerStartingHand(event.actionData, viewerSeatId) ??
         latestHand
       );
     }, null);
@@ -185,23 +185,22 @@ export class GameHistoryController {
 
   private withSanitizedActionData<
     TEntry extends { actionData: Record<string, unknown> },
-  >(entry: TEntry, viewerPlayerId: string | null): TEntry {
+  >(entry: TEntry, viewerSeatId: SeatId | null): TEntry {
     return {
       ...entry,
-      actionData: this.sanitizeActionData(entry.actionData, viewerPlayerId),
+      actionData: this.sanitizeActionData(entry.actionData, viewerSeatId),
     };
   }
 
   private sanitizeActionData(
     actionData: Record<string, unknown>,
-    viewerPlayerId: string | null,
+    viewerSeatId: SeatId | null,
   ): Record<string, unknown> {
     const safeActionData = { ...actionData };
     delete safeActionData.startingHandsBySeatId;
-    delete safeActionData.startingHandsByPlayerId;
     const viewerStartingHand = this.extractViewerStartingHand(
       actionData,
-      viewerPlayerId,
+      viewerSeatId,
     );
 
     return viewerStartingHand
@@ -211,20 +210,19 @@ export class GameHistoryController {
 
   private extractViewerStartingHand(
     actionData: Record<string, unknown>,
-    viewerPlayerId: string | null,
+    viewerSeatId: SeatId | null,
   ): string[] | null {
-    const handsByPlayerId =
-      actionData.startingHandsBySeatId ?? actionData.startingHandsByPlayerId;
+    const handsBySeatId = actionData.startingHandsBySeatId;
     if (
-      !handsByPlayerId ||
-      !viewerPlayerId ||
-      typeof handsByPlayerId !== 'object' ||
-      Array.isArray(handsByPlayerId)
+      !handsBySeatId ||
+      !viewerSeatId ||
+      typeof handsBySeatId !== 'object' ||
+      Array.isArray(handsBySeatId)
     ) {
       return null;
     }
 
-    const hand = (handsByPlayerId as Record<string, unknown>)[viewerPlayerId];
+    const hand = (handsBySeatId as Record<string, unknown>)[viewerSeatId];
     if (!Array.isArray(hand)) {
       return null;
     }

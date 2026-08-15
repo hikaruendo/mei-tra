@@ -8,6 +8,7 @@ import {
 import { toRoomContract } from '../../adapters/room-adapters';
 import { GatewayEvent } from '../interfaces/gateway-event.interface';
 import type { RoomSyncPayload } from '@contracts/room';
+import type { SeatId } from '../../types/identity.types';
 
 type PlayerResolutionSource = {
   findPlayerByActorId: (actorId: string) => DomainPlayer | null;
@@ -20,7 +21,7 @@ type TransportPlayerSource = PlayerResolutionSource & {
     roomPlayers?: RoomPlayer[],
   ) => TransportPlayer[];
   getPlayerConnectionState?: (
-    playerId: string,
+    seatId: SeatId,
   ) => Partial<PlayerConnectionMetadata> | null;
 };
 
@@ -50,8 +51,8 @@ export function resolveTransportPlayers(
     typeof source.getTransportPlayers === 'function'
       ? source.getTransportPlayers(players, options?.roomPlayers)
       : toTransportPlayers(players, {
-          getConnectionState: (playerId) =>
-            source.getPlayerConnectionState?.(playerId),
+          getConnectionState: (seatId) =>
+            source.getPlayerConnectionState?.(seatId),
           roomPlayers: options?.roomPlayers,
         });
 

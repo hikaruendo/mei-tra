@@ -1,14 +1,15 @@
 import { Room } from '../../types/room.types';
 import { TransportPlayer } from '../../adapters/player-adapters';
 import { BlowState } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface LeaveRoomRequest {
-  playerId: string;
+  seatId: SeatId;
   roomId: string;
 }
 
 export interface LeaveRoomSuccessData {
-  playerId: string;
+  seatId: SeatId;
   roomDeleted: boolean;
   roomsList: Room[];
   updatedPlayers?: TransportPlayer[];

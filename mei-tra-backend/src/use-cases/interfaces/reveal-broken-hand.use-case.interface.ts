@@ -1,9 +1,10 @@
 import { GatewayEvent } from './gateway-event.interface';
+import type { SeatId } from '../../types/identity.types';
 
 export interface RevealBrokenHandRequest {
   roomId: string;
   actorId: string;
-  playerId: string;
+  seatId: SeatId;
 }
 
 export interface RevealBrokenHandPreparation {
@@ -11,7 +12,7 @@ export interface RevealBrokenHandPreparation {
   error?: string;
   followUp?: {
     roomId: string;
-    playerId: string;
+    seatId: SeatId;
     handSnapshot?: string[];
   };
   delayMs?: number;
@@ -29,7 +30,7 @@ export interface IRevealBrokenHandUseCase {
   ): Promise<RevealBrokenHandPreparation>;
   finalize(followUp: {
     roomId: string;
-    playerId: string;
+    seatId: SeatId;
     handSnapshot?: string[];
   }): Promise<RevealBrokenHandCompletion>;
 }
