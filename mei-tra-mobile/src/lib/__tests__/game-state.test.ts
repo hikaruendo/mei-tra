@@ -2,7 +2,6 @@ import type {
   CompletedFieldContract,
 } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
-import { normalizeCompletedFieldIdentity } from '@meitra/game-client/identity';
 
 import {
   createEmptyBlowState,
@@ -10,19 +9,19 @@ import {
   dedupeCompletedFields,
   mergePlayersByIdentity,
   normalizeGameStatePayload,
-  resolvePlayerId,
+  resolveSeatId,
   shouldAckTurn,
 } from '@/lib/game-state';
 import type { MobilePlayer } from '@/types/game';
 
 const player = (
-  playerId: string,
+  seatId: string,
   overrides: Partial<MobilePlayer> = {},
 ): MobilePlayer => ({
-  socketId: `socket-${playerId}`,
-  seatId: asSeatId(playerId),
-  name: playerId,
-  userId: `user-${playerId}`,
+  socketId: `socket-${seatId}`,
+  seatId: asSeatId(seatId),
+  name: seatId,
+  userId: `user-${seatId}`,
   team: 0,
   hand: [],
   ...overrides,
@@ -80,8 +79,8 @@ describe('dedupeCompletedFields', () => {
     });
 
     expect(dedupeCompletedFields([first, duplicate, differentDealer])).toEqual([
-      normalizeCompletedFieldIdentity(first),
-      normalizeCompletedFieldIdentity(differentDealer),
+      first,
+      differentDealer,
     ]);
   });
 });
@@ -123,7 +122,7 @@ describe('recovery helpers', () => {
 
   it('resolves the current seat from game state before userId', () => {
     expect(
-      resolvePlayerId(
+      resolveSeatId(
         {
           roomId: 'room-1',
           players: [],
@@ -149,8 +148,8 @@ describe('recovery helpers', () => {
           hostSeatId: null,
           pointsToWin: 5,
           paused: false,
-          disconnectedPlayerIds: [],
-          idlePlayerIds: [],
+          disconnectedSeatIds: [],
+          idleSeatIds: [],
         },
         {
           id: 'room-1',

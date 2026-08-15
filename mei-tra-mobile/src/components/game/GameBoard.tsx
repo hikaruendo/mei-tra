@@ -58,8 +58,8 @@ interface GameBoardProps {
   onSelectNegri: (card: string) => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
-  onRemovePlayer: (playerId: string) => void;
-  onReplaceWithCOM: (playerId: string) => void;
+  onRemovePlayer: (seatId: string) => void;
+  onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
   actionsDisabled?: boolean;
   history?: GameHistoryData;
@@ -97,12 +97,12 @@ export function GameBoard({
   >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hostPlayerId =
+  const hostSeatId =
     game.players.find((p) => p.isHost)?.seatId ??
     game.players[0]?.seatId ??
     null;
-  const perspectivePlayerId = game.isSpectator
-    ? spectatorPerspectiveId ?? hostPlayerId
+  const perspectiveSeatId = game.isSpectator
+    ? spectatorPerspectiveId ?? hostSeatId
     : game.youSeatId;
 
   useEffect(() => {
@@ -110,11 +110,11 @@ export function GameBoard({
     const valid = game.players.some(
       (p) => p.seatId === spectatorPerspectiveId,
     );
-    if (!valid) setSpectatorPerspectiveId(hostPlayerId);
-  }, [game.isSpectator, game.players, hostPlayerId, spectatorPerspectiveId]);
+    if (!valid) setSpectatorPerspectiveId(hostSeatId);
+  }, [game.isSpectator, game.players, hostSeatId, spectatorPerspectiveId]);
 
   const self = game.players.find(
-    (player) => player.seatId === perspectivePlayerId,
+    (player) => player.seatId === perspectiveSeatId,
   );
   const { width: windowWidth } = useWindowDimensions();
   // Size the fan from the hand it actually renders. Spectators have no
@@ -126,8 +126,8 @@ export function GameBoard({
   const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
     useHandFanMetrics(fanAvailableWidth, selfHandCount);
   const orderedPlayers = useMemo(
-    () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
-    [game.players, perspectivePlayerId],
+    () => getSeatOrderWithSelfBottom(game.players, perspectiveSeatId),
+    [game.players, perspectiveSeatId],
   );
   const leftPlayer = orderedPlayers[1] ?? null;
   const topPlayer = orderedPlayers[2] ?? null;
@@ -309,10 +309,10 @@ export function GameBoard({
                     : undefined
                 }
                 isBlowWinner={blowWinnerId === player.seatId}
-                isDisconnected={game.disconnectedPlayerIds.includes(
+                isDisconnected={game.disconnectedSeatIds.includes(
                   player.seatId,
                 )}
-                isIdle={game.idlePlayerIds.includes(player.seatId)}
+                isIdle={game.idleSeatIds.includes(player.seatId)}
                 isTurn={game.currentTurnSeatId === player.seatId}
                 negriCard={hasNegri ? 'hidden' : undefined}
                 onPress={
@@ -356,10 +356,10 @@ export function GameBoard({
                 {seatEl}
               </Pressable>
             ) : seatEl;
-            const isDisconnected = game.disconnectedPlayerIds.includes(
+            const isDisconnected = game.disconnectedSeatIds.includes(
               player.seatId,
             );
-            const isIdle = game.idlePlayerIds.includes(player.seatId);
+            const isIdle = game.idleSeatIds.includes(player.seatId);
             // Matches the web condition (PlayerHand/index.tsx): the host never
             // sees the control on their own seat.
             const showReplacePanel =
@@ -463,7 +463,7 @@ export function GameBoard({
           <BlowControls
             actionHistory={game.blowState.actionHistory}
             actionsDisabled={actionsDisabled || game.isSpectator}
-            currentPlayerId={game.youSeatId}
+            currentSeatId={game.youSeatId}
             currentTurn={game.currentTurnSeatId}
             highest={highest}
             onDeclare={onDeclare}
@@ -646,7 +646,7 @@ export function GameBoard({
                 .filter(
                   (p) =>
                     !p.isCOM &&
-                    game.disconnectedPlayerIds.includes(p.seatId),
+                    game.disconnectedSeatIds.includes(p.seatId),
                 )
                 .map((p) => (
                   <Pressable

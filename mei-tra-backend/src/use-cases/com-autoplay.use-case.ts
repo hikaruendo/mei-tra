@@ -26,7 +26,7 @@ import {
 import { IRevealBrokenHandUseCase } from './interfaces/reveal-broken-hand.use-case.interface';
 import { transitionToPlayPhase } from './blow-phase-transition.helper';
 import { countPlayersActedInBlow } from './helpers/blow-action.helper';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import { IBlowService } from '../services/interfaces/blow-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
@@ -418,7 +418,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     const preparation = await this.revealBrokenHandUseCase.prepare({
       roomId,
       actorId: comPlayer.seatId,
-      playerId: comPlayer.seatId,
+      seatId: comPlayer.seatId,
     });
 
     if (!preparation.success || !preparation.followUp) {

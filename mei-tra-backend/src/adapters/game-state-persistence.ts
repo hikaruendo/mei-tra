@@ -6,8 +6,8 @@ import {
   Field,
   PendingBrokenHandReveal,
   PlayState,
-} from './game.types';
-import { asSeatId, SeatId } from './identity.types';
+} from '../types/game.types';
+import { asSeatId, SeatId } from '../types/identity.types';
 
 const SCALAR_SEAT_FIELDS = new Set([
   'seatId',
@@ -21,12 +21,7 @@ const SCALAR_SEAT_FIELDS = new Set([
 ]);
 
 const ARRAY_SEAT_FIELDS = new Set(['playedBySeatIds']);
-const SEAT_KEYED_FIELDS = new Set([
-  'playerStates',
-  'playerNames',
-  'neguri',
-  'teamAssignments',
-]);
+const SEAT_KEYED_FIELDS = new Set(['playerStates', 'playerNames', 'neguri']);
 
 export type PersistedBlowDeclaration = Omit<BlowDeclaration, 'seatId'> & {
   seatId: SeatId;
@@ -49,7 +44,7 @@ export type PersistedBlowState = Omit<
   lastPasserSeatId: SeatId | null;
 };
 
-export type PersistedField = Omit<Field, 'playedBy' | 'playedBySeatIds'> & {
+export type PersistedField = Omit<Field, 'playedBySeatIds'> & {
   playedBySeatIds: SeatId[];
   dealerSeatId: SeatId;
 };
@@ -124,9 +119,8 @@ export function toPersistedBlowState(blowState: BlowState): PersistedBlowState {
 
 function toPersistedField(field: Field): PersistedField {
   return {
-    ...omitKeys(field, ['playedBy', 'playedBySeatIds']),
-    playedBySeatIds:
-      field.playedBySeatIds ?? field.playedBy.map((seatId) => asSeatId(seatId)),
+    ...omitKeys(field, ['playedBySeatIds']),
+    playedBySeatIds: field.playedBySeatIds.map(asSeatId),
     dealerSeatId: field.dealerSeatId,
   } as PersistedField;
 }

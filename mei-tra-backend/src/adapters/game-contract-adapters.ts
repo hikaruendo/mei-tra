@@ -12,8 +12,8 @@ import type {
   BlowState,
   CompletedField,
   Field,
-} from './game.types';
-import { asSeatId } from './identity.types';
+} from '../types/game.types';
+import { asSeatId } from '../types/identity.types';
 
 export function toBlowDeclarationContract(
   declaration: BlowDeclaration,
@@ -66,7 +66,7 @@ export function toBlowUpdatedPayload(state: BlowState): BlowUpdatedPayload {
 export function toFieldContract(field: Field): FieldContract {
   return {
     cards: [...field.cards],
-    playedBySeatIds: (field.playedBySeatIds ?? field.playedBy).map(asSeatId),
+    playedBySeatIds: field.playedBySeatIds.map(asSeatId),
     baseCard: field.baseCard,
     baseSuit: field.baseSuit,
     dealerSeatId: field.dealerSeatId,

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ChomboViolation, DomainPlayer, Field } from '../types/game.types';
 import { PlayService } from './play.service';
 import { IChomboService } from './interfaces/chombo-service.interface';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class ChomboService implements IChomboService {
@@ -10,7 +11,7 @@ export class ChomboService implements IChomboService {
   constructor(private readonly playService: PlayService) {}
 
   checkViolations(
-    playerId: string,
+    seatId: SeatId,
     action: string,
     context: {
       player: DomainPlayer;
@@ -25,7 +26,7 @@ export class ChomboService implements IChomboService {
 
     switch (action) {
       case 'select-negri': {
-        if (!context.neguri?.[playerId]) {
+        if (!context.neguri?.[seatId]) {
           violationType = 'negri-forget';
         }
         break;
@@ -67,21 +68,21 @@ export class ChomboService implements IChomboService {
     }
 
     if (violationType) {
-      return this.recordViolation(playerId, violationType);
+      return this.recordViolation(seatId, violationType);
     }
 
     return null;
   }
 
   recordViolation(
-    playerId: string,
+    seatId: SeatId,
     type: ChomboViolation['type'],
   ): ChomboViolation {
     const violation: ChomboViolation = {
       type,
-      playerId,
+      violatorSeatId: seatId,
       timestamp: Date.now(),
-      reportedBy: null,
+      reportedBySeatId: null,
       isExpired: false,
     };
 
@@ -90,8 +91,8 @@ export class ChomboService implements IChomboService {
   }
 
   reportViolation(
-    reporterId: string,
-    violatorId: string,
+    reporterSeatId: SeatId,
+    violatorSeatId: SeatId,
     violationType: ChomboViolation['type'],
     reporterTeam: number,
     violatorTeam: number,
@@ -104,10 +105,10 @@ export class ChomboService implements IChomboService {
     // Find the violation
     const violation = this.violations.find(
       (v) =>
-        v.playerId === violatorId &&
+        v.violatorSeatId === violatorSeatId &&
         v.type === violationType &&
         !v.isExpired &&
-        !v.reportedBy,
+        !v.reportedBySeatId,
     );
 
     if (!violation) {
@@ -115,7 +116,7 @@ export class ChomboService implements IChomboService {
     }
 
     // Mark violation as reported
-    violation.reportedBy = reporterId;
+    violation.reportedBySeatId = reporterSeatId;
     return violation;
   }
 
@@ -127,7 +128,7 @@ export class ChomboService implements IChomboService {
   }
 
   getActiveViolations(): ChomboViolation[] {
-    return this.violations.filter((v) => !v.isExpired && !v.reportedBy);
+    return this.violations.filter((v) => !v.isExpired && !v.reportedBySeatId);
   }
 
   clearViolations(): void {

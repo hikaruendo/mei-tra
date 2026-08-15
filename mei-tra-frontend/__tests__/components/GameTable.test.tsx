@@ -96,7 +96,7 @@ const renderGameTable = (isSpectator: boolean) =>
       numberOfPairs={0}
       setNumberOfPairs={jest.fn()}
       teamScores={teamScores}
-      currentPlayerId="player-1"
+      currentSeatId="player-1"
       currentRoomId="room-1"
       pointsToWin={5}
       isSpectator={isSpectator}

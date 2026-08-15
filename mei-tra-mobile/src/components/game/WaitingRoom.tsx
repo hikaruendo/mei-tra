@@ -19,20 +19,20 @@ import type { MobileRoom } from '@/types/game';
 
 interface WaitingRoomProps {
   room: MobileRoom;
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   isHost: boolean;
   onShuffle: () => void;
   onStart: () => void;
   onLeave: () => void;
-  onRemovePlayer: (playerId: string) => void;
-  onReplaceWithCOM: (playerId: string) => void;
+  onRemovePlayer: (seatId: string) => void;
+  onReplaceWithCOM: (seatId: string) => void;
   onUpdateTeamNames: (teamNames: TeamNames) => void;
   actionsDisabled?: boolean;
 }
 
 export function WaitingRoom({
   room,
-  currentPlayerId,
+  currentSeatId,
   isHost,
   onShuffle,
   onStart,
@@ -115,7 +115,7 @@ export function WaitingRoom({
                 player &&
                 !player.isHost &&
                 !player.isCOM &&
-                player.seatId !== currentPlayerId;
+                player.seatId !== currentSeatId;
               const seatView = (
                 <View
                   accessibilityLabel={`${player?.name ?? '空席'}、${

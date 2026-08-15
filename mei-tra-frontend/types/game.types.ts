@@ -1,6 +1,5 @@
 import type { PlayerContract } from '@contracts/game';
 import type { SeatId } from '@contracts/ids';
-import { normalizePlayerIdentity } from '@meitra/game-client/identity';
 
 export type Team = 0 | 1;
 
@@ -110,24 +109,23 @@ export interface GameActions {
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
-  revealBrokenHand: (playerId: string) => void;
+  revealBrokenHand: (seatId: string) => void;
 } 
 
 export function fromPlayerContract(player: PlayerContract): Player {
-  const normalized = normalizePlayerIdentity(player);
   return {
-    socketId: normalized.socketId,
-    seatId: normalized.seatId,
-    name: normalized.name,
-    userId: normalized.userId,
-    isAuthenticated: normalized.isAuthenticated,
-    team: normalized.team,
-    hand: [...normalized.hand],
-    isHost: normalized.isHost,
-    isPasser: normalized.isPasser,
-    isCOM: normalized.isCOM,
-    hasBroken: normalized.hasBroken ?? false,
-    hasRequiredBroken: normalized.hasRequiredBroken ?? false,
+    socketId: player.socketId,
+    seatId: player.seatId,
+    name: player.name,
+    userId: player.userId,
+    isAuthenticated: player.isAuthenticated,
+    team: player.team,
+    hand: [...player.hand],
+    isHost: player.isHost,
+    isPasser: player.isPasser,
+    isCOM: player.isCOM,
+    hasBroken: player.hasBroken ?? false,
+    hasRequiredBroken: player.hasRequiredBroken ?? false,
   };
 }
 

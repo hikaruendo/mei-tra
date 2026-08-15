@@ -10,13 +10,13 @@ const createRoomMembershipService = (): RoomMembershipService =>
   ({
     claim: jest
       .fn()
-      .mockImplementation((userId: string, roomId: string, playerId: string) =>
+      .mockImplementation((userId: string, roomId: string, seatId: string) =>
         Promise.resolve({
           result: 'reconnected',
           membership: {
             userId,
             roomId,
-            playerId,
+            seatId,
             status: 'active',
             membershipVersion: 2,
             transitionId: 'transition-1',
@@ -92,7 +92,7 @@ describe('ReconnectionUseCase', () => {
   it('uses the persisted room player mapping after an active-game restart', async () => {
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       findPlayerByActorId: jest.fn().mockReturnValue(null),
       getState: () => ({
         players: [
@@ -231,7 +231,7 @@ describe('ReconnectionUseCase', () => {
   it('reclaims a persisted timeout COM after an active-game restart', async () => {
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       findPlayerByActorId: jest.fn().mockReturnValue(null),
       getState: () => ({
         players: [
@@ -248,7 +248,7 @@ describe('ReconnectionUseCase', () => {
         ],
         gamePhase: 'play',
         currentPlayerIndex: 0,
-        currentPlayerId: 'seat-1',
+        currentSeatId: 'seat-1',
         blowState: {
           declarations: [],
           actionHistory: [],
@@ -509,7 +509,6 @@ describe('ReconnectionUseCase', () => {
         ],
         gamePhase: 'blow',
         currentSeatId: asSeatId('seat-1'),
-        currentPlayerId: 'seat-1',
         currentPlayerIndex: 1,
         blowState: {
           declarations: [],
@@ -599,7 +598,7 @@ describe('ReconnectionUseCase', () => {
     ];
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
       getState: () => ({
         players: [],
@@ -724,9 +723,9 @@ describe('ReconnectionUseCase', () => {
     ];
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue({
-        playerId: 'seat-2',
+        seatId: 'seat-2',
       }),
-      findSessionUserByPlayerId: jest.fn().mockReturnValue(null),
+      findSessionUserBySeatId: jest.fn().mockReturnValue(null),
       reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
       getState: () => ({ players: [], gamePhase: 'waiting' }),
     };

@@ -65,8 +65,7 @@ export interface BlowState {
 
 export interface Field {
   cards: string[];
-  playedBy: string[];
-  playedBySeatIds?: SeatId[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
   dealerSeatId: SeatId;
@@ -123,9 +122,9 @@ export interface ChomboViolation {
     | 'last-tanzen'
     | 'wrong-broken'
     | 'wrong-open';
-  playerId: string;
+  violatorSeatId: SeatId;
   timestamp: number;
-  reportedBy: string | null;
+  reportedBySeatId: SeatId | null;
   isExpired: boolean;
 }
 
@@ -133,7 +132,7 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
   version?: number;
-  identitySchemaVersion?: 1 | 2;
+  identitySchemaVersion?: 2;
   players: DomainPlayer[];
   currentSeatId?: SeatId | null;
   gamePhase: GamePhase;
@@ -146,7 +145,4 @@ export interface GameState {
   agari?: string;
   roundNumber: number;
   pointsToWin: number;
-  teamAssignments: {
-    [playerId: string]: Team;
-  };
 }

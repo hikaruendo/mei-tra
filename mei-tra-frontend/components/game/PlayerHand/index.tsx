@@ -34,7 +34,7 @@ interface PlayerHandProps {
   agariCard?: string;
   currentHighestDeclaration?: Pick<BlowDeclaration, 'seatId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
   completedFields: CompletedField[];
-  currentPlayerId: string;
+  currentSeatId: string;
   currentField: Field | null;
   currentTrump: TrumpType | null;
   isHost?: boolean;
@@ -42,8 +42,8 @@ interface PlayerHandProps {
   isDisconnected?: boolean;
   isSpectator?: boolean;
   isSpectatorPerspective?: boolean;
-  onSpectatorPerspectiveChange?: (playerId: string) => void;
-  onReplaceWithCOM?: (playerId: string) => void;
+  onSpectatorPerspectiveChange?: (seatId: string) => void;
+  onReplaceWithCOM?: (seatId: string) => void;
   takenCount?: number;
   teamNames?: TeamNames;
 }
@@ -59,7 +59,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   agariCard,
   currentHighestDeclaration,
   completedFields,
-  currentPlayerId,
+  currentSeatId,
   currentField,
   currentTrump,
   isHost = false,
@@ -90,7 +90,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     currentField,
     currentTrump,
   );
-  const isCurrentPlayer = currentPlayerId === player.seatId;
+  const isCurrentPlayer = currentSeatId === player.seatId;
   const canActAsCurrentPlayer = isCurrentPlayer && !isSpectator;
   const isWinningPlayer = currentHighestDeclaration?.seatId === player.seatId;
   const playerDeclaration = isWinningPlayer && currentHighestDeclaration?.trumpType
@@ -221,7 +221,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return;
     }
 
-    if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
+    if (gamePhase === 'play' && whoseTurn === currentSeatId) {
       if (!negriCard && currentHighestDeclaration?.seatId === player.seatId) {
         setSelectedNegriCard(card);
       } else {
@@ -279,7 +279,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   if (
                     canActAsCurrentPlayer &&
                     gamePhase === 'play' &&
-                    whoseTurn === currentPlayerId &&
+                    whoseTurn === currentSeatId &&
                     isPlayable
                   ) {
                     handleCardClick(card);

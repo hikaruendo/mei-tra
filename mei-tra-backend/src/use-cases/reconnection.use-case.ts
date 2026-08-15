@@ -12,13 +12,13 @@ import {
 import { DomainPlayer, Team } from '../types/game.types';
 import { RoomMembershipService } from '../services/room-membership.service';
 import { asSeatId, type SeatId } from '../types/identity.types';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import type { GameStatePayload } from '@contracts/game';
 import {
   toBlowStateContract,
   toCompletedFieldContract,
   toFieldContract,
-} from '../types/game-contract-adapters';
+} from '../adapters/game-contract-adapters';
 
 export type ReconnectionResult =
   | {
@@ -423,13 +423,13 @@ export class ReconnectionUseCase {
   private syncGlobalConnectionUser(
     socketId: string,
     authenticatedUser: AuthenticatedUser,
-    playerId: string,
+    seatId: SeatId,
   ): void {
     const displayName = this.resolveDisplayName(authenticatedUser);
 
     this.gameState.upsertSessionUser({
       socketId,
-      seatId: asSeatId(playerId),
+      seatId,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -447,12 +447,12 @@ export class ReconnectionUseCase {
   private async claimMembership(
     userId: string,
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
   ): Promise<boolean> {
     const transition = await this.roomMembershipService.claim(
       userId,
       roomId,
-      playerId,
+      seatId,
     );
     return transition.result !== 'conflict';
   }
@@ -468,10 +468,7 @@ export class ReconnectionUseCase {
   }
 
   private resolveWaitingRoomPlayer(
-    roomGameState: Pick<
-      IGameStateService,
-      'findSessionUserByUserId' | 'findSessionUserByPlayerId'
-    >,
+    roomGameState: Pick<IGameStateService, 'findSessionUserByUserId'>,
     roomPlayers: RoomPlayer[],
     authenticatedUserId: string,
   ): RoomPlayer | null {
@@ -486,8 +483,7 @@ export class ReconnectionUseCase {
     }
 
     const sessionUser =
-      roomGameState.findSessionUserByUserId(authenticatedUserId) ??
-      roomGameState.findSessionUserByPlayerId(authenticatedUserId);
+      roomGameState.findSessionUserByUserId(authenticatedUserId);
 
     if (sessionUser) {
       const sessionMatchedPlayer =
@@ -515,13 +511,13 @@ export class ReconnectionUseCase {
   private logStateMismatch(
     roomId: string,
     userId: string,
-    playerId: string,
+    seatId: SeatId,
     roomPlayerCount: number,
     statePlayerCount: number,
     error?: string,
   ): void {
     this.logger.error(
-      `[Reconnection] State mismatch room=${roomId} user=${userId} player=${playerId} roomPlayers=${roomPlayerCount} statePlayers=${statePlayerCount} error=${error ?? 'unknown'}`,
+      `[Reconnection] State mismatch room=${roomId} user=${userId} seat=${seatId} roomPlayers=${roomPlayerCount} statePlayers=${statePlayerCount} error=${error ?? 'unknown'}`,
     );
   }
 }

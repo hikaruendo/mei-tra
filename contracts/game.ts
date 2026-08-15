@@ -141,11 +141,6 @@ export interface BrokenPayload {
   gamePhase?: TransportGamePhase;
 }
 
-export interface BlowStartedPayload {
-  startingSeatId: SeatId;
-  players: PlayerContract[];
-}
-
 export interface FieldCompletePayload {
   winnerSeatId: SeatId;
   field: CompletedFieldContract;
@@ -201,10 +196,6 @@ export interface NewRoundStartedPayload {
 export interface GameOverPayload {
   winner: string;
   finalScores: TransportTeamScores;
-}
-
-export interface RoomPlayingPayload {
-  players: PlayerContract[];
 }
 
 export interface GameStartedPayload {

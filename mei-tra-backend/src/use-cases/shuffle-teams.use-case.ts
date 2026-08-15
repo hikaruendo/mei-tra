@@ -3,6 +3,7 @@ import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IFillWithComUseCase } from './interfaces/fill-with-com.use-case.interface';
 import { Room, RoomStatus } from '../types/room.types';
 import { Team } from '../types/game.types';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class ShuffleTeamsUseCase {
@@ -14,7 +15,7 @@ export class ShuffleTeamsUseCase {
 
   async execute(request: {
     roomId: string;
-    playerId: string;
+    actorSeatId: SeatId;
   }): Promise<{ success: boolean; updatedRoom?: Room; error?: string }> {
     let room = await this.roomService.getRoom(request.roomId);
     if (!room) {
@@ -28,14 +29,14 @@ export class ShuffleTeamsUseCase {
       };
     }
 
-    if (room.hostSeatId !== request.playerId) {
+    if (room.hostSeatId !== request.actorSeatId) {
       return { success: false, error: 'Only the host can shuffle teams' };
     }
 
     if (room.players.length < 4) {
       const fillResult = await this.fillWithComUseCase.execute({
         roomId: request.roomId,
-        playerId: request.playerId,
+        actorSeatId: request.actorSeatId,
       });
       if (!fillResult.success || !fillResult.updatedRoom) {
         return {

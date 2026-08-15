@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { asSeatId } from '../types/identity.types';
 import { DomainPlayer, Field, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 import { IPlayService } from './interfaces/play-service.interface';
@@ -35,38 +34,20 @@ export class PlayService implements IPlayService {
     let winner: DomainPlayer | null = null;
     let highestStrength = -1;
 
-    // ディーラーのインデックスを取得
-    let dealerIndex = players.findIndex((p) => p.seatId === field.dealerSeatId);
-
-    // ディーラーが見つからない場合、最初の有効なプレイヤーをディーラーとする
-    if (dealerIndex === -1) {
-      dealerIndex = 0;
-      field.dealerSeatId = asSeatId(players[0].seatId);
+    if (field.playedBySeatIds.length !== field.cards.length) {
+      return null;
     }
 
-    const playersById = new Map(
+    const playersBySeatId = new Map(
       players.map((player) => [player.seatId, player]),
     );
-    const playedByOrder =
-      field.playedBy.length === field.cards.length
-        ? field.playedBy.map((playerId) => playersById.get(asSeatId(playerId)))
-        : [];
-
-    // Prefer the explicit card -> player attribution recorded when each card was
-    // played. Fall back to legacy dealer order only for older field snapshots.
-    const updatedPlayerOrder = field.cards.map((_, i) => {
-      const playedByPlayer = playedByOrder[i];
-      if (playedByPlayer) {
-        return playedByPlayer;
-      }
-
-      const index = (dealerIndex + i) % players.length;
-      return players[index];
-    });
+    const playedByOrder = field.playedBySeatIds.map((seatId) =>
+      playersBySeatId.get(seatId),
+    );
 
     // 各カードの強度を計算して勝者を決定
     field.cards.forEach((card, cardIndex) => {
-      const player = updatedPlayerOrder[cardIndex];
+      const player = playedByOrder[cardIndex];
       if (!player) {
         return;
       }

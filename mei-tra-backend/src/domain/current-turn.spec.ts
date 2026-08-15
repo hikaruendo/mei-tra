@@ -4,8 +4,8 @@ import {
   resolveCurrentSeatId,
   setCurrentSeat,
 } from './current-turn';
-import { asSeatId } from './identity.types';
-import type { DomainPlayer, GameState } from './game.types';
+import { asSeatId } from '../types/identity.types';
+import type { DomainPlayer, GameState } from '../types/game.types';
 
 const players: DomainPlayer[] = [
   {

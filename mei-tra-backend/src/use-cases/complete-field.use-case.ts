@@ -26,9 +26,9 @@ import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { toCompletedFieldContract } from '../types/game-contract-adapters';
-import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { toCompletedFieldContract } from '../adapters/game-contract-adapters';
+import { asSeatId, type SeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {
@@ -94,7 +94,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       if (state.playState) {
         state.playState.currentField = {
           cards: [],
-          playedBy: [],
           playedBySeatIds: [],
           baseCard: '',
           dealerSeatId: asSeatId(winner.seatId),
@@ -250,7 +249,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     state: GameState,
     field: Field,
   ): string | null {
-    if (field.cards.length !== field.playedBy.length) {
+    if (field.cards.length !== field.playedBySeatIds.length) {
       return 'Field card/player attribution mismatch';
     }
 
@@ -258,14 +257,14 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       return 'Field is not complete';
     }
 
-    const playerIds = new Set<string>(
+    const seatIds = new Set<SeatId>(
       state.players.map((player) => player.seatId),
     );
-    if (field.playedBy.some((playerId) => !playerIds.has(playerId))) {
+    if (field.playedBySeatIds.some((seatId) => !seatIds.has(seatId))) {
       return 'Field contains unknown player attribution';
     }
 
-    if (new Set(field.playedBy).size !== field.playedBy.length) {
+    if (new Set(field.playedBySeatIds).size !== field.playedBySeatIds.length) {
       return 'Field contains duplicate player attribution';
     }
 
@@ -273,7 +272,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     if (currentField && currentField.cards.length > 0) {
       const isSameField =
         this.isSameSequence(currentField.cards, field.cards) &&
-        this.isSameSequence(currentField.playedBy, field.playedBy) &&
+        this.isSameSequence(
+          currentField.playedBySeatIds,
+          field.playedBySeatIds,
+        ) &&
         currentField.dealerSeatId === field.dealerSeatId &&
         currentField.baseCard === field.baseCard &&
         currentField.baseSuit === field.baseSuit;
@@ -308,13 +310,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     );
     if (player) {
       return player.team;
-    }
-
-    if (state.teamAssignments) {
-      const team = state.teamAssignments[highestDeclaration.seatId];
-      if (typeof team === 'number') {
-        return team;
-      }
     }
 
     return null;
@@ -380,7 +375,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     const newPlayState = {
       currentField: {
         cards: [],
-        playedBy: [],
         playedBySeatIds: [],
         baseCard: '',
         dealerSeatId: asSeatId(nextBlowPlayer.seatId),

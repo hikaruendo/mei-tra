@@ -1,21 +1,8 @@
-import { asSeatId } from './identity.types';
-import type { Field, GameState } from './game.types';
+import { asSeatId } from '../types/identity.types';
+import type { Field, GameState } from '../types/game.types';
 
 function normalizePlayedBySeatIds(field: Field) {
-  const playedBySeatIds = (field.playedBySeatIds ?? field.playedBy).map(
-    asSeatId,
-  );
-  const hasDuplicatedAttributions =
-    field.cards.length > 0 &&
-    playedBySeatIds.length === field.cards.length * 2 &&
-    field.cards.every(
-      (_, cardIndex) =>
-        playedBySeatIds[cardIndex * 2] === playedBySeatIds[cardIndex * 2 + 1],
-    );
-
-  return hasDuplicatedAttributions
-    ? field.cards.map((_, cardIndex) => playedBySeatIds[cardIndex * 2])
-    : playedBySeatIds;
+  return field.playedBySeatIds.map(asSeatId);
 }
 
 export function normalizeGameStateIdentity(state: GameState): GameState {
@@ -65,7 +52,6 @@ export function normalizeGameStateIdentity(state: GameState): GameState {
               const dealerSeatId = field.dealerSeatId;
               return {
                 ...field,
-                playedBy: [...playedBySeatIds],
                 playedBySeatIds: [...playedBySeatIds],
                 dealerSeatId,
               };
@@ -97,9 +83,6 @@ export function normalizeGameStateIdentity(state: GameState): GameState {
     blowState,
     playState,
     pendingBrokenHandReveal,
-    teamAssignments: Object.fromEntries(
-      players.map((player) => [player.seatId, player.team]),
-    ),
   };
 
   return normalizedState;

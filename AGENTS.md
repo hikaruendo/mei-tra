@@ -4,6 +4,7 @@
 - `mei-tra-frontend/` hosts the Next.js app (App Router). Routes live under `app/`, feature-oriented React components live under `components/` (`game/`, `room/`, `shared/`, `auth/`, `social/`, etc.), styles in `styles/`, and hooks/utilities in `hooks/` / `lib/`. Static assets sit in `public/`.
 - `mei-tra-backend/` contains the NestJS gateway plus Socket.IO hub (`src/`). Scripts for Fly.io and Supabase maintenance live in `scripts/`. Database resources are under `supabase/`.
 - `contracts/` is the shared transport layer for REST DTOs and Socket.IO payloads. Keep UI-only types in `mei-tra-frontend/types/`, mobile UI types in `mei-tra-mobile/src/types/`, and backend domain/persistence types in `mei-tra-backend/src/types/`. The Expo mobile app lives in `mei-tra-mobile/`.
+- Reserve `mei-tra-backend/src/types/` for explicitly named `*.types.ts` modules. Put transport/persistence transformations in `src/adapters/` and executable game-state operations in `src/domain/`; `npm run check:architecture` enforces this boundary.
 
 ## AI Agent Documentation Policy
 - Treat `README.md`, `AGENTS.md`, and the code itself as the first sources for day-to-day work. Do not preload all human-facing docs by default.

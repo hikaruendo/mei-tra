@@ -46,7 +46,7 @@ describe('Game event instrumentation', () => {
         startGame: jest.fn().mockResolvedValue(undefined),
         saveState: jest.fn().mockResolvedValue(undefined),
         persistRoster: jest.fn().mockResolvedValue(undefined),
-        registerPlayerToken: jest.fn(),
+        registerSeatToken: jest.fn(),
       }),
       canStartGame: jest.fn().mockResolvedValue({ canStart: true }),
       updateRoomStatus: jest.fn().mockResolvedValue(true),
@@ -59,7 +59,10 @@ describe('Game event instrumentation', () => {
 
     const useCase = new StartGameUseCase(roomService, gameEventLogService);
 
-    await useCase.execute({ roomId: 'room-1', playerId: 'host-1' });
+    await useCase.execute({
+      roomId: 'room-1',
+      actorSeatId: asSeatId('host-1'),
+    });
 
     expect(gameEventLogService.log).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -93,7 +96,7 @@ describe('Game event instrumentation', () => {
       playState: {
         currentField: {
           cards: [],
-          playedBy: [],
+          playedBySeatIds: [],
           baseCard: '',
           dealerSeatId: asSeatId('player-1'),
           isComplete: false,

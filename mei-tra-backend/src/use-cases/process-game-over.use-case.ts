@@ -35,8 +35,8 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       .map((roomPlayer) => {
         const sessionUser =
           roomGameState &&
-          typeof roomGameState.findSessionUserByPlayerId === 'function'
-            ? roomGameState.findSessionUserByPlayerId(roomPlayer.seatId)
+          typeof roomGameState.findSessionUserBySeatId === 'function'
+            ? roomGameState.findSessionUserBySeatId(roomPlayer.seatId)
             : null;
         const userId = this.resolveAuthenticatedUserId(roomPlayer, sessionUser);
 
@@ -45,7 +45,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
         }
 
         return {
-          playerId: roomPlayer.seatId,
+          seatId: roomPlayer.seatId,
           team: roomPlayer.team,
           userId,
         };
@@ -54,7 +54,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
         (
           player,
         ): player is {
-          playerId: SeatId;
+          seatId: SeatId;
           team: 0 | 1;
           userId: string;
         } => player !== null,
@@ -83,7 +83,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       }
     });
     const updatedPlayers = results.flatMap((result) =>
-      result.status === 'fulfilled' ? [result.value.playerId] : [],
+      result.status === 'fulfilled' ? [result.value.seatId] : [],
     );
     const failedUpdates = results.filter(
       (result) => result.status === 'rejected',
@@ -101,7 +101,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
           .filter(
             (roomPlayer) =>
               !authenticatedPlayers.some(
-                (player) => player.playerId === roomPlayer.seatId,
+                (player) => player.seatId === roomPlayer.seatId,
               ),
           )
           .map((roomPlayer) => roomPlayer.seatId),

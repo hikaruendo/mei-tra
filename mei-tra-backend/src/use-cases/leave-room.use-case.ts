@@ -18,7 +18,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
 
   async execute(request: LeaveRoomRequest): Promise<LeaveRoomResponse> {
     try {
-      const { playerId, roomId } = request;
+      const { seatId, roomId } = request;
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
@@ -28,7 +28,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         };
       }
 
-      const player = room.players.find((p) => p.seatId === playerId);
+      const player = room.players.find((p) => p.seatId === seatId);
       if (!player) {
         return {
           success: false,
@@ -36,7 +36,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         };
       }
 
-      const success = await this.roomService.leaveRoom(roomId, playerId);
+      const success = await this.roomService.leaveRoom(roomId, seatId);
       if (!success) {
         return {
           success: false,
@@ -48,7 +48,7 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
       const roomExists = await this.roomService.getRoom(roomId);
 
       const baseResponse: LeaveRoomSuccessData = {
-        playerId: player.seatId,
+        seatId: player.seatId,
         roomDeleted: !roomExists,
         roomsList,
       };

@@ -18,7 +18,7 @@ const buildUseCase = (options: {
 }) => {
   const state = {
     players: [HUMAN],
-    currentPlayerId: options.currentPlayer?.seatId ?? null,
+    currentSeatId: options.currentPlayer?.seatId ?? null,
     gamePhase: 'play',
     pendingBrokenHandReveal: null,
     playState: { currentField: null },

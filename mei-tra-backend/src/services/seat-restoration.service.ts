@@ -1,21 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { BlowState, DomainPlayer, GameState } from '../types/game.types';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import type { VacantSeats } from '../types/vacant-seat.types';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class SeatRestorationService {
   async restorePlayerFromVacantSeat(
     roomId: string,
-    playerId: string,
+    targetSeatId: SeatId,
     room: Room,
     gameState: GameStateService,
     vacantSeats: VacantSeats,
@@ -26,7 +27,7 @@ export class SeatRestorationService {
     }
 
     const vacancyEntry = Object.entries(vacantSeatsForRoom).find(
-      ([, data]) => data.roomPlayer.seatId === playerId,
+      ([, data]) => data.roomPlayer.seatId === targetSeatId,
     );
     if (!vacancyEntry) {
       return false;
@@ -47,8 +48,8 @@ export class SeatRestorationService {
       return false;
     }
 
-    const comPlayerId = currentSeatPlayer.seatId;
-    const seatId = resolveSeatId(currentSeatPlayer);
+    const comSeatId = currentSeatPlayer.seatId;
+    const seatId = currentSeatPlayer.seatId;
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
       socketId: '',
@@ -58,7 +59,7 @@ export class SeatRestorationService {
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
-      (player) => player.seatId === comPlayerId || player.seatId === playerId,
+      (player) => player.seatId === comSeatId || player.seatId === targetSeatId,
     );
 
     const restoredGamePlayerBase: DomainPlayer = seatData.gamePlayer
@@ -77,11 +78,11 @@ export class SeatRestorationService {
         });
 
     upsertRuntimeSeat(room, state, restoredRoomPlayer, {
-      replaceSeatId: comPlayerId,
+      replaceSeatId: comSeatId,
       gameplaySource: restoredGamePlayerBase,
     });
 
-    gameState.registerPlayerToken(seatId, seatId);
+    gameState.registerSeatToken(seatId, seatId);
     gameState.clearDisconnectTimeout(seatId);
     delete vacantSeatsForRoom[asSeatId(vacantSeatId)];
     if (Object.keys(vacantSeatsForRoom).length === 0) {

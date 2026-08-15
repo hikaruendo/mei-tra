@@ -1,5 +1,4 @@
 import type {
-  BlowStartedPayload,
   BlowStateContract,
   BlowUpdatedPayload,
   BrokenPayload,
@@ -21,36 +20,23 @@ import type {
   UpdateTurnPayload,
 } from '@meitra/contracts/game';
 import type { SeatId } from '@meitra/contracts/ids';
-import {
-  type CanonicalBlowState,
-  type CanonicalCompletedFieldContract,
-  type CanonicalFieldContract,
-  type CanonicalPlayerContract,
-  normalizeBlowActionIdentity,
-  normalizeBlowDeclarationIdentity,
-  normalizeCompletedFieldIdentity,
-  normalizeFieldIdentity,
-  normalizeGameStateIdentity,
-  normalizePlayerIdentities,
-} from './identity';
 
 export interface GameEventState {
-  players: Array<CanonicalPlayerContract<PlayerContract>>;
+  players: PlayerContract[];
   gamePhase: TransportGamePhase;
   currentTurnSeatId: SeatId | null;
-  currentField: CanonicalFieldContract | null;
-  blowState: CanonicalBlowState;
+  currentField: FieldContract | null;
+  blowState: BlowStateContract;
   teamScores: TransportTeamScores;
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
-  fields: CanonicalCompletedFieldContract[];
+  fields: CompletedFieldContract[];
 }
 
 export type GameServerEvent =
   | { type: 'update-phase'; payload: UpdatePhasePayload }
   | { type: 'update-turn'; payload: UpdateTurnPayload }
-  | { type: 'blow-started'; payload: BlowStartedPayload }
   | { type: 'blow-updated'; payload: BlowUpdatedPayload }
   | { type: 'broken'; payload: BrokenPayload }
   | { type: 'round-cancelled'; payload: RoundCancelledPayload }
@@ -66,7 +52,7 @@ interface GameEventContext {
   selfSeatId?: string | null;
 }
 
-export const createEmptyBlowState = (): CanonicalBlowState => ({
+export const createEmptyBlowState = (): BlowStateContract => ({
   currentTrump: null,
   currentHighestDeclaration: null,
   declarations: [],
@@ -95,18 +81,17 @@ export const createEmptyGameEventState = (): GameEventState => ({
 export const createGameEventStateFromSnapshot = (
   payload: GameStatePayload,
 ): GameEventState => {
-  const normalized = normalizeGameStateIdentity(payload);
   return {
-    players: normalized.players,
-    gamePhase: normalized.gamePhase,
-    currentTurnSeatId: normalized.currentTurnSeatId,
-    currentField: normalized.currentField,
-    blowState: normalized.blowState,
-    teamScores: normalized.teamScores,
-    negriCard: normalized.negriCard,
-    negriSeatId: normalized.negriSeatId,
-    revealedAgari: normalized.revealedAgari ?? null,
-    fields: dedupeCompletedFields(normalized.fields),
+    players: payload.players,
+    gamePhase: payload.gamePhase,
+    currentTurnSeatId: payload.currentTurnSeatId,
+    currentField: payload.currentField,
+    blowState: payload.blowState,
+    teamScores: payload.teamScores,
+    negriCard: payload.negriCard,
+    negriSeatId: payload.negriSeatId,
+    revealedAgari: payload.revealedAgari ?? null,
+    fields: dedupeCompletedFields(payload.fields),
   };
 };
 
@@ -114,15 +99,15 @@ export const createGameEventStateFromStartedGame = (
   payload: GameStartedPayload,
 ): GameEventState => ({
   ...createEmptyGameEventState(),
-  players: normalizePlayerIdentities(payload.players),
+  players: payload.players,
   gamePhase: 'blow',
 });
 
 export const dedupeCompletedFields = (
   fields: CompletedFieldContract[],
-): CanonicalCompletedFieldContract[] => {
+): CompletedFieldContract[] => {
   const seen = new Set<string>();
-  return fields.map(normalizeCompletedFieldIdentity).filter((field) => {
+  return fields.filter((field) => {
     const key = [
       field.dealerSeatId,
       field.winnerSeatId,
@@ -137,7 +122,7 @@ export const dedupeCompletedFields = (
   });
 };
 
-const createEmptyField = (dealerSeatId: SeatId): CanonicalFieldContract => ({
+const createEmptyField = (dealerSeatId: SeatId): FieldContract => ({
   cards: [],
   playedBySeatIds: [],
   baseCard: '',
@@ -154,7 +139,7 @@ export const reduceGameEvent = (
     case 'update-phase': {
       const { phase, scores, currentHighestDeclaration } = event.payload;
       const highest = currentHighestDeclaration
-        ? normalizeBlowDeclarationIdentity(currentHighestDeclaration)
+        ? currentHighestDeclaration
         : state.blowState.currentHighestDeclaration;
       return {
         ...state,
@@ -173,29 +158,15 @@ export const reduceGameEvent = (
         currentTurnSeatId: event.payload,
       };
     }
-    case 'blow-started': {
-      return {
-        ...state,
-        players: normalizePlayerIdentities(event.payload.players),
-        gamePhase: 'blow',
-        currentTurnSeatId: event.payload.startingSeatId,
-      };
-    }
     case 'blow-updated': {
       const lastPasserSeatId = event.payload.lastPasserSeatId;
       return {
         ...state,
         blowState: {
           ...state.blowState,
-          declarations: event.payload.declarations.map(
-            normalizeBlowDeclarationIdentity,
-          ),
-          actionHistory: (event.payload.actionHistory ?? []).map(
-            normalizeBlowActionIdentity,
-          ),
-          currentHighestDeclaration: event.payload.currentHighest
-            ? normalizeBlowDeclarationIdentity(event.payload.currentHighest)
-            : null,
+          declarations: event.payload.declarations,
+          actionHistory: event.payload.actionHistory ?? [],
+          currentHighestDeclaration: event.payload.currentHighest ?? null,
           lastPasserSeatId,
         },
       };
@@ -203,7 +174,7 @@ export const reduceGameEvent = (
     case 'broken': {
       return {
         ...state,
-        players: normalizePlayerIdentities(event.payload.players),
+        players: event.payload.players,
         gamePhase: event.payload.gamePhase ?? 'blow',
         currentTurnSeatId: event.payload.nextSeatId,
         currentField: null,
@@ -218,7 +189,7 @@ export const reduceGameEvent = (
       const currentTurnSeatId = event.payload.nextDealerSeatId;
       return {
         ...state,
-        players: normalizePlayerIdentities(event.payload.players),
+        players: event.payload.players,
         gamePhase: 'blow',
         currentTurnSeatId,
         currentField: null,
@@ -226,16 +197,10 @@ export const reduceGameEvent = (
           ...createEmptyBlowState(),
           currentTrump: event.payload.currentTrump ?? null,
           currentHighestDeclaration: event.payload.currentHighestDeclaration
-            ? normalizeBlowDeclarationIdentity(
-                event.payload.currentHighestDeclaration,
-              )
+            ? event.payload.currentHighestDeclaration
             : null,
-          declarations: (event.payload.blowDeclarations ?? []).map(
-            normalizeBlowDeclarationIdentity,
-          ),
-          actionHistory: (event.payload.actionHistory ?? []).map(
-            normalizeBlowActionIdentity,
-          ),
+          declarations: event.payload.blowDeclarations ?? [],
+          actionHistory: event.payload.actionHistory ?? [],
         },
         negriCard: null,
         negriSeatId: null,
@@ -275,21 +240,19 @@ export const reduceGameEvent = (
       };
     }
     case 'card-played': {
-      const players = normalizePlayerIdentities(event.payload.players);
-      const currentField = normalizeFieldIdentity(event.payload.field);
       return {
         ...state,
-        players,
-        currentField,
+        players: event.payload.players,
+        currentField: event.payload.field,
         currentTurnSeatId:
           event.payload.nextSeatId ?? state.currentTurnSeatId,
       };
     }
     case 'field-updated': {
-      return { ...state, currentField: normalizeFieldIdentity(event.payload) };
+      return { ...state, currentField: event.payload };
     }
     case 'field-complete': {
-      const field = normalizeCompletedFieldIdentity(event.payload.field);
+      const field = event.payload.field;
       const nextSeatId = event.payload.nextSeatId;
       return {
         ...state,
@@ -308,12 +271,10 @@ export const reduceGameEvent = (
       const negriSeatId = event.payload.negriSeatId;
       return {
         ...state,
-        players: normalizePlayerIdentities(event.payload.players),
+        players: event.payload.players,
         currentTurnSeatId,
         gamePhase: event.payload.gamePhase,
-        currentField: event.payload.currentField
-          ? normalizeFieldIdentity(event.payload.currentField)
-          : null,
+        currentField: event.payload.currentField,
         fields: dedupeCompletedFields(event.payload.completedFields),
         negriCard: event.payload.negriCard,
         negriSeatId,
@@ -322,13 +283,9 @@ export const reduceGameEvent = (
           ...createEmptyBlowState(),
           currentTrump: event.payload.currentTrump,
           currentHighestDeclaration: event.payload.currentHighestDeclaration
-            ? normalizeBlowDeclarationIdentity(
-                event.payload.currentHighestDeclaration,
-              )
+            ? event.payload.currentHighestDeclaration
             : null,
-          declarations: event.payload.blowDeclarations.map(
-            normalizeBlowDeclarationIdentity,
-          ),
+          declarations: event.payload.blowDeclarations,
         },
       };
     }

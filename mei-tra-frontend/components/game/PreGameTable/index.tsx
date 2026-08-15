@@ -11,14 +11,14 @@ import { asSeatId } from '@contracts/ids';
 
 interface PreGameTableProps {
   players: Player[];
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   isHost: boolean;
   onStart: () => void;
   onLeave: () => void;
   shuffleTeams?: () => void;
   teamNames?: TeamNames;
   onUpdateTeamNames?: (teamNames: TeamNames) => void;
-  onRemovePlayer?: (playerId: string) => void;
+  onRemovePlayer?: (seatId: string) => void;
 }
 
 const positions = ['bottom', 'left', 'top', 'right'] as const;
@@ -36,7 +36,7 @@ function createEmptySlot(index: number): Player {
 
 export const PreGameTable: React.FC<PreGameTableProps> = ({
   players,
-  currentPlayerId,
+  currentSeatId,
   isHost,
   onStart,
   onLeave,
@@ -65,8 +65,8 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
     setDraftTeamNames(resolvedTeamNames);
   }, [resolvedTeamNames]);
 
-  const ordered = currentPlayerId
-    ? getConsistentTableOrderWithSelfBottom(players, currentPlayerId)
+  const ordered = currentSeatId
+    ? getConsistentTableOrderWithSelfBottom(players, currentSeatId)
     : new Array(4).fill(undefined);
 
   const slots: Player[] = ordered.map((p, idx) => {
@@ -103,7 +103,7 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
             {isHost &&
               onRemovePlayer &&
               !player.isCOM &&
-              player.seatId !== currentPlayerId && (
+              player.seatId !== currentSeatId && (
                 <button
                   type="button"
                   className={styles.seatActionButton}

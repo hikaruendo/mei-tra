@@ -29,7 +29,7 @@ const declarationLabel = (declaration: BlowDeclarationContract | null) => {
 interface BlowControlsProps {
   players: MobilePlayer[];
   currentTurn: string | null;
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   highest: BlowDeclarationContract | null;
   actionHistory: BlowActionContract[];
   onDeclare: (trump: TrumpType, pairs: number) => void;
@@ -40,7 +40,7 @@ interface BlowControlsProps {
 export function BlowControls({
   players,
   currentTurn,
-  currentPlayerId,
+  currentSeatId,
   highest,
   actionHistory,
   onDeclare,
@@ -53,7 +53,7 @@ export function BlowControls({
     null,
   );
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMyTurn = currentTurn === currentPlayerId;
+  const isMyTurn = currentTurn === currentSeatId;
   const turnName =
     players.find((player) => player.seatId === currentTurn)?.name ?? '—';
 

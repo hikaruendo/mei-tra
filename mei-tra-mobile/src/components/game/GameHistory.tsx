@@ -16,6 +16,7 @@ import {
 import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobilePlayer } from '@/types/game';
+import { MiniCard } from '@/components/game/MiniCard';
 
 interface GameHistoryProps {
   replay: GameHistoryReplayViewContract | null;
@@ -83,6 +84,13 @@ export function GameHistory({
     () => buildRoundTableRows(replay, players ?? [], teamNames),
     [replay, players, teamNames],
   );
+  const startingHands = useMemo(
+    () =>
+      (replay?.rounds ?? []).filter(
+        (round) => (round.viewerStartingHand?.length ?? 0) > 0,
+      ),
+    [replay],
+  );
 
   if (loading) {
     return (
@@ -136,6 +144,31 @@ export function GameHistory({
             {rows.map((row, index) => (
               <Row index={index} key={row.roundNumber} row={row} />
             ))}
+            {startingHands.length > 0 ? (
+              <View style={styles.handsSection}>
+                <Text style={styles.handsTitle}>開始時の手札</Text>
+                {startingHands.map((round) => (
+                  <View
+                    key={`starting-hand-${round.roundNumber ?? 'pre-game'}`}
+                    style={styles.handRow}
+                  >
+                    <Text style={styles.handLabel}>
+                      {round.roundNumber == null
+                        ? '開始前'
+                        : `${round.roundNumber}ラウンド`}
+                    </Text>
+                    <View style={styles.handCards}>
+                      {round.viewerStartingHand?.map((card, index) => (
+                        <MiniCard
+                          card={card}
+                          key={`${round.roundNumber ?? 'pre-game'}-${card}-${index}`}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </ScrollView>
         </>
       )}
@@ -227,5 +260,30 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  handsSection: {
+    gap: 12,
+    paddingTop: 18,
+  },
+  handsTitle: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  handRow: {
+    gap: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: colors.panelStrong,
+  },
+  handLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  handCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
   },
 });

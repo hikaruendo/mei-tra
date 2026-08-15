@@ -1,10 +1,11 @@
 import { Logger } from '@nestjs/common';
 import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
-import { GameState, PlayerConnectionMetadata } from '../types/game.types';
+import { GameState } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
-import { normalizeGameStateIdentity } from '../types/game-state-identity';
+import { normalizeGameStateIdentity } from '../adapters/game-state-identity';
+import type { SeatId } from '../types/identity.types';
 
 export class GameStateManager {
   constructor(
@@ -131,7 +132,7 @@ export class GameStateManager {
     roomId: string | null,
     roomPlayers: RoomPlayer[],
     state: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState> {
     if (!roomId) {
@@ -142,7 +143,7 @@ export class GameStateManager {
       roomId,
       roomPlayers,
       state,
-      hostId,
+      hostSeatId,
       membershipMutation,
     );
 
@@ -150,22 +151,6 @@ export class GameStateManager {
       throw new Error(`Game state not found for room ${roomId}`);
     }
     return persistedState;
-  }
-
-  async persistPlayerConnectionUpdate(
-    roomId: string | null,
-    playerId: string,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<void> {
-    if (!roomId) {
-      return;
-    }
-
-    try {
-      await this.repository.updatePlayerConnection(roomId, playerId, updates);
-    } catch (error) {
-      this.logger.error('Failed to persist player connection update:', error);
-    }
   }
 
   async resetState(roomId: string | null, state: GameState): Promise<void> {

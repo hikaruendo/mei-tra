@@ -1,6 +1,6 @@
 import { RoomStatus } from '../../types/room.types';
 import { DomainPlayer } from '../../types/game.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { JoinRoomGatewayEffectsService } from '../join-room-gateway-effects.service';
 import { asSeatId } from '../../types/identity.types';
@@ -139,20 +139,8 @@ describe('JoinRoomGatewayEffectsService', () => {
         event: 'room-sync',
         payload: {
           room: { id: 'room-1' },
-          players: [{ playerId: 'player-1' }],
+          players: [{ seatId: 'player-1' }],
         },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-updated',
-        payload: updatedRoom,
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [{ playerId: 'player-1' }],
       },
     ]);
 
@@ -183,7 +171,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(result.room.players).toHaveLength(2);
     expect(
       result.events.some(
-        (event) => event.event === 'room-updated' && event.roomId === 'room-1',
+        (event) => event.event === 'room-sync' && event.roomId === 'room-1',
       ),
     ).toBe(true);
   });
@@ -609,8 +597,8 @@ describe('JoinRoomGatewayEffectsService', () => {
       {
         scope: 'socket',
         socketId: 'socket-1',
-        event: 'room-updated',
-        payload: room,
+        event: 'room-sync',
+        payload: { room, players: room.players },
       },
     ]);
 
@@ -699,20 +687,8 @@ describe('JoinRoomGatewayEffectsService', () => {
         event: 'room-sync',
         payload: {
           room: { id: 'room-1' },
-          players: [{ playerId: 'player-1' }],
+          players: [{ seatId: 'player-1' }],
         },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-updated',
-        payload: room,
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [{ playerId: 'player-1' }],
       },
     ]);
 
@@ -772,11 +748,6 @@ describe('JoinRoomGatewayEffectsService', () => {
         scope: 'room',
         roomId: 'room-1',
         event: 'room-sync',
-      }),
-      expect.objectContaining({
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
       }),
     ]);
   });

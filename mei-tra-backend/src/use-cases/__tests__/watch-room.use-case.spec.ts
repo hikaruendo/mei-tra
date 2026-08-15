@@ -6,7 +6,7 @@ import {
   GameState,
   Team,
 } from '../../types/game.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
 import { asSeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 
@@ -90,7 +90,6 @@ describe('WatchRoomUseCase', () => {
     teamScoreRecords: { 0: [], 1: [] },
     roundNumber: 1,
     pointsToWin: roomValue.settings.pointsToWin,
-    teamAssignments: {},
   });
 
   const createUseCase = (roomValue: Room) => {

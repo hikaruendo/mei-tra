@@ -25,17 +25,17 @@ Review before editing. Do not change code, commit, push, or update a PR unless t
 1. Trace each changed input through state transition, persistence, Socket emit, and UI projection.
 2. Run an architecture coherence pass before judging local correctness:
    - Name the concept being changed and identify its canonical owner: `contracts/`, backend `src/types/`, Domain, UseCase/service, repository, frontend hook, or UI.
+   - Reserve backend `src/types/` for explicitly named `*.types.ts` modules. Standalone mappers, adapters, state repair, and domain operations belong in `src/adapters/` or `src/domain/`; run `npm run check:architecture` when backend files move across these boundaries.
    - Search sibling implementations before accepting a new type, helper, service, mapper, or adapter. Require equivalent concepts to use the same layer, folder, naming, error contract, and dependency direction.
-   - Count transformations of the same identity or state. One boundary adapter is acceptable; repeated `remap`, alias builders, dual shapes, fallback chains, or object reconstruction across Domain, UseCase, Gateway, persistence, Web, and Mobile indicate a split source of truth.
-   - Distinguish migration compatibility from permanent design. Keep legacy aliases and dual-read/write at an explicit boundary with telemetry, removal criteria, and a cleanup path; flag them when they leak into core logic.
+   - Count transformations of the same identity or state. One boundary adapter is acceptable; repeated `remap`, duplicate shapes, fallback chains, or object reconstruction across Domain, UseCase, Gateway, persistence, Web, and Mobile indicate a split source of truth.
    - Review stacked or adjacent changes cumulatively. If several fixes translate or repair the same concept in different places, recommend a canonical representation and deletion of the repair paths instead of another local mapper.
 3. Check the applicable invariants:
    - Preserve four-player/two-team seat order, turn order, and team membership.
-   - Keep `playerId`, `userId`, and `socketId` distinct.
+   - Keep canonical `seatId`, authenticated `userId`, and transient `socketId` distinct; do not reintroduce `playerId`.
    - Preserve seat identity across human, COM, vacant-seat, and reconnect transitions.
    - Advance blow, play, field completion, round end, and game over exactly once.
    - Reconstruct active state from persisted data after a restart; never rely only on memory or `socketId`.
-   - Keep cross-table and JSONB writes atomic or explicitly compatible during migration.
+   - Keep cross-table and JSONB writes atomic; migration-only paths must remain isolated from runtime logic.
    - Keep Socket payloads in `contracts/` and avoid domain, DB, and UI type leakage.
    - Verify layout changes at the requested text scale and viewport when visual evidence is available.
 4. Check adjacent paths: join/leave/auth update, COM replacement/autoplay, full-room recovery/team shuffle, spectator/chat/profile overlap, cold start, and timer resumption.
@@ -62,4 +62,4 @@ After an explicit fix request:
 1. Map the fix to the violated invariant and keep its scope minimal.
 2. Reuse the existing UseCase, service, effects, and adapter boundaries; do not add duplicate writes or hidden side effects.
 3. Add or update the nearest regression test, then run focused tests, build, and lint where practical.
-4. Report the behavior change, validation evidence, and remaining compatibility debt.
+4. Report the behavior change, validation evidence, and remaining risks.
