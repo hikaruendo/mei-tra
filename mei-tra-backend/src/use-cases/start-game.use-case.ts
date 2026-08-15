@@ -7,14 +7,14 @@ import {
 } from './interfaces/start-game.use-case.interface';
 import { Room, RoomStatus } from '../types/room.types';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { GameStateService } from '../services/game-state.service';
 import { GameState } from '../types/game.types';
 import { asSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayer,
   resolveCurrentPlayerIndex,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {
@@ -29,7 +29,7 @@ export class StartGameUseCase implements IStartGameUseCase {
 
   async execute(request: StartGameRequest): Promise<StartGameResponse> {
     try {
-      const { roomId, playerId } = request;
+      const { roomId, actorSeatId } = request;
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
@@ -40,10 +40,10 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const player = room.players.find((p) => p.playerId === playerId);
+      const player = room.players.find((p) => p.seatId === actorSeatId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
-          playerId,
+          actorSeatId,
           roomId,
         });
         return {
@@ -54,7 +54,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       // Authorization check: verify the requesting player is the host
-      if (room.hostId !== playerId) {
+      if (room.hostSeatId !== actorSeatId) {
         return {
           success: false,
           errorMessage: 'Only the host can start the game',
@@ -94,7 +94,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       this.syncStatePlayersFromRoom(roomGameState, roomWithFilledSeats);
       await roomGameState.persistRoster(
         roomWithFilledSeats.players,
-        roomWithFilledSeats.hostId,
+        roomWithFilledSeats.hostSeatId,
       );
 
       const statusUpdated = await this.roomService.updateRoomStatus(
@@ -120,9 +120,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       if (updatedState.blowState.currentBlowIndex !== currentPlayerIndex) {
         const currentPlayer = resolveCurrentPlayer(updatedState);
         roomGameState.updateState({
-          currentSeatId: currentPlayer
-            ? asSeatId(currentPlayer.playerId)
-            : null,
+          currentSeatId: currentPlayer ? asSeatId(currentPlayer.seatId) : null,
           blowState: {
             ...updatedState.blowState,
             currentBlowIndex: currentPlayerIndex,
@@ -152,16 +150,16 @@ export class StartGameUseCase implements IStartGameUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'game_started',
-        actorSeatId: asSeatId(playerId),
+        actorSeatId,
         state: updatedState,
         actionData: {
-          startedBySeatId: playerId,
-          firstBlowSeatId: firstBlowPlayer?.playerId ?? null,
+          startedBySeatId: actorSeatId,
+          firstBlowSeatId: firstBlowPlayer?.seatId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
           startingHandsBySeatId: Object.fromEntries(
             updatedState.players.map((player) => [
-              player.playerId,
+              player.seatId,
               [...player.hand],
             ]),
           ),
@@ -178,7 +176,7 @@ export class StartGameUseCase implements IStartGameUseCase {
             scores: updatedState.teamScores,
             winner: null,
           },
-          currentTurnSeatId: asSeatId(currentTurnPlayer.playerId),
+          currentTurnSeatId: asSeatId(currentTurnPlayer.seatId),
         },
       };
     } catch (error) {
@@ -203,17 +201,14 @@ export class StartGameUseCase implements IStartGameUseCase {
     // players array from that source before starting. This keeps the play order
     // aligned with the shuffled seat arrangement instead of any stale game-state order.
     const existingPlayers = new Map(
-      state.players.map((statePlayer) => [statePlayer.playerId, statePlayer]),
+      state.players.map((statePlayer) => [statePlayer.seatId, statePlayer]),
     );
     state.players = room.players.map((roomPlayer) => {
-      const existingPlayer = existingPlayers.get(roomPlayer.playerId);
+      const existingPlayer = existingPlayers.get(roomPlayer.seatId);
 
       if (!existingPlayer) {
-        if (typeof roomGameState.registerPlayerToken === 'function') {
-          roomGameState.registerPlayerToken(
-            roomPlayer.playerId,
-            roomPlayer.playerId,
-          );
+        if (typeof roomGameState.registerSeatToken === 'function') {
+          roomGameState.registerSeatToken(roomPlayer.seatId, roomPlayer.seatId);
         }
         return {
           ...toDomainPlayer(roomPlayer),
@@ -229,10 +224,6 @@ export class StartGameUseCase implements IStartGameUseCase {
         hasRequiredBroken: existingPlayer.hasRequiredBroken,
       };
     });
-
-    state.teamAssignments = Object.fromEntries(
-      state.players.map((player) => [player.playerId, player.team]),
-    );
 
     return state;
   }

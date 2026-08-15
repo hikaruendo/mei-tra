@@ -10,7 +10,7 @@ import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
 import { DomainPlayer, Team } from '../types/game.types';
-import { toDomainPlayer, toRoomPlayer } from '../types/player-adapters';
+import { toDomainPlayer, toRoomPlayer } from '../adapters/player-adapters';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';
@@ -26,9 +26,10 @@ import {
   RosterMembershipMutation,
 } from '../types/room-membership.types';
 import { randomUUID } from 'crypto';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import type { VacantSeats } from '../types/vacant-seat.types';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class RoomService implements IRoomService, OnModuleDestroy {
@@ -47,14 +48,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private readonly roomJoinService: RoomJoinService;
 
   private normalizeRoomHostFlags(room: Room): Room {
-    const hostSeatId = room.hostSeatId ?? asSeatId(room.hostId);
     return {
       ...room,
-      hostSeatId,
-      hostId: hostSeatId,
       players: room.players.map((player) => ({
         ...player,
-        isHost: player.playerId === hostSeatId,
+        isHost: player.seatId === room.hostSeatId,
       })),
     };
   }
@@ -201,7 +199,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       id: randomUUID(),
       name,
       hostSeatId,
-      hostId: hostSeatId,
       status: RoomStatus.WAITING,
       players: [],
       settings: {
@@ -222,7 +219,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       participantKey: hostUserId,
       gameplay: {
         seatId: hostSeatId,
-        playerId: hostSeatId,
         name: hostUser.name,
         hand: [],
         team: 0,
@@ -281,7 +277,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return {
       socketId: `com-${idStr}`,
       seatId,
-      playerId: seatId,
       participantKey: `com-${idStr}-${seatId}`,
       name: 'COM',
       isCOM: true,
@@ -297,13 +292,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   private createActiveCOMReplacement(
     index: number | string,
-    sourcePlayer: Pick<RoomPlayer, 'seatId' | 'playerId' | 'team'>,
+    sourcePlayer: Pick<RoomPlayer, 'seatId' | 'team'>,
   ): RoomPlayer {
     return this.createCOMPlaceholder(
       index,
       sourcePlayer.team,
       [],
-      asSeatId(sourcePlayer.seatId ?? sourcePlayer.playerId),
+      sourcePlayer.seatId,
     );
   }
 
@@ -322,7 +317,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       preferredIndex ?? fallbackIndex,
       team,
       [],
-      asSeatId(sourcePlayer.seatId ?? sourcePlayer.playerId),
+      sourcePlayer.seatId,
     );
   }
 
@@ -363,7 +358,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
    */
   async convertPlayerToCOM(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     options?: {
       requireDisconnected?: boolean;
       releaseMembership?: boolean;
@@ -375,7 +370,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const gameState = await this.getRoomGameState(roomId);
     if (
       options?.requireDisconnected &&
-      gameState.getPlayerConnectionState(playerId)?.socketId
+      gameState.getPlayerConnectionState(seatId)?.socketId
     ) {
       return false;
     }
@@ -383,11 +378,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const membershipMutation =
       options?.membershipMutation ??
       (options?.releaseMembership !== false
-        ? this.buildMembershipRelease(playerId)
+        ? this.buildMembershipRelease(seatId)
         : undefined);
     return this.comSessionService.convertPlayerToCOM(
       roomId,
-      playerId,
+      seatId,
       room,
       gameState,
       this.vacantSeats,
@@ -397,7 +392,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async leaveRoom(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     options?: {
       releaseMembership?: boolean;
       membershipMutation?: RosterMembershipMutation;
@@ -414,7 +409,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const membershipMutation =
       options?.membershipMutation ??
       (options?.releaseMembership !== false
-        ? this.buildMembershipRelease(playerId)
+        ? this.buildMembershipRelease(seatId)
         : undefined);
 
     // ゲーム中かどうかで分岐:
@@ -429,13 +424,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const state = gameState.getState();
 
       // 退出したプレイヤーのindexを記録
-      const playerIndex = room.players.findIndex(
-        (p) => p.playerId === playerId,
-      );
+      const playerIndex = room.players.findIndex((p) => p.seatId === seatId);
       if (playerIndex !== -1) {
         if (!this.vacantSeats[roomId]) this.vacantSeats[roomId] = {};
 
-        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+        const gsIndex = state.players.findIndex((p) => p.seatId === seatId);
 
         // 席UUIDを維持したまま占有者をCOMへ切り替える。
         // uniqueIdxはsocket/participant metadataだけを識別する。
@@ -445,8 +438,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           room.players[playerIndex],
         );
 
-        const seatId = resolveSeatId(room.players[playerIndex]);
-        this.vacantSeats[roomId][seatId] = {
+        const resolvedSeatId = room.players[playerIndex].seatId;
+        this.vacantSeats[roomId][resolvedSeatId] = {
           roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
           gamePlayer:
             gsIndex !== -1
@@ -455,23 +448,21 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         };
 
         upsertRuntimeSeat(room, state, comPlayer, {
-          replaceSeatId: playerId,
+          replaceSeatId: seatId,
           gameplaySource: gsIndex === -1 ? null : state.players[gsIndex],
         });
 
-        // 再接続トークンは保持（同じplayerIdで再join可能にする）
+        // 元の占有者が同じseatIdへ戻れるよう再接続トークンは保持する。
         // 他のプレイヤーがこの席を取ったら、その時点でトークンを削除
-        // gameState.removePlayerToken(playerId);  // ← 削除しない
+        // Keep the seat token so the original occupant can reconnect.
       }
     } else {
       // ロビー状態: 退室プレイヤーをCOMに置き換え（空席を常時COMで維持）
-      const playerIndex = room.players.findIndex(
-        (p) => p.playerId === playerId,
-      );
+      const playerIndex = room.players.findIndex((p) => p.seatId === seatId);
       if (playerIndex !== -1) {
         const leavingPlayer = room.players[playerIndex];
         const state = gameState.getState();
-        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+        const gsIndex = state.players.findIndex((p) => p.seatId === seatId);
         const seatIndex = gsIndex !== -1 ? gsIndex : playerIndex;
         const comPlaceholder = this.createWaitingCOMReplacement(
           seatIndex,
@@ -483,12 +474,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           gsIndex,
         );
         upsertRuntimeSeat(room, state, comPlaceholder, {
-          replaceSeatId: playerId,
+          replaceSeatId: seatId,
           gameplaySource: gsIndex === -1 ? null : state.players[gsIndex],
         });
       }
       // 再接続トークンを削除
-      gameState.removePlayerToken(playerId);
+      gameState.removeSeatToken(seatId);
     }
 
     // If all players are COM placeholders (no human players), delete the room
@@ -498,19 +489,19 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     // If host left, assign new host
-    if (room.hostId === playerId) {
+    if (room.hostSeatId === seatId) {
       const newHost = room.players.find((p) => !p.isCOM);
       if (newHost) {
-        room.hostId = newHost.playerId;
+        room.hostSeatId = asSeatId(newHost.seatId);
       }
     }
 
     room.players.forEach((player) => {
-      player.isHost = player.playerId === room.hostId;
+      player.isHost = player.seatId === room.hostSeatId;
     });
     await gameState.persistRoster(
       room.players,
-      room.hostId,
+      room.hostSeatId,
       membershipMutation,
     );
     return true;
@@ -610,7 +601,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       (player) => player.userId === user.userId,
     );
     if (roomMatches.length === 1) {
-      const seatId = asSeatId(roomMatches[0].playerId);
+      const seatId = asSeatId(roomMatches[0].seatId);
       return { ...user, seatId };
     }
     if (roomMatches.length > 1) {
@@ -623,7 +614,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       (seat) => seat.roomPlayer.userId === user.userId,
     );
     if (vacantMatches.length === 1) {
-      const seatId = asSeatId(vacantMatches[0].roomPlayer.playerId);
+      const seatId = asSeatId(vacantMatches[0].roomPlayer.seatId);
       return {
         ...user,
         seatId,
@@ -646,7 +637,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async restorePlayerFromVacantSeat(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
   ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
@@ -656,13 +647,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const restored =
       await this.seatRestorationService.restorePlayerFromVacantSeat(
         roomId,
-        playerId,
+        seatId,
         room,
         gameState,
         this.vacantSeats,
       );
     if (restored) {
-      this.logger.log(`Restored player ${playerId} in room ${roomId}`);
+      this.logger.log(`Restored seat ${seatId} in room ${roomId}`);
     }
     return restored;
   }
@@ -696,25 +687,25 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return !!updatedRoom;
   }
 
-  private buildMembershipRelease(seatId: string): RosterMembershipMutation {
+  private buildMembershipRelease(seatId: SeatId): RosterMembershipMutation {
     return {
       type: 'release',
-      seatId: asSeatId(seatId),
+      seatId,
       transitionId: randomUUID(),
     };
   }
 
   async updatePlayerInRoom(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     updates: Partial<RoomPlayer>,
   ): Promise<boolean> {
-    return this.updatePlayersInRoom(roomId, { [playerId]: updates });
+    return this.updatePlayersInRoom(roomId, { [seatId]: updates });
   }
 
   async updatePlayersInRoom(
     roomId: string,
-    updatesByPlayerId: Record<string, Partial<RoomPlayer>>,
+    updatesBySeatId: Partial<Record<SeatId, Partial<RoomPlayer>>>,
   ): Promise<boolean> {
     const room = await this.getRoom(roomId);
     if (!room) {
@@ -724,9 +715,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const gameState = await this.getRoomGameState(roomId);
     const state = gameState.getState();
 
-    for (const [playerId, updates] of Object.entries(updatesByPlayerId)) {
+    for (const [seatId, updates] of Object.entries(updatesBySeatId)) {
+      if (!updates) {
+        continue;
+      }
       const roomPlayer = room.players.find(
-        (player) => player.playerId === playerId,
+        (player) => player.seatId === seatId,
       );
       if (!roomPlayer) {
         return false;
@@ -734,11 +728,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
       Object.assign(roomPlayer, updates);
       if (updates.isHost === true) {
-        room.hostId = playerId;
+        room.hostSeatId = asSeatId(seatId);
       }
 
       const statePlayerIndex = state.players.findIndex(
-        (player) => player.playerId === playerId,
+        (player) => player.seatId === seatId,
       );
       const statePlayer =
         statePlayerIndex === -1 ? null : state.players[statePlayerIndex];
@@ -748,9 +742,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     room.players.forEach((player) => {
-      player.isHost = player.playerId === room.hostId;
+      player.isHost = player.seatId === room.hostSeatId;
     });
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(room.players, room.hostSeatId);
     return true;
   }
 
@@ -824,7 +818,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async handlePlayerReconnection(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     socketId: string,
     userId?: string,
     name?: string,
@@ -836,14 +830,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     const state = roomGameState.getState();
-    const player = state.players.find((p) => p.playerId === playerId);
+    const player = state.players.find((p) => p.seatId === seatId);
     if (!player) {
       return { success: false, error: 'Player not found in room' };
     }
 
     const room = await this.getRoom(roomId);
     const roomPlayer = room?.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === seatId,
     );
     if (!roomPlayer) {
       return { success: false, error: 'Room player not found' };
@@ -856,7 +850,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     this.logger.log(
-      `[RoomService] Player reconnection playerId=${playerId} userId=${userId ?? 'guest'} hadUserId=${String(!!roomGameState.findSessionUserByPlayerId(playerId)?.userId)}`,
+      `[RoomService] Seat reconnection seatId=${seatId} userId=${userId ?? 'guest'} hadUserId=${String(!!roomGameState.findSessionUserBySeatId(seatId)?.userId)}`,
     );
 
     const connectionState: PlayerConnectionState = {
@@ -867,8 +861,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       connectionState.isAuthenticated = true;
     }
 
-    roomGameState.clearDisconnectTimeout(playerId);
-    await roomGameState.applyPlayerConnectionState(playerId, connectionState);
+    roomGameState.clearDisconnectTimeout(seatId);
+    roomGameState.applyPlayerConnectionState(seatId, connectionState);
 
     const roomPlayerUpdates: {
       socketId: string;
@@ -896,26 +890,29 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     const updated = await this.updatePlayerInRoom(
       roomId,
-      playerId,
+      seatId,
       roomPlayerUpdates,
     );
     if (!updated) {
       return { success: false, error: 'Failed to persist player connection' };
     }
 
-    this.clearVacantSeatSnapshot(roomId, playerId);
+    this.clearVacantSeatSnapshot(roomId, seatId);
 
     return { success: true };
   }
 
-  private clearVacantSeatSnapshot(roomId: string, playerId: string): void {
+  private clearVacantSeatSnapshot(roomId: string, targetSeatId: SeatId): void {
     const roomVacantSeats = this.vacantSeats[roomId];
     if (!roomVacantSeats) {
       return;
     }
 
     for (const [seatId, seatData] of Object.entries(roomVacantSeats)) {
-      if (seatId === playerId || seatData.roomPlayer.playerId === playerId) {
+      if (
+        seatId === targetSeatId ||
+        seatData.roomPlayer.seatId === targetSeatId
+      ) {
         delete roomVacantSeats[asSeatId(seatId)];
       }
     }

@@ -11,8 +11,7 @@ export enum RoomStatus {
 }
 
 export interface RoomPlayer extends SessionUser, PlayerGameplayState {
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   participantKey?: string;
   isReady: boolean;
   isHost: boolean;
@@ -23,9 +22,7 @@ export interface RoomPlayer extends SessionUser, PlayerGameplayState {
 export interface Room {
   id: string;
   name: string;
-  hostSeatId?: SeatId;
-  /** @deprecated Use hostSeatId. */
-  hostId: string;
+  hostSeatId: SeatId;
   status: RoomStatus;
   players: RoomPlayer[];
   settings: RoomSettings;

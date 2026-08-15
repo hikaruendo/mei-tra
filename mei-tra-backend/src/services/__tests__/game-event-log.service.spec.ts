@@ -21,12 +21,10 @@ describe('GameEventLogService', () => {
         players: [
           {
             seatId: asSeatId('seat-1'),
-            playerId: 'player-1',
             name: 'Player One',
           },
         ],
         currentSeatId: asSeatId('seat-1'),
-        currentPlayerId: 'player-1',
         gamePhase: 'play',
         roundNumber: 2,
         teamScores: { 0: { play: 2, total: 4 }, 1: { play: 1, total: 3 } },

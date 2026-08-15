@@ -58,8 +58,8 @@ interface GameBoardProps {
   onSelectNegri: (card: string) => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
-  onRemovePlayer: (playerId: string) => void;
-  onReplaceWithCOM: (playerId: string) => void;
+  onRemovePlayer: (seatId: string) => void;
+  onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
   actionsDisabled?: boolean;
   history?: GameHistoryData;
@@ -97,24 +97,24 @@ export function GameBoard({
   >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hostPlayerId =
-    game.players.find((p) => p.isHost)?.playerId ??
-    game.players[0]?.playerId ??
+  const hostSeatId =
+    game.players.find((p) => p.isHost)?.seatId ??
+    game.players[0]?.seatId ??
     null;
-  const perspectivePlayerId = game.isSpectator
-    ? spectatorPerspectiveId ?? hostPlayerId
+  const perspectiveSeatId = game.isSpectator
+    ? spectatorPerspectiveId ?? hostSeatId
     : game.youSeatId;
 
   useEffect(() => {
     if (!game.isSpectator) return;
     const valid = game.players.some(
-      (p) => p.playerId === spectatorPerspectiveId,
+      (p) => p.seatId === spectatorPerspectiveId,
     );
-    if (!valid) setSpectatorPerspectiveId(hostPlayerId);
-  }, [game.isSpectator, game.players, hostPlayerId, spectatorPerspectiveId]);
+    if (!valid) setSpectatorPerspectiveId(hostSeatId);
+  }, [game.isSpectator, game.players, hostSeatId, spectatorPerspectiveId]);
 
   const self = game.players.find(
-    (player) => player.playerId === perspectivePlayerId,
+    (player) => player.seatId === perspectiveSeatId,
   );
   const { width: windowWidth } = useWindowDimensions();
   // Size the fan from the hand it actually renders. Spectators have no
@@ -126,8 +126,8 @@ export function GameBoard({
   const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
     useHandFanMetrics(fanAvailableWidth, selfHandCount);
   const orderedPlayers = useMemo(
-    () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
-    [game.players, perspectivePlayerId],
+    () => getSeatOrderWithSelfBottom(game.players, perspectiveSeatId),
+    [game.players, perspectiveSeatId],
   );
   const leftPlayer = orderedPlayers[1] ?? null;
   const topPlayer = orderedPlayers[2] ?? null;
@@ -160,7 +160,7 @@ export function GameBoard({
   const mustSelectNegri =
     !game.isSpectator &&
     game.gamePhase === 'play' &&
-    highest?.playerId === game.youSeatId &&
+    highest?.seatId === game.youSeatId &&
     !game.negriCard;
   const isMyTurn =
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
@@ -293,31 +293,31 @@ export function GameBoard({
           {opponentSlots.map(({ player, position }) => {
             const hasNegri =
               game.gamePhase === 'play' &&
-              game.negriSeatId === player.playerId;
-            const blowWinnerId = highest?.playerId;
+              game.negriSeatId === player.seatId;
+            const blowWinnerId = highest?.seatId;
             const hasAgari =
               game.gamePhase === 'play' &&
               game.revealedAgari &&
-              blowWinnerId === player.playerId;
+              blowWinnerId === player.seatId;
             const seatEl = (
               <PlayerSeat
-                key={player.playerId}
+                key={player.seatId}
                 agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
                 declaration={
-                  highest && highest.playerId === player.playerId
+                  highest && highest.seatId === player.seatId
                     ? `${TRUMP_LABELS[highest.trumpType]} ${highest.numberOfPairs}`
                     : undefined
                 }
-                isBlowWinner={blowWinnerId === player.playerId}
-                isDisconnected={game.disconnectedPlayerIds.includes(
-                  player.playerId,
+                isBlowWinner={blowWinnerId === player.seatId}
+                isDisconnected={game.disconnectedSeatIds.includes(
+                  player.seatId,
                 )}
-                isIdle={game.idlePlayerIds.includes(player.playerId)}
-                isTurn={game.currentTurnSeatId === player.playerId}
+                isIdle={game.idleSeatIds.includes(player.seatId)}
+                isTurn={game.currentTurnSeatId === player.seatId}
                 negriCard={hasNegri ? 'hidden' : undefined}
                 onPress={
                   game.isSpectator
-                    ? () => setSpectatorPerspectiveId(player.playerId)
+                    ? () => setSpectatorPerspectiveId(player.seatId)
                     : undefined
                 }
                 player={player}
@@ -333,7 +333,7 @@ export function GameBoard({
                   : styles.seatRight;
             const wrapped = isHost && !player.isCOM ? (
               <Pressable
-                key={player.playerId}
+                key={player.seatId}
                 onLongPress={() => {
                   Alert.alert(
                     player.name,
@@ -341,12 +341,12 @@ export function GameBoard({
                     [
                       {
                         text: 'COMに置換',
-                        onPress: () => onReplaceWithCOM(player.playerId),
+                        onPress: () => onReplaceWithCOM(player.seatId),
                       },
                       {
                         text: '退出させる',
                         style: 'destructive',
-                        onPress: () => onRemovePlayer(player.playerId),
+                        onPress: () => onRemovePlayer(player.seatId),
                       },
                       { text: 'キャンセル', style: 'cancel' },
                     ],
@@ -356,19 +356,19 @@ export function GameBoard({
                 {seatEl}
               </Pressable>
             ) : seatEl;
-            const isDisconnected = game.disconnectedPlayerIds.includes(
-              player.playerId,
+            const isDisconnected = game.disconnectedSeatIds.includes(
+              player.seatId,
             );
-            const isIdle = game.idlePlayerIds.includes(player.playerId);
+            const isIdle = game.idleSeatIds.includes(player.seatId);
             // Matches the web condition (PlayerHand/index.tsx): the host never
             // sees the control on their own seat.
             const showReplacePanel =
               isHost &&
               !player.isCOM &&
-              player.playerId !== game.youSeatId &&
+              player.seatId !== game.youSeatId &&
               (isDisconnected || isIdle);
             return (
-              <View key={player.playerId} style={posStyle}>
+              <View key={player.seatId} style={posStyle}>
                 {wrapped}
                 {showReplacePanel ? (
                   <View style={styles.replacePanel}>
@@ -376,7 +376,7 @@ export function GameBoard({
                       {isDisconnected ? '切断中' : '無操作'}
                     </Text>
                     <Pressable
-                      onPress={() => onReplaceWithCOM(player.playerId)}
+                      onPress={() => onReplaceWithCOM(player.seatId)}
                       style={styles.replacePanelButton}
                     >
                       <Text style={styles.replacePanelButtonText}>
@@ -395,9 +395,9 @@ export function GameBoard({
             <View style={styles.fieldCenter}>
               {game.currentField?.cards.length ? (
                 game.currentField.cards.map((card, index) => {
-                  const playerId = game.currentField!.playedBy[index];
+                  const seatId = game.currentField!.playedBySeatIds[index];
                   const seat = getCardSeatPosition(
-                    playerId,
+                    seatId,
                     orderedPlayers,
                   );
                   const seatOffsets: Record<string, { x: number; y: number }> = {
@@ -463,7 +463,7 @@ export function GameBoard({
           <BlowControls
             actionHistory={game.blowState.actionHistory}
             actionsDisabled={actionsDisabled || game.isSpectator}
-            currentPlayerId={game.youSeatId}
+            currentSeatId={game.youSeatId}
             currentTurn={game.currentTurnSeatId}
             highest={highest}
             onDeclare={onDeclare}
@@ -479,7 +479,7 @@ export function GameBoard({
                 style={[
                   styles.selfCard,
                   (game.isSpectator
-                    ? game.currentTurnSeatId === self.playerId
+                    ? game.currentTurnSeatId === self.seatId
                     : isMyTurn) && styles.selfCardTurn,
                 ]}
               >
@@ -499,7 +499,7 @@ export function GameBoard({
                 <Text style={styles.selfFieldCountText}>
                   取得 {teamFieldCounts[self.team] ?? 0}場
                 </Text>
-                {game.gamePhase === 'play' && game.negriCard && highest?.playerId === self.playerId ? (
+                {game.gamePhase === 'play' && game.negriCard && highest?.seatId === self.seatId ? (
                   <View style={styles.selfSpecialRow}>
                     <PlayingCard card={game.negriCard} size="seat" />
                     <Text style={styles.selfSpecialLabel}>ネグリ</Text>
@@ -646,12 +646,12 @@ export function GameBoard({
                 .filter(
                   (p) =>
                     !p.isCOM &&
-                    game.disconnectedPlayerIds.includes(p.playerId),
+                    game.disconnectedSeatIds.includes(p.seatId),
                 )
                 .map((p) => (
                   <Pressable
-                    key={p.playerId}
-                    onPress={() => onReplaceWithCOM(p.playerId)}
+                    key={p.seatId}
+                    onPress={() => onReplaceWithCOM(p.seatId)}
                     style={styles.pausedReplaceButton}
                   >
                     <Text style={styles.pausedReplaceButtonText}>

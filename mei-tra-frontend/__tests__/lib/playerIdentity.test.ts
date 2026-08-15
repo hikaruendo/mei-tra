@@ -1,36 +1,36 @@
-import { resolveSelfPlayerId } from '@/lib/utils/playerIdentity';
+import { resolveSelfSeatId } from '@/lib/utils/playerIdentity';
 
-describe('resolveSelfPlayerId', () => {
+describe('resolveSelfSeatId', () => {
   const players = [
-    { playerId: 'seat-1', userId: 'user-1' },
-    { playerId: 'seat-2', userId: 'user-2' },
+    { seatId: 'seat-1', userId: 'user-1' },
+    { seatId: 'seat-2', userId: 'user-2' },
   ];
 
   it('prefers an authoritative server player id', () => {
     expect(
-      resolveSelfPlayerId(players, {
+      resolveSelfSeatId(players, {
         userId: 'user-1',
-        serverPlayerId: 'seat-2',
-        fallbackPlayerId: 'stale-seat',
+        serverSeatId: 'seat-2',
+        fallbackSeatId: 'stale-seat',
       }),
     ).toBe('seat-2');
   });
 
   it('resolves the seat from the authenticated user before a stale fallback', () => {
     expect(
-      resolveSelfPlayerId(players, {
+      resolveSelfSeatId(players, {
         userId: 'user-1',
-        fallbackPlayerId: 'seat-2',
+        fallbackSeatId: 'seat-2',
       }),
     ).toBe('seat-1');
   });
 
   it('does not guess from an ambiguous user mapping', () => {
     expect(
-      resolveSelfPlayerId(
+      resolveSelfSeatId(
         [
           ...players,
-          { playerId: 'seat-3', userId: 'user-1' },
+          { seatId: 'seat-3', userId: 'user-1' },
         ],
         { userId: 'user-1' },
       ),

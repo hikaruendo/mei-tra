@@ -3,7 +3,6 @@ import type {
   JoinRoomPayload,
   LeaveRoomPayload,
   ModeratePlayerPayload,
-  NameUpdatedPayload,
   RoomActionPayload,
 } from '@meitra/contracts/socket';
 import { asSeatId } from '@meitra/contracts/ids';
@@ -36,20 +35,6 @@ describe('socket contract client payload shapes', () => {
       action: 'remove',
     });
   });
-
-  it('models name-updated as an explicit success or error union', () => {
-    const successPayload: NameUpdatedPayload = {
-      success: true,
-      name: 'Player 1',
-    };
-    const errorPayload: NameUpdatedPayload = {
-      success: false,
-      error: 'Name updates not supported',
-    };
-
-    expect(successPayload.success).toBe(true);
-    expect(errorPayload.success).toBe(false);
-  });
 });
 
 const forbiddenJoinPayload: JoinRoomPayload = {
@@ -57,7 +42,7 @@ const forbiddenJoinPayload: JoinRoomPayload = {
   // @ts-expect-error clients must not provide trusted join identity.
   user: {
     socketId: 'attacker-socket',
-    playerId: 'victim-player',
+    seatId: 'victim-player',
     userId: 'victim-user',
     name: 'Victim',
     isAuthenticated: true,
@@ -68,10 +53,6 @@ void forbiddenJoinPayload;
 const forbiddenActionPayload: RoomActionPayload = {
   roomId: 'room-1',
   // @ts-expect-error clients must not provide trusted actor identity.
-  playerId: 'victim-player',
+  seatId: 'victim-player',
 };
 void forbiddenActionPayload;
-
-// @ts-expect-error name is required on successful name-updated payloads.
-const forbiddenNamePayload: NameUpdatedPayload = { success: true };
-void forbiddenNamePayload;

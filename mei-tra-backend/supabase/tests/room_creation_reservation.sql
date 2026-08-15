@@ -34,7 +34,7 @@ declare
 begin
   result := public.reserve_room_membership(
     test_user,
-    host_seat::text,
+    host_seat,
     initial_transition
   );
   if result->>'result' <> 'reserved' then
@@ -64,7 +64,7 @@ begin
 
   result := public.reserve_room_membership(
     test_user,
-    host_seat::text,
+    host_seat,
     recovered_transition
   );
   if result->>'result' <> 'reserved' then
@@ -107,7 +107,7 @@ begin
 
   result := public.reserve_room_membership(
     test_user,
-    host_seat::text,
+    host_seat,
     create_transition
   );
   if result->>'result' <> 'reserved' then

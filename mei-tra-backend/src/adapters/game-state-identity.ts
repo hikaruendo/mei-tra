@@ -1,46 +1,35 @@
-import { asSeatId } from './identity.types';
-import type { Field, GameState } from './game.types';
+import { asSeatId } from '../types/identity.types';
+import type { Field, GameState } from '../types/game.types';
 
 function normalizePlayedBySeatIds(field: Field) {
-  const playedBySeatIds = (field.playedBySeatIds ?? field.playedBy).map(
-    asSeatId,
-  );
-  const hasDuplicatedAttributions =
-    field.cards.length > 0 &&
-    playedBySeatIds.length === field.cards.length * 2 &&
-    field.cards.every(
-      (_, cardIndex) =>
-        playedBySeatIds[cardIndex * 2] === playedBySeatIds[cardIndex * 2 + 1],
-    );
-
-  return hasDuplicatedAttributions
-    ? field.cards.map((_, cardIndex) => playedBySeatIds[cardIndex * 2])
-    : playedBySeatIds;
+  return field.playedBySeatIds.map(asSeatId);
 }
 
-export function normalizeGameStateIdentityAliases(state: GameState): GameState {
+export function normalizeGameStateIdentity(state: GameState): GameState {
   const currentSeatId = state.currentSeatId
     ? asSeatId(state.currentSeatId)
     : null;
   const players = state.players.map((player) => {
-    const seatId = player.seatId ?? asSeatId(player.playerId);
-    return { ...player, seatId, playerId: seatId };
+    return { ...player, seatId: asSeatId(player.seatId) };
   });
   const blowState = {
     ...state.blowState,
     declarations: state.blowState.declarations.map((declaration) => {
-      const seatId = declaration.seatId ?? asSeatId(declaration.playerId);
-      return { ...declaration, seatId, playerId: seatId };
+      return {
+        ...declaration,
+        seatId: asSeatId(declaration.seatId),
+      };
     }),
     actionHistory: state.blowState.actionHistory.map((action) => {
-      const seatId = action.seatId ?? asSeatId(action.playerId);
-      return { ...action, seatId, playerId: seatId };
+      return { ...action, seatId: asSeatId(action.seatId) };
     }),
     currentHighestDeclaration: state.blowState.currentHighestDeclaration
       ? (() => {
           const declaration = state.blowState.currentHighestDeclaration;
-          const seatId = declaration.seatId ?? asSeatId(declaration.playerId);
-          return { ...declaration, seatId, playerId: seatId };
+          return {
+            ...declaration,
+            seatId: asSeatId(declaration.seatId),
+          };
         })()
       : null,
     lastPasserSeatId: state.blowState.lastPasserSeatId ?? null,
@@ -52,7 +41,7 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
           const negriSeatId =
             state.playState.negriSeatId ??
             (state.playState.negriCard && blowState.currentHighestDeclaration
-              ? asSeatId(blowState.currentHighestDeclaration.playerId)
+              ? blowState.currentHighestDeclaration.seatId
               : null);
           return { negriSeatId };
         })(),
@@ -63,7 +52,6 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
               const dealerSeatId = field.dealerSeatId;
               return {
                 ...field,
-                playedBy: [...playedBySeatIds],
                 playedBySeatIds: [...playedBySeatIds],
                 dealerSeatId,
               };
@@ -80,13 +68,9 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
     : undefined;
   const pendingBrokenHandReveal = state.pendingBrokenHandReveal
     ? (() => {
-        const seatId =
-          state.pendingBrokenHandReveal.seatId ??
-          asSeatId(state.pendingBrokenHandReveal.playerId);
         return {
           ...state.pendingBrokenHandReveal,
-          seatId,
-          playerId: seatId,
+          seatId: asSeatId(state.pendingBrokenHandReveal.seatId),
         };
       })()
     : state.pendingBrokenHandReveal;
@@ -99,9 +83,6 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
     blowState,
     playState,
     pendingBrokenHandReveal,
-    teamAssignments: Object.fromEntries(
-      players.map((player) => [player.playerId, player.team]),
-    ),
   };
 
   return normalizedState;

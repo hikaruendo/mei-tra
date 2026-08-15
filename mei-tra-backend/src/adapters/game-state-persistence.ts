@@ -6,8 +6,8 @@ import {
   Field,
   PendingBrokenHandReveal,
   PlayState,
-} from './game.types';
-import { asSeatId, SeatId } from './identity.types';
+} from '../types/game.types';
+import { asSeatId, SeatId } from '../types/identity.types';
 
 const SCALAR_SEAT_FIELDS = new Set([
   'seatId',
@@ -21,21 +21,13 @@ const SCALAR_SEAT_FIELDS = new Set([
 ]);
 
 const ARRAY_SEAT_FIELDS = new Set(['playedBySeatIds']);
-const SEAT_KEYED_FIELDS = new Set([
-  'playerStates',
-  'playerNames',
-  'neguri',
-  'teamAssignments',
-]);
+const SEAT_KEYED_FIELDS = new Set(['playerStates', 'playerNames', 'neguri']);
 
-export type PersistedBlowDeclaration = Omit<
-  BlowDeclaration,
-  'playerId' | 'seatId'
-> & {
+export type PersistedBlowDeclaration = Omit<BlowDeclaration, 'seatId'> & {
   seatId: SeatId;
 };
 
-export type PersistedBlowAction = Omit<BlowAction, 'playerId' | 'seatId'> & {
+export type PersistedBlowAction = Omit<BlowAction, 'seatId'> & {
   seatId: SeatId;
 };
 
@@ -44,7 +36,6 @@ export type PersistedBlowState = Omit<
   | 'currentHighestDeclaration'
   | 'declarations'
   | 'actionHistory'
-  | 'lastPasser'
   | 'lastPasserSeatId'
 > & {
   currentHighestDeclaration: PersistedBlowDeclaration | null;
@@ -53,7 +44,7 @@ export type PersistedBlowState = Omit<
   lastPasserSeatId: SeatId | null;
 };
 
-export type PersistedField = Omit<Field, 'playedBy' | 'playedBySeatIds'> & {
+export type PersistedField = Omit<Field, 'playedBySeatIds'> & {
   playedBySeatIds: SeatId[];
   dealerSeatId: SeatId;
 };
@@ -63,12 +54,9 @@ export type PersistedCompletedField = CompletedField;
 export type PersistedPlayState = Omit<
   PlayState,
   | 'currentField'
-  | 'negriPlayerId'
   | 'negriSeatId'
   | 'fields'
-  | 'lastWinnerId'
   | 'lastWinnerSeatId'
-  | 'openDeclarerId'
   | 'openDeclarerSeatId'
 > & {
   currentField: PersistedField | null;
@@ -80,7 +68,7 @@ export type PersistedPlayState = Omit<
 
 export type PersistedPendingBrokenHandReveal = Omit<
   PendingBrokenHandReveal,
-  'playerId' | 'seatId'
+  'seatId'
 > & {
   seatId: SeatId;
 };
@@ -98,15 +86,15 @@ function toPersistedBlowDeclaration(
   declaration: BlowDeclaration,
 ): PersistedBlowDeclaration {
   return {
-    ...omitKeys(declaration, ['playerId', 'seatId']),
-    seatId: declaration.seatId ?? asSeatId(declaration.playerId),
+    ...omitKeys(declaration, ['seatId']),
+    seatId: declaration.seatId,
   } as PersistedBlowDeclaration;
 }
 
 function toPersistedBlowAction(action: BlowAction): PersistedBlowAction {
   return {
-    ...omitKeys(action, ['playerId', 'seatId']),
-    seatId: action.seatId ?? asSeatId(action.playerId),
+    ...omitKeys(action, ['seatId']),
+    seatId: action.seatId,
   } as PersistedBlowAction;
 }
 
@@ -118,7 +106,6 @@ export function toPersistedBlowState(blowState: BlowState): PersistedBlowState {
       'currentHighestDeclaration',
       'declarations',
       'actionHistory',
-      'lastPasser',
       'lastPasserSeatId',
     ]),
     currentHighestDeclaration: blowState.currentHighestDeclaration
@@ -132,9 +119,8 @@ export function toPersistedBlowState(blowState: BlowState): PersistedBlowState {
 
 function toPersistedField(field: Field): PersistedField {
   return {
-    ...omitKeys(field, ['playedBy', 'playedBySeatIds']),
-    playedBySeatIds:
-      field.playedBySeatIds ?? field.playedBy.map((seatId) => asSeatId(seatId)),
+    ...omitKeys(field, ['playedBySeatIds']),
+    playedBySeatIds: field.playedBySeatIds.map(asSeatId),
     dealerSeatId: field.dealerSeatId,
   } as PersistedField;
 }
@@ -155,12 +141,9 @@ export function toPersistedPlayState(
   return {
     ...omitKeys(playState, [
       'currentField',
-      'negriPlayerId',
       'negriSeatId',
       'fields',
-      'lastWinnerId',
       'lastWinnerSeatId',
-      'openDeclarerId',
       'openDeclarerSeatId',
     ]),
     currentField: playState.currentField
@@ -181,8 +164,8 @@ export function toPersistedPendingBrokenHandReveal(
   }
 
   return {
-    ...omitKeys(pendingReveal, ['playerId', 'seatId']),
-    seatId: pendingReveal.seatId ?? asSeatId(pendingReveal.playerId),
+    ...omitKeys(pendingReveal, ['seatId']),
+    seatId: pendingReveal.seatId,
   } as PersistedPendingBrokenHandReveal;
 }
 

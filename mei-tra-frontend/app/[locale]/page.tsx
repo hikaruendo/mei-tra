@@ -96,7 +96,7 @@ export default function Home() {
     numberOfPairs = 0,
     setNumberOfPairs,
     teamScores = { 0: { deal: 0, blow: 0, play: 0, total: 0 }, 1: { deal: 0, blow: 0, play: 0, total: 0 } },
-    currentPlayerId = null,
+    currentSeatId = null,
     notification,
     setNotification,
     gameOverModal = null,
@@ -110,8 +110,8 @@ export default function Home() {
     updateTeamNames,
     removePlayerFromRoom,
     replacePlayerWithCOM,
-    idlePlayerIds = [],
-    disconnectedPlayerIds = [],
+    idleSeatIds = [],
+    disconnectedSeatIds = [],
     paused = false,
     pointsToWin = 0,
     isConnected = false,
@@ -143,7 +143,7 @@ export default function Home() {
       return;
     }
 
-    if (socket && currentRoomId && currentPlayerId) {
+    if (socket && currentRoomId && currentSeatId) {
       socket.emit('leave-room', { roomId: currentRoomId });
     }
   };
@@ -183,7 +183,7 @@ export default function Home() {
                   isConnected={isConnected}
                   isConnecting={isConnecting}
                   users={users}
-                  currentPlayerId={currentPlayerId}
+                  currentSeatId={currentSeatId}
                 />
                 <Footer />
               </div>
@@ -195,7 +195,7 @@ export default function Home() {
                 {!gameStarted ? (
                   <PreGameTable
                     players={players}
-                    currentPlayerId={currentPlayerId}
+                    currentSeatId={currentSeatId}
                     isHost={isHost}
                     onStart={startGame}
                     onLeave={handleLeaveRoom}
@@ -223,13 +223,13 @@ export default function Home() {
                   numberOfPairs={numberOfPairs}
                   setNumberOfPairs={setNumberOfPairs}
                   teamScores={teamScores}
-                  currentPlayerId={currentPlayerId}
+                  currentSeatId={currentSeatId}
                   currentRoomId={currentRoomId}
                   isHost={isHost}
                   isSpectator={isSpectator}
                   teamNames={teamNames}
-                  idlePlayerIds={idlePlayerIds}
-                  disconnectedPlayerIds={disconnectedPlayerIds}
+                  idleSeatIds={idleSeatIds}
+                  disconnectedSeatIds={disconnectedSeatIds}
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
