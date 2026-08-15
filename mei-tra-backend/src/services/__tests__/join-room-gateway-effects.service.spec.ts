@@ -161,7 +161,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       roomId: 'room-1',
       normalizedUser: {
         socketId: 'socket-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Host',
       },
       joinData: {
@@ -242,7 +242,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       roomId: 'room-1',
       normalizedUser: {
         socketId: 'socket-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Host',
       },
       joinData: {
@@ -411,7 +411,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       roomId: 'room-1',
       normalizedUser: {
         socketId: 'socket-1',
-        playerId: 'stale-player',
+        seatId: asSeatId('stale-player'),
         userId: 'user-1',
         name: 'User 1',
         isAuthenticated: true,
@@ -501,7 +501,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       roomId: 'room-1',
       normalizedUser: {
         socketId: 'socket-1',
-        playerId: 'stale-player',
+        seatId: asSeatId('stale-player'),
         userId: 'user-1',
         name: 'User 1',
         isAuthenticated: true,

@@ -244,7 +244,6 @@ describe('Game Use Cases', () => {
         expect.objectContaining({
           name: 'Display Name',
           socketId: 'socket-1',
-          playerId: 'user-1',
           userId: 'user-1',
           isAuthenticated: true,
         }),
@@ -282,7 +281,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.normalizedUser?.playerId).toBe('seat-1');
+      expect(result.normalizedUser?.seatId).toBe('seat-1');
       expect(result.data?.isHost).toBe(true);
     });
 
@@ -395,7 +394,6 @@ describe('Game Use Cases', () => {
       expect(createRoomMock).toHaveBeenCalledWith(
         'Room',
         expect.objectContaining({
-          playerId: 'player-1',
           userId: 'player-1',
           socketId: 'socket-1',
         }),
@@ -4169,7 +4167,6 @@ describe('Game Use Cases', () => {
       expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
         expect.objectContaining({
           socketId: 'socket-1',
-          playerId: 'user-1',
           name: 'User Display',
           userId: 'user-1',
           isAuthenticated: true,

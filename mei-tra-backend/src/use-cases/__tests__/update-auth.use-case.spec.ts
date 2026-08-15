@@ -6,6 +6,7 @@ import { AuthenticatedUser } from '../../types/user.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { GameStateService } from '../../services/game-state.service';
 import { PlayerConnectionState, SessionUser } from '../../types/session.types';
+import { asSeatId } from '../../types/identity.types';
 
 describe('UpdateAuthUseCase', () => {
   const createAuthServiceMock = () =>
@@ -48,7 +49,7 @@ describe('UpdateAuthUseCase', () => {
     const users: SessionUser[] = [
       {
         socketId: 'socket-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Old Name',
         userId: 'user-1',
         isAuthenticated: true,
@@ -164,7 +165,7 @@ describe('UpdateAuthUseCase', () => {
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
         socketId: 'socket-1',
-        playerId: 'player-1',
+        seatId: 'player-1',
         name: 'User Display',
         userId: 'user-1',
         isAuthenticated: true,

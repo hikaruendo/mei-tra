@@ -275,8 +275,7 @@ export class DisconnectGatewayEffectsService {
     if (disconnectedSessionUser) {
       return (
         players.find(
-          (candidate) =>
-            candidate.playerId === disconnectedSessionUser.playerId,
+          (candidate) => candidate.seatId === disconnectedSessionUser.seatId,
         ) ?? null
       );
     }

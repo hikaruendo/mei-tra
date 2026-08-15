@@ -430,7 +430,7 @@ export class ReconnectionUseCase {
 
     this.gameState.upsertSessionUser({
       socketId,
-      playerId,
+      seatId: asSeatId(playerId),
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -492,9 +492,8 @@ export class ReconnectionUseCase {
 
     if (sessionUser) {
       const sessionMatchedPlayer =
-        roomPlayers.find(
-          (player) => player.playerId === sessionUser.playerId,
-        ) ?? null;
+        roomPlayers.find((player) => player.seatId === sessionUser.seatId) ??
+        null;
       if (sessionMatchedPlayer) {
         return sessionMatchedPlayer;
       }

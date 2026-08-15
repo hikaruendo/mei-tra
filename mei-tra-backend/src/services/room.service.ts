@@ -188,7 +188,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const canonicalHostUser: SessionUser = {
       ...hostUser,
       seatId: hostSeatId,
-      playerId: hostSeatId,
     };
     const reservation = await this.roomMembershipService.reserve(
       hostUserId,
@@ -612,7 +611,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     );
     if (roomMatches.length === 1) {
       const seatId = asSeatId(roomMatches[0].playerId);
-      return { ...user, seatId, playerId: seatId };
+      return { ...user, seatId };
     }
     if (roomMatches.length > 1) {
       throw new Error(
@@ -628,7 +627,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       return {
         ...user,
         seatId,
-        playerId: seatId,
       };
     }
     if (vacantMatches.length > 1) {
@@ -640,7 +638,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     const membership = await this.roomMembershipService.get(user.userId);
     if (membership?.roomId === roomId) {
       const seatId = membership.seatId;
-      return { ...user, seatId, playerId: seatId };
+      return { ...user, seatId };
     }
 
     return user;

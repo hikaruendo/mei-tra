@@ -64,7 +64,6 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
       const hostUser: SessionUser = {
         socketId,
-        playerId: authenticatedUser.id,
         name: playerName,
         userId: authenticatedUser.id,
         isAuthenticated: true,

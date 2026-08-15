@@ -79,17 +79,20 @@ export class JoinRoomGatewayEffectsService {
     const events: GatewayEvent[] = [];
     let room = joinData.room;
     const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
-    const selfPlayerId = selfRoomPlayer?.playerId ?? normalizedUser.playerId;
+    if (!selfRoomPlayer) {
+      throw new Error(
+        `Joined seat could not be resolved: room=${roomId} user=${normalizedUser.userId ?? 'unknown'}`,
+      );
+    }
+    const selfPlayerId = selfRoomPlayer.playerId;
 
-    if (currentRoomId && currentRoomId !== roomId) {
+    if (currentRoomId && currentRoomId !== roomId && previousRoomNotification) {
       events.push({
         scope: 'room',
         roomId: currentRoomId,
         event: 'player-left',
         payload: {
-          seatId: asSeatId(
-            previousRoomNotification?.playerId ?? normalizedUser.playerId,
-          ),
+          seatId: asSeatId(previousRoomNotification.playerId),
           roomId: currentRoomId,
         },
       });
@@ -294,7 +297,7 @@ export class JoinRoomGatewayEffectsService {
     }
 
     return room.players.find(
-      (player) => player.playerId === normalizedUser.playerId,
+      (player) => player.playerId === normalizedUser.seatId,
     );
   }
 
@@ -310,11 +313,13 @@ export class JoinRoomGatewayEffectsService {
       return selfRoomPlayer.playerId;
     }
 
-    if (gamePlayerIds.has(normalizedUser.playerId)) {
-      return normalizedUser.playerId;
+    if (normalizedUser.seatId && gamePlayerIds.has(normalizedUser.seatId)) {
+      return normalizedUser.seatId;
     }
 
-    return normalizedUser.playerId;
+    throw new Error(
+      `Resume seat could not be resolved: room=${room.id} user=${normalizedUser.userId ?? 'unknown'}`,
+    );
   }
 
   async buildRoomEntryEvents({

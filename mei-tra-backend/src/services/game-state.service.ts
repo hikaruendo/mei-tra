@@ -341,7 +341,7 @@ export class GameStateService implements IGameStateService {
     if (sessionUser) {
       return (
         this.state.players.find(
-          (player) => player.playerId === sessionUser.playerId,
+          (player) => player.seatId === sessionUser.seatId,
         ) || null
       );
     }
@@ -363,7 +363,7 @@ export class GameStateService implements IGameStateService {
 
     return (
       this.state.players.find(
-        (player) => player.playerId === sessionUser.playerId,
+        (player) => player.seatId === sessionUser.seatId,
       ) ?? null
     );
   }

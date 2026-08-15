@@ -183,8 +183,7 @@ export function toRoomPlayer(params: {
     socketId: params.session.socketId,
     seatId,
     playerId: seatId,
-    participantKey:
-      params.participantKey ?? params.session.userId ?? params.session.playerId,
+    participantKey: params.participantKey ?? params.session.userId ?? seatId,
     name: params.gameplay.name,
     userId: params.session.userId,
     isAuthenticated: params.session.isAuthenticated,

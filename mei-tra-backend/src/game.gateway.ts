@@ -631,7 +631,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const syncResult = this.gameState.upsertSessionUser({
       socketId: client.id,
-      playerId: userId,
       name: displayName,
       userId,
       isAuthenticated: true,

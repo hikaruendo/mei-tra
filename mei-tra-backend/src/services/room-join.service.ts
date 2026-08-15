@@ -56,7 +56,7 @@ export class RoomJoinService {
         }
         return user.userId
           ? seatData.roomPlayer.userId === user.userId
-          : seatData.roomPlayer.playerId === user.playerId;
+          : seatData.roomPlayer.seatId === user.seatId;
       })?.[0];
       const reclaimingCOMSeat = Boolean(
         existingPlayer.isCOM &&
@@ -69,7 +69,7 @@ export class RoomJoinService {
         seatId: resolveSeatId(existingPlayer),
         playerId: resolveSeatId(existingPlayer),
         participantKey:
-          user.userId ?? existingPlayer.participantKey ?? user.playerId,
+          user.userId ?? existingPlayer.participantKey ?? user.seatId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
         isHost: room.hostId === existingPlayer.playerId,
@@ -125,7 +125,8 @@ export class RoomJoinService {
     let restoredSeatData: RestoredSeatData | null = null;
 
     const matchingVacantEntry = vacantEntries.find(
-      ([, seatData]) => seatData.roomPlayer.playerId === user.playerId,
+      ([, seatData]) =>
+        user.seatId != null && seatData.roomPlayer.seatId === user.seatId,
     );
 
     if (matchingVacantEntry) {
@@ -138,7 +139,7 @@ export class RoomJoinService {
 
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
       restoredSeatData = seatData;
-      gameState.clearDisconnectTimeout(user.playerId);
+      gameState.clearDisconnectTimeout(vacantSeatId);
       delete roomVacant[asSeatId(vacantSeatId)];
       if (Object.keys(roomVacant).length === 0) {
         delete vacantSeats[roomId];
@@ -237,7 +238,7 @@ export class RoomJoinService {
       socketId: user.socketId,
       seatId: assignedSeatId,
       playerId: assignedSeatId,
-      participantKey: user.userId ?? user.playerId,
+      participantKey: user.userId ?? user.seatId ?? assignedSeatId,
       team: currentSeatRoomPlayer?.team ?? team,
       hand: [],
       isPasser: false,
@@ -329,7 +330,7 @@ export class RoomJoinService {
       }
     }
 
-    return players.find((player) => player.playerId === user.playerId);
+    return players.find((player) => player.seatId === user.seatId);
   }
 
   private isReplaceableCOMSeat(player: RoomPlayer): boolean {

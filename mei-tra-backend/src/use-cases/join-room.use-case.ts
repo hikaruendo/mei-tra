@@ -44,7 +44,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       );
       if (!joinSucceeded) {
         this.logger.warn(
-          `Join room failed for player ${normalizedUser.playerId} in room ${targetRoomId}`,
+          `Join room failed for user ${normalizedUser.userId} in room ${targetRoomId}`,
         );
         return {
           success: false,
@@ -69,7 +69,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       const joinedPlayer = this.resolveJoinedRoomPlayer(room, normalizedUser);
       if (!joinedPlayer) {
         this.logger.error(
-          `Joined player could not be resolved for user ${normalizedUser.userId ?? normalizedUser.playerId} in room ${targetRoomId}`,
+          `Joined player could not be resolved for user ${normalizedUser.userId} in room ${targetRoomId}`,
         );
         return {
           success: false,
@@ -80,7 +80,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       }
       const resolvedUser: SessionUser = {
         ...normalizedUser,
-        playerId: joinedPlayer.playerId,
+        seatId: asSeatId(joinedPlayer.playerId),
       };
       const data: JoinRoomSuccess = {
         room,
@@ -127,7 +127,6 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     return {
       socketId: request.socketId,
-      playerId: authenticatedUser.id,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -151,9 +150,8 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     }
 
     return (
-      room.players.find(
-        (player) => player.playerId === normalizedUser.playerId,
-      ) ?? null
+      room.players.find((player) => player.seatId === normalizedUser.seatId) ??
+      null
     );
   }
 
@@ -172,7 +170,10 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     return {
       roomId: currentRoomId,
-      playerId: currentRoomPlayer?.playerId ?? normalizedUser.playerId,
+      playerId:
+        currentRoomPlayer?.playerId ??
+        normalizedUser.seatId ??
+        normalizedUser.userId!,
     };
   }
 

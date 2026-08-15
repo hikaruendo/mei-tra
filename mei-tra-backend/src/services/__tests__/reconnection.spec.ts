@@ -1066,7 +1066,7 @@ describe('Reconnection Token Management', () => {
 
         const joined = await roomService.joinRoom(roomId, {
           socketId: 'socket-new',
-          playerId: 'user-new',
+          seatId: asSeatId('user-new'),
           userId: 'user-new',
           isAuthenticated: true,
           name: 'New Player',
@@ -1128,7 +1128,7 @@ describe('Reconnection Token Management', () => {
 
         const joined = await roomService.joinRoom(roomId, {
           socketId: 'socket-new',
-          playerId: 'user-new',
+          seatId: asSeatId('user-new'),
           userId: 'user-new',
           isAuthenticated: true,
           name: 'New Player',
@@ -1175,7 +1175,7 @@ describe('Reconnection Token Management', () => {
 
         const joined = await roomService.joinRoom(roomId, {
           socketId: 'socket-new',
-          playerId: 'user-new',
+          seatId: asSeatId('user-new'),
           userId: 'user-new',
           isAuthenticated: true,
           name: 'New Player',
@@ -1247,7 +1247,7 @@ describe('Reconnection Token Management', () => {
 
         const joined = await roomService.joinRoom(roomId, {
           socketId: 'socket-owner',
-          playerId: 'stale-player-id',
+          seatId: asSeatId('stale-player-id'),
           userId: 'user-owner',
           isAuthenticated: true,
           name: 'Owner',
@@ -1384,7 +1384,7 @@ describe('Reconnection Token Management', () => {
 
         const result = await roomService.joinRoom(roomId, {
           socketId: 'socket-new',
-          playerId: 'stale-player',
+          seatId: asSeatId('stale-player'),
           userId: 'user-1',
           isAuthenticated: true,
           name: 'Test Player',
@@ -2277,7 +2277,7 @@ describe('Reconnection Token Management', () => {
         const originalPlayerId = 'player-1';
         const newUser = {
           socketId: 'socket-2',
-          playerId: 'player-2', // Different playerId
+          seatId: asSeatId('player-2'),
           name: 'New Player',
         };
 

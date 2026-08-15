@@ -9,6 +9,7 @@ import { IGameStateService } from '../services/interfaces/game-state-service.int
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { AuthenticatedUser } from '../types/user.types';
+import { asSeatId } from '../types/identity.types';
 import {
   buildPlayerSyncEvents,
   buildRoomUpdatedEvent,
@@ -97,7 +98,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     const syncResult = this.gameState.upsertSessionUser({
       socketId,
-      playerId: playerId ?? authenticatedUser.id,
+      seatId: playerId ? asSeatId(playerId) : undefined,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,

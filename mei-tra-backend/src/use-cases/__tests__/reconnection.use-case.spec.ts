@@ -222,7 +222,7 @@ describe('ReconnectionUseCase', () => {
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
         socketId: 'socket-1',
-        playerId: 'seat-1',
+        seatId: 'seat-1',
         userId: 'user-1',
       }),
     );

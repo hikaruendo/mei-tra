@@ -102,7 +102,6 @@ describe('CreateRoomUseCase', () => {
     expect(roomService.createNewRoom).toHaveBeenCalledWith(
       'Test Game Room',
       expect.objectContaining({
-        playerId: userId,
         userId,
         socketId: 'socket-1',
       }),
@@ -112,7 +111,6 @@ describe('CreateRoomUseCase', () => {
     expect(roomService.joinRoom).toHaveBeenCalledWith(
       roomId,
       expect.objectContaining({
-        playerId: userId,
         userId,
         name: 'Test Player',
       }),

@@ -8,6 +8,7 @@ import { IComPlayerService } from '../interfaces/com-player-service.interface';
 import { ActiveRoomMembershipConflictError } from '../../types/room-membership.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { GameStateService } from '../game-state.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('RoomService active membership lifecycle', () => {
   const room: Room = {
@@ -101,7 +102,7 @@ describe('RoomService active membership lifecycle', () => {
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-1',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
@@ -137,7 +138,7 @@ describe('RoomService active membership lifecycle', () => {
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-new',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
@@ -146,7 +147,7 @@ describe('RoomService active membership lifecycle', () => {
     expect(membershipService.claim).not.toHaveBeenCalled();
     const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
     expect(joinRequest).toMatchObject({
-      user: { playerId: 'seat-1' },
+      user: { seatId: 'seat-1' },
     });
     expect(membershipService.get).toHaveBeenCalledWith('user-1');
   });
@@ -175,7 +176,7 @@ describe('RoomService active membership lifecycle', () => {
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-new',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
@@ -191,7 +192,7 @@ describe('RoomService active membership lifecycle', () => {
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-1',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
@@ -206,7 +207,7 @@ describe('RoomService active membership lifecycle', () => {
 
     await service.joinRoom('room-1', {
       socketId: 'socket-2',
-      playerId: 'user-1',
+      seatId: asSeatId('user-1'),
       userId: 'user-1',
       name: 'Player 1',
     });

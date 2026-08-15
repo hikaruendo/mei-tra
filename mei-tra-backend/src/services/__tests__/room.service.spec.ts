@@ -157,7 +157,7 @@ describe('RoomService join rollback', () => {
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-2',
-        playerId: 'user-2',
+        seatId: asSeatId('user-2'),
         userId: 'user-2',
         name: 'Player 2',
         isAuthenticated: true,

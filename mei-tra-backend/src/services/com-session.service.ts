@@ -28,7 +28,6 @@ export class ComSessionService {
       session: {
         socketId: `com-${idStr}`,
         seatId,
-        playerId: seatId,
         name: 'COM',
       },
       participantKey: `com-${idStr}-${seatId}`,
@@ -152,7 +151,6 @@ export class ComSessionService {
         session: {
           socketId: `com-${startingPlayerCount + i}`,
           seatId,
-          playerId: seatId,
           name: comPlayer.name,
         },
         participantKey: comPlayer.playerId,

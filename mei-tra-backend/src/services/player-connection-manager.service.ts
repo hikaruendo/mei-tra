@@ -20,18 +20,12 @@ export class PlayerConnectionManager {
     userId?: string,
     isAuthenticated?: boolean,
   ): boolean {
-    const playerId = userId || this.generateReconnectToken();
     this.users.push({
       socketId,
-      playerId,
       name,
       userId,
       isAuthenticated: isAuthenticated || false,
     });
-
-    if (userId) {
-      this.playerIds.set(userId, playerId);
-    }
 
     return true;
   }
@@ -45,7 +39,7 @@ export class PlayerConnectionManager {
   }
 
   findSessionUserByPlayerId(playerId: string): SessionUser | null {
-    return this.users.find((user) => user.playerId === playerId) || null;
+    return this.users.find((user) => user.seatId === playerId) || null;
   }
 
   upsertSessionUser(sessionUser: SessionUser): {
@@ -55,12 +49,15 @@ export class PlayerConnectionManager {
   } {
     const matchingUsers = this.users.filter(
       (user) =>
-        user.playerId === sessionUser.playerId ||
+        (sessionUser.seatId != null && user.seatId === sessionUser.seatId) ||
         (sessionUser.userId != null && user.userId === sessionUser.userId) ||
         (sessionUser.socketId !== '' && user.socketId === sessionUser.socketId),
     );
     const existingUser =
-      matchingUsers.find((user) => user.playerId === sessionUser.playerId) ??
+      matchingUsers.find(
+        (user) =>
+          sessionUser.seatId != null && user.seatId === sessionUser.seatId,
+      ) ??
       matchingUsers.find(
         (user) =>
           sessionUser.userId != null && user.userId === sessionUser.userId,
@@ -69,8 +66,8 @@ export class PlayerConnectionManager {
 
     if (!existingUser) {
       this.users.push(sessionUser);
-      if (sessionUser.userId) {
-        this.playerIds.set(sessionUser.userId, sessionUser.playerId);
+      if (sessionUser.userId && sessionUser.seatId) {
+        this.playerIds.set(sessionUser.userId, sessionUser.seatId);
       }
       return {
         user: sessionUser,
@@ -82,12 +79,11 @@ export class PlayerConnectionManager {
     const nextUserId = sessionUser.userId ?? existingUser.userId;
     const nextIsAuthenticated =
       sessionUser.isAuthenticated ?? existingUser.isAuthenticated;
-    const previousPlayerId = existingUser.playerId;
+    const previousSeatId = existingUser.seatId;
     const previousUserId = existingUser.userId;
     const changed =
       existingUser.socketId !== sessionUser.socketId ||
       existingUser.seatId !== sessionUser.seatId ||
-      existingUser.playerId !== sessionUser.playerId ||
       existingUser.name !== sessionUser.name ||
       existingUser.userId !== nextUserId ||
       existingUser.isAuthenticated !== nextIsAuthenticated;
@@ -95,7 +91,6 @@ export class PlayerConnectionManager {
     if (changed) {
       existingUser.socketId = sessionUser.socketId;
       existingUser.seatId = sessionUser.seatId;
-      existingUser.playerId = sessionUser.playerId;
       existingUser.name = sessionUser.name;
       existingUser.userId = nextUserId;
       existingUser.isAuthenticated = nextIsAuthenticated;
@@ -104,13 +99,13 @@ export class PlayerConnectionManager {
     if (
       previousUserId &&
       previousUserId !== sessionUser.userId &&
-      this.playerIds.get(previousUserId) === previousPlayerId
+      this.playerIds.get(previousUserId) === previousSeatId
     ) {
       this.playerIds.delete(previousUserId);
     }
 
-    if (sessionUser.userId) {
-      this.playerIds.set(sessionUser.userId, sessionUser.playerId);
+    if (sessionUser.userId && sessionUser.seatId) {
+      this.playerIds.set(sessionUser.userId, sessionUser.seatId);
     }
 
     for (const duplicateUser of matchingUsers) {
@@ -120,7 +115,7 @@ export class PlayerConnectionManager {
       if (
         duplicateUser.userId &&
         duplicateUser.userId !== sessionUser.userId &&
-        this.playerIds.get(duplicateUser.userId) === duplicateUser.playerId
+        this.playerIds.get(duplicateUser.userId) === duplicateUser.seatId
       ) {
         this.playerIds.delete(duplicateUser.userId);
       }
@@ -170,7 +165,7 @@ export class PlayerConnectionManager {
     }
 
     return (
-      players.find((player) => player.playerId === sessionUser.playerId) || null
+      players.find((player) => player.seatId === sessionUser.seatId) || null
     );
   }
 
@@ -217,7 +212,6 @@ export class PlayerConnectionManager {
     const { user } = this.upsertSessionUser({
       socketId,
       seatId: asSeatId(playerId),
-      playerId,
       name,
       userId: resolvedUserId,
       isAuthenticated:
@@ -273,9 +267,5 @@ export class PlayerConnectionManager {
       clearTimeout(timeout);
     }
     this.disconnectedPlayers.clear();
-  }
-
-  private generateReconnectToken(): string {
-    return Math.random().toString(36).substring(2, 15);
   }
 }

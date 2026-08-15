@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { PlayerConnectionManager } from '../player-connection-manager.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('PlayerConnectionManager', () => {
   it('disconnects only the requested player when other sockets are empty', () => {
@@ -8,20 +9,20 @@ describe('PlayerConnectionManager', () => {
     } as unknown as Logger);
     manager.upsertSessionUser({
       socketId: '',
-      playerId: 'host',
+      seatId: asSeatId('host'),
       name: 'Host',
       userId: 'host-user',
       isAuthenticated: true,
     });
     manager.upsertSessionUser({
       socketId: '',
-      playerId: 'com-1',
+      seatId: asSeatId('com-1'),
       name: 'COM',
       isAuthenticated: false,
     });
     manager.upsertSessionUser({
       socketId: 'target-socket',
-      playerId: 'target',
+      seatId: asSeatId('target'),
       name: 'Target',
       userId: 'target-user',
       isAuthenticated: true,
@@ -36,7 +37,7 @@ describe('PlayerConnectionManager', () => {
     });
     expect(manager.findSessionUserByPlayerId('host')).toEqual(
       expect.objectContaining({
-        playerId: 'host',
+        seatId: asSeatId('host'),
         name: 'Host',
         userId: 'host-user',
       }),
@@ -50,20 +51,20 @@ describe('PlayerConnectionManager', () => {
     } as unknown as Logger);
     manager.upsertSessionUser({
       socketId: 'old-socket',
-      playerId: 'user-1',
+      seatId: asSeatId('user-1'),
       name: 'Player',
       userId: 'user-1',
       isAuthenticated: true,
     });
     manager.upsertSessionUser({
       socketId: 'room-socket',
-      playerId: 'seat-1',
+      seatId: asSeatId('seat-1'),
       name: 'Player',
     });
 
     manager.upsertSessionUser({
       socketId: 'new-socket',
-      playerId: 'seat-1',
+      seatId: asSeatId('seat-1'),
       name: 'Player',
       userId: 'user-1',
       isAuthenticated: true,
@@ -72,13 +73,13 @@ describe('PlayerConnectionManager', () => {
     expect(manager.getSessionUsers()).toEqual([
       {
         socketId: 'new-socket',
-        playerId: 'seat-1',
+        seatId: asSeatId('seat-1'),
         name: 'Player',
         userId: 'user-1',
         isAuthenticated: true,
       },
     ]);
-    expect(manager.findSessionUserByUserId('user-1')?.playerId).toBe('seat-1');
+    expect(manager.findSessionUserByUserId('user-1')?.seatId).toBe('seat-1');
   });
 
   it('removes a stale user mapping when one socket changes identity', () => {
@@ -87,7 +88,7 @@ describe('PlayerConnectionManager', () => {
     } as unknown as Logger);
     manager.upsertSessionUser({
       socketId: 'shared-socket',
-      playerId: 'seat-1',
+      seatId: asSeatId('seat-1'),
       name: 'Player 1',
       userId: 'user-1',
       isAuthenticated: true,
@@ -95,7 +96,7 @@ describe('PlayerConnectionManager', () => {
 
     manager.upsertSessionUser({
       socketId: 'shared-socket',
-      playerId: 'seat-2',
+      seatId: asSeatId('seat-2'),
       name: 'Player 2',
       userId: 'user-2',
       isAuthenticated: true,
