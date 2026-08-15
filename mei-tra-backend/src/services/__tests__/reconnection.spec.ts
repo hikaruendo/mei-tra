@@ -258,7 +258,7 @@ describe('Reconnection Token Management', () => {
         const roomId = 'room-empty';
         const persistedState: GameState = {
           players: [],
-          currentPlayerIndex: -1,
+          currentSeatId: null,
           gamePhase: null,
           deck: [],
           blowState: {

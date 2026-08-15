@@ -37,8 +37,6 @@ export class GameStateManager {
 
     if (roomId) {
       const persistencePatch: Partial<GameState> = { ...newState };
-      delete persistencePatch.currentPlayerId;
-      delete persistencePatch.currentPlayerIndex;
       if (Object.prototype.hasOwnProperty.call(newState, 'currentSeatId')) {
         persistencePatch.currentSeatId = nextState.currentSeatId;
       }

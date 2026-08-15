@@ -17,8 +17,6 @@ describe('normalizeGameStateIdentityAliases', () => {
         },
       ],
       currentSeatId: asSeatId('seat-1'),
-      currentPlayerId: 'legacy-current',
-      currentPlayerIndex: 0,
       gamePhase: 'play',
       deck: [],
       teamScores: {
@@ -63,8 +61,6 @@ describe('normalizeGameStateIdentityAliases', () => {
       expect.objectContaining({ seatId: 'seat-1', playerId: 'seat-1' }),
     );
     expect(normalized.currentSeatId).toBe('seat-1');
-    expect(normalized.currentPlayerId).toBeUndefined();
-    expect(normalized.currentPlayerIndex).toBeUndefined();
     expect(normalized.blowState.lastPasserSeatId).toBe('seat-1');
     expect(normalized.playState?.currentField?.playedBy).toEqual(['seat-1']);
     expect(normalized.playState?.currentField?.playedBySeatIds).toEqual([
@@ -102,8 +98,6 @@ describe('normalizeGameStateIdentityAliases', () => {
         },
       ],
       currentSeatId: asSeatId('seat-1'),
-      currentPlayerId: 'seat-1',
-      currentPlayerIndex: 0,
       gamePhase: 'play',
       deck: [],
       teamScores: {

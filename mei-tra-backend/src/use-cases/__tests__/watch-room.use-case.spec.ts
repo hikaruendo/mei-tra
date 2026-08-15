@@ -71,7 +71,7 @@ describe('WatchRoomUseCase', () => {
       hasRequiredBroken: false,
     })),
     deck: [],
-    currentPlayerIndex: 0,
+    currentSeatId: asSeatId(roomValue.players[0].playerId),
     gamePhase: 'play',
     blowState: blowState(),
     playState: {

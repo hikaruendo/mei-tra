@@ -84,8 +84,6 @@ describe('SupabaseGameStateRepository', () => {
         },
       ],
       currentSeatId: firstSeatId,
-      currentPlayerId: firstSeatId,
-      currentPlayerIndex: 0,
       gamePhase: 'waiting',
       deck: [],
       teamScores: {
@@ -298,8 +296,6 @@ describe('SupabaseGameStateRepository', () => {
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
     expect(state?.currentSeatId).toBe(secondSeatId);
-    expect(state?.currentPlayerId).toBeUndefined();
-    expect(state?.currentPlayerIndex).toBeUndefined();
   });
 
   it('restores canonical seat references', async () => {

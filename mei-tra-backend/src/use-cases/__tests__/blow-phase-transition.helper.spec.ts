@@ -4,6 +4,7 @@ import { GameState } from '../../types/game.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { IBlowService } from '../../services/interfaces/blow-service.interface';
 import { ICardService } from '../../services/interfaces/card-service.interface';
+import { asSeatId } from '../../types/identity.types';
 
 describe('transitionToPlayPhase', () => {
   it('reveals the Agari card using room player socket when session lookup is empty', async () => {
@@ -30,7 +31,7 @@ describe('transitionToPlayPhase', () => {
           isPasser: false,
         },
       ],
-      currentPlayerIndex: 0,
+      currentSeatId: asSeatId('player-1'),
       gamePhase: 'blow',
       deck: [],
       agari: 'H-A',
@@ -171,7 +172,7 @@ describe('transitionToPlayPhase', () => {
           hasRequiredBroken: false,
         },
       ],
-      currentPlayerIndex: 0,
+      currentSeatId: asSeatId('player-1'),
       gamePhase: 'blow',
       deck: [],
       agari: 'J♦',

@@ -144,10 +144,6 @@ export interface GameState {
   identitySchemaVersion?: 1 | 2;
   players: DomainPlayer[];
   currentSeatId?: SeatId | null;
-  /** @deprecated Use currentSeatId. */
-  currentPlayerId?: string | null;
-  /** @deprecated Derive the index from currentSeatId and players. */
-  currentPlayerIndex?: number;
   gamePhase: GamePhase;
   deck: string[];
   teamScores: Record<Team, { play: number; total: number }>;

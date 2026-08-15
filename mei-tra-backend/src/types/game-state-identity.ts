@@ -104,7 +104,5 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
     ),
   };
 
-  delete normalizedState.currentPlayerId;
-  delete normalizedState.currentPlayerIndex;
   return normalizedState;
 }

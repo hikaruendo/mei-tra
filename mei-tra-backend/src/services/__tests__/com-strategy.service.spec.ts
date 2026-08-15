@@ -66,7 +66,7 @@ describe('ComStrategyService', () => {
     };
 
     return {
-      currentPlayerIndex: 0,
+      currentSeatId: asSeatId(players[0].playerId),
       gamePhase: 'blow' as GamePhase,
       deck: [],
       teamScores: {
