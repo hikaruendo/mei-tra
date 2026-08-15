@@ -65,8 +65,6 @@ export interface BlowState {
   declarations: BlowDeclaration[];
   actionHistory: BlowAction[];
   lastPasserSeatId?: SeatId | null;
-  /** @deprecated Use lastPasserSeatId. */
-  lastPasser: string | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
 }
@@ -99,17 +97,11 @@ export interface PlayState {
   currentField: Field | null;
   negriCard: string | null;
   negriSeatId?: SeatId | null;
-  /** @deprecated Use negriSeatId. */
-  negriPlayerId?: string | null;
   neguri: Record<string, string>;
   fields: CompletedField[];
   lastWinnerSeatId?: SeatId | null;
-  /** @deprecated Use lastWinnerSeatId. */
-  lastWinnerId: string | null;
   openDeclared: boolean;
   openDeclarerSeatId?: SeatId | null;
-  /** @deprecated Use openDeclarerSeatId. */
-  openDeclarerId: string | null;
 }
 
 export interface PendingBrokenHandReveal {

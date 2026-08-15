@@ -1100,7 +1100,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           actionHistory: blowState.actionHistory,
           currentHighest: blowState.currentHighestDeclaration,
           lastPasserSeatId: blowState.lastPasserSeatId,
-          lastPasser: blowState.lastPasser,
         });
       }
 
@@ -1228,7 +1227,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         actionHistory: result.blowState.actionHistory,
         currentHighest: result.blowState.currentHighestDeclaration,
         lastPasserSeatId: result.blowState.lastPasserSeatId,
-        lastPasser: result.blowState.lastPasser,
       });
       this.emitRoomsListToAll(result.roomsList);
       this.triggerComAutoPlayIfNeeded(data.roomId);

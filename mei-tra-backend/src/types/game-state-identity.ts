@@ -43,13 +43,7 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
           return { ...declaration, seatId, playerId: seatId };
         })()
       : null,
-    lastPasserSeatId:
-      state.blowState.lastPasserSeatId ??
-      (state.blowState.lastPasser
-        ? asSeatId(state.blowState.lastPasser)
-        : null),
-    lastPasser:
-      state.blowState.lastPasserSeatId ?? state.blowState.lastPasser ?? null,
+    lastPasserSeatId: state.blowState.lastPasserSeatId ?? null,
   };
   const playState = state.playState
     ? {
@@ -57,15 +51,10 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
         ...(() => {
           const negriSeatId =
             state.playState.negriSeatId ??
-            (state.playState.negriPlayerId
-              ? asSeatId(state.playState.negriPlayerId)
-              : state.playState.negriCard && blowState.currentHighestDeclaration
-                ? asSeatId(blowState.currentHighestDeclaration.playerId)
-                : null);
-          return {
-            negriSeatId,
-            negriPlayerId: negriSeatId,
-          };
+            (state.playState.negriCard && blowState.currentHighestDeclaration
+              ? asSeatId(blowState.currentHighestDeclaration.playerId)
+              : null);
+          return { negriSeatId };
         })(),
         currentField: state.playState.currentField
           ? (() => {
@@ -93,24 +82,8 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
             dealerId: dealerSeatId,
           };
         }),
-        lastWinnerSeatId:
-          state.playState.lastWinnerSeatId ??
-          (state.playState.lastWinnerId
-            ? asSeatId(state.playState.lastWinnerId)
-            : null),
-        lastWinnerId:
-          state.playState.lastWinnerSeatId ??
-          state.playState.lastWinnerId ??
-          null,
-        openDeclarerSeatId:
-          state.playState.openDeclarerSeatId ??
-          (state.playState.openDeclarerId
-            ? asSeatId(state.playState.openDeclarerId)
-            : null),
-        openDeclarerId:
-          state.playState.openDeclarerSeatId ??
-          state.playState.openDeclarerId ??
-          null,
+        lastWinnerSeatId: state.playState.lastWinnerSeatId ?? null,
+        openDeclarerSeatId: state.playState.openDeclarerSeatId ?? null,
       }
     : undefined;
   const pendingBrokenHandReveal = state.pendingBrokenHandReveal

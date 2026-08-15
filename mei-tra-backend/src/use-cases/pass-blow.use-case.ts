@@ -105,7 +105,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         timestamp: Date.now(),
       });
       state.blowState.lastPasserSeatId = asSeatId(player.playerId);
-      state.blowState.lastPasser = player.playerId;
 
       await this.gameEventLogService?.log({
         roomId,
@@ -115,7 +114,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         actionData: {
           declarationsCount: state.blowState.declarations.length,
           lastPasserSeatId: state.blowState.lastPasserSeatId,
-          lastPasser: state.blowState.lastPasser,
           actedCount: countPlayersActedInBlow(state.players, state.blowState),
         },
       });
@@ -226,7 +224,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state: GameState,
   ): Promise<{ events: GatewayEvent[] }> {
     state.players.forEach((p) => (p.isPasser = false));
-    state.blowState.lastPasser = null;
     state.blowState.lastPasserSeatId = null;
     state.blowState.declarations = [];
     state.blowState.actionHistory = [];

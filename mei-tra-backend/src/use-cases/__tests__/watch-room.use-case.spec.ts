@@ -55,7 +55,7 @@ describe('WatchRoomUseCase', () => {
     currentHighestDeclaration: null,
     declarations: [],
     actionHistory: [],
-    lastPasser: null,
+    lastPasserSeatId: null,
     isRoundCancelled: false,
     currentBlowIndex: 0,
   });
@@ -79,9 +79,9 @@ describe('WatchRoomUseCase', () => {
       negriCard: 'A♠',
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     },
     teamScores: {
       0: { play: 0, total: 0 },

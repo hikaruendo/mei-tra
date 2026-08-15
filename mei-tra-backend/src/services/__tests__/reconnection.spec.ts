@@ -221,7 +221,7 @@ describe('Reconnection Token Management', () => {
             currentHighestDeclaration: null,
             declarations: [],
             actionHistory: [],
-            lastPasser: null,
+            lastPasserSeatId: null,
             isRoundCancelled: false,
             currentBlowIndex: 0,
           },
@@ -266,7 +266,7 @@ describe('Reconnection Token Management', () => {
             currentHighestDeclaration: null,
             declarations: [],
             actionHistory: [],
-            lastPasser: null,
+            lastPasserSeatId: null,
             isRoundCancelled: false,
             currentBlowIndex: 0,
           },
@@ -782,9 +782,9 @@ describe('Reconnection Token Management', () => {
               dealerId: playerId,
             },
           ],
-          lastWinnerId: playerId,
+          lastWinnerSeatId: asSeatId(playerId),
           openDeclared: false,
-          openDeclarerId: playerId,
+          openDeclarerSeatId: asSeatId(playerId),
         };
         gameState.getState().pendingBrokenHandReveal = {
           playerId,
@@ -810,8 +810,10 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.fields[0]?.dealerId).toBe(
           comPlayerId,
         );
-        expect(gameState.getState().playState?.lastWinnerId).toBe(comPlayerId);
-        expect(gameState.getState().playState?.openDeclarerId).toBe(
+        expect(gameState.getState().playState?.lastWinnerSeatId).toBe(
+          comPlayerId,
+        );
+        expect(gameState.getState().playState?.openDeclarerSeatId).toBe(
           comPlayerId,
         );
         expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
@@ -888,7 +890,7 @@ describe('Reconnection Token Management', () => {
               timestamp: 2,
             },
           ],
-          lastPasser: playerId,
+          lastPasserSeatId: asSeatId(playerId),
           isRoundCancelled: false,
           currentBlowIndex: 0,
         };
@@ -909,7 +911,9 @@ describe('Reconnection Token Management', () => {
             .getState()
             .blowState.actionHistory.map((action) => action.playerId),
         ).toEqual([comPlayerId, comPlayerId]);
-        expect(gameState.getState().blowState.lastPasser).toBe(comPlayerId);
+        expect(gameState.getState().blowState.lastPasserSeatId).toBe(
+          comPlayerId,
+        );
       });
 
       it('should generate a unique COM id when another COM already has the same seat index id', async () => {
@@ -1774,9 +1778,9 @@ describe('Reconnection Token Management', () => {
               dealerId: targetCom.playerId,
             },
           ],
-          lastWinnerId: targetCom.playerId,
+          lastWinnerSeatId: asSeatId(targetCom.playerId),
           openDeclared: false,
-          openDeclarerId: targetCom.playerId,
+          openDeclarerSeatId: asSeatId(targetCom.playerId),
         };
         gameState.getState().pendingBrokenHandReveal = {
           playerId: targetCom.playerId,
@@ -1828,10 +1832,10 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.fields[0]?.dealerId).toBe(
           targetCom.playerId,
         );
-        expect(gameState.getState().playState?.lastWinnerId).toBe(
+        expect(gameState.getState().playState?.lastWinnerSeatId).toBe(
           targetCom.playerId,
         );
-        expect(gameState.getState().playState?.openDeclarerId).toBe(
+        expect(gameState.getState().playState?.openDeclarerSeatId).toBe(
           targetCom.playerId,
         );
         expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
@@ -1919,7 +1923,7 @@ describe('Reconnection Token Management', () => {
               timestamp: 2,
             },
           ],
-          lastPasser: targetCom.playerId,
+          lastPasserSeatId: asSeatId(targetCom.playerId),
           isRoundCancelled: false,
           currentBlowIndex: 0,
         };
@@ -1966,7 +1970,7 @@ describe('Reconnection Token Management', () => {
             .getState()
             .blowState.actionHistory.map((action) => action.playerId),
         ).toEqual([targetCom.playerId, targetCom.playerId]);
-        expect(gameState.getState().blowState.lastPasser).toBe(
+        expect(gameState.getState().blowState.lastPasserSeatId).toBe(
           targetCom.playerId,
         );
       });
@@ -2072,7 +2076,7 @@ describe('Reconnection Token Management', () => {
               timestamp: 1,
             },
           ],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         };
@@ -2197,7 +2201,7 @@ describe('Reconnection Token Management', () => {
               timestamp: 1,
             },
           ],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         };

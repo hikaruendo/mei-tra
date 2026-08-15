@@ -466,7 +466,7 @@ describe('Game Use Cases', () => {
               timestamp: 1,
             },
           ],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -739,7 +739,7 @@ describe('Game Use Cases', () => {
           currentTrump: string | null;
           currentHighestDeclaration: unknown;
           declarations: unknown[];
-          lastPasser: string | null;
+          lastPasserSeatId: string | null;
           isRoundCancelled: boolean;
         };
         teamScores: TeamScores;
@@ -768,7 +768,7 @@ describe('Game Use Cases', () => {
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
@@ -843,7 +843,7 @@ describe('Game Use Cases', () => {
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
@@ -974,7 +974,7 @@ describe('Game Use Cases', () => {
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
@@ -1122,7 +1122,7 @@ describe('Game Use Cases', () => {
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
@@ -1439,7 +1439,7 @@ describe('Game Use Cases', () => {
         declarations: [],
         actionHistory: [],
         currentHighestDeclaration: null,
-        lastPasser: null,
+        lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
@@ -2424,7 +2424,7 @@ describe('Game Use Cases', () => {
           currentHighestDeclaration: null,
           declarations: [],
           actionHistory: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -2772,7 +2772,7 @@ describe('Game Use Cases', () => {
           declarations: [],
           actionHistory: [],
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -3065,7 +3065,7 @@ describe('Game Use Cases', () => {
             numberOfPairs: 6,
             timestamp: 1,
           },
-          lastPasser: 'player-2',
+          lastPasserSeatId: asSeatId('player-2'),
           isRoundCancelled: false,
           currentBlowIndex: 2,
         },
@@ -3110,7 +3110,7 @@ describe('Game Use Cases', () => {
       expect(state.blowState.actionHistory).toEqual([]);
       expect(state.blowState.currentHighestDeclaration).toBeNull();
       expect(state.blowState.currentTrump).toBeNull();
-      expect(state.blowState.lastPasser).toBeNull();
+      expect(state.blowState.lastPasserSeatId).toBeNull();
       expect(state.players.every((player) => !player.isPasser)).toBe(true);
       expect(dealCardsMock).toHaveBeenCalled();
 
@@ -3235,7 +3235,7 @@ describe('Game Use Cases', () => {
           declarations: [],
           actionHistory: [],
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -3306,7 +3306,7 @@ describe('Game Use Cases', () => {
           declarations: [],
           actionHistory: [],
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -3407,7 +3407,7 @@ describe('Game Use Cases', () => {
           timestamp: Date.now(),
         },
         declarations: [],
-        lastPasser: null,
+        lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },

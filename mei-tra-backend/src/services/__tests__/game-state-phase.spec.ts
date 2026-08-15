@@ -168,9 +168,9 @@ describe('GameStateService phase transitions', () => {
       negriCard: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     const completedField = service.completeField(currentField, 'player-1');

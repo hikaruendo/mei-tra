@@ -38,7 +38,6 @@ describe('game-state persistence identity', () => {
         },
       ],
       lastPasserSeatId: secondSeatId,
-      lastPasser: secondSeatId,
       isRoundCancelled: false,
       currentBlowIndex: 2,
     });
@@ -62,7 +61,6 @@ describe('game-state persistence identity', () => {
       },
       negriCard: 'S9',
       negriSeatId: firstSeatId,
-      negriPlayerId: firstSeatId,
       neguri: { [firstSeatId]: 'S9' },
       fields: [
         {
@@ -75,10 +73,8 @@ describe('game-state persistence identity', () => {
         },
       ],
       lastWinnerSeatId: firstSeatId,
-      lastWinnerId: firstSeatId,
       openDeclared: true,
       openDeclarerSeatId: secondSeatId,
-      openDeclarerId: secondSeatId,
     });
     const persistedReveal = toPersistedPendingBrokenHandReveal({
       seatId: firstSeatId,

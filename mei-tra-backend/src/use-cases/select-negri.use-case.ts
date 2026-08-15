@@ -58,12 +58,11 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         },
         negriCard: card,
         negriSeatId: asSeatId(player.playerId),
-        negriPlayerId: player.playerId,
         neguri: {},
         fields: [],
-        lastWinnerId: null,
+        lastWinnerSeatId: null,
         openDeclared: false,
-        openDeclarerId: null,
+        openDeclarerSeatId: null,
       };
 
       player.hand = player.hand.filter((c) => c !== card);

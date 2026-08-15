@@ -426,7 +426,7 @@ describe('DisconnectGatewayEffectsService', () => {
       },
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     };

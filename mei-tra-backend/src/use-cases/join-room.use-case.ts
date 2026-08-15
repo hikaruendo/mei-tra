@@ -12,6 +12,7 @@ import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
 import { resolveCurrentSeatId } from '../types/current-turn';
+import { asSeatId } from '../types/identity.types';
 
 @Injectable()
 export class JoinRoomUseCase implements IJoinRoomUseCase {
@@ -204,7 +205,9 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         blowState: state.blowState,
         teamScores: state.teamScores,
         negriCard: state.playState?.negriCard ?? null,
-        negriSeatId: state.playState?.negriSeatId ?? null,
+        negriSeatId: state.playState?.negriSeatId
+          ? asSeatId(state.playState.negriSeatId)
+          : null,
         fields: state.playState?.fields,
         roomId,
         pointsToWin: room.settings.pointsToWin,

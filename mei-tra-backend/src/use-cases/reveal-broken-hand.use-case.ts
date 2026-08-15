@@ -135,19 +135,18 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         currentField: null,
         negriCard: null,
         negriSeatId: null,
-        negriPlayerId: null,
         neguri: {},
         fields: [],
-        lastWinnerId: null,
+        lastWinnerSeatId: null,
         openDeclared: false,
-        openDeclarerId: null,
+        openDeclarerSeatId: null,
       };
 
       nextState.blowState.declarations = [];
       nextState.blowState.actionHistory = [];
       nextState.blowState.currentHighestDeclaration = null;
       nextState.blowState.currentTrump = null;
-      nextState.blowState.lastPasser = null;
+      nextState.blowState.lastPasserSeatId = null;
       nextState.blowState.isRoundCancelled = false;
 
       const firstBlowIndex = nextState.blowState.currentBlowIndex;

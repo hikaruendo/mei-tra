@@ -402,7 +402,9 @@ export class ReconnectionUseCase {
         teamScores: state.teamScores,
         youSeatId: asSeatId(player.playerId),
         negriCard: state.playState?.negriCard ?? null,
-        negriSeatId: state.playState?.negriSeatId ?? null,
+        negriSeatId: state.playState?.negriSeatId
+          ? asSeatId(state.playState.negriSeatId)
+          : null,
         revealedAgari:
           state.gamePhase === 'play' &&
           !state.playState?.negriCard &&

@@ -391,12 +391,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       },
       negriCard: null,
       negriSeatId: null,
-      negriPlayerId: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     const newBlowState = {
@@ -404,7 +403,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: nextBlowIndex,
     };

@@ -45,9 +45,9 @@ export function toBlowStateContract(state: BlowState): BlowStateContract {
       : null,
     declarations: state.declarations.map(toBlowDeclarationContract),
     actionHistory: state.actionHistory.map(toBlowActionContract),
-    lastPasserSeatId:
-      state.lastPasserSeatId ??
-      (state.lastPasser ? asSeatId(state.lastPasser) : null),
+    lastPasserSeatId: state.lastPasserSeatId
+      ? asSeatId(state.lastPasserSeatId)
+      : null,
     isRoundCancelled: state.isRoundCancelled,
     currentBlowIndex: state.currentBlowIndex,
   };

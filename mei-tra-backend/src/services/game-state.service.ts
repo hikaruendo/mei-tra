@@ -101,7 +101,7 @@ export class GameStateService implements IGameStateService {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     };
@@ -112,12 +112,11 @@ export class GameStateService implements IGameStateService {
       currentField: null,
       negriCard: null,
       negriSeatId: null,
-      negriPlayerId: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
   }
 
@@ -636,12 +635,11 @@ export class GameStateService implements IGameStateService {
       },
       negriCard: null,
       negriSeatId: null,
-      negriPlayerId: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     // Randomize the first blow player
@@ -654,7 +652,7 @@ export class GameStateService implements IGameStateService {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: firstBlowIndex,
     };

@@ -58,7 +58,7 @@ describe('ComStrategyService', () => {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
       ...overrides.blowState,
@@ -498,9 +498,9 @@ describe('ComStrategyService', () => {
       negriCard: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     return state({
@@ -528,9 +528,9 @@ describe('ComStrategyService', () => {
       negriCard: null,
       neguri: {},
       fields: completedFields,
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     return state({

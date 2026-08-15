@@ -60,7 +60,7 @@ const stateWith = (
       currentHighestDeclaration: declarations[declarations.length - 1] ?? null,
       declarations,
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     },

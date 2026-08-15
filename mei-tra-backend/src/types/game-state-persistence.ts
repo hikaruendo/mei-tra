@@ -120,9 +120,7 @@ function toPersistedBlowAction(action: BlowAction): PersistedBlowAction {
 }
 
 export function toPersistedBlowState(blowState: BlowState): PersistedBlowState {
-  const lastPasserSeatId =
-    blowState.lastPasserSeatId ??
-    (blowState.lastPasser ? asSeatId(blowState.lastPasser) : null);
+  const lastPasserSeatId = blowState.lastPasserSeatId ?? null;
 
   return {
     ...omitKeys(blowState, [
@@ -191,16 +189,10 @@ export function toPersistedPlayState(
     currentField: playState.currentField
       ? toPersistedField(playState.currentField)
       : null,
-    negriSeatId:
-      playState.negriSeatId ??
-      (playState.negriPlayerId ? asSeatId(playState.negriPlayerId) : null),
+    negriSeatId: playState.negriSeatId ?? null,
     fields: playState.fields.map(toPersistedCompletedField),
-    lastWinnerSeatId:
-      playState.lastWinnerSeatId ??
-      (playState.lastWinnerId ? asSeatId(playState.lastWinnerId) : null),
-    openDeclarerSeatId:
-      playState.openDeclarerSeatId ??
-      (playState.openDeclarerId ? asSeatId(playState.openDeclarerId) : null),
+    lastWinnerSeatId: playState.lastWinnerSeatId ?? null,
+    openDeclarerSeatId: playState.openDeclarerSeatId ?? null,
   } as PersistedPlayState;
 }
 

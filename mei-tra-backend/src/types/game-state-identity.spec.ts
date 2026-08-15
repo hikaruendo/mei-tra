@@ -32,7 +32,6 @@ describe('normalizeGameStateIdentityAliases', () => {
         declarations: [],
         actionHistory: [],
         lastPasserSeatId: asSeatId('seat-1'),
-        lastPasser: 'legacy-passer',
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
@@ -48,14 +47,11 @@ describe('normalizeGameStateIdentityAliases', () => {
         },
         negriCard: '5♣',
         negriSeatId: asSeatId('seat-1'),
-        negriPlayerId: 'legacy-negri',
         neguri: {},
         fields: [],
         lastWinnerSeatId: asSeatId('seat-1'),
-        lastWinnerId: 'legacy-winner',
         openDeclared: false,
         openDeclarerSeatId: asSeatId('seat-1'),
-        openDeclarerId: 'legacy-open',
       },
       roundNumber: 1,
       pointsToWin: 5,
@@ -71,7 +67,6 @@ describe('normalizeGameStateIdentityAliases', () => {
     expect(normalized.currentPlayerId).toBeUndefined();
     expect(normalized.currentPlayerIndex).toBeUndefined();
     expect(normalized.blowState.lastPasserSeatId).toBe('seat-1');
-    expect(normalized.blowState.lastPasser).toBe('seat-1');
     expect(normalized.playState?.currentField?.playedBy).toEqual(['seat-1']);
     expect(normalized.playState?.currentField?.playedBySeatIds).toEqual([
       'seat-1',
@@ -81,9 +76,8 @@ describe('normalizeGameStateIdentityAliases', () => {
     );
     expect(normalized.playState?.currentField?.dealerId).toBe('seat-1');
     expect(normalized.playState?.negriSeatId).toBe('seat-1');
-    expect(normalized.playState?.negriPlayerId).toBe('seat-1');
-    expect(normalized.playState?.lastWinnerId).toBe('seat-1');
-    expect(normalized.playState?.openDeclarerId).toBe('seat-1');
+    expect(normalized.playState?.lastWinnerSeatId).toBe('seat-1');
+    expect(normalized.playState?.openDeclarerSeatId).toBe('seat-1');
     expect(normalized.teamAssignments).toEqual({ 'seat-1': 0 });
   });
 
@@ -124,7 +118,6 @@ describe('normalizeGameStateIdentityAliases', () => {
         declarations: [],
         actionHistory: [],
         lastPasserSeatId: null,
-        lastPasser: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
@@ -145,14 +138,11 @@ describe('normalizeGameStateIdentityAliases', () => {
         },
         negriCard: null,
         negriSeatId: null,
-        negriPlayerId: null,
         neguri: {},
         fields: [],
         lastWinnerSeatId: null,
-        lastWinnerId: null,
         openDeclared: false,
         openDeclarerSeatId: null,
-        openDeclarerId: null,
       },
       roundNumber: 1,
       pointsToWin: 5,

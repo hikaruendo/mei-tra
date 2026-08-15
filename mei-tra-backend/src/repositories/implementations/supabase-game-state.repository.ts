@@ -484,7 +484,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       declarations: [],
       actionHistory: [],
       lastPasserSeatId: null,
-      lastPasser: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     }) as BlowState;

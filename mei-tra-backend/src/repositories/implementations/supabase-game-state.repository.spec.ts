@@ -95,12 +95,12 @@ describe('SupabaseGameStateRepository', () => {
       teamScoreRecords: { 0: [], 1: [] },
       blowState: {
         ...gameStateRow.state_data.blowState,
-        lastPasser: null,
+        lastPasserSeatId: null,
       },
       playState: {
         ...gameStateRow.state_data.playState,
-        lastWinnerId: null,
-        openDeclarerId: null,
+        lastWinnerSeatId: null,
+        openDeclarerSeatId: null,
       },
       roundNumber: 1,
       pointsToWin: 8,
