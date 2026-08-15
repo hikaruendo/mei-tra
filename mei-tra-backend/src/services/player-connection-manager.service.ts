@@ -175,10 +175,10 @@ export class PlayerConnectionManager {
   ): DomainPlayer | null {
     const playerId = this.playerIds.get(token);
     if (playerId) {
-      return players.find((player) => player.playerId === playerId) || null;
+      return players.find((player) => player.seatId === playerId) || null;
     }
 
-    return players.find((player) => player.playerId === token) || null;
+    return players.find((player) => player.seatId === token) || null;
   }
 
   getPlayerConnectionState(playerId: string): PlayerConnectionState | null {

@@ -71,7 +71,7 @@ describe('UpdateAuthUseCase', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Old Name',
           userId: 'user-1',
           isAuthenticated: true,
@@ -85,16 +85,14 @@ describe('UpdateAuthUseCase', () => {
       getState: jest.fn(() => roomState),
       findPlayerByActorId: jest.fn((actorId: string) =>
         actorId === 'user-1'
-          ? (roomState.players.find(
-              (player) => player.playerId === 'player-1',
-            ) ?? null)
+          ? (roomState.players.find((player) => player.seatId === 'player-1') ??
+            null)
           : null,
       ),
       findPlayerBySocketId: jest.fn((socketId: string) =>
         socketId === 'socket-1'
-          ? (roomState.players.find(
-              (player) => player.playerId === 'player-1',
-            ) ?? null)
+          ? (roomState.players.find((player) => player.seatId === 'player-1') ??
+            null)
           : null,
       ),
       applyPlayerConnectionState: jest
@@ -118,7 +116,7 @@ describe('UpdateAuthUseCase', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'User Display',
           userId: 'user-1',
           isAuthenticated: true,
@@ -165,7 +163,7 @@ describe('UpdateAuthUseCase', () => {
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
         socketId: 'socket-1',
-        seatId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'User Display',
         userId: 'user-1',
         isAuthenticated: true,
@@ -193,7 +191,7 @@ describe('UpdateAuthUseCase', () => {
         payload: [
           expect.objectContaining({
             socketId: 'socket-1',
-            seatId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'User Display',
             userId: 'user-1',
             isAuthenticated: true,
@@ -224,7 +222,7 @@ describe('UpdateAuthUseCase', () => {
       players: [
         {
           socketId: 'socket-1',
-          seatId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'User Display',
         },
       ],

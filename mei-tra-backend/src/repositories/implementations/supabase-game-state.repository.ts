@@ -458,7 +458,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
         return toRuntimePlayer({
           seatId: asSeatId(seatId),
-          playerId: seatId,
           name: roomPlayer?.name,
           team: roomPlayer?.team as 0 | 1 | undefined,
           isCOM: roomPlayer?.isCOM,
@@ -472,7 +471,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const canonicalCurrentPlayerId = dbGameState.current_seat_id;
     if (
       canonicalCurrentPlayerId &&
-      !players.some((player) => player.playerId === canonicalCurrentPlayerId)
+      !players.some((player) => player.seatId === canonicalCurrentPlayerId)
     ) {
       throw new Error(
         `Current seat ${canonicalCurrentPlayerId} is outside room ${dbGameState.room_id}`,
@@ -511,7 +510,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
       teamAssignments: Object.fromEntries(
-        players.map((player) => [player.playerId, player.team]),
+        players.map((player) => [player.seatId, player.team]),
       ),
     });
   }

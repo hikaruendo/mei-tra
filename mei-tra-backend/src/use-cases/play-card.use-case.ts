@@ -63,7 +63,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      if (!roomGameState.isPlayerTurn(player.playerId)) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to play" };
       }
 
@@ -95,7 +95,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           ? currentField.playedBySeatIds
           : currentField.playedBy
       ).map(asSeatId);
-      playedBySeatIds.push(asSeatId(player.playerId));
+      playedBySeatIds.push(asSeatId(player.seatId));
       currentField.cards.push(card);
       currentField.playedBy = [...playedBySeatIds];
       currentField.playedBySeatIds = [...playedBySeatIds];
@@ -106,7 +106,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'card_played',
-        actorSeatId: asSeatId(player.playerId),
+        actorSeatId: asSeatId(player.seatId),
         state,
         actionData: {
           card,
@@ -118,7 +118,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       });
 
       const cardPlayedPayload: CardPlayedPayload = {
-        seatId: asSeatId(player.playerId),
+        seatId: asSeatId(player.seatId),
         card,
         field: toFieldContract(currentField),
         players: resolveTransportPlayers(roomGameState, state.players, {
@@ -159,12 +159,12 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       roomGameState.nextTurn();
       const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
-        cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.playerId);
+        cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.seatId);
         events.push({
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: asSeatId(nextPlayer.playerId),
+          payload: asSeatId(nextPlayer.seatId),
         });
       }
 

@@ -127,10 +127,10 @@ describe('SupabaseRoomRepository', () => {
     });
     expect(rooms).toHaveLength(2);
     expect(rooms[0].id).toBe('room-2');
-    expect(rooms[0].players.map((player) => player.playerId)).toEqual([
+    expect(rooms[0].players.map((player) => player.seatId)).toEqual([
       'room-2-player-3',
     ]);
-    expect(rooms[1].players.map((player) => player.playerId)).toEqual([
+    expect(rooms[1].players.map((player) => player.seatId)).toEqual([
       'room-1-player-1',
       'room-1-player-2',
     ]);

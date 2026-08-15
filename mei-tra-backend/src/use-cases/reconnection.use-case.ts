@@ -145,7 +145,7 @@ export class ReconnectionUseCase {
           !(await this.claimMembership(
             authenticatedUser.id,
             roomId,
-            existingWaitingPlayer.playerId,
+            existingWaitingPlayer.seatId,
           ))
         ) {
           return this.buildMembershipConflict(roomId);
@@ -153,7 +153,7 @@ export class ReconnectionUseCase {
 
         const reconnectResult = await this.roomService.handlePlayerReconnection(
           roomId,
-          existingWaitingPlayer.playerId,
+          existingWaitingPlayer.seatId,
           socketId,
           authenticatedUser.id,
           this.resolveDisplayName(authenticatedUser),
@@ -162,7 +162,7 @@ export class ReconnectionUseCase {
           this.logStateMismatch(
             roomId,
             authenticatedUser.id,
-            existingWaitingPlayer.playerId,
+            existingWaitingPlayer.seatId,
             updatedRoom.players.length,
             roomGameState.getState().players.length,
             reconnectResult.error,
@@ -178,12 +178,12 @@ export class ReconnectionUseCase {
         this.syncGlobalConnectionUser(
           socketId,
           authenticatedUser,
-          existingWaitingPlayer.playerId,
+          existingWaitingPlayer.seatId,
         );
 
         const reconnectedRoom = await this.roomService.getRoom(roomId);
         const reconnectedPlayer = reconnectedRoom?.players.find(
-          (player) => player.playerId === existingWaitingPlayer.playerId,
+          (player) => player.seatId === existingWaitingPlayer.seatId,
         );
         if (!reconnectedRoom || !reconnectedPlayer) {
           return {
@@ -200,10 +200,10 @@ export class ReconnectionUseCase {
           roomId,
           roomsList: await this.roomService.listRooms(),
           room: reconnectedRoom,
-          selfSeatId: asSeatId(reconnectedPlayer.playerId),
+          selfSeatId: asSeatId(reconnectedPlayer.seatId),
           selfName: reconnectedPlayer.name,
           selfTeam: reconnectedPlayer.team,
-          isHost: reconnectedRoom.hostSeatId === reconnectedPlayer.playerId,
+          isHost: reconnectedRoom.hostSeatId === reconnectedPlayer.seatId,
         };
       }
 
@@ -230,7 +230,7 @@ export class ReconnectionUseCase {
         !(await this.claimMembership(
           authenticatedUser.id,
           roomId,
-          existingPlayer.playerId,
+          existingPlayer.seatId,
         ))
       ) {
         return this.buildMembershipConflict(roomId);
@@ -238,7 +238,7 @@ export class ReconnectionUseCase {
 
       const reconnectResult = await this.roomService.handlePlayerReconnection(
         roomId,
-        existingPlayer.playerId,
+        existingPlayer.seatId,
         socketId,
         authenticatedUser.id,
         this.resolveDisplayName(authenticatedUser),
@@ -247,7 +247,7 @@ export class ReconnectionUseCase {
         this.logStateMismatch(
           roomId,
           authenticatedUser.id,
-          existingPlayer.playerId,
+          existingPlayer.seatId,
           room.players.length,
           state.players.length,
           reconnectResult.error,
@@ -263,13 +263,13 @@ export class ReconnectionUseCase {
       this.syncGlobalConnectionUser(
         socketId,
         authenticatedUser,
-        existingPlayer.playerId,
+        existingPlayer.seatId,
       );
 
       const reconnectedRoom = await this.roomService.getRoom(roomId);
       const reconnectedPlayer = roomGameState
         .getState()
-        .players.find((player) => player.playerId === existingPlayer.playerId);
+        .players.find((player) => player.seatId === existingPlayer.seatId);
       if (!reconnectedRoom || !reconnectedPlayer) {
         return {
           success: false,
@@ -365,7 +365,7 @@ export class ReconnectionUseCase {
       ? (roomGameState
           .getState()
           .players.find(
-            (player) => player.playerId === persistedRoomPlayer.playerId,
+            (player) => player.seatId === persistedRoomPlayer.seatId,
           ) ?? null)
       : resolvePlayerByActorId(roomGameState, authenticatedUserId);
   }
@@ -380,14 +380,14 @@ export class ReconnectionUseCase {
     const currentTurnSeatId = resolveCurrentSeatId(state);
 
     return {
-      selfSeatId: asSeatId(player.playerId),
-      reconnectToken: player.playerId,
+      selfSeatId: asSeatId(player.seatId),
+      reconnectToken: player.seatId,
       currentTurnSeatId: currentTurnSeatId ? asSeatId(currentTurnSeatId) : null,
       gameState: {
         players: resolveTransportPlayers(roomGameState, state.players, {
           roomPlayers: room.players,
           mapHand: (transportPlayer) =>
-            transportPlayer.seatId === asSeatId(player.playerId)
+            transportPlayer.seatId === asSeatId(player.seatId)
               ? transportPlayer.hand
               : [],
         }),
@@ -400,7 +400,7 @@ export class ReconnectionUseCase {
           : null,
         blowState: toBlowStateContract(state.blowState),
         teamScores: state.teamScores,
-        youSeatId: asSeatId(player.playerId),
+        youSeatId: asSeatId(player.seatId),
         negriCard: state.playState?.negriCard ?? null,
         negriSeatId: state.playState?.negriSeatId
           ? asSeatId(state.playState.negriSeatId)
@@ -408,7 +408,7 @@ export class ReconnectionUseCase {
         revealedAgari:
           state.gamePhase === 'play' &&
           !state.playState?.negriCard &&
-          state.blowState.currentHighestDeclaration?.seatId === player.playerId
+          state.blowState.currentHighestDeclaration?.seatId === player.seatId
             ? (state.agari ?? null)
             : null,
         fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),

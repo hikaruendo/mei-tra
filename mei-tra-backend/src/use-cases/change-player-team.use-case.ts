@@ -26,9 +26,7 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       }
 
       // Find the requesting player
-      const requestingPlayer = room.players.find(
-        (p) => p.playerId === playerId,
-      );
+      const requestingPlayer = room.players.find((p) => p.seatId === playerId);
       if (!requestingPlayer) {
         return { success: false, error: 'Player not found in room' };
       }
@@ -52,7 +50,7 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
           };
         }
 
-        const player = room.players.find((p) => p.playerId === playerId);
+        const player = room.players.find((p) => p.seatId === playerId);
         if (!player) {
           return {
             success: false,

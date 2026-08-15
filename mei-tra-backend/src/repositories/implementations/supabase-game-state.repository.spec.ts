@@ -72,8 +72,7 @@ describe('SupabaseGameStateRepository', () => {
       version: 4,
       players: [
         {
-          seatId: firstSeatId,
-          playerId: firstSeatId,
+          seatId: asSeatId(firstSeatId),
           name: 'Current name',
           hand: ['S1'],
           team: 1,
@@ -109,8 +108,7 @@ describe('SupabaseGameStateRepository', () => {
   function createRoomPlayer(): RoomPlayer {
     return {
       socketId: 'transient-socket',
-      seatId: firstSeatId,
-      playerId: firstSeatId,
+      seatId: asSeatId(firstSeatId),
       participantKey: roomPlayerRow.user_id,
       userId: roomPlayerRow.user_id,
       isAuthenticated: true,
@@ -144,8 +142,7 @@ describe('SupabaseGameStateRepository', () => {
     expect(state?.version).toBe(4);
     expect(state?.players).toEqual([
       expect.objectContaining({
-        playerId: firstSeatId,
-        seatId: firstSeatId,
+        seatId: asSeatId(firstSeatId),
         name: 'Current name',
         team: 1,
         hand: ['S1'],
@@ -185,7 +182,7 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
-    expect(state?.players.map((player) => player.playerId)).toEqual([
+    expect(state?.players.map((player) => player.seatId)).toEqual([
       firstSeatId,
       secondSeatId,
     ]);

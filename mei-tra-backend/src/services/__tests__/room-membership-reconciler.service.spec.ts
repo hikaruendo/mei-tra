@@ -19,7 +19,7 @@ describe('RoomMembershipReconcilerService', () => {
 
   it('removes a duplicate seat while preserving the authoritative room', async () => {
     const authoritativePlayer = {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       userId: 'user-1',
       isAuthenticated: true,
     };
@@ -34,7 +34,7 @@ describe('RoomMembershipReconcilerService', () => {
           id: 'room-duplicate',
           players: [
             {
-              playerId: 'player-stale',
+              seatId: asSeatId('player-stale'),
               userId: 'user-1',
               isAuthenticated: true,
             },
@@ -46,6 +46,10 @@ describe('RoomMembershipReconcilerService', () => {
     const membershipService = {
       list: jest.fn().mockResolvedValue([membership]),
       release: jest.fn(),
+      claim: jest.fn().mockResolvedValue({
+        result: 'reconnected',
+        membership,
+      }),
       cancelReservation: jest.fn(),
     } as unknown as RoomMembershipService;
     const service = new RoomMembershipReconcilerService(
@@ -102,7 +106,7 @@ describe('RoomMembershipReconcilerService', () => {
         id: 'room-authoritative',
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             userId: 'user-1',
             isAuthenticated: true,
           },

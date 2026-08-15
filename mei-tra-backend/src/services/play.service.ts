@@ -36,22 +36,20 @@ export class PlayService implements IPlayService {
     let highestStrength = -1;
 
     // ディーラーのインデックスを取得
-    let dealerIndex = players.findIndex(
-      (p) => p.playerId === field.dealerSeatId,
-    );
+    let dealerIndex = players.findIndex((p) => p.seatId === field.dealerSeatId);
 
     // ディーラーが見つからない場合、最初の有効なプレイヤーをディーラーとする
     if (dealerIndex === -1) {
       dealerIndex = 0;
-      field.dealerSeatId = asSeatId(players[0].playerId);
+      field.dealerSeatId = asSeatId(players[0].seatId);
     }
 
     const playersById = new Map(
-      players.map((player) => [player.playerId, player]),
+      players.map((player) => [player.seatId, player]),
     );
     const playedByOrder =
       field.playedBy.length === field.cards.length
-        ? field.playedBy.map((playerId) => playersById.get(playerId))
+        ? field.playedBy.map((playerId) => playersById.get(asSeatId(playerId)))
         : [];
 
     // Prefer the explicit card -> player attribution recorded when each card was

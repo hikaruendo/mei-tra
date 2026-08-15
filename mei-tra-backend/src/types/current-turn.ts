@@ -4,7 +4,7 @@ import type { DomainPlayer, GameState } from './game.types';
 type CurrentTurnState = Pick<GameState, 'players' | 'currentSeatId'>;
 
 function playerSeatId(player: DomainPlayer): SeatId {
-  return player.seatId ?? asSeatId(player.playerId);
+  return player.seatId ?? asSeatId(player.seatId);
 }
 
 export function resolveCurrentSeatId(state: CurrentTurnState): SeatId | null {

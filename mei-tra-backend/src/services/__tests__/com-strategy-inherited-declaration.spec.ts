@@ -21,7 +21,7 @@ import {
  */
 const comPlayer = (over: Partial<DomainPlayer> = {}): DomainPlayer =>
   ({
-    playerId: 'com-timeout-0-123',
+    seatId: asSeatId('com-timeout-0-123'),
     name: 'COM',
     hand: [
       'A♠',
@@ -88,7 +88,7 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(com.playerId)], [com]),
+      stateWith([declaration(com.seatId)], [com]),
       com,
     );
 
@@ -101,7 +101,7 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(com.playerId)], [com]),
+      stateWith([declaration(com.seatId)], [com]),
       com,
     );
 
@@ -113,7 +113,7 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(com.playerId)], [com]),
+      stateWith([declaration(com.seatId)], [com]),
       com,
     );
 
@@ -125,18 +125,18 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     // for the COM itself, which made it "defer to its partner" and pass.
     const com = comPlayer();
     const service = buildService();
-    const state = stateWith([declaration(com.playerId)], [com]);
+    const state = stateWith([declaration(com.seatId)], [com]);
 
     expect(service.chooseBlowAction(state, com).type).not.toBe('pass');
   });
 
   it('still acts normally when it has not declared', () => {
     const com = comPlayer();
-    const partner = comPlayer({ playerId: 'com-1', team: 0 });
+    const partner = comPlayer({ seatId: asSeatId('com-1'), team: 0 });
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(partner.playerId)], [com, partner]),
+      stateWith([declaration(partner.seatId)], [com, partner]),
       com,
     );
 

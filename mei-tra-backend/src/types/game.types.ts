@@ -5,9 +5,7 @@ export type Team = 0 | 1;
 export type TeamNames = Partial<Record<Team, string>>;
 
 export interface PlayerIdentity {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. This alias is kept equal to seatId. */
-  playerId: string;
+  seatId: SeatId;
   name: string;
 }
 

@@ -16,7 +16,7 @@ describe('Game event instrumentation', () => {
         settings: { pointsToWin: 7 },
         players: [
           {
-            playerId: 'host-1',
+            seatId: asSeatId('host-1'),
             hand: [],
             isPasser: false,
             hasBroken: false,
@@ -28,7 +28,7 @@ describe('Game event instrumentation', () => {
         getState: () => ({
           players: [
             {
-              playerId: 'host-1',
+              seatId: asSeatId('host-1'),
               team: 0,
               hand: [],
               isPasser: false,
@@ -76,12 +76,12 @@ describe('Game event instrumentation', () => {
     const state = {
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           userId: 'user-1',
           hand: ['AS'],
         },
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           userId: 'user-2',
           hand: [],
         },
@@ -139,7 +139,7 @@ describe('Game event instrumentation', () => {
         id: 'room-1',
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             team: 0,
             hand: [],

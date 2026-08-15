@@ -1,9 +1,10 @@
 import { Logger } from '@nestjs/common';
 import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
 import { DomainPlayer } from '../../types/game.types';
+import { asSeatId } from '../../types/identity.types';
 
 const HUMAN: DomainPlayer = {
-  playerId: 'human-1',
+  seatId: asSeatId('human-1'),
   name: 'Human',
   hand: ['9♣'],
   team: 0,
@@ -17,7 +18,7 @@ const buildUseCase = (options: {
 }) => {
   const state = {
     players: [HUMAN],
-    currentPlayerId: options.currentPlayer?.playerId ?? null,
+    currentPlayerId: options.currentPlayer?.seatId ?? null,
     gamePhase: 'play',
     pendingBrokenHandReveal: null,
     playState: { currentField: null },

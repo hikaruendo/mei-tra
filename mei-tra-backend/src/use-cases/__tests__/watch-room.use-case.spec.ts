@@ -11,17 +11,17 @@ import { asSeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 
 describe('WatchRoomUseCase', () => {
-  const player = (playerId: string, team: Team, hand: string[]) => ({
-    socketId: `${playerId}-socket`,
-    playerId,
-    name: playerId,
-    userId: playerId,
+  const player = (seatId: string, team: Team, hand: string[]) => ({
+    socketId: `${seatId}-socket`,
+    seatId: asSeatId(seatId),
+    name: seatId,
+    userId: seatId,
     isAuthenticated: true,
     team,
     hand,
     isPasser: false,
     isReady: true,
-    isHost: playerId === 'p1',
+    isHost: seatId === 'p1',
     joinedAt: new Date(),
   });
 
@@ -62,7 +62,7 @@ describe('WatchRoomUseCase', () => {
 
   const gameState = (roomValue: Room): GameState => ({
     players: roomValue.players.map((roomPlayer) => ({
-      playerId: roomPlayer.playerId,
+      seatId: roomPlayer.seatId,
       name: roomPlayer.name,
       team: roomPlayer.team,
       hand: [...roomPlayer.hand],
@@ -71,7 +71,7 @@ describe('WatchRoomUseCase', () => {
       hasRequiredBroken: false,
     })),
     deck: [],
-    currentSeatId: asSeatId(roomValue.players[0].playerId),
+    currentSeatId: asSeatId(roomValue.players[0].seatId),
     gamePhase: 'play',
     blowState: blowState(),
     playState: {
@@ -100,10 +100,10 @@ describe('WatchRoomUseCase', () => {
       getTransportPlayers: jest.fn(
         (players: DomainPlayer[]): TransportPlayer[] =>
           players.map((domainPlayer) => ({
-            socketId: `${domainPlayer.playerId}-socket`,
-            seatId: asSeatId(domainPlayer.playerId),
+            socketId: `${domainPlayer.seatId}-socket`,
+            seatId: asSeatId(domainPlayer.seatId),
             name: domainPlayer.name,
-            userId: domainPlayer.playerId,
+            userId: domainPlayer.seatId,
             isAuthenticated: true,
             team: domainPlayer.team,
             hand: [...domainPlayer.hand],

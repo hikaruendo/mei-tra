@@ -55,7 +55,7 @@ const room = (overrides: Partial<Room> = {}): Room => ({
   status: RoomStatus.PLAYING,
   players: [
     {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       userId: 'user-1',
       socketId: 'socket-1',
       name: 'Player 1',
@@ -69,7 +69,7 @@ const room = (overrides: Partial<Room> = {}): Room => ({
       joinedAt: new Date('2026-07-23T00:00:00.000Z'),
     },
     {
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       userId: 'user-2',
       socketId: 'socket-2',
       name: 'Player 2',
@@ -83,7 +83,7 @@ const room = (overrides: Partial<Room> = {}): Room => ({
       joinedAt: new Date('2026-07-23T00:00:00.000Z'),
     },
     {
-      playerId: 'com-3',
+      seatId: asSeatId('com-3'),
       socketId: 'socket-3',
       name: 'COM 3',
       team: 0,

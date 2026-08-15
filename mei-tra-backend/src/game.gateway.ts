@@ -194,7 +194,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
     }
 
-    return roomPlayers[0].playerId;
+    return roomPlayers[0].seatId;
   }
 
   private async rejectInactiveMutatingAction(
@@ -334,7 +334,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const room = await this.roomService.getRoom(roomId);
     const targetPlayer = room?.players.find(
-      (player) => player.playerId === playerId,
+      (player) => player.seatId === playerId,
     );
     const targetSocketId =
       roomGameState.getPlayerConnectionState(playerId)?.socketId;
@@ -593,7 +593,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             room: result.room,
             selfPlayer: {
               seatId: result.selfSeatId,
-              playerId: result.selfSeatId,
               name: result.selfName,
               team: result.selfTeam,
             },
@@ -790,8 +789,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           clientId: client.id,
           room: updatedRoom,
           selfPlayer: {
-            seatId: asSeatId(hostPlayer.playerId),
-            playerId: hostPlayer.playerId,
+            seatId: asSeatId(hostPlayer.seatId),
             name: hostPlayer.name,
             team: hostPlayer.team,
           },

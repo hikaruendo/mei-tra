@@ -245,10 +245,10 @@ export class GameStateService implements IGameStateService {
       }
 
       this.state.players.forEach((player) => {
-        if (player.playerId) {
+        if (player.seatId) {
           this.connectionManager.registerPlayerToken(
-            player.playerId,
-            player.playerId,
+            player.seatId,
+            player.seatId,
           );
         }
       });
@@ -293,19 +293,16 @@ export class GameStateService implements IGameStateService {
     reconcileRuntimeRoster(this.state, roomPlayers);
 
     roomPlayers.forEach((player) => {
-      this.connectionManager.registerPlayerToken(
-        player.playerId,
-        player.playerId,
-      );
+      this.connectionManager.registerPlayerToken(player.seatId, player.seatId);
       if (player.userId) {
         this.connectionManager.registerPlayerToken(
           player.userId,
-          player.playerId,
+          player.seatId,
         );
       }
     });
 
-    const hostId = roomPlayers.find((player) => player.isHost)?.playerId;
+    const hostId = roomPlayers.find((player) => player.isHost)?.seatId;
     try {
       await this.persistRoster(roomPlayers, hostId);
     } catch (error) {
@@ -398,7 +395,7 @@ export class GameStateService implements IGameStateService {
     userId?: string,
   ): Promise<void> {
     const player = this.state.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === playerId,
     );
     if (!player) {
       return;
@@ -416,7 +413,7 @@ export class GameStateService implements IGameStateService {
     connectionState: PlayerConnectionState,
   ): Promise<void> {
     const player = this.state.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === playerId,
     );
     if (!player) {
       return;
@@ -465,7 +462,7 @@ export class GameStateService implements IGameStateService {
     for (const player of this.state.players) {
       if (!Array.isArray(player.hand)) {
         throw new Error(
-          `Player ${player.playerId} has invalid hand: ${typeof player.hand}`,
+          `Player ${player.seatId} has invalid hand: ${typeof player.hand}`,
         );
       }
     }
@@ -517,7 +514,7 @@ export class GameStateService implements IGameStateService {
       throw new Error('Current seat is not initialized');
     }
     const nextIndex = (currentIndex + 1) % this.state.players.length;
-    setCurrentSeat(this.state, this.state.players[nextIndex]?.playerId ?? null);
+    setCurrentSeat(this.state, this.state.players[nextIndex]?.seatId ?? null);
   }
 
   getCurrentPlayer(): DomainPlayer | null {
@@ -534,7 +531,7 @@ export class GameStateService implements IGameStateService {
 
   isPlayerTurn(playerId: string): boolean {
     const currentPlayer = this.getCurrentPlayer();
-    return currentPlayer?.playerId === playerId;
+    return currentPlayer?.seatId === playerId;
   }
 
   completeField(field: Field, winnerSeatId: string): CompletedField | null {
@@ -549,7 +546,7 @@ export class GameStateService implements IGameStateService {
     }
 
     field.isComplete = true;
-    const winner = state.players.find((p) => p.playerId === winnerSeatId);
+    const winner = state.players.find((p) => p.seatId === winnerSeatId);
     if (!winner) {
       return null;
     }
@@ -627,7 +624,7 @@ export class GameStateService implements IGameStateService {
         playedBy: [],
         playedBySeatIds: [],
         baseCard: '',
-        dealerSeatId: asSeatId(state.players[0].playerId),
+        dealerSeatId: asSeatId(state.players[0].seatId),
         isComplete: false,
       },
       negriCard: null,
@@ -641,7 +638,7 @@ export class GameStateService implements IGameStateService {
 
     // Randomize the first blow player
     const firstBlowIndex = Math.floor(Math.random() * state.players.length);
-    this.setCurrentSeat(state.players[firstBlowIndex]?.playerId ?? null);
+    this.setCurrentSeat(state.players[firstBlowIndex]?.seatId ?? null);
 
     // Initialize blow state
     state.blowState = {

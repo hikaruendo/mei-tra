@@ -29,14 +29,13 @@ export type TransportPlayer = PlayerContract;
 export function toDomainPlayer(
   player: Pick<
     RoomPlayer | DomainPlayer,
-    'seatId' | 'playerId' | 'name' | 'team' | 'isCOM'
+    'seatId' | 'name' | 'team' | 'isCOM'
   > &
     Partial<PlayerGameplayState>,
 ): DomainPlayer {
   const seatId = resolveSeatId(player);
   return {
     seatId,
-    playerId: seatId,
     name: player.name,
     hand: [...(player.hand ?? [])],
     team: player.team,
@@ -79,16 +78,16 @@ export function toTransportPlayers(
 ): TransportPlayer[] {
   const roomPlayersById = new Map(
     (options?.roomPlayers ?? []).map((roomPlayer) => [
-      roomPlayer.playerId,
+      roomPlayer.seatId,
       roomPlayer,
     ]),
   );
 
   return players.map((player) => {
-    const roomPlayer = roomPlayersById.get(player.playerId);
+    const roomPlayer = roomPlayersById.get(player.seatId);
     const transportPlayer = withConnectionMetadata(
       player,
-      options?.getConnectionState?.(player.playerId) ?? roomPlayer,
+      options?.getConnectionState?.(player.seatId) ?? roomPlayer,
     );
 
     const visiblePlayer = roomPlayer?.isCOM
@@ -123,7 +122,7 @@ export function toPersistedPlayerStates(
 ): PersistedPlayerStates {
   return Object.fromEntries(
     players.map((player) => [
-      player.playerId,
+      player.seatId,
       {
         hand: [...player.hand],
         isPasser: player.isPasser,
@@ -140,7 +139,7 @@ export function toRuntimePlayer(
 ): DomainPlayer | null {
   if (
     !player ||
-    typeof player.playerId !== 'string' ||
+    typeof player.seatId !== 'string' ||
     typeof player.name !== 'string'
   ) {
     return null;
@@ -151,10 +150,8 @@ export function toRuntimePlayer(
     return null;
   }
 
-  const seatId = player.seatId ?? asSeatId(player.playerId);
   return {
-    seatId,
-    playerId: seatId,
+    seatId: asSeatId(player.seatId),
     name: player.name,
     hand: Array.isArray(player.hand) ? [...player.hand] : [],
     team,
@@ -167,22 +164,16 @@ export function toRuntimePlayer(
 
 export function toRoomPlayer(params: {
   session: SessionUser;
-  gameplay: PlayerGameplayState &
-    Pick<DomainPlayer, 'name' | 'playerId' | 'seatId'>;
+  gameplay: PlayerGameplayState & Pick<DomainPlayer, 'name' | 'seatId'>;
   participantKey?: string;
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;
 }): RoomPlayer {
-  const seatId =
-    params.session.seatId ??
-    (params.gameplay.seatId
-      ? params.gameplay.seatId
-      : asSeatId(params.gameplay.playerId));
+  const seatId = params.session.seatId ?? params.gameplay.seatId;
   return {
     socketId: params.session.socketId,
     seatId,
-    playerId: seatId,
     participantKey: params.participantKey ?? params.session.userId ?? seatId,
     name: params.gameplay.name,
     userId: params.session.userId,

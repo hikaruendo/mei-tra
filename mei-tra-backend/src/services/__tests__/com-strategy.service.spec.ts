@@ -36,7 +36,7 @@ describe('ComStrategyService', () => {
     hand: string[] = [],
     overrides: Partial<DomainPlayer> = {},
   ): DomainPlayer => ({
-    playerId,
+    seatId: asSeatId(playerId),
     name: playerId,
     team,
     hand,
@@ -66,7 +66,7 @@ describe('ComStrategyService', () => {
     };
 
     return {
-      currentSeatId: asSeatId(players[0].playerId),
+      currentSeatId: asSeatId(players[0].seatId),
       gamePhase: 'blow' as GamePhase,
       deck: [],
       teamScores: {
@@ -78,7 +78,7 @@ describe('ComStrategyService', () => {
       roundNumber: 1,
       pointsToWin: 5,
       teamAssignments: Object.fromEntries(
-        players.map((statePlayer) => [statePlayer.playerId, statePlayer.team]),
+        players.map((statePlayer) => [statePlayer.seatId, statePlayer.team]),
       ),
       ...overrides,
       players,
@@ -138,7 +138,7 @@ describe('ComStrategyService', () => {
       players: [com, enemy, player('partner-0', 0), player('enemy-2', 1)],
       blowState: {
         currentHighestDeclaration: {
-          seatId: asSeatId(enemy.playerId),
+          seatId: asSeatId(enemy.seatId),
           trumpType: 'tra',
           numberOfPairs: 7,
           timestamp: Date.now(),
@@ -171,7 +171,7 @@ describe('ComStrategyService', () => {
       players: [com, player('e1', 1), partner, player('e2', 1)],
       blowState: {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'club',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -194,7 +194,7 @@ describe('ComStrategyService', () => {
       players: [com, player('e1', 1), partner, player('e2', 1)],
       blowState: {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'club',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -221,7 +221,7 @@ describe('ComStrategyService', () => {
       blowState: {
         currentTrump: 'herz',
         currentHighestDeclaration: {
-          seatId: asSeatId(com.playerId),
+          seatId: asSeatId(com.seatId),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -284,7 +284,7 @@ describe('ComStrategyService', () => {
     const partner = player('partner-0', 0);
     const gameState = leadState(com, 'herz', {
       currentHighestDeclaration: {
-        seatId: asSeatId(partner.playerId),
+        seatId: asSeatId(partner.seatId),
         trumpType: 'herz',
         numberOfPairs: 6,
         timestamp: Date.now(),
@@ -307,7 +307,7 @@ describe('ComStrategyService', () => {
       'herz',
       {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -335,7 +335,7 @@ describe('ComStrategyService', () => {
       'herz',
       {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -360,7 +360,7 @@ describe('ComStrategyService', () => {
       'herz',
       {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -388,7 +388,7 @@ describe('ComStrategyService', () => {
       'herz',
       {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -416,7 +416,7 @@ describe('ComStrategyService', () => {
       'herz',
       {
         currentHighestDeclaration: {
-          seatId: asSeatId(partner.playerId),
+          seatId: asSeatId(partner.seatId),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -441,7 +441,7 @@ describe('ComStrategyService', () => {
     const enemy = player('enemy-1', 1);
     const gameState = leadState(com, 'herz', {
       currentHighestDeclaration: {
-        seatId: asSeatId(enemy.playerId),
+        seatId: asSeatId(enemy.seatId),
         trumpType: 'herz',
         numberOfPairs: 6,
         timestamp: Date.now(),
@@ -461,7 +461,7 @@ describe('ComStrategyService', () => {
     const enemy = player('enemy-1', 1);
     const gameState = leadState(com, 'herz', {
       currentHighestDeclaration: {
-        seatId: asSeatId(enemy.playerId),
+        seatId: asSeatId(enemy.seatId),
         trumpType: 'herz',
         numberOfPairs: 6,
         timestamp: Date.now(),

@@ -9,7 +9,6 @@ describe('normalizeGameStateIdentityAliases', () => {
       players: [
         {
           seatId: asSeatId('seat-1'),
-          playerId: 'legacy-player',
           name: 'Player 1',
           team: 0,
           hand: [],
@@ -58,7 +57,10 @@ describe('normalizeGameStateIdentityAliases', () => {
     const normalized = normalizeGameStateIdentityAliases(state);
 
     expect(normalized.players[0]).toEqual(
-      expect.objectContaining({ seatId: 'seat-1', playerId: 'seat-1' }),
+      expect.objectContaining({
+        seatId: asSeatId('seat-1'),
+        playerId: 'seat-1',
+      }),
     );
     expect(normalized.currentSeatId).toBe('seat-1');
     expect(normalized.blowState.lastPasserSeatId).toBe('seat-1');
@@ -82,7 +84,6 @@ describe('normalizeGameStateIdentityAliases', () => {
       players: [
         {
           seatId: asSeatId('seat-1'),
-          playerId: 'seat-1',
           name: 'Player 1',
           team: 0,
           hand: [],
@@ -90,7 +91,6 @@ describe('normalizeGameStateIdentityAliases', () => {
         },
         {
           seatId: asSeatId('seat-2'),
-          playerId: 'seat-2',
           name: 'Player 2',
           team: 1,
           hand: [],

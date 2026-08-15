@@ -43,7 +43,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      if (player.playerId !== playerId) {
+      if (player.seatId !== playerId) {
         return { success: false, error: 'Player mismatch for broken hand' };
       }
 
@@ -99,7 +99,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
       const room = await this.roomService.getRoom(roomId);
-      const player = state.players.find((p) => p.playerId === playerId);
+      const player = state.players.find((p) => p.seatId === playerId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -151,7 +151,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const firstBlowIndex = nextState.blowState.currentBlowIndex;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
-      setCurrentSeat(nextState, firstBlowPlayer?.playerId ?? null);
+      setCurrentSeat(nextState, firstBlowPlayer?.seatId ?? null);
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;
       });
@@ -173,7 +173,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         });
 
         const brokenPayload: BrokenPayload = {
-          nextSeatId: asSeatId(firstBlowPlayer.playerId),
+          nextSeatId: asSeatId(firstBlowPlayer.seatId),
           players: resolveTransportPlayers(roomGameState, nextState.players, {
             roomPlayers: room?.players,
           }),
@@ -190,7 +190,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: firstBlowPlayer.playerId,
+          payload: firstBlowPlayer.seatId,
         });
       }
 
@@ -200,11 +200,11 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         actorSeatId: asSeatId(playerId),
         state: nextState,
         actionData: {
-          nextSeatId: firstBlowPlayer?.playerId ?? null,
+          nextSeatId: firstBlowPlayer?.seatId ?? null,
           nextBlowIndex: firstBlowIndex,
           startingHandsBySeatId: Object.fromEntries(
             nextState.players.map((statePlayer) => [
-              statePlayer.playerId,
+              statePlayer.seatId,
               [...statePlayer.hand],
             ]),
           ),

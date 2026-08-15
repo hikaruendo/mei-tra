@@ -21,7 +21,7 @@ describe('TurnMonitorService', () => {
         getState: () => ({
           players: [
             {
-              playerId: 'p1',
+              seatId: asSeatId('p1'),
               socketId: 'socket-1',
               userId: 'user-1',
               isCOM: false,
@@ -67,7 +67,7 @@ describe('TurnMonitorService', () => {
         getState: () => ({
           players: [
             {
-              playerId: 'p1',
+              seatId: asSeatId('p1'),
               socketId: 'socket-1',
               userId: 'user-1',
               isCOM: false,
@@ -111,7 +111,7 @@ describe('TurnMonitorService', () => {
         getState: () => ({
           players: [
             {
-              playerId: 'p1',
+              seatId: asSeatId('p1'),
               socketId: 'socket-1',
               userId: 'user-1',
               isCOM: false,

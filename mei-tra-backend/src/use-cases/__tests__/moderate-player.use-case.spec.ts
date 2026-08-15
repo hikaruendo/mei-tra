@@ -11,7 +11,7 @@ describe('ModeratePlayerUseCase', () => {
     status: RoomStatus.PLAYING,
     players: [
       {
-        playerId: 'host',
+        seatId: asSeatId('host'),
         isCOM: false,
         socketId: 'host-socket',
         name: 'Host',
@@ -20,7 +20,7 @@ describe('ModeratePlayerUseCase', () => {
         isPasser: false,
       },
       {
-        playerId: 'target',
+        seatId: asSeatId('target'),
         isCOM: false,
         socketId: '',
         name: 'Target',
@@ -53,7 +53,7 @@ describe('ModeratePlayerUseCase', () => {
         getState: () => ({
           players: [
             {
-              playerId: 'target',
+              seatId: asSeatId('target'),
               name: 'Target',
               hand: [],
               team: 1,

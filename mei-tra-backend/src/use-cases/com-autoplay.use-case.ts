@@ -92,13 +92,13 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       this.logger.warn(
         `Turn unplayable in room ${roomId}: no current player resolved ` +
           `(currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
-          `roster=[${state.players.map((player) => player.playerId).join(', ')}])`,
+          `roster=[${state.players.map((player) => player.seatId).join(', ')}])`,
       );
       return;
     }
 
     const isConnected = Boolean(
-      gameState.getPlayerConnectionState(currentPlayer.playerId)?.socketId,
+      gameState.getPlayerConnectionState(currentPlayer.seatId)?.socketId,
     );
     if (isConnected) {
       return;
@@ -106,7 +106,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
     this.logger.warn(
       `Turn unplayable in room ${roomId}: auto-play skipped non-COM player ` +
-        `${currentPlayer.playerId} which has no live socket ` +
+        `${currentPlayer.seatId} which has no live socket ` +
         `(phase=${state.gamePhase}, currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
         `isCOM=${String(currentPlayer.isCOM)})`,
     );
@@ -167,7 +167,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
     if (
       state.playState?.negriCard == null &&
-      state.blowState.currentHighestDeclaration?.seatId === comPlayer.playerId
+      state.blowState.currentHighestDeclaration?.seatId === comPlayer.seatId
     ) {
       const negriCard = this.comStrategyService.chooseNegriCard(
         state,
@@ -186,7 +186,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       const negriResult: SelectNegriResponse =
         await this.selectNegriUseCase.execute({
           roomId,
-          actorId: comPlayer.playerId,
+          actorId: comPlayer.seatId,
           card: negriCard,
         });
 
@@ -209,7 +209,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
     const result: PlayCardResponse = await this.playCardUseCase.execute({
       roomId,
-      actorId: comPlayer.playerId,
+      actorId: comPlayer.seatId,
       card: bestCard,
     });
 
@@ -225,7 +225,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       updatedField &&
       updatedField.baseCard === 'JOKER' &&
       !updatedField.baseSuit &&
-      updatedField.dealerSeatId === comPlayer.playerId
+      updatedField.dealerSeatId === comPlayer.seatId
     ) {
       updatedField.baseSuit = this.comStrategyService.chooseBaseSuit(
         updatedState,
@@ -246,7 +246,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: nextPlayer.seatId,
         });
       }
 
@@ -293,12 +293,12 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       action.type === 'declare'
         ? await this.declareBlowUseCase.execute({
             roomId,
-            actorId: comPlayer.playerId,
+            actorId: comPlayer.seatId,
             declaration: action.declaration,
           })
         : await this.passBlowUseCase.execute({
             roomId,
-            actorId: comPlayer.playerId,
+            actorId: comPlayer.seatId,
           });
 
     const { events = [], delayedEvents = [] } =
@@ -372,7 +372,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     }
 
     this.logger.warn(
-      `Blow turn sat on ${comPlayer.playerId} in room ${roomId}, which has already declared; advancing the turn`,
+      `Blow turn sat on ${comPlayer.seatId} in room ${roomId}, which has already declared; advancing the turn`,
     );
 
     const maxAttempts = state.players.length;
@@ -383,7 +383,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       if (!candidate) break;
 
       const acted =
-        hasPlayerDeclaredInBlow(state.blowState, candidate.playerId) ||
+        hasPlayerDeclaredInBlow(state.blowState, candidate.seatId) ||
         hasPlayerPassedInBlow(state.blowState, candidate);
       if (!acted) break;
     }
@@ -397,7 +397,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
             scope: 'room',
             roomId,
             event: 'update-turn',
-            payload: nextPlayer.playerId,
+            payload: nextPlayer.seatId,
           },
         ]
       : [];
@@ -417,8 +417,8 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
   ): Promise<ComAutoPlayResponse> {
     const preparation = await this.revealBrokenHandUseCase.prepare({
       roomId,
-      actorId: comPlayer.playerId,
-      playerId: comPlayer.playerId,
+      actorId: comPlayer.seatId,
+      playerId: comPlayer.seatId,
     });
 
     if (!preparation.success || !preparation.followUp) {

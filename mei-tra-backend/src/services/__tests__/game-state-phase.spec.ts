@@ -118,14 +118,14 @@ describe('GameStateService phase transitions', () => {
     const state = service.getState();
     state.players = [
       {
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Player 1',
         team: 0,
         hand: [],
         isPasser: false,
       },
       {
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
         name: 'Player 2',
         team: 1,
         hand: [],
@@ -149,7 +149,7 @@ describe('GameStateService phase transitions', () => {
     const state = service.getState();
     state.players = [
       {
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Player 1',
         team: 0,
         hand: [],
@@ -196,28 +196,28 @@ describe('GameStateService phase transitions', () => {
     const state = service.getState();
     state.players = [
       {
-        playerId: 'host-player',
+        seatId: asSeatId('host-player'),
         name: 'Host',
         team: 0,
         hand: [],
         isPasser: false,
       },
       {
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
         name: 'Player 2',
         team: 1,
         hand: [],
         isPasser: false,
       },
       {
-        playerId: 'player-3',
+        seatId: asSeatId('player-3'),
         name: 'Player 3',
         team: 0,
         hand: [],
         isPasser: false,
       },
       {
-        playerId: 'player-4',
+        seatId: asSeatId('player-4'),
         name: 'Player 4',
         team: 1,
         hand: [],

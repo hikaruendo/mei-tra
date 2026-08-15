@@ -71,7 +71,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         return { success: false, error: pendingError };
       }
 
-      if (!roomGameState.isPlayerTurn(player.playerId)) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to pass" };
       }
 
@@ -89,7 +89,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       }
 
       // Check if player has already declared in this blow phase
-      if (hasPlayerDeclaredInBlow(state.blowState, player.playerId)) {
+      if (hasPlayerDeclaredInBlow(state.blowState, player.seatId)) {
         return {
           success: false,
           error: 'You have already declared in this blow phase',
@@ -100,15 +100,15 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       player.isPasser = true;
       state.blowState.actionHistory.push({
         type: 'pass',
-        seatId: asSeatId(player.playerId),
+        seatId: asSeatId(player.seatId),
         timestamp: Date.now(),
       });
-      state.blowState.lastPasserSeatId = asSeatId(player.playerId);
+      state.blowState.lastPasserSeatId = asSeatId(player.seatId);
 
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'blow_passed',
-        actorSeatId: asSeatId(player.playerId),
+        actorSeatId: asSeatId(player.seatId),
         state,
         actionData: {
           declarationsCount: state.blowState.declarations.length,
@@ -183,7 +183,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           break;
         }
         const hasActed =
-          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.playerId) ||
+          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.seatId) ||
           hasPlayerPassedInBlow(state.blowState, currentPlayer);
 
         if (!hasActed) {
@@ -203,7 +203,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: nextPlayer.seatId,
         });
       }
 
@@ -239,7 +239,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       return { events: [] };
     }
 
-    setCurrentSeat(state, firstBlowPlayer.playerId);
+    setCurrentSeat(state, firstBlowPlayer.seatId);
     state.deck = this.cardService.generateDeck();
     roomGameState.dealCards();
 
@@ -250,7 +250,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       state,
       actionData: {
         reason: 'no_declarations',
-        nextDealerSeatId: firstBlowPlayer.playerId,
+        nextDealerSeatId: firstBlowPlayer.seatId,
         nextBlowIndex: firstBlowIndex,
       },
     });
@@ -267,7 +267,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       },
     );
     const roundCancelledPayload: RoundCancelledPayload = {
-      nextDealerSeatId: asSeatId(firstBlowPlayer.playerId),
+      nextDealerSeatId: asSeatId(firstBlowPlayer.seatId),
       players: resolveTransportPlayers(roomGameState, state.players, {
         roomPlayers: room?.players,
       }),
@@ -296,7 +296,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         scope: 'room',
         roomId,
         event: 'update-turn',
-        payload: firstBlowPlayer.playerId,
+        payload: firstBlowPlayer.seatId,
       },
     ];
     return { events };

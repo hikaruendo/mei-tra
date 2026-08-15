@@ -36,7 +36,7 @@ describe('GameHistoryController', () => {
     players: [
       {
         socketId: 'socket-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         userId: 'user-1',
         isAuthenticated: true,
         name: 'Player 1',
@@ -489,7 +489,7 @@ describe('GameHistoryController', () => {
         room.players[0],
         {
           ...room.players[0],
-          playerId: 'player-duplicate',
+          seatId: asSeatId('player-duplicate'),
           socketId: 'socket-duplicate',
           isHost: false,
         },

@@ -80,11 +80,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       }
       const resolvedUser: SessionUser = {
         ...normalizedUser,
-        seatId: asSeatId(joinedPlayer.playerId),
+        seatId: asSeatId(joinedPlayer.seatId),
       };
       const data: JoinRoomSuccess = {
         room,
-        isHost: room.hostSeatId === joinedPlayer.playerId,
+        isHost: room.hostSeatId === joinedPlayer.seatId,
         roomStatus: room.status,
         roomsList: await this.roomService.listRooms(),
         resumeGame: await this.buildResumePayloadIfNeeded(room.id, room),
@@ -171,7 +171,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     return {
       roomId: currentRoomId,
       playerId:
-        currentRoomPlayer?.playerId ??
+        currentRoomPlayer?.seatId ??
         normalizedUser.seatId ??
         normalizedUser.userId!,
     };

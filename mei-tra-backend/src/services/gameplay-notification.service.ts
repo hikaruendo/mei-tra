@@ -99,7 +99,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
         }
 
         const targetPlayer = context.room.players.find(
-          (player) => player.playerId === playerId,
+          (player) => player.seatId === playerId,
         );
         if (!targetPlayer) {
           return;
@@ -180,10 +180,10 @@ export class GameplayNotificationService implements OnModuleDestroy {
       ...new Set(
         players
           .filter((player) => !player.isCOM)
-          .filter((player) => !excludedPlayerIds.has(player.playerId))
+          .filter((player) => !excludedPlayerIds.has(player.seatId))
           .filter(
             (player) =>
-              player.playerId !== options.excludeActorId &&
+              player.seatId !== options.excludeActorId &&
               player.userId !== options.excludeActorId,
           )
           .map((player) => player.userId)

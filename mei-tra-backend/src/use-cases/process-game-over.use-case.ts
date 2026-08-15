@@ -6,6 +6,7 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { SessionUser } from '../types/session.types';
+import type { SeatId } from '@contracts/ids';
 
 @Injectable()
 export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
@@ -35,7 +36,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
         const sessionUser =
           roomGameState &&
           typeof roomGameState.findSessionUserByPlayerId === 'function'
-            ? roomGameState.findSessionUserByPlayerId(roomPlayer.playerId)
+            ? roomGameState.findSessionUserByPlayerId(roomPlayer.seatId)
             : null;
         const userId = this.resolveAuthenticatedUserId(roomPlayer, sessionUser);
 
@@ -44,14 +45,19 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
         }
 
         return {
-          playerId: roomPlayer.playerId,
+          playerId: roomPlayer.seatId,
           team: roomPlayer.team,
           userId,
         };
       })
       .filter(
-        (player): player is { playerId: string; team: 0 | 1; userId: string } =>
-          player !== null,
+        (
+          player,
+        ): player is {
+          playerId: SeatId;
+          team: 0 | 1;
+          userId: string;
+        } => player !== null,
       );
 
     const updatePromises = authenticatedPlayers.map(async (player) => {
@@ -95,10 +101,10 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
           .filter(
             (roomPlayer) =>
               !authenticatedPlayers.some(
-                (player) => player.playerId === roomPlayer.playerId,
+                (player) => player.playerId === roomPlayer.seatId,
               ),
           )
-          .map((roomPlayer) => roomPlayer.playerId),
+          .map((roomPlayer) => roomPlayer.seatId),
         failedCount: failedUpdates,
         finalScores: teamScores,
       },

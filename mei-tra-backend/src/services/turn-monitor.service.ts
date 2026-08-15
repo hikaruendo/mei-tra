@@ -74,11 +74,11 @@ export class TurnMonitorService implements OnModuleDestroy {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const currentPlayer = state.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === playerId,
     );
 
     const currentPlayerConnection = currentPlayer
-      ? roomGameState.getPlayerConnectionState(currentPlayer.playerId)
+      ? roomGameState.getPlayerConnectionState(currentPlayer.seatId)
       : null;
 
     if (
@@ -163,10 +163,10 @@ export class TurnMonitorService implements OnModuleDestroy {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const currentPlayer = state.players.find(
-      (player) => player.playerId === monitor.playerId,
+      (player) => player.seatId === monitor.playerId,
     );
     const currentPlayerConnection = currentPlayer
-      ? roomGameState.getPlayerConnectionState(currentPlayer.playerId)
+      ? roomGameState.getPlayerConnectionState(currentPlayer.seatId)
       : null;
     const matchesCurrentTurnPlayer =
       currentPlayerConnection &&
@@ -202,7 +202,7 @@ export class TurnMonitorService implements OnModuleDestroy {
 
     return (
       (state.gamePhase === 'play' || state.gamePhase === 'blow') &&
-      currentPlayer?.playerId === playerId
+      currentPlayer?.seatId === playerId
     );
   }
 }

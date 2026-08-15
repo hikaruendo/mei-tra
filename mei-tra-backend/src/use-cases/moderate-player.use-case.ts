@@ -60,7 +60,7 @@ export class ModeratePlayerUseCase {
     }
 
     const targetPlayer = room.players.find(
-      (player) => player.playerId === request.targetPlayerId,
+      (player) => player.seatId === request.targetPlayerId,
     );
     if (!targetPlayer || targetPlayer.isCOM) {
       return { success: false, error: 'Target player not found' };
@@ -110,7 +110,7 @@ export class ModeratePlayerUseCase {
 
     const state = roomGameState.getState();
     const targetStatePlayer = state.players.find(
-      (player) => player.playerId === request.targetPlayerId,
+      (player) => player.seatId === request.targetPlayerId,
     );
     const canReplaceDisconnected = Boolean(
       room.status === RoomStatus.PLAYING &&

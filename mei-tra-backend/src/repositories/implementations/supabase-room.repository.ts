@@ -295,13 +295,13 @@ export class SupabaseRoomRepository implements IRoomRepository {
   }
 
   private mapDatabaseToRoom(dbRoom: RoomRow, players: RoomPlayer[]): Room {
-    const hostSeatId = dbRoom.host_seat_id ?? players[0]?.playerId;
+    const hostSeatId = dbRoom.host_seat_id ?? players[0]?.seatId;
     if (!hostSeatId) {
       throw new Error(`Room ${dbRoom.id} has no canonical host seat`);
     }
     const canonicalPlayers = players.map((player) => ({
       ...player,
-      isHost: player.playerId === hostSeatId,
+      isHost: player.seatId === hostSeatId,
     }));
     return {
       id: dbRoom.id,
@@ -364,8 +364,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     const seatId = asSeatId(dbPlayer.id);
     return {
       socketId: '',
-      seatId,
-      playerId: seatId,
+      seatId: asSeatId(seatId),
       participantKey: dbPlayer.user_id ?? dbPlayer.id,
       userId: dbPlayer.user_id ?? undefined,
       isAuthenticated: Boolean(dbPlayer.user_id),

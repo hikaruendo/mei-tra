@@ -23,7 +23,7 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
     ? asSeatId(state.currentSeatId)
     : null;
   const players = state.players.map((player) => {
-    const seatId = player.seatId ?? asSeatId(player.playerId);
+    const seatId = player.seatId ?? asSeatId(player.seatId);
     return { ...player, seatId, playerId: seatId };
   });
   const blowState = {

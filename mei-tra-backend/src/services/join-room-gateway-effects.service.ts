@@ -43,7 +43,6 @@ interface BuildRoomEntryEventsParams {
   room: JoinRoomSuccess['room'];
   selfPlayer: {
     seatId: SeatId;
-    playerId: string;
     name: string;
     team: Team;
   };
@@ -84,7 +83,7 @@ export class JoinRoomGatewayEffectsService {
         `Joined seat could not be resolved: room=${roomId} user=${normalizedUser.userId ?? 'unknown'}`,
       );
     }
-    const selfPlayerId = selfRoomPlayer.playerId;
+    const selfPlayerId = selfRoomPlayer.seatId;
 
     if (currentRoomId && currentRoomId !== roomId && previousRoomNotification) {
       events.push({
@@ -147,12 +146,12 @@ export class JoinRoomGatewayEffectsService {
 
     if (!joinData.resumeGame) {
       for (const existingPlayer of room.players) {
-        if (existingPlayer.playerId === selfPlayerId) {
+        if (existingPlayer.seatId === selfPlayerId) {
           continue;
         }
 
         const existingPlayerJoinedPayload: GamePlayerJoinedPayload = {
-          seatId: asSeatId(existingPlayer.playerId),
+          seatId: asSeatId(existingPlayer.seatId),
           roomId,
           isHost: existingPlayer.isHost,
           roomStatus: joinData.roomStatus,
@@ -297,7 +296,7 @@ export class JoinRoomGatewayEffectsService {
     }
 
     return room.players.find(
-      (player) => player.playerId === normalizedUser.seatId,
+      (player) => player.seatId === normalizedUser.seatId,
     );
   }
 
@@ -306,11 +305,11 @@ export class JoinRoomGatewayEffectsService {
     gamePlayers: DomainPlayer[],
     normalizedUser: SessionUser,
   ): string {
-    const gamePlayerIds = new Set(gamePlayers.map((player) => player.playerId));
+    const gamePlayerIds = new Set(gamePlayers.map((player) => player.seatId));
 
     const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
-    if (selfRoomPlayer && gamePlayerIds.has(selfRoomPlayer.playerId)) {
-      return selfRoomPlayer.playerId;
+    if (selfRoomPlayer && gamePlayerIds.has(selfRoomPlayer.seatId)) {
+      return selfRoomPlayer.seatId;
     }
 
     if (normalizedUser.seatId && gamePlayerIds.has(normalizedUser.seatId)) {

@@ -17,14 +17,14 @@ describe('transitionToPlayPhase', () => {
     const state: GameState = {
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           team: 0 as const,
           hand: ['H-7'],
           isPasser: false,
         },
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           name: 'Player 2',
           team: 1 as const,
           hand: ['S-9'],
@@ -73,7 +73,7 @@ describe('transitionToPlayPhase', () => {
       players: [
         {
           socketId: 'socket-from-room',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           team: 0,
           hand: [],
@@ -138,7 +138,7 @@ describe('transitionToPlayPhase', () => {
       event: 'reveal-agari',
       payload: {
         agari: 'H-A',
-        seatId: 'player-1',
+        seatId: asSeatId('player-1'),
       },
     });
     const updatePhaseEvent = result.delayedEvents.find(
@@ -164,7 +164,7 @@ describe('transitionToPlayPhase', () => {
     const state: GameState = {
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           team: 0 as const,
           hand: ['J♠', 'J♣', 'J♥'],

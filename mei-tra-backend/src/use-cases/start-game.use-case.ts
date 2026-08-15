@@ -40,7 +40,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const player = room.players.find((p) => p.playerId === playerId);
+      const player = room.players.find((p) => p.seatId === playerId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
           playerId,
@@ -120,9 +120,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       if (updatedState.blowState.currentBlowIndex !== currentPlayerIndex) {
         const currentPlayer = resolveCurrentPlayer(updatedState);
         roomGameState.updateState({
-          currentSeatId: currentPlayer
-            ? asSeatId(currentPlayer.playerId)
-            : null,
+          currentSeatId: currentPlayer ? asSeatId(currentPlayer.seatId) : null,
           blowState: {
             ...updatedState.blowState,
             currentBlowIndex: currentPlayerIndex,
@@ -156,12 +154,12 @@ export class StartGameUseCase implements IStartGameUseCase {
         state: updatedState,
         actionData: {
           startedBySeatId: playerId,
-          firstBlowSeatId: firstBlowPlayer?.playerId ?? null,
+          firstBlowSeatId: firstBlowPlayer?.seatId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
           startingHandsBySeatId: Object.fromEntries(
             updatedState.players.map((player) => [
-              player.playerId,
+              player.seatId,
               [...player.hand],
             ]),
           ),
@@ -178,7 +176,7 @@ export class StartGameUseCase implements IStartGameUseCase {
             scores: updatedState.teamScores,
             winner: null,
           },
-          currentTurnSeatId: asSeatId(currentTurnPlayer.playerId),
+          currentTurnSeatId: asSeatId(currentTurnPlayer.seatId),
         },
       };
     } catch (error) {
@@ -203,16 +201,16 @@ export class StartGameUseCase implements IStartGameUseCase {
     // players array from that source before starting. This keeps the play order
     // aligned with the shuffled seat arrangement instead of any stale game-state order.
     const existingPlayers = new Map(
-      state.players.map((statePlayer) => [statePlayer.playerId, statePlayer]),
+      state.players.map((statePlayer) => [statePlayer.seatId, statePlayer]),
     );
     state.players = room.players.map((roomPlayer) => {
-      const existingPlayer = existingPlayers.get(roomPlayer.playerId);
+      const existingPlayer = existingPlayers.get(roomPlayer.seatId);
 
       if (!existingPlayer) {
         if (typeof roomGameState.registerPlayerToken === 'function') {
           roomGameState.registerPlayerToken(
-            roomPlayer.playerId,
-            roomPlayer.playerId,
+            roomPlayer.seatId,
+            roomPlayer.seatId,
           );
         }
         return {
@@ -231,7 +229,7 @@ export class StartGameUseCase implements IStartGameUseCase {
     });
 
     state.teamAssignments = Object.fromEntries(
-      state.players.map((player) => [player.playerId, player.team]),
+      state.players.map((player) => [player.seatId, player.team]),
     );
 
     return state;

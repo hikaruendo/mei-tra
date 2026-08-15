@@ -7,7 +7,7 @@ describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
   const makePlayer = (playerId: string, isCOM = false): DomainPlayer => ({
-    playerId,
+    seatId: asSeatId(playerId),
     name: playerId,
     hand: [],
     team: isCOM ? 1 : 0,
@@ -33,7 +33,7 @@ describe('PlayService', () => {
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('player-2');
+    expect(winner?.seatId).toBe('player-2');
   });
 
   it('keeps COM seats in the play order when attributing cards to players', () => {
@@ -54,7 +54,7 @@ describe('PlayService', () => {
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('com-1');
+    expect(winner?.seatId).toBe('com-1');
   });
 
   it('uses playedBy as the source of truth when card attribution differs from current seat order', () => {
@@ -75,7 +75,7 @@ describe('PlayService', () => {
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('player-3');
+    expect(winner?.seatId).toBe('player-3');
   });
 
   it('falls back to dealer order for legacy fields without playedBy attribution', () => {
@@ -96,7 +96,7 @@ describe('PlayService', () => {
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('player-2');
+    expect(winner?.seatId).toBe('player-2');
   });
 
   it('returns only base-suit cards when the hand can follow suit', () => {

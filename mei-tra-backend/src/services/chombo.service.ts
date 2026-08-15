@@ -145,7 +145,7 @@ export class ChomboService implements IChomboService {
     if (validCards.length !== hand.length) {
       // Log warning if undefined cards detected
       console.warn(
-        `Player ${player.playerId} has ${hand.length - validCards.length} undefined cards`,
+        `Player ${player.seatId} has ${hand.length - validCards.length} undefined cards`,
       );
     }
 

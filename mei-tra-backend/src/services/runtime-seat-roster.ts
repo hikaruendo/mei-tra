@@ -27,7 +27,7 @@ function replaceOrAppend<T>(items: T[], index: number, value: T): void {
 
 export function rebuildTeamAssignments(state: RuntimeGameRoster): void {
   state.teamAssignments = Object.fromEntries(
-    state.players.map((player) => [player.playerId, player.team]),
+    state.players.map((player) => [player.seatId, player.team]),
   );
 }
 
@@ -70,8 +70,7 @@ export function upsertRuntimeSeat(
     (gameIndex === -1 ? null : state.players[gameIndex]);
   const normalizedRoomPlayer: RoomPlayer = {
     ...roomPlayer,
-    seatId,
-    playerId: seatId,
+    seatId: seatId,
     hand: [],
     isPasser: false,
     hasBroken: false,

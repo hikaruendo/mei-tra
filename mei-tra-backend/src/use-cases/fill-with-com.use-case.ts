@@ -25,9 +25,7 @@ export class FillWithComUseCase implements IFillWithComUseCase {
       }
 
       // Find the requesting player by playerId
-      const requestingPlayer = room.players.find(
-        (p) => p.playerId === playerId,
-      );
+      const requestingPlayer = room.players.find((p) => p.seatId === playerId);
       if (!requestingPlayer) {
         return {
           success: false,

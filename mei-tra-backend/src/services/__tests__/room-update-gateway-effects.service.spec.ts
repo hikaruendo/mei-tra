@@ -12,7 +12,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
         getState: jest.fn(() => ({
           players: [
             {
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               name: 'Player 1',
               hand: [],
               team: 0,
@@ -33,15 +33,14 @@ describe('RoomUpdateGatewayEffectsService', () => {
         getTransportPlayers: jest.fn(
           (players?: DomainPlayer[]): TransportPlayer[] =>
             (players ?? []).map((player) => ({
-              socketId:
-                player.playerId === 'player-1' ? 'socket-1' : 'socket-2',
-              seatId: asSeatId(player.playerId),
+              socketId: player.seatId === 'player-1' ? 'socket-1' : 'socket-2',
+              seatId: asSeatId(player.seatId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
               isPasser: player.isPasser,
               isCOM: player.isCOM,
-              isHost: player.playerId === 'player-1',
+              isHost: player.seatId === 'player-1',
             })),
         ),
       }),
@@ -56,7 +55,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           hand: [],
           team: 0 as const,

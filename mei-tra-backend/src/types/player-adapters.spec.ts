@@ -3,13 +3,14 @@ import {
   toRuntimePlayer,
   toTransportPlayers,
 } from './player-adapters';
+import { asSeatId } from './identity.types';
 
 describe('player-adapters', () => {
   describe('toRuntimePlayer', () => {
     it('uses an explicit fallback team when persisted player team is missing', () => {
       const player = toRuntimePlayer(
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           hand: [],
           isPasser: false,
@@ -22,7 +23,7 @@ describe('player-adapters', () => {
 
     it('rejects players without a persisted or fallback team', () => {
       const player = toRuntimePlayer({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Player 1',
         hand: [],
         isPasser: false,
@@ -36,7 +37,7 @@ describe('player-adapters', () => {
     it('persists gameplay fields without duplicating player identity', () => {
       const states = toPersistedPlayerStates([
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           hand: ['S1'],
           team: 1,
@@ -66,7 +67,7 @@ describe('player-adapters', () => {
       const [player] = toTransportPlayers(
         [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             name: 'Player2',
             hand: ['S1'],
             team: 0,
@@ -83,7 +84,7 @@ describe('player-adapters', () => {
           roomPlayers: [
             {
               socketId: '',
-              playerId: 'seat-1',
+              seatId: asSeatId('seat-1'),
               participantKey: 'com-seat-1',
               name: 'COM',
               team: 0,
@@ -100,7 +101,7 @@ describe('player-adapters', () => {
 
       expect(player).toEqual(
         expect.objectContaining({
-          seatId: 'seat-1',
+          seatId: asSeatId('seat-1'),
           name: 'COM',
           socketId: '',
           userId: undefined,

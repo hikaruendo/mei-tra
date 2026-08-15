@@ -38,7 +38,7 @@ describe('DisconnectGatewayEffectsService', () => {
     const state = {
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: [],
           team: 0,
@@ -53,7 +53,7 @@ describe('DisconnectGatewayEffectsService', () => {
       saveState: jest.fn().mockResolvedValue(undefined),
       findSessionUserBySocketId: jest.fn(() => ({
         socketId: 'socket-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Host',
         userId: 'user-1',
         isAuthenticated: true,
@@ -75,7 +75,7 @@ describe('DisconnectGatewayEffectsService', () => {
       maxPlayers: 4,
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           isCOM: false,
           socketId: 'socket-1',
@@ -85,7 +85,7 @@ describe('DisconnectGatewayEffectsService', () => {
           joinedAt: new Date(),
         },
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           name: 'Other',
           isCOM: false,
           socketId: 'socket-2',
@@ -105,7 +105,7 @@ describe('DisconnectGatewayEffectsService', () => {
       hostSeatId: asSeatId('player-2'),
       players: initialRoom.players.map((player) => ({
         ...player,
-        isHost: player.playerId === 'player-2',
+        isHost: player.seatId === 'player-2',
       })),
     };
     const roomService = {
@@ -316,13 +316,13 @@ describe('DisconnectGatewayEffectsService', () => {
   it('ignores a stale socket disconnect after a newer socket reconnects', async () => {
     const roomGameState = {
       getState: jest.fn(() => ({
-        players: [{ playerId: 'player-1', name: 'Player 1', team: 0 }],
+        players: [{ seatId: asSeatId('player-1'), name: 'Player 1', team: 0 }],
         teamAssignments: {},
         gamePhase: 'play',
       })),
       findSessionUserBySocketId: jest.fn(() => ({
         socketId: 'socket-old',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         userId: 'user-1',
         name: 'Player 1',
       })),

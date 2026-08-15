@@ -146,7 +146,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     const roomStatePlayer = roomPlayer
       ? (roomGameState
           .getState()
-          .players.find((player) => player.playerId === roomPlayer.playerId) ??
+          .players.find((player) => player.seatId === roomPlayer.seatId) ??
         null)
       : null;
     const currentPlayer =
@@ -164,7 +164,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       authenticatedUser.email ||
       currentPlayer.name;
     currentPlayer.name = displayName;
-    await roomGameState.applyPlayerConnectionState(currentPlayer.playerId, {
+    await roomGameState.applyPlayerConnectionState(currentPlayer.seatId, {
       socketId,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -172,7 +172,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     await this.roomService.updatePlayerInRoom(
       currentRoomId,
-      currentPlayer.playerId,
+      currentPlayer.seatId,
       {
         socketId,
         name: displayName,
@@ -195,6 +195,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       );
     }
 
-    return { playerId: currentPlayer.playerId, events: roomEvents };
+    return { playerId: currentPlayer.seatId, events: roomEvents };
   }
 }

@@ -40,7 +40,7 @@ export class RoomJoinService {
     const existingPlayer = this.findExistingRoomPlayer(room.players, user);
     if (existingPlayer) {
       const statePlayer = state.players.find(
-        (player) => player.playerId === existingPlayer.playerId,
+        (player) => player.seatId === existingPlayer.seatId,
       );
       const isWaitingRoom =
         state.gamePhase === null || state.gamePhase === 'waiting';
@@ -51,7 +51,7 @@ export class RoomJoinService {
       const reclaimingVacantSeatId = Object.entries(
         vacantSeats[roomId] ?? {},
       ).find(([seatId, seatData]) => {
-        if (seatId !== existingPlayer.playerId) {
+        if (seatId !== existingPlayer.seatId) {
           return false;
         }
         return user.userId
@@ -67,30 +67,26 @@ export class RoomJoinService {
         ...existingPlayer,
         ...user,
         seatId: resolveSeatId(existingPlayer),
-        playerId: resolveSeatId(existingPlayer),
         participantKey:
           user.userId ?? existingPlayer.participantKey ?? user.seatId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
-        isHost: room.hostSeatId === existingPlayer.playerId,
+        isHost: room.hostSeatId === existingPlayer.seatId,
         isCOM: reclaimingCOMSeat ? false : existingPlayer.isCOM,
       };
       upsertRuntimeSeat(room, state, updatedPlayer, {
         gameplaySource: statePlayer,
       });
 
-      gameState.registerPlayerToken(
-        updatedPlayer.playerId,
-        updatedPlayer.playerId,
-      );
+      gameState.registerPlayerToken(updatedPlayer.seatId, updatedPlayer.seatId);
       if (updatedPlayer.userId) {
         gameState.registerPlayerToken(
           updatedPlayer.userId,
-          updatedPlayer.playerId,
+          updatedPlayer.seatId,
         );
       }
-      gameState.clearDisconnectTimeout(updatedPlayer.playerId);
-      await gameState.applyPlayerConnectionState(updatedPlayer.playerId, {
+      gameState.clearDisconnectTimeout(updatedPlayer.seatId);
+      await gameState.applyPlayerConnectionState(updatedPlayer.seatId, {
         socketId: updatedPlayer.socketId,
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
@@ -147,7 +143,7 @@ export class RoomJoinService {
     } else {
       const availableVacantEntry = vacantEntries.find(([vacantSeatId]) => {
         const currentSeat = room.players.find(
-          (player) => player.playerId === vacantSeatId,
+          (player) => player.seatId === vacantSeatId,
         );
         return Boolean(currentSeat && !currentSeat.userId);
       });
@@ -158,7 +154,7 @@ export class RoomJoinService {
         const seatRoomPlayer = seatData.roomPlayer;
         team = seatRoomPlayer.team;
 
-        const originalPlayerId = seatRoomPlayer.playerId;
+        const originalPlayerId = seatRoomPlayer.seatId;
         gameState.removePlayerToken(originalPlayerId);
         gameState.clearDisconnectTimeout(originalPlayerId);
 
@@ -176,12 +172,12 @@ export class RoomJoinService {
           this.isReplaceableCOMSeat(player),
         );
         if (comIndex !== -1) {
-          const comPlayerId = room.players[comIndex].playerId;
+          const comPlayerId = room.players[comIndex].seatId;
           team = room.players[comIndex].team;
           replacingComId = comPlayerId;
           assignedIndex = comIndex;
           gsAssignedIndex = state.players.findIndex(
-            (player) => player.playerId === comPlayerId,
+            (player) => player.seatId === comPlayerId,
           );
         }
       }
@@ -201,7 +197,7 @@ export class RoomJoinService {
           (player) => this.isReplaceableCOMSeat(player) && !player.isReady,
         );
         if (waitingComIndex !== -1) {
-          replacingComId = room.players[waitingComIndex].playerId;
+          replacingComId = room.players[waitingComIndex].seatId;
           assignedIndex = waitingComIndex;
         }
       }
@@ -218,12 +214,12 @@ export class RoomJoinService {
     const seatGameSnapshot = restoredSeatData?.gamePlayer;
 
     if (assignedIndex !== -1) {
-      replacingComId = room.players[assignedIndex]?.playerId || null;
+      replacingComId = room.players[assignedIndex]?.seatId || null;
     }
 
     const currentSeatRoomPlayer =
       replacingComId != null
-        ? room.players.find((player) => player.playerId === replacingComId)
+        ? room.players.find((player) => player.seatId === replacingComId)
         : assignedIndex !== -1
           ? room.players[assignedIndex]
           : undefined;
@@ -237,7 +233,6 @@ export class RoomJoinService {
       ...user,
       socketId: user.socketId,
       seatId: assignedSeatId,
-      playerId: assignedSeatId,
       participantKey: user.userId ?? user.seatId ?? assignedSeatId,
       team: currentSeatRoomPlayer?.team ?? team,
       hand: [],
@@ -255,30 +250,30 @@ export class RoomJoinService {
 
     if (gsAssignedIndex === -1 && replacingComId) {
       gsAssignedIndex = state.players.findIndex(
-        (statePlayer) => statePlayer.playerId === replacingComId,
+        (statePlayer) => statePlayer.seatId === replacingComId,
       );
     }
 
     const currentSeatGamePlayer =
       replacingComId != null
         ? state.players.find(
-            (statePlayer) => statePlayer.playerId === replacingComId,
+            (statePlayer) => statePlayer.seatId === replacingComId,
           )
         : undefined;
 
     upsertRuntimeSeat(room, state, player, {
-      replaceSeatId: replacingComId ?? player.playerId,
+      replaceSeatId: replacingComId ?? player.seatId,
       gameplaySource:
         currentSeatGamePlayer ??
         seatGameSnapshot ??
         (gsAssignedIndex === -1 ? null : state.players[gsAssignedIndex]),
     });
 
-    gameState.registerPlayerToken(player.playerId, player.playerId);
+    gameState.registerPlayerToken(player.seatId, player.seatId);
     if (player.userId) {
-      gameState.registerPlayerToken(player.userId, player.playerId);
+      gameState.registerPlayerToken(player.userId, player.seatId);
     }
-    await gameState.applyPlayerConnectionState(player.playerId, {
+    await gameState.applyPlayerConnectionState(player.seatId, {
       socketId: player.socketId,
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,
@@ -302,7 +297,7 @@ export class RoomJoinService {
   }
 
   private resolveVacantSeatIndex(room: Room, vacantSeatId: string): number {
-    return room.players.findIndex((player) => player.playerId === vacantSeatId);
+    return room.players.findIndex((player) => player.seatId === vacantSeatId);
   }
 
   private buildMembershipClaim(
@@ -355,7 +350,7 @@ export class RoomJoinService {
       const candidateIndex = (currentIndex + offset) % state.players.length;
       const candidatePlayer = state.players[candidateIndex];
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
-        setCurrentSeat(state, candidatePlayer.playerId);
+        setCurrentSeat(state, candidatePlayer.seatId);
         return true;
       }
     }
@@ -367,10 +362,10 @@ export class RoomJoinService {
     return (
       player.isPasser ||
       blowState.declarations.some(
-        (declaration) => declaration.seatId === player.playerId,
+        (declaration) => declaration.seatId === player.seatId,
       ) ||
       (blowState.actionHistory ?? []).some(
-        (action) => action.seatId === player.playerId,
+        (action) => action.seatId === player.seatId,
       )
     );
   }

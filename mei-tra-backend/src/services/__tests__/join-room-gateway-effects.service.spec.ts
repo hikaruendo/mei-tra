@@ -59,7 +59,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: [],
           team: 0 as const,
@@ -89,7 +89,7 @@ describe('JoinRoomGatewayEffectsService', () => {
         ...room.players,
         {
           socketId: 'com-1',
-          playerId: 'com-1',
+          seatId: asSeatId('com-1'),
           name: 'COM 1',
           hand: [],
           team: 1 as const,
@@ -106,7 +106,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     roomService.getRoomGameState.mockResolvedValue({
       getState: jest.fn(() => ({
         players: updatedRoom.players.map((player) => ({
-          playerId: player.playerId,
+          seatId: player.seatId,
           name: player.name,
           hand: [],
           team: player.team,
@@ -118,15 +118,15 @@ describe('JoinRoomGatewayEffectsService', () => {
         (players: DomainPlayer[]): TransportPlayer[] =>
           players.map(
             (player): TransportPlayer => ({
-              socketId: player.playerId === 'player-1' ? 'socket-1' : '',
-              seatId: asSeatId(player.playerId),
+              socketId: player.seatId === 'player-1' ? 'socket-1' : '',
+              seatId: asSeatId(player.seatId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
               isPasser: player.isPasser,
               isCOM: player.isCOM,
               isHost: updatedRoom.players.find(
-                (roomPlayer) => roomPlayer.playerId === player.playerId,
+                (roomPlayer) => roomPlayer.seatId === player.seatId,
               )?.isHost,
             }),
           ),
@@ -197,7 +197,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: ['A'],
           team: 0 as const,
@@ -226,8 +226,8 @@ describe('JoinRoomGatewayEffectsService', () => {
         (players: DomainPlayer[]): TransportPlayer[] =>
           players.map(
             (player): TransportPlayer => ({
-              socketId: player.playerId === 'player-1' ? 'socket-1' : '',
-              seatId: asSeatId(player.playerId),
+              socketId: player.seatId === 'player-1' ? 'socket-1' : '',
+              seatId: asSeatId(player.seatId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
@@ -255,14 +255,14 @@ describe('JoinRoomGatewayEffectsService', () => {
           gameState: {
             players: [
               {
-                playerId: 'player-1',
+                seatId: asSeatId('player-1'),
                 name: 'Host',
                 hand: ['A'],
                 team: 0 as const,
                 isPasser: false,
               },
               {
-                playerId: 'player-2',
+                seatId: asSeatId('player-2'),
                 name: 'Other',
                 hand: ['B'],
                 team: 1 as const,
@@ -328,7 +328,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       payload: {
         declarations: [
           {
-            seatId: 'player-1',
+            seatId: asSeatId('player-1'),
             trumpType: 'daiya',
             numberOfPairs: 6,
             timestamp: 1,
@@ -337,14 +337,14 @@ describe('JoinRoomGatewayEffectsService', () => {
         actionHistory: [
           {
             type: 'declare',
-            seatId: 'player-1',
+            seatId: asSeatId('player-1'),
             trumpType: 'daiya',
             numberOfPairs: 6,
             timestamp: 1,
           },
         ],
         currentHighest: {
-          seatId: 'player-1',
+          seatId: asSeatId('player-1'),
           trumpType: 'daiya',
           numberOfPairs: 6,
           timestamp: 1,
@@ -369,7 +369,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'actual-seat',
+          seatId: asSeatId('actual-seat'),
           userId: 'user-1',
           name: 'User 1',
           hand: [],
@@ -382,7 +382,7 @@ describe('JoinRoomGatewayEffectsService', () => {
         },
         {
           socketId: 'com-1',
-          playerId: 'com-1',
+          seatId: asSeatId('com-1'),
           name: 'COM 1',
           hand: [],
           team: 1 as const,
@@ -431,7 +431,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(selfJoinedEvent).toMatchObject({
       socketId: 'socket-1',
       payload: {
-        seatId: 'actual-seat',
+        seatId: asSeatId('actual-seat'),
         isSelf: true,
       },
     });
@@ -441,7 +441,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(roomPlayerJoinedEvent).toMatchObject({
       scope: 'room',
       roomId: 'room-1',
-      payload: { seatId: 'actual-seat' },
+      payload: { seatId: asSeatId('actual-seat') },
     });
   });
 
@@ -454,7 +454,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'actual-seat',
+          seatId: asSeatId('actual-seat'),
           userId: 'user-1',
           name: 'User 1',
           hand: ['A'],
@@ -484,13 +484,13 @@ describe('JoinRoomGatewayEffectsService', () => {
         (players: DomainPlayer[]): TransportPlayer[] =>
           players.map(
             (player): TransportPlayer => ({
-              socketId: player.playerId === 'actual-seat' ? 'socket-1' : '',
-              seatId: asSeatId(player.playerId),
+              socketId: player.seatId === 'actual-seat' ? 'socket-1' : '',
+              seatId: asSeatId(player.seatId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
               isPasser: player.isPasser,
-              userId: player.playerId === 'actual-seat' ? 'user-1' : undefined,
+              userId: player.seatId === 'actual-seat' ? 'user-1' : undefined,
             }),
           ),
       ),
@@ -516,14 +516,14 @@ describe('JoinRoomGatewayEffectsService', () => {
           gameState: {
             players: [
               {
-                playerId: 'actual-seat',
+                seatId: asSeatId('actual-seat'),
                 name: 'User 1',
                 hand: ['A'],
                 team: 0 as const,
                 isPasser: false,
               },
               {
-                playerId: 'other-seat',
+                seatId: asSeatId('other-seat'),
                 name: 'Other',
                 hand: ['B'],
                 team: 1 as const,
@@ -563,8 +563,11 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect((gameStateEvent?.payload as any).youSeatId).toBe('actual-seat');
     expect((gameStateEvent?.payload as any).players).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ seatId: 'actual-seat', hand: ['A'] }),
-        expect.objectContaining({ seatId: 'other-seat', hand: [] }),
+        expect.objectContaining({
+          seatId: asSeatId('actual-seat'),
+          hand: ['A'],
+        }),
+        expect.objectContaining({ seatId: asSeatId('other-seat'), hand: [] }),
       ]),
     );
   });
@@ -578,7 +581,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: [],
           team: 0 as const,
@@ -615,8 +618,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       clientId: 'socket-1',
       room: room as never,
       selfPlayer: {
-        seatId: 'player-1' as never,
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'Host',
         team: 0,
       },
@@ -666,7 +668,7 @@ describe('JoinRoomGatewayEffectsService', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: [],
           team: 0 as const,

@@ -26,7 +26,7 @@ export class SeatRestorationService {
     }
 
     const vacancyEntry = Object.entries(vacantSeatsForRoom).find(
-      ([, data]) => data.roomPlayer.playerId === playerId,
+      ([, data]) => data.roomPlayer.seatId === playerId,
     );
     if (!vacancyEntry) {
       return false;
@@ -34,40 +34,37 @@ export class SeatRestorationService {
 
     const [vacantSeatId, seatData] = vacancyEntry;
     const currentSeatPlayer = room.players.find(
-      (player) => player.playerId === vacantSeatId,
+      (player) => player.seatId === vacantSeatId,
     );
     if (!currentSeatPlayer || !currentSeatPlayer.isCOM) {
       return false;
     }
 
     const currentSeatIndex = room.players.findIndex(
-      (player) => player.playerId === currentSeatPlayer.playerId,
+      (player) => player.seatId === currentSeatPlayer.seatId,
     );
     if (currentSeatIndex === -1) {
       return false;
     }
 
-    const comPlayerId = currentSeatPlayer.playerId;
+    const comPlayerId = currentSeatPlayer.seatId;
     const seatId = resolveSeatId(currentSeatPlayer);
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
       socketId: '',
-      seatId,
-      playerId: seatId,
+      seatId: seatId,
       joinedAt: new Date(seatData.roomPlayer.joinedAt),
     };
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
-      (player) =>
-        player.playerId === comPlayerId || player.playerId === playerId,
+      (player) => player.seatId === comPlayerId || player.seatId === playerId,
     );
 
     const restoredGamePlayerBase: DomainPlayer = seatData.gamePlayer
       ? {
           ...toDomainPlayer(seatData.gamePlayer),
           seatId,
-          playerId: seatId,
           hand: [
             ...(state.players[gsIndex]?.hand.length
               ? state.players[gsIndex].hand
@@ -119,7 +116,7 @@ export class SeatRestorationService {
       const candidateIndex = (currentIndex + offset) % state.players.length;
       const candidatePlayer = state.players[candidateIndex];
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
-        setCurrentSeat(state, candidatePlayer.playerId);
+        setCurrentSeat(state, candidatePlayer.seatId);
         return true;
       }
     }
@@ -131,10 +128,10 @@ export class SeatRestorationService {
     return (
       player.isPasser ||
       blowState.declarations.some(
-        (declaration) => declaration.seatId === player.playerId,
+        (declaration) => declaration.seatId === player.seatId,
       ) ||
       (blowState.actionHistory ?? []).some(
-        (action) => action.seatId === player.playerId,
+        (action) => action.seatId === player.seatId,
       )
     );
   }

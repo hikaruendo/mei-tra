@@ -26,7 +26,7 @@ export class TogglePlayerReadyUseCase implements ITogglePlayerReadyUseCase {
         return { success: false, error: 'Room not found' };
       }
 
-      const player = room.players.find((p) => p.playerId === playerId);
+      const player = room.players.find((p) => p.seatId === playerId);
       if (!player) {
         return { success: false, error: 'Player not found in room' };
       }

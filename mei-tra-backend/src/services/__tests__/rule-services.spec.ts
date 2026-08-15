@@ -37,10 +37,10 @@ describe('Rule service characterization', () => {
 
   it('determines field winner using dealer-relative play order', () => {
     const players = [
-      { playerId: 'p1', name: 'A', team: 0 },
-      { playerId: 'p2', name: 'B', team: 1 },
-      { playerId: 'p3', name: 'C', team: 0 },
-      { playerId: 'p4', name: 'D', team: 1 },
+      { seatId: asSeatId('p1'), name: 'A', team: 0 },
+      { seatId: asSeatId('p2'), name: 'B', team: 1 },
+      { seatId: asSeatId('p3'), name: 'C', team: 0 },
+      { seatId: asSeatId('p4'), name: 'D', team: 1 },
     ].map(
       (player) =>
         ({
@@ -60,7 +60,7 @@ describe('Rule service characterization', () => {
     };
 
     expect(
-      playService.determineFieldWinner(field, players, 'club')?.playerId,
+      playService.determineFieldWinner(field, players, 'club')?.seatId,
     ).toBe('p3');
   });
 
@@ -78,7 +78,7 @@ describe('Rule service characterization', () => {
 
   it('records and reports chombo violations across teams only', () => {
     const player = {
-      playerId: 'p1',
+      seatId: asSeatId('p1'),
       name: 'A',
       team: 0,
       hand: ['J♠', 'J♣', 'J♥', 'J♦'],

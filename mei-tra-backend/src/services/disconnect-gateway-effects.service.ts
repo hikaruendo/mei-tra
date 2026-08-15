@@ -59,10 +59,10 @@ export class DisconnectGatewayEffectsService {
     }
 
     const roomPlayer = room.players.find(
-      (candidate) => candidate.playerId === player.playerId,
+      (candidate) => candidate.seatId === player.seatId,
     );
     const initialConnectionState = roomGameState.getPlayerConnectionState(
-      player.playerId,
+      player.seatId,
     );
     if (
       initialConnectionState?.socketId &&
@@ -80,7 +80,7 @@ export class DisconnectGatewayEffectsService {
     }
 
     const latestConnectionState = roomGameState.getPlayerConnectionState(
-      player.playerId,
+      player.seatId,
     );
     if (
       latestConnectionState?.socketId &&
@@ -89,7 +89,7 @@ export class DisconnectGatewayEffectsService {
       return null;
     }
 
-    await roomGameState.applyPlayerConnectionState(player.playerId, {
+    await roomGameState.applyPlayerConnectionState(player.seatId, {
       socketId: '',
     });
 
@@ -102,7 +102,7 @@ export class DisconnectGatewayEffectsService {
     });
 
     return {
-      playerId: player.playerId,
+      playerId: player.seatId,
       playerName: displayName ?? player.name,
       roomGameState,
       timeoutMode: this.resolveTimeoutMode(state.gamePhase),
@@ -288,7 +288,7 @@ export class DisconnectGatewayEffectsService {
     }
 
     return (
-      players.find((candidate) => candidate.playerId === roomPlayer.playerId) ??
+      players.find((candidate) => candidate.seatId === roomPlayer.seatId) ??
       null
     );
   }
@@ -304,14 +304,13 @@ export class DisconnectGatewayEffectsService {
     let room = params.room;
     const events: GatewayEvent[] = [];
 
-    if (room?.hostSeatId === player.playerId) {
+    if (room?.hostSeatId === player.seatId) {
       const nextHost = room.players.find(
-        (candidate) =>
-          candidate.playerId !== player.playerId && !candidate.isCOM,
+        (candidate) => candidate.seatId !== player.seatId && !candidate.isCOM,
       );
       if (nextHost) {
         await this.roomService.updateRoom(roomId, {
-          hostSeatId: asSeatId(nextHost.playerId),
+          hostSeatId: asSeatId(nextHost.seatId),
         });
         room = await this.roomService.getRoom(roomId);
         if (room) {
@@ -361,7 +360,7 @@ export class DisconnectGatewayEffectsService {
         roomId,
         event: 'player-left',
         payload: {
-          seatId: asSeatId(player.playerId),
+          seatId: asSeatId(player.seatId),
           roomId,
         },
       },
@@ -370,7 +369,7 @@ export class DisconnectGatewayEffectsService {
         roomId,
         event: 'player-disconnected',
         payload: {
-          seatId: asSeatId(player.playerId),
+          seatId: asSeatId(player.seatId),
           playerName,
           roomId,
         },

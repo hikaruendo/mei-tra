@@ -51,7 +51,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       ...room,
       players: room.players.map((player) => ({
         ...player,
-        isHost: player.playerId === room.hostSeatId,
+        isHost: player.seatId === room.hostSeatId,
       })),
     };
   }
@@ -218,7 +218,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       participantKey: hostUserId,
       gameplay: {
         seatId: hostSeatId,
-        playerId: hostSeatId,
         name: hostUser.name,
         hand: [],
         team: 0,
@@ -277,7 +276,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     return {
       socketId: `com-${idStr}`,
       seatId,
-      playerId: seatId,
       participantKey: `com-${idStr}-${seatId}`,
       name: 'COM',
       isCOM: true,
@@ -293,13 +291,13 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   private createActiveCOMReplacement(
     index: number | string,
-    sourcePlayer: Pick<RoomPlayer, 'seatId' | 'playerId' | 'team'>,
+    sourcePlayer: Pick<RoomPlayer, 'seatId' | 'team'>,
   ): RoomPlayer {
     return this.createCOMPlaceholder(
       index,
       sourcePlayer.team,
       [],
-      asSeatId(sourcePlayer.seatId ?? sourcePlayer.playerId),
+      sourcePlayer.seatId,
     );
   }
 
@@ -318,7 +316,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       preferredIndex ?? fallbackIndex,
       team,
       [],
-      asSeatId(sourcePlayer.seatId ?? sourcePlayer.playerId),
+      asSeatId(sourcePlayer.seatId ?? sourcePlayer.seatId),
     );
   }
 
@@ -425,13 +423,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       const state = gameState.getState();
 
       // 退出したプレイヤーのindexを記録
-      const playerIndex = room.players.findIndex(
-        (p) => p.playerId === playerId,
-      );
+      const playerIndex = room.players.findIndex((p) => p.seatId === playerId);
       if (playerIndex !== -1) {
         if (!this.vacantSeats[roomId]) this.vacantSeats[roomId] = {};
 
-        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+        const gsIndex = state.players.findIndex((p) => p.seatId === playerId);
 
         // 席UUIDを維持したまま占有者をCOMへ切り替える。
         // uniqueIdxはsocket/participant metadataだけを識別する。
@@ -461,13 +457,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       }
     } else {
       // ロビー状態: 退室プレイヤーをCOMに置き換え（空席を常時COMで維持）
-      const playerIndex = room.players.findIndex(
-        (p) => p.playerId === playerId,
-      );
+      const playerIndex = room.players.findIndex((p) => p.seatId === playerId);
       if (playerIndex !== -1) {
         const leavingPlayer = room.players[playerIndex];
         const state = gameState.getState();
-        const gsIndex = state.players.findIndex((p) => p.playerId === playerId);
+        const gsIndex = state.players.findIndex((p) => p.seatId === playerId);
         const seatIndex = gsIndex !== -1 ? gsIndex : playerIndex;
         const comPlaceholder = this.createWaitingCOMReplacement(
           seatIndex,
@@ -497,12 +491,12 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     if (room.hostSeatId === playerId) {
       const newHost = room.players.find((p) => !p.isCOM);
       if (newHost) {
-        room.hostSeatId = asSeatId(newHost.playerId);
+        room.hostSeatId = asSeatId(newHost.seatId);
       }
     }
 
     room.players.forEach((player) => {
-      player.isHost = player.playerId === room.hostSeatId;
+      player.isHost = player.seatId === room.hostSeatId;
     });
     await gameState.persistRoster(
       room.players,
@@ -606,7 +600,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       (player) => player.userId === user.userId,
     );
     if (roomMatches.length === 1) {
-      const seatId = asSeatId(roomMatches[0].playerId);
+      const seatId = asSeatId(roomMatches[0].seatId);
       return { ...user, seatId };
     }
     if (roomMatches.length > 1) {
@@ -619,7 +613,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       (seat) => seat.roomPlayer.userId === user.userId,
     );
     if (vacantMatches.length === 1) {
-      const seatId = asSeatId(vacantMatches[0].roomPlayer.playerId);
+      const seatId = asSeatId(vacantMatches[0].roomPlayer.seatId);
       return {
         ...user,
         seatId,
@@ -722,7 +716,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     for (const [playerId, updates] of Object.entries(updatesByPlayerId)) {
       const roomPlayer = room.players.find(
-        (player) => player.playerId === playerId,
+        (player) => player.seatId === playerId,
       );
       if (!roomPlayer) {
         return false;
@@ -734,7 +728,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       }
 
       const statePlayerIndex = state.players.findIndex(
-        (player) => player.playerId === playerId,
+        (player) => player.seatId === playerId,
       );
       const statePlayer =
         statePlayerIndex === -1 ? null : state.players[statePlayerIndex];
@@ -744,7 +738,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     room.players.forEach((player) => {
-      player.isHost = player.playerId === room.hostSeatId;
+      player.isHost = player.seatId === room.hostSeatId;
     });
     await gameState.persistRoster(room.players, room.hostSeatId);
     return true;
@@ -832,14 +826,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     const state = roomGameState.getState();
-    const player = state.players.find((p) => p.playerId === playerId);
+    const player = state.players.find((p) => p.seatId === playerId);
     if (!player) {
       return { success: false, error: 'Player not found in room' };
     }
 
     const room = await this.getRoom(roomId);
     const roomPlayer = room?.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === playerId,
     );
     if (!roomPlayer) {
       return { success: false, error: 'Room player not found' };
@@ -911,7 +905,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     for (const [seatId, seatData] of Object.entries(roomVacantSeats)) {
-      if (seatId === playerId || seatData.roomPlayer.playerId === playerId) {
+      if (seatId === playerId || seatData.roomPlayer.seatId === playerId) {
         delete roomVacantSeats[asSeatId(seatId)];
       }
     }

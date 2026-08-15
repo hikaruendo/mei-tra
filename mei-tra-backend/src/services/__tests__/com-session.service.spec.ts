@@ -13,7 +13,7 @@ const createGameStateStub = () => {
   const makeState = () => ({
     players: [
       {
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         name: 'Human',
         team: 0 as const,
         hand: ['A♠'],
@@ -60,7 +60,7 @@ const createRoom = (): Room =>
     hostId: HUMAN_ID,
     players: [
       {
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         name: 'Human',
         team: 0,
         hand: ['A♠'],
@@ -94,7 +94,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(converted).toBe(true);
 
     const state = gameState.getState();
-    const comId = state.players[0].playerId;
+    const comId = state.players[0].seatId;
     expect(comId).toBe(HUMAN_ID);
 
     expect(state.playState!.currentField!.playedBy).toEqual([comId]);
@@ -102,7 +102,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(state.teamAssignments[comId]).toBe(0);
     expect(state.currentSeatId).toBe(comId);
     expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);
-    expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.playerId).toBe(
+    expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.seatId).toBe(
       HUMAN_ID,
     );
   });
@@ -134,7 +134,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(converted).toBe(true);
     expect(room.players[0]).toEqual(
       expect.objectContaining({
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         userId: 'user-1',
         participantKey: 'user-1',
         isAuthenticated: true,

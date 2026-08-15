@@ -21,7 +21,7 @@ export function hasPlayerPassedInBlow(
   return (
     player.isPasser ||
     (blowState.actionHistory ?? []).some(
-      (action) => action.seatId === player.playerId && action.type === 'pass',
+      (action) => action.seatId === player.seatId && action.type === 'pass',
     )
   );
 }
@@ -32,7 +32,7 @@ export function countPlayersActedInBlow(
 ): number {
   return players.filter(
     (player) =>
-      hasPlayerDeclaredInBlow(blowState, player.playerId) ||
+      hasPlayerDeclaredInBlow(blowState, player.seatId) ||
       hasPlayerPassedInBlow(blowState, player),
   ).length;
 }

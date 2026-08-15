@@ -1,5 +1,6 @@
 import { Socket } from 'socket.io';
 import { GameGateway } from '../game.gateway';
+import { asSeatId } from '../types/identity.types';
 
 const createGateway = (): GameGateway => {
   const GatewayConstructor = GameGateway as unknown as new (
@@ -349,7 +350,7 @@ describe('GameGateway COM recovery integration', () => {
       getRoom: jest.fn().mockResolvedValue({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             userId: 'user-1',
             isCOM: false,
           },

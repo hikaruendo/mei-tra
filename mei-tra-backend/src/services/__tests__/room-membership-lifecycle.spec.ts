@@ -119,7 +119,7 @@ describe('RoomService active membership lifecycle', () => {
       players: [
         {
           socketId: 'socket-old',
-          playerId: 'seat-1',
+          seatId: asSeatId('seat-1'),
           userId: 'user-1',
           isAuthenticated: true,
           name: 'Player 1',
@@ -147,7 +147,7 @@ describe('RoomService active membership lifecycle', () => {
     expect(membershipService.claim).not.toHaveBeenCalled();
     const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
     expect(joinRequest).toMatchObject({
-      user: { seatId: 'seat-1' },
+      user: { seatId: asSeatId('seat-1') },
     });
     expect(membershipService.get).toHaveBeenCalledWith('user-1');
   });
@@ -168,8 +168,8 @@ describe('RoomService active membership lifecycle', () => {
     jest.spyOn(service, 'getRoom').mockResolvedValue({
       ...room,
       players: [
-        { ...duplicatePlayer, playerId: 'seat-1' },
-        { ...duplicatePlayer, playerId: 'seat-2' },
+        { ...duplicatePlayer, seatId: asSeatId('seat-1') },
+        { ...duplicatePlayer, seatId: asSeatId('seat-2') },
       ],
     });
 
