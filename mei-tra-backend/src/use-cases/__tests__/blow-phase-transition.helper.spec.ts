@@ -9,7 +9,7 @@ import { asSeatId } from '../../types/identity.types';
 describe('transitionToPlayPhase', () => {
   it('reveals the Agari card using room player socket when session lookup is empty', async () => {
     const declaration = {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       trumpType: 'club' as const,
       numberOfPairs: 6,
       timestamp: 1,
@@ -17,14 +17,14 @@ describe('transitionToPlayPhase', () => {
     const state: GameState = {
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           team: 0 as const,
           hand: ['H-7'],
           isPasser: false,
         },
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           name: 'Player 2',
           team: 1 as const,
           hand: ['S-9'],
@@ -63,17 +63,16 @@ describe('transitionToPlayPhase', () => {
       },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
     };
     const room = {
       id: 'room-1',
       name: 'Room 1',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       status: RoomStatus.PLAYING,
       players: [
         {
           socketId: 'socket-from-room',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           team: 0,
           hand: [],
@@ -110,7 +109,7 @@ describe('transitionToPlayPhase', () => {
           socketId: 'socket-2',
         },
       ]),
-      findSessionUserByPlayerId: jest.fn(() => null),
+      findSessionUserBySeatId: jest.fn(() => null),
       saveState: jest.fn(),
     } as unknown as GameStateService;
     const blowService = {
@@ -138,7 +137,7 @@ describe('transitionToPlayPhase', () => {
       event: 'reveal-agari',
       payload: {
         agari: 'H-A',
-        seatId: 'player-1',
+        seatId: asSeatId('player-1'),
       },
     });
     const updatePhaseEvent = result.delayedEvents.find(
@@ -156,7 +155,7 @@ describe('transitionToPlayPhase', () => {
 
   it('does not request broken reveal after the Agari card is added', async () => {
     const declaration = {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       trumpType: 'club' as const,
       numberOfPairs: 6,
       timestamp: 1,
@@ -164,7 +163,7 @@ describe('transitionToPlayPhase', () => {
     const state: GameState = {
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           team: 0 as const,
           hand: ['J♠', 'J♣', 'J♥'],
@@ -204,7 +203,6 @@ describe('transitionToPlayPhase', () => {
       },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
     };
     const roomGameState = {
       transitionPhase: jest.fn(async (phase: GameState['gamePhase']) => {
@@ -212,7 +210,7 @@ describe('transitionToPlayPhase', () => {
       }),
       getState: jest.fn(() => state),
       getTransportPlayers: jest.fn(() => state.players),
-      findSessionUserByPlayerId: jest.fn(() => null),
+      findSessionUserBySeatId: jest.fn(() => null),
       saveState: jest.fn(),
     } as unknown as GameStateService;
     const blowService = {

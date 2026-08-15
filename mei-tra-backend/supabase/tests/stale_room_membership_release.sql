@@ -79,23 +79,23 @@ begin
     raise exception 'service_role cannot release stale room memberships';
   end if;
 
-  result := public.claim_room_membership(test_user, room_a, seat_a::text, t1);
+  result := public.claim_room_membership(test_user, room_a, seat_a, t1);
   if result->>'result' <> 'claimed' then
     raise exception 'setup claim failed: %', result;
   end if;
 
   -- A live room must keep behaving exactly as before.
-  result := public.reserve_room_membership(test_user, seat_b::text, t2);
+  result := public.reserve_room_membership(test_user, seat_b, t2);
   if result->>'result' <> 'conflict' then
     raise exception 'live room did not block reservation: %', result;
   end if;
 
-  result := public.claim_room_membership(test_user, room_b, seat_b::text, t2);
+  result := public.claim_room_membership(test_user, room_b, seat_b, t2);
   if result->>'result' <> 'conflict' then
     raise exception 'live room did not block cross-room claim: %', result;
   end if;
 
-  result := public.claim_room_membership(test_user, room_a, seat_a::text, t2);
+  result := public.claim_room_membership(test_user, room_a, seat_a, t2);
   if result->>'result' <> 'reconnected' then
     raise exception 'live room reconnect broke: %', result;
   end if;
@@ -104,7 +104,7 @@ begin
   -- write is skipped here, standing in for a crash between the two.
   update public.rooms set status = 'finished' where id = room_a;
 
-  result := public.claim_room_membership(test_user, room_b, seat_b::text, t3);
+  result := public.claim_room_membership(test_user, room_b, seat_b, t3);
   if result->>'result' <> 'claimed' then
     raise exception 'finished room still blocked a claim: %', result;
   end if;
@@ -131,7 +131,7 @@ begin
   -- Same check on the reserve path, and for 'abandoned' as well as 'finished'.
   update public.rooms set status = 'abandoned' where id = room_b;
 
-  result := public.reserve_room_membership(test_user, next_seat::text, t4);
+  result := public.reserve_room_membership(test_user, next_seat, t4);
   if result->>'result' <> 'reserved' then
     raise exception 'abandoned room still blocked a reservation: %', result;
   end if;

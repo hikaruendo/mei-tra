@@ -11,7 +11,7 @@ import {
 import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import { asSeatId } from '../types/identity.types';
 
 @Injectable()
@@ -44,7 +44,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       );
       if (!joinSucceeded) {
         this.logger.warn(
-          `Join room failed for player ${normalizedUser.playerId} in room ${targetRoomId}`,
+          `Join room failed for user ${normalizedUser.userId} in room ${targetRoomId}`,
         );
         return {
           success: false,
@@ -69,7 +69,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       const joinedPlayer = this.resolveJoinedRoomPlayer(room, normalizedUser);
       if (!joinedPlayer) {
         this.logger.error(
-          `Joined player could not be resolved for user ${normalizedUser.userId ?? normalizedUser.playerId} in room ${targetRoomId}`,
+          `Joined player could not be resolved for user ${normalizedUser.userId} in room ${targetRoomId}`,
         );
         return {
           success: false,
@@ -80,11 +80,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       }
       const resolvedUser: SessionUser = {
         ...normalizedUser,
-        playerId: joinedPlayer.playerId,
+        seatId: asSeatId(joinedPlayer.seatId),
       };
       const data: JoinRoomSuccess = {
         room,
-        isHost: room.hostId === joinedPlayer.playerId,
+        isHost: room.hostSeatId === joinedPlayer.seatId,
         roomStatus: room.status,
         roomsList: await this.roomService.listRooms(),
         resumeGame: await this.buildResumePayloadIfNeeded(room.id, room),
@@ -127,7 +127,6 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     return {
       socketId: request.socketId,
-      playerId: authenticatedUser.id,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -151,9 +150,8 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     }
 
     return (
-      room.players.find(
-        (player) => player.playerId === normalizedUser.playerId,
-      ) ?? null
+      room.players.find((player) => player.seatId === normalizedUser.seatId) ??
+      null
     );
   }
 
@@ -172,7 +170,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     return {
       roomId: currentRoomId,
-      playerId: currentRoomPlayer?.playerId ?? normalizedUser.playerId,
+      seatId: asSeatId(
+        currentRoomPlayer?.seatId ??
+          normalizedUser.seatId ??
+          normalizedUser.userId!,
+      ),
     };
   }
 
@@ -183,9 +185,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
 
-    // room.status の fallback（WAITING→PLAYING 状態遷移バグがある既存ルームも考慮）
-    const isPlaying =
-      room.status === RoomStatus.PLAYING || state.gamePhase !== null;
+    const isPlaying = room.status === RoomStatus.PLAYING;
     if (!isPlaying) {
       return undefined;
     }

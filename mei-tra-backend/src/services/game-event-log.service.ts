@@ -222,10 +222,10 @@ export class GameEventLogService implements IGameEventLogService {
   }
 
   private buildPlayerNames(
-    players: Array<{ name?: string; seatId?: string; playerId?: string }>,
+    players: Array<{ name?: string; seatId?: string }>,
   ): Record<string, string> | undefined {
     const entries = players.flatMap((player) => {
-      const seatId = player.seatId ?? player.seatId;
+      const seatId = player.seatId;
       if (!seatId || !player.name) {
         return [];
       }
@@ -255,9 +255,7 @@ export class GameEventLogService implements IGameEventLogService {
       entry.actionData?.context &&
       typeof entry.actionData.context === 'object' &&
       entry.actionData.context !== null
-        ? (entry.actionData.context as Partial<GameHistoryContext> & {
-            currentTurnPlayerId?: unknown;
-          })
+        ? (entry.actionData.context as Partial<GameHistoryContext>)
         : null;
 
     if (!context) {
@@ -277,9 +275,7 @@ export class GameEventLogService implements IGameEventLogService {
       currentTurnSeatId:
         typeof context.currentTurnSeatId === 'string'
           ? asSeatId(context.currentTurnSeatId)
-          : typeof context.currentTurnPlayerId === 'string'
-            ? asSeatId(context.currentTurnPlayerId)
-            : null,
+          : null,
       teamScores: context.teamScores,
     };
   }
@@ -297,13 +293,13 @@ export class GameEventLogService implements IGameEventLogService {
     }
 
     return Object.entries(playerNames).reduce<Record<string, string>>(
-      (acc, [playerId, playerName]) => {
+      (acc, [seatId, playerName]) => {
         if (
-          playerId.length > 0 &&
+          seatId.length > 0 &&
           typeof playerName === 'string' &&
           playerName.length > 0
         ) {
-          acc[playerId] = playerName;
+          acc[seatId] = playerName;
         }
 
         return acc;
@@ -492,16 +488,8 @@ export class GameEventLogService implements IGameEventLogService {
 
     switch (entry.actionType) {
       case 'game_started': {
-        const firstBlowSeatId = this.readSeatAlias(
-          actionData,
-          'firstBlowSeatId',
-          'firstBlowPlayerId',
-        );
-        const startedBySeatId = this.readSeatAlias(
-          actionData,
-          'startedBySeatId',
-          'startedByPlayerId',
-        );
+        const firstBlowSeatId = this.readSeatId(actionData, 'firstBlowSeatId');
+        const startedBySeatId = this.readSeatId(actionData, 'startedBySeatId');
         return {
           firstBlowSeatId,
           startedBySeatId,
@@ -519,10 +507,9 @@ export class GameEventLogService implements IGameEventLogService {
           ),
         };
       case 'blow_passed': {
-        const lastPasserSeatId = this.readSeatAlias(
+        const lastPasserSeatId = this.readSeatId(
           actionData,
           'lastPasserSeatId',
-          'lastPasser',
         );
         return {
           lastPasserSeatId,
@@ -533,11 +520,7 @@ export class GameEventLogService implements IGameEventLogService {
         };
       }
       case 'play_phase_started': {
-        const winnerSeatId = this.readSeatAlias(
-          actionData,
-          'winnerSeatId',
-          'winnerPlayerId',
-        );
+        const winnerSeatId = this.readSeatId(actionData, 'winnerSeatId');
         return {
           winnerSeatId,
           currentTrump:
@@ -564,11 +547,7 @@ export class GameEventLogService implements IGameEventLogService {
               : null,
         };
       case 'field_completed': {
-        const winnerSeatId = this.readSeatAlias(
-          actionData,
-          'winnerSeatId',
-          'winnerPlayerId',
-        );
+        const winnerSeatId = this.readSeatId(actionData, 'winnerSeatId');
         return {
           winnerSeatId,
           winnerTeam:
@@ -595,22 +574,16 @@ export class GameEventLogService implements IGameEventLogService {
           highestDeclaration: this.asRecord(actionData.highestDeclaration),
         };
       case 'round_reset': {
-        const nextDealerSeatId = this.readSeatAlias(
+        const nextDealerSeatId = this.readSeatId(
           actionData,
           'nextDealerSeatId',
-          'nextDealerPlayerId',
-          'nextDealerId',
         );
         return {
           nextDealerSeatId,
         };
       }
       case 'broken_hand_revealed': {
-        const nextSeatId = this.readSeatAlias(
-          actionData,
-          'nextSeatId',
-          'nextPlayerId',
-        );
+        const nextSeatId = this.readSeatId(actionData, 'nextSeatId');
         return {
           nextSeatId,
           nextBlowIndex:
@@ -914,16 +887,10 @@ export class GameEventLogService implements IGameEventLogService {
       : null;
   }
 
-  private readSeatAlias(
-    actionData: Record<string, unknown>,
-    canonicalKey: string,
-    ...legacyKeys: string[]
-  ) {
-    for (const key of [canonicalKey, ...legacyKeys]) {
-      const value = actionData[key];
-      if (typeof value === 'string' && value.length > 0) {
-        return asSeatId(value);
-      }
+  private readSeatId(actionData: Record<string, unknown>, key: string) {
+    const value = actionData[key];
+    if (typeof value === 'string' && value.length > 0) {
+      return asSeatId(value);
     }
 
     return null;
@@ -959,14 +926,10 @@ export class GameEventLogService implements IGameEventLogService {
   private formatGameStartedSummary(
     actionData: Record<string, unknown>,
   ): string {
-    const firstBlowPlayerId = this.readSeatAlias(
-      actionData,
-      'firstBlowSeatId',
-      'firstBlowPlayerId',
-    );
+    const firstBlowSeatId = this.readSeatId(actionData, 'firstBlowSeatId');
     const firstBlowPlayerLabel = this.resolvePlayerLabel(
       actionData,
-      firstBlowPlayerId,
+      firstBlowSeatId,
     );
     const pointsToWin =
       typeof actionData.pointsToWin === 'number'
@@ -1011,15 +974,8 @@ export class GameEventLogService implements IGameEventLogService {
   private formatPlayPhaseStartedSummary(
     actionData: Record<string, unknown>,
   ): string {
-    const winnerPlayerId = this.readSeatAlias(
-      actionData,
-      'winnerSeatId',
-      'winnerPlayerId',
-    );
-    const winnerPlayerLabel = this.resolvePlayerLabel(
-      actionData,
-      winnerPlayerId,
-    );
+    const winnerSeatId = this.readSeatId(actionData, 'winnerSeatId');
+    const winnerPlayerLabel = this.resolvePlayerLabel(actionData, winnerSeatId);
     const currentTrump =
       typeof actionData.currentTrump === 'string'
         ? actionData.currentTrump
@@ -1057,15 +1013,8 @@ export class GameEventLogService implements IGameEventLogService {
   private formatFieldCompletedSummary(
     actionData: Record<string, unknown>,
   ): string {
-    const winnerPlayerId = this.readSeatAlias(
-      actionData,
-      'winnerSeatId',
-      'winnerPlayerId',
-    );
-    const winnerPlayerLabel = this.resolvePlayerLabel(
-      actionData,
-      winnerPlayerId,
-    );
+    const winnerSeatId = this.readSeatId(actionData, 'winnerSeatId');
+    const winnerPlayerLabel = this.resolvePlayerLabel(actionData, winnerSeatId);
     const winnerTeam =
       typeof actionData.winnerTeam === 'number' ? actionData.winnerTeam : null;
     const winnerTeamLabel = this.formatTeamLabel(winnerTeam);
@@ -1112,11 +1061,11 @@ export class GameEventLogService implements IGameEventLogService {
       actionData.highestDeclaration !== null
         ? (actionData.highestDeclaration as Record<string, unknown>)
         : null;
-    const playerId =
+    const seatId =
       highestDeclaration && typeof highestDeclaration.seatId === 'string'
         ? highestDeclaration.seatId
         : null;
-    const playerLabel = this.resolvePlayerLabel(actionData, playerId);
+    const playerLabel = this.resolvePlayerLabel(actionData, seatId);
 
     return playerLabel
       ? `Round cancelled after declaration by ${playerLabel}`
@@ -1124,13 +1073,11 @@ export class GameEventLogService implements IGameEventLogService {
   }
 
   private formatRoundResetSummary(actionData: Record<string, unknown>): string {
-    const nextDealerId = this.readSeatAlias(
+    const nextDealerSeatId = this.readSeatId(actionData, 'nextDealerSeatId');
+    const nextDealerLabel = this.resolvePlayerLabel(
       actionData,
-      'nextDealerSeatId',
-      'nextDealerPlayerId',
-      'nextDealerId',
+      nextDealerSeatId,
     );
-    const nextDealerLabel = this.resolvePlayerLabel(actionData, nextDealerId);
 
     return nextDealerLabel
       ? `Round reset. Next dealer: ${nextDealerLabel}`
@@ -1141,12 +1088,8 @@ export class GameEventLogService implements IGameEventLogService {
     playerLabel: string,
     actionData: Record<string, unknown>,
   ): string {
-    const nextPlayerId = this.readSeatAlias(
-      actionData,
-      'nextSeatId',
-      'nextPlayerId',
-    );
-    const nextPlayerLabel = this.resolvePlayerLabel(actionData, nextPlayerId);
+    const nextSeatId = this.readSeatId(actionData, 'nextSeatId');
+    const nextPlayerLabel = this.resolvePlayerLabel(actionData, nextSeatId);
 
     return nextPlayerLabel
       ? `${playerLabel} revealed a broken hand. Next player: ${nextPlayerLabel}`

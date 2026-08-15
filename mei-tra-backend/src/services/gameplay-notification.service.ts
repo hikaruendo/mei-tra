@@ -4,18 +4,19 @@ import { IUserProfileRepository } from '../repositories/interfaces/user-profile.
 import { IRoomService } from './interfaces/room-service.interface';
 import type { GameState } from '../types/game.types';
 import type { Room, RoomPlayer } from '../types/room.types';
+import type { SeatId } from '../types/identity.types';
 
 const MAX_DEDUPED_EVENTS = 1_000;
 
 interface GameStartedNotificationParams {
   roomId: string;
   initiatingActorId?: string;
-  currentTurnPlayerId?: string;
+  currentTurnSeatId?: SeatId;
 }
 
 interface TurnNotificationParams {
   roomId: string;
-  playerId: string;
+  seatId: SeatId;
   initiatingActorId?: string;
   delayMs?: number;
 }
@@ -47,7 +48,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
   async notifyGameStarted({
     roomId,
     initiatingActorId,
-    currentTurnPlayerId,
+    currentTurnSeatId,
   }: GameStartedNotificationParams): Promise<void> {
     try {
       const context = await this.loadContext(roomId);
@@ -64,7 +65,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
         context.room.players,
         {
           excludeActorId: initiatingActorId,
-          excludePlayerIds: currentTurnPlayerId ? [currentTurnPlayerId] : [],
+          excludeSeatIds: currentTurnSeatId ? [currentTurnSeatId] : [],
         },
       );
 
@@ -87,7 +88,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
 
   async notifyTurnChanged({
     roomId,
-    playerId,
+    seatId,
     initiatingActorId,
     delayMs,
   }: TurnNotificationParams): Promise<void> {
@@ -99,7 +100,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
         }
 
         const targetPlayer = context.room.players.find(
-          (player) => player.playerId === playerId,
+          (player) => player.seatId === seatId,
         );
         if (!targetPlayer) {
           return;
@@ -110,7 +111,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
           return;
         }
 
-        const eventId = this.buildTurnEventId(roomId, playerId, context.state);
+        const eventId = this.buildTurnEventId(roomId, seatId, context.state);
         if (!this.markEvent(eventId)) {
           return;
         }
@@ -132,7 +133,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
         });
       } catch (error) {
         this.logger.error(
-          `Failed to send turn push notification for room ${roomId} player ${playerId}`,
+          `Failed to send turn push notification for room ${roomId} seat ${seatId}`,
           error instanceof Error ? error.stack : String(error),
         );
       }
@@ -172,18 +173,18 @@ export class GameplayNotificationService implements OnModuleDestroy {
     players: readonly RoomPlayer[],
     options: {
       excludeActorId?: string;
-      excludePlayerIds?: readonly string[];
+      excludeSeatIds?: readonly SeatId[];
     } = {},
   ): Promise<string[]> {
-    const excludedPlayerIds = new Set(options.excludePlayerIds ?? []);
+    const excludedSeatIds = new Set(options.excludeSeatIds ?? []);
     const candidateUserIds = [
       ...new Set(
         players
           .filter((player) => !player.isCOM)
-          .filter((player) => !excludedPlayerIds.has(player.playerId))
+          .filter((player) => !excludedSeatIds.has(player.seatId))
           .filter(
             (player) =>
-              player.playerId !== options.excludeActorId &&
+              player.seatId !== options.excludeActorId &&
               player.userId !== options.excludeActorId,
           )
           .map((player) => player.userId)
@@ -225,7 +226,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
 
   private buildTurnEventId(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     state: GameState,
   ): string {
     return [
@@ -233,7 +234,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
       roomId,
       state.roundNumber,
       state.gamePhase,
-      playerId,
+      seatId,
       state.blowState.currentBlowIndex,
       state.blowState.actionHistory?.length ?? 0,
       state.playState?.fields?.length ?? 0,

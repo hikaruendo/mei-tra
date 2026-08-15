@@ -560,13 +560,13 @@
           "name": "actor_key_snapshot",
           "type": "text",
           "nullable": true,
-          "comment": "Immutable legacy actor key retained for unresolved and historical records."
+          "comment": "Immutable actor key snapshot retained when an actor seat is unavailable."
         },
         {
           "name": "actor_seat_id",
           "type": "uuid",
           "nullable": true,
-          "comment": "Canonical actor seat UUID. actor_key_snapshot is reserved for unresolved legacy actors."
+          "comment": "Actor seat UUID when the action is tied to a room seat."
         },
         {
           "name": "game_state_id",
@@ -1639,7 +1639,7 @@
           "name": "host_seat_id",
           "type": "uuid",
           "nullable": true,
-          "comment": "Canonical host seat UUID. Runtime hostId is an alias of this value."
+          "comment": "Host seat UUID."
         },
         {
           "name": "id",
@@ -2282,7 +2282,7 @@
     {
       "name": "public.claim_room_membership",
       "return_type": "jsonb",
-      "arguments": "p_user_id uuid, p_room_id uuid, p_player_id text, p_transition_id uuid",
+      "arguments": "p_user_id uuid, p_room_id uuid, p_seat_id uuid, p_transition_id uuid",
       "type": "FUNCTION"
     },
     {
@@ -2376,9 +2376,9 @@
       "type": "FUNCTION"
     },
     {
-      "name": "public.release_room_membership_by_player",
+      "name": "public.release_room_membership_by_seat",
       "return_type": "bool",
-      "arguments": "p_room_id uuid, p_player_id text, p_transition_id uuid",
+      "arguments": "p_room_id uuid, p_seat_id uuid, p_transition_id uuid",
       "type": "FUNCTION"
     },
     {
@@ -2402,7 +2402,7 @@
     {
       "name": "public.reserve_room_membership",
       "return_type": "jsonb",
-      "arguments": "p_user_id uuid, p_player_id text, p_transition_id uuid",
+      "arguments": "p_user_id uuid, p_seat_id uuid, p_transition_id uuid",
       "type": "FUNCTION"
     },
     {

@@ -8,7 +8,7 @@ import {
 const declaration = (
   overrides: Partial<BlowDeclaration> = {},
 ): BlowDeclaration => ({
-  playerId: 'player-1',
+  seatId: 'player-1',
   trumpType: 'zuppe',
   numberOfPairs: 6,
   timestamp: 1,
