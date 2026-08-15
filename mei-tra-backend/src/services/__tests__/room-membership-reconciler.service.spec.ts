@@ -9,7 +9,6 @@ describe('RoomMembershipReconcilerService', () => {
     userId: 'user-1',
     roomId: 'room-authoritative',
     seatId: asSeatId('player-1'),
-    playerId: 'player-1',
     status: 'active',
     membershipVersion: 4,
     transitionId: 'transition-1',
@@ -92,10 +91,10 @@ describe('RoomMembershipReconcilerService', () => {
     );
   });
 
-  it('repairs a same-room membership that points to a stale player id', async () => {
+  it('repairs a same-room membership that points to a stale seat id', async () => {
     const repairedMembership: ActiveRoomMembership = {
       ...membership,
-      playerId: 'seat-1',
+      seatId: asSeatId('seat-1'),
       membershipVersion: 5,
     };
     const roomService = {

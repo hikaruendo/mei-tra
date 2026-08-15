@@ -311,7 +311,6 @@ export class RoomMembershipService {
       userId: row.user_id,
       roomId: row.room_id,
       seatId: asSeatId(row.seat_id),
-      playerId: row.seat_id,
       status: row.status,
       membershipVersion: row.membership_version,
       transitionId: row.transition_id,

@@ -313,7 +313,6 @@ describe('Game Use Cases', () => {
           userId: 'user-1',
           roomId: 'room-existing',
           seatId: asSeatId('player-1'),
-          playerId: 'player-1',
           status: 'active',
           membershipVersion: 3,
           transitionId: 'transition-existing',

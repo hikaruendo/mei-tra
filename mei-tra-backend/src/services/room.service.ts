@@ -639,7 +639,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     const membership = await this.roomMembershipService.get(user.userId);
     if (membership?.roomId === roomId) {
-      const seatId = membership.seatId ?? asSeatId(membership.playerId);
+      const seatId = membership.seatId;
       return { ...user, seatId, playerId: seatId };
     }
 
