@@ -30,7 +30,7 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
     playState: {
       currentField: {
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
         dealerSeatId: asSeatId('player-1'),
         isComplete: false,
@@ -44,7 +44,6 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
     },
     roundNumber: 1,
     pointsToWin: 5,
-    teamAssignments: {},
     ...overrides,
   }) as GameState;
 
@@ -161,12 +160,12 @@ describe('GameplayNotificationService', () => {
     await service.notifyGameStarted({
       roomId: 'room-1',
       initiatingActorId: 'player-1',
-      currentTurnPlayerId: 'com-3',
+      currentTurnSeatId: asSeatId('com-3'),
     });
     await service.notifyGameStarted({
       roomId: 'room-1',
       initiatingActorId: 'player-1',
-      currentTurnPlayerId: 'com-3',
+      currentTurnSeatId: asSeatId('com-3'),
     });
 
     expect(pushNotificationService.sendGameStarted).toHaveBeenCalledTimes(1);
@@ -183,12 +182,12 @@ describe('GameplayNotificationService', () => {
   it('sends one turn notification per transition and suppresses replay duplicates', async () => {
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       initiatingActorId: 'player-1',
     });
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       initiatingActorId: 'player-1',
     });
 
@@ -211,11 +210,11 @@ describe('GameplayNotificationService', () => {
 
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'com-3',
+      seatId: asSeatId('com-3'),
     });
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
     });
 
     expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
@@ -229,7 +228,7 @@ describe('GameplayNotificationService', () => {
     await expect(
       service.notifyTurnChanged({
         roomId: 'room-1',
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
       }),
     ).resolves.toBeUndefined();
 
@@ -243,7 +242,7 @@ describe('GameplayNotificationService', () => {
 
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       delayMs: 1_000,
     });
 
@@ -262,7 +261,7 @@ describe('GameplayNotificationService', () => {
 
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       delayMs: 1_000,
     });
     service.onModuleDestroy();

@@ -27,11 +27,11 @@
 <polygon fill="none" stroke="black" points="313.02,-1721.8 313.02,-1752.6 1007.15,-1752.6 1007.15,-1721.8 313.02,-1721.8"/>
 <text text-anchor="start" x="320.02" y="-1734" font-family="Arial" font-size="14.00">actor_key_snapshot </text>
 <text text-anchor="start" x="449.21" y="-1734" font-family="Arial" font-size="14.00" fill="#666666">[text]</text>
-<text text-anchor="start" x="479.56" y="-1734" font-family="Arial" font-size="14.00"> Immutable legacy actor key retained for unresolved and historical records.</text>
+<text text-anchor="start" x="479.56" y="-1734" font-family="Arial" font-size="14.00"> Immutable actor key snapshot retained when an actor seat is unavailable.</text>
 <polygon fill="none" stroke="black" points="313.02,-1691 313.02,-1721.8 1007.15,-1721.8 1007.15,-1691 313.02,-1691"/>
 <text text-anchor="start" x="320.02" y="-1703.2" font-family="Arial" font-size="14.00">actor_seat_id </text>
 <text text-anchor="start" x="407.97" y="-1703.2" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
-<text text-anchor="start" x="442.21" y="-1703.2" font-family="Arial" font-size="14.00"> Canonical actor seat UUID. actor_key_snapshot is reserved for unresolved legacy actors.</text>
+<text text-anchor="start" x="442.21" y="-1703.2" font-family="Arial" font-size="14.00"> Actor seat UUID when the action is tied to a room seat.</text>
 <polygon fill="none" stroke="black" points="313.02,-1660.2 313.02,-1691 1007.15,-1691 1007.15,-1660.2 313.02,-1660.2"/>
 <text text-anchor="start" x="320.02" y="-1672.4" font-family="Arial" font-size="14.00">game_state_id </text>
 <text text-anchor="start" x="415.75" y="-1672.4" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
@@ -159,7 +159,7 @@
 <polygon fill="none" stroke="black" points="874.55,-289.6 874.55,-320.4 1421.62,-320.4 1421.62,-289.6 874.55,-289.6"/>
 <text text-anchor="start" x="881.55" y="-301.8" font-family="Arial" font-size="14.00">host_seat_id </text>
 <text text-anchor="start" x="964.83" y="-301.8" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
-<text text-anchor="start" x="999.08" y="-301.8" font-family="Arial" font-size="14.00"> Canonical host seat UUID. Runtime hostId is an alias of this value.</text>
+<text text-anchor="start" x="999.08" y="-301.8" font-family="Arial" font-size="14.00"> Host seat UUID.</text>
 <polygon fill="none" stroke="black" points="874.55,-258.8 874.55,-289.6 1421.62,-289.6 1421.62,-258.8 874.55,-258.8"/>
 <text text-anchor="start" x="881.55" y="-271" font-family="Arial" font-size="14.00">id </text>
 <text text-anchor="start" x="896.34" y="-271" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>

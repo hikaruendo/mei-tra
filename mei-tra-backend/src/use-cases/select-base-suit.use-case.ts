@@ -7,7 +7,7 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
-import { resolveCurrentPlayer } from '../types/current-turn';
+import { resolveCurrentPlayer } from '../domain/current-turn';
 
 @Injectable()
 export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {

@@ -4,11 +4,14 @@ import { SupabaseService } from '../../database/supabase.service';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { Database } from '../../types/database.types';
-import { asSeatId, resolveSeatId } from '../../types/identity.types';
+import { asSeatId } from '../../types/identity.types';
+import type { GameParticipant } from '../../types/game-participant.types';
 
 type RoomRow = Database['public']['Tables']['rooms']['Row'];
 type RoomUpdate = Database['public']['Tables']['rooms']['Update'];
 type RoomPlayerRow = Database['public']['Tables']['room_players']['Row'];
+type GameParticipantRow =
+  Database['public']['Tables']['game_participants']['Row'];
 
 interface CreatedRoomWithHostSeat {
   room: RoomRow;
@@ -31,7 +34,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     hostPlayer: RoomPlayer,
     transitionId: string,
   ): Promise<Room> {
-    const hostSeatId = resolveSeatId(hostPlayer);
+    const hostSeatId = hostPlayer.seatId;
     const hostUserId = hostPlayer.userId;
     if (!hostUserId) {
       throw new Error('Authenticated host user is required');
@@ -198,9 +201,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
     try {
       const { data: roomsData, error } = await this.supabase
         .from('rooms')
-        .select('*, room_players!room_players_room_id_fkey!inner(user_id)')
+        .select(
+          '*, game_participants!game_participants_room_id_fkey!inner(user_id)',
+        )
         .eq('status', RoomStatus.FINISHED)
-        .eq('room_players.user_id', userId)
+        .eq('game_participants.user_id', userId)
         .order('last_activity_at', { ascending: false })
         .limit(limit);
 
@@ -218,6 +223,30 @@ export class SupabaseRoomRepository implements IRoomRepository {
       );
       throw error;
     }
+  }
+
+  async findGameParticipants(roomId: string): Promise<GameParticipant[]> {
+    const { data, error } = await this.supabase
+      .from('game_participants')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('joined_at', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch game participants: ${error.message}`);
+    }
+
+    return ((data ?? []) as GameParticipantRow[]).map((participant) => ({
+      roomId: participant.room_id,
+      seatId: asSeatId(participant.seat_id),
+      userId: participant.user_id,
+      playerName: participant.player_name_snapshot,
+      team:
+        participant.team_snapshot === 0 || participant.team_snapshot === 1
+          ? participant.team_snapshot
+          : null,
+      joinedAt: new Date(participant.joined_at),
+    }));
   }
 
   async updateStatus(roomId: string, status: RoomStatus): Promise<boolean> {

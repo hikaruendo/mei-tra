@@ -3,7 +3,7 @@ import {
   toRuntimePlayer,
   toTransportPlayers,
 } from './player-adapters';
-import { asSeatId } from './identity.types';
+import { asSeatId } from '../types/identity.types';
 
 describe('player-adapters', () => {
   describe('toRuntimePlayer', () => {

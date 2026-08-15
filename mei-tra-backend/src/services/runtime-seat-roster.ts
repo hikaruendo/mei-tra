@@ -1,10 +1,9 @@
 import type { DomainPlayer, GameState } from '../types/game.types';
-import { resolveSeatId } from '../types/identity.types';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import type { Room, RoomPlayer } from '../types/room.types';
 
 type RuntimeRoomRoster = Pick<Room, 'players'>;
-type RuntimeGameRoster = Pick<GameState, 'players' | 'teamAssignments'>;
+type RuntimeGameRoster = Pick<GameState, 'players'>;
 
 interface UpsertRuntimeSeatOptions {
   replaceSeatId?: string;
@@ -23,12 +22,6 @@ function replaceOrAppend<T>(items: T[], index: number, value: T): void {
   }
 
   items[index] = value;
-}
-
-export function rebuildTeamAssignments(state: RuntimeGameRoster): void {
-  state.teamAssignments = Object.fromEntries(
-    state.players.map((player) => [player.seatId, player.team]),
-  );
 }
 
 function projectGamePlayer(
@@ -50,7 +43,7 @@ export function upsertRuntimeSeat(
   roomPlayer: RoomPlayer,
   options: UpsertRuntimeSeatOptions = {},
 ): RuntimeSeatProjection {
-  const seatId = resolveSeatId(roomPlayer);
+  const seatId = roomPlayer.seatId;
   const replaceSeatId = options.replaceSeatId ?? seatId;
 
   if (replaceSeatId !== seatId) {
@@ -60,10 +53,10 @@ export function upsertRuntimeSeat(
   }
 
   const roomIndex = room.players.findIndex(
-    (player) => resolveSeatId(player) === seatId,
+    (player) => player.seatId === seatId,
   );
   const gameIndex = state.players.findIndex(
-    (player) => resolveSeatId(player) === seatId,
+    (player) => player.seatId === seatId,
   );
   const gameplaySource =
     options.gameplaySource ??
@@ -80,7 +73,6 @@ export function upsertRuntimeSeat(
 
   replaceOrAppend(room.players, roomIndex, normalizedRoomPlayer);
   replaceOrAppend(state.players, gameIndex, gamePlayer);
-  rebuildTeamAssignments(state);
 
   return { roomPlayer: normalizedRoomPlayer, gamePlayer };
 }
@@ -90,14 +82,13 @@ export function reconcileRuntimeRoster(
   roomPlayers: RoomPlayer[],
 ): void {
   const currentPlayers = new Map(
-    state.players.map((player) => [resolveSeatId(player), player]),
+    state.players.map((player) => [player.seatId, player]),
   );
 
   state.players = roomPlayers.map((roomPlayer) =>
     projectGamePlayer(
       roomPlayer,
-      currentPlayers.get(resolveSeatId(roomPlayer)) ?? null,
+      currentPlayers.get(roomPlayer.seatId) ?? null,
     ),
   );
-  rebuildTeamAssignments(state);
 }

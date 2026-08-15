@@ -3,15 +3,16 @@ import { IRoomService } from '../services/interfaces/room-service.interface';
 import { ILeaveRoomUseCase } from './interfaces/leave-room.use-case.interface';
 import { RoomStatus } from '../types/room.types';
 import { BlowState } from '../types/game.types';
-import { TransportPlayer } from '../types/player-adapters';
+import { TransportPlayer } from '../adapters/player-adapters';
 import { resolveRoomTransportPlayers } from './helpers/player-resolution.helper';
+import type { SeatId } from '../types/identity.types';
 
 export type ModeratePlayerResult =
   | {
       success: true;
       mode: 'remove';
       targetSocketId?: string;
-      playerId: string;
+      seatId: SeatId;
       roomDeleted: boolean;
       roomsList: Awaited<ReturnType<IRoomService['listRooms']>>;
       updatedRoom?: Awaited<ReturnType<IRoomService['getRoom']>>;
@@ -21,7 +22,7 @@ export type ModeratePlayerResult =
       success: true;
       mode: 'replace-with-com';
       targetSocketId?: string;
-      playerId: string;
+      seatId: SeatId;
       playerName: string;
       message: string;
       blowState: BlowState;
@@ -41,8 +42,8 @@ export class ModeratePlayerUseCase {
 
   async execute(request: {
     roomId: string;
-    requesterPlayerId: string;
-    targetPlayerId: string;
+    requesterSeatId: SeatId;
+    targetSeatId: SeatId;
     action: 'remove' | 'replace-with-com';
     isPlayerIdle: boolean;
   }): Promise<ModeratePlayerResult> {
@@ -51,16 +52,16 @@ export class ModeratePlayerUseCase {
       return { success: false, error: 'Room not found' };
     }
 
-    if (room.hostSeatId !== request.requesterPlayerId) {
+    if (room.hostSeatId !== request.requesterSeatId) {
       return { success: false, error: 'Only the host can moderate players' };
     }
 
-    if (request.requesterPlayerId === request.targetPlayerId) {
+    if (request.requesterSeatId === request.targetSeatId) {
       return { success: false, error: 'Host cannot moderate themselves' };
     }
 
     const targetPlayer = room.players.find(
-      (player) => player.seatId === request.targetPlayerId,
+      (player) => player.seatId === request.targetSeatId,
     );
     if (!targetPlayer || targetPlayer.isCOM) {
       return { success: false, error: 'Target player not found' };
@@ -70,7 +71,7 @@ export class ModeratePlayerUseCase {
       request.roomId,
     );
     const targetConnectionState = roomGameState.getPlayerConnectionState(
-      request.targetPlayerId,
+      request.targetSeatId,
     );
 
     if (request.action === 'remove') {
@@ -82,7 +83,7 @@ export class ModeratePlayerUseCase {
       }
 
       const result = await this.leaveRoomUseCase.execute({
-        playerId: request.targetPlayerId,
+        seatId: request.targetSeatId,
         roomId: request.roomId,
       });
       if (!result.success || !result.data) {
@@ -100,7 +101,7 @@ export class ModeratePlayerUseCase {
         success: true,
         mode: 'remove',
         targetSocketId: targetConnectionState?.socketId || undefined,
-        playerId: result.data.playerId,
+        seatId: result.data.seatId,
         roomDeleted: result.data.roomDeleted,
         roomsList: result.data.roomsList,
         updatedRoom: updatedRoom ?? undefined,
@@ -110,7 +111,7 @@ export class ModeratePlayerUseCase {
 
     const state = roomGameState.getState();
     const targetStatePlayer = state.players.find(
-      (player) => player.seatId === request.targetPlayerId,
+      (player) => player.seatId === request.targetSeatId,
     );
     const canReplaceDisconnected = Boolean(
       room.status === RoomStatus.PLAYING &&
@@ -133,12 +134,12 @@ export class ModeratePlayerUseCase {
 
     const converted = await this.roomService.convertPlayerToCOM(
       request.roomId,
-      request.targetPlayerId,
+      request.targetSeatId,
     );
     if (!converted) {
       return { success: false, error: 'Failed to replace player with COM' };
     }
-    roomGameState.clearDisconnectTimeout(request.targetPlayerId);
+    roomGameState.clearDisconnectTimeout(request.targetSeatId);
 
     const updatedRoom = await this.roomService.getRoom(request.roomId);
     if (!updatedRoom) {
@@ -149,7 +150,7 @@ export class ModeratePlayerUseCase {
       success: true,
       mode: 'replace-with-com',
       targetSocketId: targetConnectionState?.socketId || undefined,
-      playerId: request.targetPlayerId,
+      seatId: request.targetSeatId,
       playerName: targetPlayer.name,
       message: canReplaceIdle
         ? 'Host replaced an unresponsive player with COM'

@@ -95,7 +95,7 @@ const gameActions: GameActions = {
 
 const otherPlayer: Player = {
   socketId: '',
-  playerId: 'player-2',
+  seatId: 'player-2',
   name: 'Player 2',
   team: 0,
   hand: ['H-A'],
@@ -115,7 +115,7 @@ const renderPlayerHand = (
       gameActions={gameActions}
       position="left"
       completedFields={[]}
-      currentPlayerId="player-1"
+      currentSeatId="player-1"
       currentField={null}
       currentTrump={null}
       isHost
@@ -154,8 +154,8 @@ describe('PlayerHand', () => {
   it('shows the Agari card while selecting Negri', () => {
     renderPlayerHand({
       agariCard: 'H-A',
-      currentHighestDeclaration: { playerId: 'player-2' },
-      currentPlayerId: 'player-2',
+      currentHighestDeclaration: { seatId: 'player-2' },
+      currentSeatId: 'player-2',
       whoseTurn: 'player-2',
       player: {
         ...otherPlayer,
@@ -172,8 +172,8 @@ describe('PlayerHand', () => {
     renderPlayerHand({
       position: 'bottom',
       agariCard: 'H-A',
-      currentHighestDeclaration: { playerId: 'player-2' },
-      currentPlayerId: 'player-2',
+      currentHighestDeclaration: { seatId: 'player-2' },
+      currentSeatId: 'player-2',
       whoseTurn: 'player-2',
       player: {
         ...otherPlayer,
@@ -192,7 +192,7 @@ describe('PlayerHand', () => {
   it('shows taken sets and the red team badge in the player info', () => {
     renderPlayerHand({
       position: 'bottom',
-      currentPlayerId: 'player-2',
+      currentSeatId: 'player-2',
       negriCard: 'H-A',
     });
 
@@ -206,7 +206,7 @@ describe('PlayerHand', () => {
   it('uses the translated no-trump label in the declaration badge', () => {
     renderPlayerHand({
       currentHighestDeclaration: {
-        playerId: 'player-2',
+        seatId: 'player-2',
         trumpType: 'tra',
         numberOfPairs: 6,
       },
@@ -218,7 +218,7 @@ describe('PlayerHand', () => {
   it('omits the suit symbol from the declaration badge', () => {
     renderPlayerHand({
       currentHighestDeclaration: {
-        playerId: 'player-2',
+        seatId: 'player-2',
         trumpType: 'daiya',
         numberOfPairs: 7,
       },
@@ -238,7 +238,7 @@ describe('PlayerHand', () => {
 
   it('reorders the current player hand locally with pointer drag', () => {
     renderPlayerHand({
-      currentPlayerId: 'player-2',
+      currentSeatId: 'player-2',
       player: {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
@@ -262,7 +262,7 @@ describe('PlayerHand', () => {
 
   it('shows an insertion marker on the target card while reordering', () => {
     renderPlayerHand({
-      currentPlayerId: 'player-2',
+      currentSeatId: 'player-2',
       player: {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
@@ -282,7 +282,7 @@ describe('PlayerHand', () => {
 
   it('overlays the animated current-turn clock on the player avatar', () => {
     renderPlayerHand({
-      currentPlayerId: 'player-2',
+      currentSeatId: 'player-2',
       isCurrentTurn: true,
       takenCount: 3,
     });
@@ -300,7 +300,7 @@ describe('PlayerHand', () => {
 
   it('shows the selected spectator perspective hand face up', () => {
     renderPlayerHand({
-      currentPlayerId: 'player-2',
+      currentSeatId: 'player-2',
       isSpectator: true,
       isSpectatorPerspective: true,
     });
@@ -311,7 +311,7 @@ describe('PlayerHand', () => {
 
   it('keeps non-perspective spectator hands face down', () => {
     renderPlayerHand({
-      currentPlayerId: 'player-1',
+      currentSeatId: 'player-1',
       isSpectator: true,
     });
 

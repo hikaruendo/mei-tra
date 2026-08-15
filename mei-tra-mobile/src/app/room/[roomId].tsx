@@ -22,7 +22,7 @@ export default function RoomScreen() {
     currentRoom,
     game,
     connectionStatus,
-    currentPlayerId,
+    currentSeatId,
     isHost,
     error,
     notice,
@@ -123,7 +123,7 @@ export default function RoomScreen() {
       {isWaiting && currentRoom ? (
         <WaitingRoom
           actionsDisabled={actionsDisabled}
-          currentPlayerId={currentPlayerId}
+          currentSeatId={currentSeatId}
           isHost={isHost}
           onLeave={doLeave}
           onRemovePlayer={removePlayer}

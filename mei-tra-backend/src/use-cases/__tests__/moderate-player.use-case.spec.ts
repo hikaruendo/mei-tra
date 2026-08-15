@@ -36,7 +36,7 @@ describe('ModeratePlayerUseCase', () => {
     const blowState = {
       currentTrump: null,
       currentHighestDeclaration: {
-        playerId: 'com-target',
+        seatId: asSeatId('com-target'),
         trumpType: 'herz',
         numberOfPairs: 7,
         timestamp: 1,
@@ -75,8 +75,8 @@ describe('ModeratePlayerUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      requesterPlayerId: 'host',
-      targetPlayerId: 'target',
+      requesterSeatId: asSeatId('host'),
+      targetSeatId: asSeatId('target'),
       action: 'replace-with-com',
       isPlayerIdle: false,
     });

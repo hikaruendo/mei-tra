@@ -2,6 +2,7 @@ import { DisconnectGatewayEffectsService } from '../disconnect-gateway-effects.s
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomMembershipService } from '../room-membership.service';
 import { asSeatId } from '../../types/identity.types';
+import type { RoomSyncPayload } from '@contracts/room';
 
 const membershipServiceStub = (
   overrides: Partial<RoomMembershipService> = {},
@@ -45,7 +46,6 @@ describe('DisconnectGatewayEffectsService', () => {
           isPasser: false,
         },
       ],
-      teamAssignments: {} as Record<string, 0 | 1>,
       gamePhase: 'play' as const,
     };
     const roomGameState = {
@@ -58,13 +58,13 @@ describe('DisconnectGatewayEffectsService', () => {
         userId: 'user-1',
         isAuthenticated: true,
       })),
-      applyPlayerConnectionState: jest.fn().mockResolvedValue(undefined),
+      applyPlayerConnectionState: jest.fn(),
       getPlayerConnectionState: jest.fn(() => ({
         socketId: 'socket-1',
         userId: 'user-1',
         isAuthenticated: true,
       })),
-      getTransportPlayers: jest.fn(() => [{ playerId: 'player-1' }]),
+      getTransportPlayers: jest.fn(() => [{ seatId: asSeatId('player-1') }]),
       setDisconnectTimeout: jest.fn(),
     };
     const initialRoom = {
@@ -123,19 +123,10 @@ describe('DisconnectGatewayEffectsService', () => {
           scope: 'room',
           roomId: 'room-1',
           event: 'room-sync',
-          payload: { room: updatedRoom, players: [{ playerId: 'player-1' }] },
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'room-updated',
-          payload: updatedRoom,
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'update-players',
-          payload: [{ playerId: 'player-1' }],
+          payload: {
+            room: updatedRoom,
+            players: [{ seatId: asSeatId('player-1') }],
+          },
         },
       ]),
       buildRoomsListEvent: jest.fn(({ rooms }: { rooms: unknown[] }) => ({
@@ -158,7 +149,7 @@ describe('DisconnectGatewayEffectsService', () => {
         markDisconnected: jest.fn().mockResolvedValue({
           userId: 'user-1',
           roomId: 'room-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           status: 'disconnected',
           membershipVersion: 3,
           transitionId: 'transition-disconnect',
@@ -175,7 +166,7 @@ describe('DisconnectGatewayEffectsService', () => {
       displayName: 'Host Display',
     });
 
-    expect(result?.playerId).toBe('player-1');
+    expect(result?.seatId).toBe('player-1');
     expect(result?.timeoutMode).toBe('convert-to-com');
     expect(roomGameState.applyPlayerConnectionState).toHaveBeenCalledWith(
       'player-1',
@@ -184,18 +175,19 @@ describe('DisconnectGatewayEffectsService', () => {
     expect(roomService.updateRoom).toHaveBeenCalledWith('room-1', {
       hostSeatId: asSeatId('player-2'),
     });
-    expect(result?.events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          event: 'room-updated',
-          payload: updatedRoom,
-        }),
-        expect.objectContaining({
-          event: 'rooms-list',
-          payload: [updatedRoom],
-        }),
-      ]),
+    expect(result?.events.map((event) => event.event)).toEqual(
+      expect.arrayContaining(['room-sync', 'rooms-list']),
     );
+    const roomSyncEvent = result?.events.find(
+      (event) => event.event === 'room-sync',
+    );
+    const roomsListEvent = result?.events.find(
+      (event) => event.event === 'rooms-list',
+    );
+    expect((roomSyncEvent?.payload as RoomSyncPayload).room).toEqual(
+      updatedRoom,
+    );
+    expect(roomsListEvent?.payload).toEqual([updatedRoom]);
     expect(
       roomUpdateGatewayEffectsService.buildRoomsListEvent,
     ).toHaveBeenCalledWith({
@@ -244,7 +236,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'remove-player',
     });
@@ -278,7 +270,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'remove-player',
     });
@@ -300,7 +292,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
     });
@@ -317,7 +309,6 @@ describe('DisconnectGatewayEffectsService', () => {
     const roomGameState = {
       getState: jest.fn(() => ({
         players: [{ seatId: asSeatId('player-1'), name: 'Player 1', team: 0 }],
-        teamAssignments: {},
         gamePhase: 'play',
       })),
       findSessionUserBySocketId: jest.fn(() => ({
@@ -337,7 +328,7 @@ describe('DisconnectGatewayEffectsService', () => {
         id: 'room-1',
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             userId: 'user-1',
             socketId: 'socket-new',
           },
@@ -381,7 +372,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
       membership: {
@@ -456,7 +447,7 @@ describe('DisconnectGatewayEffectsService', () => {
 
     const events = await service.buildTimeoutEvents({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
       membership: { ...movingMembership, status: 'disconnected' },

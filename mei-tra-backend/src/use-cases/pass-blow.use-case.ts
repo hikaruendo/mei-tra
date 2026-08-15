@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { RoundCancelledPayload } from '@contracts/game';
-import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
+import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
 import {
   IPassBlowUseCase,
   PassBlowRequest,
@@ -36,7 +36,7 @@ import {
   resolveCurrentPlayer,
   resolveCurrentPlayerIndex,
   setCurrentSeat,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 
 @Injectable()
 export class PassBlowUseCase implements IPassBlowUseCase {

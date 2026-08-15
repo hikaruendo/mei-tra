@@ -8,9 +8,9 @@ import { IGameEventLogService } from '../services/interfaces/game-event-log.serv
 import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { setCurrentSeat } from '../domain/current-turn';
 import type { RevealAgariPayload } from '@contracts/game';
-import { toBlowDeclarationContract } from '../types/game-contract-adapters';
+import { toBlowDeclarationContract } from '../adapters/game-contract-adapters';
 
 export interface TransitionResult {
   events: GatewayEvent[];
@@ -91,7 +91,7 @@ export async function transitionToPlayPhase({
     },
   ];
 
-  const winningPlayerSession = roomGameState.findSessionUserByPlayerId(
+  const winningPlayerSession = roomGameState.findSessionUserBySeatId(
     winningPlayer.seatId,
   );
   const winningPlayerSocketId =

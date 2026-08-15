@@ -31,13 +31,13 @@ describe('ComStrategyService', () => {
     } as unknown as ConfigService);
 
   const player = (
-    playerId: string,
+    seatId: string,
     team: Team,
     hand: string[] = [],
     overrides: Partial<DomainPlayer> = {},
   ): DomainPlayer => ({
-    seatId: asSeatId(playerId),
-    name: playerId,
+    seatId: asSeatId(seatId),
+    name: seatId,
     team,
     hand,
     isPasser: false,
@@ -77,9 +77,6 @@ describe('ComStrategyService', () => {
       playState: overrides.playState,
       roundNumber: 1,
       pointsToWin: 5,
-      teamAssignments: Object.fromEntries(
-        players.map((statePlayer) => [statePlayer.seatId, statePlayer.team]),
-      ),
       ...overrides,
       players,
       blowState,
@@ -235,7 +232,7 @@ describe('ComStrategyService', () => {
   it('does not waste a winner when the partner is already winning the field', () => {
     const field: Field = {
       cards: ['A♠', 'K♠'],
-      playedBy: ['partner-0', 'enemy-1'],
+      playedBySeatIds: ['partner-0', 'enemy-1'].map(asSeatId),
       baseCard: 'A♠',
       dealerSeatId: asSeatId('partner-0'),
       isComplete: false,
@@ -249,7 +246,7 @@ describe('ComStrategyService', () => {
   it('beats an opponent with the cheapest winning legal card', () => {
     const field: Field = {
       cards: ['K♠'],
-      playedBy: ['enemy-1'],
+      playedBySeatIds: [asSeatId('enemy-1')],
       baseCard: 'K♠',
       dealerSeatId: asSeatId('enemy-1'),
       isComplete: false,
@@ -263,7 +260,7 @@ describe('ComStrategyService', () => {
   it('throws the lowest discard when it cannot win the field', () => {
     const field: Field = {
       cards: ['K♠'],
-      playedBy: ['enemy-1'],
+      playedBySeatIds: [asSeatId('enemy-1')],
       baseCard: 'K♠',
       dealerSeatId: asSeatId('enemy-1'),
       isComplete: false,

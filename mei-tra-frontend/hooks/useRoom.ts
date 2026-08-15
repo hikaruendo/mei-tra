@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { PlayerContract, RoomPlayingPayload } from '@contracts/game';
+import type {
+  PlayerContract,
+  PlayerLeftPayload,
+} from '@contracts/game';
 import type {
   RoomContract,
   RoomPlayerJoinedPayload,
@@ -15,14 +18,13 @@ import {
 } from '../types/room.types';
 import { useAuth } from '../contexts/AuthContext';
 import { ConnectionUser, Team } from '../types/game.types';
-import { RoomStatus } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
-import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
+import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import { asSeatId } from '@contracts/ids';
 
 interface UseRoomOptions {
   users?: ConnectionUser[];
-  currentPlayerId?: string | null;
+  currentSeatId?: string | null;
 }
 
 interface ProfileUpdatedPayload {
@@ -43,93 +45,28 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   const { user } = useAuth();
 
   const users = useMemo(() => options.users ?? [], [options.users]);
-  const currentPlayerId = options.currentPlayerId ?? null;
+  const currentSeatId = options.currentSeatId ?? null;
 
   const resolveSelfRoomPlayer = useCallback(
     (room: Room | null | undefined): RoomPlayer | null => {
       if (!room) {
         return null;
       }
-      const playerId = resolveSelfPlayerId(room.players, {
+      const seatId = resolveSelfSeatId(room.players, {
         userId: user?.id,
-        serverPlayerId: currentPlayerId,
+        serverSeatId: currentSeatId,
       });
       return (
-        room.players.find((player) => player.playerId === playerId) ?? null
+        room.players.find((player) => player.seatId === seatId) ?? null
       );
     },
-    [currentPlayerId, user?.id],
+    [currentSeatId, user?.id],
   );
 
   const currentRoomRef = useRef<Room | null>(null);
-  const legacyRoomEventSkipRef = useRef<{
-    roomId: string | null;
-    roomUpdated: boolean;
-    updatePlayers: boolean;
-    roomPlaying: boolean;
-  }>({
-    roomId: null,
-    roomUpdated: false,
-    updatePlayers: false,
-    roomPlaying: false,
-  });
   useEffect(() => {
     currentRoomRef.current = currentRoom;
   }, [currentRoom]);
-
-  const markRoomSyncHandled = useCallback((roomId: string) => {
-    legacyRoomEventSkipRef.current = {
-      roomId,
-      roomUpdated: true,
-      updatePlayers: true,
-      roomPlaying: true,
-    };
-  }, []);
-
-  const shouldSkipLegacyRoomUpdated = useCallback((roomId: string) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (state.roomId !== roomId || !state.roomUpdated) {
-      return false;
-    }
-
-    state.roomUpdated = false;
-    if (!state.updatePlayers && !state.roomPlaying) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
-
-  const shouldSkipLegacyUpdatePlayers = useCallback((roomId: string | null) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (!state.updatePlayers) {
-      return false;
-    }
-    if (roomId && state.roomId && state.roomId !== roomId) {
-      return false;
-    }
-
-    state.updatePlayers = false;
-    if (!state.roomUpdated && !state.roomPlaying) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
-
-  const shouldSkipLegacyRoomPlaying = useCallback((roomId: string | null) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (!state.roomPlaying) {
-      return false;
-    }
-    if (roomId && state.roomId && state.roomId !== roomId) {
-      return false;
-    }
-
-    state.roomPlaying = false;
-    if (!state.roomUpdated && !state.updatePlayers) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
 
   const clearStoredRoomState = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -175,30 +112,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       }
     };
 
-    // ルーム更新
-    const handleRoomUpdated = (room: RoomContract) => {
-      const nextRoom = fromRoomContract(room);
-      if (shouldSkipLegacyRoomUpdated(nextRoom.id)) {
-        return;
-      }
-      setAvailableRooms(prevRooms =>
-        prevRooms.map((currentRoom) =>
-          currentRoom.id === nextRoom.id ? nextRoom : currentRoom,
-        ),
-      );
-      const storedRoomId =
-        typeof window !== 'undefined' ? sessionStorage.getItem('roomId') : null;
-      if (
-        currentRoomRef.current?.id === nextRoom.id ||
-        storedRoomId === nextRoom.id
-      ) {
-        setCurrentRoom(nextRoom);
-      }
-    };
-
     const handleRoomSync = (payload: RoomSyncPayload) => {
       const { room: nextRoom } = fromRoomSyncPayload(payload);
-      markRoomSyncHandled(nextRoom.id);
 
       setAvailableRooms(prevRooms =>
         prevRooms.map((currentRoom) =>
@@ -232,12 +147,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
               return {
                 socketId: '',
                 seatId: asSeatId(p),
-                playerId: p,
                 name: p,
                 hand: [],
                 team: (index % 2) as Team,
                 isReady: false,
-                isHost: room.hostId === p,
+                isHost: room.hostSeatId === p,
                 joinedAt: new Date()
               } as RoomPlayer;
             }
@@ -246,14 +160,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
           // 既存プレイヤーチェック（重複防止）
           const alreadyInRoom = existingPlayers.some(
-            (player) => player.playerId === joinedSeatId,
+            (player) => player.seatId === joinedSeatId,
           );
           if (alreadyInRoom) return room;
 
           const newPlayer: RoomPlayer = {
             socketId: '',
             seatId: joinedSeatId,
-            playerId: joinedSeatId,
             name: joinedSeatId,
             hand: [],
             team: (existingPlayers.length % 2) as Team,
@@ -286,19 +199,19 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     };
 
     // プレイヤー退出
-    const handlePlayerLeft = ({ playerId, roomId }: { playerId: string; roomId: string }) => {
+    const handlePlayerLeft = ({ seatId, roomId }: PlayerLeftPayload) => {
       if (currentRoomRef.current?.id !== roomId) {
         return;
       }
 
-      if (currentPlayerId && currentPlayerId === playerId) {
+      if (currentSeatId && currentSeatId === seatId) {
         setCurrentRoom(null);
       } else {
         setCurrentRoom(prev => {
           if (!prev) return null;
 
           const updatedPlayers = prev.players.map(p =>
-            p.playerId === playerId
+            p.seatId === seatId
               ? {
                   ...p,
                   socketId: '',
@@ -315,15 +228,15 @@ export const useRoom = (options: UseRoomOptions = {}) => {
               : p
           );
 
-          if (prev.hostId === playerId) {
+          if (prev.hostSeatId === seatId) {
             const newHost = updatedPlayers.find(p => !p.isCOM);
             if (newHost) {
               return {
                 ...prev,
                 players: updatedPlayers.map(p =>
-                  p.playerId === newHost.playerId ? { ...p, isHost: true } : p
+                  p.seatId === newHost.seatId ? { ...p, isHost: true } : p
                 ),
-                hostId: newHost.playerId,
+                hostSeatId: newHost.seatId,
               };
             }
           }
@@ -336,45 +249,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
       setPlayerReadyStatus(prev => {
         const newStatus = { ...prev };
-        delete newStatus[playerId];
+        delete newStatus[seatId];
         return newStatus;
       });
     };
 
-    // ゲーム開始
-    const handleRoomPlaying = ({ players }: RoomPlayingPayload) => {
-      if (shouldSkipLegacyRoomPlaying(currentRoomRef.current?.id ?? null)) {
-        return;
-      }
-      if (currentRoomRef.current) {
-        const updatedRoom = {
-          ...currentRoomRef.current,
-          status: RoomStatus.PLAYING,
-          players: currentRoomRef.current.players.map(p => {
-            const updatedPlayer = players.find(
-              (player) => player.seatId === p.seatId,
-            );
-            return updatedPlayer ? { ...p, hand: updatedPlayer.hand } : p;
-          })
-        };
-
-        setCurrentRoom(updatedRoom);
-        setAvailableRooms(prevRooms => {
-          const newRooms = prevRooms.map(room =>
-            room.id === currentRoomRef.current!.id ? updatedRoom : room
-          );
-          return newRooms;
-        });
-      } else {
-        console.log('currentRoom is null when room-playing event received');
-      }
-    };
-
     // プレイヤー情報の更新（currentRoom の team 等を同期する）
     const handleUpdatePlayers = (players: PlayerContract[]) => {
-      if (shouldSkipLegacyUpdatePlayers(currentRoomRef.current?.id ?? null)) {
-        return;
-      }
       if (currentRoomRef.current) {
         const updatedRoom = {
           ...currentRoomRef.current,
@@ -412,7 +293,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     ): Room => ({
       ...room,
       players: room.players.map((player) =>
-        player.userId === userId || player.playerId === userId
+        player.userId === userId || player.seatId === userId
           ? { ...player, profileRevision }
           : player,
       ),
@@ -434,7 +315,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       setAvailableRooms((prevRooms) =>
         prevRooms.map((room) =>
           room.players.some(
-            (player) => player.userId === userId || player.playerId === userId,
+            (player) => player.userId === userId || player.seatId === userId,
           )
             ? applyProfileRevision(room, userId, profileRevision)
             : room,
@@ -481,10 +362,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.on('rooms-list', handleRoomsList);
     socket.on('room-sync', handleRoomSync);
-    socket.on('room-updated', handleRoomUpdated);
     socket.on('room-player-joined', handleRoomPlayerJoined);
     socket.on('player-left', handlePlayerLeft);
-    socket.on('room-playing', handleRoomPlaying);
     socket.on('update-players', handleUpdatePlayers);
     socket.on('profile-updated', handleProfileUpdated);
     socket.on('error-message', handleErrorMessage);
@@ -494,10 +373,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     return () => {
       socket.off('rooms-list', handleRoomsList);
       socket.off('room-sync', handleRoomSync);
-      socket.off('room-updated', handleRoomUpdated);
       socket.off('room-player-joined', handleRoomPlayerJoined);
       socket.off('player-left', handlePlayerLeft);
-      socket.off('room-playing', handleRoomPlaying);
       socket.off('update-players', handleUpdatePlayers);
       socket.off('profile-updated', handleProfileUpdated);
       socket.off('error-message', handleErrorMessage);
@@ -506,12 +383,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     };
   }, [
     socket,
-    currentPlayerId,
+    currentSeatId,
     clearStoredRoomState,
-    markRoomSyncHandled,
-    shouldSkipLegacyRoomUpdated,
-    shouldSkipLegacyUpdatePlayers,
-    shouldSkipLegacyRoomPlaying,
   ]);
 
   // ルーム作成
@@ -588,7 +461,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     const displayName = user.profile?.displayName || user.email || 'User';
     const userToJoin = {
       socketId: socket.id ?? '',
-      playerId: user.id,  // Supabase userId — must match room.hostId set during createRoom
       name: displayName,
       userId: user.id,
       isAuthenticated: true
@@ -644,13 +516,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // userId でマッチング（socket.id は再接続で変わるため使わない）
     const player = resolveSelfRoomPlayer(room);
 
-    if (!player?.playerId) {
+    if (!player?.seatId) {
       console.error('[useRoom] Cannot leave room: player not found');
       setError('Player not found in room');
       return;
     }
 
-    socket.emit('leave-room', { roomId, playerId: player.playerId }, (response: { success: boolean; error?: string }) => {
+    socket.emit('leave-room', { roomId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('roomId');
@@ -680,7 +552,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       setError('Player not found in room');
       return;
     }
-    if (!player.playerId) {
+    if (!player.seatId) {
       setError('Player ID is not set');
       return;
     }
@@ -688,12 +560,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // ローカルの準備状態を即時更新
     setPlayerReadyStatus(prev => ({
       ...prev,
-      [player.playerId]: !prev[player.playerId]
+      [player.seatId]: !prev[player.seatId]
     }));
 
     socket.emit('toggle-player-ready', {
-      roomId: currentRoom.id,
-      playerId: player.playerId
+      roomId: currentRoom.id
     });
   }, [socket, currentRoom, resolveSelfRoomPlayer]);
 
@@ -712,8 +583,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     }
 
     socket.emit('start-game', {
-      roomId: currentRoom.id,
-      playerId: player.playerId
+      roomId: currentRoom.id
     });
   }, [socket, currentRoom, resolveSelfRoomPlayer]);
 
@@ -722,11 +592,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     if (!socket) return;
     const room = availableRooms.find(r => r.id === roomId) || currentRoom;
     const player = resolveSelfRoomPlayer(room);
-    if (!player?.playerId) {
+    if (!player?.seatId) {
       console.error('[useRoom] Cannot fill with COM: player not found');
       return;
     }
-    socket.emit('fill-with-com', { roomId, playerId: player.playerId });
+    socket.emit('fill-with-com', { roomId });
   }, [socket, currentRoom, availableRooms, resolveSelfRoomPlayer]);
 
   // プレイヤーのチーム変更
@@ -737,13 +607,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // userId でマッチング（socket.id は再接続で変わるため使わない）
     const player = resolveSelfRoomPlayer(room);
 
-    if (!player?.playerId) {
+    if (!player?.seatId) {
       console.error('[useRoom] Cannot change team: player not found');
       return Promise.resolve(false);
     }
 
     return new Promise((resolve) => {
-      socket.emit('change-player-team', { roomId, playerId: player.playerId, teamChanges }, (response: { success: boolean }) => {
+      socket.emit('change-player-team', { roomId, teamChanges }, (response: { success: boolean }) => {
         resolve(response.success);
       });
     });

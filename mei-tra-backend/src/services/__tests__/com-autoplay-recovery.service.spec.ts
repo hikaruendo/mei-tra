@@ -104,7 +104,7 @@ describe('ComAutoPlayRecoveryService', () => {
     } = createService();
     const field = {
       cards: ['A♠', 'K♠', 'Q♠', 'J♠'],
-      playedBy: ['p1', 'p2', 'p3', 'com-1'],
+      playedBySeatIds: ['p1', 'p2', 'p3', 'com-1'].map(asSeatId),
       baseCard: 'A♠',
       dealerSeatId: asSeatId('p1'),
       isComplete: true,
@@ -123,7 +123,7 @@ describe('ComAutoPlayRecoveryService', () => {
       state.playState.currentField = {
         ...field,
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         isComplete: false,
       };
       return Promise.resolve(completionResponse);

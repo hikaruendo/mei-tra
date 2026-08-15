@@ -43,8 +43,8 @@ const comPlayer = (over: Partial<DomainPlayer> = {}): DomainPlayer =>
     ...over,
   }) as DomainPlayer;
 
-const declaration = (playerId: string): BlowDeclaration => ({
-  seatId: asSeatId(playerId),
+const declaration = (seatId: string): BlowDeclaration => ({
+  seatId: asSeatId(seatId),
   trumpType: 'herz',
   numberOfPairs: 8,
   timestamp: 1,

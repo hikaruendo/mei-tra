@@ -1,15 +1,16 @@
 import { BlowState, DomainPlayer } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 
 export function hasPlayerDeclaredInBlow(
   blowState: BlowState,
-  playerId: string,
+  seatId: SeatId,
 ): boolean {
   return (
     blowState.declarations.some(
-      (declaration) => declaration.seatId === playerId,
+      (declaration) => declaration.seatId === seatId,
     ) ||
     (blowState.actionHistory ?? []).some(
-      (action) => action.seatId === playerId && action.type === 'declare',
+      (action) => action.seatId === seatId && action.type === 'declare',
     )
   );
 }

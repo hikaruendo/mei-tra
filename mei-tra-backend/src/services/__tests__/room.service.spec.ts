@@ -47,7 +47,6 @@ interface TestGameState {
   getState: jest.Mock<
     {
       players: DomainPlayer[];
-      teamAssignments: Record<string, Team>;
       gamePhase: null;
     },
     []
@@ -63,11 +62,9 @@ interface TestJoinRoomParams {
 const createGameState = (): TestGameState => {
   const state: {
     players: DomainPlayer[];
-    teamAssignments: Record<string, Team>;
     gamePhase: null;
   } = {
     players: [],
-    teamAssignments: {},
     gamePhase: null,
   };
 
