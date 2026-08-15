@@ -68,7 +68,6 @@ export class BlowService implements IBlowService {
   ): BlowDeclaration {
     return {
       seatId: asSeatId(playerId),
-      playerId,
       team,
       trumpType,
       numberOfPairs,

@@ -417,7 +417,7 @@ describe('DisconnectGatewayEffectsService', () => {
     const blowState = {
       currentTrump: null,
       currentHighestDeclaration: {
-        playerId: 'com-timeout',
+        seatId: asSeatId('com-timeout'),
         trumpType: 'herz',
         numberOfPairs: 7,
         timestamp: 1,

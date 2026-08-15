@@ -77,7 +77,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       }
 
       const winnerIndex = state.players.findIndex(
-        (p) => p.playerId === winner.playerId,
+        (p) => p.playerId === winner.seatId,
       );
       if (winnerIndex === -1) {
         return {
@@ -86,7 +86,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         };
       }
 
-      setCurrentSeat(state, winner.playerId);
+      setCurrentSeat(state, winner.seatId);
       const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [

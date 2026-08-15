@@ -40,7 +40,7 @@ export async function transitionToPlayPhase({
     state.blowState.declarations,
   );
   const winningPlayer = state.players.find(
-    (p) => p.playerId === highestDeclaration.playerId,
+    (p) => p.playerId === highestDeclaration.seatId,
   );
 
   if (!winningPlayer) {

@@ -1564,7 +1564,7 @@ describe('Game Use Cases', () => {
           actionHistory: [
             {
               type: 'pass' as const,
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               timestamp: 1,
             },
           ],
@@ -2292,7 +2292,7 @@ describe('Game Use Cases', () => {
         blowState: {
           currentTrump: 'herz' as const,
           currentHighestDeclaration: {
-            playerId: 'com-timeout-1',
+            seatId: asSeatId('com-timeout-1'),
             trumpType: 'herz' as const,
             numberOfPairs: 6,
             timestamp: Date.now(),
@@ -2562,7 +2562,7 @@ describe('Game Use Cases', () => {
       const roomService = createRoomServiceMock();
       const blowService = {
         findHighestDeclaration: jest.fn(() => ({
-          playerId: 'com-timeout-1',
+          seatId: asSeatId('com-timeout-1'),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -2596,7 +2596,7 @@ describe('Game Use Cases', () => {
         blowState: {
           declarations: [
             {
-              playerId: 'com-timeout-1',
+              seatId: asSeatId('com-timeout-1'),
               trumpType: 'herz' as const,
               numberOfPairs: 6,
               timestamp: Date.now(),
@@ -2740,8 +2740,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          seatId?: ReturnType<typeof asSeatId>;
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
@@ -2814,7 +2813,6 @@ describe('Game Use Cases', () => {
       expect(preparation.followUp).toBeDefined();
       expect(state.pendingBrokenHandReveal).toEqual({
         seatId: 'player-1',
-        playerId: 'player-1',
         handSnapshot: ['C1'],
         startedAt: expect.any(Number),
       });
@@ -2907,7 +2905,7 @@ describe('Game Use Cases', () => {
         blowState: {
           declarations: [
             {
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               trumpType: 'club' as const,
               numberOfPairs: 6,
               timestamp: 1,
@@ -2993,8 +2991,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          seatId?: ReturnType<typeof asSeatId>;
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
@@ -3036,7 +3033,7 @@ describe('Game Use Cases', () => {
           currentTrump: 'club',
           declarations: [
             {
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               trumpType: 'club',
               numberOfPairs: 6,
               timestamp: 1,
@@ -3045,19 +3042,19 @@ describe('Game Use Cases', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               trumpType: 'club',
               numberOfPairs: 6,
               timestamp: 1,
             },
             {
               type: 'pass',
-              playerId: 'player-2',
+              seatId: asSeatId('player-2'),
               timestamp: 2,
             },
           ],
           currentHighestDeclaration: {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             trumpType: 'club',
             numberOfPairs: 6,
             timestamp: 1,
@@ -3070,7 +3067,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'blow',
         deck: [],
         pendingBrokenHandReveal: {
-          playerId: 'player-3',
+          seatId: asSeatId('player-3'),
           handSnapshot: ['H1'],
           startedAt: 1,
         },
@@ -3145,7 +3142,7 @@ describe('Game Use Cases', () => {
         blowState: Pick<BlowState, 'declarations'>;
         gamePhase: GamePhase;
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
@@ -3163,7 +3160,7 @@ describe('Game Use Cases', () => {
         blowState: { declarations: [] },
         gamePhase: 'blow',
         pendingBrokenHandReveal: {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           handSnapshot: ['old-card'],
           startedAt: Date.now() - BROKEN_HAND_REVEAL_PENDING_TTL_MS - 1,
         },
@@ -3186,7 +3183,6 @@ describe('Game Use Cases', () => {
       expect(preparation.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toEqual({
         seatId: 'player-1',
-        playerId: 'player-1',
         handSnapshot: ['C1'],
         startedAt: expect.any(Number),
       });
@@ -3212,7 +3208,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
@@ -3240,7 +3236,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'play',
         deck: [],
         pendingBrokenHandReveal: {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           handSnapshot: ['old-card'],
           startedAt: 1,
         },
@@ -3282,7 +3278,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;

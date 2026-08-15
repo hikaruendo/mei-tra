@@ -367,10 +367,10 @@ export class RoomJoinService {
     return (
       player.isPasser ||
       blowState.declarations.some(
-        (declaration) => declaration.playerId === player.playerId,
+        (declaration) => declaration.seatId === player.playerId,
       ) ||
       (blowState.actionHistory ?? []).some(
-        (action) => action.playerId === player.playerId,
+        (action) => action.seatId === player.playerId,
       )
     );
   }

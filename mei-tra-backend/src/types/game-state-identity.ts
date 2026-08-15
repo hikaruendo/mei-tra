@@ -29,17 +29,17 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
   const blowState = {
     ...state.blowState,
     declarations: state.blowState.declarations.map((declaration) => {
-      const seatId = declaration.seatId ?? asSeatId(declaration.playerId);
+      const seatId = declaration.seatId ?? asSeatId(declaration.seatId);
       return { ...declaration, seatId, playerId: seatId };
     }),
     actionHistory: state.blowState.actionHistory.map((action) => {
-      const seatId = action.seatId ?? asSeatId(action.playerId);
+      const seatId = action.seatId ?? asSeatId(action.seatId);
       return { ...action, seatId, playerId: seatId };
     }),
     currentHighestDeclaration: state.blowState.currentHighestDeclaration
       ? (() => {
           const declaration = state.blowState.currentHighestDeclaration;
-          const seatId = declaration.seatId ?? asSeatId(declaration.playerId);
+          const seatId = declaration.seatId ?? asSeatId(declaration.seatId);
           return { ...declaration, seatId, playerId: seatId };
         })()
       : null,
@@ -82,7 +82,7 @@ export function normalizeGameStateIdentityAliases(state: GameState): GameState {
     ? (() => {
         const seatId =
           state.pendingBrokenHandReveal.seatId ??
-          asSeatId(state.pendingBrokenHandReveal.playerId);
+          asSeatId(state.pendingBrokenHandReveal.seatId);
         return {
           ...state.pendingBrokenHandReveal,
           seatId,

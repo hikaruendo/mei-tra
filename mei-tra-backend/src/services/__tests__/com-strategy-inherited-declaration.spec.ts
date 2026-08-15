@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { ComStrategyService } from '../com-strategy.service';
 import { IBlowService } from '../interfaces/blow-service.interface';
 import { ICardService } from '../interfaces/card-service.interface';
@@ -43,7 +44,7 @@ const comPlayer = (over: Partial<DomainPlayer> = {}): DomainPlayer =>
   }) as DomainPlayer;
 
 const declaration = (playerId: string): BlowDeclaration => ({
-  playerId,
+  seatId: asSeatId(playerId),
   trumpType: 'herz',
   numberOfPairs: 8,
   timestamp: 1,

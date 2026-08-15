@@ -109,7 +109,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       state.blowState.actionHistory.push({
         type: 'declare',
         seatId: asSeatId(player.playerId),
-        playerId: player.playerId,
         trumpType: declaration.trumpType,
         numberOfPairs: declaration.numberOfPairs,
         timestamp: newDeclaration.timestamp,

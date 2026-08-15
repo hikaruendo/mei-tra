@@ -9,7 +9,7 @@ import { asSeatId } from '../../types/identity.types';
 describe('transitionToPlayPhase', () => {
   it('reveals the Agari card using room player socket when session lookup is empty', async () => {
     const declaration = {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       trumpType: 'club' as const,
       numberOfPairs: 6,
       timestamp: 1,
@@ -156,7 +156,7 @@ describe('transitionToPlayPhase', () => {
 
   it('does not request broken reveal after the Agari card is added', async () => {
     const declaration = {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       trumpType: 'club' as const,
       numberOfPairs: 6,
       timestamp: 1,

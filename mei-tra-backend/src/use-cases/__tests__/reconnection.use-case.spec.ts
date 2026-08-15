@@ -384,7 +384,7 @@ describe('ReconnectionUseCase', () => {
           actionHistory: [],
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             trumpType: 'zuppe',
             numberOfPairs: 7,
             timestamp: 1,

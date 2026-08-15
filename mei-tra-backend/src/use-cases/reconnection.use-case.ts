@@ -408,8 +408,7 @@ export class ReconnectionUseCase {
         revealedAgari:
           state.gamePhase === 'play' &&
           !state.playState?.negriCard &&
-          state.blowState.currentHighestDeclaration?.playerId ===
-            player.playerId
+          state.blowState.currentHighestDeclaration?.seatId === player.playerId
             ? (state.agari ?? null)
             : null,
         fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),

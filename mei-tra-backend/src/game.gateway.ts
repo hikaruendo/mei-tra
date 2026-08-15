@@ -1703,8 +1703,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client,
         actorId,
       );
-      const winningPlayerId =
-        state.blowState.currentHighestDeclaration?.playerId;
+      const winningPlayerId = state.blowState.currentHighestDeclaration?.seatId;
 
       if (
         state.gamePhase !== 'play' ||

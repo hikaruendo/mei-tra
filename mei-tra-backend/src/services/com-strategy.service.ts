@@ -90,7 +90,7 @@ export class ComStrategyService implements IComStrategyService {
 
     const currentHighest = state.blowState.currentHighestDeclaration;
     const currentHighestPlayer = currentHighest
-      ? this.findPlayer(state, currentHighest.playerId)
+      ? this.findPlayer(state, currentHighest.seatId)
       : null;
     // Never treat one's own bid as a partner's — an inherited declaration would
     // otherwise make the COM defer to itself and pass.
@@ -370,8 +370,8 @@ export class ComStrategyService implements IComStrategyService {
   ): string | null {
     if (
       declaration == null ||
-      declaration.playerId === comPlayer.playerId ||
-      this.findPlayer(state, declaration.playerId)?.team !== comPlayer.team
+      declaration.seatId === comPlayer.playerId ||
+      this.findPlayer(state, declaration.seatId)?.team !== comPlayer.team
     ) {
       return null;
     }
@@ -772,7 +772,7 @@ export class ComStrategyService implements IComStrategyService {
     if (!declaration) {
       return null;
     }
-    return this.findPlayer(state, declaration.playerId)?.team ?? null;
+    return this.findPlayer(state, declaration.seatId)?.team ?? null;
   }
 
   private countCompletedFieldsByTeam(state: GameState, team: Team): number {

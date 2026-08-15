@@ -52,7 +52,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       const hasDeclared = state.blowState.declarations.some(
-        (declaration) => declaration.playerId === playerId,
+        (declaration) => declaration.seatId === playerId,
       );
       if (player.isPasser || hasDeclared) {
         return { success: false, error: 'Cannot reveal broken hand now' };
@@ -70,7 +70,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const handSnapshot = [...player.hand];
       state.pendingBrokenHandReveal = {
         seatId: asSeatId(playerId),
-        playerId,
         handSnapshot,
         startedAt: Date.now(),
       };
@@ -111,7 +110,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       const pendingReveal = state.pendingBrokenHandReveal;
-      if (!pendingReveal || pendingReveal.playerId !== playerId) {
+      if (!pendingReveal || pendingReveal.seatId !== playerId) {
         return { success: false, error: 'Broken hand reveal is not pending' };
       }
 

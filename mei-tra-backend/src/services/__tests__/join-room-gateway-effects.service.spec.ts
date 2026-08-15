@@ -275,14 +275,14 @@ describe('JoinRoomGatewayEffectsService', () => {
             blowState: {
               currentTrump: null,
               currentHighestDeclaration: {
-                playerId: 'player-1',
+                seatId: asSeatId('player-1'),
                 trumpType: 'daiya',
                 numberOfPairs: 6,
                 timestamp: 1,
               },
               declarations: [
                 {
-                  playerId: 'player-1',
+                  seatId: asSeatId('player-1'),
                   trumpType: 'daiya',
                   numberOfPairs: 6,
                   timestamp: 1,
@@ -291,7 +291,7 @@ describe('JoinRoomGatewayEffectsService', () => {
               actionHistory: [
                 {
                   type: 'declare',
-                  playerId: 'player-1',
+                  seatId: asSeatId('player-1'),
                   trumpType: 'daiya',
                   numberOfPairs: 6,
                   timestamp: 1,

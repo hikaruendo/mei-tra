@@ -15,7 +15,6 @@ describe('game-state persistence identity', () => {
       currentTrump: 'herz',
       currentHighestDeclaration: {
         seatId: firstSeatId,
-        playerId: firstSeatId,
         trumpType: 'herz',
         numberOfPairs: 6,
         timestamp: 1,
@@ -23,7 +22,6 @@ describe('game-state persistence identity', () => {
       declarations: [
         {
           seatId: firstSeatId,
-          playerId: firstSeatId,
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: 1,
@@ -33,7 +31,6 @@ describe('game-state persistence identity', () => {
         {
           type: 'pass',
           seatId: secondSeatId,
-          playerId: secondSeatId,
           timestamp: 2,
         },
       ],
@@ -75,7 +72,6 @@ describe('game-state persistence identity', () => {
     });
     const persistedReveal = toPersistedPendingBrokenHandReveal({
       seatId: firstSeatId,
-      playerId: firstSeatId,
       handSnapshot: ['H7'],
       startedAt: 3,
     });

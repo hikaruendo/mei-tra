@@ -6,10 +6,10 @@ export function hasPlayerDeclaredInBlow(
 ): boolean {
   return (
     blowState.declarations.some(
-      (declaration) => declaration.playerId === playerId,
+      (declaration) => declaration.seatId === playerId,
     ) ||
     (blowState.actionHistory ?? []).some(
-      (action) => action.playerId === playerId && action.type === 'declare',
+      (action) => action.seatId === playerId && action.type === 'declare',
     )
   );
 }
@@ -21,7 +21,7 @@ export function hasPlayerPassedInBlow(
   return (
     player.isPasser ||
     (blowState.actionHistory ?? []).some(
-      (action) => action.playerId === player.playerId && action.type === 'pass',
+      (action) => action.seatId === player.playerId && action.type === 'pass',
     )
   );
 }

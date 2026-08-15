@@ -167,7 +167,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
     if (
       state.playState?.negriCard == null &&
-      state.blowState.currentHighestDeclaration?.playerId === comPlayer.playerId
+      state.blowState.currentHighestDeclaration?.seatId === comPlayer.playerId
     ) {
       const negriCard = this.comStrategyService.chooseNegriCard(
         state,

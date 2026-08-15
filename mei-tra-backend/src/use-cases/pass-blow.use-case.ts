@@ -101,7 +101,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       state.blowState.actionHistory.push({
         type: 'pass',
         seatId: asSeatId(player.playerId),
-        playerId: player.playerId,
         timestamp: Date.now(),
       });
       state.blowState.lastPasserSeatId = asSeatId(player.playerId);

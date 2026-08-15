@@ -40,9 +40,7 @@ export interface TeamScores {
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface BlowDeclaration {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -51,9 +49,7 @@ export interface BlowDeclaration {
 
 export interface BlowAction {
   type: 'declare' | 'pass';
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -99,9 +95,7 @@ export interface PlayState {
 }
 
 export interface PendingBrokenHandReveal {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   handSnapshot: string[];
   startedAt: number;
 }

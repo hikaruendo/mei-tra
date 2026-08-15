@@ -99,14 +99,14 @@ function toPersistedBlowDeclaration(
 ): PersistedBlowDeclaration {
   return {
     ...omitKeys(declaration, ['playerId', 'seatId']),
-    seatId: declaration.seatId ?? asSeatId(declaration.playerId),
+    seatId: declaration.seatId ?? asSeatId(declaration.seatId),
   } as PersistedBlowDeclaration;
 }
 
 function toPersistedBlowAction(action: BlowAction): PersistedBlowAction {
   return {
     ...omitKeys(action, ['playerId', 'seatId']),
-    seatId: action.seatId ?? asSeatId(action.playerId),
+    seatId: action.seatId ?? asSeatId(action.seatId),
   } as PersistedBlowAction;
 }
 
@@ -182,7 +182,7 @@ export function toPersistedPendingBrokenHandReveal(
 
   return {
     ...omitKeys(pendingReveal, ['playerId', 'seatId']),
-    seatId: pendingReveal.seatId ?? asSeatId(pendingReveal.playerId),
+    seatId: pendingReveal.seatId ?? asSeatId(pendingReveal.seatId),
   } as PersistedPendingBrokenHandReveal;
 }
 

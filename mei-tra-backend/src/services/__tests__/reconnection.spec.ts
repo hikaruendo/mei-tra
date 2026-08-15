@@ -787,7 +787,7 @@ describe('Reconnection Token Management', () => {
           openDeclarerSeatId: asSeatId(playerId),
         };
         gameState.getState().pendingBrokenHandReveal = {
-          playerId,
+          seatId: asSeatId(playerId),
           handSnapshot: ['JOKER', '9♣'],
           startedAt: 100,
         };
@@ -816,7 +816,7 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.openDeclarerSeatId).toBe(
           comPlayerId,
         );
-        expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
+        expect(gameState.getState().pendingBrokenHandReveal?.seatId).toBe(
           comPlayerId,
         );
         expect(gameState.getState().playState?.neguri[comPlayerId]).toBe('9♣');
@@ -863,14 +863,14 @@ describe('Reconnection Token Management', () => {
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId,
+            seatId: asSeatId(playerId),
             trumpType: 'tra',
             numberOfPairs: 6,
             timestamp: 1,
           },
           declarations: [
             {
-              playerId,
+              seatId: asSeatId(playerId),
               trumpType: 'tra',
               numberOfPairs: 6,
               timestamp: 1,
@@ -879,14 +879,14 @@ describe('Reconnection Token Management', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId,
+              seatId: asSeatId(playerId),
               trumpType: 'tra',
               numberOfPairs: 6,
               timestamp: 1,
             },
             {
               type: 'pass',
-              playerId,
+              seatId: asSeatId(playerId),
               timestamp: 2,
             },
           ],
@@ -901,15 +901,15 @@ describe('Reconnection Token Management', () => {
         const comPlayerId = gameState.getState().players[0].playerId;
         expect(comPlayerId).toBe(playerId);
         expect(
-          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+          gameState.getState().blowState.currentHighestDeclaration?.seatId,
         ).toBe(comPlayerId);
-        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+        expect(gameState.getState().blowState.declarations[0]?.seatId).toBe(
           comPlayerId,
         );
         expect(
           gameState
             .getState()
-            .blowState.actionHistory.map((action) => action.playerId),
+            .blowState.actionHistory.map((action) => action.seatId),
         ).toEqual([comPlayerId, comPlayerId]);
         expect(gameState.getState().blowState.lastPasserSeatId).toBe(
           comPlayerId,
@@ -1783,7 +1783,7 @@ describe('Reconnection Token Management', () => {
           openDeclarerSeatId: asSeatId(targetCom.playerId),
         };
         gameState.getState().pendingBrokenHandReveal = {
-          playerId: targetCom.playerId,
+          seatId: asSeatId(targetCom.playerId),
           handSnapshot: ['H2', 'D3'],
           startedAt: 100,
         };
@@ -1838,7 +1838,7 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.openDeclarerSeatId).toBe(
           targetCom.playerId,
         );
-        expect(gameState.getState().pendingBrokenHandReveal?.playerId).toBe(
+        expect(gameState.getState().pendingBrokenHandReveal?.seatId).toBe(
           targetCom.playerId,
         );
         expect(gameState.getState().playState?.neguri[targetCom.playerId]).toBe(
@@ -1896,14 +1896,14 @@ describe('Reconnection Token Management', () => {
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: targetCom.playerId,
+            seatId: asSeatId(targetCom.playerId),
             trumpType: 'club',
             numberOfPairs: 6,
             timestamp: 1,
           },
           declarations: [
             {
-              playerId: targetCom.playerId,
+              seatId: asSeatId(targetCom.playerId),
               trumpType: 'club',
               numberOfPairs: 6,
               timestamp: 1,
@@ -1912,14 +1912,14 @@ describe('Reconnection Token Management', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId: targetCom.playerId,
+              seatId: asSeatId(targetCom.playerId),
               trumpType: 'club',
               numberOfPairs: 6,
               timestamp: 1,
             },
             {
               type: 'pass',
-              playerId: targetCom.playerId,
+              seatId: asSeatId(targetCom.playerId),
               timestamp: 2,
             },
           ],
@@ -1960,15 +1960,15 @@ describe('Reconnection Token Management', () => {
 
         expect(result).toBe(true);
         expect(
-          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+          gameState.getState().blowState.currentHighestDeclaration?.seatId,
         ).toBe(targetCom.playerId);
-        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+        expect(gameState.getState().blowState.declarations[0]?.seatId).toBe(
           targetCom.playerId,
         );
         expect(
           gameState
             .getState()
-            .blowState.actionHistory.map((action) => action.playerId),
+            .blowState.actionHistory.map((action) => action.seatId),
         ).toEqual([targetCom.playerId, targetCom.playerId]);
         expect(gameState.getState().blowState.lastPasserSeatId).toBe(
           targetCom.playerId,
@@ -2054,14 +2054,14 @@ describe('Reconnection Token Management', () => {
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: replacingComId,
+            seatId: asSeatId(replacingComId),
             trumpType: 'daiya',
             numberOfPairs: 7,
             timestamp: 1,
           },
           declarations: [
             {
-              playerId: replacingComId,
+              seatId: asSeatId(replacingComId),
               trumpType: 'daiya',
               numberOfPairs: 7,
               timestamp: 1,
@@ -2070,7 +2070,7 @@ describe('Reconnection Token Management', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId: replacingComId,
+              seatId: asSeatId(replacingComId),
               trumpType: 'daiya',
               numberOfPairs: 7,
               timestamp: 1,
@@ -2086,9 +2086,9 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         expect(gameState.getState().players[0]?.playerId).toBe(replacingComId);
         expect(
-          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+          gameState.getState().blowState.currentHighestDeclaration?.seatId,
         ).toBe(replacingComId);
-        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+        expect(gameState.getState().blowState.declarations[0]?.seatId).toBe(
           replacingComId,
         );
         expect(gameState.getState().currentSeatId).toBe(nextPlayerId);
@@ -2179,14 +2179,14 @@ describe('Reconnection Token Management', () => {
         gameState.getState().blowState = {
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: seatId,
+            seatId: asSeatId(seatId),
             trumpType: 'club',
             numberOfPairs: 7,
             timestamp: 1,
           },
           declarations: [
             {
-              playerId: seatId,
+              seatId: asSeatId(seatId),
               trumpType: 'club',
               numberOfPairs: 7,
               timestamp: 1,
@@ -2195,7 +2195,7 @@ describe('Reconnection Token Management', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId: seatId,
+              seatId: asSeatId(seatId),
               trumpType: 'club',
               numberOfPairs: 7,
               timestamp: 1,
@@ -2249,12 +2249,12 @@ describe('Reconnection Token Management', () => {
         expect(result).toBe(true);
         expect(gameState.getState().players[0]?.playerId).toBe(seatId);
         expect(
-          gameState.getState().blowState.currentHighestDeclaration?.playerId,
+          gameState.getState().blowState.currentHighestDeclaration?.seatId,
         ).toBe(seatId);
-        expect(gameState.getState().blowState.declarations[0]?.playerId).toBe(
+        expect(gameState.getState().blowState.declarations[0]?.seatId).toBe(
           seatId,
         );
-        expect(gameState.getState().blowState.actionHistory[0]?.playerId).toBe(
+        expect(gameState.getState().blowState.actionHistory[0]?.seatId).toBe(
           seatId,
         );
         expect(gameState.getState().currentSeatId).toBe(nextPlayerId);
@@ -2267,7 +2267,7 @@ describe('Reconnection Token Management', () => {
         expect(
           gameStateRepository.update.mock.calls.some(
             ([, update]) =>
-              update.blowState?.currentHighestDeclaration?.playerId === seatId,
+              update.blowState?.currentHighestDeclaration?.seatId === seatId,
           ),
         ).toBe(true);
       });

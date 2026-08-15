@@ -153,8 +153,8 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'round_completed',
-        actorSeatId: state.blowState.currentHighestDeclaration?.playerId
-          ? asSeatId(state.blowState.currentHighestDeclaration.playerId)
+        actorSeatId: state.blowState.currentHighestDeclaration?.seatId
+          ? asSeatId(state.blowState.currentHighestDeclaration.seatId)
           : null,
         state,
         actionData: {
@@ -305,14 +305,14 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     }
 
     const player = state.players.find(
-      (p) => p.playerId === highestDeclaration.playerId,
+      (p) => p.playerId === highestDeclaration.seatId,
     );
     if (player) {
       return player.team;
     }
 
     if (state.teamAssignments) {
-      const team = state.teamAssignments[highestDeclaration.playerId];
+      const team = state.teamAssignments[highestDeclaration.seatId];
       if (typeof team === 'number') {
         return team;
       }
