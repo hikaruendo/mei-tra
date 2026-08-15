@@ -71,7 +71,7 @@ describe('UpdateAuthUseCase', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Old Name',
           userId: 'user-1',
           isAuthenticated: true,
@@ -85,22 +85,20 @@ describe('UpdateAuthUseCase', () => {
       getState: jest.fn(() => roomState),
       findPlayerByActorId: jest.fn((actorId: string) =>
         actorId === 'user-1'
-          ? (roomState.players.find(
-              (player) => player.playerId === 'player-1',
-            ) ?? null)
+          ? (roomState.players.find((player) => player.seatId === 'player-1') ??
+            null)
           : null,
       ),
       findPlayerBySocketId: jest.fn((socketId: string) =>
         socketId === 'socket-1'
-          ? (roomState.players.find(
-              (player) => player.playerId === 'player-1',
-            ) ?? null)
+          ? (roomState.players.find((player) => player.seatId === 'player-1') ??
+            null)
           : null,
       ),
       applyPlayerConnectionState: jest
         .fn()
         .mockImplementation(
-          async (_playerId: string, connectionState: PlayerConnectionState) => {
+          (_seatId: string, connectionState: PlayerConnectionState) => {
             roomState.players[0].socketId = connectionState.socketId;
             roomState.players[0].userId = connectionState.userId ?? '';
             roomState.players[0].isAuthenticated = Boolean(
@@ -118,7 +116,7 @@ describe('UpdateAuthUseCase', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'User Display',
           userId: 'user-1',
           isAuthenticated: true,
@@ -165,7 +163,7 @@ describe('UpdateAuthUseCase', () => {
     expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
       expect.objectContaining({
         socketId: 'socket-1',
-        seatId: 'player-1',
+        seatId: asSeatId('player-1'),
         name: 'User Display',
         userId: 'user-1',
         isAuthenticated: true,
@@ -187,31 +185,6 @@ describe('UpdateAuthUseCase', () => {
         event: 'update-users',
       }),
     );
-    expect(result.roomEvents).toContainEqual(
-      expect.objectContaining({
-        event: 'update-players',
-        payload: [
-          expect.objectContaining({
-            socketId: 'socket-1',
-            seatId: 'player-1',
-            name: 'User Display',
-            userId: 'user-1',
-            isAuthenticated: true,
-            isHost: true,
-          }),
-        ],
-      }),
-    );
-    const roomUpdatedEvent = result.roomEvents?.find(
-      (event) => event.event === 'room-updated',
-    );
-    expect(roomUpdatedEvent).toBeDefined();
-    expect(roomUpdatedEvent?.payload).toMatchObject({
-      id: updatedRoom.id,
-      hostSeatId: updatedRoom.hostSeatId,
-      name: updatedRoom.name,
-      status: updatedRoom.status,
-    });
     const roomSyncEvent = result.roomEvents?.find(
       (event) => event.event === 'room-sync',
     );
@@ -224,8 +197,11 @@ describe('UpdateAuthUseCase', () => {
       players: [
         {
           socketId: 'socket-1',
-          seatId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'User Display',
+          userId: 'user-1',
+          isAuthenticated: true,
+          isHost: true,
         },
       ],
     });

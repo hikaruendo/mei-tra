@@ -2,7 +2,6 @@ import type {
   CompletedFieldContract,
 } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
-import { normalizeCompletedFieldIdentity } from '@meitra/game-client/identity';
 
 import {
   createEmptyBlowState,
@@ -10,20 +9,19 @@ import {
   dedupeCompletedFields,
   mergePlayersByIdentity,
   normalizeGameStatePayload,
-  resolvePlayerId,
+  resolveSeatId,
   shouldAckTurn,
 } from '@/lib/game-state';
 import type { MobilePlayer } from '@/types/game';
 
 const player = (
-  playerId: string,
+  seatId: string,
   overrides: Partial<MobilePlayer> = {},
 ): MobilePlayer => ({
-  socketId: `socket-${playerId}`,
-  seatId: asSeatId(playerId),
-  playerId: asSeatId(playerId),
-  name: playerId,
-  userId: `user-${playerId}`,
+  socketId: `socket-${seatId}`,
+  seatId: asSeatId(seatId),
+  name: seatId,
+  userId: `user-${seatId}`,
   team: 0,
   hand: [],
   ...overrides,
@@ -49,7 +47,7 @@ describe('mergePlayersByIdentity', () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         userId: 'user-1',
         name: 'Hikaru',
       }),
@@ -64,7 +62,7 @@ describe('mergePlayersByIdentity', () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         userId: undefined,
         name: 'COM 1',
       }),
@@ -81,8 +79,8 @@ describe('dedupeCompletedFields', () => {
     });
 
     expect(dedupeCompletedFields([first, duplicate, differentDealer])).toEqual([
-      normalizeCompletedFieldIdentity(first),
-      normalizeCompletedFieldIdentity(differentDealer),
+      first,
+      differentDealer,
     ]);
   });
 });
@@ -115,7 +113,7 @@ describe('recovery helpers', () => {
       pointsToWin: 5,
     });
 
-    expect(snapshot.players).toEqual([expect.objectContaining({ playerId: 'server-player' })]);
+    expect(snapshot.players).toEqual([expect.objectContaining({ seatId: 'server-player' })]);
     expect(snapshot.fields).toHaveLength(1);
     expect(snapshot.youSeatId).toBe('server-player');
     expect(snapshot.negriSeatId).toBe('server-player');
@@ -124,7 +122,7 @@ describe('recovery helpers', () => {
 
   it('resolves the current seat from game state before userId', () => {
     expect(
-      resolvePlayerId(
+      resolveSeatId(
         {
           roomId: 'room-1',
           players: [],
@@ -137,7 +135,6 @@ describe('recovery helpers', () => {
             declarations: [],
             actionHistory: [],
             lastPasserSeatId: null,
-            lastPasser: null,
             isRoundCancelled: false,
             currentBlowIndex: 0,
           },
@@ -151,14 +148,13 @@ describe('recovery helpers', () => {
           hostSeatId: null,
           pointsToWin: 5,
           paused: false,
-          disconnectedPlayerIds: [],
-          idlePlayerIds: [],
+          disconnectedSeatIds: [],
+          idleSeatIds: [],
         },
         {
           id: 'room-1',
           name: 'room',
           hostSeatId: asSeatId('host'),
-          hostId: asSeatId('host'),
           status: 'waiting',
           players: [
             {
@@ -207,7 +203,7 @@ describe('recovery helpers', () => {
       pointsToWin: 5,
     });
 
-    expect(snapshot.players[0].playerId).toBe('canonical-seat');
+    expect(snapshot.players[0].seatId).toBe('canonical-seat');
     expect(snapshot.currentTurnSeatId).toBe('canonical-seat');
     expect(snapshot.youSeatId).toBe('canonical-seat');
     expect(snapshot.hostSeatId).toBe('canonical-seat');

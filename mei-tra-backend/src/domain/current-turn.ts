@@ -1,10 +1,10 @@
-import { asSeatId, SeatId } from './identity.types';
-import type { DomainPlayer, GameState } from './game.types';
+import { asSeatId, SeatId } from '../types/identity.types';
+import type { DomainPlayer, GameState } from '../types/game.types';
 
 type CurrentTurnState = Pick<GameState, 'players' | 'currentSeatId'>;
 
 function playerSeatId(player: DomainPlayer): SeatId {
-  return player.seatId ?? asSeatId(player.playerId);
+  return player.seatId;
 }
 
 export function resolveCurrentSeatId(state: CurrentTurnState): SeatId | null {

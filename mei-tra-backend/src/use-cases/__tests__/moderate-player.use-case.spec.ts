@@ -11,7 +11,7 @@ describe('ModeratePlayerUseCase', () => {
     status: RoomStatus.PLAYING,
     players: [
       {
-        playerId: 'host',
+        seatId: asSeatId('host'),
         isCOM: false,
         socketId: 'host-socket',
         name: 'Host',
@@ -20,7 +20,7 @@ describe('ModeratePlayerUseCase', () => {
         isPasser: false,
       },
       {
-        playerId: 'target',
+        seatId: asSeatId('target'),
         isCOM: false,
         socketId: '',
         name: 'Target',
@@ -36,7 +36,7 @@ describe('ModeratePlayerUseCase', () => {
     const blowState = {
       currentTrump: null,
       currentHighestDeclaration: {
-        playerId: 'com-target',
+        seatId: asSeatId('com-target'),
         trumpType: 'herz',
         numberOfPairs: 7,
         timestamp: 1,
@@ -53,7 +53,7 @@ describe('ModeratePlayerUseCase', () => {
         getState: () => ({
           players: [
             {
-              playerId: 'target',
+              seatId: asSeatId('target'),
               name: 'Target',
               hand: [],
               team: 1,
@@ -75,8 +75,8 @@ describe('ModeratePlayerUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      requesterPlayerId: 'host',
-      targetPlayerId: 'target',
+      requesterSeatId: asSeatId('host'),
+      targetSeatId: asSeatId('target'),
       action: 'replace-with-com',
       isPlayerIdle: false,
     });

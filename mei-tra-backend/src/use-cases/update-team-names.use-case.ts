@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { TeamNames } from '@contracts/game';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { Room, RoomStatus } from '../types/room.types';
+import type { SeatId } from '../types/identity.types';
 
 const MAX_TEAM_NAME_LENGTH = 16;
 
@@ -26,7 +27,7 @@ export class UpdateTeamNamesUseCase {
 
   async execute(request: {
     roomId: string;
-    playerId: string;
+    actorSeatId: SeatId;
     teamNames: TeamNames;
   }): Promise<{ success: boolean; updatedRoom?: Room; error?: string }> {
     const room = await this.roomService.getRoom(request.roomId);
@@ -41,7 +42,7 @@ export class UpdateTeamNamesUseCase {
       };
     }
 
-    if (room.hostSeatId !== request.playerId) {
+    if (room.hostSeatId !== request.actorSeatId) {
       return { success: false, error: 'Only the host can change team names' };
     }
 

@@ -15,7 +15,7 @@ describe('CreateRoomUseCase', () => {
   const userId = 'user-123';
   const hostPlayer: RoomPlayer = {
     socketId: '',
-    playerId: userId,
+    seatId: asSeatId(userId),
     userId,
     isAuthenticated: true,
     name: 'Test Player',
