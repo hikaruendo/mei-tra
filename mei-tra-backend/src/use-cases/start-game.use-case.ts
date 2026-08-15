@@ -153,21 +153,12 @@ export class StartGameUseCase implements IStartGameUseCase {
         roomId,
         actionType: 'game_started',
         actorSeatId: asSeatId(playerId),
-        playerId,
         state: updatedState,
         actionData: {
           startedBySeatId: playerId,
-          startedByPlayerId: playerId,
           firstBlowSeatId: firstBlowPlayer?.playerId ?? null,
-          firstBlowPlayerId: firstBlowPlayer?.playerId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
-          startingHandsByPlayerId: Object.fromEntries(
-            updatedState.players.map((player) => [
-              player.playerId,
-              [...player.hand],
-            ]),
-          ),
           startingHandsBySeatId: Object.fromEntries(
             updatedState.players.map((player) => [
               player.playerId,

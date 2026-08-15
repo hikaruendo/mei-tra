@@ -111,7 +111,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         roomId,
         actionType: 'blow_passed',
         actorSeatId: asSeatId(player.playerId),
-        playerId: player.playerId,
         state,
         actionData: {
           declarationsCount: state.blowState.declarations.length,
@@ -252,12 +251,10 @@ export class PassBlowUseCase implements IPassBlowUseCase {
       roomId,
       actionType: 'round_cancelled',
       actorSeatId: null,
-      playerId: null,
       state,
       actionData: {
         reason: 'no_declarations',
         nextDealerSeatId: firstBlowPlayer.playerId,
-        nextDealerPlayerId: firstBlowPlayer.playerId,
         nextBlowIndex: firstBlowIndex,
       },
     });

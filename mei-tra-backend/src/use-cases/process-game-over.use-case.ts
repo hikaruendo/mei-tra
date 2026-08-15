@@ -87,7 +87,6 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       roomId,
       actionType: 'player_stats_updated',
       actorSeatId: null,
-      playerId: null,
       actionData: {
         winningTeam,
         updatedPlayers,

@@ -107,14 +107,12 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         roomId,
         actionType: 'card_played',
         actorSeatId: asSeatId(player.playerId),
-        playerId: player.playerId,
         state,
         actionData: {
           card,
           fieldCards: [...currentField.cards],
           baseCard: currentField.baseCard,
           playedBySeatIds: [...playedBySeatIds],
-          playedBy: [...playedBySeatIds],
           isFieldComplete: currentField.cards.length === 4,
         },
       });

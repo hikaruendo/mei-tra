@@ -3,6 +3,7 @@ import { IRoomRepository } from '../repositories/interfaces/room.repository.inte
 import { Room, RoomStatus } from '../types/room.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
+import { asSeatId } from '../types/identity.types';
 
 describe('GameHistoryController', () => {
   const currentUser = {
@@ -139,7 +140,7 @@ describe('GameHistoryController', () => {
         'room-1',
         {
           actionType: 'card_played',
-          playerId: 'player-1',
+          actorSeatId: 'player-1',
           roundNumber: '2',
           since: '2026-04-16T00:00:00.000Z',
           until: '2026-04-16T01:00:00.000Z',
@@ -156,7 +157,7 @@ describe('GameHistoryController', () => {
       'room-1',
       {
         actionType: 'card_played',
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         roundNumber: 2,
         since: new Date('2026-04-16T00:00:00.000Z'),
         until: new Date('2026-04-16T01:00:00.000Z'),

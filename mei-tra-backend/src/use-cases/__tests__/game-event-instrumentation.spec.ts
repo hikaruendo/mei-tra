@@ -65,7 +65,7 @@ describe('Game event instrumentation', () => {
       expect.objectContaining({
         roomId: 'room-1',
         actionType: 'game_started',
-        playerId: 'host-1',
+        actorSeatId: 'host-1',
       }),
     );
   });
@@ -128,7 +128,7 @@ describe('Game event instrumentation', () => {
       expect.objectContaining({
         roomId: 'room-1',
         actionType: 'card_played',
-        playerId: 'player-1',
+        actorSeatId: 'player-1',
       }),
     );
   });

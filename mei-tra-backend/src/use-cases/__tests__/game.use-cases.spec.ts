@@ -2830,11 +2830,11 @@ describe('Game Use Cases', () => {
         expect(gameEventLogService.log).toHaveBeenCalledWith(
           expect.objectContaining({
             actionType: 'broken_hand_revealed',
-            playerId: 'player-1',
+            actorSeatId: 'player-1',
             actionData: expect.objectContaining({
-              nextPlayerId: 'player-1',
+              nextSeatId: 'player-1',
               nextBlowIndex: 0,
-              startingHandsByPlayerId: {
+              startingHandsBySeatId: {
                 'player-1': ['X1', 'X2'],
                 'player-2': ['X1', 'X2'],
               },

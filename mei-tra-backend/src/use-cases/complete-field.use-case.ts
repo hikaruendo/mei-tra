@@ -79,12 +79,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         roomId,
         actionType: 'field_completed',
         actorSeatId: asSeatId(winner.playerId),
-        playerId: winner.playerId,
         state,
         actionData: {
           completedField,
           winnerSeatId: winner.playerId,
-          winnerPlayerId: winner.playerId,
           winnerTeam: winner.team,
           cards: [...field.cards],
         },
@@ -159,7 +157,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         actorSeatId: state.blowState.currentHighestDeclaration?.playerId
           ? asSeatId(state.blowState.currentHighestDeclaration.playerId)
           : null,
-        playerId: state.blowState.currentHighestDeclaration?.playerId ?? null,
         state,
         actionData: {
           declaringTeam,
@@ -208,7 +205,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           roomId,
           actionType: 'game_over',
           actorSeatId: null,
-          playerId: null,
           state,
           actionData: {
             winningTeam,
@@ -480,19 +476,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       roomId,
       actionType: 'round_reset',
       actorSeatId: asSeatId(nextBlowPlayer.playerId),
-      playerId: nextBlowPlayer.playerId,
       state: updatedState,
       actionData: {
         nextDealerSeatId: nextBlowPlayer.playerId,
-        nextDealerPlayerId: nextBlowPlayer.playerId,
         nextRoundNumber: updatedState.roundNumber,
         nextBlowIndex,
-        startingHandsByPlayerId: Object.fromEntries(
-          updatedState.players.map((player) => [
-            player.playerId,
-            [...player.hand],
-          ]),
-        ),
         startingHandsBySeatId: Object.fromEntries(
           updatedState.players.map((player) => [
             player.playerId,

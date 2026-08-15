@@ -21,13 +21,13 @@ import {
   GameHistorySummary,
 } from '../types/game-history.types';
 import { Room, RoomPlayer, RoomStatus } from '../types/room.types';
-import { resolveSeatId } from '../types/identity.types';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 
 type GameHistoryRequestQuery = Partial<
   Record<
-    'actionType' | 'limit' | 'playerId' | 'roundNumber' | 'since' | 'until',
+    'actionType' | 'limit' | 'actorSeatId' | 'roundNumber' | 'since' | 'until',
     string
   >
 >;
@@ -139,7 +139,7 @@ export class GameHistoryController {
     return {
       participant: participants[0] ?? null,
       playerNames: Object.fromEntries(
-        room.players.map((player) => [player.playerId, player.name]),
+        room.players.map((player) => [resolveSeatId(player), player.name]),
       ),
       teamNames: room.settings.teamNames,
     };
@@ -235,7 +235,7 @@ export class GameHistoryController {
 
     return {
       actionType,
-      playerId: query.playerId,
+      actorSeatId: query.actorSeatId ? asSeatId(query.actorSeatId) : undefined,
       roundNumber,
       limit: this.parseLimit(query.limit),
       since,

@@ -10,7 +10,7 @@ describe('GET /api/game-history/[roomId]/summary', () => {
     process.env.NEXT_PUBLIC_BACKEND_URL = 'http://backend.test';
     global.fetch = jest.fn().mockResolvedValue(
       new Response(
-        '{"roomId":"room-1","totalEntries":3,"byActionType":{"card_played":2},"playerIds":["p1"],"roundNumbers":[1],"firstTimestamp":null,"lastTimestamp":null}',
+        '{"roomId":"room-1","totalEntries":3,"byActionType":{"card_played":2},"actorSeatIds":["p1"],"roundNumbers":[1],"firstTimestamp":null,"lastTimestamp":null}',
         {
           status: 200,
           headers: {

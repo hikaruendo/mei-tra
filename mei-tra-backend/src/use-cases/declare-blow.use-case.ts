@@ -120,7 +120,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         roomId,
         actionType: 'blow_declared',
         actorSeatId: asSeatId(player.playerId),
-        playerId: player.playerId,
         state,
         actionData: {
           declaration: {

@@ -118,13 +118,11 @@ export async function transitionToPlayPhase({
     roomId,
     actionType: 'play_phase_started',
     actorSeatId: asSeatId(winningPlayer.playerId),
-    playerId: winningPlayer.playerId,
     state: nextState,
     actionData: {
       currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
       currentTrump: nextState.blowState.currentTrump,
       winnerSeatId: winningPlayer.playerId,
-      winnerPlayerId: winningPlayer.playerId,
     },
   });
 

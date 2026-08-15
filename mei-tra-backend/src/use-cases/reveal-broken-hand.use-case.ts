@@ -200,18 +200,10 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         roomId,
         actionType: 'broken_hand_revealed',
         actorSeatId: asSeatId(playerId),
-        playerId,
         state: nextState,
         actionData: {
           nextSeatId: firstBlowPlayer?.playerId ?? null,
-          nextPlayerId: firstBlowPlayer?.playerId ?? null,
           nextBlowIndex: firstBlowIndex,
-          startingHandsByPlayerId: Object.fromEntries(
-            nextState.players.map((statePlayer) => [
-              statePlayer.playerId,
-              [...statePlayer.hand],
-            ]),
-          ),
           startingHandsBySeatId: Object.fromEntries(
             nextState.players.map((statePlayer) => [
               statePlayer.playerId,

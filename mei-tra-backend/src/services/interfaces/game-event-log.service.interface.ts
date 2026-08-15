@@ -12,8 +12,6 @@ export interface LogGameEventInput {
   roomId: string;
   actionType: GameHistoryActionType;
   actorSeatId?: SeatId | null;
-  /** @deprecated Use actorSeatId. */
-  playerId?: string | null;
   state?: Pick<
     GameState,
     'players' | 'currentSeatId' | 'gamePhase' | 'roundNumber' | 'teamScores'
