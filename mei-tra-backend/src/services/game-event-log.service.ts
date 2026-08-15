@@ -222,10 +222,10 @@ export class GameEventLogService implements IGameEventLogService {
   }
 
   private buildPlayerNames(
-    players: Array<{ name?: string; seatId?: string; playerId?: string }>,
+    players: Array<{ name?: string; seatId?: string }>,
   ): Record<string, string> | undefined {
     const entries = players.flatMap((player) => {
-      const seatId = player.seatId ?? player.seatId;
+      const seatId = player.seatId;
       if (!seatId || !player.name) {
         return [];
       }

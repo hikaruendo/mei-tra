@@ -4,7 +4,7 @@ import { GameState, PlayerConnectionMetadata } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
-import { normalizeGameStateIdentityAliases } from '../types/game-state-identity';
+import { normalizeGameStateIdentity } from '../types/game-state-identity';
 
 export class GameStateManager {
   constructor(
@@ -25,7 +25,7 @@ export class GameStateManager {
       ...currentState,
       ...newState,
     };
-    return normalizeGameStateIdentityAliases(nextState);
+    return normalizeGameStateIdentity(nextState);
   }
 
   async updateState(
@@ -111,7 +111,7 @@ export class GameStateManager {
   }
 
   async saveState(roomId: string | null, state: GameState): Promise<GameState> {
-    const normalizedState = normalizeGameStateIdentityAliases(state);
+    const normalizedState = normalizeGameStateIdentity(state);
     if (!roomId) {
       return normalizedState;
     }

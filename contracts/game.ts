@@ -228,6 +228,10 @@ export interface PlayerLeftPayload {
   roomId: string;
 }
 
+export interface PlayerDisconnectedPayload extends PlayerLeftPayload {
+  playerName?: string;
+}
+
 export interface PlayerConvertedToComPayload {
   seatId: SeatId;
   playerName: string;
@@ -242,5 +246,6 @@ export interface TurnPingPayload {
 export interface PlayerIdlePayload {
   roomId: string;
   seatId: SeatId;
+  playerName?: string;
   idleMs?: number;
 }

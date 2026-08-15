@@ -316,7 +316,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       preferredIndex ?? fallbackIndex,
       team,
       [],
-      asSeatId(sourcePlayer.seatId ?? sourcePlayer.seatId),
+      sourcePlayer.seatId,
     );
   }
 

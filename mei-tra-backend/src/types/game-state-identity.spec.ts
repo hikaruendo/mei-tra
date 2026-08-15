@@ -1,8 +1,8 @@
-import { normalizeGameStateIdentityAliases } from './game-state-identity';
+import { normalizeGameStateIdentity } from './game-state-identity';
 import { asSeatId } from './identity.types';
 import type { GameState } from './game.types';
 
-describe('normalizeGameStateIdentityAliases', () => {
+describe('normalizeGameStateIdentity', () => {
   it('prefers canonical seat fields over stale legacy aliases', () => {
     const state: GameState = {
       identitySchemaVersion: 2,
@@ -54,14 +54,12 @@ describe('normalizeGameStateIdentityAliases', () => {
       teamAssignments: { 'legacy-player': 0 },
     };
 
-    const normalized = normalizeGameStateIdentityAliases(state);
+    const normalized = normalizeGameStateIdentity(state);
 
     expect(normalized.players[0]).toEqual(
-      expect.objectContaining({
-        seatId: asSeatId('seat-1'),
-        playerId: 'seat-1',
-      }),
+      expect.objectContaining({ seatId: asSeatId('seat-1') }),
     );
+    expect(normalized.players[0]).not.toHaveProperty('playerId');
     expect(normalized.currentSeatId).toBe('seat-1');
     expect(normalized.blowState.lastPasserSeatId).toBe('seat-1');
     expect(normalized.playState?.currentField?.playedBy).toEqual(['seat-1']);
@@ -141,7 +139,7 @@ describe('normalizeGameStateIdentityAliases', () => {
       teamAssignments: { 'seat-1': 0, 'seat-2': 1 },
     } satisfies GameState;
 
-    const normalized = normalizeGameStateIdentityAliases(state);
+    const normalized = normalizeGameStateIdentity(state);
 
     expect(normalized.playState?.currentField?.playedBy).toEqual([
       'seat-1',

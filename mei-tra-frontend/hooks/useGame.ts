@@ -18,6 +18,10 @@ import type {
   PlayerContract,
   PlayCardPayload,
   PlaySetupCompletePayload,
+  PlayerConvertedToComPayload,
+  PlayerDisconnectedPayload,
+  PlayerIdlePayload,
+  PlayerLeftPayload,
   ReconnectionFailureCode,
   RequestAgariPayload,
   RevealAgariPayload,
@@ -34,6 +38,7 @@ import type {
   RoomContract,
   RoomSyncPayload,
 } from '@contracts/room';
+import type { NameUpdatedPayload } from '@contracts/socket';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import {
@@ -63,7 +68,6 @@ import {
 } from '@meitra/game-client/game-event-reducer';
 import { normalizePlayerIdentities } from '@meitra/game-client/identity';
 import { resolveSelfPlayerId } from '../lib/utils/playerIdentity';
-import { asSeatId } from '@contracts/ids';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -595,14 +599,14 @@ export const useGame = () => {
         usersRef.current = users;
         setUsers(users);
       },
-      'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
-        if (success && playerId && name) {
+      'name-updated': (payload: NameUpdatedPayload) => {
+        if (payload.success && payload.seatId) {
+          const { seatId, name } = payload;
           setUsers((prev) => {
-            const existingIndex = prev.findIndex((u) => u.seatId === playerId);
+            const existingIndex = prev.findIndex((u) => u.seatId === seatId);
             const baseUser = {
               socketId: '',
-              seatId: asSeatId(playerId),
-              playerId,
+              seatId,
               name,
               isAuthenticated: false,
             };
@@ -615,8 +619,8 @@ export const useGame = () => {
 
             return [...prev, baseUser];
           });
-        } else if (!success && error) {
-          setNotification({ message: error, type: 'error' });
+        } else if (!payload.success) {
+          setNotification({ message: payload.error, type: 'error' });
         }
       },
       'update-players': (playerContracts: PlayerContract[]) => {
@@ -824,7 +828,6 @@ export const useGame = () => {
           return [...prev, {
             socketId: knownUser?.socketId ?? '',
             seatId: joinedSeatId,
-            playerId: joinedSeatId,
             name: data.name || knownUser?.name || joinedSeatId,
             team: (data.team ?? 0) as Player['team'],
             hand: [],
@@ -1043,16 +1046,13 @@ export const useGame = () => {
         setNotification({ message, type: 'success' });
       },
       'player-disconnected': ({
-        playerId,
+        seatId,
         playerName,
-      }: {
-        playerId: string;
-        playerName?: string;
-      }) => {
+      }: PlayerDisconnectedPayload) => {
         gameEventStateRef.current = {
           ...gameEventStateRef.current,
           players: gameEventStateRef.current.players.map((player) =>
-            player.seatId === playerId
+            player.seatId === seatId
               ? {
                   ...player,
                   socketId: '',
@@ -1063,7 +1063,7 @@ export const useGame = () => {
         };
         updatePlayersLocally((prev) =>
           prev.map((player) =>
-            player.seatId === playerId
+            player.seatId === seatId
               ? {
                   ...player,
                   socketId: '',
@@ -1072,62 +1072,55 @@ export const useGame = () => {
               : player,
           ),
         );
-        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== seatId));
         setDisconnectedPlayerIds((prev) =>
-          prev.includes(playerId) ? prev : [...prev, playerId],
+          prev.includes(seatId) ? prev : [...prev, seatId],
         );
         setNotification({
           message: tStatus('disconnectedNotice', {
-            playerName: playerName ?? playerId,
+            playerName: playerName ?? seatId,
           }),
           type: 'warning'
         });
       },
       'player-idle': ({
-        playerId,
+        seatId,
         playerName,
-      }: {
-        playerId: string;
-        playerName?: string;
-      }) => {
+      }: PlayerIdlePayload) => {
         setIdlePlayerIds((prev) =>
-          prev.includes(playerId) ? prev : [...prev, playerId],
+          prev.includes(seatId) ? prev : [...prev, seatId],
         );
         setNotification({
           message: tStatus('idleNotice', {
-            playerName: playerName ?? playerId,
+            playerName: playerName ?? seatId,
           }),
           type: 'warning',
         });
       },
-      'player-idle-cleared': ({ playerId }: { playerId: string }) => {
-        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
+      'player-idle-cleared': ({ seatId }: PlayerIdlePayload) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== seatId));
       },
       'player-converted-to-com': ({
-        playerId,
+        seatId,
         playerName,
         message,
-      }: {
-        playerId: string;
-        playerName?: string;
-        message: string;
-      }) => {
-        console.log('[useGame] Player converted to COM:', playerId, message);
+      }: PlayerConvertedToComPayload) => {
+        console.log('[useGame] Player converted to COM:', seatId, message);
         gameEventStateRef.current = {
           ...gameEventStateRef.current,
           players: gameEventStateRef.current.players.map((player) =>
-            player.seatId === playerId
+            player.seatId === seatId
               ? { ...player, isCOM: true, socketId: '' }
               : player,
           ),
         };
-        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
-        setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== playerId));
-        if (playerId === currentPlayerId) {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== seatId));
+        setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== seatId));
+        if (seatId === currentPlayerId) {
           resetRoomState();
           setNotification({
             message: tStatus('convertedToComNotice', {
-              playerName: playerName ?? playerId,
+              playerName: playerName ?? seatId,
             }),
             type: 'warning'
           });
@@ -1135,15 +1128,15 @@ export const useGame = () => {
         }
         setNotification({
           message: tStatus('convertedToComNotice', {
-            playerName: playerName ?? playerId,
+            playerName: playerName ?? seatId,
           }),
           type: 'warning'
         });
       },
-      'player-left': ({ playerId }: { playerId: string; roomId: string }) => {
-        setIdlePlayerIds((prev) => prev.filter((id) => id !== playerId));
-        setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== playerId));
-        if (playerId === currentPlayerId) {
+      'player-left': ({ seatId }: PlayerLeftPayload) => {
+        setIdlePlayerIds((prev) => prev.filter((id) => id !== seatId));
+        setDisconnectedPlayerIds((prev) => prev.filter((id) => id !== seatId));
+        if (seatId === currentPlayerId) {
           setCurrentRoomId(null);
           setIsHost(false);
         }

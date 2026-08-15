@@ -21,7 +21,12 @@ import {
   GameHistorySummary,
 } from '../types/game-history.types';
 import { Room, RoomPlayer, RoomStatus } from '../types/room.types';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import {
+  asSeatId,
+  isUuid,
+  resolveSeatId,
+  type SeatId,
+} from '../types/identity.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 
@@ -235,7 +240,7 @@ export class GameHistoryController {
 
     return {
       actionType,
-      actorSeatId: query.actorSeatId ? asSeatId(query.actorSeatId) : undefined,
+      actorSeatId: this.parseSeatId(query.actorSeatId),
       roundNumber,
       limit: this.parseLimit(query.limit),
       since,
@@ -250,6 +255,10 @@ export class GameHistoryController {
 
     const parsed = Number(value);
     return Number.isFinite(parsed) ? Math.max(1, parsed) : undefined;
+  }
+
+  private parseSeatId(value?: string): SeatId | undefined {
+    return value && isUuid(value) ? asSeatId(value) : undefined;
   }
 
   private parseActionType(

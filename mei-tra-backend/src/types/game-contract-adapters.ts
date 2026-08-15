@@ -19,7 +19,7 @@ export function toBlowDeclarationContract(
   declaration: BlowDeclaration,
 ): BlowDeclarationContract {
   return {
-    seatId: declaration.seatId ?? asSeatId(declaration.seatId),
+    seatId: declaration.seatId,
     team: declaration.team,
     trumpType: declaration.trumpType,
     numberOfPairs: declaration.numberOfPairs,
@@ -30,7 +30,7 @@ export function toBlowDeclarationContract(
 export function toBlowActionContract(action: BlowAction): BlowActionContract {
   return {
     type: action.type,
-    seatId: action.seatId ?? asSeatId(action.seatId),
+    seatId: action.seatId,
     trumpType: action.trumpType,
     numberOfPairs: action.numberOfPairs,
     timestamp: action.timestamp,

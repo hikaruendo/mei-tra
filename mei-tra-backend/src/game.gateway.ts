@@ -359,7 +359,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const updatedRoom = await this.roomService.getRoom(roomId);
     this.server.to(roomId).emit('player-converted-to-com', {
-      playerId,
+      seatId: asSeatId(playerId),
       playerName: targetPlayer?.name ?? playerId,
       message,
     });
@@ -1076,7 +1076,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(data.roomId).emit('player-left', {
         seatId: asSeatId(playerId),
-        playerId,
         roomId: data.roomId,
       });
       this.queueSpectatorSnapshot(data.roomId);
@@ -1196,7 +1195,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         this.server.to(data.roomId).emit('player-left', {
           seatId: asSeatId(result.playerId),
-          playerId: result.playerId,
           roomId: data.roomId,
         });
         this.queueSpectatorSnapshot(data.roomId);
@@ -1207,7 +1205,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.clearTurnAckMonitor(data.roomId);
       this.server.to(data.roomId).emit('player-converted-to-com', {
         seatId: asSeatId(result.playerId),
-        playerId: result.playerId,
         playerName: result.playerName,
         message: result.message,
       });

@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { PlayerContract, RoomPlayingPayload } from '@contracts/game';
+import type {
+  PlayerContract,
+  PlayerLeftPayload,
+  RoomPlayingPayload,
+} from '@contracts/game';
 import type {
   RoomContract,
   RoomPlayerJoinedPayload,
@@ -232,7 +236,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
               return {
                 socketId: '',
                 seatId: asSeatId(p),
-                playerId: p,
                 name: p,
                 hand: [],
                 team: (index % 2) as Team,
@@ -285,19 +288,19 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     };
 
     // プレイヤー退出
-    const handlePlayerLeft = ({ playerId, roomId }: { playerId: string; roomId: string }) => {
+    const handlePlayerLeft = ({ seatId, roomId }: PlayerLeftPayload) => {
       if (currentRoomRef.current?.id !== roomId) {
         return;
       }
 
-      if (currentPlayerId && currentPlayerId === playerId) {
+      if (currentPlayerId && currentPlayerId === seatId) {
         setCurrentRoom(null);
       } else {
         setCurrentRoom(prev => {
           if (!prev) return null;
 
           const updatedPlayers = prev.players.map(p =>
-            p.seatId === playerId
+            p.seatId === seatId
               ? {
                   ...p,
                   socketId: '',
@@ -314,7 +317,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
               : p
           );
 
-          if (prev.hostSeatId === playerId) {
+          if (prev.hostSeatId === seatId) {
             const newHost = updatedPlayers.find(p => !p.isCOM);
             if (newHost) {
               return {
@@ -335,7 +338,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
       setPlayerReadyStatus(prev => {
         const newStatus = { ...prev };
-        delete newStatus[playerId];
+        delete newStatus[seatId];
         return newStatus;
       });
     };

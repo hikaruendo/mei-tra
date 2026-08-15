@@ -28,14 +28,11 @@ const SEAT_KEYED_FIELDS = new Set([
   'teamAssignments',
 ]);
 
-export type PersistedBlowDeclaration = Omit<
-  BlowDeclaration,
-  'playerId' | 'seatId'
-> & {
+export type PersistedBlowDeclaration = Omit<BlowDeclaration, 'seatId'> & {
   seatId: SeatId;
 };
 
-export type PersistedBlowAction = Omit<BlowAction, 'playerId' | 'seatId'> & {
+export type PersistedBlowAction = Omit<BlowAction, 'seatId'> & {
   seatId: SeatId;
 };
 
@@ -44,7 +41,6 @@ export type PersistedBlowState = Omit<
   | 'currentHighestDeclaration'
   | 'declarations'
   | 'actionHistory'
-  | 'lastPasser'
   | 'lastPasserSeatId'
 > & {
   currentHighestDeclaration: PersistedBlowDeclaration | null;
@@ -63,12 +59,9 @@ export type PersistedCompletedField = CompletedField;
 export type PersistedPlayState = Omit<
   PlayState,
   | 'currentField'
-  | 'negriPlayerId'
   | 'negriSeatId'
   | 'fields'
-  | 'lastWinnerId'
   | 'lastWinnerSeatId'
-  | 'openDeclarerId'
   | 'openDeclarerSeatId'
 > & {
   currentField: PersistedField | null;
@@ -80,7 +73,7 @@ export type PersistedPlayState = Omit<
 
 export type PersistedPendingBrokenHandReveal = Omit<
   PendingBrokenHandReveal,
-  'playerId' | 'seatId'
+  'seatId'
 > & {
   seatId: SeatId;
 };
@@ -98,15 +91,15 @@ function toPersistedBlowDeclaration(
   declaration: BlowDeclaration,
 ): PersistedBlowDeclaration {
   return {
-    ...omitKeys(declaration, ['playerId', 'seatId']),
-    seatId: declaration.seatId ?? asSeatId(declaration.seatId),
+    ...omitKeys(declaration, ['seatId']),
+    seatId: declaration.seatId,
   } as PersistedBlowDeclaration;
 }
 
 function toPersistedBlowAction(action: BlowAction): PersistedBlowAction {
   return {
-    ...omitKeys(action, ['playerId', 'seatId']),
-    seatId: action.seatId ?? asSeatId(action.seatId),
+    ...omitKeys(action, ['seatId']),
+    seatId: action.seatId,
   } as PersistedBlowAction;
 }
 
@@ -118,7 +111,6 @@ export function toPersistedBlowState(blowState: BlowState): PersistedBlowState {
       'currentHighestDeclaration',
       'declarations',
       'actionHistory',
-      'lastPasser',
       'lastPasserSeatId',
     ]),
     currentHighestDeclaration: blowState.currentHighestDeclaration
@@ -155,12 +147,9 @@ export function toPersistedPlayState(
   return {
     ...omitKeys(playState, [
       'currentField',
-      'negriPlayerId',
       'negriSeatId',
       'fields',
-      'lastWinnerId',
       'lastWinnerSeatId',
-      'openDeclarerId',
       'openDeclarerSeatId',
     ]),
     currentField: playState.currentField
@@ -181,8 +170,8 @@ export function toPersistedPendingBrokenHandReveal(
   }
 
   return {
-    ...omitKeys(pendingReveal, ['playerId', 'seatId']),
-    seatId: pendingReveal.seatId ?? asSeatId(pendingReveal.seatId),
+    ...omitKeys(pendingReveal, ['seatId']),
+    seatId: pendingReveal.seatId,
   } as PersistedPendingBrokenHandReveal;
 }
 

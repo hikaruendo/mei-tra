@@ -14,6 +14,7 @@ import type {
   PlayCardPayload,
   PlayerContract,
   PlayerConvertedToComPayload,
+  PlayerDisconnectedPayload,
   PlayerIdlePayload,
   PlayerLeftPayload,
   PlaySetupCompletePayload,
@@ -238,7 +239,7 @@ export interface ServerToClientEvents {
   'back-to-lobby': (payload?: BackToLobbyPayload) => void;
   'player-left': (payload: PlayerLeftPayload) => void;
   'player-converted-to-com': (payload: PlayerConvertedToComPayload) => void;
-  'player-disconnected': (payload: PlayerLeftPayload) => void;
+  'player-disconnected': (payload: PlayerDisconnectedPayload) => void;
   'player-idle': (payload: PlayerIdlePayload) => void;
   'player-idle-cleared': (payload: PlayerIdlePayload) => void;
   'turn-ping': (payload: TurnPingPayload) => void;

@@ -6,6 +6,7 @@ import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history
 import { asSeatId } from '../types/identity.types';
 
 describe('GameHistoryController', () => {
+  const actorSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
   const currentUser = {
     id: 'user-1',
     email: 'user@example.com',
@@ -101,7 +102,7 @@ describe('GameHistoryController', () => {
     expect(getGameHistoryUseCase.execute).toHaveBeenCalledWith('room-1', {
       actionType: undefined,
       limit: undefined,
-      playerId: undefined,
+      actorSeatId: undefined,
       roundNumber: undefined,
       since: undefined,
       until: undefined,
@@ -140,7 +141,7 @@ describe('GameHistoryController', () => {
         'room-1',
         {
           actionType: 'card_played',
-          actorSeatId: 'player-1',
+          actorSeatId,
           roundNumber: '2',
           since: '2026-04-16T00:00:00.000Z',
           until: '2026-04-16T01:00:00.000Z',
@@ -157,7 +158,7 @@ describe('GameHistoryController', () => {
       'room-1',
       {
         actionType: 'card_played',
-        actorSeatId: asSeatId('player-1'),
+        actorSeatId,
         roundNumber: 2,
         since: new Date('2026-04-16T00:00:00.000Z'),
         until: new Date('2026-04-16T01:00:00.000Z'),
@@ -215,7 +216,7 @@ describe('GameHistoryController', () => {
       {
         actionType: undefined,
         limit: undefined,
-        playerId: undefined,
+        actorSeatId: undefined,
         roundNumber: undefined,
         since: undefined,
         until: undefined,
@@ -408,7 +409,7 @@ describe('GameHistoryController', () => {
       {
         actionType: undefined,
         limit: 5,
-        playerId: undefined,
+        actorSeatId: undefined,
         roundNumber: undefined,
         since: undefined,
         until: undefined,
@@ -437,6 +438,7 @@ describe('GameHistoryController', () => {
         'room-1',
         {
           actionType: 'not-real',
+          actorSeatId: 'not-a-uuid',
           limit: 'NaN',
           roundNumber: 'also-bad',
           since: 'invalid-date',
@@ -449,7 +451,7 @@ describe('GameHistoryController', () => {
     expect(getGameHistoryUseCase.execute).toHaveBeenCalledWith('room-1', {
       actionType: undefined,
       limit: undefined,
-      playerId: undefined,
+      actorSeatId: undefined,
       roundNumber: undefined,
       since: undefined,
       until: undefined,

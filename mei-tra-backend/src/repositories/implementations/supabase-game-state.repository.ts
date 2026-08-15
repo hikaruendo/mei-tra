@@ -19,7 +19,7 @@ import {
 import { Database } from '../../types/database.types';
 import { RoomPlayer } from '../../types/room.types';
 import { asSeatId, resolveSeatId } from '../../types/identity.types';
-import { normalizeGameStateIdentityAliases } from '../../types/game-state-identity';
+import { normalizeGameStateIdentity } from '../../types/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import {
   findUnknownPersistedSeatReferences,
@@ -61,7 +61,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async create(roomId: string, gameState: GameState): Promise<GameState> {
     try {
-      const canonicalGameState = normalizeGameStateIdentityAliases(gameState);
+      const canonicalGameState = normalizeGameStateIdentity(gameState);
       const { data, error } = await this.supabase
         .from('game_states')
         .insert({
@@ -164,7 +164,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     hostId?: string,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState | null> {
-    const canonicalGameState = normalizeGameStateIdentityAliases(gameState);
+    const canonicalGameState = normalizeGameStateIdentity(gameState);
     const playerStates = toPersistedPlayerStates(canonicalGameState.players);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
       seatId: resolveSeatId(player),
@@ -487,7 +487,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       currentBlowIndex: 0,
     }) as BlowState;
 
-    return normalizeGameStateIdentityAliases({
+    return normalizeGameStateIdentity({
       version: dbGameState.version,
       identitySchemaVersion: 2,
       players,
