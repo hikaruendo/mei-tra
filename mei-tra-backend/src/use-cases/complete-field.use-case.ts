@@ -26,9 +26,9 @@ import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { toCompletedFieldContract } from '../types/game-contract-adapters';
+import { toCompletedFieldContract } from '../adapters/game-contract-adapters';
 import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {

@@ -7,14 +7,14 @@ import {
 } from './interfaces/start-game.use-case.interface';
 import { Room, RoomStatus } from '../types/room.types';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { GameStateService } from '../services/game-state.service';
 import { GameState } from '../types/game.types';
 import { asSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayer,
   resolveCurrentPlayerIndex,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {

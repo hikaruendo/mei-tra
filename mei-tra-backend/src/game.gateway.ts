@@ -54,7 +54,7 @@ import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
 import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { Room } from './types/room.types';
-import { toRoomContract, toRoomContracts } from './types/room-adapters';
+import { toRoomContract, toRoomContracts } from './adapters/room-adapters';
 import {
   ComAutoPlayRecoveryHandlers,
   ComAutoPlayRecoveryService,

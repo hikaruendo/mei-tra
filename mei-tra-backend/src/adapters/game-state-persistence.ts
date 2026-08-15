@@ -6,8 +6,8 @@ import {
   Field,
   PendingBrokenHandReveal,
   PlayState,
-} from './game.types';
-import { asSeatId, SeatId } from './identity.types';
+} from '../types/game.types';
+import { asSeatId, SeatId } from '../types/identity.types';
 
 const SCALAR_SEAT_FIELDS = new Set([
   'seatId',

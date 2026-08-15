@@ -4,8 +4,8 @@ import {
   toDomainPlayer,
   toTransportPlayers,
   TransportPlayer,
-} from '../../types/player-adapters';
-import { toRoomContract } from '../../types/room-adapters';
+} from '../../adapters/player-adapters';
+import { toRoomContract } from '../../adapters/room-adapters';
 import { GatewayEvent } from '../interfaces/gateway-event.interface';
 import type { RoomSyncPayload } from '@contracts/room';
 

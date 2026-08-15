@@ -23,7 +23,7 @@ import {
   toRuntimePlayer,
   toTransportPlayers,
   TransportPlayer,
-} from '../types/player-adapters';
+} from '../adapters/player-adapters';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { asSeatId } from '../types/identity.types';
@@ -32,7 +32,7 @@ import {
   resolveCurrentPlayerIndex,
   resolveCurrentSeatId,
   setCurrentSeat,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 import { reconcileRuntimeRoster } from './runtime-seat-roster';
 
 @Injectable()

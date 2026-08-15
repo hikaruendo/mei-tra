@@ -11,7 +11,7 @@ import {
 import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import { asSeatId } from '../types/identity.types';
 
 @Injectable()

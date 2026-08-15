@@ -22,7 +22,7 @@ import {
   toBlowUpdatedPayload,
   toCompletedFieldContract,
   toFieldContract,
-} from '../types/game-contract-adapters';
+} from '../adapters/game-contract-adapters';
 
 interface BuildJoinRoomEffectsParams {
   clientId: string;

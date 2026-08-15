@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomStatus } from '../types/room.types';
-import { resolveCurrentPlayer } from '../types/current-turn';
+import { resolveCurrentPlayer } from '../domain/current-turn';
 import { asSeatId } from '../types/identity.types';
 
 const TURN_ACK_PING_INTERVAL_MS = 15 * 1000;

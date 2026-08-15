@@ -1,5 +1,5 @@
 import { Room } from '../../types/room.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
 import { BlowState } from '../../types/game.types';
 
 export interface LeaveRoomRequest {

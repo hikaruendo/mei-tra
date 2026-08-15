@@ -16,7 +16,7 @@ import {
 } from './helpers/player-resolution.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
 import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {

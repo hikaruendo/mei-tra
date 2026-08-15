@@ -3,7 +3,7 @@ import { IRoomService } from '../services/interfaces/room-service.interface';
 import { ILeaveRoomUseCase } from './interfaces/leave-room.use-case.interface';
 import { RoomStatus } from '../types/room.types';
 import { BlowState } from '../types/game.types';
-import { TransportPlayer } from '../types/player-adapters';
+import { TransportPlayer } from '../adapters/player-adapters';
 import { resolveRoomTransportPlayers } from './helpers/player-resolution.helper';
 
 export type ModeratePlayerResult =

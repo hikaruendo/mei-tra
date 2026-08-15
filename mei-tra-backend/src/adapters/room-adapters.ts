@@ -1,7 +1,7 @@
 import type { RoomContract, RoomPlayerContract } from '@contracts/room';
-import { Room, RoomPlayer } from './room.types';
+import { Room, RoomPlayer } from '../types/room.types';
 import { TransportPlayer } from './player-adapters';
-import { resolveSeatId } from './identity.types';
+import { resolveSeatId } from '../types/identity.types';
 
 function toIsoString(value: Date | string): string {
   if (value instanceof Date) {

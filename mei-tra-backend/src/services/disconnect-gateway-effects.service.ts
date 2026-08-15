@@ -7,7 +7,7 @@ import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.s
 import { RoomMembershipService } from './room-membership.service';
 import { ActiveRoomMembership } from '../types/room-membership.types';
 import { asSeatId } from '../types/identity.types';
-import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
+import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 

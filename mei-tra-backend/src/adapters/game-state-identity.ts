@@ -1,5 +1,5 @@
-import { asSeatId } from './identity.types';
-import type { Field, GameState } from './game.types';
+import { asSeatId } from '../types/identity.types';
+import type { Field, GameState } from '../types/game.types';
 
 function normalizePlayedBySeatIds(field: Field) {
   const playedBySeatIds = (field.playedBySeatIds ?? field.playedBy).map(

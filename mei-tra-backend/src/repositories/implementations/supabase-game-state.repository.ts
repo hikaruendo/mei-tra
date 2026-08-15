@@ -15,18 +15,18 @@ import {
   PersistedPlayerStates,
   toPersistedPlayerStates,
   toRuntimePlayer,
-} from '../../types/player-adapters';
+} from '../../adapters/player-adapters';
 import { Database } from '../../types/database.types';
 import { RoomPlayer } from '../../types/room.types';
 import { asSeatId, resolveSeatId } from '../../types/identity.types';
-import { normalizeGameStateIdentity } from '../../types/game-state-identity';
+import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import {
   findUnknownPersistedSeatReferences,
   toPersistedBlowState,
   toPersistedPendingBrokenHandReveal,
   toPersistedPlayState,
-} from '../../types/game-state-persistence';
+} from '../../adapters/game-state-persistence';
 
 type GameStateRow = Database['public']['Tables']['game_states']['Row'];
 type GameStateUpdate = Database['public']['Tables']['game_states']['Update'];

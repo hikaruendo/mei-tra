@@ -2,10 +2,10 @@ import {
   DomainPlayer,
   PlayerConnectionMetadata,
   PlayerGameplayState,
-} from './game.types';
-import { RoomPlayer } from './room.types';
-import { SessionUser } from './session.types';
-import { asSeatId, resolveSeatId } from './identity.types';
+} from '../types/game.types';
+import { RoomPlayer } from '../types/room.types';
+import { SessionUser } from '../types/session.types';
+import { asSeatId, resolveSeatId } from '../types/identity.types';
 import type { PlayerContract } from '@contracts/game';
 
 export type PersistedGamePlayer = DomainPlayer & {

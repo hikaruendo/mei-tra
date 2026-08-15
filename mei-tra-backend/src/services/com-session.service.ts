@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DomainPlayer, Team } from '../types/game.types';
-import { toDomainPlayer, toRoomPlayer } from '../types/player-adapters';
+import { toDomainPlayer, toRoomPlayer } from '../adapters/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { IComPlayerService } from './interfaces/com-player-service.interface';
 import { GameStateService } from './game-state.service';

@@ -12,7 +12,7 @@ import {
   resolvePlayerByActorId,
 } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BlowState, DomainPlayer, GameState } from '../types/game.types';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import type { VacantSeats } from '../types/vacant-seat.types';
@@ -8,7 +8,7 @@ import { asSeatId, resolveSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 
 @Injectable()

@@ -12,13 +12,13 @@ import {
 import { DomainPlayer, Team } from '../types/game.types';
 import { RoomMembershipService } from '../services/room-membership.service';
 import { asSeatId, type SeatId } from '../types/identity.types';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import type { GameStatePayload } from '@contracts/game';
 import {
   toBlowStateContract,
   toCompletedFieldContract,
   toFieldContract,
-} from '../types/game-contract-adapters';
+} from '../adapters/game-contract-adapters';
 
 export type ReconnectionResult =
   | {

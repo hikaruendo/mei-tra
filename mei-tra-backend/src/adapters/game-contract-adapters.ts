@@ -12,8 +12,8 @@ import type {
   BlowState,
   CompletedField,
   Field,
-} from './game.types';
-import { asSeatId } from './identity.types';
+} from '../types/game.types';
+import { asSeatId } from '../types/identity.types';
 
 export function toBlowDeclarationContract(
   declaration: BlowDeclaration,

@@ -5,9 +5,9 @@ import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { resolveRoomTransportPlayers } from '../use-cases/helpers/player-resolution.helper';
 import { DomainPlayer } from '../types/game.types';
 import { Room } from '../types/room.types';
-import { TransportPlayer } from '../types/player-adapters';
-import { toRoomContract, toRoomContracts } from '../types/room-adapters';
-import { toFieldContract } from '../types/game-contract-adapters';
+import { TransportPlayer } from '../adapters/player-adapters';
+import { toRoomContract, toRoomContracts } from '../adapters/room-adapters';
+import { toFieldContract } from '../adapters/game-contract-adapters';
 import { IRoomService } from './interfaces/room-service.interface';
 
 interface RoomUpdateGatewayView {

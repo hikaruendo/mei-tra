@@ -25,6 +25,7 @@ Review before editing. Do not change code, commit, push, or update a PR unless t
 1. Trace each changed input through state transition, persistence, Socket emit, and UI projection.
 2. Run an architecture coherence pass before judging local correctness:
    - Name the concept being changed and identify its canonical owner: `contracts/`, backend `src/types/`, Domain, UseCase/service, repository, frontend hook, or UI.
+   - Reserve backend `src/types/` for explicitly named `*.types.ts` modules. Standalone mappers, adapters, state repair, and domain operations belong in `src/adapters/` or `src/domain/`; run `npm run check:architecture` when backend files move across these boundaries.
    - Search sibling implementations before accepting a new type, helper, service, mapper, or adapter. Require equivalent concepts to use the same layer, folder, naming, error contract, and dependency direction.
    - Count transformations of the same identity or state. One boundary adapter is acceptable; repeated `remap`, alias builders, dual shapes, fallback chains, or object reconstruction across Domain, UseCase, Gateway, persistence, Web, and Mobile indicate a split source of truth.
    - Distinguish migration compatibility from permanent design. Keep legacy aliases and dual-read/write at an explicit boundary with telemetry, removal criteria, and a cleanup path; flag them when they leak into core logic.

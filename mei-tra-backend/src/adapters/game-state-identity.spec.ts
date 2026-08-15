@@ -1,6 +1,6 @@
 import { normalizeGameStateIdentity } from './game-state-identity';
-import { asSeatId } from './identity.types';
-import type { GameState } from './game.types';
+import { asSeatId } from '../types/identity.types';
+import type { GameState } from '../types/game.types';
 
 describe('normalizeGameStateIdentity', () => {
   it('prefers canonical seat fields over stale legacy aliases', () => {

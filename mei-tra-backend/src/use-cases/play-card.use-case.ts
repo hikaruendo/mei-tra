@@ -15,8 +15,8 @@ import {
 } from './helpers/player-resolution.helper';
 import { IPlayService } from '../services/interfaces/play-service.interface';
 import { asSeatId } from '../types/identity.types';
-import { resolveCurrentPlayer } from '../types/current-turn';
-import { toFieldContract } from '../types/game-contract-adapters';
+import { resolveCurrentPlayer } from '../domain/current-turn';
+import { toFieldContract } from '../adapters/game-contract-adapters';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {

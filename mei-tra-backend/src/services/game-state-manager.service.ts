@@ -4,7 +4,7 @@ import { GameState, PlayerConnectionMetadata } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
-import { normalizeGameStateIdentity } from '../types/game-state-identity';
+import { normalizeGameStateIdentity } from '../adapters/game-state-identity';
 
 export class GameStateManager {
   constructor(

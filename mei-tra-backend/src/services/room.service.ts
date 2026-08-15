@@ -10,7 +10,7 @@ import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
 import { DomainPlayer, Team } from '../types/game.types';
-import { toDomainPlayer, toRoomPlayer } from '../types/player-adapters';
+import { toDomainPlayer, toRoomPlayer } from '../adapters/player-adapters';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';

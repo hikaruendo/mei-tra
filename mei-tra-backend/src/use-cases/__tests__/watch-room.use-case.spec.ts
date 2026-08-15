@@ -6,7 +6,7 @@ import {
   GameState,
   Team,
 } from '../../types/game.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
 import { asSeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 

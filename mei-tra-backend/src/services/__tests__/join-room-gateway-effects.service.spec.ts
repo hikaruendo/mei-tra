@@ -1,6 +1,6 @@
 import { RoomStatus } from '../../types/room.types';
 import { DomainPlayer } from '../../types/game.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { JoinRoomGatewayEffectsService } from '../join-room-gateway-effects.service';
 import { asSeatId } from '../../types/identity.types';

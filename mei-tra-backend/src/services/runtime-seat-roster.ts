@@ -1,6 +1,6 @@
 import type { DomainPlayer, GameState } from '../types/game.types';
 import { resolveSeatId } from '../types/identity.types';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import type { Room, RoomPlayer } from '../types/room.types';
 
 type RuntimeRoomRoster = Pick<Room, 'players'>;

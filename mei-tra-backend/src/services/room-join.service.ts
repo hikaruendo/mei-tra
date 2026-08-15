@@ -13,7 +13,7 @@ import { RosterMembershipMutation } from '../types/room-membership.types';
 import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 
 interface JoinRoomParams {

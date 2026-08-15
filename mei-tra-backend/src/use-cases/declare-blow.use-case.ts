@@ -27,8 +27,8 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { asSeatId } from '../types/identity.types';
-import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
-import { resolveCurrentPlayer } from '../types/current-turn';
+import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
+import { resolveCurrentPlayer } from '../domain/current-turn';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
