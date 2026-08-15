@@ -4,13 +4,12 @@ import {
   resolveCurrentSeatId,
   setCurrentSeat,
 } from './current-turn';
-import { asSeatId } from './identity.types';
-import type { DomainPlayer, GameState } from './game.types';
+import { asSeatId } from '../types/identity.types';
+import type { DomainPlayer, GameState } from '../types/game.types';
 
 const players: DomainPlayer[] = [
   {
     seatId: asSeatId('seat-1'),
-    playerId: 'seat-1',
     name: 'Player 1',
     team: 0,
     hand: [],
@@ -18,7 +17,6 @@ const players: DomainPlayer[] = [
   },
   {
     seatId: asSeatId('seat-2'),
-    playerId: 'seat-2',
     name: 'Player 2',
     team: 1,
     hand: [],
@@ -40,7 +38,7 @@ describe('current turn identity', () => {
 
     expect(resolveCurrentSeatId(state)).toBe('seat-1');
     expect(resolveCurrentPlayerIndex(state)).toBe(0);
-    expect(resolveCurrentPlayer(state)?.playerId).toBe('seat-1');
+    expect(resolveCurrentPlayer(state)?.seatId).toBe('seat-1');
   });
 
   it('updates only the canonical seat assignment', () => {
@@ -48,7 +46,7 @@ describe('current turn identity', () => {
 
     const currentPlayer = setCurrentSeat(state, 'seat-2');
 
-    expect(currentPlayer?.playerId).toBe('seat-2');
+    expect(currentPlayer?.seatId).toBe('seat-2');
     expect(state.currentSeatId).toBe('seat-2');
   });
 

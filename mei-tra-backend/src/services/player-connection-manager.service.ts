@@ -1,12 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { DomainPlayer } from '../types/game.types';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
-import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
 
 export class PlayerConnectionManager {
   readonly users: SessionUser[] = [];
-  readonly playerIds: Map<string, string> = new Map();
-  readonly disconnectedPlayers: Map<string, NodeJS.Timeout> = new Map();
+  readonly seatIdsByToken: Map<string, SeatId> = new Map();
+  readonly disconnectTimeoutsBySeatId: Map<SeatId, NodeJS.Timeout> = new Map();
 
   constructor(private readonly logger: Logger) {}
 
@@ -38,8 +38,8 @@ export class PlayerConnectionManager {
     return this.users.find((user) => user.userId === userId) || null;
   }
 
-  findSessionUserByPlayerId(playerId: string): SessionUser | null {
-    return this.users.find((user) => user.seatId === playerId) || null;
+  findSessionUserBySeatId(seatId: SeatId): SessionUser | null {
+    return this.users.find((user) => user.seatId === seatId) || null;
   }
 
   upsertSessionUser(sessionUser: SessionUser): {
@@ -67,7 +67,7 @@ export class PlayerConnectionManager {
     if (!existingUser) {
       this.users.push(sessionUser);
       if (sessionUser.userId && sessionUser.seatId) {
-        this.playerIds.set(sessionUser.userId, sessionUser.seatId);
+        this.seatIdsByToken.set(sessionUser.userId, sessionUser.seatId);
       }
       return {
         user: sessionUser,
@@ -99,13 +99,13 @@ export class PlayerConnectionManager {
     if (
       previousUserId &&
       previousUserId !== sessionUser.userId &&
-      this.playerIds.get(previousUserId) === previousSeatId
+      this.seatIdsByToken.get(previousUserId) === previousSeatId
     ) {
-      this.playerIds.delete(previousUserId);
+      this.seatIdsByToken.delete(previousUserId);
     }
 
     if (sessionUser.userId && sessionUser.seatId) {
-      this.playerIds.set(sessionUser.userId, sessionUser.seatId);
+      this.seatIdsByToken.set(sessionUser.userId, sessionUser.seatId);
     }
 
     for (const duplicateUser of matchingUsers) {
@@ -115,9 +115,9 @@ export class PlayerConnectionManager {
       if (
         duplicateUser.userId &&
         duplicateUser.userId !== sessionUser.userId &&
-        this.playerIds.get(duplicateUser.userId) === duplicateUser.seatId
+        this.seatIdsByToken.get(duplicateUser.userId) === duplicateUser.seatId
       ) {
-        this.playerIds.delete(duplicateUser.userId);
+        this.seatIdsByToken.delete(duplicateUser.userId);
       }
       const duplicateIndex = this.users.indexOf(duplicateUser);
       if (duplicateIndex !== -1) {
@@ -142,14 +142,14 @@ export class PlayerConnectionManager {
     return true;
   }
 
-  registerPlayerToken(token: string, playerId: string): void {
-    this.playerIds.set(token, playerId);
+  registerSeatToken(token: string, seatId: SeatId): void {
+    this.seatIdsByToken.set(token, seatId);
   }
 
-  removePlayerToken(playerId: string): void {
-    for (const [token, id] of this.playerIds.entries()) {
-      if (id === playerId) {
-        this.playerIds.delete(token);
+  removeSeatToken(seatId: SeatId): void {
+    for (const [token, registeredSeatId] of this.seatIdsByToken.entries()) {
+      if (registeredSeatId === seatId) {
+        this.seatIdsByToken.delete(token);
         break;
       }
     }
@@ -173,16 +173,16 @@ export class PlayerConnectionManager {
     players: DomainPlayer[],
     token: string,
   ): DomainPlayer | null {
-    const playerId = this.playerIds.get(token);
-    if (playerId) {
-      return players.find((player) => player.playerId === playerId) || null;
+    const seatId = this.seatIdsByToken.get(token);
+    if (seatId) {
+      return players.find((player) => player.seatId === seatId) || null;
     }
 
-    return players.find((player) => player.playerId === token) || null;
+    return players.find((player) => player.seatId === token) || null;
   }
 
-  getPlayerConnectionState(playerId: string): PlayerConnectionState | null {
-    const sessionUser = this.findSessionUserByPlayerId(playerId);
+  getPlayerConnectionState(seatId: SeatId): PlayerConnectionState | null {
+    const sessionUser = this.findSessionUserBySeatId(seatId);
     if (!sessionUser) {
       return null;
     }
@@ -195,23 +195,23 @@ export class PlayerConnectionManager {
   }
 
   updatePlayerSocketId(
-    playerId: string,
+    seatId: SeatId,
     socketId: string,
     name: string,
     userId?: string,
     isAuthenticated?: boolean,
   ): SessionUser {
-    const timeout = this.disconnectedPlayers.get(playerId);
+    const timeout = this.disconnectTimeoutsBySeatId.get(seatId);
     if (timeout) {
       clearTimeout(timeout);
-      this.disconnectedPlayers.delete(playerId);
+      this.disconnectTimeoutsBySeatId.delete(seatId);
     }
 
-    const existingUser = this.findSessionUserByPlayerId(playerId);
+    const existingUser = this.findSessionUserBySeatId(seatId);
     const resolvedUserId = userId ?? existingUser?.userId;
     const { user } = this.upsertSessionUser({
       socketId,
-      seatId: asSeatId(playerId),
+      seatId,
       name,
       userId: resolvedUserId,
       isAuthenticated:
@@ -222,7 +222,7 @@ export class PlayerConnectionManager {
 
     if (resolvedUserId) {
       this.logger.log(
-        `[GameState] Updated player ${playerId} with userId: ${resolvedUserId}`,
+        `[GameState] Updated seat ${seatId} with userId: ${resolvedUserId}`,
       );
     }
 
@@ -230,12 +230,12 @@ export class PlayerConnectionManager {
   }
 
   applyConnectionState(
-    playerId: string,
+    seatId: SeatId,
     name: string,
     connectionState: PlayerConnectionState,
   ): SessionUser {
     return this.updatePlayerSocketId(
-      playerId,
+      seatId,
       connectionState.socketId,
       name,
       connectionState.userId,
@@ -243,29 +243,29 @@ export class PlayerConnectionManager {
     );
   }
 
-  setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {
-    const existingTimeout = this.disconnectedPlayers.get(playerId);
+  setDisconnectTimeout(seatId: SeatId, timeout: NodeJS.Timeout): void {
+    const existingTimeout = this.disconnectTimeoutsBySeatId.get(seatId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
     }
 
-    this.disconnectedPlayers.set(playerId, timeout);
+    this.disconnectTimeoutsBySeatId.set(seatId, timeout);
   }
 
-  clearDisconnectTimeout(playerId: string): void {
-    const existingTimeout = this.disconnectedPlayers.get(playerId);
+  clearDisconnectTimeout(seatId: SeatId): void {
+    const existingTimeout = this.disconnectTimeoutsBySeatId.get(seatId);
     if (!existingTimeout) {
       return;
     }
 
     clearTimeout(existingTimeout);
-    this.disconnectedPlayers.delete(playerId);
+    this.disconnectTimeoutsBySeatId.delete(seatId);
   }
 
   clearAllDisconnectTimeouts(): void {
-    for (const timeout of this.disconnectedPlayers.values()) {
+    for (const timeout of this.disconnectTimeoutsBySeatId.values()) {
       clearTimeout(timeout);
     }
-    this.disconnectedPlayers.clear();
+    this.disconnectTimeoutsBySeatId.clear();
   }
 }

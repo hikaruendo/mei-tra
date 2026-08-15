@@ -1,21 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { BlowState, DomainPlayer, GameState } from '../types/game.types';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import type { VacantSeats } from '../types/vacant-seat.types';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
-} from '../types/current-turn';
+} from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class SeatRestorationService {
   async restorePlayerFromVacantSeat(
     roomId: string,
-    playerId: string,
+    targetSeatId: SeatId,
     room: Room,
     gameState: GameStateService,
     vacantSeats: VacantSeats,
@@ -26,7 +27,7 @@ export class SeatRestorationService {
     }
 
     const vacancyEntry = Object.entries(vacantSeatsForRoom).find(
-      ([, data]) => data.roomPlayer.playerId === playerId,
+      ([, data]) => data.roomPlayer.seatId === targetSeatId,
     );
     if (!vacancyEntry) {
       return false;
@@ -34,40 +35,37 @@ export class SeatRestorationService {
 
     const [vacantSeatId, seatData] = vacancyEntry;
     const currentSeatPlayer = room.players.find(
-      (player) => player.playerId === vacantSeatId,
+      (player) => player.seatId === vacantSeatId,
     );
     if (!currentSeatPlayer || !currentSeatPlayer.isCOM) {
       return false;
     }
 
     const currentSeatIndex = room.players.findIndex(
-      (player) => player.playerId === currentSeatPlayer.playerId,
+      (player) => player.seatId === currentSeatPlayer.seatId,
     );
     if (currentSeatIndex === -1) {
       return false;
     }
 
-    const comPlayerId = currentSeatPlayer.playerId;
-    const seatId = resolveSeatId(currentSeatPlayer);
+    const comSeatId = currentSeatPlayer.seatId;
+    const seatId = currentSeatPlayer.seatId;
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
       socketId: '',
-      seatId,
-      playerId: seatId,
+      seatId: seatId,
       joinedAt: new Date(seatData.roomPlayer.joinedAt),
     };
 
     const state = gameState.getState();
     const gsIndex = state.players.findIndex(
-      (player) =>
-        player.playerId === comPlayerId || player.playerId === playerId,
+      (player) => player.seatId === comSeatId || player.seatId === targetSeatId,
     );
 
     const restoredGamePlayerBase: DomainPlayer = seatData.gamePlayer
       ? {
           ...toDomainPlayer(seatData.gamePlayer),
           seatId,
-          playerId: seatId,
           hand: [
             ...(state.players[gsIndex]?.hand.length
               ? state.players[gsIndex].hand
@@ -80,11 +78,11 @@ export class SeatRestorationService {
         });
 
     upsertRuntimeSeat(room, state, restoredRoomPlayer, {
-      replaceSeatId: comPlayerId,
+      replaceSeatId: comSeatId,
       gameplaySource: restoredGamePlayerBase,
     });
 
-    gameState.registerPlayerToken(seatId, seatId);
+    gameState.registerSeatToken(seatId, seatId);
     gameState.clearDisconnectTimeout(seatId);
     delete vacantSeatsForRoom[asSeatId(vacantSeatId)];
     if (Object.keys(vacantSeatsForRoom).length === 0) {
@@ -119,7 +117,7 @@ export class SeatRestorationService {
       const candidateIndex = (currentIndex + offset) % state.players.length;
       const candidatePlayer = state.players[candidateIndex];
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
-        setCurrentSeat(state, candidatePlayer.playerId);
+        setCurrentSeat(state, candidatePlayer.seatId);
         return true;
       }
     }
@@ -131,10 +129,10 @@ export class SeatRestorationService {
     return (
       player.isPasser ||
       blowState.declarations.some(
-        (declaration) => declaration.seatId === player.playerId,
+        (declaration) => declaration.seatId === player.seatId,
       ) ||
       (blowState.actionHistory ?? []).some(
-        (action) => action.seatId === player.playerId,
+        (action) => action.seatId === player.seatId,
       )
     );
   }

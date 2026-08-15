@@ -8,9 +8,9 @@ import { IGameEventLogService } from '../services/interfaces/game-event-log.serv
 import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { setCurrentSeat } from '../domain/current-turn';
 import type { RevealAgariPayload } from '@contracts/game';
-import { toBlowDeclarationContract } from '../types/game-contract-adapters';
+import { toBlowDeclarationContract } from '../adapters/game-contract-adapters';
 
 export interface TransitionResult {
   events: GatewayEvent[];
@@ -40,7 +40,7 @@ export async function transitionToPlayPhase({
     state.blowState.declarations,
   );
   const winningPlayer = state.players.find(
-    (p) => p.playerId === highestDeclaration.seatId,
+    (p) => p.seatId === highestDeclaration.seatId,
   );
 
   if (!winningPlayer) {
@@ -56,7 +56,7 @@ export async function transitionToPlayPhase({
   const nextState = roomGameState.getState();
 
   nextState.blowState.currentTrump = highestDeclaration.trumpType;
-  setCurrentSeat(nextState, winningPlayer.playerId);
+  setCurrentSeat(nextState, winningPlayer.seatId);
 
   const events: GatewayEvent[] = buildPlayerSyncEvents(
     roomGameState,
@@ -79,7 +79,7 @@ export async function transitionToPlayPhase({
       scope: 'room',
       roomId,
       event: 'update-turn',
-      payload: asSeatId(winningPlayer.playerId),
+      payload: asSeatId(winningPlayer.seatId),
       delayMs: 3000,
     },
     {
@@ -91,19 +91,19 @@ export async function transitionToPlayPhase({
     },
   ];
 
-  const winningPlayerSession = roomGameState.findSessionUserByPlayerId(
-    winningPlayer.playerId,
+  const winningPlayerSession = roomGameState.findSessionUserBySeatId(
+    winningPlayer.seatId,
   );
   const winningPlayerSocketId =
     winningPlayerSession?.socketId ??
-    room?.players.find((player) => player.playerId === winningPlayer.playerId)
+    room?.players.find((player) => player.seatId === winningPlayer.seatId)
       ?.socketId;
 
   if (state.agari && winningPlayerSocketId) {
     const revealAgariPayload: RevealAgariPayload = {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
-      seatId: asSeatId(winningPlayer.playerId),
+      seatId: asSeatId(winningPlayer.seatId),
     };
     delayedEvents.unshift({
       scope: 'socket',
@@ -117,12 +117,12 @@ export async function transitionToPlayPhase({
   await gameEventLogService?.log({
     roomId,
     actionType: 'play_phase_started',
-    actorSeatId: asSeatId(winningPlayer.playerId),
+    actorSeatId: asSeatId(winningPlayer.seatId),
     state: nextState,
     actionData: {
       currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
       currentTrump: nextState.blowState.currentTrump,
-      winnerSeatId: winningPlayer.playerId,
+      winnerSeatId: winningPlayer.seatId,
     },
   });
 

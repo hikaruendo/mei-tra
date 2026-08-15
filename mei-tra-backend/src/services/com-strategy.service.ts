@@ -16,6 +16,7 @@ import {
   ComBlowAction,
   IComStrategyService,
 } from './interfaces/com-strategy-service.interface';
+import type { SeatId } from '../types/identity.types';
 
 type TrumpEvaluation = {
   trumpType: TrumpType;
@@ -80,7 +81,7 @@ export class ComStrategyService implements IComStrategyService {
     // The bid already belongs to the stable seat, so the COM sees it directly.
     // Returning 'skip' lets the caller advance the turn instead of retrying an
     // action the rules forbid.
-    if (hasPlayerDeclaredInBlow(state.blowState, comPlayer.playerId)) {
+    if (hasPlayerDeclaredInBlow(state.blowState, comPlayer.seatId)) {
       return { type: 'skip' };
     }
 
@@ -96,7 +97,7 @@ export class ComStrategyService implements IComStrategyService {
     // otherwise make the COM defer to itself and pass.
     const currentHighestIsPartner =
       currentHighestPlayer != null &&
-      currentHighestPlayer.playerId !== comPlayer.playerId &&
+      currentHighestPlayer.seatId !== comPlayer.seatId &&
       currentHighestPlayer.team === comPlayer.team;
     const evaluations = TRUMP_TYPES.map((trumpType) =>
       this.evaluateHandForTrump(comPlayer.hand, trumpType),
@@ -370,7 +371,7 @@ export class ComStrategyService implements IComStrategyService {
   ): string | null {
     if (
       declaration == null ||
-      declaration.seatId === comPlayer.playerId ||
+      declaration.seatId === comPlayer.seatId ||
       this.findPlayer(state, declaration.seatId)?.team !== comPlayer.team
     ) {
       return null;
@@ -782,8 +783,8 @@ export class ComStrategyService implements IComStrategyService {
     );
   }
 
-  private findPlayer(state: GameState, playerId: string): DomainPlayer | null {
-    return state.players.find((player) => player.playerId === playerId) ?? null;
+  private findPlayer(state: GameState, seatId: SeatId): DomainPlayer | null {
+    return state.players.find((player) => player.seatId === seatId) ?? null;
   }
 
   private countSuits(

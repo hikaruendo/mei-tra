@@ -19,7 +19,12 @@ describe('Rule service characterization', () => {
   });
 
   it('orders declarations by pairs first and trump strength second', () => {
-    const currentHighest = blowService.createDeclaration('p1', 0, 'club', 7);
+    const currentHighest = blowService.createDeclaration(
+      asSeatId('p1'),
+      0,
+      'club',
+      7,
+    );
     expect(currentHighest.team).toBe(0);
     expect(
       blowService.isValidDeclaration(
@@ -37,10 +42,10 @@ describe('Rule service characterization', () => {
 
   it('determines field winner using dealer-relative play order', () => {
     const players = [
-      { playerId: 'p1', name: 'A', team: 0 },
-      { playerId: 'p2', name: 'B', team: 1 },
-      { playerId: 'p3', name: 'C', team: 0 },
-      { playerId: 'p4', name: 'D', team: 1 },
+      { seatId: asSeatId('p1'), name: 'A', team: 0 },
+      { seatId: asSeatId('p2'), name: 'B', team: 1 },
+      { seatId: asSeatId('p3'), name: 'C', team: 0 },
+      { seatId: asSeatId('p4'), name: 'D', team: 1 },
     ].map(
       (player) =>
         ({
@@ -53,14 +58,14 @@ describe('Rule service characterization', () => {
     );
     const field: Field = {
       cards: ['10♠', 'A♠', 'J♣', 'K♠'],
-      playedBy: ['p1', 'p2', 'p3', 'p4'],
+      playedBySeatIds: ['p1', 'p2', 'p3', 'p4'].map(asSeatId),
       baseCard: '10♠',
       dealerSeatId: asSeatId('p1'),
       isComplete: false,
     };
 
     expect(
-      playService.determineFieldWinner(field, players, 'club')?.playerId,
+      playService.determineFieldWinner(field, players, 'club')?.seatId,
     ).toBe('p3');
   });
 
@@ -78,7 +83,7 @@ describe('Rule service characterization', () => {
 
   it('records and reports chombo violations across teams only', () => {
     const player = {
-      playerId: 'p1',
+      seatId: asSeatId('p1'),
       name: 'A',
       team: 0,
       hand: ['J♠', 'J♣', 'J♥', 'J♦'],
@@ -87,16 +92,32 @@ describe('Rule service characterization', () => {
       hasRequiredBroken: false,
     } as DomainPlayer;
 
-    const violation = chomboService.checkViolations('p1', 'check-four-jack', {
-      player,
-      hasBroken: false,
-    });
+    const violation = chomboService.checkViolations(
+      asSeatId('p1'),
+      'check-four-jack',
+      {
+        player,
+        hasBroken: false,
+      },
+    );
     expect(violation?.type).toBe('four-jack');
     expect(
-      chomboService.reportViolation('ally', 'p1', 'four-jack', 0, 0),
+      chomboService.reportViolation(
+        asSeatId('ally'),
+        asSeatId('p1'),
+        'four-jack',
+        0,
+        0,
+      ),
     ).toBeNull();
     expect(
-      chomboService.reportViolation('enemy', 'p1', 'four-jack', 1, 0),
-    ).toEqual(expect.objectContaining({ reportedBy: 'enemy' }));
+      chomboService.reportViolation(
+        asSeatId('enemy'),
+        asSeatId('p1'),
+        'four-jack',
+        1,
+        0,
+      ),
+    ).toEqual(expect.objectContaining({ reportedBySeatId: 'enemy' }));
   });
 });

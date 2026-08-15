@@ -33,7 +33,7 @@ describe('RoomService active membership lifecycle', () => {
   const membership = {
     userId: 'user-1',
     roomId: 'room-1',
-    playerId: 'user-1',
+    seatId: 'user-1',
     status: 'active' as const,
     membershipVersion: 2,
     transitionId: 'transition-1',
@@ -47,7 +47,7 @@ describe('RoomService active membership lifecycle', () => {
     get: jest.Mock;
     claim: jest.Mock;
     release: jest.Mock;
-    releaseByPlayer: jest.Mock;
+    releaseBySeat: jest.Mock;
     releaseRoom: jest.Mock;
   };
   let roomJoinService: { joinRoom: jest.Mock };
@@ -63,7 +63,7 @@ describe('RoomService active membership lifecycle', () => {
       get: jest.fn().mockResolvedValue(null),
       claim: jest.fn(),
       release: jest.fn().mockResolvedValue('released'),
-      releaseByPlayer: jest.fn().mockResolvedValue(true),
+      releaseBySeat: jest.fn().mockResolvedValue(true),
       releaseRoom: jest.fn().mockResolvedValue(0),
     };
     roomJoinService = { joinRoom: jest.fn() };
@@ -119,7 +119,7 @@ describe('RoomService active membership lifecycle', () => {
       players: [
         {
           socketId: 'socket-old',
-          playerId: 'seat-1',
+          seatId: asSeatId('seat-1'),
           userId: 'user-1',
           isAuthenticated: true,
           name: 'Player 1',
@@ -147,7 +147,7 @@ describe('RoomService active membership lifecycle', () => {
     expect(membershipService.claim).not.toHaveBeenCalled();
     const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
     expect(joinRequest).toMatchObject({
-      user: { seatId: 'seat-1' },
+      user: { seatId: asSeatId('seat-1') },
     });
     expect(membershipService.get).toHaveBeenCalledWith('user-1');
   });
@@ -168,8 +168,8 @@ describe('RoomService active membership lifecycle', () => {
     jest.spyOn(service, 'getRoom').mockResolvedValue({
       ...room,
       players: [
-        { ...duplicatePlayer, playerId: 'seat-1' },
-        { ...duplicatePlayer, playerId: 'seat-2' },
+        { ...duplicatePlayer, seatId: asSeatId('seat-1') },
+        { ...duplicatePlayer, seatId: asSeatId('seat-2') },
       ],
     });
 
@@ -199,7 +199,7 @@ describe('RoomService active membership lifecycle', () => {
     ).resolves.toBe(false);
 
     expect(membershipService.release).not.toHaveBeenCalled();
-    expect(membershipService.releaseByPlayer).not.toHaveBeenCalled();
+    expect(membershipService.releaseBySeat).not.toHaveBeenCalled();
   });
 
   it('preserves an existing same-room membership when reconnect joining fails', async () => {

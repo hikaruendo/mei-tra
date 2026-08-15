@@ -13,7 +13,7 @@ const createGameStateStub = () => {
   const makeState = () => ({
     players: [
       {
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         name: 'Human',
         team: 0 as const,
         hand: ['A♠'],
@@ -22,12 +22,11 @@ const createGameStateStub = () => {
         hasRequiredBroken: false,
       },
     ],
-    teamAssignments: { [HUMAN_ID]: 0 } as Record<string, number>,
     currentSeatId: asSeatId(HUMAN_ID),
     playState: {
       currentField: {
         cards: ['A♠'],
-        playedBy: [HUMAN_ID],
+        playedBySeatIds: [asSeatId(HUMAN_ID)],
         baseCard: 'A♠',
         dealerSeatId: asSeatId(HUMAN_ID),
         isComplete: false,
@@ -42,7 +41,7 @@ const createGameStateStub = () => {
 
   const gameState = {
     getState: () => liveState,
-    registerPlayerToken: jest.fn(),
+    registerSeatToken: jest.fn(),
     persistRoster: jest.fn().mockImplementation(() => {
       const persistedPlayers = liveState.players;
       liveState = makeState();
@@ -57,10 +56,10 @@ const createGameStateStub = () => {
 
 const createRoom = (): Room =>
   ({
-    hostId: HUMAN_ID,
+    hostSeatId: asSeatId(HUMAN_ID),
     players: [
       {
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         name: 'Human',
         team: 0,
         hand: ['A♠'],
@@ -85,7 +84,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
 
     const converted = await service.convertPlayerToCOM(
       'room-1',
-      HUMAN_ID,
+      asSeatId(HUMAN_ID),
       createRoom(),
       gameState,
       vacantSeats,
@@ -94,16 +93,18 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(converted).toBe(true);
 
     const state = gameState.getState();
-    const comId = state.players[0].playerId;
+    const comId = state.players[0].seatId;
     expect(comId).toBe(HUMAN_ID);
 
-    expect(state.playState!.currentField!.playedBy).toEqual([comId]);
+    expect(state.playState!.currentField!.playedBySeatIds).toEqual([comId]);
     expect(state.playState!.currentField!.dealerSeatId).toBe(comId);
-    expect(state.teamAssignments[comId]).toBe(0);
+    expect(state.players.find((player) => player.seatId === comId)?.team).toBe(
+      0,
+    );
     expect(state.currentSeatId).toBe(comId);
     expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);
-    expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.playerId).toBe(
-      HUMAN_ID,
+    expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.seatId).toBe(
+      asSeatId(HUMAN_ID),
     );
   });
 
@@ -119,7 +120,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
 
     const converted = await service.convertPlayerToCOM(
       'room-1',
-      HUMAN_ID,
+      asSeatId(HUMAN_ID),
       room,
       gameState,
       {},
@@ -134,7 +135,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(converted).toBe(true);
     expect(room.players[0]).toEqual(
       expect.objectContaining({
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         userId: 'user-1',
         participantKey: 'user-1',
         isAuthenticated: true,

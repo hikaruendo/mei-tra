@@ -239,17 +239,17 @@ export function GameHistoryDock({
 
   const resolvePlayerName = useCallback(
     (
-      playerId: string | null | undefined,
+      seatId: string | null | undefined,
       fallbackName?: string | null,
     ): string | null => {
-      if (!playerId) {
+      if (!seatId) {
         return null;
       }
 
       const currentName = players
-        .find((player) => player.seatId === playerId)
+        .find((player) => player.seatId === seatId)
         ?.name.trim();
-      const summaryName = resolvedSummary?.playerNames[playerId]?.trim();
+      const summaryName = resolvedSummary?.playerNames[seatId]?.trim();
       const storedName = fallbackName?.trim();
 
       return currentName || summaryName || storedName || null;
@@ -258,14 +258,14 @@ export function GameHistoryDock({
   );
 
   const formatPlayer = (
-    playerId: string | null | undefined,
+    seatId: string | null | undefined,
     fallbackName?: string | null,
   ) => {
-    if (!playerId) {
+    if (!seatId) {
       return null;
     }
 
-    return resolvePlayerName(playerId, fallbackName) ?? t('participant');
+    return resolvePlayerName(seatId, fallbackName) ?? t('participant');
   };
 
   const formatTrump = (trump: unknown) => {

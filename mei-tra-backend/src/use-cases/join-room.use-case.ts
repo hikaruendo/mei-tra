@@ -11,7 +11,7 @@ import {
 import { RoomStatus } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import { asSeatId } from '../types/identity.types';
 
 @Injectable()
@@ -80,11 +80,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       }
       const resolvedUser: SessionUser = {
         ...normalizedUser,
-        seatId: asSeatId(joinedPlayer.playerId),
+        seatId: asSeatId(joinedPlayer.seatId),
       };
       const data: JoinRoomSuccess = {
         room,
-        isHost: room.hostSeatId === joinedPlayer.playerId,
+        isHost: room.hostSeatId === joinedPlayer.seatId,
         roomStatus: room.status,
         roomsList: await this.roomService.listRooms(),
         resumeGame: await this.buildResumePayloadIfNeeded(room.id, room),
@@ -170,10 +170,11 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     return {
       roomId: currentRoomId,
-      playerId:
-        currentRoomPlayer?.playerId ??
-        normalizedUser.seatId ??
-        normalizedUser.userId!,
+      seatId: asSeatId(
+        currentRoomPlayer?.seatId ??
+          normalizedUser.seatId ??
+          normalizedUser.userId!,
+      ),
     };
   }
 
@@ -184,9 +185,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
 
-    // room.status の fallback（WAITING→PLAYING 状態遷移バグがある既存ルームも考慮）
-    const isPlaying =
-      room.status === RoomStatus.PLAYING || state.gamePhase !== null;
+    const isPlaying = room.status === RoomStatus.PLAYING;
     if (!isPlaying) {
       return undefined;
     }

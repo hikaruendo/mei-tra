@@ -6,7 +6,7 @@ import { asSeatId } from '../../types/identity.types';
 
 const createRoomPlayer = (overrides: Partial<RoomPlayer> = {}): RoomPlayer => ({
   socketId: 'socket-1',
-  playerId: 'player-1',
+  seatId: asSeatId('player-1'),
   userId: 'user-1',
   name: 'Player 1',
   team: 0,
@@ -47,7 +47,6 @@ interface TestGameState {
   getState: jest.Mock<
     {
       players: DomainPlayer[];
-      teamAssignments: Record<string, Team>;
       gamePhase: null;
     },
     []
@@ -63,11 +62,9 @@ interface TestJoinRoomParams {
 const createGameState = (): TestGameState => {
   const state: {
     players: DomainPlayer[];
-    teamAssignments: Record<string, Team>;
     gamePhase: null;
   } = {
     players: [],
-    teamAssignments: {},
     gamePhase: null,
   };
 
@@ -103,7 +100,7 @@ describe('RoomService join rollback', () => {
           mutableRoom.players.push(
             createRoomPlayer({
               socketId: 'ghost-socket',
-              playerId: 'ghost-player',
+              seatId: asSeatId('ghost-player'),
               userId: 'ghost-user',
               name: 'Ghost',
               isHost: false,
@@ -111,7 +108,7 @@ describe('RoomService join rollback', () => {
             }),
           );
           gameState.getState().players.push({
-            playerId: 'ghost-player',
+            seatId: asSeatId('ghost-player'),
             name: 'Ghost',
             hand: [],
             team: 1,
@@ -139,13 +136,13 @@ describe('RoomService join rollback', () => {
       roomJoinService as never,
     );
     const originalVacantSeat = createRoomPlayer({
-      playerId: 'vacant-player',
+      seatId: asSeatId('vacant-player'),
       userId: 'vacant-user',
       socketId: '',
       name: 'Vacant',
       isHost: false,
     });
-    const vacantSeatId = asSeatId(originalVacantSeat.playerId);
+    const vacantSeatId = asSeatId(originalVacantSeat.seatId);
     (
       service as unknown as { vacantSeats: Record<string, unknown> }
     ).vacantSeats['room-1'] = {
@@ -172,7 +169,7 @@ describe('RoomService join rollback', () => {
     expect(
       internals.vacantSeats['room-1'][vacantSeatId].roomPlayer,
     ).toMatchObject({
-      playerId: 'vacant-player',
+      seatId: asSeatId('vacant-player'),
       userId: 'vacant-user',
     });
     expect(internals.vacantSeats['room-1'][vacantSeatId].roomPlayer).not.toBe(

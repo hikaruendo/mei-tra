@@ -55,7 +55,7 @@ describe('RoomMembershipService', () => {
     expect(rpc).toHaveBeenCalledWith('claim_room_membership', {
       p_user_id: 'user-1',
       p_room_id: 'room-1',
-      p_player_id: seatId,
+      p_seat_id: seatId,
       p_transition_id: 'transition-moving',
     });
     expect(result.result).toBe('claimed');

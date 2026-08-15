@@ -4,7 +4,7 @@ import {
   toPersistedPendingBrokenHandReveal,
   toPersistedPlayState,
 } from './game-state-persistence';
-import { asSeatId } from './identity.types';
+import { asSeatId } from '../types/identity.types';
 
 const firstSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
 const secondSeatId = asSeatId('22222222-2222-4222-8222-222222222222');
@@ -45,11 +45,10 @@ describe('game-state persistence identity', () => {
     expect(JSON.stringify(persisted)).not.toContain('lastPasser"');
   });
 
-  it('persists play and pending reveal references without aliases', () => {
+  it('persists play and pending reveal seat references', () => {
     const persistedPlayState = toPersistedPlayState({
       currentField: {
         cards: ['H7'],
-        playedBy: [firstSeatId],
         playedBySeatIds: [firstSeatId],
         baseCard: 'H7',
         dealerSeatId: asSeatId(secondSeatId),
