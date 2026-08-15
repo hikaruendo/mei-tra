@@ -2,10 +2,11 @@ import {
   DomainPlayer,
   PlayerConnectionMetadata,
   PlayerGameplayState,
-} from './game.types';
-import { RoomPlayer } from './room.types';
-import { SessionUser } from './session.types';
-import { asSeatId, resolveSeatId } from './identity.types';
+} from '../types/game.types';
+import { RoomPlayer } from '../types/room.types';
+import { SessionUser } from '../types/session.types';
+import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
 import type { PlayerContract } from '@contracts/game';
 
 export type PersistedGamePlayer = DomainPlayer & {
@@ -20,7 +21,7 @@ export interface PersistedPlayerGameplayState {
 }
 
 export type PersistedPlayerStates = Record<
-  string,
+  SeatId,
   PersistedPlayerGameplayState
 >;
 
@@ -29,14 +30,13 @@ export type TransportPlayer = PlayerContract;
 export function toDomainPlayer(
   player: Pick<
     RoomPlayer | DomainPlayer,
-    'seatId' | 'playerId' | 'name' | 'team' | 'isCOM'
+    'seatId' | 'name' | 'team' | 'isCOM'
   > &
     Partial<PlayerGameplayState>,
 ): DomainPlayer {
-  const seatId = resolveSeatId(player);
+  const seatId = player.seatId;
   return {
     seatId,
-    playerId: seatId,
     name: player.name,
     hand: [...(player.hand ?? [])],
     team: player.team,
@@ -53,7 +53,7 @@ export function withConnectionMetadata(
 ): TransportPlayer {
   const domainPlayer = toDomainPlayer(player);
   return {
-    seatId: resolveSeatId(domainPlayer),
+    seatId: domainPlayer.seatId,
     name: domainPlayer.name,
     hand: [...domainPlayer.hand],
     team: domainPlayer.team,
@@ -71,24 +71,24 @@ export function toTransportPlayers(
   players: DomainPlayer[],
   options?: {
     getConnectionState?: (
-      playerId: string,
+      seatId: SeatId,
     ) => Partial<PlayerConnectionMetadata> | null | undefined;
     roomPlayers?: RoomPlayer[];
     mapHand?: (player: DomainPlayer) => string[];
   },
 ): TransportPlayer[] {
-  const roomPlayersById = new Map(
+  const roomPlayersBySeatId = new Map(
     (options?.roomPlayers ?? []).map((roomPlayer) => [
-      roomPlayer.playerId,
+      roomPlayer.seatId,
       roomPlayer,
     ]),
   );
 
   return players.map((player) => {
-    const roomPlayer = roomPlayersById.get(player.playerId);
+    const roomPlayer = roomPlayersBySeatId.get(player.seatId);
     const transportPlayer = withConnectionMetadata(
       player,
-      options?.getConnectionState?.(player.playerId) ?? roomPlayer,
+      options?.getConnectionState?.(player.seatId) ?? roomPlayer,
     );
 
     const visiblePlayer = roomPlayer?.isCOM
@@ -123,7 +123,7 @@ export function toPersistedPlayerStates(
 ): PersistedPlayerStates {
   return Object.fromEntries(
     players.map((player) => [
-      player.playerId,
+      player.seatId,
       {
         hand: [...player.hand],
         isPasser: player.isPasser,
@@ -140,7 +140,7 @@ export function toRuntimePlayer(
 ): DomainPlayer | null {
   if (
     !player ||
-    typeof player.playerId !== 'string' ||
+    typeof player.seatId !== 'string' ||
     typeof player.name !== 'string'
   ) {
     return null;
@@ -151,10 +151,8 @@ export function toRuntimePlayer(
     return null;
   }
 
-  const seatId = player.seatId ?? asSeatId(player.playerId);
   return {
-    seatId,
-    playerId: seatId,
+    seatId: asSeatId(player.seatId),
     name: player.name,
     hand: Array.isArray(player.hand) ? [...player.hand] : [],
     team,
@@ -167,24 +165,17 @@ export function toRuntimePlayer(
 
 export function toRoomPlayer(params: {
   session: SessionUser;
-  gameplay: PlayerGameplayState &
-    Pick<DomainPlayer, 'name' | 'playerId' | 'seatId'>;
+  gameplay: PlayerGameplayState & Pick<DomainPlayer, 'name' | 'seatId'>;
   participantKey?: string;
   isReady: boolean;
   isHost: boolean;
   joinedAt: Date;
 }): RoomPlayer {
-  const seatId =
-    params.session.seatId ??
-    (params.gameplay.seatId
-      ? params.gameplay.seatId
-      : asSeatId(params.gameplay.playerId));
+  const seatId = params.session.seatId ?? params.gameplay.seatId;
   return {
     socketId: params.session.socketId,
     seatId,
-    playerId: seatId,
-    participantKey:
-      params.participantKey ?? params.session.userId ?? params.session.playerId,
+    participantKey: params.participantKey ?? params.session.userId ?? seatId,
     name: params.gameplay.name,
     userId: params.session.userId,
     isAuthenticated: params.session.isAuthenticated,

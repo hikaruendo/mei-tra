@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { ShuffleTeamsUseCase } from '../shuffle-teams.use-case';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IFillWithComUseCase } from '../interfaces/fill-with-com.use-case.interface';
@@ -7,21 +8,21 @@ describe('ShuffleTeamsUseCase', () => {
   it('fills empty seats and atomically persists shuffled seats and teams', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.WAITING,
       players: [
-        { playerId: 'host', team: 0 },
-        { playerId: 'guest', team: 1 },
+        { seatId: asSeatId('host'), team: 0 },
+        { seatId: asSeatId('guest'), team: 1 },
       ],
       updatedAt: new Date(),
     };
     const updatedRoom = {
       ...room,
       players: [
-        { playerId: 'host', team: 0 },
-        { playerId: 'guest', team: 1 },
-        { playerId: 'com-1', team: 0 },
-        { playerId: 'com-2', team: 1 },
+        { seatId: asSeatId('host'), team: 0 },
+        { seatId: asSeatId('guest'), team: 1 },
+        { seatId: asSeatId('com-1'), team: 0 },
+        { seatId: asSeatId('com-2'), team: 1 },
       ],
     };
     const roomGameState = {
@@ -42,7 +43,7 @@ describe('ShuffleTeamsUseCase', () => {
     const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'host',
+      actorSeatId: asSeatId('host'),
     });
     randomSpy.mockRestore();
 
@@ -50,7 +51,7 @@ describe('ShuffleTeamsUseCase', () => {
     expect(fillWithComUseCase.execute).toHaveBeenCalled();
     expect(roomGameState.reconcileWaitingRoomPlayers).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ playerId: 'host', team: 1, seatIndex: 3 }),
+        expect.objectContaining({ seatId: 'host', team: 1, seatIndex: 3 }),
       ]),
     );
     const [shuffledPlayers] = roomGameState.reconcileWaitingRoomPlayers.mock
@@ -63,9 +64,9 @@ describe('ShuffleTeamsUseCase', () => {
   it('returns failure when empty seats cannot be filled', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.WAITING,
-      players: [{ playerId: 'host', team: 0 }],
+      players: [{ seatId: asSeatId('host'), team: 0 }],
       updatedAt: new Date(),
     };
     const roomService = {
@@ -81,7 +82,7 @@ describe('ShuffleTeamsUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'host',
+      actorSeatId: asSeatId('host'),
     });
 
     expect(result).toEqual({ success: false, error: 'fill failed' });
@@ -91,13 +92,13 @@ describe('ShuffleTeamsUseCase', () => {
   it('rejects shuffling after the game has started', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.PLAYING,
       players: [
-        { playerId: 'host', team: 0 },
-        { playerId: 'player-2', team: 1 },
-        { playerId: 'player-3', team: 0 },
-        { playerId: 'player-4', team: 1 },
+        { seatId: asSeatId('host'), team: 0 },
+        { seatId: asSeatId('player-2'), team: 1 },
+        { seatId: asSeatId('player-3'), team: 0 },
+        { seatId: asSeatId('player-4'), team: 1 },
       ],
       updatedAt: new Date(),
     };
@@ -112,7 +113,7 @@ describe('ShuffleTeamsUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'host',
+      actorSeatId: asSeatId('host'),
     });
 
     expect(result).toEqual({
@@ -126,13 +127,13 @@ describe('ShuffleTeamsUseCase', () => {
   it('returns failure when the atomic roster update fails', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.WAITING,
       players: [
-        { playerId: 'host', team: 0 },
-        { playerId: 'player-2', team: 1 },
-        { playerId: 'player-3', team: 0 },
-        { playerId: 'player-4', team: 1 },
+        { seatId: asSeatId('host'), team: 0 },
+        { seatId: asSeatId('player-2'), team: 1 },
+        { seatId: asSeatId('player-3'), team: 0 },
+        { seatId: asSeatId('player-4'), team: 1 },
       ],
       updatedAt: new Date(),
     };
@@ -150,7 +151,7 @@ describe('ShuffleTeamsUseCase', () => {
 
     const result = await useCase.execute({
       roomId: 'room-1',
-      playerId: 'host',
+      actorSeatId: asSeatId('host'),
     });
 
     expect(result).toEqual({

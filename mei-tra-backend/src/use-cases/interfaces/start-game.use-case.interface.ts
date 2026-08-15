@@ -3,7 +3,7 @@ import { DomainPlayer } from '../../types/game.types';
 import type { SeatId } from '../../types/identity.types';
 
 export interface StartGameRequest {
-  playerId: string;
+  actorSeatId: SeatId;
   roomId: string;
 }
 

@@ -1,40 +1,37 @@
 import type {
+  BlowStateContract,
+  CompletedFieldContract,
+  FieldContract,
   PlayerContract,
   TeamNames,
   TransportGamePhase,
   TransportTeamScores,
 } from '@meitra/contracts/game';
 import type { SeatId } from '@meitra/contracts/ids';
-import type {
-  CanonicalBlowState,
-  CanonicalCompletedFieldContract,
-  CanonicalFieldContract,
-  CanonicalPlayerContract,
-  CanonicalRoomContract,
-} from '@meitra/game-client/identity';
+import type { RoomContract } from '@meitra/contracts/room';
 
-export type MobilePlayer = CanonicalPlayerContract<PlayerContract>;
-export type MobileRoom = CanonicalRoomContract;
+export type MobilePlayer = PlayerContract;
+export type MobileRoom = RoomContract;
 
 export interface MobileGameSnapshot {
   roomId: string;
   players: MobilePlayer[];
   gamePhase: TransportGamePhase;
-  currentField: CanonicalFieldContract | null;
+  currentField: FieldContract | null;
   currentTurnSeatId: SeatId | null;
-  blowState: CanonicalBlowState;
+  blowState: BlowStateContract;
   teamScores: TransportTeamScores;
   youSeatId: SeatId | null;
   isSpectator: boolean;
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
-  fields: CanonicalCompletedFieldContract[];
+  fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;
   paused: boolean;
-  disconnectedPlayerIds: string[];
-  idlePlayerIds: string[];
+  disconnectedSeatIds: string[];
+  idleSeatIds: string[];
   teamNames?: TeamNames;
 }
 

@@ -1,9 +1,10 @@
 import { Room } from '../../types/room.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface ChangePlayerTeamRequest {
   roomId: string;
-  playerId: string;
-  teamChanges: { [playerId: string]: number };
+  actorSeatId: SeatId;
+  teamChanges: { [seatId: string]: number };
 }
 
 export interface ChangePlayerTeamResponse {

@@ -153,7 +153,7 @@ export class ConnectionGatewayEffectsService {
       }
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       return (
-        roomGameState.getPlayerConnectionState(player.playerId)?.socketId ||
+        roomGameState.getPlayerConnectionState(player.seatId)?.socketId ||
         player.socketId ||
         null
       );
