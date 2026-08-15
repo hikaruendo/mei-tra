@@ -1,6 +1,5 @@
 import type { PlayerContract } from '@contracts/game';
 import type { SeatId } from '@contracts/ids';
-import { normalizePlayerIdentity } from '@meitra/game-client/identity';
 
 export type Team = 0 | 1;
 
@@ -13,8 +12,6 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 export interface ConnectionUser {
   socketId: string; // Connection/session identifier only
   seatId: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
   name: string;
   userId?: string; // Canonical authenticated account ID
   isAuthenticated?: boolean;
@@ -24,30 +21,24 @@ export interface ConnectionUser {
 export interface CompletedField {
   cards: string[];
   winnerSeatId: SeatId;
-  winnerId: string;
   winnerTeam: Team;
   dealerSeatId: SeatId;
-  dealerId: string;
 }
 
 export interface Field {
   cards: string[];
-  playedBy: string[];
   playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
   dealerSeatId: SeatId;
-  dealerId: string;
   isComplete: boolean;
 }
 
 // Update socket event types
 export interface FieldCompleteEvent {
   winnerSeatId: SeatId;
-  winnerId: string;
   field: CompletedField;
   nextSeatId: SeatId;
-  nextPlayerId: string;
 }
 
 export interface Player extends ConnectionUser {
@@ -62,7 +53,6 @@ export interface Player extends ConnectionUser {
 
 export interface BlowDeclaration {
   seatId: SeatId;
-  playerId: string;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -72,7 +62,6 @@ export interface BlowDeclaration {
 export interface BlowAction {
   type: 'declare' | 'pass';
   seatId: SeatId;
-  playerId: string;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -83,7 +72,7 @@ export interface BlowState {
   currentHighestDeclaration: BlowDeclaration | null;
   declarations: BlowDeclaration[];
   actionHistory: BlowAction[];
-  lastPasser: string | null;
+  lastPasserSeatId: SeatId | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
 }
@@ -120,25 +109,23 @@ export interface GameActions {
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
-  revealBrokenHand: (playerId: string) => void;
+  revealBrokenHand: (seatId: string) => void;
 } 
 
 export function fromPlayerContract(player: PlayerContract): Player {
-  const normalized = normalizePlayerIdentity(player);
   return {
-    socketId: normalized.socketId,
-    seatId: normalized.seatId,
-    playerId: normalized.playerId,
-    name: normalized.name,
-    userId: normalized.userId,
-    isAuthenticated: normalized.isAuthenticated,
-    team: normalized.team,
-    hand: [...normalized.hand],
-    isHost: normalized.isHost,
-    isPasser: normalized.isPasser,
-    isCOM: normalized.isCOM,
-    hasBroken: normalized.hasBroken ?? false,
-    hasRequiredBroken: normalized.hasRequiredBroken ?? false,
+    socketId: player.socketId,
+    seatId: player.seatId,
+    name: player.name,
+    userId: player.userId,
+    isAuthenticated: player.isAuthenticated,
+    team: player.team,
+    hand: [...player.hand],
+    isHost: player.isHost,
+    isPasser: player.isPasser,
+    isCOM: player.isCOM,
+    hasBroken: player.hasBroken ?? false,
+    hasRequiredBroken: player.hasRequiredBroken ?? false,
   };
 }
 

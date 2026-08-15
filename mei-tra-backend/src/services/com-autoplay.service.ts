@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IComAutoPlayService } from './interfaces/com-autoplay-service.interface';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class ComAutoPlayService implements IComAutoPlayService {
@@ -8,10 +9,10 @@ export class ComAutoPlayService implements IComAutoPlayService {
 
   scheduleComTurn(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     action: () => Promise<void>,
   ): void {
-    this.clearComTurn(roomId, playerId);
+    this.clearComTurn(roomId, seatId);
 
     const timeout = setTimeout(() => {
       void (async () => {
@@ -19,20 +20,20 @@ export class ComAutoPlayService implements IComAutoPlayService {
           await action();
         } catch (error) {
           this.logger.error(
-            `COM auto-play error in room ${roomId} for player ${playerId}:`,
+            `COM auto-play error in room ${roomId} for seat ${seatId}:`,
             error,
           );
         } finally {
-          this.comTurnTimeouts.delete(`${roomId}:${playerId}`);
+          this.comTurnTimeouts.delete(`${roomId}:${seatId}`);
         }
       })();
     }, 2000);
 
-    this.comTurnTimeouts.set(`${roomId}:${playerId}`, timeout);
+    this.comTurnTimeouts.set(`${roomId}:${seatId}`, timeout);
   }
 
-  clearComTurn(roomId: string, playerId: string): void {
-    const key = `${roomId}:${playerId}`;
+  clearComTurn(roomId: string, seatId: SeatId): void {
+    const key = `${roomId}:${seatId}`;
     const timeout = this.comTurnTimeouts.get(key);
     if (timeout) {
       clearTimeout(timeout);

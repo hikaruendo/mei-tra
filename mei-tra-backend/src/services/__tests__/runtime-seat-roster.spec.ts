@@ -8,7 +8,6 @@ import type { Room, RoomPlayer } from '../../types/room.types';
 
 const roomPlayer = (overrides: Partial<RoomPlayer> = {}): RoomPlayer => ({
   seatId: asSeatId('seat-1'),
-  playerId: 'seat-1',
   socketId: 'socket-1',
   name: 'Player 1',
   hand: [],
@@ -24,11 +23,10 @@ const roomPlayer = (overrides: Partial<RoomPlayer> = {}): RoomPlayer => ({
 
 const room = (players: RoomPlayer[]): Pick<Room, 'players'> => ({ players });
 
-const state = (): Pick<GameState, 'players' | 'teamAssignments'> => ({
+const state = (): Pick<GameState, 'players'> => ({
   players: [
     {
       seatId: asSeatId('seat-1'),
-      playerId: 'seat-1',
       name: 'Player 1',
       hand: ['A♠'],
       team: 0,
@@ -37,7 +35,6 @@ const state = (): Pick<GameState, 'players' | 'teamAssignments'> => ({
       hasRequiredBroken: false,
     },
   ],
-  teamAssignments: { 'seat-1': 0 },
 });
 
 describe('runtime seat roster', () => {
@@ -57,29 +54,27 @@ describe('runtime seat roster', () => {
     );
 
     expect(projection.roomPlayer).toMatchObject({
-      playerId: 'seat-1',
+      seatId: asSeatId('seat-1'),
       name: 'COM',
       isCOM: true,
     });
     expect(projection.roomPlayer.hand).toEqual([]);
     expect(projection.roomPlayer.isPasser).toBe(false);
     expect(runtimeState.players[0]).toMatchObject({
-      playerId: 'seat-1',
+      seatId: asSeatId('seat-1'),
       name: 'COM',
       isCOM: true,
       hand: ['A♠'],
       hasBroken: true,
     });
-    expect(runtimeState.teamAssignments).toEqual({ 'seat-1': 0 });
   });
 
-  it('rebuilds the game projection and team lookup from the room roster', () => {
+  it('rebuilds the game projection from the room roster', () => {
     const runtimeState = state();
     const players = [
       roomPlayer({ name: 'Reconnected' }),
       roomPlayer({
         seatId: asSeatId('seat-2'),
-        playerId: 'seat-2',
         name: 'COM',
         team: 1,
         isCOM: true,
@@ -90,20 +85,16 @@ describe('runtime seat roster', () => {
 
     expect(runtimeState.players).toEqual([
       expect.objectContaining({
-        playerId: 'seat-1',
+        seatId: asSeatId('seat-1'),
         name: 'Reconnected',
         hand: ['A♠'],
       }),
       expect.objectContaining({
-        playerId: 'seat-2',
+        seatId: asSeatId('seat-2'),
         name: 'COM',
         team: 1,
       }),
     ]);
-    expect(runtimeState.teamAssignments).toEqual({
-      'seat-1': 0,
-      'seat-2': 1,
-    });
   });
 
   it('rejects replacing a seat with a different identity', () => {
@@ -113,7 +104,6 @@ describe('runtime seat roster', () => {
         state(),
         roomPlayer({
           seatId: asSeatId('seat-2'),
-          playerId: 'seat-2',
         }),
         { replaceSeatId: 'seat-1' },
       ),

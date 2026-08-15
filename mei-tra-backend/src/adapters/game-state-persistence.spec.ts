@@ -4,7 +4,7 @@ import {
   toPersistedPendingBrokenHandReveal,
   toPersistedPlayState,
 } from './game-state-persistence';
-import { asSeatId } from './identity.types';
+import { asSeatId } from '../types/identity.types';
 
 const firstSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
 const secondSeatId = asSeatId('22222222-2222-4222-8222-222222222222');
@@ -15,7 +15,6 @@ describe('game-state persistence identity', () => {
       currentTrump: 'herz',
       currentHighestDeclaration: {
         seatId: firstSeatId,
-        playerId: firstSeatId,
         trumpType: 'herz',
         numberOfPairs: 6,
         timestamp: 1,
@@ -23,7 +22,6 @@ describe('game-state persistence identity', () => {
       declarations: [
         {
           seatId: firstSeatId,
-          playerId: firstSeatId,
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: 1,
@@ -33,7 +31,6 @@ describe('game-state persistence identity', () => {
         {
           type: 'pass',
           seatId: secondSeatId,
-          playerId: secondSeatId,
           timestamp: 2,
         },
       ],
@@ -48,15 +45,13 @@ describe('game-state persistence identity', () => {
     expect(JSON.stringify(persisted)).not.toContain('lastPasser"');
   });
 
-  it('persists play and pending reveal references without aliases', () => {
+  it('persists play and pending reveal seat references', () => {
     const persistedPlayState = toPersistedPlayState({
       currentField: {
         cards: ['H7'],
-        playedBy: [firstSeatId],
         playedBySeatIds: [firstSeatId],
         baseCard: 'H7',
-        dealerSeatId: secondSeatId,
-        dealerId: secondSeatId,
+        dealerSeatId: asSeatId(secondSeatId),
         isComplete: false,
       },
       negriCard: 'S9',
@@ -65,11 +60,9 @@ describe('game-state persistence identity', () => {
       fields: [
         {
           cards: ['H7'],
-          winnerSeatId: firstSeatId,
-          winnerId: firstSeatId,
+          winnerSeatId: asSeatId(firstSeatId),
           winnerTeam: 0,
-          dealerSeatId: secondSeatId,
-          dealerId: secondSeatId,
+          dealerSeatId: asSeatId(secondSeatId),
         },
       ],
       lastWinnerSeatId: firstSeatId,
@@ -78,7 +71,6 @@ describe('game-state persistence identity', () => {
     });
     const persistedReveal = toPersistedPendingBrokenHandReveal({
       seatId: firstSeatId,
-      playerId: firstSeatId,
       handSnapshot: ['H7'],
       startedAt: 3,
     });
@@ -91,8 +83,6 @@ describe('game-state persistence identity', () => {
     expect(persistedReveal?.seatId).toBe(firstSeatId);
     expect(serialized).not.toContain('playerId');
     expect(serialized).not.toContain('playedBy"');
-    expect(serialized).not.toContain('dealerId');
-    expect(serialized).not.toContain('winnerId');
   });
 
   it('finds canonical nested seat references outside the room roster', () => {
@@ -102,7 +92,7 @@ describe('game-state persistence identity', () => {
           playerStates: { [firstSeatId]: { hand: [] } },
           playState: {
             currentField: {
-              dealerSeatId: secondSeatId,
+              dealerSeatId: asSeatId(secondSeatId),
               playedBySeatIds: [firstSeatId, 'unknown-seat'],
             },
           },

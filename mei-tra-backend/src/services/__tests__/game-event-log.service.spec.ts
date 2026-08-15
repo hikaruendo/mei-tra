@@ -21,12 +21,10 @@ describe('GameEventLogService', () => {
         players: [
           {
             seatId: asSeatId('seat-1'),
-            playerId: 'player-1',
             name: 'Player One',
           },
         ],
         currentSeatId: asSeatId('seat-1'),
-        currentPlayerId: 'player-1',
         gamePhase: 'play',
         roundNumber: 2,
         teamScores: { 0: { play: 2, total: 4 }, 1: { play: 1, total: 3 } },
@@ -249,7 +247,7 @@ describe('GameEventLogService', () => {
         actionType: 'field_completed' as const,
         actorSeatId: 'player-2',
         actionData: {
-          winnerSeatId: 'player-2',
+          winnerSeatId: asSeatId('player-2'),
           winnerTeam: 1,
           context: { roundNumber: 1 },
           playerNames: {
@@ -366,7 +364,7 @@ describe('GameEventLogService', () => {
               gamePhase: 'waiting',
               summary: 'Field completed by Player Two for Team 2',
               details: {
-                winnerSeatId: 'player-2',
+                winnerSeatId: asSeatId('player-2'),
                 winnerTeam: 1,
                 cards: [],
               },
@@ -394,7 +392,7 @@ describe('GameEventLogService', () => {
                 teamScores: undefined,
               },
               actionData: {
-                winnerSeatId: 'player-2',
+                winnerSeatId: asSeatId('player-2'),
                 winnerTeam: 1,
                 context: { roundNumber: 1 },
                 playerNames: {
@@ -470,7 +468,7 @@ describe('GameEventLogService', () => {
           actionType: 'field_completed' as const,
           actorSeatId: 'player-3',
           actionData: {
-            winnerSeatId: 'player-3',
+            winnerSeatId: asSeatId('player-3'),
             winnerTeam: 0,
             playerNames: { 'player-3': 'COM 3' },
           },

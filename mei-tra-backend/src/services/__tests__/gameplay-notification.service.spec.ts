@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { GameplayNotificationService } from '../gameplay-notification.service';
 import type { PushNotificationService } from '../../push/push-notification.service';
 import type { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
@@ -29,9 +30,9 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
     playState: {
       currentField: {
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       },
       negriCard: null,
@@ -43,18 +44,17 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
     },
     roundNumber: 1,
     pointsToWin: 5,
-    teamAssignments: {},
     ...overrides,
   }) as GameState;
 
 const room = (overrides: Partial<Room> = {}): Room => ({
   id: 'room-1',
   name: 'Room',
-  hostId: 'player-1',
+  hostSeatId: asSeatId('player-1'),
   status: RoomStatus.PLAYING,
   players: [
     {
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       userId: 'user-1',
       socketId: 'socket-1',
       name: 'Player 1',
@@ -68,7 +68,7 @@ const room = (overrides: Partial<Room> = {}): Room => ({
       joinedAt: new Date('2026-07-23T00:00:00.000Z'),
     },
     {
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       userId: 'user-2',
       socketId: 'socket-2',
       name: 'Player 2',
@@ -82,7 +82,7 @@ const room = (overrides: Partial<Room> = {}): Room => ({
       joinedAt: new Date('2026-07-23T00:00:00.000Z'),
     },
     {
-      playerId: 'com-3',
+      seatId: asSeatId('com-3'),
       socketId: 'socket-3',
       name: 'COM 3',
       team: 0,
@@ -160,12 +160,12 @@ describe('GameplayNotificationService', () => {
     await service.notifyGameStarted({
       roomId: 'room-1',
       initiatingActorId: 'player-1',
-      currentTurnPlayerId: 'com-3',
+      currentTurnSeatId: asSeatId('com-3'),
     });
     await service.notifyGameStarted({
       roomId: 'room-1',
       initiatingActorId: 'player-1',
-      currentTurnPlayerId: 'com-3',
+      currentTurnSeatId: asSeatId('com-3'),
     });
 
     expect(pushNotificationService.sendGameStarted).toHaveBeenCalledTimes(1);
@@ -182,12 +182,12 @@ describe('GameplayNotificationService', () => {
   it('sends one turn notification per transition and suppresses replay duplicates', async () => {
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       initiatingActorId: 'player-1',
     });
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       initiatingActorId: 'player-1',
     });
 
@@ -210,11 +210,11 @@ describe('GameplayNotificationService', () => {
 
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'com-3',
+      seatId: asSeatId('com-3'),
     });
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
     });
 
     expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
@@ -228,7 +228,7 @@ describe('GameplayNotificationService', () => {
     await expect(
       service.notifyTurnChanged({
         roomId: 'room-1',
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
       }),
     ).resolves.toBeUndefined();
 
@@ -242,7 +242,7 @@ describe('GameplayNotificationService', () => {
 
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       delayMs: 1_000,
     });
 
@@ -261,7 +261,7 @@ describe('GameplayNotificationService', () => {
 
     await service.notifyTurnChanged({
       roomId: 'room-1',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       delayMs: 1_000,
     });
     service.onModuleDestroy();

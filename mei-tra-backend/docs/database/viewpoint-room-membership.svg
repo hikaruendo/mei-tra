@@ -121,7 +121,7 @@
 <polygon fill="none" stroke="black" points="936.7,-305.6 936.7,-336.4 1483.76,-336.4 1483.76,-305.6 936.7,-305.6"/>
 <text text-anchor="start" x="943.7" y="-317.8" font-family="Arial" font-size="14.00">host_seat_id </text>
 <text text-anchor="start" x="1026.98" y="-317.8" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
-<text text-anchor="start" x="1061.23" y="-317.8" font-family="Arial" font-size="14.00"> Canonical host seat UUID. Runtime hostId is an alias of this value.</text>
+<text text-anchor="start" x="1061.23" y="-317.8" font-family="Arial" font-size="14.00"> Host seat UUID.</text>
 <polygon fill="none" stroke="black" points="936.7,-274.8 936.7,-305.6 1483.76,-305.6 1483.76,-274.8 936.7,-274.8"/>
 <text text-anchor="start" x="943.7" y="-287" font-family="Arial" font-size="14.00">id </text>
 <text text-anchor="start" x="958.48" y="-287" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>

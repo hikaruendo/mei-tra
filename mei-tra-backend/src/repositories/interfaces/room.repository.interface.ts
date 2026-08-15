@@ -1,4 +1,5 @@
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
+import type { GameParticipant } from '../../types/game-participant.types';
 
 export interface IRoomRepository {
   // Basic CRUD operations
@@ -16,6 +17,7 @@ export interface IRoomRepository {
   findByStatus(status: RoomStatus): Promise<Room[]>;
   findByHostId(hostId: string): Promise<Room[]>;
   findRecentFinishedByUserId(userId: string, limit: number): Promise<Room[]>;
+  findGameParticipants(roomId: string): Promise<GameParticipant[]>;
   updateStatus(roomId: string, status: RoomStatus): Promise<boolean>;
   updateLastActivity(roomId: string): Promise<void>;
 

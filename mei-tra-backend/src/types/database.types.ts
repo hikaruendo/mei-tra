@@ -427,6 +427,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      game_participants: {
+        Row: {
+          id: string;
+          room_id: string;
+          seat_id: string;
+          user_id: string | null;
+          player_name_snapshot: string;
+          team_snapshot: number | null;
+          joined_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          seat_id: string;
+          user_id?: string | null;
+          player_name_snapshot: string;
+          team_snapshot?: number | null;
+          joined_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          room_id?: string;
+          seat_id?: string;
+          user_id?: string | null;
+          player_name_snapshot?: string;
+          team_snapshot?: number | null;
+          joined_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -446,7 +479,7 @@ export interface Database {
       reserve_room_membership: {
         Args: {
           p_user_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: Record<string, unknown>;
@@ -455,7 +488,7 @@ export interface Database {
         Args: {
           p_user_id: string;
           p_room_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: Record<string, unknown>;
@@ -476,10 +509,10 @@ export interface Database {
         };
         Returns: Record<string, unknown>;
       };
-      release_room_membership_by_player: {
+      release_room_membership_by_seat: {
         Args: {
           p_room_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: boolean;
