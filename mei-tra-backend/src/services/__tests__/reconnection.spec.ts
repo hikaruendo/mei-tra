@@ -385,6 +385,7 @@ describe('Reconnection Token Management', () => {
         findByStatus: jest.fn(),
         findByHostId: jest.fn(),
         findRecentFinishedByUserId: jest.fn(),
+        findGameParticipants: jest.fn(),
         updateStatus: jest.fn(),
         updateLastActivity: jest.fn(),
         deleteExpiredRooms: jest.fn(),

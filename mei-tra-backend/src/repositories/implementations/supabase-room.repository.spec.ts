@@ -188,16 +188,57 @@ describe('SupabaseRoomRepository', () => {
     const rooms = await repository.findRecentFinishedByUserId('user-1', 10);
 
     expect(roomsSelect).toHaveBeenCalledWith(
-      '*, room_players!room_players_room_id_fkey!inner(user_id)',
+      '*, game_participants!game_participants_room_id_fkey!inner(user_id)',
     );
     expect(eqStatusMock).toHaveBeenCalledWith('status', RoomStatus.FINISHED);
-    expect(eqUserMock).toHaveBeenCalledWith('room_players.user_id', 'user-1');
+    expect(eqUserMock).toHaveBeenCalledWith(
+      'game_participants.user_id',
+      'user-1',
+    );
     expect(orderMock).toHaveBeenCalledWith('last_activity_at', {
       ascending: false,
     });
     expect(limitMock).toHaveBeenCalledWith(10);
     expect(rooms).toHaveLength(1);
     expect(rooms[0].status).toBe(RoomStatus.FINISHED);
+  });
+
+  it('maps immutable game participants independently from the room roster', async () => {
+    const order = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'participant-1',
+          room_id: 'room-1',
+          seat_id: '11111111-1111-4111-8111-111111111111',
+          user_id: 'user-1',
+          player_name_snapshot: 'Mobile Player',
+          team_snapshot: 1,
+          joined_at: '2026-08-15T00:00:00.000Z',
+          created_at: '2026-08-15T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    });
+    const eq = jest.fn().mockReturnValue({ order });
+    const select = jest.fn().mockReturnValue({ eq });
+    const from = jest.fn().mockReturnValue({ select });
+    const repository = new SupabaseRoomRepository({
+      client: { from },
+    } as unknown as SupabaseService);
+
+    await expect(repository.findGameParticipants('room-1')).resolves.toEqual([
+      {
+        roomId: 'room-1',
+        seatId: '11111111-1111-4111-8111-111111111111',
+        userId: 'user-1',
+        playerName: 'Mobile Player',
+        team: 1,
+        joinedAt: new Date('2026-08-15T00:00:00.000Z'),
+      },
+    ]);
+    expect(from).toHaveBeenCalledWith('game_participants');
+    expect(eq).toHaveBeenCalledWith('room_id', 'room-1');
+    expect(order).toHaveBeenCalledWith('joined_at', { ascending: true });
   });
 
   it('installs a room_players trigger so roster RPC writes cannot race account deletion', () => {

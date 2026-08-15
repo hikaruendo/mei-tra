@@ -4,6 +4,7 @@ import { Room, RoomStatus } from '../types/room.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 import { asSeatId } from '../types/identity.types';
+import type { GameParticipant } from '../types/game-participant.types';
 
 describe('GameHistoryController', () => {
   const actorSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
@@ -65,9 +66,24 @@ describe('GameHistoryController', () => {
     lastActivityAt: new Date('2026-04-16T00:00:00.000Z'),
   } satisfies Room;
 
-  const createRoomRepository = (nextRoom: Room | null = room) =>
+  const defaultParticipants: GameParticipant[] = [
+    {
+      roomId: room.id,
+      seatId: room.players[0].seatId,
+      userId: currentUser.id,
+      playerName: room.players[0].name,
+      team: room.players[0].team,
+      joinedAt: room.players[0].joinedAt,
+    },
+  ];
+
+  const createRoomRepository = (
+    nextRoom: Room | null = room,
+    gameParticipants: GameParticipant[] = defaultParticipants,
+  ) =>
     ({
       findById: jest.fn().mockResolvedValue(nextRoom),
+      findGameParticipants: jest.fn().mockResolvedValue(gameParticipants),
     }) as unknown as jest.Mocked<IRoomRepository>;
 
   it('returns the room history from the use-case', async () => {
@@ -170,6 +186,55 @@ describe('GameHistoryController', () => {
     );
   });
 
+  it('uses the historical participant after the current seat becomes COM', async () => {
+    const summary = {
+      roomId: 'room-1',
+      totalEntries: 1,
+      byActionType: { game_over: 1 },
+      actorSeatIds: [room.players[0].seatId],
+      playerNames: {},
+      status: 'completed' as const,
+      winningTeam: 0,
+      lastActionType: 'game_over' as const,
+      roundNumbers: [1],
+      firstTimestamp: new Date('2026-04-16T00:00:00.000Z'),
+      lastTimestamp: new Date('2026-04-16T00:05:00.000Z'),
+    };
+    const getGameHistoryUseCase: IGetGameHistoryUseCase = {
+      execute: jest.fn(),
+      replay: jest.fn(),
+      summarize: jest.fn().mockResolvedValue(summary),
+    };
+    const roomRepository = createRoomRepository({
+      ...room,
+      players: [
+        {
+          ...room.players[0],
+          userId: undefined,
+          isAuthenticated: false,
+          isCOM: true,
+          name: 'COM',
+        },
+      ],
+    });
+    const controller = new GameHistoryController(
+      getGameHistoryUseCase,
+      roomRepository,
+    );
+
+    await expect(
+      controller.summarizeByRoomId('room-1', {}, currentUser),
+    ).resolves.toEqual({
+      ...summary,
+      teamNames: { 0: '111', 1: '222' },
+    });
+    expect(getGameHistoryUseCase.summarize).toHaveBeenCalledWith(
+      'room-1',
+      expect.any(Object),
+      { 'player-1': 'Player 1' },
+    );
+  });
+
   it('allows an authenticated spectator to read active room history', async () => {
     const summary = {
       roomId: 'room-1',
@@ -189,17 +254,20 @@ describe('GameHistoryController', () => {
       replay: jest.fn(),
       summarize: jest.fn().mockResolvedValue(summary),
     };
-    const roomRepository = createRoomRepository({
-      ...room,
-      status: RoomStatus.PLAYING,
-      settings: { ...room.settings, allowSpectators: true },
-      players: [
-        {
-          ...room.players[0],
-          userId: 'other-user',
-        },
-      ],
-    });
+    const roomRepository = createRoomRepository(
+      {
+        ...room,
+        status: RoomStatus.PLAYING,
+        settings: { ...room.settings, allowSpectators: true },
+        players: [
+          {
+            ...room.players[0],
+            userId: 'other-user',
+          },
+        ],
+      },
+      [],
+    );
     const controller = new GameHistoryController(
       getGameHistoryUseCase,
       roomRepository,
@@ -274,17 +342,20 @@ describe('GameHistoryController', () => {
       replay: jest.fn().mockResolvedValue(replay),
       summarize: jest.fn(),
     };
-    const roomRepository = createRoomRepository({
-      ...room,
-      status: RoomStatus.PLAYING,
-      settings: { ...room.settings, allowSpectators: true },
-      players: [
-        {
-          ...room.players[0],
-          userId: 'other-user',
-        },
-      ],
-    });
+    const roomRepository = createRoomRepository(
+      {
+        ...room,
+        status: RoomStatus.PLAYING,
+        settings: { ...room.settings, allowSpectators: true },
+        players: [
+          {
+            ...room.players[0],
+            userId: 'other-user',
+          },
+        ],
+      },
+      [],
+    );
     const controller = new GameHistoryController(
       getGameHistoryUseCase,
       roomRepository,
@@ -456,10 +527,13 @@ describe('GameHistoryController', () => {
       replay: jest.fn(),
       summarize: jest.fn(),
     };
-    const roomRepository = createRoomRepository({
-      ...room,
-      players: [{ ...room.players[0], userId: 'other-user' }],
-    });
+    const roomRepository = createRoomRepository(
+      {
+        ...room,
+        players: [{ ...room.players[0], userId: 'other-user' }],
+      },
+      [],
+    );
     const controller = new GameHistoryController(
       getGameHistoryUseCase,
       roomRepository,
@@ -477,18 +551,13 @@ describe('GameHistoryController', () => {
       replay: jest.fn(),
       summarize: jest.fn(),
     };
-    const roomRepository = createRoomRepository({
-      ...room,
-      players: [
-        room.players[0],
-        {
-          ...room.players[0],
-          seatId: asSeatId('player-duplicate'),
-          socketId: 'socket-duplicate',
-          isHost: false,
-        },
-      ],
-    });
+    const roomRepository = createRoomRepository(room, [
+      defaultParticipants[0],
+      {
+        ...defaultParticipants[0],
+        seatId: asSeatId('player-duplicate'),
+      },
+    ]);
     const controller = new GameHistoryController(
       getGameHistoryUseCase,
       roomRepository,
