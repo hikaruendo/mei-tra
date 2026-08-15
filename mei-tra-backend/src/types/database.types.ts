@@ -427,6 +427,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      game_participants: {
+        Row: {
+          id: string;
+          room_id: string;
+          seat_id: string;
+          user_id: string | null;
+          player_name_snapshot: string;
+          team_snapshot: number | null;
+          joined_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          seat_id: string;
+          user_id?: string | null;
+          player_name_snapshot: string;
+          team_snapshot?: number | null;
+          joined_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          room_id?: string;
+          seat_id?: string;
+          user_id?: string | null;
+          player_name_snapshot?: string;
+          team_snapshot?: number | null;
+          joined_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {

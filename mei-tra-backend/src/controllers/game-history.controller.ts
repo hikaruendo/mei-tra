@@ -20,8 +20,9 @@ import {
   GameHistoryReplayView,
   GameHistorySummary,
 } from '../types/game-history.types';
-import { Room, RoomPlayer, RoomStatus } from '../types/room.types';
+import { Room, RoomStatus } from '../types/room.types';
 import { asSeatId, isUuid, type SeatId } from '../types/identity.types';
+import type { GameParticipant } from '../types/game-participant.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 
@@ -107,7 +108,7 @@ export class GameHistoryController {
     roomId: string,
     userId: string,
   ): Promise<{
-    participant: RoomPlayer | null;
+    participant: Pick<GameParticipant, 'seatId'> | null;
     playerNames: Record<string, string>;
     teamNames: Room['settings']['teamNames'];
   }> {
@@ -116,9 +117,18 @@ export class GameHistoryController {
       throw new NotFoundException('Room not found');
     }
 
-    const participants = room.players.filter(
+    const gameParticipants =
+      await this.roomRepository.findGameParticipants(roomId);
+    const historicalParticipants = gameParticipants.filter(
+      (participant) => participant.userId === userId,
+    );
+    const currentParticipants = room.players.filter(
       (player) => !player.isCOM && player.userId === userId,
     );
+    const participants =
+      historicalParticipants.length > 0
+        ? historicalParticipants
+        : currentParticipants;
     if (
       participants.length !== 1 &&
       !(
@@ -132,9 +142,16 @@ export class GameHistoryController {
 
     return {
       participant: participants[0] ?? null,
-      playerNames: Object.fromEntries(
-        room.players.map((player) => [player.seatId, player.name]),
-      ),
+      playerNames: Object.fromEntries([
+        ...room.players.map((player): [string, string] => [
+          player.seatId,
+          player.name,
+        ]),
+        ...gameParticipants.map((participant): [string, string] => [
+          participant.seatId,
+          participant.playerName,
+        ]),
+      ]),
       teamNames: room.settings.teamNames,
     };
   }
