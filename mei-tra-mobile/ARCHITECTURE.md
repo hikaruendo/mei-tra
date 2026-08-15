@@ -374,7 +374,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 
 ## Socket.IO イベントマップ
 
-### Game namespace (`/`) — 34 受信 / 22 送信
+### Game namespace (`/`)
 
 **受信 (Server → Client)**:
 
@@ -382,17 +382,14 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 |-------|------|
 | `rooms-list` | ルーム一覧 |
 | `room-sync` | ルーム状態同期 |
-| `room-updated` | 単一ルーム更新 |
 | `set-room-id` | ルーム ID 永続化 |
 | `game-player-joined` | プレイヤー参加通知 |
 | `update-players` | プレイヤーリスト更新 |
-| `room-playing` | プレイヤー更新 (ゲーム中) |
 | `game-state` | フルゲーム状態スナップショット |
 | `reconnect-token` | 再接続トークン |
 | `game-started` | ゲーム開始 |
 | `update-phase` | フェーズ遷移 |
 | `update-turn` | ターン更新 |
-| `blow-started` | 吹きフェーズ開始 |
 | `blow-updated` | 吹き宣言更新 |
 | `broken` | 手札崩れ |
 | `round-cancelled` | ラウンドキャンセル (全パス) |

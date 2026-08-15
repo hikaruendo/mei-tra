@@ -23,15 +23,10 @@ export interface IGameStateService {
   updateUserNameBySocketId(socketId: string, name: string): boolean;
   findPlayerByActorId(actorId: string): DomainPlayer | null;
   findPlayerBySocketId(socketId: string): DomainPlayer | null;
-  updatePlayerSocketId(
-    seatId: SeatId,
-    socketId: string,
-    userId?: string,
-  ): Promise<void>;
   applyPlayerConnectionState(
     seatId: SeatId,
     connectionState: PlayerConnectionState,
-  ): Promise<void>;
+  ): void;
   getPlayerConnectionState(seatId: SeatId): PlayerConnectionState | null;
   persistRoster(
     roomPlayers: RoomPlayer[],

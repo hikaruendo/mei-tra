@@ -4,7 +4,7 @@ import { SupabaseService } from '../../database/supabase.service';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { Database } from '../../types/database.types';
-import { asSeatId, resolveSeatId } from '../../types/identity.types';
+import { asSeatId } from '../../types/identity.types';
 
 type RoomRow = Database['public']['Tables']['rooms']['Row'];
 type RoomUpdate = Database['public']['Tables']['rooms']['Update'];
@@ -31,7 +31,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
     hostPlayer: RoomPlayer,
     transitionId: string,
   ): Promise<Room> {
-    const hostSeatId = resolveSeatId(hostPlayer);
+    const hostSeatId = hostPlayer.seatId;
     const hostUserId = hostPlayer.userId;
     if (!hostUserId) {
       throw new Error('Authenticated host user is required');

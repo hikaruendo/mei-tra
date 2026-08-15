@@ -6,7 +6,6 @@ import {
   BlowState,
   GameState,
   DomainPlayer,
-  PlayerConnectionMetadata,
   PlayState,
   ScoreRecord,
 } from '../../types/game.types';
@@ -18,7 +17,7 @@ import {
 } from '../../adapters/player-adapters';
 import { Database } from '../../types/database.types';
 import { RoomPlayer } from '../../types/room.types';
-import { asSeatId, resolveSeatId } from '../../types/identity.types';
+import { asSeatId } from '../../types/identity.types';
 import type { SeatId } from '../../types/identity.types';
 import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
@@ -168,7 +167,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const canonicalGameState = normalizeGameStateIdentity(gameState);
     const playerStates = toPersistedPlayerStates(canonicalGameState.players);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
-      seatId: resolveSeatId(player),
+      seatId: player.seatId,
       userId: player.userId ?? null,
       name: player.name,
       team: player.team,
@@ -321,38 +320,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       this.logger.error('Error updating players:', error);
       return false;
     }
-  }
-
-  async updatePlayerConnection(
-    roomId: string,
-    seatId: SeatId,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<boolean> {
-    void seatId;
-    void updates;
-
-    // Connection metadata now lives in room/session state. Keep the method for
-    // incremental Phase 3 compatibility without mutating persisted game-state
-    // snapshots.
-    const { error } = await this.supabase
-      .from('game_states')
-      .select('id')
-      .eq('room_id', roomId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return false;
-      }
-
-      this.logger.error(
-        'Failed to verify game state before connection sync',
-        error,
-      );
-      return false;
-    }
-
-    return true;
   }
 
   async updateGamePhase(roomId: string, phase: string): Promise<boolean> {
@@ -510,9 +477,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       agari: stateData.agari ?? undefined,
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
-      teamAssignments: Object.fromEntries(
-        players.map((player) => [player.seatId, player.team]),
-      ),
     });
   }
 
@@ -530,7 +494,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
 
     return {
-      seatId: resolveSeatId(player),
+      seatId: player.seatId,
       name: player.name,
       team: player.team,
       isCOM: player.isCOM,

@@ -82,7 +82,6 @@ describe('Reconnection Token Management', () => {
           ),
         delete: jest.fn(),
         updatePlayers: jest.fn(),
-        updatePlayerConnection: jest.fn(),
         updateGamePhase: jest.fn(),
         bulkUpdate: jest.fn(),
         deleteExpiredGameStates: jest.fn(),
@@ -234,7 +233,6 @@ describe('Reconnection Token Management', () => {
             0: [],
             1: [],
           },
-          teamAssignments: {},
         };
 
         gameStateRepository.findByRoomId.mockResolvedValue(persistedState);
@@ -279,7 +277,6 @@ describe('Reconnection Token Management', () => {
             0: [],
             1: [],
           },
-          teamAssignments: {},
         };
 
         gameStateRepository.findByRoomId.mockResolvedValue(persistedState);
@@ -334,9 +331,7 @@ describe('Reconnection Token Management', () => {
             team: 1,
           }),
         ]);
-        expect(gameStateService.getState().teamAssignments).toEqual({
-          'seat-1': 1,
-        });
+        expect(gameStateService.getState().players[0]?.team).toBe(1);
         expect(gameStateService.findPlayerByReconnectToken('user-1')).toEqual(
           expect.objectContaining({ seatId: asSeatId('seat-1') }),
         );
@@ -345,7 +340,6 @@ describe('Reconnection Token Management', () => {
           roomPlayers,
           expect.objectContaining({
             players: gameStateService.getState().players,
-            teamAssignments: { 'seat-1': 1 },
           }),
           'seat-1',
           undefined,
@@ -432,7 +426,6 @@ describe('Reconnection Token Management', () => {
           ),
         delete: jest.fn(),
         updatePlayers: jest.fn(),
-        updatePlayerConnection: jest.fn(),
         updateGamePhase: jest.fn(),
         bulkUpdate: jest.fn(),
         deleteExpiredGameStates: jest.fn(),
@@ -639,7 +632,7 @@ describe('Reconnection Token Management', () => {
             hand: [...player.hand],
           }),
         ];
-        await gameState.applyPlayerConnectionState(seatId, {
+        gameState.applyPlayerConnectionState(seatId, {
           socketId: 'socket-new',
         });
 
@@ -762,7 +755,7 @@ describe('Reconnection Token Management', () => {
         gameState.getState().playState = {
           currentField: {
             cards: ['JOKER'],
-            playedBy: [seatId],
+            playedBySeatIds: [seatId],
             baseCard: 'JOKER',
             dealerSeatId: asSeatId(seatId),
             isComplete: false,
@@ -786,8 +779,6 @@ describe('Reconnection Token Management', () => {
           handSnapshot: ['JOKER', '9♣'],
           startedAt: 100,
         };
-        gameState.getState().teamAssignments[seatId] = 0;
-
         const result = await roomService.convertPlayerToCOM(roomId, seatId);
 
         expect(result).toBe(true);
@@ -796,9 +787,9 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.currentField?.dealerSeatId).toBe(
           comSeatId,
         );
-        expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
-          comSeatId,
-        ]);
+        expect(
+          gameState.getState().playState?.currentField?.playedBySeatIds,
+        ).toEqual([comSeatId]);
         expect(gameState.getState().playState?.fields[0]?.winnerSeatId).toBe(
           comSeatId,
         );
@@ -815,7 +806,7 @@ describe('Reconnection Token Management', () => {
           comSeatId,
         );
         expect(gameState.getState().playState?.neguri[comSeatId]).toBe('9♣');
-        expect(gameState.getState().teamAssignments[comSeatId]).toBe(0);
+        expect(gameState.getState().players[0]?.team).toBe(0);
       });
 
       it('should keep current blow references on the stable seat', async () => {
@@ -1750,7 +1741,7 @@ describe('Reconnection Token Management', () => {
         gameState.getState().playState = {
           currentField: {
             cards: ['9♥'],
-            playedBy: [targetCom.seatId],
+            playedBySeatIds: [targetCom.seatId],
             baseCard: '9♥',
             dealerSeatId: asSeatId(targetCom.seatId),
             isComplete: false,
@@ -1774,8 +1765,6 @@ describe('Reconnection Token Management', () => {
           handSnapshot: ['H2', 'D3'],
           startedAt: 100,
         };
-        gameState.getState().teamAssignments[targetCom.seatId] = 0;
-
         (roomService as any)['vacantSeats'][roomId] = {
           [seatId]: {
             roomPlayer: {
@@ -1810,9 +1799,9 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.currentField?.dealerSeatId).toBe(
           targetCom.seatId,
         );
-        expect(gameState.getState().playState?.currentField?.playedBy).toEqual([
-          targetCom.seatId,
-        ]);
+        expect(
+          gameState.getState().playState?.currentField?.playedBySeatIds,
+        ).toEqual([targetCom.seatId]);
         expect(gameState.getState().playState?.fields[0]?.winnerSeatId).toBe(
           targetCom.seatId,
         );
@@ -1831,7 +1820,11 @@ describe('Reconnection Token Management', () => {
         expect(gameState.getState().playState?.neguri[targetCom.seatId]).toBe(
           '5♦',
         );
-        expect(gameState.getState().teamAssignments[targetCom.seatId]).toBe(0);
+        expect(
+          gameState
+            .getState()
+            .players.find((player) => player.seatId === targetCom.seatId)?.team,
+        ).toBe(0);
       });
 
       it('should keep blow references on the stable seat when a player rejoins', async () => {
@@ -2582,13 +2575,6 @@ describe('Reconnection Token Management', () => {
             isPasser: true,
           }),
         ];
-        gameState.getState().teamAssignments = {
-          [hostPlayer.seatId]: hostPlayer.team,
-          [leavingPlayer.seatId]: leavingPlayer.team,
-          [comPlayer2.seatId]: comPlayer2.team,
-          [comPlayer3.seatId]: comPlayer3.team,
-        };
-
         await roomService.leaveRoom(roomId, seatId);
 
         const updatedRoom = roomState.getPersistedRoom();
@@ -2604,9 +2590,10 @@ describe('Reconnection Token Management', () => {
         );
         expect(gameState.getState().players[1].team).toBe(1);
         expect(
-          gameState.getState().teamAssignments[replacementCom?.seatId ?? ''],
+          gameState
+            .getState()
+            .players.find((player) => player.seatId === seatId)?.team,
         ).toBe(1);
-        expect(gameState.getState().teamAssignments[seatId]).toBe(1);
       });
 
       it('should avoid duplicate COM player ids when waiting-room state order is stale', async () => {

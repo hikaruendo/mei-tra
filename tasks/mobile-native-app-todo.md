@@ -234,7 +234,7 @@
 - [x] localでmobile lint / typecheck / 14 suites / 63 tests / Expo Doctor 19/19 / iOS export / Android exportが成功している。
 - [x] localでbackend 52 suites / 300 tests、frontend 27 suites / 78 tests、両方のlint / buildが成功している。
 - [ ] Expoの`xcode`→`uuid`経路に残るmoderate advisory 10件をupstream更新時に再評価する。high / criticalは0件で、Expo downgradeを伴う強制fixは適用しない。
-- [ ] shared contractのWeb・backend・mobile棚卸しが完了し、backend互換性を確認している。
+- [ ] shared contractのWeb・backend・mobile棚卸しが完了し、3クライアントの型とイベントが一致している。
 - [ ] production migrationsが`20260806165711`まで適用され、schema / RLS / receipt worker RPC / atomic anonymization / deleting-account room・Socket gate / room membership直列化 / registration smokeを確認している。
 - [ ] EAS project ID、EAS environments、`EXPO_TOKEN`、Apple / Google署名・提出資格情報が設定されている。
 - [ ] preview buildをiOS / Android実機で受入し、TestFlight / Play internal buildを各1回実施している。

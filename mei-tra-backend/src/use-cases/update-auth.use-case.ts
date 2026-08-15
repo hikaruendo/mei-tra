@@ -12,7 +12,6 @@ import { AuthenticatedUser } from '../types/user.types';
 import type { SeatId } from '../types/identity.types';
 import {
   buildPlayerSyncEvents,
-  buildRoomUpdatedEvent,
   resolvePlayerByActorId,
   resolvePlayerBySocketId,
 } from './helpers/player-resolution.helper';
@@ -48,7 +47,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         authenticatedUser,
       );
 
-      const { clientEvents, broadcastEvents } = this.ensureUserRegistered(
+      const broadcastEvents = this.ensureUserRegistered(
         request.socketId,
         authenticatedUser,
         request.handshakeName,
@@ -58,7 +57,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       return {
         success: true,
         authenticatedUser,
-        clientEvents,
         broadcastEvents,
         roomEvents: roomSync?.events,
       };
@@ -73,28 +71,12 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     authenticatedUser: AuthenticatedUser,
     handshakeName?: string,
     seatId?: SeatId,
-  ): {
-    clientEvents: GatewayEvent[];
-    broadcastEvents: GatewayEvent[];
-  } {
+  ): GatewayEvent[] {
     const displayName =
       authenticatedUser.profile?.displayName ||
       authenticatedUser.email ||
       handshakeName ||
       'User';
-
-    const clientEvents: GatewayEvent[] = [
-      {
-        scope: 'socket',
-        socketId,
-        event: 'auth-updated',
-        payload: {
-          userId: authenticatedUser.id,
-          displayName,
-          username: authenticatedUser.profile?.username,
-        },
-      },
-    ];
 
     const syncResult = this.gameState.upsertSessionUser({
       socketId,
@@ -105,22 +87,16 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     });
 
     if (syncResult.created || syncResult.changed) {
-      return {
-        clientEvents,
-        broadcastEvents: [
-          {
-            scope: 'all',
-            event: 'update-users',
-            payload: this.gameState.getSessionUsers(),
-          },
-        ],
-      };
+      return [
+        {
+          scope: 'all',
+          event: 'update-users',
+          payload: this.gameState.getSessionUsers(),
+        },
+      ];
     }
 
-    return {
-      clientEvents,
-      broadcastEvents: [],
-    };
+    return [];
   }
 
   private async syncRoomPlayer(
@@ -164,7 +140,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       authenticatedUser.email ||
       currentPlayer.name;
     currentPlayer.name = displayName;
-    await roomGameState.applyPlayerConnectionState(currentPlayer.seatId, {
+    roomGameState.applyPlayerConnectionState(currentPlayer.seatId, {
       socketId,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -188,12 +164,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       state.players,
       { room: updatedRoom },
     );
-
-    if (updatedRoom) {
-      roomEvents.push(
-        buildRoomUpdatedEvent(roomGameState, updatedRoom, state.players),
-      );
-    }
 
     return { seatId: currentPlayer.seatId, events: roomEvents };
   }

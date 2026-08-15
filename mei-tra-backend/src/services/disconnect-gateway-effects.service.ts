@@ -90,7 +90,7 @@ export class DisconnectGatewayEffectsService {
       return null;
     }
 
-    await roomGameState.applyPlayerConnectionState(player.seatId, {
+    roomGameState.applyPlayerConnectionState(player.seatId, {
       socketId: '',
     });
 

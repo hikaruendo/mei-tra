@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
-import { GameState, PlayerConnectionMetadata } from '../types/game.types';
+import { GameState } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
@@ -151,22 +151,6 @@ export class GameStateManager {
       throw new Error(`Game state not found for room ${roomId}`);
     }
     return persistedState;
-  }
-
-  async persistPlayerConnectionUpdate(
-    roomId: string | null,
-    seatId: SeatId,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<void> {
-    if (!roomId) {
-      return;
-    }
-
-    try {
-      await this.repository.updatePlayerConnection(roomId, seatId, updates);
-    } catch (error) {
-      this.logger.error('Failed to persist player connection update:', error);
-    }
   }
 
   async resetState(roomId: string | null, state: GameState): Promise<void> {

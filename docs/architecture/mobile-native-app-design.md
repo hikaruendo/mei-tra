@@ -24,7 +24,7 @@
 | npm workspace | npm `10.9.2`でclean install成功 | root lockfileとworkspace packageのローカル解決 |
 | mobile | 14 suites / 63 tests、Expo Doctor 19/19、iOS / Android export成功 | JavaScript・設定・bundle export。署名済みnative buildではない |
 | backend | 52 suites / 300 tests、lint、build成功 | ローカルbackendとlocal Supabase |
-| frontend | 27 suites / 78 tests、lint、build成功 | Web buildと既存client互換性 |
+| frontend | 27 suites / 78 tests、lint、build成功 | Web buildと共有Socket契約 |
 | Web dev | HTTP 200 | ローカルdev serverの到達性 |
 | Playwright 390×844 | seat identityのserver derivation後にfinal normal flowを再実行。signup、room作成、COM補充、shuffle、start、blow pass、合法card play、reload後のauthoritative restore、leave、settings/legal links、account deletion HTTP 200と成功後redirect、parameterなしcallbackの安全なredirect | browser smoke。TestFlight / Play・実端末・native pushではない |
 | production dependency audit | `npm audit --omit=dev`でmoderate 10件、high / critical 0件 | Expoの`xcode`→`uuid`依存経路。強制fixはExpoをdowngradeするため未適用で、upstream dependency reviewを継続 |

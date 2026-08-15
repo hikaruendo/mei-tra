@@ -363,9 +363,10 @@ frontend の auth 状態更新を socket connection 側に反映します。
 - token 再検証
 - global `SessionUser` 一覧の更新
 - current room の player 情報も更新
-- `auth-updated`, `update-users`, `room-sync`, `update-players`, `room-updated` を返す
+- session user を更新し、変更時は `update-users` を返す
+- room が存在する場合は `room-sync`、player 差分だけの場合は `update-players` を返す
 
-現在の frontend は `room-sync` を優先して room/player 状態を更新し、`room-updated` / `update-players` は互換 fallback として残っています。これにより、ログイン後に socket 上の displayName や userId を追従させられます。
+`room-sync` は room と player の完全同期、`update-players` は進行中の player 表示だけを更新します。
 
 ### 7.9 `ComAutoPlayUseCase`
 
@@ -614,7 +615,6 @@ backend には二種類の socket interface があります。
 
 - `rooms-list`
 - `room-sync`
-- `room-updated`
 - `update-players`
 - `game-state`
 - `game-started`

@@ -2,6 +2,7 @@ import { DisconnectGatewayEffectsService } from '../disconnect-gateway-effects.s
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomMembershipService } from '../room-membership.service';
 import { asSeatId } from '../../types/identity.types';
+import type { RoomSyncPayload } from '@contracts/room';
 
 const membershipServiceStub = (
   overrides: Partial<RoomMembershipService> = {},
@@ -45,7 +46,6 @@ describe('DisconnectGatewayEffectsService', () => {
           isPasser: false,
         },
       ],
-      teamAssignments: {} as Record<string, 0 | 1>,
       gamePhase: 'play' as const,
     };
     const roomGameState = {
@@ -58,7 +58,7 @@ describe('DisconnectGatewayEffectsService', () => {
         userId: 'user-1',
         isAuthenticated: true,
       })),
-      applyPlayerConnectionState: jest.fn().mockResolvedValue(undefined),
+      applyPlayerConnectionState: jest.fn(),
       getPlayerConnectionState: jest.fn(() => ({
         socketId: 'socket-1',
         userId: 'user-1',
@@ -128,18 +128,6 @@ describe('DisconnectGatewayEffectsService', () => {
             players: [{ seatId: asSeatId('player-1') }],
           },
         },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'room-updated',
-          payload: updatedRoom,
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'update-players',
-          payload: [{ seatId: asSeatId('player-1') }],
-        },
       ]),
       buildRoomsListEvent: jest.fn(({ rooms }: { rooms: unknown[] }) => ({
         scope: 'all',
@@ -187,18 +175,19 @@ describe('DisconnectGatewayEffectsService', () => {
     expect(roomService.updateRoom).toHaveBeenCalledWith('room-1', {
       hostSeatId: asSeatId('player-2'),
     });
-    expect(result?.events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          event: 'room-updated',
-          payload: updatedRoom,
-        }),
-        expect.objectContaining({
-          event: 'rooms-list',
-          payload: [updatedRoom],
-        }),
-      ]),
+    expect(result?.events.map((event) => event.event)).toEqual(
+      expect.arrayContaining(['room-sync', 'rooms-list']),
     );
+    const roomSyncEvent = result?.events.find(
+      (event) => event.event === 'room-sync',
+    );
+    const roomsListEvent = result?.events.find(
+      (event) => event.event === 'rooms-list',
+    );
+    expect((roomSyncEvent?.payload as RoomSyncPayload).room).toEqual(
+      updatedRoom,
+    );
+    expect(roomsListEvent?.payload).toEqual([updatedRoom]);
     expect(
       roomUpdateGatewayEffectsService.buildRoomsListEvent,
     ).toHaveBeenCalledWith({
@@ -320,7 +309,6 @@ describe('DisconnectGatewayEffectsService', () => {
     const roomGameState = {
       getState: jest.fn(() => ({
         players: [{ seatId: asSeatId('player-1'), name: 'Player 1', team: 0 }],
-        teamAssignments: {},
         gamePhase: 'play',
       })),
       findSessionUserBySocketId: jest.fn(() => ({

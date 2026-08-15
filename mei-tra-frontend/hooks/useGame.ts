@@ -5,7 +5,6 @@ import type {
   BlowActionContract,
   BlowDeclarationContract,
   BlowUpdatedPayload,
-  BlowStartedPayload,
   BrokenPayload,
   CardPlayedPayload,
   CompletedFieldContract,
@@ -35,10 +34,8 @@ import type {
 } from '@contracts/game';
 import type {
   GamePlayerJoinedPayload,
-  RoomContract,
   RoomSyncPayload,
 } from '@contracts/room';
-import type { NameUpdatedPayload } from '@contracts/socket';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 import {
@@ -55,7 +52,7 @@ import {
   TrumpType,
   fromPlayerContracts,
 } from '../types/game.types';
-import { fromRoomContract, fromRoomSyncPayload } from '../types/room.types';
+import { fromRoomSyncPayload } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { getTeamDisplayName } from '../lib/utils/teamLabels';
 import {
@@ -66,7 +63,6 @@ import {
   type GameEventState,
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
-import { normalizePlayerIdentities } from '@meitra/game-client/identity';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 
 interface ProfileUpdatedPayload {
@@ -203,15 +199,6 @@ export const useGame = () => {
   const agariRequestKeyRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
   const gameStateSyncKeyRef = useRef<string | null>(null);
-  const legacyRoomEventSkipRef = useRef<{
-    roomId: string | null;
-    roomUpdated: boolean;
-    updatePlayers: boolean;
-  }>({
-    roomId: null,
-    roomUpdated: false,
-    updatePlayers: false,
-  });
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -403,43 +390,6 @@ export const useGame = () => {
     }
   }, [updatePlayersLocally]);
 
-  const markRoomSyncHandled = useCallback((roomId: string) => {
-    legacyRoomEventSkipRef.current = {
-      roomId,
-      roomUpdated: true,
-      updatePlayers: true,
-    };
-  }, []);
-
-  const shouldSkipLegacyRoomUpdated = useCallback((roomId: string) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (state.roomId !== roomId || !state.roomUpdated) {
-      return false;
-    }
-
-    state.roomUpdated = false;
-    if (!state.updatePlayers) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
-
-  const shouldSkipLegacyUpdatePlayers = useCallback((roomId: string | null) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (!state.updatePlayers) {
-      return false;
-    }
-    if (roomId && state.roomId && state.roomId !== roomId) {
-      return false;
-    }
-
-    state.updatePlayers = false;
-    if (!state.roomUpdated) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
-
   useEffect(() => {
     if (!currentHostSeatId || !currentSeatId) {
       setIsHost(false);
@@ -599,37 +549,10 @@ export const useGame = () => {
         usersRef.current = users;
         setUsers(users);
       },
-      'name-updated': (payload: NameUpdatedPayload) => {
-        if (payload.success && payload.seatId) {
-          const { seatId, name } = payload;
-          setUsers((prev) => {
-            const existingIndex = prev.findIndex((u) => u.seatId === seatId);
-            const baseUser = {
-              socketId: '',
-              seatId,
-              name,
-              isAuthenticated: false,
-            };
-
-            if (existingIndex !== -1) {
-              const updated = [...prev];
-              updated[existingIndex] = { ...updated[existingIndex], ...baseUser };
-              return updated;
-            }
-
-            return [...prev, baseUser];
-          });
-        } else if (!payload.success) {
-          setNotification({ message: payload.error, type: 'error' });
-        }
-      },
       'update-players': (playerContracts: PlayerContract[]) => {
-        if (shouldSkipLegacyUpdatePlayers(currentRoomId)) {
-          return;
-        }
         gameEventStateRef.current = {
           ...gameEventStateRef.current,
-          players: normalizePlayerIdentities(playerContracts),
+          players: playerContracts,
         };
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
@@ -647,42 +570,9 @@ export const useGame = () => {
       'set-room-id': (roomId: string) => {
         setCurrentRoomId(roomId);
       },
-      'room-updated': (room: RoomContract) => {
-        const nextRoom = fromRoomContract(room);
-        if (shouldSkipLegacyRoomUpdated(nextRoom.id)) {
-          return;
-        }
-        const selfSeatId = resolveCurrentUserSeatId(
-          nextRoom.players,
-          currentSeatId,
-        );
-        const isCurrentRoom =
-          nextRoom.id === currentRoomId ||
-          Boolean(
-            selfSeatId &&
-              nextRoom.players.some(
-                (player) => player.seatId === selfSeatId,
-              ),
-          );
-
-        if (!isCurrentRoom) {
-          return;
-        }
-
-        if (!currentRoomId) {
-          setCurrentRoomId(nextRoom.id);
-        }
-
-        setCurrentHostSeatId(nextRoom.hostSeatId);
-        setTeamNames(nextRoom.settings.teamNames);
-        if (selfSeatId) {
-          setCurrentSeatId(selfSeatId);
-        }
-      },
       'room-sync': (payload: RoomSyncPayload) => {
         const { room: nextRoom, players: nextPlayers } =
           fromRoomSyncPayload(payload);
-        markRoomSyncHandled(nextRoom.id);
         const selfSeatId = resolveCurrentUserSeatId(
           nextRoom.players,
           currentSeatId,
@@ -952,9 +842,6 @@ export const useGame = () => {
 
         // Keep ref set until the next game starts (game-started handler clears it)
       },
-      'blow-started': (payload: BlowStartedPayload) => {
-        applyGameServerEvent({ type: 'blow-started', payload });
-      },
       'blow-updated': (payload: BlowUpdatedPayload) => {
         applyGameServerEvent({ type: 'blow-updated', payload });
       },
@@ -1190,14 +1077,11 @@ export const useGame = () => {
     currentRoomId,
     isSpectator,
     negriSeatId,
-    markRoomSyncHandled,
     commitPlayers,
     resolveCurrentUserSeatId,
     getCurrentUserSeatId,
     updatePlayersLocally,
     syncCurrentPlayerIdentity,
-    shouldSkipLegacyRoomUpdated,
-    shouldSkipLegacyUpdatePlayers,
     resetRoomState,
     resetBlowState,
     syncDisconnectedSeatIdsFromPlayers,

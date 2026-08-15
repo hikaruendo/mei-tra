@@ -5,7 +5,7 @@ import { Room, RoomPlayer } from '../types/room.types';
 import { IComPlayerService } from './interfaces/com-player-service.interface';
 import { GameStateService } from './game-state.service';
 import { randomUUID } from 'crypto';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import type { VacantSeats } from '../types/vacant-seat.types';
@@ -56,7 +56,7 @@ export class ComSessionService {
       index,
       sourcePlayer.team,
       [],
-      resolveSeatId(sourcePlayer),
+      sourcePlayer.seatId,
     );
   }
 
@@ -205,7 +205,7 @@ export class ComSessionService {
       comPlayer.participantKey = room.players[playerIndex].participantKey;
     }
 
-    const resolvedSeatId = resolveSeatId(room.players[playerIndex]);
+    const resolvedSeatId = room.players[playerIndex].seatId;
     vacantSeats[roomId][resolvedSeatId] = {
       roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
       gamePlayer:

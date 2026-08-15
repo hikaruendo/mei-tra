@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   PlayerContract,
   PlayerLeftPayload,
-  RoomPlayingPayload,
 } from '@contracts/game';
 import type {
   RoomContract,
@@ -19,7 +18,6 @@ import {
 } from '../types/room.types';
 import { useAuth } from '../contexts/AuthContext';
 import { ConnectionUser, Team } from '../types/game.types';
-import { RoomStatus } from '../types/room.types';
 import { clearPlayerProfileCache } from '../lib/utils/profileUtils';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import { asSeatId } from '@contracts/ids';
@@ -66,74 +64,9 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   );
 
   const currentRoomRef = useRef<Room | null>(null);
-  const legacyRoomEventSkipRef = useRef<{
-    roomId: string | null;
-    roomUpdated: boolean;
-    updatePlayers: boolean;
-    roomPlaying: boolean;
-  }>({
-    roomId: null,
-    roomUpdated: false,
-    updatePlayers: false,
-    roomPlaying: false,
-  });
   useEffect(() => {
     currentRoomRef.current = currentRoom;
   }, [currentRoom]);
-
-  const markRoomSyncHandled = useCallback((roomId: string) => {
-    legacyRoomEventSkipRef.current = {
-      roomId,
-      roomUpdated: true,
-      updatePlayers: true,
-      roomPlaying: true,
-    };
-  }, []);
-
-  const shouldSkipLegacyRoomUpdated = useCallback((roomId: string) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (state.roomId !== roomId || !state.roomUpdated) {
-      return false;
-    }
-
-    state.roomUpdated = false;
-    if (!state.updatePlayers && !state.roomPlaying) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
-
-  const shouldSkipLegacyUpdatePlayers = useCallback((roomId: string | null) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (!state.updatePlayers) {
-      return false;
-    }
-    if (roomId && state.roomId && state.roomId !== roomId) {
-      return false;
-    }
-
-    state.updatePlayers = false;
-    if (!state.roomUpdated && !state.roomPlaying) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
-
-  const shouldSkipLegacyRoomPlaying = useCallback((roomId: string | null) => {
-    const state = legacyRoomEventSkipRef.current;
-    if (!state.roomPlaying) {
-      return false;
-    }
-    if (roomId && state.roomId && state.roomId !== roomId) {
-      return false;
-    }
-
-    state.roomPlaying = false;
-    if (!state.roomUpdated && !state.updatePlayers) {
-      state.roomId = null;
-    }
-    return true;
-  }, []);
 
   const clearStoredRoomState = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -179,30 +112,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       }
     };
 
-    // ルーム更新
-    const handleRoomUpdated = (room: RoomContract) => {
-      const nextRoom = fromRoomContract(room);
-      if (shouldSkipLegacyRoomUpdated(nextRoom.id)) {
-        return;
-      }
-      setAvailableRooms(prevRooms =>
-        prevRooms.map((currentRoom) =>
-          currentRoom.id === nextRoom.id ? nextRoom : currentRoom,
-        ),
-      );
-      const storedRoomId =
-        typeof window !== 'undefined' ? sessionStorage.getItem('roomId') : null;
-      if (
-        currentRoomRef.current?.id === nextRoom.id ||
-        storedRoomId === nextRoom.id
-      ) {
-        setCurrentRoom(nextRoom);
-      }
-    };
-
     const handleRoomSync = (payload: RoomSyncPayload) => {
       const { room: nextRoom } = fromRoomSyncPayload(payload);
-      markRoomSyncHandled(nextRoom.id);
 
       setAvailableRooms(prevRooms =>
         prevRooms.map((currentRoom) =>
@@ -343,40 +254,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       });
     };
 
-    // ゲーム開始
-    const handleRoomPlaying = ({ players }: RoomPlayingPayload) => {
-      if (shouldSkipLegacyRoomPlaying(currentRoomRef.current?.id ?? null)) {
-        return;
-      }
-      if (currentRoomRef.current) {
-        const updatedRoom = {
-          ...currentRoomRef.current,
-          status: RoomStatus.PLAYING,
-          players: currentRoomRef.current.players.map(p => {
-            const updatedPlayer = players.find(
-              (player) => player.seatId === p.seatId,
-            );
-            return updatedPlayer ? { ...p, hand: updatedPlayer.hand } : p;
-          })
-        };
-
-        setCurrentRoom(updatedRoom);
-        setAvailableRooms(prevRooms => {
-          const newRooms = prevRooms.map(room =>
-            room.id === currentRoomRef.current!.id ? updatedRoom : room
-          );
-          return newRooms;
-        });
-      } else {
-        console.log('currentRoom is null when room-playing event received');
-      }
-    };
-
     // プレイヤー情報の更新（currentRoom の team 等を同期する）
     const handleUpdatePlayers = (players: PlayerContract[]) => {
-      if (shouldSkipLegacyUpdatePlayers(currentRoomRef.current?.id ?? null)) {
-        return;
-      }
       if (currentRoomRef.current) {
         const updatedRoom = {
           ...currentRoomRef.current,
@@ -483,10 +362,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.on('rooms-list', handleRoomsList);
     socket.on('room-sync', handleRoomSync);
-    socket.on('room-updated', handleRoomUpdated);
     socket.on('room-player-joined', handleRoomPlayerJoined);
     socket.on('player-left', handlePlayerLeft);
-    socket.on('room-playing', handleRoomPlaying);
     socket.on('update-players', handleUpdatePlayers);
     socket.on('profile-updated', handleProfileUpdated);
     socket.on('error-message', handleErrorMessage);
@@ -496,10 +373,8 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     return () => {
       socket.off('rooms-list', handleRoomsList);
       socket.off('room-sync', handleRoomSync);
-      socket.off('room-updated', handleRoomUpdated);
       socket.off('room-player-joined', handleRoomPlayerJoined);
       socket.off('player-left', handlePlayerLeft);
-      socket.off('room-playing', handleRoomPlaying);
       socket.off('update-players', handleUpdatePlayers);
       socket.off('profile-updated', handleProfileUpdated);
       socket.off('error-message', handleErrorMessage);
@@ -510,10 +385,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     socket,
     currentSeatId,
     clearStoredRoomState,
-    markRoomSyncHandled,
-    shouldSkipLegacyRoomUpdated,
-    shouldSkipLegacyUpdatePlayers,
-    shouldSkipLegacyRoomPlaying,
   ]);
 
   // ルーム作成

@@ -220,7 +220,7 @@ Supabase Auth の canonical user は `auth.users` です。一方、このアプ
 
 UUID ではない ID は外部システムまたは実行単位の opaque ID に限定します。現在の許可対象は `device_id`、`expo_receipt_id`、`worker_id` です。新しい内部 text ID を追加すると `supabase/tests/seat_uuid_identity.sql` が失敗します。
 
-JSON と Socket payload でも意味を列名に合わせ、`currentSeatId`、`winnerSeatId`、`dealerSeatId`、`negriSeatId`、`targetSeatId`、`youSeatId` を使用します。Web / Mobile の移行期間だけ旧名を同値 alias として読み書きします。
+JSON と Socket payload でも意味を列名に合わせ、`currentSeatId`、`winnerSeatId`、`dealerSeatId`、`negriSeatId`、`targetSeatId`、`youSeatId` を使用します。
 
 ### 5.6 social chat の source of truth
 
@@ -364,7 +364,7 @@ room 作成は room UUID と host seat UUID を先に生成し、deferred FK を
 - JSON shape と TypeScript 型がずれると runtime bug になる
 - relation と JSONB を跨ぐロスター更新には transaction が必要
 
-`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players.id`、player gameplay は `state_data.playerStates[seatId]`、current turn は `current_seat_id` の各正本だけを参照します。transport / runtimeも`seatId`を正本とし、旧identity aliasや旧JSON shapeは保持しません。
+`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players.id`、player gameplay は `state_data.playerStates[seatId]`、current turn は `current_seat_id` の各正本だけを参照します。transport / runtimeも`seatId`を正本とします。
 
 ### 7.3 chat
 

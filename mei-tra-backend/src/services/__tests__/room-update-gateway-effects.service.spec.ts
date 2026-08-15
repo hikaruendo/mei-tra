@@ -23,7 +23,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
           playState: {
             currentField: {
               cards: ['J♠'],
-              playedBy: ['com-player-1'],
+              playedBySeatIds: [asSeatId('com-player-1')],
               baseCard: 'J♠',
               dealerSeatId: asSeatId('com-player-1'),
               isComplete: false,
@@ -120,7 +120,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
   it('emits the canonical field after the updated player roster', async () => {
     const currentField = {
       cards: ['J♠'],
-      playedBy: ['com-player-1'],
+      playedBySeatIds: [asSeatId('com-player-1')],
       baseCard: 'J♠',
       dealerSeatId: asSeatId('com-player-1'),
       isComplete: false,
@@ -160,14 +160,15 @@ describe('RoomUpdateGatewayEffectsService', () => {
       scope: 'room',
       roomId: room.id,
     });
-    const playersEventIndex = events.findIndex(
-      (event) => event.event === 'update-players',
-    );
     const fieldEventIndex = events.findIndex(
       (event) => event.event === 'field-updated',
     );
 
-    expect(fieldEventIndex).toBeGreaterThan(playersEventIndex);
+    expect(events.map((event) => event.event)).toEqual([
+      'room-sync',
+      'field-updated',
+    ]);
+    expect(fieldEventIndex).toBe(1);
     expect(events[fieldEventIndex]).toEqual({
       scope: 'room',
       roomId: 'room-1',

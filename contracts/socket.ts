@@ -1,6 +1,5 @@
 import type {
   BackToLobbyPayload,
-  BlowStartedPayload,
   BlowUpdatedPayload,
   BrokenPayload,
   CardPlayedPayload,
@@ -111,21 +110,6 @@ export interface UpdateAuthPayload {
   token?: string;
 }
 
-export interface UpdateNamePayload {
-  name: string;
-}
-
-export type NameUpdatedPayload =
-  | {
-      success: true;
-      name: string;
-      seatId?: SeatId;
-    }
-  | {
-      success: false;
-      error: string;
-    };
-
 export type AckCallback<TAck extends GatewayAck = GatewayAck> = (
   response: TAck,
 ) => void;
@@ -198,7 +182,6 @@ export interface ClientToServerEvents {
   'select-base-suit': (payload: SelectBaseSuitPayload) => void;
   'reveal-broken-hand': (payload: RevealBrokenHandPayload) => void;
   'update-auth': (payload: UpdateAuthPayload) => void;
-  'update-name': (payload: UpdateNamePayload) => void;
   'profile-updated': () => void;
 }
 
@@ -206,18 +189,15 @@ export interface ServerToClientEvents {
   'update-users': (users: unknown[]) => void;
   'rooms-list': (rooms: RoomContract[]) => void;
   'room-sync': (payload: RoomSyncPayload) => void;
-  'room-updated': (room: RoomContract) => void;
   'room-player-joined': (payload: RoomPlayerJoinedPayload) => void;
   'set-room-id': (roomId: string) => void;
   'game-player-joined': (payload: GamePlayerJoinedPayload) => void;
   'update-players': (players: PlayerContract[]) => void;
-  'room-playing': (payload: { players: PlayerContract[] }) => void;
   'game-state': (payload: GameStatePayload) => void;
   'reconnect-token': (reconnectToken: string) => void;
   'game-started': (payload: GameStartedPayload) => void;
   'update-phase': (payload: UpdatePhasePayload) => void;
   'update-turn': (payload: UpdateTurnPayload) => void;
-  'blow-started': (payload: BlowStartedPayload) => void;
   'blow-updated': (payload: BlowUpdatedPayload) => void;
   broken: (payload: BrokenPayload) => void;
   'round-cancelled': (payload: RoundCancelledPayload) => void;
@@ -240,11 +220,7 @@ export interface ServerToClientEvents {
   'player-idle': (payload: PlayerIdlePayload) => void;
   'player-idle-cleared': (payload: PlayerIdlePayload) => void;
   'turn-ping': (payload: TurnPingPayload) => void;
-  'auth-updated': (payload: { userId: string }) => void;
-  'auth-update-error': (message: string) => void;
-  'name-updated': (payload: NameUpdatedPayload) => void;
   'profile-updated': (payload: unknown) => void;
-  'profile-update-error': (message: string) => void;
   error: (payload: { message: string }) => void;
 }
 

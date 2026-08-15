@@ -7,11 +7,6 @@ import type {
 import type { RoomContract } from '@meitra/contracts/room';
 import { asSeatId } from '@meitra/contracts/ids';
 import {
-  normalizeGameStateIdentity,
-  normalizePlayerIdentities,
-  normalizeRoomIdentity,
-} from '@meitra/game-client/identity';
-import {
   createEmptyBlowState,
   dedupeCompletedFields,
 } from '@meitra/game-client/game-event-reducer';
@@ -35,13 +30,11 @@ export const mergePlayersByIdentity = (
   previous: MobilePlayer[],
   next: PlayerContract[],
 ): MobilePlayer[] => {
-  const normalizedPrevious = normalizePlayerIdentities(previous);
-  const normalizedNext = normalizePlayerIdentities(next);
   const previousBySeatId = new Map(
-    normalizedPrevious.map((player) => [player.seatId, player]),
+    previous.map((player) => [player.seatId, player]),
   );
 
-  return normalizedNext.map((player) => {
+  return next.map((player) => {
     const oldPlayer = previousBySeatId.get(player.seatId);
     if (!oldPlayer || player.isCOM) {
       return player;
@@ -66,8 +59,7 @@ export const resolveSeatId = (
   if (!authenticatedUserId) return null;
 
   if (!room) return null;
-  const normalizedRoom = normalizeRoomIdentity(room);
-  return normalizedRoom.players.find(
+  return room.players.find(
     (player) => player.userId === authenticatedUserId,
   )?.seatId ?? null;
 };
@@ -75,14 +67,13 @@ export const resolveSeatId = (
 export const normalizeGameStatePayload = (
   payload: GameStatePayload,
 ): MobileGameSnapshot => {
-  const normalized = normalizeGameStateIdentity(payload);
   return {
-    ...normalized,
+    ...payload,
     isSpectator: Boolean(payload.isSpectator),
     revealedAgari: payload.revealedAgari ?? null,
     paused: false,
-    fields: dedupeCompletedFields(normalized.fields),
-    disconnectedSeatIds: extractDisconnectedSeatIds(normalized.players),
+    fields: dedupeCompletedFields(payload.fields),
+    disconnectedSeatIds: extractDisconnectedSeatIds(payload.players),
     idleSeatIds: [],
     teamNames: payload.teamNames,
   };
@@ -91,21 +82,18 @@ export const normalizeGameStatePayload = (
 export const extractDisconnectedSeatIds = (
   players: PlayerContract[],
 ): string[] =>
-  normalizePlayerIdentities(players)
-    .filter((p) => !p.isCOM && !p.socketId)
-    .map((p) => p.seatId);
+  players.filter((p) => !p.isCOM && !p.socketId).map((p) => p.seatId);
 
 export const createStartedGameSnapshot = (
   payload: GameStartedPayload,
   currentSeatId: string | null,
   hostSeatIdValue: string | null,
 ): MobileGameSnapshot => {
-  const players = normalizePlayerIdentities(payload.players);
   const youSeatId = currentSeatId ? asSeatId(currentSeatId) : null;
   const hostSeatId = hostSeatIdValue ? asSeatId(hostSeatIdValue) : null;
   return {
     roomId: payload.roomId,
-    players,
+    players: payload.players,
     gamePhase: 'blow',
     currentField: null,
     currentTurnSeatId: null,

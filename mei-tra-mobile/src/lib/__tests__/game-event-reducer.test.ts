@@ -4,10 +4,6 @@ import {
   createEmptyGameEventState,
   reduceGameEvent,
 } from '@meitra/game-client/game-event-reducer';
-import {
-  normalizeBlowDeclarationIdentity,
-  normalizePlayerIdentities,
-} from '@meitra/game-client/identity';
 
 const createPlayer = (seatId: string, hand: string[]): PlayerContract => ({
   socketId: `socket-${seatId}`,
@@ -26,7 +22,7 @@ describe('reduceGameEvent', () => {
     ];
     const state = {
       ...createEmptyGameEventState(),
-      players: normalizePlayerIdentities(players),
+      players,
       gamePhase: 'play' as const,
     };
 
@@ -49,26 +45,15 @@ describe('reduceGameEvent', () => {
 
     expect(afterCard.currentTurnSeatId).toBe('seat-2');
     expect(afterCard.currentField?.playedBySeatIds).toEqual(['seat-1']);
-
-    const afterBlowStart = reduceGameEvent(afterCard, {
-      type: 'blow-started',
-      payload: {
-        startingSeatId: asSeatId('seat-1'),
-        players,
-      },
-    });
-
-    expect(afterBlowStart.currentTurnSeatId).toBe('seat-1');
-    expect(afterBlowStart.players[0]?.seatId).toBe('seat-1');
   });
 
   it('keeps the server turn when card-played omits nextSeatId', () => {
     const state = {
       ...createEmptyGameEventState(),
-      players: normalizePlayerIdentities([
+      players: [
         createPlayer('seat-1', ['5♣']),
         createPlayer('seat-2', ['6♣']),
-      ]),
+      ],
       currentTurnSeatId: asSeatId('seat-1'),
       gamePhase: 'play' as const,
     };
@@ -95,18 +80,18 @@ describe('reduceGameEvent', () => {
   it('removes the negri card only from the identified self seat', () => {
     const state = {
       ...createEmptyGameEventState(),
-      players: normalizePlayerIdentities([
+      players: [
         createPlayer('seat-1', ['5♣', '6♣']),
         createPlayer('seat-2', ['5♣', '7♣']),
-      ]),
+      ],
       blowState: {
         ...createEmptyGameEventState().blowState,
-        currentHighestDeclaration: normalizeBlowDeclarationIdentity({
+        currentHighestDeclaration: {
           seatId: asSeatId('seat-1'),
           trumpType: 'club' as const,
           numberOfPairs: 6,
           timestamp: 1,
-        }),
+        },
       },
     };
 

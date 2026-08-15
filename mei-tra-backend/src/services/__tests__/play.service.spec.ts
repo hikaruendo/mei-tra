@@ -25,7 +25,9 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', 'K♣', '6♣'],
-      playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+      playedBySeatIds: ['player-1', 'player-2', 'player-3', 'player-4'].map(
+        asSeatId,
+      ),
       baseCard: '5♣',
       dealerSeatId: asSeatId('player-1'),
       isComplete: true,
@@ -46,7 +48,7 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
-      playedBy: ['player-1', 'com-1', 'player-2', 'com-2'],
+      playedBySeatIds: ['player-1', 'com-1', 'player-2', 'com-2'].map(asSeatId),
       baseCard: '5♣',
       dealerSeatId: asSeatId('player-1'),
       isComplete: true,
@@ -57,7 +59,7 @@ describe('PlayService', () => {
     expect(winner?.seatId).toBe('com-1');
   });
 
-  it('uses playedBy as the source of truth when card attribution differs from current seat order', () => {
+  it('uses playedBySeatIds when card attribution differs from current seat order', () => {
     const players = [
       makePlayer('player-1'),
       makePlayer('player-2'),
@@ -67,7 +69,9 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
-      playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+      playedBySeatIds: ['player-1', 'player-3', 'player-2', 'player-4'].map(
+        asSeatId,
+      ),
       baseCard: '5♣',
       dealerSeatId: asSeatId('player-1'),
       isComplete: true,
@@ -78,31 +82,10 @@ describe('PlayService', () => {
     expect(winner?.seatId).toBe('player-3');
   });
 
-  it('falls back to dealer order for legacy fields without playedBy attribution', () => {
-    const players = [
-      makePlayer('player-1'),
-      makePlayer('player-2'),
-      makePlayer('player-3'),
-      makePlayer('player-4'),
-    ];
-
-    const field: Field = {
-      cards: ['5♣', 'A♣', '6♣', 'K♣'],
-      playedBy: [],
-      baseCard: '5♣',
-      dealerSeatId: asSeatId('player-1'),
-      isComplete: true,
-    };
-
-    const winner = playService.determineFieldWinner(field, players, null);
-
-    expect(winner?.seatId).toBe('player-2');
-  });
-
   it('returns only base-suit cards when the hand can follow suit', () => {
     const field: Field = {
       cards: ['K♠'],
-      playedBy: ['player-2'],
+      playedBySeatIds: [asSeatId('player-2')],
       baseCard: 'K♠',
       dealerSeatId: asSeatId('player-2'),
       isComplete: false,
@@ -116,7 +99,7 @@ describe('PlayService', () => {
   it('requires Joker in Tanzen when the hand has it', () => {
     const field: Field = {
       cards: [],
-      playedBy: [],
+      playedBySeatIds: [],
       baseCard: '',
       dealerSeatId: asSeatId('player-1'),
       isComplete: false,

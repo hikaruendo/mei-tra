@@ -8,7 +8,7 @@ import type {
 } from '../types/vacant-seat.types';
 import { SessionUser } from '../types/session.types';
 import { randomUUID } from 'crypto';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import {
@@ -67,7 +67,7 @@ export class RoomJoinService {
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
         ...user,
-        seatId: resolveSeatId(existingPlayer),
+        seatId: existingPlayer.seatId,
         participantKey:
           user.userId ?? existingPlayer.participantKey ?? user.seatId,
         userId: user.userId ?? existingPlayer.userId,
@@ -84,7 +84,7 @@ export class RoomJoinService {
         gameState.registerSeatToken(updatedPlayer.userId, updatedPlayer.seatId);
       }
       gameState.clearDisconnectTimeout(updatedPlayer.seatId);
-      await gameState.applyPlayerConnectionState(updatedPlayer.seatId, {
+      gameState.applyPlayerConnectionState(updatedPlayer.seatId, {
         socketId: updatedPlayer.socketId,
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
@@ -222,9 +222,9 @@ export class RoomJoinService {
           ? room.players[assignedIndex]
           : undefined;
     const assignedSeatId = currentSeatRoomPlayer
-      ? resolveSeatId(currentSeatRoomPlayer)
+      ? currentSeatRoomPlayer.seatId
       : seatRoomSnapshot
-        ? resolveSeatId(seatRoomSnapshot)
+        ? seatRoomSnapshot.seatId
         : asSeatId(randomUUID());
     const player: RoomPlayer = {
       ...(seatRoomSnapshot ?? {}),
@@ -271,7 +271,7 @@ export class RoomJoinService {
     if (player.userId) {
       gameState.registerSeatToken(player.userId, player.seatId);
     }
-    await gameState.applyPlayerConnectionState(player.seatId, {
+    gameState.applyPlayerConnectionState(player.seatId, {
       socketId: player.socketId,
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,

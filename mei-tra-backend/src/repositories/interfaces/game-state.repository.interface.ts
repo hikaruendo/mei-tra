@@ -1,8 +1,4 @@
-import {
-  GameState,
-  DomainPlayer,
-  PlayerConnectionMetadata,
-} from '../../types/game.types';
+import { GameState, DomainPlayer } from '../../types/game.types';
 import { RoomPlayer } from '../../types/room.types';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import type { SeatId } from '../../types/identity.types';
@@ -27,11 +23,6 @@ export interface IGameStateRepository {
 
   // Player management in game state
   updatePlayers(roomId: string, players: DomainPlayer[]): Promise<boolean>;
-  updatePlayerConnection(
-    roomId: string,
-    seatId: SeatId,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<boolean>;
 
   // Game phase management
   updateGamePhase(roomId: string, phase: string): Promise<boolean>;

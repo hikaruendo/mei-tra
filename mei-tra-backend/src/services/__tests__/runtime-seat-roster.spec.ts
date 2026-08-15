@@ -23,7 +23,7 @@ const roomPlayer = (overrides: Partial<RoomPlayer> = {}): RoomPlayer => ({
 
 const room = (players: RoomPlayer[]): Pick<Room, 'players'> => ({ players });
 
-const state = (): Pick<GameState, 'players' | 'teamAssignments'> => ({
+const state = (): Pick<GameState, 'players'> => ({
   players: [
     {
       seatId: asSeatId('seat-1'),
@@ -35,7 +35,6 @@ const state = (): Pick<GameState, 'players' | 'teamAssignments'> => ({
       hasRequiredBroken: false,
     },
   ],
-  teamAssignments: { 'seat-1': 0 },
 });
 
 describe('runtime seat roster', () => {
@@ -68,10 +67,9 @@ describe('runtime seat roster', () => {
       hand: ['A♠'],
       hasBroken: true,
     });
-    expect(runtimeState.teamAssignments).toEqual({ 'seat-1': 0 });
   });
 
-  it('rebuilds the game projection and team lookup from the room roster', () => {
+  it('rebuilds the game projection from the room roster', () => {
     const runtimeState = state();
     const players = [
       roomPlayer({ name: 'Reconnected' }),
@@ -97,10 +95,6 @@ describe('runtime seat roster', () => {
         team: 1,
       }),
     ]);
-    expect(runtimeState.teamAssignments).toEqual({
-      'seat-1': 0,
-      'seat-2': 1,
-    });
   });
 
   it('rejects replacing a seat with a different identity', () => {

@@ -27,10 +27,6 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 import {
-  normalizePlayerIdentities,
-  normalizeRoomIdentity,
-} from '@meitra/game-client/identity';
-import {
   createEmptyGameEventState,
   createGameEventStateFromSnapshot,
   createGameEventStateFromStartedGame,
@@ -77,7 +73,6 @@ type Action =
   | { type: 'connection'; status: ConnectionStatus }
   | { type: 'rooms'; rooms: RoomContract[] }
   | { type: 'room'; room: RoomContract | null }
-  | { type: 'roomUpdated'; room: RoomContract }
   | { type: 'game'; game: MobileGameSnapshot }
   | { type: 'patchGame'; patch: Partial<MobileGameSnapshot> }
   | { type: 'players'; players: PlayerContract[] }
@@ -115,7 +110,7 @@ function reducer(state: MobileState, action: Action): MobileState {
     case 'connection':
       return { ...state, connectionStatus: action.status };
     case 'rooms': {
-      const rooms = action.rooms.map(normalizeRoomIdentity);
+      const rooms = action.rooms;
       return {
         ...state,
         rooms,
@@ -126,7 +121,7 @@ function reducer(state: MobileState, action: Action): MobileState {
       };
     }
     case 'room': {
-      const room = action.room ? normalizeRoomIdentity(action.room) : null;
+      const room = action.room;
       return {
         ...state,
         currentRoom: room,
@@ -136,18 +131,6 @@ function reducer(state: MobileState, action: Action): MobileState {
               room,
             ]
           : state.rooms,
-      };
-    }
-    case 'roomUpdated': {
-      const room = normalizeRoomIdentity(action.room);
-      return {
-        ...state,
-        rooms: [
-          ...state.rooms.filter((item) => item.id !== room.id),
-          room,
-        ],
-        currentRoom:
-          state.currentRoom?.id === room.id ? room : state.currentRoom,
       };
     }
     case 'game':
@@ -172,7 +155,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         },
       };
     case 'players': {
-      const players = normalizePlayerIdentities(action.players);
+      const players = action.players;
       const gamePlayers = state.game
         ? mergePlayersByIdentity(state.game.players, players)
         : players;
@@ -612,9 +595,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'players', players });
       finishResyncFlight(room.id);
     });
-    socket.on('room-updated', (room) => {
-      dispatch({ type: 'roomUpdated', room });
-    });
     socket.on('set-room-id', (roomId) => {
       void roomStorage.set(roomId);
     });
@@ -626,7 +606,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('update-players', (players) => {
       gameEventStateRef.current = {
         ...gameEventStateRef.current,
-        players: normalizePlayerIdentities(players),
+        players,
       };
       dispatch({ type: 'players', players });
       if (stateRef.current.game) {
@@ -637,13 +617,6 @@ export function GameProvider({ children }: PropsWithChildren) {
           },
         });
       }
-    });
-    socket.on('room-playing', ({ players }) => {
-      gameEventStateRef.current = {
-        ...gameEventStateRef.current,
-        players: normalizePlayerIdentities(players),
-      };
-      dispatch({ type: 'players', players });
     });
     socket.on('game-state', (payload) => {
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
@@ -686,9 +659,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (shouldAckTurn(stateRef.current.game, roomId)) {
         socket.emit('turn-ack', { roomId });
       }
-    });
-    socket.on('blow-started', (payload) => {
-      applyGameServerEvent({ type: 'blow-started', payload });
     });
     socket.on('blow-updated', (payload) => {
       applyGameServerEvent({ type: 'blow-updated', payload });
@@ -821,28 +791,6 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'notice', message: message ?? `${playerName ?? seatId} がCOMに置換されました` });
       },
     );
-    socket.on('name-updated', (payload) => {
-      if (!payload.success || !payload.seatId || !payload.name) return;
-      gameEventStateRef.current = {
-        ...gameEventStateRef.current,
-        players: gameEventStateRef.current.players.map((player) =>
-          player.seatId === payload.seatId
-            ? { ...player, name: payload.name! }
-            : player,
-        ),
-      };
-      const game = stateRef.current.game;
-      if (!game) return;
-      dispatch({
-        type: 'players',
-        players: game.players.map((p) =>
-          p.seatId === payload.seatId
-            ? { ...p, name: payload.name! }
-            : p,
-        ),
-      });
-    });
-
     socket.connect();
 
     return () => {
@@ -1204,12 +1152,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     () => resolveSeatId(state.game, state.currentRoom, user?.id),
     [state.currentRoom, state.game, user?.id],
   );
-  // Prefer the room's host seat: room-sync/room-updated keep it current, while
-  // the game snapshot is captured once at game start and never refreshed. Without
-  // this, a host transfer (e.g. the host disconnects) leaves every client
-  // believing the departed player is still host, so nobody can replace them
-  // with a COM. The web client reads a single currentHostSeatId that both room and
-  // game events write, which is the behaviour mirrored here.
+  // The room snapshot is refreshed after host changes; the game snapshot is
+  // captured at game start and can still contain the previous host seat.
   const isHost =
     Boolean(currentSeatId) &&
     (state.currentRoom?.hostSeatId ?? state.game?.hostSeatId) ===

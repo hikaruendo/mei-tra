@@ -21,12 +21,7 @@ import {
   GameHistorySummary,
 } from '../types/game-history.types';
 import { Room, RoomPlayer, RoomStatus } from '../types/room.types';
-import {
-  asSeatId,
-  isUuid,
-  resolveSeatId,
-  type SeatId,
-} from '../types/identity.types';
+import { asSeatId, isUuid, type SeatId } from '../types/identity.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 
@@ -85,10 +80,7 @@ export class GameHistoryController {
       this.parseQuery(query),
       playerNames,
     );
-    return this.withViewerStartingHands(
-      replay,
-      participant ? resolveSeatId(participant) : null,
-    );
+    return this.withViewerStartingHands(replay, participant?.seatId ?? null);
   }
 
   @Get(':roomId')
@@ -107,10 +99,7 @@ export class GameHistoryController {
       this.parseQuery(query),
     );
     return history.map((entry) =>
-      this.withSanitizedActionData(
-        entry,
-        participant ? resolveSeatId(participant) : null,
-      ),
+      this.withSanitizedActionData(entry, participant?.seatId ?? null),
     );
   }
 
@@ -144,7 +133,7 @@ export class GameHistoryController {
     return {
       participant: participants[0] ?? null,
       playerNames: Object.fromEntries(
-        room.players.map((player) => [resolveSeatId(player), player.name]),
+        room.players.map((player) => [player.seatId, player.name]),
       ),
       teamNames: room.settings.teamNames,
     };

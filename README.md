@@ -14,7 +14,7 @@
 最近の主要な設計方針は次の通りです。
 
 - 外側は Next.js / NestJS の標準的な module、route、controller、gateway、DI に乗せる。一方で、ゲームの正しさに直結する `CardService` / `BlowService` / `PlayService` / `ScoreService` / `ChomboService` / `GamePhaseService` は domain層として扱い、UI・Socket・DB へ散らさない
-- room/player 同期は `room-sync` を主系統にし、`room-updated` / `update-players` は互換 fallback として維持する
+- room/player の完全同期は `room-sync`、進行中のplayer表示更新は `update-players` を使う
 - 対局ログは `game_history` を write/read side の両方で使い、**プレイ中 UI ではなくプロフィールの「最近の対局」から詳細ページへ入る**
 
 ## リポジトリ構成

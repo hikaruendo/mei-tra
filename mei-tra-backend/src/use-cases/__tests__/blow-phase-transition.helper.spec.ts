@@ -63,7 +63,6 @@ describe('transitionToPlayPhase', () => {
       },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
     };
     const room = {
       id: 'room-1',
@@ -204,7 +203,6 @@ describe('transitionToPlayPhase', () => {
       },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
     };
     const roomGameState = {
       transitionPhase: jest.fn(async (phase: GameState['gamePhase']) => {

@@ -142,18 +142,6 @@ describe('JoinRoomGatewayEffectsService', () => {
           players: [{ seatId: 'player-1' }],
         },
       },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-updated',
-        payload: updatedRoom,
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [{ seatId: 'player-1' }],
-      },
     ]);
 
     const result = await service.buildEffects({
@@ -183,7 +171,7 @@ describe('JoinRoomGatewayEffectsService', () => {
     expect(result.room.players).toHaveLength(2);
     expect(
       result.events.some(
-        (event) => event.event === 'room-updated' && event.roomId === 'room-1',
+        (event) => event.event === 'room-sync' && event.roomId === 'room-1',
       ),
     ).toBe(true);
   });
@@ -609,8 +597,8 @@ describe('JoinRoomGatewayEffectsService', () => {
       {
         scope: 'socket',
         socketId: 'socket-1',
-        event: 'room-updated',
-        payload: room,
+        event: 'room-sync',
+        payload: { room, players: room.players },
       },
     ]);
 
@@ -702,18 +690,6 @@ describe('JoinRoomGatewayEffectsService', () => {
           players: [{ seatId: 'player-1' }],
         },
       },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-updated',
-        payload: room,
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [{ seatId: 'player-1' }],
-      },
     ]);
 
     const events = await service.buildActiveReconnectEvents({
@@ -772,11 +748,6 @@ describe('JoinRoomGatewayEffectsService', () => {
         scope: 'room',
         roomId: 'room-1',
         event: 'room-sync',
-      }),
-      expect.objectContaining({
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
       }),
     ]);
   });

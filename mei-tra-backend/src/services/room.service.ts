@@ -26,7 +26,7 @@ import {
   RosterMembershipMutation,
 } from '../types/room-membership.types';
 import { randomUUID } from 'crypto';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
@@ -438,7 +438,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           room.players[playerIndex],
         );
 
-        const resolvedSeatId = resolveSeatId(room.players[playerIndex]);
+        const resolvedSeatId = room.players[playerIndex].seatId;
         this.vacantSeats[roomId][resolvedSeatId] = {
           roomPlayer: this.cloneRoomPlayer(room.players[playerIndex]),
           gamePlayer:
@@ -862,7 +862,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     roomGameState.clearDisconnectTimeout(seatId);
-    await roomGameState.applyPlayerConnectionState(seatId, connectionState);
+    roomGameState.applyPlayerConnectionState(seatId, connectionState);
 
     const roomPlayerUpdates: {
       socketId: string;

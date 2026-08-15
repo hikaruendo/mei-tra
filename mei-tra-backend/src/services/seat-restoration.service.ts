@@ -4,7 +4,7 @@ import { toDomainPlayer } from '../adapters/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import type { VacantSeats } from '../types/vacant-seat.types';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayerIndex,
   setCurrentSeat,
@@ -49,7 +49,7 @@ export class SeatRestorationService {
     }
 
     const comSeatId = currentSeatPlayer.seatId;
-    const seatId = resolveSeatId(currentSeatPlayer);
+    const seatId = currentSeatPlayer.seatId;
     const restoredRoomPlayer: RoomPlayer = {
       ...seatData.roomPlayer,
       socketId: '',

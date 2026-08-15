@@ -470,7 +470,7 @@ UI では RoomList がこれを使って、「backend 起動中」「接続中�
 例:
 
 - `game.types.ts` では `GameActions` のような UI 専用型がある
-- `room.types.ts` には `teamAssignments` が含まれる
+- `room.types.ts` は room metadata と player list を UI 向けに再公開する
 - `social.types.ts` は `contracts/` の social payload を frontend 側へ再公開する薄い入口になっている
 - `user.types.ts` には theme / font size を含む preference 型がある
 

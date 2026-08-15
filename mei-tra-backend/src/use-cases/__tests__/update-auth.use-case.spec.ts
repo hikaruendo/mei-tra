@@ -98,7 +98,7 @@ describe('UpdateAuthUseCase', () => {
       applyPlayerConnectionState: jest
         .fn()
         .mockImplementation(
-          async (_seatId: string, connectionState: PlayerConnectionState) => {
+          (_seatId: string, connectionState: PlayerConnectionState) => {
             roomState.players[0].socketId = connectionState.socketId;
             roomState.players[0].userId = connectionState.userId ?? '';
             roomState.players[0].isAuthenticated = Boolean(
@@ -185,31 +185,6 @@ describe('UpdateAuthUseCase', () => {
         event: 'update-users',
       }),
     );
-    expect(result.roomEvents).toContainEqual(
-      expect.objectContaining({
-        event: 'update-players',
-        payload: [
-          expect.objectContaining({
-            socketId: 'socket-1',
-            seatId: asSeatId('player-1'),
-            name: 'User Display',
-            userId: 'user-1',
-            isAuthenticated: true,
-            isHost: true,
-          }),
-        ],
-      }),
-    );
-    const roomUpdatedEvent = result.roomEvents?.find(
-      (event) => event.event === 'room-updated',
-    );
-    expect(roomUpdatedEvent).toBeDefined();
-    expect(roomUpdatedEvent?.payload).toMatchObject({
-      id: updatedRoom.id,
-      hostSeatId: updatedRoom.hostSeatId,
-      name: updatedRoom.name,
-      status: updatedRoom.status,
-    });
     const roomSyncEvent = result.roomEvents?.find(
       (event) => event.event === 'room-sync',
     );
@@ -224,6 +199,9 @@ describe('UpdateAuthUseCase', () => {
           socketId: 'socket-1',
           seatId: asSeatId('player-1'),
           name: 'User Display',
+          userId: 'user-1',
+          isAuthenticated: true,
+          isHost: true,
         },
       ],
     });

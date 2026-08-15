@@ -5,7 +5,7 @@ import {
 } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import type { PlayerContract } from '@contracts/game';
 
@@ -34,7 +34,7 @@ export function toDomainPlayer(
   > &
     Partial<PlayerGameplayState>,
 ): DomainPlayer {
-  const seatId = resolveSeatId(player);
+  const seatId = player.seatId;
   return {
     seatId,
     name: player.name,
@@ -53,7 +53,7 @@ export function withConnectionMetadata(
 ): TransportPlayer {
   const domainPlayer = toDomainPlayer(player);
   return {
-    seatId: resolveSeatId(domainPlayer),
+    seatId: domainPlayer.seatId,
     name: domainPlayer.name,
     hand: [...domainPlayer.hand],
     team: domainPlayer.team,

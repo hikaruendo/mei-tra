@@ -30,7 +30,7 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
     playState: {
       currentField: {
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
         dealerSeatId: asSeatId('player-1'),
         isComplete: false,
@@ -44,7 +44,6 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
     },
     roundNumber: 1,
     pointsToWin: 5,
-    teamAssignments: {},
     ...overrides,
   }) as GameState;
 

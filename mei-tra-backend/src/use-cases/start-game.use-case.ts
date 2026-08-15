@@ -225,10 +225,6 @@ export class StartGameUseCase implements IStartGameUseCase {
       };
     });
 
-    state.teamAssignments = Object.fromEntries(
-      state.players.map((player) => [player.seatId, player.team]),
-    );
-
     return state;
   }
 

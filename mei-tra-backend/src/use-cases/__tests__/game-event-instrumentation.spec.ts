@@ -96,7 +96,7 @@ describe('Game event instrumentation', () => {
       playState: {
         currentField: {
           cards: [],
-          playedBy: [],
+          playedBySeatIds: [],
           baseCard: '',
           dealerSeatId: asSeatId('player-1'),
           isComplete: false,

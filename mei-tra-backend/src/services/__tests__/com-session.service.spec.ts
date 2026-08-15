@@ -22,12 +22,11 @@ const createGameStateStub = () => {
         hasRequiredBroken: false,
       },
     ],
-    teamAssignments: { [HUMAN_ID]: 0 } as Record<string, number>,
     currentSeatId: asSeatId(HUMAN_ID),
     playState: {
       currentField: {
         cards: ['A♠'],
-        playedBy: [asSeatId(HUMAN_ID)],
+        playedBySeatIds: [asSeatId(HUMAN_ID)],
         baseCard: 'A♠',
         dealerSeatId: asSeatId(HUMAN_ID),
         isComplete: false,
@@ -97,9 +96,11 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     const comId = state.players[0].seatId;
     expect(comId).toBe(HUMAN_ID);
 
-    expect(state.playState!.currentField!.playedBy).toEqual([comId]);
+    expect(state.playState!.currentField!.playedBySeatIds).toEqual([comId]);
     expect(state.playState!.currentField!.dealerSeatId).toBe(comId);
-    expect(state.teamAssignments[comId]).toBe(0);
+    expect(state.players.find((player) => player.seatId === comId)?.team).toBe(
+      0,
+    );
     expect(state.currentSeatId).toBe(comId);
     expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);
     expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.seatId).toBe(

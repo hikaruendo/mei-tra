@@ -58,7 +58,7 @@ describe('Rule service characterization', () => {
     );
     const field: Field = {
       cards: ['10♠', 'A♠', 'J♣', 'K♠'],
-      playedBy: ['p1', 'p2', 'p3', 'p4'],
+      playedBySeatIds: ['p1', 'p2', 'p3', 'p4'].map(asSeatId),
       baseCard: '10♠',
       dealerSeatId: asSeatId('p1'),
       isComplete: false,

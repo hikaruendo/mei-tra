@@ -2,7 +2,6 @@ import type {
   CompletedFieldContract,
 } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
-import { normalizeCompletedFieldIdentity } from '@meitra/game-client/identity';
 
 import {
   createEmptyBlowState,
@@ -80,8 +79,8 @@ describe('dedupeCompletedFields', () => {
     });
 
     expect(dedupeCompletedFields([first, duplicate, differentDealer])).toEqual([
-      normalizeCompletedFieldIdentity(first),
-      normalizeCompletedFieldIdentity(differentDealer),
+      first,
+      differentDealer,
     ]);
   });
 });

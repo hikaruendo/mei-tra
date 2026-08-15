@@ -226,10 +226,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private normalizeGatewayPayload(event: GatewayEvent): unknown {
-    if (event.event === 'room-updated' && event.payload) {
-      return toRoomContract(event.payload as Room);
-    }
-
     if (event.event === 'rooms-list' && Array.isArray(event.payload)) {
       return toRoomContracts(event.payload as Room[]);
     }
@@ -649,21 +645,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('update-name')
-  handleUpdateName(@ConnectedSocket() client: Socket) {
-    // Name updates not supported for authenticated users
-    // Display name comes from profile
-    client.emit('name-updated', {
-      success: false,
-      error: 'Name updates not supported. Please update your profile.',
-    });
-  }
-
   @SubscribeMessage('profile-updated')
   handleProfileUpdated(@ConnectedSocket() client: Socket): void {
     const authenticatedUser = this.getAuthenticatedUser(client);
     if (!authenticatedUser) {
-      client.emit('profile-update-error', 'Authentication required');
+      client.emit('error-message', 'Authentication required');
       return;
     }
 
@@ -1841,22 +1827,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (!result.success || !result.authenticatedUser) {
-        client.emit(
-          'auth-update-error',
-          result.error ?? 'Authentication failed',
-        );
+        client.emit('error-message', result.error ?? 'Authentication failed');
         return;
       }
 
       (client.data as { user?: AuthenticatedUser }).user =
         result.authenticatedUser;
 
-      this.dispatchEvents(result.clientEvents);
       this.dispatchEvents(result.broadcastEvents);
       this.dispatchEvents(result.roomEvents);
     } catch (error) {
       console.error('[GameGateway] Error in handleUpdateAuth:', error);
-      client.emit('auth-update-error', 'Internal server error');
+      client.emit('error-message', 'Internal server error');
     }
   }
 }

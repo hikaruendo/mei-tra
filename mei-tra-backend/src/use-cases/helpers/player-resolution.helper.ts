@@ -110,23 +110,6 @@ export function buildRoomSyncEvent(
   };
 }
 
-export function buildRoomUpdatedEvent(
-  source: TransportPlayerSource,
-  room: Room,
-  players: DomainPlayer[],
-): GatewayEvent {
-  const transportPlayers = resolveTransportPlayers(source, players, {
-    roomPlayers: room.players,
-  });
-
-  return {
-    scope: 'room',
-    roomId: room.id,
-    event: 'room-updated',
-    payload: toRoomContract(room, { players: transportPlayers }),
-  };
-}
-
 export function buildPlayerSyncEvents(
   source: TransportPlayerSource,
   roomId: string,
@@ -136,10 +119,14 @@ export function buildPlayerSyncEvents(
     roomPlayers?: RoomPlayer[];
   },
 ): GatewayEvent[] {
+  if (options?.room) {
+    return [buildRoomSyncEvent(source, options.room, players)];
+  }
+
   const transportPlayers = resolveTransportPlayers(source, players, {
-    roomPlayers: options?.roomPlayers ?? options?.room?.players,
+    roomPlayers: options?.roomPlayers,
   });
-  const events: GatewayEvent[] = [
+  return [
     {
       scope: 'room',
       roomId,
@@ -147,10 +134,4 @@ export function buildPlayerSyncEvents(
       payload: transportPlayers,
     },
   ];
-
-  if (options?.room) {
-    events.push(buildRoomSyncEvent(source, options.room, players));
-  }
-
-  return events;
 }

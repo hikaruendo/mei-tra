@@ -101,7 +101,6 @@ describe('SupabaseGameStateRepository', () => {
       },
       roundNumber: 1,
       pointsToWin: 8,
-      teamAssignments: { [firstSeatId]: 1 },
     };
   }
 
