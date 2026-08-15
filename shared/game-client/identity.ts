@@ -12,21 +12,15 @@ import type { RoomContract } from '@meitra/contracts/room';
 
 export type CanonicalPlayerContract<T extends ConnectionUserContract> = T & {
   seatId: SeatId;
-  playerId: SeatId;
 };
 
 export type CanonicalRoomContract = Omit<RoomContract, 'players'> & {
-  hostId: SeatId;
   players: Array<CanonicalPlayerContract<RoomContract['players'][number]>>;
 };
 
-export type CanonicalBlowDeclaration = BlowDeclarationContract & {
-  playerId: SeatId;
-};
+export type CanonicalBlowDeclaration = BlowDeclarationContract;
 
-export type CanonicalBlowAction = BlowActionContract & {
-  playerId: SeatId;
-};
+export type CanonicalBlowAction = BlowActionContract;
 
 export type CanonicalBlowState = Omit<
   BlowStateContract,
@@ -35,18 +29,11 @@ export type CanonicalBlowState = Omit<
   currentHighestDeclaration: CanonicalBlowDeclaration | null;
   declarations: CanonicalBlowDeclaration[];
   actionHistory: CanonicalBlowAction[];
-  lastPasser: SeatId | null;
 };
 
-export type CanonicalFieldContract = FieldContract & {
-  playedBy: SeatId[];
-  dealerId: SeatId;
-};
+export type CanonicalFieldContract = FieldContract;
 
-export type CanonicalCompletedFieldContract = CompletedFieldContract & {
-  winnerId: SeatId;
-  dealerId: SeatId;
-};
+export type CanonicalCompletedFieldContract = CompletedFieldContract;
 
 export type CanonicalGameStatePayload = Omit<
   GameStatePayload,
@@ -64,10 +51,7 @@ export type CanonicalGameStatePayload = Omit<
 export const normalizePlayerIdentity = <T extends ConnectionUserContract>(
   player: T,
 ): CanonicalPlayerContract<T> => {
-  return {
-    ...player,
-    playerId: player.seatId,
-  };
+  return { ...player };
 };
 
 export const normalizePlayerIdentities = <T extends ConnectionUserContract>(
@@ -78,13 +62,13 @@ export const normalizePlayerIdentities = <T extends ConnectionUserContract>(
 export const normalizeBlowDeclarationIdentity = (
   declaration: BlowDeclarationContract,
 ): CanonicalBlowDeclaration => {
-  return { ...declaration, playerId: declaration.seatId };
+  return { ...declaration };
 };
 
 export const normalizeBlowActionIdentity = (
   action: BlowActionContract,
 ): CanonicalBlowAction => {
-  return { ...action, playerId: action.seatId };
+  return { ...action };
 };
 
 export const normalizeBlowStateIdentity = (
@@ -104,28 +88,19 @@ export const normalizeBlowStateIdentity = (
     declarations,
     actionHistory,
     currentHighestDeclaration,
-    lastPasser: blowState.lastPasserSeatId,
   };
 };
 
 export const normalizeFieldIdentity = (
   field: FieldContract,
 ): CanonicalFieldContract => {
-  return {
-    ...field,
-    playedBy: [...field.playedBySeatIds],
-    dealerId: field.dealerSeatId,
-  };
+  return { ...field, playedBySeatIds: [...field.playedBySeatIds] };
 };
 
 export const normalizeCompletedFieldIdentity = (
   field: CompletedFieldContract,
 ): CanonicalCompletedFieldContract => {
-  return {
-    ...field,
-    winnerId: field.winnerSeatId,
-    dealerId: field.dealerSeatId,
-  };
+  return { ...field };
 };
 
 export const normalizeRoomIdentity = (
@@ -135,7 +110,6 @@ export const normalizeRoomIdentity = (
 
   return {
     ...room,
-    hostId: room.hostSeatId,
     players,
   };
 };

@@ -171,7 +171,7 @@ export const RoomList: React.FC<RoomListProps> = ({
               .filter(
                 (player, index, players) =>
                   players.findIndex(
-                    (candidate) => candidate.playerId === player.playerId,
+                    (candidate) => candidate.seatId === player.seatId,
                   ) === index,
               )
               .slice(0, room.settings.maxPlayers);
@@ -187,7 +187,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <ul className={styles.playerList}>
                     {displayPlayers.map((player, index) => (
                       <li
-                        key={`${player.playerId}-${index}`}
+                        key={`${player.seatId}-${index}`}
                         className={styles.playerItem}
                       >
                         <span className={styles.playerName} title={player.name}>{player.name}</span>

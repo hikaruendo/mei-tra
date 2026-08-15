@@ -55,7 +55,7 @@ export function BlowControls({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMyTurn = currentTurn === currentPlayerId;
   const turnName =
-    players.find((player) => player.playerId === currentTurn)?.name ?? '—';
+    players.find((player) => player.seatId === currentTurn)?.name ?? '—';
 
   const validPairs = useMemo(
     () => getValidBlowPairValues(highest, selectedTrump),

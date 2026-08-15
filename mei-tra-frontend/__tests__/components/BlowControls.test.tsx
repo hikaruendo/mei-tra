@@ -27,14 +27,14 @@ jest.mock('next-intl', () => ({
 
 const player: Player = {
   socketId: 'socket-1',
-  playerId: 'player-1',
+  seatId: 'player-1',
   name: 'Player 1',
   team: 0,
   hand: [],
 };
 
 const declaration: BlowDeclaration = {
-  playerId: 'player-1',
+  seatId: 'player-1',
   trumpType: 'daiya',
   numberOfPairs: 6,
   timestamp: 1,
@@ -42,7 +42,7 @@ const declaration: BlowDeclaration = {
 
 const action: BlowAction = {
   type: 'declare',
-  playerId: 'player-1',
+  seatId: 'player-1',
   trumpType: 'daiya',
   numberOfPairs: 6,
   timestamp: 1,

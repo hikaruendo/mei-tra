@@ -21,7 +21,6 @@ const player = (
 ): MobilePlayer => ({
   socketId: `socket-${playerId}`,
   seatId: asSeatId(playerId),
-  playerId: asSeatId(playerId),
   name: playerId,
   userId: `user-${playerId}`,
   team: 0,
@@ -49,7 +48,7 @@ describe('mergePlayersByIdentity', () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         userId: 'user-1',
         name: 'Hikaru',
       }),
@@ -64,7 +63,7 @@ describe('mergePlayersByIdentity', () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         userId: undefined,
         name: 'COM 1',
       }),
@@ -115,7 +114,7 @@ describe('recovery helpers', () => {
       pointsToWin: 5,
     });
 
-    expect(snapshot.players).toEqual([expect.objectContaining({ playerId: 'server-player' })]);
+    expect(snapshot.players).toEqual([expect.objectContaining({ seatId: 'server-player' })]);
     expect(snapshot.fields).toHaveLength(1);
     expect(snapshot.youSeatId).toBe('server-player');
     expect(snapshot.negriSeatId).toBe('server-player');
@@ -137,7 +136,6 @@ describe('recovery helpers', () => {
             declarations: [],
             actionHistory: [],
             lastPasserSeatId: null,
-            lastPasser: null,
             isRoundCancelled: false,
             currentBlowIndex: 0,
           },
@@ -158,7 +156,6 @@ describe('recovery helpers', () => {
           id: 'room-1',
           name: 'room',
           hostSeatId: asSeatId('host'),
-          hostId: asSeatId('host'),
           status: 'waiting',
           players: [
             {
@@ -207,7 +204,7 @@ describe('recovery helpers', () => {
       pointsToWin: 5,
     });
 
-    expect(snapshot.players[0].playerId).toBe('canonical-seat');
+    expect(snapshot.players[0].seatId).toBe('canonical-seat');
     expect(snapshot.currentTurnSeatId).toBe('canonical-seat');
     expect(snapshot.youSeatId).toBe('canonical-seat');
     expect(snapshot.hostSeatId).toBe('canonical-seat');

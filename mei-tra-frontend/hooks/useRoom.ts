@@ -55,7 +55,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
         serverPlayerId: currentPlayerId,
       });
       return (
-        room.players.find((player) => player.playerId === playerId) ?? null
+        room.players.find((player) => player.seatId === playerId) ?? null
       );
     },
     [currentPlayerId, user?.id],
@@ -237,7 +237,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
                 hand: [],
                 team: (index % 2) as Team,
                 isReady: false,
-                isHost: room.hostId === p,
+                isHost: room.hostSeatId === p,
                 joinedAt: new Date()
               } as RoomPlayer;
             }
@@ -246,14 +246,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
           // 既存プレイヤーチェック（重複防止）
           const alreadyInRoom = existingPlayers.some(
-            (player) => player.playerId === joinedSeatId,
+            (player) => player.seatId === joinedSeatId,
           );
           if (alreadyInRoom) return room;
 
           const newPlayer: RoomPlayer = {
             socketId: '',
             seatId: joinedSeatId,
-            playerId: joinedSeatId,
             name: joinedSeatId,
             hand: [],
             team: (existingPlayers.length % 2) as Team,
@@ -298,7 +297,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           if (!prev) return null;
 
           const updatedPlayers = prev.players.map(p =>
-            p.playerId === playerId
+            p.seatId === playerId
               ? {
                   ...p,
                   socketId: '',
@@ -315,15 +314,15 @@ export const useRoom = (options: UseRoomOptions = {}) => {
               : p
           );
 
-          if (prev.hostId === playerId) {
+          if (prev.hostSeatId === playerId) {
             const newHost = updatedPlayers.find(p => !p.isCOM);
             if (newHost) {
               return {
                 ...prev,
                 players: updatedPlayers.map(p =>
-                  p.playerId === newHost.playerId ? { ...p, isHost: true } : p
+                  p.seatId === newHost.seatId ? { ...p, isHost: true } : p
                 ),
-                hostId: newHost.playerId,
+                hostSeatId: newHost.seatId,
               };
             }
           }
@@ -412,7 +411,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     ): Room => ({
       ...room,
       players: room.players.map((player) =>
-        player.userId === userId || player.playerId === userId
+        player.userId === userId || player.seatId === userId
           ? { ...player, profileRevision }
           : player,
       ),
@@ -434,7 +433,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       setAvailableRooms((prevRooms) =>
         prevRooms.map((room) =>
           room.players.some(
-            (player) => player.userId === userId || player.playerId === userId,
+            (player) => player.userId === userId || player.seatId === userId,
           )
             ? applyProfileRevision(room, userId, profileRevision)
             : room,
@@ -588,7 +587,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     const displayName = user.profile?.displayName || user.email || 'User';
     const userToJoin = {
       socketId: socket.id ?? '',
-      playerId: user.id,  // Supabase userId — must match room.hostId set during createRoom
+      playerId: user.id, // Transport field carries the Supabase user ID during room creation.
       name: displayName,
       userId: user.id,
       isAuthenticated: true
@@ -644,13 +643,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // userId でマッチング（socket.id は再接続で変わるため使わない）
     const player = resolveSelfRoomPlayer(room);
 
-    if (!player?.playerId) {
+    if (!player?.seatId) {
       console.error('[useRoom] Cannot leave room: player not found');
       setError('Player not found in room');
       return;
     }
 
-    socket.emit('leave-room', { roomId, playerId: player.playerId }, (response: { success: boolean; error?: string }) => {
+    socket.emit('leave-room', { roomId, playerId: player.seatId }, (response: { success: boolean; error?: string }) => {
       if (response.success) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('roomId');
@@ -680,7 +679,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       setError('Player not found in room');
       return;
     }
-    if (!player.playerId) {
+    if (!player.seatId) {
       setError('Player ID is not set');
       return;
     }
@@ -688,12 +687,12 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // ローカルの準備状態を即時更新
     setPlayerReadyStatus(prev => ({
       ...prev,
-      [player.playerId]: !prev[player.playerId]
+      [player.seatId]: !prev[player.seatId]
     }));
 
     socket.emit('toggle-player-ready', {
       roomId: currentRoom.id,
-      playerId: player.playerId
+      playerId: player.seatId
     });
   }, [socket, currentRoom, resolveSelfRoomPlayer]);
 
@@ -713,7 +712,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.emit('start-game', {
       roomId: currentRoom.id,
-      playerId: player.playerId
+      playerId: player.seatId
     });
   }, [socket, currentRoom, resolveSelfRoomPlayer]);
 
@@ -722,11 +721,11 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     if (!socket) return;
     const room = availableRooms.find(r => r.id === roomId) || currentRoom;
     const player = resolveSelfRoomPlayer(room);
-    if (!player?.playerId) {
+    if (!player?.seatId) {
       console.error('[useRoom] Cannot fill with COM: player not found');
       return;
     }
-    socket.emit('fill-with-com', { roomId, playerId: player.playerId });
+    socket.emit('fill-with-com', { roomId, playerId: player.seatId });
   }, [socket, currentRoom, availableRooms, resolveSelfRoomPlayer]);
 
   // プレイヤーのチーム変更
@@ -737,13 +736,13 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     // userId でマッチング（socket.id は再接続で変わるため使わない）
     const player = resolveSelfRoomPlayer(room);
 
-    if (!player?.playerId) {
+    if (!player?.seatId) {
       console.error('[useRoom] Cannot change team: player not found');
       return Promise.resolve(false);
     }
 
     return new Promise((resolve) => {
-      socket.emit('change-player-team', { roomId, playerId: player.playerId, teamChanges }, (response: { success: boolean }) => {
+      socket.emit('change-player-team', { roomId, playerId: player.seatId, teamChanges }, (response: { success: boolean }) => {
         resolve(response.success);
       });
     });

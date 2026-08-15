@@ -115,7 +115,7 @@ export function WaitingRoom({
                 player &&
                 !player.isHost &&
                 !player.isCOM &&
-                player.playerId !== currentPlayerId;
+                player.seatId !== currentPlayerId;
               const seatView = (
                 <View
                   accessibilityLabel={`${player?.name ?? '空席'}、${
@@ -155,13 +155,13 @@ export function WaitingRoom({
                           {
                             text: 'COMに置換',
                             onPress: () =>
-                              onReplaceWithCOM(player.playerId),
+                              onReplaceWithCOM(player.seatId),
                           },
                           {
                             text: '退出させる',
                             style: 'destructive',
                             onPress: () =>
-                              onRemovePlayer(player.playerId),
+                              onRemovePlayer(player.seatId),
                           },
                           { text: 'キャンセル', style: 'cancel' },
                         ],

@@ -1,5 +1,5 @@
 export interface PlayerIdentity {
-  playerId: string;
+  seatId: string;
   userId?: string;
 }
 
@@ -13,7 +13,7 @@ export function resolveSelfPlayerId<T extends PlayerIdentity>(
 ): string | null {
   if (
     options.serverPlayerId &&
-    players.some((player) => player.playerId === options.serverPlayerId)
+    players.some((player) => player.seatId === options.serverPlayerId)
   ) {
     return options.serverPlayerId;
   }
@@ -23,13 +23,13 @@ export function resolveSelfPlayerId<T extends PlayerIdentity>(
       (player) => player.userId === options.userId,
     );
     if (authenticatedMatches.length === 1) {
-      return authenticatedMatches[0].playerId;
+      return authenticatedMatches[0].seatId;
     }
   }
 
   if (
     options.fallbackPlayerId &&
-    players.some((player) => player.playerId === options.fallbackPlayerId)
+    players.some((player) => player.seatId === options.fallbackPlayerId)
   ) {
     return options.fallbackPlayerId;
   }

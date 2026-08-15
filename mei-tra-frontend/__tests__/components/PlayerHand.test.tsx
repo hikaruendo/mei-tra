@@ -95,7 +95,7 @@ const gameActions: GameActions = {
 
 const otherPlayer: Player = {
   socketId: '',
-  playerId: 'player-2',
+  seatId: 'player-2',
   name: 'Player 2',
   team: 0,
   hand: ['H-A'],
@@ -154,7 +154,7 @@ describe('PlayerHand', () => {
   it('shows the Agari card while selecting Negri', () => {
     renderPlayerHand({
       agariCard: 'H-A',
-      currentHighestDeclaration: { playerId: 'player-2' },
+      currentHighestDeclaration: { seatId: 'player-2' },
       currentPlayerId: 'player-2',
       whoseTurn: 'player-2',
       player: {
@@ -172,7 +172,7 @@ describe('PlayerHand', () => {
     renderPlayerHand({
       position: 'bottom',
       agariCard: 'H-A',
-      currentHighestDeclaration: { playerId: 'player-2' },
+      currentHighestDeclaration: { seatId: 'player-2' },
       currentPlayerId: 'player-2',
       whoseTurn: 'player-2',
       player: {
@@ -206,7 +206,7 @@ describe('PlayerHand', () => {
   it('uses the translated no-trump label in the declaration badge', () => {
     renderPlayerHand({
       currentHighestDeclaration: {
-        playerId: 'player-2',
+        seatId: 'player-2',
         trumpType: 'tra',
         numberOfPairs: 6,
       },
@@ -218,7 +218,7 @@ describe('PlayerHand', () => {
   it('omits the suit symbol from the declaration badge', () => {
     renderPlayerHand({
       currentHighestDeclaration: {
-        playerId: 'player-2',
+        seatId: 'player-2',
         trumpType: 'daiya',
         numberOfPairs: 7,
       },

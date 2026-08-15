@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { asSeatId } from '@contracts/ids';
 import { CompletedFields } from '@/components/game/CompletedFields';
 
 describe('CompletedFields', () => {
@@ -12,8 +13,18 @@ describe('CompletedFields', () => {
     render(
       <CompletedFields
         fields={[
-          { cards: ['A♠', '10♥'], winnerId: 'player-1', winnerTeam: 0 },
-          { cards: ['C-K'], winnerId: 'player-2', winnerTeam: 0 },
+          {
+            cards: ['A♠', '10♥'],
+            winnerSeatId: asSeatId('player-1'),
+            dealerSeatId: asSeatId('player-2'),
+            winnerTeam: 0,
+          },
+          {
+            cards: ['C-K'],
+            winnerSeatId: asSeatId('player-2'),
+            dealerSeatId: asSeatId('player-1'),
+            winnerTeam: 0,
+          },
         ]}
       />,
     );

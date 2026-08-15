@@ -32,7 +32,7 @@ interface PlayerHandProps {
   gameActions: GameActions;
   position: string;
   agariCard?: string;
-  currentHighestDeclaration?: Pick<BlowDeclaration, 'playerId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
+  currentHighestDeclaration?: Pick<BlowDeclaration, 'seatId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
   completedFields: CompletedField[];
   currentPlayerId: string;
   currentField: Field | null;
@@ -90,9 +90,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     currentField,
     currentTrump,
   );
-  const isCurrentPlayer = currentPlayerId === player.playerId;
+  const isCurrentPlayer = currentPlayerId === player.seatId;
   const canActAsCurrentPlayer = isCurrentPlayer && !isSpectator;
-  const isWinningPlayer = currentHighestDeclaration?.playerId === player.playerId;
+  const isWinningPlayer = currentHighestDeclaration?.seatId === player.seatId;
   const playerDeclaration = isWinningPlayer && currentHighestDeclaration?.trumpType
     ? {
       trumpType: currentHighestDeclaration.trumpType,
@@ -131,13 +131,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
 
     autoRevealAttemptedRef.current = true;
-    gameActions.revealBrokenHand(player.playerId);
+    gameActions.revealBrokenHand(player.seatId);
   }, [
     gamePhase,
     gameActions,
     canActAsCurrentPlayer,
     player.hasRequiredBroken,
-    player.playerId,
+    player.seatId,
   ]);
 
   useEffect(() => {
@@ -222,7 +222,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
 
     if (gamePhase === 'play' && whoseTurn === currentPlayerId) {
-      if (!negriCard && currentHighestDeclaration?.playerId === player.playerId) {
+      if (!negriCard && currentHighestDeclaration?.seatId === player.seatId) {
         setSelectedNegriCard(card);
       } else {
         setSelectedCard(card);
@@ -427,7 +427,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
         <button
           className={styles.brokenButton}
-          onClick={() => gameActions.revealBrokenHand(player.playerId)}
+          onClick={() => gameActions.revealBrokenHand(player.seatId)}
         >
           {t('revealBroken')}
         </button>
@@ -484,7 +484,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             <button
               type="button"
               className={`${styles.playerInfoContainer} ${styles.spectatorPerspectiveButton} ${isCurrentTurn ? styles.currentTurn : ''} ${isSpectatorPerspective ? styles.spectatorPerspective : ''}`}
-              onClick={() => onSpectatorPerspectiveChange?.(player.playerId)}
+              onClick={() => onSpectatorPerspectiveChange?.(player.seatId)}
               aria-pressed={isSpectatorPerspective}
               aria-label={`Switch spectator perspective to ${player.name}`}
             >
@@ -511,7 +511,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 <button
                   type="button"
                   className={styles.replaceWithComButton}
-                  onClick={() => onReplaceWithCOM(player.playerId)}
+                  onClick={() => onReplaceWithCOM(player.seatId)}
                 >
                   {tStatus('replaceWithCom')}
                 </button>

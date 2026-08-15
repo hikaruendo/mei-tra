@@ -72,7 +72,6 @@ export const createEmptyBlowState = (): CanonicalBlowState => ({
   declarations: [],
   actionHistory: [],
   lastPasserSeatId: null,
-  lastPasser: null,
   isRoundCancelled: false,
   currentBlowIndex: 0,
 });
@@ -125,8 +124,8 @@ export const dedupeCompletedFields = (
   const seen = new Set<string>();
   return fields.map(normalizeCompletedFieldIdentity).filter((field) => {
     const key = [
-      field.dealerId,
-      field.winnerId,
+      field.dealerSeatId,
+      field.winnerSeatId,
       field.winnerTeam,
       field.cards.join(','),
     ].join('|');
@@ -140,11 +139,9 @@ export const dedupeCompletedFields = (
 
 const createEmptyField = (dealerSeatId: SeatId): CanonicalFieldContract => ({
   cards: [],
-  playedBy: [],
   playedBySeatIds: [],
   baseCard: '',
   dealerSeatId,
-  dealerId: dealerSeatId,
   isComplete: false,
 });
 
@@ -200,7 +197,6 @@ export const reduceGameEvent = (
             ? normalizeBlowDeclarationIdentity(event.payload.currentHighest)
             : null,
           lastPasserSeatId,
-          lastPasser: lastPasserSeatId,
         },
       };
     }
@@ -257,7 +253,7 @@ export const reduceGameEvent = (
         ...state,
         players: selfSeatId
           ? state.players.map((player) =>
-              player.playerId === selfSeatId
+              player.seatId === selfSeatId
                 ? {
                     ...player,
                     hand: player.hand.filter(

@@ -84,7 +84,7 @@ const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
   const seen = new Set<string>();
 
   return fields.filter((field) => {
-    const signature = `${field.winnerId}|${field.winnerTeam}|${field.cards.join(',')}`;
+    const signature = `${field.winnerSeatId}|${field.winnerTeam}|${field.cards.join(',')}`;
     if (seen.has(signature)) {
       return false;
     }
@@ -105,12 +105,12 @@ const toUiBlowDeclaration = (
   declaration: BlowDeclarationContract,
 ): BlowDeclaration => {
   const seatId = declaration.seatId;
-  return { ...declaration, seatId, playerId: seatId };
+  return { ...declaration, seatId };
 };
 
 const toUiBlowAction = (action: BlowActionContract): BlowAction => {
   const seatId = action.seatId;
-  return { ...action, seatId, playerId: seatId };
+  return { ...action, seatId };
 };
 
 const toUiField = (field: FieldContract | null): Field | null => {
@@ -123,11 +123,9 @@ const toUiField = (field: FieldContract | null): Field | null => {
   return {
     cards: field.cards,
     playedBySeatIds,
-    playedBy: playedBySeatIds,
     baseCard: field.baseCard,
     baseSuit: field.baseSuit,
     dealerSeatId,
-    dealerId: dealerSeatId,
     isComplete: field.isComplete,
   };
 };
@@ -140,10 +138,8 @@ const toUiCompletedField = (
   return {
     cards: field.cards,
     winnerSeatId,
-    winnerId: winnerSeatId,
     winnerTeam: field.winnerTeam,
     dealerSeatId,
-    dealerId: dealerSeatId,
   };
 };
 
@@ -172,11 +168,11 @@ const mergePlayersPreservingIdentity = (
   nextPlayers: Player[],
 ): Player[] => {
   const previousByPlayerId = new Map(
-    previousPlayers.map((player) => [player.playerId, player]),
+    previousPlayers.map((player) => [player.seatId, player]),
   );
 
   return nextPlayers.map((nextPlayer) => {
-    const previousPlayer = previousByPlayerId.get(nextPlayer.playerId);
+    const previousPlayer = previousByPlayerId.get(nextPlayer.seatId);
     if (!previousPlayer || nextPlayer.isCOM) {
       return nextPlayer;
     }
@@ -311,17 +307,17 @@ export const useGame = () => {
   );
 
   const syncDisconnectedPlayerIdsFromPlayers = useCallback(
-    (nextPlayers: Array<Pick<Player, 'playerId' | 'isCOM' | 'socketId'>>) => {
+    (nextPlayers: Array<Pick<Player, 'seatId' | 'isCOM' | 'socketId'>>) => {
       setDisconnectedPlayerIds(
         nextPlayers
           .filter((player) => !player.isCOM && !player.socketId)
-          .map((player) => player.playerId),
+          .map((player) => player.seatId),
       );
     },
     [],
   );
 
-  const resolveCurrentUserPlayerId = useCallback(<T extends { playerId: string; userId?: string }>(
+  const resolveCurrentUserPlayerId = useCallback(<T extends { seatId: string; userId?: string }>(
     nextPlayers: T[],
     fallbackPlayerId?: string | null,
     serverPlayerId?: string | null,
@@ -356,15 +352,15 @@ export const useGame = () => {
   const hasPlayerActedInCurrentBlow = useCallback(
     (playerId: string): boolean => {
       const player = playersRef.current.find(
-        (candidate) => candidate.playerId === playerId,
+        (candidate) => candidate.seatId === playerId,
       );
 
       return (
         Boolean(player?.isPasser) ||
         blowDeclarations.some(
-          (declaration) => declaration.playerId === playerId,
+          (declaration) => declaration.seatId === playerId,
         ) ||
-        blowActionHistory.some((action) => action.playerId === playerId)
+        blowActionHistory.some((action) => action.seatId === playerId)
       );
     },
     [blowActionHistory, blowDeclarations],
@@ -477,7 +473,7 @@ export const useGame = () => {
       !currentRoomId ||
       gamePhase !== 'play' ||
       !currentPlayerId ||
-      currentHighestDeclaration?.playerId !== currentPlayerId ||
+      currentHighestDeclaration?.seatId !== currentPlayerId ||
       revealedAgari ||
       negriCard
     ) {
@@ -553,7 +549,7 @@ export const useGame = () => {
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setIdlePlayerIds((idleIds) =>
           idleIds.filter((playerId) =>
-            nextPlayers.some((player) => player.playerId === playerId),
+            nextPlayers.some((player) => player.seatId === playerId),
           ),
         );
         if (!isSpectator) {
@@ -602,7 +598,7 @@ export const useGame = () => {
       'name-updated': ({ success, playerId, name, error }: { success: boolean; playerId?: string; name?: string; error?: string }) => {
         if (success && playerId && name) {
           setUsers((prev) => {
-            const existingIndex = prev.findIndex((u) => u.playerId === playerId);
+            const existingIndex = prev.findIndex((u) => u.seatId === playerId);
             const baseUser = {
               socketId: '',
               seatId: asSeatId(playerId),
@@ -639,7 +635,7 @@ export const useGame = () => {
         syncDisconnectedPlayerIdsFromPlayers(nextPlayers);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
-            nextPlayers.some((player) => player.playerId === playerId),
+            nextPlayers.some((player) => player.seatId === playerId),
           ),
         );
         syncCurrentPlayerIdentity(nextPlayers, currentPlayerId);
@@ -661,7 +657,7 @@ export const useGame = () => {
           Boolean(
             selfPlayerId &&
               nextRoom.players.some(
-                (player) => player.playerId === selfPlayerId,
+                (player) => player.seatId === selfPlayerId,
               ),
           );
 
@@ -673,7 +669,7 @@ export const useGame = () => {
           setCurrentRoomId(nextRoom.id);
         }
 
-        setCurrentHostId(nextRoom.hostId);
+        setCurrentHostId(nextRoom.hostSeatId);
         setTeamNames(nextRoom.settings.teamNames);
         if (selfPlayerId) {
           setCurrentPlayerId(selfPlayerId);
@@ -692,7 +688,7 @@ export const useGame = () => {
           Boolean(
             selfPlayerId &&
               nextRoom.players.some(
-                (player) => player.playerId === selfPlayerId,
+                (player) => player.seatId === selfPlayerId,
               ),
           );
 
@@ -712,7 +708,7 @@ export const useGame = () => {
           setCurrentRoomId(nextRoom.id);
         }
 
-        setCurrentHostId(nextRoom.hostId);
+        setCurrentHostId(nextRoom.hostSeatId);
         setTeamNames(nextRoom.settings.teamNames);
         if (selfPlayerId) {
           setCurrentPlayerId(selfPlayerId);
@@ -792,7 +788,7 @@ export const useGame = () => {
         setTeamNames(teamNames);
         setIdlePlayerIds((prev) =>
           prev.filter((playerId) =>
-            nextPlayers.some((player) => player.playerId === playerId),
+            nextPlayers.some((player) => player.seatId === playerId),
           ),
         );
       },
@@ -816,14 +812,14 @@ export const useGame = () => {
           return;
         }
         updatePlayersLocally((prev) => {
-          const existingPlayer = prev.find(p => p.playerId === joinedSeatId);
+          const existingPlayer = prev.find(p => p.seatId === joinedSeatId);
           if (existingPlayer) {
             return prev;
           }
 
           // Look up display name from users list by playerId (not socket.id).
           // Use usersRef.current to avoid stale closure — users state may be empty at handler registration time.
-          const knownUser = usersRef.current.find(u => u.playerId === joinedSeatId);
+          const knownUser = usersRef.current.find(u => u.seatId === joinedSeatId);
 
           return [...prev, {
             socketId: knownUser?.socketId ?? '',
@@ -846,7 +842,7 @@ export const useGame = () => {
 
         updatePlayersLocally((prev) =>
           prev.map((player) =>
-            player.userId === userId || player.playerId === userId
+            player.userId === userId || player.seatId === userId
               ? { ...player, profileRevision }
               : player,
           ),
@@ -970,7 +966,7 @@ export const useGame = () => {
       // 'reveal-hands': ({ players }: { players: { playerId: string; hand: string[] }[] }) => {
       //   setPlayers(currentPlayers => 
       //     currentPlayers.map(p => {
-      //       const revealedPlayer = players.find(rp => rp.playerId === p.playerId);
+      //       const revealedPlayer = players.find(rp => rp.seatId === p.seatId);
       //       return revealedPlayer ? { ...p, hand: revealedPlayer.hand } : p;
       //     })
       //   );
@@ -1056,7 +1052,7 @@ export const useGame = () => {
         gameEventStateRef.current = {
           ...gameEventStateRef.current,
           players: gameEventStateRef.current.players.map((player) =>
-            player.playerId === playerId
+            player.seatId === playerId
               ? {
                   ...player,
                   socketId: '',
@@ -1067,7 +1063,7 @@ export const useGame = () => {
         };
         updatePlayersLocally((prev) =>
           prev.map((player) =>
-            player.playerId === playerId
+            player.seatId === playerId
               ? {
                   ...player,
                   socketId: '',
@@ -1120,7 +1116,7 @@ export const useGame = () => {
         gameEventStateRef.current = {
           ...gameEventStateRef.current,
           players: gameEventStateRef.current.players.map((player) =>
-            player.playerId === playerId
+            player.seatId === playerId
               ? { ...player, isCOM: true, socketId: '' }
               : player,
           ),

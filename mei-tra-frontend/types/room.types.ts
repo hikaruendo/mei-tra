@@ -15,7 +15,6 @@ export interface Room {
   id: string;
   name: string;
   hostSeatId: SeatId;
-  hostId: string;
   status: RoomStatus;
   players: RoomPlayer[];
   settings: RoomSettings;
@@ -59,7 +58,6 @@ export function fromRoomPlayerContract(
   return {
     socketId: normalized.socketId,
     seatId: normalized.seatId,
-    playerId: normalized.playerId,
     name: normalized.name,
     userId: normalized.userId,
     isAuthenticated: normalized.isAuthenticated,
@@ -81,7 +79,6 @@ export function fromRoomContract(room: RoomContract): Room {
     id: normalized.id,
     name: normalized.name,
     hostSeatId: normalized.hostSeatId!,
-    hostId: normalized.hostId,
     status: toRoomStatus(normalized.status),
     players: normalized.players.map(fromRoomPlayerContract),
     settings: {

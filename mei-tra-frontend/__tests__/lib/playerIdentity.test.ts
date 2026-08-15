@@ -2,8 +2,8 @@ import { resolveSelfPlayerId } from '@/lib/utils/playerIdentity';
 
 describe('resolveSelfPlayerId', () => {
   const players = [
-    { playerId: 'seat-1', userId: 'user-1' },
-    { playerId: 'seat-2', userId: 'user-2' },
+    { seatId: 'seat-1', userId: 'user-1' },
+    { seatId: 'seat-2', userId: 'user-2' },
   ];
 
   it('prefers an authoritative server player id', () => {
@@ -30,7 +30,7 @@ describe('resolveSelfPlayerId', () => {
       resolveSelfPlayerId(
         [
           ...players,
-          { playerId: 'seat-3', userId: 'user-1' },
+          { seatId: 'seat-3', userId: 'user-1' },
         ],
         { userId: 'user-1' },
       ),

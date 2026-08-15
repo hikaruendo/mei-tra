@@ -83,12 +83,12 @@ export const GameTable: React.FC<GameTableProps> = ({
   const [spectatorPerspectivePlayerId, setSpectatorPerspectivePlayerId] =
     useState<string | null>(null);
 
-  const hostPlayerId = players.find((player) => player.isHost)?.playerId ?? players[0]?.playerId ?? null;
+  const hostPlayerId = players.find((player) => player.isHost)?.seatId ?? players[0]?.seatId ?? null;
   const tablePerspectivePlayerId = isSpectator
     ? spectatorPerspectivePlayerId ?? hostPlayerId
     : currentPlayerId;
   const perspectivePlayerTeam = players.find(
-    (player) => player.playerId === tablePerspectivePlayerId,
+    (player) => player.seatId === tablePerspectivePlayerId,
   )?.team ?? 0;
 
   useEffect(() => {
@@ -100,7 +100,7 @@ export const GameTable: React.FC<GameTableProps> = ({
     }
 
     const hasSelectedPerspective = players.some(
-      (player) => player.playerId === spectatorPerspectivePlayerId,
+      (player) => player.seatId === spectatorPerspectivePlayerId,
     );
     if (!hasSelectedPerspective) {
       setSpectatorPerspectivePlayerId(hostPlayerId);
@@ -122,7 +122,6 @@ export const GameTable: React.FC<GameTableProps> = ({
   const createCOMSlot = (idx: number): Player => ({
     socketId: `com-${idx}`,
     seatId: asSeatId(`com-${idx}`),
-    playerId: `com-${idx}`,
     name: 'COM',
     team: (idx % 2) as Player['team'],
     hand: [],
@@ -198,7 +197,7 @@ export const GameTable: React.FC<GameTableProps> = ({
           const position = positions[idx];
           const currentPlayerTeam = isSpectator
             ? perspectivePlayerTeam
-            : players.find(p => p.playerId === currentPlayerId)?.team ?? 0;
+            : players.find(p => p.seatId === currentPlayerId)?.team ?? 0;
 
           // Show all team's completed fields only for bottom player
           const teamCompletedFields = position === 'bottom'
@@ -210,9 +209,9 @@ export const GameTable: React.FC<GameTableProps> = ({
 
           return (
             <PlayerHand
-              key={player_.playerId}
+              key={player_.seatId}
               player={player_}
-              isCurrentTurn={whoseTurn === player_.playerId}
+              isCurrentTurn={whoseTurn === player_.seatId}
               negriCard={negriCard}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
@@ -227,11 +226,11 @@ export const GameTable: React.FC<GameTableProps> = ({
               takenCount={takenCount}
               teamNames={teamNames}
               isHost={isHost}
-              isIdle={idlePlayerIds.includes(player_.playerId)}
-              isDisconnected={disconnectedPlayerIds.includes(player_.playerId)}
+              isIdle={idlePlayerIds.includes(player_.seatId)}
+              isDisconnected={disconnectedPlayerIds.includes(player_.seatId)}
               isSpectator={isSpectator}
               isSpectatorPerspective={
-                isSpectator && tablePerspectivePlayerId === player_.playerId
+                isSpectator && tablePerspectivePlayerId === player_.seatId
               }
               onSpectatorPerspectiveChange={
                 isSpectator ? setSpectatorPerspectivePlayerId : undefined

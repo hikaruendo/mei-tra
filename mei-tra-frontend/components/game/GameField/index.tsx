@@ -39,8 +39,8 @@ export const GameField: React.FC<GameFieldProps> = ({
       <div className={styles.fieldContainerOuter}>
         <div className={styles.fieldContainerInner}>
           {currentField.cards.map((card: string, index: number) => {
-            const playedByPlayerId = currentField.playedBy?.[index] ?? '';
-            const position = getCardSeatPosition(playedByPlayerId, orderedPlayers);
+            const playedBySeatId = currentField.playedBySeatIds[index] ?? '';
+            const position = getCardSeatPosition(playedBySeatId, orderedPlayers);
 
             return (
               <div

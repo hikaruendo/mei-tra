@@ -48,14 +48,14 @@ jest.mock('@/components/game/BlowSpectatorPanel', () => ({
 const players: Player[] = [
   {
     socketId: 'player-1',
-    playerId: 'player-1',
+    seatId: 'player-1',
     name: 'Player 1',
     team: 0,
     hand: [],
   },
   {
     socketId: 'player-2',
-    playerId: 'player-2',
+    seatId: 'player-2',
     name: 'Player 2',
     team: 1,
     hand: [],

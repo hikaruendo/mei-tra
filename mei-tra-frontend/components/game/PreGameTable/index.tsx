@@ -27,7 +27,6 @@ function createEmptySlot(index: number): Player {
   return {
     socketId: `empty-${index}`,
     seatId: asSeatId(`empty-${index}`),
-    playerId: `empty-${index}`,
     name: 'COM',
     team: (index % 2) as Player['team'],
     hand: [],
@@ -91,7 +90,7 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
     <div className={styles.playerPositions}>
       {slots.map((player, idx) => (
         <div
-          key={player.playerId}
+          key={player.seatId}
           className={`${styles.playerSeat} ${styles[positions[idx]]} ${
             player.team === 0 ? styles.teamRed : styles.teamBlack
           }`}
@@ -104,11 +103,11 @@ export const PreGameTable: React.FC<PreGameTableProps> = ({
             {isHost &&
               onRemovePlayer &&
               !player.isCOM &&
-              player.playerId !== currentPlayerId && (
+              player.seatId !== currentPlayerId && (
                 <button
                   type="button"
                   className={styles.seatActionButton}
-                  onClick={() => onRemovePlayer(player.playerId)}
+                  onClick={() => onRemovePlayer(player.seatId)}
                 >
                   {tRoot('room.removePlayer')}
                 </button>

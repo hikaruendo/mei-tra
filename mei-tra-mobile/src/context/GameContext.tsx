@@ -81,10 +81,10 @@ type Action =
   | { type: 'game'; game: MobileGameSnapshot }
   | { type: 'patchGame'; patch: Partial<MobileGameSnapshot> }
   | { type: 'players'; players: PlayerContract[] }
-  | { type: 'playerDisconnected'; playerId: string }
-  | { type: 'playerIdle'; playerId: string }
-  | { type: 'playerIdleCleared'; playerId: string }
-  | { type: 'playerConvertedToCom'; playerId: string }
+  | { type: 'playerDisconnected'; seatId: string }
+  | { type: 'playerIdle'; seatId: string }
+  | { type: 'playerIdleCleared'; seatId: string }
+  | { type: 'playerConvertedToCom'; seatId: string }
   | { type: 'error'; message: string | null }
   | { type: 'notice'; message: string | null }
   | { type: 'gameOver'; gameOver: MobileGameOver | null }
@@ -179,7 +179,7 @@ function reducer(state: MobileState, action: Action): MobileState {
       const roomPlayers = state.currentRoom
         ? state.currentRoom.players.map((roomPlayer) => {
             const updated = players.find(
-              (player) => player.playerId === roomPlayer.playerId,
+              (player) => player.seatId === roomPlayer.seatId,
             );
             return updated ? { ...roomPlayer, ...updated } : roomPlayer;
           })
@@ -201,15 +201,15 @@ function reducer(state: MobileState, action: Action): MobileState {
         game: {
           ...state.game,
           players: state.game.players.map((p) =>
-            p.playerId === action.playerId ? { ...p, socketId: '' } : p,
+            p.seatId === action.seatId ? { ...p, socketId: '' } : p,
           ),
           disconnectedPlayerIds: state.game.disconnectedPlayerIds.includes(
-            action.playerId,
+            action.seatId,
           )
             ? state.game.disconnectedPlayerIds
-            : [...state.game.disconnectedPlayerIds, action.playerId],
+            : [...state.game.disconnectedPlayerIds, action.seatId],
           idlePlayerIds: state.game.idlePlayerIds.filter(
-            (id) => id !== action.playerId,
+            (id) => id !== action.seatId,
           ),
         },
       };
@@ -220,9 +220,9 @@ function reducer(state: MobileState, action: Action): MobileState {
         ...state,
         game: {
           ...state.game,
-          idlePlayerIds: state.game.idlePlayerIds.includes(action.playerId)
+          idlePlayerIds: state.game.idlePlayerIds.includes(action.seatId)
             ? state.game.idlePlayerIds
-            : [...state.game.idlePlayerIds, action.playerId],
+            : [...state.game.idlePlayerIds, action.seatId],
         },
       };
     }
@@ -233,7 +233,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         game: {
           ...state.game,
           idlePlayerIds: state.game.idlePlayerIds.filter(
-            (id) => id !== action.playerId,
+            (id) => id !== action.seatId,
           ),
         },
       };
@@ -245,10 +245,10 @@ function reducer(state: MobileState, action: Action): MobileState {
         game: {
           ...state.game,
           disconnectedPlayerIds: state.game.disconnectedPlayerIds.filter(
-            (id) => id !== action.playerId,
+            (id) => id !== action.seatId,
           ),
           idlePlayerIds: state.game.idlePlayerIds.filter(
-            (id) => id !== action.playerId,
+            (id) => id !== action.seatId,
           ),
         },
       };
@@ -775,7 +775,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       gameEventStateRef.current = {
         ...gameEventStateRef.current,
         players: gameEventStateRef.current.players.map((player) =>
-          player.playerId === playerId
+          player.seatId === playerId
             ? {
                 ...player,
                 socketId: '',
@@ -784,7 +784,7 @@ export function GameProvider({ children }: PropsWithChildren) {
             : player,
         ),
       };
-      dispatch({ type: 'playerDisconnected', playerId });
+      dispatch({ type: 'playerDisconnected', seatId: playerId });
       dispatch({
         type: 'notice',
         message: `${playerName ?? playerId} が切断しました`,
@@ -793,14 +793,14 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('player-idle', (payload) => {
       const playerId = payload.seatId;
       const playerName = (payload as { playerName?: string }).playerName;
-      dispatch({ type: 'playerIdle', playerId });
+      dispatch({ type: 'playerIdle', seatId: playerId });
       dispatch({
         type: 'notice',
         message: `${playerName ?? playerId} が無操作です`,
       });
     });
     socket.on('player-idle-cleared', ({ seatId }) => {
-      dispatch({ type: 'playerIdleCleared', playerId: seatId });
+      dispatch({ type: 'playerIdleCleared', seatId });
     });
     socket.on(
       'player-converted-to-com',
@@ -813,7 +813,7 @@ export function GameProvider({ children }: PropsWithChildren) {
               : player,
           ),
         };
-        dispatch({ type: 'playerConvertedToCom', playerId: seatId });
+        dispatch({ type: 'playerConvertedToCom', seatId });
         if (seatId === asSeatId(resolveCurrentPlayerId() ?? '')) {
           void roomStorage.clear();
           dispatch({ type: 'resetRoom' });

@@ -38,11 +38,11 @@ export const mergePlayersByIdentity = (
   const normalizedPrevious = normalizePlayerIdentities(previous);
   const normalizedNext = normalizePlayerIdentities(next);
   const previousByPlayerId = new Map(
-    normalizedPrevious.map((player) => [player.playerId, player]),
+    normalizedPrevious.map((player) => [player.seatId, player]),
   );
 
   return normalizedNext.map((player) => {
-    const oldPlayer = previousByPlayerId.get(player.playerId);
+    const oldPlayer = previousByPlayerId.get(player.seatId);
     if (!oldPlayer || player.isCOM) {
       return player;
     }
@@ -93,16 +93,16 @@ export const extractDisconnectedPlayerIds = (
 ): string[] =>
   normalizePlayerIdentities(players)
     .filter((p) => !p.isCOM && !p.socketId)
-    .map((p) => p.playerId);
+    .map((p) => p.seatId);
 
 export const createStartedGameSnapshot = (
   payload: GameStartedPayload,
-  currentPlayerId: string | null,
-  hostId: string | null,
+  currentSeatId: string | null,
+  hostSeatIdValue: string | null,
 ): MobileGameSnapshot => {
   const players = normalizePlayerIdentities(payload.players);
-  const youSeatId = currentPlayerId ? asSeatId(currentPlayerId) : null;
-  const hostSeatId = hostId ? asSeatId(hostId) : null;
+  const youSeatId = currentSeatId ? asSeatId(currentSeatId) : null;
+  const hostSeatId = hostSeatIdValue ? asSeatId(hostSeatIdValue) : null;
   return {
     roomId: payload.roomId,
     players,

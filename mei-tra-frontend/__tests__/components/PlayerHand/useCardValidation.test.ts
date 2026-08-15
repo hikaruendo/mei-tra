@@ -1,13 +1,14 @@
 import { renderHook } from '@testing-library/react';
+import { asSeatId } from '@contracts/ids';
 import type { Field } from '@/types/game.types';
 import { useCardValidation } from '@/components/game/PlayerHand/hooks/useCardValidation';
 
 const field = (baseCard: string, baseSuit?: string): Field => ({
   cards: [baseCard],
-  playedBy: ['player-1'],
+  playedBySeatIds: [asSeatId('player-1')],
   baseCard,
   ...(baseSuit ? { baseSuit } : {}),
-  dealerId: 'player-1',
+  dealerSeatId: asSeatId('player-1'),
   isComplete: false,
 });
 
