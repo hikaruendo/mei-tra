@@ -23,7 +23,7 @@ export interface JoinRoomRequest {
 
 export interface PreviousRoomNotification {
   roomId: string;
-  playerId: string;
+  seatId: SeatId;
 }
 
 export interface ResumeGamePayload {

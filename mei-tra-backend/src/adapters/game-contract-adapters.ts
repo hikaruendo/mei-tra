@@ -12,14 +12,14 @@ import type {
   BlowState,
   CompletedField,
   Field,
-} from './game.types';
-import { asSeatId } from './identity.types';
+} from '../types/game.types';
+import { asSeatId } from '../types/identity.types';
 
 export function toBlowDeclarationContract(
   declaration: BlowDeclaration,
 ): BlowDeclarationContract {
   return {
-    seatId: declaration.seatId ?? asSeatId(declaration.playerId),
+    seatId: declaration.seatId,
     team: declaration.team,
     trumpType: declaration.trumpType,
     numberOfPairs: declaration.numberOfPairs,
@@ -30,7 +30,7 @@ export function toBlowDeclarationContract(
 export function toBlowActionContract(action: BlowAction): BlowActionContract {
   return {
     type: action.type,
-    seatId: action.seatId ?? asSeatId(action.playerId),
+    seatId: action.seatId,
     trumpType: action.trumpType,
     numberOfPairs: action.numberOfPairs,
     timestamp: action.timestamp,
@@ -66,7 +66,7 @@ export function toBlowUpdatedPayload(state: BlowState): BlowUpdatedPayload {
 export function toFieldContract(field: Field): FieldContract {
   return {
     cards: [...field.cards],
-    playedBySeatIds: (field.playedBySeatIds ?? field.playedBy).map(asSeatId),
+    playedBySeatIds: field.playedBySeatIds.map(asSeatId),
     baseCard: field.baseCard,
     baseSuit: field.baseSuit,
     dealerSeatId: field.dealerSeatId,

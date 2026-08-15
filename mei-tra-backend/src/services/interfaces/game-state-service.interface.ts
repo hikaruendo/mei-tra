@@ -2,6 +2,7 @@ import { DomainPlayer } from '../../types/game.types';
 import { PlayerConnectionState, SessionUser } from '../../types/session.types';
 import { RoomPlayer } from '../../types/room.types';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface IGameStateService {
   addPlayer(
@@ -13,7 +14,7 @@ export interface IGameStateService {
   getSessionUsers(): SessionUser[];
   findSessionUserBySocketId(socketId: string): SessionUser | null;
   findSessionUserByUserId(userId: string): SessionUser | null;
-  findSessionUserByPlayerId(playerId: string): SessionUser | null;
+  findSessionUserBySeatId(seatId: SeatId): SessionUser | null;
   upsertSessionUser(sessionUser: SessionUser): {
     user: SessionUser;
     created: boolean;
@@ -22,19 +23,14 @@ export interface IGameStateService {
   updateUserNameBySocketId(socketId: string, name: string): boolean;
   findPlayerByActorId(actorId: string): DomainPlayer | null;
   findPlayerBySocketId(socketId: string): DomainPlayer | null;
-  updatePlayerSocketId(
-    playerId: string,
-    socketId: string,
-    userId?: string,
-  ): Promise<void>;
   applyPlayerConnectionState(
-    playerId: string,
+    seatId: SeatId,
     connectionState: PlayerConnectionState,
-  ): Promise<void>;
-  getPlayerConnectionState(playerId: string): PlayerConnectionState | null;
+  ): void;
+  getPlayerConnectionState(seatId: SeatId): PlayerConnectionState | null;
   persistRoster(
     roomPlayers: RoomPlayer[],
-    hostId?: string,
+    hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<void>;
   reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void>;

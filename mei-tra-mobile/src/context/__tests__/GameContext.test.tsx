@@ -433,12 +433,12 @@ describe('GameProvider realtime resync safety', () => {
     expect(screen.latestGame.game?.players).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: 'player-2',
           isCOM: true,
         }),
       ]),
     );
-    expect(screen.latestGame.game?.currentField?.playedBy).toEqual([
+    expect(screen.latestGame.game?.currentField?.playedBySeatIds).toEqual([
       'player-2',
     ]);
 

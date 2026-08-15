@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { CreateRoomUseCase } from '../create-room.use-case';
@@ -14,7 +15,7 @@ describe('CreateRoomUseCase', () => {
   const userId = 'user-123';
   const hostPlayer: RoomPlayer = {
     socketId: '',
-    playerId: userId,
+    seatId: asSeatId(userId),
     userId,
     isAuthenticated: true,
     name: 'Test Player',
@@ -31,7 +32,7 @@ describe('CreateRoomUseCase', () => {
   const createdRoom: Room = {
     id: roomId,
     name: 'Test Game Room',
-    hostId: userId,
+    hostSeatId: asSeatId(userId),
     status: RoomStatus.WAITING,
     settings: {
       maxPlayers: 4,
@@ -102,7 +103,6 @@ describe('CreateRoomUseCase', () => {
     expect(roomService.createNewRoom).toHaveBeenCalledWith(
       'Test Game Room',
       expect.objectContaining({
-        playerId: userId,
         userId,
         socketId: 'socket-1',
       }),
@@ -112,7 +112,6 @@ describe('CreateRoomUseCase', () => {
     expect(roomService.joinRoom).toHaveBeenCalledWith(
       roomId,
       expect.objectContaining({
-        playerId: userId,
         userId,
         name: 'Test Player',
       }),

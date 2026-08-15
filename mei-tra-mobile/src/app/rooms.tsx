@@ -208,7 +208,7 @@ export default function RoomsScreen() {
             const players = room.players.filter(
               (player, index, all) =>
                 all.findIndex(
-                  (candidate) => candidate.playerId === player.playerId,
+                  (candidate) => candidate.seatId === player.seatId,
                 ) === index,
             );
             const humans = players.filter((player) => !player.isCOM);

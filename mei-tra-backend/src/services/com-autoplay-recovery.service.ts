@@ -178,7 +178,7 @@ export class ComAutoPlayRecoveryService {
           field: {
             ...currentField,
             cards: [...currentField.cards],
-            playedBy: [...(currentField.playedBy ?? [])],
+            playedBySeatIds: [...currentField.playedBySeatIds],
           },
         });
         await this.handleFieldCompletionResponse(

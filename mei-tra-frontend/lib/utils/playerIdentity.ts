@@ -1,21 +1,21 @@
 export interface PlayerIdentity {
-  playerId: string;
+  seatId: string;
   userId?: string;
 }
 
-export function resolveSelfPlayerId<T extends PlayerIdentity>(
+export function resolveSelfSeatId<T extends PlayerIdentity>(
   players: T[],
   options: {
     userId?: string | null;
-    serverPlayerId?: string | null;
-    fallbackPlayerId?: string | null;
+    serverSeatId?: string | null;
+    fallbackSeatId?: string | null;
   },
 ): string | null {
   if (
-    options.serverPlayerId &&
-    players.some((player) => player.playerId === options.serverPlayerId)
+    options.serverSeatId &&
+    players.some((player) => player.seatId === options.serverSeatId)
   ) {
-    return options.serverPlayerId;
+    return options.serverSeatId;
   }
 
   if (options.userId) {
@@ -23,15 +23,15 @@ export function resolveSelfPlayerId<T extends PlayerIdentity>(
       (player) => player.userId === options.userId,
     );
     if (authenticatedMatches.length === 1) {
-      return authenticatedMatches[0].playerId;
+      return authenticatedMatches[0].seatId;
     }
   }
 
   if (
-    options.fallbackPlayerId &&
-    players.some((player) => player.playerId === options.fallbackPlayerId)
+    options.fallbackSeatId &&
+    players.some((player) => player.seatId === options.fallbackSeatId)
   ) {
-    return options.fallbackPlayerId;
+    return options.fallbackSeatId;
   }
 
   return null;

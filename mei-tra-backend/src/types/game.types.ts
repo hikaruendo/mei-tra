@@ -5,9 +5,7 @@ export type Team = 0 | 1;
 export type TeamNames = Partial<Record<Team, string>>;
 
 export interface PlayerIdentity {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. This alias is kept equal to seatId. */
-  playerId: string;
+  seatId: SeatId;
   name: string;
 }
 
@@ -40,9 +38,7 @@ export interface TeamScores {
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface BlowDeclaration {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -51,9 +47,7 @@ export interface BlowDeclaration {
 
 export interface BlowAction {
   type: 'declare' | 'pass';
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -71,8 +65,7 @@ export interface BlowState {
 
 export interface Field {
   cards: string[];
-  playedBy: string[];
-  playedBySeatIds?: SeatId[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
   dealerSeatId: SeatId;
@@ -99,9 +92,7 @@ export interface PlayState {
 }
 
 export interface PendingBrokenHandReveal {
-  seatId?: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
+  seatId: SeatId;
   handSnapshot: string[];
   startedAt: number;
 }
@@ -131,9 +122,9 @@ export interface ChomboViolation {
     | 'last-tanzen'
     | 'wrong-broken'
     | 'wrong-open';
-  playerId: string;
+  violatorSeatId: SeatId;
   timestamp: number;
-  reportedBy: string | null;
+  reportedBySeatId: SeatId | null;
   isExpired: boolean;
 }
 
@@ -141,13 +132,9 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
   version?: number;
-  identitySchemaVersion?: 1 | 2;
+  identitySchemaVersion?: 2;
   players: DomainPlayer[];
   currentSeatId?: SeatId | null;
-  /** @deprecated Use currentSeatId. */
-  currentPlayerId?: string | null;
-  /** @deprecated Derive the index from currentSeatId and players. */
-  currentPlayerIndex?: number;
   gamePhase: GamePhase;
   deck: string[];
   teamScores: Record<Team, { play: number; total: number }>;
@@ -158,7 +145,4 @@ export interface GameState {
   agari?: string;
   roundNumber: number;
   pointsToWin: number;
-  teamAssignments: {
-    [playerId: string]: Team;
-  };
 }
