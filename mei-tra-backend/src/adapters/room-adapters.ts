@@ -1,7 +1,6 @@
 import type { RoomContract, RoomPlayerContract } from '@contracts/room';
 import { Room, RoomPlayer } from '../types/room.types';
 import { TransportPlayer } from './player-adapters';
-import { resolveSeatId } from '../types/identity.types';
 
 function toIsoString(value: Date | string): string {
   if (value instanceof Date) {
@@ -17,7 +16,7 @@ export function toRoomPlayerContract(
 ): RoomPlayerContract {
   return {
     socketId: transportPlayer?.socketId ?? roomPlayer.socketId,
-    seatId: resolveSeatId(roomPlayer),
+    seatId: roomPlayer.seatId,
     name: transportPlayer?.name ?? roomPlayer.name,
     userId: transportPlayer?.userId ?? roomPlayer.userId,
     isAuthenticated:
@@ -50,7 +49,7 @@ export function toRoomContract(
     players: room.players.map((roomPlayer) =>
       toRoomPlayerContract(
         roomPlayer,
-        transportPlayersById.get(resolveSeatId(roomPlayer)),
+        transportPlayersById.get(roomPlayer.seatId),
       ),
     ),
     settings: {

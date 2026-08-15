@@ -90,14 +90,9 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       player.hand = player.hand.filter((c) => c !== card);
 
       const currentField = state.playState.currentField;
-      const playedBySeatIds = (
-        Array.isArray(currentField.playedBySeatIds)
-          ? currentField.playedBySeatIds
-          : currentField.playedBy
-      ).map(asSeatId);
+      const playedBySeatIds = [...currentField.playedBySeatIds];
       playedBySeatIds.push(asSeatId(player.seatId));
       currentField.cards.push(card);
-      currentField.playedBy = [...playedBySeatIds];
       currentField.playedBySeatIds = [...playedBySeatIds];
       if (currentField.cards.length === 1) {
         currentField.baseCard = card;
@@ -145,7 +140,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           field: {
             ...currentField,
             cards: [...currentField.cards],
-            playedBy: [...(currentField.playedBy ?? [])],
+            playedBySeatIds: [...currentField.playedBySeatIds],
           },
         };
         return { success: true, events, completeFieldTrigger: trigger };

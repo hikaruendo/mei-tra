@@ -90,7 +90,6 @@ describe('WatchRoomUseCase', () => {
     teamScoreRecords: { 0: [], 1: [] },
     roundNumber: 1,
     pointsToWin: roomValue.settings.pointsToWin,
-    teamAssignments: {},
   });
 
   const createUseCase = (roomValue: Room) => {

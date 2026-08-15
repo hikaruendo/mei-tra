@@ -66,7 +66,7 @@ export function toBlowUpdatedPayload(state: BlowState): BlowUpdatedPayload {
 export function toFieldContract(field: Field): FieldContract {
   return {
     cards: [...field.cards],
-    playedBySeatIds: (field.playedBySeatIds ?? field.playedBy).map(asSeatId),
+    playedBySeatIds: field.playedBySeatIds.map(asSeatId),
     baseCard: field.baseCard,
     baseSuit: field.baseSuit,
     dealerSeatId: field.dealerSeatId,

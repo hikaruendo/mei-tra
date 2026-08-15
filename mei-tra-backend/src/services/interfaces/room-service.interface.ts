@@ -2,6 +2,7 @@ import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import { GameStateService } from '../game-state.service';
 import { SessionUser } from '../../types/session.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface IRoomService {
   getRoom(roomId: string): Promise<Room | null>;
@@ -18,7 +19,7 @@ export interface IRoomService {
   cancelRoomMembershipReservation(userId: string): Promise<boolean>;
   leaveRoom(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     options?: {
       releaseMembership?: boolean;
       membershipMutation?: RosterMembershipMutation;
@@ -28,31 +29,28 @@ export interface IRoomService {
   updateRoomStatus(roomId: string, status: RoomStatus): Promise<boolean>;
   updatePlayerInRoom(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     updates: Partial<RoomPlayer>,
   ): Promise<boolean>;
   updatePlayersInRoom(
     roomId: string,
-    updatesByPlayerId: Record<string, Partial<RoomPlayer>>,
+    updatesBySeatId: Partial<Record<SeatId, Partial<RoomPlayer>>>,
   ): Promise<boolean>;
   canStartGame(roomId: string): Promise<{ canStart: boolean; reason?: string }>;
   getRoomGameState(roomId: string): Promise<GameStateService>;
   convertPlayerToCOM(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     options?: {
       requireDisconnected?: boolean;
       releaseMembership?: boolean;
       membershipMutation?: RosterMembershipMutation;
     },
   ): Promise<boolean>;
-  restorePlayerFromVacantSeat(
-    roomId: string,
-    playerId: string,
-  ): Promise<boolean>;
+  restorePlayerFromVacantSeat(roomId: string, seatId: SeatId): Promise<boolean>;
   handlePlayerReconnection(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     socketId: string,
     userId?: string,
     name?: string,

@@ -7,12 +7,13 @@ import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.s
 import { RoomMembershipService } from './room-membership.service';
 import { ActiveRoomMembership } from '../types/room-membership.types';
 import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
 import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 
 export interface DisconnectPreparation {
-  playerId: string;
+  seatId: SeatId;
   playerName: string;
   roomGameState: Awaited<ReturnType<IRoomService['getRoomGameState']>>;
   timeoutMode: DisconnectTimeoutMode;
@@ -89,7 +90,7 @@ export class DisconnectGatewayEffectsService {
       return null;
     }
 
-    await roomGameState.applyPlayerConnectionState(player.seatId, {
+    roomGameState.applyPlayerConnectionState(player.seatId, {
       socketId: '',
     });
 
@@ -102,7 +103,7 @@ export class DisconnectGatewayEffectsService {
     });
 
     return {
-      playerId: player.seatId,
+      seatId: player.seatId,
       playerName: displayName ?? player.name,
       roomGameState,
       timeoutMode: this.resolveTimeoutMode(state.gamePhase),
@@ -113,12 +114,12 @@ export class DisconnectGatewayEffectsService {
 
   async buildTimeoutEvents(params: {
     roomId: string;
-    playerId: string;
+    seatId: SeatId;
     playerName: string;
     timeoutMode: DisconnectTimeoutMode;
     membership?: ActiveRoomMembership | null;
   }): Promise<GatewayEvent[]> {
-    const { roomId, playerId, playerName, timeoutMode, membership } = params;
+    const { roomId, seatId, playerName, timeoutMode, membership } = params;
     const room = await this.roomService.getRoom(roomId);
     if (!room) {
       return [];
@@ -147,11 +148,11 @@ export class DisconnectGatewayEffectsService {
     try {
       if (timeoutMode === 'remove-player') {
         const roomGameState = await this.roomService.getRoomGameState(roomId);
-        if (roomGameState.getPlayerConnectionState(playerId)?.socketId) {
+        if (roomGameState.getPlayerConnectionState(seatId)?.socketId) {
           return [];
         }
 
-        succeeded = await this.roomService.leaveRoom(roomId, playerId, {
+        succeeded = await this.roomService.leaveRoom(roomId, seatId, {
           releaseMembership: false,
           membershipMutation: timeoutMembershipMutation,
         });
@@ -189,7 +190,7 @@ export class DisconnectGatewayEffectsService {
         return [];
       }
 
-      succeeded = await this.roomService.convertPlayerToCOM(roomId, playerId, {
+      succeeded = await this.roomService.convertPlayerToCOM(roomId, seatId, {
         requireDisconnected: true,
         releaseMembership: false,
         membershipMutation: timeoutMembershipMutation,
@@ -217,7 +218,7 @@ export class DisconnectGatewayEffectsService {
           roomId,
           event: 'player-converted-to-com',
           payload: {
-            seatId: asSeatId(playerId),
+            seatId,
             playerName,
             message: 'Player disconnected for too long - converted to COM',
           },

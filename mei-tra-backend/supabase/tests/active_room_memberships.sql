@@ -60,7 +60,7 @@ declare
 begin
   if has_function_privilege(
     'anon',
-    'public.claim_room_membership(uuid,uuid,text,uuid)',
+    'public.claim_room_membership(uuid,uuid,uuid,uuid)',
     'execute'
   ) then
     raise exception 'anon can claim room membership';
@@ -68,7 +68,7 @@ begin
 
   if not has_function_privilege(
     'service_role',
-    'public.claim_room_membership(uuid,uuid,text,uuid)',
+    'public.claim_room_membership(uuid,uuid,uuid,uuid)',
     'execute'
   ) then
     raise exception 'service_role cannot claim room membership';
@@ -77,7 +77,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     first_room,
-    first_seat::text,
+    first_seat,
     first_transition
   );
   if result->>'result' <> 'claimed' then
@@ -87,7 +87,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     second_room,
-    second_seat::text,
+    second_seat,
     second_transition
   );
   if result->>'result' <> 'conflict' then
@@ -97,7 +97,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     first_room,
-    first_seat::text,
+    first_seat,
     second_transition
   );
   if result->>'result' <> 'reconnected' then
@@ -131,7 +131,7 @@ begin
 
   result := public.reserve_room_membership(
     test_user,
-    second_seat::text,
+    second_seat,
     first_transition
   );
   if result->>'result' <> 'reserved' then
@@ -140,7 +140,7 @@ begin
 
   result := public.reserve_room_membership(
     test_user,
-    second_seat::text,
+    second_seat,
     first_transition
   );
   if result->>'result' <> 'reserved' then
@@ -150,16 +150,16 @@ begin
   result := public.claim_room_membership(
     test_user,
     second_room,
-    second_seat::text,
+    second_seat,
     first_transition
   );
   if result->>'result' <> 'claimed' then
     raise exception 'reserved membership claim failed: %', result;
   end if;
 
-  if not public.release_room_membership_by_player(
+  if not public.release_room_membership_by_seat(
     second_room,
-    second_seat::text,
+    second_seat,
     third_transition
   ) then
     raise exception 'player membership release failed';

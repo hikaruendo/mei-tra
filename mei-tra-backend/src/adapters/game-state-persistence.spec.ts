@@ -45,11 +45,10 @@ describe('game-state persistence identity', () => {
     expect(JSON.stringify(persisted)).not.toContain('lastPasser"');
   });
 
-  it('persists play and pending reveal references without aliases', () => {
+  it('persists play and pending reveal seat references', () => {
     const persistedPlayState = toPersistedPlayState({
       currentField: {
         cards: ['H7'],
-        playedBy: [firstSeatId],
         playedBySeatIds: [firstSeatId],
         baseCard: 'H7',
         dealerSeatId: asSeatId(secondSeatId),

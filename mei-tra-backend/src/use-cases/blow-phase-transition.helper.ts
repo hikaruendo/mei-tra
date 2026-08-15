@@ -91,7 +91,7 @@ export async function transitionToPlayPhase({
     },
   ];
 
-  const winningPlayerSession = roomGameState.findSessionUserByPlayerId(
+  const winningPlayerSession = roomGameState.findSessionUserBySeatId(
     winningPlayer.seatId,
   );
   const winningPlayerSocketId =

@@ -8,6 +8,7 @@ import {
 import { toRoomContract } from '../../adapters/room-adapters';
 import { GatewayEvent } from '../interfaces/gateway-event.interface';
 import type { RoomSyncPayload } from '@contracts/room';
+import type { SeatId } from '../../types/identity.types';
 
 type PlayerResolutionSource = {
   findPlayerByActorId: (actorId: string) => DomainPlayer | null;
@@ -20,7 +21,7 @@ type TransportPlayerSource = PlayerResolutionSource & {
     roomPlayers?: RoomPlayer[],
   ) => TransportPlayer[];
   getPlayerConnectionState?: (
-    playerId: string,
+    seatId: SeatId,
   ) => Partial<PlayerConnectionMetadata> | null;
 };
 
@@ -50,8 +51,8 @@ export function resolveTransportPlayers(
     typeof source.getTransportPlayers === 'function'
       ? source.getTransportPlayers(players, options?.roomPlayers)
       : toTransportPlayers(players, {
-          getConnectionState: (playerId) =>
-            source.getPlayerConnectionState?.(playerId),
+          getConnectionState: (seatId) =>
+            source.getPlayerConnectionState?.(seatId),
           roomPlayers: options?.roomPlayers,
         });
 
@@ -109,23 +110,6 @@ export function buildRoomSyncEvent(
   };
 }
 
-export function buildRoomUpdatedEvent(
-  source: TransportPlayerSource,
-  room: Room,
-  players: DomainPlayer[],
-): GatewayEvent {
-  const transportPlayers = resolveTransportPlayers(source, players, {
-    roomPlayers: room.players,
-  });
-
-  return {
-    scope: 'room',
-    roomId: room.id,
-    event: 'room-updated',
-    payload: toRoomContract(room, { players: transportPlayers }),
-  };
-}
-
 export function buildPlayerSyncEvents(
   source: TransportPlayerSource,
   roomId: string,
@@ -135,10 +119,14 @@ export function buildPlayerSyncEvents(
     roomPlayers?: RoomPlayer[];
   },
 ): GatewayEvent[] {
+  if (options?.room) {
+    return [buildRoomSyncEvent(source, options.room, players)];
+  }
+
   const transportPlayers = resolveTransportPlayers(source, players, {
-    roomPlayers: options?.roomPlayers ?? options?.room?.players,
+    roomPlayers: options?.roomPlayers,
   });
-  const events: GatewayEvent[] = [
+  return [
     {
       scope: 'room',
       roomId,
@@ -146,10 +134,4 @@ export function buildPlayerSyncEvents(
       payload: transportPlayers,
     },
   ];
-
-  if (options?.room) {
-    events.push(buildRoomSyncEvent(source, options.room, players));
-  }
-
-  return events;
 }

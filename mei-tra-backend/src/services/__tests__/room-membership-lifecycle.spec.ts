@@ -33,7 +33,7 @@ describe('RoomService active membership lifecycle', () => {
   const membership = {
     userId: 'user-1',
     roomId: 'room-1',
-    playerId: 'user-1',
+    seatId: 'user-1',
     status: 'active' as const,
     membershipVersion: 2,
     transitionId: 'transition-1',
@@ -47,7 +47,7 @@ describe('RoomService active membership lifecycle', () => {
     get: jest.Mock;
     claim: jest.Mock;
     release: jest.Mock;
-    releaseByPlayer: jest.Mock;
+    releaseBySeat: jest.Mock;
     releaseRoom: jest.Mock;
   };
   let roomJoinService: { joinRoom: jest.Mock };
@@ -63,7 +63,7 @@ describe('RoomService active membership lifecycle', () => {
       get: jest.fn().mockResolvedValue(null),
       claim: jest.fn(),
       release: jest.fn().mockResolvedValue('released'),
-      releaseByPlayer: jest.fn().mockResolvedValue(true),
+      releaseBySeat: jest.fn().mockResolvedValue(true),
       releaseRoom: jest.fn().mockResolvedValue(0),
     };
     roomJoinService = { joinRoom: jest.fn() };
@@ -199,7 +199,7 @@ describe('RoomService active membership lifecycle', () => {
     ).resolves.toBe(false);
 
     expect(membershipService.release).not.toHaveBeenCalled();
-    expect(membershipService.releaseByPlayer).not.toHaveBeenCalled();
+    expect(membershipService.releaseBySeat).not.toHaveBeenCalled();
   });
 
   it('preserves an existing same-room membership when reconnect joining fails', async () => {

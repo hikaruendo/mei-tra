@@ -63,7 +63,6 @@ describe('transitionToPlayPhase', () => {
       },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
     };
     const room = {
       id: 'room-1',
@@ -110,7 +109,7 @@ describe('transitionToPlayPhase', () => {
           socketId: 'socket-2',
         },
       ]),
-      findSessionUserByPlayerId: jest.fn(() => null),
+      findSessionUserBySeatId: jest.fn(() => null),
       saveState: jest.fn(),
     } as unknown as GameStateService;
     const blowService = {
@@ -204,7 +203,6 @@ describe('transitionToPlayPhase', () => {
       },
       roundNumber: 1,
       pointsToWin: 10,
-      teamAssignments: {},
     };
     const roomGameState = {
       transitionPhase: jest.fn(async (phase: GameState['gamePhase']) => {
@@ -212,7 +210,7 @@ describe('transitionToPlayPhase', () => {
       }),
       getState: jest.fn(() => state),
       getTransportPlayers: jest.fn(() => state.players),
-      findSessionUserByPlayerId: jest.fn(() => null),
+      findSessionUserBySeatId: jest.fn(() => null),
       saveState: jest.fn(),
     } as unknown as GameStateService;
     const blowService = {

@@ -37,8 +37,8 @@ export function BlowSpectatorPanel({
     (first, second) => first.timestamp - second.timestamp,
   );
 
-  const getPlayerName = (playerId: string) =>
-    playerMap.get(playerId)?.name ?? playerId;
+  const getPlayerName = (seatId: string) =>
+    playerMap.get(seatId)?.name ?? seatId;
   const isHighestDeclaration = (action: BlowAction) =>
     action.type === 'declare' &&
     currentHighestDeclaration?.timestamp === action.timestamp &&

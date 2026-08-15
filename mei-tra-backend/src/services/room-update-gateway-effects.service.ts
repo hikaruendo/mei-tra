@@ -131,56 +131,14 @@ export class RoomUpdateGatewayEffectsService {
       roomId,
       socketId,
     });
-
-    if (scope === 'room') {
-      return [
-        roomSyncEvent,
-        {
-          scope: 'room',
-          roomId: roomId ?? room.id,
-          event: 'room-updated',
-          payload: roomView.room,
-        },
-        {
-          ...this.buildPlayersEvent({
-            players: roomView.players,
-            scope: 'room',
-            roomId: roomId ?? room.id,
-          }),
-        },
-        ...(roomView.currentField
-          ? [
-              {
-                scope: 'room' as const,
-                roomId: roomId ?? room.id,
-                event: 'field-updated',
-                payload: roomView.currentField,
-              },
-            ]
-          : []),
-      ];
-    }
-
     return [
       roomSyncEvent,
-      {
-        scope: 'socket',
-        socketId,
-        event: 'room-updated',
-        payload: roomView.room,
-      },
-      {
-        ...this.buildPlayersEvent({
-          players: roomView.players,
-          scope: 'socket',
-          socketId,
-        }),
-      },
       ...(roomView.currentField
         ? [
             {
-              scope: 'socket' as const,
-              socketId,
+              scope,
+              roomId: scope === 'room' ? (roomId ?? room.id) : undefined,
+              socketId: scope === 'socket' ? socketId : undefined,
               event: 'field-updated',
               payload: roomView.currentField,
             },

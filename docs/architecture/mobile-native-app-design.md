@@ -24,7 +24,7 @@
 | npm workspace | npm `10.9.2`でclean install成功 | root lockfileとworkspace packageのローカル解決 |
 | mobile | 14 suites / 63 tests、Expo Doctor 19/19、iOS / Android export成功 | JavaScript・設定・bundle export。署名済みnative buildではない |
 | backend | 52 suites / 300 tests、lint、build成功 | ローカルbackendとlocal Supabase |
-| frontend | 27 suites / 78 tests、lint、build成功 | Web buildと既存client互換性 |
+| frontend | 27 suites / 78 tests、lint、build成功 | Web buildと共有Socket契約 |
 | Web dev | HTTP 200 | ローカルdev serverの到達性 |
 | Playwright 390×844 | seat identityのserver derivation後にfinal normal flowを再実行。signup、room作成、COM補充、shuffle、start、blow pass、合法card play、reload後のauthoritative restore、leave、settings/legal links、account deletion HTTP 200と成功後redirect、parameterなしcallbackの安全なredirect | browser smoke。TestFlight / Play・実端末・native pushではない |
 | production dependency audit | `npm audit --omit=dev`でmoderate 10件、high / critical 0件 | Expoの`xcode`→`uuid`依存経路。強制fixはExpoをdowngradeするため未適用で、upstream dependency reviewを継続 |
@@ -43,7 +43,7 @@ active game reloadでは、標準のdevelopment情報を除きerror / warnを検
 ### 不変条件
 
 1. フェーズ、手番、合法手、得点、勝敗、ルーム復帰の可否はbackendを正とする。
-2. 座席と本人判定は`playerId` / `userId`で行い、再接続で変わる`socket.id`を識別子にしない。
+2. 座席は`seatId`、本人は`userId`で判定し、再接続で変わる`socket.id`を識別子にしない。
 3. background中のイベント欠落を正常系とし、foreground復帰時に最新JWTとサーバスナップショットへ戻す。
 4. クライアントのvalidatorや表示用stateは入力補助であり、サーバのゲームルールを置き換えない。
 5. 通知や分析の失敗は、確定済みのゲーム進行をロールバックまたは停止させない。
@@ -214,7 +214,7 @@ sequenceDiagram
 
 ### Identity
 
-mobileの参加payloadは`user.id`を`playerId` / `userId`として送るが、接続ごとに`socketId`もtransport payloadに含む。これはtransportの補助情報であり、本人・席・手番の永続識別には使わない。state mergeとcurrent player解決は`playerId` / `userId`を優先する。
+mobileの参加payloadは認証accountを`userId`として送り、参加後にserverが解決した`seatId`を受け取る。接続ごとの`socketId`はtransportの補助情報であり、本人・席・手番の永続識別には使わない。state mergeとcurrent player解決は`seatId`を正本とする。
 
 ## 6. ゲームUIと入力補助
 

@@ -16,7 +16,7 @@ export class FillWithComUseCase implements IFillWithComUseCase {
 
   async execute(request: FillWithComRequest): Promise<FillWithComResponse> {
     try {
-      const { roomId, playerId } = request;
+      const { roomId, actorSeatId } = request;
 
       // Get the room
       const room = await this.roomService.getRoom(roomId);
@@ -24,8 +24,9 @@ export class FillWithComUseCase implements IFillWithComUseCase {
         return { success: false, error: 'Room not found' };
       }
 
-      // Find the requesting player by playerId
-      const requestingPlayer = room.players.find((p) => p.seatId === playerId);
+      const requestingPlayer = room.players.find(
+        (player) => player.seatId === actorSeatId,
+      );
       if (!requestingPlayer) {
         return {
           success: false,
@@ -34,7 +35,7 @@ export class FillWithComUseCase implements IFillWithComUseCase {
       }
 
       // Verify that the requesting player is the host
-      if (room.hostSeatId !== playerId) {
+      if (room.hostSeatId !== actorSeatId) {
         return {
           success: false,
           error: 'Only the host can add COM players',

@@ -117,7 +117,7 @@
 <polygon fill="none" stroke="black" points="1045.55,-289.6 1045.55,-320.4 1592.62,-320.4 1592.62,-289.6 1045.55,-289.6"/>
 <text text-anchor="start" x="1052.55" y="-301.8" font-family="Arial" font-size="14.00">host_seat_id </text>
 <text text-anchor="start" x="1135.83" y="-301.8" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
-<text text-anchor="start" x="1170.08" y="-301.8" font-family="Arial" font-size="14.00"> Canonical host seat UUID. Runtime hostId is an alias of this value.</text>
+<text text-anchor="start" x="1170.08" y="-301.8" font-family="Arial" font-size="14.00"> Host seat UUID.</text>
 <polygon fill="none" stroke="black" points="1045.55,-258.8 1045.55,-289.6 1592.62,-289.6 1592.62,-258.8 1045.55,-258.8"/>
 <text text-anchor="start" x="1052.55" y="-271" font-family="Arial" font-size="14.00">id </text>
 <text text-anchor="start" x="1067.33" y="-271" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
@@ -268,11 +268,11 @@
 <polygon fill="none" stroke="black" points="377.02,-1724.8 377.02,-1755.6 1071.15,-1755.6 1071.15,-1724.8 377.02,-1724.8"/>
 <text text-anchor="start" x="384.02" y="-1737" font-family="Arial" font-size="14.00">actor_key_snapshot </text>
 <text text-anchor="start" x="513.21" y="-1737" font-family="Arial" font-size="14.00" fill="#666666">[text]</text>
-<text text-anchor="start" x="543.55" y="-1737" font-family="Arial" font-size="14.00"> Immutable legacy actor key retained for unresolved and historical records.</text>
+<text text-anchor="start" x="543.55" y="-1737" font-family="Arial" font-size="14.00"> Immutable actor key snapshot retained when an actor seat is unavailable.</text>
 <polygon fill="none" stroke="black" points="377.02,-1694 377.02,-1724.8 1071.15,-1724.8 1071.15,-1694 377.02,-1694"/>
 <text text-anchor="start" x="384.02" y="-1706.2" font-family="Arial" font-size="14.00">actor_seat_id </text>
 <text text-anchor="start" x="471.96" y="-1706.2" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>
-<text text-anchor="start" x="506.21" y="-1706.2" font-family="Arial" font-size="14.00"> Canonical actor seat UUID. actor_key_snapshot is reserved for unresolved legacy actors.</text>
+<text text-anchor="start" x="506.21" y="-1706.2" font-family="Arial" font-size="14.00"> Actor seat UUID when the action is tied to a room seat.</text>
 <polygon fill="none" stroke="black" points="377.02,-1663.2 377.02,-1694 1071.15,-1694 1071.15,-1663.2 377.02,-1663.2"/>
 <text text-anchor="start" x="384.02" y="-1675.4" font-family="Arial" font-size="14.00">game_state_id </text>
 <text text-anchor="start" x="479.75" y="-1675.4" font-family="Arial" font-size="14.00" fill="#666666">[uuid]</text>

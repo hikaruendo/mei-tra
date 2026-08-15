@@ -16,7 +16,6 @@ describe('GameStateService phase transitions', () => {
       update: jest.fn().mockResolvedValue({ version: 1 }),
       persistRoomRoster: jest.fn().mockResolvedValue({ version: 1 }),
       delete: jest.fn().mockResolvedValue(true),
-      updatePlayerConnection: jest.fn().mockResolvedValue(true),
       updateGamePhase: jest.fn().mockResolvedValue(true),
       bulkUpdate: jest.fn().mockResolvedValue(true),
       updatePlayers: jest.fn().mockResolvedValue(true),
@@ -81,11 +80,19 @@ describe('GameStateService phase transitions', () => {
   it('keeps the persisted version when resetting a round', async () => {
     const state = service.getState();
     state.version = 96;
-    state.teamAssignments = { 'player-1': 0 };
+    state.players = [
+      {
+        seatId: asSeatId('player-1'),
+        name: 'Player 1',
+        team: 0,
+        hand: [],
+        isPasser: false,
+      },
+    ];
 
     service.resetRoundState();
     expect(service.getState().version).toBe(96);
-    expect(service.getState().teamAssignments).toEqual({ 'player-1': 0 });
+    expect(service.getState().players[0]?.team).toBe(0);
 
     await service.saveState();
 
@@ -158,7 +165,12 @@ describe('GameStateService phase transitions', () => {
     ];
     const currentField = {
       cards: ['S1', 'S2', 'S3', 'S4'],
-      playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+      playedBySeatIds: [
+        asSeatId('player-1'),
+        asSeatId('player-2'),
+        asSeatId('player-3'),
+        asSeatId('player-4'),
+      ],
       baseCard: 'S1',
       dealerSeatId: asSeatId('player-1'),
       isComplete: true,

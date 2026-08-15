@@ -5,7 +5,8 @@ import {
 } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
 import { SessionUser } from '../types/session.types';
-import { asSeatId, resolveSeatId } from '../types/identity.types';
+import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
 import type { PlayerContract } from '@contracts/game';
 
 export type PersistedGamePlayer = DomainPlayer & {
@@ -20,7 +21,7 @@ export interface PersistedPlayerGameplayState {
 }
 
 export type PersistedPlayerStates = Record<
-  string,
+  SeatId,
   PersistedPlayerGameplayState
 >;
 
@@ -33,7 +34,7 @@ export function toDomainPlayer(
   > &
     Partial<PlayerGameplayState>,
 ): DomainPlayer {
-  const seatId = resolveSeatId(player);
+  const seatId = player.seatId;
   return {
     seatId,
     name: player.name,
@@ -52,7 +53,7 @@ export function withConnectionMetadata(
 ): TransportPlayer {
   const domainPlayer = toDomainPlayer(player);
   return {
-    seatId: resolveSeatId(domainPlayer),
+    seatId: domainPlayer.seatId,
     name: domainPlayer.name,
     hand: [...domainPlayer.hand],
     team: domainPlayer.team,
@@ -70,13 +71,13 @@ export function toTransportPlayers(
   players: DomainPlayer[],
   options?: {
     getConnectionState?: (
-      playerId: string,
+      seatId: SeatId,
     ) => Partial<PlayerConnectionMetadata> | null | undefined;
     roomPlayers?: RoomPlayer[];
     mapHand?: (player: DomainPlayer) => string[];
   },
 ): TransportPlayer[] {
-  const roomPlayersById = new Map(
+  const roomPlayersBySeatId = new Map(
     (options?.roomPlayers ?? []).map((roomPlayer) => [
       roomPlayer.seatId,
       roomPlayer,
@@ -84,7 +85,7 @@ export function toTransportPlayers(
   );
 
   return players.map((player) => {
-    const roomPlayer = roomPlayersById.get(player.seatId);
+    const roomPlayer = roomPlayersBySeatId.get(player.seatId);
     const transportPlayer = withConnectionMetadata(
       player,
       options?.getConnectionState?.(player.seatId) ?? roomPlayer,

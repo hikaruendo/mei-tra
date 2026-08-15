@@ -101,7 +101,6 @@ describe('SupabaseGameStateRepository', () => {
       },
       roundNumber: 1,
       pointsToWin: 8,
-      teamAssignments: { [firstSeatId]: 1 },
     };
   }
 
@@ -523,7 +522,6 @@ describe('SupabaseGameStateRepository', () => {
     const secondPlayer = {
       ...createRoomPlayer(),
       seatId: secondSeatId,
-      playerId: secondSeatId,
       participantKey: roomPlayerRow.user_id,
       name: 'Player 2',
       seatIndex: 0,
