@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type { SeatId } from '../types/identity.types';
 import { SupabaseService } from '../database/supabase.service';
 import {
   ActiveRoomMembership,
@@ -56,14 +57,14 @@ export class RoomMembershipService {
 
   async reserve(
     userId: string,
-    seatId: string,
+    seatId: SeatId,
   ): Promise<RoomMembershipTransition> {
     const transitionId = randomUUID();
     const { data, error } = await this.supabaseService.client.rpc(
       'reserve_room_membership',
       {
         p_user_id: userId,
-        p_player_id: seatId,
+        p_seat_id: seatId,
         p_transition_id: transitionId,
       },
     );
@@ -78,7 +79,7 @@ export class RoomMembershipService {
   async claim(
     userId: string,
     roomId: string,
-    seatId: string,
+    seatId: SeatId,
   ): Promise<RoomMembershipTransition> {
     const currentMembership = await this.get(userId);
     const transitionId =
@@ -92,7 +93,7 @@ export class RoomMembershipService {
       {
         p_user_id: userId,
         p_room_id: roomId,
-        p_player_id: seatId,
+        p_seat_id: seatId,
         p_transition_id: transitionId,
       },
     );
@@ -159,18 +160,18 @@ export class RoomMembershipService {
     return result;
   }
 
-  async releaseByPlayer(roomId: string, playerId: string): Promise<boolean> {
+  async releaseBySeat(roomId: string, seatId: SeatId): Promise<boolean> {
     const { data, error } = await this.supabaseService.client.rpc(
-      'release_room_membership_by_player',
+      'release_room_membership_by_seat',
       {
         p_room_id: roomId,
-        p_player_id: playerId,
+        p_seat_id: seatId,
         p_transition_id: randomUUID(),
       },
     );
 
     if (error) {
-      throw new Error(`Failed to release player membership: ${error.message}`);
+      throw new Error(`Failed to release seat membership: ${error.message}`);
     }
 
     return data;
@@ -311,7 +312,6 @@ export class RoomMembershipService {
       userId: row.user_id,
       roomId: row.room_id,
       seatId: asSeatId(row.seat_id),
-      playerId: row.seat_id,
       status: row.status,
       membershipVersion: row.membership_version,
       transitionId: row.transition_id,

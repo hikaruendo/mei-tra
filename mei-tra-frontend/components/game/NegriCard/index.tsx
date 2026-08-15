@@ -5,16 +5,16 @@ import { CardFace } from '@/components/game/CardFace';
 
 interface NegriCardProps {
   negriCard: string;
-  negriPlayerId: string;
-  currentPlayerId: string;
+  negriSeatId: string;
+  currentSeatId: string;
 }
 
 export const NegriCard: React.FC<NegriCardProps> = ({
   negriCard,
-  negriPlayerId,
-  currentPlayerId,
+  negriSeatId,
+  currentSeatId,
 }) => {
-  const isNegriPlayer = currentPlayerId === negriPlayerId;
+  const isNegriPlayer = currentSeatId === negriSeatId;
 
   return (
     <div className={styles.negriCardDisplay}>

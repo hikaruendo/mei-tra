@@ -9,9 +9,9 @@ import { IGameStateService } from '../services/interfaces/game-state-service.int
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { AuthenticatedUser } from '../types/user.types';
+import type { SeatId } from '../types/identity.types';
 import {
   buildPlayerSyncEvents,
-  buildRoomUpdatedEvent,
   resolvePlayerByActorId,
   resolvePlayerBySocketId,
 } from './helpers/player-resolution.helper';
@@ -47,17 +47,16 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
         authenticatedUser,
       );
 
-      const { clientEvents, broadcastEvents } = this.ensureUserRegistered(
+      const broadcastEvents = this.ensureUserRegistered(
         request.socketId,
         authenticatedUser,
         request.handshakeName,
-        roomSync?.playerId,
+        roomSync?.seatId,
       );
 
       return {
         success: true,
         authenticatedUser,
-        clientEvents,
         broadcastEvents,
         roomEvents: roomSync?.events,
       };
@@ -71,62 +70,40 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     socketId: string,
     authenticatedUser: AuthenticatedUser,
     handshakeName?: string,
-    playerId?: string,
-  ): {
-    clientEvents: GatewayEvent[];
-    broadcastEvents: GatewayEvent[];
-  } {
+    seatId?: SeatId,
+  ): GatewayEvent[] {
     const displayName =
       authenticatedUser.profile?.displayName ||
       authenticatedUser.email ||
       handshakeName ||
       'User';
 
-    const clientEvents: GatewayEvent[] = [
-      {
-        scope: 'socket',
-        socketId,
-        event: 'auth-updated',
-        payload: {
-          userId: authenticatedUser.id,
-          displayName,
-          username: authenticatedUser.profile?.username,
-        },
-      },
-    ];
-
     const syncResult = this.gameState.upsertSessionUser({
       socketId,
-      playerId: playerId ?? authenticatedUser.id,
+      seatId,
       name: displayName,
       userId: authenticatedUser.id,
       isAuthenticated: true,
     });
 
     if (syncResult.created || syncResult.changed) {
-      return {
-        clientEvents,
-        broadcastEvents: [
-          {
-            scope: 'all',
-            event: 'update-users',
-            payload: this.gameState.getSessionUsers(),
-          },
-        ],
-      };
+      return [
+        {
+          scope: 'all',
+          event: 'update-users',
+          payload: this.gameState.getSessionUsers(),
+        },
+      ];
     }
 
-    return {
-      clientEvents,
-      broadcastEvents: [],
-    };
+    return [];
   }
 
   private async syncRoomPlayer(
     currentRoomId: string | undefined,
     socketId: string,
     authenticatedUser: AuthenticatedUser,
-  ): Promise<{ playerId: string; events: GatewayEvent[] } | undefined> {
+  ): Promise<{ seatId: SeatId; events: GatewayEvent[] } | undefined> {
     if (!currentRoomId) {
       return undefined;
     }
@@ -145,7 +122,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
     const roomStatePlayer = roomPlayer
       ? (roomGameState
           .getState()
-          .players.find((player) => player.playerId === roomPlayer.playerId) ??
+          .players.find((player) => player.seatId === roomPlayer.seatId) ??
         null)
       : null;
     const currentPlayer =
@@ -163,7 +140,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       authenticatedUser.email ||
       currentPlayer.name;
     currentPlayer.name = displayName;
-    await roomGameState.applyPlayerConnectionState(currentPlayer.playerId, {
+    roomGameState.applyPlayerConnectionState(currentPlayer.seatId, {
       socketId,
       userId: authenticatedUser.id,
       isAuthenticated: true,
@@ -171,7 +148,7 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
 
     await this.roomService.updatePlayerInRoom(
       currentRoomId,
-      currentPlayer.playerId,
+      currentPlayer.seatId,
       {
         socketId,
         name: displayName,
@@ -188,12 +165,6 @@ export class UpdateAuthUseCase implements IUpdateAuthUseCase {
       { room: updatedRoom },
     );
 
-    if (updatedRoom) {
-      roomEvents.push(
-        buildRoomUpdatedEvent(roomGameState, updatedRoom, state.players),
-      );
-    }
-
-    return { playerId: currentPlayer.playerId, events: roomEvents };
+    return { seatId: currentPlayer.seatId, events: roomEvents };
   }
 }

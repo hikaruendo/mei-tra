@@ -21,7 +21,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [imageError, setImageError] = useState(false);
   const {
-    playerId,
+    seatId,
     userId,
     isAuthenticated,
     isCOM,
@@ -55,7 +55,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
       cancelled = true;
     };
   }, [
-    playerId,
+    seatId,
     userId,
     isAuthenticated,
     isCOM,
@@ -65,7 +65,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 
   useEffect(() => {
     setImageError(false);
-  }, [playerId, profile?.avatarUrl]);
+  }, [seatId, profile?.avatarUrl]);
 
   const handleImageError = () => {
     setImageError(true);

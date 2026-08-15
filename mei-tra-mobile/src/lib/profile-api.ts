@@ -3,10 +3,31 @@ import type {
   UpdateUserProfileRequestDto,
   UserProfileDto,
 } from '@meitra/contracts/profile';
+import type { RecentGameHistoryItemContract } from '@meitra/contracts/game-history';
 
 import { config } from '@/lib/config';
 
 const BASE = `${config.backendUrl}/api/user-profile`;
+
+export async function fetchProfileGameHistory(
+  userId: string,
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RecentGameHistoryItemContract[]> {
+  const res = await fetchImpl(
+    `${BASE}/${encodeURIComponent(userId)}/game-history`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(body || `Game history request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<RecentGameHistoryItemContract[]>;
+}
 
 export async function updateProfile(
   userId: string,

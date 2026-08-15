@@ -26,9 +26,9 @@ import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { toCompletedFieldContract } from '../types/game-contract-adapters';
-import { asSeatId } from '../types/identity.types';
-import { setCurrentSeat } from '../types/current-turn';
+import { toCompletedFieldContract } from '../adapters/game-contract-adapters';
+import { asSeatId, type SeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {
@@ -66,10 +66,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
 
       this.removeCardsFromHands(state, field.cards);
 
-      const completedField = roomGameState.completeField(
-        field,
-        winner.playerId,
-      );
+      const completedField = roomGameState.completeField(field, winner.seatId);
 
       if (!completedField) {
         return { success: false, error: 'Failed to persist completed field' };
@@ -78,13 +75,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'field_completed',
-        actorSeatId: asSeatId(winner.playerId),
-        playerId: winner.playerId,
+        actorSeatId: asSeatId(winner.seatId),
         state,
         actionData: {
           completedField,
-          winnerSeatId: winner.playerId,
-          winnerPlayerId: winner.playerId,
+          winnerSeatId: winner.seatId,
           winnerTeam: winner.team,
           cards: [...field.cards],
         },
@@ -94,24 +89,22 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         (player) => player.hand.length === 0,
       );
 
-      setCurrentSeat(state, winner.playerId);
+      setCurrentSeat(state, winner.seatId);
 
       if (state.playState) {
         state.playState.currentField = {
           cards: [],
-          playedBy: [],
           playedBySeatIds: [],
           baseCard: '',
-          dealerSeatId: asSeatId(winner.playerId),
-          dealerId: winner.playerId,
+          dealerSeatId: asSeatId(winner.seatId),
           isComplete: false,
         };
       }
 
       const fieldCompletePayload: FieldCompletePayload = {
-        winnerSeatId: asSeatId(winner.playerId),
+        winnerSeatId: asSeatId(winner.seatId),
         field: toCompletedFieldContract(completedField),
-        nextSeatId: asSeatId(winner.playerId),
+        nextSeatId: asSeatId(winner.seatId),
       };
       const room = await this.roomService.getRoom(roomId);
 
@@ -137,7 +130,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: winner.playerId,
+          payload: winner.seatId,
         });
 
         await roomGameState.saveState();
@@ -156,10 +149,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'round_completed',
-        actorSeatId: state.blowState.currentHighestDeclaration?.playerId
-          ? asSeatId(state.blowState.currentHighestDeclaration.playerId)
+        actorSeatId: state.blowState.currentHighestDeclaration?.seatId
+          ? asSeatId(state.blowState.currentHighestDeclaration.seatId)
           : null,
-        playerId: state.blowState.currentHighestDeclaration?.playerId ?? null,
         state,
         actionData: {
           declaringTeam,
@@ -208,7 +200,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           roomId,
           actionType: 'game_over',
           actorSeatId: null,
-          playerId: null,
           state,
           actionData: {
             winningTeam,
@@ -258,7 +249,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     state: GameState,
     field: Field,
   ): string | null {
-    if (field.cards.length !== field.playedBy.length) {
+    if (field.cards.length !== field.playedBySeatIds.length) {
       return 'Field card/player attribution mismatch';
     }
 
@@ -266,12 +257,14 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       return 'Field is not complete';
     }
 
-    const playerIds = new Set(state.players.map((player) => player.playerId));
-    if (field.playedBy.some((playerId) => !playerIds.has(playerId))) {
+    const seatIds = new Set<SeatId>(
+      state.players.map((player) => player.seatId),
+    );
+    if (field.playedBySeatIds.some((seatId) => !seatIds.has(seatId))) {
       return 'Field contains unknown player attribution';
     }
 
-    if (new Set(field.playedBy).size !== field.playedBy.length) {
+    if (new Set(field.playedBySeatIds).size !== field.playedBySeatIds.length) {
       return 'Field contains duplicate player attribution';
     }
 
@@ -279,8 +272,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     if (currentField && currentField.cards.length > 0) {
       const isSameField =
         this.isSameSequence(currentField.cards, field.cards) &&
-        this.isSameSequence(currentField.playedBy, field.playedBy) &&
-        currentField.dealerId === field.dealerId &&
+        this.isSameSequence(
+          currentField.playedBySeatIds,
+          field.playedBySeatIds,
+        ) &&
+        currentField.dealerSeatId === field.dealerSeatId &&
         currentField.baseCard === field.baseCard &&
         currentField.baseSuit === field.baseSuit;
 
@@ -310,17 +306,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     }
 
     const player = state.players.find(
-      (p) => p.playerId === highestDeclaration.playerId,
+      (p) => p.seatId === highestDeclaration.seatId,
     );
     if (player) {
       return player.team;
-    }
-
-    if (state.teamAssignments) {
-      const team = state.teamAssignments[highestDeclaration.playerId];
-      if (typeof team === 'number') {
-        return team;
-      }
     }
 
     return null;
@@ -386,21 +375,18 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     const newPlayState = {
       currentField: {
         cards: [],
-        playedBy: [],
         playedBySeatIds: [],
         baseCard: '',
-        dealerSeatId: asSeatId(nextBlowPlayer.playerId),
-        dealerId: nextBlowPlayer.playerId,
+        dealerSeatId: asSeatId(nextBlowPlayer.seatId),
         isComplete: false,
       },
       negriCard: null,
       negriSeatId: null,
-      negriPlayerId: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     const newBlowState = {
@@ -408,7 +394,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: nextBlowIndex,
     };
@@ -417,14 +403,14 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     roomGameState.updateState({
       playState: newPlayState,
       blowState: newBlowState,
-      currentSeatId: asSeatId(nextBlowPlayer.playerId),
+      currentSeatId: asSeatId(nextBlowPlayer.seatId),
     });
 
     const newRoundPayload: NewRoundStartedPayload = {
       players: resolveTransportPlayers(roomGameState, updatedState.players, {
         roomPlayers: room?.players,
       }),
-      currentTurnSeatId: asSeatId(nextBlowPlayer.playerId),
+      currentTurnSeatId: asSeatId(nextBlowPlayer.seatId),
       gamePhase: 'blow',
       currentField: null,
       completedFields: [],
@@ -462,7 +448,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         scope: 'room',
         roomId,
         event: 'update-turn',
-        payload: nextBlowPlayer.playerId,
+        payload: nextBlowPlayer.seatId,
         delayMs: 3000,
       },
       {
@@ -479,23 +465,15 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     await this.gameEventLogService?.log({
       roomId,
       actionType: 'round_reset',
-      actorSeatId: asSeatId(nextBlowPlayer.playerId),
-      playerId: nextBlowPlayer.playerId,
+      actorSeatId: asSeatId(nextBlowPlayer.seatId),
       state: updatedState,
       actionData: {
-        nextDealerSeatId: nextBlowPlayer.playerId,
-        nextDealerPlayerId: nextBlowPlayer.playerId,
+        nextDealerSeatId: nextBlowPlayer.seatId,
         nextRoundNumber: updatedState.roundNumber,
         nextBlowIndex,
-        startingHandsByPlayerId: Object.fromEntries(
-          updatedState.players.map((player) => [
-            player.playerId,
-            [...player.hand],
-          ]),
-        ),
         startingHandsBySeatId: Object.fromEntries(
           updatedState.players.map((player) => [
-            player.playerId,
+            player.seatId,
             [...player.hand],
           ]),
         ),

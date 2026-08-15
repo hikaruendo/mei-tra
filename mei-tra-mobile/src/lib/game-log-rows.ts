@@ -160,14 +160,16 @@ export function buildRoundTableRows(
 
       // Blower fallback chain, matching web.
       const blower =
-        (declaration?.playerId
-          ? playerNamesOf(declaration)[declaration.playerId]
+        (declaration?.actorSeatId
+          ? playerNamesOf(declaration)[declaration.actorSeatId]
           : null) ??
         getTextDetail(playStarted, 'winner') ??
-        (playStarted?.playerId
-          ? playerNamesOf(playStarted)[playStarted.playerId]
+        (playStarted?.actorSeatId
+          ? playerNamesOf(playStarted)[playStarted.actorSeatId]
           : null) ??
-        players.find((player) => player.playerId === declaration?.playerId)
+        players.find(
+          (player) => player.seatId === declaration?.actorSeatId,
+        )
           ?.name ??
         PARTICIPANT;
 

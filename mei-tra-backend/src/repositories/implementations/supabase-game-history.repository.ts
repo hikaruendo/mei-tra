@@ -81,12 +81,8 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       request = request.eq('action_type', query.actionType);
     }
 
-    if (query?.playerId) {
-      request = this.isUuid(query.playerId)
-        ? request.or(
-            `actor_seat_id.eq.${query.playerId},actor_key_snapshot.eq.${query.playerId}`,
-          )
-        : request.eq('actor_key_snapshot', query.playerId);
+    if (query?.actorSeatId) {
+      request = request.eq('actor_seat_id', query.actorSeatId);
     }
 
     if (query?.since) {
@@ -207,7 +203,6 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       actionType: row.action_type as GameHistoryActionType,
       actorSeatId: row.actor_seat_id ? asSeatId(row.actor_seat_id) : null,
       actorKeySnapshot: row.actor_key_snapshot,
-      playerId: row.actor_seat_id ?? row.actor_key_snapshot,
       actionData: row.action_data ?? {},
       timestamp: new Date(row.timestamp),
     };

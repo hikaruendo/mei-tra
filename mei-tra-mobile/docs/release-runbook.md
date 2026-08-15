@@ -183,7 +183,7 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 - EAS Build中: EAS dashboardまたは `eas build:cancel` で停止し、署名・設定を修正して再ビルドする。
 - TestFlight / Play内部テスト: 問題のbuildをtester配布から外し、直前の正常buildを再配布する。ストア公開後はストア側の段階的公開・撤回方針に従う。
 - OTA: 同じruntimeの直前の正常updateへrollbackする。native module変更をOTAで直そうとしない。
-- backend互換性: mobileを先に配布せず、既存Web clientと新mobileの両方を受け入れるbackendを先にproductionへ出す。wire contractを壊す変更は、backend → mobile binaryの順で段階移行する。
+- shared contract: mobileを先に配布せず、Webとmobileが利用するwire contractをbackendへ先に反映する。wire contractを変える場合は、backend → mobile binaryの順で展開する。
 - すべてのrollbackで、対象build/update ID、runtime version、channel、原因、再発防止テストを記録する。
 
 ## 10. 現時点の外部ブロッカー

@@ -13,7 +13,7 @@ function buildQueryString(query?: GameHistoryReplayQueryContract): string {
   if (query.roundNumber != null)
     params.set('roundNumber', String(query.roundNumber));
   if (query.actionType) params.set('actionType', query.actionType);
-  if (query.playerId) params.set('playerId', query.playerId);
+  if (query.actorSeatId) params.set('actorSeatId', query.actorSeatId);
   if (query.since) params.set('since', query.since);
   if (query.until) params.set('until', query.until);
   const qs = params.toString();

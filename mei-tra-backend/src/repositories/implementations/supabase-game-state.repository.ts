@@ -6,7 +6,6 @@ import {
   BlowState,
   GameState,
   DomainPlayer,
-  PlayerConnectionMetadata,
   PlayState,
   ScoreRecord,
 } from '../../types/game.types';
@@ -15,18 +14,19 @@ import {
   PersistedPlayerStates,
   toPersistedPlayerStates,
   toRuntimePlayer,
-} from '../../types/player-adapters';
+} from '../../adapters/player-adapters';
 import { Database } from '../../types/database.types';
 import { RoomPlayer } from '../../types/room.types';
-import { asSeatId, resolveSeatId } from '../../types/identity.types';
-import { normalizeGameStateIdentityAliases } from '../../types/game-state-identity';
+import { asSeatId } from '../../types/identity.types';
+import type { SeatId } from '../../types/identity.types';
+import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import {
   findUnknownPersistedSeatReferences,
   toPersistedBlowState,
   toPersistedPendingBrokenHandReveal,
   toPersistedPlayState,
-} from '../../types/game-state-persistence';
+} from '../../adapters/game-state-persistence';
 
 type GameStateRow = Database['public']['Tables']['game_states']['Row'];
 type GameStateUpdate = Database['public']['Tables']['game_states']['Update'];
@@ -61,7 +61,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async create(roomId: string, gameState: GameState): Promise<GameState> {
     try {
-      const canonicalGameState = normalizeGameStateIdentityAliases(gameState);
+      const canonicalGameState = normalizeGameStateIdentity(gameState);
       const { data, error } = await this.supabase
         .from('game_states')
         .insert({
@@ -161,13 +161,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     roomId: string,
     roomPlayers: RoomPlayer[],
     gameState: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState | null> {
-    const canonicalGameState = normalizeGameStateIdentityAliases(gameState);
+    const canonicalGameState = normalizeGameStateIdentity(gameState);
     const playerStates = toPersistedPlayerStates(canonicalGameState.players);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
-      seatId: resolveSeatId(player),
+      seatId: player.seatId,
       userId: player.userId ?? null,
       name: player.name,
       team: player.team,
@@ -186,7 +186,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           p_player_states: playerStates,
           p_state_patch: this.buildStatePatch(canonicalGameState),
           p_scalar_patch: this.buildScalarPatch(canonicalGameState),
-          p_host_id: hostId ?? null,
+          p_host_id: hostSeatId ?? null,
           p_expected_version: canonicalGameState.version ?? null,
           p_membership_mutation: membershipMutation ?? null,
         },
@@ -322,38 +322,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  async updatePlayerConnection(
-    roomId: string,
-    playerId: string,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<boolean> {
-    void playerId;
-    void updates;
-
-    // Connection metadata now lives in room/session state. Keep the method for
-    // incremental Phase 3 compatibility without mutating persisted game-state
-    // snapshots.
-    const { error } = await this.supabase
-      .from('game_states')
-      .select('id')
-      .eq('room_id', roomId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return false;
-      }
-
-      this.logger.error(
-        'Failed to verify game state before connection sync',
-        error,
-      );
-      return false;
-    }
-
-    return true;
-  }
-
   async updateGamePhase(roomId: string, phase: string): Promise<boolean> {
     try {
       return Boolean(
@@ -458,7 +426,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
         return toRuntimePlayer({
           seatId: asSeatId(seatId),
-          playerId: seatId,
           name: roomPlayer?.name,
           team: roomPlayer?.team as 0 | 1 | undefined,
           isCOM: roomPlayer?.isCOM,
@@ -469,13 +436,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         });
       })
       .filter((player): player is DomainPlayer => Boolean(player));
-    const canonicalCurrentPlayerId = dbGameState.current_seat_id;
+    const canonicalCurrentSeatId = dbGameState.current_seat_id;
     if (
-      canonicalCurrentPlayerId &&
-      !players.some((player) => player.playerId === canonicalCurrentPlayerId)
+      canonicalCurrentSeatId &&
+      !players.some((player) => player.seatId === canonicalCurrentSeatId)
     ) {
       throw new Error(
-        `Current seat ${canonicalCurrentPlayerId} is outside room ${dbGameState.room_id}`,
+        `Current seat ${canonicalCurrentSeatId} is outside room ${dbGameState.room_id}`,
       );
     }
     const blowState = (stateData.blowState ?? {
@@ -484,17 +451,16 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       declarations: [],
       actionHistory: [],
       lastPasserSeatId: null,
-      lastPasser: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     }) as BlowState;
 
-    return normalizeGameStateIdentityAliases({
+    return normalizeGameStateIdentity({
       version: dbGameState.version,
       identitySchemaVersion: 2,
       players,
-      currentSeatId: canonicalCurrentPlayerId
-        ? asSeatId(canonicalCurrentPlayerId)
+      currentSeatId: canonicalCurrentSeatId
+        ? asSeatId(canonicalCurrentSeatId)
         : null,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],
@@ -511,9 +477,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       agari: stateData.agari ?? undefined,
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
-      teamAssignments: Object.fromEntries(
-        players.map((player) => [player.playerId, player.team]),
-      ),
     });
   }
 
@@ -531,7 +494,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
 
     return {
-      seatId: resolveSeatId(player),
+      seatId: player.seatId,
       name: player.name,
       team: player.team,
       isCOM: player.isCOM,

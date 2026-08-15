@@ -57,7 +57,7 @@ describe('GameHistoryPageClient', () => {
         roomId: 'room-1',
         totalEntries: 10,
         byActionType: { game_over: 1 },
-        playerIds: ['player-1'],
+        actorSeatIds: ['player-1'],
         playerNames: { 'player-1': 'Player 1' },
         teamNames: { 0: '111', 1: '222' },
         status: 'completed',

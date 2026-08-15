@@ -174,7 +174,7 @@ describe('SupabaseGameHistoryRepository', () => {
     expect(entries[0]?.id).toBe('history-2');
   });
 
-  it('filters a legacy non-UUID player key without comparing it to the UUID column', async () => {
+  it('filters by the canonical actor seat', async () => {
     const order = jest.fn().mockResolvedValue({ data: [], error: null });
     const request = {
       eq: jest.fn(),
@@ -189,16 +189,15 @@ describe('SupabaseGameHistoryRepository', () => {
     } as unknown as SupabaseService;
     const repository = new SupabaseGameHistoryRepository(supabaseService);
 
-    await repository.findByRoomId('room-1', { playerId: 'com-timeout-a' });
+    await repository.findByRoomId('room-1', {
+      actorSeatId: asSeatId('com-timeout-a'),
+    });
 
-    expect(request.eq).toHaveBeenCalledWith(
-      'actor_key_snapshot',
-      'com-timeout-a',
-    );
+    expect(request.eq).toHaveBeenCalledWith('actor_seat_id', 'com-timeout-a');
     expect(request.or).not.toHaveBeenCalled();
   });
 
-  it('filters a UUID player key through canonical and snapshot columns', async () => {
+  it('does not query the legacy actor snapshot column', async () => {
     const order = jest.fn().mockResolvedValue({ data: [], error: null });
     const request = {
       eq: jest.fn(),
@@ -212,13 +211,12 @@ describe('SupabaseGameHistoryRepository', () => {
       client: { from: jest.fn(() => ({ select })) },
     } as unknown as SupabaseService;
     const repository = new SupabaseGameHistoryRepository(supabaseService);
-    const playerId = '00000000-0000-0000-0000-000000000101';
+    const actorSeatId = asSeatId('00000000-0000-0000-0000-000000000101');
 
-    await repository.findByRoomId('room-1', { playerId });
+    await repository.findByRoomId('room-1', { actorSeatId });
 
-    expect(request.or).toHaveBeenCalledWith(
-      `actor_seat_id.eq.${playerId},actor_key_snapshot.eq.${playerId}`,
-    );
+    expect(request.eq).toHaveBeenCalledWith('actor_seat_id', actorSeatId);
+    expect(request.or).not.toHaveBeenCalled();
   });
 
   it('deletes game history for finished rooms outside the recent limit', async () => {

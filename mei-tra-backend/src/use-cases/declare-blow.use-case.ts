@@ -27,8 +27,8 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { asSeatId } from '../types/identity.types';
-import { toBlowUpdatedPayload } from '../types/game-contract-adapters';
-import { resolveCurrentPlayer } from '../types/current-turn';
+import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
+import { resolveCurrentPlayer } from '../domain/current-turn';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -63,7 +63,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         return { success: false, error: pendingError };
       }
 
-      if (!roomGameState.isPlayerTurn(player.playerId)) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to declare" };
       }
 
@@ -73,7 +73,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       // Check if player has already declared in this blow phase
-      if (hasPlayerDeclaredInBlow(state.blowState, player.playerId)) {
+      if (hasPlayerDeclaredInBlow(state.blowState, player.seatId)) {
         return {
           success: false,
           error: 'You have already declared in this blow phase',
@@ -98,7 +98,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       const newDeclaration = this.blowService.createDeclaration(
-        player.playerId,
+        player.seatId,
         player.team,
         declaration.trumpType,
         declaration.numberOfPairs,
@@ -108,8 +108,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       state.blowState.declarations.push(newDeclaration);
       state.blowState.actionHistory.push({
         type: 'declare',
-        seatId: asSeatId(player.playerId),
-        playerId: player.playerId,
+        seatId: asSeatId(player.seatId),
         trumpType: declaration.trumpType,
         numberOfPairs: declaration.numberOfPairs,
         timestamp: newDeclaration.timestamp,
@@ -119,8 +118,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'blow_declared',
-        actorSeatId: asSeatId(player.playerId),
-        playerId: player.playerId,
+        actorSeatId: asSeatId(player.seatId),
         state,
         actionData: {
           declaration: {
@@ -184,7 +182,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           break;
         }
         const hasActed =
-          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.playerId) ||
+          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.seatId) ||
           hasPlayerPassedInBlow(state.blowState, currentPlayer);
 
         if (!hasActed) {
@@ -204,7 +202,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: nextPlayer.seatId,
         });
       }
 

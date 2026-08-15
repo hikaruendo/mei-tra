@@ -7,7 +7,7 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
-import { resolveCurrentPlayer } from '../types/current-turn';
+import { resolveCurrentPlayer } from '../domain/current-turn';
 
 @Injectable()
 export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
@@ -37,7 +37,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      if (state.playState.currentField.dealerId !== player.playerId) {
+      if (state.playState.currentField.dealerSeatId !== player.seatId) {
         return {
           success: false,
           error: "It's not your turn to select base suit",
@@ -62,7 +62,7 @@ export class SelectBaseSuitUseCase implements ISelectBaseSuitUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: nextPlayer.seatId,
         });
       }
 

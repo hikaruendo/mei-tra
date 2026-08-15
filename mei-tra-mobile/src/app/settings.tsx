@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, useRouter } from 'expo-router';
+import type { Team } from '@meitra/contracts/game';
 import { useState } from 'react';
 import {
   Alert,
@@ -21,8 +22,10 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { useNotifications } from '@/context/NotificationContext';
+import { useProfileGameHistory } from '@/hooks/useProfileGameHistory';
 import { config } from '@/lib/config';
 import { updateProfile, uploadAvatar } from '@/lib/profile-api';
+import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors } from '@/theme/colors';
 
 export default function SettingsScreen() {
@@ -43,6 +46,12 @@ export default function SettingsScreen() {
   const [savingName, setSavingName] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const {
+    items: recentMatches,
+    loading: historyLoading,
+    error: historyError,
+    refresh: refreshHistory,
+  } = useProfileGameHistory(user?.id ?? null);
 
   if (!loading && !user) {
     return <Redirect href="/sign-in" />;
@@ -210,6 +219,82 @@ export default function SettingsScreen() {
           >
             戻る
           </Button>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>最近の対局</Text>
+              <Text style={styles.hint}>完了した対局を新しい順に表示します。</Text>
+            </View>
+            <Button
+              disabled={historyLoading}
+              onPress={() => void refreshHistory()}
+              style={styles.refreshButton}
+              variant="ghost"
+            >
+              更新
+            </Button>
+          </View>
+
+          {historyLoading && recentMatches.length === 0 ? (
+            <Text style={styles.historyStatus}>対局ログを読み込んでいます</Text>
+          ) : null}
+          {!historyLoading && historyError ? (
+            <Text accessibilityRole="alert" style={styles.profileError}>
+              対局ログを読み込めませんでした
+            </Text>
+          ) : null}
+          {!historyLoading && !historyError && recentMatches.length === 0 ? (
+            <Text style={styles.historyStatus}>完了した対局はまだありません</Text>
+          ) : null}
+
+          {recentMatches.map((match) => {
+            const completedAt = new Date(match.completedAt);
+            const winner =
+              match.winningTeam === 0 || match.winningTeam === 1
+                ? getTeamDisplayName(
+                    match.winningTeam as Team,
+                    match.teamNames,
+                  )
+                : '勝敗未確定';
+
+            return (
+              <Pressable
+                accessibilityHint="対局ログの詳細を開きます"
+                accessibilityRole="button"
+                key={match.roomId}
+                onPress={() =>
+                  router.push({
+                    pathname: '/game-history/[roomId]',
+                    params: { roomId: match.roomId },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.historyItem,
+                  pressed && styles.linkPressed,
+                ]}
+              >
+                <View style={styles.historyItemHeader}>
+                  <Text numberOfLines={1} style={styles.historyRoomName}>
+                    {match.roomName}
+                  </Text>
+                  <Text style={styles.historyDate}>
+                    {Number.isNaN(completedAt.getTime())
+                      ? match.completedAt
+                      : completedAt.toLocaleString('ja-JP')}
+                  </Text>
+                </View>
+                <View style={styles.historyMeta}>
+                  <Text style={styles.historyMetaText}>
+                    {match.roundCount}ラウンド
+                  </Text>
+                  <Text style={styles.historyMetaText}>勝者: {winner}</Text>
+                </View>
+                <Text style={styles.historyDetails}>詳細を見る</Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <View style={styles.card}>
@@ -464,6 +549,59 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 19,
     fontWeight: '800',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionHeading: {
+    flex: 1,
+    gap: 4,
+  },
+  refreshButton: {
+    minHeight: 40,
+    paddingHorizontal: 10,
+  },
+  historyStatus: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  historyItem: {
+    gap: 8,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.panelStrong,
+  },
+  historyItemHeader: {
+    gap: 4,
+  },
+  historyRoomName: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  historyDate: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  historyMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  historyMetaText: {
+    color: colors.text,
+    fontSize: 13,
+  },
+  historyDetails: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
   },
   avatarRow: {
     alignItems: 'center',

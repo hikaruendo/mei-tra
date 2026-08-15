@@ -79,20 +79,20 @@ function getTextDetail(
   return detail?.value.kind === 'text' ? detail.value.text : null;
 }
 
-function getPlayerDetailId(
+function getPlayerDetailSeatId(
   event: GameHistoryReplayEvent | undefined,
   labelKey: string,
 ): string | null {
   const detail = event?.detailItems.find((item) => item.labelKey === labelKey);
 
-  return detail?.value.kind === 'player' ? detail.value.playerId : null;
+  return detail?.value.kind === 'player' ? detail.value.seatId : null;
 }
 
 function getPlayerNameFromActionData(
   event: GameHistoryReplayEvent | undefined,
-  playerId: string | null,
+  seatId: string | null,
 ): string | null {
-  if (!event || !playerId) {
+  if (!event || !seatId) {
     return null;
   }
 
@@ -105,7 +105,7 @@ function getPlayerNameFromActionData(
     return null;
   }
 
-  const playerName = (playerNames as Record<string, unknown>)[playerId];
+  const playerName = (playerNames as Record<string, unknown>)[seatId];
   return typeof playerName === 'string' && playerName.length > 0
     ? playerName
     : null;
@@ -239,17 +239,17 @@ export function GameHistoryDock({
 
   const resolvePlayerName = useCallback(
     (
-      playerId: string | null | undefined,
+      seatId: string | null | undefined,
       fallbackName?: string | null,
     ): string | null => {
-      if (!playerId) {
+      if (!seatId) {
         return null;
       }
 
       const currentName = players
-        .find((player) => player.playerId === playerId)
+        .find((player) => player.seatId === seatId)
         ?.name.trim();
-      const summaryName = resolvedSummary?.playerNames[playerId]?.trim();
+      const summaryName = resolvedSummary?.playerNames[seatId]?.trim();
       const storedName = fallbackName?.trim();
 
       return currentName || summaryName || storedName || null;
@@ -258,14 +258,14 @@ export function GameHistoryDock({
   );
 
   const formatPlayer = (
-    playerId: string | null | undefined,
+    seatId: string | null | undefined,
     fallbackName?: string | null,
   ) => {
-    if (!playerId) {
+    if (!seatId) {
       return null;
     }
 
-    return resolvePlayerName(playerId, fallbackName) ?? t('participant');
+    return resolvePlayerName(seatId, fallbackName) ?? t('participant');
   };
 
   const formatTrump = (trump: unknown) => {
@@ -367,20 +367,21 @@ export function GameHistoryDock({
                 Boolean(score),
             )
             .sort((left, right) => left.team - right.team);
-          const latestDeclarationPlayerId = latestDeclarationEvent?.playerId ?? null;
-          const playStartedPlayerId =
-            getPlayerDetailId(playStartedEvent, 'winner')
-            ?? playStartedEvent?.playerId
+          const latestDeclarationSeatId =
+            latestDeclarationEvent?.actorSeatId ?? null;
+          const playStartedSeatId =
+            getPlayerDetailSeatId(playStartedEvent, 'winner')
+            ?? playStartedEvent?.actorSeatId
             ?? null;
-          const blowerId = latestDeclarationPlayerId ?? playStartedPlayerId;
+          const blowerId = latestDeclarationSeatId ?? playStartedSeatId;
           const blowerName =
             resolvePlayerName(blowerId)
             ?? getPlayerNameFromActionData(
               latestDeclarationEvent,
-              latestDeclarationPlayerId,
+              latestDeclarationSeatId,
             )
             ?? getPlayerDetailName(playStartedEvent, 'winner')
-            ?? getPlayerNameFromActionData(playStartedEvent, playStartedPlayerId);
+            ?? getPlayerNameFromActionData(playStartedEvent, playStartedSeatId);
           const declarationValue =
             getTextDetail(latestDeclarationEvent, 'highestDeclaration')
             ?? getTextDetail(latestDeclarationEvent, 'declaration');
@@ -396,7 +397,7 @@ export function GameHistoryDock({
             roundNumber: round.roundNumber!,
             blower: blowerId
               ? blowerName
-                ?? players.find((player) => player.playerId === blowerId)?.name
+                ?? players.find((player) => player.seatId === blowerId)?.name
                 ?? t('participant')
               : t('participant'),
             declaration,
@@ -477,7 +478,7 @@ export function GameHistoryDock({
         return detailItem.value.text;
       case 'player':
         return formatPlayer(
-          detailItem.value.playerId,
+          detailItem.value.seatId,
           detailItem.value.playerName,
         );
       case 'team':
@@ -528,7 +529,7 @@ export function GameHistoryDock({
   };
 
   const formatEventSummary = (event: GameHistoryReplayEvent) => {
-    const player = formatPlayer(event.playerId) ?? t('unknownPlayer');
+    const player = formatPlayer(event.actorSeatId) ?? t('unknownPlayer');
 
     switch (event.actionType) {
       case 'game_started':
