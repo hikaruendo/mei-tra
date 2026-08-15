@@ -6,8 +6,6 @@ export interface ActiveRoomMembership {
   userId: string;
   roomId: string | null;
   seatId: SeatId;
-  /** @deprecated Use seatId. */
-  playerId: string;
   status: ActiveRoomMembershipStatus;
   membershipVersion: number;
   transitionId: string;

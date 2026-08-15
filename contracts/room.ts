@@ -26,7 +26,6 @@ export interface RoomSettingsContract {
 
 export interface UpdateTeamNamesPayload {
   roomId: string;
-  playerId: string;
   teamNames: TeamNames;
 }
 

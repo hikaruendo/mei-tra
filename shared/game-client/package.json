@@ -23,10 +23,6 @@
       "types": "./table-order.ts",
       "default": "./table-order.ts"
     },
-    "./identity": {
-      "types": "./identity.ts",
-      "default": "./identity.ts"
-    },
     "./game-event-reducer": {
       "types": "./game-event-reducer.ts",
       "default": "./game-event-reducer.ts"

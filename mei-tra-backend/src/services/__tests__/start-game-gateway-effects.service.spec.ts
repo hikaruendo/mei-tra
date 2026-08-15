@@ -1,6 +1,7 @@
 import { StartGameGatewayEffectsService } from '../start-game-gateway-effects.service';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from '../room-update-gateway-effects.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('StartGameGatewayEffectsService', () => {
   it('builds contractized start-game room events', async () => {
@@ -11,7 +12,7 @@ describe('StartGameGatewayEffectsService', () => {
         settings: { teamNames: undefined },
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             socketId: 'socket-1',
             name: 'Host',
             hand: [],
@@ -33,7 +34,7 @@ describe('StartGameGatewayEffectsService', () => {
         getTransportPlayers: jest.fn(() => [
           {
             socketId: 'socket-1',
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Host',
             hand: ['AS'],
             team: 0,
@@ -53,28 +54,11 @@ describe('StartGameGatewayEffectsService', () => {
             room: { id: 'room-1' },
             players: [
               {
-                playerId: 'player-1',
+                seatId: 'player-1',
                 team: 0,
               },
             ],
           },
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'room-updated',
-          payload: { id: 'room-1' },
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'update-players',
-          payload: [
-            {
-              playerId: 'player-1',
-              team: 0,
-            },
-          ],
         },
       ]),
       buildRoomsListEvent: jest.fn().mockReturnValue({
@@ -93,7 +77,7 @@ describe('StartGameGatewayEffectsService', () => {
       roomId: 'room-1',
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: ['AS'],
           team: 0,
@@ -121,28 +105,11 @@ describe('StartGameGatewayEffectsService', () => {
           room: { id: 'room-1' },
           players: [
             expect.objectContaining({
-              playerId: 'player-1',
+              seatId: 'player-1',
               team: 0,
             }),
           ],
         },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-updated',
-        payload: { id: 'room-1' },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [
-          expect.objectContaining({
-            playerId: 'player-1',
-            team: 0,
-          }),
-        ],
       },
       {
         scope: 'all',
@@ -152,28 +119,16 @@ describe('StartGameGatewayEffectsService', () => {
       {
         scope: 'room',
         roomId: 'room-1',
-        event: 'room-playing',
-        payload: {
-          players: [
-            expect.objectContaining({
-              playerId: 'player-1',
-              team: 0,
-            }),
-          ],
-        },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
         event: 'game-started',
         payload: {
           roomId: 'room-1',
           players: [
             expect.objectContaining({
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
             }),
           ],
           pointsToWin: 10,
+          teamNames: undefined,
         },
       },
       {
@@ -203,7 +158,7 @@ describe('StartGameGatewayEffectsService', () => {
     const [roomEventsArgs] = buildRoomEventsMock.mock.calls[0] ?? [];
     expect(roomEventsArgs).toBeDefined();
     expect(roomEventsArgs?.room.id).toBe('room-1');
-    expect(roomEventsArgs?.statePlayers?.[0]?.playerId).toBe('player-1');
+    expect(roomEventsArgs?.statePlayers?.[0]?.seatId).toBe('player-1');
     expect(roomEventsArgs?.scope).toBe('room');
     expect(roomEventsArgs?.roomId).toBe('room-1');
     expect(roomService.listRooms).toHaveBeenCalledTimes(1);

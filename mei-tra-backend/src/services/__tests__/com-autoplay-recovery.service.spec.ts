@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { Logger } from '@nestjs/common';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { IComAutoPlayUseCase } from '../../use-cases/interfaces/com-autoplay-use-case.interface';
@@ -103,9 +104,9 @@ describe('ComAutoPlayRecoveryService', () => {
     } = createService();
     const field = {
       cards: ['A♠', 'K♠', 'Q♠', 'J♠'],
-      playedBy: ['p1', 'p2', 'p3', 'com-1'],
+      playedBySeatIds: ['p1', 'p2', 'p3', 'com-1'].map(asSeatId),
       baseCard: 'A♠',
-      dealerId: 'p1',
+      dealerSeatId: asSeatId('p1'),
       isComplete: true,
     };
     const state = {
@@ -122,7 +123,7 @@ describe('ComAutoPlayRecoveryService', () => {
       state.playState.currentField = {
         ...field,
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         isComplete: false,
       };
       return Promise.resolve(completionResponse);

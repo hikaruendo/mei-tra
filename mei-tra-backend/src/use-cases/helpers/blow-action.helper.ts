@@ -1,15 +1,16 @@
 import { BlowState, DomainPlayer } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 
 export function hasPlayerDeclaredInBlow(
   blowState: BlowState,
-  playerId: string,
+  seatId: SeatId,
 ): boolean {
   return (
     blowState.declarations.some(
-      (declaration) => declaration.playerId === playerId,
+      (declaration) => declaration.seatId === seatId,
     ) ||
     (blowState.actionHistory ?? []).some(
-      (action) => action.playerId === playerId && action.type === 'declare',
+      (action) => action.seatId === seatId && action.type === 'declare',
     )
   );
 }
@@ -21,7 +22,7 @@ export function hasPlayerPassedInBlow(
   return (
     player.isPasser ||
     (blowState.actionHistory ?? []).some(
-      (action) => action.playerId === player.playerId && action.type === 'pass',
+      (action) => action.seatId === player.seatId && action.type === 'pass',
     )
   );
 }
@@ -32,7 +33,7 @@ export function countPlayersActedInBlow(
 ): number {
   return players.filter(
     (player) =>
-      hasPlayerDeclaredInBlow(blowState, player.playerId) ||
+      hasPlayerDeclaredInBlow(blowState, player.seatId) ||
       hasPlayerPassedInBlow(blowState, player),
   ).length;
 }

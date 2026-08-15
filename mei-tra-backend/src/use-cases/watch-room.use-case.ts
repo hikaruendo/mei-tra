@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { GameStatePayload } from '@contracts/game';
 import { IRoomService } from '../services/interfaces/room-service.interface';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { Room, RoomStatus } from '../types/room.types';
 import {
   IWatchRoomUseCase,
@@ -10,12 +10,12 @@ import {
 } from './interfaces/watch-room.use-case.interface';
 import { resolveTransportPlayers } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
-import { resolveCurrentSeatId } from '../types/current-turn';
+import { resolveCurrentSeatId } from '../domain/current-turn';
 import {
   toBlowStateContract,
   toCompletedFieldContract,
   toFieldContract,
-} from '../types/game-contract-adapters';
+} from '../adapters/game-contract-adapters';
 
 @Injectable()
 export class WatchRoomUseCase implements IWatchRoomUseCase {
@@ -99,10 +99,12 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       youSeatId: null,
       isSpectator: true,
       negriCard: state.playState?.negriCard ?? null,
-      negriSeatId: state.playState?.negriSeatId ?? null,
+      negriSeatId: state.playState?.negriSeatId
+        ? asSeatId(state.playState.negriSeatId)
+        : null,
       fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
       roomId: room.id,
-      hostSeatId: asSeatId(room.hostId),
+      hostSeatId: asSeatId(room.hostSeatId),
       pointsToWin: room.settings.pointsToWin,
       teamNames: room.settings.teamNames,
     };

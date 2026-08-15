@@ -17,8 +17,8 @@
 
 ## 現在の主要 state / contract 方針
 
-- room/player 同期の主系統は `room-sync`
-- `room-updated` / `update-players` は互換 fallback
+- room/player の完全同期は `room-sync`
+- 進行中の player 表示更新は `update-players`
 - transport 契約は `contracts/`、UI view model は `types/` に分けています
 
 ## 開発

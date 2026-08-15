@@ -53,15 +53,17 @@ export function BlowControls({
   players,
 }: BlowControlsProps) {
   const t = useTranslations('blowControls');
-  const currentPlayerName = players.find(p => p.playerId === whoseTurn)?.name;
-  const playerMap = new Map(players.map((player) => [player.playerId, player]));
+  const currentPlayerName = players.find(p => p.seatId === whoseTurn)?.name;
+  const playerMap = new Map<string, Player>(
+    players.map((player) => [player.seatId, player]),
+  );
   const currentPlayer =
     isCurrentPlayer && whoseTurn ? playerMap.get(whoseTurn) : undefined;
   const currentPlayerAlreadyActed =
     !!currentPlayer &&
     (currentPlayer.isPasser ||
-      blowDeclarations.some((declaration) => declaration.playerId === currentPlayer.playerId) ||
-      blowActionHistory.some((action) => action.playerId === currentPlayer.playerId));
+      blowDeclarations.some((declaration) => declaration.seatId === currentPlayer.seatId) ||
+      blowActionHistory.some((action) => action.seatId === currentPlayer.seatId));
 
   // 宣言処理
   const handleDeclare = () => {
@@ -182,7 +184,7 @@ export function BlowControls({
 
     const isLatestDeclaration = declaration === blowDeclarations[blowDeclarations.length - 1];
     const isHighestDeclaration = currentHighestDeclaration && 
-      declaration.playerId === currentHighestDeclaration.playerId &&
+      declaration.seatId === currentHighestDeclaration.seatId &&
       declaration.trumpType === currentHighestDeclaration.trumpType &&
       declaration.numberOfPairs === currentHighestDeclaration.numberOfPairs;
 
@@ -287,13 +289,13 @@ export function BlowControls({
         <div className={styles.declarations}>
           <div className={styles.declarationList}>
             {chronologicalDeclarations.map((entry, index) => {
-              const player = playerMap.get(entry.playerId);
-              const playerName = player?.name ?? entry.playerId;
+              const player = playerMap.get(entry.seatId);
+              const playerName = player?.name ?? entry.seatId;
 
               if (entry.type === 'pass') {
                 return (
                   <div
-                    key={`pass-${entry.playerId}-${index}`}
+                    key={`pass-${entry.seatId}-${index}`}
                     className={`${styles.declarationItem} ${styles.pass}`}
                     title={`${playerName}: ${t('passed')}`}
                   >
@@ -309,7 +311,7 @@ export function BlowControls({
               }
 
               const declaration = {
-                playerId: entry.playerId,
+                seatId: entry.seatId,
                 trumpType: entry.trumpType,
                 numberOfPairs: entry.numberOfPairs,
                 timestamp: entry.timestamp,
@@ -317,7 +319,7 @@ export function BlowControls({
 
               return (
                 <div
-                  key={`${entry.playerId}-${entry.timestamp}`}
+                  key={`${entry.seatId}-${entry.timestamp}`}
                   className={getDeclarationItemClassName(declaration)}
                   title={`${playerName}: ${entry.trumpType ? t(entry.trumpType) : ''} ${formatSetOption(declaration.numberOfPairs)}`}
                 >

@@ -13,7 +13,7 @@ interface GameFieldProps {
   players: Player[];
   onBaseSuitSelect: (suit: string) => void;
   isCurrentPlayer: boolean;
-  currentPlayerId: string;
+  currentSeatId: string;
 }
 
 export const GameField: React.FC<GameFieldProps> = ({
@@ -21,14 +21,14 @@ export const GameField: React.FC<GameFieldProps> = ({
   players,
   onBaseSuitSelect,
   isCurrentPlayer,
-  currentPlayerId,
+  currentSeatId,
 }) => {
   const t = useTranslations('gameField');
   const isJokerBaseCard = currentField?.baseCard === 'JOKER';
   const needsBaseSuitSelection = isJokerBaseCard && !currentField?.baseSuit && isCurrentPlayer;
   const isRedBaseSuit = currentField?.baseSuit === '♥' || currentField?.baseSuit === '♦';
 
-  const orderedPlayers = getSeatOrderWithSelfBottom(players, currentPlayerId);
+  const orderedPlayers = getSeatOrderWithSelfBottom(players, currentSeatId);
 
   if (!currentField || currentField.cards.length === 0) {
     return null;
@@ -39,8 +39,8 @@ export const GameField: React.FC<GameFieldProps> = ({
       <div className={styles.fieldContainerOuter}>
         <div className={styles.fieldContainerInner}>
           {currentField.cards.map((card: string, index: number) => {
-            const playedByPlayerId = currentField.playedBy?.[index] ?? '';
-            const position = getCardSeatPosition(playedByPlayerId, orderedPlayers);
+            const playedBySeatId = currentField.playedBySeatIds[index] ?? '';
+            const position = getCardSeatPosition(playedBySeatId, orderedPlayers);
 
             return (
               <div

@@ -17,17 +17,14 @@ describe('GameEventLogService', () => {
       roomId: 'room-1',
       actionType: 'card_played',
       actorSeatId: asSeatId('seat-1'),
-      playerId: 'player-1',
       state: {
         players: [
           {
             seatId: asSeatId('seat-1'),
-            playerId: 'player-1',
             name: 'Player One',
           },
         ],
         currentSeatId: asSeatId('seat-1'),
-        currentPlayerId: 'player-1',
         gamePhase: 'play',
         roundNumber: 2,
         teamScores: { 0: { play: 2, total: 4 }, 1: { play: 1, total: 3 } },
@@ -46,7 +43,6 @@ describe('GameEventLogService', () => {
             roundNumber: 2,
             gamePhase: 'play',
             currentTurnSeatId: 'seat-1',
-            currentTurnPlayerId: 'seat-1',
           }),
           playerNames: {
             'seat-1': 'Player One',
@@ -81,7 +77,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'card_played' as const,
-        playerId: 'player-1',
+        actorSeatId: 'player-1',
         actionData: {},
         timestamp: new Date('2026-04-16T00:00:00.000Z'),
       },
@@ -122,7 +118,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'game_started' as const,
-        playerId: null,
+        actorSeatId: null,
         actionData: {
           context: { roundNumber: 1 },
           playerNames: {
@@ -136,7 +132,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'card_played' as const,
-        playerId: 'player-1',
+        actorSeatId: 'player-1',
         actionData: {
           context: { roundNumber: 1 },
           playerNames: {
@@ -160,7 +156,7 @@ describe('GameEventLogService', () => {
         game_started: 1,
         card_played: 1,
       },
-      playerIds: ['player-1'],
+      actorSeatIds: ['player-1'],
       playerNames: {
         'player-1': 'Player One',
       },
@@ -180,7 +176,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'game_started' as const,
-        playerId: null,
+        actorSeatId: null,
         actionData: {},
         timestamp: new Date('2026-04-16T00:00:00.000Z'),
       },
@@ -189,7 +185,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'game_over' as const,
-        playerId: 'player-1',
+        actorSeatId: 'player-1',
         actionData: {
           winningTeam: 1,
         },
@@ -219,7 +215,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'game_started' as const,
-        playerId: null,
+        actorSeatId: null,
         actionData: {
           playerNames: {
             'player-1': 'Player One',
@@ -232,7 +228,7 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'card_played' as const,
-        playerId: 'player-1',
+        actorSeatId: 'player-1',
         actionData: {
           card: 'AS',
           fieldCards: ['AS'],
@@ -249,9 +245,9 @@ describe('GameEventLogService', () => {
         roomId: 'room-1',
         gameStateId: 'state-1',
         actionType: 'field_completed' as const,
-        playerId: 'player-2',
+        actorSeatId: 'player-2',
         actionData: {
-          winnerPlayerId: 'player-2',
+          winnerSeatId: asSeatId('player-2'),
           winnerTeam: 1,
           context: { roundNumber: 1 },
           playerNames: {
@@ -277,7 +273,7 @@ describe('GameEventLogService', () => {
           startedAt: new Date('2026-04-16T00:00:00.000Z'),
           endedAt: new Date('2026-04-16T00:00:00.000Z'),
           actionTypes: ['game_started'],
-          playerIds: [],
+          actorSeatIds: [],
           entries: [history[0]],
           events: [
             {
@@ -286,15 +282,12 @@ describe('GameEventLogService', () => {
               actionType: 'game_started',
               kind: 'lifecycle',
               actorSeatId: null,
-              playerId: null,
               roundNumber: null,
               gamePhase: null,
               summary: 'Game started',
               details: {
                 firstBlowSeatId: null,
-                firstBlowPlayerId: null,
                 startedBySeatId: null,
-                startedByPlayerId: null,
                 pointsToWin: null,
               },
               detailItems: [],
@@ -312,7 +305,7 @@ describe('GameEventLogService', () => {
           startedAt: new Date('2026-04-16T00:05:00.000Z'),
           endedAt: new Date('2026-04-16T00:06:00.000Z'),
           actionTypes: ['card_played', 'field_completed'],
-          playerIds: ['player-1', 'player-2'],
+          actorSeatIds: ['player-1', 'player-2'],
           entries: [history[1], history[2]],
           events: [
             {
@@ -321,7 +314,6 @@ describe('GameEventLogService', () => {
               actionType: 'card_played',
               kind: 'play',
               actorSeatId: 'player-1',
-              playerId: 'player-1',
               roundNumber: 1,
               gamePhase: 'waiting',
               summary: 'Player One played AS (1/4)',
@@ -350,7 +342,6 @@ describe('GameEventLogService', () => {
                 roundNumber: 1,
                 gamePhase: 'waiting',
                 currentTurnSeatId: null,
-                currentTurnPlayerId: null,
                 teamScores: undefined,
               },
               actionData: {
@@ -369,13 +360,11 @@ describe('GameEventLogService', () => {
               actionType: 'field_completed',
               kind: 'play',
               actorSeatId: 'player-2',
-              playerId: 'player-2',
               roundNumber: 1,
               gamePhase: 'waiting',
               summary: 'Field completed by Player Two for Team 2',
               details: {
-                winnerSeatId: 'player-2',
-                winnerPlayerId: 'player-2',
+                winnerSeatId: asSeatId('player-2'),
                 winnerTeam: 1,
                 cards: [],
               },
@@ -385,7 +374,6 @@ describe('GameEventLogService', () => {
                   value: {
                     kind: 'player',
                     seatId: 'player-2',
-                    playerId: 'player-2',
                     playerName: 'Player Two',
                   },
                 },
@@ -401,11 +389,10 @@ describe('GameEventLogService', () => {
                 roundNumber: 1,
                 gamePhase: 'waiting',
                 currentTurnSeatId: null,
-                currentTurnPlayerId: null,
                 teamScores: undefined,
               },
               actionData: {
-                winnerPlayerId: 'player-2',
+                winnerSeatId: asSeatId('player-2'),
                 winnerTeam: 1,
                 context: { roundNumber: 1 },
                 playerNames: {
@@ -428,7 +415,6 @@ describe('GameEventLogService', () => {
           roomId: 'room-1',
           gameStateId: 'state-1',
           actionType: 'player_stats_updated' as const,
-          playerId: null,
           actionData: {
             updatedCount: 2,
             skippedPlayers: ['player-3'],
@@ -480,9 +466,9 @@ describe('GameEventLogService', () => {
           roomId: 'room-1',
           gameStateId: 'state-1',
           actionType: 'field_completed' as const,
-          playerId: 'player-3',
+          actorSeatId: 'player-3',
           actionData: {
-            winnerPlayerId: 'player-3',
+            winnerSeatId: asSeatId('player-3'),
             winnerTeam: 0,
             playerNames: { 'player-3': 'COM 3' },
           },
@@ -503,7 +489,6 @@ describe('GameEventLogService', () => {
       value: {
         kind: 'player',
         seatId: 'player-3',
-        playerId: 'player-3',
         playerName: 'Player3',
       },
     });

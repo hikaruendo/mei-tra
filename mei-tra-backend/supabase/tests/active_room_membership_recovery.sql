@@ -60,7 +60,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    test_seat::text,
+    test_seat,
     claim_transition
   );
   current_version := (result->'membership'->>'membership_version')::bigint;
@@ -79,7 +79,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    test_seat::text,
+    test_seat,
     reconnect_transition
   );
   if result->>'result' <> 'reconnected' then
@@ -120,7 +120,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    test_seat::text,
+    test_seat,
     reconnect_transition
   );
   if result->>'result' <> 'conflict' then
@@ -141,7 +141,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    test_seat::text,
+    test_seat,
     reconnect_transition
   );
   current_version := (result->'membership'->>'membership_version')::bigint;
@@ -179,7 +179,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    test_seat::text,
+    test_seat,
     claim_transition
   );
   current_version := (result->'membership'->>'membership_version')::bigint;
@@ -206,7 +206,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     test_room,
-    test_seat::text,
+    test_seat,
     reconnect_transition
   );
   if result->>'result' <> 'reconnected' then

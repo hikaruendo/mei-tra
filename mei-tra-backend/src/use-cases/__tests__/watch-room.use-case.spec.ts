@@ -6,29 +6,29 @@ import {
   GameState,
   Team,
 } from '../../types/game.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
 import { asSeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 
 describe('WatchRoomUseCase', () => {
-  const player = (playerId: string, team: Team, hand: string[]) => ({
-    socketId: `${playerId}-socket`,
-    playerId,
-    name: playerId,
-    userId: playerId,
+  const player = (seatId: string, team: Team, hand: string[]) => ({
+    socketId: `${seatId}-socket`,
+    seatId: asSeatId(seatId),
+    name: seatId,
+    userId: seatId,
     isAuthenticated: true,
     team,
     hand,
     isPasser: false,
     isReady: true,
-    isHost: playerId === 'p1',
+    isHost: seatId === 'p1',
     joinedAt: new Date(),
   });
 
   const room = (overrides: Partial<Room> = {}): Room => ({
     id: 'room-1',
     name: 'Room 1',
-    hostId: 'p1',
+    hostSeatId: asSeatId('p1'),
     status: RoomStatus.PLAYING,
     players: [
       player('p1', 0, ['A♠', 'K♠']),
@@ -55,14 +55,14 @@ describe('WatchRoomUseCase', () => {
     currentHighestDeclaration: null,
     declarations: [],
     actionHistory: [],
-    lastPasser: null,
+    lastPasserSeatId: null,
     isRoundCancelled: false,
     currentBlowIndex: 0,
   });
 
   const gameState = (roomValue: Room): GameState => ({
     players: roomValue.players.map((roomPlayer) => ({
-      playerId: roomPlayer.playerId,
+      seatId: roomPlayer.seatId,
       name: roomPlayer.name,
       team: roomPlayer.team,
       hand: [...roomPlayer.hand],
@@ -71,7 +71,7 @@ describe('WatchRoomUseCase', () => {
       hasRequiredBroken: false,
     })),
     deck: [],
-    currentPlayerIndex: 0,
+    currentSeatId: asSeatId(roomValue.players[0].seatId),
     gamePhase: 'play',
     blowState: blowState(),
     playState: {
@@ -79,9 +79,9 @@ describe('WatchRoomUseCase', () => {
       negriCard: 'A♠',
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     },
     teamScores: {
       0: { play: 0, total: 0 },
@@ -90,7 +90,6 @@ describe('WatchRoomUseCase', () => {
     teamScoreRecords: { 0: [], 1: [] },
     roundNumber: 1,
     pointsToWin: roomValue.settings.pointsToWin,
-    teamAssignments: {},
   });
 
   const createUseCase = (roomValue: Room) => {
@@ -100,10 +99,10 @@ describe('WatchRoomUseCase', () => {
       getTransportPlayers: jest.fn(
         (players: DomainPlayer[]): TransportPlayer[] =>
           players.map((domainPlayer) => ({
-            socketId: `${domainPlayer.playerId}-socket`,
-            seatId: asSeatId(domainPlayer.playerId),
+            socketId: `${domainPlayer.seatId}-socket`,
+            seatId: asSeatId(domainPlayer.seatId),
             name: domainPlayer.name,
-            userId: domainPlayer.playerId,
+            userId: domainPlayer.seatId,
             isAuthenticated: true,
             team: domainPlayer.team,
             hand: [...domainPlayer.hand],

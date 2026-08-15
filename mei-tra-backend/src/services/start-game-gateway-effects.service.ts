@@ -1,9 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  GameStartedPayload,
-  RoomPlayingPayload,
-  UpdatePhasePayload,
-} from '@contracts/game';
+import type { GameStartedPayload, UpdatePhasePayload } from '@contracts/game';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { DomainPlayer } from '../types/game.types';
 import type { SeatId } from '../types/identity.types';
@@ -39,9 +35,6 @@ export class StartGameGatewayEffectsService {
       room?.players,
     );
 
-    const roomPlayingPayload: RoomPlayingPayload = {
-      players: transportPlayers,
-    };
     const gameStartedPayload: GameStartedPayload = {
       roomId,
       players: transportPlayers,
@@ -64,12 +57,6 @@ export class StartGameGatewayEffectsService {
         rooms: roomsList,
         scope: 'all',
       }),
-      {
-        scope: 'room',
-        roomId,
-        event: 'room-playing',
-        payload: roomPlayingPayload,
-      },
       {
         scope: 'room',
         roomId,

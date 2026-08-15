@@ -1,8 +1,9 @@
 import { Room } from '../../types/room.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface FillWithComRequest {
   roomId: string;
-  playerId: string; // Player ID of the requesting player
+  actorSeatId: SeatId;
 }
 
 export interface FillWithComResponse {
