@@ -304,14 +304,14 @@ export class DisconnectGatewayEffectsService {
     let room = params.room;
     const events: GatewayEvent[] = [];
 
-    if (room?.hostId === player.playerId) {
+    if (room?.hostSeatId === player.playerId) {
       const nextHost = room.players.find(
         (candidate) =>
           candidate.playerId !== player.playerId && !candidate.isCOM,
       );
       if (nextHost) {
         await this.roomService.updateRoom(roomId, {
-          hostId: nextHost.playerId,
+          hostSeatId: asSeatId(nextHost.playerId),
         });
         room = await this.roomService.getRoom(roomId);
         if (room) {

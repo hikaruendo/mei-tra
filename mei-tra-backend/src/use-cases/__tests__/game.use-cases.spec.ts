@@ -158,7 +158,7 @@ describe('Game Use Cases', () => {
   const baseRoom: Room = {
     id: 'room-1',
     name: 'Room',
-    hostId: 'player-1',
+    hostSeatId: asSeatId('player-1'),
     status: RoomStatus.WAITING,
     players: basePlayers,
     settings: {
@@ -181,7 +181,7 @@ describe('Game Use Cases', () => {
 
       const room: Room = {
         ...baseRoom,
-        hostId: 'user-1',
+        hostSeatId: asSeatId('user-1'),
         players: [
           {
             ...basePlayers[0],
@@ -261,7 +261,7 @@ describe('Game Use Cases', () => {
       };
       const room: Room = {
         ...baseRoom,
-        hostId: 'seat-1',
+        hostSeatId: asSeatId('seat-1'),
         players: [joinedPlayer, basePlayers[1]],
       };
       roomService.joinRoom.mockResolvedValue(true);
@@ -515,7 +515,7 @@ describe('Game Use Cases', () => {
       const waitingRoom: Room = {
         ...baseRoom,
         status: RoomStatus.WAITING,
-        hostId: 'player-2',
+        hostSeatId: asSeatId('player-2'),
         players: [
           {
             socketId: 'com-0',
@@ -1056,7 +1056,7 @@ describe('Game Use Cases', () => {
       ]);
       expect(persistRosterMock).toHaveBeenCalledWith(
         expect.any(Array),
-        room.hostId,
+        room.hostSeatId,
       );
       expect(persistRosterMock.mock.invocationCallOrder[0]).toBeLessThan(
         startGameMock.mock.invocationCallOrder[0],
@@ -1144,7 +1144,7 @@ describe('Game Use Cases', () => {
       roomService.updateRoomStatus.mockResolvedValue(false);
 
       const result = await useCase.execute({
-        playerId: room.hostId,
+        playerId: room.hostSeatId,
         roomId: room.id,
       });
 

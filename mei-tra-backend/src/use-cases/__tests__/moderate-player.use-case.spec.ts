@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { ModeratePlayerUseCase } from '../moderate-player.use-case';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { ILeaveRoomUseCase } from '../interfaces/leave-room.use-case.interface';
@@ -6,7 +7,7 @@ import { RoomStatus } from '../../types/room.types';
 describe('ModeratePlayerUseCase', () => {
   const createRoom = () => ({
     id: 'room-1',
-    hostId: 'host',
+    hostSeatId: asSeatId('host'),
     status: RoomStatus.PLAYING,
     players: [
       {

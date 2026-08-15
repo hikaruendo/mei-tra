@@ -41,7 +41,7 @@ export class UpdateTeamNamesUseCase {
       };
     }
 
-    if (room.hostId !== request.playerId) {
+    if (room.hostSeatId !== request.playerId) {
       return { success: false, error: 'Only the host can change team names' };
     }
 

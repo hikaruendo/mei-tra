@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { UpdateTeamNamesUseCase } from '../update-team-names.use-case';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { RoomStatus } from '../../types/room.types';
@@ -5,7 +6,7 @@ import { RoomStatus } from '../../types/room.types';
 describe('UpdateTeamNamesUseCase', () => {
   const waitingRoom = {
     id: 'room-1',
-    hostId: 'host',
+    hostSeatId: asSeatId('host'),
     status: RoomStatus.WAITING,
     settings: {
       maxPlayers: 4,

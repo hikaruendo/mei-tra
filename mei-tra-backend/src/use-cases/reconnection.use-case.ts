@@ -203,7 +203,7 @@ export class ReconnectionUseCase {
           selfSeatId: asSeatId(reconnectedPlayer.playerId),
           selfName: reconnectedPlayer.name,
           selfTeam: reconnectedPlayer.team,
-          isHost: reconnectedRoom.hostId === reconnectedPlayer.playerId,
+          isHost: reconnectedRoom.hostSeatId === reconnectedPlayer.playerId,
         };
       }
 
@@ -414,7 +414,7 @@ export class ReconnectionUseCase {
             : null,
         fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
         roomId,
-        hostSeatId: asSeatId(room.hostId),
+        hostSeatId: asSeatId(room.hostSeatId),
         pointsToWin: state.pointsToWin,
         teamNames: room.settings.teamNames,
       },

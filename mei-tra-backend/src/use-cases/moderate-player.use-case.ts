@@ -51,7 +51,7 @@ export class ModeratePlayerUseCase {
       return { success: false, error: 'Room not found' };
     }
 
-    if (room.hostId !== request.requesterPlayerId) {
+    if (room.hostSeatId !== request.requesterPlayerId) {
       return { success: false, error: 'Only the host can moderate players' };
     }
 

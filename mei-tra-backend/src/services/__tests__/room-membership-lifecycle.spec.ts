@@ -14,7 +14,7 @@ describe('RoomService active membership lifecycle', () => {
   const room: Room = {
     id: 'room-1',
     name: 'Room 1',
-    hostId: 'user-1',
+    hostSeatId: asSeatId('user-1'),
     status: RoomStatus.WAITING,
     settings: {
       maxPlayers: 4,
@@ -115,7 +115,7 @@ describe('RoomService active membership lifecycle', () => {
   it('joins with the persisted room seat id and leaves claiming to the atomic writer', async () => {
     const roomWithResolvedSeat: Room = {
       ...room,
-      hostId: 'seat-1',
+      hostSeatId: asSeatId('seat-1'),
       players: [
         {
           socketId: 'socket-old',

@@ -47,14 +47,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   private readonly roomJoinService: RoomJoinService;
 
   private normalizeRoomHostFlags(room: Room): Room {
-    const hostSeatId = room.hostSeatId ?? asSeatId(room.hostId);
     return {
       ...room,
-      hostSeatId,
-      hostId: hostSeatId,
       players: room.players.map((player) => ({
         ...player,
-        isHost: player.playerId === hostSeatId,
+        isHost: player.playerId === room.hostSeatId,
       })),
     };
   }
@@ -201,7 +198,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       id: randomUUID(),
       name,
       hostSeatId,
-      hostId: hostSeatId,
       status: RoomStatus.WAITING,
       players: [],
       settings: {
@@ -498,19 +494,19 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     // If host left, assign new host
-    if (room.hostId === playerId) {
+    if (room.hostSeatId === playerId) {
       const newHost = room.players.find((p) => !p.isCOM);
       if (newHost) {
-        room.hostId = newHost.playerId;
+        room.hostSeatId = asSeatId(newHost.playerId);
       }
     }
 
     room.players.forEach((player) => {
-      player.isHost = player.playerId === room.hostId;
+      player.isHost = player.playerId === room.hostSeatId;
     });
     await gameState.persistRoster(
       room.players,
-      room.hostId,
+      room.hostSeatId,
       membershipMutation,
     );
     return true;
@@ -734,7 +730,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
       Object.assign(roomPlayer, updates);
       if (updates.isHost === true) {
-        room.hostId = playerId;
+        room.hostSeatId = asSeatId(playerId);
       }
 
       const statePlayerIndex = state.players.findIndex(
@@ -748,9 +744,9 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     }
 
     room.players.forEach((player) => {
-      player.isHost = player.playerId === room.hostId;
+      player.isHost = player.playerId === room.hostSeatId;
     });
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(room.players, room.hostSeatId);
     return true;
   }
 

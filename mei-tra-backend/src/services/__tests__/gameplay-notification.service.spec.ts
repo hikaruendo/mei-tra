@@ -51,7 +51,7 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
 const room = (overrides: Partial<Room> = {}): Room => ({
   id: 'room-1',
   name: 'Room',
-  hostId: 'player-1',
+  hostSeatId: asSeatId('player-1'),
   status: RoomStatus.PLAYING,
   players: [
     {

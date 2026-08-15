@@ -28,7 +28,7 @@ describe('WatchRoomUseCase', () => {
   const room = (overrides: Partial<Room> = {}): Room => ({
     id: 'room-1',
     name: 'Room 1',
-    hostId: 'p1',
+    hostSeatId: asSeatId('p1'),
     status: RoomStatus.PLAYING,
     players: [
       player('p1', 0, ['A♠', 'K♠']),

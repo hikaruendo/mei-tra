@@ -72,7 +72,7 @@ export class RoomJoinService {
           user.userId ?? existingPlayer.participantKey ?? user.seatId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
-        isHost: room.hostId === existingPlayer.playerId,
+        isHost: room.hostSeatId === existingPlayer.playerId,
         isCOM: reclaimingCOMSeat ? false : existingPlayer.isCOM,
       };
       upsertRuntimeSeat(room, state, updatedPlayer, {
@@ -97,7 +97,7 @@ export class RoomJoinService {
       });
       await gameState.persistRoster(
         room.players,
-        room.hostId,
+        room.hostSeatId,
         this.buildMembershipClaim(user),
       );
       if (reclaimingVacantSeatId !== undefined) {
@@ -246,7 +246,7 @@ export class RoomJoinService {
       hasRequiredBroken: false,
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
-      isHost: room.hostId === assignedSeatId,
+      isHost: room.hostSeatId === assignedSeatId,
       isCOM: false,
       joinedAt: seatRoomSnapshot?.joinedAt
         ? new Date(seatRoomSnapshot.joinedAt)
@@ -285,7 +285,7 @@ export class RoomJoinService {
     });
     await gameState.persistRoster(
       room.players,
-      room.hostId,
+      room.hostSeatId,
       this.buildMembershipClaim(user),
     );
     const persistedState = gameState.getState();

@@ -103,7 +103,7 @@ export class ComSessionService {
     }
 
     if (rosterChanged) {
-      await gameState.persistRoster(room.players, room.hostId);
+      await gameState.persistRoster(room.players, room.hostSeatId);
     }
   }
 
@@ -129,7 +129,7 @@ export class ComSessionService {
 
     const maxPlayers = room.settings?.maxPlayers ?? 4;
     if (room.players.length >= maxPlayers) {
-      await gameState.persistRoster(room.players, room.hostId);
+      await gameState.persistRoster(room.players, room.hostSeatId);
       return;
     }
 
@@ -171,7 +171,7 @@ export class ComSessionService {
       );
     }
 
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(room.players, room.hostSeatId);
   }
 
   async convertPlayerToCOM(
@@ -225,7 +225,7 @@ export class ComSessionService {
 
     await gameState.persistRoster(
       room.players,
-      room.hostId,
+      room.hostSeatId,
       membershipMutation,
     );
     return true;

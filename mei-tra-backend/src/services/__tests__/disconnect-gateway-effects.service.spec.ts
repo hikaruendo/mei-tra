@@ -71,7 +71,7 @@ describe('DisconnectGatewayEffectsService', () => {
       id: 'room-1',
       name: 'Room 1',
       status: 'playing',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       maxPlayers: 4,
       players: [
         {
@@ -102,7 +102,7 @@ describe('DisconnectGatewayEffectsService', () => {
     };
     const updatedRoom = {
       ...initialRoom,
-      hostId: 'player-2',
+      hostSeatId: asSeatId('player-2'),
       players: initialRoom.players.map((player) => ({
         ...player,
         isHost: player.playerId === 'player-2',
@@ -182,7 +182,7 @@ describe('DisconnectGatewayEffectsService', () => {
       { socketId: '' },
     );
     expect(roomService.updateRoom).toHaveBeenCalledWith('room-1', {
-      hostId: 'player-2',
+      hostSeatId: asSeatId('player-2'),
     });
     expect(result?.events).toEqual(
       expect.arrayContaining([

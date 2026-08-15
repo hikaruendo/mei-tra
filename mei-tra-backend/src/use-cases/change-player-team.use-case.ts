@@ -34,7 +34,7 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       }
 
       // Verify that the requesting player is the host
-      if (room.hostId !== playerId) {
+      if (room.hostSeatId !== playerId) {
         return { success: false, error: 'Only the host can change teams' };
       }
 

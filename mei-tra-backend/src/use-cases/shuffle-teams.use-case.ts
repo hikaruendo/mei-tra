@@ -28,7 +28,7 @@ export class ShuffleTeamsUseCase {
       };
     }
 
-    if (room.hostId !== request.playerId) {
+    if (room.hostSeatId !== request.playerId) {
       return { success: false, error: 'Only the host can shuffle teams' };
     }
 

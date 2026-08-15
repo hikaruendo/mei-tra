@@ -91,7 +91,7 @@ export class SeatRestorationService {
       delete vacantSeats[roomId];
     }
 
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(room.players, room.hostSeatId);
     const persistedState = gameState.getState();
     const advancedBlowTurn =
       this.advanceBlowTurnPastActedPlayer(persistedState);

@@ -231,7 +231,7 @@ export class JoinRoomGatewayEffectsService {
         })),
         blowState: toBlowStateContract(joinData.resumeGame.gameState.blowState),
         youSeatId: resumeSelfPlayerId ? asSeatId(resumeSelfPlayerId) : null,
-        hostSeatId: asSeatId(room.hostId),
+        hostSeatId: asSeatId(room.hostSeatId),
       };
 
       events.push({

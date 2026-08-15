@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { CreateRoomUseCase } from '../create-room.use-case';
@@ -31,7 +32,7 @@ describe('CreateRoomUseCase', () => {
   const createdRoom: Room = {
     id: roomId,
     name: 'Test Game Room',
-    hostId: userId,
+    hostSeatId: asSeatId(userId),
     status: RoomStatus.WAITING,
     settings: {
       maxPlayers: 4,

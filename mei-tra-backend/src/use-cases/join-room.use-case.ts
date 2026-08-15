@@ -84,7 +84,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       };
       const data: JoinRoomSuccess = {
         room,
-        isHost: room.hostId === joinedPlayer.playerId,
+        isHost: room.hostSeatId === joinedPlayer.playerId,
         roomStatus: room.status,
         roomsList: await this.roomService.listRooms(),
         resumeGame: await this.buildResumePayloadIfNeeded(room.id, room),

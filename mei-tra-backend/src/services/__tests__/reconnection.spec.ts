@@ -365,7 +365,7 @@ describe('Reconnection Token Management', () => {
     const baseRoom: Room = {
       id: 'room-123',
       name: 'Test Room',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       status: RoomStatus.PLAYING,
       settings: {
         maxPlayers: 4,
@@ -549,7 +549,7 @@ describe('Reconnection Token Management', () => {
           if (persistedRoom?.id === roomId) {
             persistedRoom = cloneRoom({
               ...persistedRoom,
-              hostId: hostId ?? persistedRoom.hostId,
+              hostSeatId: asSeatId(hostId ?? persistedRoom.hostSeatId),
               players: roomPlayers.map((player) => ({
                 ...player,
                 socketId: '',
@@ -1059,7 +1059,7 @@ describe('Reconnection Token Management', () => {
         const roomState = bindRoomRepositoryToState({
           ...baseRoom,
           id: roomId,
-          hostId: host.playerId,
+          hostSeatId: asSeatId(host.playerId),
           status: RoomStatus.WAITING,
           players: [host, comSeat],
         });
@@ -1120,7 +1120,7 @@ describe('Reconnection Token Management', () => {
         const roomState = bindRoomRepositoryToState({
           ...baseRoom,
           id: roomId,
-          hostId: host.playerId,
+          hostSeatId: asSeatId(host.playerId),
           status: RoomStatus.WAITING,
           settings: { ...baseRoom.settings, maxPlayers: 2 },
           players: [host, timeoutSeat],
@@ -1154,7 +1154,7 @@ describe('Reconnection Token Management', () => {
         const roomState = bindRoomRepositoryToState({
           ...baseRoom,
           id: roomId,
-          hostId: host.playerId,
+          hostSeatId: asSeatId(host.playerId),
           status: RoomStatus.PLAYING,
           settings: { ...baseRoom.settings, maxPlayers: 3 },
           players: [host, timeoutSeat],
@@ -1215,7 +1215,7 @@ describe('Reconnection Token Management', () => {
         const roomState = bindRoomRepositoryToState({
           ...baseRoom,
           id: roomId,
-          hostId: seatId,
+          hostSeatId: asSeatId(seatId),
           status: RoomStatus.PLAYING,
           players: [timeoutCOM],
         });
@@ -1434,7 +1434,7 @@ describe('Reconnection Token Management', () => {
 
         const room: Room = {
           ...baseRoom,
-          hostId: comPlayer.playerId,
+          hostSeatId: asSeatId(comPlayer.playerId),
           status: RoomStatus.WAITING,
           players: [comPlayer],
         };
@@ -1458,11 +1458,11 @@ describe('Reconnection Token Management', () => {
         );
       });
 
-      it('should normalize duplicate host flags based on room.hostId', async () => {
+      it('should normalize duplicate host flags based on room.hostSeatId', async () => {
         const roomId = 'room-123';
         const room: Room = {
           ...baseRoom,
-          hostId: 'player-2',
+          hostSeatId: asSeatId('player-2'),
           players: [
             {
               socketId: 'socket-1',
@@ -2361,7 +2361,7 @@ describe('Reconnection Token Management', () => {
       const roomState = bindRoomRepositoryToState({
         ...baseRoom,
         id: roomId,
-        hostId: playerId,
+        hostSeatId: asSeatId(playerId),
         status: RoomStatus.PLAYING,
         players: [
           {

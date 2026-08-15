@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { ShuffleTeamsUseCase } from '../shuffle-teams.use-case';
 import { IRoomService } from '../../services/interfaces/room-service.interface';
 import { IFillWithComUseCase } from '../interfaces/fill-with-com.use-case.interface';
@@ -7,7 +8,7 @@ describe('ShuffleTeamsUseCase', () => {
   it('fills empty seats and atomically persists shuffled seats and teams', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.WAITING,
       players: [
         { playerId: 'host', team: 0 },
@@ -63,7 +64,7 @@ describe('ShuffleTeamsUseCase', () => {
   it('returns failure when empty seats cannot be filled', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.WAITING,
       players: [{ playerId: 'host', team: 0 }],
       updatedAt: new Date(),
@@ -91,7 +92,7 @@ describe('ShuffleTeamsUseCase', () => {
   it('rejects shuffling after the game has started', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.PLAYING,
       players: [
         { playerId: 'host', team: 0 },
@@ -126,7 +127,7 @@ describe('ShuffleTeamsUseCase', () => {
   it('returns failure when the atomic roster update fails', async () => {
     const room = {
       id: 'room-1',
-      hostId: 'host',
+      hostSeatId: asSeatId('host'),
       status: RoomStatus.WAITING,
       players: [
         { playerId: 'host', team: 0 },

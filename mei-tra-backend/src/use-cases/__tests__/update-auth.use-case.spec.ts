@@ -113,7 +113,7 @@ describe('UpdateAuthUseCase', () => {
     const updatedRoom: Room = {
       id: 'room-1',
       name: 'Room',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       status: RoomStatus.WAITING,
       players: [
         {
@@ -208,7 +208,7 @@ describe('UpdateAuthUseCase', () => {
     expect(roomUpdatedEvent).toBeDefined();
     expect(roomUpdatedEvent?.payload).toMatchObject({
       id: updatedRoom.id,
-      hostSeatId: updatedRoom.hostId,
+      hostSeatId: updatedRoom.hostSeatId,
       name: updatedRoom.name,
       status: updatedRoom.status,
     });

@@ -51,7 +51,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
     const room = {
       id: 'room-1',
       name: 'Room',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       status: RoomStatus.WAITING,
       players: [
         {
@@ -85,7 +85,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
       expect.objectContaining({
         id: room.id,
         name: room.name,
-        hostSeatId: room.hostId,
+        hostSeatId: room.hostSeatId,
         status: room.status,
         createdAt: room.createdAt.toISOString(),
         updatedAt: room.updatedAt.toISOString(),

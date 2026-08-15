@@ -12,7 +12,7 @@ describe('Game event instrumentation', () => {
     const roomService = {
       getRoom: jest.fn().mockResolvedValue({
         id: 'room-1',
-        hostId: 'host-1',
+        hostSeatId: asSeatId('host-1'),
         settings: { pointsToWin: 7 },
         players: [
           {

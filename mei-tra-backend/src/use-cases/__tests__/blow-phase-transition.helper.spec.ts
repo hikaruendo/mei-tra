@@ -68,7 +68,7 @@ describe('transitionToPlayPhase', () => {
     const room = {
       id: 'room-1',
       name: 'Room 1',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       status: RoomStatus.PLAYING,
       players: [
         {

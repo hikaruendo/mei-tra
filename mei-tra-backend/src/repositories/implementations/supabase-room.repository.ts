@@ -93,8 +93,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
       if (updates.name) updateData.name = updates.name;
       if (updates.hostSeatId) {
         updateData.host_seat_id = updates.hostSeatId;
-      } else if (updates.hostId) {
-        updateData.host_seat_id = updates.hostId;
       }
       if (updates.status) updateData.status = updates.status;
       if (updates.settings) updateData.settings = updates.settings;
@@ -309,7 +307,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
       id: dbRoom.id,
       name: dbRoom.name,
       hostSeatId: asSeatId(hostSeatId),
-      hostId: hostSeatId,
       status: dbRoom.status as RoomStatus,
       players: canonicalPlayers,
       settings: dbRoom.settings,

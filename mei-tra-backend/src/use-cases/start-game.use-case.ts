@@ -54,7 +54,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       // Authorization check: verify the requesting player is the host
-      if (room.hostId !== playerId) {
+      if (room.hostSeatId !== playerId) {
         return {
           success: false,
           errorMessage: 'Only the host can start the game',
@@ -94,7 +94,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       this.syncStatePlayersFromRoom(roomGameState, roomWithFilledSeats);
       await roomGameState.persistRoster(
         roomWithFilledSeats.players,
-        roomWithFilledSeats.hostId,
+        roomWithFilledSeats.hostSeatId,
       );
 
       const statusUpdated = await this.roomService.updateRoomStatus(

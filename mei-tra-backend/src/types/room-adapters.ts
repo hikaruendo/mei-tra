@@ -45,7 +45,7 @@ export function toRoomContract(
   return {
     id: room.id,
     name: room.name,
-    hostSeatId: room.hostSeatId ?? resolveSeatId({ playerId: room.hostId }),
+    hostSeatId: room.hostSeatId,
     status: room.status,
     players: room.players.map((roomPlayer) =>
       toRoomPlayerContract(
