@@ -457,7 +457,7 @@ describe('GameEventLogService', () => {
     ]);
   });
 
-  it('projects current seat names onto replay summaries and details', async () => {
+  it('keeps stored event-time names when current seat names differ', async () => {
     const repository = {
       create: jest.fn(),
       findByRoomId: jest.fn().mockResolvedValue([
@@ -483,22 +483,22 @@ describe('GameEventLogService', () => {
     });
     const event = replay.rounds[0]?.events[0];
 
-    expect(event?.summary).toBe('Field completed by Player3 for Team 1');
+    expect(event?.summary).toBe('Field completed by COM 3 for Team 1');
     expect(event?.detailItems).toContainEqual({
       labelKey: 'winner',
       value: {
         kind: 'player',
         seatId: 'player-3',
-        playerName: 'Player3',
+        playerName: 'COM 3',
       },
     });
     expect(event?.actionData.playerNames).toEqual({
-      'player-3': 'Player3',
+      'player-3': 'COM 3',
     });
 
     const summary = await service.summarizeByRoomId('room-1', undefined, {
       'player-3': 'Player3',
     });
-    expect(summary.playerNames).toEqual({ 'player-3': 'Player3' });
+    expect(summary.playerNames).toEqual({ 'player-3': 'COM 3' });
   });
 });

@@ -523,7 +523,7 @@ describe('GameHistoryController', () => {
       {
         id: 'membership-1',
         eventType: 'player_joined',
-        userId: currentUser.id,
+        userId: 'user-2',
         roomId: room.id,
         seatId: room.players[0].seatId,
         timestamp: new Date('2026-04-16T00:02:00.000Z'),
@@ -531,7 +531,7 @@ describe('GameHistoryController', () => {
       {
         id: 'membership-2',
         eventType: 'player_left',
-        userId: currentUser.id,
+        userId: 'user-2',
         roomId: room.id,
         seatId: room.players[0].seatId,
         timestamp: new Date('2026-04-16T00:03:00.000Z'),
@@ -543,7 +543,17 @@ describe('GameHistoryController', () => {
       replay: jest.fn().mockResolvedValue(replay),
       summarize: jest.fn(),
     };
-    const roomRepository = createRoomRepository();
+    const roomRepository = createRoomRepository(room, [
+      ...defaultParticipants,
+      {
+        roomId: room.id,
+        seatId: room.players[0].seatId,
+        userId: 'user-2',
+        playerName: 'Player 2',
+        team: 1,
+        joinedAt: new Date('2026-04-16T00:01:00.000Z'),
+      },
+    ]);
     const roomMembershipService = createRoomMembershipService(membershipEvents);
     const controller = createController(
       getGameHistoryUseCase,
@@ -560,6 +570,9 @@ describe('GameHistoryController', () => {
       (event) => event.actionType === 'player_left',
     );
     const playerDetail = joinedEvent?.detailItems.find(
+      (detailItem) => detailItem.labelKey === 'player',
+    );
+    const leftPlayerDetail = leftEvent?.detailItems.find(
       (detailItem) => detailItem.labelKey === 'player',
     );
 
@@ -580,7 +593,12 @@ describe('GameHistoryController', () => {
     expect(playerDetail?.value).toEqual({
       kind: 'player',
       seatId: room.players[0].seatId,
-      playerName: 'Player 1',
+      playerName: 'Player 2',
+    });
+    expect(leftPlayerDetail?.value).toEqual({
+      kind: 'player',
+      seatId: room.players[0].seatId,
+      playerName: 'Player 2',
     });
     expect(roomMembershipService.listReplayEventsForRoom).toHaveBeenCalledWith(
       'room-1',

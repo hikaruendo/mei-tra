@@ -254,7 +254,7 @@ export function GameHistoryDock({
       const summaryName = resolvedSummary?.playerNames[seatId]?.trim();
       const storedName = fallbackName?.trim();
 
-      return currentName || summaryName || storedName || null;
+      return storedName || currentName || summaryName || null;
     },
     [players, resolvedSummary?.playerNames],
   );
@@ -376,14 +376,15 @@ export function GameHistoryDock({
             ?? playStartedEvent?.actorSeatId
             ?? null;
           const blowerId = latestDeclarationSeatId ?? playStartedSeatId;
-          const blowerName =
-            resolvePlayerName(blowerId)
-            ?? getPlayerNameFromActionData(
+          const blowerStoredName =
+            getPlayerNameFromActionData(
               latestDeclarationEvent,
               latestDeclarationSeatId,
             )
             ?? getPlayerDetailName(playStartedEvent, 'winner')
             ?? getPlayerNameFromActionData(playStartedEvent, playStartedSeatId);
+          const blowerName =
+            resolvePlayerName(blowerId, blowerStoredName);
           const declarationValue =
             getTextDetail(latestDeclarationEvent, 'highestDeclaration')
             ?? getTextDetail(latestDeclarationEvent, 'declaration');
@@ -531,7 +532,11 @@ export function GameHistoryDock({
   };
 
   const formatEventSummary = (event: GameHistoryReplayEvent) => {
-    const player = formatPlayer(event.actorSeatId) ?? t('unknownPlayer');
+    const player =
+      formatPlayer(
+        event.actorSeatId,
+        getPlayerNameFromActionData(event, event.actorSeatId),
+      ) ?? t('unknownPlayer');
 
     switch (event.actionType) {
       case 'game_started':

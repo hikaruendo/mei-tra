@@ -53,10 +53,8 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistorySummary> {
-    const { playerNames, teamNames } = await this.getRoomParticipantContext(
-      roomId,
-      currentUser.id,
-    );
+    const { playerNames, playerNamesByUserId, teamNames } =
+      await this.getRoomParticipantContext(roomId, currentUser.id);
     const parsedQuery = this.parseQuery(query);
     const [summary, membershipEvents] = await Promise.all([
       this.getGameHistoryUseCase.summarize(roomId, parsedQuery, playerNames),
@@ -67,6 +65,7 @@ export class GameHistoryController {
       summary,
       this.filterMembershipEvents(membershipEvents, parsedQuery),
       playerNames,
+      playerNamesByUserId,
     );
 
     return {
@@ -82,10 +81,8 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistoryReplayView> {
-    const { participant, playerNames } = await this.getRoomParticipantContext(
-      roomId,
-      currentUser.id,
-    );
+    const { participant, playerNames, playerNamesByUserId } =
+      await this.getRoomParticipantContext(roomId, currentUser.id);
     const parsedQuery = this.parseQuery(query);
     const [replay, membershipEvents] = await Promise.all([
       this.getGameHistoryUseCase.replay(roomId, parsedQuery, playerNames),
@@ -95,6 +92,7 @@ export class GameHistoryController {
       replay,
       this.filterMembershipEvents(membershipEvents, parsedQuery),
       playerNames,
+      playerNamesByUserId,
       parsedQuery,
     );
     return this.withViewerStartingHands(
@@ -127,6 +125,7 @@ export class GameHistoryController {
     summary: GameHistorySummary,
     membershipEvents: RoomMembershipReplayEvent[],
     playerNames: Readonly<Record<string, string>>,
+    playerNamesByUserId: Readonly<Record<string, string>>,
   ): GameHistorySummary {
     if (membershipEvents.length === 0) {
       return summary;
@@ -140,7 +139,11 @@ export class GameHistoryController {
       byActionType[event.eventType] = (byActionType[event.eventType] ?? 0) + 1;
       if (event.seatId) {
         actorSeatIds.add(event.seatId);
-        const playerName = playerNames[event.seatId];
+        const playerName = this.resolveMembershipPlayerName(
+          event,
+          playerNames,
+          playerNamesByUserId,
+        );
         if (playerName) {
           mergedPlayerNames[event.seatId] = playerName;
         }
@@ -182,6 +185,7 @@ export class GameHistoryController {
     replay: GameHistoryReplayView,
     membershipEvents: RoomMembershipReplayEvent[],
     playerNames: Readonly<Record<string, string>>,
+    playerNamesByUserId: Readonly<Record<string, string>>,
     query: GameHistoryQuery,
   ): GameHistoryReplayView {
     if (membershipEvents.length === 0) {
@@ -213,6 +217,7 @@ export class GameHistoryController {
         membershipEvent,
         roundNumber,
         playerNames,
+        playerNamesByUserId,
       );
       let round = rounds.find(
         (candidate) => candidate.roundNumber === roundNumber,
@@ -324,10 +329,13 @@ export class GameHistoryController {
     event: RoomMembershipReplayEvent,
     roundNumber: number | null,
     playerNames: Readonly<Record<string, string>>,
+    playerNamesByUserId: Readonly<Record<string, string>>,
   ): GameHistoryReplayEvent {
-    const playerName = event.seatId
-      ? (playerNames[event.seatId] ?? null)
-      : null;
+    const playerName = this.resolveMembershipPlayerName(
+      event,
+      playerNames,
+      playerNamesByUserId,
+    );
     const detailItems: GameHistoryReplayDetailItem[] = [
       {
         labelKey: 'player',
@@ -370,6 +378,7 @@ export class GameHistoryController {
   ): Promise<{
     participant: Pick<GameParticipant, 'seatId'> | null;
     playerNames: Record<string, string>;
+    playerNamesByUserId: Record<string, string>;
     teamNames: Room['settings']['teamNames'];
   }> {
     const room = await this.roomRepository.findById(roomId);
@@ -412,8 +421,35 @@ export class GameHistoryController {
           participant.playerName,
         ]),
       ]),
+      playerNamesByUserId: Object.fromEntries([
+        ...room.players.flatMap((player): [string, string][] =>
+          !player.isCOM && player.userId ? [[player.userId, player.name]] : [],
+        ),
+        ...gameParticipants.flatMap((participant): [string, string][] =>
+          participant.userId
+            ? [[participant.userId, participant.playerName]]
+            : [],
+        ),
+      ]),
       teamNames: room.settings.teamNames,
     };
+  }
+
+  private resolveMembershipPlayerName(
+    event: RoomMembershipReplayEvent,
+    playerNamesBySeatId: Readonly<Record<string, string>>,
+    playerNamesByUserId: Readonly<Record<string, string>>,
+  ): string | null {
+    const userName = playerNamesByUserId[event.userId]?.trim();
+    if (userName) {
+      return userName;
+    }
+
+    if (!event.seatId) {
+      return null;
+    }
+
+    return playerNamesBySeatId[event.seatId]?.trim() || null;
   }
 
   private withViewerStartingHands(
