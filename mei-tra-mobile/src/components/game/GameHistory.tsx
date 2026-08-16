@@ -1,5 +1,6 @@
 import type { TeamNames } from '@meitra/contracts/game';
 import type {
+  GameHistoryReplayEventContract,
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
 } from '@meitra/contracts/game-history';
@@ -71,6 +72,48 @@ function Row({ row, index }: { row: RoundRow; index: number }) {
   );
 }
 
+function getEventPlayerName(event: GameHistoryReplayEventContract): string {
+  const playerDetail = event.detailItems.find(
+    (detail) => detail.labelKey === 'player' && detail.value.kind === 'player',
+  );
+  if (playerDetail?.value.kind === 'player' && playerDetail.value.playerName) {
+    return playerDetail.value.playerName;
+  }
+
+  const playerNames = event.actionData.playerNames;
+  if (
+    event.actorSeatId &&
+    typeof playerNames === 'object' &&
+    playerNames !== null &&
+    !Array.isArray(playerNames)
+  ) {
+    const playerName = (playerNames as Record<string, unknown>)[
+      event.actorSeatId
+    ];
+    if (typeof playerName === 'string' && playerName.length > 0) {
+      return playerName;
+    }
+  }
+
+  return 'プレイヤー';
+}
+
+function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
+  const playerName = getEventPlayerName(event);
+  const actionLabel = event.actionType === 'player_joined' ? '入室' : '退出';
+
+  return (
+    <View style={styles.membershipRow}>
+      <Text style={styles.membershipTime}>
+        {new Date(event.timestamp).toLocaleTimeString()}
+      </Text>
+      <Text style={styles.membershipText}>
+        {playerName}が{actionLabel}
+      </Text>
+    </View>
+  );
+}
+
 export function GameHistory({
   replay,
   summary,
@@ -83,6 +126,21 @@ export function GameHistory({
   const rows = useMemo(
     () => buildRoundTableRows(replay, players ?? [], teamNames),
     [replay, players, teamNames],
+  );
+  const membershipEvents = useMemo(
+    () =>
+      (replay?.rounds ?? [])
+        .flatMap((round) => round.events)
+        .filter(
+          (event) =>
+            event.actionType === 'player_joined' ||
+            event.actionType === 'player_left',
+        )
+        .sort(
+          (left, right) =>
+            Date.parse(left.timestamp) - Date.parse(right.timestamp),
+        ),
+    [replay],
   );
   const startingHands = useMemo(
     () =>
@@ -120,30 +178,42 @@ export function GameHistory({
         </Pressable>
       </View>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && membershipEvents.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>表示できる対局ログがありません</Text>
         </View>
       ) : (
         <>
-          <View style={[styles.row, styles.headRow]}>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
-              ラウンド
-            </Text>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.blower }]}>
-              吹き手
-            </Text>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.bid }]}>
-              宣言
-            </Text>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.score }]}>
-              得点
-            </Text>
-          </View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {rows.map((row, index) => (
-              <Row index={index} key={row.roundNumber} row={row} />
-            ))}
+            {membershipEvents.length > 0 ? (
+              <View style={styles.membershipSection}>
+                <Text style={styles.membershipTitle}>入退出</Text>
+                {membershipEvents.map((event) => (
+                  <MembershipRow event={event} key={event.id} />
+                ))}
+              </View>
+            ) : null}
+            {rows.length > 0 ? (
+              <>
+                <View style={[styles.row, styles.headRow]}>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
+                    ラウンド
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.blower }]}>
+                    吹き手
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.bid }]}>
+                    宣言
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.score }]}>
+                    得点
+                  </Text>
+                </View>
+                {rows.map((row, index) => (
+                  <Row index={index} key={row.roundNumber} row={row} />
+                ))}
+              </>
+            ) : null}
             {startingHands.length > 0 ? (
               <View style={styles.handsSection}>
                 <Text style={styles.handsTitle}>開始時の手札</Text>
@@ -232,6 +302,33 @@ const styles = StyleSheet.create({
   scoreValue: {
     color: colors.text,
     fontVariant: ['tabular-nums'],
+  },
+  membershipSection: {
+    gap: 6,
+    paddingBottom: 8,
+  },
+  membershipTitle: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  membershipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  membershipTime: {
+    color: colors.textMuted,
+    fontSize: 11,
+    minWidth: 72,
+  },
+  membershipText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
   },
   inProgress: {
     color: colors.textMuted,

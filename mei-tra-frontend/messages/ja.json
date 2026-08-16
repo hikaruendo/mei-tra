@@ -479,7 +479,9 @@
       "round_reset": "ラウンド再開",
       "broken_hand_revealed": "ブロークン公開",
       "game_over": "ゲーム終了",
-      "player_stats_updated": "戦績更新"
+      "player_stats_updated": "戦績更新",
+      "player_joined": "入室",
+      "player_left": "退出"
     },
     "summaries": {
       "game_started": "ゲーム開始。最初の宣言: {firstBlow}。目標: {pointsToWin}点",
@@ -493,7 +495,9 @@
       "round_reset": "ラウンド再開",
       "broken_hand_revealed": "{player}がブロークンを公開。次: {nextPlayer}",
       "game_over": "ゲーム終了。{team}の勝利",
-      "player_stats_updated": "戦績更新: 成功 {updated}人 / 失敗 {failed}人"
+      "player_stats_updated": "戦績更新: 成功 {updated}人 / 失敗 {failed}人",
+      "player_joined": "{player}が入室",
+      "player_left": "{player}が退出"
     },
     "detailLabels": {
       "startedBy": "開始者",
@@ -518,6 +522,7 @@
       "nextDealer": "次の配り手",
       "nextPlayer": "次の手番",
       "nextBlowIndex": "次の宣言順",
+      "player": "プレイヤー",
       "finalScores": "最終得点",
       "updated": "更新成功",
       "failed": "更新失敗"

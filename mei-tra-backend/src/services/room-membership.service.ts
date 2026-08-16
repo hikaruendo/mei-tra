@@ -4,6 +4,8 @@ import type { SeatId } from '../types/identity.types';
 import { SupabaseService } from '../database/supabase.service';
 import {
   ActiveRoomMembership,
+  RoomMembershipReplayEvent,
+  RoomMembershipReplayEventType,
   RoomMembershipTransition,
   RoomMembershipTransitionResult,
 } from '../types/room-membership.types';
@@ -20,6 +22,33 @@ type MembershipRow = {
   updated_at: string;
   last_seen_at: string;
 };
+
+type MembershipEventRow = {
+  id: number;
+  user_id: string;
+  from_room_id: string | null;
+  to_room_id: string | null;
+  seat_id: string | null;
+  event_type: string;
+  created_at: string;
+};
+
+const JOINED_MEMBERSHIP_EVENT_TYPES = [
+  'room_claimed',
+  'room_created_and_claimed',
+  'room_reconnected',
+] as const;
+
+const LEFT_MEMBERSHIP_EVENT_TYPES = [
+  'room_released',
+  'player_membership_released',
+  'disconnect_timeout_completed',
+] as const;
+
+const REPLAY_MEMBERSHIP_EVENT_TYPES = [
+  ...JOINED_MEMBERSHIP_EVENT_TYPES,
+  ...LEFT_MEMBERSHIP_EVENT_TYPES,
+] as const;
 
 @Injectable()
 export class RoomMembershipService {
@@ -53,6 +82,30 @@ export class RoomMembershipService {
     }
 
     return (data ?? []).map((row) => this.mapMembership(row));
+  }
+
+  async listReplayEventsForRoom(
+    roomId: string,
+  ): Promise<RoomMembershipReplayEvent[]> {
+    const { data, error } = await this.supabaseService.client
+      .from('room_membership_events')
+      .select(
+        'id,user_id,from_room_id,to_room_id,seat_id,event_type,created_at',
+      )
+      .in('event_type', [...REPLAY_MEMBERSHIP_EVENT_TYPES])
+      .or(`from_room_id.eq.${roomId},to_room_id.eq.${roomId}`)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (error) {
+      throw new Error(
+        `Failed to list room membership replay events: ${error.message}`,
+      );
+    }
+
+    return (data ?? [])
+      .map((row) => this.mapReplayEvent(row, roomId))
+      .filter((event): event is RoomMembershipReplayEvent => event !== null);
   }
 
   async reserve(
@@ -321,6 +374,54 @@ export class RoomMembershipService {
     };
   }
 
+  private mapReplayEvent(
+    row: MembershipEventRow | Record<string, unknown>,
+    roomId: string,
+  ): RoomMembershipReplayEvent | null {
+    if (!this.isMembershipEventRow(row)) {
+      throw new Error('Room membership event response has an invalid shape');
+    }
+
+    const eventType = this.toReplayEventType(row, roomId);
+    if (!eventType) {
+      return null;
+    }
+
+    return {
+      id: `membership-${row.id}`,
+      eventType,
+      userId: row.user_id,
+      roomId,
+      seatId: row.seat_id ? asSeatId(row.seat_id) : null,
+      timestamp: new Date(row.created_at),
+    };
+  }
+
+  private toReplayEventType(
+    row: MembershipEventRow,
+    roomId: string,
+  ): RoomMembershipReplayEventType | null {
+    if (
+      row.to_room_id === roomId &&
+      JOINED_MEMBERSHIP_EVENT_TYPES.includes(
+        row.event_type as (typeof JOINED_MEMBERSHIP_EVENT_TYPES)[number],
+      )
+    ) {
+      return 'player_joined';
+    }
+
+    if (
+      row.from_room_id === roomId &&
+      LEFT_MEMBERSHIP_EVENT_TYPES.includes(
+        row.event_type as (typeof LEFT_MEMBERSHIP_EVENT_TYPES)[number],
+      )
+    ) {
+      return 'player_left';
+    }
+
+    return null;
+  }
+
   private readString(data: Record<string, unknown>, key: string): string {
     const value = data[key];
     if (typeof value !== 'string') {
@@ -366,6 +467,20 @@ export class RoomMembershipService {
       typeof value.created_at === 'string' &&
       typeof value.updated_at === 'string' &&
       typeof value.last_seen_at === 'string'
+    );
+  }
+
+  private isMembershipEventRow(
+    value: MembershipEventRow | Record<string, unknown>,
+  ): value is MembershipEventRow {
+    return (
+      typeof value.id === 'number' &&
+      typeof value.user_id === 'string' &&
+      (typeof value.from_room_id === 'string' || value.from_room_id === null) &&
+      (typeof value.to_room_id === 'string' || value.to_room_id === null) &&
+      (typeof value.seat_id === 'string' || value.seat_id === null) &&
+      typeof value.event_type === 'string' &&
+      typeof value.created_at === 'string'
     );
   }
 }
