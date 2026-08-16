@@ -24,6 +24,8 @@ export interface UserPreferences {
   sound: boolean;
   theme: 'light' | 'dark';
   fontSize: FontSizePreset;
+  /** Optional: profiles created before the setting existed omit it. */
+  startPlayerAnimation?: boolean;
 }
 
 export interface CreateUserProfileDto {

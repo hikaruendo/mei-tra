@@ -118,6 +118,8 @@ export default function Home() {
     isConnecting = false,
     users = [],
     socket = null,
+    firstTurnReveal = null,
+    clearFirstTurnReveal,
   } = gameState;
 
   // Type guard to ensure gameActions exists
@@ -233,6 +235,8 @@ export default function Home() {
                   pointsToWin={pointsToWin}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
+                  firstTurnReveal={firstTurnReveal}
+                  onFirstTurnRevealDone={clearFirstTurnReveal}
                 />
                 )}
               </div>

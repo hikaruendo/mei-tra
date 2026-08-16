@@ -499,6 +499,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
+  /**
+   * Holds COM back until the room's delayed events have gone out, so it never
+   * acts while clients are still showing the animation those delays reserve.
+   */
+  private triggerComAutoPlayAfterEvents(
+    roomId: string,
+    events: GatewayEvent[],
+  ): void {
+    const maxDelay = events.reduce(
+      (longest, event) => Math.max(longest, event.delayMs ?? 0),
+      0,
+    );
+
+    if (maxDelay <= 0) {
+      this.triggerComAutoPlayIfNeeded(roomId);
+      return;
+    }
+
+    this.comAutoPlayRecoveryService.triggerAfterDelay(
+      roomId,
+      this.comAutoPlayRecoveryHandlers,
+      maxDelay + 100,
+    );
+  }
+
   private scheduleFieldCompletion(trigger: CompleteFieldTrigger): void {
     this.comAutoPlayRecoveryService.scheduleFieldCompletion(
       trigger,
@@ -1514,7 +1539,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         currentTurnSeatId,
       });
 
-      this.triggerComAutoPlayIfNeeded(data.roomId);
+      this.triggerComAutoPlayAfterEvents(data.roomId, startGameEvents);
 
       return { success: true };
     } catch (error) {

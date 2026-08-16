@@ -1,3 +1,4 @@
+import { GAME_START_TURN_REVEAL_DELAY_MS } from '@contracts/game';
 import { StartGameGatewayEffectsService } from '../start-game-gateway-effects.service';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from '../room-update-gateway-effects.service';
@@ -129,6 +130,7 @@ describe('StartGameGatewayEffectsService', () => {
           ],
           pointsToWin: 10,
           teamNames: undefined,
+          currentTurnSeatId: 'player-1',
         },
       },
       {
@@ -149,6 +151,7 @@ describe('StartGameGatewayEffectsService', () => {
         roomId: 'room-1',
         event: 'update-turn',
         payload: 'player-1',
+        delayMs: GAME_START_TURN_REVEAL_DELAY_MS,
       },
     ]);
     const buildRoomEventsMock = jest.mocked(

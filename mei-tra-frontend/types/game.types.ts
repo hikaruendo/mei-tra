@@ -103,6 +103,8 @@ export interface TeamPlayers {
   team1: Player[];
 }
 
+export type { FirstTurnReveal } from '@meitra/game-client/first-turn-reveal';
+
 export interface GameActions {
   selectNegri: (card: string) => void;
   playCard: (card: string) => void;

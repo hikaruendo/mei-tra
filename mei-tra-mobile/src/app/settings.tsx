@@ -10,6 +10,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -46,6 +47,11 @@ export default function SettingsScreen() {
   const [savingName, setSavingName] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [savingAnimation, setSavingAnimation] = useState(false);
+  // Mirrors the saved value so the switch responds before the profile reloads.
+  const [animationOverride, setAnimationOverride] = useState<boolean | null>(
+    null,
+  );
   const {
     items: recentMatches,
     loading: historyLoading,
@@ -70,6 +76,9 @@ export default function SettingsScreen() {
     user.profile?.username ||
     user.email?.split('@')[0] ||
     'Player';
+
+  const startPlayerAnimation =
+    animationOverride ?? user.profile?.startPlayerAnimation ?? true;
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -150,6 +159,28 @@ export default function SettingsScreen() {
       );
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const handleToggleAnimation = async (next: boolean) => {
+    setSavingAnimation(true);
+    setProfileError(null);
+    setAnimationOverride(next);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('認証が切れました');
+      await updateProfile(user.id, token, {
+        preferences: { startPlayerAnimation: next },
+      });
+      await refreshProfile();
+      setAnimationOverride(null);
+    } catch (err) {
+      setAnimationOverride(null);
+      setProfileError(
+        err instanceof Error ? err.message : '設定の更新に失敗しました',
+      );
+    } finally {
+      setSavingAnimation(false);
     }
   };
 
@@ -372,6 +403,23 @@ export default function SettingsScreen() {
               {profileError}
             </Text>
           ) : null}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>対局</Text>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>
+              ゲーム開始時のじゃんけん演出
+            </Text>
+            <Switch
+              disabled={savingAnimation}
+              onValueChange={(value) => void handleToggleAnimation(value)}
+              value={startPlayerAnimation}
+            />
+          </View>
+          <Text style={styles.hint}>
+            オフにすると、開始プレイヤーがすぐに表示されます。
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -688,6 +736,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  settingLabel: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
   },
   linkList: {
     gap: 10,

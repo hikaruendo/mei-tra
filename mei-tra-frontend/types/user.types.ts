@@ -21,6 +21,7 @@ export interface UserPreferences {
   sound: boolean;
   theme: 'system' | 'light' | 'dark';
   fontSize: FontSizePreset;
+  startPlayerAnimation: boolean;
 }
 
 export interface AuthUser {

@@ -203,7 +203,14 @@ export interface GameStartedPayload {
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
+  currentTurnSeatId?: SeatId;
 }
+
+/**
+ * `update-turn` is held back by this much at game start so clients can play the
+ * first-turn reveal animation. Client animations must finish within it.
+ */
+export const GAME_START_TURN_REVEAL_DELAY_MS = 4500;
 
 export interface PlaySetupCompletePayload {
   negriCard: string;

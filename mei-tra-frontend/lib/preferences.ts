@@ -43,6 +43,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   sound: true,
   theme: DEFAULT_THEME_PREFERENCE,
   fontSize: DEFAULT_FONT_SIZE_PRESET,
+  startPlayerAnimation: true,
 };
 
 export function isThemePreference(value: unknown): value is UserPreferences['theme'] {
@@ -77,6 +78,10 @@ export function normalizeUserPreferences(
       ? preferences.theme
       : DEFAULT_USER_PREFERENCES.theme,
     fontSize: normalizeFontSizePreset(preferences?.fontSize),
+    startPlayerAnimation:
+      typeof preferences?.startPlayerAnimation === 'boolean'
+        ? preferences.startPlayerAnimation
+        : DEFAULT_USER_PREFERENCES.startPlayerAnimation,
   };
 }
 

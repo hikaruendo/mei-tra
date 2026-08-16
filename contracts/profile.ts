@@ -7,6 +7,8 @@ export interface TransportUserPreferences {
   sound: boolean;
   theme: TransportTheme;
   fontSize: FontSizePreset;
+  /** Optional: profiles created before the setting existed omit it. */
+  startPlayerAnimation?: boolean;
 }
 
 export interface UserProfileDto {

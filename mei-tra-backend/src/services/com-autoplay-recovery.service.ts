@@ -104,6 +104,28 @@ export class ComAutoPlayRecoveryService {
       });
   }
 
+  /**
+   * Paces the first COM move against broadcasts the gateway delayed, so COM
+   * never acts while clients are still playing the matching animation.
+   */
+  triggerAfterDelay(
+    roomId: string,
+    handlers: ComAutoPlayRecoveryHandlers,
+    delayMs: number,
+  ): void {
+    if (delayMs <= 0) {
+      this.trigger(roomId, handlers);
+      return;
+    }
+
+    // A new game starting resets the pacing baseline: a timer left over from
+    // the previous game (e.g. its final continuation on a quick rematch) would
+    // both fire too early for the reveal and make scheduleTrigger skip this
+    // request, so it is superseded rather than kept.
+    this.clearRetry(roomId);
+    this.scheduleContinuation(roomId, handlers, delayMs);
+  }
+
   scheduleFieldCompletion(
     trigger: CompleteFieldTrigger,
     handlers: ComAutoPlayRecoveryHandlers,

@@ -338,7 +338,14 @@
     "suitDaiya": "Diamond",
     "suitClub": "Club",
     "suitZuppe": "Spade",
-    "suitTra": "Tra"
+    "suitTra": "Tra",
+    "firstTurnReveal": {
+      "chant": "Jan-ken…",
+      "ready": "Shu!",
+      "shu": "Shu!",
+      "draw": "Draw!",
+      "result": "{name} blows first"
+    }
   },
   "gamePhase": {
     "deal": "Deal",
@@ -762,9 +769,10 @@
     "imageProcessing": "Processing image...",
     "imageProcessingFailed": "Failed to process image",
     "basicInfo": "Basic Information",
-    "settings": "Settings (TBD)",
+    "settings": "Settings",
     "notifications": "Enable notifications",
-    "soundEffects": "Enable sound effects",
+    "soundEffects": "Enable sound effects (TBD)",
+    "startPlayerAnimation": "Show the janken animation at game start",
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",

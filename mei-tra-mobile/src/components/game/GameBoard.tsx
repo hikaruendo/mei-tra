@@ -19,6 +19,7 @@ import {
 import { BlowControls } from '@/components/game/BlowControls';
 import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
+import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
 import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
@@ -34,6 +35,7 @@ import { getStrengthOrderLabel } from '@/lib/trump-display';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { TRUMP_LABELS } from '@/lib/trump-labels';
 import { colors, teamColors } from '@/theme/colors';
+import type { MobileFirstTurnReveal } from '@/context/GameContext';
 import type {
   MobileGameOver,
   MobileGameSnapshot,
@@ -64,6 +66,8 @@ interface GameBoardProps {
   actionsDisabled?: boolean;
   history?: GameHistoryData;
   roomId?: string;
+  firstTurnReveal?: MobileFirstTurnReveal | null;
+  onFirstTurnRevealDone?: () => void;
 }
 
 export function GameBoard({
@@ -82,6 +86,8 @@ export function GameBoard({
   actionsDisabled = false,
   history,
   roomId,
+  firstTurnReveal = null,
+  onFirstTurnRevealDone,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -811,9 +817,19 @@ export function GameBoard({
           </View>
         </Modal>
       ) : null}
+
+      {firstTurnReveal ? (
+        <StartPlayerJanken
+          onDone={onFirstTurnRevealDone ?? noop}
+          players={game.players}
+          reveal={firstTurnReveal}
+        />
+      ) : null}
     </View>
   );
 }
+
+const noop = () => {};
 
 const styles = StyleSheet.create({
   container: {
