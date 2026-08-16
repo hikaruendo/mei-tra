@@ -7,6 +7,7 @@ import { asSeatId } from '../types/identity.types';
 import type { GameParticipant } from '../types/game-participant.types';
 import type { RoomMembershipReplayEvent } from '../types/room-membership.types';
 import { RoomMembershipService } from '../services/room-membership.service';
+import { GameHistoryMembershipLogService } from '../services/game-history-membership-log.service';
 
 describe('GameHistoryController', () => {
   const actorSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
@@ -104,6 +105,7 @@ describe('GameHistoryController', () => {
       getGameHistoryUseCase,
       roomRepository,
       roomMembershipService,
+      new GameHistoryMembershipLogService(),
     );
 
   it('returns the room history from the use-case', async () => {

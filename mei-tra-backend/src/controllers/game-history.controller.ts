@@ -16,7 +16,6 @@ import {
   GameHistoryActionType,
   GameHistoryEntry,
   GameHistoryQuery,
-  GameHistoryReplayDetailItem,
   GameHistoryReplayEvent,
   GameHistoryReplayView,
   GameHistorySummary,
@@ -24,10 +23,10 @@ import {
 import { Room, RoomStatus } from '../types/room.types';
 import { asSeatId, isUuid, type SeatId } from '../types/identity.types';
 import type { GameParticipant } from '../types/game-participant.types';
-import type { RoomMembershipReplayEvent } from '../types/room-membership.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
 import { RoomMembershipService } from '../services/room-membership.service';
+import { GameHistoryMembershipLogService } from '../services/game-history-membership-log.service';
 
 type GameHistoryRequestQuery = Partial<
   Record<
@@ -44,6 +43,7 @@ export class GameHistoryController {
     @Inject('IRoomRepository')
     private readonly roomRepository: IRoomRepository,
     private readonly roomMembershipService: RoomMembershipService,
+    private readonly gameHistoryMembershipLogService: GameHistoryMembershipLogService,
   ) {}
 
   @Get(':roomId/summary')
@@ -61,12 +61,14 @@ export class GameHistoryController {
       this.roomMembershipService.listReplayEventsForRoom(roomId),
     ]);
 
-    const summaryWithMembership = this.withMembershipSummary(
-      summary,
-      this.filterMembershipEvents(membershipEvents, parsedQuery),
-      playerNames,
-      playerNamesByUserId,
-    );
+    const summaryWithMembership =
+      this.gameHistoryMembershipLogService.mergeSummary(
+        summary,
+        membershipEvents,
+        parsedQuery,
+        playerNames,
+        playerNamesByUserId,
+      );
 
     return {
       ...summaryWithMembership,
@@ -88,13 +90,14 @@ export class GameHistoryController {
       this.getGameHistoryUseCase.replay(roomId, parsedQuery, playerNames),
       this.roomMembershipService.listReplayEventsForRoom(roomId),
     ]);
-    const replayWithMembership = this.withMembershipReplayEvents(
-      replay,
-      this.filterMembershipEvents(membershipEvents, parsedQuery),
-      playerNames,
-      playerNamesByUserId,
-      parsedQuery,
-    );
+    const replayWithMembership =
+      this.gameHistoryMembershipLogService.mergeReplay(
+        replay,
+        membershipEvents,
+        parsedQuery,
+        playerNames,
+        playerNamesByUserId,
+      );
     return this.withViewerStartingHands(
       replayWithMembership,
       participant?.seatId ?? null,
@@ -119,257 +122,6 @@ export class GameHistoryController {
     return history.map((entry) =>
       this.withSanitizedActionData(entry, participant?.seatId ?? null),
     );
-  }
-
-  private withMembershipSummary(
-    summary: GameHistorySummary,
-    membershipEvents: RoomMembershipReplayEvent[],
-    playerNames: Readonly<Record<string, string>>,
-    playerNamesByUserId: Readonly<Record<string, string>>,
-  ): GameHistorySummary {
-    if (membershipEvents.length === 0) {
-      return summary;
-    }
-
-    const byActionType = { ...summary.byActionType };
-    const actorSeatIds = new Set(summary.actorSeatIds);
-    const mergedPlayerNames = { ...summary.playerNames };
-
-    for (const event of membershipEvents) {
-      byActionType[event.eventType] = (byActionType[event.eventType] ?? 0) + 1;
-      if (event.seatId) {
-        actorSeatIds.add(event.seatId);
-        const playerName = this.resolveMembershipPlayerName(
-          event,
-          playerNames,
-          playerNamesByUserId,
-        );
-        if (playerName) {
-          mergedPlayerNames[event.seatId] = playerName;
-        }
-      }
-    }
-
-    const firstMembershipTimestamp = membershipEvents[0]?.timestamp ?? null;
-    const lastMembershipTimestamp = membershipEvents.at(-1)?.timestamp ?? null;
-    const lastActionType =
-      lastMembershipTimestamp &&
-      (!summary.lastTimestamp ||
-        lastMembershipTimestamp > summary.lastTimestamp)
-        ? (membershipEvents.at(-1)?.eventType ?? summary.lastActionType)
-        : summary.lastActionType;
-
-    return {
-      ...summary,
-      totalEntries: summary.totalEntries + membershipEvents.length,
-      byActionType,
-      actorSeatIds: [...actorSeatIds],
-      playerNames: mergedPlayerNames,
-      lastActionType,
-      firstTimestamp:
-        summary.firstTimestamp && firstMembershipTimestamp
-          ? summary.firstTimestamp < firstMembershipTimestamp
-            ? summary.firstTimestamp
-            : firstMembershipTimestamp
-          : (summary.firstTimestamp ?? firstMembershipTimestamp),
-      lastTimestamp:
-        summary.lastTimestamp && lastMembershipTimestamp
-          ? summary.lastTimestamp > lastMembershipTimestamp
-            ? summary.lastTimestamp
-            : lastMembershipTimestamp
-          : (summary.lastTimestamp ?? lastMembershipTimestamp),
-    };
-  }
-
-  private withMembershipReplayEvents(
-    replay: GameHistoryReplayView,
-    membershipEvents: RoomMembershipReplayEvent[],
-    playerNames: Readonly<Record<string, string>>,
-    playerNamesByUserId: Readonly<Record<string, string>>,
-    query: GameHistoryQuery,
-  ): GameHistoryReplayView {
-    if (membershipEvents.length === 0) {
-      return replay;
-    }
-
-    const rounds = replay.rounds.map((round) => ({
-      ...round,
-      actionTypes: [...round.actionTypes],
-      actorSeatIds: [...round.actorSeatIds],
-      entries: [...round.entries],
-      events: [...round.events],
-    }));
-    let insertedCount = 0;
-
-    for (const membershipEvent of membershipEvents) {
-      const roundNumber = this.resolveRoundNumberAt(
-        membershipEvent.timestamp,
-        rounds,
-      );
-      if (
-        typeof query.roundNumber === 'number' &&
-        query.roundNumber !== roundNumber
-      ) {
-        continue;
-      }
-
-      const replayEvent = this.toMembershipReplayEvent(
-        membershipEvent,
-        roundNumber,
-        playerNames,
-        playerNamesByUserId,
-      );
-      let round = rounds.find(
-        (candidate) => candidate.roundNumber === roundNumber,
-      );
-      if (!round) {
-        round = {
-          roundNumber,
-          startedAt: membershipEvent.timestamp,
-          endedAt: membershipEvent.timestamp,
-          actionTypes: [],
-          actorSeatIds: [],
-          entries: [],
-          events: [],
-        };
-        rounds.push(round);
-      }
-
-      round.events.push(replayEvent);
-      round.events.sort(
-        (left, right) => left.timestamp.getTime() - right.timestamp.getTime(),
-      );
-      if (!round.actionTypes.includes(replayEvent.actionType)) {
-        round.actionTypes.push(replayEvent.actionType);
-      }
-      if (
-        replayEvent.actorSeatId &&
-        !round.actorSeatIds.includes(replayEvent.actorSeatId)
-      ) {
-        round.actorSeatIds.push(replayEvent.actorSeatId);
-      }
-      round.startedAt =
-        !round.startedAt || membershipEvent.timestamp < round.startedAt
-          ? membershipEvent.timestamp
-          : round.startedAt;
-      round.endedAt =
-        !round.endedAt || membershipEvent.timestamp > round.endedAt
-          ? membershipEvent.timestamp
-          : round.endedAt;
-      insertedCount += 1;
-    }
-
-    return {
-      ...replay,
-      totalEntries: replay.totalEntries + insertedCount,
-      rounds: rounds.sort((left, right) => {
-        if (left.roundNumber === null) {
-          return -1;
-        }
-        if (right.roundNumber === null) {
-          return 1;
-        }
-        return left.roundNumber - right.roundNumber;
-      }),
-    };
-  }
-
-  private filterMembershipEvents(
-    events: RoomMembershipReplayEvent[],
-    query: GameHistoryQuery,
-  ): RoomMembershipReplayEvent[] {
-    if (query.actionType) {
-      return [];
-    }
-
-    return events.filter((event) => {
-      if (query.actorSeatId && event.seatId !== query.actorSeatId) {
-        return false;
-      }
-      if (query.since && event.timestamp < query.since) {
-        return false;
-      }
-      if (query.until && event.timestamp > query.until) {
-        return false;
-      }
-      return true;
-    });
-  }
-
-  private resolveRoundNumberAt(
-    timestamp: Date,
-    rounds: Pick<
-      GameHistoryReplayView['rounds'][number],
-      'roundNumber' | 'startedAt'
-    >[],
-  ): number | null {
-    let selectedRoundNumber: number | null = null;
-    let selectedStartedAt = Number.NEGATIVE_INFINITY;
-
-    for (const round of rounds) {
-      if (
-        round.roundNumber === null ||
-        !(round.startedAt instanceof Date) ||
-        round.startedAt > timestamp
-      ) {
-        continue;
-      }
-
-      const startedAt = round.startedAt.getTime();
-      if (startedAt >= selectedStartedAt) {
-        selectedRoundNumber = round.roundNumber;
-        selectedStartedAt = startedAt;
-      }
-    }
-
-    return selectedRoundNumber;
-  }
-
-  private toMembershipReplayEvent(
-    event: RoomMembershipReplayEvent,
-    roundNumber: number | null,
-    playerNames: Readonly<Record<string, string>>,
-    playerNamesByUserId: Readonly<Record<string, string>>,
-  ): GameHistoryReplayEvent {
-    const playerName = this.resolveMembershipPlayerName(
-      event,
-      playerNames,
-      playerNamesByUserId,
-    );
-    const detailItems: GameHistoryReplayDetailItem[] = [
-      {
-        labelKey: 'player',
-        value: {
-          kind: 'player',
-          seatId: event.seatId,
-          playerName,
-        },
-      },
-    ];
-    const actionData = {
-      membershipEventType: event.eventType,
-      playerNames:
-        event.seatId && playerName ? { [event.seatId]: playerName } : {},
-    };
-
-    return {
-      id: event.id,
-      timestamp: event.timestamp,
-      actionType: event.eventType,
-      kind: 'membership',
-      actorSeatId: event.seatId,
-      roundNumber,
-      gamePhase: null,
-      summary: `${playerName ?? 'Player'} ${
-        event.eventType === 'player_joined' ? 'joined' : 'left'
-      }`,
-      details: {
-        seatId: event.seatId,
-        playerName,
-      },
-      detailItems,
-      actionData,
-    };
   }
 
   private async getRoomParticipantContext(
@@ -433,23 +185,6 @@ export class GameHistoryController {
       ]),
       teamNames: room.settings.teamNames,
     };
-  }
-
-  private resolveMembershipPlayerName(
-    event: RoomMembershipReplayEvent,
-    playerNamesBySeatId: Readonly<Record<string, string>>,
-    playerNamesByUserId: Readonly<Record<string, string>>,
-  ): string | null {
-    const userName = playerNamesByUserId[event.userId]?.trim();
-    if (userName) {
-      return userName;
-    }
-
-    if (!event.seatId) {
-      return null;
-    }
-
-    return playerNamesBySeatId[event.seatId]?.trim() || null;
   }
 
   private withViewerStartingHands(
