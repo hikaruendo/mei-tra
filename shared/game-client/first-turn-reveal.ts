@@ -128,12 +128,16 @@ const BEATS: Record<JankenHand, JankenHand> = {
   paper: 'rock',
 };
 
+// The result beat is the longest: two lines of text (winner + first blower)
+// need reading time. The script may outlast the server's update-turn delay —
+// the same-seat rebroadcast does not abort the reveal — but it must end
+// before COM's earliest first action (delay + pacing + COM think time).
 const STEP_DURATION_MS = {
   chant: 900,
   ready: 700,
   draw: 900,
   showdown: 800,
-  result: 900,
+  result: 2400,
 } as const;
 
 // Reduced motion removes the motion, not the time: the static result holds

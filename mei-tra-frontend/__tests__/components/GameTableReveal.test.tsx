@@ -158,9 +158,8 @@ describe('GameTable first-turn reveal', () => {
     act(() => {
       jest.advanceTimersByTime(800);
     });
-    // The winner is announced as 吹き上げ; the first blower is explained.
+    // The winner is announced as 吹き上げ.
     expect(screen.getByText('result:Player 1')).toBeInTheDocument();
-    expect(screen.getByText('firstBlow:Player 2')).toBeInTheDocument();
     // The first blower's seat carries the turn ring into real play.
     expect(screen.getByTestId('seat-seat-2')).toHaveAttribute(
       'data-current-turn',
@@ -172,7 +171,7 @@ describe('GameTable first-turn reveal', () => {
     );
 
     act(() => {
-      jest.advanceTimersByTime(900);
+      jest.advanceTimersByTime(2_400);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });

@@ -344,8 +344,7 @@
       "ready": "シュッ！",
       "shu": "シュ！",
       "draw": "シュ！ …あいこ！",
-      "result": "{name} の勝ち — 吹き上げ！",
-      "firstBlow": "{name} から吹き始めます"
+      "result": "{name} の勝ち — 吹き上げ！"
     }
   },
   "gamePhase": {

@@ -76,15 +76,21 @@ describe('useFirstTurnReveal', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('finishes before the server releases the turn', () => {
+  it('completes after the full script length', () => {
     const onDone = jest.fn();
     const reveal = makeReveal();
     renderHook(() => useFirstTurnReveal({ reveal, seatIds: SEAT_IDS, onDone }));
 
+    // The script outlasts the server delay by design: the extended result
+    // beat gives the two-line verdict reading time.
     act(() => {
       jest.advanceTimersByTime(GAME_START_TURN_REVEAL_DELAY_MS);
     });
+    expect(onDone).not.toHaveBeenCalled();
 
+    act(() => {
+      jest.advanceTimersByTime(1_200);
+    });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
@@ -102,7 +108,7 @@ describe('useFirstTurnReveal', () => {
     // Static, but held for the full script length so the turn indicator
     // arrives right as it ends.
     act(() => {
-      jest.advanceTimersByTime(4_200);
+      jest.advanceTimersByTime(5_700);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -141,7 +147,7 @@ describe('useFirstTurnReveal', () => {
     );
 
     act(() => {
-      jest.advanceTimersByTime(GAME_START_TURN_REVEAL_DELAY_MS);
+      jest.advanceTimersByTime(5_700);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
 
@@ -155,7 +161,7 @@ describe('useFirstTurnReveal', () => {
     expect(result.current.step?.kind).toBe('chant');
 
     act(() => {
-      jest.advanceTimersByTime(GAME_START_TURN_REVEAL_DELAY_MS);
+      jest.advanceTimersByTime(5_700);
     });
     expect(onDone).toHaveBeenCalledTimes(2);
     expect(result.current.highlightSeatId).toBe('seat-0');

@@ -344,8 +344,7 @@
       "ready": "Shu!",
       "shu": "Shu!",
       "draw": "Shu! …Draw!",
-      "result": "{name} wins — blows last!",
-      "firstBlow": "{name} blows first"
+      "result": "{name} wins — blows last!"
     }
   },
   "gamePhase": {

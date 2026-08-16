@@ -179,9 +179,6 @@ export function StartPlayerJanken({
               <Text style={styles.verdict}>
                 {nameOf(reveal.lastBlowSeatId)} の勝ち — 吹き上げ！
               </Text>
-              <Text style={styles.explain}>
-                {nameOf(reveal.seatId)} から吹き始めます
-              </Text>
             </View>
           ) : null}
         </View>
@@ -261,12 +258,6 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '800',
     letterSpacing: 1,
-    textAlign: 'center',
-  },
-  explain: {
-    marginTop: 6,
-    color: colors.textMuted,
-    fontSize: 13,
     textAlign: 'center',
   },
 });

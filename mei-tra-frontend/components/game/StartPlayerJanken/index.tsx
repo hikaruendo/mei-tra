@@ -16,8 +16,6 @@ export interface RevealSeat {
 interface StartPlayerJankenProps {
   step: FirstTurnRevealStep;
   seats: RevealSeat[];
-  /** Seat that blows first (the janken winner's neighbor). */
-  firstTurnSeatId: string;
   /** Seat that wins the janken and blows last (吹き上げ). */
   lastBlowSeatId: string;
 }
@@ -35,7 +33,6 @@ function HandGlyph({ hand }: { hand: JankenHand }) {
 export function StartPlayerJanken({
   step,
   seats,
-  firstTurnSeatId,
   lastBlowSeatId,
 }: StartPlayerJankenProps) {
   const t = useTranslations('game.firstTurnReveal');
@@ -102,9 +99,6 @@ export function StartPlayerJanken({
         <div className={styles.result}>
           <div className={styles.verdict}>
             {t('result', { name: nameOf(lastBlowSeatId) })}
-          </div>
-          <div className={styles.explain}>
-            {t('firstBlow', { name: nameOf(firstTurnSeatId) })}
           </div>
         </div>
       )}

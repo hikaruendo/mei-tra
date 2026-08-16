@@ -207,8 +207,11 @@ export interface GameStartedPayload {
 }
 
 /**
- * `update-turn` is held back by this much at game start so clients can play the
- * first-turn reveal animation. Client animations must finish within it.
+ * `update-turn` is held back by this much at game start so clients can play
+ * the first-turn reveal animation. The animation may outlast it — clients do
+ * not abort the reveal when the rebroadcast repeats its own seat — but it
+ * must end before COM's earliest first action (this delay + pacing margin +
+ * COM think time).
  */
 export const GAME_START_TURN_REVEAL_DELAY_MS = 4500;
 

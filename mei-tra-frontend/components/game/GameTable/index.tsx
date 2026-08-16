@@ -293,7 +293,6 @@ export const GameTable: React.FC<GameTableProps> = ({
           <StartPlayerJanken
             step={revealStep}
             seats={revealSeats}
-            firstTurnSeatId={armedReveal.seatId}
             lastBlowSeatId={armedReveal.lastBlowSeatId}
           />
         )}
