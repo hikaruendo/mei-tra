@@ -18,6 +18,18 @@ export const GAME_HISTORY_ACTION_TYPES = [
 
 export type GameHistoryActionType = (typeof GAME_HISTORY_ACTION_TYPES)[number];
 
+export const GAME_HISTORY_REPLAY_MEMBERSHIP_ACTION_TYPES = [
+  'player_joined',
+  'player_left',
+] as const;
+
+export type GameHistoryReplayMembershipActionType =
+  (typeof GAME_HISTORY_REPLAY_MEMBERSHIP_ACTION_TYPES)[number];
+
+export type GameHistoryReplayActionType =
+  | GameHistoryActionType
+  | GameHistoryReplayMembershipActionType;
+
 export interface GameHistoryContext {
   roundNumber: number;
   gamePhase: GamePhase;
@@ -48,13 +60,13 @@ export interface GameHistoryQuery {
 export interface GameHistorySummary {
   roomId: string;
   totalEntries: number;
-  byActionType: Partial<Record<GameHistoryActionType, number>>;
+  byActionType: Partial<Record<GameHistoryReplayActionType, number>>;
   actorSeatIds: SeatId[];
   playerNames: Record<string, string>;
   teamNames?: TeamNames;
   status: 'completed' | 'in_progress';
   winningTeam: number | null;
-  lastActionType: GameHistoryActionType | null;
+  lastActionType: GameHistoryReplayActionType | null;
   roundNumbers: number[];
   firstTimestamp: Date | null;
   lastTimestamp: Date | null;
@@ -76,7 +88,7 @@ export interface GameHistoryReplayRound {
   startedAt: Date | null;
   endedAt: Date | null;
   viewerStartingHand?: string[];
-  actionTypes: GameHistoryActionType[];
+  actionTypes: GameHistoryReplayActionType[];
   actorSeatIds: SeatId[];
   entries: GameHistoryEntry[];
   events: GameHistoryReplayEvent[];
@@ -153,6 +165,11 @@ export interface PlayerStatsUpdatedReplayDetails {
   failedCount: number;
 }
 
+export interface PlayerMembershipReplayDetails {
+  seatId: SeatId | null;
+  playerName: string | null;
+}
+
 export type GameHistoryReplayDetailValue =
   | {
       kind: 'text';
@@ -190,8 +207,14 @@ export interface GameHistoryReplayDetailItem {
 }
 
 type GameHistoryReplayEventBase<
-  TAction extends GameHistoryActionType,
-  TKind extends 'lifecycle' | 'blow' | 'play' | 'round' | 'stats',
+  TAction extends GameHistoryReplayActionType,
+  TKind extends
+    | 'lifecycle'
+    | 'blow'
+    | 'play'
+    | 'round'
+    | 'stats'
+    | 'membership',
   TDetails,
 > = {
   id: string;
@@ -252,6 +275,16 @@ export type GameHistoryReplayEvent =
       'player_stats_updated',
       'stats',
       PlayerStatsUpdatedReplayDetails
+    >
+  | GameHistoryReplayEventBase<
+      'player_joined',
+      'membership',
+      PlayerMembershipReplayDetails
+    >
+  | GameHistoryReplayEventBase<
+      'player_left',
+      'membership',
+      PlayerMembershipReplayDetails
     >;
 
 export interface CreateGameHistoryEntry {

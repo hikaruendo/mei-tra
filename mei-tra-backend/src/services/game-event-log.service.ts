@@ -203,8 +203,8 @@ export class GameEventLogService implements IGameEventLogService {
       actionData: {
         ...entry.actionData,
         playerNames: {
-          ...this.extractPlayerNames(entry),
           ...playerNameOverrides,
+          ...this.extractPlayerNames(entry),
         },
       },
     }));

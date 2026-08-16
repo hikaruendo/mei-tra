@@ -19,6 +19,14 @@ export type GameHistoryActionType =
   | 'game_over'
   | 'player_stats_updated';
 
+export type GameHistoryReplayMembershipActionType =
+  | 'player_joined'
+  | 'player_left';
+
+export type GameHistoryReplayActionType =
+  | GameHistoryActionType
+  | GameHistoryReplayMembershipActionType;
+
 export interface GameHistoryContextContract {
   roundNumber: number;
   gamePhase: TransportGamePhase | null;
@@ -40,13 +48,13 @@ export interface GameHistoryEntryContract {
 export interface GameHistorySummaryContract {
   roomId: string;
   totalEntries: number;
-  byActionType: Partial<Record<GameHistoryActionType, number>>;
+  byActionType: Partial<Record<GameHistoryReplayActionType, number>>;
   actorSeatIds: SeatId[];
   playerNames: Record<string, string>;
   teamNames?: TeamNames;
   status: 'completed' | 'in_progress';
   winningTeam: number | null;
-  lastActionType: GameHistoryActionType | null;
+  lastActionType: GameHistoryReplayActionType | null;
   roundNumbers: number[];
   firstTimestamp: string | null;
   lastTimestamp: string | null;
@@ -68,7 +76,7 @@ export interface GameHistoryReplayRoundContract {
   startedAt: string | null;
   endedAt: string | null;
   viewerStartingHand?: string[];
-  actionTypes: GameHistoryActionType[];
+  actionTypes: GameHistoryReplayActionType[];
   actorSeatIds: SeatId[];
   entries: GameHistoryEntryContract[];
   events: GameHistoryReplayEventContract[];
@@ -145,6 +153,11 @@ export interface PlayerStatsUpdatedReplayDetailsContract {
   failedCount: number;
 }
 
+export interface PlayerMembershipReplayDetailsContract {
+  seatId: SeatId | null;
+  playerName: string | null;
+}
+
 export type GameHistoryReplayDetailValueContract =
   | {
       kind: 'text';
@@ -182,8 +195,8 @@ export interface GameHistoryReplayDetailItemContract {
 }
 
 type GameHistoryReplayEventBaseContract<
-  TAction extends GameHistoryActionType,
-  TKind extends 'lifecycle' | 'blow' | 'play' | 'round' | 'stats',
+  TAction extends GameHistoryReplayActionType,
+  TKind extends 'lifecycle' | 'blow' | 'play' | 'round' | 'stats' | 'membership',
   TDetails,
 > = {
   id: string;
@@ -260,6 +273,16 @@ export type GameHistoryReplayEventContract =
       'player_stats_updated',
       'stats',
       PlayerStatsUpdatedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'player_joined',
+      'membership',
+      PlayerMembershipReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'player_left',
+      'membership',
+      PlayerMembershipReplayDetailsContract
     >;
 
 export interface GameHistoryReplayQueryContract {

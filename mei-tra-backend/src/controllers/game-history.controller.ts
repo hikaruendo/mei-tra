@@ -25,6 +25,8 @@ import { asSeatId, isUuid, type SeatId } from '../types/identity.types';
 import type { GameParticipant } from '../types/game-participant.types';
 import { AuthenticatedUser } from '../types/user.types';
 import { IGetGameHistoryUseCase } from '../use-cases/interfaces/get-game-history.use-case.interface';
+import { RoomMembershipService } from '../services/room-membership.service';
+import { GameHistoryMembershipLogService } from '../services/game-history-membership-log.service';
 
 type GameHistoryRequestQuery = Partial<
   Record<
@@ -40,6 +42,8 @@ export class GameHistoryController {
     private readonly getGameHistoryUseCase: IGetGameHistoryUseCase,
     @Inject('IRoomRepository')
     private readonly roomRepository: IRoomRepository,
+    private readonly roomMembershipService: RoomMembershipService,
+    private readonly gameHistoryMembershipLogService: GameHistoryMembershipLogService,
   ) {}
 
   @Get(':roomId/summary')
@@ -49,18 +53,25 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistorySummary> {
-    const { playerNames, teamNames } = await this.getRoomParticipantContext(
-      roomId,
-      currentUser.id,
-    );
-    const summary = await this.getGameHistoryUseCase.summarize(
-      roomId,
-      this.parseQuery(query),
-      playerNames,
-    );
+    const { playerNames, playerNamesByUserId, teamNames } =
+      await this.getRoomParticipantContext(roomId, currentUser.id);
+    const parsedQuery = this.parseQuery(query);
+    const [summary, membershipEvents] = await Promise.all([
+      this.getGameHistoryUseCase.summarize(roomId, parsedQuery, playerNames),
+      this.roomMembershipService.listReplayEventsForRoom(roomId),
+    ]);
+
+    const summaryWithMembership =
+      this.gameHistoryMembershipLogService.mergeSummary(
+        summary,
+        membershipEvents,
+        parsedQuery,
+        playerNames,
+        playerNamesByUserId,
+      );
 
     return {
-      ...summary,
+      ...summaryWithMembership,
       teamNames,
     };
   }
@@ -72,16 +83,25 @@ export class GameHistoryController {
     @Query() query: GameHistoryRequestQuery,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<GameHistoryReplayView> {
-    const { participant, playerNames } = await this.getRoomParticipantContext(
-      roomId,
-      currentUser.id,
+    const { participant, playerNames, playerNamesByUserId } =
+      await this.getRoomParticipantContext(roomId, currentUser.id);
+    const parsedQuery = this.parseQuery(query);
+    const [replay, membershipEvents] = await Promise.all([
+      this.getGameHistoryUseCase.replay(roomId, parsedQuery, playerNames),
+      this.roomMembershipService.listReplayEventsForRoom(roomId),
+    ]);
+    const replayWithMembership =
+      this.gameHistoryMembershipLogService.mergeReplay(
+        replay,
+        membershipEvents,
+        parsedQuery,
+        playerNames,
+        playerNamesByUserId,
+      );
+    return this.withViewerStartingHands(
+      replayWithMembership,
+      participant?.seatId ?? null,
     );
-    const replay = await this.getGameHistoryUseCase.replay(
-      roomId,
-      this.parseQuery(query),
-      playerNames,
-    );
-    return this.withViewerStartingHands(replay, participant?.seatId ?? null);
   }
 
   @Get(':roomId')
@@ -110,6 +130,7 @@ export class GameHistoryController {
   ): Promise<{
     participant: Pick<GameParticipant, 'seatId'> | null;
     playerNames: Record<string, string>;
+    playerNamesByUserId: Record<string, string>;
     teamNames: Room['settings']['teamNames'];
   }> {
     const room = await this.roomRepository.findById(roomId);
@@ -151,6 +172,16 @@ export class GameHistoryController {
           participant.seatId,
           participant.playerName,
         ]),
+      ]),
+      playerNamesByUserId: Object.fromEntries([
+        ...room.players.flatMap((player): [string, string][] =>
+          !player.isCOM && player.userId ? [[player.userId, player.name]] : [],
+        ),
+        ...gameParticipants.flatMap((participant): [string, string][] =>
+          participant.userId
+            ? [[participant.userId, participant.playerName]]
+            : [],
+        ),
       ]),
       teamNames: room.settings.teamNames,
     };

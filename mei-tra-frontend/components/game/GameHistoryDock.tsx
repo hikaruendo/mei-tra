@@ -7,7 +7,7 @@ import { useGameHistory } from '@/hooks/useGameHistory';
 import { Link } from '@/i18n/routing';
 import { CardFace } from '@/components/game/CardFace';
 import type {
-  GameHistoryActionType,
+  GameHistoryReplayActionType,
   GameHistoryReplayDetailItem,
   GameHistoryReplayEvent,
   GameHistoryReplayRound,
@@ -44,6 +44,8 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   broken_hand_revealed: 'actionTypes.broken_hand_revealed',
   game_over: 'actionTypes.game_over',
   player_stats_updated: 'actionTypes.player_stats_updated',
+  player_joined: 'actionTypes.player_joined',
+  player_left: 'actionTypes.player_left',
 } as const;
 
 const extractScoreTotals = (
@@ -135,7 +137,7 @@ export function GameHistoryDock({
 }: GameHistoryDockProps) {
   const t = useTranslations('gameHistoryDock');
   const trumpT = useTranslations('blowControls');
-  const getActionLabel = (actionType: GameHistoryActionType) =>
+  const getActionLabel = (actionType: GameHistoryReplayActionType) =>
     t(ACTION_TYPE_MESSAGE_KEYS[actionType] as never);
   const getDetailLabel = (
     key: string,
@@ -252,7 +254,7 @@ export function GameHistoryDock({
       const summaryName = resolvedSummary?.playerNames[seatId]?.trim();
       const storedName = fallbackName?.trim();
 
-      return currentName || summaryName || storedName || null;
+      return storedName || currentName || summaryName || null;
     },
     [players, resolvedSummary?.playerNames],
   );
@@ -374,14 +376,15 @@ export function GameHistoryDock({
             ?? playStartedEvent?.actorSeatId
             ?? null;
           const blowerId = latestDeclarationSeatId ?? playStartedSeatId;
-          const blowerName =
-            resolvePlayerName(blowerId)
-            ?? getPlayerNameFromActionData(
+          const blowerStoredName =
+            getPlayerNameFromActionData(
               latestDeclarationEvent,
               latestDeclarationSeatId,
             )
             ?? getPlayerDetailName(playStartedEvent, 'winner')
             ?? getPlayerNameFromActionData(playStartedEvent, playStartedSeatId);
+          const blowerName =
+            resolvePlayerName(blowerId, blowerStoredName);
           const declarationValue =
             getTextDetail(latestDeclarationEvent, 'highestDeclaration')
             ?? getTextDetail(latestDeclarationEvent, 'declaration');
@@ -529,7 +532,11 @@ export function GameHistoryDock({
   };
 
   const formatEventSummary = (event: GameHistoryReplayEvent) => {
-    const player = formatPlayer(event.actorSeatId) ?? t('unknownPlayer');
+    const player =
+      formatPlayer(
+        event.actorSeatId,
+        getPlayerNameFromActionData(event, event.actorSeatId),
+      ) ?? t('unknownPlayer');
 
     switch (event.actionType) {
       case 'game_started':
@@ -581,6 +588,10 @@ export function GameHistoryDock({
           updated: getDetailValue(event, 'updated') ?? '0',
           failed: getDetailValue(event, 'failed') ?? '0',
         } as never);
+      case 'player_joined':
+        return t('summaries.player_joined' as never, { player } as never);
+      case 'player_left':
+        return t('summaries.player_left' as never, { player } as never);
       default:
         return event.summary;
     }

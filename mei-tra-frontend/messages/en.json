@@ -479,7 +479,9 @@
       "round_reset": "Round reset",
       "broken_hand_revealed": "Broken hand revealed",
       "game_over": "Game over",
-      "player_stats_updated": "Player stats updated"
+      "player_stats_updated": "Player stats updated",
+      "player_joined": "Joined",
+      "player_left": "Left"
     },
     "summaries": {
       "game_started": "Game started. First blow: {firstBlow}. Target: {pointsToWin} points",
@@ -493,7 +495,9 @@
       "round_reset": "Round reset",
       "broken_hand_revealed": "{player} revealed a broken hand. Next: {nextPlayer}",
       "game_over": "Game over. {team} won",
-      "player_stats_updated": "Stats updated: {updated} succeeded / {failed} failed"
+      "player_stats_updated": "Stats updated: {updated} succeeded / {failed} failed",
+      "player_joined": "{player} joined",
+      "player_left": "{player} left"
     },
     "detailLabels": {
       "startedBy": "Started by",
@@ -518,6 +522,7 @@
       "nextDealer": "Next dealer",
       "nextPlayer": "Next player",
       "nextBlowIndex": "Next blow index",
+      "player": "Player",
       "finalScores": "Final scores",
       "updated": "Updated",
       "failed": "Failed"

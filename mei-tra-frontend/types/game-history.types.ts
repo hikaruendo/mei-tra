@@ -1,5 +1,6 @@
 import type {
   GameHistoryActionType,
+  GameHistoryReplayActionType,
   GameHistoryReplayDetailItemContract,
   GameHistoryReplayDetailValueContract,
   GameHistoryContextContract,
@@ -13,7 +14,7 @@ import type {
 } from '@contracts/game-history';
 
 export type GameHistoryReplayQuery = GameHistoryReplayQueryContract;
-export type { GameHistoryActionType };
+export type { GameHistoryActionType, GameHistoryReplayActionType };
 export type GameHistoryFilters = {
   round: 'all' | number;
   actionType: 'all' | GameHistoryActionType;
