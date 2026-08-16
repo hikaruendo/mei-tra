@@ -343,8 +343,9 @@
       "chant": "ジャンケン…",
       "ready": "シュッ！",
       "shu": "シュ！",
-      "draw": "あいこ！",
-      "result": "{name} から吹き始め"
+      "draw": "シュ！ …あいこ！",
+      "result": "{name} の勝ち — 吹き上げ！",
+      "firstBlow": "{name} から吹き始めます"
     }
   },
   "gamePhase": {

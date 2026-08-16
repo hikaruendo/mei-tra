@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   buildFirstTurnRevealScript,
+  isFirstTurnRevealStale,
   type FirstTurnRevealScript,
   type FirstTurnRevealStep,
 } from '@meitra/game-client/first-turn-reveal';
@@ -52,12 +53,16 @@ export function useFirstTurnReveal({
       return;
     }
 
-    const script = buildFirstTurnRevealScript({
-      seatIds: seatIdsRef.current,
-      firstTurnSeatId: reveal.seatId,
-      roomId: reveal.roomId,
-      reducedMotion: prefersReducedMotion(),
-    });
+    // A reveal armed while nothing could render it must not replay late.
+    const script = isFirstTurnRevealStale(reveal, Date.now())
+      ? null
+      : buildFirstTurnRevealScript({
+          seatIds: seatIdsRef.current,
+          firstTurnSeatId: reveal.seatId,
+          lastBlowSeatId: reveal.lastBlowSeatId,
+          roomId: reveal.roomId,
+          reducedMotion: prefersReducedMotion(),
+        });
 
     if (!script) {
       setState(null);

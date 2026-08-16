@@ -1,82 +1,113 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type {
-  FirstTurnRevealStep,
-  JankenHand,
+import {
+  JANKEN_HAND_PATHS,
+  type FirstTurnRevealStep,
+  type JankenHand,
 } from '@meitra/game-client/first-turn-reveal';
-import type { SeatPosition } from '@/lib/utils/tableOrder';
 import styles from './index.module.scss';
 
 export interface RevealSeat {
   seatId: string;
   name: string;
-  position: SeatPosition;
 }
 
 interface StartPlayerJankenProps {
   step: FirstTurnRevealStep;
   seats: RevealSeat[];
-  /** Seat that loses the janken and blows first. */
+  /** Seat that blows first (the janken winner's neighbor). */
   firstTurnSeatId: string;
+  /** Seat that wins the janken and blows last (吹き上げ). */
+  lastBlowSeatId: string;
 }
 
-const HAND_GLYPHS: Record<JankenHand, string> = {
-  rock: '✊',
-  scissors: '✌️',
-  paper: '✋',
-};
+function HandGlyph({ hand }: { hand: JankenHand }) {
+  return (
+    <svg viewBox="0 0 64 64" className={styles.glyph} aria-hidden="true">
+      {JANKEN_HAND_PATHS[hand].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
 
 export function StartPlayerJanken({
   step,
   seats,
   firstTurnSeatId,
+  lastBlowSeatId,
 }: StartPlayerJankenProps) {
   const t = useTranslations('game.firstTurnReveal');
 
-  const firstTurnName =
-    seats.find((seat) => seat.seatId === firstTurnSeatId)?.name ?? '';
+  const nameOf = (seatId: string) =>
+    seats.find((seat) => seat.seatId === seatId)?.name ?? '';
 
+  const isResult = step.kind === 'result';
   const caption =
-    step.kind === 'result'
-      ? t('result', { name: firstTurnName })
-      : step.kind === 'chant'
-        ? t('chant')
-        : step.kind === 'ready'
-          ? t('ready')
-          : step.kind === 'draw'
-            ? t('draw')
-            : t('shu');
+    step.kind === 'chant'
+      ? t('chant')
+      : step.kind === 'ready'
+        ? t('ready')
+        : step.kind === 'draw'
+          ? t('draw')
+          : t('shu');
 
   return (
     <div className={styles.overlay} aria-live="polite">
-      {seats.map((seat) => {
-        const hand = step.hands?.[seat.seatId];
-        const isFirstTurn = seat.seatId === firstTurnSeatId;
+      {!isResult && (
+        // Keyed by step so the punch-in restarts on every beat.
+        <div
+          key={step.kind}
+          className={`${styles.chant} ${
+            step.kind === 'chant' ? styles.chantSoft : styles.chantPunch
+          }`}
+        >
+          {caption}
+        </div>
+      )}
 
-        return (
-          <div
-            key={seat.seatId}
-            className={`${styles.hand} ${styles[seat.position]} ${
-              step.kind === 'result' && isFirstTurn ? styles.handWinner : ''
-            }`}
-          >
-            <span
-              className={`${styles.glyph} ${hand ? '' : styles.glyphWaiting}`}
+      <div className={styles.cards}>
+        {seats.map((seat) => {
+          const hand = step.hands?.[seat.seatId] ?? 'rock';
+          const isWinner = seat.seatId === lastBlowSeatId;
+
+          return (
+            <div
+              key={seat.seatId}
+              className={`${styles.card} ${
+                isResult
+                  ? isWinner
+                    ? styles.cardWinner
+                    : styles.cardDim
+                  : ''
+              }`}
             >
-              {hand ? HAND_GLYPHS[hand] : HAND_GLYPHS.rock}
-            </span>
-          </div>
-        );
-      })}
-
-      <div
-        className={`${styles.caption} ${
-          step.kind === 'result' ? styles.captionResult : ''
-        }`}
-      >
-        {caption}
+              {/* Keyed by step so the throw snap replays on every beat. */}
+              <div
+                key={step.kind}
+                className={
+                  step.kind === 'chant' ? styles.handWindup : styles.handThrow
+                }
+              >
+                <HandGlyph hand={hand} />
+              </div>
+              <div className={styles.name}>{seat.name}</div>
+            </div>
+          );
+        })}
       </div>
+
+      {isResult && (
+        <div className={styles.result}>
+          <div className={styles.verdict}>
+            {t('result', { name: nameOf(lastBlowSeatId) })}
+          </div>
+          <div className={styles.explain}>
+            {t('firstBlow', { name: nameOf(firstTurnSeatId) })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

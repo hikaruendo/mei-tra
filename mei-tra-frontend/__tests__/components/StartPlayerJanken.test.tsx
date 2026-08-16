@@ -5,11 +5,14 @@ import type { FirstTurnReveal } from '@/types/game.types';
 
 const SEAT_IDS = ['seat-0', 'seat-1', 'seat-2', 'seat-3'];
 
-const reveal: FirstTurnReveal = {
+// token is stamped per test: a reveal older than the animation window is
+// treated as stale and completes immediately.
+const makeReveal = (): FirstTurnReveal => ({
   roomId: 'room-1',
   seatId: 'seat-2',
-  token: 1,
-};
+  lastBlowSeatId: 'seat-1',
+  token: Date.now(),
+});
 
 function mockReducedMotion(matches: boolean) {
   Object.defineProperty(window, 'matchMedia', {
@@ -35,6 +38,7 @@ describe('useFirstTurnReveal', () => {
 
   it('runs through the chant and lands on the first turn seat', () => {
     const onDone = jest.fn();
+    const reveal = makeReveal();
     const { result } = renderHook(() =>
       useFirstTurnReveal({ reveal, seatIds: SEAT_IDS, onDone }),
     );
@@ -56,8 +60,11 @@ describe('useFirstTurnReveal', () => {
       jest.advanceTimersByTime(900);
     });
     expect(result.current.step?.kind).toBe('showdown');
-    // Only the seat that blows first throws the losing hand.
-    expect(result.current.step?.hands?.['seat-2']).not.toBe(
+    // Only the janken winner (吹き上げ) throws the winning hand.
+    expect(result.current.step?.hands?.['seat-1']).not.toBe(
+      result.current.step?.hands?.['seat-0'],
+    );
+    expect(result.current.step?.hands?.['seat-2']).toBe(
       result.current.step?.hands?.['seat-0'],
     );
 
@@ -71,6 +78,7 @@ describe('useFirstTurnReveal', () => {
 
   it('finishes before the server releases the turn', () => {
     const onDone = jest.fn();
+    const reveal = makeReveal();
     renderHook(() => useFirstTurnReveal({ reveal, seatIds: SEAT_IDS, onDone }));
 
     act(() => {
@@ -83,6 +91,7 @@ describe('useFirstTurnReveal', () => {
   it('skips straight to the result when motion is reduced', () => {
     mockReducedMotion(true);
     const onDone = jest.fn();
+    const reveal = makeReveal();
     const { result } = renderHook(() =>
       useFirstTurnReveal({ reveal, seatIds: SEAT_IDS, onDone }),
     );
@@ -90,9 +99,22 @@ describe('useFirstTurnReveal', () => {
     expect(result.current.step?.kind).toBe('result');
     expect(result.current.highlightSeatId).toBe('seat-2');
 
+    // Static, but held for the full script length so the turn indicator
+    // arrives right as it ends.
     act(() => {
-      jest.advanceTimersByTime(1_400);
+      jest.advanceTimersByTime(4_200);
     });
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('completes immediately instead of replaying a stale reveal', () => {
+    const onDone = jest.fn();
+    const staleReveal = { ...makeReveal(), token: Date.now() - 60_000 };
+    const { result } = renderHook(() =>
+      useFirstTurnReveal({ reveal: staleReveal, seatIds: SEAT_IDS, onDone }),
+    );
+
+    expect(result.current.step).toBeNull();
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
@@ -115,7 +137,7 @@ describe('useFirstTurnReveal', () => {
     const { result, rerender } = renderHook(
       ({ current }: { current: FirstTurnReveal }) =>
         useFirstTurnReveal({ reveal: current, seatIds: SEAT_IDS, onDone }),
-      { initialProps: { current: reveal } },
+      { initialProps: { current: makeReveal() } },
     );
 
     act(() => {
@@ -123,7 +145,13 @@ describe('useFirstTurnReveal', () => {
     });
     expect(onDone).toHaveBeenCalledTimes(1);
 
-    rerender({ current: { roomId: 'room-1', seatId: 'seat-0', token: 2 } });
+    const nextReveal: FirstTurnReveal = {
+      roomId: 'room-1',
+      seatId: 'seat-0',
+      lastBlowSeatId: 'seat-3',
+      token: Date.now(),
+    };
+    rerender({ current: nextReveal });
     expect(result.current.step?.kind).toBe('chant');
 
     act(() => {
@@ -135,6 +163,7 @@ describe('useFirstTurnReveal', () => {
 
   it('clears pending timers on unmount', () => {
     const onDone = jest.fn();
+    const reveal = makeReveal();
     const { unmount } = renderHook(() =>
       useFirstTurnReveal({ reveal, seatIds: SEAT_IDS, onDone }),
     );
@@ -149,12 +178,14 @@ describe('useFirstTurnReveal', () => {
 
   it('completes immediately when the first turn seat is not at the table', () => {
     const onDone = jest.fn();
+    const missingSeatReveal: FirstTurnReveal = {
+      roomId: 'room-1',
+      seatId: 'seat-9',
+      lastBlowSeatId: 'seat-1',
+      token: Date.now(),
+    };
     const { result } = renderHook(() =>
-      useFirstTurnReveal({
-        reveal: { roomId: 'room-1', seatId: 'seat-9', token: 3 },
-        seatIds: SEAT_IDS,
-        onDone,
-      }),
+      useFirstTurnReveal({ reveal: missingSeatReveal, seatIds: SEAT_IDS, onDone }),
     );
 
     expect(result.current.step).toBeNull();

@@ -16,6 +16,7 @@ import type { RoomContract } from '@meitra/contracts/room';
 import { asSeatId } from '@meitra/contracts/ids';
 import {
   hasBlowActivity,
+  resolveLastBlowSeatId,
   shouldAbortRevealOnTurn,
   type FirstTurnReveal,
 } from '@meitra/game-client/first-turn-reveal';
@@ -694,10 +695,18 @@ export function GameProvider({ children }: PropsWithChildren) {
       // it or, when the reveal is off, apply the turn now rather than idle.
       const animate =
         userRef.current?.profile?.startPlayerAnimation !== false;
-      if (payload.currentTurnSeatId && animate) {
+      // The payload array is the server roster order, i.e. blow order.
+      const lastBlowSeatId = payload.currentTurnSeatId
+        ? resolveLastBlowSeatId(
+            payload.players.map((player) => player.seatId),
+            payload.currentTurnSeatId,
+          )
+        : null;
+      if (payload.currentTurnSeatId && lastBlowSeatId && animate) {
         setFirstTurnReveal({
           roomId: payload.roomId,
           seatId: payload.currentTurnSeatId,
+          lastBlowSeatId,
           token: Date.now(),
         });
       } else {

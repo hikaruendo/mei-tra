@@ -1,6 +1,8 @@
 import {
   buildFirstTurnRevealScript,
   hasBlowActivity,
+  isFirstTurnRevealStale,
+  resolveLastBlowSeatId,
   shouldAbortRevealOnTurn,
   type JankenHand,
 } from '@meitra/game-client/first-turn-reveal';
@@ -14,48 +16,57 @@ const BEATS: Record<JankenHand, JankenHand> = {
   paper: 'rock',
 };
 
-describe('buildFirstTurnRevealScript', () => {
-  it('is deterministic for the same room and first turn seat', () => {
-    const first = buildFirstTurnRevealScript({
-      seatIds: SEAT_IDS,
-      firstTurnSeatId: 'seat-2',
-      roomId: 'room-abc',
-    });
-    const second = buildFirstTurnRevealScript({
-      seatIds: SEAT_IDS,
-      firstTurnSeatId: 'seat-2',
-      roomId: 'room-abc',
-    });
+const params = (overrides: Partial<Parameters<typeof buildFirstTurnRevealScript>[0]> = {}) => ({
+  seatIds: SEAT_IDS,
+  firstTurnSeatId: 'seat-2',
+  lastBlowSeatId: 'seat-1',
+  roomId: 'room-abc',
+  ...overrides,
+});
 
-    expect(first).toEqual(second);
+describe('resolveLastBlowSeatId', () => {
+  it('returns the seat right before the first blower in blow order', () => {
+    expect(resolveLastBlowSeatId(SEAT_IDS, 'seat-2')).toBe('seat-1');
   });
 
-  it('gives the first turn seat the only losing hand', () => {
+  it('wraps around when the first blower opens the roster', () => {
+    expect(resolveLastBlowSeatId(SEAT_IDS, 'seat-0')).toBe('seat-3');
+  });
+
+  it('returns null when the seat is not in the roster', () => {
+    expect(resolveLastBlowSeatId(SEAT_IDS, 'seat-9')).toBeNull();
+    expect(resolveLastBlowSeatId(['seat-0'], 'seat-0')).toBeNull();
+  });
+});
+
+describe('buildFirstTurnRevealScript', () => {
+  it('is deterministic for the same room and first turn seat', () => {
+    expect(buildFirstTurnRevealScript(params())).toEqual(
+      buildFirstTurnRevealScript(params()),
+    );
+  });
+
+  it('gives the last blower the only winning hand', () => {
     for (const firstTurnSeatId of SEAT_IDS) {
-      const script = buildFirstTurnRevealScript({
-        seatIds: SEAT_IDS,
-        firstTurnSeatId,
-        roomId: 'room-abc',
-      });
+      const lastBlowSeatId = resolveLastBlowSeatId(SEAT_IDS, firstTurnSeatId)!;
+      const script = buildFirstTurnRevealScript(
+        params({ firstTurnSeatId, lastBlowSeatId }),
+      );
       const showdown = script?.steps.find((step) => step.kind === 'showdown');
       const hands = showdown?.hands;
 
       expect(hands).toBeDefined();
-      const loserHand = hands![firstTurnSeatId];
-      const winners = SEAT_IDS.filter((seatId) => seatId !== firstTurnSeatId);
+      const winnerHand = hands![lastBlowSeatId];
+      const losers = SEAT_IDS.filter((seatId) => seatId !== lastBlowSeatId);
 
-      for (const seatId of winners) {
-        expect(BEATS[hands![seatId]]).toBe(loserHand);
+      for (const seatId of losers) {
+        expect(BEATS[winnerHand]).toBe(hands![seatId]);
       }
     }
   });
 
   it('shows every seat the same hand on the draw step', () => {
-    const script = buildFirstTurnRevealScript({
-      seatIds: SEAT_IDS,
-      firstTurnSeatId: 'seat-1',
-      roomId: 'room-abc',
-    });
+    const script = buildFirstTurnRevealScript(params());
     const draw = script?.steps.find((step) => step.kind === 'draw');
     const hands = Object.values(draw?.hands ?? {});
 
@@ -64,11 +75,7 @@ describe('buildFirstTurnRevealScript', () => {
   });
 
   it('opens with every seat showing rock for the first shu', () => {
-    const script = buildFirstTurnRevealScript({
-      seatIds: SEAT_IDS,
-      firstTurnSeatId: 'seat-1',
-      roomId: 'room-abc',
-    });
+    const script = buildFirstTurnRevealScript(params());
     const ready = script?.steps.find((step) => step.kind === 'ready');
 
     expect(Object.values(ready?.hands ?? {})).toEqual(
@@ -77,11 +84,7 @@ describe('buildFirstTurnRevealScript', () => {
   });
 
   it('finishes within the server turn delay', () => {
-    const script = buildFirstTurnRevealScript({
-      seatIds: SEAT_IDS,
-      firstTurnSeatId: 'seat-0',
-      roomId: 'room-abc',
-    });
+    const script = buildFirstTurnRevealScript(params());
 
     expect(script?.totalDurationMs).toBeLessThanOrEqual(
       GAME_START_TURN_REVEAL_DELAY_MS,
@@ -89,40 +92,51 @@ describe('buildFirstTurnRevealScript', () => {
   });
 
   it('collapses to a single result step when motion is reduced', () => {
-    const script = buildFirstTurnRevealScript({
-      seatIds: SEAT_IDS,
-      firstTurnSeatId: 'seat-3',
-      roomId: 'room-abc',
-      reducedMotion: true,
-    });
+    const script = buildFirstTurnRevealScript(params({ reducedMotion: true }));
 
     expect(script?.steps.map((step) => step.kind)).toEqual(['result']);
-    expect(script?.steps[0].hands?.['seat-3']).toBeDefined();
+    expect(script?.steps[0].hands?.['seat-1']).toBeDefined();
+    expect(script?.lastBlowSeatId).toBe('seat-1');
+    // Reduced motion holds the static result for the full script length so the
+    // delayed turn indicator arrives right as it ends.
+    expect(script?.totalDurationMs).toBe(
+      buildFirstTurnRevealScript(params())?.totalDurationMs,
+    );
   });
 
-  it('returns null when the first turn seat is not seated', () => {
+  it('marks a reveal stale once the animation window has long passed', () => {
+    const token = 1_000_000;
+    expect(isFirstTurnRevealStale({ token }, token + 4_200)).toBe(false);
+    expect(isFirstTurnRevealStale({ token }, token + 60_000)).toBe(true);
+  });
+
+  it('returns null when either seat is missing or they collide', () => {
     expect(
-      buildFirstTurnRevealScript({
-        seatIds: SEAT_IDS,
-        firstTurnSeatId: 'seat-9',
-        roomId: 'room-abc',
-      }),
+      buildFirstTurnRevealScript(params({ firstTurnSeatId: 'seat-9' })),
     ).toBeNull();
-  });
-
-  it('returns null when there are not enough seats', () => {
     expect(
-      buildFirstTurnRevealScript({
-        seatIds: ['seat-0'],
-        firstTurnSeatId: 'seat-0',
-        roomId: 'room-abc',
-      }),
+      buildFirstTurnRevealScript(params({ lastBlowSeatId: 'seat-9' })),
+    ).toBeNull();
+    expect(
+      buildFirstTurnRevealScript(
+        params({ firstTurnSeatId: 'seat-1', lastBlowSeatId: 'seat-1' }),
+      ),
+    ).toBeNull();
+    expect(
+      buildFirstTurnRevealScript(
+        params({ seatIds: ['seat-0'], firstTurnSeatId: 'seat-0' }),
+      ),
     ).toBeNull();
   });
 });
 
 describe('shouldAbortRevealOnTurn', () => {
-  const reveal = { roomId: 'room-1', seatId: 'seat-2', token: 1 };
+  const reveal = {
+    roomId: 'room-1',
+    seatId: 'seat-2',
+    lastBlowSeatId: 'seat-1',
+    token: 1,
+  };
 
   it('lets the reveal continue when the rebroadcast repeats its seat', () => {
     expect(shouldAbortRevealOnTurn(reveal, 'seat-2')).toBe(false);

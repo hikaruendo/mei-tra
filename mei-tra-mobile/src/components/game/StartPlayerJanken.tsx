@@ -1,16 +1,13 @@
 import {
   buildFirstTurnRevealScript,
+  isFirstTurnRevealStale,
+  JANKEN_HAND_PATHS,
   type FirstTurnRevealScript,
   type JankenHand,
 } from '@meitra/game-client/first-turn-reveal';
 import { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Modal,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { AccessibilityInfo, Modal, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '@/theme/colors';
 import type { MobileFirstTurnReveal } from '@/context/GameContext';
@@ -22,22 +19,34 @@ interface StartPlayerJankenProps {
   onDone: () => void;
 }
 
-const HAND_GLYPHS: Record<JankenHand, string> = {
-  rock: '✊',
-  scissors: '✌️',
-  paper: '✋',
-};
-
 const CAPTIONS = {
   chant: 'ジャンケン…',
   ready: 'シュッ！',
-  draw: 'あいこ！',
+  draw: 'シュ！ …あいこ！',
   showdown: 'シュ！',
 } as const;
 
+function HandGlyph({ hand, winner }: { hand: JankenHand; winner?: boolean }) {
+  return (
+    <Svg width={34} height={34} viewBox="0 0 64 64">
+      {JANKEN_HAND_PATHS[hand].map((d) => (
+        <Path
+          key={d}
+          d={d}
+          fill="none"
+          stroke={winner ? colors.goldStrong : colors.text}
+          strokeWidth={3.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+    </Svg>
+  );
+}
+
 /**
- * Plays the game-start "ジャンケンシュッシュ" reveal, landing on the seat the
- * server already chose. The loser of the janken blows first.
+ * Plays the game-start "ジャンケンシュッシュ" reveal. Per the original rule
+ * the janken winner blows last (吹き上げ); their neighbor blows first.
  */
 export function StartPlayerJanken({
   reveal,
@@ -63,9 +72,17 @@ export function StartPlayerJanken({
       .then((reducedMotion) => {
         if (cancelled) return;
 
+        // A reveal armed while this screen was closed (e.g. the user was on
+        // the room list at game start) must not replay minutes later.
+        if (isFirstTurnRevealStale(reveal, Date.now())) {
+          onDoneRef.current();
+          return;
+        }
+
         const script = buildFirstTurnRevealScript({
           seatIds: playersRef.current.map((player) => player.seatId),
           firstTurnSeatId: reveal.seatId,
+          lastBlowSeatId: reveal.lastBlowSeatId,
           roomId: reveal.roomId,
           reducedMotion,
         });
@@ -110,34 +127,45 @@ export function StartPlayerJanken({
     return null;
   }
 
-  const firstTurnName =
-    players.find((player) => player.seatId === reveal.seatId)?.name ?? '';
-  const caption =
-    step.kind === 'result'
-      ? `${firstTurnName} から吹き始め`
-      : CAPTIONS[step.kind];
+  const nameOf = (seatId: string) =>
+    players.find((player) => player.seatId === seatId)?.name ?? '';
+  const isResult = step.kind === 'result';
 
   return (
     <Modal animationType="fade" transparent visible>
       <View style={styles.backdrop}>
         <View style={styles.panel}>
+          {step.kind !== 'result' ? (
+            <Text
+              style={[
+                styles.chant,
+                step.kind !== 'chant' && styles.chantPunch,
+              ]}
+            >
+              {CAPTIONS[step.kind]}
+            </Text>
+          ) : null}
+
           <View style={styles.hands}>
             {players.map((player) => {
-              const hand = step.hands?.[player.seatId];
-              const isFirstTurn = player.seatId === reveal.seatId;
-              const isWinnerRow = step.kind === 'result' && isFirstTurn;
+              const hand = step.hands?.[player.seatId] ?? 'rock';
+              const isWinner = player.seatId === reveal.lastBlowSeatId;
+              const winnerRow = isResult && isWinner;
+              const dimRow = isResult && !isWinner;
 
               return (
                 <View
                   key={player.seatId}
-                  style={[styles.handRow, isWinnerRow && styles.handRowWinner]}
+                  style={[
+                    styles.handRow,
+                    winnerRow && styles.handRowWinner,
+                    dimRow && styles.handRowDim,
+                  ]}
                 >
-                  <Text style={styles.glyph}>
-                    {hand ? HAND_GLYPHS[hand] : HAND_GLYPHS.rock}
-                  </Text>
+                  <HandGlyph hand={hand} winner={winnerRow} />
                   <Text
                     numberOfLines={1}
-                    style={[styles.name, isWinnerRow && styles.nameWinner]}
+                    style={[styles.name, winnerRow && styles.nameWinner]}
                   >
                     {player.name}
                   </Text>
@@ -146,15 +174,16 @@ export function StartPlayerJanken({
             })}
           </View>
 
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[
-              styles.caption,
-              step.kind === 'result' && styles.captionResult,
-            ]}
-          >
-            {caption}
-          </Text>
+          {isResult ? (
+            <View accessibilityLiveRegion="polite">
+              <Text style={styles.verdict}>
+                {nameOf(reveal.lastBlowSeatId)} の勝ち — 吹き上げ！
+              </Text>
+              <Text style={styles.explain}>
+                {nameOf(reveal.seatId)} から吹き始めます
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -179,6 +208,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.panel,
   },
+  chant: {
+    color: colors.textMuted,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  chantPunch: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: '800',
+  },
   hands: {
     gap: 8,
   },
@@ -195,9 +236,15 @@ const styles = StyleSheet.create({
   },
   handRowWinner: {
     borderColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+    transform: [{ scale: 1.03 }],
   },
-  glyph: {
-    fontSize: 26,
+  handRowDim: {
+    opacity: 0.35,
   },
   name: {
     flex: 1,
@@ -207,15 +254,19 @@ const styles = StyleSheet.create({
   },
   nameWinner: {
     color: colors.goldStrong,
+    fontWeight: '800',
   },
-  caption: {
-    color: colors.text,
-    fontSize: 20,
+  verdict: {
+    color: colors.goldStrong,
+    fontSize: 19,
     fontWeight: '800',
     letterSpacing: 1,
     textAlign: 'center',
   },
-  captionResult: {
-    color: colors.goldStrong,
+  explain: {
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

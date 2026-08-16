@@ -125,10 +125,15 @@ describe('GameTable first-turn reveal', () => {
     expect(screen.queryByText('chant')).not.toBeInTheDocument();
   });
 
-  it('plays the janken overlay and lands on the first turn seat', () => {
+  it('plays the janken overlay and crowns the last blower', () => {
     const onDone = jest.fn();
     renderTable({
-      firstTurnReveal: { roomId: 'room-1', seatId: 'seat-2', token: 1 },
+      firstTurnReveal: {
+        roomId: 'room-1',
+        seatId: 'seat-2',
+        lastBlowSeatId: 'seat-1',
+        token: Date.now(),
+      },
       onFirstTurnRevealDone: onDone,
     });
 
@@ -153,10 +158,10 @@ describe('GameTable first-turn reveal', () => {
     act(() => {
       jest.advanceTimersByTime(800);
     });
-    expect(
-      screen.getByText('result:Player 2'),
-    ).toBeInTheDocument();
-    // The losing seat lights up using the existing turn ring.
+    // The winner is announced as 吹き上げ; the first blower is explained.
+    expect(screen.getByText('result:Player 1')).toBeInTheDocument();
+    expect(screen.getByText('firstBlow:Player 2')).toBeInTheDocument();
+    // The first blower's seat carries the turn ring into real play.
     expect(screen.getByTestId('seat-seat-2')).toHaveAttribute(
       'data-current-turn',
       'true',

@@ -11,6 +11,8 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
   ({
     players: [],
     currentPlayerIndex: 0,
+    // Turn notifications verify the seat still holds the turn before sending.
+    currentSeatId: asSeatId('player-2'),
     gamePhase: 'blow',
     deck: [],
     teamScores: {
@@ -177,6 +179,16 @@ describe('GameplayNotificationService', () => {
         roundNumber: 1,
       },
     );
+  });
+
+  it('drops a turn notification whose seat no longer holds the turn', async () => {
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-1'),
+      initiatingActorId: 'player-2',
+    });
+
+    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
   });
 
   it('sends one turn notification per transition and suppresses replay duplicates', async () => {

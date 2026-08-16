@@ -343,8 +343,9 @@
       "chant": "Jan-ken…",
       "ready": "Shu!",
       "shu": "Shu!",
-      "draw": "Draw!",
-      "result": "{name} blows first"
+      "draw": "Shu! …Draw!",
+      "result": "{name} wins — blows last!",
+      "firstBlow": "{name} blows first"
     }
   },
   "gamePhase": {

@@ -71,6 +71,7 @@ import {
 } from '../lib/preferences';
 import {
   hasBlowActivity,
+  resolveLastBlowSeatId,
   shouldAbortRevealOnTurn,
 } from '@meitra/game-client/first-turn-reveal';
 
@@ -842,10 +843,23 @@ export const useGame = () => {
         // left over from a previous game and then either animate or, when the
         // reveal is off, apply the turn now instead of idling for the delay.
         setWhoseTurn(null);
-        if (currentTurnSeatId && startPlayerAnimationEnabledRef.current) {
+        // The payload array is the server roster order, i.e. blow order —
+        // the merged local players state may be ordered differently.
+        const lastBlowSeatId = currentTurnSeatId
+          ? resolveLastBlowSeatId(
+              playerContracts.map((player) => player.seatId),
+              currentTurnSeatId,
+            )
+          : null;
+        if (
+          currentTurnSeatId &&
+          lastBlowSeatId &&
+          startPlayerAnimationEnabledRef.current
+        ) {
           updateFirstTurnReveal({
             roomId,
             seatId: currentTurnSeatId,
+            lastBlowSeatId,
             token: Date.now(),
           });
         } else {

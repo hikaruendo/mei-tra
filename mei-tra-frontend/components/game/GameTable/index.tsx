@@ -122,8 +122,8 @@ export const GameTable: React.FC<GameTableProps> = ({
   );
   const positions: SeatPosition[] = ['bottom', 'left', 'top', 'right'];
 
-  const revealSeats: RevealSeat[] = orderedPlayers.flatMap((player, idx) =>
-    player ? [{ seatId: player.seatId, name: player.name, position: positions[idx] }] : [],
+  const revealSeats: RevealSeat[] = orderedPlayers.flatMap((player) =>
+    player ? [{ seatId: player.seatId, name: player.name }] : [],
   );
   // Without the completion callback the reveal could never report itself done
   // and the overlay would stay up forever, so it only arms when both arrive.
@@ -172,7 +172,9 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      {gamePhase && (
+      {/* The fixed blow panel sits above the table; hold it back while the
+          reveal plays so the animation is not covered. */}
+      {gamePhase && !revealStep && (
         <GameControls
           gamePhase={gamePhase}
           renderBlowControls={() => {
@@ -292,6 +294,7 @@ export const GameTable: React.FC<GameTableProps> = ({
             step={revealStep}
             seats={revealSeats}
             firstTurnSeatId={armedReveal.seatId}
+            lastBlowSeatId={armedReveal.lastBlowSeatId}
           />
         )}
       </div>

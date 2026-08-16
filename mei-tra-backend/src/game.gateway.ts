@@ -296,11 +296,48 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       if (event.delayMs && event.delayMs > 0) {
-        setTimeout(emit, event.delayMs);
+        setTimeout(() => {
+          void this.emitUnlessStale(event, emit);
+        }, event.delayMs);
       } else {
         emit();
       }
     });
+  }
+
+  /**
+   * A delayed `update-turn` carries a seat frozen at build time. If the turn
+   * already advanced (e.g. the first blower acted before the game-start
+   * reveal delay elapsed), rebroadcasting the stale seat would roll every
+   * client's turn back and point the ack monitor at the wrong player, so the
+   * event is dropped — the action that advanced the turn already emitted the
+   * fresh one.
+   */
+  private async emitUnlessStale(
+    event: GatewayEvent,
+    emit: () => void,
+  ): Promise<void> {
+    if (
+      event.event === 'update-turn' &&
+      event.scope === 'room' &&
+      event.roomId &&
+      typeof event.payload === 'string'
+    ) {
+      try {
+        const roomGameState = await this.roomService.getRoomGameState(
+          event.roomId,
+        );
+        const currentSeatId = roomGameState.getState().currentSeatId ?? null;
+        if (currentSeatId !== event.payload) {
+          return;
+        }
+      } catch {
+        // Room is gone; nothing to emit to.
+        return;
+      }
+    }
+
+    emit();
   }
 
   private dispatchGameplayEvents(
