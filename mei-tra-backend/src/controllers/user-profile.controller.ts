@@ -338,6 +338,7 @@ export class UserProfileController {
         sound: profile.preferences.sound,
         theme: profile.preferences.theme,
         fontSize: profile.preferences.fontSize,
+        startPlayerAnimation: profile.preferences.startPlayerAnimation ?? true,
       },
     };
   }

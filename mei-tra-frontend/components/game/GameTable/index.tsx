@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions, TeamNames } from '@/types/game.types';
+import { Player, GamePhase, TrumpType, Field, CompletedField, BlowAction, BlowDeclaration, TeamScores, GameActions, TeamNames, FirstTurnReveal } from '@/types/game.types';
 import { GameField } from '@/components/game/GameField';
 import { GameInfo } from '@/components/game/GameInfo';
 import { GameDock } from '@/components/game/GameDock';
@@ -9,8 +9,10 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
-import { getSeatOrderWithSelfBottom } from '@/lib/utils/tableOrder';
+import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
+import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
+import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
 import { asSeatId } from '@contracts/ids';
 
 interface GameTableProps {
@@ -44,8 +46,12 @@ interface GameTableProps {
   onStart?: () => void;
   onLeave?: () => void;
   onReplaceWithCOM?: (seatId: string) => void;
+  firstTurnReveal?: FirstTurnReveal | null;
+  onFirstTurnRevealDone?: () => void;
 }
 
+
+const noop = () => {};
 
 export const GameTable: React.FC<GameTableProps> = ({
   whoseTurn,
@@ -77,6 +83,8 @@ export const GameTable: React.FC<GameTableProps> = ({
   onStart,
   onLeave,
   onReplaceWithCOM,
+  firstTurnReveal = null,
+  onFirstTurnRevealDone,
 }) => {
   const tRoot = useTranslations();
   usePreloadCards();
@@ -107,16 +115,28 @@ export const GameTable: React.FC<GameTableProps> = ({
     }
   }, [hostSeatId, isSpectator, players, spectatorPerspectiveSeatId]);
 
-  if (!players || players.length === 0) {
-    return null;
-  }
-
   // Consistent table order for all players, self is always bottom
   const orderedPlayers = getSeatOrderWithSelfBottom(
     players,
     tablePerspectiveSeatId || '',
   );
-  const positions = ['bottom', 'left', 'top', 'right'];
+  const positions: SeatPosition[] = ['bottom', 'left', 'top', 'right'];
+
+  const revealSeats: RevealSeat[] = orderedPlayers.flatMap((player) =>
+    player ? [{ seatId: player.seatId, name: player.name }] : [],
+  );
+  // Without the completion callback the reveal could never report itself done
+  // and the overlay would stay up forever, so it only arms when both arrive.
+  const armedReveal = onFirstTurnRevealDone ? firstTurnReveal : null;
+  const { step: revealStep, highlightSeatId } = useFirstTurnReveal({
+    reveal: armedReveal,
+    seatIds: revealSeats.map((seat) => seat.seatId),
+    onDone: onFirstTurnRevealDone ?? noop,
+  });
+
+  if (!players || players.length === 0) {
+    return null;
+  }
 
   // During waiting, fill undefined slots with COM placeholders
   const createCOMSlot = (idx: number): Player => ({
@@ -152,7 +172,9 @@ export const GameTable: React.FC<GameTableProps> = ({
         />
       )}
 
-      {gamePhase && (
+      {/* The fixed blow panel sits above the table; hold it back while the
+          reveal plays so the animation is not covered. */}
+      {gamePhase && !revealStep && (
         <GameControls
           gamePhase={gamePhase}
           renderBlowControls={() => {
@@ -211,7 +233,10 @@ export const GameTable: React.FC<GameTableProps> = ({
             <PlayerHand
               key={player_.seatId}
               player={player_}
-              isCurrentTurn={whoseTurn === player_.seatId}
+              isCurrentTurn={
+                whoseTurn === player_.seatId ||
+                highlightSeatId === player_.seatId
+              }
               negriCard={negriCard}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
@@ -261,6 +286,14 @@ export const GameTable: React.FC<GameTableProps> = ({
             onBaseSuitSelect={gameActions.selectBaseSuit}
             isCurrentPlayer={!isSpectator && currentSeatId === whoseTurn}
             currentSeatId={tablePerspectiveSeatId || ''}
+          />
+        )}
+
+        {revealStep && armedReveal && (
+          <StartPlayerJanken
+            step={revealStep}
+            seats={revealSeats}
+            lastBlowSeatId={armedReveal.lastBlowSeatId}
           />
         )}
       </div>

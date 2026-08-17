@@ -99,6 +99,12 @@ export class GameplayNotificationService implements OnModuleDestroy {
           return;
         }
 
+        // A delayed notification carries a seat frozen at schedule time; if
+        // the turn already moved on, pushing "your turn" would mislead.
+        if ((context.state.currentSeatId ?? null) !== seatId) {
+          return;
+        }
+
         const targetPlayer = context.room.players.find(
           (player) => player.seatId === seatId,
         );

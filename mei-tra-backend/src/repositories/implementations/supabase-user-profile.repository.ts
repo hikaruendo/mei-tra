@@ -98,6 +98,7 @@ export class SupabaseUserProfileRepository
         sound: true,
         theme: 'light',
         fontSize: 'standard',
+        startPlayerAnimation: true,
       };
 
       const insertData = {

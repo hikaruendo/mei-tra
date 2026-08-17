@@ -1,0 +1,235 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  // Above the fixed blow panel (z-index 99) in case it ever renders alongside.
+  z-index: 120;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.75rem, 2.5vh, 1.5rem);
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.78) 80%
+  );
+}
+
+// ── chant typography: the beat carrier ──────────────────────────────
+
+// Text sits on a raised panel, not the scrim: the scrim is always dark while
+// the ink tokens flip per theme, so light theme would otherwise be unreadable.
+.chant {
+  font-family: var(--mt-font-heading);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--mt-text-primary);
+  white-space: nowrap;
+  font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+  padding: 0.3em 0.9em;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised);
+  box-shadow: var(--mt-shadow-panel);
+}
+
+.chantSoft {
+  font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+  color: var(--mt-text-secondary);
+  animation: chant-linger 0.5s ease-out both;
+}
+
+.chantPunch {
+  animation: chant-punch 0.42s cubic-bezier(0.18, 1.6, 0.4, 1) both;
+}
+
+@keyframes chant-punch {
+  0% {
+    opacity: 0;
+    transform: scale(2.4);
+    filter: blur(3px);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(0.94);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes chant-linger {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ── hand cards, center stage ────────────────────────────────────────
+
+.cards {
+  display: flex;
+  gap: clamp(0.5rem, 1.8vw, 1.1rem);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 0 0.5rem;
+}
+
+.card {
+  width: clamp(88px, 15vw, 120px);
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: calc(var(--mt-radius) + 4px);
+  background: linear-gradient(
+    180deg,
+    var(--mt-surface-raised-2),
+    var(--mt-surface-raised)
+  );
+  box-shadow: var(--mt-shadow-panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition:
+    opacity 0.45s ease,
+    filter 0.45s ease,
+    border-color 0.45s ease,
+    box-shadow 0.45s ease,
+    transform 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.name {
+  font-size: 0.8rem;
+  color: var(--mt-text-secondary);
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glyph {
+  width: clamp(44px, 8vw, 62px);
+  height: clamp(44px, 8vw, 62px);
+  display: block;
+
+  path {
+    fill: none;
+    stroke: var(--mt-text-primary);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+// the chant beat: fists shake in anticipation before any hand is thrown
+.handWindup {
+  animation: hand-windup 0.55s ease-in-out infinite;
+}
+
+@keyframes hand-windup {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+
+  50% {
+    transform: translateY(8px) rotate(4deg);
+  }
+}
+
+// the throw: pull back, snap out with overshoot, settle
+.handThrow {
+  animation: hand-throw 0.38s cubic-bezier(0.16, 1.7, 0.45, 1) both;
+}
+
+@keyframes hand-throw {
+  0% {
+    transform: translateY(14px) scale(0.72);
+    opacity: 0.4;
+  }
+
+  60% {
+    transform: translateY(-5px) scale(1.14);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+// ── showdown: the winner takes the spotlight ────────────────────────
+
+.cardDim {
+  opacity: 0.32;
+  filter: saturate(0.4) brightness(0.7);
+  transform: scale(0.9) translateY(6px);
+}
+
+.cardWinner {
+  transform: scale(1.14) translateY(-6px);
+  border-color: var(--mt-accent);
+  box-shadow:
+    var(--mt-shadow-panel),
+    0 0 0 3px var(--mt-accent-subtle),
+    0 0 32px color-mix(in srgb, var(--mt-accent) 50%, transparent);
+  z-index: 2;
+
+  .name {
+    color: var(--mt-accent-strong);
+    font-weight: 700;
+  }
+
+  .glyph path {
+    stroke: var(--mt-accent-strong);
+  }
+}
+
+// ── result ──────────────────────────────────────────────────────────
+
+.result {
+  text-align: center;
+  animation: chant-linger 0.5s 0.1s ease-out both;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid var(--mt-accent);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised);
+  box-shadow:
+    var(--mt-shadow-panel),
+    0 0 0 3px var(--mt-accent-subtle);
+}
+
+.verdict {
+  font-family: var(--mt-font-heading);
+  font-size: clamp(1.15rem, 3vw, 1.5rem);
+  letter-spacing: 0.1em;
+  color: var(--mt-accent-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handWindup,
+  .handThrow,
+  .chantSoft,
+  .chantPunch,
+  .result {
+    animation: none;
+  }
+
+  .card {
+    transition: none;
+  }
+}

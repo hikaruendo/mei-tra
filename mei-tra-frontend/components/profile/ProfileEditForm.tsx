@@ -13,6 +13,7 @@ import {
   formatFileSize
 } from '@/lib/utils/imageOptimizer';
 import { clearPlayerProfileCache } from '@/lib/utils/profileUtils';
+import { normalizeUserPreferences } from '@/lib/preferences';
 import styles from './ProfileEditForm.module.scss';
 
 interface ProfileEditFormProps {
@@ -33,7 +34,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
 
   const [formData, setFormData] = useState<FormData>({
     displayName: profile.displayName,
-    preferences: { ...profile.preferences },
+    preferences: normalizeUserPreferences(profile.preferences),
   });
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -332,6 +333,20 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               className={styles.checkbox}
             />
             <span className={styles.checkboxText}>{t('soundEffects')}</span>
+          </label>
+        </div>
+
+        <div className={styles.checkboxGroup}>
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              name="preferences.startPlayerAnimation"
+              checked={formData.preferences.startPlayerAnimation}
+              onChange={handleInputChange}
+              disabled={isSaving}
+              className={styles.checkbox}
+            />
+            <span className={styles.checkboxText}>{t('startPlayerAnimation')}</span>
           </label>
         </div>
       </div>

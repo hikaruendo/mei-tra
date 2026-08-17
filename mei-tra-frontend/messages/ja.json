@@ -338,7 +338,13 @@
     "suitDaiya": "ダイヤ",
     "suitClub": "クラブ",
     "suitZuppe": "スペード",
-    "suitTra": "トラ"
+    "suitTra": "トラ",
+    "firstTurnReveal": {
+      "chant": "ジャンケン…",
+      "ready": "シュッ！",
+      "shu": "シュ！",
+      "result": "{name} の勝ち — 吹き上げ！"
+    }
   },
   "gamePhase": {
     "deal": "配布",
@@ -762,9 +768,10 @@
     "imageProcessing": "画像を処理中...",
     "imageProcessingFailed": "画像の処理に失敗しました",
     "basicInfo": "基本情報",
-    "settings": "設定（未実装）",
+    "settings": "設定",
     "notifications": "通知を受け取る",
-    "soundEffects": "効果音を有効にする",
+    "soundEffects": "効果音を有効にする（未実装）",
+    "startPlayerAnimation": "ゲーム開始時のじゃんけん演出を表示する",
     "theme": "テーマ",
     "light": "ライト",
     "dark": "ダーク",

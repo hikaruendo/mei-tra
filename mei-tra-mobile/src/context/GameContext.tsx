@@ -14,6 +14,12 @@ import type {
 } from '@meitra/contracts/socket';
 import type { RoomContract } from '@meitra/contracts/room';
 import { asSeatId } from '@meitra/contracts/ids';
+import {
+  hasBlowActivity,
+  resolveLastBlowSeatId,
+  shouldAbortRevealOnTurn,
+  type FirstTurnReveal,
+} from '@meitra/game-client/first-turn-reveal';
 import { io } from 'socket.io-client';
 import {
   createContext,
@@ -67,7 +73,14 @@ interface MobileState {
   error: string | null;
   notice: string | null;
   gameOver: MobileGameOver | null;
+  /**
+   * Set only by the live 'game-started' event; snapshot restores clear it so a
+   * reconnect never replays the reveal.
+   */
+  firstTurnReveal: MobileFirstTurnReveal | null;
 }
+
+export type MobileFirstTurnReveal = FirstTurnReveal;
 
 type Action =
   | { type: 'connection'; status: ConnectionStatus }
@@ -83,6 +96,7 @@ type Action =
   | { type: 'error'; message: string | null }
   | { type: 'notice'; message: string | null }
   | { type: 'gameOver'; gameOver: MobileGameOver | null }
+  | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
   | { type: 'resetRoom' };
 
 type CurrentPlayerAckEvent = Extract<
@@ -103,6 +117,7 @@ const initialState: MobileState = {
   error: null,
   notice: null,
   gameOver: null,
+  firstTurnReveal: null,
 };
 
 function reducer(state: MobileState, action: Action): MobileState {
@@ -242,6 +257,8 @@ function reducer(state: MobileState, action: Action): MobileState {
       return { ...state, notice: action.message };
     case 'gameOver':
       return { ...state, gameOver: action.gameOver };
+    case 'firstTurnReveal':
+      return { ...state, firstTurnReveal: action.reveal };
     case 'resetRoom':
       return {
         ...state,
@@ -251,6 +268,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         error: null,
         notice: null,
         gameOver: null,
+        firstTurnReveal: null,
       };
     default:
       return state;
@@ -281,6 +299,7 @@ interface GameContextValue extends MobileState {
   updateTeamNames: (teamNames: TeamNames) => void;
   clearFeedback: () => void;
   closeGameOver: () => void;
+  clearFirstTurnReveal: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -324,6 +343,9 @@ export function GameProvider({ children }: PropsWithChildren) {
   const socketRef = useRef<MobileSocket | null>(null);
   const stateRef = useRef(state);
   const gameEventStateRef = useRef(createEmptyGameEventState());
+  // Mirrors state.firstTurnReveal for the long-lived socket handlers, which
+  // need it synchronously and would otherwise close over a stale value.
+  const firstTurnRevealRef = useRef<MobileFirstTurnReveal | null>(null);
   const userRef = useRef(user);
   const brokenRequestRef = useRef<string | null>(null);
   const agariRequestRef = useRef<string | null>(null);
@@ -334,6 +356,8 @@ export function GameProvider({ children }: PropsWithChildren) {
   const hasSession = session !== null;
   stateRef.current = state;
   userRef.current = user;
+  // Re-sync after reducer-only changes such as 'resetRoom'.
+  firstTurnRevealRef.current = state.firstTurnReveal;
 
   useEffect(() => {
     if (!state.game && !state.currentRoom) {
@@ -555,6 +579,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       void roomStorage.set(room.id);
     };
 
+    const setFirstTurnReveal = (reveal: MobileFirstTurnReveal | null) => {
+      firstTurnRevealRef.current = reveal;
+      dispatch({ type: 'firstTurnReveal', reveal });
+    };
+
     const applyGameServerEvent = (event: GameServerEvent) => {
       const previous = gameEventStateRef.current;
       const next = reduceGameEvent(previous, event, {
@@ -564,7 +593,15 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (next.players !== previous.players) {
         dispatch({ type: 'players', players: next.players });
       }
-      dispatch({ type: 'patchGame', patch: toMobileGamePatch(next) });
+      const patch = toMobileGamePatch(next);
+      dispatch({
+        type: 'patchGame',
+        // While the start reveal plays, hold the turn back so the animation is
+        // not spoiled; `clearFirstTurnReveal` applies it afterwards.
+        patch: firstTurnRevealRef.current
+          ? { ...patch, currentTurnSeatId: null }
+          : patch,
+      });
       return next;
     };
 
@@ -620,9 +657,14 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('game-state', (payload) => {
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
+      const snapshot = normalizeGameStatePayload(payload);
       dispatch({
         type: 'game',
-        game: normalizeGameStatePayload(payload),
+        // The bootstrap snapshot right after game start already carries the
+        // chosen seat; hold it back until the reveal finishes.
+        game: firstTurnRevealRef.current
+          ? { ...snapshot, currentTurnSeatId: null }
+          : snapshot,
       });
       void roomStorage.set(payload.roomId);
       finishResyncFlight(payload.roomId);
@@ -648,12 +690,48 @@ export function GameProvider({ children }: PropsWithChildren) {
           stateRef.current.currentRoom?.hostSeatId ?? null,
         ),
       });
+
+      // The server holds `update-turn` back for the reveal, so either animate
+      // it or, when the reveal is off, apply the turn now rather than idle.
+      const animate =
+        userRef.current?.profile?.startPlayerAnimation !== false;
+      // The payload array is the server roster order, i.e. blow order.
+      const lastBlowSeatId = payload.currentTurnSeatId
+        ? resolveLastBlowSeatId(
+            payload.players.map((player) => player.seatId),
+            payload.currentTurnSeatId,
+          )
+        : null;
+      if (payload.currentTurnSeatId && lastBlowSeatId && animate) {
+        setFirstTurnReveal({
+          roomId: payload.roomId,
+          seatId: payload.currentTurnSeatId,
+          lastBlowSeatId,
+          token: Date.now(),
+        });
+      } else {
+        setFirstTurnReveal(null);
+        if (payload.currentTurnSeatId) {
+          // Reduce it rather than patching directly, so the shared reducer
+          // agrees and a later event cannot blank the turn again.
+          applyGameServerEvent({
+            type: 'update-turn',
+            payload: payload.currentTurnSeatId,
+          });
+        }
+      }
+
       void roomStorage.set(payload.roomId);
     });
     socket.on('update-phase', (payload) => {
       applyGameServerEvent({ type: 'update-phase', payload });
     });
     socket.on('update-turn', (currentTurnSeatId) => {
+      if (
+        shouldAbortRevealOnTurn(firstTurnRevealRef.current, currentTurnSeatId)
+      ) {
+        setFirstTurnReveal(null);
+      }
       applyGameServerEvent({ type: 'update-turn', payload: currentTurnSeatId });
       const roomId = stateRef.current.game?.roomId;
       if (shouldAckTurn(stateRef.current.game, roomId)) {
@@ -661,6 +739,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('blow-updated', (payload) => {
+      // A player whose reveal is disabled can declare before our animation
+      // ends; cut it short rather than narrate a turn that already moved.
+      if (hasBlowActivity(payload)) {
+        setFirstTurnReveal(null);
+      }
       applyGameServerEvent({ type: 'blow-updated', payload });
     });
     socket.on('broken', (payload) => {
@@ -1188,6 +1271,18 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'notice', message: null });
       },
       closeGameOver: () => dispatch({ type: 'gameOver', gameOver: null }),
+      clearFirstTurnReveal: () => {
+        firstTurnRevealRef.current = null;
+        dispatch({ type: 'firstTurnReveal', reveal: null });
+        // Apply whatever turn the reducer learned while the reveal held it
+        // back, so the indicator is never left blank.
+        dispatch({
+          type: 'patchGame',
+          patch: {
+            currentTurnSeatId: gameEventStateRef.current.currentTurnSeatId,
+          },
+        });
+      },
     }),
     [
       changePlayerTeam,

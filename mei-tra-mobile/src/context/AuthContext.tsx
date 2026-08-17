@@ -59,13 +59,24 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const mapProfile = (record: Record<string, unknown>): MobileUserProfile => ({
-  displayName:
-    typeof record.display_name === 'string' ? record.display_name : '',
-  username: typeof record.username === 'string' ? record.username : '',
-  avatarUrl:
-    typeof record.avatar_url === 'string' ? record.avatar_url : undefined,
-});
+const mapProfile = (record: Record<string, unknown>): MobileUserProfile => {
+  const preferences =
+    typeof record.preferences === 'object' && record.preferences !== null
+      ? (record.preferences as Record<string, unknown>)
+      : {};
+
+  return {
+    displayName:
+      typeof record.display_name === 'string' ? record.display_name : '',
+    username: typeof record.username === 'string' ? record.username : '',
+    avatarUrl:
+      typeof record.avatar_url === 'string' ? record.avatar_url : undefined,
+    startPlayerAnimation:
+      typeof preferences.startPlayerAnimation === 'boolean'
+        ? preferences.startPlayerAnimation
+        : true,
+  };
+};
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
@@ -79,7 +90,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('display_name, username, avatar_url')
+        .select('display_name, username, avatar_url, preferences')
         .eq('id', authUser.id)
         .maybeSingle();
 

@@ -41,6 +41,8 @@ export default function RoomScreen() {
     updateTeamNames,
     clearFeedback,
     closeGameOver,
+    firstTurnReveal,
+    clearFirstTurnReveal,
   } = useGame();
 
   useKeepAwake();
@@ -155,6 +157,8 @@ export default function RoomScreen() {
           onSelectNegri={selectNegri}
           history={history}
           roomId={resolvedRoomId}
+          firstTurnReveal={firstTurnReveal}
+          onFirstTurnRevealDone={clearFirstTurnReveal}
         />
       ) : (
         <View style={styles.center}>

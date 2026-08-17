@@ -296,11 +296,48 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       if (event.delayMs && event.delayMs > 0) {
-        setTimeout(emit, event.delayMs);
+        setTimeout(() => {
+          void this.emitUnlessStale(event, emit);
+        }, event.delayMs);
       } else {
         emit();
       }
     });
+  }
+
+  /**
+   * A delayed `update-turn` carries a seat frozen at build time. If the turn
+   * already advanced (e.g. the first blower acted before the game-start
+   * reveal delay elapsed), rebroadcasting the stale seat would roll every
+   * client's turn back and point the ack monitor at the wrong player, so the
+   * event is dropped — the action that advanced the turn already emitted the
+   * fresh one.
+   */
+  private async emitUnlessStale(
+    event: GatewayEvent,
+    emit: () => void,
+  ): Promise<void> {
+    if (
+      event.event === 'update-turn' &&
+      event.scope === 'room' &&
+      event.roomId &&
+      typeof event.payload === 'string'
+    ) {
+      try {
+        const roomGameState = await this.roomService.getRoomGameState(
+          event.roomId,
+        );
+        const currentSeatId = roomGameState.getState().currentSeatId ?? null;
+        if (currentSeatId !== event.payload) {
+          return;
+        }
+      } catch {
+        // Room is gone; nothing to emit to.
+        return;
+      }
+    }
+
+    emit();
   }
 
   private dispatchGameplayEvents(
@@ -496,6 +533,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.comAutoPlayRecoveryService.trigger(
       roomId,
       this.comAutoPlayRecoveryHandlers,
+    );
+  }
+
+  /**
+   * Holds COM back until the room's delayed events have gone out, so it never
+   * acts while clients are still showing the animation those delays reserve.
+   */
+  private triggerComAutoPlayAfterEvents(
+    roomId: string,
+    events: GatewayEvent[],
+  ): void {
+    const maxDelay = events.reduce(
+      (longest, event) => Math.max(longest, event.delayMs ?? 0),
+      0,
+    );
+
+    if (maxDelay <= 0) {
+      this.triggerComAutoPlayIfNeeded(roomId);
+      return;
+    }
+
+    this.comAutoPlayRecoveryService.triggerAfterDelay(
+      roomId,
+      this.comAutoPlayRecoveryHandlers,
+      maxDelay + 100,
     );
   }
 
@@ -1514,7 +1576,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         currentTurnSeatId,
       });
 
-      this.triggerComAutoPlayIfNeeded(data.roomId);
+      this.triggerComAutoPlayAfterEvents(data.roomId, startGameEvents);
 
       return { success: true };
     } catch (error) {

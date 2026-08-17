@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { GameStartedPayload, UpdatePhasePayload } from '@contracts/game';
+import {
+  GAME_START_TURN_REVEAL_DELAY_MS,
+  type GameStartedPayload,
+  type UpdatePhasePayload,
+} from '@contracts/game';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { DomainPlayer } from '../types/game.types';
 import type { SeatId } from '../types/identity.types';
@@ -40,6 +44,7 @@ export class StartGameGatewayEffectsService {
       players: transportPlayers,
       pointsToWin,
       teamNames: room?.settings.teamNames,
+      currentTurnSeatId,
     };
     const roomEvents = room
       ? await this.roomUpdateGatewayEffectsService.buildRoomEvents({
@@ -74,6 +79,9 @@ export class StartGameGatewayEffectsService {
         roomId,
         event: 'update-turn',
         payload: currentTurnSeatId,
+        // Held back so clients can play the first-turn reveal; the seat is
+        // already in `game-started` for clients that animate it.
+        delayMs: GAME_START_TURN_REVEAL_DELAY_MS,
       },
     ];
   }

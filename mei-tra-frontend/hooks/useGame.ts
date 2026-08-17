@@ -44,6 +44,7 @@ import {
   CompletedField,
   ConnectionUser,
   Field,
+  FirstTurnReveal,
   GamePhase,
   Player,
   Team,
@@ -64,6 +65,15 @@ import {
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
+import {
+  DEFAULT_USER_PREFERENCES,
+  normalizeUserPreferences,
+} from '../lib/preferences';
+import {
+  hasBlowActivity,
+  resolveLastBlowSeatId,
+  shouldAbortRevealOnTurn,
+} from '@meitra/game-client/first-turn-reveal';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -199,6 +209,13 @@ export const useGame = () => {
   const agariRequestKeyRef = useRef<string | null>(null);
   const roomBootstrapRef = useRef<string | null>(null);
   const gameStateSyncKeyRef = useRef<string | null>(null);
+  // Read through a ref so the long-lived socket handlers see the current value.
+  const startPlayerAnimationEnabledRef = useRef(
+    DEFAULT_USER_PREFERENCES.startPlayerAnimation,
+  );
+  startPlayerAnimationEnabledRef.current = normalizeUserPreferences(
+    user?.profile?.preferences,
+  ).startPlayerAnimation;
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -206,6 +223,26 @@ export const useGame = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
+  // Set only by the live 'game-started' event; a reload starts it null, so a
+  // reconnect restores through the snapshot without replaying the reveal.
+  const [firstTurnReveal, setFirstTurnReveal] =
+    useState<FirstTurnReveal | null>(null);
+  // Mirrors the state for the long-lived socket handlers, which need it
+  // synchronously and would otherwise close over a stale value.
+  const firstTurnRevealRef = useRef<FirstTurnReveal | null>(null);
+  const updateFirstTurnReveal = useCallback(
+    (next: FirstTurnReveal | null) => {
+      firstTurnRevealRef.current = next;
+      setFirstTurnReveal(next);
+    },
+    [],
+  );
+  const clearFirstTurnReveal = useCallback(() => {
+    updateFirstTurnReveal(null);
+    // Apply whatever turn the reducer learned while the reveal was held back,
+    // so the indicator is never left blank if `update-turn` already landed.
+    setWhoseTurn(gameEventStateRef.current.currentTurnSeatId);
+  }, [updateFirstTurnReveal]);
   const [teamScores, setTeamScores] = useState<TeamScores>(createEmptyTeamScores);
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
@@ -213,6 +250,14 @@ export const useGame = () => {
   const [currentHighestDeclaration, setCurrentHighestDeclaration] = useState<BlowDeclaration | null>(null);
   const [selectedTrump, setSelectedTrump] = useState<TrumpType | null>(null);
   const [numberOfPairs, setNumberOfPairs] = useState<number>(0);
+
+  // Pausing or ending the game unmounts the table mid-animation, so the reveal
+  // would never report itself done and would keep gating the turn indicator.
+  useEffect(() => {
+    if (!gameStarted && firstTurnRevealRef.current) {
+      clearFirstTurnReveal();
+    }
+  }, [gameStarted, clearFirstTurnReveal]);
 
   // Client-side rendering guard
   const [isClient, setIsClient] = useState(false);
@@ -278,6 +323,8 @@ export const useGame = () => {
     setCompletedFields([]);
     setCurrentTrump(null);
     setWhoseTurn(null);
+    firstTurnRevealRef.current = null;
+    setFirstTurnReveal(null);
     setBlowDeclarations([]);
     setBlowActionHistory([]);
     setCurrentHighestDeclaration(null);
@@ -490,6 +537,17 @@ export const useGame = () => {
 
     if (!socket) return;
 
+    /**
+     * The single way server state may reveal whose turn it is. While the start
+     * reveal plays it holds the turn back, because every snapshot the server
+     * sends already carries the seat that the delayed `update-turn` is
+     * reserving animation time for. `clearFirstTurnReveal` applies the seat
+     * once the animation ends.
+     */
+    const commitTurn = (seatId: string | null) => {
+      setWhoseTurn(firstTurnRevealRef.current ? null : seatId);
+    };
+
     const commitGameEventState = (
       previous: GameEventState,
       next: GameEventState,
@@ -512,7 +570,7 @@ export const useGame = () => {
       }
 
       setGamePhase(toUiGamePhase(next.gamePhase));
-      setWhoseTurn(next.currentTurnSeatId);
+      commitTurn(next.currentTurnSeatId);
       setCurrentField(toUiField(next.currentField));
       setCurrentTrump(next.blowState.currentTrump);
       setCurrentHighestDeclaration(
@@ -655,7 +713,7 @@ export const useGame = () => {
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setRevealedAgari(syncedRevealedAgari ?? null);
-        setWhoseTurn(currentTurnSeatId);
+        commitTurn(currentTurnSeatId);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
         setCurrentHighestDeclaration(
@@ -746,6 +804,7 @@ export const useGame = () => {
         players: playerContracts,
         pointsToWin,
         teamNames,
+        currentTurnSeatId,
       }: GameStartedPayload) => {
         gameEventStateRef.current = createGameEventStateFromStartedGame({
           roomId,
@@ -779,6 +838,41 @@ export const useGame = () => {
         setTeamNames(teamNames);
         setGameStarted(true);
         setGamePhase('blow');
+
+        // The server holds `update-turn` back for the reveal, so clear any turn
+        // left over from a previous game and then either animate or, when the
+        // reveal is off, apply the turn now instead of idling for the delay.
+        setWhoseTurn(null);
+        // The payload array is the server roster order, i.e. blow order —
+        // the merged local players state may be ordered differently.
+        const lastBlowSeatId = currentTurnSeatId
+          ? resolveLastBlowSeatId(
+              playerContracts.map((player) => player.seatId),
+              currentTurnSeatId,
+            )
+          : null;
+        if (
+          currentTurnSeatId &&
+          lastBlowSeatId &&
+          startPlayerAnimationEnabledRef.current
+        ) {
+          updateFirstTurnReveal({
+            roomId,
+            seatId: currentTurnSeatId,
+            lastBlowSeatId,
+            token: Date.now(),
+          });
+        } else {
+          updateFirstTurnReveal(null);
+          if (currentTurnSeatId) {
+            // Reduce it rather than setting state directly, so the shared
+            // reducer agrees and a later event cannot blank the turn again.
+            applyGameServerEvent({
+              type: 'update-turn',
+              payload: currentTurnSeatId,
+            });
+          }
+        }
       },
       'update-phase': ({
         phase,
@@ -807,6 +901,9 @@ export const useGame = () => {
         setNotification({ message, type: 'error' });
       },
       'update-turn': (seatId: UpdateTurnPayload) => {
+        if (shouldAbortRevealOnTurn(firstTurnRevealRef.current, seatId)) {
+          updateFirstTurnReveal(null);
+        }
         applyGameServerEvent({ type: 'update-turn', payload: seatId });
         if (socket && currentRoomId && !isSpectator) {
           socket.emit('turn-ack', { roomId: currentRoomId });
@@ -843,6 +940,11 @@ export const useGame = () => {
         // Keep ref set until the next game starts (game-started handler clears it)
       },
       'blow-updated': (payload: BlowUpdatedPayload) => {
+        // A player whose reveal is disabled can declare before our animation
+        // ends; cut it short rather than narrate a turn that already moved.
+        if (hasBlowActivity(payload)) {
+          updateFirstTurnReveal(null);
+        }
         applyGameServerEvent({ type: 'blow-updated', payload });
       },
       'broken': (payload: BrokenPayload) => {
@@ -1088,6 +1190,7 @@ export const useGame = () => {
     getTeamLabel,
     t,
     tStatus,
+    updateFirstTurnReveal,
     user?.id,
   ]);
 
@@ -1214,6 +1317,7 @@ export const useGame = () => {
     setGameOverModal(null);
   };
 
+
   if (!isClient) {
     return {
       isLoading: true,
@@ -1285,5 +1389,7 @@ export const useGame = () => {
     socket,
     isConnected,
     isConnecting,
+    firstTurnReveal,
+    clearFirstTurnReveal,
   };
 }; 
