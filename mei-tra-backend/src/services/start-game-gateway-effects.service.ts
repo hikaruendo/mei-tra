@@ -16,6 +16,8 @@ interface BuildStartGameEventsParams {
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
   currentTurnSeatId: SeatId;
+  /** False when no seated human wants the reveal; the turn goes out at once. */
+  firstTurnRevealEnabled: boolean;
 }
 
 @Injectable()
@@ -31,6 +33,7 @@ export class StartGameGatewayEffectsService {
     pointsToWin,
     updatePhase,
     currentTurnSeatId,
+    firstTurnRevealEnabled,
   }: BuildStartGameEventsParams): Promise<GatewayEvent[]> {
     const room = await this.roomService.getRoom(roomId);
     const roomGameState = await this.roomService.getRoomGameState(roomId);
@@ -80,8 +83,11 @@ export class StartGameGatewayEffectsService {
         event: 'update-turn',
         payload: currentTurnSeatId,
         // Held back so clients can play the first-turn reveal; the seat is
-        // already in `game-started` for clients that animate it.
-        delayMs: GAME_START_TURN_REVEAL_DELAY_MS,
+        // already in `game-started` for clients that animate it. When nobody
+        // seated wants the reveal, the turn goes out immediately.
+        ...(firstTurnRevealEnabled
+          ? { delayMs: GAME_START_TURN_REVEAL_DELAY_MS }
+          : {}),
       },
     ];
   }

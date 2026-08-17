@@ -12,6 +12,12 @@ export interface StartGameSuccessData {
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
   currentTurnSeatId: SeatId;
+  /**
+   * Whether the game-start janken reveal should reserve time: false when
+   * every seated human has the animation turned off, so `update-turn` and
+   * the first COM move need not wait for a show nobody watches.
+   */
+  firstTurnRevealEnabled: boolean;
 }
 
 export interface StartGameResponse {

@@ -1558,8 +1558,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: false, error: errorMessage };
       }
 
-      const { players, pointsToWin, updatePhase, currentTurnSeatId } =
-        result.data;
+      const {
+        players,
+        pointsToWin,
+        updatePhase,
+        currentTurnSeatId,
+        firstTurnRevealEnabled,
+      } = result.data;
       const startGameEvents =
         await this.startGameGatewayEffectsService.buildEvents({
           roomId: data.roomId,
@@ -1567,6 +1572,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           pointsToWin,
           updatePhase,
           currentTurnSeatId,
+          firstTurnRevealEnabled,
         });
 
       this.dispatchGameplayEvents(startGameEvents, actorSeatId);
