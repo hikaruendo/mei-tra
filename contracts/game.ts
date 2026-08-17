@@ -213,7 +213,7 @@ export interface GameStartedPayload {
  * must end before COM's earliest first action (this delay + pacing margin +
  * COM think time).
  */
-export const GAME_START_TURN_REVEAL_DELAY_MS = 4500;
+export const GAME_START_TURN_REVEAL_DELAY_MS = 5000;
 
 export interface PlaySetupCompletePayload {
   negriCard: string;

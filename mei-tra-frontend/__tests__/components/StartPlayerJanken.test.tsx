@@ -1,9 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { GAME_START_TURN_REVEAL_DELAY_MS } from '@contracts/game';
+import { JANKEN_STEP_DURATION_MS as D } from '@meitra/game-client/first-turn-reveal';
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
 import type { FirstTurnReveal } from '@/types/game.types';
 
 const SEAT_IDS = ['seat-0', 'seat-1', 'seat-2', 'seat-3'];
+const TOTAL_MS = D.chant + D.ready + D.showdown + D.result;
 
 // token is stamped per test: a reveal older than the animation window is
 // treated as stale and completes immediately.
@@ -47,17 +49,12 @@ describe('useFirstTurnReveal', () => {
     expect(result.current.highlightSeatId).toBeNull();
 
     act(() => {
-      jest.advanceTimersByTime(900);
+      jest.advanceTimersByTime(D.chant);
     });
     expect(result.current.step?.kind).toBe('ready');
 
     act(() => {
-      jest.advanceTimersByTime(700);
-    });
-    expect(result.current.step?.kind).toBe('draw');
-
-    act(() => {
-      jest.advanceTimersByTime(900);
+      jest.advanceTimersByTime(D.ready);
     });
     expect(result.current.step?.kind).toBe('showdown');
     // Only the janken winner (吹き上げ) throws the winning hand.
@@ -69,7 +66,7 @@ describe('useFirstTurnReveal', () => {
     );
 
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(D.showdown);
     });
     expect(result.current.step?.kind).toBe('result');
     expect(result.current.highlightSeatId).toBe('seat-2');
@@ -89,7 +86,7 @@ describe('useFirstTurnReveal', () => {
     expect(onDone).not.toHaveBeenCalled();
 
     act(() => {
-      jest.advanceTimersByTime(1_200);
+      jest.advanceTimersByTime(TOTAL_MS - GAME_START_TURN_REVEAL_DELAY_MS);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -108,7 +105,7 @@ describe('useFirstTurnReveal', () => {
     // Static, but held for the full script length so the turn indicator
     // arrives right as it ends.
     act(() => {
-      jest.advanceTimersByTime(5_700);
+      jest.advanceTimersByTime(TOTAL_MS);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -147,7 +144,7 @@ describe('useFirstTurnReveal', () => {
     );
 
     act(() => {
-      jest.advanceTimersByTime(5_700);
+      jest.advanceTimersByTime(TOTAL_MS);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
 
@@ -161,7 +158,7 @@ describe('useFirstTurnReveal', () => {
     expect(result.current.step?.kind).toBe('chant');
 
     act(() => {
-      jest.advanceTimersByTime(5_700);
+      jest.advanceTimersByTime(TOTAL_MS);
     });
     expect(onDone).toHaveBeenCalledTimes(2);
     expect(result.current.highlightSeatId).toBe('seat-0');

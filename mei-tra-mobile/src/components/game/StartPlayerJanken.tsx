@@ -22,7 +22,6 @@ interface StartPlayerJankenProps {
 const CAPTIONS = {
   chant: 'ジャンケン…',
   ready: 'シュッ！',
-  draw: 'シュ！ …あいこ！',
   showdown: 'シュ！',
 } as const;
 

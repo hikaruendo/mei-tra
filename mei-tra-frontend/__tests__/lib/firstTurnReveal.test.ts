@@ -65,15 +65,6 @@ describe('buildFirstTurnRevealScript', () => {
     }
   });
 
-  it('shows every seat the same hand on the draw step', () => {
-    const script = buildFirstTurnRevealScript(params());
-    const draw = script?.steps.find((step) => step.kind === 'draw');
-    const hands = Object.values(draw?.hands ?? {});
-
-    expect(hands).toHaveLength(SEAT_IDS.length);
-    expect(new Set(hands).size).toBe(1);
-  });
-
   it('opens with every seat showing rock for the first shu', () => {
     const script = buildFirstTurnRevealScript(params());
     const ready = script?.steps.find((step) => step.kind === 'ready');

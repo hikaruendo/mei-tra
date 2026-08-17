@@ -63,7 +63,6 @@ export function hasBlowActivity(payload: {
 export type FirstTurnRevealStepKind =
   | 'chant'
   | 'ready'
-  | 'draw'
   | 'showdown'
   | 'result';
 
@@ -128,17 +127,19 @@ const BEATS: Record<JankenHand, JankenHand> = {
   paper: 'rock',
 };
 
-// The result beat is the longest: two lines of text (winner + first blower)
-// need reading time. The script may outlast the server's update-turn delay —
-// the same-seat rebroadcast does not abort the reveal — but it must end
-// before COM's earliest first action (delay + pacing + COM think time).
-const STEP_DURATION_MS = {
-  chant: 900,
-  ready: 700,
-  draw: 900,
-  showdown: 800,
-  result: 2400,
+// The chant marches at 60 BPM — one beat per second, like calling the janken
+// out loud — and the result holds longest for reading time. The script may
+// outlast the server's update-turn delay — the same-seat rebroadcast does not
+// abort the reveal — but it must end before COM's earliest first action
+// (delay + pacing + COM think time).
+export const JANKEN_STEP_DURATION_MS = {
+  chant: 1000,
+  ready: 1000,
+  showdown: 1000,
+  result: 3000,
 } as const;
+
+const STEP_DURATION_MS = JANKEN_STEP_DURATION_MS;
 
 // Reduced motion removes the motion, not the time: the static result holds
 // for the full script length so the turn indicator arrives right as it ends
@@ -146,7 +147,6 @@ const STEP_DURATION_MS = {
 const REDUCED_MOTION_RESULT_MS =
   STEP_DURATION_MS.chant +
   STEP_DURATION_MS.ready +
-  STEP_DURATION_MS.draw +
   STEP_DURATION_MS.showdown +
   STEP_DURATION_MS.result;
 
@@ -211,7 +211,6 @@ export function buildFirstTurnRevealScript({
   const seed = hashSeed(`${roomId}:${firstTurnSeatId}`);
   const winnerHand = HANDS[seed % HANDS.length];
   const loserHand = BEATS[winnerHand];
-  const drawHand = HANDS[(seed >>> 8) % HANDS.length];
 
   const showdownHands: Record<string, JankenHand> = {};
   for (const seatId of seatIds) {
@@ -232,11 +231,6 @@ export function buildFirstTurnRevealScript({
           kind: 'ready',
           durationMs: STEP_DURATION_MS.ready,
           hands: uniformHands(seatIds, 'rock'),
-        },
-        {
-          kind: 'draw',
-          durationMs: STEP_DURATION_MS.draw,
-          hands: uniformHands(seatIds, drawHand),
         },
         {
           kind: 'showdown',

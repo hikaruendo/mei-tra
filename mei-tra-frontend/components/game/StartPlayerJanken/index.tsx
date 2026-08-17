@@ -46,9 +46,7 @@ export function StartPlayerJanken({
       ? t('chant')
       : step.kind === 'ready'
         ? t('ready')
-        : step.kind === 'draw'
-          ? t('draw')
-          : t('shu');
+        : t('shu');
 
   return (
     <div className={styles.overlay} aria-live="polite">

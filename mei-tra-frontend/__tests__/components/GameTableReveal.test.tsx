@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { GameTable } from '@/components/game/GameTable';
+import { JANKEN_STEP_DURATION_MS as D } from '@meitra/game-client/first-turn-reveal';
 import type { GameActions, Player, TeamScores } from '@/types/game.types';
 
 jest.mock('next-intl', () => ({
@@ -141,22 +142,17 @@ describe('GameTable first-turn reveal', () => {
     expect(screen.getByText('chant')).toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(900);
+      jest.advanceTimersByTime(D.chant);
     });
     expect(screen.getByText('ready')).toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(700);
-    });
-    expect(screen.getByText('draw')).toBeInTheDocument();
-
-    act(() => {
-      jest.advanceTimersByTime(900);
+      jest.advanceTimersByTime(D.ready);
     });
     expect(screen.getByText('shu')).toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(D.showdown);
     });
     // The winner is announced as 吹き上げ.
     expect(screen.getByText('result:Player 1')).toBeInTheDocument();
@@ -171,7 +167,7 @@ describe('GameTable first-turn reveal', () => {
     );
 
     act(() => {
-      jest.advanceTimersByTime(2_400);
+      jest.advanceTimersByTime(D.result);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
