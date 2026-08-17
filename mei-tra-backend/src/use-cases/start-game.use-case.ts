@@ -7,6 +7,7 @@ import {
 } from './interfaces/start-game.use-case.interface';
 import { Room, RoomStatus } from '../types/room.types';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
+import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { toDomainPlayer } from '../adapters/player-adapters';
 import { GameStateService } from '../services/game-state.service';
 import { GameState } from '../types/game.types';
@@ -25,6 +26,9 @@ export class StartGameUseCase implements IStartGameUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('IUserProfileRepository')
+    private readonly userProfileRepository?: IUserProfileRepository,
   ) {}
 
   async execute(request: StartGameRequest): Promise<StartGameResponse> {
@@ -142,6 +146,8 @@ export class StartGameUseCase implements IStartGameUseCase {
           errorMessage: 'Current turn seat was not initialized',
         };
       }
+      const firstTurnRevealEnabled =
+        await this.resolveFirstTurnRevealEnabled(roomWithFilledSeats);
       const firstBlowPlayer =
         updatedState.players[updatedState.blowState.currentBlowIndex];
 
@@ -177,6 +183,7 @@ export class StartGameUseCase implements IStartGameUseCase {
             winner: null,
           },
           currentTurnSeatId: asSeatId(currentTurnPlayer.seatId),
+          firstTurnRevealEnabled,
         },
       };
     } catch (error) {
@@ -188,6 +195,42 @@ export class StartGameUseCase implements IStartGameUseCase {
         success: false,
         errorMessage: 'Failed to start game',
       };
+    }
+  }
+
+  /**
+   * The reveal reserves ~6s of animation time; skip it when every seated
+   * human has it turned off so an all-COM table starts immediately. Missing
+   * repository, missing profiles, guests, and lookup failures all count as
+   * "wants the animation" — the delay is the safe default.
+   */
+  private async resolveFirstTurnRevealEnabled(room: Room): Promise<boolean> {
+    if (!this.userProfileRepository) {
+      return true;
+    }
+
+    const humanUserIds = room.players
+      .filter((player) => !player.isCOM && player.userId)
+      .map((player) => player.userId as string);
+    if (humanUserIds.length === 0) {
+      return true;
+    }
+
+    try {
+      const profiles = await Promise.all(
+        humanUserIds.map((userId) =>
+          this.userProfileRepository!.findById(userId),
+        ),
+      );
+      return profiles.some(
+        (profile) => profile?.preferences?.startPlayerAnimation !== false,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to resolve start reveal preferences; keeping the reveal delay`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return true;
     }
   }
 

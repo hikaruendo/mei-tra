@@ -796,12 +796,127 @@ describe('Game Use Cases', () => {
       expect(result.success).toBe(true);
       expect(result.data?.players.length).toBe(2);
       expect(result.data?.currentTurnSeatId).toBe('player-1');
+      // Without a profile repository the reveal keeps its delay by default.
+      expect(result.data?.firstTurnRevealEnabled).toBe(true);
 
       const updateRoomStatusMock = roomService.updateRoomStatus as jest.Mock;
       expect(updateRoomStatusMock).toHaveBeenCalledWith(
         room.id,
         RoomStatus.PLAYING,
       );
+    });
+
+    describe('firstTurnRevealEnabled', () => {
+      const startWithProfiles = async (
+        profilesByUserId: Record<
+          string,
+          { preferences?: { startPlayerAnimation?: boolean } } | null
+        >,
+      ) => {
+        const roomService = createRoomServiceMock();
+        const userProfileRepository = {
+          findById: jest.fn((userId: string) =>
+            Promise.resolve(profilesByUserId[userId] ?? null),
+          ),
+        };
+        const useCase = new StartGameUseCase(
+          roomService,
+          undefined,
+          userProfileRepository as never,
+        );
+
+        const room: Room = {
+          ...baseRoom,
+          status: RoomStatus.READY,
+          players: [
+            { ...basePlayers[0], isReady: true, userId: 'user-1' },
+            { ...basePlayers[1], isReady: true, userId: 'user-2' },
+            {
+              ...basePlayers[0],
+              seatId: asSeatId('com-1'),
+              name: 'COM',
+              isHost: false,
+              isReady: true,
+              isCOM: true,
+              userId: undefined,
+            },
+          ] as RoomPlayer[],
+        };
+
+        const state = {
+          players: [
+            {
+              seatId: asSeatId('player-1'),
+              name: 'Player 1',
+              team: 0 as const,
+              hand: [],
+              isPasser: false,
+            },
+          ],
+          currentSeatId: asSeatId('player-1'),
+          blowState: {
+            currentBlowIndex: 0,
+            currentTrump: null,
+            currentHighestDeclaration: null,
+            declarations: [],
+            lastPasserSeatId: null,
+            isRoundCancelled: false,
+          },
+          teamScores: {
+            0: { play: 0, total: 0 },
+            1: { play: 0, total: 0 },
+          },
+          pointsToWin: 0,
+          gamePhase: 'blow' as GamePhase,
+        };
+        const roomGameState = {
+          getState: jest.fn(() => state),
+          startGame: jest.fn(),
+          persistRoster: jest.fn().mockResolvedValue(undefined),
+          saveState: jest.fn().mockResolvedValue(undefined),
+        } as unknown as GameStateService;
+
+        roomService.getRoom.mockResolvedValue(room);
+        roomService.getRoomGameState.mockResolvedValue(roomGameState);
+        roomService.canStartGame.mockResolvedValue({ canStart: true });
+        roomService.updateRoomStatus.mockResolvedValue(true);
+
+        const result = await useCase.execute({
+          actorSeatId: asSeatId('player-1'),
+          roomId: room.id,
+        });
+        return { result, userProfileRepository };
+      };
+
+      it('skips the reveal when every seated human turned it off', async () => {
+        const { result, userProfileRepository } = await startWithProfiles({
+          'user-1': { preferences: { startPlayerAnimation: false } },
+          'user-2': { preferences: { startPlayerAnimation: false } },
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.data?.firstTurnRevealEnabled).toBe(false);
+        // COM seats have no profile to look up.
+        expect(userProfileRepository.findById).toHaveBeenCalledTimes(2);
+      });
+
+      it('keeps the reveal when any seated human wants it', async () => {
+        const { result } = await startWithProfiles({
+          'user-1': { preferences: { startPlayerAnimation: false } },
+          'user-2': { preferences: { startPlayerAnimation: true } },
+        });
+
+        expect(result.data?.firstTurnRevealEnabled).toBe(true);
+      });
+
+      it('treats a missing profile as wanting the reveal', async () => {
+        const { result } = await startWithProfiles({
+          'user-1': { preferences: { startPlayerAnimation: false } },
+          'user-2': null,
+        });
+
+        expect(result.data?.firstTurnRevealEnabled).toBe(true);
+      });
     });
 
     it('synchronizes the initial blow index with the persisted current turn', async () => {

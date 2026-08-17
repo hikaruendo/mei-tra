@@ -95,6 +95,7 @@ describe('StartGameGatewayEffectsService', () => {
         winner: null,
       },
       currentTurnSeatId: 'player-1' as never,
+      firstTurnRevealEnabled: true,
     });
 
     expect(events).toEqual([
@@ -177,5 +178,48 @@ describe('StartGameGatewayEffectsService', () => {
       ],
       scope: 'all',
     });
+  });
+
+  it('sends the turn immediately when nobody wants the reveal', async () => {
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(null),
+      listRooms: jest.fn().mockResolvedValue([]),
+      getRoomGameState: jest.fn().mockResolvedValue({
+        getTransportPlayers: jest.fn(() => []),
+      }),
+    } as unknown as IRoomService;
+    const roomUpdateGatewayEffectsService = {
+      buildRoomEvents: jest.fn().mockResolvedValue([]),
+      buildRoomsListEvent: jest.fn().mockReturnValue({
+        scope: 'all',
+        event: 'rooms-list',
+        payload: [],
+      }),
+    } as unknown as RoomUpdateGatewayEffectsService;
+
+    const service = new StartGameGatewayEffectsService(
+      roomService,
+      roomUpdateGatewayEffectsService,
+    );
+
+    const events = await service.buildEvents({
+      roomId: 'room-1',
+      players: [],
+      pointsToWin: 10,
+      updatePhase: {
+        phase: 'blow',
+        scores: {
+          0: { play: 0, total: 0 },
+          1: { play: 0, total: 0 },
+        },
+        winner: null,
+      },
+      currentTurnSeatId: 'player-1' as never,
+      firstTurnRevealEnabled: false,
+    });
+
+    const updateTurn = events.find((event) => event.event === 'update-turn');
+    expect(updateTurn).toBeDefined();
+    expect(updateTurn?.delayMs).toBeUndefined();
   });
 });
