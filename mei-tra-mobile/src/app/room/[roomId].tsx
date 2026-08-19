@@ -14,8 +14,12 @@ import { useGame } from '@/context/GameContext';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function RoomScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const { user, loading } = useAuth();

@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { completeOAuthCallback } from '@/lib/auth-session';
 import { supabase } from '@/lib/supabase';
 import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 const getFirstParam = (value: string | string[] | undefined): string | null => {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -30,6 +31,9 @@ const buildCallbackUrl = (
 };
 
 export default function AuthCallbackScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const linkedUrl = Linking.useURL();
   const params = useLocalSearchParams();

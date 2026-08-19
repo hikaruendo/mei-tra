@@ -39,14 +39,22 @@ export function LocaleProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true;
 
-    void loadStoredPreference().then((stored) => {
-      if (!active) return;
-      const resolved = resolvePreference(stored);
-      setLocale(resolved);
-      setPreferenceState(stored);
-      setLocaleState(resolved);
-      setRestored(true);
-    });
+    void loadStoredPreference()
+      .then((stored) => {
+        if (!active) return;
+        const resolved = resolvePreference(stored);
+        setLocale(resolved);
+        setPreferenceState(stored);
+        setLocaleState(resolved);
+      })
+      .catch((error: unknown) => {
+        console.warn('[Locale] Failed to restore the locale preference:', error);
+      })
+      // Always lift the gate: a failure here must not leave the app rendering
+      // nothing. The device language is a usable fallback.
+      .finally(() => {
+        if (active) setRestored(true);
+      });
 
     return () => {
       active = false;

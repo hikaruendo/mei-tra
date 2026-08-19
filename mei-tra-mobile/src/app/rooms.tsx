@@ -20,8 +20,12 @@ import { useGame } from '@/context/GameContext';
 import { confirmGuestSignOut } from '@/lib/confirm-guest-sign-out';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function RoomsScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
   const {

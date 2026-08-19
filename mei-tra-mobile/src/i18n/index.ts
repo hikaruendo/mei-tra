@@ -40,25 +40,43 @@ export function resolvePreference(
   return preference === 'system' ? resolveDeviceLocale() : preference;
 }
 
-i18n.locale = resolveDeviceLocale();
-
 export function setLocale(locale: SupportedLocale): void {
   i18n.locale = locale;
+  activeTag = deviceTagFor(locale);
 }
 
 export function getLocale(): SupportedLocale {
   return isSupported(i18n.locale) ? i18n.locale : DEFAULT_LOCALE;
 }
 
-const LOCALE_TAGS: Record<SupportedLocale, string> = {
+const FALLBACK_TAGS: Record<SupportedLocale, string> = {
   ja: 'ja-JP',
   en: 'en-US',
 };
 
+/**
+ * Prefers the device's own regional variant of the chosen language, so an
+ * en-GB phone gets British date order rather than the US default.
+ */
+function deviceTagFor(locale: SupportedLocale): string {
+  try {
+    const match = getLocales().find(
+      (entry) => entry.languageCode === locale && entry.languageTag,
+    );
+    return match?.languageTag ?? FALLBACK_TAGS[locale];
+  } catch {
+    return FALLBACK_TAGS[locale];
+  }
+}
+
+let activeTag: string = FALLBACK_TAGS[DEFAULT_LOCALE];
+
 /** BCP 47 tag for Intl / toLocale* APIs, so dates follow the app language. */
 export function getLocaleTag(): string {
-  return LOCALE_TAGS[getLocale()];
+  return activeTag;
 }
+
+setLocale(resolveDeviceLocale());
 
 /**
  * Translate a key. Kept as a bare function rather than a hook so non-React

@@ -14,8 +14,12 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function UpgradeAccountScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const { user, loading, upgradeAccount } = useAuth();
   const [email, setEmail] = useState('');

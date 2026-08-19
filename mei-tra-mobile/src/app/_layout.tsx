@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { GameProvider } from '@/context/GameContext';
-import { LocaleProvider, useLocale } from '@/context/LocaleContext';
+import { LocaleProvider } from '@/context/LocaleContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SocialProvider } from '@/context/SocialContext';
 import { colors } from '@/theme/colors';
@@ -23,26 +23,6 @@ const navigationTheme = {
   },
 };
 
-/**
- * `t()` is a bare function, so switching languages does not re-render screens
- * on its own. Keying the navigator on the locale rebuilds the screen tree,
- * while the providers above it — and with them the socket and game state —
- * stay mounted.
- */
-function LocalisedStack() {
-  const { locale } = useLocale();
-
-  return (
-    <Stack
-      key={locale}
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    />
-  );
-}
-
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
@@ -52,7 +32,12 @@ export default function RootLayout() {
             <GameProvider>
               <SocialProvider>
                 <NotificationProvider>
-                  <LocalisedStack />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.background },
+                    }}
+                  />
                 </NotificationProvider>
               </SocialProvider>
             </GameProvider>
