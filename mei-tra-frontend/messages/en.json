@@ -828,7 +828,8 @@
     "guestBadge": "Guest",
     "guestAccountLabel": "Guest account",
     "guestSignOutTitle": "Log out?",
-    "guestSignOutMessage": "If you log out of a guest account you can never access it again and your stats will be lost. Register an account first if you want to keep them."
+    "guestSignOutMessage": "If you log out of a guest account you can never access it again and your stats will be lost. Register an account first if you want to keep them.",
+    "avatarGuestBlocked": "Setting an avatar requires a registered account."
   },
   "terms": {
     "title": "Terms of Service",

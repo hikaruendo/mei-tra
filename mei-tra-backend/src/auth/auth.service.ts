@@ -135,6 +135,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       const authenticatedUser: AuthenticatedUser = {
         id: user.user.id,
         email: user.user.email,
+        isAnonymous: user.user.is_anonymous ?? false,
         profile,
       };
 

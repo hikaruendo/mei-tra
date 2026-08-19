@@ -211,6 +211,7 @@ describe('Game Use Cases', () => {
       const authenticatedUser = {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {
           id: 'profile-1',
           username: 'user',
@@ -4199,6 +4200,7 @@ describe('Game Use Cases', () => {
     const authenticatedUser: AuthenticatedUser = {
       id: 'user-1',
       email: 'user@example.com',
+      isAnonymous: false,
       profile: {
         id: 'profile-1',
         username: 'user',

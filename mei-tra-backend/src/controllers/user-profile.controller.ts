@@ -163,6 +163,7 @@ export class UserProfileController {
   ) {
     try {
       this.assertProfileOwnership(id, currentUser);
+      this.assertNotGuest(currentUser);
 
       // Optimize image using Sharp
       const optimizedBuffer = await this.optimizeImage(file.buffer);
@@ -238,6 +239,18 @@ export class UserProfileController {
   ): void {
     if (currentUser.id !== requestedUserId) {
       throw new ForbiddenException('Cannot modify another user profile');
+    }
+  }
+
+  /**
+   * Guests are throwaway accounts on a public bucket, so their uploads would
+   * outlive them as publicly reachable files. Registering lifts the block.
+   */
+  private assertNotGuest(currentUser: AuthenticatedUser): void {
+    if (currentUser.isAnonymous) {
+      throw new ForbiddenException(
+        'Guest accounts cannot upload an avatar. Please register an account first.',
+      );
     }
   }
 

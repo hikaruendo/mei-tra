@@ -73,11 +73,13 @@ describe('SocialGateway (e2e)', () => {
     'token-user-1': {
       id: 'user-1',
       email: 'user-1@example.com',
+      isAnonymous: false,
       profile: profiles['user-1'],
     },
     'token-user-2': {
       id: 'user-2',
       email: 'user-2@example.com',
+      isAnonymous: false,
       profile: profiles['user-2'],
     },
   };

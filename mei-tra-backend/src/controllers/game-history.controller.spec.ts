@@ -14,6 +14,7 @@ describe('GameHistoryController', () => {
   const currentUser = {
     id: 'user-1',
     email: 'user@example.com',
+    isAnonymous: false,
     profile: {
       id: 'user-1',
       username: 'user',

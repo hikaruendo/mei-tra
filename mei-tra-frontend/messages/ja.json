@@ -828,7 +828,8 @@
     "guestBadge": "ゲスト",
     "guestAccountLabel": "ゲストアカウント",
     "guestSignOutTitle": "ログアウトしますか？",
-    "guestSignOutMessage": "ゲストアカウントはログアウトすると二度とアクセスできず、戦績も失われます。残したい場合は先にアカウント登録をしてください。"
+    "guestSignOutMessage": "ゲストアカウントはログアウトすると二度とアクセスできず、戦績も失われます。残したい場合は先にアカウント登録をしてください。",
+    "avatarGuestBlocked": "アバターの設定にはアカウント登録が必要です。"
   },
   "terms": {
     "title": "利用規約",

@@ -13,6 +13,7 @@ describe('UserProfileController', () => {
   const currentUser = {
     id: 'user-1',
     email: 'user@example.com',
+    isAnonymous: false,
     profile: {
       id: 'user-1',
       username: 'user',
@@ -91,6 +92,7 @@ describe('UserProfileController', () => {
       controller.getRecentGameHistory('user-1', {
         id: 'user-2',
         email: 'other@example.com',
+        isAnonymous: false,
         profile: {
           id: 'user-2',
           username: 'other',
@@ -171,5 +173,32 @@ describe('UserProfileController', () => {
     await expect(
       controller.deleteAccount('user-1', currentUser),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  describe('uploadAvatar', () => {
+    const file = { buffer: Buffer.from('fake') } as Express.Multer.File;
+
+    // createController injects an empty SupabaseService, so anything that
+    // reached image processing or storage would throw TypeError instead —
+    // getting ForbiddenException proves the guard short-circuits first.
+    it('rejects guests before touching storage', async () => {
+      const controller = createController();
+
+      await expect(
+        controller.uploadAvatar(
+          currentUser.id,
+          { ...currentUser, isAnonymous: true },
+          file,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('still rejects a mismatched owner', async () => {
+      const controller = createController();
+
+      await expect(
+        controller.uploadAvatar('someone-else', currentUser, file),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
   });
 });

@@ -203,6 +203,15 @@ export default function SettingsScreen() {
 
   const handlePickAvatar = async () => {
     setProfileError(null);
+    // Guest uploads would outlive the account on a public bucket; the backend
+    // and storage RLS reject them, so do not open the picker at all.
+    if (user.isAnonymous) {
+      setProfileError(
+        'アバターの設定にはアカウント登録が必要です。',
+      );
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
