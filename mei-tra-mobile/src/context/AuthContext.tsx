@@ -291,7 +291,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // already has an account, so say that in the app's language instead.
       const message =
         error?.code === 'email_exists'
-          ? 'このメールアドレスは既に登録されています。お持ちのアカウントでログインしてください（ゲスト中の戦績は引き継がれません）。'
+          ? t('auth.emailAlreadyRegistered')
           : (error?.message ?? null);
 
       // Supabase parks the address in new_email until the link is clicked; when
