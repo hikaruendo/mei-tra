@@ -86,26 +86,26 @@ export function LandingPage({
         </h1>
         <p className={styles.heroDescription}>{t('hero.description')}</p>
         <div className={styles.ctaRow}>
-          <button type="button" className={styles.primaryCta} onClick={onSignupClick}>
+          <button type="button" className={styles.primaryCta} onClick={onLoginClick}>
+            {t('hero.loginCta')}
+          </button>
+          <button type="button" className={styles.secondaryCta} onClick={onSignupClick}>
             {t('hero.signupCta')}
           </button>
-          {onGuestClick && (
+        </div>
+        {onGuestClick && (
+          <div className={styles.guestLinkGroup}>
             <button
               type="button"
-              className={styles.secondaryCta}
+              className={styles.textCta}
               onClick={onGuestClick}
               disabled={guestPending}
             >
               {t('hero.guestCta')}
             </button>
-          )}
-        </div>
-        {onGuestClick && (
-          <p className={styles.ctaNote}>{t('hero.guestNote')}</p>
+            <p className={styles.ctaNote}>{t('hero.guestNote')}</p>
+          </div>
         )}
-        <button type="button" className={styles.textCta} onClick={onLoginClick}>
-          {t('hero.loginCta')}
-        </button>
         <div className={styles.metrics}>
           {metrics.map((metric) => (
             <div key={metric.label} className={styles.metric}>
@@ -224,24 +224,24 @@ export function LandingPage({
         <h2 className={styles.ctaSectionTitle}>{t('cta.title')}</h2>
         <p className={styles.ctaSectionDescription}>{t('cta.description')}</p>
         <div className={styles.ctaSectionRow}>
-          <button type="button" className={styles.primaryCta} onClick={onSignupClick}>
+          <button type="button" className={styles.primaryCta} onClick={onLoginClick}>
+            {t('cta.login')}
+          </button>
+          <button type="button" className={styles.secondaryCta} onClick={onSignupClick}>
             {t('cta.signup')}
           </button>
+        </div>
+        <div className={styles.ctaSectionFooter}>
           {onGuestClick && (
             <button
               type="button"
-              className={styles.secondaryCta}
+              className={styles.textCta}
               onClick={onGuestClick}
               disabled={guestPending}
             >
               {t('cta.guest')}
             </button>
           )}
-        </div>
-        <div className={styles.ctaSectionFooter}>
-          <button type="button" className={styles.textCta} onClick={onLoginClick}>
-            {t('cta.login')}
-          </button>
           <a
             className={styles.textCta}
             href={productUrl}
