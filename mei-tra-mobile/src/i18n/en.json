@@ -10,10 +10,10 @@
   },
   "trump": {
     "tra": "Tra",
-    "herz": "Hearts (♥)",
-    "daiya": "Diamonds (♦)",
-    "club": "Clubs (♣)",
-    "zuppe": "Spades (♠)"
+    "herz": "Herz (♥)",
+    "daiya": "Daiya (♦)",
+    "club": "Club (♣)",
+    "zuppe": "Zuppe (♠)"
   },
   "auth": {
     "signOutTitle": "Log out?",
@@ -233,8 +233,8 @@
     "currentTurn": "Bidding: {name}",
     "youSuffix": " (you)",
     "highest": "Highest bid: {label}",
-    "selectTrump": "Choose a trump",
-    "selectPairs": "Choose the number of sets",
+    "selectTrump": "Select Trump",
+    "selectPairs": "Select Sets",
     "declare": "Bid",
     "pass": "Pass",
     "history": "Bid history",

@@ -229,16 +229,16 @@
   },
   "blow": {
     "noDeclaration": "まだ宣言はありません",
-    "declarationSummary": "{trump}・{pairs}ペア",
+    "declarationSummary": "{trump}・{pairs}組",
     "currentTurn": "現在の宣言順: {name}",
     "youSuffix": "（あなた）",
     "highest": "最高宣言: {label}",
-    "selectTrump": "キリ（切り札）を選択",
-    "selectPairs": "ペア数を選択",
+    "selectTrump": "キリを選択",
+    "selectPairs": "組数を選択",
     "declare": "宣言",
     "pass": "パス",
     "history": "宣言履歴",
-    "historyEntry": "{trump} {pairs}ペア"
+    "historyEntry": "{trump} {pairs}組"
   },
   "seat": {
     "disconnected": "切断中",
