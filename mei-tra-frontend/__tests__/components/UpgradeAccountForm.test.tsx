@@ -76,6 +76,44 @@ describe('UpgradeAccountForm', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('translates the taken-email error instead of leaking the English one', async () => {
+    upgradeAccount.mockResolvedValue({
+      error: { code: 'email_exists', message: 'A user with this email address has already been registered' },
+      confirmationRequired: false,
+    });
+    render(<UpgradeAccountForm />);
+    fillForm('taken@example.com', 'longenough');
+
+    fireEvent.submit(screen.getByRole('button', { name: 'upgrade.submit' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('upgrade.emailAlreadyRegistered'),
+      ).toBeInTheDocument();
+    });
+    // The raw English string must not reach a localized UI verbatim.
+    expect(
+      screen.queryByText(/already been registered/),
+    ).not.toBeInTheDocument();
+    // The form stays usable so another address can be tried.
+    expect(screen.getByLabelText('email')).toBeInTheDocument();
+  });
+
+  it('keeps showing raw messages for errors without a known code', async () => {
+    upgradeAccount.mockResolvedValue({
+      error: { code: 'weak_password', message: 'Password is too weak' },
+      confirmationRequired: false,
+    });
+    render(<UpgradeAccountForm />);
+    fillForm('new@example.com', 'longenough');
+
+    fireEvent.submit(screen.getByRole('button', { name: 'upgrade.submit' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Password is too weak')).toBeInTheDocument();
+    });
+  });
+
   it('surfaces the auth error message when the upgrade fails', async () => {
     upgradeAccount.mockResolvedValue({
       error: { message: 'email already registered' },

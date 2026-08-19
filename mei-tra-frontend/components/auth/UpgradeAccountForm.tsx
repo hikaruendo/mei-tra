@@ -36,7 +36,13 @@ export function UpgradeAccountForm({ onUpgraded }: UpgradeAccountFormProps) {
       });
 
       if (error) {
-        setError(error.message);
+        // Supabase reports this in English; the person hitting it already has an
+        // account, so say that in their language and point them at sign-in.
+        if (error.code === 'email_exists') {
+          setError(t('upgrade.emailAlreadyRegistered'));
+        } else {
+          setError(error.message);
+        }
       } else {
         setSuccessMessage(
           confirmationRequired
