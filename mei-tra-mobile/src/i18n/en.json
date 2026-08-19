@@ -186,7 +186,12 @@
     "deleteWarning": "This cannot be undone. Your profile, past records, and notification registration will be deleted. Leave any room you are in first.",
     "deleteConfirmLabel": "Type DELETE to confirm",
     "deleting": "Deleting…",
-    "deleteFinal": "Delete permanently"
+    "deleteFinal": "Delete permanently",
+    "language": "Language",
+    "languageSystem": "Follow device setting",
+    "languageJa": "日本語",
+    "languageEn": "English",
+    "languageHint": "Your choice is saved on this device."
   },
   "connection": {
     "connected": "Connected",

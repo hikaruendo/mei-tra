@@ -1,11 +1,14 @@
-import { I18n } from 'i18n-js';
 import { getLocales } from 'expo-localization';
+import { I18n } from 'i18n-js';
 
 import en from './en.json';
 import ja from './ja.json';
 
 export const SUPPORTED_LOCALES = ['ja', 'en'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+
+/** What the person chose. 'system' defers to the device. */
+export type LocalePreference = SupportedLocale | 'system';
 
 const DEFAULT_LOCALE: SupportedLocale = 'ja';
 
@@ -16,16 +19,25 @@ i18n.enableFallback = true;
 // copy can be moved between mei-tra-frontend/messages and this catalogue.
 i18n.placeholder = /\{(\w+)\}/g;
 
+function isSupported(value: string | null | undefined): value is SupportedLocale {
+  return (SUPPORTED_LOCALES as readonly string[]).includes(value ?? '');
+}
+
 /** Picks the first device language we actually ship, else Japanese. */
 export function resolveDeviceLocale(): SupportedLocale {
   for (const { languageCode } of getLocales()) {
-    const match = SUPPORTED_LOCALES.find((locale) => locale === languageCode);
-    if (match) {
-      return match;
+    if (isSupported(languageCode)) {
+      return languageCode;
     }
   }
 
   return DEFAULT_LOCALE;
+}
+
+export function resolvePreference(
+  preference: LocalePreference,
+): SupportedLocale {
+  return preference === 'system' ? resolveDeviceLocale() : preference;
 }
 
 i18n.locale = resolveDeviceLocale();
@@ -35,9 +47,7 @@ export function setLocale(locale: SupportedLocale): void {
 }
 
 export function getLocale(): SupportedLocale {
-  return (SUPPORTED_LOCALES as readonly string[]).includes(i18n.locale)
-    ? (i18n.locale as SupportedLocale)
-    : DEFAULT_LOCALE;
+  return isSupported(i18n.locale) ? i18n.locale : DEFAULT_LOCALE;
 }
 
 /**

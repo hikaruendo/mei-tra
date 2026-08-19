@@ -186,7 +186,12 @@
     "deleteWarning": "この操作は取り消せません。プロフィール、過去の記録、通知登録が削除されます。参加中のルームがある場合は先に退出してください。",
     "deleteConfirmLabel": "確認のため DELETE と入力してください",
     "deleting": "削除中…",
-    "deleteFinal": "完全に削除する"
+    "deleteFinal": "完全に削除する",
+    "language": "言語",
+    "languageSystem": "端末の設定に合わせる",
+    "languageJa": "日本語",
+    "languageEn": "English",
+    "languageHint": "選んだ言語はこの端末に保存されます。"
   },
   "connection": {
     "connected": "サーバー接続済み",

@@ -22,6 +22,7 @@ import { ConnectionBanner } from '@/components/ui/ConnectionBanner';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useProfileGameHistory } from '@/hooks/useProfileGameHistory';
 import { config } from '@/lib/config';
@@ -31,11 +32,19 @@ import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 
+const LOCALE_OPTIONS = [
+  { value: 'system' as const, labelKey: 'settings.languageSystem' },
+  { value: 'ja' as const, labelKey: 'settings.languageJa' },
+  { value: 'en' as const, labelKey: 'settings.languageEn' },
+];
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, loading, deleteAccount, signOut, getAccessToken, refreshProfile } =
     useAuth();
   const { connectionStatus, refreshRooms } = useGame();
+  const { preference: localePreference, setPreference: setLocalePreference } =
+    useLocale();
   const { retryRegistration, status: notificationStatus } = useNotifications();
   const [signingOut, setSigningOut] = useState(false);
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
@@ -468,6 +477,29 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+          {LOCALE_OPTIONS.map((option) => (
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ selected: localePreference === option.value }}
+              key={option.value}
+              onPress={() => void setLocalePreference(option.value)}
+              style={({ pressed }) => [
+                styles.localeOption,
+                localePreference === option.value && styles.localeOptionActive,
+                pressed && styles.localeOptionPressed,
+              ]}
+            >
+              <Text style={styles.localeOptionLabel}>{t(option.labelKey)}</Text>
+              {localePreference === option.value ? (
+                <Text style={styles.localeOptionCheck}>✓</Text>
+              ) : null}
+            </Pressable>
+          ))}
+          <Text style={styles.hint}>{t('settings.languageHint')}</Text>
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('settings.connection')}</Text>
           <ConnectionBanner status={connectionStatus} onRetry={refreshRooms} />
           <Text style={styles.hint}>
@@ -609,6 +641,32 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  localeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundElevated,
+  },
+  localeOptionActive: {
+    borderColor: colors.gold,
+  },
+  localeOptionPressed: {
+    opacity: 0.7,
+  },
+  localeOptionLabel: {
+    color: colors.text,
+    fontSize: 16,
+  },
+  localeOptionCheck: {
+    color: colors.gold,
+    fontSize: 18,
+    fontWeight: '700',
+  },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
