@@ -13,7 +13,7 @@ import {
 
 import { useSocial } from '@/context/SocialContext';
 import { colors } from '@/theme/colors';
-import { t } from '@/i18n';
+import { getLocaleTag, t } from '@/i18n';
 
 interface ChatPanelProps {
   roomId: string;
@@ -22,7 +22,7 @@ interface ChatPanelProps {
 const MAX_LENGTH = 500;
 
 function MessageItem({ item }: { item: ChatMessage }) {
-  const time = new Date(item.createdAt).toLocaleTimeString('ja-JP', {
+  const time = new Date(item.createdAt).toLocaleTimeString(getLocaleTag(), {
     hour: '2-digit',
     minute: '2-digit',
   });

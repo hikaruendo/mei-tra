@@ -1,6 +1,6 @@
 import ja from '../ja.json';
 import en from '../en.json';
-import { getLocale, setLocale, SUPPORTED_LOCALES, t } from '..';
+import { getLocale, getLocaleTag, setLocale, SUPPORTED_LOCALES, t } from '..';
 
 type Catalogue = Record<string, unknown>;
 
@@ -79,6 +79,13 @@ describe('t()', () => {
         expect(rendered).not.toBe(key);
       }
     }
+  });
+
+  it('maps each locale to a BCP 47 tag for date formatting', () => {
+    setLocale('ja');
+    expect(getLocaleTag()).toBe('ja-JP');
+    setLocale('en');
+    expect(getLocaleTag()).toBe('en-US');
   });
 
   it('only reports locales it can actually serve', () => {

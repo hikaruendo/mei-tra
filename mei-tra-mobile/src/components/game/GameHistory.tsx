@@ -18,7 +18,7 @@ import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobilePlayer } from '@/types/game';
 import { MiniCard } from '@/components/game/MiniCard';
-import { t } from '@/i18n';
+import { getLocaleTag, t } from '@/i18n';
 
 interface GameHistoryProps {
   replay: GameHistoryReplayViewContract | null;
@@ -109,7 +109,7 @@ function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
   return (
     <View style={styles.membershipRow}>
       <Text style={styles.membershipTime}>
-        {new Date(event.timestamp).toLocaleTimeString()}
+        {new Date(event.timestamp).toLocaleTimeString(getLocaleTag())}
       </Text>
       <Text style={styles.membershipText}>
         {t('gameLog.membershipEntry', {

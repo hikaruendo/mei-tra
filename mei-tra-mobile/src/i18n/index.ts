@@ -50,6 +50,16 @@ export function getLocale(): SupportedLocale {
   return isSupported(i18n.locale) ? i18n.locale : DEFAULT_LOCALE;
 }
 
+const LOCALE_TAGS: Record<SupportedLocale, string> = {
+  ja: 'ja-JP',
+  en: 'en-US',
+};
+
+/** BCP 47 tag for Intl / toLocale* APIs, so dates follow the app language. */
+export function getLocaleTag(): string {
+  return LOCALE_TAGS[getLocale()];
+}
+
 /**
  * Translate a key. Kept as a bare function rather than a hook so non-React
  * modules (socket handlers, api clients) can use the same catalogue.

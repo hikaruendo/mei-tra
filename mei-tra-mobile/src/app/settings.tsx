@@ -30,7 +30,7 @@ import { confirmGuestSignOut } from '@/lib/confirm-guest-sign-out';
 import { updateProfile, uploadAvatar } from '@/lib/profile-api';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors } from '@/theme/colors';
-import { t } from '@/i18n';
+import { getLocaleTag, t } from '@/i18n';
 
 const LOCALE_OPTIONS = [
   { value: 'system' as const, labelKey: 'settings.languageSystem' },
@@ -349,7 +349,7 @@ export default function SettingsScreen() {
                   <Text style={styles.historyDate}>
                     {Number.isNaN(completedAt.getTime())
                       ? match.completedAt
-                      : completedAt.toLocaleString('ja-JP')}
+                      : completedAt.toLocaleString(getLocaleTag())}
                   </Text>
                 </View>
                 <View style={styles.historyMeta}>
