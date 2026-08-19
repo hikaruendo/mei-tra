@@ -266,7 +266,8 @@
       "passwordTooShort": "Password must be at least 8 characters",
       "submit": "Register",
       "confirmEmailSent": "Confirmation email sent. Click the link in the email to finish registration.",
-      "completed": "Registration complete. You can sign in with this email and password from now on."
+      "completed": "Registration complete. You can sign in with this email and password from now on.",
+      "emailAlreadyRegistered": "This email is already registered. Please sign in with that account (guest stats will not carry over)."
     }
   },
   "room": {

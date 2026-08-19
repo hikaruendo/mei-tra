@@ -286,10 +286,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
         password,
       });
 
+      // Supabase reports a taken address in English; the person hitting it
+      // already has an account, so say that in the app's language instead.
+      const message =
+        error?.code === 'email_exists'
+          ? 'このメールアドレスは既に登録されています。お持ちのアカウントでログインしてください（ゲスト中の戦績は引き継がれません）。'
+          : (error?.message ?? null);
+
       // Supabase parks the address in new_email until the link is clicked; when
       // confirmations are disabled the address applies immediately instead.
       return {
-        error: error?.message ?? null,
+        error: message,
         emailConfirmationRequired: Boolean(data?.user?.new_email),
       };
     },
