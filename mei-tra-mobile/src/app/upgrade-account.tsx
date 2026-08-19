@@ -27,7 +27,10 @@ export default function UpgradeAccountScreen() {
     return <Redirect href="/sign-in" />;
   }
 
-  if (!loading && user && !user.isAnonymous) {
+  // An upgrade that needs no email confirmation clears isAnonymous the moment
+  // it lands, so keep the screen mounted while one is in flight or its result
+  // is on screen — otherwise the redirect swallows the confirmation.
+  if (!loading && user && !user.isAnonymous && !submitting && !message) {
     return <Redirect href="/rooms" />;
   }
 

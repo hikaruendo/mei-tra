@@ -4,6 +4,13 @@
 -- room_membership_events, chat_members, push_tokens and push_receipts;
 -- room_players.user_id / game_participants.user_id / chat_messages.sender_id
 -- are ON DELETE SET NULL so game history keeps its name snapshots.
+--
+-- Avatars are deliberately left alone here. storage.objects has no FK to
+-- auth.users, so the rows survive and the folder becomes a genuine orphan once
+-- user_profiles cascades away; AvatarOrphanCleanupService then removes it
+-- through the Storage API. Deleting the rows with SQL would only drop the
+-- metadata, leave the file on the storage backend, and hide it from that
+-- sweeper (which enumerates the bucket via those same rows) forever.
 
 -- Ensure idempotency: remove prior job with same name
 SELECT cron.unschedule(jobid)
@@ -44,12 +51,6 @@ BEGIN
     IF array_length(stale_user_ids, 1) IS NULL THEN
         RETURN;
     END IF;
-
-    -- The avatars bucket has no FK to auth.users, so remove guest uploads
-    -- explicitly (path convention: avatars/<user_id>/...).
-    DELETE FROM storage.objects
-    WHERE bucket_id = 'avatars'
-      AND (storage.foldername(name))[1] = ANY (stale_user_ids::text[]);
 
     DELETE FROM auth.users WHERE id = ANY (stale_user_ids);
 END;
