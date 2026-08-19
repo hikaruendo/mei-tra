@@ -3,10 +3,17 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { NotificationProvider } from '../NotificationContext';
+import { registerForPushNotifications } from '@/lib/notifications';
 
 const mockPush = jest.fn();
 const mockResumeRoom = jest.fn(async () => undefined);
 let mockResponseHandler: ((response: NotificationResponse) => void) | null = null;
+let mockLifecycleListener:
+  | ((
+      snapshot: { appState: 'active' | 'background'; isOnline: boolean },
+      previous: { appState: 'active' | 'background'; isOnline: boolean },
+    ) => void)
+  | null = null;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -22,6 +29,15 @@ jest.mock('@/context/AuthContext', () => ({
 
 jest.mock('@/context/GameContext', () => ({
   useGame: () => ({ resumeRoom: mockResumeRoom }),
+}));
+
+jest.mock('@/lib/app-lifecycle', () => ({
+  subscribeAppLifecycle: (
+    listener: typeof mockLifecycleListener,
+  ) => {
+    mockLifecycleListener = listener;
+    return jest.fn();
+  },
 }));
 
 jest.mock('@/lib/notifications', () => ({
@@ -47,6 +63,7 @@ describe('NotificationProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockResponseHandler = null;
+    mockLifecycleListener = null;
   });
 
   it('resumes the notification room before routing to it', async () => {
@@ -59,6 +76,19 @@ describe('NotificationProvider', () => {
       );
       await flushPromises();
     });
+
+    expect(registerForPushNotifications).toHaveBeenCalledWith('access-token', {
+      requestPermission: false,
+    });
+
+    await act(async () => {
+      mockLifecycleListener?.(
+        { appState: 'active', isOnline: true },
+        { appState: 'background', isOnline: true },
+      );
+      await flushPromises();
+    });
+    expect(registerForPushNotifications).toHaveBeenCalledTimes(2);
 
     const response = {
       notification: {

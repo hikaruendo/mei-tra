@@ -51,7 +51,13 @@ src/
 │   ├── index.tsx                 ← エントリ: /rooms or /sign-in にリダイレクト
 │   ├── sign-in.tsx               ← サインイン / サインアップ
 │   ├── rooms.tsx                 ← ルーム一覧・作成・参加・観戦
-│   ├── settings.tsx              ← プロフィール編集・通知設定・アカウント削除
+│   ├── settings/                 ← プロフィールハブと各設定画面
+│   │   ├── index.tsx             ← プロフィール概要・最近の対局・設定導線
+│   │   ├── profile.tsx           ← 表示名・アバター編集
+│   │   ├── preferences.tsx       ← 対局演出・通知・言語
+│   │   ├── help.tsx              ← 規約・プライバシー・問い合わせ
+│   │   └── account.tsx           ← ログアウト・アカウント削除
+│   ├── game-history/             ← 対局履歴一覧・詳細
 │   ├── auth/callback.tsx         ← OAuth コールバック (deep link)
 │   └── room/[roomId].tsx         ← WaitingRoom or GameBoard (動的ルート)
 │
@@ -462,7 +468,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 | `app/_layout.tsx` | `app/layout.tsx` | |
 | `app/room/[roomId].tsx` | `app/[locale]/page.tsx` | Web はルーム別ページなし |
 | `app/rooms.tsx` | `app/[locale]/rooms/page.tsx` | |
-| `app/settings.tsx` | `app/[locale]/profile/page.tsx` | Mobile にアカウント削除あり |
+| `app/settings/*` | `app/[locale]/profile/page.tsx` | Mobile は設定とアカウント管理を分割 |
 | `app/sign-in.tsx` | `components/auth/AuthModal.tsx` | Web はモーダル |
 
 ### Game Components

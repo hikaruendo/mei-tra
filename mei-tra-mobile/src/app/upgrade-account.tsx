@@ -70,9 +70,10 @@ export default function UpgradeAccountScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <BrandHeader subtitle={t('auth.brandTagline')} />
+        <View style={styles.formColumn}>
+          <BrandHeader subtitle={t('auth.brandTagline')} />
 
-        <View style={styles.card}>
+          <View style={styles.card}>
           <Text style={styles.title}>{t('upgrade.title')}</Text>
 
           {message ? (
@@ -133,6 +134,7 @@ export default function UpgradeAccountScreen() {
           >
             {t('upgrade.back')}
           </Button>
+          </View>
         </View>
       </ScrollView>
     </Screen>
@@ -143,8 +145,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    gap: 32,
     padding: 24,
+  },
+  formColumn: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    gap: 32,
   },
   card: {
     gap: 16,

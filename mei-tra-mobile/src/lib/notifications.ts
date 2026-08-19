@@ -25,9 +25,15 @@ const REQUEST_TIMEOUT_MS = 5000;
 export type NotificationRegistrationStatus =
   | 'registered'
   | 'unsupported'
+  | 'not-requested'
   | 'permission-denied'
   | 'missing-project-id'
   | 'failed';
+
+interface NotificationRegistrationOptions {
+  appVersion?: string;
+  requestPermission?: boolean;
+}
 
 export interface LocalPushRegistration {
   deviceId: string;
@@ -143,7 +149,10 @@ const requestApi = async (
 
 export const registerForPushNotifications = async (
   accessToken: string | null,
-  appVersion = Constants.expoConfig?.version,
+  {
+    appVersion = Constants.expoConfig?.version,
+    requestPermission = false,
+  }: NotificationRegistrationOptions = {},
 ): Promise<NotificationRegistrationResult> => {
   const platform = getPlatform();
   if (!platform || !Device.isDevice) {
@@ -156,6 +165,15 @@ export const registerForPushNotifications = async (
     }
 
     const current = await notificationPlatform.getPermissions();
+    if (current.status !== 'granted' && !requestPermission) {
+      return {
+        status:
+          current.status === 'denied'
+            ? 'permission-denied'
+            : 'not-requested',
+      };
+    }
+
     const permission =
       current.status === 'granted'
         ? current
