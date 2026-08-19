@@ -68,6 +68,8 @@ interface GameBoardProps {
   roomId?: string;
   firstTurnReveal?: MobileFirstTurnReveal | null;
   onFirstTurnRevealDone?: () => void;
+  isGuest?: boolean;
+  onRegisterAccount?: () => void;
 }
 
 export function GameBoard({
@@ -88,6 +90,8 @@ export function GameBoard({
   roomId,
   firstTurnReveal = null,
   onFirstTurnRevealDone,
+  isGuest = false,
+  onRegisterAccount,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -687,6 +691,16 @@ export function GameBoard({
               {getTeamDisplayName(1, game.teamNames)}{' '}
               {gameOver?.finalScores[1]?.total ?? 0}点
             </Text>
+            {isGuest && onRegisterAccount ? (
+              <View style={styles.guestPromptBox}>
+                <Text style={styles.guestPromptText}>
+                  ゲストプレイ中です。アカウント登録すると、この戦績を残せます。
+                </Text>
+                {/* Registration is REST/Supabase, so it stays enabled even when
+                    socket actions are disabled. */}
+                <Button onPress={onRegisterAccount}>アカウント登録</Button>
+              </View>
+            ) : null}
             <Button disabled={actionsDisabled} onPress={onCloseGameOver}>
               ルーム一覧へ
             </Button>
@@ -1189,6 +1203,19 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     lineHeight: 26,
+  },
+  guestPromptBox: {
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panelStrong,
+  },
+  guestPromptText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
   chatOverlay: {
     flex: 1,

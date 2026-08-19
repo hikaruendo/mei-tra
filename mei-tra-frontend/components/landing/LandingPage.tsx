@@ -8,6 +8,8 @@ import styles from './LandingPage.module.scss';
 interface LandingPageProps {
   onLoginClick: () => void;
   onSignupClick: () => void;
+  onGuestClick?: () => void;
+  guestPending?: boolean;
   productUrl?: string;
 }
 
@@ -43,6 +45,8 @@ type LandingFaqItem = {
 export function LandingPage({
   onLoginClick,
   onSignupClick,
+  onGuestClick,
+  guestPending = false,
   productUrl = 'https://kando1.com',
 }: LandingPageProps) {
   const t = useTranslations('landing');
@@ -88,6 +92,16 @@ export function LandingPage({
           <button type="button" className={styles.secondaryCta} onClick={onSignupClick}>
             {t('hero.signupCta')}
           </button>
+          {onGuestClick && (
+            <button
+              type="button"
+              className={styles.secondaryCta}
+              onClick={onGuestClick}
+              disabled={guestPending}
+            >
+              {t('hero.guestCta')}
+            </button>
+          )}
         </div>
         <div className={styles.metrics}>
           {metrics.map((metric) => (

@@ -9,5 +9,7 @@ export interface MobileUserProfile {
 export interface MobileAuthUser {
   id: string;
   email?: string;
+  /** Supabase anonymous (guest) session; upgrading via updateUser keeps the same id. */
+  isAnonymous?: boolean;
   profile: MobileUserProfile | null;
 }

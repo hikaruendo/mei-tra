@@ -12,6 +12,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   showCancelButton?: boolean;
+  children?: React.ReactNode;
 }
 
 export function ConfirmModal({
@@ -23,6 +24,7 @@ export function ConfirmModal({
   confirmText,
   cancelText,
   showCancelButton = true,
+  children,
 }: ConfirmModalProps) {
   const t = useTranslations('common');
 
@@ -37,6 +39,7 @@ export function ConfirmModal({
 
         <div className={styles.content}>
           <p className={styles.message}>{message}</p>
+          {children}
         </div>
 
         <div className={styles.actions}>

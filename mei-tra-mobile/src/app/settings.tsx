@@ -25,6 +25,7 @@ import { useGame } from '@/context/GameContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useProfileGameHistory } from '@/hooks/useProfileGameHistory';
 import { config } from '@/lib/config';
+import { confirmGuestSignOut } from '@/lib/confirm-guest-sign-out';
 import { updateProfile, uploadAvatar } from '@/lib/profile-api';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors } from '@/theme/colors';
@@ -80,8 +81,7 @@ export default function SettingsScreen() {
   const startPlayerAnimation =
     animationOverride ?? user.profile?.startPlayerAnimation ?? true;
 
-  const handleSignOut = async () => {
-    if (signingOut) return;
+  const performSignOut = async () => {
     setSigningOut(true);
     try {
       await signOut();
@@ -89,6 +89,18 @@ export default function SettingsScreen() {
     } finally {
       setSigningOut(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+
+    // A guest account is unreachable after sign-out, so confirm before losing it.
+    if (user?.isAnonymous) {
+      confirmGuestSignOut(() => void performSignOut());
+      return;
+    }
+
+    await performSignOut();
   };
 
   const openDeleteModal = () => {
@@ -397,7 +409,19 @@ export default function SettingsScreen() {
             </Pressable>
           )}
 
-          <Text style={styles.email}>{user.email ?? 'メールアドレス未設定'}</Text>
+          {user.isAnonymous ? (
+            <>
+              <Text style={styles.email}>ゲストアカウント</Text>
+              <Button onPress={() => router.push('/upgrade-account')}>
+                アカウント登録して戦績を残す
+              </Button>
+              <Text style={styles.hint}>
+                {'メールアドレスとパスワードを設定すると、戦績を引き継いだまま次回からログインできるようになります。'}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.email}>{user.email ?? 'メールアドレス未設定'}</Text>
+          )}
           {profileError ? (
             <Text accessibilityRole="alert" style={styles.profileError}>
               {profileError}

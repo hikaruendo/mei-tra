@@ -64,7 +64,8 @@
           "value": "Free",
           "label": "Browser only, no install"
         }
-      ]
+      ],
+      "guestCta": "Try as guest"
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
@@ -252,6 +253,18 @@
       "invalidLink": "Link is invalid or expired. Please login again.",
       "unexpectedError": "An unexpected error occurred.",
       "backToLogin": "Back to Login"
+    },
+    "continueAsGuest": "Play as guest",
+    "guestHint": "Play instantly without an account. Register later to keep your stats.",
+    "guestDefaultName": "Guest {number}",
+    "upgrade": {
+      "title": "Create your account",
+      "description": "Set an email and password to keep your current stats and profile, and sign in next time.",
+      "passwordHint": "At least 8 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "submit": "Register",
+      "confirmEmailSent": "Confirmation email sent. Click the link in the email to finish registration.",
+      "completed": "Registration complete. You can sign in with this email and password from now on."
     }
   },
   "room": {
@@ -331,7 +344,9 @@
     },
     "gameOver": {
       "title": "Game Over",
-      "message": "{winnerTeam} wins!\n\nFinal score\n{teamRedName}: {team0Score} points\n{teamBlackName}: {team1Score} points"
+      "message": "{winnerTeam} wins!\n\nFinal score\n{teamRedName}: {team0Score} points\n{teamBlackName}: {team1Score} points",
+      "guestPrompt": "You're playing as a guest. Register an account to keep these stats.",
+      "guestPromptCta": "Register"
     },
     "trumpFormat": "Trump: {suit} ({symbol})",
     "suitHerz": "Heart",
@@ -807,7 +822,11 @@
     "logout": "Logout",
     "unavailableDuringGame": "This action is unavailable during a game",
     "passwordResetConfirmTitle": "Send a password reset email?",
-    "passwordResetConfirmMessage": "A password setup/change email will be sent to {email}. Do you want to continue?"
+    "passwordResetConfirmMessage": "A password setup/change email will be sent to {email}. Do you want to continue?",
+    "guestBadge": "Guest",
+    "guestAccountLabel": "Guest account",
+    "guestSignOutTitle": "Log out?",
+    "guestSignOutMessage": "If you log out of a guest account you can never access it again and your stats will be lost. Register an account first if you want to keep them."
   },
   "terms": {
     "title": "Terms of Service",
