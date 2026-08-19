@@ -16,6 +16,7 @@ import {
   notificationPlatform,
   type NotificationResponseHandler,
 } from './notification-platform';
+import { t } from '@/i18n';
 
 const DEVICE_ID_KEY = 'meitra.notifications.deviceId';
 const REGISTRATION_KEY = 'meitra.notifications.registration';
@@ -146,7 +147,7 @@ export const registerForPushNotifications = async (
 ): Promise<NotificationRegistrationResult> => {
   const platform = getPlatform();
   if (!platform || !Device.isDevice) {
-    return { status: 'unsupported', message: '実機でのみ通知を登録できます。' };
+    return { status: 'unsupported', message: t('notifications.deviceOnly') };
   }
 
   try {
@@ -162,19 +163,19 @@ export const registerForPushNotifications = async (
     if (permission.status !== 'granted') {
       return {
         status: 'permission-denied',
-        message: '通知が許可されていないため、対局通知を登録しませんでした。',
+        message: t('notifications.permissionDenied'),
       };
     }
 
     if (!accessToken) {
-      return { status: 'failed', message: 'ログインセッションがありません。' };
+      return { status: 'failed', message: t('notifications.noSession') };
     }
 
     const projectId = getProjectId();
     if (!projectId) {
       return {
         status: 'missing-project-id',
-        message: 'Expo projectIdが未設定のため、通知を登録できません。',
+        message: t('notifications.projectIdMissing'),
       };
     }
 
@@ -204,7 +205,7 @@ export const registerForPushNotifications = async (
     console.warn('[Notifications] Failed to register push token:', error);
     return {
       status: 'failed',
-      message: '対局通知を登録できませんでした。設定から再試行できます。',
+      message: t('notifications.registerFailed'),
     };
   }
 };

@@ -33,7 +33,7 @@ import {
 } from '@/lib/table-order';
 import { getStrengthOrderLabel } from '@/lib/trump-display';
 import { getTeamDisplayName } from '@/lib/team-labels';
-import { TRUMP_LABELS } from '@/lib/trump-labels';
+import { trumpLabel } from '@/lib/trump-labels';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobileFirstTurnReveal } from '@/context/GameContext';
 import type {
@@ -285,7 +285,7 @@ export function GameBoard({
           <Text style={styles.phase}>{phaseLabel}</Text>
           {highest ? (
             <Text style={styles.trumpBadge}>
-              {TRUMP_LABELS[highest.trumpType]} {highest.numberOfPairs}
+              {trumpLabel(highest.trumpType)} {highest.numberOfPairs}
             </Text>
           ) : null}
         </View>
@@ -315,7 +315,7 @@ export function GameBoard({
                 agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
                 declaration={
                   highest && highest.seatId === player.seatId
-                    ? `${TRUMP_LABELS[highest.trumpType]} ${highest.numberOfPairs}`
+                    ? `${trumpLabel(highest.trumpType)} ${highest.numberOfPairs}`
                     : undefined
                 }
                 isBlowWinner={blowWinnerId === player.seatId}

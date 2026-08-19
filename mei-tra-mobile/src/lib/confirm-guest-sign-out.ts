@@ -1,8 +1,8 @@
 import { Alert, Platform } from 'react-native';
+import { t } from '@/i18n';
 
-const TITLE = 'ログアウトしますか？';
-const MESSAGE =
-  'ゲストアカウントはログアウトすると二度とアクセスできず、戦績も失われます。残したい場合は先にアカウント登録をしてください。';
+
+
 
 /**
  * A guest (anonymous) account is unreachable after sign-out, so every sign-out
@@ -17,7 +17,7 @@ export function confirmGuestSignOut(
     const confirm = (
       globalThis as { confirm?: (message: string) => boolean }
     ).confirm;
-    if (confirm?.(`${TITLE}\n\n${MESSAGE}`)) {
+    if (confirm?.(`${t('auth.signOutTitle')}\n\n${t('auth.guestSignOutMessage')}`)) {
       onConfirm();
     } else {
       onDismiss?.();
@@ -26,11 +26,11 @@ export function confirmGuestSignOut(
   }
 
   Alert.alert(
-    TITLE,
-    MESSAGE,
+    t('auth.signOutTitle'),
+    t('auth.guestSignOutMessage'),
     [
-      { text: 'キャンセル', style: 'cancel', onPress: onDismiss },
-      { text: 'ログアウト', style: 'destructive', onPress: onConfirm },
+      { text: t('common.cancel'), style: 'cancel', onPress: onDismiss },
+      { text: t('auth.signOut'), style: 'destructive', onPress: onConfirm },
     ],
     // Android back-button dismissal skips the buttons entirely.
     { onDismiss },

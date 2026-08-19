@@ -1,0 +1,48 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "unknown": "Unknown",
+    "player": "Player"
+  },
+  "team": {
+    "red": "Red",
+    "black": "Black"
+  },
+  "trump": {
+    "tra": "Tra",
+    "herz": "Hearts (♥)",
+    "daiya": "Diamonds (♦)",
+    "club": "Clubs (♣)",
+    "zuppe": "Spades (♠)"
+  },
+  "auth": {
+    "signOutTitle": "Log out?",
+    "guestSignOutMessage": "A guest account cannot be accessed again after logging out, and its stats are lost. Register an account first if you want to keep them.",
+    "signOut": "Log out",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "callbackUrlUnreadable": "Could not read the authentication callback URL",
+    "credentialsMissing": "Could not receive your credentials. Please sign in again.",
+    "googleFailed": "Could not complete Google sign-in"
+  },
+  "account": {
+    "networkError": "Could not reach the server. Check your connection and try again.",
+    "leaveRoomFirst": "Leave the room you are in before deleting your account.",
+    "deleteFailed": "Could not delete your account. Please try again later."
+  },
+  "notifications": {
+    "channelName": "Game notifications",
+    "deviceOnly": "Notifications can only be registered on a physical device.",
+    "permissionDenied": "Game notifications were not registered because permission was denied.",
+    "noSession": "No sign-in session.",
+    "projectIdMissing": "Cannot register notifications: Expo projectId is not set.",
+    "registerFailed": "Could not register game notifications. You can retry from settings."
+  },
+  "realtime": {
+    "notConnected": "Not connected to the server",
+    "noResponse": "No response from the server"
+  },
+  "game": {
+    "pairsSuffix": "{count} sets",
+    "otherSuits": "other suits"
+  }
+}

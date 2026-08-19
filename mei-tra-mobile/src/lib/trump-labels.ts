@@ -1,22 +1,24 @@
 import type { TrumpType } from '@meitra/contracts/game';
 
+import { t } from '@/i18n';
+
 /**
  * Trump display names, matching the web app verbatim
- * (mei-tra-frontend/messages/ja.json → `blowControls`).
+ * (mei-tra-frontend/messages/*.json → `blowControls`).
  *
- * Mobile previously spelled these differently in two places (`トラ` instead of
- * `ノートラ`, and bare suit glyphs rather than parenthesised ones), which meant
- * the same trump had two names inside one app.
+ * These are catalogue keys rather than literals so both locales stay in one
+ * place; read them through `trumpLabel()` so nothing renders a raw key.
  */
-export const TRUMP_LABELS: Record<TrumpType, string> = {
-  tra: 'ノートラ',
-  herz: 'ヘル (♥)',
-  daiya: 'ダイヤ (♦)',
-  club: 'クラブ (♣)',
-  zuppe: 'ズッペ (♠)',
+const TRUMP_LABEL_KEYS: Record<TrumpType, string> = {
+  tra: 'trump.tra',
+  herz: 'trump.herz',
+  daiya: 'trump.daiya',
+  club: 'trump.club',
+  zuppe: 'trump.zuppe',
 };
 
 export function trumpLabel(trump: TrumpType | string | null | undefined): string {
   if (!trump) return '';
-  return TRUMP_LABELS[trump as TrumpType] ?? String(trump);
+  const key = TRUMP_LABEL_KEYS[trump as TrumpType];
+  return key ? t(key) : String(trump);
 }
