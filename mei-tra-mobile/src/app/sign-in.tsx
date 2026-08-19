@@ -14,8 +14,13 @@ import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function SignInScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const {
     user,
@@ -42,7 +47,7 @@ export default function SignInScreen() {
       <Screen contentStyle={styles.loadingState}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text accessibilityLiveRegion="polite" style={styles.loadingText}>
-          ログイン状態を確認しています
+          {t('auth.checkingSession')}
         </Text>
       </Screen>
     );
@@ -66,7 +71,7 @@ export default function SignInScreen() {
 
       if (result.emailConfirmationRequired) {
         setMessage(
-          '確認メールを送信しました。メール内のリンクから登録を完了してください。',
+          t('auth.confirmEmailSentSignUp'),
         );
         return;
       }
@@ -125,11 +130,11 @@ export default function SignInScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <BrandHeader subtitle="明専トランプを、いつでも。" />
+        <BrandHeader subtitle={t('auth.brandTagline')} />
 
         <View style={styles.card}>
           <Text style={styles.title}>
-            {mode === 'signIn' ? 'ログイン' : 'アカウント作成'}
+            {mode === 'signIn' ? t('auth.signIn') : t('auth.signUpTitle')}
           </Text>
 
           <Button
@@ -137,7 +142,7 @@ export default function SignInScreen() {
             onPress={handleGoogle}
             disabled={submitting}
           >
-            Googleで続ける
+            {t('auth.continueWithGoogle')}
           </Button>
 
           <Button
@@ -145,25 +150,25 @@ export default function SignInScreen() {
             onPress={handleGuest}
             disabled={submitting}
           >
-            ゲストとして遊ぶ
+            {t('auth.playAsGuest')}
           </Button>
           <Text style={styles.guestHint}>
-            登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。
+            {t('auth.guestHint')}
           </Text>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>または</Text>
+            <Text style={styles.dividerText}>{t('auth.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           {mode === 'signUp' ? (
             <TextInput
-            accessibilityLabel="表示名"
+            accessibilityLabel={t('auth.displayName')}
             autoCapitalize="none"
             autoCorrect={false}
               onChangeText={setDisplayName}
-              placeholder="表示名"
+              placeholder={t('auth.displayName')}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               value={displayName}
@@ -171,26 +176,26 @@ export default function SignInScreen() {
           ) : null}
 
           <TextInput
-            accessibilityLabel="メールアドレス"
+            accessibilityLabel={t('auth.email')}
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect={false}
             keyboardType="email-address"
             onChangeText={setEmail}
-            placeholder="メールアドレス"
+            placeholder={t('auth.email')}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             value={email}
           />
 
           <TextInput
-            accessibilityLabel="パスワード"
+            accessibilityLabel={t('auth.password')}
             autoCapitalize="none"
             autoComplete={
               mode === 'signIn' ? 'current-password' : 'new-password'
             }
             onChangeText={setPassword}
-            placeholder="パスワード（6文字以上）"
+            placeholder={t('auth.passwordMin6')}
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             style={styles.input}
@@ -205,7 +210,7 @@ export default function SignInScreen() {
             loading={submitting}
             onPress={handleSubmit}
           >
-            {mode === 'signIn' ? 'ログイン' : '登録する'}
+            {mode === 'signIn' ? t('auth.signIn') : t('auth.signUpSubmit')}
           </Button>
 
           <Button
@@ -220,8 +225,8 @@ export default function SignInScreen() {
             }}
           >
             {mode === 'signIn'
-              ? '初めての方はこちら'
-              : 'アカウントをお持ちの方'}
+              ? t('auth.toSignUp')
+              : t('auth.toSignIn')}
           </Button>
         </View>
       </ScrollView>

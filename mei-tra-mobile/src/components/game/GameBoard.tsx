@@ -41,6 +41,7 @@ import type {
   MobileGameSnapshot,
   MobilePlayer,
 } from '@/types/game';
+import { t } from '@/i18n';
 
 interface GameHistoryData {
   replay: GameHistoryReplayViewContract | null;
@@ -176,10 +177,10 @@ export function GameBoard({
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
   const phaseLabel =
     game.gamePhase === 'blow'
-      ? '吹き'
+      ? t('board.phaseBlow')
       : game.gamePhase === 'play'
-        ? 'プレイ'
-        : '待機';
+        ? t('board.phasePlay')
+        : t('board.phaseWaiting');
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
@@ -347,18 +348,18 @@ export function GameBoard({
                 onLongPress={() => {
                   Alert.alert(
                     player.name,
-                    'プレイヤーの操作を選択してください',
+                    t('waiting.playerActionTitle'),
                     [
                       {
-                        text: 'COMに置換',
+                        text: t('waiting.replaceWithCom'),
                         onPress: () => onReplaceWithCOM(player.seatId),
                       },
                       {
-                        text: '退出させる',
+                        text: t('waiting.removePlayer'),
                         style: 'destructive',
                         onPress: () => onRemovePlayer(player.seatId),
                       },
-                      { text: 'キャンセル', style: 'cancel' },
+                      { text: t('common.cancel'), style: 'cancel' },
                     ],
                   );
                 }}
@@ -383,14 +384,14 @@ export function GameBoard({
                 {showReplacePanel ? (
                   <View style={styles.replacePanel}>
                     <Text style={styles.replacePanelHeader}>
-                      {isDisconnected ? '切断中' : '無操作'}
+                      {isDisconnected ? t('seat.disconnected') : t('seat.idle')}
                     </Text>
                     <Pressable
                       onPress={() => onReplaceWithCOM(player.seatId)}
                       style={styles.replacePanelButton}
                     >
                       <Text style={styles.replacePanelButtonText}>
-                        COMに置換
+                        {t('waiting.replaceWithCom')}
                       </Text>
                     </Pressable>
                   </View>
@@ -436,17 +437,19 @@ export function GameBoard({
                   );
                 })
               ) : (
-                <Text style={styles.emptyField}>まだカードはありません</Text>
+                <Text style={styles.emptyField}>{t('board.emptyField')}</Text>
               )}
             </View>
             {game.currentField?.baseSuit ? (
               <Text style={styles.baseSuit}>
-                台札のスート: {game.currentField.baseSuit}
+                {t('board.baseSuit', {
+                  suit: game.currentField.baseSuit,
+                })}
               </Text>
             ) : null}
             {needsBaseSuit ? (
               <View style={styles.suitSelector}>
-                <Text style={styles.sectionLabel}>台札のスートを選択</Text>
+                <Text style={styles.sectionLabel}>{t('board.selectBaseSuit')}</Text>
                 <View style={styles.suitButtons}>
                   {['♠', '♥', '♦', '♣'].map((suit) => (
                     <Button
@@ -507,18 +510,20 @@ export function GameBoard({
                   </Text>
                 </View>
                 <Text style={styles.selfFieldCountText}>
-                  取得 {teamFieldCounts[self.team] ?? 0}場
+                  {t('seat.fieldsWon', {
+                    count: teamFieldCounts[self.team] ?? 0,
+                  })}
                 </Text>
                 {game.gamePhase === 'play' && game.negriCard && highest?.seatId === self.seatId ? (
                   <View style={styles.selfSpecialRow}>
                     <PlayingCard card={game.negriCard} size="seat" />
-                    <Text style={styles.selfSpecialLabel}>ネグリ</Text>
+                    <Text style={styles.selfSpecialLabel}>{t('seat.negri')}</Text>
                   </View>
                 ) : null}
                 {game.gamePhase === 'play' && game.revealedAgari ? (
                   <View style={styles.selfSpecialRow}>
                     <PlayingCard card={game.revealedAgari} size="seat" />
-                    <Text style={styles.selfSpecialLabel}>アゲ</Text>
+                    <Text style={styles.selfSpecialLabel}>{t('seat.agariShort')}</Text>
                   </View>
                 ) : null}
               </View>
@@ -526,15 +531,17 @@ export function GameBoard({
                 {game.gamePhase === 'play' ? (
                   game.isSpectator ? (
                     <Text style={styles.instruction}>
-                      {self.name} の手札（観戦中）
+                      {t('board.spectatingHand', { name: self.name })}
                     </Text>
                   ) : mustSelectNegri ? (
                     <Text style={styles.instruction}>
-                      ネグリにするカードを選んでください
+                      {t('board.chooseNegri')}
                     </Text>
                   ) : (
                     <Text style={styles.instruction}>
-                      {isMyTurn ? 'プレイするカードを選んでください' : '順番を待っています'}
+                      {isMyTurn
+                        ? t('board.choosePlayCard')
+                        : t('board.waitingTurn')}
                     </Text>
                   )
                 ) : null}
@@ -607,7 +614,7 @@ export function GameBoard({
                   style={styles.actionButton}
                   variant="secondary"
                 >
-                  キャンセル
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   disabled={
@@ -619,7 +626,7 @@ export function GameBoard({
                   onPress={confirmSelected}
                   style={styles.actionButton}
                 >
-                  {mustSelectNegri ? 'ネグリにする' : 'プレイ'}
+                  {mustSelectNegri ? t('board.setNegri') : t('board.play')}
                 </Button>
               </View>
             ) : null}
@@ -648,8 +655,8 @@ export function GameBoard({
 
       {game.paused ? (
         <View style={styles.pausedOverlay}>
-          <Text style={styles.pausedTitle}>ゲームを一時停止しています</Text>
-          <Text style={styles.pausedText}>プレイヤーの再接続を待っています</Text>
+          <Text style={styles.pausedTitle}>{t('board.pausedTitle')}</Text>
+          <Text style={styles.pausedText}>{t('board.pausedText')}</Text>
           {isHost ? (
             <View style={styles.pausedReplaceSection}>
               {game.players
@@ -665,7 +672,7 @@ export function GameBoard({
                     style={styles.pausedReplaceButton}
                   >
                     <Text style={styles.pausedReplaceButtonText}>
-                      {p.name} をCOMに置換
+                      {t('board.replaceNamed', { name: p.name })}
                     </Text>
                   </Pressable>
                 ))}
@@ -682,27 +689,30 @@ export function GameBoard({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>ゲーム終了</Text>
+            <Text style={styles.modalTitle}>{t('board.gameOver')}</Text>
             <Text style={styles.modalText}>
-              勝者: {gameOver?.winner}
-              {'\n'}
-              {getTeamDisplayName(0, game.teamNames)}{' '}
-              {gameOver?.finalScores[0]?.total ?? 0}点 /{' '}
-              {getTeamDisplayName(1, game.teamNames)}{' '}
-              {gameOver?.finalScores[1]?.total ?? 0}点
+              {t('board.gameOverResult', {
+                winner: gameOver?.winner ?? '',
+                redName: getTeamDisplayName(0, game.teamNames),
+                redScore: gameOver?.finalScores[0]?.total ?? 0,
+                blackName: getTeamDisplayName(1, game.teamNames),
+                blackScore: gameOver?.finalScores[1]?.total ?? 0,
+              })}
             </Text>
             {isGuest && onRegisterAccount ? (
               <View style={styles.guestPromptBox}>
                 <Text style={styles.guestPromptText}>
-                  ゲストプレイ中です。アカウント登録すると、この戦績を残せます。
+                  {t('board.guestPrompt')}
                 </Text>
                 {/* Registration is REST/Supabase, so it stays enabled even when
                     socket actions are disabled. */}
-                <Button onPress={onRegisterAccount}>アカウント登録</Button>
+                <Button onPress={onRegisterAccount}>
+                  {t('board.registerAccount')}
+                </Button>
               </View>
             ) : null}
             <Button disabled={actionsDisabled} onPress={onCloseGameOver}>
-              ルーム一覧へ
+              {t('board.toRoomList')}
             </Button>
           </View>
         </View>
@@ -734,7 +744,7 @@ export function GameBoard({
                 }}
                 variant="secondary"
               >
-                強さ順
+                {t('board.strengthOrder')}
               </Button>
             ) : null}
             {roomId ? (
@@ -745,7 +755,7 @@ export function GameBoard({
                 }}
                 variant="secondary"
               >
-                チャット
+                {t('board.chat')}
               </Button>
             ) : null}
             {history ? (
@@ -757,7 +767,7 @@ export function GameBoard({
                 }}
                 variant="secondary"
               >
-                対局ログ
+                {t('board.gameLog')}
               </Button>
             ) : null}
             <Button
@@ -770,7 +780,7 @@ export function GameBoard({
               variant="ghost"
               style={styles.optionsItemDanger}
             >
-              退出
+              {t('board.leave')}
             </Button>
           </View>
         </View>
@@ -786,12 +796,12 @@ export function GameBoard({
           <View style={styles.chatOverlay}>
             <View style={styles.chatCard}>
               <View style={styles.chatHeader}>
-                <Text style={styles.chatTitle}>チャット</Text>
+                <Text style={styles.chatTitle}>{t('board.chat')}</Text>
                 <Button
                   onPress={() => setShowChat(false)}
                   variant="ghost"
                 >
-                  閉じる
+                  {t('board.close')}
                 </Button>
               </View>
               <ChatPanel roomId={roomId} />
@@ -810,12 +820,12 @@ export function GameBoard({
           <View style={styles.historyOverlay}>
             <View style={styles.historyCard}>
               <View style={styles.historyHeader}>
-                <Text style={styles.historyTitle}>対局ログ</Text>
+                <Text style={styles.historyTitle}>{t('board.gameLog')}</Text>
                 <Button
                   onPress={() => setShowHistory(false)}
                   variant="ghost"
                 >
-                  閉じる
+                  {t('board.close')}
                 </Button>
               </View>
               <GameHistory

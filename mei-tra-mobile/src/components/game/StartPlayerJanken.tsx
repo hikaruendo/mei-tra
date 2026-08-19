@@ -12,6 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/theme/colors';
 import type { MobileFirstTurnReveal } from '@/context/GameContext';
 import type { MobilePlayer } from '@/types/game';
+import { t } from '@/i18n';
 
 interface StartPlayerJankenProps {
   reveal: MobileFirstTurnReveal;
@@ -19,10 +20,11 @@ interface StartPlayerJankenProps {
   onDone: () => void;
 }
 
-const CAPTIONS = {
-  chant: 'ジャンケン…',
-  ready: 'シュッ！',
-  showdown: 'シュ！',
+// Catalogue keys; read through t() so both locales render.
+const CAPTION_KEYS = {
+  chant: 'janken.chant',
+  ready: 'janken.ready',
+  showdown: 'janken.showdown',
 } as const;
 
 function HandGlyph({ hand, winner }: { hand: JankenHand; winner?: boolean }) {
@@ -141,7 +143,7 @@ export function StartPlayerJanken({
                 step.kind !== 'chant' && styles.chantPunch,
               ]}
             >
-              {CAPTIONS[step.kind]}
+              {t(CAPTION_KEYS[step.kind])}
             </Text>
           ) : null}
 
@@ -176,7 +178,9 @@ export function StartPlayerJanken({
           {isResult ? (
             <View accessibilityLiveRegion="polite">
               <Text style={styles.verdict}>
-                {nameOf(reveal.lastBlowSeatId)} の勝ち — 吹き上げ！
+                {t('janken.result', {
+                  name: nameOf(reveal.lastBlowSeatId),
+                })}
               </Text>
             </View>
           ) : null}

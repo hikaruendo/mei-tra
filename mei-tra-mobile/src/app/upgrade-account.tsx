@@ -13,8 +13,13 @@ import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function UpgradeAccountScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const { user, loading, upgradeAccount } = useAuth();
   const [email, setEmail] = useState('');
@@ -51,8 +56,8 @@ export default function UpgradeAccountScreen() {
 
       setMessage(
         result.emailConfirmationRequired
-          ? '確認メールを送信しました。メール内のリンクをクリックすると登録が完了します。'
-          : '登録が完了しました。次回からこのメールアドレスとパスワードでログインできます。',
+          ? t('upgrade.confirmEmailSent')
+          : t('upgrade.completed'),
       );
     } finally {
       setSubmitting(false);
@@ -65,38 +70,38 @@ export default function UpgradeAccountScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <BrandHeader subtitle="明専トランプを、いつでも。" />
+        <BrandHeader subtitle={t('auth.brandTagline')} />
 
         <View style={styles.card}>
-          <Text style={styles.title}>アカウント登録</Text>
+          <Text style={styles.title}>{t('upgrade.title')}</Text>
 
           {message ? (
             <Text style={styles.message}>{message}</Text>
           ) : (
             <>
               <Text style={styles.description}>
-                {'メールアドレスとパスワードを設定すると、いまの戦績やプロフィールをそのまま引き継いで、次回からログインできるようになります。'}
+                {t('upgrade.description')}
               </Text>
 
               <TextInput
-                accessibilityLabel="メールアドレス"
+                accessibilityLabel={t('auth.email')}
                 autoCapitalize="none"
                 autoComplete="email"
                 autoCorrect={false}
                 keyboardType="email-address"
                 onChangeText={setEmail}
-                placeholder="メールアドレス"
+                placeholder={t('auth.email')}
                 placeholderTextColor={colors.textMuted}
                 style={styles.input}
                 value={email}
               />
 
               <TextInput
-                accessibilityLabel="パスワード"
+                accessibilityLabel={t('auth.password')}
                 autoCapitalize="none"
                 autoComplete="new-password"
                 onChangeText={setPassword}
-                placeholder="パスワード（8文字以上）"
+                placeholder={t('auth.passwordMin8')}
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry
                 style={styles.input}
@@ -110,7 +115,7 @@ export default function UpgradeAccountScreen() {
                 loading={submitting}
                 onPress={handleSubmit}
               >
-                登録する
+                {t('upgrade.submit')}
               </Button>
             </>
           )}
@@ -126,7 +131,7 @@ export default function UpgradeAccountScreen() {
               }
             }}
           >
-            戻る
+            {t('upgrade.back')}
           </Button>
         </View>
       </ScrollView>

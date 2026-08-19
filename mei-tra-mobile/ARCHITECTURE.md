@@ -22,15 +22,23 @@ Web 版 (Next.js) はゲーム状態を `useGame` / `useRoom` / `useSocket` の 
 ```
 SafeAreaProvider
   ThemeProvider (dark navigation theme)
-    AuthProvider              ← Supabase 認証・セッション管理
-      GameProvider            ← Socket.IO (/) + ゲーム状態 + ルーム管理
-        SocialProvider        ← Socket.IO (/social) + チャット
-          NotificationProvider  ← Push 通知登録 + deep-link ルーティング
-            Stack (expo-router)
+    LocaleProvider            ← 表示言語の設定 (端末設定 / ja / en)
+      AuthProvider            ← Supabase 認証・セッション管理
+        GameProvider          ← Socket.IO (/) + ゲーム状態 + ルーム管理
+          SocialProvider      ← Socket.IO (/social) + チャット
+            NotificationProvider  ← Push 通知登録 + deep-link ルーティング
+              Stack (expo-router, locale を key にする)
 ```
 
 依存方向は上から下のみ。`NotificationProvider` は `useAuth()` と `useGame()` の両方に依存する
 (Push 通知タップ → `resumeRoom()` でゲームに復帰するため)。
+
+`LocaleProvider` は何にも依存しないので最上位に置く。保存済みの選択を読み終えるまで
+`null` を返すため、起動直後に端末の言語が一瞬見えることはない。
+
+`t()` は React 外からも使える素の関数で、言語を変えても画面は自動では再描画されない。
+そのため `Stack` に `key={locale}` を付けて画面ツリーだけを作り直す。プロバイダは
+その上にあるので、ソケット接続とゲーム状態は維持される。
 
 ---
 

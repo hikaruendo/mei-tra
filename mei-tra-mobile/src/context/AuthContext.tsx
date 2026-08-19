@@ -32,6 +32,7 @@ import {
 } from '@/lib/session-cleanup';
 import { clearLocalAuthSession, supabase } from '@/lib/supabase';
 import type { MobileAuthUser, MobileUserProfile } from '@/types/auth';
+import { t } from '@/i18n';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -246,13 +247,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
 
     if (error || !data.url) {
-      return { error: error?.message ?? 'Googleログインを開始できませんでした' };
+      return { error: error?.message ?? t('auth.googleStartFailed') };
     }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type !== 'success') {
       return {
-        error: result.type === 'cancel' ? null : 'Googleログインを完了できませんでした',
+        error: result.type === 'cancel' ? null : t('auth.googleFailed'),
       };
     }
 
@@ -267,7 +268,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const { error } = await supabase.auth.signInAnonymously({
       options: {
         data: {
-          display_name: `ゲスト${guestNumber}`,
+          display_name: t('auth.guestName', { number: guestNumber }),
           locale: 'ja',
         },
       },
@@ -290,7 +291,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // already has an account, so say that in the app's language instead.
       const message =
         error?.code === 'email_exists'
-          ? 'このメールアドレスは既に登録されています。お持ちのアカウントでログインしてください（ゲスト中の戦績は引き継がれません）。'
+          ? t('auth.emailAlreadyRegistered')
           : (error?.message ?? null);
 
       // Supabase parks the address in new_email until the link is clicked; when
@@ -323,7 +324,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         error: new AccountDeletionError(
           'unauthorized',
-          'ログインセッションが切れています。もう一度ログインしてください。',
+          t('auth.sessionExpired'),
           401,
         ),
       };
@@ -345,7 +346,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         error: new AccountDeletionError(
           'server',
-          'アカウントを削除できませんでした。時間をおいて再試行してください。',
+          t('account.deleteFailed'),
         ),
       };
     }
