@@ -17,6 +17,7 @@ import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
+import { confirmGuestSignOut } from '@/lib/confirm-guest-sign-out';
 import { colors } from '@/theme/colors';
 
 export default function RoomsScreen() {
@@ -140,15 +141,29 @@ export default function RoomsScreen() {
           <Button
             accessibilityLabel="ログアウト"
             variant="ghost"
-            onPress={async () => {
+            onPress={() => {
               if (submitting) return;
-              setSubmitting(true);
-              try {
-                await signOut();
-                router.replace('/sign-in');
-              } finally {
-                setSubmitting(false);
+
+              const performSignOut = async () => {
+                setSubmitting(true);
+                try {
+                  await signOut();
+                  router.replace('/sign-in');
+                } finally {
+                  setSubmitting(false);
+                }
+              };
+
+              if (user?.isAnonymous) {
+                setSubmitting(true);
+                confirmGuestSignOut(
+                  () => void performSignOut(),
+                  () => setSubmitting(false),
+                );
+                return;
               }
+
+              void performSignOut();
             }}
             style={styles.logout}
             disabled={submitting}

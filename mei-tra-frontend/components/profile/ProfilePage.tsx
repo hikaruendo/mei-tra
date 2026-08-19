@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { UpgradeAccountForm } from '@/components/auth/UpgradeAccountForm';
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm';
 import { ProfileRecentMatchesSection } from '@/components/profile/ProfileRecentMatchesSection';
 import { Navigation } from '@/components/layout/Navigation';
@@ -15,6 +16,7 @@ import styles from './ProfilePage.module.scss';
 export function ProfilePage() {
   const { user, loading, getAccessToken, refreshUserProfile } = useAuth();
   const t = useTranslations('profile');
+  const authT = useTranslations('auth');
   const locale = useLocale();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -23,6 +25,10 @@ export function ProfilePage() {
   const [showPasswordResetConfirm, setShowPasswordResetConfirm] = useState(false);
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
   const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  // An upgrade that needs no email confirmation clears isAnonymous while the
+  // request is still in flight. Latch the section open so the form survives to
+  // render its own result instead of being swapped out mid-submit.
+  const [showUpgradeSection, setShowUpgradeSection] = useState(false);
   const localePrefix = locale === 'en' ? '/en' : '';
 
   useEffect(() => {
@@ -43,6 +49,12 @@ export function ProfilePage() {
 
     void refreshUserProfile();
   }, [refreshUserProfile, user?.id]);
+
+  useEffect(() => {
+    if (user?.isAnonymous) {
+      setShowUpgradeSection(true);
+    }
+  }, [user?.isAnonymous]);
 
   if (loading) {
     return (
@@ -90,6 +102,7 @@ export function ProfilePage() {
 
   const profile = currentProfile || user.profile;
   const winRate = profile?.gamesPlayed ? (profile.gamesWon / profile.gamesPlayed * 100).toFixed(1) : '0.0';
+  const isGuest = Boolean(user.isAnonymous);
 
   const handleEditSave = (updatedProfile: UserProfile) => {
     setCurrentProfile(updatedProfile);
@@ -202,8 +215,8 @@ export function ProfilePage() {
                 <h1 className={styles.profileName} title={profile?.displayName || user?.email || 'User'}>
                   {profile?.displayName || user?.email || 'User'}
                 </h1>
-                <p className={styles.profileEmail} title={user.email ?? undefined}>
-                  {user.email}
+                <p className={styles.profileEmail} title={isGuest ? t('guestAccountLabel') : user.email ?? undefined}>
+                  {isGuest ? t('guestAccountLabel') : user.email}
                 </p>
               </div>
               <div className={styles.headerActions}>
@@ -283,29 +296,38 @@ export function ProfilePage() {
                 )}
                 <div className={styles.accountRow}>
                   <span className={styles.accountLabel}>{t('emailAddress')}</span>
-                  <span className={styles.accountValue}>{user.email}</span>
+                  <span className={styles.accountValue}>
+                    {isGuest ? t('guestAccountLabel') : user.email}
+                  </span>
                 </div>
               </div>
-              <div className={styles.accountActions}>
-                <button
-                  type="button"
-                  onClick={handlePasswordResetClick}
-                  disabled={isSendingPasswordReset || !user.email}
-                  className={styles.accountActionButton}
-                >
-                  {isSendingPasswordReset ? t('passwordResetSending') : t('passwordResetAction')}
-                </button>
-                {passwordResetMessage && (
-                  <p className={styles.accountSuccess} role="status">
-                    {passwordResetMessage}
-                  </p>
-                )}
-                {passwordResetError && (
-                  <p className={styles.accountError} role="alert">
-                    {passwordResetError}
-                  </p>
-                )}
-              </div>
+              {showUpgradeSection ? (
+                <div className={styles.accountActions}>
+                  <h4 className={styles.sectionTitle}>{authT('upgrade.title')}</h4>
+                  <UpgradeAccountForm />
+                </div>
+              ) : (
+                <div className={styles.accountActions}>
+                  <button
+                    type="button"
+                    onClick={handlePasswordResetClick}
+                    disabled={isSendingPasswordReset || !user.email}
+                    className={styles.accountActionButton}
+                  >
+                    {isSendingPasswordReset ? t('passwordResetSending') : t('passwordResetAction')}
+                  </button>
+                  {passwordResetMessage && (
+                    <p className={styles.accountSuccess} role="status">
+                      {passwordResetMessage}
+                    </p>
+                  )}
+                  {passwordResetError && (
+                    <p className={styles.accountError} role="alert">
+                      {passwordResetError}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <ProfileRecentMatchesSection

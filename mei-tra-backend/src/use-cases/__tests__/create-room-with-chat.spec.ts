@@ -96,7 +96,7 @@ describe('CreateRoomUseCase', () => {
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
       socketId: 'socket-1',
-      authenticatedUser: { id: userId, profile: {} as any },
+      authenticatedUser: { id: userId, isAnonymous: false, profile: {} as any },
     });
 
     expect(result.success).toBe(true);
@@ -138,7 +138,7 @@ describe('CreateRoomUseCase', () => {
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
       socketId: 'socket-1',
-      authenticatedUser: { id: userId, profile: {} as any },
+      authenticatedUser: { id: userId, isAnonymous: false, profile: {} as any },
     });
 
     expect(result.success).toBe(true);
@@ -154,7 +154,7 @@ describe('CreateRoomUseCase', () => {
       teamAssignmentMethod: 'random',
       playerName: 'Test Player',
       socketId: 'socket-1',
-      authenticatedUser: { id: userId, profile: {} as any },
+      authenticatedUser: { id: userId, isAnonymous: false, profile: {} as any },
     });
 
     expect(result.success).toBe(false);

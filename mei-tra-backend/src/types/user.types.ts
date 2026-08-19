@@ -45,6 +45,8 @@ export interface UpdateUserProfileDto {
 export interface AuthenticatedUser {
   id: string; // Supabase auth user ID
   email?: string;
+  /** Supabase anonymous (guest) session; upgrading keeps the same id. */
+  isAnonymous: boolean;
   profile: UserProfile;
 }
 

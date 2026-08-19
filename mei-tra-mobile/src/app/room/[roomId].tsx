@@ -159,6 +159,16 @@ export default function RoomScreen() {
           roomId={resolvedRoomId}
           firstTurnReveal={firstTurnReveal}
           onFirstTurnRevealDone={clearFirstTurnReveal}
+          isGuest={Boolean(user?.isAnonymous)}
+          onRegisterAccount={async () => {
+            // Leave the finished game first so room state doesn't reset
+            // underneath the upgrade screen, then navigate.
+            const didLeave = await doLeave();
+            if (didLeave) {
+              closeGameOver();
+            }
+            router.push('/upgrade-account');
+          }}
         />
       ) : (
         <View style={styles.center}>

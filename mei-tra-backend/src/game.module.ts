@@ -33,6 +33,7 @@ import { ProcessGameOverUseCase } from './use-cases/process-game-over.use-case';
 import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
 import { ComAutoPlayUseCase } from './use-cases/com-autoplay.use-case';
 import { ActivityTrackerService } from './services/activity-tracker.service';
+import { AvatarOrphanCleanupService } from './services/avatar-orphan-cleanup.service';
 import { TurnMonitorService } from './services/turn-monitor.service';
 import { UserGameStatsService } from './services/user-game-stats.service';
 import { ComSessionService } from './services/com-session.service';
@@ -74,6 +75,7 @@ import { AccountActionGateService } from './services/account-action-gate.service
   providers: [
     GameGateway,
     ActivityTrackerService,
+    AvatarOrphanCleanupService,
     TurnMonitorService,
     ComAutoPlayRecoveryService,
     UserGameStatsService,

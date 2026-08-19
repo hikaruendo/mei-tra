@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { GameTable } from '@/components/game/GameTable';
 import { PreGameTable } from '@/components/game/PreGameTable';
 import { Notification } from '@/components/shared/Notification';
@@ -12,6 +12,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RoomList } from '@/components/room/RoomList';
 import { LandingPage } from '@/components/landing/LandingPage';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { UpgradeAccountModal } from '@/components/auth/UpgradeAccountModal';
+import { GuestUpgradePrompt } from '@/components/auth/GuestUpgradePrompt';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './index.module.css';
@@ -21,14 +23,38 @@ export const dynamic = 'force-dynamic';
 export default function Home() {
   const t = useTranslations('game');
   const commonT = useTranslations('common');
-  const { user, loading: authLoading } = useAuth();
+  const authT = useTranslations('auth');
+  const locale = useLocale();
+  const { user, loading: authLoading, signInAnonymously } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [isGuestSigningIn, setIsGuestSigningIn] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const gameState = useGame();
 
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
+  };
+
+  const handleGuestStart = async () => {
+    if (isGuestSigningIn) return;
+
+    setIsGuestSigningIn(true);
+    try {
+      const guestNumber = Math.floor(1000 + Math.random() * 9000);
+      const { error } = await signInAnonymously({
+        displayName: authT('guestDefaultName', { number: guestNumber }),
+        locale: locale === 'en' ? 'en' : 'ja',
+      });
+
+      // On failure fall back to the auth modal, whose guest button surfaces errors.
+      if (error) {
+        openAuthModal('signin');
+      }
+    } finally {
+      setIsGuestSigningIn(false);
+    }
   };
 
   if (authLoading) {
@@ -52,6 +78,8 @@ export default function Home() {
         <LandingPage
           onLoginClick={() => openAuthModal('signin')}
           onSignupClick={() => openAuthModal('signup')}
+          onGuestClick={handleGuestStart}
+          guestPending={isGuestSigningIn}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -170,8 +198,21 @@ export default function Home() {
             onCancel={closeGameOverModal}
             confirmText={commonT('close')}
             showCancelButton={false}
-          />
+          >
+            {user?.isAnonymous && (
+              <GuestUpgradePrompt
+                onRegisterClick={() => {
+                  closeGameOverModal();
+                  setIsUpgradeModalOpen(true);
+                }}
+              />
+            )}
+          </ConfirmModal>
         )}
+        <UpgradeAccountModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+        />
         {paused ? (
           <div className={styles.paused}>
             {t('paused')}

@@ -29,6 +29,9 @@ interface FormData {
 
 export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormProps) {
   const { user, refreshUserProfile, getAccessToken } = useAuth();
+  // Guest uploads would outlive the account on a public bucket; see
+  // 20260819000000_block_guest_avatar_upload.sql for the matching RLS rule.
+  const isGuest = Boolean(user?.isAnonymous);
   const t = useTranslations('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -243,33 +246,37 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             )}
           </div>
 
-          <div className={styles.avatarControls}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading || isSaving}
-              className={styles.uploadButton}
-            >
-              {isUploading ? t('processing') : t('selectImage')}
-            </button>
+          {isGuest ? (
+            <p className={styles.avatarGuestNote}>{t('avatarGuestBlocked')}</p>
+          ) : (
+            <div className={styles.avatarControls}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading || isSaving}
+                className={styles.uploadButton}
+              >
+                {isUploading ? t('processing') : t('selectImage')}
+              </button>
 
-            <div
-              className={styles.dropZone}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-            >
-              <p>{t('dragDrop')}</p>
-              <small>JPEG, PNG, WebP (最大2MB)</small>
+              <div
+                className={styles.dropZone}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+              >
+                <p>{t('dragDrop')}</p>
+                <small>JPEG, PNG, WebP (最大2MB)</small>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleFileInputChange}
+                className={styles.hiddenInput}
+              />
             </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleFileInputChange}
-              className={styles.hiddenInput}
-            />
-          </div>
+          )}
 
           {uploadProgress.original && (
             <div className={styles.uploadProgress}>

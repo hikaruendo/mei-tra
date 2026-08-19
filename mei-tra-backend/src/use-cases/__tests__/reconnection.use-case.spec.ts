@@ -49,6 +49,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {} as UserProfile,
       },
     });
@@ -81,6 +82,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {} as UserProfile,
       },
     });
@@ -200,6 +202,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile,
       },
     });
@@ -327,6 +330,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: { displayName: 'Restored User' } as UserProfile,
       },
     });
@@ -447,6 +451,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {
           id: 'user-1',
           username: 'user-1',
@@ -572,6 +577,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {} as UserProfile,
       },
     });
@@ -647,6 +653,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {
           id: 'user-1',
           username: 'user-1',
@@ -756,6 +763,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {} as UserProfile,
       },
     });
@@ -835,6 +843,7 @@ describe('ReconnectionUseCase', () => {
       authenticatedUser: {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {} as UserProfile,
       },
     });

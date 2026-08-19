@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { disconnectSocket } from '@/app/socket';
-import { AuthUser, FontSizePreset, SignUpData, SignInData, UserProfile, UserPreferences } from '@/types/user.types';
+import { AuthUser, FontSizePreset, SignUpData, SignInData, GuestSignInData, UpgradeAccountData, UserProfile, UserPreferences } from '@/types/user.types';
 import { updateUserProfileViaApi } from '@/lib/api/user-profile';
 import {
   DEFAULT_FONT_SIZE_PRESET,
@@ -24,6 +24,8 @@ interface AuthContextType {
   fontSizePreference: FontSizePreset;
   signUp: (data: SignUpData) => Promise<{ user: User | null; error: AuthError | null }>;
   signIn: (data: SignInData) => Promise<{ user: User | null; error: AuthError | null }>;
+  signInAnonymously: (data: GuestSignInData) => Promise<{ user: User | null; error: AuthError | null }>;
+  upgradeAccount: (data: UpgradeAccountData) => Promise<{ error: AuthError | null; confirmationRequired: boolean }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   getAccessToken: () => Promise<string | null>;
   refreshSession: () => Promise<void>;
@@ -141,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser({
               id: supabaseUser.id,
               email: supabaseUser.email,
+              isAnonymous: supabaseUser.is_anonymous ?? false,
               profile,
             });
 
@@ -225,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             id: supabaseUser.id,
             email: supabaseUser.email,
+            isAnonymous: supabaseUser.is_anonymous ?? false,
             profile: userProfile,
           });
 
@@ -333,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser({
           id: session.user.id,
           email: session.user.email,
+          isAnonymous: session.user.is_anonymous ?? false,
           profile: null,
         });
         setLoading(false);
@@ -360,11 +365,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[AuthContext] Auth state changed:', event);
       setSession(session);
 
-      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
         // Preserve existing profile if available, set loading false immediately
         setUser(prev => ({
           id: session.user.id,
           email: session.user.email,
+          isAnonymous: session.user.is_anonymous ?? false,
           profile: prev?.profile || null,
         }));
         setLoading(false);
@@ -409,6 +415,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { user: authData.user, error };
     } catch (error) {
       return { user: null, error: error as AuthError };
+    }
+  };
+
+  const signInAnonymously = async (data: GuestSignInData) => {
+    try {
+      // display_name lands in raw_user_meta_data, which the handle_new_user
+      // trigger uses when creating the user_profiles row.
+      const { data: authData, error } = await supabase.auth.signInAnonymously({
+        options: {
+          data: {
+            display_name: data.displayName,
+            locale: data.locale || 'ja',
+          },
+        },
+      });
+
+      return { user: authData.user, error };
+    } catch (error) {
+      return { user: null, error: error as AuthError };
+    }
+  };
+
+  const upgradeAccount = async (data: UpgradeAccountData) => {
+    try {
+      // Attaches email+password to the anonymous user, keeping the same user id
+      // (and therefore the profile/stats). The email must be confirmed via the
+      // link Supabase sends before it can be used to sign in.
+      const { data: updated, error } = await supabase.auth.updateUser({
+        email: data.email,
+        password: data.password,
+      });
+
+      // Supabase parks the address in new_email until the link is clicked; when
+      // confirmations are disabled the address applies immediately instead.
+      return {
+        error,
+        confirmationRequired: Boolean(updated?.user?.new_email),
+      };
+    } catch (error) {
+      return { error: error as AuthError, confirmationRequired: false };
     }
   };
 
@@ -544,6 +590,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fontSizePreference,
     signUp,
     signIn,
+    signInAnonymously,
+    upgradeAccount,
     signOut,
     getAccessToken,
     refreshSession,

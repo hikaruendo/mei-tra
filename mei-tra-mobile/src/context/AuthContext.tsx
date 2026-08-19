@@ -51,6 +51,8 @@ interface AuthContextValue {
     displayName: string,
   ) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
+  signInAnonymously: () => Promise<AuthResult>;
+  upgradeAccount: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: AccountDeletionError | null }>;
   getAccessToken: () => Promise<string | null>;
@@ -105,6 +107,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser({
         id: authUser.id,
         email: authUser.email,
+        isAnonymous: authUser.is_anonymous ?? false,
         profile: data ? mapProfile(data) : null,
       });
     } catch (error) {
@@ -139,6 +142,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setUser({
             id: data.session.user.id,
             email: data.session.user.email,
+            isAnonymous: data.session.user.is_anonymous ?? false,
             profile: null,
           });
           void loadProfile(data.session.user);
@@ -164,6 +168,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser((current) => ({
           id: nextSession.user.id,
           email: nextSession.user.email,
+          isAnonymous: nextSession.user.is_anonymous ?? false,
           profile:
             current?.id === nextSession.user.id ? current.profile : null,
         }));
@@ -255,6 +260,42 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: callback.error };
   }, []);
 
+  const signInAnonymously = useCallback(async () => {
+    const guestNumber = Math.floor(1000 + Math.random() * 9000);
+    // display_name lands in raw_user_meta_data, which the handle_new_user
+    // trigger uses when creating the user_profiles row.
+    const { error } = await supabase.auth.signInAnonymously({
+      options: {
+        data: {
+          display_name: `ゲスト${guestNumber}`,
+          locale: 'ja',
+        },
+      },
+    });
+
+    return { error: error?.message ?? null };
+  }, []);
+
+  const upgradeAccount = useCallback(
+    async (email: string, password: string) => {
+      // Attaches email+password to the anonymous user, keeping the same user id
+      // (and therefore the profile/stats). The email must be confirmed via the
+      // link Supabase sends before it can be used to sign in.
+      const { data, error } = await supabase.auth.updateUser({
+        email: email.trim(),
+        password,
+      });
+
+      // Supabase parks the address in new_email until the link is clicked; when
+      // confirmations are disabled the address applies immediately instead.
+      return {
+        error: error?.message ?? null,
+        emailConfirmationRequired: Boolean(data?.user?.new_email),
+      };
+    },
+    [],
+  );
+
   const signOut = useCallback(async () => {
     try {
       await cleanupBeforeLocalSignOut({
@@ -318,6 +359,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signUp,
       signInWithGoogle,
+      signInAnonymously,
+      upgradeAccount,
       signOut,
       deleteAccount,
       getAccessToken,
@@ -329,9 +372,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       refreshProfile,
       session,
       signIn,
+      signInAnonymously,
       signInWithGoogle,
       signOut,
       signUp,
+      upgradeAccount,
       user,
       deleteAccount,
     ],

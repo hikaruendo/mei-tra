@@ -344,3 +344,13 @@ $transition-standard: all 0.3s ease;
     transform: translateY(-1px);
   }
 }
+
+.avatarGuestNote {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px dashed var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-muted);
+  font-size: var(--font-size-sm);
+}

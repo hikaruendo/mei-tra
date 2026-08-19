@@ -23,6 +23,7 @@ export default function SignInScreen() {
     signIn,
     signUp,
     signInWithGoogle,
+    signInAnonymously,
   } = useAuth();
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');
@@ -94,6 +95,25 @@ export default function SignInScreen() {
     }
   };
 
+  const handleGuest = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await signInAnonymously();
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      router.replace('/rooms');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const isInvalid =
     !email.trim() ||
     password.length < 6 ||
@@ -119,6 +139,17 @@ export default function SignInScreen() {
           >
             Googleで続ける
           </Button>
+
+          <Button
+            variant="secondary"
+            onPress={handleGuest}
+            disabled={submitting}
+          >
+            ゲストとして遊ぶ
+          </Button>
+          <Text style={styles.guestHint}>
+            登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。
+          </Text>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
@@ -250,6 +281,11 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: colors.textMuted,
+  },
+  guestHint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   error: {
     // dangerText, not danger: `danger` is a fill colour and only reaches ~2.4:1
