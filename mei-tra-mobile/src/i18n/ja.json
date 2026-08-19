@@ -1,0 +1,48 @@
+{
+  "common": {
+    "cancel": "キャンセル",
+    "unknown": "不明",
+    "player": "プレイヤー"
+  },
+  "team": {
+    "red": "赤",
+    "black": "黒"
+  },
+  "trump": {
+    "tra": "ノートラ",
+    "herz": "ヘル (♥)",
+    "daiya": "ダイヤ (♦)",
+    "club": "クラブ (♣)",
+    "zuppe": "ズッペ (♠)"
+  },
+  "auth": {
+    "signOutTitle": "ログアウトしますか？",
+    "guestSignOutMessage": "ゲストアカウントはログアウトすると二度とアクセスできず、戦績も失われます。残したい場合は先にアカウント登録をしてください。",
+    "signOut": "ログアウト",
+    "sessionExpired": "ログインセッションが切れています。もう一度ログインしてください。",
+    "callbackUrlUnreadable": "認証コールバックURLを読み取れませんでした",
+    "credentialsMissing": "認証情報を受け取れませんでした。もう一度ログインしてください。",
+    "googleFailed": "Googleログインを完了できませんでした"
+  },
+  "account": {
+    "networkError": "サーバーに接続できませんでした。通信状態を確認して再試行してください。",
+    "leaveRoomFirst": "参加中のルームから退出してからアカウントを削除してください。",
+    "deleteFailed": "アカウントを削除できませんでした。時間をおいて再試行してください。"
+  },
+  "notifications": {
+    "channelName": "対局通知",
+    "deviceOnly": "実機でのみ通知を登録できます。",
+    "permissionDenied": "通知が許可されていないため、対局通知を登録しませんでした。",
+    "noSession": "ログインセッションがありません。",
+    "projectIdMissing": "Expo projectIdが未設定のため、通知を登録できません。",
+    "registerFailed": "対局通知を登録できませんでした。設定から再試行できます。"
+  },
+  "realtime": {
+    "notConnected": "サーバーに接続されていません",
+    "noResponse": "サーバーから応答がありません"
+  },
+  "game": {
+    "pairsSuffix": "{count}組",
+    "otherSuits": "他のスート"
+  }
+}

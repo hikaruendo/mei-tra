@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { t } from '@/i18n';
 
 export const TOKEN_REFRESH_SKEW_SECONDS = 60;
 export const SUPABASE_AUTH_STORAGE_KEY = 'supabase.auth.token';
@@ -88,7 +89,7 @@ export const parseOAuthCallback = (url: string): OAuthCallbackPayload => {
       code: null,
       accessToken: null,
       refreshToken: null,
-      error: '認証コールバックURLを読み取れませんでした',
+      error: t('auth.callbackUrlUnreadable'),
     };
   }
 };
@@ -140,7 +141,7 @@ export const completeOAuthCallback = async (
   const key = getOAuthCallbackKey(callback);
   if (!key) {
     return {
-      error: '認証情報を受け取れませんでした。もう一度ログインしてください。',
+      error: t('auth.credentialsMissing'),
       session: await getCurrentSession(auth),
       alreadyCompleted: false,
     };
@@ -177,7 +178,7 @@ export const completeOAuthCallback = async (
       }
 
       return {
-        error: error.message ?? 'Googleログインを完了できませんでした',
+        error: error.message ?? t('auth.googleFailed'),
         session: null,
         alreadyCompleted: false,
       };

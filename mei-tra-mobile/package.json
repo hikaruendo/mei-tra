@@ -39,6 +39,7 @@
     "expo-image-picker": "~55.0.22",
     "expo-keep-awake": "~55.0.8",
     "expo-linking": "~55.0.16",
+    "expo-localization": "^57.0.1",
     "expo-notifications": "55.0.25",
     "expo-router": "~55.0.17",
     "expo-secure-store": "~55.0.16",
@@ -47,6 +48,7 @@
     "expo-symbols": "~55.0.9",
     "expo-system-ui": "~55.0.20",
     "expo-web-browser": "~55.0.18",
+    "i18n-js": "^4.5.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
@@ -76,6 +78,9 @@
     "preset": "jest-expo",
     "moduleNameMapper": {
       "\\.svg$": "<rootDir>/jest/svgMock.js"
-    }
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest/setup-i18n.js"
+    ]
   }
 }

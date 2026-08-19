@@ -6,6 +6,7 @@ import type {
   ServerToClientEvents,
 } from '@meitra/contracts/socket';
 import type { Socket } from 'socket.io-client';
+import { t } from '@/i18n';
 
 export type MobileSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -28,7 +29,7 @@ export const emitWithAck = <TEvent extends AckableClientEvent>(
     if (!socket?.connected) {
       resolve({
         success: false,
-        error: 'サーバーに接続されていません',
+        error: t('realtime.notConnected'),
       } as ClientAckResponses[TEvent]);
       return;
     }
@@ -40,7 +41,7 @@ export const emitWithAck = <TEvent extends AckableClientEvent>(
       if (timeoutError) {
         resolve({
           success: false,
-          error: 'サーバーから応答がありません',
+          error: t('realtime.noResponse'),
         } as ClientAckResponses[TEvent]);
         return;
       }

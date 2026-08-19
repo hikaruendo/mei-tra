@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
-import { TRUMP_LABELS } from '@/lib/trump-labels';
+import { trumpLabel } from '@/lib/trump-labels';
 import { colors } from '@/theme/colors';
 import { getValidBlowPairValues } from '@meitra/game-client/blow';
 import type { MobilePlayer } from '@/types/game';
@@ -15,7 +15,7 @@ import type { MobilePlayer } from '@/types/game';
 const TRUMP_ORDER: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz', 'tra'];
 
 const trumpOptions: { value: TrumpType; label: string }[] = TRUMP_ORDER.map(
-  (value) => ({ value, label: TRUMP_LABELS[value] }),
+  (value) => ({ value, label: trumpLabel(value) }),
 );
 
 const declarationLabel = (declaration: BlowDeclarationContract | null) => {
