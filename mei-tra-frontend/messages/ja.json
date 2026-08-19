@@ -49,8 +49,8 @@
       "titleHighlight": "100年以上",
       "titleTrailing": "続いたカードゲーム。",
       "description": "ビットと読み合い。本格トリックテイキングが、ブラウザで無料で動く。AI対戦で1人でも始められる。",
-      "loginCta": "ログイン",
-      "signupCta": "無料で始める",
+      "loginCta": "アカウントをお持ちの方はログイン",
+      "signupCta": "無料でアカウント登録",
       "metrics": [
         {
           "value": "100年以上",
@@ -65,7 +65,8 @@
           "label": "ブラウザだけで動く"
         }
       ],
-      "guestCta": "登録なしで試す"
+      "guestCta": "登録せずに試す",
+      "guestNote": "戦績は残りませんが、あとから登録すれば引き継げます。"
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
@@ -171,9 +172,10 @@
       "eyebrow": "Ready?",
       "title": "最初の一局を、今すぐ。",
       "description": "アカウント登録は無料。登録したら、そのままプレイへ。",
-      "login": "ログイン",
-      "signup": "無料で登録",
-      "product": "運営会社"
+      "login": "アカウントをお持ちの方はログイン",
+      "signup": "無料でアカウント登録",
+      "product": "運営会社",
+      "guest": "登録せずに試す"
     },
     "footer": {
       "links": [

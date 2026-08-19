@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../database/supabase.service';
 
@@ -22,10 +22,19 @@ type AvatarBucket = ReturnType<SupabaseService['client']['storage']['from']>;
  * a run but never loses work: orphans wait for the next run.
  */
 @Injectable()
-export class AvatarOrphanCleanupService {
+export class AvatarOrphanCleanupService implements OnModuleInit {
   private readonly logger = new Logger(AvatarOrphanCleanupService.name);
 
   constructor(private readonly supabaseService: SupabaseService) {}
+
+  /**
+   * Fly stops the machine when idle, so a wall-clock cron alone can go days
+   * without firing. Sweeping on boot ties reclamation to traffic instead:
+   * whenever someone plays, orphans from the nightly guest purge get cleared.
+   */
+  onModuleInit(): void {
+    void this.cleanupOrphanedAvatarFolders();
+  }
 
   @Cron(CronExpression.EVERY_DAY_AT_5AM)
   async cleanupOrphanedAvatarFolders(): Promise<void> {

@@ -25,6 +25,10 @@ export function ProfilePage() {
   const [showPasswordResetConfirm, setShowPasswordResetConfirm] = useState(false);
   const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
   const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  // An upgrade that needs no email confirmation clears isAnonymous while the
+  // request is still in flight. Latch the section open so the form survives to
+  // render its own result instead of being swapped out mid-submit.
+  const [showUpgradeSection, setShowUpgradeSection] = useState(false);
   const localePrefix = locale === 'en' ? '/en' : '';
 
   useEffect(() => {
@@ -45,6 +49,12 @@ export function ProfilePage() {
 
     void refreshUserProfile();
   }, [refreshUserProfile, user?.id]);
+
+  useEffect(() => {
+    if (user?.isAnonymous) {
+      setShowUpgradeSection(true);
+    }
+  }, [user?.isAnonymous]);
 
   if (loading) {
     return (
@@ -291,7 +301,7 @@ export function ProfilePage() {
                   </span>
                 </div>
               </div>
-              {isGuest ? (
+              {showUpgradeSection ? (
                 <div className={styles.accountActions}>
                   <h4 className={styles.sectionTitle}>{authT('upgrade.title')}</h4>
                   <UpgradeAccountForm />

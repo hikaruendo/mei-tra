@@ -91,7 +91,38 @@ $lp-content-width: min(1200px, 100%);
   flex-wrap: wrap;
   gap: 16px;
   align-items: center;
+  margin-bottom: 12px;
+}
+
+.ctaNote {
+  margin: 0 0 4px;
+  font-size: 0.875rem;
+  color: var(--mt-text-muted);
+}
+
+// Demoted from a button so the two real choices above stay unambiguous.
+.textCta {
+  display: inline-block;
   margin-bottom: 32px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--mt-text-muted);
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--mt-text-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-radius: var(--mt-radius);
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
+  }
 }
 
 .primaryCta,
@@ -486,6 +517,19 @@ $lp-content-width: min(1200px, 100%);
   gap: 16px;
   align-items: center;
   justify-content: center;
+}
+
+.ctaSectionFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+
+  .textCta {
+    margin-bottom: 0;
+  }
 }
 
 // ── Responsive ──

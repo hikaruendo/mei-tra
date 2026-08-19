@@ -37,6 +37,7 @@ export default function SettingsScreen() {
   const { connectionStatus, refreshRooms } = useGame();
   const { retryRegistration, status: notificationStatus } = useNotifications();
   const [signingOut, setSigningOut] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
@@ -92,11 +93,15 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = async () => {
-    if (signingOut) return;
+    if (signingOut || confirmingSignOut) return;
 
     // A guest account is unreachable after sign-out, so confirm before losing it.
     if (user?.isAnonymous) {
-      confirmGuestSignOut(() => void performSignOut());
+      setConfirmingSignOut(true);
+      confirmGuestSignOut(
+        () => void performSignOut(),
+        () => setConfirmingSignOut(false),
+      );
       return;
     }
 

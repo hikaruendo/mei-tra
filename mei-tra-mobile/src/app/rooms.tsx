@@ -155,7 +155,11 @@ export default function RoomsScreen() {
               };
 
               if (user?.isAnonymous) {
-                confirmGuestSignOut(() => void performSignOut());
+                setSubmitting(true);
+                confirmGuestSignOut(
+                  () => void performSignOut(),
+                  () => setSubmitting(false),
+                );
                 return;
               }
 

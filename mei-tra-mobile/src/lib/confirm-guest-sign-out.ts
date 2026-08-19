@@ -9,19 +9,30 @@ const MESSAGE =
  * entry point must confirm first. react-native-web ships Alert as a no-op
  * stub, so the web build falls back to the browser's confirm dialog.
  */
-export function confirmGuestSignOut(onConfirm: () => void): void {
+export function confirmGuestSignOut(
+  onConfirm: () => void,
+  onDismiss?: () => void,
+): void {
   if (Platform.OS === 'web') {
     const confirm = (
       globalThis as { confirm?: (message: string) => boolean }
     ).confirm;
     if (confirm?.(`${TITLE}\n\n${MESSAGE}`)) {
       onConfirm();
+    } else {
+      onDismiss?.();
     }
     return;
   }
 
-  Alert.alert(TITLE, MESSAGE, [
-    { text: 'キャンセル', style: 'cancel' },
-    { text: 'ログアウト', style: 'destructive', onPress: onConfirm },
-  ]);
+  Alert.alert(
+    TITLE,
+    MESSAGE,
+    [
+      { text: 'キャンセル', style: 'cancel', onPress: onDismiss },
+      { text: 'ログアウト', style: 'destructive', onPress: onConfirm },
+    ],
+    // Android back-button dismissal skips the buttons entirely.
+    { onDismiss },
+  );
 }

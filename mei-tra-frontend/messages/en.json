@@ -49,8 +49,8 @@
       "titleHighlight": "A century old.",
       "titleTrailing": " Now in your browser.",
       "description": "A 4-player, 2-team trick-taking game with real depth—bidding, Jack hierarchy, and penalty calls. Play solo against AI or with four people in real time.",
-      "loginCta": "Log In",
-      "signupCta": "Play Free",
+      "loginCta": "Already have an account? Log in",
+      "signupCta": "Create a free account",
       "metrics": [
         {
           "value": "100+ years",
@@ -65,7 +65,8 @@
           "label": "Browser only, no install"
         }
       ],
-      "guestCta": "Try as guest"
+      "guestCta": "Try without signing up",
+      "guestNote": "Stats are not saved, but you can carry them over by registering later."
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
@@ -171,9 +172,10 @@
       "eyebrow": "Ready?",
       "title": "Your first hand is waiting.",
       "description": "Free to sign up. First hand in under five minutes.",
-      "login": "Log In",
-      "signup": "Play Free",
-      "product": "Operating Company"
+      "login": "Already have an account? Log in",
+      "signup": "Create a free account",
+      "product": "Operating Company",
+      "guest": "Try without signing up"
     },
     "footer": {
       "links": [

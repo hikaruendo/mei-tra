@@ -106,8 +106,12 @@ describe('AvatarOrphanCleanupService', () => {
     expect(bucket.remove).toHaveBeenCalledWith([
       `${ORPHAN_USER_ID}/avatar.webp`,
     ]);
-    const rootCalls = bucket.list.mock.calls.filter(([p]) => p === '');
-    expect(rootCalls.length).toBeGreaterThan(1);
+    // Pin the stride too: `offset: page` would also produce >1 call but skip rows.
+    const rootOffsets = bucket.list.mock.calls
+      .filter(([p]) => p === '')
+      .map(([, opts]) => opts as { offset: number; limit: number });
+    expect(rootOffsets.map((o) => o.offset)).toEqual([0, 1000]);
+    expect(rootOffsets.every((o) => o.limit === 1000)).toBe(true);
   });
 
   it('splits the profile lookup so the in-filter cannot blow the URL limit', async () => {

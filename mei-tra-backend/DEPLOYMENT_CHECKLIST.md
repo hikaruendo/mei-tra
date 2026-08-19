@@ -98,10 +98,14 @@
 
 `supabase/config.toml` はローカル環境専用のため、以下は本番プロジェクトで個別に設定する。未設定だとゲスト機能だけが静かに失敗する。
 
-- [ ] Authentication > Sign In / Up > **Anonymous sign-ins を有効化**
+- [ ] Authentication 設定で **Anonymous sign-ins を有効化**
       （ゲストログインに必須。無効のままだと「ゲストとして遊ぶ」がエラーになる）
-- [ ] Authentication > Emails > **Confirm email が有効**であることを確認
-      （ゲストからのアカウント登録は確認メールを踏んで完了する前提）
+- [ ] Authentication の Email provider で **Confirm email が有効**であることを確認
+      （ゲストからのアカウント登録は、確認メールのリンクを踏んで完了する前提。
+      無効だと `is_anonymous` が即座に false になり挙動が変わる）
+
+> ダッシュボードのメニュー階層は Supabase 側の変更で移動することがある。
+> 見つからない場合は Authentication 配下を設定名で検索する。
 
 ---
 
