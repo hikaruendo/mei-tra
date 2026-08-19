@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 
 import { completeOAuthCallback } from '@/lib/auth-session';
 import { supabase } from '@/lib/supabase';
+import { t } from '@/i18n';
 
 const getFirstParam = (value: string | string[] | undefined): string | null => {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -47,7 +48,7 @@ export default function AuthCallbackScreen() {
     let active = true;
 
     const routeToSignInWithError = (message: string) => {
-      Alert.alert('ログインを完了できませんでした', message);
+      Alert.alert(t('auth.signInFailedTitle'), message);
       router.replace('/sign-in');
     };
 
@@ -68,7 +69,7 @@ export default function AuthCallbackScreen() {
         const message =
           callbackError instanceof Error
             ? callbackError.message
-            : 'Googleログインを完了できませんでした';
+            : t('auth.googleFailed');
         routeToSignInWithError(message);
       }
     };

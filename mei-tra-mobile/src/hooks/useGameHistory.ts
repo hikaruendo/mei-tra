@@ -9,6 +9,7 @@ import {
   fetchGameHistoryReplay,
   fetchGameHistorySummary,
 } from '@/lib/game-history-api';
+import { t } from '@/i18n';
 
 interface UseGameHistoryResult {
   replay: GameHistoryReplayViewContract | null;
@@ -44,7 +45,7 @@ export function useGameHistory(
       setSummary(summaryData);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'ゲーム履歴の取得に失敗しました',
+        err instanceof Error ? err.message : t('history.fetchFailed'),
       );
     } finally {
       setLoading(false);

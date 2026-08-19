@@ -18,6 +18,7 @@ import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobilePlayer } from '@/types/game';
 import { MiniCard } from '@/components/game/MiniCard';
+import { t } from '@/i18n';
 
 interface GameHistoryProps {
   replay: GameHistoryReplayViewContract | null;
@@ -56,7 +57,7 @@ function Row({ row, index }: { row: RoundRow; index: number }) {
       </Text>
       <View style={[styles.scoreCell, { flex: COL.score }]}>
         {row.inProgress ? (
-          <Text style={styles.inProgress}>進行中</Text>
+          <Text style={styles.inProgress}>{t('gameLog.inProgress')}</Text>
         ) : (
           row.scores.map((score) => (
             <Text key={score.team} style={styles.scoreLine}>
@@ -95,12 +96,15 @@ function getEventPlayerName(event: GameHistoryReplayEventContract): string {
     }
   }
 
-  return 'プレイヤー';
+  return t('common.player');
 }
 
 function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
   const playerName = getEventPlayerName(event);
-  const actionLabel = event.actionType === 'player_joined' ? '入室' : '退出';
+  const actionLabel =
+    event.actionType === 'player_joined'
+      ? t('gameLog.joined')
+      : t('gameLog.left');
 
   return (
     <View style={styles.membershipRow}>
@@ -108,7 +112,10 @@ function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
         {new Date(event.timestamp).toLocaleTimeString()}
       </Text>
       <Text style={styles.membershipText}>
-        {playerName}が{actionLabel}
+        {t('gameLog.membershipEntry', {
+          name: playerName,
+          action: actionLabel,
+        })}
       </Text>
     </View>
   );
@@ -154,7 +161,7 @@ export function GameHistory({
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.gold} size="small" />
-        <Text style={styles.loadingText}>ログを読み込み中...</Text>
+        <Text style={styles.loadingText}>{t('gameLog.loading')}</Text>
       </View>
     );
   }
@@ -164,7 +171,7 @@ export function GameHistory({
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable onPress={onRefresh}>
-          <Text style={styles.retryText}>再試行</Text>
+          <Text style={styles.retryText}>{t('gameLog.retry')}</Text>
         </Pressable>
       </View>
     );
@@ -174,20 +181,20 @@ export function GameHistory({
     <View style={styles.container}>
       <View style={styles.header}>
         <Pressable hitSlop={8} onPress={onRefresh}>
-          <Text style={styles.refresh}>更新</Text>
+          <Text style={styles.refresh}>{t('gameLog.refresh')}</Text>
         </Pressable>
       </View>
 
       {rows.length === 0 && membershipEvents.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>表示できる対局ログがありません</Text>
+          <Text style={styles.emptyText}>{t('gameLog.empty')}</Text>
         </View>
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false}>
             {membershipEvents.length > 0 ? (
               <View style={styles.membershipSection}>
-                <Text style={styles.membershipTitle}>入退出</Text>
+                <Text style={styles.membershipTitle}>{t('gameLog.membership')}</Text>
                 {membershipEvents.map((event) => (
                   <MembershipRow event={event} key={event.id} />
                 ))}
@@ -197,16 +204,16 @@ export function GameHistory({
               <>
                 <View style={[styles.row, styles.headRow]}>
                   <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
-                    ラウンド
+                    {t('gameLog.round')}
                   </Text>
                   <Text numberOfLines={1} style={[styles.headCell, { flex: COL.blower }]}>
-                    吹き手
+                    {t('gameLog.blower')}
                   </Text>
                   <Text numberOfLines={1} style={[styles.headCell, { flex: COL.bid }]}>
-                    宣言
+                    {t('gameLog.declaration')}
                   </Text>
                   <Text numberOfLines={1} style={[styles.headCell, { flex: COL.score }]}>
-                    得点
+                    {t('gameLog.score')}
                   </Text>
                 </View>
                 {rows.map((row, index) => (
@@ -216,7 +223,7 @@ export function GameHistory({
             ) : null}
             {startingHands.length > 0 ? (
               <View style={styles.handsSection}>
-                <Text style={styles.handsTitle}>開始時の手札</Text>
+                <Text style={styles.handsTitle}>{t('gameLog.startingHands')}</Text>
                 {startingHands.map((round) => (
                   <View
                     key={`starting-hand-${round.roundNumber ?? 'pre-game'}`}
@@ -224,8 +231,8 @@ export function GameHistory({
                   >
                     <Text style={styles.handLabel}>
                       {round.roundNumber == null
-                        ? '開始前'
-                        : `${round.roundNumber}ラウンド`}
+                        ? t('gameLog.preGame')
+                        : t('gameLog.roundN', { n: round.roundNumber })}
                     </Text>
                     <View style={styles.handCards}>
                       {round.viewerStartingHand?.map((card, index) => (

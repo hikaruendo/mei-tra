@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 interface FeedbackBannerProps {
   error?: string | null;
@@ -24,8 +25,8 @@ export function FeedbackBanner({
     >
       <Text style={styles.message}>{message}</Text>
       <Pressable
-        accessibilityLabel="メッセージを閉じる"
-        accessibilityHint="メッセージを閉じます"
+        accessibilityLabel={t('a11y.dismissMessage')}
+        accessibilityHint={t('a11y.dismissMessageHint')}
         accessibilityRole="button"
         hitSlop={12}
         onPress={onDismiss}

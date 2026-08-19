@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 export default function RoomScreen() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function RoomScreen() {
       <Screen contentStyle={styles.center}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text accessibilityLiveRegion="polite" style={styles.loadingText}>
-          アカウント情報を読み込んでいます
+          {t('rooms.loadingAccount')}
         </Text>
       </Screen>
     );
@@ -94,11 +95,11 @@ export default function RoomScreen() {
         <ActivityIndicator color={colors.gold} size="large" />
         <Text style={styles.loadingText}>
           {connectionStatus === 'connected'
-            ? 'ルーム情報を復元しています'
-            : 'サーバーへ再接続しています'}
+            ? t('room.restoring')
+            : t('room.reconnecting')}
         </Text>
         <Button variant="ghost" onPress={() => router.replace('/rooms')}>
-          ルーム一覧へ戻る
+          {t('room.backToRooms')}
         </Button>
       </Screen>
     );
@@ -113,7 +114,7 @@ export default function RoomScreen() {
       {connectionStatus !== 'connected' ? (
         <ConnectionBanner
           onRetry={refreshRooms}
-          retryLabel="再接続を試す"
+          retryLabel={t('room.retryConnect')}
           status={connectionStatus}
         />
       ) : null}

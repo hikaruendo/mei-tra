@@ -3,14 +3,15 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 export default function IndexScreen() {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <View accessibilityLabel="ログイン状態を確認しています" style={styles.loading}>
-        <ActivityIndicator accessibilityLabel="読み込み中" color={colors.gold} size="large" />
+      <View accessibilityLabel={t('auth.checkingSession')} style={styles.loading}>
+        <ActivityIndicator accessibilityLabel={t('auth.loading')} color={colors.gold} size="large" />
       </View>
     );
   }

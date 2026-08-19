@@ -29,6 +29,7 @@ import { confirmGuestSignOut } from '@/lib/confirm-guest-sign-out';
 import { updateProfile, uploadAvatar } from '@/lib/profile-api';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function SettingsScreen() {
   if (loading || !user) {
     return (
       <Screen contentStyle={styles.center}>
-        <Text style={styles.loading}>アカウント情報を読み込んでいます</Text>
+        <Text style={styles.loading}>{t('rooms.loadingAccount')}</Text>
       </Screen>
     );
   }
@@ -124,7 +125,7 @@ export default function SettingsScreen() {
         const roomCount = result.error.activeRoomCount;
         setDeleteError(
           result.error.kind === 'active-room' && roomCount
-            ? `参加中のルームが${roomCount}件あります。退出してから再試行してください。`
+            ? t('settings.activeRoomBlocked', { count: roomCount })
             : result.error.message,
         );
         return;
@@ -144,7 +145,7 @@ export default function SettingsScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      setLinkError(`${label}を開けませんでした。もう一度お試しください。`);
+      setLinkError(t('settings.linkOpenFailed', { label }));
     } finally {
       setOpeningLink(null);
     }
@@ -166,13 +167,13 @@ export default function SettingsScreen() {
     setProfileError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error('認証が切れました');
+      if (!token) throw new Error(t('settings.authExpired'));
       await updateProfile(user.id, token, { displayName: trimmed });
       await refreshProfile();
       setEditingName(false);
     } catch (err) {
       setProfileError(
-        err instanceof Error ? err.message : '表示名の更新に失敗しました',
+        err instanceof Error ? err.message : t('settings.displayNameUpdateFailed'),
       );
     } finally {
       setSavingName(false);
@@ -185,7 +186,7 @@ export default function SettingsScreen() {
     setAnimationOverride(next);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error('認証が切れました');
+      if (!token) throw new Error(t('settings.authExpired'));
       await updateProfile(user.id, token, {
         preferences: { startPlayerAnimation: next },
       });
@@ -194,7 +195,7 @@ export default function SettingsScreen() {
     } catch (err) {
       setAnimationOverride(null);
       setProfileError(
-        err instanceof Error ? err.message : '設定の更新に失敗しました',
+        err instanceof Error ? err.message : t('settings.settingUpdateFailed'),
       );
     } finally {
       setSavingAnimation(false);
@@ -207,7 +208,7 @@ export default function SettingsScreen() {
     // and storage RLS reject them, so do not open the picker at all.
     if (user.isAnonymous) {
       setProfileError(
-        'アバターの設定にはアカウント登録が必要です。',
+        t('settings.avatarNeedsAccount'),
       );
       return;
     }
@@ -215,8 +216,8 @@ export default function SettingsScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        '写真のアクセス許可',
-        'アバターを変更するには、写真ライブラリへのアクセスを許可してください。',
+        t('settings.photoPermissionTitle'),
+        t('settings.photoPermissionMessage'),
       );
       return;
     }
@@ -234,7 +235,7 @@ export default function SettingsScreen() {
     setUploadingAvatar(true);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error('認証が切れました');
+      if (!token) throw new Error(t('settings.authExpired'));
       await uploadAvatar(
         user.id,
         token,
@@ -244,7 +245,7 @@ export default function SettingsScreen() {
       await refreshProfile();
     } catch (err) {
       setProfileError(
-        err instanceof Error ? err.message : 'アバターのアップロードに失敗しました',
+        err instanceof Error ? err.message : t('settings.avatarUploadFailed'),
       );
     } finally {
       setUploadingAvatar(false);
@@ -253,36 +254,36 @@ export default function SettingsScreen() {
 
   const externalLinks = [
     {
-      label: 'プライバシーポリシー',
+      label: t('settings.privacyPolicy'),
       url: `${config.publicWebBaseUrl}/ja/privacy`,
     },
     {
-      label: '利用規約',
+      label: t('settings.terms'),
       url: `${config.publicWebBaseUrl}/ja/terms`,
     },
-    { label: 'お問い合わせ（運営会社）', url: config.supportUrl },
+    { label: t('settings.support'), url: config.supportUrl },
   ];
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <BrandHeader subtitle="アカウントと接続状態" />
+          <BrandHeader subtitle={t('settings.subtitle')} />
           <Button
-            accessibilityLabel="部屋一覧へ戻る"
+            accessibilityLabel={t('settings.backToRooms')}
             onPress={() => router.replace('/rooms')}
             style={styles.back}
             variant="ghost"
           >
-            戻る
+            {t('settings.back')}
           </Button>
         </View>
 
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeading}>
-              <Text style={styles.sectionTitle}>最近の対局</Text>
-              <Text style={styles.hint}>完了した対局を新しい順に表示します。</Text>
+              <Text style={styles.sectionTitle}>{t('settings.recentGames')}</Text>
+              <Text style={styles.hint}>{t('settings.recentGamesHint')}</Text>
             </View>
             <Button
               disabled={historyLoading}
@@ -290,20 +291,20 @@ export default function SettingsScreen() {
               style={styles.refreshButton}
               variant="ghost"
             >
-              更新
+              {t('settings.refresh')}
             </Button>
           </View>
 
           {historyLoading && recentMatches.length === 0 ? (
-            <Text style={styles.historyStatus}>対局ログを読み込んでいます</Text>
+            <Text style={styles.historyStatus}>{t('settings.historyLoading')}</Text>
           ) : null}
           {!historyLoading && historyError ? (
             <Text accessibilityRole="alert" style={styles.profileError}>
-              対局ログを読み込めませんでした
+              {t('settings.historyFailed')}
             </Text>
           ) : null}
           {!historyLoading && !historyError && recentMatches.length === 0 ? (
-            <Text style={styles.historyStatus}>完了した対局はまだありません</Text>
+            <Text style={styles.historyStatus}>{t('settings.historyEmpty')}</Text>
           ) : null}
 
           {recentMatches.map((match) => {
@@ -314,11 +315,11 @@ export default function SettingsScreen() {
                     match.winningTeam as Team,
                     match.teamNames,
                   )
-                : '勝敗未確定';
+                : t('settings.winnerUndecided');
 
             return (
               <Pressable
-                accessibilityHint="対局ログの詳細を開きます"
+                accessibilityHint={t('settings.historyHint')}
                 accessibilityRole="button"
                 key={match.roomId}
                 onPress={() =>
@@ -344,22 +345,24 @@ export default function SettingsScreen() {
                 </View>
                 <View style={styles.historyMeta}>
                   <Text style={styles.historyMetaText}>
-                    {match.roundCount}ラウンド
+                    {t('settings.rounds', { count: match.roundCount })}
                   </Text>
-                  <Text style={styles.historyMetaText}>勝者: {winner}</Text>
+                  <Text style={styles.historyMetaText}>
+                    {t('settings.winner', { name: winner })}
+                  </Text>
                 </View>
-                <Text style={styles.historyDetails}>詳細を見る</Text>
+                <Text style={styles.historyDetails}>{t('settings.viewDetails')}</Text>
               </Pressable>
             );
           })}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>プロフィール</Text>
+          <Text style={styles.sectionTitle}>{t('settings.profile')}</Text>
 
           <View style={styles.avatarRow}>
             <Pressable
-              accessibilityLabel="アバターを変更"
+              accessibilityLabel={t('settings.changeAvatar')}
               disabled={uploadingAvatar}
               onPress={() => void handlePickAvatar()}
               style={styles.avatarWrapper}
@@ -377,7 +380,9 @@ export default function SettingsScreen() {
                 </View>
               )}
               <Text style={styles.avatarHint}>
-                {uploadingAvatar ? 'アップロード中...' : 'タップで変更'}
+                {uploadingAvatar
+                  ? t('settings.uploading')
+                  : t('settings.tapToChange')}
               </Text>
             </Pressable>
           </View>
@@ -389,7 +394,7 @@ export default function SettingsScreen() {
                 maxLength={30}
                 onChangeText={setNameInput}
                 onSubmitEditing={() => void handleSaveName()}
-                placeholder="表示名"
+                placeholder={t('settings.displayName')}
                 placeholderTextColor={colors.textMuted}
                 returnKeyType="done"
                 style={styles.nameInput}
@@ -401,7 +406,7 @@ export default function SettingsScreen() {
                 onPress={() => void handleSaveName()}
                 style={styles.saveButton}
               >
-                保存
+                {t('settings.save')}
               </Button>
               <Button
                 disabled={savingName}
@@ -409,32 +414,34 @@ export default function SettingsScreen() {
                 style={styles.cancelButton}
                 variant="ghost"
               >
-                取消
+                {t('settings.cancelShort')}
               </Button>
             </View>
           ) : (
             <Pressable
-              accessibilityHint="タップして表示名を編集"
+              accessibilityHint={t('settings.tapToEditName')}
               onPress={handleStartEditName}
               style={styles.nameRow}
             >
               <Text style={styles.name}>{displayName}</Text>
-              <Text style={styles.editIcon}>編集</Text>
+              <Text style={styles.editIcon}>{t('settings.edit')}</Text>
             </Pressable>
           )}
 
           {user.isAnonymous ? (
             <>
-              <Text style={styles.email}>ゲストアカウント</Text>
+              <Text style={styles.email}>{t('settings.guestAccount')}</Text>
               <Button onPress={() => router.push('/upgrade-account')}>
-                アカウント登録して戦績を残す
+                {t('settings.upgradeCta')}
               </Button>
               <Text style={styles.hint}>
-                {'メールアドレスとパスワードを設定すると、戦績を引き継いだまま次回からログインできるようになります。'}
+                {t('settings.upgradeHint')}
               </Text>
             </>
           ) : (
-            <Text style={styles.email}>{user.email ?? 'メールアドレス未設定'}</Text>
+            <Text style={styles.email}>
+              {user.email ?? t('settings.noEmail')}
+            </Text>
           )}
           {profileError ? (
             <Text accessibilityRole="alert" style={styles.profileError}>
@@ -444,10 +451,10 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>対局</Text>
+          <Text style={styles.sectionTitle}>{t('settings.game')}</Text>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel}>
-              ゲーム開始時のじゃんけん演出
+              {t('settings.jankenToggle')}
             </Text>
             <Switch
               disabled={savingAnimation}
@@ -456,44 +463,44 @@ export default function SettingsScreen() {
             />
           </View>
           <Text style={styles.hint}>
-            オフにすると、開始プレイヤーがすぐに表示されます。
+            {t('settings.jankenHint')}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>接続</Text>
+          <Text style={styles.sectionTitle}>{t('settings.connection')}</Text>
           <ConnectionBanner status={connectionStatus} onRetry={refreshRooms} />
           <Text style={styles.hint}>
-            対局中はアプリを前面に戻すと、最新のゲーム状態へ再同期します。
+            {t('settings.resyncHint')}
           </Text>
           <Text style={styles.hint}>
-            対局通知:{' '}
+            {t('settings.notificationsLabel')}{' '}
             {notificationStatus === 'registered'
-              ? '有効'
+              ? t('settings.notifEnabled')
               : notificationStatus === 'permission-denied'
-                ? '許可されていません'
+                ? t('settings.notifDenied')
                 : notificationStatus === 'unsupported'
-                  ? '実機で利用できます'
-                  : '未登録'}
+                  ? t('settings.notifDeviceOnly')
+                  : t('settings.notifUnregistered')}
           </Text>
           {notificationStatus !== 'registered' &&
           notificationStatus !== 'unsupported' ? (
             <Button onPress={() => void retryRegistration()} variant="ghost">
-              対局通知を再登録
+              {t('settings.retryNotifications')}
             </Button>
           ) : null}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>法的情報・サポート</Text>
+          <Text style={styles.sectionTitle}>{t('settings.legal')}</Text>
           <Text style={styles.hint}>
-            プライバシーポリシー、利用規約、お問い合わせはWebサイトで確認できます。
+            {t('settings.legalHint')}
           </Text>
           <View style={styles.linkList}>
             {externalLinks.map(({ label, url }) => (
               <Pressable
-                accessibilityHint="Webブラウザで開きます"
-                accessibilityLabel={`${label}を開く`}
+                accessibilityHint={t('settings.openInBrowser')}
+                accessibilityLabel={t('settings.openLabel', { label })}
                 accessibilityRole="link"
                 accessibilityState={{ disabled: Boolean(openingLink) }}
                 disabled={Boolean(openingLink)}
@@ -505,7 +512,9 @@ export default function SettingsScreen() {
                 ]}
               >
                 <Text style={styles.linkLabel}>
-                  {openingLink === url ? `${label}を開いています…` : label}
+                  {openingLink === url
+                    ? t('settings.openingLabel', { label })
+                    : label}
                 </Text>
               </Pressable>
             ))}
@@ -518,14 +527,14 @@ export default function SettingsScreen() {
         </View>
 
         <Button loading={signingOut} onPress={handleSignOut} variant="danger">
-          ログアウト
+          {t('settings.signOut')}
         </Button>
         <Button
           disabled={signingOut || deletingAccount}
           onPress={openDeleteModal}
           variant="ghost"
         >
-          アカウントを削除
+          {t('settings.deleteAccount')}
         </Button>
       </ScrollView>
 
@@ -539,13 +548,12 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>アカウントを削除</Text>
+            <Text style={styles.modalTitle}>{t('settings.deleteAccount')}</Text>
             <Text style={styles.modalWarning}>
-              この操作は取り消せません。プロフィール、過去の記録、通知登録が削除されます。
-              参加中のルームがある場合は先に退出してください。
+              {t('settings.deleteWarning')}
             </Text>
             <Text style={styles.confirmationLabel}>
-              確認のため DELETE と入力してください
+              {t('settings.deleteConfirmLabel')}
             </Text>
             <TextInput
               autoCapitalize="characters"
@@ -569,7 +577,7 @@ export default function SettingsScreen() {
                 onPress={() => setDeleteModalVisible(false)}
                 style={styles.cancelAction}
               >
-                <Text style={styles.cancelLabel}>キャンセル</Text>
+                <Text style={styles.cancelLabel}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -587,7 +595,9 @@ export default function SettingsScreen() {
                 ]}
               >
                 <Text style={styles.deleteLabel}>
-                  {deletingAccount ? '削除中…' : '完全に削除する'}
+                  {deletingAccount
+                    ? t('settings.deleting')
+                    : t('settings.deleteFinal')}
                 </Text>
               </Pressable>
             </View>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { fetchProfileGameHistory } from '@/lib/profile-api';
+import { t } from '@/i18n';
 
 export function useProfileGameHistory(userId: string | null) {
   const { getAccessToken } = useAuth();
@@ -17,13 +18,13 @@ export function useProfileGameHistory(userId: string | null) {
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error('認証が切れました');
+      if (!token) throw new Error(t('settings.authExpired'));
       setItems(await fetchProfileGameHistory(userId, token));
     } catch (loadError) {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : '対局ログの取得に失敗しました',
+          : t('history.logFetchFailed'),
       );
     } finally {
       setLoading(false);

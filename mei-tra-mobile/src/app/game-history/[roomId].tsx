@@ -8,6 +8,7 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 export default function GameHistoryScreen() {
   const router = useRouter();
@@ -28,13 +29,13 @@ export default function GameHistoryScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
-        <BrandHeader subtitle="過去の対局を確認" />
+        <BrandHeader subtitle={t('gameLog.subtitle')} />
         <Button onPress={() => router.back()} style={styles.back} variant="ghost">
-          戻る
+          {t('gameLog.back')}
         </Button>
       </View>
       <View style={styles.card}>
-        <Text style={styles.title}>対局ログ</Text>
+        <Text style={styles.title}>{t('gameLog.title')}</Text>
         <GameHistory
           error={error}
           loading={loading || authLoading}

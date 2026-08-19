@@ -7,6 +7,7 @@ import { getTeamDisplayName } from '@/lib/team-labels';
 import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobilePlayer } from '@/types/game';
+import { t } from '@/i18n';
 
 interface PlayerSeatProps {
   player: MobilePlayer;
@@ -38,18 +39,23 @@ export function PlayerSeat({
   onPress,
 }: PlayerSeatProps) {
   const statusLabel = isDisconnected
-    ? '切断中'
+    ? t('seat.disconnected')
     : isIdle
-      ? '無操作'
+      ? t('seat.idle')
       : isTurn
-        ? '現在の手番'
-        : '手番待ち';
+        ? t('seat.currentTurn')
+        : t('seat.waitingTurn');
 
   const faceDownCount = Math.min(player.hand.length, 5);
 
   const content = (
     <View
-      accessibilityLabel={`${player.name}${isSelf ? '、あなた' : ''}、${statusLabel}、手札${player.hand.length}枚`}
+      accessibilityLabel={t('seat.a11yLabel', {
+        name: player.name,
+        self: isSelf ? t('seat.a11ySelf') : '',
+        status: statusLabel,
+        count: player.hand.length,
+      })}
       style={[
         styles.container,
         isTurn && styles.turn,
@@ -59,7 +65,9 @@ export function PlayerSeat({
     >
       {isBlowWinner && declaration ? (
         <View style={styles.declarationBadge}>
-          <Text style={styles.declarationBadgeText}>アゲ: {declaration}</Text>
+          <Text style={styles.declarationBadgeText}>
+            {t('seat.agari', { card: declaration })}
+          </Text>
         </View>
       ) : null}
       {isTurn ? (
@@ -74,7 +82,7 @@ export function PlayerSeat({
       </View>
       <Text numberOfLines={1} style={styles.name}>
         {player.name}
-        {isSelf ? '（あなた）' : ''}
+        {isSelf ? t('blow.youSuffix') : ''}
       </Text>
       <View style={[styles.teamBadge, { borderColor: teamColors[player.team] }]}>
         <Text style={[styles.teamBadgeText, { color: teamColors[player.team] }]}>
@@ -83,24 +91,24 @@ export function PlayerSeat({
       </View>
       {teamFieldCounts ? (
         <Text style={styles.fieldCountText}>
-          取得 {teamFieldCounts[player.team] ?? 0}場
+          {t('seat.fieldsWon', { count: teamFieldCounts[player.team] ?? 0 })}
         </Text>
       ) : null}
       {isDisconnected ? (
-        <Text style={styles.statusBadge}>切断中</Text>
+        <Text style={styles.statusBadge}>{t('seat.disconnected')}</Text>
       ) : isIdle ? (
-        <Text style={styles.statusBadge}>無操作</Text>
+        <Text style={styles.statusBadge}>{t('seat.idle')}</Text>
       ) : null}
       {negriCard ? (
         <View style={styles.specialCardRow}>
           <PlayingCard faceDown size="seat" />
-          <Text style={styles.specialCardLabel}>ネグリ</Text>
+          <Text style={styles.specialCardLabel}>{t('seat.negri')}</Text>
         </View>
       ) : null}
       {agariCard ? (
         <View style={styles.specialCardRow}>
           <PlayingCard card={agariCard} size="seat" />
-          <Text style={styles.specialCardLabel}>アゲ</Text>
+          <Text style={styles.specialCardLabel}>{t('seat.agariShort')}</Text>
         </View>
       ) : null}
       {faceDownCount > 0 ? (
@@ -118,7 +126,7 @@ export function PlayerSeat({
   if (onPress) {
     return (
       <Pressable
-        accessibilityHint="タップで視点を切り替え"
+        accessibilityHint={t('seat.switchPerspective')}
         accessibilityRole="button"
         onPress={onPress}
       >

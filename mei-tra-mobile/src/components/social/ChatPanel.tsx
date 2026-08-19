@@ -13,6 +13,7 @@ import {
 
 import { useSocial } from '@/context/SocialContext';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 interface ChatPanelProps {
   roomId: string;
@@ -122,7 +123,7 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>
-              まだメッセージがありません
+              {t('chat.empty')}
             </Text>
           </View>
         }
@@ -133,8 +134,8 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
       {typingUserIds.length > 0 ? (
         <Text style={styles.typingIndicator}>
           {typingUserIds.length === 1
-            ? '入力中...'
-            : `${typingUserIds.length}人が入力中...`}
+            ? t('chat.typingOne')
+            : t('chat.typingMany', { count: typingUserIds.length })}
         </Text>
       ) : null}
 
@@ -144,7 +145,9 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
           maxLength={MAX_LENGTH}
           multiline
           onChangeText={handleChangeText}
-          placeholder={connected ? 'メッセージを入力' : '接続中...'}
+          placeholder={
+            connected ? t('chat.inputPlaceholder') : t('chat.connecting')
+          }
           placeholderTextColor={colors.textMuted}
           style={styles.input}
           value={text}
@@ -161,7 +164,7 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
               (!text.trim() || !connected) && styles.sendButtonDisabled,
             ]}
           >
-            <Text style={styles.sendText}>送信</Text>
+            <Text style={styles.sendText}>{t('chat.send')}</Text>
           </Pressable>
         </View>
       </View>

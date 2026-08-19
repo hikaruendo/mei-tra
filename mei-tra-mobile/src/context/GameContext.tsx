@@ -63,6 +63,7 @@ import type {
   MobileGameSnapshot,
   MobileRoom,
 } from '@/types/game';
+import { t } from '@/i18n';
 
 interface MobileState {
   rooms: MobileRoom[];
@@ -304,10 +305,11 @@ interface GameContextValue extends MobileState {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
-const reconnectMessages: Record<ReconnectionFailureCode, string> = {
-  roomUnavailable: '部屋が終了したためロビーへ戻りました',
-  sessionInvalid: '参加情報を確認できなかったためロビーへ戻りました',
-  stateInconsistent: 'ゲーム状態を復元できなかったためロビーへ戻りました',
+// Catalogue keys; read through t() at dispatch time.
+const reconnectMessageKeys: Record<ReconnectionFailureCode, string> = {
+  roomUnavailable: 'game.roomUnavailable',
+  sessionInvalid: 'game.sessionInvalid',
+  stateInconsistent: 'game.stateInconsistent',
 };
 
 const RESYNC_TIMEOUT_MS = 10000;
@@ -421,7 +423,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({
           type: 'error',
           message:
-            'ゲーム状態の再同期が完了していません。再接続を試してください',
+            t('game.resyncIncomplete'),
         });
       }, RESYNC_TIMEOUT_MS),
     };
@@ -529,8 +531,8 @@ export function GameProvider({ children }: PropsWithChildren) {
         type: 'error',
         message:
           status === 'resyncing'
-            ? 'ゲーム状態を再同期しています。完了後に操作してください'
-            : 'サーバーへ再接続中です。接続後に操作してください',
+            ? t('game.resyncWait')
+            : t('game.reconnectWait'),
       });
     }
     return false;
@@ -614,7 +616,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'connection', status: 'connecting' });
       dispatch({
         type: 'error',
-        message: `サーバーへ接続中です: ${error.message}`,
+        message: t('game.connecting', { message: error.message }),
       });
     });
     socket.on('disconnect', () => {
@@ -748,11 +750,11 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('broken', (payload) => {
       applyGameServerEvent({ type: 'broken', payload });
-      dispatch({ type: 'notice', message: '手役が成立したため配り直しました' });
+      dispatch({ type: 'notice', message: t('game.redealHand') });
     });
     socket.on('round-cancelled', (payload) => {
       applyGameServerEvent({ type: 'round-cancelled', payload });
-      dispatch({ type: 'notice', message: '全員パスのため配り直しました' });
+      dispatch({ type: 'notice', message: t('game.redealAllPass') });
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });
@@ -796,7 +798,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'resetRoom' });
       finishResyncFlight(undefined);
       if (payload?.code) {
-        dispatch({ type: 'notice', message: reconnectMessages[payload.code] });
+        dispatch({ type: 'notice', message: t(reconnectMessageKeys[payload.code]) });
       }
     });
     socket.on('player-left', ({ seatId }) => {
@@ -840,7 +842,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'playerDisconnected', seatId: seatId });
       dispatch({
         type: 'notice',
-        message: `${playerName ?? seatId} が切断しました`,
+        message: t('game.playerDisconnected', { name: playerName ?? seatId }),
       });
     });
     socket.on('player-idle', (payload) => {
@@ -849,7 +851,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'playerIdle', seatId: seatId });
       dispatch({
         type: 'notice',
-        message: `${playerName ?? seatId} が無操作です`,
+        message: t('game.playerIdle', { name: playerName ?? seatId }),
       });
     });
     socket.on('player-idle-cleared', ({ seatId }) => {
@@ -871,7 +873,9 @@ export function GameProvider({ children }: PropsWithChildren) {
           void roomStorage.clear();
           dispatch({ type: 'resetRoom' });
         }
-        dispatch({ type: 'notice', message: message ?? `${playerName ?? seatId} がCOMに置換されました` });
+        dispatch({ type: 'notice', message:
+            message ??
+            t('game.playerReplacedByCom', { name: playerName ?? seatId }) });
       },
     );
     socket.connect();
@@ -969,7 +973,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!response.success || !response.room) {
         dispatch({
           type: 'error',
-          message: response.error ?? '部屋を作成できませんでした',
+          message: response.error ?? t('game.createRoomFailed'),
         });
         return false;
       }
@@ -990,7 +994,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!response.success || !response.room) {
         dispatch({
           type: 'error',
-          message: response.error ?? '部屋に参加できませんでした',
+          message: response.error ?? t('game.joinRoomFailed'),
         });
         return false;
       }
@@ -1009,7 +1013,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!response.success || !response.room) {
         dispatch({
           type: 'error',
-          message: response.error ?? '観戦を開始できませんでした',
+          message: response.error ?? t('game.watchFailed'),
         });
         return false;
       }
@@ -1035,7 +1039,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (!response.success) {
       dispatch({
         type: 'error',
-        message: response.error ?? 'ルームから退出できませんでした',
+        message: response.error ?? t('game.leaveFailed'),
       });
       return false;
     }
@@ -1052,7 +1056,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       const roomId =
         stateRef.current.game?.roomId ?? stateRef.current.currentRoom?.id;
       if (!roomId) {
-        dispatch({ type: 'error', message: 'プレイヤー情報を確認できません' });
+        dispatch({ type: 'error', message: t('game.playerUnknown') });
         return;
       }
 
@@ -1066,7 +1070,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         if (!response.success) {
           dispatch({
             type: 'error',
-            message: response.error ?? '操作を完了できませんでした',
+            message: response.error ?? t('game.actionFailed'),
           });
         }
       } finally {
@@ -1111,7 +1115,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     (trumpType: TrumpType, numberOfPairs: number) => {
       const game = stateRef.current.game;
       if (!game || game.currentTurnSeatId !== game.youSeatId) {
-        dispatch({ type: 'error', message: 'あなたの宣言順ではありません' });
+        dispatch({ type: 'error', message: t('game.notYourBlowTurn') });
         return;
       }
       emitOneWayAction('declare-blow', game.roomId, () => {
@@ -1127,7 +1131,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const passBlow = useCallback(() => {
     const game = stateRef.current.game;
     if (!game || game.currentTurnSeatId !== game.youSeatId) {
-      dispatch({ type: 'error', message: 'あなたの宣言順ではありません' });
+      dispatch({ type: 'error', message: t('game.notYourBlowTurn') });
       return;
     }
     emitOneWayAction('pass-blow', game.roomId, () => {
@@ -1146,7 +1150,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const playCard = useCallback((card: string) => {
     const game = stateRef.current.game;
     if (!game || game.currentTurnSeatId !== game.youSeatId) {
-      dispatch({ type: 'error', message: 'あなたのプレイ順ではありません' });
+      dispatch({ type: 'error', message: t('game.notYourPlayTurn') });
       return;
     }
     emitOneWayAction('play-card', game.roomId, () => {

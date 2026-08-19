@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobileRoom } from '@/types/game';
+import { t } from '@/i18n';
 
 interface WaitingRoomProps {
   room: MobileRoom;
@@ -88,8 +89,11 @@ export function WaitingRoom({
       <View style={styles.heading}>
         <Text style={styles.title}>{room.name}</Text>
         <Text style={styles.subtitle}>
-          {room.players.length}/{room.settings.maxPlayers}席・
-          {room.settings.pointsToWin}点先取
+          {t('waiting.seats', {
+            current: room.players.length,
+            max: room.settings.maxPlayers,
+          })}
+          {t('rooms.pointsSuffix', { points: room.settings.pointsToWin })}
         </Text>
       </View>
 
@@ -118,9 +122,16 @@ export function WaitingRoom({
                 player.seatId !== currentSeatId;
               const seatView = (
                 <View
-                  accessibilityLabel={`${player?.name ?? '空席'}、${
-                    player ? (player.isHost ? 'ホスト' : player.isCOM ? 'COM' : '参加中') : '参加待ち'
-                  }`}
+                  accessibilityLabel={t('waiting.seatA11y', {
+                    name: player?.name ?? t('waiting.emptySeat'),
+                    status: player
+                      ? player.isHost
+                        ? t('waiting.host')
+                        : player.isCOM
+                          ? 'COM'
+                          : t('waiting.joined')
+                      : t('waiting.waitingJoin'),
+                  })}
                   accessibilityRole="text"
                   style={styles.seat}
                 >
@@ -129,16 +140,16 @@ export function WaitingRoom({
                   </Text>
                   <View style={styles.seatText}>
                     <Text numberOfLines={1} style={styles.playerName}>
-                      {player?.name ?? '空席'}
+                      {player?.name ?? t('waiting.emptySeat')}
                     </Text>
                     <Text style={styles.ready}>
                       {player?.isHost
-                        ? 'ホスト'
+                        ? t('waiting.host')
                         : player?.isCOM
                           ? 'COM'
                           : player
-                            ? '参加中'
-                            : '参加待ち'}
+                            ? t('waiting.joined')
+                            : t('waiting.waitingJoin')}
                     </Text>
                   </View>
                 </View>
@@ -150,20 +161,20 @@ export function WaitingRoom({
                     onLongPress={() => {
                       Alert.alert(
                         player.name,
-                        'プレイヤーの操作を選択してください',
+                        t('waiting.playerActionTitle'),
                         [
                           {
-                            text: 'COMに置換',
+                            text: t('waiting.replaceWithCom'),
                             onPress: () =>
                               onReplaceWithCOM(player.seatId),
                           },
                           {
-                            text: '退出させる',
+                            text: t('waiting.removePlayer'),
                             style: 'destructive',
                             onPress: () =>
                               onRemovePlayer(player.seatId),
                           },
-                          { text: 'キャンセル', style: 'cancel' },
+                          { text: t('common.cancel'), style: 'cancel' },
                         ],
                       );
                     }}
@@ -185,45 +196,45 @@ export function WaitingRoom({
         showTeamNameEditor ? (
           <View style={styles.teamNamePanel}>
             <View style={styles.teamNamePanelHeader}>
-              <Text style={styles.teamNamePanelTitle}>チーム名</Text>
-              {([0, 1] as const).map((t) => (
+              <Text style={styles.teamNamePanelTitle}>{t('waiting.teamNames')}</Text>
+              {([0, 1] as const).map((team) => (
                 <View
-                  key={t}
+                  key={team}
                   style={[
                     styles.teamColorDot,
-                    { borderColor: teamColors[t] },
+                    { borderColor: teamColors[team] },
                   ]}
                 >
-                  <Text style={[styles.teamColorDotText, { color: teamColors[t] }]}>
-                    {draftTeamNames[t].slice(0, 1) || `${t + 1}`}
+                  <Text style={[styles.teamColorDotText, { color: teamColors[team] }]}>
+                    {draftTeamNames[team].slice(0, 1) || `${team + 1}`}
                   </Text>
                 </View>
               ))}
               <Pressable onPress={() => setShowTeamNameEditor(false)}>
-                <Text style={styles.teamNameClose}>閉じる</Text>
+                <Text style={styles.teamNameClose}>{t('waiting.close')}</Text>
               </Pressable>
             </View>
-            {([0, 1] as const).map((t) => (
-              <View key={t} style={styles.teamNameRow}>
+            {([0, 1] as const).map((team) => (
+              <View key={team} style={styles.teamNameRow}>
                 <View
                   style={[
                     styles.teamColorLabel,
-                    { borderColor: teamColors[t] },
+                    { borderColor: teamColors[team] },
                   ]}
                 >
-                  <Text style={[styles.teamColorLabelText, { color: teamColors[t] }]}>
-                    {t === 0 ? '赤' : '黒'}
+                  <Text style={[styles.teamColorLabelText, { color: teamColors[team] }]}>
+                    {team === 0 ? t('team.red') : t('team.black')}
                   </Text>
                 </View>
                 <TextInput
                   maxLength={16}
                   onChangeText={(text) =>
-                    setDraftTeamNames((prev) => ({ ...prev, [t]: text }))
+                    setDraftTeamNames((prev) => ({ ...prev, [team]: text }))
                   }
-                  placeholder={getTeamDisplayName(t)}
+                  placeholder={getTeamDisplayName(team)}
                   placeholderTextColor={colors.textMuted}
                   style={styles.teamNameInput}
-                  value={draftTeamNames[t]}
+                  value={draftTeamNames[team]}
                 />
               </View>
             ))}
@@ -238,7 +249,7 @@ export function WaitingRoom({
               }}
               variant="secondary"
             >
-              保存
+              {t('waiting.save')}
             </Button>
           </View>
         ) : (
@@ -246,21 +257,21 @@ export function WaitingRoom({
             onPress={() => setShowTeamNameEditor(true)}
             style={styles.editTeamNamesButton}
           >
-            <Text style={styles.editTeamNamesLabel}>チーム名</Text>
-            {([0, 1] as const).map((t) => (
+            <Text style={styles.editTeamNamesLabel}>{t('waiting.teamNames')}</Text>
+            {([0, 1] as const).map((team) => (
               <View
-                key={t}
+                key={team}
                 style={[
                   styles.teamColorDot,
-                  { borderColor: teamColors[t] },
+                  { borderColor: teamColors[team] },
                 ]}
               >
-                <Text style={[styles.teamColorDotText, { color: teamColors[t] }]}>
-                  {getTeamDisplayName(t, room.settings.teamNames).slice(0, 1)}
+                <Text style={[styles.teamColorDotText, { color: teamColors[team] }]}>
+                  {getTeamDisplayName(team, room.settings.teamNames).slice(0, 1)}
                 </Text>
               </View>
             ))}
-            <Text style={styles.editTeamNamesAction}>編集</Text>
+            <Text style={styles.editTeamNamesAction}>{t('waiting.edit')}</Text>
           </Pressable>
         )
       ) : null}
@@ -273,23 +284,23 @@ export function WaitingRoom({
             onPress={() => runAction('shuffle', onShuffle)}
             variant="secondary"
           >
-            チームをシャッフル
+            {t('waiting.shuffleTeams')}
           </Button>
           <Button
             disabled={!canStart || actionsDisabled || Boolean(pendingAction)}
             loading={pendingAction === 'start'}
             onPress={() => runAction('start', onStart)}
           >
-            ゲーム開始
+            {t('waiting.startGame')}
           </Button>
           {!canStart ? (
             <Text style={styles.hint}>
-              4席を埋めると開始できます
+              {t('waiting.needFourSeats')}
             </Text>
           ) : null}
         </View>
       ) : (
-        <Text style={styles.hint}>ホストのゲーム開始を待っています</Text>
+        <Text style={styles.hint}>{t('waiting.waitingForHost')}</Text>
       )}
 
       <View style={styles.bottomActions}>
@@ -298,7 +309,7 @@ export function WaitingRoom({
           style={styles.chatButton}
           variant="secondary"
         >
-          チャット
+          {t('waiting.chat')}
         </Button>
         <Button
           disabled={actionsDisabled || Boolean(pendingAction)}
@@ -307,7 +318,7 @@ export function WaitingRoom({
           style={styles.leaveButton}
           variant="ghost"
         >
-          退出
+          {t('waiting.leave')}
         </Button>
       </View>
 
@@ -320,12 +331,12 @@ export function WaitingRoom({
         <View style={styles.chatOverlay}>
           <View style={styles.chatCard}>
             <View style={styles.chatHeader}>
-              <Text style={styles.chatTitle}>チャット</Text>
+              <Text style={styles.chatTitle}>{t('waiting.chat')}</Text>
               <Button
                 onPress={() => setShowChat(false)}
                 variant="ghost"
               >
-                閉じる
+                {t('waiting.close')}
               </Button>
             </View>
             <ChatPanel roomId={room.id} />

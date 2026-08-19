@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 interface ButtonProps
   extends PropsWithChildren,
@@ -45,7 +46,7 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator accessibilityLabel="処理中" color={activityColor} />
+        <ActivityIndicator accessibilityLabel={t('a11y.processing')} color={activityColor} />
       ) : (
         <Text style={[styles.label, variant === 'primary' && styles.primaryLabel]}>
           {children}

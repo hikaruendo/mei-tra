@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { colors } from '@/theme/colors';
 import type { ConnectionStatus } from '@/types/game';
+import { t } from '@/i18n';
 
 interface ConnectionBannerProps {
   status: ConnectionStatus | string;
@@ -13,20 +14,20 @@ interface ConnectionBannerProps {
 const getCopy = (status: ConnectionStatus | string) => {
   switch (status) {
     case 'connected':
-      return { label: 'サーバー接続済み', tone: 'connected' as const };
+      return { label: t('connection.connected'), tone: 'connected' as const };
     case 'resyncing':
-      return { label: 'ゲーム状態を再同期しています', tone: 'pending' as const };
+      return { label: t('connection.resyncing'), tone: 'pending' as const };
     case 'disconnected':
-      return { label: 'オフラインです。再接続を待っています', tone: 'offline' as const };
+      return { label: t('connection.offline'), tone: 'offline' as const };
     default:
-      return { label: 'サーバーへ再接続しています', tone: 'pending' as const };
+      return { label: t('connection.reconnecting'), tone: 'pending' as const };
   }
 };
 
 export function ConnectionBanner({
   status,
   onRetry,
-  retryLabel = '再試行',
+  retryLabel = t('connection.retry'),
 }: ConnectionBannerProps) {
   const copy = getCopy(status);
 

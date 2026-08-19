@@ -11,6 +11,7 @@ import { trumpLabel } from '@/lib/trump-labels';
 import { colors } from '@/theme/colors';
 import { getValidBlowPairValues } from '@meitra/game-client/blow';
 import type { MobilePlayer } from '@/types/game';
+import { t } from '@/i18n';
 
 const TRUMP_ORDER: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz', 'tra'];
 
@@ -19,11 +20,14 @@ const trumpOptions: { value: TrumpType; label: string }[] = TRUMP_ORDER.map(
 );
 
 const declarationLabel = (declaration: BlowDeclarationContract | null) => {
-  if (!declaration) return 'まだ宣言はありません';
+  if (!declaration) return t('blow.noDeclaration');
   const trump = trumpOptions.find(
     (option) => option.value === declaration.trumpType,
   );
-  return `${trump?.label ?? declaration.trumpType}・${declaration.numberOfPairs}ペア`;
+  return t('blow.declarationSummary', {
+    trump: trump?.label ?? declaration.trumpType,
+    pairs: declaration.numberOfPairs,
+  });
 };
 
 interface BlowControlsProps {
@@ -91,12 +95,14 @@ export function BlowControls({
   return (
     <View style={styles.container}>
       <Text style={styles.turn}>
-        現在の宣言順: {turnName}
-        {isMyTurn ? '（あなた）' : ''}
+        {t('blow.currentTurn', { name: turnName })}
+        {isMyTurn ? t('blow.youSuffix') : ''}
       </Text>
-      <Text style={styles.highest}>最高宣言: {declarationLabel(highest)}</Text>
+      <Text style={styles.highest}>
+        {t('blow.highest', { label: declarationLabel(highest) })}
+      </Text>
 
-      <Text style={styles.label}>キリ（切り札）を選択</Text>
+      <Text style={styles.label}>{t('blow.selectTrump')}</Text>
       <ScrollView
         horizontal
         contentContainerStyle={styles.options}
@@ -115,7 +121,7 @@ export function BlowControls({
         ))}
       </ScrollView>
 
-      <Text style={styles.label}>ペア数を選択</Text>
+      <Text style={styles.label}>{t('blow.selectPairs')}</Text>
       <ScrollView
         horizontal
         contentContainerStyle={styles.options}
@@ -153,7 +159,7 @@ export function BlowControls({
           }}
           style={styles.action}
         >
-          宣言
+          {t('blow.declare')}
         </Button>
         <Button
           variant="secondary"
@@ -165,13 +171,13 @@ export function BlowControls({
           }}
           style={styles.action}
         >
-          パス
+          {t('blow.pass')}
         </Button>
       </View>
 
       {actionHistory.length > 0 ? (
         <View style={styles.historySection}>
-          <Text style={styles.historyLabel}>宣言履歴</Text>
+          <Text style={styles.historyLabel}>{t('blow.history')}</Text>
           <ScrollView
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
@@ -205,8 +211,11 @@ export function BlowControls({
                     ]}
                   >
                     {action.type === 'pass'
-                      ? 'パス'
-                      : `${trump?.label ?? action.trumpType} ${action.numberOfPairs}ペア`}
+                      ? t('blow.pass')
+                      : t('blow.historyEntry', {
+                          trump: trump?.label ?? action.trumpType ?? '',
+                          pairs: action.numberOfPairs ?? 0,
+                        })}
                   </Text>
                 </View>
               );
