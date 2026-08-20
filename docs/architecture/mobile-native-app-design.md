@@ -1,6 +1,6 @@
 # Meitra モバイルネイティブアプリ設計
 
-更新日: 2026-07-24
+更新日: 2026-08-20
 対象: iOS / Android
 実装: Expo SDK 55 / React Native 0.83 / TypeScript / Expo Router / EAS
 
@@ -15,14 +15,14 @@
 | **外部作業** | EAS、Apple、Google、Supabase本番など、このリポジトリだけでは完了できない作業 |
 | **未実装** | 設計上は必要だが、現行コードに対応する実装がない |
 
-現時点で、認証・ルーム・対局UI・再接続、通知、退会、共有Socket契約は**実装済み**である。npm workspace解決、自動テスト、build/export、390×844のbrowser smokeは**ローカル検証済み**である。一方、TestFlight / Google Play内部テスト、実端末のpush・background復帰、EAS project・署名資格情報、本番Supabase migrationは未完了である。したがって、この文書はストアリリース済み、またはリリース可能と宣言しない。
+現時点で、認証・ルーム・対局UI・再接続、通知、退会、共有Socket契約は**実装済み**である。npm workspace解決、自動テスト、build/export、390×844のbrowser smokeは**ローカル検証済み**である。本番Supabase migrationは適用済みである。一方、TestFlight / Google Play内部テスト、実端末のpush・background復帰、EAS project・署名資格情報は未完了である。したがって、この文書はストアリリース済み、またはリリース可能と宣言しない。
 
 ### 2026-07-24 ローカル検証スナップショット
 
 | 対象 | 結果 | 検証境界 |
 | --- | --- | --- |
 | npm workspace | npm `10.9.2`でclean install成功 | root lockfileとworkspace packageのローカル解決 |
-| mobile | 14 suites / 63 tests、Expo Doctor 19/19、iOS / Android export成功 | JavaScript・設定・bundle export。署名済みnative buildではない |
+| mobile | 24 suites / 125 tests、Expo Doctor 18/18、iOS export成功 | JavaScript・設定・bundle export。署名済みnative buildではない |
 | backend | 52 suites / 300 tests、lint、build成功 | ローカルbackendとlocal Supabase |
 | frontend | 27 suites / 78 tests、lint、build成功 | Web buildと共有Socket契約 |
 | Web dev | HTTP 200 | ローカルdev serverの到達性 |
@@ -110,7 +110,11 @@ mei-tra-mobile/src/app/
 ├── sign-in.tsx               # email/password と Google OAuth
 ├── rooms.tsx                 # ルーム一覧・作成・参加・観戦
 ├── room/[roomId].tsx         # 待機室または対局画面
-└── settings.tsx              # 接続、通知、ログアウト、退会
+├── settings/index.tsx        # 設定トップ
+├── settings/account.tsx      # アカウント・退会
+├── settings/preferences.tsx  # 表示・通知設定
+├── settings/profile.tsx      # プロフィール
+└── settings/help.tsx         # ヘルプ・規約
 ```
 
 `room/[roomId]`はサーバ状態を見て`WaitingRoom`と`GameBoard`を切り替える。`room/current`は作成直後や復帰導線で解決するための論理的な入口であり、固定のサーバルームIDではない。
@@ -289,11 +293,26 @@ push送信・receipt workerのunit/spec、SQL self-test、local push tokenのreg
 
 ### リリースを止める設定
 
-- `app.json`に`expo.extra.eas.projectId`がないため、EAS project linkは未完了である。
-- EAS login、EAS environment、`EXPO_TOKEN`、Apple Developer / App Store Connect、Android keystore / Play Console資格情報は未設定または未確認である。
-- `20260806162505_anonymize_account_references_atomically.sql`、`20260806162619_reject_deleting_room_players.sql`、`20260806165611_push_receipt_tracking.sql`、`20260806165711_serialize_account_deletion_room_membership.sql`を含むlocal migration historyは本番Supabaseへ未適用・未検証である。
-- `runtimeVersion`と`updates.url`がないため、EAS Updateは開始しない。channel定義だけではOTAは有効にならない。
-- `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストは未実施である。
+残っているブロッカーは次のとおりである。資格情報を要するため、リポジトリ側の変更では解消できない。
+
+- Apple Developer Program、App Store Connectのapp record、APNs key、Android keystore / Play Console資格情報は未設定または未確認である。`EXPO_TOKEN`、`EXPO_APPLE_ID`、`EXPO_ASC_APP_ID`、`EXPO_APPLE_TEAM_ID`はGitHub environmentへ未投入である。
+- `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストは未実施である。このリポジトリを開発しているマシンにはXcodeが入っておらず (`xcode-select -p` → CommandLineTools)、iOS simulator buildもローカルでは実行できない。
+
+EAS Updateは初回リリースの要件ではないため、意図的に着手していない。`expo-updates`が未導入で、`runtimeVersion`だけを書いても効果はない。native依存の追加は署名済みbuildを一度も通していない段階では検証対象を増やすだけなので、初回提出後に切り出す。
+
+次の項目は解消済みである。
+
+- **EAS project link**: `eas init`で`@hikaruendo/meitra` (projectId `70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681`) をリンクし、`app.json`に`extra.eas.projectId`と`owner`が入った。`mobile-release.yml`のpreflightが要求する唯一の必須項目はこれで満たされる。
+- **本番Supabase migration**: `20260806162505_anonymize_account_references_atomically.sql`以降を含め、`20260809074500_release_stale_room_membership.sql`まで本番へ適用済みである。`supabase_migrations.schema_migrations`と、`reserve_room_membership` / `claim_room_membership`のsource照合で確認した。
+- **GitHub environment**: `mobile-release.yml`が参照する`mobile-preview`と`mobile-production`を作成済みである（secretの投入は別途）。
+- **iOS submit profile**: production submit時にGitHub Actionsが`EXPO_APPLE_ID` / `EXPO_ASC_APP_ID` / `EXPO_APPLE_TEAM_ID`から一時的に`submit.production.ios`を生成する。`eas.json`は環境変数を展開しないため、未解決の`$EXPO_*`を直接記述しない。
+- **`ios.supportsTablet`**: 非目標(§ 対象外)に合わせて`false`にした。`true`のままだとAppleはiPadでも審査し、iPad screenshotの提出も要求する。
+
+### 審査で確認が要る点
+
+- サインイン画面はGoogle loginを提供する (`signInWithGoogle`)。App Store Guideline 4.8はthird-party loginを使う場合に同等のprivacy優先の選択肢を求める。email / password (`signUp`・`signInWithPassword`) が実装済みなのでこれで満たせる可能性はあるが、Sign in with Appleの追加を求められる可能性は残る。
+- アプリ内account deletion (Guideline 5.1.1(v)) は`src/app/settings/account.tsx`に実装済みである。
+- privacy policy / terms は web の `/ja/privacy` `/ja/terms` に実在し、設定画面からリンクしている。
 
 ## 10. テスト戦略と完了条件
 
@@ -301,7 +320,7 @@ push送信・receipt workerのunit/spec、SQL self-test、local push tokenのreg
 
 ローカルでは次の結果を確認済みである。
 
-- mobile: 14 suites / 63 tests、Expo Doctor 19/19、lint、typecheck、iOS / Android export。
+- mobile: 24 suites / 125 tests、Expo Doctor 18/18、lint、typecheck、iOS export。
 - backend: 52 suites / 300 tests、lint、build。
 - frontend: 27 suites / 78 tests、lint、build。
 - Web dev server: HTTP 200。

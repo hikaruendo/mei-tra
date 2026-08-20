@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0e2a21",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "icon": "./assets/images/meitra-icon.png",
       "bundleIdentifier": "com.kando1.meitra"
     },
@@ -45,6 +45,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681"
+      }
+    },
+    "owner": "hikaruendo"
   }
 }
