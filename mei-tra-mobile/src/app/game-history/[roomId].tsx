@@ -55,6 +55,9 @@ export default function GameHistoryScreen() {
 
 const styles = StyleSheet.create({
   screen: {
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
     gap: 16,
     padding: 18,
   },

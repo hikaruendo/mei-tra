@@ -17,7 +17,6 @@ import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
-import { confirmGuestSignOut } from '@/lib/confirm-guest-sign-out';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 import { useLocale } from '@/context/LocaleContext';
@@ -27,7 +26,7 @@ export default function RoomsScreen() {
   // function and cannot trigger that on its own.
   useLocale();
   const router = useRouter();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const {
     rooms,
     connectionStatus,
@@ -144,39 +143,7 @@ export default function RoomsScreen() {
             style={styles.settings}
             variant="ghost"
           >
-            {t('rooms.settings')}
-          </Button>
-          <Button
-            accessibilityLabel={t('rooms.signOut')}
-            variant="ghost"
-            onPress={() => {
-              if (submitting) return;
-
-              const performSignOut = async () => {
-                setSubmitting(true);
-                try {
-                  await signOut();
-                  router.replace('/sign-in');
-                } finally {
-                  setSubmitting(false);
-                }
-              };
-
-              if (user?.isAnonymous) {
-                setSubmitting(true);
-                confirmGuestSignOut(
-                  () => void performSignOut(),
-                  () => setSubmitting(false),
-                );
-                return;
-              }
-
-              void performSignOut();
-            }}
-            style={styles.logout}
-            disabled={submitting}
-          >
-            {t('rooms.signOut')}
+            {t('rooms.profile')}
           </Button>
         </View>
 
@@ -316,6 +283,9 @@ export default function RoomsScreen() {
 
 const styles = StyleSheet.create({
   content: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     gap: 18,
     padding: 18,
     paddingBottom: 42,
@@ -330,10 +300,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   settings: {
-    minHeight: 42,
-    paddingHorizontal: 10,
-  },
-  logout: {
     minHeight: 42,
     paddingHorizontal: 10,
   },

@@ -13,6 +13,7 @@ import type { NotificationResponse } from 'expo-notifications';
 
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
+import { subscribeAppLifecycle } from '@/lib/app-lifecycle';
 import {
   getNotificationRoomId,
   registerForPushNotifications,
@@ -22,7 +23,7 @@ import {
 
 interface NotificationContextValue {
   status: NotificationRegistrationStatus | 'idle' | 'registering';
-  retryRegistration: () => Promise<void>;
+  requestRegistration: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -66,10 +67,21 @@ export function NotificationProvider({ children }: PropsWithChildren) {
     [routeToRoom],
   );
 
-  const retryRegistration = useCallback(async () => {
+  const syncRegistration = useCallback(async () => {
     if (!user || !session) return;
     setStatus('registering');
-    const result = await registerForPushNotifications(await getAccessToken());
+    const result = await registerForPushNotifications(await getAccessToken(), {
+      requestPermission: false,
+    });
+    setStatus(result.status);
+  }, [getAccessToken, session, user]);
+
+  const requestRegistration = useCallback(async () => {
+    if (!user || !session) return;
+    setStatus('registering');
+    const result = await registerForPushNotifications(await getAccessToken(), {
+      requestPermission: true,
+    });
     setStatus(result.status);
   }, [getAccessToken, session, user]);
 
@@ -91,12 +103,24 @@ export function NotificationProvider({ children }: PropsWithChildren) {
     if (registeredUserIdRef.current === user.id) return;
 
     registeredUserIdRef.current = user.id;
-    void retryRegistration();
-  }, [retryRegistration, session, user]);
+    void syncRegistration();
+  }, [session, syncRegistration, user]);
+
+  useEffect(
+    () =>
+      subscribeAppLifecycle((snapshot, previous) => {
+        const becameAvailable =
+          snapshot.appState === 'active' &&
+          snapshot.isOnline &&
+          (previous.appState !== 'active' || !previous.isOnline);
+        if (becameAvailable) void syncRegistration();
+      }),
+    [syncRegistration],
+  );
 
   const value = useMemo(
-    () => ({ status, retryRegistration }),
-    [retryRegistration, status],
+    () => ({ status, requestRegistration }),
+    [requestRegistration, status],
   );
 
   return (
