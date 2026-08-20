@@ -5,6 +5,7 @@ import { resolveCardArt } from '@/lib/card-art-assets';
 import { parseCard } from '@/lib/cards';
 import { palette } from '@/theme/palette';
 import { radius } from '@/theme/radius';
+import { t } from '@/i18n';
 
 /**
  * A rank+suit chip, mirroring the web app's completed-field cards
@@ -25,7 +26,7 @@ export function MiniCard({ card }: { card: string }) {
   if (card === 'JOKER') {
     const art = resolveCardArt(card);
     return (
-      <View accessibilityLabel="ジョーカー" style={styles.chip}>
+      <View accessibilityLabel={t('a11y.joker')} style={styles.chip}>
         {/* The clip lives on an inner view, as in PlayingCard: `overflow:
             hidden` on the chip itself would set masksToBounds and swallow the
             iOS layer shadow, which is painted outside the layer bounds. */}

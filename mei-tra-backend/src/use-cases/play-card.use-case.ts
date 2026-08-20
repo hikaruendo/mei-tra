@@ -14,6 +14,9 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { IPlayService } from '../services/interfaces/play-service.interface';
+import { asSeatId } from '../types/identity.types';
+import { resolveCurrentPlayer } from '../domain/current-turn';
+import { toFieldContract } from '../adapters/game-contract-adapters';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -60,7 +63,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      if (!roomGameState.isPlayerTurn(player.playerId)) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to play" };
       }
 
@@ -81,16 +84,16 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: false, error: legalPlayError };
       }
 
+      const room = await this.roomService.getRoom(roomId);
+
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
 
       const currentField = state.playState.currentField;
-      const playedBy = Array.isArray(currentField.playedBy)
-        ? currentField.playedBy
-        : [];
-      currentField.playedBy = playedBy;
+      const playedBySeatIds = [...currentField.playedBySeatIds];
+      playedBySeatIds.push(asSeatId(player.seatId));
       currentField.cards.push(card);
-      playedBy.push(player.playerId);
+      currentField.playedBySeatIds = [...playedBySeatIds];
       if (currentField.cards.length === 1) {
         currentField.baseCard = card;
       }
@@ -98,22 +101,24 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'card_played',
-        playerId: player.playerId,
+        actorSeatId: asSeatId(player.seatId),
         state,
         actionData: {
           card,
           fieldCards: [...currentField.cards],
           baseCard: currentField.baseCard,
-          playedBy: [...playedBy],
+          playedBySeatIds: [...playedBySeatIds],
           isFieldComplete: currentField.cards.length === 4,
         },
       });
 
       const cardPlayedPayload: CardPlayedPayload = {
-        playerId: player.playerId,
+        seatId: asSeatId(player.seatId),
         card,
-        field: currentField,
-        players: resolveTransportPlayers(roomGameState, state.players),
+        field: toFieldContract(currentField),
+        players: resolveTransportPlayers(roomGameState, state.players, {
+          roomPlayers: room?.players,
+        }),
       };
       const events: PlayCardGatewayEvent[] = [
         {
@@ -135,7 +140,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           field: {
             ...currentField,
             cards: [...currentField.cards],
-            playedBy: [...(currentField.playedBy ?? [])],
+            playedBySeatIds: [...currentField.playedBySeatIds],
           },
         };
         return { success: true, events, completeFieldTrigger: trigger };
@@ -146,15 +151,15 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: true, events };
       }
 
-      await roomGameState.nextTurn();
-      const nextPlayer = state.players[state.currentPlayerIndex];
+      roomGameState.nextTurn();
+      const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
-        cardPlayedPayload.nextPlayerId = nextPlayer.playerId;
+        cardPlayedPayload.nextSeatId = asSeatId(nextPlayer.seatId);
         events.push({
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: asSeatId(nextPlayer.seatId),
         });
       }
 

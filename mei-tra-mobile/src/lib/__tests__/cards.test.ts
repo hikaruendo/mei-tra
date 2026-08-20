@@ -1,12 +1,13 @@
 import type { FieldContract } from '@meitra/contracts/game';
+import { asSeatId } from '@meitra/contracts/ids';
 
 import { isCardPlayable, parseCard } from '@/lib/cards';
 
 const field = (baseCard: string, cards = [baseCard]): FieldContract => ({
   cards,
-  playedBy: ['player-1'],
+  playedBySeatIds: [asSeatId('player-1')],
   baseCard,
-  dealerId: 'player-1',
+  dealerSeatId: asSeatId('player-1'),
   isComplete: false,
 });
 

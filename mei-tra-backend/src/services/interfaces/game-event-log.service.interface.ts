@@ -6,14 +6,15 @@ import {
   GameHistoryReplayView,
   GameHistorySummary,
 } from '../../types/game-history.types';
+import type { SeatId } from '../../types/identity.types';
 
 export interface LogGameEventInput {
   roomId: string;
   actionType: GameHistoryActionType;
-  playerId?: string | null;
+  actorSeatId?: SeatId | null;
   state?: Pick<
     GameState,
-    'players' | 'currentPlayerId' | 'gamePhase' | 'roundNumber' | 'teamScores'
+    'players' | 'currentSeatId' | 'gamePhase' | 'roundNumber' | 'teamScores'
   >;
   actionData?: Record<string, unknown>;
 }

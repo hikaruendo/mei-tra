@@ -20,12 +20,21 @@ import { PlayerConnectionManager } from './player-connection-manager.service';
 import { GamePhaseService } from './game-phase.service';
 import { PlayerConnectionState, SessionUser } from '../types/session.types';
 import {
-  toDomainPlayer,
   toRuntimePlayer,
   toTransportPlayers,
   TransportPlayer,
-} from '../types/player-adapters';
+} from '../adapters/player-adapters';
 import { RoomPlayer } from '../types/room.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
+import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
+import {
+  resolveCurrentPlayer,
+  resolveCurrentPlayerIndex,
+  resolveCurrentSeatId,
+  setCurrentSeat,
+} from '../domain/current-turn';
+import { reconcileRuntimeRoster } from './runtime-seat-roster';
 
 @Injectable()
 export class GameStateService implements IGameStateService {
@@ -34,8 +43,6 @@ export class GameStateService implements IGameStateService {
   private roomId: string | null = null;
   private readonly stateManager: GameStateManager;
   private readonly connectionManager: PlayerConnectionManager;
-  private readonly playerIds: Map<string, string>;
-  private readonly disconnectedPlayers: Map<string, NodeJS.Timeout>;
   private readonly gamePhaseService: GamePhaseService;
   private persistenceQueue: Promise<void> = Promise.resolve();
 
@@ -52,8 +59,6 @@ export class GameStateService implements IGameStateService {
       this.gamePhaseService,
     );
     this.connectionManager = new PlayerConnectionManager(this.logger);
-    this.playerIds = this.connectionManager.playerIds;
-    this.disconnectedPlayers = this.connectionManager.disconnectedPlayers;
     this.initializeState();
   }
 
@@ -64,10 +69,10 @@ export class GameStateService implements IGameStateService {
   private initializeState(pointsToWin: number = 10): void {
     this.state = {
       version: 0,
+      identitySchemaVersion: 2,
       players: [],
       deck: [],
-      currentPlayerId: null,
-      currentPlayerIndex: 0,
+      currentSeatId: null,
       agari: undefined,
       teamScores: {
         0: { play: 0, total: 0 },
@@ -83,7 +88,6 @@ export class GameStateService implements IGameStateService {
       } as Record<Team, ScoreRecord[]>,
       roundNumber: 1,
       pointsToWin,
-      teamAssignments: {},
     };
   }
 
@@ -93,7 +97,7 @@ export class GameStateService implements IGameStateService {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     };
@@ -103,11 +107,12 @@ export class GameStateService implements IGameStateService {
     return {
       currentField: null,
       negriCard: null,
+      negriSeatId: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
   }
 
@@ -152,21 +157,10 @@ export class GameStateService implements IGameStateService {
       }
     }
 
-    const normalizedIndex = this.resolveCurrentPlayerIndex();
-
-    if (normalizedIndex !== this.state.currentPlayerIndex) {
-      this.state.currentPlayerIndex = normalizedIndex;
+    const normalizedSeatId = resolveCurrentSeatId(this.state);
+    if (this.state.currentSeatId !== normalizedSeatId) {
+      this.state.currentSeatId = normalizedSeatId;
       changed = true;
-    }
-
-    const normalizedPlayerId =
-      this.state.players[normalizedIndex]?.playerId ?? null;
-    if (this.state.currentPlayerId !== normalizedPlayerId) {
-      const hadStaleCurrentPlayerId = this.state.currentPlayerId != null;
-      this.state.currentPlayerId = normalizedPlayerId;
-      if (hadStaleCurrentPlayerId) {
-        changed = true;
-      }
     }
 
     return changed;
@@ -186,8 +180,8 @@ export class GameStateService implements IGameStateService {
     roomPlayers?: RoomPlayer[],
   ): TransportPlayer[] {
     return toTransportPlayers(players, {
-      getConnectionState: (playerId) =>
-        this.connectionManager.getPlayerConnectionState(playerId),
+      getConnectionState: (seatId) =>
+        this.connectionManager.getPlayerConnectionState(seatId),
       roomPlayers,
     });
   }
@@ -200,8 +194,8 @@ export class GameStateService implements IGameStateService {
     return this.connectionManager.findSessionUserByUserId(userId);
   }
 
-  findSessionUserByPlayerId(playerId: string): SessionUser | null {
-    return this.connectionManager.findSessionUserByPlayerId(playerId);
+  findSessionUserBySeatId(seatId: SeatId): SessionUser | null {
+    return this.connectionManager.findSessionUserBySeatId(seatId);
   }
 
   upsertSessionUser(sessionUser: SessionUser): {
@@ -221,16 +215,12 @@ export class GameStateService implements IGameStateService {
     return result;
   }
 
-  async updateState(newState: Partial<GameState>): Promise<void> {
-    this.state = await this.enqueuePersistence(() =>
-      this.stateManager.updateState(this.roomId, this.state, newState),
-    );
+  updateState(newState: Partial<GameState>): void {
+    this.state = this.stateManager.applyState(this.state, newState);
   }
 
-  async transitionPhase(nextPhase: GamePhase): Promise<void> {
-    this.state = await this.enqueuePersistence(() =>
-      this.stateManager.transitionPhase(this.roomId, this.state, nextPhase),
-    );
+  transitionPhase(nextPhase: GamePhase): void {
+    this.updateState({ gamePhase: nextPhase });
   }
 
   async loadState(roomId: string): Promise<void> {
@@ -246,16 +236,15 @@ export class GameStateService implements IGameStateService {
       if (sanitized) {
         this.state = await this.stateManager.updateState(roomId, this.state, {
           players: this.state.players,
-          currentPlayerId: this.state.currentPlayerId,
-          currentPlayerIndex: this.state.currentPlayerIndex,
+          currentSeatId: this.state.currentSeatId,
         });
       }
 
       this.state.players.forEach((player) => {
-        if (player.playerId) {
-          this.connectionManager.registerPlayerToken(
-            player.playerId,
-            player.playerId,
+        if (player.seatId) {
+          this.connectionManager.registerSeatToken(
+            player.seatId,
+            player.seatId,
           );
         }
       });
@@ -280,62 +269,36 @@ export class GameStateService implements IGameStateService {
 
   async persistRoster(
     roomPlayers: RoomPlayer[],
-    hostId?: string,
+    hostSeatId?: SeatId,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<void> {
     this.state = await this.enqueuePersistence(() =>
       this.stateManager.persistRoster(
         this.roomId,
         roomPlayers,
         this.state,
-        hostId,
+        hostSeatId,
+        membershipMutation,
       ),
     );
   }
 
   async reconcileWaitingRoomPlayers(roomPlayers: RoomPlayer[]): Promise<void> {
     const previousPlayers = this.state.players;
-    const previousTeamAssignments = this.state.teamAssignments;
-    const currentPlayers = new Map(
-      this.state.players.map((player) => [player.playerId, player]),
-    );
-
-    this.state.players = roomPlayers.map((roomPlayer) => {
-      const currentPlayer = currentPlayers.get(roomPlayer.playerId);
-      if (!currentPlayer) {
-        return toDomainPlayer(roomPlayer);
-      }
-
-      return toDomainPlayer({
-        ...roomPlayer,
-        hand: currentPlayer.hand,
-        isPasser: currentPlayer.isPasser,
-        hasBroken: currentPlayer.hasBroken,
-        hasRequiredBroken: currentPlayer.hasRequiredBroken,
-      });
-    });
-    this.state.teamAssignments = Object.fromEntries(
-      roomPlayers.map((player) => [player.playerId, player.team]),
-    );
+    reconcileRuntimeRoster(this.state, roomPlayers);
 
     roomPlayers.forEach((player) => {
-      this.connectionManager.registerPlayerToken(
-        player.playerId,
-        player.playerId,
-      );
+      this.connectionManager.registerSeatToken(player.seatId, player.seatId);
       if (player.userId) {
-        this.connectionManager.registerPlayerToken(
-          player.userId,
-          player.playerId,
-        );
+        this.connectionManager.registerSeatToken(player.userId, player.seatId);
       }
     });
 
-    const hostId = roomPlayers.find((player) => player.isHost)?.playerId;
+    const hostSeatId = roomPlayers.find((player) => player.isHost)?.seatId;
     try {
-      await this.persistRoster(roomPlayers, hostId);
+      await this.persistRoster(roomPlayers, hostSeatId);
     } catch (error) {
       this.state.players = previousPlayers;
-      this.state.teamAssignments = previousTeamAssignments;
       throw error;
     }
   }
@@ -361,12 +324,12 @@ export class GameStateService implements IGameStateService {
   findPlayerByActorId(actorId: string): DomainPlayer | null {
     const sessionUser =
       this.connectionManager.findSessionUserByUserId(actorId) ??
-      this.connectionManager.findSessionUserByPlayerId(actorId);
+      this.connectionManager.findSessionUserBySeatId(asSeatId(actorId));
 
     if (sessionUser) {
       return (
         this.state.players.find(
-          (player) => player.playerId === sessionUser.playerId,
+          (player) => player.seatId === sessionUser.seatId,
         ) || null
       );
     }
@@ -388,23 +351,19 @@ export class GameStateService implements IGameStateService {
 
     return (
       this.state.players.find(
-        (player) => player.playerId === sessionUser.playerId,
+        (player) => player.seatId === sessionUser.seatId,
       ) ?? null
     );
   }
 
-  removePlayer(playerId: string) {
-    this.connectionManager.removePlayer(this.state.players, playerId);
-  }
-
   // プレイヤーの再接続トークンを登録
-  registerPlayerToken(token: string, playerId: string): void {
-    this.connectionManager.registerPlayerToken(token, playerId);
+  registerSeatToken(token: string, seatId: SeatId): void {
+    this.connectionManager.registerSeatToken(token, seatId);
   }
 
   // プレイヤーの再接続トークンを削除
-  removePlayerToken(playerId: string): void {
-    this.connectionManager.removePlayerToken(playerId);
+  removeSeatToken(seatId: SeatId): void {
+    this.connectionManager.removeSeatToken(seatId);
   }
 
   findPlayerByUserId(userId: string): DomainPlayer | null {
@@ -421,66 +380,29 @@ export class GameStateService implements IGameStateService {
     );
   }
 
-  async updatePlayerSocketId(
-    playerId: string,
-    socketId: string,
-    userId?: string,
-  ): Promise<void> {
-    const player = this.state.players.find(
-      (candidate) => candidate.playerId === playerId,
-    );
-    if (!player) {
-      return;
-    }
-
-    await this.applyPlayerConnectionState(playerId, {
-      socketId,
-      userId,
-      isAuthenticated: userId ? true : undefined,
-    });
-  }
-
-  async applyPlayerConnectionState(
-    playerId: string,
+  applyPlayerConnectionState(
+    seatId: SeatId,
     connectionState: PlayerConnectionState,
-  ): Promise<void> {
+  ): void {
     const player = this.state.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === seatId,
     );
     if (!player) {
       return;
     }
 
     this.connectionManager.applyConnectionState(
-      playerId,
+      seatId,
       player.name,
       connectionState,
     );
-
-    const updates: {
-      socketId: string;
-      userId?: string;
-      isAuthenticated?: boolean;
-    } = { socketId: connectionState.socketId };
-    if (connectionState.userId !== undefined) {
-      updates.userId = connectionState.userId;
-    }
-    if (connectionState.isAuthenticated !== undefined) {
-      updates.isAuthenticated = connectionState.isAuthenticated;
-    }
-
-    await this.stateManager.persistPlayerConnectionUpdate(
-      this.roomId,
-      playerId,
-      updates,
-    );
   }
 
-  getPlayerConnectionState(playerId: string): PlayerConnectionState | null {
-    return this.connectionManager.getPlayerConnectionState(playerId);
+  getPlayerConnectionState(seatId: SeatId): PlayerConnectionState | null {
+    return this.connectionManager.getPlayerConnectionState(seatId);
   }
 
-  async dealCards(): Promise<void> {
+  dealCards(): void {
     if (this.state.players.length === 0) return;
 
     // Validate deck exists and has correct size
@@ -494,7 +416,7 @@ export class GameStateService implements IGameStateService {
     for (const player of this.state.players) {
       if (!Array.isArray(player.hand)) {
         throw new Error(
-          `Player ${player.playerId} has invalid hand: ${typeof player.hand}`,
+          `Player ${player.seatId} has invalid hand: ${typeof player.hand}`,
         );
       }
     }
@@ -537,45 +459,36 @@ export class GameStateService implements IGameStateService {
       this.chomboService.checkForBrokenHand(player);
       this.chomboService.checkForRequiredBrokenHand(player);
     });
-
-    // Persist the updated state
-    await this.saveState();
   }
 
-  async nextTurn(): Promise<void> {
+  nextTurn(): void {
     if (this.state.players.length === 0) return;
-    const currentIndex = this.resolveCurrentPlayerIndex();
-    const nextIndex = (currentIndex + 1) % this.state.players.length;
-    this.state.currentPlayerIndex = nextIndex;
-    this.state.currentPlayerId =
-      this.state.players[nextIndex]?.playerId ?? null;
-
-    // Persist the turn change
-    if (this.roomId) {
-      try {
-        this.state.version = await this.enqueuePersistence(() =>
-          this.stateManager.persistCurrentPlayerId(
-            this.roomId,
-            this.state,
-            this.state.currentPlayerId ?? null,
-          ),
-        );
-      } catch {
-        // Keep in-memory turn changes even if persistence fails.
-      }
+    const currentIndex = resolveCurrentPlayerIndex(this.state);
+    if (currentIndex === -1) {
+      throw new Error('Current seat is not initialized');
     }
+    const nextIndex = (currentIndex + 1) % this.state.players.length;
+    setCurrentSeat(this.state, this.state.players[nextIndex]?.seatId ?? null);
   }
 
   getCurrentPlayer(): DomainPlayer | null {
-    return this.state.players[this.resolveCurrentPlayerIndex()] || null;
+    return resolveCurrentPlayer(this.state);
   }
 
-  isPlayerTurn(playerId: string): boolean {
+  getCurrentPlayerIndex(): number {
+    return resolveCurrentPlayerIndex(this.state);
+  }
+
+  setCurrentSeat(seatId: string | null): DomainPlayer | null {
+    return setCurrentSeat(this.state, seatId);
+  }
+
+  isPlayerTurn(seatId: SeatId): boolean {
     const currentPlayer = this.getCurrentPlayer();
-    return currentPlayer?.playerId === playerId;
+    return currentPlayer?.seatId === seatId;
   }
 
-  completeField(field: Field, winnerId: string): CompletedField | null {
+  completeField(field: Field, winnerSeatId: string): CompletedField | null {
     const state = this.getState();
     if (!state.playState) {
       return null;
@@ -587,16 +500,16 @@ export class GameStateService implements IGameStateService {
     }
 
     field.isComplete = true;
-    const winner = state.players.find((p) => p.playerId === winnerId);
+    const winner = state.players.find((p) => p.seatId === winnerSeatId);
     if (!winner) {
       return null;
     }
 
     const completedField: CompletedField = {
       cards: [...field.cards],
-      winnerId: winnerId,
+      winnerSeatId: asSeatId(winnerSeatId),
       winnerTeam: winner.team,
-      dealerId: field.dealerId,
+      dealerSeatId: field.dealerSeatId,
     };
 
     state.playState.fields.push(completedField);
@@ -613,13 +526,12 @@ export class GameStateService implements IGameStateService {
     );
   }
 
-  async resetRoundState(): Promise<void> {
+  resetRoundState(): void {
     // Keep the current players, scores, and game settings
     const version = this.state.version;
     const players = [...this.state.players];
     const teamScores = { ...this.state.teamScores };
     const teamScoreRecords = { ...this.state.teamScoreRecords };
-    const teamAssignments = { ...this.state.teamAssignments };
     const pointsToWin = this.state.pointsToWin;
 
     // Initialize new state with preserved pointsToWin
@@ -630,11 +542,10 @@ export class GameStateService implements IGameStateService {
     this.state.players = players;
     this.state.teamScores = teamScores;
     this.state.teamScoreRecords = teamScoreRecords;
-    this.state.teamAssignments = teamAssignments;
 
     // Generate new deck and deal cards
     this.state.deck = this.cardService.generateDeck();
-    await this.dealCards();
+    this.dealCards();
   }
 
   get roundNumber(): number {
@@ -646,84 +557,39 @@ export class GameStateService implements IGameStateService {
   }
 
   get currentTurn(): string | null {
-    return this.getCurrentPlayer()?.playerId ?? null;
+    return resolveCurrentSeatId(this.state);
   }
 
-  set currentTurn(playerId: string) {
-    const playerIndex = this.state.players.findIndex(
-      (p) => p.playerId === playerId,
-    );
-    if (playerIndex !== -1) {
-      this.state.currentPlayerId = playerId;
-      this.state.currentPlayerIndex = playerIndex;
-      void this.enqueuePersistence(() =>
-        this.stateManager.persistCurrentPlayerId(
-          this.roomId,
-          this.state,
-          playerId,
-        ),
-      )
-        .then((version) => {
-          this.state.version = version;
-        })
-        .catch((error) => {
-          this.logger.error('Failed to persist turn change:', error);
-        });
-    }
-  }
-
-  private resolveCurrentPlayerIndex(): number {
-    if (this.state.players.length === 0) {
-      return 0;
-    }
-
-    if (this.state.currentPlayerId) {
-      const index = this.state.players.findIndex(
-        (player) => player.playerId === this.state.currentPlayerId,
-      );
-      if (index !== -1) {
-        return index;
-      }
-    }
-
-    return Number.isInteger(this.state.currentPlayerIndex)
-      ? Math.min(
-          Math.max(this.state.currentPlayerIndex, 0),
-          this.state.players.length - 1,
-        )
-      : 0;
-  }
-
-  async startGame(): Promise<void> {
-    await this.transitionPhase('blow');
+  startGame(): void {
+    this.transitionPhase('blow');
     let state = this.getState();
 
     // Initialize game state
     state.deck = this.cardService.generateDeck();
-    await this.dealCards();
+    this.dealCards();
     state = this.getState();
 
     // Initialize play state
     state.playState = {
       currentField: {
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
-        dealerId: state.players[0].playerId,
+        dealerSeatId: asSeatId(state.players[0].seatId),
         isComplete: false,
       },
       negriCard: null,
+      negriSeatId: null,
       neguri: {},
       fields: [],
-      lastWinnerId: null,
+      lastWinnerSeatId: null,
       openDeclared: false,
-      openDeclarerId: null,
+      openDeclarerSeatId: null,
     };
 
     // Randomize the first blow player
     const firstBlowIndex = Math.floor(Math.random() * state.players.length);
-    state.currentPlayerId = state.players[firstBlowIndex]?.playerId ?? null;
-    state.currentPlayerIndex = firstBlowIndex;
+    this.setCurrentSeat(state.players[firstBlowIndex]?.seatId ?? null);
 
     // Initialize blow state
     state.blowState = {
@@ -731,20 +597,17 @@ export class GameStateService implements IGameStateService {
       currentHighestDeclaration: null,
       declarations: [],
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: firstBlowIndex,
     };
-
-    // Persist the game start
-    await this.saveState();
   }
 
-  setDisconnectTimeout(playerId: string, timeout: NodeJS.Timeout): void {
-    this.connectionManager.setDisconnectTimeout(playerId, timeout);
+  setDisconnectTimeout(seatId: SeatId, timeout: NodeJS.Timeout): void {
+    this.connectionManager.setDisconnectTimeout(seatId, timeout);
   }
 
-  clearDisconnectTimeout(playerId: string): void {
-    this.connectionManager.clearDisconnectTimeout(playerId);
+  clearDisconnectTimeout(seatId: SeatId): void {
+    this.connectionManager.clearDisconnectTimeout(seatId);
   }
 }

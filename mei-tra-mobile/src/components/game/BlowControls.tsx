@@ -1,35 +1,39 @@
 import type {
   BlowActionContract,
   BlowDeclarationContract,
-  PlayerContract,
   TrumpType,
 } from '@meitra/contracts/game';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
-import { TRUMP_LABELS } from '@/lib/trump-labels';
+import { trumpLabel } from '@/lib/trump-labels';
 import { colors } from '@/theme/colors';
 import { getValidBlowPairValues } from '@meitra/game-client/blow';
+import type { MobilePlayer } from '@/types/game';
+import { t } from '@/i18n';
 
 const TRUMP_ORDER: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz', 'tra'];
 
 const trumpOptions: { value: TrumpType; label: string }[] = TRUMP_ORDER.map(
-  (value) => ({ value, label: TRUMP_LABELS[value] }),
+  (value) => ({ value, label: trumpLabel(value) }),
 );
 
 const declarationLabel = (declaration: BlowDeclarationContract | null) => {
-  if (!declaration) return 'まだ宣言はありません';
+  if (!declaration) return t('blow.noDeclaration');
   const trump = trumpOptions.find(
     (option) => option.value === declaration.trumpType,
   );
-  return `${trump?.label ?? declaration.trumpType}・${declaration.numberOfPairs}ペア`;
+  return t('blow.declarationSummary', {
+    trump: trump?.label ?? declaration.trumpType,
+    pairs: declaration.numberOfPairs,
+  });
 };
 
 interface BlowControlsProps {
-  players: PlayerContract[];
+  players: MobilePlayer[];
   currentTurn: string | null;
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   highest: BlowDeclarationContract | null;
   actionHistory: BlowActionContract[];
   onDeclare: (trump: TrumpType, pairs: number) => void;
@@ -40,7 +44,7 @@ interface BlowControlsProps {
 export function BlowControls({
   players,
   currentTurn,
-  currentPlayerId,
+  currentSeatId,
   highest,
   actionHistory,
   onDeclare,
@@ -53,9 +57,9 @@ export function BlowControls({
     null,
   );
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMyTurn = currentTurn === currentPlayerId;
+  const isMyTurn = currentTurn === currentSeatId;
   const turnName =
-    players.find((player) => player.playerId === currentTurn)?.name ?? '—';
+    players.find((player) => player.seatId === currentTurn)?.name ?? '—';
 
   const validPairs = useMemo(
     () => getValidBlowPairValues(highest, selectedTrump),
@@ -91,12 +95,14 @@ export function BlowControls({
   return (
     <View style={styles.container}>
       <Text style={styles.turn}>
-        現在の宣言順: {turnName}
-        {isMyTurn ? '（あなた）' : ''}
+        {t('blow.currentTurn', { name: turnName })}
+        {isMyTurn ? t('blow.youSuffix') : ''}
       </Text>
-      <Text style={styles.highest}>最高宣言: {declarationLabel(highest)}</Text>
+      <Text style={styles.highest}>
+        {t('blow.highest', { label: declarationLabel(highest) })}
+      </Text>
 
-      <Text style={styles.label}>キリ（切り札）を選択</Text>
+      <Text style={styles.label}>{t('blow.selectTrump')}</Text>
       <ScrollView
         horizontal
         contentContainerStyle={styles.options}
@@ -115,7 +121,7 @@ export function BlowControls({
         ))}
       </ScrollView>
 
-      <Text style={styles.label}>ペア数を選択</Text>
+      <Text style={styles.label}>{t('blow.selectPairs')}</Text>
       <ScrollView
         horizontal
         contentContainerStyle={styles.options}
@@ -153,7 +159,7 @@ export function BlowControls({
           }}
           style={styles.action}
         >
-          宣言
+          {t('blow.declare')}
         </Button>
         <Button
           variant="secondary"
@@ -165,13 +171,13 @@ export function BlowControls({
           }}
           style={styles.action}
         >
-          パス
+          {t('blow.pass')}
         </Button>
       </View>
 
       {actionHistory.length > 0 ? (
         <View style={styles.historySection}>
-          <Text style={styles.historyLabel}>宣言履歴</Text>
+          <Text style={styles.historyLabel}>{t('blow.history')}</Text>
           <ScrollView
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
@@ -179,11 +185,11 @@ export function BlowControls({
           >
             {actionHistory.map((action, index) => {
               const name =
-                players.find((p) => p.playerId === action.playerId)?.name ??
+                players.find((p) => p.seatId === action.seatId)?.name ??
                 '—';
               const isHighest =
                 action.type === 'declare' &&
-                highest?.playerId === action.playerId &&
+                highest?.seatId === action.seatId &&
                 highest?.trumpType === action.trumpType &&
                 highest?.numberOfPairs === action.numberOfPairs;
               const trump = action.trumpType
@@ -205,8 +211,11 @@ export function BlowControls({
                     ]}
                   >
                     {action.type === 'pass'
-                      ? 'パス'
-                      : `${trump?.label ?? action.trumpType} ${action.numberOfPairs}ペア`}
+                      ? t('blow.pass')
+                      : t('blow.historyEntry', {
+                          trump: trump?.label ?? action.trumpType ?? '',
+                          pairs: action.numberOfPairs ?? 0,
+                        })}
                   </Text>
                 </View>
               );

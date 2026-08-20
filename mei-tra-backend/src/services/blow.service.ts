@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BlowDeclaration, Team, TrumpType } from '../types/game.types';
 import { CardService } from './card.service';
 import { IBlowService } from './interfaces/blow-service.interface';
+import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class BlowService implements IBlowService {
@@ -60,13 +61,13 @@ export class BlowService implements IBlowService {
   }
 
   createDeclaration(
-    playerId: string,
+    seatId: SeatId,
     team: Team,
     trumpType: TrumpType,
     numberOfPairs: number,
   ): BlowDeclaration {
     return {
-      playerId,
+      seatId,
       team,
       trumpType,
       numberOfPairs,

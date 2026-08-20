@@ -7,26 +7,31 @@ import type {
   TransportGamePhase,
   TransportTeamScores,
 } from '@meitra/contracts/game';
+import type { SeatId } from '@meitra/contracts/ids';
+import type { RoomContract } from '@meitra/contracts/room';
+
+export type MobilePlayer = PlayerContract;
+export type MobileRoom = RoomContract;
 
 export interface MobileGameSnapshot {
   roomId: string;
-  players: PlayerContract[];
+  players: MobilePlayer[];
   gamePhase: TransportGamePhase;
   currentField: FieldContract | null;
-  currentTurn: string | null;
+  currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
-  you: string | null;
+  youSeatId: SeatId | null;
   isSpectator: boolean;
   negriCard: string | null;
-  negriPlayerId: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari: string | null;
   fields: CompletedFieldContract[];
-  hostId: string | null;
+  hostSeatId: SeatId | null;
   pointsToWin: number;
   paused: boolean;
-  disconnectedPlayerIds: string[];
-  idlePlayerIds: string[];
+  disconnectedSeatIds: string[];
+  idleSeatIds: string[];
   teamNames?: TeamNames;
 }
 

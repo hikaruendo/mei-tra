@@ -1,12 +1,11 @@
 import { Logger } from '@nestjs/common';
 import { IGameStateRepository } from '../repositories/interfaces/game-state.repository.interface';
-import {
-  GamePhase,
-  GameState,
-  PlayerConnectionMetadata,
-} from '../types/game.types';
+import { GameState } from '../types/game.types';
 import { RoomPlayer } from '../types/room.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
 import { GamePhaseService } from './game-phase.service';
+import { normalizeGameStateIdentity } from '../adapters/game-state-identity';
+import type { SeatId } from '../types/identity.types';
 
 export class GameStateManager {
   constructor(
@@ -15,11 +14,7 @@ export class GameStateManager {
     private readonly gamePhaseService: GamePhaseService,
   ) {}
 
-  async updateState(
-    roomId: string | null,
-    currentState: GameState,
-    newState: Partial<GameState>,
-  ): Promise<GameState> {
+  applyState(currentState: GameState, newState: Partial<GameState>): GameState {
     if (Object.prototype.hasOwnProperty.call(newState, 'gamePhase')) {
       this.gamePhaseService.assertTransition(
         currentState.gamePhase,
@@ -27,15 +22,46 @@ export class GameStateManager {
       );
     }
 
-    const nextState = {
+    const nextState: GameState = {
       ...currentState,
       ...newState,
     };
+    return normalizeGameStateIdentity(nextState);
+  }
+
+  async updateState(
+    roomId: string | null,
+    currentState: GameState,
+    newState: Partial<GameState>,
+  ): Promise<GameState> {
+    const nextState = this.applyState(currentState, newState);
 
     if (roomId) {
+      const persistencePatch: Partial<GameState> = { ...newState };
+      if (Object.prototype.hasOwnProperty.call(newState, 'currentSeatId')) {
+        persistencePatch.currentSeatId = nextState.currentSeatId;
+      }
+      if (newState.players) {
+        persistencePatch.players = nextState.players;
+      }
+      if (newState.blowState) {
+        persistencePatch.blowState = nextState.blowState;
+      }
+      if (newState.playState) {
+        persistencePatch.playState = nextState.playState;
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(
+          newState,
+          'pendingBrokenHandReveal',
+        )
+      ) {
+        persistencePatch.pendingBrokenHandReveal =
+          nextState.pendingBrokenHandReveal;
+      }
       const persistedState = await this.repository.update(
         roomId,
-        newState,
+        persistencePatch,
         currentState.version,
       );
       if (!persistedState) {
@@ -45,14 +71,6 @@ export class GameStateManager {
     }
 
     return nextState;
-  }
-
-  async transitionPhase(
-    roomId: string | null,
-    currentState: GameState,
-    nextPhase: GamePhase,
-  ): Promise<GameState> {
-    return this.updateState(roomId, currentState, { gamePhase: nextPhase });
   }
 
   async loadState(
@@ -94,13 +112,14 @@ export class GameStateManager {
   }
 
   async saveState(roomId: string | null, state: GameState): Promise<GameState> {
+    const normalizedState = normalizeGameStateIdentity(state);
     if (!roomId) {
-      return state;
+      return normalizedState;
     }
 
     const persistedState = await this.repository.update(
       roomId,
-      state,
+      normalizedState,
       state.version,
     );
     if (!persistedState) {
@@ -113,7 +132,8 @@ export class GameStateManager {
     roomId: string | null,
     roomPlayers: RoomPlayer[],
     state: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState> {
     if (!roomId) {
       throw new Error('Cannot persist roster without a room ID');
@@ -123,69 +143,14 @@ export class GameStateManager {
       roomId,
       roomPlayers,
       state,
-      hostId,
+      hostSeatId,
+      membershipMutation,
     );
 
     if (!persistedState) {
       throw new Error(`Game state not found for room ${roomId}`);
     }
     return persistedState;
-  }
-
-  async persistPlayerConnectionUpdate(
-    roomId: string | null,
-    playerId: string,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<void> {
-    if (!roomId) {
-      return;
-    }
-
-    try {
-      await this.repository.updatePlayerConnection(roomId, playerId, updates);
-    } catch (error) {
-      this.logger.error('Failed to persist player connection update:', error);
-    }
-  }
-
-  async persistCurrentPlayerId(
-    roomId: string | null,
-    state: GameState,
-    currentPlayerId: string | null,
-  ): Promise<number | undefined> {
-    if (!roomId) {
-      return state.version;
-    }
-
-    const persistedState = await this.repository.update(
-      roomId,
-      { currentPlayerId },
-      state.version,
-    );
-    if (!persistedState) {
-      throw new Error(`Game state not found for room ${roomId}`);
-    }
-    return persistedState.version;
-  }
-
-  async persistRoundNumber(
-    roomId: string | null,
-    state: GameState,
-    roundNumber: number,
-  ): Promise<number | undefined> {
-    if (!roomId) {
-      return state.version;
-    }
-
-    const persistedState = await this.repository.update(
-      roomId,
-      { roundNumber },
-      state.version,
-    );
-    if (!persistedState) {
-      throw new Error(`Game state not found for room ${roomId}`);
-    }
-    return persistedState.version;
   }
 
   async resetState(roomId: string | null, state: GameState): Promise<void> {

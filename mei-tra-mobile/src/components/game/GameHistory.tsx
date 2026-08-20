@@ -1,5 +1,6 @@
-import type { PlayerContract, TeamNames } from '@meitra/contracts/game';
+import type { TeamNames } from '@meitra/contracts/game';
 import type {
+  GameHistoryReplayEventContract,
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
 } from '@meitra/contracts/game-history';
@@ -15,6 +16,9 @@ import {
 
 import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
 import { colors, teamColors } from '@/theme/colors';
+import type { MobilePlayer } from '@/types/game';
+import { MiniCard } from '@/components/game/MiniCard';
+import { getLocaleTag, t } from '@/i18n';
 
 interface GameHistoryProps {
   replay: GameHistoryReplayViewContract | null;
@@ -22,7 +26,7 @@ interface GameHistoryProps {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
-  players?: PlayerContract[];
+  players?: MobilePlayer[];
   teamNames?: TeamNames;
 }
 
@@ -53,7 +57,7 @@ function Row({ row, index }: { row: RoundRow; index: number }) {
       </Text>
       <View style={[styles.scoreCell, { flex: COL.score }]}>
         {row.inProgress ? (
-          <Text style={styles.inProgress}>進行中</Text>
+          <Text style={styles.inProgress}>{t('gameLog.inProgress')}</Text>
         ) : (
           row.scores.map((score) => (
             <Text key={score.team} style={styles.scoreLine}>
@@ -65,6 +69,54 @@ function Row({ row, index }: { row: RoundRow; index: number }) {
           ))
         )}
       </View>
+    </View>
+  );
+}
+
+function getEventPlayerName(event: GameHistoryReplayEventContract): string {
+  const playerDetail = event.detailItems.find(
+    (detail) => detail.labelKey === 'player' && detail.value.kind === 'player',
+  );
+  if (playerDetail?.value.kind === 'player' && playerDetail.value.playerName) {
+    return playerDetail.value.playerName;
+  }
+
+  const playerNames = event.actionData.playerNames;
+  if (
+    event.actorSeatId &&
+    typeof playerNames === 'object' &&
+    playerNames !== null &&
+    !Array.isArray(playerNames)
+  ) {
+    const playerName = (playerNames as Record<string, unknown>)[
+      event.actorSeatId
+    ];
+    if (typeof playerName === 'string' && playerName.length > 0) {
+      return playerName;
+    }
+  }
+
+  return t('common.player');
+}
+
+function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
+  const playerName = getEventPlayerName(event);
+  const actionLabel =
+    event.actionType === 'player_joined'
+      ? t('gameLog.joined')
+      : t('gameLog.left');
+
+  return (
+    <View style={styles.membershipRow}>
+      <Text style={styles.membershipTime}>
+        {new Date(event.timestamp).toLocaleTimeString(getLocaleTag())}
+      </Text>
+      <Text style={styles.membershipText}>
+        {t('gameLog.membershipEntry', {
+          name: playerName,
+          action: actionLabel,
+        })}
+      </Text>
     </View>
   );
 }
@@ -82,12 +134,34 @@ export function GameHistory({
     () => buildRoundTableRows(replay, players ?? [], teamNames),
     [replay, players, teamNames],
   );
+  const membershipEvents = useMemo(
+    () =>
+      (replay?.rounds ?? [])
+        .flatMap((round) => round.events)
+        .filter(
+          (event) =>
+            event.actionType === 'player_joined' ||
+            event.actionType === 'player_left',
+        )
+        .sort(
+          (left, right) =>
+            Date.parse(left.timestamp) - Date.parse(right.timestamp),
+        ),
+    [replay],
+  );
+  const startingHands = useMemo(
+    () =>
+      (replay?.rounds ?? []).filter(
+        (round) => (round.viewerStartingHand?.length ?? 0) > 0,
+      ),
+    [replay],
+  );
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.gold} size="small" />
-        <Text style={styles.loadingText}>ログを読み込み中...</Text>
+        <Text style={styles.loadingText}>{t('gameLog.loading')}</Text>
       </View>
     );
   }
@@ -97,7 +171,7 @@ export function GameHistory({
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable onPress={onRefresh}>
-          <Text style={styles.retryText}>再試行</Text>
+          <Text style={styles.retryText}>{t('gameLog.retry')}</Text>
         </Pressable>
       </View>
     );
@@ -107,34 +181,71 @@ export function GameHistory({
     <View style={styles.container}>
       <View style={styles.header}>
         <Pressable hitSlop={8} onPress={onRefresh}>
-          <Text style={styles.refresh}>更新</Text>
+          <Text style={styles.refresh}>{t('gameLog.refresh')}</Text>
         </Pressable>
       </View>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && membershipEvents.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>表示できる対局ログがありません</Text>
+          <Text style={styles.emptyText}>{t('gameLog.empty')}</Text>
         </View>
       ) : (
         <>
-          <View style={[styles.row, styles.headRow]}>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
-              ラウンド
-            </Text>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.blower }]}>
-              吹き手
-            </Text>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.bid }]}>
-              宣言
-            </Text>
-            <Text numberOfLines={1} style={[styles.headCell, { flex: COL.score }]}>
-              得点
-            </Text>
-          </View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {rows.map((row, index) => (
-              <Row index={index} key={row.roundNumber} row={row} />
-            ))}
+            {membershipEvents.length > 0 ? (
+              <View style={styles.membershipSection}>
+                <Text style={styles.membershipTitle}>{t('gameLog.membership')}</Text>
+                {membershipEvents.map((event) => (
+                  <MembershipRow event={event} key={event.id} />
+                ))}
+              </View>
+            ) : null}
+            {rows.length > 0 ? (
+              <>
+                <View style={[styles.row, styles.headRow]}>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
+                    {t('gameLog.round')}
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.blower }]}>
+                    {t('gameLog.blower')}
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.bid }]}>
+                    {t('gameLog.declaration')}
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.headCell, { flex: COL.score }]}>
+                    {t('gameLog.score')}
+                  </Text>
+                </View>
+                {rows.map((row, index) => (
+                  <Row index={index} key={row.roundNumber} row={row} />
+                ))}
+              </>
+            ) : null}
+            {startingHands.length > 0 ? (
+              <View style={styles.handsSection}>
+                <Text style={styles.handsTitle}>{t('gameLog.startingHands')}</Text>
+                {startingHands.map((round) => (
+                  <View
+                    key={`starting-hand-${round.roundNumber ?? 'pre-game'}`}
+                    style={styles.handRow}
+                  >
+                    <Text style={styles.handLabel}>
+                      {round.roundNumber == null
+                        ? t('gameLog.preGame')
+                        : t('gameLog.roundN', { n: round.roundNumber })}
+                    </Text>
+                    <View style={styles.handCards}>
+                      {round.viewerStartingHand?.map((card, index) => (
+                        <MiniCard
+                          card={card}
+                          key={`${round.roundNumber ?? 'pre-game'}-${card}-${index}`}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </ScrollView>
         </>
       )}
@@ -199,6 +310,33 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontVariant: ['tabular-nums'],
   },
+  membershipSection: {
+    gap: 6,
+    paddingBottom: 8,
+  },
+  membershipTitle: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  membershipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  membershipTime: {
+    color: colors.textMuted,
+    fontSize: 11,
+    minWidth: 72,
+  },
+  membershipText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   inProgress: {
     color: colors.textMuted,
     fontSize: 12,
@@ -226,5 +364,30 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  handsSection: {
+    gap: 12,
+    paddingTop: 18,
+  },
+  handsTitle: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  handRow: {
+    gap: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: colors.panelStrong,
+  },
+  handLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  handCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
   },
 });

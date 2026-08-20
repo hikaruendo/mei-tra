@@ -4,11 +4,19 @@ import { SupabaseService } from '../../database/supabase.service';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { Database } from '../../types/database.types';
+import { asSeatId } from '../../types/identity.types';
+import type { GameParticipant } from '../../types/game-participant.types';
 
 type RoomRow = Database['public']['Tables']['rooms']['Row'];
 type RoomUpdate = Database['public']['Tables']['rooms']['Update'];
 type RoomPlayerRow = Database['public']['Tables']['room_players']['Row'];
-type RoomPlayerUpdate = Database['public']['Tables']['room_players']['Update'];
+type GameParticipantRow =
+  Database['public']['Tables']['game_participants']['Row'];
+
+interface CreatedRoomWithHostSeat {
+  room: RoomRow;
+  roomPlayer: RoomPlayerRow;
+}
 
 @Injectable()
 export class SupabaseRoomRepository implements IRoomRepository {
@@ -21,38 +29,40 @@ export class SupabaseRoomRepository implements IRoomRepository {
     return this.supabaseService.client as any;
   }
 
-  async create(room: Room): Promise<Room> {
-    try {
-      const { data, error } = await this.supabase
-        .from('rooms')
-        .insert({
-          // idはDEFAULT値でUUID自動生成されるため除外
-          name: room.name,
-          host_id: room.hostId,
-          status: room.status,
-          settings: room.settings,
-          created_at: room.createdAt.toISOString(),
-          updated_at: room.updatedAt.toISOString(),
-          last_activity_at: room.lastActivityAt.toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error('Failed to create room:', error);
-        throw new Error(`Failed to create room: ${error.message}`);
-      }
-
-      // Create room players
-      if (room.players.length > 0) {
-        await this.addMultiplePlayers(room.id, room.players);
-      }
-
-      return this.mapDatabaseToRoom(data, room.players);
-    } catch (error) {
-      this.logger.error('Error creating room:', error);
-      throw error;
+  async createWithHostSeat(
+    room: Room,
+    hostPlayer: RoomPlayer,
+    transitionId: string,
+  ): Promise<Room> {
+    const hostSeatId = hostPlayer.seatId;
+    const hostUserId = hostPlayer.userId;
+    if (!hostUserId) {
+      throw new Error('Authenticated host user is required');
     }
+
+    const { data, error } = await this.supabase.rpc(
+      'create_room_with_host_seat_atomic',
+      {
+        p_room_id: room.id,
+        p_room_name: room.name,
+        p_host_seat_id: hostSeatId,
+        p_host_user_id: hostUserId,
+        p_host_name: hostPlayer.name,
+        p_room_settings: room.settings,
+        p_points_to_win: room.settings.pointsToWin,
+        p_transition_id: transitionId,
+      },
+    );
+
+    if (error) {
+      this.logger.error('Failed to create room with host seat:', error);
+      throw new Error(`Failed to create room with host seat: ${error.message}`);
+    }
+
+    const created = data as CreatedRoomWithHostSeat;
+    return this.mapDatabaseToRoom(created.room, [
+      this.mapDatabaseToPlayer(created.roomPlayer),
+    ]);
   }
 
   async findById(roomId: string): Promise<Room | null> {
@@ -84,7 +94,9 @@ export class SupabaseRoomRepository implements IRoomRepository {
       const updateData: Partial<RoomUpdate> = {};
 
       if (updates.name) updateData.name = updates.name;
-      if (updates.hostId) updateData.host_id = updates.hostId;
+      if (updates.hostSeatId) {
+        updateData.host_seat_id = updates.hostSeatId;
+      }
       if (updates.status) updateData.status = updates.status;
       if (updates.settings) updateData.settings = updates.settings;
       if (updates.lastActivityAt)
@@ -168,7 +180,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       const { data: roomsData, error } = await this.supabase
         .from('rooms')
         .select('*')
-        .eq('host_id', hostId)
+        .eq('host_seat_id', hostId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -189,9 +201,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
     try {
       const { data: roomsData, error } = await this.supabase
         .from('rooms')
-        .select('*, room_players!inner(user_id)')
+        .select(
+          '*, game_participants!game_participants_room_id_fkey!inner(user_id)',
+        )
         .eq('status', RoomStatus.FINISHED)
-        .eq('room_players.user_id', userId)
+        .eq('game_participants.user_id', userId)
         .order('last_activity_at', { ascending: false })
         .limit(limit);
 
@@ -209,6 +223,30 @@ export class SupabaseRoomRepository implements IRoomRepository {
       );
       throw error;
     }
+  }
+
+  async findGameParticipants(roomId: string): Promise<GameParticipant[]> {
+    const { data, error } = await this.supabase
+      .from('game_participants')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('joined_at', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch game participants: ${error.message}`);
+    }
+
+    return ((data ?? []) as GameParticipantRow[]).map((participant) => ({
+      roomId: participant.room_id,
+      seatId: asSeatId(participant.seat_id),
+      userId: participant.user_id,
+      playerName: participant.player_name_snapshot,
+      team:
+        participant.team_snapshot === 0 || participant.team_snapshot === 1
+          ? participant.team_snapshot
+          : null,
+      joinedAt: new Date(participant.joined_at),
+    }));
   }
 
   async updateStatus(roomId: string, status: RoomStatus): Promise<boolean> {
@@ -243,107 +281,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
     } catch (error) {
       this.logger.error('Error updating last activity:', error);
       throw error;
-    }
-  }
-
-  async addPlayer(roomId: string, player: RoomPlayer): Promise<boolean> {
-    try {
-      // Check if player already exists
-      const { data: existingPlayer } = await this.supabase
-        .from('room_players')
-        .select('player_id')
-        .eq('room_id', roomId)
-        .eq('player_id', player.playerId)
-        .single();
-
-      if (existingPlayer) {
-        this.logger.warn(
-          `Player ${player.playerId} already exists in room ${roomId}`,
-        );
-        return true; // Player already exists, consider it success
-      }
-
-      const { error } = await this.supabase.from('room_players').insert({
-        room_id: roomId,
-        player_id: player.playerId,
-        socket_id: player.socketId,
-        user_id: player.userId ?? null,
-        name: player.name,
-        team: player.team,
-        is_ready: player.isReady,
-        is_host: player.isHost,
-        is_com: player.isCOM ?? false,
-        joined_at: player.joinedAt.toISOString(),
-        seat_index: await this.getNextSeatIndex(roomId),
-      });
-
-      if (error) {
-        this.logger.error('Failed to add player:', error);
-        return false;
-      }
-
-      await this.updateLastActivity(roomId);
-      return true;
-    } catch (error) {
-      this.logger.error('Error adding player:', error);
-      return false;
-    }
-  }
-
-  async removePlayer(roomId: string, playerId: string): Promise<boolean> {
-    try {
-      const { error } = await this.supabase
-        .from('room_players')
-        .delete()
-        .eq('room_id', roomId)
-        .eq('player_id', playerId);
-
-      if (error) {
-        this.logger.error('Failed to remove player:', error);
-        return false;
-      }
-
-      await this.updateLastActivity(roomId);
-      return true;
-    } catch (error) {
-      this.logger.error('Error removing player:', error);
-      return false;
-    }
-  }
-
-  async updatePlayer(
-    roomId: string,
-    playerId: string,
-    updates: Partial<RoomPlayer>,
-  ): Promise<boolean> {
-    try {
-      const updateData: Partial<RoomPlayerUpdate> = {};
-
-      if (updates.socketId !== undefined) {
-        updateData.socket_id = updates.socketId;
-      }
-      if (updates.userId !== undefined) updateData.user_id = updates.userId;
-      if (updates.name) updateData.name = updates.name;
-      if (updates.team !== undefined) updateData.team = updates.team;
-      if (updates.isReady !== undefined) updateData.is_ready = updates.isReady;
-      if (updates.isHost !== undefined) updateData.is_host = updates.isHost;
-
-      const { error } = await this.supabase
-        .from('room_players')
-        .update(updateData)
-        .eq('room_id', roomId)
-        .eq('player_id', playerId);
-
-      if (error) {
-        this.logger.error('Failed to update player:', error);
-        return false;
-      }
-
-      await this.updateLastActivity(roomId);
-      return true;
-    } catch (error) {
-      this.logger.error('Error updating player:', error);
-      return false;
     }
   }
 
@@ -386,40 +323,21 @@ export class SupabaseRoomRepository implements IRoomRepository {
     }
   }
 
-  private async addMultiplePlayers(
-    roomId: string,
-    players: RoomPlayer[],
-  ): Promise<void> {
-    const playerInserts = players.map((player, seatIndex) => ({
-      room_id: roomId,
-      player_id: player.playerId,
-      socket_id: player.socketId,
-      user_id: player.userId ?? null,
-      name: player.name,
-      team: player.team,
-      is_ready: player.isReady,
-      is_host: player.isHost,
-      is_com: player.isCOM ?? false,
-      joined_at: player.joinedAt.toISOString(),
-      seat_index: seatIndex,
-    }));
-
-    const { error } = await this.supabase
-      .from('room_players')
-      .insert(playerInserts);
-
-    if (error) {
-      throw new Error(`Failed to add players: ${error.message}`);
-    }
-  }
-
   private mapDatabaseToRoom(dbRoom: RoomRow, players: RoomPlayer[]): Room {
+    const hostSeatId = dbRoom.host_seat_id ?? players[0]?.seatId;
+    if (!hostSeatId) {
+      throw new Error(`Room ${dbRoom.id} has no canonical host seat`);
+    }
+    const canonicalPlayers = players.map((player) => ({
+      ...player,
+      isHost: player.seatId === hostSeatId,
+    }));
     return {
       id: dbRoom.id,
       name: dbRoom.name,
-      hostId: dbRoom.host_id,
+      hostSeatId: asSeatId(hostSeatId),
       status: dbRoom.status as RoomStatus,
-      players,
+      players: canonicalPlayers,
       settings: dbRoom.settings,
       createdAt: new Date(dbRoom.created_at),
       updatedAt: new Date(dbRoom.updated_at),
@@ -472,9 +390,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
   }
 
   private mapDatabaseToPlayer(dbPlayer: RoomPlayerRow): RoomPlayer {
+    const seatId = asSeatId(dbPlayer.id);
     return {
-      socketId: dbPlayer.socket_id || '',
-      playerId: dbPlayer.player_id,
+      socketId: '',
+      seatId: asSeatId(seatId),
+      participantKey: dbPlayer.user_id ?? dbPlayer.id,
       userId: dbPlayer.user_id ?? undefined,
       isAuthenticated: Boolean(dbPlayer.user_id),
       name: dbPlayer.name,
@@ -484,25 +404,10 @@ export class SupabaseRoomRepository implements IRoomRepository {
       hasBroken: false,
       hasRequiredBroken: false,
       isReady: dbPlayer.is_ready,
-      isHost: dbPlayer.is_host,
+      isHost: false,
       isCOM: dbPlayer.is_com,
       joinedAt: new Date(dbPlayer.joined_at),
       seatIndex: dbPlayer.seat_index,
     };
-  }
-
-  private async getNextSeatIndex(roomId: string): Promise<number> {
-    const { data, error } = await this.supabase
-      .from('room_players')
-      .select('seat_index')
-      .eq('room_id', roomId)
-      .order('seat_index', { ascending: false })
-      .limit(1);
-
-    if (error) {
-      throw new Error(`Failed to allocate seat index: ${error.message}`);
-    }
-
-    return (data?.[0]?.seat_index ?? -1) + 1;
   }
 }

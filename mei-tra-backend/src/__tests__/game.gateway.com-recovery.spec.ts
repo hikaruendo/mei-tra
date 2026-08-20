@@ -1,5 +1,6 @@
 import { Socket } from 'socket.io';
 import { GameGateway } from '../game.gateway';
+import { asSeatId } from '../types/identity.types';
 
 const createGateway = (): GameGateway => {
   const GatewayConstructor = GameGateway as unknown as new (
@@ -122,9 +123,9 @@ describe('GameGateway COM recovery integration', () => {
         roomId: 'room-1',
         roomsList: [],
         room: { id: 'room-1', players: [] },
-        selfPlayerId: 'user-1',
+        selfSeatId: 'user-1',
         reconnectToken: 'user-1',
-        currentTurnPlayerId: 'com-1',
+        currentTurnSeatId: 'com-1',
         gameState: { players: [], gamePhase: 'play' },
       }),
       getActiveGameSnapshot: jest.fn(),
@@ -209,7 +210,7 @@ describe('GameGateway COM recovery integration', () => {
     };
     testGateway.disconnectGatewayEffectsService = {
       prepareDisconnect: jest.fn().mockResolvedValue({
-        playerId: 'player-1',
+        seatId: 'player-1',
         playerName: 'Player 1',
         roomGameState,
         timeoutMode: 'convert-to-com',
@@ -221,7 +222,7 @@ describe('GameGateway COM recovery integration', () => {
           scope: 'room',
           roomId: 'room-1',
           event: 'player-converted-to-com',
-          payload: { playerId: 'player-1' },
+          payload: { seatId: 'player-1' },
         },
       ]),
     };
@@ -246,7 +247,7 @@ describe('GameGateway COM recovery integration', () => {
       testGateway.disconnectGatewayEffectsService.buildTimeoutEvents,
     ).toHaveBeenCalledWith({
       roomId: 'room-1',
-      playerId: 'player-1',
+      seatId: 'player-1',
       playerName: 'Player 1',
       timeoutMode: 'convert-to-com',
       membership: null,
@@ -271,9 +272,9 @@ describe('GameGateway COM recovery integration', () => {
     testGateway.reconnectionUseCase = {
       execute: jest.fn(),
       getActiveGameSnapshot: jest.fn().mockResolvedValue({
-        selfPlayerId: 'user-1',
+        selfSeatId: 'user-1',
         reconnectToken: 'player-1',
-        currentTurnPlayerId: 'player-2',
+        currentTurnSeatId: 'player-2',
         gameState,
       }),
     };
@@ -334,7 +335,7 @@ describe('GameGateway COM recovery integration', () => {
       execute: jest.fn().mockResolvedValue({
         success: true,
         data: {
-          playerId: 'seat-1',
+          seatId: 'seat-1',
           roomDeleted: true,
           roomsList: [],
         },
@@ -349,7 +350,7 @@ describe('GameGateway COM recovery integration', () => {
       getRoom: jest.fn().mockResolvedValue({
         players: [
           {
-            playerId: 'seat-1',
+            seatId: asSeatId('seat-1'),
             userId: 'user-1',
             isCOM: false,
           },
@@ -398,12 +399,11 @@ describe('GameGateway COM recovery integration', () => {
 
     await gateway.handleLeaveRoom(socketOne, {
       roomId: 'room-1',
-      playerId: 'user-1',
     });
 
     expect(testGateway.leaveRoomUseCase.execute).toHaveBeenCalledWith({
       roomId: 'room-1',
-      playerId: 'seat-1',
+      seatId: 'seat-1',
     });
     expect(socketOne.leave).toHaveBeenCalledWith('room-1');
     expect(socketTwo.leave).toHaveBeenCalledWith('room-1');

@@ -26,6 +26,9 @@ import {
   hasPlayerDeclaredInBlow,
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
+import { asSeatId } from '../types/identity.types';
+import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
+import { resolveCurrentPlayer } from '../domain/current-turn';
 
 @Injectable()
 export class DeclareBlowUseCase implements IDeclareBlowUseCase {
@@ -60,7 +63,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         return { success: false, error: pendingError };
       }
 
-      if (!roomGameState.isPlayerTurn(player.playerId)) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to declare" };
       }
 
@@ -70,7 +73,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       // Check if player has already declared in this blow phase
-      if (hasPlayerDeclaredInBlow(state.blowState, player.playerId)) {
+      if (hasPlayerDeclaredInBlow(state.blowState, player.seatId)) {
         return {
           success: false,
           error: 'You have already declared in this blow phase',
@@ -95,7 +98,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       const newDeclaration = this.blowService.createDeclaration(
-        player.playerId,
+        player.seatId,
         player.team,
         declaration.trumpType,
         declaration.numberOfPairs,
@@ -105,7 +108,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       state.blowState.declarations.push(newDeclaration);
       state.blowState.actionHistory.push({
         type: 'declare',
-        playerId: player.playerId,
+        seatId: asSeatId(player.seatId),
         trumpType: declaration.trumpType,
         numberOfPairs: declaration.numberOfPairs,
         timestamp: newDeclaration.timestamp,
@@ -115,7 +118,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'blow_declared',
-        playerId: player.playerId,
+        actorSeatId: asSeatId(player.seatId),
         state,
         actionData: {
           declaration: {
@@ -133,12 +136,7 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           scope: 'room',
           roomId,
           event: 'blow-updated',
-          payload: {
-            declarations: state.blowState.declarations,
-            actionHistory: state.blowState.actionHistory,
-            currentHighest: state.blowState.currentHighestDeclaration,
-            lastPasser: state.blowState.lastPasser,
-          },
+          payload: toBlowUpdatedPayload(state.blowState),
         },
       ];
       events.push(
@@ -173,35 +171,38 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
       }
 
       // Not all players have acted yet - continue to next player
-      await roomGameState.nextTurn();
+      roomGameState.nextTurn();
 
       // Skip players who have already acted (passed or declared)
       let attempts = 0;
       const maxAttempts = state.players.length;
       while (attempts < maxAttempts) {
-        const currentPlayer = state.players[state.currentPlayerIndex];
+        const currentPlayer = resolveCurrentPlayer(state);
+        if (!currentPlayer) {
+          break;
+        }
         const hasActed =
-          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.playerId) ||
+          hasPlayerDeclaredInBlow(state.blowState, currentPlayer.seatId) ||
           hasPlayerPassedInBlow(state.blowState, currentPlayer);
 
         if (!hasActed) {
           break; // Found a player who hasn't acted yet
         }
 
-        await roomGameState.nextTurn();
+        roomGameState.nextTurn();
         attempts++;
       }
 
       // Save the final turn state after skipping
       await roomGameState.saveState();
 
-      const nextPlayer = state.players[state.currentPlayerIndex];
+      const nextPlayer = resolveCurrentPlayer(state);
       if (nextPlayer) {
         events.push({
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: nextPlayer.playerId,
+          payload: nextPlayer.seatId,
         });
       }
 

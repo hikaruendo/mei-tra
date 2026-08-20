@@ -1,5 +1,7 @@
 begin;
 
+select plan(1);
+
 insert into auth.users (
   id,
   email,
@@ -15,17 +17,32 @@ values (
   now()
 );
 
-insert into public.rooms (id, name, host_id)
+insert into public.rooms (id, name)
 values
   (
     '00000000-0000-0000-0000-000000000912',
-    'Membership room A',
-    'membership-player'
+    'Membership room A'
   ),
   (
     '00000000-0000-0000-0000-000000000913',
-    'Membership room B',
-    'membership-player'
+    'Membership room B'
+  );
+
+insert into public.room_players (id, room_id, name, team, seat_index)
+values
+  (
+    '00000000-0000-4000-8000-000000000917',
+    '00000000-0000-0000-0000-000000000912',
+    'Seat A',
+    0,
+    0
+  ),
+  (
+    '00000000-0000-4000-8000-000000000918',
+    '00000000-0000-0000-0000-000000000913',
+    'Seat B',
+    1,
+    0
   );
 
 do $test$
@@ -35,13 +52,15 @@ declare
   test_user constant uuid := '00000000-0000-0000-0000-000000000911';
   first_room constant uuid := '00000000-0000-0000-0000-000000000912';
   second_room constant uuid := '00000000-0000-0000-0000-000000000913';
+  first_seat constant uuid := '00000000-0000-4000-8000-000000000917';
+  second_seat constant uuid := '00000000-0000-4000-8000-000000000918';
   first_transition constant uuid := '00000000-0000-4000-8000-000000000914';
   second_transition constant uuid := '00000000-0000-4000-8000-000000000915';
   third_transition constant uuid := '00000000-0000-4000-8000-000000000916';
 begin
   if has_function_privilege(
     'anon',
-    'public.claim_room_membership(uuid,uuid,text,uuid)',
+    'public.claim_room_membership(uuid,uuid,uuid,uuid)',
     'execute'
   ) then
     raise exception 'anon can claim room membership';
@@ -49,7 +68,7 @@ begin
 
   if not has_function_privilege(
     'service_role',
-    'public.claim_room_membership(uuid,uuid,text,uuid)',
+    'public.claim_room_membership(uuid,uuid,uuid,uuid)',
     'execute'
   ) then
     raise exception 'service_role cannot claim room membership';
@@ -58,7 +77,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     first_room,
-    'membership-player',
+    first_seat,
     first_transition
   );
   if result->>'result' <> 'claimed' then
@@ -68,7 +87,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     second_room,
-    'membership-player',
+    second_seat,
     second_transition
   );
   if result->>'result' <> 'conflict' then
@@ -78,7 +97,7 @@ begin
   result := public.claim_room_membership(
     test_user,
     first_room,
-    'membership-player',
+    first_seat,
     second_transition
   );
   if result->>'result' <> 'reconnected' then
@@ -112,7 +131,7 @@ begin
 
   result := public.reserve_room_membership(
     test_user,
-    'membership-player',
+    second_seat,
     first_transition
   );
   if result->>'result' <> 'reserved' then
@@ -121,7 +140,7 @@ begin
 
   result := public.reserve_room_membership(
     test_user,
-    'membership-player',
+    second_seat,
     first_transition
   );
   if result->>'result' <> 'reserved' then
@@ -131,21 +150,24 @@ begin
   result := public.claim_room_membership(
     test_user,
     second_room,
-    'membership-player',
+    second_seat,
     first_transition
   );
   if result->>'result' <> 'claimed' then
     raise exception 'reserved membership claim failed: %', result;
   end if;
 
-  if not public.release_room_membership_by_player(
+  if not public.release_room_membership_by_seat(
     second_room,
-    'membership-player',
+    second_seat,
     third_transition
   ) then
     raise exception 'player membership release failed';
   end if;
 end;
 $test$;
+
+select pass('active room membership transitions preserve canonical seats');
+select * from finish();
 
 rollback;

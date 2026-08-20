@@ -37,7 +37,7 @@ interface RoomListProps {
   isConnected?: boolean;
   isConnecting?: boolean;
   users?: ConnectionUser[];
-  currentPlayerId?: string | null;
+  currentSeatId?: string | null;
   onRoomEntered?: (roomId: string) => void;
 }
 
@@ -45,7 +45,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   isConnected,
   isConnecting,
   users = [],
-  currentPlayerId: currentPlayerIdProp = null,
+  currentSeatId: currentSeatIdProp = null,
   onRoomEntered,
 }) => {
   const t = useTranslations();
@@ -60,7 +60,7 @@ export const RoomList: React.FC<RoomListProps> = ({
     currentRoom,
     isConnected: roomSocketConnected,
     isConnecting: roomSocketConnecting,
-  } = useRoom({ users: memoizedUsers, currentPlayerId: currentPlayerIdProp ?? null });
+  } = useRoom({ users: memoizedUsers, currentSeatId: currentSeatIdProp ?? null });
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
@@ -171,7 +171,7 @@ export const RoomList: React.FC<RoomListProps> = ({
               .filter(
                 (player, index, players) =>
                   players.findIndex(
-                    (candidate) => candidate.playerId === player.playerId,
+                    (candidate) => candidate.seatId === player.seatId,
                   ) === index,
               )
               .slice(0, room.settings.maxPlayers);
@@ -187,7 +187,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                   <ul className={styles.playerList}>
                     {displayPlayers.map((player, index) => (
                       <li
-                        key={`${player.playerId}-${index}`}
+                        key={`${player.seatId}-${index}`}
                         className={styles.playerItem}
                       >
                         <span className={styles.playerName} title={player.name}>{player.name}</span>

@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { Logger } from '@nestjs/common';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { IComAutoPlayUseCase } from '../../use-cases/interfaces/com-autoplay-use-case.interface';
@@ -103,9 +104,9 @@ describe('ComAutoPlayRecoveryService', () => {
     } = createService();
     const field = {
       cards: ['A♠', 'K♠', 'Q♠', 'J♠'],
-      playedBy: ['p1', 'p2', 'p3', 'com-1'],
+      playedBySeatIds: ['p1', 'p2', 'p3', 'com-1'].map(asSeatId),
       baseCard: 'A♠',
-      dealerId: 'p1',
+      dealerSeatId: asSeatId('p1'),
       isComplete: true,
     };
     const state = {
@@ -122,7 +123,7 @@ describe('ComAutoPlayRecoveryService', () => {
       state.playState.currentField = {
         ...field,
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         isComplete: false,
       };
       return Promise.resolve(completionResponse);
@@ -416,6 +417,110 @@ describe('ComAutoPlayRecoveryService', () => {
     await flushPromises();
 
     expect(handlers.dispatchEvents).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('holds the first COM move until the start reveal delay elapses', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'blow',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+      shouldContinue: false,
+    });
+
+    service.triggerAfterDelay('room-1', handlers, 4_600);
+    await flushPromises();
+
+    // The COM seat must stay silent while clients play the reveal, including
+    // the 2s initial auto-play delay that a plain trigger would start now.
+    await jest.advanceTimersByTimeAsync(4_000);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    // A reconnect mid-reveal must not pull the move forward.
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(3_000);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    service.clearRoom('room-1');
+    jest.useRealTimers();
+  });
+
+  it('supersedes a stale timer from the previous game on a quick rematch', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'blow',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+      shouldContinue: false,
+    });
+
+    // Leftover pacing from the previous game's final move.
+    service.triggerAfterDelay('room-1', handlers, 1_000);
+    // The rematch starts before it fires and must reset the baseline.
+    service.triggerAfterDelay('room-1', handlers, 4_600);
+    await flushPromises();
+
+    await jest.advanceTimersByTimeAsync(4_000);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(3_000);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    service.clearRoom('room-1');
+    jest.useRealTimers();
+  });
+
+  it('triggers immediately when no reveal delay is requested', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'blow',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+      shouldContinue: false,
+    });
+
+    service.triggerAfterDelay('room-1', handlers, 0);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+    service.clearRoom('room-1');
     jest.useRealTimers();
   });
 });

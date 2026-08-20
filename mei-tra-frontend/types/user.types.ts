@@ -21,11 +21,14 @@ export interface UserPreferences {
   sound: boolean;
   theme: 'system' | 'light' | 'dark';
   fontSize: FontSizePreset;
+  startPlayerAnimation: boolean;
 }
 
 export interface AuthUser {
   id: string;
   email?: string;
+  // Supabase anonymous (guest) session; upgrading via updateUser keeps the same id.
+  isAnonymous?: boolean;
   profile: UserProfile | null;
 }
 
@@ -39,6 +42,16 @@ export interface SignUpData {
 }
 
 export interface SignInData {
+  email: string;
+  password: string;
+}
+
+export interface GuestSignInData {
+  displayName: string;
+  locale?: 'ja' | 'en';
+}
+
+export interface UpgradeAccountData {
   email: string;
   password: string;
 }

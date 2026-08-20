@@ -49,8 +49,8 @@
       "titleHighlight": "100年以上",
       "titleTrailing": "続いたカードゲーム。",
       "description": "ビットと読み合い。本格トリックテイキングが、ブラウザで無料で動く。AI対戦で1人でも始められる。",
-      "loginCta": "ログイン",
-      "signupCta": "無料で始める",
+      "loginCta": "アカウントをお持ちの方はログイン",
+      "signupCta": "無料でアカウント登録",
       "metrics": [
         {
           "value": "100年以上",
@@ -64,7 +64,9 @@
           "value": "無料",
           "label": "ブラウザだけで動く"
         }
-      ]
+      ],
+      "guestCta": "登録せずに試す",
+      "guestNote": "戦績は残りませんが、あとから登録すれば引き継げます。"
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
@@ -170,9 +172,10 @@
       "eyebrow": "Ready?",
       "title": "最初の一局を、今すぐ。",
       "description": "アカウント登録は無料。登録したら、そのままプレイへ。",
-      "login": "ログイン",
-      "signup": "無料で登録",
-      "product": "運営会社"
+      "login": "アカウントをお持ちの方はログイン",
+      "signup": "無料でアカウント登録",
+      "product": "運営会社",
+      "guest": "登録せずに試す"
     },
     "footer": {
       "links": [
@@ -252,6 +255,19 @@
       "invalidLink": "リンクが無効または期限切れです。もう一度ログインしてください。",
       "unexpectedError": "予期しないエラーが発生しました。",
       "backToLogin": "ログインページへ戻る"
+    },
+    "continueAsGuest": "ゲストとして遊ぶ",
+    "guestHint": "登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。",
+    "guestDefaultName": "ゲスト{number}",
+    "upgrade": {
+      "title": "アカウント登録",
+      "description": "メールアドレスとパスワードを設定すると、いまの戦績やプロフィールをそのまま引き継いで、次回からログインできるようになります。",
+      "passwordHint": "8文字以上",
+      "passwordTooShort": "パスワードは8文字以上で入力してください",
+      "submit": "登録する",
+      "confirmEmailSent": "確認メールを送信しました。メール内のリンクをクリックすると登録が完了します。",
+      "completed": "登録が完了しました。次回からこのメールアドレスとパスワードでログインできます。",
+      "emailAlreadyRegistered": "このメールアドレスは既に登録されています。お持ちのアカウントでログインしてください（ゲスト中の戦績は引き継がれません）。"
     }
   },
   "room": {
@@ -331,14 +347,22 @@
     },
     "gameOver": {
       "title": "ゲーム終了",
-      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{teamRedName}: {team0Score} ポイント\n{teamBlackName}: {team1Score} ポイント"
+      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{teamRedName}: {team0Score} ポイント\n{teamBlackName}: {team1Score} ポイント",
+      "guestPrompt": "ゲストプレイ中です。アカウント登録すると、この戦績を残せます。",
+      "guestPromptCta": "アカウント登録"
     },
     "trumpFormat": "キリ：{suit}（{symbol}）",
     "suitHerz": "ハート",
     "suitDaiya": "ダイヤ",
     "suitClub": "クラブ",
     "suitZuppe": "スペード",
-    "suitTra": "トラ"
+    "suitTra": "トラ",
+    "firstTurnReveal": {
+      "chant": "ジャンケン…",
+      "ready": "シュッ！",
+      "shu": "シュ！",
+      "result": "{name} の勝ち — 吹き上げ！"
+    }
   },
   "gamePhase": {
     "deal": "配布",
@@ -479,7 +503,9 @@
       "round_reset": "ラウンド再開",
       "broken_hand_revealed": "ブロークン公開",
       "game_over": "ゲーム終了",
-      "player_stats_updated": "戦績更新"
+      "player_stats_updated": "戦績更新",
+      "player_joined": "入室",
+      "player_left": "退出"
     },
     "summaries": {
       "game_started": "ゲーム開始。最初の宣言: {firstBlow}。目標: {pointsToWin}点",
@@ -493,7 +519,9 @@
       "round_reset": "ラウンド再開",
       "broken_hand_revealed": "{player}がブロークンを公開。次: {nextPlayer}",
       "game_over": "ゲーム終了。{team}の勝利",
-      "player_stats_updated": "戦績更新: 成功 {updated}人 / 失敗 {failed}人"
+      "player_stats_updated": "戦績更新: 成功 {updated}人 / 失敗 {failed}人",
+      "player_joined": "{player}が入室",
+      "player_left": "{player}が退出"
     },
     "detailLabels": {
       "startedBy": "開始者",
@@ -518,6 +546,7 @@
       "nextDealer": "次の配り手",
       "nextPlayer": "次の手番",
       "nextBlowIndex": "次の宣言順",
+      "player": "プレイヤー",
       "finalScores": "最終得点",
       "updated": "更新成功",
       "failed": "更新失敗"
@@ -757,9 +786,10 @@
     "imageProcessing": "画像を処理中...",
     "imageProcessingFailed": "画像の処理に失敗しました",
     "basicInfo": "基本情報",
-    "settings": "設定（未実装）",
+    "settings": "設定",
     "notifications": "通知を受け取る",
-    "soundEffects": "効果音を有効にする",
+    "soundEffects": "効果音を有効にする（未実装）",
+    "startPlayerAnimation": "ゲーム開始時のじゃんけん演出を表示する",
     "theme": "テーマ",
     "light": "ライト",
     "dark": "ダーク",
@@ -795,7 +825,12 @@
     "logout": "ログアウト",
     "unavailableDuringGame": "対局中はこの操作を行えません",
     "passwordResetConfirmTitle": "パスワード設定・変更メールを送信しますか？",
-    "passwordResetConfirmMessage": "{email} 宛に、パスワード設定・変更用のメールを送信します。よろしいですか？"
+    "passwordResetConfirmMessage": "{email} 宛に、パスワード設定・変更用のメールを送信します。よろしいですか？",
+    "guestBadge": "ゲスト",
+    "guestAccountLabel": "ゲストアカウント",
+    "guestSignOutTitle": "ログアウトしますか？",
+    "guestSignOutMessage": "ゲストアカウントはログアウトすると二度とアクセスできず、戦績も失われます。残したい場合は先にアカウント登録をしてください。",
+    "avatarGuestBlocked": "アバターの設定にはアカウント登録が必要です。"
   },
   "terms": {
     "title": "利用規約",

@@ -54,7 +54,7 @@ jest.mock('react-native', () => ({
 }));
 
 jest.mock('expo-notifications', () => ({
-  PermissionStatus: { GRANTED: 'granted' },
+  PermissionStatus: { GRANTED: 'granted', UNDETERMINED: 'undetermined' },
   AndroidImportance: { DEFAULT: 3 },
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
@@ -76,6 +76,7 @@ const fetchMock = jest.fn();
 
 describe('notifications', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockStorage.clear();
     mockPlatformOS = 'ios';
     mockIsDevice = true;
@@ -165,6 +166,26 @@ describe('notifications', () => {
     await expect(unregisterPushToken('access-token')).resolves.toBe('none');
   });
 
+  it('waits for an explicit action before requesting notification permission', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({
+      status: Notifications.PermissionStatus.UNDETERMINED,
+    });
+
+    await expect(registerForPushNotifications('access-token')).resolves.toEqual({
+      status: 'not-requested',
+    });
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await expect(
+      registerForPushNotifications('access-token', {
+        requestPermission: true,
+      }),
+    ).resolves.toEqual({ status: 'registered' });
+    expect(Notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not register after permission denial and extracts room links safely', async () => {
     (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({
       status: 'denied',
@@ -176,6 +197,7 @@ describe('notifications', () => {
     await expect(registerForPushNotifications('access-token')).resolves.toMatchObject({
       status: 'permission-denied',
     });
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
 
     const response = {

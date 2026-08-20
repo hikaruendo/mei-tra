@@ -26,7 +26,16 @@ describe('preferences helpers', () => {
       sound: true,
       theme: 'light',
       fontSize: 'standard',
+      startPlayerAnimation: true,
     });
+  });
+
+  it('defaults the start player animation on and honours an explicit off', () => {
+    expect(normalizeUserPreferences({}).startPlayerAnimation).toBe(true);
+    expect(
+      normalizeUserPreferences({ startPlayerAnimation: false })
+        .startPlayerAnimation,
+    ).toBe(false);
   });
 
   it('reads stored theme and font size when values are valid', () => {

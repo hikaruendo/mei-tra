@@ -1,19 +1,19 @@
 import { ComSessionService } from '../com-session.service';
-import { PlayerReferenceRemapperService } from '../player-reference-remapper.service';
 import { IComPlayerService } from '../interfaces/com-player-service.interface';
 import { GameStateService } from '../game-state.service';
 import { Room } from '../../types/room.types';
+import type { VacantSeats } from '../../types/vacant-seat.types';
+import { asSeatId } from '../../types/identity.types';
 
 const HUMAN_ID = 'human-1';
 
-// persistRoster replaces the in-memory state with its DB round-trip, and that
-// round-trip preserves the stored playState verbatim (the roster SQL only merges
-// playerStates). This fake reproduces that swap so the remap must survive it.
+// persistRoster replaces the in-memory state with its DB round-trip. Identity
+// references must remain valid without a remapping pass because the seat is stable.
 const createGameStateStub = () => {
   const makeState = () => ({
     players: [
       {
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         name: 'Human',
         team: 0 as const,
         hand: ['A♠'],
@@ -22,14 +22,13 @@ const createGameStateStub = () => {
         hasRequiredBroken: false,
       },
     ],
-    teamAssignments: { [HUMAN_ID]: 0 } as Record<string, number>,
-    currentPlayerId: HUMAN_ID as string | null,
+    currentSeatId: asSeatId(HUMAN_ID),
     playState: {
       currentField: {
         cards: ['A♠'],
-        playedBy: [HUMAN_ID],
+        playedBySeatIds: [asSeatId(HUMAN_ID)],
         baseCard: 'A♠',
-        dealerId: HUMAN_ID,
+        dealerSeatId: asSeatId(HUMAN_ID),
         isComplete: false,
       },
       fields: [],
@@ -42,7 +41,7 @@ const createGameStateStub = () => {
 
   const gameState = {
     getState: () => liveState,
-    registerPlayerToken: jest.fn(),
+    registerSeatToken: jest.fn(),
     persistRoster: jest.fn().mockImplementation(() => {
       const persistedPlayers = liveState.players;
       liveState = makeState();
@@ -57,10 +56,10 @@ const createGameStateStub = () => {
 
 const createRoom = (): Room =>
   ({
-    hostId: HUMAN_ID,
+    hostSeatId: asSeatId(HUMAN_ID),
     players: [
       {
-        playerId: HUMAN_ID,
+        seatId: asSeatId(HUMAN_ID),
         name: 'Human',
         team: 0,
         hand: ['A♠'],
@@ -77,39 +76,71 @@ const createRoom = (): Room =>
 
 describe('ComSessionService.convertPlayerToCOM', () => {
   it('keeps field attribution pointing at the COM seat after the roster round-trip', async () => {
-    const service = new ComSessionService(
-      { createComPlayer: jest.fn() } as unknown as IComPlayerService,
-      new PlayerReferenceRemapperService(),
-    );
-    const { gameState, saveState } = createGameStateStub();
+    const service = new ComSessionService({
+      createComPlayer: jest.fn(),
+    } as unknown as IComPlayerService);
+    const { gameState } = createGameStateStub();
+    const vacantSeats: VacantSeats = {};
 
     const converted = await service.convertPlayerToCOM(
       'room-1',
-      HUMAN_ID,
+      asSeatId(HUMAN_ID),
       createRoom(),
       gameState,
-      {},
+      vacantSeats,
     );
 
     expect(converted).toBe(true);
 
     const state = gameState.getState();
-    const comId = state.players[0].playerId;
-    expect(comId).toMatch(/^com-/);
+    const comId = state.players[0].seatId;
+    expect(comId).toBe(HUMAN_ID);
 
-    // The removed human must not survive anywhere the round-end validator looks:
-    // complete-field rejects the whole field if playedBy holds an unknown id.
-    expect(state.playState!.currentField!.playedBy).toEqual([comId]);
-    expect(state.playState!.currentField!.dealerId).toBe(comId);
-    expect(state.teamAssignments[HUMAN_ID]).toBeUndefined();
-    expect(state.teamAssignments[comId]).toBe(0);
+    expect(state.playState!.currentField!.playedBySeatIds).toEqual([comId]);
+    expect(state.playState!.currentField!.dealerSeatId).toBe(comId);
+    expect(state.players.find((player) => player.seatId === comId)?.team).toBe(
+      0,
+    );
+    expect(state.currentSeatId).toBe(comId);
+    expect(Object.keys(vacantSeats['room-1'])).toEqual([HUMAN_ID]);
+    expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.seatId).toBe(
+      asSeatId(HUMAN_ID),
+    );
+  });
 
-    // In production the roster SQL re-anchors current_player_id to the seat's new
-    // occupant, so this field is not known to go stale on its own. Pinned anyway:
-    // resolveCurrentPlayerIndex() silently falls back to currentPlayerIndex when the
-    // id is unresolvable, so a regression here would be invisible at runtime.
-    expect(state.currentPlayerId).toBe(comId);
+  it('keeps the seat owner only for a disconnect-timeout COM replacement', async () => {
+    const service = new ComSessionService({
+      createComPlayer: jest.fn(),
+    } as unknown as IComPlayerService);
+    const { gameState } = createGameStateStub();
+    const room = createRoom();
+    room.players[0].userId = 'user-1';
+    room.players[0].isAuthenticated = true;
+    room.players[0].participantKey = 'user-1';
 
-    expect(saveState).toHaveBeenCalled();
+    const converted = await service.convertPlayerToCOM(
+      'room-1',
+      asSeatId(HUMAN_ID),
+      room,
+      gameState,
+      {},
+      {
+        type: 'complete-disconnect-timeout',
+        userId: 'user-1',
+        expectedVersion: 2,
+        transitionId: 'transition-timeout',
+      },
+    );
+
+    expect(converted).toBe(true);
+    expect(room.players[0]).toEqual(
+      expect.objectContaining({
+        seatId: asSeatId(HUMAN_ID),
+        userId: 'user-1',
+        participantKey: 'user-1',
+        isAuthenticated: true,
+        isCOM: true,
+      }),
+    );
   });
 });

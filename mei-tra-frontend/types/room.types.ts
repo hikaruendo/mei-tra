@@ -4,12 +4,13 @@ import type {
   RoomStatusContract,
   RoomSyncPayload,
 } from '@contracts/room';
+import type { SeatId } from '@contracts/ids';
 import { Player, TeamNames, fromPlayerContracts } from './game.types';
 
 export interface Room {
   id: string;
   name: string;
-  hostId: string;
+  hostSeatId: SeatId;
   status: RoomStatus;
   players: RoomPlayer[];
   settings: RoomSettings;
@@ -51,7 +52,7 @@ export function fromRoomPlayerContract(
 ): RoomPlayer {
   return {
     socketId: player.socketId,
-    playerId: player.playerId,
+    seatId: player.seatId,
     name: player.name,
     userId: player.userId,
     isAuthenticated: player.isAuthenticated,
@@ -71,7 +72,7 @@ export function fromRoomContract(room: RoomContract): Room {
   return {
     id: room.id,
     name: room.name,
-    hostId: room.hostId,
+    hostSeatId: room.hostSeatId,
     status: toRoomStatus(room.status),
     players: room.players.map(fromRoomPlayerContract),
     settings: {

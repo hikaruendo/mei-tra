@@ -1,6 +1,8 @@
+import type { SeatId } from './identity.types';
+
 export interface SessionUser {
   socketId: string;
-  playerId: string;
+  seatId?: SeatId;
   name: string;
   userId?: string;
   isAuthenticated?: boolean;

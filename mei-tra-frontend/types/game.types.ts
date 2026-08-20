@@ -1,4 +1,5 @@
 import type { PlayerContract } from '@contracts/game';
+import type { SeatId } from '@contracts/ids';
 
 export type Team = 0 | 1;
 
@@ -10,7 +11,7 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface ConnectionUser {
   socketId: string; // Connection/session identifier only
-  playerId: string; // Table participant identifier (future participantId equivalent)
+  seatId: SeatId;
   name: string;
   userId?: string; // Canonical authenticated account ID
   isAuthenticated?: boolean;
@@ -19,24 +20,25 @@ export interface ConnectionUser {
 
 export interface CompletedField {
   cards: string[];
-  winnerId: string;
+  winnerSeatId: SeatId;
   winnerTeam: Team;
+  dealerSeatId: SeatId;
 }
 
 export interface Field {
   cards: string[];
-  playedBy: string[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
-  dealerId: string;
+  dealerSeatId: SeatId;
   isComplete: boolean;
 }
 
 // Update socket event types
 export interface FieldCompleteEvent {
-  winnerId: string;
+  winnerSeatId: SeatId;
   field: CompletedField;
-  nextPlayerId: string;
+  nextSeatId: SeatId;
 }
 
 export interface Player extends ConnectionUser {
@@ -50,7 +52,7 @@ export interface Player extends ConnectionUser {
 }
 
 export interface BlowDeclaration {
-  playerId: string;
+  seatId: SeatId;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -59,7 +61,7 @@ export interface BlowDeclaration {
 
 export interface BlowAction {
   type: 'declare' | 'pass';
-  playerId: string;
+  seatId: SeatId;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -70,7 +72,7 @@ export interface BlowState {
   currentHighestDeclaration: BlowDeclaration | null;
   declarations: BlowDeclaration[];
   actionHistory: BlowAction[];
-  lastPasser: string | null;
+  lastPasserSeatId: SeatId | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
 }
@@ -101,19 +103,21 @@ export interface TeamPlayers {
   team1: Player[];
 }
 
+export type { FirstTurnReveal } from '@meitra/game-client/first-turn-reveal';
+
 export interface GameActions {
   selectNegri: (card: string) => void;
   playCard: (card: string) => void;
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
-  revealBrokenHand: (playerId: string) => void;
+  revealBrokenHand: (seatId: string) => void;
 } 
 
 export function fromPlayerContract(player: PlayerContract): Player {
   return {
     socketId: player.socketId,
-    playerId: player.playerId,
+    seatId: player.seatId,
     name: player.name,
     userId: player.userId,
     isAuthenticated: player.isAuthenticated,

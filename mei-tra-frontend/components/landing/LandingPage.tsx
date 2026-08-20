@@ -8,6 +8,8 @@ import styles from './LandingPage.module.scss';
 interface LandingPageProps {
   onLoginClick: () => void;
   onSignupClick: () => void;
+  onGuestClick?: () => void;
+  guestPending?: boolean;
   productUrl?: string;
 }
 
@@ -43,6 +45,8 @@ type LandingFaqItem = {
 export function LandingPage({
   onLoginClick,
   onSignupClick,
+  onGuestClick,
+  guestPending = false,
   productUrl = 'https://kando1.com',
 }: LandingPageProps) {
   const t = useTranslations('landing');
@@ -89,6 +93,19 @@ export function LandingPage({
             {t('hero.signupCta')}
           </button>
         </div>
+        {onGuestClick && (
+          <div className={styles.guestLinkGroup}>
+            <button
+              type="button"
+              className={styles.textCta}
+              onClick={onGuestClick}
+              disabled={guestPending}
+            >
+              {t('hero.guestCta')}
+            </button>
+            <p className={styles.ctaNote}>{t('hero.guestNote')}</p>
+          </div>
+        )}
         <div className={styles.metrics}>
           {metrics.map((metric) => (
             <div key={metric.label} className={styles.metric}>
@@ -213,8 +230,20 @@ export function LandingPage({
           <button type="button" className={styles.secondaryCta} onClick={onSignupClick}>
             {t('cta.signup')}
           </button>
+        </div>
+        <div className={styles.ctaSectionFooter}>
+          {onGuestClick && (
+            <button
+              type="button"
+              className={styles.textCta}
+              onClick={onGuestClick}
+              disabled={guestPending}
+            >
+              {t('cta.guest')}
+            </button>
+          )}
           <a
-            className={styles.secondaryCta}
+            className={styles.textCta}
             href={productUrl}
             target="_blank"
             rel="noreferrer"

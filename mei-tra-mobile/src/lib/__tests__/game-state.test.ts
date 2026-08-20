@@ -1,24 +1,27 @@
 import type {
   CompletedFieldContract,
-  PlayerContract,
 } from '@meitra/contracts/game';
+import { asSeatId } from '@meitra/contracts/ids';
 
 import {
+  createEmptyBlowState,
+  createEmptyScores,
   dedupeCompletedFields,
   mergePlayersByIdentity,
   normalizeGameStatePayload,
-  resolvePlayerId,
+  resolveSeatId,
   shouldAckTurn,
 } from '@/lib/game-state';
+import type { MobilePlayer } from '@/types/game';
 
 const player = (
-  playerId: string,
-  overrides: Partial<PlayerContract> = {},
-): PlayerContract => ({
-  socketId: `socket-${playerId}`,
-  playerId,
-  name: playerId,
-  userId: `user-${playerId}`,
+  seatId: string,
+  overrides: Partial<MobilePlayer> = {},
+): MobilePlayer => ({
+  socketId: `socket-${seatId}`,
+  seatId: asSeatId(seatId),
+  name: seatId,
+  userId: `user-${seatId}`,
   team: 0,
   hand: [],
   ...overrides,
@@ -29,9 +32,9 @@ const completedField = (
   overrides: Partial<CompletedFieldContract> = {},
 ): CompletedFieldContract => ({
   cards,
-  winnerId: 'player-1',
+  winnerSeatId: asSeatId('player-1'),
   winnerTeam: 0,
-  dealerId: 'player-2',
+  dealerSeatId: asSeatId('player-2'),
   ...overrides,
 });
 
@@ -44,7 +47,7 @@ describe('mergePlayersByIdentity', () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         userId: 'user-1',
         name: 'Hikaru',
       }),
@@ -59,7 +62,7 @@ describe('mergePlayersByIdentity', () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         userId: undefined,
         name: 'COM 1',
       }),
@@ -72,7 +75,7 @@ describe('dedupeCompletedFields', () => {
     const first = completedField(['J♠', 'Q♠']);
     const duplicate = completedField(['J♠', 'Q♠']);
     const differentDealer = completedField(['J♠', 'Q♠'], {
-      dealerId: 'player-3',
+      dealerSeatId: asSeatId('player-3'),
     });
 
     expect(dedupeCompletedFields([first, duplicate, differentDealer])).toEqual([
@@ -89,66 +92,69 @@ describe('recovery helpers', () => {
       players: [player('server-player')],
       gamePhase: 'play',
       currentField: null,
-      currentTurn: 'server-player',
+      currentTurnSeatId: asSeatId('server-player'),
       blowState: {
         currentTrump: 'club',
         currentHighestDeclaration: null,
         declarations: [],
         actionHistory: [],
-        lastPasser: null,
+        lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
       teamScores: { 0: { play: 1, total: 2 }, 1: { play: 0, total: 1 } },
-      you: 'server-player',
+      youSeatId: asSeatId('server-player'),
       isSpectator: false,
       negriCard: '5♣',
+      negriSeatId: asSeatId('server-player'),
       revealedAgari: 'J♣',
       fields: [completedField(['J♠', 'Q♠']), completedField(['J♠', 'Q♠'])],
+      hostSeatId: asSeatId('server-player'),
       pointsToWin: 5,
     });
 
-    expect(snapshot.players).toEqual([expect.objectContaining({ playerId: 'server-player' })]);
+    expect(snapshot.players).toEqual([expect.objectContaining({ seatId: 'server-player' })]);
     expect(snapshot.fields).toHaveLength(1);
-    expect(snapshot.you).toBe('server-player');
+    expect(snapshot.youSeatId).toBe('server-player');
+    expect(snapshot.negriSeatId).toBe('server-player');
     expect(snapshot.revealedAgari).toBe('J♣');
   });
 
-  it('resolves the current player by playerId before userId', () => {
+  it('resolves the current seat from game state before userId', () => {
     expect(
-      resolvePlayerId(
+      resolveSeatId(
         {
           roomId: 'room-1',
           players: [],
           gamePhase: 'waiting',
           currentField: null,
-          currentTurn: null,
+          currentTurnSeatId: null,
           blowState: {
             currentTrump: null,
             currentHighestDeclaration: null,
             declarations: [],
             actionHistory: [],
-            lastPasser: null,
+            lastPasserSeatId: null,
             isRoundCancelled: false,
             currentBlowIndex: 0,
           },
           teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
-          you: 'player-from-state',
+          youSeatId: asSeatId('player-from-state'),
           isSpectator: false,
           negriCard: null,
-          negriPlayerId: null,
+          negriSeatId: null,
           revealedAgari: null,
           fields: [],
-          hostId: null,
+          hostSeatId: null,
           pointsToWin: 5,
           paused: false,
-          disconnectedPlayerIds: [],
-          idlePlayerIds: [],
+          disconnectedSeatIds: [],
+          idleSeatIds: [],
         },
         {
           id: 'room-1',
           name: 'room',
-          hostId: 'host',
+          hostSeatId: asSeatId('host'),
           status: 'waiting',
           players: [
             {
@@ -177,5 +183,29 @@ describe('recovery helpers', () => {
 
   it('does not ack turns while disconnected from a game snapshot', () => {
     expect(shouldAckTurn(null, 'room-1')).toBe(false);
+  });
+
+  it('preserves canonical seat fields', () => {
+    const snapshot = normalizeGameStatePayload({
+      roomId: 'room-1',
+      players: [player('canonical-seat')],
+      gamePhase: 'blow',
+      currentField: null,
+      currentTurnSeatId: asSeatId('canonical-seat'),
+      blowState: createEmptyBlowState(),
+      teamScores: createEmptyScores(),
+      youSeatId: asSeatId('canonical-seat'),
+      isSpectator: false,
+      negriCard: null,
+      negriSeatId: null,
+      fields: [],
+      hostSeatId: asSeatId('canonical-seat'),
+      pointsToWin: 5,
+    });
+
+    expect(snapshot.players[0].seatId).toBe('canonical-seat');
+    expect(snapshot.currentTurnSeatId).toBe('canonical-seat');
+    expect(snapshot.youSeatId).toBe('canonical-seat');
+    expect(snapshot.hostSeatId).toBe('canonical-seat');
   });
 });

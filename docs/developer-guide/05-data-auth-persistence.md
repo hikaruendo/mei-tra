@@ -198,13 +198,31 @@ Supabase Auth の canonical user は `auth.users` です。一方、このアプ
 ### 5.4 game room / player の source of truth
 
 - room metadata: `rooms`
-- player identity / seat / team / ready / host: `room_players`
+- canonical seat identity / team / ready / occupant: `room_players`
+- host seat: `rooms.host_seat_id`
+- current turn seat: `game_states.current_seat_id`
 - player gameplay state: `game_states.state_data.playerStates`
-- socket 接続情報: `GameStateService` 内の memory state
+- socket 接続情報: `GameStateService` / `PlayerConnectionManager` 内の memory state
 - runtime: room ごとの `GameStateService`
 - frontend 表示: `types/room.types.ts`, `types/game.types.ts`
 
-### 5.5 social chat の source of truth
+部屋内の正本 identity は `seatId = room_players.id` です。`seatId` は部屋が削除されるまで変わらず、人間から COM、人間への復帰、再接続では同じ席行の占有情報だけを更新します。
+
+- `userId`: Supabase Auth の認証アカウント
+- `seatId`: ゲーム上の席を表す UUID
+- `socketId`: 接続ごとに変わる一時 transport ID
+
+この区別により、アカウント削除や接続切断が起きても、進行中の席と対局履歴を同じ UUID で追跡できます。Gateway は自分の席を client payload から信用せず、認証済み `userId`、active membership、socket session から解決します。
+
+### 5.5 ID 命名規約
+
+内部 relation の `*_id` は原則として UUID と FK を持たせます。特に席を参照する列は `(room_id, seat_id)` の複合 FK にし、別ルームの席を誤って参照できないようにします。
+
+UUID ではない ID は外部システムまたは実行単位の opaque ID に限定します。現在の許可対象は `device_id`、`expo_receipt_id`、`worker_id` です。新しい内部 text ID を追加すると `supabase/tests/seat_uuid_identity.sql` が失敗します。
+
+JSON と Socket payload でも意味を列名に合わせ、`currentSeatId`、`winnerSeatId`、`dealerSeatId`、`negriSeatId`、`targetSeatId`、`youSeatId` を使用します。
+
+### 5.6 social chat の source of truth
 
 - persistence: `chat_rooms`, `chat_members`, `chat_messages`
 - runtime / domain: `ChatService` と repository 実装
@@ -278,7 +296,9 @@ profile は現在も進化中の schema です。
 
 ### 7.1 room と room players
 
-room metadata は `rooms`、参加者の identity と座席情報は `room_players` にあります。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が `room_players`、`rooms.host_id`、`game_states` を一つの transaction で更新します。
+room metadata は `rooms`、canonical seat と占有者情報は `room_players` にあります。`room_players.id` が部屋削除まで不変の席 UUID です。認証アカウントは nullable な `user_id` で席を占有し、COM 化や再接続では席行を入れ替えません。`SupabaseRoomRepository` は対象 room 群の player rows をまとめて取得し、memory 上で group 化して `Room` を構築します。ロスター変更は `persist_room_roster_atomic()` が席行を削除・再作成せず、`room_players`、`rooms.host_seat_id`、`game_states.current_seat_id`、membership を一つの transaction で更新します。
+
+room 作成は room UUID と host seat UUID を先に生成し、deferred FK を使う `create_room_with_host_seat_atomic()` で原子的に保存します。COM 置換・再接続・退出でも `seatId` は維持されるため、ゲーム状態や履歴を横断して参照置換する処理は不要です。
 
 この説明が指す主なコードは次です。
 
@@ -300,14 +320,15 @@ room metadata は `rooms`、参加者の identity と座席情報は `room_playe
 
 - room に player が複数いるので read path が重い
 - runtime 上の `room.players` と waiting room UI が強く結び付いている
-- `isCOM`, `isReady`, `isHost`, `team`, `userId`, `name` は `room_players` が正である
+- `isCOM`, `isReady`, `team`, `userId`, `name` は `room_players` が正である
+- `isHost` は `rooms.host_seat_id === room_players.id` から導出する
 - `socketId` と認証済み接続状態は再接続ごとに変わるため永続化せず、memory 上で管理する
 - application service から `room_players` を個別 CRUD せず、完成したロスターを原子的に保存する
 - finished room も一定期間残し、プロフィールの recent matches から参照する
 
 ### 7.2 game state
 
-`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ち、手番の永続 identity は `current_player_id` に保存します。`playerStates` は `playerId` を key にして hand / pass / broken flags だけを保存します。座席順は `room_players.seat_index` を正本とし、ゲーム進行で必要な index は実行時に座席順から導出します。
+`game_states` は deck, agari, blowState, playState と player ごとの gameplay state を `state_data` JSONB に持ち、手番の永続 identity は `current_seat_id` に保存します。`identitySchemaVersion: 2` の `playerStates` は `seatId` を key にして hand / pass / broken flags だけを保存します。座席順は `room_players.seat_index` を正本とし、ゲーム進行で必要な index は実行時に座席順から導出します。
 
 この説明が指す主なコードは次です。
 
@@ -343,7 +364,7 @@ room metadata は `rooms`、参加者の identity と座席情報は `room_playe
 - JSON shape と TypeScript 型がずれると runtime bug になる
 - relation と JSONB を跨ぐロスター更新には transaction が必要
 
-`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players`、player gameplay は `state_data.playerStates`、current turn は `current_player_id` の各正本だけを参照します。
+`load_room_game_state()` で room player と game state を同じ snapshot から読み、`atomic_update_game_state()` と `persist_room_roster_atomic()` で更新します。room identity は `room_players.id`、player gameplay は `state_data.playerStates[seatId]`、current turn は `current_seat_id` の各正本だけを参照します。transport / runtimeも`seatId`を正本とします。
 
 ### 7.3 chat
 

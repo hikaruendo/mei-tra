@@ -4,6 +4,7 @@ import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import { palette } from '@/theme/palette';
 import { radius } from '@/theme/radius';
+import { t } from '@/i18n';
 
 const DIAL = palette.text.primary;
 
@@ -49,7 +50,7 @@ export function TurnClock({ size = 26 }: { size?: number }) {
 
   return (
     <View
-      accessibilityLabel="現在の手番"
+      accessibilityLabel={t('a11y.currentTurn')}
       accessibilityRole="image"
       style={[
         styles.badge,

@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IRoomRepository } from '../repositories/interfaces/room.repository.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
-import { RecentGameHistoryItem } from '../types/game-history.types';
+import {
+  GAME_HISTORY_ACTION_TYPES,
+  GameHistoryActionType,
+  GameHistoryReplayActionType,
+  RecentGameHistoryItem,
+} from '../types/game-history.types';
 import { IGetUserRecentGameHistoryUseCase } from './interfaces/get-user-recent-game-history.use-case.interface';
 
 const DEFAULT_LIMIT = 10;
@@ -40,8 +45,9 @@ export class GetUserRecentGameHistoryUseCase
           completedAt,
           roundCount: summary.roundNumbers.length,
           totalEntries: summary.totalEntries,
+          teamNames: room.settings.teamNames,
           winningTeam: summary.winningTeam,
-          lastActionType: summary.lastActionType,
+          lastActionType: this.toRecentActionType(summary.lastActionType),
         } satisfies RecentGameHistoryItem;
       }),
     );
@@ -52,5 +58,15 @@ export class GetUserRecentGameHistoryUseCase
         (left, right) =>
           right.completedAt.getTime() - left.completedAt.getTime(),
       );
+  }
+
+  private toRecentActionType(
+    actionType: GameHistoryReplayActionType | null,
+  ): GameHistoryActionType | null {
+    return GAME_HISTORY_ACTION_TYPES.includes(
+      actionType as GameHistoryActionType,
+    )
+      ? (actionType as GameHistoryActionType)
+      : null;
   }
 }

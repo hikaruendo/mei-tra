@@ -5,6 +5,7 @@ import type {
   UserProfileDto,
 } from '@contracts/profile';
 import { UserPreferences, UserProfile } from '@/types/user.types';
+import { normalizeUserPreferences } from '@/lib/preferences';
 
 export interface UpdateUserProfilePayload {
   username?: string;
@@ -44,6 +45,7 @@ function mapPreferencesForTransport(
     notifications: preferences.notifications,
     sound: preferences.sound,
     fontSize: preferences.fontSize,
+    startPlayerAnimation: preferences.startPlayerAnimation,
   };
 
   const theme = resolveTransportTheme(preferences.theme);
@@ -68,7 +70,7 @@ export function mapUserProfileResponse(
     gamesPlayed: profile.gamesPlayed,
     gamesWon: profile.gamesWon,
     totalScore: profile.totalScore,
-    preferences: profile.preferences,
+    preferences: normalizeUserPreferences(profile.preferences),
   };
 }
 

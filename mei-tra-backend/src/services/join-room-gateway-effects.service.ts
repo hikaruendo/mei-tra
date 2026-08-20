@@ -1,8 +1,9 @@
-import type { GameStatePayload } from '@contracts/game';
 import type {
   GamePlayerJoinedPayload,
   RoomPlayerJoinedPayload,
 } from '@contracts/room';
+import type { GameStatePayload } from '@contracts/game';
+import type { SeatId } from '@contracts/ids';
 import { Inject, Injectable } from '@nestjs/common';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import {
@@ -15,6 +16,13 @@ import { SessionUser } from '../types/session.types';
 import { RoomPlayer, RoomStatus } from '../types/room.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
+import { asSeatId } from '../types/identity.types';
+import {
+  toBlowStateContract,
+  toBlowUpdatedPayload,
+  toCompletedFieldContract,
+  toFieldContract,
+} from '../adapters/game-contract-adapters';
 
 interface BuildJoinRoomEffectsParams {
   clientId: string;
@@ -34,7 +42,7 @@ interface BuildRoomEntryEventsParams {
   clientId: string;
   room: JoinRoomSuccess['room'];
   selfPlayer: {
-    playerId: string;
+    seatId: SeatId;
     name: string;
     team: Team;
   };
@@ -70,16 +78,20 @@ export class JoinRoomGatewayEffectsService {
     const events: GatewayEvent[] = [];
     let room = joinData.room;
     const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
-    const selfPlayerId = selfRoomPlayer?.playerId ?? normalizedUser.playerId;
+    if (!selfRoomPlayer) {
+      throw new Error(
+        `Joined seat could not be resolved: room=${roomId} user=${normalizedUser.userId ?? 'unknown'}`,
+      );
+    }
+    const selfSeatId = selfRoomPlayer.seatId;
 
-    if (currentRoomId && currentRoomId !== roomId) {
+    if (currentRoomId && currentRoomId !== roomId && previousRoomNotification) {
       events.push({
         scope: 'room',
         roomId: currentRoomId,
         event: 'player-left',
         payload: {
-          playerId:
-            previousRoomNotification?.playerId ?? normalizedUser.playerId,
+          seatId: previousRoomNotification.seatId,
           roomId: currentRoomId,
         },
       });
@@ -88,7 +100,7 @@ export class JoinRoomGatewayEffectsService {
     const joiningTeam = selfRoomPlayer?.team;
 
     const roomPlayerJoinedPayload: RoomPlayerJoinedPayload = {
-      playerId: selfPlayerId,
+      seatId: selfSeatId,
       roomId,
       isHost: joinData.isHost,
     };
@@ -101,7 +113,7 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const selfJoinedPayload: GamePlayerJoinedPayload = {
-      playerId: selfPlayerId,
+      seatId: selfSeatId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
@@ -117,7 +129,7 @@ export class JoinRoomGatewayEffectsService {
     });
 
     const otherJoinedPayload: GamePlayerJoinedPayload = {
-      playerId: selfPlayerId,
+      seatId: selfSeatId,
       roomId,
       isHost: joinData.isHost,
       roomStatus: joinData.roomStatus,
@@ -134,12 +146,12 @@ export class JoinRoomGatewayEffectsService {
 
     if (!joinData.resumeGame) {
       for (const existingPlayer of room.players) {
-        if (existingPlayer.playerId === selfPlayerId) {
+        if (existingPlayer.seatId === selfSeatId) {
           continue;
         }
 
         const existingPlayerJoinedPayload: GamePlayerJoinedPayload = {
-          playerId: existingPlayer.playerId,
+          seatId: asSeatId(existingPlayer.seatId),
           roomId,
           isHost: existingPlayer.isHost,
           roomStatus: joinData.roomStatus,
@@ -189,16 +201,22 @@ export class JoinRoomGatewayEffectsService {
 
     if (joinData.resumeGame) {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const resumeSelfPlayerId = this.resolveResumeSelfPlayerId(
+      const resumeSelfSeatId = this.resolveResumeSelfSeatId(
         room,
         joinData.resumeGame.gameState.players,
         normalizedUser,
       );
       const maskedGameStateForJoiner: GameStatePayload = {
         ...joinData.resumeGame.gameState,
-        currentField: joinData.resumeGame.gameState.currentField ?? null,
+        currentTurnSeatId:
+          joinData.resumeGame.gameState.currentTurnSeatId ?? null,
+        currentField: joinData.resumeGame.gameState.currentField
+          ? toFieldContract(joinData.resumeGame.gameState.currentField)
+          : null,
         negriCard: joinData.resumeGame.gameState.negriCard ?? null,
-        fields: joinData.resumeGame.gameState.fields ?? [],
+        fields: (joinData.resumeGame.gameState.fields ?? []).map(
+          toCompletedFieldContract,
+        ),
         players: resolveTransportPlayers(
           roomGameState,
           joinData.resumeGame.gameState.players,
@@ -207,10 +225,11 @@ export class JoinRoomGatewayEffectsService {
           },
         ).map((player) => ({
           ...player,
-          hand: player.playerId === resumeSelfPlayerId ? player.hand : [],
+          hand: player.seatId === resumeSelfSeatId ? player.hand : [],
         })),
-        you: resumeSelfPlayerId,
-        hostId: room.hostId,
+        blowState: toBlowStateContract(joinData.resumeGame.gameState.blowState),
+        youSeatId: resumeSelfSeatId,
+        hostSeatId: asSeatId(room.hostSeatId),
       };
 
       events.push({
@@ -244,20 +263,14 @@ export class JoinRoomGatewayEffectsService {
         scope: 'room',
         roomId,
         event: 'blow-updated',
-        payload: {
-          declarations: joinData.resumeGame.gameState.blowState.declarations,
-          actionHistory: joinData.resumeGame.gameState.blowState.actionHistory,
-          currentHighest:
-            joinData.resumeGame.gameState.blowState.currentHighestDeclaration,
-          lastPasser: joinData.resumeGame.gameState.blowState.lastPasser,
-        },
+        payload: toBlowUpdatedPayload(joinData.resumeGame.gameState.blowState),
       });
-      if (joinData.resumeGame.gameState.currentTurn) {
+      if (joinData.resumeGame.gameState.currentTurnSeatId) {
         events.push({
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: joinData.resumeGame.gameState.currentTurn,
+          payload: joinData.resumeGame.gameState.currentTurnSeatId,
         });
       }
     }
@@ -282,27 +295,29 @@ export class JoinRoomGatewayEffectsService {
     }
 
     return room.players.find(
-      (player) => player.playerId === normalizedUser.playerId,
+      (player) => player.seatId === normalizedUser.seatId,
     );
   }
 
-  private resolveResumeSelfPlayerId(
+  private resolveResumeSelfSeatId(
     room: JoinRoomSuccess['room'],
     gamePlayers: DomainPlayer[],
     normalizedUser: SessionUser,
-  ): string {
-    const gamePlayerIds = new Set(gamePlayers.map((player) => player.playerId));
+  ): SeatId {
+    const gameSeatIds = new Set(gamePlayers.map((player) => player.seatId));
 
     const selfRoomPlayer = this.resolveSelfRoomPlayer(room, normalizedUser);
-    if (selfRoomPlayer && gamePlayerIds.has(selfRoomPlayer.playerId)) {
-      return selfRoomPlayer.playerId;
+    if (selfRoomPlayer && gameSeatIds.has(selfRoomPlayer.seatId)) {
+      return selfRoomPlayer.seatId;
     }
 
-    if (gamePlayerIds.has(normalizedUser.playerId)) {
-      return normalizedUser.playerId;
+    if (normalizedUser.seatId && gameSeatIds.has(normalizedUser.seatId)) {
+      return normalizedUser.seatId;
     }
 
-    return normalizedUser.playerId;
+    throw new Error(
+      `Resume seat could not be resolved: room=${room.id} user=${normalizedUser.userId ?? 'unknown'}`,
+    );
   }
 
   async buildRoomEntryEvents({
@@ -325,7 +340,7 @@ export class JoinRoomGatewayEffectsService {
       socketId: clientId,
       event: 'game-player-joined',
       payload: {
-        playerId: selfPlayer.playerId,
+        seatId: selfPlayer.seatId,
         roomId: room.id,
         isHost,
         roomStatus,

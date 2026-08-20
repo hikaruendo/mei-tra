@@ -41,7 +41,10 @@ import {
   REQUIRED_BROKEN_HAND_REVEAL_ERROR,
 } from '../helpers/broken-hand.helper';
 import { ActiveRoomMembershipConflictError } from '../../types/room-membership.types';
+import { asSeatId } from '../../types/identity.types';
 describe('Game Use Cases', () => {
+  const asSeatIds = (...seatIds: string[]) => seatIds.map(asSeatId);
+
   const createRoomServiceMock = () => {
     const mock: Partial<jest.Mocked<IRoomService>> = {
       joinRoom: jest.fn(),
@@ -96,11 +99,11 @@ describe('Game Use Cases', () => {
 
   const createPlayRulesService = () => new PlayService(new CardService());
 
-  const createPlayServiceMock = (winnerId: string) => {
+  const createPlayServiceMock = (winnerSeatId: string) => {
     const determineFieldWinnerMock = jest.fn<
       ReturnType<IPlayService['determineFieldWinner']>,
       Parameters<IPlayService['determineFieldWinner']>
-    >((_, players) => players.find((p) => p.playerId === winnerId) || null);
+    >((_, players) => players.find((p) => p.seatId === winnerSeatId) || null);
 
     const mock: Partial<jest.Mocked<IPlayService>> = {
       determineFieldWinner: determineFieldWinnerMock,
@@ -130,7 +133,7 @@ describe('Game Use Cases', () => {
   const basePlayers: RoomPlayer[] = [
     {
       socketId: 'socket-1',
-      playerId: 'player-1',
+      seatId: asSeatId('player-1'),
       name: 'Player 1',
       team: 0 as const,
       hand: [],
@@ -142,7 +145,7 @@ describe('Game Use Cases', () => {
     },
     {
       socketId: 'socket-2',
-      playerId: 'player-2',
+      seatId: asSeatId('player-2'),
       name: 'Player 2',
       team: 1 as const,
       hand: [],
@@ -157,7 +160,7 @@ describe('Game Use Cases', () => {
   const baseRoom: Room = {
     id: 'room-1',
     name: 'Room',
-    hostId: 'player-1',
+    hostSeatId: asSeatId('player-1'),
     status: RoomStatus.WAITING,
     players: basePlayers,
     settings: {
@@ -180,11 +183,11 @@ describe('Game Use Cases', () => {
 
       const room: Room = {
         ...baseRoom,
-        hostId: 'user-1',
+        hostSeatId: asSeatId('user-1'),
         players: [
           {
             ...basePlayers[0],
-            playerId: 'user-1',
+            seatId: asSeatId('user-1'),
             userId: 'user-1',
             isAuthenticated: true,
           },
@@ -208,6 +211,7 @@ describe('Game Use Cases', () => {
       const authenticatedUser = {
         id: 'user-1',
         email: 'user@example.com',
+        isAnonymous: false,
         profile: {
           id: 'profile-1',
           username: 'user',
@@ -243,7 +247,6 @@ describe('Game Use Cases', () => {
         expect.objectContaining({
           name: 'Display Name',
           socketId: 'socket-1',
-          playerId: 'user-1',
           userId: 'user-1',
           isAuthenticated: true,
         }),
@@ -255,13 +258,13 @@ describe('Game Use Cases', () => {
       const useCase = new JoinRoomUseCase(roomService);
       const joinedPlayer: RoomPlayer = {
         ...basePlayers[0],
-        playerId: 'seat-1',
+        seatId: asSeatId('seat-1'),
         userId: 'user-1',
         isAuthenticated: true,
       };
       const room: Room = {
         ...baseRoom,
-        hostId: 'seat-1',
+        hostSeatId: asSeatId('seat-1'),
         players: [joinedPlayer, basePlayers[1]],
       };
       roomService.joinRoom.mockResolvedValue(true);
@@ -281,7 +284,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.normalizedUser?.playerId).toBe('seat-1');
+      expect(result.normalizedUser?.seatId).toBe('seat-1');
       expect(result.data?.isHost).toBe(true);
     });
 
@@ -311,7 +314,7 @@ describe('Game Use Cases', () => {
         new ActiveRoomMembershipConflictError({
           userId: 'user-1',
           roomId: 'room-existing',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           status: 'active',
           membershipVersion: 3,
           transitionId: 'transition-existing',
@@ -362,7 +365,7 @@ describe('Game Use Cases', () => {
       const room: Room = { ...baseRoom };
       const hostPlayer = {
         ...basePlayers[0],
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         userId: 'player-1',
         name: 'Host',
         isHost: true,
@@ -393,7 +396,10 @@ describe('Game Use Cases', () => {
       const createRoomMock = roomService.createNewRoom as jest.Mock;
       expect(createRoomMock).toHaveBeenCalledWith(
         'Room',
-        'player-1',
+        expect.objectContaining({
+          userId: 'player-1',
+          socketId: 'socket-1',
+        }),
         30,
         'random',
       );
@@ -409,7 +415,7 @@ describe('Game Use Cases', () => {
       roomService.getRoom.mockResolvedValue(null);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         roomId: 'missing',
       });
 
@@ -424,7 +430,7 @@ describe('Game Use Cases', () => {
       const room: Room = { ...baseRoom, status: RoomStatus.PLAYING };
       const statePlayers: DomainPlayer[] = [
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           name: 'Player 2',
           team: 1 as const,
           hand: [],
@@ -433,19 +439,18 @@ describe('Game Use Cases', () => {
       ];
       const state = {
         players: statePlayers,
-        teamAssignments: {} as Record<string, number>,
         gamePhase: 'play' as GamePhase,
         blowState: {
           currentTrump: null,
           currentHighestDeclaration: {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             trumpType: 'daiya' as const,
             numberOfPairs: 6,
             timestamp: 1,
           },
           declarations: [
             {
-              playerId: 'player-2',
+              seatId: asSeatId('player-2'),
               trumpType: 'daiya' as const,
               numberOfPairs: 6,
               timestamp: 1,
@@ -454,13 +459,13 @@ describe('Game Use Cases', () => {
           actionHistory: [
             {
               type: 'declare' as const,
-              playerId: 'player-2',
+              seatId: asSeatId('player-2'),
               trumpType: 'daiya' as const,
               numberOfPairs: 6,
               timestamp: 1,
             },
           ],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -478,14 +483,14 @@ describe('Game Use Cases', () => {
       roomService.getRoomGameState.mockResolvedValue(gameStateMock);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         roomId: room.id,
       });
 
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual([
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           socketId: 'socket-2',
           name: 'Player 2',
           team: 1,
@@ -493,12 +498,11 @@ describe('Game Use Cases', () => {
       ]);
       expect(result.data?.blowState?.currentHighestDeclaration).toEqual(
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: 'player-2',
           trumpType: 'daiya',
           numberOfPairs: 6,
         }),
       );
-      expect(state.teamAssignments['player-1']).toBeUndefined();
       // gamePausedMessage is no longer sent (COM takes over vacant seats)
 
       const leaveRoomMock = roomService.leaveRoom as jest.Mock;
@@ -512,11 +516,11 @@ describe('Game Use Cases', () => {
       const waitingRoom: Room = {
         ...baseRoom,
         status: RoomStatus.WAITING,
-        hostId: 'player-2',
+        hostSeatId: asSeatId('player-2'),
         players: [
           {
             socketId: 'com-0',
-            playerId: 'com-0',
+            seatId: asSeatId('com-0'),
             name: 'COM',
             team: 0 as const,
             hand: [],
@@ -529,7 +533,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-2',
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 1 as const,
             hand: [],
@@ -546,7 +550,7 @@ describe('Game Use Cases', () => {
         players: [
           {
             socketId: 'com-0',
-            playerId: 'com-0',
+            seatId: asSeatId('com-0'),
             name: 'COM',
             team: 0 as const,
             hand: [],
@@ -555,7 +559,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-2',
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 1 as const,
             hand: [],
@@ -563,7 +567,6 @@ describe('Game Use Cases', () => {
             hasBroken: false,
           },
         ],
-        teamAssignments: {} as Record<string, number>,
         gamePhase: null as GamePhase,
       };
 
@@ -579,26 +582,26 @@ describe('Game Use Cases', () => {
       roomService.getRoomGameState.mockResolvedValue(gameStateMock);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         roomId: waitingRoom.id,
       });
 
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual([
         expect.objectContaining({
-          playerId: 'com-0',
+          seatId: asSeatId('com-0'),
           socketId: 'com-0',
           isHost: false,
         }),
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           socketId: 'socket-2',
           isHost: true,
         }),
       ]);
       expect(result.data?.updatedPlayers).toContainEqual(
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           isHost: true,
         }),
       );
@@ -617,7 +620,7 @@ describe('Game Use Cases', () => {
       roomService.listRooms.mockResolvedValue([]);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         roomId: room.id,
       });
 
@@ -637,7 +640,7 @@ describe('Game Use Cases', () => {
           ...baseRoom.players,
           {
             socketId: 'socket-2',
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 1 as const,
             hand: ['H2', 'D3'],
@@ -652,14 +655,14 @@ describe('Game Use Cases', () => {
 
       const statePlayers: DomainPlayer[] = [
         {
-          playerId: 'com-0',
+          seatId: asSeatId('com-0'),
           name: 'COM',
           team: 0 as Team,
           hand: [],
           isPasser: false,
         },
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           name: 'Player 2',
           team: 1 as const,
           hand: ['H2', 'D3'],
@@ -669,7 +672,6 @@ describe('Game Use Cases', () => {
 
       const state = {
         players: statePlayers,
-        teamAssignments: { 'player-1': 0 } as Record<string, number>,
         gamePhase: 'play' as GamePhase,
       };
 
@@ -685,18 +687,18 @@ describe('Game Use Cases', () => {
       roomService.getRoomGameState.mockResolvedValue(gameStateMock);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         roomId: playingRoom.id,
       });
 
       expect(result.success).toBe(true);
       expect(result.data?.updatedPlayers).toEqual([
         expect.objectContaining({
-          playerId: expect.stringContaining('com-'),
+          seatId: expect.stringContaining('com-'),
           team: 0,
         }),
         expect.objectContaining({
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           socketId: 'socket-2',
           team: 1,
         }),
@@ -707,7 +709,7 @@ describe('Game Use Cases', () => {
       expect(leaveRoomMock).toHaveBeenCalledWith(playingRoom.id, 'player-1');
 
       // Verify com player is in the list
-      expect(statePlayers[0].playerId).toContain('com-');
+      expect(statePlayers[0].seatId).toContain('com-');
     });
   });
 
@@ -727,13 +729,13 @@ describe('Game Use Cases', () => {
 
       const state: {
         players: DomainPlayer[];
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
         blowState: {
           currentBlowIndex: number;
           currentTrump: string | null;
           currentHighestDeclaration: unknown;
           declarations: unknown[];
-          lastPasser: string | null;
+          lastPasserSeatId: string | null;
           isRoundCancelled: boolean;
         };
         teamScores: TeamScores;
@@ -742,27 +744,27 @@ describe('Game Use Cases', () => {
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             team: 0 as const,
             hand: [],
             isPasser: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 1 as const,
             hand: [],
             isPasser: false,
           },
         ],
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
         blowState: {
           currentBlowIndex: 0,
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
@@ -775,8 +777,11 @@ describe('Game Use Cases', () => {
 
       const roomGameState = {
         getState: jest.fn(() => state),
-        startGame: jest.fn().mockResolvedValue(undefined),
+        startGame: jest.fn(() => {
+          state.currentSeatId = asSeatId('player-1');
+        }),
         persistRoster: jest.fn().mockResolvedValue(undefined),
+        saveState: jest.fn().mockResolvedValue(undefined),
       } as unknown as GameStateService;
 
       roomService.getRoom.mockResolvedValue(room);
@@ -785,19 +790,134 @@ describe('Game Use Cases', () => {
       roomService.updateRoomStatus.mockResolvedValue(true);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         roomId: room.id,
       });
 
       expect(result.success).toBe(true);
       expect(result.data?.players.length).toBe(2);
-      expect(result.data?.currentTurnPlayerId).toBe('player-1');
+      expect(result.data?.currentTurnSeatId).toBe('player-1');
+      // Without a profile repository the reveal keeps its delay by default.
+      expect(result.data?.firstTurnRevealEnabled).toBe(true);
 
       const updateRoomStatusMock = roomService.updateRoomStatus as jest.Mock;
       expect(updateRoomStatusMock).toHaveBeenCalledWith(
         room.id,
         RoomStatus.PLAYING,
       );
+    });
+
+    describe('firstTurnRevealEnabled', () => {
+      const startWithProfiles = async (
+        profilesByUserId: Record<
+          string,
+          { preferences?: { startPlayerAnimation?: boolean } } | null
+        >,
+      ) => {
+        const roomService = createRoomServiceMock();
+        const userProfileRepository = {
+          findById: jest.fn((userId: string) =>
+            Promise.resolve(profilesByUserId[userId] ?? null),
+          ),
+        };
+        const useCase = new StartGameUseCase(
+          roomService,
+          undefined,
+          userProfileRepository as never,
+        );
+
+        const room: Room = {
+          ...baseRoom,
+          status: RoomStatus.READY,
+          players: [
+            { ...basePlayers[0], isReady: true, userId: 'user-1' },
+            { ...basePlayers[1], isReady: true, userId: 'user-2' },
+            {
+              ...basePlayers[0],
+              seatId: asSeatId('com-1'),
+              name: 'COM',
+              isHost: false,
+              isReady: true,
+              isCOM: true,
+              userId: undefined,
+            },
+          ] as RoomPlayer[],
+        };
+
+        const state = {
+          players: [
+            {
+              seatId: asSeatId('player-1'),
+              name: 'Player 1',
+              team: 0 as const,
+              hand: [],
+              isPasser: false,
+            },
+          ],
+          currentSeatId: asSeatId('player-1'),
+          blowState: {
+            currentBlowIndex: 0,
+            currentTrump: null,
+            currentHighestDeclaration: null,
+            declarations: [],
+            lastPasserSeatId: null,
+            isRoundCancelled: false,
+          },
+          teamScores: {
+            0: { play: 0, total: 0 },
+            1: { play: 0, total: 0 },
+          },
+          pointsToWin: 0,
+          gamePhase: 'blow' as GamePhase,
+        };
+        const roomGameState = {
+          getState: jest.fn(() => state),
+          startGame: jest.fn(),
+          persistRoster: jest.fn().mockResolvedValue(undefined),
+          saveState: jest.fn().mockResolvedValue(undefined),
+        } as unknown as GameStateService;
+
+        roomService.getRoom.mockResolvedValue(room);
+        roomService.getRoomGameState.mockResolvedValue(roomGameState);
+        roomService.canStartGame.mockResolvedValue({ canStart: true });
+        roomService.updateRoomStatus.mockResolvedValue(true);
+
+        const result = await useCase.execute({
+          actorSeatId: asSeatId('player-1'),
+          roomId: room.id,
+        });
+        return { result, userProfileRepository };
+      };
+
+      it('skips the reveal when every seated human turned it off', async () => {
+        const { result, userProfileRepository } = await startWithProfiles({
+          'user-1': { preferences: { startPlayerAnimation: false } },
+          'user-2': { preferences: { startPlayerAnimation: false } },
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.data?.firstTurnRevealEnabled).toBe(false);
+        // COM seats have no profile to look up.
+        expect(userProfileRepository.findById).toHaveBeenCalledTimes(2);
+      });
+
+      it('keeps the reveal when any seated human wants it', async () => {
+        const { result } = await startWithProfiles({
+          'user-1': { preferences: { startPlayerAnimation: false } },
+          'user-2': { preferences: { startPlayerAnimation: true } },
+        });
+
+        expect(result.data?.firstTurnRevealEnabled).toBe(true);
+      });
+
+      it('treats a missing profile as wanting the reveal', async () => {
+        const { result } = await startWithProfiles({
+          'user-1': { preferences: { startPlayerAnimation: false } },
+          'user-2': null,
+        });
+
+        expect(result.data?.firstTurnRevealEnabled).toBe(true);
+      });
     });
 
     it('synchronizes the initial blow index with the persisted current turn', async () => {
@@ -814,27 +934,27 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             team: 0 as const,
             hand: [],
             isPasser: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 1 as const,
             hand: [],
             isPasser: false,
           },
         ] as DomainPlayer[],
-        currentPlayerIndex: 1,
+        currentSeatId: asSeatId('player-2'),
         blowState: {
           currentBlowIndex: 0,
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
@@ -846,10 +966,13 @@ describe('Game Use Cases', () => {
       };
       const roomGameState = {
         getState: jest.fn(() => state),
-        startGame: jest.fn().mockResolvedValue(undefined),
+        startGame: jest.fn(() => {
+          state.currentSeatId = asSeatId('player-2');
+        }),
         persistRoster: jest.fn().mockResolvedValue(undefined),
+        saveState: jest.fn().mockResolvedValue(undefined),
         updateState: jest.fn(async (updates) => {
-          state.currentPlayerIndex = updates.currentPlayerIndex;
+          state.currentSeatId = updates.currentSeatId ?? state.currentSeatId;
           state.blowState = updates.blowState;
         }),
       } as unknown as GameStateService;
@@ -860,16 +983,15 @@ describe('Game Use Cases', () => {
       roomService.updateRoomStatus.mockResolvedValue(true);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         roomId: room.id,
       });
 
       expect(result.success).toBe(true);
-      expect(result.data?.currentTurnPlayerId).toBe('player-2');
+      expect(result.data?.currentTurnSeatId).toBe('player-2');
       expect(state.blowState.currentBlowIndex).toBe(1);
       expect(roomGameState.updateState).toHaveBeenCalledWith({
-        currentPlayerId: 'player-2',
-        currentPlayerIndex: 1,
+        currentSeatId: 'player-2',
         blowState: expect.objectContaining({ currentBlowIndex: 1 }),
       });
     });
@@ -884,7 +1006,7 @@ describe('Game Use Cases', () => {
         players: [
           {
             socketId: 'socket-1',
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             team: 0 as const,
             hand: [],
@@ -896,7 +1018,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-2',
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 0 as const,
             hand: [],
@@ -908,7 +1030,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-3',
-            playerId: 'player-3',
+            seatId: asSeatId('player-3'),
             name: 'Player 3',
             team: 1 as const,
             hand: [],
@@ -920,7 +1042,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-4',
-            playerId: 'player-4',
+            seatId: asSeatId('player-4'),
             name: 'Player 4',
             team: 1 as const,
             hand: [],
@@ -936,46 +1058,45 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            playerId: 'player-4',
+            seatId: asSeatId('player-4'),
             name: 'Player 4',
             team: 1 as const,
             hand: ['H4'],
             isPasser: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             team: 1 as const,
             hand: ['H2'],
             isPasser: false,
           },
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             team: 1 as const,
             hand: ['H1'],
             isPasser: false,
           },
         ] as DomainPlayer[],
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
         blowState: {
           currentBlowIndex: 0,
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
           0: { play: 0, total: 0 },
           1: { play: 0, total: 0 },
         } as TeamScores,
-        teamAssignments: {},
         pointsToWin: 0,
         gamePhase: 'blow' as GamePhase,
       };
 
-      const registerPlayerTokenMock = jest.fn();
+      const registerSeatTokenMock = jest.fn();
       const persistRosterMock = jest.fn().mockResolvedValue(undefined);
       const startGameMock = jest.fn(() => {
         state.players = [
@@ -984,12 +1105,14 @@ describe('Game Use Cases', () => {
           state.players[2],
           state.players[3],
         ];
+        state.currentSeatId = asSeatId('player-1');
       });
       const roomGameState = {
         getState: jest.fn(() => state),
-        registerPlayerToken: registerPlayerTokenMock,
+        registerSeatToken: registerSeatTokenMock,
         startGame: startGameMock,
         persistRoster: persistRosterMock,
+        saveState: jest.fn().mockResolvedValue(undefined),
       } as unknown as GameStateService;
 
       roomService.getRoom.mockResolvedValue(room);
@@ -999,12 +1122,12 @@ describe('Game Use Cases', () => {
       roomService.updateRoomStatus.mockResolvedValue(true);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         roomId: room.id,
       });
 
       expect(result.success).toBe(true);
-      expect(state.players.map((player) => player.playerId)).toEqual([
+      expect(state.players.map((player) => player.seatId)).toEqual([
         'player-1',
         'player-3',
         'player-2',
@@ -1013,21 +1136,25 @@ describe('Game Use Cases', () => {
       expect(state.players[0]?.team).toBe(0);
       expect(state.players[1]?.team).toBe(1);
       expect(state.players[2]?.hand).toEqual(['H2']);
-      expect(state.teamAssignments).toEqual({
+      expect(
+        Object.fromEntries(
+          state.players.map((player) => [player.seatId, player.team]),
+        ),
+      ).toEqual({
         'player-1': 0,
         'player-2': 0,
         'player-3': 1,
         'player-4': 1,
       });
-      expect(registerPlayerTokenMock).toHaveBeenCalledWith(
+      expect(registerSeatTokenMock).toHaveBeenCalledWith(
         'player-3',
         'player-3',
       );
-      expect(registerPlayerTokenMock).toHaveBeenCalledTimes(1);
+      expect(registerSeatTokenMock).toHaveBeenCalledTimes(1);
       const persistedPlayers = persistRosterMock.mock.calls[0]?.[0] as
         | RoomPlayer[]
         | undefined;
-      expect(persistedPlayers?.map((player) => player.playerId)).toEqual([
+      expect(persistedPlayers?.map((player) => player.seatId)).toEqual([
         'player-1',
         'player-3',
         'player-2',
@@ -1035,18 +1162,18 @@ describe('Game Use Cases', () => {
       ]);
       expect(
         persistedPlayers?.map((player) => ({
-          playerId: player.playerId,
+          seatId: player.seatId,
           seatIndex: player.seatIndex,
         })),
       ).toEqual([
-        { playerId: 'player-1', seatIndex: 0 },
-        { playerId: 'player-3', seatIndex: 1 },
-        { playerId: 'player-2', seatIndex: 2 },
-        { playerId: 'player-4', seatIndex: 3 },
+        { seatId: 'player-1', seatIndex: 0 },
+        { seatId: 'player-3', seatIndex: 1 },
+        { seatId: 'player-2', seatIndex: 2 },
+        { seatId: 'player-4', seatIndex: 3 },
       ]);
       expect(persistRosterMock).toHaveBeenCalledWith(
         expect.any(Array),
-        room.hostId,
+        room.hostSeatId,
       );
       expect(persistRosterMock.mock.invocationCallOrder[0]).toBeLessThan(
         startGameMock.mock.invocationCallOrder[0],
@@ -1064,7 +1191,7 @@ describe('Game Use Cases', () => {
           players: [
             {
               socketId: 'socket-1',
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               name: 'Player 1',
               team: 0 as const,
               hand: [],
@@ -1079,7 +1206,7 @@ describe('Game Use Cases', () => {
       });
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         roomId: 'room-1',
       });
 
@@ -1109,14 +1236,13 @@ describe('Game Use Cases', () => {
           currentTrump: null,
           currentHighestDeclaration: null,
           declarations: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
         },
         teamScores: {
           0: { play: 0, total: 0 },
           1: { play: 0, total: 0 },
         } as TeamScores,
-        teamAssignments: {},
         pointsToWin: 0,
         gamePhase: null,
       };
@@ -1134,7 +1260,7 @@ describe('Game Use Cases', () => {
       roomService.updateRoomStatus.mockResolvedValue(false);
 
       const result = await useCase.execute({
-        playerId: room.hostId,
+        actorSeatId: room.hostSeatId,
         roomId: room.id,
       });
 
@@ -1165,7 +1291,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-3',
-            playerId: 'player-3',
+            seatId: asSeatId('player-3'),
             name: 'Player 3',
             team: 0 as const,
             hand: [],
@@ -1177,7 +1303,7 @@ describe('Game Use Cases', () => {
           } as RoomPlayer,
           {
             socketId: 'socket-4',
-            playerId: 'player-4',
+            seatId: asSeatId('player-4'),
             name: 'Player 4',
             team: 1 as const,
             hand: [],
@@ -1194,14 +1320,13 @@ describe('Game Use Cases', () => {
       roomService.getRoomGameState.mockResolvedValue({
         getState: jest.fn(() => ({
           players: [],
-          teamAssignments: {},
         })),
       } as unknown as GameStateService);
       roomService.canStartGame.mockResolvedValue({ canStart: true });
       roomService.fillVacantSeatsWithCOM.mockResolvedValue(undefined);
 
       const result = await useCase.execute({
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         roomId: room.id,
       });
 
@@ -1232,9 +1357,9 @@ describe('Game Use Cases', () => {
           (players ?? []).map((player) => ({
             socketId:
               room.players.find(
-                (roomPlayer) => roomPlayer.playerId === player.playerId,
+                (roomPlayer) => roomPlayer.seatId === player.seatId,
               )?.socketId ?? '',
-            playerId: player.playerId,
+            seatId: asSeatId(player.seatId),
             name: player.name,
             hand: [...player.hand],
             team: player.team,
@@ -1242,7 +1367,7 @@ describe('Game Use Cases', () => {
             isCOM: player.isCOM,
             isHost:
               room.players.find(
-                (roomPlayer) => roomPlayer.playerId === player.playerId,
+                (roomPlayer) => roomPlayer.seatId === player.seatId,
               )?.isHost ?? false,
           })),
         ),
@@ -1252,7 +1377,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: room.id,
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
       });
 
       expect(result.success).toBe(true);
@@ -1280,7 +1405,7 @@ describe('Game Use Cases', () => {
           ...(baseRoom.players.map((p) => ({ ...p })) as RoomPlayer[]),
           {
             socketId: 'socket-3',
-            playerId: 'player-3',
+            seatId: asSeatId('player-3'),
             name: 'Player 3',
             team: 0 as const,
             hand: [],
@@ -1297,7 +1422,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: room.id,
-        playerId: 'player-1', // Host player
+        actorSeatId: asSeatId('player-1'), // Host seat
         teamChanges: {
           'player-2': 0,
           'player-3': 0,
@@ -1325,7 +1450,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'com-1',
-            playerId: 'com-1',
+            seatId: asSeatId('com-1'),
             name: 'COM 1',
             team: 1 as const,
             hand: [],
@@ -1338,7 +1463,7 @@ describe('Game Use Cases', () => {
           } as RoomPlayer,
           {
             socketId: 'com-2',
-            playerId: 'com-2',
+            seatId: asSeatId('com-2'),
             name: 'COM 2',
             team: 1 as const,
             hand: [],
@@ -1356,7 +1481,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: room.id,
-        playerId: 'player-1',
+        actorSeatId: asSeatId('player-1'),
         teamChanges: {
           'player-2': 1,
         },
@@ -1379,7 +1504,7 @@ describe('Game Use Cases', () => {
       const updatedRoom = {
         ...room,
         players: room.players.map((p) =>
-          p.playerId === 'player-2' ? { ...p, team: 0 as Team } : p,
+          p.seatId === 'player-2' ? { ...p, team: 0 as Team } : p,
         ),
       };
 
@@ -1389,7 +1514,7 @@ describe('Game Use Cases', () => {
 
       const result = await useCase.execute({
         roomId: room.id,
-        playerId: 'player-1', // Host player
+        actorSeatId: asSeatId('player-1'), // Host seat
         teamChanges: {
           'player-2': 0,
         },
@@ -1401,8 +1526,7 @@ describe('Game Use Cases', () => {
         'player-2': { team: 0 },
       });
       expect(
-        result.updatedRoom?.players.find((p) => p.playerId === 'player-2')
-          ?.team,
+        result.updatedRoom?.players.find((p) => p.seatId === 'player-2')?.team,
       ).toBe(0);
     });
   });
@@ -1411,7 +1535,7 @@ describe('Game Use Cases', () => {
     const buildRequiredBrokenState = () => ({
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           hand: ['J♠', 'J♣', 'J♥', 'J♦'],
           team: 0 as Team,
@@ -1426,7 +1550,7 @@ describe('Game Use Cases', () => {
         declarations: [],
         actionHistory: [],
         currentHighestDeclaration: null,
-        lastPasser: null,
+        lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
@@ -1554,7 +1678,7 @@ describe('Game Use Cases', () => {
           actionHistory: [
             {
               type: 'pass' as const,
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               timestamp: 1,
             },
           ],
@@ -1636,27 +1760,27 @@ describe('Game Use Cases', () => {
 
       const currentField: Field = {
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
 
       const state: {
         players: DomainPlayer[];
         playState: { currentField: Field };
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1', 'C2'],
             team: 0,
             isPasser: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             hand: ['D1', 'D2'],
             team: 1,
@@ -1666,30 +1790,27 @@ describe('Game Use Cases', () => {
         playState: {
           currentField,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
 
       const roomGameState = {
         getState: jest.fn(() => state),
         saveState: jest.fn(),
         nextTurn: jest.fn(() => {
-          state.currentPlayerIndex =
-            (state.currentPlayerIndex + 1) % state.players.length;
+          state.currentSeatId = asSeatId('player-2');
         }),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
-            ? (state.players.find((player) => player.playerId === 'player-1') ??
+            ? (state.players.find((player) => player.seatId === 'player-1') ??
               null)
             : actorId === 'user-2'
-              ? (state.players.find(
-                  (player) => player.playerId === 'player-2',
-                ) ?? null)
-              : (state.players.find((player) => player.playerId === actorId) ??
+              ? (state.players.find((player) => player.seatId === 'player-2') ??
+                null)
+              : (state.players.find((player) => player.seatId === actorId) ??
                 null),
         ),
         isPlayerTurn: jest.fn(
-          (playerId: string) =>
-            state.players[state.currentPlayerIndex]?.playerId === playerId,
+          (seatId: string) => state.currentSeatId === asSeatId(seatId),
         ),
       } as unknown as GameStateService;
 
@@ -1706,20 +1827,20 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'card-played',
       );
       expect(cardPlayedEvent?.payload).toMatchObject({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         card: 'C1',
         field: expect.objectContaining({
           cards: ['C1'],
-          playedBy: ['player-1'],
+          playedBySeatIds: ['player-1'],
         }),
         players: expect.any(Array),
-        nextPlayerId: 'player-2',
+        nextSeatId: 'player-2',
       });
       const updateTurnEvent = result.events?.find(
         (evt) => evt.event === 'update-turn',
       );
       expect(updateTurnEvent?.payload).toBe('player-2');
-      expect(roomGameState.saveState).toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
     });
 
     it('returns complete field trigger when field reaches four cards', async () => {
@@ -1731,20 +1852,20 @@ describe('Game Use Cases', () => {
 
       const fieldBefore: Field = {
         cards: ['C1', 'C2', 'C3'],
-        playedBy: ['player-1', 'player-2', 'player-3'],
+        playedBySeatIds: asSeatIds('player-1', 'player-2', 'player-3'),
         baseCard: 'C1',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
 
       const state: {
         players: DomainPlayer[];
         playState: { currentField: Field };
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C4'],
             team: 0,
@@ -1754,7 +1875,7 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: fieldBefore,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
 
       const roomGameState = {
@@ -1763,14 +1884,13 @@ describe('Game Use Cases', () => {
         nextTurn: jest.fn(),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
-            ? (state.players.find((player) => player.playerId === 'player-1') ??
+            ? (state.players.find((player) => player.seatId === 'player-1') ??
               null)
-            : (state.players.find((player) => player.playerId === actorId) ??
+            : (state.players.find((player) => player.seatId === actorId) ??
               null),
         ),
         isPlayerTurn: jest.fn(
-          (playerId: string) =>
-            state.players[state.currentPlayerIndex]?.playerId === playerId,
+          (seatId: string) => state.currentSeatId === asSeatId(seatId),
         ),
       } as unknown as GameStateService;
 
@@ -1787,6 +1907,93 @@ describe('Game Use Cases', () => {
       expect(result.completeFieldTrigger?.delayMs).toBe(3000);
     });
 
+    it('keeps a vacated seat displayed as COM on every card update', async () => {
+      const roomService = createRoomServiceMock();
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+      );
+      const state = {
+        players: [
+          {
+            seatId: asSeatId('player-1'),
+            name: 'Player 1',
+            hand: ['C1'],
+            team: 0 as Team,
+            isPasser: false,
+            isCOM: false,
+          },
+          {
+            seatId: asSeatId('player-2'),
+            name: 'Player 2',
+            hand: ['D1'],
+            team: 1 as Team,
+            isPasser: false,
+            isCOM: false,
+          },
+        ],
+        blowState: { currentTrump: null },
+        playState: {
+          currentField: {
+            cards: [],
+            playedBySeatIds: [],
+            baseCard: '',
+            dealerSeatId: asSeatId('player-1'),
+            isComplete: false,
+          } as Field,
+        },
+        currentSeatId: asSeatId('player-1'),
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+        nextTurn: jest.fn(() => {
+          state.currentSeatId = asSeatId('player-2');
+        }),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.getRoom.mockResolvedValue({
+        ...baseRoom,
+        status: RoomStatus.PLAYING,
+        players: [
+          {
+            ...basePlayers[0],
+            hand: ['C1'],
+            isCOM: false,
+          },
+          {
+            ...basePlayers[1],
+            socketId: '',
+            name: 'COM',
+            hand: ['D1'],
+            isCOM: true,
+          },
+        ],
+      });
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'user-1',
+        card: 'C1',
+      });
+
+      const cardPlayedEvent = result.events?.find(
+        (event) => event.event === 'card-played',
+      );
+      expect(cardPlayedEvent?.payload).toMatchObject({
+        players: expect.arrayContaining([
+          expect.objectContaining({
+            seatId: asSeatId('player-2'),
+            name: 'COM',
+            socketId: '',
+            isCOM: true,
+          }),
+        ]),
+      });
+    });
+
     it('rejects off-suit play when the player has the base suit', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PlayCardUseCase(
@@ -1795,15 +2002,15 @@ describe('Game Use Cases', () => {
       );
       const currentField: Field = {
         cards: ['K♠'],
-        playedBy: ['player-2'],
+        playedBySeatIds: [asSeatId('player-2')],
         baseCard: 'K♠',
-        dealerId: 'player-2',
+        dealerSeatId: asSeatId('player-2'),
         isComplete: false,
       };
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['5♠', 'A♥'],
             team: 0 as Team,
@@ -1843,22 +2050,22 @@ describe('Game Use Cases', () => {
       );
       const currentField: Field = {
         cards: ['K♠'],
-        playedBy: ['player-2'],
+        playedBySeatIds: [asSeatId('player-2')],
         baseCard: 'K♠',
-        dealerId: 'player-2',
+        dealerSeatId: asSeatId('player-2'),
         isComplete: false,
       };
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['A♥'],
             team: 0 as Team,
             isPasser: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             hand: [],
             team: 1 as Team,
@@ -1899,15 +2106,15 @@ describe('Game Use Cases', () => {
       );
       const currentField: Field = {
         cards: [],
-        playedBy: [],
+        playedBySeatIds: [],
         baseCard: '',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: false,
       };
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['JOKER', 'A♥'],
             team: 0 as Team,
@@ -1983,7 +2190,7 @@ describe('Game Use Cases', () => {
       );
 
       const comPlayer: DomainPlayer = {
-        playerId: 'com-0',
+        seatId: asSeatId('com-0'),
         name: 'COM',
         hand: ['9♣'],
         team: 0,
@@ -2005,7 +2212,7 @@ describe('Game Use Cases', () => {
         players: [
           comPlayer,
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             hand: ['7♠'],
             team: 1 as const,
@@ -2020,10 +2227,10 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: {
             cards: ['JOKER'],
-            playedBy: ['com-0'],
+            playedBySeatIds: [asSeatId('com-0')],
             baseCard: 'JOKER',
             baseSuit: undefined,
-            dealerId: 'com-0',
+            dealerSeatId: asSeatId('com-0'),
             isComplete: false,
           },
         },
@@ -2049,7 +2256,7 @@ describe('Game Use Cases', () => {
             roomId: 'room-1',
             event: 'card-played',
             payload: {
-              playerId: 'com-0',
+              seatId: asSeatId('com-0'),
               card: 'JOKER',
             },
           },
@@ -2121,7 +2328,7 @@ describe('Game Use Cases', () => {
       );
 
       const comPlayer: DomainPlayer = {
-        playerId: 'com-timeout-1',
+        seatId: asSeatId('com-timeout-1'),
         name: 'COM',
         hand: ['6♥', 'A♠'],
         team: 0,
@@ -2134,7 +2341,7 @@ describe('Game Use Cases', () => {
           comPlayer,
           {
             socketId: 'socket-2',
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             userId: 'user-2',
             name: 'Player 2',
             hand: ['7♠'],
@@ -2147,7 +2354,7 @@ describe('Game Use Cases', () => {
         blowState: {
           currentTrump: 'herz' as const,
           currentHighestDeclaration: {
-            playerId: 'com-timeout-1',
+            seatId: asSeatId('com-timeout-1'),
             trumpType: 'herz' as const,
             numberOfPairs: 6,
             timestamp: Date.now(),
@@ -2156,9 +2363,9 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: {
             cards: [],
-            playedBy: [],
+            playedBySeatIds: [],
             baseCard: '',
-            dealerId: 'com-timeout-1',
+            dealerSeatId: asSeatId('com-timeout-1'),
             isComplete: false,
           },
           negriCard: null,
@@ -2182,7 +2389,7 @@ describe('Game Use Cases', () => {
             event: 'play-setup-complete',
             payload: {
               negriCard: '6♥',
-              startingPlayer: 'com-timeout-1',
+              startingSeatId: 'com-timeout-1',
             },
           },
         ],
@@ -2208,7 +2415,7 @@ describe('Game Use Cases', () => {
           event: 'play-setup-complete',
           payload: {
             negriCard: '6♥',
-            startingPlayer: 'com-timeout-1',
+            startingSeatId: 'com-timeout-1',
           },
         },
       ]);
@@ -2260,7 +2467,7 @@ describe('Game Use Cases', () => {
       );
 
       const comPlayer: DomainPlayer = {
-        playerId: 'com-0',
+        seatId: asSeatId('com-0'),
         name: 'COM',
         hand: ['JOKER', 'J♥', 'A♥'],
         team: 0,
@@ -2276,7 +2483,7 @@ describe('Game Use Cases', () => {
           currentHighestDeclaration: null,
           declarations: [],
           actionHistory: [],
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -2333,7 +2540,7 @@ describe('Game Use Cases', () => {
           success: true,
           followUp: {
             roomId: 'room-1',
-            playerId: 'com-0',
+            seatId: asSeatId('com-0'),
             handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
           },
         }),
@@ -2344,7 +2551,7 @@ describe('Game Use Cases', () => {
               scope: 'room',
               roomId: 'room-1',
               event: 'broken',
-              payload: { nextPlayerId: 'com-0' },
+              payload: { nextSeatId: 'com-0' },
             },
           ],
         }),
@@ -2363,7 +2570,7 @@ describe('Game Use Cases', () => {
       );
 
       const comPlayer: DomainPlayer = {
-        playerId: 'com-0',
+        seatId: asSeatId('com-0'),
         name: 'COM',
         hand: ['J♠', 'J♣', 'J♥', 'J♦'],
         team: 0,
@@ -2391,11 +2598,11 @@ describe('Game Use Cases', () => {
       expect(revealBrokenHandUseCase.prepare).toHaveBeenCalledWith({
         roomId: 'room-1',
         actorId: 'com-0',
-        playerId: 'com-0',
+        seatId: asSeatId('com-0'),
       });
       expect(revealBrokenHandUseCase.finalize).toHaveBeenCalledWith({
         roomId: 'room-1',
-        playerId: 'com-0',
+        seatId: asSeatId('com-0'),
         handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
       });
       expect(comStrategyService.chooseBlowAction).not.toHaveBeenCalled();
@@ -2406,18 +2613,18 @@ describe('Game Use Cases', () => {
           scope: 'room',
           roomId: 'room-1',
           event: 'broken',
-          payload: { nextPlayerId: 'com-0' },
+          payload: { nextSeatId: 'com-0' },
         },
       ]);
     });
   });
 
   describe('SelectNegriUseCase', () => {
-    it('accepts COM playerId when the blow winner has no userId', async () => {
+    it('accepts a COM seat when the blow winner has no userId', async () => {
       const roomService = createRoomServiceMock();
       const blowService = {
         findHighestDeclaration: jest.fn(() => ({
-          playerId: 'com-timeout-1',
+          seatId: asSeatId('com-timeout-1'),
           trumpType: 'herz',
           numberOfPairs: 6,
           timestamp: Date.now(),
@@ -2429,7 +2636,7 @@ describe('Game Use Cases', () => {
         players: [
           {
             socketId: 'com-timeout-1',
-            playerId: 'com-timeout-1',
+            seatId: asSeatId('com-timeout-1'),
             name: 'COM',
             hand: ['6♥', 'A♠'],
             team: 0 as const,
@@ -2438,7 +2645,7 @@ describe('Game Use Cases', () => {
           },
           {
             socketId: 'socket-2',
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             userId: 'user-2',
             name: 'Player 2',
             hand: ['7♠'],
@@ -2451,7 +2658,7 @@ describe('Game Use Cases', () => {
         blowState: {
           declarations: [
             {
-              playerId: 'com-timeout-1',
+              seatId: asSeatId('com-timeout-1'),
               trumpType: 'herz' as const,
               numberOfPairs: 6,
               timestamp: Date.now(),
@@ -2465,7 +2672,7 @@ describe('Game Use Cases', () => {
         isPlayerTurn: jest.fn(() => true),
         findPlayerByActorId: jest.fn(
           (actorId: string) =>
-            state.players.find((player) => player.playerId === actorId) ?? null,
+            state.players.find((player) => player.seatId === actorId) ?? null,
         ),
         saveState: jest.fn(),
       } as unknown as GameStateService;
@@ -2486,7 +2693,7 @@ describe('Game Use Cases', () => {
             event: 'play-setup-complete',
             payload: expect.objectContaining({
               negriCard: '6♥',
-              startingPlayer: 'com-timeout-1',
+              startingSeatId: 'com-timeout-1',
             }),
           }),
         ]),
@@ -2503,11 +2710,11 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         playState: { currentField: Field };
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -2515,7 +2722,7 @@ describe('Game Use Cases', () => {
             hasRequiredBroken: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             hand: ['D1'],
             team: 1,
@@ -2525,31 +2732,30 @@ describe('Game Use Cases', () => {
         playState: {
           currentField: {
             cards: ['JOKER'],
-            playedBy: ['player-1'],
+            playedBySeatIds: [asSeatId('player-1')],
             baseCard: 'JOKER',
             baseSuit: undefined,
-            dealerId: 'player-1',
+            dealerSeatId: asSeatId('player-1'),
             isComplete: false,
           },
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
       };
 
       const roomGameState = {
         getState: jest.fn(() => state),
         saveState: jest.fn(),
         nextTurn: jest.fn(() => {
-          state.currentPlayerIndex = 1;
+          state.currentSeatId = asSeatId('player-2');
         }),
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
-            ? (state.players.find((player) => player.playerId === 'player-1') ??
+            ? (state.players.find((player) => player.seatId === 'player-1') ??
               null)
             : actorId === 'user-2'
-              ? (state.players.find(
-                  (player) => player.playerId === 'player-2',
-                ) ?? null)
-              : (state.players.find((player) => player.playerId === actorId) ??
+              ? (state.players.find((player) => player.seatId === 'player-2') ??
+                null)
+              : (state.players.find((player) => player.seatId === actorId) ??
                 null),
         ),
       } as unknown as GameStateService;
@@ -2571,6 +2777,7 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'update-turn',
       );
       expect(updateTurn?.payload).toBe('player-2');
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -2590,18 +2797,18 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         blowState: BlowState;
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -2609,7 +2816,7 @@ describe('Game Use Cases', () => {
             hasRequiredBroken: true,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             hand: ['D1'],
             team: 1,
@@ -2622,11 +2829,11 @@ describe('Game Use Cases', () => {
           declarations: [],
           actionHistory: [],
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
-        currentPlayerIndex: 0,
+        currentSeatId: asSeatId('player-1'),
         gamePhase: 'blow' as const,
         deck: [],
       };
@@ -2642,13 +2849,12 @@ describe('Game Use Cases', () => {
         dealCards: dealCardsMock,
         findPlayerByActorId: jest.fn((actorId: string) =>
           actorId === 'user-1'
-            ? (state.players.find((player) => player.playerId === 'player-1') ??
+            ? (state.players.find((player) => player.seatId === 'player-1') ??
               null)
             : actorId === 'user-2'
-              ? (state.players.find(
-                  (player) => player.playerId === 'player-2',
-                ) ?? null)
-              : (state.players.find((player) => player.playerId === actorId) ??
+              ? (state.players.find((player) => player.seatId === 'player-2') ??
+                null)
+              : (state.players.find((player) => player.seatId === actorId) ??
                 null),
         ),
         saveState: jest.fn(),
@@ -2659,14 +2865,14 @@ describe('Game Use Cases', () => {
       const preparation = await useCase.prepare({
         roomId: 'room-1',
         actorId: 'user-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
       });
 
       expect(preparation.success).toBe(true);
       expect(preparation.delayMs).toBe(3000);
       expect(preparation.followUp).toBeDefined();
       expect(state.pendingBrokenHandReveal).toEqual({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         handSnapshot: ['C1'],
         startedAt: expect.any(Number),
       });
@@ -2679,11 +2885,11 @@ describe('Game Use Cases', () => {
         expect(gameEventLogService.log).toHaveBeenCalledWith(
           expect.objectContaining({
             actionType: 'broken_hand_revealed',
-            playerId: 'player-1',
+            actorSeatId: 'player-1',
             actionData: expect.objectContaining({
-              nextPlayerId: 'player-1',
+              nextSeatId: 'player-1',
               nextBlowIndex: 0,
-              startingHandsByPlayerId: {
+              startingHandsBySeatId: {
                 'player-1': ['X1', 'X2'],
                 'player-2': ['X1', 'X2'],
               },
@@ -2705,7 +2911,7 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -2730,7 +2936,7 @@ describe('Game Use Cases', () => {
       const preparation = await useCase.prepare({
         roomId: 'room-1',
         actorId: 'player-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
       });
 
       expect(preparation).toEqual({
@@ -2748,7 +2954,7 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -2759,7 +2965,7 @@ describe('Game Use Cases', () => {
         blowState: {
           declarations: [
             {
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               trumpType: 'club' as const,
               numberOfPairs: 6,
               timestamp: 1,
@@ -2780,7 +2986,7 @@ describe('Game Use Cases', () => {
       const preparation = await useCase.prepare({
         roomId: 'room-1',
         actorId: 'player-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
       });
 
       expect(preparation).toEqual({
@@ -2798,7 +3004,7 @@ describe('Game Use Cases', () => {
       const state = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -2823,7 +3029,7 @@ describe('Game Use Cases', () => {
       const preparation = await useCase.prepare({
         roomId: 'room-1',
         actorId: 'player-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
       });
 
       expect(preparation).toEqual({
@@ -2841,25 +3047,25 @@ describe('Game Use Cases', () => {
       const state: {
         players: DomainPlayer[];
         blowState: BlowState;
-        currentPlayerIndex: number;
+        currentSeatId: ReturnType<typeof asSeatId>;
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
             isPasser: false,
           },
           {
-            playerId: 'player-2',
+            seatId: asSeatId('player-2'),
             name: 'Player 2',
             hand: ['D1'],
             team: 1,
@@ -2867,7 +3073,7 @@ describe('Game Use Cases', () => {
             hasRequiredBroken: false,
           },
           {
-            playerId: 'player-3',
+            seatId: asSeatId('player-3'),
             name: 'Player 3',
             hand: ['H1'],
             team: 0,
@@ -2875,7 +3081,7 @@ describe('Game Use Cases', () => {
             hasRequiredBroken: true,
           },
           {
-            playerId: 'player-4',
+            seatId: asSeatId('player-4'),
             name: 'Player 4',
             hand: ['S1'],
             team: 1,
@@ -2887,7 +3093,7 @@ describe('Game Use Cases', () => {
           currentTrump: 'club',
           declarations: [
             {
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               trumpType: 'club',
               numberOfPairs: 6,
               timestamp: 1,
@@ -2896,32 +3102,32 @@ describe('Game Use Cases', () => {
           actionHistory: [
             {
               type: 'declare',
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               trumpType: 'club',
               numberOfPairs: 6,
               timestamp: 1,
             },
             {
               type: 'pass',
-              playerId: 'player-2',
+              seatId: asSeatId('player-2'),
               timestamp: 2,
             },
           ],
           currentHighestDeclaration: {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             trumpType: 'club',
             numberOfPairs: 6,
             timestamp: 1,
           },
-          lastPasser: 'player-2',
+          lastPasserSeatId: asSeatId('player-2'),
           isRoundCancelled: false,
           currentBlowIndex: 2,
         },
-        currentPlayerIndex: 1,
+        currentSeatId: asSeatId('player-2'),
         gamePhase: 'blow',
         deck: [],
         pendingBrokenHandReveal: {
-          playerId: 'player-3',
+          seatId: asSeatId('player-3'),
           handSnapshot: ['H1'],
           startedAt: 1,
         },
@@ -2938,7 +3144,7 @@ describe('Game Use Cases', () => {
         dealCards: dealCardsMock,
         findPlayerByActorId: jest.fn(
           (actorId: string) =>
-            state.players.find((player) => player.playerId === actorId) ?? null,
+            state.players.find((player) => player.seatId === actorId) ?? null,
         ),
         saveState: jest.fn(),
       } as unknown as GameStateService;
@@ -2947,18 +3153,18 @@ describe('Game Use Cases', () => {
 
       const completion = await useCase.finalize({
         roomId: 'room-1',
-        playerId: 'player-3',
+        seatId: asSeatId('player-3'),
       });
 
       expect(completion.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toBeNull();
       expect(state.blowState.currentBlowIndex).toBe(2);
-      expect(state.currentPlayerIndex).toBe(2);
+      expect(state.currentSeatId).toBe(asSeatId('player-3'));
       expect(state.blowState.declarations).toEqual([]);
       expect(state.blowState.actionHistory).toEqual([]);
       expect(state.blowState.currentHighestDeclaration).toBeNull();
       expect(state.blowState.currentTrump).toBeNull();
-      expect(state.blowState.lastPasser).toBeNull();
+      expect(state.blowState.lastPasserSeatId).toBeNull();
       expect(state.players.every((player) => !player.isPasser)).toBe(true);
       expect(dealCardsMock).toHaveBeenCalled();
 
@@ -2969,14 +3175,14 @@ describe('Game Use Cases', () => {
         declarations: [],
         actionHistory: [],
         currentHighest: null,
-        lastPasser: null,
+        lastPasserSeatId: null,
       });
 
       const brokenEvent = completion.events?.find(
         (evt) => evt.event === 'broken',
       );
       expect(brokenEvent?.payload).toMatchObject({
-        nextPlayerId: 'player-3',
+        nextSeatId: 'player-3',
         gamePhase: 'blow',
       });
 
@@ -2996,14 +3202,14 @@ describe('Game Use Cases', () => {
         blowState: Pick<BlowState, 'declarations'>;
         gamePhase: GamePhase;
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['C1'],
             team: 0,
@@ -3014,7 +3220,7 @@ describe('Game Use Cases', () => {
         blowState: { declarations: [] },
         gamePhase: 'blow',
         pendingBrokenHandReveal: {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           handSnapshot: ['old-card'],
           startedAt: Date.now() - BROKEN_HAND_REVEAL_PENDING_TTL_MS - 1,
         },
@@ -3031,12 +3237,12 @@ describe('Game Use Cases', () => {
       const preparation = await useCase.prepare({
         roomId: 'room-1',
         actorId: 'user-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
       });
 
       expect(preparation.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toEqual({
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         handSnapshot: ['C1'],
         startedAt: expect.any(Number),
       });
@@ -3062,14 +3268,14 @@ describe('Game Use Cases', () => {
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['new-card'],
             team: 0,
@@ -3082,7 +3288,7 @@ describe('Game Use Cases', () => {
           declarations: [],
           actionHistory: [],
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -3090,7 +3296,7 @@ describe('Game Use Cases', () => {
         gamePhase: 'play',
         deck: [],
         pendingBrokenHandReveal: {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           handSnapshot: ['old-card'],
           startedAt: 1,
         },
@@ -3106,7 +3312,7 @@ describe('Game Use Cases', () => {
 
       const completion = await useCase.finalize({
         roomId: 'room-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         handSnapshot: ['old-card'],
       });
 
@@ -3132,14 +3338,14 @@ describe('Game Use Cases', () => {
         gamePhase: 'play' | 'blow';
         deck: string[];
         pendingBrokenHandReveal?: {
-          playerId: string;
+          seatId: ReturnType<typeof asSeatId>;
           handSnapshot: string[];
           startedAt: number;
         } | null;
       } = {
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Player 1',
             hand: ['2♣', '3♦'],
             team: 0,
@@ -3153,7 +3359,7 @@ describe('Game Use Cases', () => {
           declarations: [],
           actionHistory: [],
           currentHighestDeclaration: null,
-          lastPasser: null,
+          lastPasserSeatId: null,
           isRoundCancelled: false,
           currentBlowIndex: 0,
         },
@@ -3169,7 +3375,7 @@ describe('Game Use Cases', () => {
         }),
         findPlayerByActorId: jest.fn(
           (actorId: string) =>
-            state.players.find((player) => player.playerId === actorId) ?? null,
+            state.players.find((player) => player.seatId === actorId) ?? null,
         ),
         saveState: jest.fn(),
       } as unknown as GameStateService;
@@ -3179,13 +3385,13 @@ describe('Game Use Cases', () => {
       const preparation = await useCase.prepare({
         roomId: 'room-1',
         actorId: 'player-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
       });
 
       expect(preparation.success).toBe(true);
       expect(preparation.followUp).toEqual({
         roomId: 'room-1',
-        playerId: 'player-1',
+        seatId: asSeatId('player-1'),
         handSnapshot: ['2♣', '3♦'],
       });
 
@@ -3207,28 +3413,28 @@ describe('Game Use Cases', () => {
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           hand: ['A', 'B'],
           team: 0 as const,
           isPasser: false,
         },
         {
-          playerId: 'player-2',
+          seatId: asSeatId('player-2'),
           name: 'Player 2',
           hand: ['C', 'D'],
           team: 1 as const,
           isPasser: false,
         },
         {
-          playerId: 'player-3',
+          seatId: asSeatId('player-3'),
           name: 'Player 3',
           hand: [],
           team: 0 as const,
           isPasser: false,
         },
         {
-          playerId: 'player-4',
+          seatId: asSeatId('player-4'),
           name: 'Player 4',
           hand: [],
           team: 1 as const,
@@ -3239,22 +3445,22 @@ describe('Game Use Cases', () => {
         fields: [] as CompletedField[],
         currentField: {
           cards: [],
-          playedBy: [],
+          playedBySeatIds: [],
           baseCard: '',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         } as Field,
       },
       blowState: {
         currentHighestDeclaration: {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           team: 0 as Team,
           trumpType: 'tra',
           numberOfPairs: 6,
           timestamp: Date.now(),
         },
         declarations: [],
-        lastPasser: null,
+        lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
@@ -3266,7 +3472,6 @@ describe('Game Use Cases', () => {
         0: [],
         1: [],
       },
-      teamAssignments: {},
       pointsToWin: 10,
       currentPlayerIndex: 0,
       roundNumber: 1,
@@ -3286,9 +3491,9 @@ describe('Game Use Cases', () => {
       state.playState.fields = [{ winnerTeam: 0 } as unknown as CompletedField];
       const completeFieldMock = jest.fn(() => ({
         cards: ['A', 'B', 'C', 'D'],
-        winnerId: 'player-1',
+        winnerSeatId: asSeatId('player-1'),
         winnerTeam: 0,
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
       }));
       const saveStateMock = jest.fn();
       let roundNumberValue = state.roundNumber;
@@ -3312,9 +3517,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'C', 'E', 'F'],
-          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3352,9 +3562,9 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
-          playedBy: ['player-1', 'player-2', 'player-3'],
+          playedBySeatIds: asSeatIds('player-1', 'player-2', 'player-3'),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: true,
         },
       });
@@ -3378,9 +3588,14 @@ describe('Game Use Cases', () => {
       const state = buildState();
       state.playState.currentField = {
         cards: ['A', 'B', 'C', 'D'],
-        playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+        playedBySeatIds: asSeatIds(
+          'player-1',
+          'player-2',
+          'player-3',
+          'player-4',
+        ),
         baseCard: 'A',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: true,
       };
 
@@ -3396,9 +3611,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
-          playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-3',
+            'player-2',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: true,
         },
       });
@@ -3427,41 +3647,48 @@ describe('Game Use Cases', () => {
       });
       state.blowState.currentHighestDeclaration = {
         ...state.blowState.currentHighestDeclaration,
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
         team: 1,
       };
 
       const field: Field = {
         cards: ['5♣', 'A♣', '6♣', 'K♣'],
-        playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+        playedBySeatIds: asSeatIds(
+          'player-1',
+          'player-3',
+          'player-2',
+          'player-4',
+        ),
         baseCard: '5♣',
-        dealerId: 'player-1',
+        dealerSeatId: asSeatId('player-1'),
         isComplete: true,
       };
       state.playState.currentField = {
         ...field,
         cards: [...field.cards],
-        playedBy: [...field.playedBy],
+        playedBySeatIds: [...field.playedBySeatIds],
       };
 
       const roomGameState = {
         getState: jest.fn(() => state),
-        completeField: jest.fn((completedField: Field, winnerId: string) => {
-          const winner = state.players.find(
-            (player) => player.playerId === winnerId,
-          );
-          if (!winner) {
-            return null;
-          }
-          const persistedField = {
-            cards: [...completedField.cards],
-            winnerId,
-            winnerTeam: winner.team,
-            dealerId: completedField.dealerId,
-          };
-          state.playState.fields.push(persistedField);
-          return persistedField;
-        }),
+        completeField: jest.fn(
+          (completedField: Field, winnerSeatId: string) => {
+            const winner = state.players.find(
+              (player) => player.seatId === winnerSeatId,
+            );
+            if (!winner) {
+              return null;
+            }
+            const persistedField = {
+              cards: [...completedField.cards],
+              winnerSeatId: asSeatId(winnerSeatId),
+              winnerTeam: winner.team,
+              dealerSeatId: asSeatId(completedField.dealerSeatId),
+            };
+            state.playState.fields.push(persistedField);
+            return persistedField;
+          },
+        ),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
         transitionPhase: jest.fn(async () => {}),
@@ -3488,10 +3715,11 @@ describe('Game Use Cases', () => {
       ).toEqual(
         expect.objectContaining({
           field: expect.objectContaining({
-            winnerId: 'player-3',
+            winnerSeatId: asSeatId('player-3'),
             winnerTeam: 0,
           }),
-          winnerId: 'player-3',
+          winnerSeatId: asSeatId('player-3'),
+          nextSeatId: 'player-3',
         }),
       );
       expect(scoreService.calculatePlayPoints).toHaveBeenCalledWith(6, 0);
@@ -3517,9 +3745,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'C', 'E', 'F'],
-          winnerId: 'player-1',
+          winnerSeatId: asSeatId('player-1'),
           winnerTeam: 0,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3533,9 +3761,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'C', 'E', 'F'],
-          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: true,
         },
       });
@@ -3565,9 +3798,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-1',
+          winnerSeatId: asSeatId('player-1'),
           winnerTeam: 0,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
       } as unknown as GameStateService;
@@ -3578,9 +3811,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
-          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3609,7 +3847,7 @@ describe('Game Use Cases', () => {
       const state = buildState();
       state.blowState.currentHighestDeclaration = {
         ...state.blowState.currentHighestDeclaration,
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
         team: 1,
       };
       state.players[0].hand = [];
@@ -3620,9 +3858,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-2',
+          winnerSeatId: asSeatId('player-2'),
           winnerTeam: 1,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3638,9 +3876,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
-          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3653,7 +3896,7 @@ describe('Game Use Cases', () => {
       ]);
     });
 
-    it('uses declaration team snapshot when declaring player id is no longer present', async () => {
+    it('uses declaration team snapshot when the declaring seat is no longer present', async () => {
       const roomService = createRoomServiceMock();
       const playService = createPlayServiceMock('player-2');
       const scoreService = createScoreServiceMock(2);
@@ -3666,7 +3909,7 @@ describe('Game Use Cases', () => {
       const state = buildState();
       state.blowState.currentHighestDeclaration = {
         ...state.blowState.currentHighestDeclaration,
-        playerId: 'stale-player-id',
+        seatId: asSeatId('missing-seat'),
         team: 1,
       };
       state.players[0].hand = [];
@@ -3677,9 +3920,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-2',
+          winnerSeatId: asSeatId('player-2'),
           winnerTeam: 1,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3695,9 +3938,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
-          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3722,7 +3970,7 @@ describe('Game Use Cases', () => {
       const state = buildState();
       state.blowState.currentHighestDeclaration = {
         ...state.blowState.currentHighestDeclaration,
-        playerId: 'player-2',
+        seatId: asSeatId('player-2'),
         team: 1,
       };
       state.players[0].hand = [];
@@ -3733,9 +3981,9 @@ describe('Game Use Cases', () => {
         getState: jest.fn(() => state),
         completeField: jest.fn(() => ({
           cards: ['A', 'B', 'C', 'D'],
-          winnerId: 'player-1',
+          winnerSeatId: asSeatId('player-1'),
           winnerTeam: 0,
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
         })),
         saveState: jest.fn(),
         resetRoundState: jest.fn(async () => {}),
@@ -3751,9 +3999,14 @@ describe('Game Use Cases', () => {
         roomId: 'room-1',
         field: {
           cards: ['A', 'B', 'C', 'D'],
-          playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
           baseCard: 'A',
-          dealerId: 'player-1',
+          dealerSeatId: asSeatId('player-1'),
           isComplete: false,
         },
       });
@@ -3857,8 +4110,8 @@ describe('Game Use Cases', () => {
         ],
       });
       roomService.getRoomGameState.mockResolvedValue({
-        findSessionUserByPlayerId: jest.fn().mockReturnValue({
-          playerId: 'player-1',
+        findSessionUserBySeatId: jest.fn().mockReturnValue({
+          seatId: asSeatId('player-1'),
           socketId: 'socket-1',
           name: 'Player 1',
           userId: 'user-1',
@@ -3947,6 +4200,7 @@ describe('Game Use Cases', () => {
     const authenticatedUser: AuthenticatedUser = {
       id: 'user-1',
       email: 'user@example.com',
+      isAnonymous: false,
       profile: {
         id: 'profile-1',
         username: 'user',
@@ -3971,7 +4225,7 @@ describe('Game Use Cases', () => {
       const authService = createAuthServiceMock();
       const users = [] as Array<{
         socketId: string;
-        playerId: string;
+        seatId: ReturnType<typeof asSeatId>;
         name: string;
         userId?: string;
         isAuthenticated?: boolean;
@@ -3981,7 +4235,7 @@ describe('Game Use Cases', () => {
         upsertSessionUser: jest.fn(() => {
           users.push({
             socketId: 'socket-1',
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'User Display',
             userId: 'user-1',
             isAuthenticated: true,
@@ -4014,7 +4268,6 @@ describe('Game Use Cases', () => {
       expect(gameState.upsertSessionUser).toHaveBeenCalledWith(
         expect.objectContaining({
           socketId: 'socket-1',
-          playerId: 'user-1',
           name: 'User Display',
           userId: 'user-1',
           isAuthenticated: true,
@@ -4024,10 +4277,6 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'update-users',
       );
       expect(updateUsersEvent).toBeDefined();
-      const authUpdatedEvent = result.clientEvents?.find(
-        (evt) => evt.event === 'auth-updated',
-      );
-      expect(authUpdatedEvent).toBeDefined();
     });
 
     it('returns error when token is missing', async () => {

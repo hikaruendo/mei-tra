@@ -19,7 +19,7 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
     request: ChangePlayerTeamRequest,
   ): Promise<ChangePlayerTeamResponse> {
     try {
-      const { roomId, playerId, teamChanges } = request;
+      const { roomId, actorSeatId, teamChanges } = request;
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return { success: false, error: 'Room not found' };
@@ -27,14 +27,14 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
 
       // Find the requesting player
       const requestingPlayer = room.players.find(
-        (p) => p.playerId === playerId,
+        (player) => player.seatId === actorSeatId,
       );
       if (!requestingPlayer) {
         return { success: false, error: 'Player not found in room' };
       }
 
       // Verify that the requesting player is the host
-      if (room.hostId !== playerId) {
+      if (room.hostSeatId !== actorSeatId) {
         return { success: false, error: 'Only the host can change teams' };
       }
 
@@ -44,19 +44,19 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       } as Record<Team, number>;
 
       const newTeamCounts = { ...currentTeamCounts };
-      for (const [playerId, newTeam] of Object.entries(teamChanges)) {
+      for (const [seatId, newTeam] of Object.entries(teamChanges)) {
         if (newTeam !== 0 && newTeam !== 1) {
           return {
             success: false,
-            error: `Invalid team for player ${playerId}`,
+            error: `Invalid team for seat ${seatId}`,
           };
         }
 
-        const player = room.players.find((p) => p.playerId === playerId);
+        const player = room.players.find((p) => p.seatId === seatId);
         if (!player) {
           return {
             success: false,
-            error: `Player ${playerId} not found`,
+            error: `Seat ${seatId} not found`,
           };
         }
 

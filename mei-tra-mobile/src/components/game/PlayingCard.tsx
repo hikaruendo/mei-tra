@@ -11,6 +11,7 @@ import {
   type CardSize,
 } from '@/theme/cards';
 import { shadows } from '@/theme/shadows';
+import { t } from '@/i18n';
 
 interface PlayingCardProps {
   card?: string;
@@ -25,8 +26,8 @@ interface PlayingCardProps {
 }
 
 function accessibilityLabelFor(card: string | undefined, faceDown: boolean) {
-  if (faceDown) return '裏向きのカード';
-  if (card === 'JOKER') return 'ジョーカー';
+  if (faceDown) return t('a11y.faceDownCard');
+  if (card === 'JOKER') return t('a11y.joker');
   return card;
 }
 
@@ -47,7 +48,7 @@ function PlayingCardComponent({
   return (
     <Pressable
       accessibilityHint={
-        onPress && !disabled ? 'タップしてカードを選択します' : undefined
+        onPress && !disabled ? t('a11y.tapToSelectCard') : undefined
       }
       accessibilityLabel={accessibilityLabelFor(card, faceDown)}
       accessibilityRole={onPress ? 'button' : undefined}

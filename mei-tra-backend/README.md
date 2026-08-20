@@ -31,7 +31,7 @@
 - ルール判定・得点計算・phase transition の正しさは `CardService`, `BlowService`, `PlayService`, `ScoreService`, `ChomboService`, `GamePhaseService` に寄せています
 - `GameStateManager`, `PlayerConnectionManager`, `ComSessionService`, `TurnMonitorService` は domain層そのものではなく、state / session / realtime 例外処理を支える application service として扱います
 - gateway は transport adapter として薄くし、reconnect / moderation / start-game / room sync の組み立ては use-case / effects service へ委譲しています
-- room/player 同期の主系統は `room-sync` で、`room-updated` / `update-players` は互換 fallback です
+- room/player の完全同期は `room-sync`、進行中のplayer表示更新は `update-players` です
 - `src/use-cases/helpers/` は「複数 UseCase で共有する純粋なルール判定」だけを置く場所です。I/O、永続化、event 組み立て、state mutation は UseCase / Service に置きます
 
 ## 現在の主な read-side
@@ -160,6 +160,18 @@ ConfigModule.forFeature(supabaseConfig)
 
 - **[Supabaseマイグレーションガイド](./SUPABASE_MIGRATION.md)** - Supabase移行の全体概要とトラブルシューティング
 - **[Supabase運用操作手順書](./SUPABASE_OPERATIONS.md)** - 日常運用での具体的な操作手順
+
+## Database documentation
+
+`tbls` で `public` スキーマの全テーブル・全カラムと、用途別の ER 図を生成します。生成物は [`docs/database/`](./docs/database/) にコミットし、migration を追加・変更した後に更新します。
+
+```bash
+brew install tbls
+npm run db:docs
+```
+
+標準ではローカル Supabase (`127.0.0.1:54322`) を参照します。別の安全な開発用 DB を使う場合だけ `TBLS_DSN` を指定し、本番の接続情報は設定や生成物へ保存しないでください。
+
 - **[デプロイメントガイド](./DEPLOYMENT.md)** - 本番環境へのデプロイ手順
 
 ## Project setup

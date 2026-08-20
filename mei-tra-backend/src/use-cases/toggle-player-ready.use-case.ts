@@ -20,13 +20,13 @@ export class TogglePlayerReadyUseCase implements ITogglePlayerReadyUseCase {
     request: TogglePlayerReadyRequest,
   ): Promise<TogglePlayerReadyResponse> {
     try {
-      const { roomId, playerId } = request;
+      const { roomId, actorSeatId } = request;
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return { success: false, error: 'Room not found' };
       }
 
-      const player = room.players.find((p) => p.playerId === playerId);
+      const player = room.players.find((p) => p.seatId === actorSeatId);
       if (!player) {
         return { success: false, error: 'Player not found in room' };
       }
@@ -34,7 +34,7 @@ export class TogglePlayerReadyUseCase implements ITogglePlayerReadyUseCase {
       const newReadyState = !player.isReady;
       const updateSuccess = await this.roomService.updatePlayerInRoom(
         roomId,
-        playerId,
+        actorSeatId,
         { isReady: newReadyState },
       );
 

@@ -13,8 +13,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function RoomScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const { user, loading } = useAuth();
@@ -22,7 +27,7 @@ export default function RoomScreen() {
     currentRoom,
     game,
     connectionStatus,
-    currentPlayerId,
+    currentSeatId,
     isHost,
     error,
     notice,
@@ -41,6 +46,8 @@ export default function RoomScreen() {
     updateTeamNames,
     clearFeedback,
     closeGameOver,
+    firstTurnReveal,
+    clearFirstTurnReveal,
   } = useGame();
 
   useKeepAwake();
@@ -75,7 +82,7 @@ export default function RoomScreen() {
       <Screen contentStyle={styles.center}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text accessibilityLiveRegion="polite" style={styles.loadingText}>
-          アカウント情報を読み込んでいます
+          {t('rooms.loadingAccount')}
         </Text>
       </Screen>
     );
@@ -92,11 +99,11 @@ export default function RoomScreen() {
         <ActivityIndicator color={colors.gold} size="large" />
         <Text style={styles.loadingText}>
           {connectionStatus === 'connected'
-            ? 'ルーム情報を復元しています'
-            : 'サーバーへ再接続しています'}
+            ? t('room.restoring')
+            : t('room.reconnecting')}
         </Text>
         <Button variant="ghost" onPress={() => router.replace('/rooms')}>
-          ルーム一覧へ戻る
+          {t('room.backToRooms')}
         </Button>
       </Screen>
     );
@@ -111,7 +118,7 @@ export default function RoomScreen() {
       {connectionStatus !== 'connected' ? (
         <ConnectionBanner
           onRetry={refreshRooms}
-          retryLabel="再接続を試す"
+          retryLabel={t('room.retryConnect')}
           status={connectionStatus}
         />
       ) : null}
@@ -123,7 +130,7 @@ export default function RoomScreen() {
       {isWaiting && currentRoom ? (
         <WaitingRoom
           actionsDisabled={actionsDisabled}
-          currentPlayerId={currentPlayerId}
+          currentSeatId={currentSeatId}
           isHost={isHost}
           onLeave={doLeave}
           onRemovePlayer={removePlayer}
@@ -155,6 +162,18 @@ export default function RoomScreen() {
           onSelectNegri={selectNegri}
           history={history}
           roomId={resolvedRoomId}
+          firstTurnReveal={firstTurnReveal}
+          onFirstTurnRevealDone={clearFirstTurnReveal}
+          isGuest={Boolean(user?.isAnonymous)}
+          onRegisterAccount={async () => {
+            // Leave the finished game first so room state doesn't reset
+            // underneath the upgrade screen, then navigate.
+            const didLeave = await doLeave();
+            if (didLeave) {
+              closeGameOver();
+            }
+            router.push('/upgrade-account');
+          }}
         />
       ) : (
         <View style={styles.center}>

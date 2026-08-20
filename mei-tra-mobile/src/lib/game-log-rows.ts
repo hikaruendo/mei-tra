@@ -2,10 +2,12 @@ import type {
   GameHistoryReplayEventContract,
   GameHistoryReplayViewContract,
 } from '@meitra/contracts/game-history';
-import type { PlayerContract, Team, TeamNames } from '@meitra/contracts/game';
+import type { Team, TeamNames } from '@meitra/contracts/game';
+import type { MobilePlayer } from '@/types/game';
 
 import { getTeamDisplayName } from './team-labels';
 import { trumpLabel } from './trump-labels';
+import { t } from '@/i18n';
 
 /**
  * Derives the round-summary table shown in 対局ログ, mirroring the web dock
@@ -30,8 +32,7 @@ export interface RoundRow {
   inProgress: boolean;
 }
 
-const UNKNOWN = '不明';
-const PARTICIPANT = 'プレイヤー';
+
 
 function getTextDetail(
   event: GameHistoryReplayEventContract | undefined,
@@ -110,18 +111,18 @@ function buildScoreDeltas(
 
 /** '6 pair(s) / herz' → '6組 / ヘル (♥)' */
 export function formatBid(rawBid: string | null): string {
-  if (!rawBid) return UNKNOWN;
+  if (!rawBid) return t('common.unknown');
 
   const [countPart, trumpPart] = rawBid.split(' / ');
   const match = countPart
     ?.trim()
     .match(/^(\d+(?:\.\d+)?)\s*(?:pairs?|pair\(s\)|sets?|set\(s\)|組)?$/i);
 
-  const count = match ? `${match[1]}組` : countPart?.trim();
+  const count = match ? t('game.pairsSuffix', { count: match[1] }) : countPart?.trim();
   const trump = trumpPart ? trumpLabel(trumpPart.trim()) : null;
 
   if (count && trump) return `${count} / ${trump}`;
-  return count || trump || UNKNOWN;
+  return count || trump || t('common.unknown');
 }
 
 function formatDelta(delta: number | undefined): string {
@@ -132,7 +133,7 @@ function formatDelta(delta: number | undefined): string {
 
 export function buildRoundTableRows(
   replay: GameHistoryReplayViewContract | null,
-  players: PlayerContract[] = [],
+  players: MobilePlayer[] = [],
   teamNames?: TeamNames,
 ): RoundRow[] {
   if (!replay) return [];
@@ -159,16 +160,18 @@ export function buildRoundTableRows(
 
       // Blower fallback chain, matching web.
       const blower =
-        (declaration?.playerId
-          ? playerNamesOf(declaration)[declaration.playerId]
+        (declaration?.actorSeatId
+          ? playerNamesOf(declaration)[declaration.actorSeatId]
           : null) ??
         getTextDetail(playStarted, 'winner') ??
-        (playStarted?.playerId
-          ? playerNamesOf(playStarted)[playStarted.playerId]
+        (playStarted?.actorSeatId
+          ? playerNamesOf(playStarted)[playStarted.actorSeatId]
           : null) ??
-        players.find((player) => player.playerId === declaration?.playerId)
+        players.find(
+          (player) => player.seatId === declaration?.actorSeatId,
+        )
           ?.name ??
-        PARTICIPANT;
+        t('common.player');
 
       const bid = formatBid(
         getTextDetail(declaration, 'highestDeclaration') ??

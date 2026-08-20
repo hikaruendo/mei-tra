@@ -5,7 +5,7 @@ export interface Database {
         Row: {
           id: string;
           name: string;
-          host_id: string;
+          host_seat_id: string | null;
           status: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
           settings: {
             maxPlayers: number;
@@ -26,7 +26,7 @@ export interface Database {
         Insert: {
           id?: string;
           name: string;
-          host_id: string;
+          host_seat_id?: string | null;
           status?: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
           settings?: {
             maxPlayers?: number;
@@ -47,7 +47,7 @@ export interface Database {
         Update: {
           id?: string;
           name?: string;
-          host_id?: string;
+          host_seat_id?: string | null;
           status?: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
           settings?: {
             maxPlayers?: number;
@@ -71,12 +71,9 @@ export interface Database {
         Row: {
           id: string;
           room_id: string;
-          player_id: string;
-          socket_id: string | null;
           name: string;
           team: number;
           is_ready: boolean;
-          is_host: boolean;
           is_com: boolean;
           joined_at: string;
           seat_index: number;
@@ -85,12 +82,9 @@ export interface Database {
         Insert: {
           id?: string;
           room_id: string;
-          player_id: string;
-          socket_id?: string | null;
           name: string;
           team?: number;
           is_ready?: boolean;
-          is_host?: boolean;
           is_com?: boolean;
           joined_at?: string;
           seat_index?: number;
@@ -99,12 +93,9 @@ export interface Database {
         Update: {
           id?: string;
           room_id?: string;
-          player_id?: string;
-          socket_id?: string | null;
           name?: string;
           team?: number;
           is_ready?: boolean;
-          is_host?: boolean;
           is_com?: boolean;
           joined_at?: string;
           seat_index?: number;
@@ -203,7 +194,7 @@ export interface Database {
         Row: {
           user_id: string;
           room_id: string | null;
-          player_id: string;
+          seat_id: string;
           status: 'moving' | 'active' | 'disconnected';
           membership_version: number;
           transition_id: string;
@@ -214,7 +205,7 @@ export interface Database {
         Insert: {
           user_id: string;
           room_id?: string | null;
-          player_id: string;
+          seat_id: string;
           status: 'moving' | 'active' | 'disconnected';
           membership_version?: number;
           transition_id: string;
@@ -225,7 +216,7 @@ export interface Database {
         Update: {
           user_id?: string;
           room_id?: string | null;
-          player_id?: string;
+          seat_id?: string;
           status?: 'moving' | 'active' | 'disconnected';
           membership_version?: number;
           transition_id?: string;
@@ -242,6 +233,7 @@ export interface Database {
           user_id: string;
           from_room_id: string | null;
           to_room_id: string | null;
+          seat_id: string | null;
           event_type: string;
           membership_version: number | null;
           metadata: Record<string, any>;
@@ -253,6 +245,7 @@ export interface Database {
           user_id: string;
           from_room_id?: string | null;
           to_room_id?: string | null;
+          seat_id?: string | null;
           event_type: string;
           membership_version?: number | null;
           metadata?: Record<string, any>;
@@ -264,6 +257,7 @@ export interface Database {
           user_id?: string;
           from_room_id?: string | null;
           to_room_id?: string | null;
+          seat_id?: string | null;
           event_type?: string;
           membership_version?: number | null;
           metadata?: Record<string, any>;
@@ -276,7 +270,7 @@ export interface Database {
           id: string;
           room_id: string;
           state_data: Record<string, any>;
-          current_player_id: string | null;
+          current_seat_id: string | null;
           game_phase: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number: number;
           points_to_win: number;
@@ -298,7 +292,7 @@ export interface Database {
           id?: string;
           room_id: string;
           state_data?: Record<string, any>;
-          current_player_id?: string | null;
+          current_seat_id?: string | null;
           game_phase?: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number?: number;
           points_to_win?: number;
@@ -320,7 +314,7 @@ export interface Database {
           id?: string;
           room_id?: string;
           state_data?: Record<string, any>;
-          current_player_id?: string | null;
+          current_seat_id?: string | null;
           game_phase?: 'deal' | 'blow' | 'play' | 'waiting' | null;
           round_number?: number;
           points_to_win?: number;
@@ -406,7 +400,8 @@ export interface Database {
           room_id: string;
           game_state_id: string;
           action_type: string;
-          player_id: string | null;
+          actor_seat_id: string | null;
+          actor_key_snapshot: string | null;
           action_data: Record<string, any>;
           timestamp: string;
         };
@@ -415,7 +410,8 @@ export interface Database {
           room_id: string;
           game_state_id: string;
           action_type: string;
-          player_id?: string | null;
+          actor_seat_id?: string | null;
+          actor_key_snapshot?: string | null;
           action_data?: Record<string, any>;
           timestamp?: string;
         };
@@ -424,19 +420,66 @@ export interface Database {
           room_id?: string;
           game_state_id?: string;
           action_type?: string;
-          player_id?: string | null;
+          actor_seat_id?: string | null;
+          actor_key_snapshot?: string | null;
           action_data?: Record<string, any>;
           timestamp?: string;
+        };
+        Relationships: [];
+      };
+      game_participants: {
+        Row: {
+          id: string;
+          room_id: string;
+          seat_id: string;
+          user_id: string | null;
+          player_name_snapshot: string;
+          team_snapshot: number | null;
+          joined_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          seat_id: string;
+          user_id?: string | null;
+          player_name_snapshot: string;
+          team_snapshot?: number | null;
+          joined_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          room_id?: string;
+          seat_id?: string;
+          user_id?: string | null;
+          player_name_snapshot?: string;
+          team_snapshot?: number | null;
+          joined_at?: string;
+          created_at?: string;
         };
         Relationships: [];
       };
     };
     Views: { [_ in never]: never };
     Functions: {
+      create_room_with_host_seat_atomic: {
+        Args: {
+          p_room_id: string;
+          p_room_name: string;
+          p_host_seat_id: string;
+          p_host_user_id: string;
+          p_host_name: string;
+          p_room_settings: Record<string, unknown>;
+          p_points_to_win: number;
+          p_transition_id: string;
+        };
+        Returns: Record<string, unknown>;
+      };
       reserve_room_membership: {
         Args: {
           p_user_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: Record<string, unknown>;
@@ -445,7 +488,7 @@ export interface Database {
         Args: {
           p_user_id: string;
           p_room_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: Record<string, unknown>;
@@ -466,10 +509,10 @@ export interface Database {
         };
         Returns: Record<string, unknown>;
       };
-      release_room_membership_by_player: {
+      release_room_membership_by_seat: {
         Args: {
           p_room_id: string;
-          p_player_id: string;
+          p_seat_id: string;
           p_transition_id: string;
         };
         Returns: boolean;

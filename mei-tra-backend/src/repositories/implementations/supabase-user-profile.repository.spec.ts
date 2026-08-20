@@ -88,8 +88,20 @@ describe('SupabaseUserProfileRepository account deletion helpers', () => {
     const roomPlayersIn = jest.fn().mockResolvedValue({
       data: [
         {
+          id: 'seat-playing',
           room_id: 'room-playing',
-          rooms: { status: RoomStatus.PLAYING },
+          rooms: {
+            status: RoomStatus.PLAYING,
+            host_seat_id: 'another-seat',
+          },
+        },
+        {
+          id: 'seat-waiting',
+          room_id: 'room-waiting',
+          rooms: {
+            status: RoomStatus.WAITING,
+            host_seat_id: 'seat-waiting',
+          },
         },
       ],
       error: null,
@@ -97,20 +109,9 @@ describe('SupabaseUserProfileRepository account deletion helpers', () => {
     const roomPlayersEq = jest.fn().mockReturnValue({ in: roomPlayersIn });
     const roomPlayersSelect = jest.fn().mockReturnValue({ eq: roomPlayersEq });
 
-    const roomsIn = jest.fn().mockResolvedValue({
-      data: [{ id: 'room-waiting', status: RoomStatus.WAITING }],
-      error: null,
-    });
-    const roomsEq = jest.fn().mockReturnValue({ in: roomsIn });
-    const roomsSelect = jest.fn().mockReturnValue({ eq: roomsEq });
-
     const from = jest.fn((table: string) => {
       if (table === 'room_players') {
         return { select: roomPlayersSelect };
-      }
-
-      if (table === 'rooms') {
-        return { select: roomsSelect };
       }
 
       throw new Error(`Unexpected table: ${table}`);
@@ -138,11 +139,9 @@ describe('SupabaseUserProfileRepository account deletion helpers', () => {
       RoomStatus.READY,
       RoomStatus.PLAYING,
     ]);
-    expect(roomsIn).toHaveBeenCalledWith('status', [
-      RoomStatus.WAITING,
-      RoomStatus.READY,
-      RoomStatus.PLAYING,
-    ]);
+    expect(roomPlayersSelect).toHaveBeenCalledWith(
+      'id, room_id, rooms!room_players_room_id_fkey!inner(status, host_seat_id)',
+    );
   });
 
   it('delegates all account reference anonymization to the atomic RPC', async () => {

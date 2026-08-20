@@ -7,9 +7,15 @@ import {
 } from './interfaces/start-game.use-case.interface';
 import { Room, RoomStatus } from '../types/room.types';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
-import { toDomainPlayer } from '../types/player-adapters';
+import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { GameStateService } from '../services/game-state.service';
 import { GameState } from '../types/game.types';
+import { asSeatId } from '../types/identity.types';
+import {
+  resolveCurrentPlayer,
+  resolveCurrentPlayerIndex,
+} from '../domain/current-turn';
 
 @Injectable()
 export class StartGameUseCase implements IStartGameUseCase {
@@ -20,11 +26,14 @@ export class StartGameUseCase implements IStartGameUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('IUserProfileRepository')
+    private readonly userProfileRepository?: IUserProfileRepository,
   ) {}
 
   async execute(request: StartGameRequest): Promise<StartGameResponse> {
     try {
-      const { roomId, playerId } = request;
+      const { roomId, actorSeatId } = request;
 
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
@@ -35,10 +44,10 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       const roomGameState = await this.roomService.getRoomGameState(roomId);
-      const player = room.players.find((p) => p.playerId === playerId);
+      const player = room.players.find((p) => p.seatId === actorSeatId);
       if (!player) {
         this.logger.error('Player not found in game state for game start', {
-          playerId,
+          actorSeatId,
           roomId,
         });
         return {
@@ -49,7 +58,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       }
 
       // Authorization check: verify the requesting player is the host
-      if (room.hostId !== playerId) {
+      if (room.hostSeatId !== actorSeatId) {
         return {
           success: false,
           errorMessage: 'Only the host can start the game',
@@ -89,7 +98,7 @@ export class StartGameUseCase implements IStartGameUseCase {
       this.syncStatePlayersFromRoom(roomGameState, roomWithFilledSeats);
       await roomGameState.persistRoster(
         roomWithFilledSeats.players,
-        roomWithFilledSeats.hostId,
+        roomWithFilledSeats.hostSeatId,
       );
 
       const statusUpdated = await this.roomService.updateRoomStatus(
@@ -102,60 +111,61 @@ export class StartGameUseCase implements IStartGameUseCase {
           errorMessage: 'Failed to mark room as playing',
         };
       }
-      await roomGameState.startGame();
+      roomGameState.startGame();
 
       let updatedState = roomGameState.getState();
-      if (
-        updatedState.blowState.currentBlowIndex !==
-        updatedState.currentPlayerIndex
-      ) {
-        const currentPlayer =
-          updatedState.players[updatedState.currentPlayerIndex] ?? null;
-        await roomGameState.updateState({
-          currentPlayerId: currentPlayer?.playerId ?? null,
-          currentPlayerIndex: updatedState.currentPlayerIndex,
+      const currentPlayerIndex = resolveCurrentPlayerIndex(updatedState);
+      if (currentPlayerIndex === -1) {
+        return {
+          success: false,
+          errorMessage: 'Current turn seat was not initialized',
+        };
+      }
+      if (updatedState.blowState.currentBlowIndex !== currentPlayerIndex) {
+        const currentPlayer = resolveCurrentPlayer(updatedState);
+        roomGameState.updateState({
+          currentSeatId: currentPlayer ? asSeatId(currentPlayer.seatId) : null,
           blowState: {
             ...updatedState.blowState,
-            currentBlowIndex: updatedState.currentPlayerIndex,
+            currentBlowIndex: currentPlayerIndex,
           },
         });
         updatedState = roomGameState.getState();
       }
       updatedState.pointsToWin = room.settings.pointsToWin;
 
-      // Synchronize hands with room representation
-      roomWithFilledSeats.players.forEach((roomPlayer) => {
-        const statePlayer = updatedState.players.find(
-          (p) => p.playerId === roomPlayer.playerId,
-        );
-        if (statePlayer) {
-          roomPlayer.hand = [...statePlayer.hand];
-        }
-      });
-
       // Reset all players' isPasser flag at blow phase start
       updatedState.players.forEach((p) => {
         p.isPasser = false;
       });
 
-      const currentTurnPlayer =
-        updatedState.players[updatedState.currentPlayerIndex];
+      const currentTurnPlayer = resolveCurrentPlayer(updatedState);
+      if (!currentTurnPlayer) {
+        return {
+          success: false,
+          errorMessage: 'Current turn seat was not initialized',
+        };
+      }
+      const firstTurnRevealEnabled =
+        await this.resolveFirstTurnRevealEnabled(roomWithFilledSeats);
       const firstBlowPlayer =
         updatedState.players[updatedState.blowState.currentBlowIndex];
+
+      await roomGameState.saveState();
 
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'game_started',
-        playerId,
+        actorSeatId,
         state: updatedState,
         actionData: {
-          startedByPlayerId: playerId,
-          firstBlowPlayerId: firstBlowPlayer?.playerId ?? null,
+          startedBySeatId: actorSeatId,
+          firstBlowSeatId: firstBlowPlayer?.seatId ?? null,
           pointsToWin: updatedState.pointsToWin,
           playerCount: updatedState.players.length,
-          startingHandsByPlayerId: Object.fromEntries(
+          startingHandsBySeatId: Object.fromEntries(
             updatedState.players.map((player) => [
-              player.playerId,
+              player.seatId,
               [...player.hand],
             ]),
           ),
@@ -172,7 +182,8 @@ export class StartGameUseCase implements IStartGameUseCase {
             scores: updatedState.teamScores,
             winner: null,
           },
-          currentTurnPlayerId: currentTurnPlayer.playerId,
+          currentTurnSeatId: asSeatId(currentTurnPlayer.seatId),
+          firstTurnRevealEnabled,
         },
       };
     } catch (error) {
@@ -187,6 +198,42 @@ export class StartGameUseCase implements IStartGameUseCase {
     }
   }
 
+  /**
+   * The reveal reserves ~6s of animation time; skip it when every seated
+   * human has it turned off so an all-COM table starts immediately. Missing
+   * repository, missing profiles, guests, and lookup failures all count as
+   * "wants the animation" — the delay is the safe default.
+   */
+  private async resolveFirstTurnRevealEnabled(room: Room): Promise<boolean> {
+    if (!this.userProfileRepository) {
+      return true;
+    }
+
+    const humanUserIds = room.players
+      .filter((player) => !player.isCOM && player.userId)
+      .map((player) => player.userId as string);
+    if (humanUserIds.length === 0) {
+      return true;
+    }
+
+    try {
+      const profiles = await Promise.all(
+        humanUserIds.map((userId) =>
+          this.userProfileRepository!.findById(userId),
+        ),
+      );
+      return profiles.some(
+        (profile) => profile?.preferences?.startPlayerAnimation !== false,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to resolve start reveal preferences; keeping the reveal delay`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return true;
+    }
+  }
+
   private syncStatePlayersFromRoom(
     roomGameState: GameStateService,
     room: Room,
@@ -197,24 +244,17 @@ export class StartGameUseCase implements IStartGameUseCase {
     // players array from that source before starting. This keeps the play order
     // aligned with the shuffled seat arrangement instead of any stale game-state order.
     const existingPlayers = new Map(
-      state.players.map((statePlayer) => [statePlayer.playerId, statePlayer]),
+      state.players.map((statePlayer) => [statePlayer.seatId, statePlayer]),
     );
     state.players = room.players.map((roomPlayer) => {
-      const existingPlayer = existingPlayers.get(roomPlayer.playerId);
+      const existingPlayer = existingPlayers.get(roomPlayer.seatId);
 
       if (!existingPlayer) {
-        if (typeof roomGameState.registerPlayerToken === 'function') {
-          roomGameState.registerPlayerToken(
-            roomPlayer.playerId,
-            roomPlayer.playerId,
-          );
+        if (typeof roomGameState.registerSeatToken === 'function') {
+          roomGameState.registerSeatToken(roomPlayer.seatId, roomPlayer.seatId);
         }
         return {
           ...toDomainPlayer(roomPlayer),
-          hand: [...roomPlayer.hand],
-          isPasser: roomPlayer.isPasser ?? false,
-          hasBroken: roomPlayer.hasBroken ?? false,
-          hasRequiredBroken: roomPlayer.hasRequiredBroken ?? false,
         };
       }
 
@@ -227,10 +267,6 @@ export class StartGameUseCase implements IStartGameUseCase {
         hasRequiredBroken: existingPlayer.hasRequiredBroken,
       };
     });
-
-    state.teamAssignments = Object.fromEntries(
-      state.players.map((player) => [player.playerId, player.team]),
-    );
 
     return state;
   }

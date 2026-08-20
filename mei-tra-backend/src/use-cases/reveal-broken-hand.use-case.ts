@@ -15,6 +15,9 @@ import {
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
+import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
@@ -32,7 +35,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
     request: RevealBrokenHandRequest,
   ): Promise<RevealBrokenHandPreparation> {
     try {
-      const { roomId, actorId, playerId } = request;
+      const { roomId, actorId, seatId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
       const player = resolvePlayerByActorId(roomGameState, actorId);
@@ -41,7 +44,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      if (player.playerId !== playerId) {
+      if (player.seatId !== seatId) {
         return { success: false, error: 'Player mismatch for broken hand' };
       }
 
@@ -50,7 +53,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       const hasDeclared = state.blowState.declarations.some(
-        (declaration) => declaration.playerId === playerId,
+        (declaration) => declaration.seatId === seatId,
       );
       if (player.isPasser || hasDeclared) {
         return { success: false, error: 'Cannot reveal broken hand now' };
@@ -67,7 +70,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       const handSnapshot = [...player.hand];
       state.pendingBrokenHandReveal = {
-        playerId,
+        seatId,
         handSnapshot,
         startedAt: Date.now(),
       };
@@ -76,7 +79,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       return {
         success: true,
         delayMs: 3000,
-        followUp: { roomId, playerId, handSnapshot },
+        followUp: { roomId, seatId, handSnapshot },
       };
     } catch (error) {
       this.logger.error(
@@ -89,14 +92,15 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
   async finalize(followUp: {
     roomId: string;
-    playerId: string;
+    seatId: SeatId;
     handSnapshot?: string[];
   }): Promise<RevealBrokenHandCompletion> {
     try {
-      const { roomId, playerId } = followUp;
+      const { roomId, seatId } = followUp;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const player = state.players.find((p) => p.playerId === playerId);
+      const room = await this.roomService.getRoom(roomId);
+      const player = state.players.find((p) => p.seatId === seatId);
 
       if (!player) {
         return { success: false, error: 'Player not found in game state' };
@@ -107,7 +111,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       const pendingReveal = state.pendingBrokenHandReveal;
-      if (!pendingReveal || pendingReveal.playerId !== playerId) {
+      if (!pendingReveal || pendingReveal.seatId !== seatId) {
         return { success: false, error: 'Broken hand reveal is not pending' };
       }
 
@@ -130,30 +134,30 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       nextState.playState = {
         currentField: null,
         negriCard: null,
+        negriSeatId: null,
         neguri: {},
         fields: [],
-        lastWinnerId: null,
+        lastWinnerSeatId: null,
         openDeclared: false,
-        openDeclarerId: null,
+        openDeclarerSeatId: null,
       };
 
       nextState.blowState.declarations = [];
       nextState.blowState.actionHistory = [];
       nextState.blowState.currentHighestDeclaration = null;
       nextState.blowState.currentTrump = null;
-      nextState.blowState.lastPasser = null;
+      nextState.blowState.lastPasserSeatId = null;
       nextState.blowState.isRoundCancelled = false;
 
       const firstBlowIndex = nextState.blowState.currentBlowIndex;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
-      nextState.currentPlayerId = firstBlowPlayer?.playerId ?? null;
-      nextState.currentPlayerIndex = firstBlowIndex;
+      setCurrentSeat(nextState, firstBlowPlayer?.seatId ?? null);
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;
       });
       nextState.deck = this.cardService.generateDeck();
-      await roomGameState.dealCards();
+      roomGameState.dealCards();
 
       const events: GatewayEvent[] = [];
       if (firstBlowPlayer) {
@@ -165,13 +169,15 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
             declarations: [],
             actionHistory: [],
             currentHighest: null,
-            lastPasser: null,
+            lastPasserSeatId: null,
           },
         });
 
         const brokenPayload: BrokenPayload = {
-          nextPlayerId: firstBlowPlayer.playerId,
-          players: resolveTransportPlayers(roomGameState, nextState.players),
+          nextSeatId: asSeatId(firstBlowPlayer.seatId),
+          players: resolveTransportPlayers(roomGameState, nextState.players, {
+            roomPlayers: room?.players,
+          }),
           gamePhase: 'blow',
         };
 
@@ -185,21 +191,21 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: firstBlowPlayer.playerId,
+          payload: firstBlowPlayer.seatId,
         });
       }
 
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'broken_hand_revealed',
-        playerId,
+        actorSeatId: seatId,
         state: nextState,
         actionData: {
-          nextPlayerId: firstBlowPlayer?.playerId ?? null,
+          nextSeatId: firstBlowPlayer?.seatId ?? null,
           nextBlowIndex: firstBlowIndex,
-          startingHandsByPlayerId: Object.fromEntries(
+          startingHandsBySeatId: Object.fromEntries(
             nextState.players.map((statePlayer) => [
-              statePlayer.playerId,
+              statePlayer.seatId,
               [...statePlayer.hand],
             ]),
           ),

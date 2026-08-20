@@ -1,15 +1,19 @@
 import { SupabaseService } from '../../database/supabase.service';
 import { GameState } from '../../types/game.types';
 import { RoomPlayer } from '../../types/room.types';
+import { asSeatId } from '../../types/identity.types';
 import { SupabaseGameStateRepository } from './supabase-game-state.repository';
 
 describe('SupabaseGameStateRepository', () => {
+  const firstSeatId = asSeatId('00000000-0000-4000-8000-000000001001');
+  const secondSeatId = asSeatId('00000000-0000-4000-8000-000000001002');
   const gameStateRow = {
     id: 'game-state-1',
     room_id: '00000000-0000-0000-0000-000000000001',
     state_data: {
+      identitySchemaVersion: 2,
       playerStates: {
-        'player-1': {
+        [firstSeatId]: {
           hand: ['S1'],
           isPasser: true,
           hasBroken: true,
@@ -22,21 +26,22 @@ describe('SupabaseGameStateRepository', () => {
         currentHighestDeclaration: null,
         declarations: [],
         actionHistory: [],
-        lastPasser: null,
+        lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: 0,
       },
       playState: {
         currentField: null,
         negriCard: null,
+        negriSeatId: null,
         neguri: {},
         fields: [],
-        lastWinnerId: null,
+        lastWinnerSeatId: null,
         openDeclared: false,
-        openDeclarerId: null,
+        openDeclarerSeatId: null,
       },
     },
-    current_player_id: 'player-1',
+    current_seat_id: firstSeatId,
     game_phase: 'waiting' as const,
     round_number: 1,
     points_to_win: 8,
@@ -51,15 +56,12 @@ describe('SupabaseGameStateRepository', () => {
   };
 
   const roomPlayerRow = {
-    id: 'room-player-1',
+    id: firstSeatId,
     room_id: gameStateRow.room_id,
-    player_id: 'player-1',
-    socket_id: null,
     user_id: '00000000-0000-0000-0000-000000000101',
     name: 'Current name',
     team: 1,
     is_ready: true,
-    is_host: true,
     is_com: false,
     joined_at: '2026-07-19T00:00:00.000Z',
     seat_index: 0,
@@ -70,7 +72,7 @@ describe('SupabaseGameStateRepository', () => {
       version: 4,
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId(firstSeatId),
           name: 'Current name',
           hand: ['S1'],
           team: 1,
@@ -80,8 +82,7 @@ describe('SupabaseGameStateRepository', () => {
           hasRequiredBroken: false,
         },
       ],
-      currentPlayerId: 'player-1',
-      currentPlayerIndex: 0,
+      currentSeatId: firstSeatId,
       gamePhase: 'waiting',
       deck: [],
       teamScores: {
@@ -89,18 +90,25 @@ describe('SupabaseGameStateRepository', () => {
         1: { play: 0, total: 0 },
       },
       teamScoreRecords: { 0: [], 1: [] },
-      blowState: gameStateRow.state_data.blowState,
-      playState: gameStateRow.state_data.playState,
+      blowState: {
+        ...gameStateRow.state_data.blowState,
+        lastPasserSeatId: null,
+      },
+      playState: {
+        ...gameStateRow.state_data.playState,
+        lastWinnerSeatId: null,
+        openDeclarerSeatId: null,
+      },
       roundNumber: 1,
       pointsToWin: 8,
-      teamAssignments: { 'player-1': 1 },
     };
   }
 
   function createRoomPlayer(): RoomPlayer {
     return {
       socketId: 'transient-socket',
-      playerId: 'player-1',
+      seatId: asSeatId(firstSeatId),
+      participantKey: roomPlayerRow.user_id,
       userId: roomPlayerRow.user_id,
       isAuthenticated: true,
       name: 'Current name',
@@ -133,7 +141,7 @@ describe('SupabaseGameStateRepository', () => {
     expect(state?.version).toBe(4);
     expect(state?.players).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: asSeatId(firstSeatId),
         name: 'Current name',
         team: 1,
         hand: ['S1'],
@@ -146,8 +154,7 @@ describe('SupabaseGameStateRepository', () => {
   it('uses room_players seat order as the authoritative roster', async () => {
     const secondRoomPlayer = {
       ...roomPlayerRow,
-      id: 'room-player-2',
-      player_id: 'player-2',
+      id: secondSeatId,
       name: 'Second player',
       team: 0,
       seat_index: 1,
@@ -160,7 +167,7 @@ describe('SupabaseGameStateRepository', () => {
             ...gameStateRow.state_data,
             playerStates: {
               ...gameStateRow.state_data.playerStates,
-              'player-2': { hand: ['H2'] },
+              [secondSeatId]: { hand: ['H2'] },
             },
           },
         },
@@ -174,82 +181,23 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
-    expect(state?.players.map((player) => player.playerId)).toEqual([
-      'player-1',
-      'player-2',
+    expect(state?.players.map((player) => player.seatId)).toEqual([
+      firstSeatId,
+      secondSeatId,
     ]);
   });
 
-  it('remaps an orphan blow actor to the only roster player without a blow action', async () => {
-    const secondRoomPlayer = {
-      ...roomPlayerRow,
-      id: 'room-player-2',
-      player_id: 'player-2',
-      name: 'Second player',
-      team: 0,
-      seat_index: 1,
-    };
-    const thirdRoomPlayer = {
-      ...roomPlayerRow,
-      id: 'room-player-3',
-      player_id: 'player-3',
-      name: 'Third player',
-      team: 1,
-      seat_index: 2,
-    };
+  it('rejects a game state that is not identity schema v2', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: {
         gameState: {
           ...gameStateRow,
-          game_phase: 'blow',
           state_data: {
             ...gameStateRow.state_data,
-            playerStates: {
-              ...gameStateRow.state_data.playerStates,
-              'player-2': { hand: ['H2'], isPasser: false },
-              'player-3': { hand: ['D3'], isPasser: true },
-            },
-            blowState: {
-              ...gameStateRow.state_data.blowState,
-              currentHighestDeclaration: {
-                playerId: 'com-orphan',
-                team: 0,
-                trumpType: 'zuppe',
-                numberOfPairs: 6,
-                timestamp: 1,
-              },
-              declarations: [
-                {
-                  playerId: 'com-orphan',
-                  team: 0,
-                  trumpType: 'zuppe',
-                  numberOfPairs: 6,
-                  timestamp: 1,
-                },
-              ],
-              actionHistory: [
-                {
-                  type: 'pass',
-                  playerId: 'player-1',
-                  timestamp: 1,
-                },
-                {
-                  type: 'declare',
-                  playerId: 'com-orphan',
-                  trumpType: 'zuppe',
-                  numberOfPairs: 6,
-                  timestamp: 2,
-                },
-                {
-                  type: 'pass',
-                  playerId: 'player-3',
-                  timestamp: 3,
-                },
-              ],
-            },
+            identitySchemaVersion: 1,
           },
         },
-        roomPlayers: [roomPlayerRow, secondRoomPlayer, thirdRoomPlayer],
+        roomPlayers: [roomPlayerRow],
       },
       error: null,
     });
@@ -257,17 +205,12 @@ describe('SupabaseGameStateRepository', () => {
       client: { rpc },
     } as unknown as SupabaseService);
 
-    const state = await repository.findByRoomId(gameStateRow.room_id);
-
-    expect(state?.blowState.currentHighestDeclaration?.playerId).toBe(
-      'player-2',
+    await expect(repository.findByRoomId(gameStateRow.room_id)).rejects.toThrow(
+      'Unsupported game-state identity schema',
     );
-    expect(state?.blowState.currentHighestDeclaration?.team).toBe(0);
-    expect(state?.blowState.declarations[0]?.playerId).toBe('player-2');
-    expect(state?.blowState.actionHistory[1]?.playerId).toBe('player-2');
   });
 
-  it('ignores player order entries when authoritative roster is empty', async () => {
+  it('rejects player states that reference seats outside the roster', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: {
         gameState: gameStateRow,
@@ -279,16 +222,48 @@ describe('SupabaseGameStateRepository', () => {
       client: { rpc },
     } as unknown as SupabaseService);
 
-    const state = await repository.findByRoomId(gameStateRow.room_id);
-
-    expect(state?.players).toEqual([]);
+    await expect(repository.findByRoomId(gameStateRow.room_id)).rejects.toThrow(
+      'Game state references seats outside room',
+    );
   });
 
-  it('restores the current turn from current_player_id', async () => {
+  it('rejects nested state references outside the room roster', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          state_data: {
+            ...gameStateRow.state_data,
+            blowState: {
+              ...gameStateRow.state_data.blowState,
+              declarations: [
+                {
+                  seatId: secondSeatId,
+                  trumpType: 'herz',
+                  numberOfPairs: 6,
+                  timestamp: 1,
+                },
+              ],
+            },
+          },
+        },
+        roomPlayers: [roomPlayerRow],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    await expect(repository.findByRoomId(gameStateRow.room_id)).rejects.toThrow(
+      'Game state references seats outside room',
+    );
+  });
+
+  it('restores the current turn from current_seat_id', async () => {
     const secondRoomPlayer = {
       ...roomPlayerRow,
-      id: 'room-player-2',
-      player_id: 'player-2',
+      id: secondSeatId,
       name: 'Second player',
       team: 0,
       seat_index: 1,
@@ -297,12 +272,12 @@ describe('SupabaseGameStateRepository', () => {
       data: {
         gameState: {
           ...gameStateRow,
-          current_player_id: 'player-2',
+          current_seat_id: secondSeatId,
           state_data: {
             ...gameStateRow.state_data,
             playerStates: {
               ...gameStateRow.state_data.playerStates,
-              'player-2': { hand: ['H2'] },
+              [secondSeatId]: { hand: ['H2'] },
             },
           },
         },
@@ -316,8 +291,95 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.findByRoomId(gameStateRow.room_id);
 
-    expect(state?.currentPlayerId).toBe('player-2');
-    expect(state?.currentPlayerIndex).toBe(1);
+    expect(state?.currentSeatId).toBe(secondSeatId);
+  });
+
+  it('restores canonical seat references', async () => {
+    const secondRoomPlayer = {
+      ...roomPlayerRow,
+      id: secondSeatId,
+      name: 'Second player',
+      team: 0,
+      seat_index: 1,
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          current_seat_id: secondSeatId,
+          state_data: {
+            ...gameStateRow.state_data,
+            identitySchemaVersion: 2,
+            playerStates: {
+              [firstSeatId]: { hand: ['S1'] },
+              [secondSeatId]: { hand: ['H2'] },
+            },
+            blowState: {
+              ...gameStateRow.state_data.blowState,
+              declarations: [
+                {
+                  seatId: secondSeatId,
+                  trumpType: 'herz',
+                  numberOfPairs: 5,
+                  timestamp: 1,
+                },
+              ],
+              actionHistory: [],
+              lastPasserSeatId: firstSeatId,
+            },
+            playState: {
+              currentField: {
+                cards: ['S1'],
+                playedBySeatIds: [firstSeatId],
+                baseCard: 'S1',
+                dealerSeatId: asSeatId(secondSeatId),
+                isComplete: false,
+              },
+              negriCard: '5♣',
+              negriSeatId: secondSeatId,
+              neguri: {},
+              fields: [
+                {
+                  cards: ['S1'],
+                  winnerSeatId: asSeatId(firstSeatId),
+                  winnerTeam: 1,
+                  dealerSeatId: asSeatId(secondSeatId),
+                },
+              ],
+              lastWinnerSeatId: firstSeatId,
+              openDeclared: true,
+              openDeclarerSeatId: secondSeatId,
+            },
+            pendingBrokenHandReveal: {
+              seatId: secondSeatId,
+              handSnapshot: ['H2'],
+              startedAt: 1,
+            },
+          },
+        },
+        roomPlayers: [roomPlayerRow, secondRoomPlayer],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    const state = await repository.findByRoomId(gameStateRow.room_id);
+
+    expect(state?.currentSeatId).toBe(secondSeatId);
+    expect(state?.blowState.declarations[0]?.seatId).toBe(secondSeatId);
+    expect(state?.blowState.lastPasserSeatId).toBe(firstSeatId);
+    expect(state?.playState?.currentField?.playedBySeatIds).toEqual([
+      firstSeatId,
+    ]);
+    expect(state?.playState?.currentField?.dealerSeatId).toBe(secondSeatId);
+    expect(state?.playState?.negriSeatId).toBe(secondSeatId);
+    expect(state?.playState?.fields[0]?.winnerSeatId).toBe(firstSeatId);
+    expect(state?.playState?.fields[0]?.dealerSeatId).toBe(secondSeatId);
+    expect(state?.playState?.lastWinnerSeatId).toBe(firstSeatId);
+    expect(state?.playState?.openDeclarerSeatId).toBe(secondSeatId);
+    expect(state?.pendingBrokenHandReveal?.seatId).toBe(secondSeatId);
   });
 
   it('passes the expected version to atomic state updates', async () => {
@@ -346,14 +408,14 @@ describe('SupabaseGameStateRepository', () => {
 
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
-      p_state_patch: {},
+      p_state_patch: { identitySchemaVersion: 2 },
       p_scalar_patch: { roundNumber: 2 },
       p_expected_version: 4,
     });
     expect(state?.version).toBe(5);
   });
 
-  it('persists current player id with a derived index fallback', async () => {
+  it('persists the canonical current seat id', async () => {
     const order = jest.fn().mockResolvedValue({
       data: [roomPlayerRow],
       error: null,
@@ -373,14 +435,15 @@ describe('SupabaseGameStateRepository', () => {
 
     await repository.update(gameStateRow.room_id, {
       players: createState().players,
-      currentPlayerIndex: 0,
+      currentSeatId: firstSeatId,
     });
 
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
       p_state_patch: {
+        identitySchemaVersion: 2,
         playerStates: {
-          'player-1': {
+          [firstSeatId]: {
             hand: ['S1'],
             isPasser: true,
             hasBroken: true,
@@ -389,7 +452,7 @@ describe('SupabaseGameStateRepository', () => {
         },
       },
       p_scalar_patch: {
-        currentPlayerId: 'player-1',
+        currentSeatId: firstSeatId,
       },
       p_expected_version: null,
     });
@@ -397,7 +460,7 @@ describe('SupabaseGameStateRepository', () => {
 
   it('persists the complete roster without socket metadata', async () => {
     const rpc = jest.fn().mockResolvedValue({
-      data: { ...gameStateRow, version: 5 },
+      data: { ...gameStateRow, version: 5, roomPlayers: [roomPlayerRow] },
       error: null,
     });
     const repository = new SupabaseGameStateRepository({
@@ -408,16 +471,17 @@ describe('SupabaseGameStateRepository', () => {
       gameStateRow.room_id,
       [createRoomPlayer()],
       createState(),
-      'player-1',
+      firstSeatId,
     );
 
     expect(rpc).toHaveBeenCalledWith(
       'persist_room_roster_atomic',
       expect.objectContaining({
         p_expected_version: 4,
-        p_host_id: 'player-1',
+        p_host_id: firstSeatId,
+        p_membership_mutation: null,
         p_player_states: {
-          'player-1': {
+          [firstSeatId]: {
             hand: ['S1'],
             isPasser: true,
             hasBroken: true,
@@ -426,12 +490,11 @@ describe('SupabaseGameStateRepository', () => {
         },
         p_room_players: [
           {
-            playerId: 'player-1',
+            seatId: firstSeatId,
             userId: roomPlayerRow.user_id,
             name: 'Current name',
             team: 1,
             isReady: true,
-            isHost: true,
             isCOM: false,
             joinedAt: roomPlayerRow.joined_at,
             seatIndex: 0,
@@ -450,7 +513,7 @@ describe('SupabaseGameStateRepository', () => {
 
   it('reassigns sequential seat indexes when persisting a roster', async () => {
     const rpc = jest.fn().mockResolvedValue({
-      data: { ...gameStateRow, version: 5 },
+      data: { ...gameStateRow, version: 5, roomPlayers: [roomPlayerRow] },
       error: null,
     });
     const repository = new SupabaseGameStateRepository({
@@ -458,7 +521,8 @@ describe('SupabaseGameStateRepository', () => {
     } as unknown as SupabaseService);
     const secondPlayer = {
       ...createRoomPlayer(),
-      playerId: 'player-2',
+      seatId: secondSeatId,
+      participantKey: roomPlayerRow.user_id,
       name: 'Player 2',
       seatIndex: 0,
     };
@@ -467,21 +531,21 @@ describe('SupabaseGameStateRepository', () => {
       gameStateRow.room_id,
       [{ ...createRoomPlayer(), seatIndex: 7 }, secondPlayer],
       createState(),
-      'player-1',
+      firstSeatId,
     );
 
     const [, rosterPayload] = rpc.mock.calls[0] as [
       string,
-      { p_room_players: Array<{ playerId: string; seatIndex: number }> },
+      { p_room_players: Array<{ seatId: string; seatIndex: number }> },
     ];
     expect(
       rosterPayload.p_room_players.map((player) => ({
-        playerId: player.playerId,
+        seatId: player.seatId,
         seatIndex: player.seatIndex,
       })),
     ).toEqual([
-      { playerId: 'player-1', seatIndex: 0 },
-      { playerId: 'player-2', seatIndex: 1 },
+      { seatId: firstSeatId, seatIndex: 0 },
+      { seatId: secondSeatId, seatIndex: 1 },
     ]);
   });
 });

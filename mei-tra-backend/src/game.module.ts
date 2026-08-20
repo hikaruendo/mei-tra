@@ -33,8 +33,8 @@ import { ProcessGameOverUseCase } from './use-cases/process-game-over.use-case';
 import { UpdateAuthUseCase } from './use-cases/update-auth.use-case';
 import { ComAutoPlayUseCase } from './use-cases/com-autoplay.use-case';
 import { ActivityTrackerService } from './services/activity-tracker.service';
+import { AvatarOrphanCleanupService } from './services/avatar-orphan-cleanup.service';
 import { TurnMonitorService } from './services/turn-monitor.service';
-import { PlayerReferenceRemapperService } from './services/player-reference-remapper.service';
 import { UserGameStatsService } from './services/user-game-stats.service';
 import { ComSessionService } from './services/com-session.service';
 import { SeatRestorationService } from './services/seat-restoration.service';
@@ -49,6 +49,7 @@ import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
 import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { GameEventLogService } from './services/game-event-log.service';
+import { GameHistoryMembershipLogService } from './services/game-history-membership-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
@@ -74,9 +75,9 @@ import { AccountActionGateService } from './services/account-action-gate.service
   providers: [
     GameGateway,
     ActivityTrackerService,
+    AvatarOrphanCleanupService,
     TurnMonitorService,
     ComAutoPlayRecoveryService,
-    PlayerReferenceRemapperService,
     UserGameStatsService,
     ComSessionService,
     SeatRestorationService,
@@ -92,6 +93,7 @@ import { AccountActionGateService } from './services/account-action-gate.service
     StartGameGatewayEffectsService,
     SpectatorGatewayEffectsService,
     GameEventLogService,
+    GameHistoryMembershipLogService,
     {
       provide: 'IActivityTrackerService',
       useExisting: ActivityTrackerService,

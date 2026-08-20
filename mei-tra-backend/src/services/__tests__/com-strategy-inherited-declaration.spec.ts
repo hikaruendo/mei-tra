@@ -1,12 +1,17 @@
+import { asSeatId } from '../../types/identity.types';
 import { ComStrategyService } from '../com-strategy.service';
 import { IBlowService } from '../interfaces/blow-service.interface';
 import { ICardService } from '../interfaces/card-service.interface';
 import { IPlayService } from '../interfaces/play-service.interface';
-import { BlowDeclaration, DomainPlayer, GameState } from '../../types/game.types';
+import {
+  BlowDeclaration,
+  DomainPlayer,
+  GameState,
+} from '../../types/game.types';
 
 /**
  * A COM that replaces a human inherits that human's blow declaration — the
- * player-reference remap deliberately moves the bid to the seat.
+ * declaration remains attached to that stable seat.
  *
  * Both declare-blow and pass-blow reject a player who has already declared
  * (hasPlayerDeclaredInBlow), so such a seat has NO legal action. If the
@@ -16,9 +21,20 @@ import { BlowDeclaration, DomainPlayer, GameState } from '../../types/game.types
  */
 const comPlayer = (over: Partial<DomainPlayer> = {}): DomainPlayer =>
   ({
-    playerId: 'com-timeout-0-123',
+    seatId: asSeatId('com-timeout-0-123'),
     name: 'COM',
-    hand: ['A♠', 'K♠', 'Q♠', 'J♠', '10♠', '9♠', '8♠', '7♠', '6♠', '5♠'],
+    hand: [
+      'A♠',
+      'K♠',
+      'Q♠',
+      'J♠',
+      '10♠',
+      '9♠',
+      '8♠',
+      '7♠',
+      '6♠',
+      '5♠',
+    ],
     team: 0,
     isPasser: false,
     isCOM: true,
@@ -27,8 +43,8 @@ const comPlayer = (over: Partial<DomainPlayer> = {}): DomainPlayer =>
     ...over,
   }) as DomainPlayer;
 
-const declaration = (playerId: string): BlowDeclaration => ({
-  playerId,
+const declaration = (seatId: string): BlowDeclaration => ({
+  seatId: asSeatId(seatId),
   trumpType: 'herz',
   numberOfPairs: 8,
   timestamp: 1,
@@ -45,7 +61,7 @@ const stateWith = (
       currentHighestDeclaration: declarations[declarations.length - 1] ?? null,
       declarations,
       actionHistory: [],
-      lastPasser: null,
+      lastPasserSeatId: null,
       isRoundCancelled: false,
       currentBlowIndex: 0,
     },
@@ -72,7 +88,7 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(com.playerId)], [com]),
+      stateWith([declaration(com.seatId)], [com]),
       com,
     );
 
@@ -85,7 +101,7 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(com.playerId)], [com]),
+      stateWith([declaration(com.seatId)], [com]),
       com,
     );
 
@@ -97,7 +113,7 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(com.playerId)], [com]),
+      stateWith([declaration(com.seatId)], [com]),
       com,
     );
 
@@ -109,18 +125,18 @@ describe('ComStrategyService.chooseBlowAction — inherited declaration', () => 
     // for the COM itself, which made it "defer to its partner" and pass.
     const com = comPlayer();
     const service = buildService();
-    const state = stateWith([declaration(com.playerId)], [com]);
+    const state = stateWith([declaration(com.seatId)], [com]);
 
     expect(service.chooseBlowAction(state, com).type).not.toBe('pass');
   });
 
   it('still acts normally when it has not declared', () => {
     const com = comPlayer();
-    const partner = comPlayer({ playerId: 'com-1', team: 0 });
+    const partner = comPlayer({ seatId: asSeatId('com-1'), team: 0 });
     const service = buildService();
 
     const action = service.chooseBlowAction(
-      stateWith([declaration(partner.playerId)], [com, partner]),
+      stateWith([declaration(partner.seatId)], [com, partner]),
       com,
     );
 

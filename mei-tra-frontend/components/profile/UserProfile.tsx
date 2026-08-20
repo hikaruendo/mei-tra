@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { UserIcon } from '@/components/icons/UIIcons';
@@ -17,11 +18,13 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
   const { user, signOut, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showGuestSignOutConfirm, setShowGuestSignOutConfirm] = useState(false);
   const [isCompactMenuOpen, setIsCompactMenuOpen] = useState(false);
   const compactMenuRef = useRef<HTMLDivElement | null>(null);
   const t = useTranslations('profile');
   const isCompact = variant === 'compact';
 
+  const isGuest = Boolean(user?.isAnonymous);
   const displayName = user?.profile?.displayName || user?.email || t('guestUser');
   const secondaryEmail = user?.email && user.profile?.displayName && user.profile.displayName !== user.email
     ? user.email
@@ -69,6 +72,30 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
     }
   };
 
+  // A guest account is unreachable after sign-out, so confirm before losing it.
+  const requestSignOut = () => {
+    if (isGuest) {
+      setShowGuestSignOutConfirm(true);
+      return;
+    }
+
+    void handleSignOut();
+  };
+
+  const guestSignOutConfirmModal = (
+    <ConfirmModal
+      isOpen={showGuestSignOutConfirm}
+      title={t('guestSignOutTitle')}
+      message={t('guestSignOutMessage')}
+      onConfirm={() => {
+        setShowGuestSignOutConfirm(false);
+        void handleSignOut();
+      }}
+      onCancel={() => setShowGuestSignOutConfirm(false)}
+      confirmText={t('logout')}
+    />
+  );
+
   const renderAvatar = (className: string, placeholderClassName: string) => {
     if (user?.profile?.avatarUrl) {
       return (
@@ -91,7 +118,9 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
   const compactSummaryContent = (
     <>
       <span className={styles.compactDisplayName} title={displayName}>{displayName}</span>
-      {secondaryEmail ? (
+      {isGuest ? (
+        <span className={styles.compactMeta}>{t('guestBadge')}</span>
+      ) : secondaryEmail ? (
         <span className={styles.compactMeta}>{secondaryEmail}</span>
       ) : null}
     </>
@@ -103,7 +132,10 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
         {renderAvatar(styles.avatar, styles.avatarPlaceholder)}
       </div>
       <div className={styles.userInfo}>
-        <span className={styles.displayName} title={displayName}>{displayName}</span>
+        <span className={styles.displayName} title={displayName}>
+          {displayName}
+          {isGuest && <span className={styles.guestBadge}>{t('guestBadge')}</span>}
+        </span>
         <span className={styles.profileEditHint}>
           {t('edit')}
         </span>
@@ -210,7 +242,7 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
                 role="menuitem"
                 onClick={() => {
                   closeCompactMenu();
-                  void handleSignOut();
+                  requestSignOut();
                 }}
                 disabled={isSigningOut || isGameInProgress}
                 className={styles.compactActionButton}
@@ -221,6 +253,7 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
             </div>
           </div>
         )}
+        {guestSignOutConfirmModal}
       </div>
     );
   }
@@ -243,15 +276,14 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
       )}
 
       <button
-        onClick={() => {
-          void handleSignOut();
-        }}
+        onClick={requestSignOut}
         disabled={isSigningOut || isGameInProgress}
         className={styles.signOutButton}
         title={isGameInProgress ? unavailableDuringGameMessage : undefined}
       >
         {isSigningOut ? t('loggingOut') : t('logout')}
       </button>
+      {guestSignOutConfirmModal}
     </div>
   );
 }

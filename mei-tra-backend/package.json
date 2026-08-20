@@ -6,13 +6,14 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build --webpack",
+    "check:architecture": "node scripts/check-types-directory.mjs",
+    "build": "npm run check:architecture && nest build --webpack",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start --webpack",
     "start:dev": "node scripts/start-watch.js",
     "start:debug": "node scripts/start-watch.js --debug",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "npm run check:architecture && eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -21,6 +22,8 @@
     "deploy:production": "./scripts/set-production-mode.sh",
     "deploy:standby": "./scripts/set-standby-mode.sh",
     "supabase:start": "./scripts/start-local-supabase.sh",
+    "db:docs": "bash scripts/generate-db-docs.sh",
+    "test:db:seat-concurrency": "bash scripts/test-seat-update-concurrency.sh",
     "clear:rooms": "ts-node scripts/clear-dev-rooms.ts"
   },
   "dependencies": {
@@ -83,6 +86,9 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^@contracts/(.*)$": "<rootDir>/../../contracts/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

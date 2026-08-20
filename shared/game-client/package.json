@@ -19,9 +19,17 @@
       "types": "./card-legality.ts",
       "default": "./card-legality.ts"
     },
+    "./first-turn-reveal": {
+      "types": "./first-turn-reveal.ts",
+      "default": "./first-turn-reveal.ts"
+    },
     "./table-order": {
       "types": "./table-order.ts",
       "default": "./table-order.ts"
+    },
+    "./game-event-reducer": {
+      "types": "./game-event-reducer.ts",
+      "default": "./game-event-reducer.ts"
     }
   }
 }

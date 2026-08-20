@@ -4,11 +4,12 @@ import type {
   NotificationPlatform,
   NotificationResponseHandler,
 } from './notification-platform';
+import { t } from '@/i18n';
 
 export const notificationPlatform: NotificationPlatform = {
   setAndroidNotificationChannel: async () => {
     await Notifications.setNotificationChannelAsync('gameplay', {
-      name: '対局通知',
+      name: t('notifications.channelName'),
       importance: Notifications.AndroidImportance.DEFAULT,
       sound: 'default',
     });

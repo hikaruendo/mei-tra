@@ -22,15 +22,23 @@ Web 版 (Next.js) はゲーム状態を `useGame` / `useRoom` / `useSocket` の 
 ```
 SafeAreaProvider
   ThemeProvider (dark navigation theme)
-    AuthProvider              ← Supabase 認証・セッション管理
-      GameProvider            ← Socket.IO (/) + ゲーム状態 + ルーム管理
-        SocialProvider        ← Socket.IO (/social) + チャット
-          NotificationProvider  ← Push 通知登録 + deep-link ルーティング
-            Stack (expo-router)
+    LocaleProvider            ← 表示言語の設定 (端末設定 / ja / en)
+      AuthProvider            ← Supabase 認証・セッション管理
+        GameProvider          ← Socket.IO (/) + ゲーム状態 + ルーム管理
+          SocialProvider      ← Socket.IO (/social) + チャット
+            NotificationProvider  ← Push 通知登録 + deep-link ルーティング
+              Stack (expo-router, locale を key にする)
 ```
 
 依存方向は上から下のみ。`NotificationProvider` は `useAuth()` と `useGame()` の両方に依存する
 (Push 通知タップ → `resumeRoom()` でゲームに復帰するため)。
+
+`LocaleProvider` は何にも依存しないので最上位に置く。保存済みの選択を読み終えるまで
+`null` を返すため、起動直後に端末の言語が一瞬見えることはない。
+
+`t()` は React 外からも使える素の関数で、言語を変えても画面は自動では再描画されない。
+そのため `Stack` に `key={locale}` を付けて画面ツリーだけを作り直す。プロバイダは
+その上にあるので、ソケット接続とゲーム状態は維持される。
 
 ---
 
@@ -43,7 +51,13 @@ src/
 │   ├── index.tsx                 ← エントリ: /rooms or /sign-in にリダイレクト
 │   ├── sign-in.tsx               ← サインイン / サインアップ
 │   ├── rooms.tsx                 ← ルーム一覧・作成・参加・観戦
-│   ├── settings.tsx              ← プロフィール編集・通知設定・アカウント削除
+│   ├── settings/                 ← プロフィールハブと各設定画面
+│   │   ├── index.tsx             ← プロフィール概要・最近の対局・設定導線
+│   │   ├── profile.tsx           ← 表示名・アバター編集
+│   │   ├── preferences.tsx       ← 対局演出・通知・言語
+│   │   ├── help.tsx              ← 規約・プライバシー・問い合わせ
+│   │   └── account.tsx           ← ログアウト・アカウント削除
+│   ├── game-history/             ← 対局履歴一覧・詳細
 │   ├── auth/callback.tsx         ← OAuth コールバック (deep link)
 │   └── room/[roomId].tsx         ← WaitingRoom or GameBoard (動的ルート)
 │
@@ -168,20 +182,20 @@ interface MobileGameSnapshot {
   players: PlayerContract[];
   gamePhase: TransportGamePhase;        // 'waiting' | 'blow' | 'play' | null
   currentField: FieldContract | null;
-  currentTurn: string | null;
+  currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
-  you: string | null;                   // 自分の playerId
+  youSeatId: SeatId | null;
   isSpectator: boolean;
   negriCard: string | null;
-  negriPlayerId: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari: string | null;
   fields: CompletedFieldContract[];     // 完了した場 (取得セット)
-  hostId: string | null;
+  hostSeatId: SeatId | null;
   pointsToWin: number;
   paused: boolean;
-  disconnectedPlayerIds: string[];
-  idlePlayerIds: string[];
+  disconnectedSeatIds: SeatId[];
+  idleSeatIds: SeatId[];
   teamNames?: TeamNames;
 }
 ```
@@ -374,7 +388,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 
 ## Socket.IO イベントマップ
 
-### Game namespace (`/`) — 34 受信 / 22 送信
+### Game namespace (`/`)
 
 **受信 (Server → Client)**:
 
@@ -382,17 +396,14 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 |-------|------|
 | `rooms-list` | ルーム一覧 |
 | `room-sync` | ルーム状態同期 |
-| `room-updated` | 単一ルーム更新 |
 | `set-room-id` | ルーム ID 永続化 |
 | `game-player-joined` | プレイヤー参加通知 |
 | `update-players` | プレイヤーリスト更新 |
-| `room-playing` | プレイヤー更新 (ゲーム中) |
 | `game-state` | フルゲーム状態スナップショット |
 | `reconnect-token` | 再接続トークン |
 | `game-started` | ゲーム開始 |
 | `update-phase` | フェーズ遷移 |
 | `update-turn` | ターン更新 |
-| `blow-started` | 吹きフェーズ開始 |
 | `blow-updated` | 吹き宣言更新 |
 | `broken` | 手札崩れ |
 | `round-cancelled` | ラウンドキャンセル (全パス) |
@@ -457,7 +468,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 | `app/_layout.tsx` | `app/layout.tsx` | |
 | `app/room/[roomId].tsx` | `app/[locale]/page.tsx` | Web はルーム別ページなし |
 | `app/rooms.tsx` | `app/[locale]/rooms/page.tsx` | |
-| `app/settings.tsx` | `app/[locale]/profile/page.tsx` | Mobile にアカウント削除あり |
+| `app/settings/*` | `app/[locale]/profile/page.tsx` | Mobile は設定とアカウント管理を分割 |
 | `app/sign-in.tsx` | `components/auth/AuthModal.tsx` | Web はモーダル |
 
 ### Game Components

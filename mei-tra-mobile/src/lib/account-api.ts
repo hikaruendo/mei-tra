@@ -1,4 +1,5 @@
 import { config } from '@/lib/config';
+import { t } from '@/i18n';
 
 export type AccountDeletionErrorKind =
   | 'active-room'
@@ -51,7 +52,7 @@ export const deleteAccountRequest = async (
   if (!accessToken) {
     throw new AccountDeletionError(
       'unauthorized',
-      'ログインセッションが切れています。もう一度ログインしてください。',
+      t('auth.sessionExpired'),
       401,
     );
   }
@@ -70,7 +71,7 @@ export const deleteAccountRequest = async (
   } catch {
     throw new AccountDeletionError(
       'network',
-      'サーバーに接続できませんでした。通信状態を確認して再試行してください。',
+      t('account.networkError'),
     );
   }
 
@@ -84,7 +85,7 @@ export const deleteAccountRequest = async (
   if (response.status === 409) {
     throw new AccountDeletionError(
       'active-room',
-      '参加中のルームから退出してからアカウントを削除してください。',
+      t('account.leaveRoomFirst'),
       response.status,
       activeRoomCount,
     );
@@ -93,14 +94,14 @@ export const deleteAccountRequest = async (
   if (response.status === 401 || response.status === 403) {
     throw new AccountDeletionError(
       'unauthorized',
-      'ログインセッションが切れています。もう一度ログインしてください。',
+      t('auth.sessionExpired'),
       response.status,
     );
   }
 
   throw new AccountDeletionError(
     'server',
-    message || 'アカウントを削除できませんでした。時間をおいて再試行してください。',
+    message || t('account.deleteFailed'),
     response.status,
   );
 };

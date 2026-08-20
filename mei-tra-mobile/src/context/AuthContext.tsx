@@ -32,6 +32,7 @@ import {
 } from '@/lib/session-cleanup';
 import { clearLocalAuthSession, supabase } from '@/lib/supabase';
 import type { MobileAuthUser, MobileUserProfile } from '@/types/auth';
+import { t } from '@/i18n';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -51,6 +52,8 @@ interface AuthContextValue {
     displayName: string,
   ) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
+  signInAnonymously: () => Promise<AuthResult>;
+  upgradeAccount: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: AccountDeletionError | null }>;
   getAccessToken: () => Promise<string | null>;
@@ -59,13 +62,24 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const mapProfile = (record: Record<string, unknown>): MobileUserProfile => ({
-  displayName:
-    typeof record.display_name === 'string' ? record.display_name : '',
-  username: typeof record.username === 'string' ? record.username : '',
-  avatarUrl:
-    typeof record.avatar_url === 'string' ? record.avatar_url : undefined,
-});
+const mapProfile = (record: Record<string, unknown>): MobileUserProfile => {
+  const preferences =
+    typeof record.preferences === 'object' && record.preferences !== null
+      ? (record.preferences as Record<string, unknown>)
+      : {};
+
+  return {
+    displayName:
+      typeof record.display_name === 'string' ? record.display_name : '',
+    username: typeof record.username === 'string' ? record.username : '',
+    avatarUrl:
+      typeof record.avatar_url === 'string' ? record.avatar_url : undefined,
+    startPlayerAnimation:
+      typeof preferences.startPlayerAnimation === 'boolean'
+        ? preferences.startPlayerAnimation
+        : true,
+  };
+};
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
@@ -79,7 +93,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('display_name, username, avatar_url')
+        .select('display_name, username, avatar_url, preferences')
         .eq('id', authUser.id)
         .maybeSingle();
 
@@ -94,6 +108,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser({
         id: authUser.id,
         email: authUser.email,
+        isAnonymous: authUser.is_anonymous ?? false,
         profile: data ? mapProfile(data) : null,
       });
     } catch (error) {
@@ -128,6 +143,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setUser({
             id: data.session.user.id,
             email: data.session.user.email,
+            isAnonymous: data.session.user.is_anonymous ?? false,
             profile: null,
           });
           void loadProfile(data.session.user);
@@ -153,6 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser((current) => ({
           id: nextSession.user.id,
           email: nextSession.user.email,
+          isAnonymous: nextSession.user.is_anonymous ?? false,
           profile:
             current?.id === nextSession.user.id ? current.profile : null,
         }));
@@ -230,19 +247,62 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
 
     if (error || !data.url) {
-      return { error: error?.message ?? 'Googleログインを開始できませんでした' };
+      return { error: error?.message ?? t('auth.googleStartFailed') };
     }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type !== 'success') {
       return {
-        error: result.type === 'cancel' ? null : 'Googleログインを完了できませんでした',
+        error: result.type === 'cancel' ? null : t('auth.googleFailed'),
       };
     }
 
     const callback = await completeOAuthCallback(result.url, supabase.auth);
     return { error: callback.error };
   }, []);
+
+  const signInAnonymously = useCallback(async () => {
+    const guestNumber = Math.floor(1000 + Math.random() * 9000);
+    // display_name lands in raw_user_meta_data, which the handle_new_user
+    // trigger uses when creating the user_profiles row.
+    const { error } = await supabase.auth.signInAnonymously({
+      options: {
+        data: {
+          display_name: t('auth.guestName', { number: guestNumber }),
+          locale: 'ja',
+        },
+      },
+    });
+
+    return { error: error?.message ?? null };
+  }, []);
+
+  const upgradeAccount = useCallback(
+    async (email: string, password: string) => {
+      // Attaches email+password to the anonymous user, keeping the same user id
+      // (and therefore the profile/stats). The email must be confirmed via the
+      // link Supabase sends before it can be used to sign in.
+      const { data, error } = await supabase.auth.updateUser({
+        email: email.trim(),
+        password,
+      });
+
+      // Supabase reports a taken address in English; the person hitting it
+      // already has an account, so say that in the app's language instead.
+      const message =
+        error?.code === 'email_exists'
+          ? t('auth.emailAlreadyRegistered')
+          : (error?.message ?? null);
+
+      // Supabase parks the address in new_email until the link is clicked; when
+      // confirmations are disabled the address applies immediately instead.
+      return {
+        error: message,
+        emailConfirmationRequired: Boolean(data?.user?.new_email),
+      };
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     try {
@@ -264,7 +324,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         error: new AccountDeletionError(
           'unauthorized',
-          'ログインセッションが切れています。もう一度ログインしてください。',
+          t('auth.sessionExpired'),
           401,
         ),
       };
@@ -286,7 +346,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         error: new AccountDeletionError(
           'server',
-          'アカウントを削除できませんでした。時間をおいて再試行してください。',
+          t('account.deleteFailed'),
         ),
       };
     }
@@ -307,6 +367,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signUp,
       signInWithGoogle,
+      signInAnonymously,
+      upgradeAccount,
       signOut,
       deleteAccount,
       getAccessToken,
@@ -318,9 +380,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       refreshProfile,
       session,
       signIn,
+      signInAnonymously,
       signInWithGoogle,
       signOut,
       signUp,
+      upgradeAccount,
       user,
       deleteAccount,
     ],

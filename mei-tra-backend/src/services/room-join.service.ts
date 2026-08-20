@@ -1,11 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { BlowState, DomainPlayer, GameState, Team } from '../types/game.types';
-import { toDomainPlayer } from '../types/player-adapters';
 import { Room, RoomPlayer } from '../types/room.types';
 import { GameStateService } from './game-state.service';
-import { PlayerReferenceRemapperService } from './player-reference-remapper.service';
-import { VacantSeats } from './com-session.service';
+import type {
+  VacantSeats,
+  VacantSeatSnapshot,
+} from '../types/vacant-seat.types';
 import { SessionUser } from '../types/session.types';
+import { randomUUID } from 'crypto';
+import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
+import { RosterMembershipMutation } from '../types/room-membership.types';
+import {
+  resolveCurrentPlayerIndex,
+  setCurrentSeat,
+} from '../domain/current-turn';
+import { upsertRuntimeSeat } from './runtime-seat-roster';
 
 interface JoinRoomParams {
   roomId: string;
@@ -15,18 +25,10 @@ interface JoinRoomParams {
   vacantSeats: VacantSeats;
 }
 
-interface RestoredSeatData {
-  roomPlayer: RoomPlayer;
-  gamePlayer?: DomainPlayer;
-  replacementPlayerId?: string;
-}
+type RestoredSeatData = VacantSeatSnapshot;
 
 @Injectable()
 export class RoomJoinService {
-  constructor(
-    private readonly playerReferenceRemapperService: PlayerReferenceRemapperService,
-  ) {}
-
   async joinRoom({
     roomId,
     room,
@@ -34,13 +36,12 @@ export class RoomJoinService {
     user,
     vacantSeats,
   }: JoinRoomParams): Promise<boolean> {
-    void roomId;
     const state = gameState.getState();
 
     const existingPlayer = this.findExistingRoomPlayer(room.players, user);
     if (existingPlayer) {
       const statePlayer = state.players.find(
-        (player) => player.playerId === existingPlayer.playerId,
+        (player) => player.seatId === existingPlayer.seatId,
       );
       const isWaitingRoom =
         state.gamePhase === null || state.gamePhase === 'waiting';
@@ -48,40 +49,57 @@ export class RoomJoinService {
         return false;
       }
 
+      const reclaimingVacantSeatId = Object.entries(
+        vacantSeats[roomId] ?? {},
+      ).find(([seatId, seatData]) => {
+        if (seatId !== existingPlayer.seatId) {
+          return false;
+        }
+        return user.userId
+          ? seatData.roomPlayer.userId === user.userId
+          : seatData.roomPlayer.seatId === user.seatId;
+      })?.[0];
+      const reclaimingCOMSeat = Boolean(
+        existingPlayer.isCOM &&
+          ((user.userId && existingPlayer.userId === user.userId) ||
+            reclaimingVacantSeatId !== undefined),
+      );
       const updatedPlayer: RoomPlayer = {
         ...existingPlayer,
         ...user,
-        playerId: existingPlayer.playerId,
+        seatId: existingPlayer.seatId,
+        participantKey:
+          user.userId ?? existingPlayer.participantKey ?? user.seatId,
         userId: user.userId ?? existingPlayer.userId,
         isAuthenticated: user.isAuthenticated ?? existingPlayer.isAuthenticated,
-        isHost: room.hostId === existingPlayer.playerId,
+        isHost: room.hostSeatId === existingPlayer.seatId,
+        isCOM: reclaimingCOMSeat ? false : existingPlayer.isCOM,
       };
-      Object.assign(existingPlayer, updatedPlayer);
-      if (statePlayer) {
-        statePlayer.name = updatedPlayer.name;
-        statePlayer.team = updatedPlayer.team;
-      } else {
-        state.players.push(toDomainPlayer(updatedPlayer));
-      }
-      state.teamAssignments[updatedPlayer.playerId] = updatedPlayer.team;
+      upsertRuntimeSeat(room, state, updatedPlayer, {
+        gameplaySource: statePlayer,
+      });
 
-      gameState.registerPlayerToken(
-        updatedPlayer.playerId,
-        updatedPlayer.playerId,
-      );
+      gameState.registerSeatToken(updatedPlayer.seatId, updatedPlayer.seatId);
       if (updatedPlayer.userId) {
-        gameState.registerPlayerToken(
-          updatedPlayer.userId,
-          updatedPlayer.playerId,
-        );
+        gameState.registerSeatToken(updatedPlayer.userId, updatedPlayer.seatId);
       }
-      gameState.clearDisconnectTimeout(updatedPlayer.playerId);
-      await gameState.applyPlayerConnectionState(updatedPlayer.playerId, {
+      gameState.clearDisconnectTimeout(updatedPlayer.seatId);
+      gameState.applyPlayerConnectionState(updatedPlayer.seatId, {
         socketId: updatedPlayer.socketId,
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
       });
-      await gameState.persistRoster(room.players, room.hostId);
+      await gameState.persistRoster(
+        room.players,
+        room.hostSeatId,
+        this.buildMembershipClaim(user),
+      );
+      if (reclaimingVacantSeatId !== undefined) {
+        delete vacantSeats[roomId][asSeatId(reclaimingVacantSeatId)];
+        if (Object.keys(vacantSeats[roomId] ?? {}).length === 0) {
+          delete vacantSeats[roomId];
+        }
+      }
       if (this.advanceBlowTurnPastActedPlayer(gameState.getState())) {
         await gameState.saveState();
       }
@@ -93,76 +111,76 @@ export class RoomJoinService {
     }
 
     const roomVacant = vacantSeats[roomId] || {};
-    const vacantIndexes = Object.keys(roomVacant).map(Number);
+    const vacantEntries = Object.entries(roomVacant);
     let assignedIndex = -1;
     let gsAssignedIndex = -1;
-    let hand: string[] = [];
     let team: Team = 0;
-    let replacingComId: string | null = null;
+    let replacingComSeatId: SeatId | null = null;
     let restoredSeatData: RestoredSeatData | null = null;
 
-    const matchingVacantIndex = vacantIndexes.find(
-      (index) => roomVacant[index]?.roomPlayer.playerId === user.playerId,
+    const matchingVacantEntry = vacantEntries.find(
+      ([, seatData]) =>
+        user.seatId != null && seatData.roomPlayer.seatId === user.seatId,
     );
 
-    if (matchingVacantIndex !== undefined) {
-      assignedIndex = matchingVacantIndex;
-      const seatData = roomVacant[assignedIndex];
-      const seatRoomPlayer = seatData?.roomPlayer;
-      const seatGamePlayer = seatData?.gamePlayer;
-
-      hand = seatGamePlayer
-        ? [...seatGamePlayer.hand]
-        : seatRoomPlayer
-          ? [...seatRoomPlayer.hand]
-          : [];
-      team = seatRoomPlayer ? seatRoomPlayer.team : team;
-      restoredSeatData = seatData ?? null;
-      gameState.clearDisconnectTimeout(user.playerId);
-      delete roomVacant[assignedIndex];
-      if (Object.keys(roomVacant).length === 0) {
-        delete vacantSeats[roomId];
+    if (matchingVacantEntry) {
+      const [vacantSeatId, seatData] = matchingVacantEntry;
+      assignedIndex = this.resolveVacantSeatIndex(room, vacantSeatId);
+      if (assignedIndex === -1) {
+        return false;
       }
-    } else if (vacantIndexes.length > 0) {
-      assignedIndex = vacantIndexes[0];
-      const seatData = roomVacant[assignedIndex];
-      const seatRoomPlayer = seatData?.roomPlayer;
-      hand = seatRoomPlayer ? [...seatRoomPlayer.hand] : [];
+      const seatRoomPlayer = seatData.roomPlayer;
+
       team = seatRoomPlayer ? seatRoomPlayer.team : team;
-
-      const originalPlayerId = seatRoomPlayer?.playerId;
-      if (originalPlayerId) {
-        gameState.removePlayerToken(originalPlayerId);
-        gameState.clearDisconnectTimeout(originalPlayerId);
-      }
-
-      restoredSeatData = seatData ?? null;
-      delete roomVacant[assignedIndex];
+      restoredSeatData = seatData;
+      gameState.clearDisconnectTimeout(asSeatId(vacantSeatId));
+      delete roomVacant[asSeatId(vacantSeatId)];
       if (Object.keys(roomVacant).length === 0) {
         delete vacantSeats[roomId];
       }
     } else {
+      const availableVacantEntry = vacantEntries.find(([vacantSeatId]) => {
+        const currentSeat = room.players.find(
+          (player) => player.seatId === vacantSeatId,
+        );
+        return Boolean(currentSeat && !currentSeat.userId);
+      });
+
+      if (availableVacantEntry) {
+        const [vacantSeatId, seatData] = availableVacantEntry;
+        assignedIndex = this.resolveVacantSeatIndex(room, vacantSeatId);
+        const seatRoomPlayer = seatData.roomPlayer;
+        team = seatRoomPlayer.team;
+
+        const originalSeatId = seatRoomPlayer.seatId;
+        gameState.removeSeatToken(originalSeatId);
+        gameState.clearDisconnectTimeout(originalSeatId);
+
+        restoredSeatData = seatData;
+        delete roomVacant[asSeatId(vacantSeatId)];
+        if (Object.keys(roomVacant).length === 0) {
+          delete vacantSeats[roomId];
+        }
+      }
+    }
+
+    if (assignedIndex === -1) {
       if (state.gamePhase !== null) {
-        const comIndex = room.players.findIndex(
-          (player) => player.isCOM === true,
+        const comIndex = room.players.findIndex((player) =>
+          this.isReplaceableCOMSeat(player),
         );
         if (comIndex !== -1) {
-          const comPlayerId = room.players[comIndex].playerId;
+          const comSeatId = room.players[comIndex].seatId;
           team = room.players[comIndex].team;
-          replacingComId = comPlayerId;
+          replacingComSeatId = comSeatId;
           assignedIndex = comIndex;
           gsAssignedIndex = state.players.findIndex(
-            (player) => player.playerId === comPlayerId,
+            (player) => player.seatId === comSeatId,
           );
-          const currentGamePlayer =
-            gsAssignedIndex !== -1 ? state.players[gsAssignedIndex] : null;
-          hand = currentGamePlayer
-            ? [...(currentGamePlayer.hand ?? [])]
-            : [...(room.players[comIndex].hand ?? [])];
         }
       }
 
-      if (hand.length === 0) {
+      if (assignedIndex === -1 && replacingComSeatId === null) {
         const team0Count = room.players.filter(
           (player) => !player.isCOM && player.team === 0,
         ).length;
@@ -172,174 +190,101 @@ export class RoomJoinService {
         team = (team0Count <= team1Count ? 0 : 1) as Team;
       }
 
-      if (!replacingComId && assignedIndex === -1) {
+      if (!replacingComSeatId && assignedIndex === -1) {
         const waitingComIndex = room.players.findIndex(
-          (player) => player.isCOM === true && !player.isReady,
+          (player) => this.isReplaceableCOMSeat(player) && !player.isReady,
         );
         if (waitingComIndex !== -1) {
-          replacingComId = room.players[waitingComIndex].playerId;
+          replacingComSeatId = room.players[waitingComIndex].seatId;
           assignedIndex = waitingComIndex;
         }
       }
     }
 
+    if (
+      assignedIndex === -1 &&
+      room.players.length >= room.settings.maxPlayers
+    ) {
+      return false;
+    }
+
     const seatRoomSnapshot = restoredSeatData?.roomPlayer;
     const seatGameSnapshot = restoredSeatData?.gamePlayer;
-    const replacementPlayerId = restoredSeatData?.replacementPlayerId;
 
-    if (replacementPlayerId) {
-      const currentRoomSeatIndex = room.players.findIndex(
-        (player) => player.playerId === replacementPlayerId,
-      );
-      if (currentRoomSeatIndex !== -1) {
-        assignedIndex = currentRoomSeatIndex;
-        replacingComId = replacementPlayerId;
-      }
-    } else if (assignedIndex !== -1) {
-      replacingComId = room.players[assignedIndex]?.playerId || null;
+    if (assignedIndex !== -1) {
+      replacingComSeatId = room.players[assignedIndex]?.seatId ?? null;
     }
 
     const currentSeatRoomPlayer =
-      replacingComId != null
-        ? room.players.find((player) => player.playerId === replacingComId)
+      replacingComSeatId != null
+        ? room.players.find((player) => player.seatId === replacingComSeatId)
         : assignedIndex !== -1
           ? room.players[assignedIndex]
           : undefined;
-    const currentSeatRoomHand =
-      currentSeatRoomPlayer && currentSeatRoomPlayer.hand.length > 0
-        ? currentSeatRoomPlayer.hand
-        : undefined;
-
+    const assignedSeatId = currentSeatRoomPlayer
+      ? currentSeatRoomPlayer.seatId
+      : seatRoomSnapshot
+        ? seatRoomSnapshot.seatId
+        : asSeatId(randomUUID());
     const player: RoomPlayer = {
       ...(seatRoomSnapshot ?? {}),
       ...user,
       socketId: user.socketId,
-      playerId: user.playerId,
+      seatId: assignedSeatId,
+      participantKey: user.userId ?? user.seatId ?? assignedSeatId,
       team: currentSeatRoomPlayer?.team ?? team,
-      hand: [...(currentSeatRoomHand ?? hand)],
-      isPasser:
-        seatGameSnapshot?.isPasser ??
-        currentSeatRoomPlayer?.isPasser ??
-        seatRoomSnapshot?.isPasser ??
-        false,
-      hasBroken:
-        seatGameSnapshot?.hasBroken ??
-        currentSeatRoomPlayer?.hasBroken ??
-        seatRoomSnapshot?.hasBroken ??
-        false,
-      hasRequiredBroken:
-        seatGameSnapshot?.hasRequiredBroken ??
-        currentSeatRoomPlayer?.hasRequiredBroken ??
-        seatRoomSnapshot?.hasRequiredBroken ??
-        false,
+      hand: [],
+      isPasser: false,
+      hasBroken: false,
+      hasRequiredBroken: false,
       isReady:
         currentSeatRoomPlayer?.isReady ?? seatRoomSnapshot?.isReady ?? false,
-      isHost: room.hostId === user.playerId,
+      isHost: room.hostSeatId === assignedSeatId,
+      isCOM: false,
       joinedAt: seatRoomSnapshot?.joinedAt
         ? new Date(seatRoomSnapshot.joinedAt)
         : new Date(),
     };
 
-    if (assignedIndex !== -1) {
-      room.players[assignedIndex] = player;
-    } else {
-      const comIndex = room.players.findIndex(
-        (roomPlayer) => roomPlayer.isCOM === true && !roomPlayer.isReady,
-      );
-      if (comIndex !== -1) {
-        room.players[comIndex] = player;
-      } else {
-        room.players.push(player);
-      }
-    }
-
-    if (replacementPlayerId) {
+    if (gsAssignedIndex === -1 && replacingComSeatId) {
       gsAssignedIndex = state.players.findIndex(
-        (statePlayer) => statePlayer.playerId === replacementPlayerId,
-      );
-    }
-    if (gsAssignedIndex === -1 && replacingComId) {
-      gsAssignedIndex = state.players.findIndex(
-        (statePlayer) => statePlayer.playerId === replacingComId,
+        (statePlayer) => statePlayer.seatId === replacingComSeatId,
       );
     }
 
     const currentSeatGamePlayer =
-      replacingComId != null
+      replacingComSeatId != null
         ? state.players.find(
-            (statePlayer) => statePlayer.playerId === replacingComId,
+            (statePlayer) => statePlayer.seatId === replacingComSeatId,
           )
         : undefined;
 
-    player.hand = [
-      ...(currentSeatGamePlayer?.hand.length
-        ? currentSeatGamePlayer.hand
-        : player.hand),
-    ];
-    player.isPasser =
-      currentSeatGamePlayer?.isPasser ?? player.isPasser ?? false;
-    player.hasBroken =
-      currentSeatGamePlayer?.hasBroken ?? player.hasBroken ?? false;
-    player.hasRequiredBroken =
-      currentSeatGamePlayer?.hasRequiredBroken ??
-      player.hasRequiredBroken ??
-      false;
+    upsertRuntimeSeat(room, state, player, {
+      replaceSeatId: replacingComSeatId ?? player.seatId,
+      gameplaySource:
+        currentSeatGamePlayer ??
+        seatGameSnapshot ??
+        (gsAssignedIndex === -1 ? null : state.players[gsAssignedIndex]),
+    });
 
-    const gamePlayer = toDomainPlayer(player);
-
-    if (gsAssignedIndex !== -1) {
-      state.players[gsAssignedIndex] = gamePlayer;
-    } else {
-      const comIndex = state.players.findIndex(
-        (statePlayer) => statePlayer.isCOM === true,
-      );
-      if (comIndex !== -1) {
-        state.players[comIndex] = gamePlayer;
-      } else {
-        state.players.push(gamePlayer);
-      }
-    }
-
-    const seatReferencePlayerIds = new Set<string>();
-    if (replacingComId) {
-      seatReferencePlayerIds.add(replacingComId);
-    }
-    if (seatRoomSnapshot?.playerId) {
-      seatReferencePlayerIds.add(seatRoomSnapshot.playerId);
-    }
-    if (seatGameSnapshot?.playerId) {
-      seatReferencePlayerIds.add(seatGameSnapshot.playerId);
-    }
-
-    const remappedSeatReferences = this.remapSeatReferences(
-      state,
-      seatReferencePlayerIds,
-      player.playerId,
-    );
-    state.teamAssignments[player.playerId] = player.team;
-
-    gameState.registerPlayerToken(player.playerId, player.playerId);
+    gameState.registerSeatToken(player.seatId, player.seatId);
     if (player.userId) {
-      gameState.registerPlayerToken(player.userId, player.playerId);
+      gameState.registerSeatToken(player.userId, player.seatId);
     }
-    await gameState.applyPlayerConnectionState(player.playerId, {
+    gameState.applyPlayerConnectionState(player.seatId, {
       socketId: player.socketId,
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,
     });
-    await gameState.persistRoster(room.players, room.hostId);
+    await gameState.persistRoster(
+      room.players,
+      room.hostSeatId,
+      this.buildMembershipClaim(user),
+    );
     const persistedState = gameState.getState();
-    if (remappedSeatReferences) {
-      this.remapSeatReferences(
-        persistedState,
-        seatReferencePlayerIds,
-        player.playerId,
-      );
-      persistedState.teamAssignments[player.playerId] = player.team;
-    }
     const advancedBlowTurn =
       this.advanceBlowTurnPastActedPlayer(persistedState);
-    if (remappedSeatReferences || advancedBlowTurn) {
+    if (advancedBlowTurn) {
       await gameState.saveState();
     }
     return true;
@@ -349,46 +294,40 @@ export class RoomJoinService {
     return players.filter((player) => !player.isCOM).length;
   }
 
+  private resolveVacantSeatIndex(room: Room, vacantSeatId: string): number {
+    return room.players.findIndex((player) => player.seatId === vacantSeatId);
+  }
+
+  private buildMembershipClaim(
+    user: SessionUser,
+  ): RosterMembershipMutation | undefined {
+    return user.userId
+      ? {
+          type: 'claim',
+          userId: user.userId,
+          transitionId: randomUUID(),
+        }
+      : undefined;
+  }
+
   private findExistingRoomPlayer(
     players: RoomPlayer[],
     user: SessionUser,
   ): RoomPlayer | undefined {
     if (user.userId) {
       const playerByUserId = players.find(
-        (player) => !player.isCOM && player.userId === user.userId,
+        (player) => player.userId === user.userId,
       );
       if (playerByUserId) {
         return playerByUserId;
       }
     }
 
-    return players.find((player) => player.playerId === user.playerId);
+    return players.find((player) => player.seatId === user.seatId);
   }
 
-  private remapSeatReferences(
-    state: GameState,
-    seatReferencePlayerIds: Set<string>,
-    playerId: string,
-  ): boolean {
-    let remapped = false;
-
-    seatReferencePlayerIds.forEach((fromPlayerId) => {
-      if (fromPlayerId === playerId) {
-        return;
-      }
-
-      this.playerReferenceRemapperService.remapGameStatePlayerIdReferences(
-        state,
-        fromPlayerId,
-        playerId,
-      );
-      if (state.teamAssignments[fromPlayerId] != null) {
-        delete state.teamAssignments[fromPlayerId];
-      }
-      remapped = true;
-    });
-
-    return remapped;
+  private isReplaceableCOMSeat(player: RoomPlayer): boolean {
+    return player.isCOM === true && !player.userId;
   }
 
   private advanceBlowTurnPastActedPlayer(state: GameState): boolean {
@@ -396,7 +335,7 @@ export class RoomJoinService {
       return false;
     }
 
-    const currentIndex = this.resolveCurrentPlayerIndex(state);
+    const currentIndex = resolveCurrentPlayerIndex(state);
     const currentPlayer = state.players[currentIndex];
     if (
       !currentPlayer ||
@@ -409,8 +348,7 @@ export class RoomJoinService {
       const candidateIndex = (currentIndex + offset) % state.players.length;
       const candidatePlayer = state.players[candidateIndex];
       if (!this.hasActedInBlow(state.blowState, candidatePlayer)) {
-        state.currentPlayerIndex = candidateIndex;
-        state.currentPlayerId = candidatePlayer.playerId;
+        setCurrentSeat(state, candidatePlayer.seatId);
         return true;
       }
     }
@@ -418,30 +356,14 @@ export class RoomJoinService {
     return false;
   }
 
-  private resolveCurrentPlayerIndex(state: GameState): number {
-    if (state.currentPlayerId) {
-      const index = state.players.findIndex(
-        (player) => player.playerId === state.currentPlayerId,
-      );
-      if (index !== -1) {
-        return index;
-      }
-    }
-
-    return Math.min(
-      Math.max(state.currentPlayerIndex ?? 0, 0),
-      state.players.length - 1,
-    );
-  }
-
   private hasActedInBlow(blowState: BlowState, player: DomainPlayer): boolean {
     return (
       player.isPasser ||
       blowState.declarations.some(
-        (declaration) => declaration.playerId === player.playerId,
+        (declaration) => declaration.seatId === player.seatId,
       ) ||
       (blowState.actionHistory ?? []).some(
-        (action) => action.playerId === player.playerId,
+        (action) => action.seatId === player.seatId,
       )
     );
   }

@@ -2,6 +2,7 @@ import type {
   GameHistoryReplayEventContract,
   GameHistoryReplayViewContract,
 } from '@meitra/contracts/game-history';
+import type { SeatId } from '@meitra/contracts/ids';
 
 import { buildRoundTableRows, formatBid } from '../game-log-rows';
 
@@ -13,7 +14,7 @@ const event = (
   ({
     timestamp: '2026-01-01T00:00:00.000Z',
     kind: 'round',
-    playerId: null,
+    actorSeatId: null,
     roundNumber: 1,
     gamePhase: null,
     summary: '',
@@ -61,7 +62,7 @@ const round = (
     startedAt: null,
     endedAt: null,
     actionTypes: [],
-    playerIds: [],
+    actorSeatIds: [],
     entries: [],
     events,
   }) as GameHistoryReplayViewContract['rounds'][number];
@@ -122,7 +123,7 @@ describe('buildRoundTableRows', () => {
           event({
             id: 'd',
             actionType: 'blow_declared',
-            playerId: 'p1',
+            actorSeatId: 'p1' as SeatId,
             actionData: { playerNames: { p1: 'あかり' } },
           }),
         ]),

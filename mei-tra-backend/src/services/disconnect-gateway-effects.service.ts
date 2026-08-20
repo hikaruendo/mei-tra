@@ -6,11 +6,14 @@ import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 import { RoomMembershipService } from './room-membership.service';
 import { ActiveRoomMembership } from '../types/room-membership.types';
+import { asSeatId } from '../types/identity.types';
+import type { SeatId } from '../types/identity.types';
+import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 
 export interface DisconnectPreparation {
-  playerId: string;
+  seatId: SeatId;
   playerName: string;
   roomGameState: Awaited<ReturnType<IRoomService['getRoomGameState']>>;
   timeoutMode: DisconnectTimeoutMode;
@@ -57,10 +60,10 @@ export class DisconnectGatewayEffectsService {
     }
 
     const roomPlayer = room.players.find(
-      (candidate) => candidate.playerId === player.playerId,
+      (candidate) => candidate.seatId === player.seatId,
     );
     const initialConnectionState = roomGameState.getPlayerConnectionState(
-      player.playerId,
+      player.seatId,
     );
     if (
       initialConnectionState?.socketId &&
@@ -78,7 +81,7 @@ export class DisconnectGatewayEffectsService {
     }
 
     const latestConnectionState = roomGameState.getPlayerConnectionState(
-      player.playerId,
+      player.seatId,
     );
     if (
       latestConnectionState?.socketId &&
@@ -87,8 +90,7 @@ export class DisconnectGatewayEffectsService {
       return null;
     }
 
-    state.teamAssignments[player.playerId] = player.team;
-    await roomGameState.applyPlayerConnectionState(player.playerId, {
+    roomGameState.applyPlayerConnectionState(player.seatId, {
       socketId: '',
     });
 
@@ -101,7 +103,7 @@ export class DisconnectGatewayEffectsService {
     });
 
     return {
-      playerId: player.playerId,
+      seatId: player.seatId,
       playerName: displayName ?? player.name,
       roomGameState,
       timeoutMode: this.resolveTimeoutMode(state.gamePhase),
@@ -112,12 +114,12 @@ export class DisconnectGatewayEffectsService {
 
   async buildTimeoutEvents(params: {
     roomId: string;
-    playerId: string;
+    seatId: SeatId;
     playerName: string;
     timeoutMode: DisconnectTimeoutMode;
     membership?: ActiveRoomMembership | null;
   }): Promise<GatewayEvent[]> {
-    const { roomId, playerId, playerName, timeoutMode, membership } = params;
+    const { roomId, seatId, playerName, timeoutMode, membership } = params;
     const room = await this.roomService.getRoom(roomId);
     if (!room) {
       return [];
@@ -133,17 +135,26 @@ export class DisconnectGatewayEffectsService {
     if (membership && !timeoutMembership) {
       return [];
     }
+    const timeoutMembershipMutation = timeoutMembership
+      ? {
+          type: 'complete-disconnect-timeout' as const,
+          userId: timeoutMembership.userId,
+          expectedVersion: timeoutMembership.membershipVersion,
+          transitionId: timeoutMembership.transitionId,
+        }
+      : undefined;
 
     let succeeded = false;
     try {
       if (timeoutMode === 'remove-player') {
         const roomGameState = await this.roomService.getRoomGameState(roomId);
-        if (roomGameState.getPlayerConnectionState(playerId)?.socketId) {
+        if (roomGameState.getPlayerConnectionState(seatId)?.socketId) {
           return [];
         }
 
-        succeeded = await this.roomService.leaveRoom(roomId, playerId, {
+        succeeded = await this.roomService.leaveRoom(roomId, seatId, {
           releaseMembership: false,
+          membershipMutation: timeoutMembershipMutation,
         });
         if (!succeeded) {
           return [];
@@ -179,9 +190,10 @@ export class DisconnectGatewayEffectsService {
         return [];
       }
 
-      succeeded = await this.roomService.convertPlayerToCOM(roomId, playerId, {
+      succeeded = await this.roomService.convertPlayerToCOM(roomId, seatId, {
         requireDisconnected: true,
         releaseMembership: false,
+        membershipMutation: timeoutMembershipMutation,
       });
       if (!succeeded) {
         return [];
@@ -206,7 +218,7 @@ export class DisconnectGatewayEffectsService {
           roomId,
           event: 'player-converted-to-com',
           payload: {
-            playerId,
+            seatId,
             playerName,
             message: 'Player disconnected for too long - converted to COM',
           },
@@ -216,12 +228,7 @@ export class DisconnectGatewayEffectsService {
           scope: 'room',
           roomId,
           event: 'blow-updated',
-          payload: {
-            declarations: blowState.declarations,
-            actionHistory: blowState.actionHistory,
-            currentHighest: blowState.currentHighestDeclaration,
-            lastPasser: blowState.lastPasser,
-          },
+          payload: toBlowUpdatedPayload(blowState),
         },
         this.roomUpdateGatewayEffectsService.buildRoomsListEvent({
           rooms: await this.roomService.listRooms(),
@@ -229,10 +236,10 @@ export class DisconnectGatewayEffectsService {
         }),
       ];
     } finally {
-      if (timeoutMembership) {
+      if (timeoutMembership && !succeeded) {
         await this.roomMembershipService.finishDisconnectTimeout(
           timeoutMembership,
-          succeeded,
+          false,
         );
       }
     }
@@ -269,8 +276,7 @@ export class DisconnectGatewayEffectsService {
     if (disconnectedSessionUser) {
       return (
         players.find(
-          (candidate) =>
-            candidate.playerId === disconnectedSessionUser.playerId,
+          (candidate) => candidate.seatId === disconnectedSessionUser.seatId,
         ) ?? null
       );
     }
@@ -283,7 +289,7 @@ export class DisconnectGatewayEffectsService {
     }
 
     return (
-      players.find((candidate) => candidate.playerId === roomPlayer.playerId) ??
+      players.find((candidate) => candidate.seatId === roomPlayer.seatId) ??
       null
     );
   }
@@ -299,14 +305,13 @@ export class DisconnectGatewayEffectsService {
     let room = params.room;
     const events: GatewayEvent[] = [];
 
-    if (room?.hostId === player.playerId) {
+    if (room?.hostSeatId === player.seatId) {
       const nextHost = room.players.find(
-        (candidate) =>
-          candidate.playerId !== player.playerId && !candidate.isCOM,
+        (candidate) => candidate.seatId !== player.seatId && !candidate.isCOM,
       );
       if (nextHost) {
         await this.roomService.updateRoom(roomId, {
-          hostId: nextHost.playerId,
+          hostSeatId: asSeatId(nextHost.seatId),
         });
         room = await this.roomService.getRoom(roomId);
         if (room) {
@@ -356,7 +361,7 @@ export class DisconnectGatewayEffectsService {
         roomId,
         event: 'player-left',
         payload: {
-          playerId: player.playerId,
+          seatId: asSeatId(player.seatId),
           roomId,
         },
       },
@@ -365,7 +370,7 @@ export class DisconnectGatewayEffectsService {
         roomId,
         event: 'player-disconnected',
         payload: {
-          playerId: player.playerId,
+          seatId: asSeatId(player.seatId),
           playerName,
           roomId,
         },

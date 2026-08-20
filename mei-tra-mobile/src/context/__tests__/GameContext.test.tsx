@@ -1,4 +1,5 @@
 import type { GameStatePayload, PlayerContract } from '@meitra/contracts/game';
+import { asSeatId } from '@meitra/contracts/ids';
 import type { RoomContract, RoomPlayerContract } from '@meitra/contracts/room';
 import React, { useEffect } from 'react';
 import { AppState } from 'react-native';
@@ -120,7 +121,7 @@ const createMockSocket = () => {
 
 const player = (overrides: Partial<PlayerContract> = {}): PlayerContract => ({
   socketId: 'socket-1',
-  playerId: 'player-1',
+  seatId: asSeatId('player-1'),
   userId: 'user-1',
   name: 'Player 1',
   team: 0,
@@ -144,11 +145,11 @@ const roomPlayer = (
 const createRoom = (): RoomContract => ({
   id: 'room-1',
   name: 'Test Room',
-  hostId: 'player-1',
+  hostSeatId: asSeatId('player-1'),
   status: 'playing',
   players: [
     roomPlayer(),
-    roomPlayer({ playerId: 'player-2', userId: 'user-2', team: 1 }),
+    roomPlayer({ seatId: asSeatId('player-2'), userId: 'user-2', team: 1 }),
   ],
   settings: {
     maxPlayers: 4,
@@ -167,23 +168,23 @@ const createGameState = (): GameStatePayload => ({
   roomId: 'room-1',
   players: [
     player(),
-    player({ playerId: 'player-2', userId: 'user-2', team: 1, hand: [] }),
+    player({ seatId: asSeatId('player-2'), userId: 'user-2', team: 1, hand: [] }),
   ],
   gamePhase: 'play',
   currentField: {
     cards: [],
-    playedBy: [],
+    playedBySeatIds: [],
     baseCard: '',
-    dealerId: 'player-1',
+    dealerSeatId: asSeatId('player-1'),
     isComplete: false,
   },
-  currentTurn: 'player-1',
+  currentTurnSeatId: asSeatId('player-1'),
   blowState: {
     currentTrump: 'zuppe',
     currentHighestDeclaration: null,
     declarations: [],
     actionHistory: [],
-    lastPasser: null,
+    lastPasserSeatId: null,
     isRoundCancelled: false,
     currentBlowIndex: 0,
   },
@@ -191,11 +192,12 @@ const createGameState = (): GameStatePayload => ({
     0: { play: 0, total: 0 },
     1: { play: 0, total: 0 },
   },
-  you: 'player-1',
+  youSeatId: asSeatId('player-1'),
   isSpectator: false,
   negriCard: null,
+  negriSeatId: null,
   fields: [],
-  hostId: 'player-1',
+  hostSeatId: asSeatId('player-1'),
   pointsToWin: 5,
 });
 
@@ -399,10 +401,10 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
-  it('applies the remapped field after a player is replaced with COM', async () => {
+  it('keeps the seat identity after a player is replaced with COM', async () => {
     const screen = await renderProvider();
     const comPlayer = player({
-      playerId: 'com-player-2',
+      seatId: asSeatId('player-2'),
       userId: undefined,
       name: 'COM 2',
       team: 1,
@@ -420,9 +422,9 @@ describe('GameProvider realtime resync safety', () => {
       mockSocket.trigger('update-players', [player(), comPlayer]);
       mockSocket.trigger('field-updated', {
         cards: ['J♠'],
-        playedBy: ['com-player-2'],
+        playedBySeatIds: [asSeatId('player-2')],
         baseCard: 'J♠',
-        dealerId: 'com-player-2',
+        dealerSeatId: asSeatId('player-2'),
         isComplete: false,
       });
       await flushPromises();
@@ -431,13 +433,13 @@ describe('GameProvider realtime resync safety', () => {
     expect(screen.latestGame.game?.players).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          playerId: 'com-player-2',
+          seatId: 'player-2',
           isCOM: true,
         }),
       ]),
     );
-    expect(screen.latestGame.game?.currentField?.playedBy).toEqual([
-      'com-player-2',
+    expect(screen.latestGame.game?.currentField?.playedBySeatIds).toEqual([
+      'player-2',
     ]);
 
     await screen.unmount();

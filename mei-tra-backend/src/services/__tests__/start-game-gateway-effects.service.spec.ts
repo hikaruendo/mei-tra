@@ -1,6 +1,8 @@
+import { GAME_START_TURN_REVEAL_DELAY_MS } from '@contracts/game';
 import { StartGameGatewayEffectsService } from '../start-game-gateway-effects.service';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from '../room-update-gateway-effects.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('StartGameGatewayEffectsService', () => {
   it('builds contractized start-game room events', async () => {
@@ -11,7 +13,7 @@ describe('StartGameGatewayEffectsService', () => {
         settings: { teamNames: undefined },
         players: [
           {
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             socketId: 'socket-1',
             name: 'Host',
             hand: [],
@@ -33,7 +35,7 @@ describe('StartGameGatewayEffectsService', () => {
         getTransportPlayers: jest.fn(() => [
           {
             socketId: 'socket-1',
-            playerId: 'player-1',
+            seatId: asSeatId('player-1'),
             name: 'Host',
             hand: ['AS'],
             team: 0,
@@ -53,28 +55,11 @@ describe('StartGameGatewayEffectsService', () => {
             room: { id: 'room-1' },
             players: [
               {
-                playerId: 'player-1',
+                seatId: 'player-1',
                 team: 0,
               },
             ],
           },
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'room-updated',
-          payload: { id: 'room-1' },
-        },
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'update-players',
-          payload: [
-            {
-              playerId: 'player-1',
-              team: 0,
-            },
-          ],
         },
       ]),
       buildRoomsListEvent: jest.fn().mockReturnValue({
@@ -93,7 +78,7 @@ describe('StartGameGatewayEffectsService', () => {
       roomId: 'room-1',
       players: [
         {
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Host',
           hand: ['AS'],
           team: 0,
@@ -109,7 +94,8 @@ describe('StartGameGatewayEffectsService', () => {
         },
         winner: null,
       },
-      currentTurnPlayerId: 'player-1',
+      currentTurnSeatId: 'player-1' as never,
+      firstTurnRevealEnabled: true,
     });
 
     expect(events).toEqual([
@@ -121,28 +107,11 @@ describe('StartGameGatewayEffectsService', () => {
           room: { id: 'room-1' },
           players: [
             expect.objectContaining({
-              playerId: 'player-1',
+              seatId: 'player-1',
               team: 0,
             }),
           ],
         },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'room-updated',
-        payload: { id: 'room-1' },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-players',
-        payload: [
-          expect.objectContaining({
-            playerId: 'player-1',
-            team: 0,
-          }),
-        ],
       },
       {
         scope: 'all',
@@ -152,28 +121,17 @@ describe('StartGameGatewayEffectsService', () => {
       {
         scope: 'room',
         roomId: 'room-1',
-        event: 'room-playing',
-        payload: {
-          players: [
-            expect.objectContaining({
-              playerId: 'player-1',
-              team: 0,
-            }),
-          ],
-        },
-      },
-      {
-        scope: 'room',
-        roomId: 'room-1',
         event: 'game-started',
         payload: {
           roomId: 'room-1',
           players: [
             expect.objectContaining({
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
             }),
           ],
           pointsToWin: 10,
+          teamNames: undefined,
+          currentTurnSeatId: 'player-1',
         },
       },
       {
@@ -194,6 +152,7 @@ describe('StartGameGatewayEffectsService', () => {
         roomId: 'room-1',
         event: 'update-turn',
         payload: 'player-1',
+        delayMs: GAME_START_TURN_REVEAL_DELAY_MS,
       },
     ]);
     const buildRoomEventsMock = jest.mocked(
@@ -203,7 +162,7 @@ describe('StartGameGatewayEffectsService', () => {
     const [roomEventsArgs] = buildRoomEventsMock.mock.calls[0] ?? [];
     expect(roomEventsArgs).toBeDefined();
     expect(roomEventsArgs?.room.id).toBe('room-1');
-    expect(roomEventsArgs?.statePlayers?.[0]?.playerId).toBe('player-1');
+    expect(roomEventsArgs?.statePlayers?.[0]?.seatId).toBe('player-1');
     expect(roomEventsArgs?.scope).toBe('room');
     expect(roomEventsArgs?.roomId).toBe('room-1');
     expect(roomService.listRooms).toHaveBeenCalledTimes(1);
@@ -219,5 +178,48 @@ describe('StartGameGatewayEffectsService', () => {
       ],
       scope: 'all',
     });
+  });
+
+  it('sends the turn immediately when nobody wants the reveal', async () => {
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(null),
+      listRooms: jest.fn().mockResolvedValue([]),
+      getRoomGameState: jest.fn().mockResolvedValue({
+        getTransportPlayers: jest.fn(() => []),
+      }),
+    } as unknown as IRoomService;
+    const roomUpdateGatewayEffectsService = {
+      buildRoomEvents: jest.fn().mockResolvedValue([]),
+      buildRoomsListEvent: jest.fn().mockReturnValue({
+        scope: 'all',
+        event: 'rooms-list',
+        payload: [],
+      }),
+    } as unknown as RoomUpdateGatewayEffectsService;
+
+    const service = new StartGameGatewayEffectsService(
+      roomService,
+      roomUpdateGatewayEffectsService,
+    );
+
+    const events = await service.buildEvents({
+      roomId: 'room-1',
+      players: [],
+      pointsToWin: 10,
+      updatePhase: {
+        phase: 'blow',
+        scores: {
+          0: { play: 0, total: 0 },
+          1: { play: 0, total: 0 },
+        },
+        winner: null,
+      },
+      currentTurnSeatId: 'player-1' as never,
+      firstTurnRevealEnabled: false,
+    });
+
+    const updateTurn = events.find((event) => event.event === 'update-turn');
+    expect(updateTurn).toBeDefined();
+    expect(updateTurn?.delayMs).toBeUndefined();
   });
 });

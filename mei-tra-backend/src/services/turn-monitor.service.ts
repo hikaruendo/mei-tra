@@ -2,13 +2,15 @@ import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomStatus } from '../types/room.types';
+import { resolveCurrentPlayer } from '../domain/current-turn';
+import type { SeatId } from '../types/identity.types';
 
 const TURN_ACK_PING_INTERVAL_MS = 15 * 1000;
 const TURN_IDLE_WARNING_MS = 45 * 1000;
 const TURN_IDLE_TO_COM_TIMEOUT_MS = 2 * 60 * 1000;
 
 interface TurnAckMonitor {
-  playerId: string;
+  seatId: SeatId;
   roomId: string;
   playerName: string;
   socketId: string;
@@ -45,22 +47,20 @@ export class TurnMonitorService implements OnModuleDestroy {
     this.monitors.delete(roomId);
   }
 
-  isPlayerIdle(roomId: string, playerId: string): boolean {
+  isPlayerIdle(roomId: string, seatId: SeatId): boolean {
     const monitor = this.monitors.get(roomId);
-    return Boolean(
-      monitor && monitor.playerId === playerId && monitor.idleEmitted,
-    );
+    return Boolean(monitor && monitor.seatId === seatId && monitor.idleEmitted);
   }
 
-  isMonitoringPlayer(roomId: string, playerId: string): boolean {
-    return this.monitors.get(roomId)?.playerId === playerId;
+  isMonitoringPlayer(roomId: string, seatId: SeatId): boolean {
+    return this.monitors.get(roomId)?.seatId === seatId;
   }
 
   async startMonitor(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
     server: Server,
-    onIdleTimeout: (roomId: string, playerId: string) => Promise<void>,
+    onIdleTimeout: (roomId: string, seatId: SeatId) => Promise<void>,
   ): Promise<void> {
     this.clearMonitor(roomId);
 
@@ -72,11 +72,11 @@ export class TurnMonitorService implements OnModuleDestroy {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const currentPlayer = state.players.find(
-      (candidate) => candidate.playerId === playerId,
+      (candidate) => candidate.seatId === seatId,
     );
 
     const currentPlayerConnection = currentPlayer
-      ? roomGameState.getPlayerConnectionState(currentPlayer.playerId)
+      ? roomGameState.getPlayerConnectionState(currentPlayer.seatId)
       : null;
 
     if (
@@ -91,13 +91,13 @@ export class TurnMonitorService implements OnModuleDestroy {
     const emitPing = () => {
       server.to(currentPlayerConnection.socketId).emit('turn-ping', {
         roomId,
-        playerId,
+        seatId,
       });
     };
 
     const monitor: TurnAckMonitor = {
       roomId,
-      playerId,
+      seatId,
       playerName: currentPlayer.name,
       socketId: currentPlayerConnection.socketId,
       server,
@@ -105,7 +105,7 @@ export class TurnMonitorService implements OnModuleDestroy {
       pingInterval: setInterval(emitPing, TURN_ACK_PING_INTERVAL_MS),
       statusInterval: setInterval(() => {
         void (async () => {
-          if (!(await this.isTurnStillOwnedByPlayer(roomId, playerId))) {
+          if (!(await this.isTurnStillOwnedBySeat(roomId, seatId))) {
             this.clearMonitor(roomId);
             return;
           }
@@ -116,7 +116,7 @@ export class TurnMonitorService implements OnModuleDestroy {
           if (!monitor.idleEmitted && silenceMs >= TURN_IDLE_WARNING_MS) {
             monitor.idleEmitted = true;
             server.to(roomId).emit('player-idle', {
-              playerId,
+              seatId,
               playerName: monitor.playerName,
               roomId,
             });
@@ -125,7 +125,7 @@ export class TurnMonitorService implements OnModuleDestroy {
           if (silenceMs >= TURN_IDLE_TO_COM_TIMEOUT_MS) {
             this.clearMonitor(roomId);
             try {
-              await onIdleTimeout(roomId, playerId);
+              await onIdleTimeout(roomId, seatId);
             } catch (error) {
               this.logger.error(
                 '[TurnMonitor] Error converting idle player:',
@@ -161,10 +161,10 @@ export class TurnMonitorService implements OnModuleDestroy {
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
     const currentPlayer = state.players.find(
-      (player) => player.playerId === monitor.playerId,
+      (player) => player.seatId === monitor.seatId,
     );
     const currentPlayerConnection = currentPlayer
-      ? roomGameState.getPlayerConnectionState(currentPlayer.playerId)
+      ? roomGameState.getPlayerConnectionState(currentPlayer.seatId)
       : null;
     const matchesCurrentTurnPlayer =
       currentPlayerConnection &&
@@ -179,15 +179,15 @@ export class TurnMonitorService implements OnModuleDestroy {
     if (monitor.idleEmitted) {
       monitor.idleEmitted = false;
       monitor.server.to(roomId).emit('player-idle-cleared', {
-        playerId: monitor.playerId,
+        seatId: monitor.seatId,
         roomId,
       });
     }
   }
 
-  private async isTurnStillOwnedByPlayer(
+  private async isTurnStillOwnedBySeat(
     roomId: string,
-    playerId: string,
+    seatId: SeatId,
   ): Promise<boolean> {
     const room = await this.roomService.getRoom(roomId);
     if (room?.status !== RoomStatus.PLAYING) {
@@ -196,11 +196,11 @@ export class TurnMonitorService implements OnModuleDestroy {
 
     const roomGameState = await this.roomService.getRoomGameState(roomId);
     const state = roomGameState.getState();
-    const currentPlayer = state.players[state.currentPlayerIndex];
+    const currentPlayer = resolveCurrentPlayer(state);
 
     return (
       (state.gamePhase === 'play' || state.gamePhase === 'blow') &&
-      currentPlayer?.playerId === playerId
+      currentPlayer?.seatId === seatId
     );
   }
 }

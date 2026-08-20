@@ -1,10 +1,7 @@
 import { GatewayEvent } from './gateway-event.interface';
 import { Field } from '../../types/game.types';
-import type {
-  CardPlayedPayload,
-  PlayCardPayload,
-  UpdateTurnPayload,
-} from '@contracts/game';
+import type { PlayCardPayload, UpdateTurnPayload } from '@contracts/game';
+import type { CardPlayedPayload } from '@contracts/game';
 
 export interface PlayCardRequest extends PlayCardPayload {
   actorId: string;

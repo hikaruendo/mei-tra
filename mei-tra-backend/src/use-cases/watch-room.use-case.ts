@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { GameStatePayload } from '@contracts/game';
 import { IRoomService } from '../services/interfaces/room-service.interface';
-import { toDomainPlayer } from '../types/player-adapters';
+import { toDomainPlayer } from '../adapters/player-adapters';
 import { Room, RoomStatus } from '../types/room.types';
 import {
   IWatchRoomUseCase,
@@ -9,6 +9,13 @@ import {
   WatchRoomResponse,
 } from './interfaces/watch-room.use-case.interface';
 import { resolveTransportPlayers } from './helpers/player-resolution.helper';
+import { asSeatId } from '../types/identity.types';
+import { resolveCurrentSeatId } from '../domain/current-turn';
+import {
+  toBlowStateContract,
+  toCompletedFieldContract,
+  toFieldContract,
+} from '../adapters/game-contract-adapters';
 
 @Injectable()
 export class WatchRoomUseCase implements IWatchRoomUseCase {
@@ -71,10 +78,7 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       state.players.length > 0
         ? state.players
         : room.players.map((player) => toDomainPlayer(player));
-    const currentTurn =
-      state.currentPlayerIndex !== -1 && state.players[state.currentPlayerIndex]
-        ? state.players[state.currentPlayerIndex].playerId
-        : null;
+    const currentTurn = resolveCurrentSeatId(state);
     const spectatorPlayers = resolveTransportPlayers(
       roomGameState,
       statePlayers,
@@ -86,16 +90,21 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
     return {
       players: spectatorPlayers,
       gamePhase: state.gamePhase ?? 'waiting',
-      currentField: state.playState?.currentField ?? null,
-      currentTurn,
-      blowState: state.blowState,
+      currentField: state.playState?.currentField
+        ? toFieldContract(state.playState.currentField)
+        : null,
+      currentTurnSeatId: currentTurn ? asSeatId(currentTurn) : null,
+      blowState: toBlowStateContract(state.blowState),
       teamScores: state.teamScores,
-      you: null,
+      youSeatId: null,
       isSpectator: true,
       negriCard: state.playState?.negriCard ?? null,
-      fields: state.playState?.fields ?? [],
+      negriSeatId: state.playState?.negriSeatId
+        ? asSeatId(state.playState.negriSeatId)
+        : null,
+      fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
       roomId: room.id,
-      hostId: room.hostId,
+      hostSeatId: asSeatId(room.hostSeatId),
       pointsToWin: room.settings.pointsToWin,
       teamNames: room.settings.teamNames,
     };

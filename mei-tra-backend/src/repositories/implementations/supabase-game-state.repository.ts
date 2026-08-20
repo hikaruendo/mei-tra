@@ -6,7 +6,7 @@ import {
   BlowState,
   GameState,
   DomainPlayer,
-  PlayerConnectionMetadata,
+  PlayState,
   ScoreRecord,
 } from '../../types/game.types';
 import {
@@ -14,9 +14,19 @@ import {
   PersistedPlayerStates,
   toPersistedPlayerStates,
   toRuntimePlayer,
-} from '../../types/player-adapters';
+} from '../../adapters/player-adapters';
 import { Database } from '../../types/database.types';
 import { RoomPlayer } from '../../types/room.types';
+import { asSeatId } from '../../types/identity.types';
+import type { SeatId } from '../../types/identity.types';
+import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
+import { RosterMembershipMutation } from '../../types/room-membership.types';
+import {
+  findUnknownPersistedSeatReferences,
+  toPersistedBlowState,
+  toPersistedPendingBrokenHandReveal,
+  toPersistedPlayState,
+} from '../../adapters/game-state-persistence';
 
 type GameStateRow = Database['public']['Tables']['game_states']['Row'];
 type GameStateUpdate = Database['public']['Tables']['game_states']['Update'];
@@ -27,8 +37,12 @@ interface LoadedRoomGameState {
   roomPlayers: RoomPlayerRow[];
 }
 
+type PersistedRosterResult = GameStateRow & {
+  roomPlayers?: RoomPlayerRow[];
+};
+
 interface RosterPlayerSnapshot {
-  playerId: string;
+  seatId: string;
   name: string;
   team: number;
   isCOM?: boolean;
@@ -47,23 +61,28 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async create(roomId: string, gameState: GameState): Promise<GameState> {
     try {
+      const canonicalGameState = normalizeGameStateIdentity(gameState);
       const { data, error } = await this.supabase
         .from('game_states')
         .insert({
           room_id: roomId,
           state_data: {
-            playerStates: toPersistedPlayerStates(gameState.players),
-            deck: gameState.deck,
-            agari: gameState.agari,
-            blowState: gameState.blowState,
-            playState: gameState.playState,
+            identitySchemaVersion: 2,
+            playerStates: toPersistedPlayerStates(canonicalGameState.players),
+            deck: canonicalGameState.deck,
+            agari: canonicalGameState.agari,
+            blowState: toPersistedBlowState(canonicalGameState.blowState),
+            playState: toPersistedPlayState(canonicalGameState.playState),
+            pendingBrokenHandReveal: toPersistedPendingBrokenHandReveal(
+              canonicalGameState.pendingBrokenHandReveal,
+            ),
           },
-          current_player_id: this.resolveCurrentPlayerId(gameState),
-          game_phase: gameState.gamePhase,
-          round_number: gameState.roundNumber,
-          points_to_win: gameState.pointsToWin,
-          team_scores: gameState.teamScores,
-          team_score_records: gameState.teamScoreRecords,
+          current_seat_id: canonicalGameState.currentSeatId,
+          game_phase: canonicalGameState.gamePhase,
+          round_number: canonicalGameState.roundNumber,
+          points_to_win: canonicalGameState.pointsToWin,
+          team_scores: canonicalGameState.teamScores,
+          team_score_records: canonicalGameState.teamScoreRecords,
         })
         .select()
         .single();
@@ -73,7 +92,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         throw new Error(`Failed to create game state: ${error.message}`);
       }
 
-      return { ...gameState, version: data.version };
+      return { ...canonicalGameState, version: data.version };
     } catch (error) {
       this.logger.error('Error creating game state:', error);
       throw error;
@@ -142,16 +161,17 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     roomId: string,
     roomPlayers: RoomPlayer[],
     gameState: GameState,
-    hostId?: string,
+    hostSeatId?: SeatId,
+    membershipMutation?: RosterMembershipMutation,
   ): Promise<GameState | null> {
-    const playerStates = toPersistedPlayerStates(gameState.players);
+    const canonicalGameState = normalizeGameStateIdentity(gameState);
+    const playerStates = toPersistedPlayerStates(canonicalGameState.players);
     const persistedRoomPlayers = roomPlayers.map((player, seatIndex) => ({
-      playerId: player.playerId,
+      seatId: player.seatId,
       userId: player.userId ?? null,
       name: player.name,
       team: player.team,
       isReady: player.isReady,
-      isHost: player.isHost,
       isCOM: player.isCOM ?? false,
       joinedAt: player.joinedAt.toISOString(),
       seatIndex,
@@ -164,8 +184,11 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           p_room_id: roomId,
           p_room_players: persistedRoomPlayers,
           p_player_states: playerStates,
-          p_host_id: hostId ?? null,
-          p_expected_version: gameState.version ?? null,
+          p_state_patch: this.buildStatePatch(canonicalGameState),
+          p_scalar_patch: this.buildScalarPatch(canonicalGameState),
+          p_host_id: hostSeatId ?? null,
+          p_expected_version: canonicalGameState.version ?? null,
+          p_membership_mutation: membershipMutation ?? null,
         },
       );
 
@@ -173,9 +196,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         throw new Error(`Failed to persist room roster: ${error.message}`);
       }
 
-      return data
-        ? this.mapDatabaseToGameState(data as GameStateRow, roomPlayers)
-        : null;
+      if (!data) {
+        return null;
+      }
+
+      const persisted = data as PersistedRosterResult;
+      const persistedRoomRoster = persisted.roomPlayers ?? [];
+      return this.mapDatabaseToGameState(persisted, persistedRoomRoster);
     } catch (error) {
       this.logger.error('Error persisting room roster:', error);
       throw error;
@@ -187,15 +214,23 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
   ): Record<string, unknown> {
     const patch: Record<string, unknown> = {};
 
+    patch.identitySchemaVersion = 2;
+
     if (gameState.players) {
       patch.playerStates = toPersistedPlayerStates(gameState.players);
     }
     if (gameState.deck) patch.deck = gameState.deck;
     if (gameState.agari !== undefined) patch.agari = gameState.agari;
-    if (gameState.blowState) patch.blowState = gameState.blowState;
-    if (gameState.playState) patch.playState = gameState.playState;
+    if (gameState.blowState) {
+      patch.blowState = toPersistedBlowState(gameState.blowState);
+    }
+    if (gameState.playState) {
+      patch.playState = toPersistedPlayState(gameState.playState);
+    }
     if (gameState.pendingBrokenHandReveal !== undefined) {
-      patch.pendingBrokenHandReveal = gameState.pendingBrokenHandReveal;
+      patch.pendingBrokenHandReveal = toPersistedPendingBrokenHandReveal(
+        gameState.pendingBrokenHandReveal,
+      );
     }
 
     return patch;
@@ -206,14 +241,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
   ): Record<string, unknown> {
     const patch: Record<string, unknown> = {};
 
-    if (gameState.currentPlayerId !== undefined) {
-      patch.currentPlayerId = gameState.currentPlayerId;
-    } else if (gameState.currentPlayerIndex !== undefined) {
-      const currentPlayerId =
-        gameState.players?.[gameState.currentPlayerIndex]?.playerId;
-      if (currentPlayerId !== undefined) {
-        patch.currentPlayerId = currentPlayerId;
-      }
+    if (gameState.currentSeatId !== undefined) {
+      patch.currentSeatId = gameState.currentSeatId;
     }
     if (gameState.gamePhase !== undefined) {
       patch.gamePhase = gameState.gamePhase;
@@ -293,38 +322,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  async updatePlayerConnection(
-    roomId: string,
-    playerId: string,
-    updates: Partial<PlayerConnectionMetadata>,
-  ): Promise<boolean> {
-    void playerId;
-    void updates;
-
-    // Connection metadata now lives in room/session state. Keep the method for
-    // incremental Phase 3 compatibility without mutating persisted game-state
-    // snapshots.
-    const { error } = await this.supabase
-      .from('game_states')
-      .select('id')
-      .eq('room_id', roomId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return false;
-      }
-
-      this.logger.error(
-        'Failed to verify game state before connection sync',
-        error,
-      );
-      return false;
-    }
-
-    return true;
-  }
-
   async updateGamePhase(roomId: string, phase: string): Promise<boolean> {
     try {
       return Boolean(
@@ -348,8 +345,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       if (updates.round_number !== undefined) {
         gameStateUpdates.roundNumber = updates.round_number;
       }
-      if (updates.current_player_id !== undefined) {
-        gameStateUpdates.currentPlayerId = updates.current_player_id;
+      if (updates.current_seat_id !== undefined) {
+        gameStateUpdates.currentSeatId = updates.current_seat_id
+          ? asSeatId(updates.current_seat_id)
+          : null;
       }
       if (updates.game_phase !== undefined) {
         gameStateUpdates.gamePhase = updates.game_phase;
@@ -393,6 +392,11 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     roomPlayers?: Array<RoomPlayerRow | RoomPlayer>,
   ): GameState {
     const stateData = dbGameState.state_data || {};
+    if (stateData.identitySchemaVersion !== 2) {
+      throw new Error(
+        `Unsupported game-state identity schema for room ${dbGameState.room_id}`,
+      );
+    }
     const playerStates =
       stateData.playerStates && typeof stateData.playerStates === 'object'
         ? (stateData.playerStates as PersistedPlayerStates)
@@ -401,18 +405,27 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       this.toRosterPlayerSnapshot(player),
     );
     const roomPlayersById = new Map(
-      rosterPlayers.map((player) => [player.playerId, player]),
+      rosterPlayers.map((player) => [player.seatId, player]),
     );
-    const rosterOrder = rosterPlayers.map((player) => player.playerId);
+    const unknownStateSeats = findUnknownPersistedSeatReferences(
+      stateData,
+      new Set(roomPlayersById.keys()),
+    );
+    if (unknownStateSeats.length > 0) {
+      throw new Error(
+        `Game state references seats outside room ${dbGameState.room_id}: ${unknownStateSeats.join(',')}`,
+      );
+    }
+    const rosterOrder = rosterPlayers.map((player) => player.seatId);
     const players = rosterOrder
-      .map((playerId) => {
-        const roomPlayer = roomPlayersById.get(playerId);
-        const gameplay = playerStates[playerId] as
+      .map((seatId) => {
+        const roomPlayer = roomPlayersById.get(seatId);
+        const gameplay = playerStates[seatId] as
           | PersistedPlayerGameplayState
           | undefined;
 
         return toRuntimePlayer({
-          playerId,
+          seatId: asSeatId(seatId),
           name: roomPlayer?.name,
           team: roomPlayer?.team as 0 | 1 | undefined,
           isCOM: roomPlayer?.isCOM,
@@ -423,38 +436,32 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         });
       })
       .filter((player): player is DomainPlayer => Boolean(player));
+    const canonicalCurrentSeatId = dbGameState.current_seat_id;
+    if (
+      canonicalCurrentSeatId &&
+      !players.some((player) => player.seatId === canonicalCurrentSeatId)
+    ) {
+      throw new Error(
+        `Current seat ${canonicalCurrentSeatId} is outside room ${dbGameState.room_id}`,
+      );
+    }
+    const blowState = (stateData.blowState ?? {
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      declarations: [],
+      actionHistory: [],
+      lastPasserSeatId: null,
+      isRoundCancelled: false,
+      currentBlowIndex: 0,
+    }) as BlowState;
 
-    const persistedCurrentPlayerId =
-      typeof dbGameState.current_player_id === 'string'
-        ? dbGameState.current_player_id
-        : null;
-    const currentPlayerId =
-      persistedCurrentPlayerId &&
-      players.some((player) => player.playerId === persistedCurrentPlayerId)
-        ? persistedCurrentPlayerId
-        : null;
-    const currentPlayerIndex =
-      currentPlayerId === null
-        ? 0
-        : players.findIndex((player) => player.playerId === currentPlayerId);
-    const blowState = this.reconcileBlowStateForRoster(
-      (stateData.blowState ?? {
-        currentTrump: null,
-        currentHighestDeclaration: null,
-        declarations: [],
-        actionHistory: [],
-        lastPasser: null,
-        isRoundCancelled: false,
-        currentBlowIndex: 0,
-      }) as BlowState,
-      players,
-    );
-
-    return {
+    return normalizeGameStateIdentity({
       version: dbGameState.version,
+      identitySchemaVersion: 2,
       players,
-      currentPlayerId,
-      currentPlayerIndex: currentPlayerIndex === -1 ? 0 : currentPlayerIndex,
+      currentSeatId: canonicalCurrentSeatId
+        ? asSeatId(canonicalCurrentSeatId)
+        : null,
       gamePhase: dbGameState.game_phase,
       deck: stateData.deck || [],
       teamScores: dbGameState.team_scores as Record<
@@ -465,119 +472,21 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         dbGameState.team_score_records,
       ),
       blowState,
-      playState: stateData.playState,
+      playState: stateData.playState as PlayState | undefined,
       pendingBrokenHandReveal: stateData.pendingBrokenHandReveal ?? null,
-      agari: stateData.agari,
+      agari: stateData.agari ?? undefined,
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
-      teamAssignments: Object.fromEntries(
-        players.map((player) => [player.playerId, player.team]),
-      ),
-    };
-  }
-
-  private reconcileBlowStateForRoster(
-    blowState: BlowState,
-    players: DomainPlayer[],
-  ): BlowState {
-    if (players.length === 0) {
-      return blowState;
-    }
-
-    const rosterPlayerIds = new Set(players.map((player) => player.playerId));
-    const referencedPlayerIds = new Set<string>();
-
-    blowState.declarations.forEach((declaration) => {
-      referencedPlayerIds.add(declaration.playerId);
     });
-    (blowState.actionHistory ?? []).forEach((action) => {
-      referencedPlayerIds.add(action.playerId);
-    });
-    if (blowState.currentHighestDeclaration?.playerId) {
-      referencedPlayerIds.add(blowState.currentHighestDeclaration.playerId);
-    }
-    if (blowState.lastPasser) {
-      referencedPlayerIds.add(blowState.lastPasser);
-    }
-
-    const orphanPlayerIds = [...referencedPlayerIds].filter(
-      (playerId) => !rosterPlayerIds.has(playerId),
-    );
-    if (orphanPlayerIds.length !== 1) {
-      return blowState;
-    }
-
-    const actedRosterPlayerIds = new Set(
-      [...referencedPlayerIds].filter((playerId) =>
-        rosterPlayerIds.has(playerId),
-      ),
-    );
-    const missingPlayers = players.filter(
-      (player) => !actedRosterPlayerIds.has(player.playerId),
-    );
-    if (missingPlayers.length !== 1) {
-      return blowState;
-    }
-
-    const fromPlayerId = orphanPlayerIds[0];
-    const toPlayer = missingPlayers[0];
-    const remappedBlowState: BlowState = {
-      ...blowState,
-      declarations: blowState.declarations.map((declaration) =>
-        declaration.playerId === fromPlayerId
-          ? {
-              ...declaration,
-              playerId: toPlayer.playerId,
-              team: toPlayer.team,
-            }
-          : declaration,
-      ),
-      actionHistory: (blowState.actionHistory ?? []).map((action) =>
-        action.playerId === fromPlayerId
-          ? { ...action, playerId: toPlayer.playerId }
-          : action,
-      ),
-      currentHighestDeclaration:
-        blowState.currentHighestDeclaration?.playerId === fromPlayerId
-          ? {
-              ...blowState.currentHighestDeclaration,
-              playerId: toPlayer.playerId,
-              team: toPlayer.team,
-            }
-          : blowState.currentHighestDeclaration,
-      lastPasser:
-        blowState.lastPasser === fromPlayerId
-          ? toPlayer.playerId
-          : blowState.lastPasser,
-    };
-
-    if (
-      remappedBlowState.lastPasser === toPlayer.playerId ||
-      remappedBlowState.actionHistory.some(
-        (action) =>
-          action.type === 'pass' && action.playerId === toPlayer.playerId,
-      )
-    ) {
-      toPlayer.isPasser = true;
-    }
-
-    return remappedBlowState;
-  }
-
-  private resolveCurrentPlayerId(gameState: GameState): string | null {
-    if (gameState.currentPlayerId !== undefined) {
-      return gameState.currentPlayerId;
-    }
-
-    return gameState.players[gameState.currentPlayerIndex]?.playerId ?? null;
   }
 
   private toRosterPlayerSnapshot(
     player: RoomPlayerRow | RoomPlayer,
   ): RosterPlayerSnapshot {
-    if ('player_id' in player) {
+    if ('room_id' in player) {
+      const seatId = player.id;
       return {
-        playerId: player.player_id,
+        seatId,
         name: player.name,
         team: player.team,
         isCOM: player.is_com,
@@ -585,7 +494,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
 
     return {
-      playerId: player.playerId,
+      seatId: player.seatId,
       name: player.name,
       team: player.team,
       isCOM: player.isCOM,

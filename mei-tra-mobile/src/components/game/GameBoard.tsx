@@ -1,4 +1,4 @@
-import type { PlayerContract, TrumpType } from '@meitra/contracts/game';
+import type { TrumpType } from '@meitra/contracts/game';
 import type {
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
@@ -19,6 +19,7 @@ import {
 import { BlowControls } from '@/components/game/BlowControls';
 import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
+import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
 import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
@@ -32,12 +33,15 @@ import {
 } from '@/lib/table-order';
 import { getStrengthOrderLabel } from '@/lib/trump-display';
 import { getTeamDisplayName } from '@/lib/team-labels';
-import { TRUMP_LABELS } from '@/lib/trump-labels';
+import { trumpLabel } from '@/lib/trump-labels';
 import { colors, teamColors } from '@/theme/colors';
+import type { MobileFirstTurnReveal } from '@/context/GameContext';
 import type {
   MobileGameOver,
   MobileGameSnapshot,
+  MobilePlayer,
 } from '@/types/game';
+import { t } from '@/i18n';
 
 interface GameHistoryData {
   replay: GameHistoryReplayViewContract | null;
@@ -57,12 +61,16 @@ interface GameBoardProps {
   onSelectNegri: (card: string) => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
-  onRemovePlayer: (playerId: string) => void;
-  onReplaceWithCOM: (playerId: string) => void;
+  onRemovePlayer: (seatId: string) => void;
+  onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
   actionsDisabled?: boolean;
   history?: GameHistoryData;
   roomId?: string;
+  firstTurnReveal?: MobileFirstTurnReveal | null;
+  onFirstTurnRevealDone?: () => void;
+  isGuest?: boolean;
+  onRegisterAccount?: () => void;
 }
 
 export function GameBoard({
@@ -81,6 +89,10 @@ export function GameBoard({
   actionsDisabled = false,
   history,
   roomId,
+  firstTurnReveal = null,
+  onFirstTurnRevealDone,
+  isGuest = false,
+  onRegisterAccount,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -96,28 +108,28 @@ export function GameBoard({
   >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hostPlayerId =
-    game.players.find((p) => p.isHost)?.playerId ??
-    game.players[0]?.playerId ??
+  const hostSeatId =
+    game.players.find((p) => p.isHost)?.seatId ??
+    game.players[0]?.seatId ??
     null;
-  const perspectivePlayerId = game.isSpectator
-    ? spectatorPerspectiveId ?? hostPlayerId
-    : game.you;
+  const perspectiveSeatId = game.isSpectator
+    ? spectatorPerspectiveId ?? hostSeatId
+    : game.youSeatId;
 
   useEffect(() => {
     if (!game.isSpectator) return;
     const valid = game.players.some(
-      (p) => p.playerId === spectatorPerspectiveId,
+      (p) => p.seatId === spectatorPerspectiveId,
     );
-    if (!valid) setSpectatorPerspectiveId(hostPlayerId);
-  }, [game.isSpectator, game.players, hostPlayerId, spectatorPerspectiveId]);
+    if (!valid) setSpectatorPerspectiveId(hostSeatId);
+  }, [game.isSpectator, game.players, hostSeatId, spectatorPerspectiveId]);
 
   const self = game.players.find(
-    (player) => player.playerId === perspectivePlayerId,
+    (player) => player.seatId === perspectiveSeatId,
   );
   const { width: windowWidth } = useWindowDimensions();
   // Size the fan from the hand it actually renders. Spectators have no
-  // `game.you`, so keying off that collapsed the count to 0 and the metrics
+  // `game.youSeatId`, so keying off that collapsed the count to 0 and the metrics
   // fell through to the single-card branch (max width, zero overlap).
   const selfHandCount = self?.hand.length ?? 0;
   // board padding (20) + self panel (~86) + fan padding (20)
@@ -125,8 +137,8 @@ export function GameBoard({
   const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
     useHandFanMetrics(fanAvailableWidth, selfHandCount);
   const orderedPlayers = useMemo(
-    () => getSeatOrderWithSelfBottom(game.players, perspectivePlayerId),
-    [game.players, perspectivePlayerId],
+    () => getSeatOrderWithSelfBottom(game.players, perspectiveSeatId),
+    [game.players, perspectiveSeatId],
   );
   const leftPlayer = orderedPlayers[1] ?? null;
   const topPlayer = orderedPlayers[2] ?? null;
@@ -141,7 +153,7 @@ export function GameBoard({
         (
           slot,
         ): slot is {
-          player: PlayerContract;
+          player: MobilePlayer;
           position: 'left' | 'top' | 'right';
         } =>
           slot.player != null,
@@ -159,15 +171,16 @@ export function GameBoard({
   const mustSelectNegri =
     !game.isSpectator &&
     game.gamePhase === 'play' &&
-    highest?.playerId === game.you &&
+    highest?.seatId === game.youSeatId &&
     !game.negriCard;
-  const isMyTurn = !game.isSpectator && game.currentTurn === game.you;
+  const isMyTurn =
+    !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
   const phaseLabel =
     game.gamePhase === 'blow'
-      ? '吹き'
+      ? t('board.phaseBlow')
       : game.gamePhase === 'play'
-        ? 'プレイ'
-        : '待機';
+        ? t('board.phasePlay')
+        : t('board.phaseWaiting');
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
@@ -193,7 +206,7 @@ export function GameBoard({
   useEffect(() => {
     setSelectedCard(null);
     setPendingAction(null);
-  }, [game.gamePhase, game.you]);
+  }, [game.gamePhase, game.youSeatId]);
 
   useEffect(() => {
     setPendingAction(null);
@@ -202,7 +215,7 @@ export function GameBoard({
     }
   }, [
     actionsDisabled,
-    game.currentTurn,
+    game.currentTurnSeatId,
     fieldCardsKey,
     game.blowState.currentHighestDeclaration?.timestamp,
     game.negriCard,
@@ -273,7 +286,7 @@ export function GameBoard({
           <Text style={styles.phase}>{phaseLabel}</Text>
           {highest ? (
             <Text style={styles.trumpBadge}>
-              {TRUMP_LABELS[highest.trumpType]} {highest.numberOfPairs}
+              {trumpLabel(highest.trumpType)} {highest.numberOfPairs}
             </Text>
           ) : null}
         </View>
@@ -291,31 +304,31 @@ export function GameBoard({
           {opponentSlots.map(({ player, position }) => {
             const hasNegri =
               game.gamePhase === 'play' &&
-              game.negriPlayerId === player.playerId;
-            const blowWinnerId = highest?.playerId;
+              game.negriSeatId === player.seatId;
+            const blowWinnerId = highest?.seatId;
             const hasAgari =
               game.gamePhase === 'play' &&
               game.revealedAgari &&
-              blowWinnerId === player.playerId;
+              blowWinnerId === player.seatId;
             const seatEl = (
               <PlayerSeat
-                key={player.playerId}
+                key={player.seatId}
                 agariCard={hasAgari ? game.revealedAgari ?? undefined : undefined}
                 declaration={
-                  highest && highest.playerId === player.playerId
-                    ? `${TRUMP_LABELS[highest.trumpType]} ${highest.numberOfPairs}`
+                  highest && highest.seatId === player.seatId
+                    ? `${trumpLabel(highest.trumpType)} ${highest.numberOfPairs}`
                     : undefined
                 }
-                isBlowWinner={blowWinnerId === player.playerId}
-                isDisconnected={game.disconnectedPlayerIds.includes(
-                  player.playerId,
+                isBlowWinner={blowWinnerId === player.seatId}
+                isDisconnected={game.disconnectedSeatIds.includes(
+                  player.seatId,
                 )}
-                isIdle={game.idlePlayerIds.includes(player.playerId)}
-                isTurn={game.currentTurn === player.playerId}
+                isIdle={game.idleSeatIds.includes(player.seatId)}
+                isTurn={game.currentTurnSeatId === player.seatId}
                 negriCard={hasNegri ? 'hidden' : undefined}
                 onPress={
                   game.isSpectator
-                    ? () => setSpectatorPerspectiveId(player.playerId)
+                    ? () => setSpectatorPerspectiveId(player.seatId)
                     : undefined
                 }
                 player={player}
@@ -331,22 +344,22 @@ export function GameBoard({
                   : styles.seatRight;
             const wrapped = isHost && !player.isCOM ? (
               <Pressable
-                key={player.playerId}
+                key={player.seatId}
                 onLongPress={() => {
                   Alert.alert(
                     player.name,
-                    'プレイヤーの操作を選択してください',
+                    t('waiting.playerActionTitle'),
                     [
                       {
-                        text: 'COMに置換',
-                        onPress: () => onReplaceWithCOM(player.playerId),
+                        text: t('waiting.replaceWithCom'),
+                        onPress: () => onReplaceWithCOM(player.seatId),
                       },
                       {
-                        text: '退出させる',
+                        text: t('waiting.removePlayer'),
                         style: 'destructive',
-                        onPress: () => onRemovePlayer(player.playerId),
+                        onPress: () => onRemovePlayer(player.seatId),
                       },
-                      { text: 'キャンセル', style: 'cancel' },
+                      { text: t('common.cancel'), style: 'cancel' },
                     ],
                   );
                 }}
@@ -354,31 +367,31 @@ export function GameBoard({
                 {seatEl}
               </Pressable>
             ) : seatEl;
-            const isDisconnected = game.disconnectedPlayerIds.includes(
-              player.playerId,
+            const isDisconnected = game.disconnectedSeatIds.includes(
+              player.seatId,
             );
-            const isIdle = game.idlePlayerIds.includes(player.playerId);
+            const isIdle = game.idleSeatIds.includes(player.seatId);
             // Matches the web condition (PlayerHand/index.tsx): the host never
             // sees the control on their own seat.
             const showReplacePanel =
               isHost &&
               !player.isCOM &&
-              player.playerId !== game.you &&
+              player.seatId !== game.youSeatId &&
               (isDisconnected || isIdle);
             return (
-              <View key={player.playerId} style={posStyle}>
+              <View key={player.seatId} style={posStyle}>
                 {wrapped}
                 {showReplacePanel ? (
                   <View style={styles.replacePanel}>
                     <Text style={styles.replacePanelHeader}>
-                      {isDisconnected ? '切断中' : '無操作'}
+                      {isDisconnected ? t('seat.disconnected') : t('seat.idle')}
                     </Text>
                     <Pressable
-                      onPress={() => onReplaceWithCOM(player.playerId)}
+                      onPress={() => onReplaceWithCOM(player.seatId)}
                       style={styles.replacePanelButton}
                     >
                       <Text style={styles.replacePanelButtonText}>
-                        COMに置換
+                        {t('waiting.replaceWithCom')}
                       </Text>
                     </Pressable>
                   </View>
@@ -393,9 +406,9 @@ export function GameBoard({
             <View style={styles.fieldCenter}>
               {game.currentField?.cards.length ? (
                 game.currentField.cards.map((card, index) => {
-                  const playerId = game.currentField!.playedBy[index];
+                  const seatId = game.currentField!.playedBySeatIds[index];
                   const seat = getCardSeatPosition(
-                    playerId,
+                    seatId,
                     orderedPlayers,
                   );
                   const seatOffsets: Record<string, { x: number; y: number }> = {
@@ -424,17 +437,19 @@ export function GameBoard({
                   );
                 })
               ) : (
-                <Text style={styles.emptyField}>まだカードはありません</Text>
+                <Text style={styles.emptyField}>{t('board.emptyField')}</Text>
               )}
             </View>
             {game.currentField?.baseSuit ? (
               <Text style={styles.baseSuit}>
-                台札のスート: {game.currentField.baseSuit}
+                {t('board.baseSuit', {
+                  suit: game.currentField.baseSuit,
+                })}
               </Text>
             ) : null}
             {needsBaseSuit ? (
               <View style={styles.suitSelector}>
-                <Text style={styles.sectionLabel}>台札のスートを選択</Text>
+                <Text style={styles.sectionLabel}>{t('board.selectBaseSuit')}</Text>
                 <View style={styles.suitButtons}>
                   {['♠', '♥', '♦', '♣'].map((suit) => (
                     <Button
@@ -461,8 +476,8 @@ export function GameBoard({
           <BlowControls
             actionHistory={game.blowState.actionHistory}
             actionsDisabled={actionsDisabled || game.isSpectator}
-            currentPlayerId={game.you}
-            currentTurn={game.currentTurn}
+            currentSeatId={game.youSeatId}
+            currentTurn={game.currentTurnSeatId}
             highest={highest}
             onDeclare={onDeclare}
             onPass={onPass}
@@ -477,7 +492,7 @@ export function GameBoard({
                 style={[
                   styles.selfCard,
                   (game.isSpectator
-                    ? game.currentTurn === self.playerId
+                    ? game.currentTurnSeatId === self.seatId
                     : isMyTurn) && styles.selfCardTurn,
                 ]}
               >
@@ -495,18 +510,20 @@ export function GameBoard({
                   </Text>
                 </View>
                 <Text style={styles.selfFieldCountText}>
-                  取得 {teamFieldCounts[self.team] ?? 0}場
+                  {t('seat.fieldsWon', {
+                    count: teamFieldCounts[self.team] ?? 0,
+                  })}
                 </Text>
-                {game.gamePhase === 'play' && game.negriCard && highest?.playerId === self.playerId ? (
+                {game.gamePhase === 'play' && game.negriCard && highest?.seatId === self.seatId ? (
                   <View style={styles.selfSpecialRow}>
                     <PlayingCard card={game.negriCard} size="seat" />
-                    <Text style={styles.selfSpecialLabel}>ネグリ</Text>
+                    <Text style={styles.selfSpecialLabel}>{t('seat.negri')}</Text>
                   </View>
                 ) : null}
                 {game.gamePhase === 'play' && game.revealedAgari ? (
                   <View style={styles.selfSpecialRow}>
                     <PlayingCard card={game.revealedAgari} size="seat" />
-                    <Text style={styles.selfSpecialLabel}>アゲ</Text>
+                    <Text style={styles.selfSpecialLabel}>{t('seat.agariShort')}</Text>
                   </View>
                 ) : null}
               </View>
@@ -514,15 +531,17 @@ export function GameBoard({
                 {game.gamePhase === 'play' ? (
                   game.isSpectator ? (
                     <Text style={styles.instruction}>
-                      {self.name} の手札（観戦中）
+                      {t('board.spectatingHand', { name: self.name })}
                     </Text>
                   ) : mustSelectNegri ? (
                     <Text style={styles.instruction}>
-                      ネグリにするカードを選んでください
+                      {t('board.chooseNegri')}
                     </Text>
                   ) : (
                     <Text style={styles.instruction}>
-                      {isMyTurn ? 'プレイするカードを選んでください' : '順番を待っています'}
+                      {isMyTurn
+                        ? t('board.choosePlayCard')
+                        : t('board.waitingTurn')}
                     </Text>
                   )
                 ) : null}
@@ -595,7 +614,7 @@ export function GameBoard({
                   style={styles.actionButton}
                   variant="secondary"
                 >
-                  キャンセル
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   disabled={
@@ -607,7 +626,7 @@ export function GameBoard({
                   onPress={confirmSelected}
                   style={styles.actionButton}
                 >
-                  {mustSelectNegri ? 'ネグリにする' : 'プレイ'}
+                  {mustSelectNegri ? t('board.setNegri') : t('board.play')}
                 </Button>
               </View>
             ) : null}
@@ -636,24 +655,24 @@ export function GameBoard({
 
       {game.paused ? (
         <View style={styles.pausedOverlay}>
-          <Text style={styles.pausedTitle}>ゲームを一時停止しています</Text>
-          <Text style={styles.pausedText}>プレイヤーの再接続を待っています</Text>
+          <Text style={styles.pausedTitle}>{t('board.pausedTitle')}</Text>
+          <Text style={styles.pausedText}>{t('board.pausedText')}</Text>
           {isHost ? (
             <View style={styles.pausedReplaceSection}>
               {game.players
                 .filter(
                   (p) =>
                     !p.isCOM &&
-                    game.disconnectedPlayerIds.includes(p.playerId),
+                    game.disconnectedSeatIds.includes(p.seatId),
                 )
                 .map((p) => (
                   <Pressable
-                    key={p.playerId}
-                    onPress={() => onReplaceWithCOM(p.playerId)}
+                    key={p.seatId}
+                    onPress={() => onReplaceWithCOM(p.seatId)}
                     style={styles.pausedReplaceButton}
                   >
                     <Text style={styles.pausedReplaceButtonText}>
-                      {p.name} をCOMに置換
+                      {t('board.replaceNamed', { name: p.name })}
                     </Text>
                   </Pressable>
                 ))}
@@ -670,17 +689,30 @@ export function GameBoard({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>ゲーム終了</Text>
+            <Text style={styles.modalTitle}>{t('board.gameOver')}</Text>
             <Text style={styles.modalText}>
-              勝者: {gameOver?.winner}
-              {'\n'}
-              {getTeamDisplayName(0, game.teamNames)}{' '}
-              {gameOver?.finalScores[0]?.total ?? 0}点 /{' '}
-              {getTeamDisplayName(1, game.teamNames)}{' '}
-              {gameOver?.finalScores[1]?.total ?? 0}点
+              {t('board.gameOverResult', {
+                winner: gameOver?.winner ?? '',
+                redName: getTeamDisplayName(0, game.teamNames),
+                redScore: gameOver?.finalScores[0]?.total ?? 0,
+                blackName: getTeamDisplayName(1, game.teamNames),
+                blackScore: gameOver?.finalScores[1]?.total ?? 0,
+              })}
             </Text>
+            {isGuest && onRegisterAccount ? (
+              <View style={styles.guestPromptBox}>
+                <Text style={styles.guestPromptText}>
+                  {t('board.guestPrompt')}
+                </Text>
+                {/* Registration is REST/Supabase, so it stays enabled even when
+                    socket actions are disabled. */}
+                <Button onPress={onRegisterAccount}>
+                  {t('board.registerAccount')}
+                </Button>
+              </View>
+            ) : null}
             <Button disabled={actionsDisabled} onPress={onCloseGameOver}>
-              ルーム一覧へ
+              {t('board.toRoomList')}
             </Button>
           </View>
         </View>
@@ -712,7 +744,7 @@ export function GameBoard({
                 }}
                 variant="secondary"
               >
-                強さ順
+                {t('board.strengthOrder')}
               </Button>
             ) : null}
             {roomId ? (
@@ -723,7 +755,7 @@ export function GameBoard({
                 }}
                 variant="secondary"
               >
-                チャット
+                {t('board.chat')}
               </Button>
             ) : null}
             {history ? (
@@ -735,7 +767,7 @@ export function GameBoard({
                 }}
                 variant="secondary"
               >
-                対局ログ
+                {t('board.gameLog')}
               </Button>
             ) : null}
             <Button
@@ -748,7 +780,7 @@ export function GameBoard({
               variant="ghost"
               style={styles.optionsItemDanger}
             >
-              退出
+              {t('board.leave')}
             </Button>
           </View>
         </View>
@@ -764,12 +796,12 @@ export function GameBoard({
           <View style={styles.chatOverlay}>
             <View style={styles.chatCard}>
               <View style={styles.chatHeader}>
-                <Text style={styles.chatTitle}>チャット</Text>
+                <Text style={styles.chatTitle}>{t('board.chat')}</Text>
                 <Button
                   onPress={() => setShowChat(false)}
                   variant="ghost"
                 >
-                  閉じる
+                  {t('board.close')}
                 </Button>
               </View>
               <ChatPanel roomId={roomId} />
@@ -788,12 +820,12 @@ export function GameBoard({
           <View style={styles.historyOverlay}>
             <View style={styles.historyCard}>
               <View style={styles.historyHeader}>
-                <Text style={styles.historyTitle}>対局ログ</Text>
+                <Text style={styles.historyTitle}>{t('board.gameLog')}</Text>
                 <Button
                   onPress={() => setShowHistory(false)}
                   variant="ghost"
                 >
-                  閉じる
+                  {t('board.close')}
                 </Button>
               </View>
               <GameHistory
@@ -809,9 +841,19 @@ export function GameBoard({
           </View>
         </Modal>
       ) : null}
+
+      {firstTurnReveal ? (
+        <StartPlayerJanken
+          onDone={onFirstTurnRevealDone ?? noop}
+          players={game.players}
+          reveal={firstTurnReveal}
+        />
+      ) : null}
     </View>
   );
 }
+
+const noop = () => {};
 
 const styles = StyleSheet.create({
   container: {
@@ -1171,6 +1213,19 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     lineHeight: 26,
+  },
+  guestPromptBox: {
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panelStrong,
+  },
+  guestPromptText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
   chatOverlay: {
     flex: 1,

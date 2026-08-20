@@ -8,12 +8,13 @@ import { IComPlayerService } from '../interfaces/com-player-service.interface';
 import { ActiveRoomMembershipConflictError } from '../../types/room-membership.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { GameStateService } from '../game-state.service';
+import { asSeatId } from '../../types/identity.types';
 
 describe('RoomService active membership lifecycle', () => {
   const room: Room = {
     id: 'room-1',
     name: 'Room 1',
-    hostId: 'user-1',
+    hostSeatId: asSeatId('user-1'),
     status: RoomStatus.WAITING,
     settings: {
       maxPlayers: 4,
@@ -32,7 +33,7 @@ describe('RoomService active membership lifecycle', () => {
   const membership = {
     userId: 'user-1',
     roomId: 'room-1',
-    playerId: 'user-1',
+    seatId: 'user-1',
     status: 'active' as const,
     membershipVersion: 2,
     transitionId: 'transition-1',
@@ -46,7 +47,7 @@ describe('RoomService active membership lifecycle', () => {
     get: jest.Mock;
     claim: jest.Mock;
     release: jest.Mock;
-    releaseByPlayer: jest.Mock;
+    releaseBySeat: jest.Mock;
     releaseRoom: jest.Mock;
   };
   let roomJoinService: { joinRoom: jest.Mock };
@@ -62,7 +63,7 @@ describe('RoomService active membership lifecycle', () => {
       get: jest.fn().mockResolvedValue(null),
       claim: jest.fn(),
       release: jest.fn().mockResolvedValue('released'),
-      releaseByPlayer: jest.fn().mockResolvedValue(true),
+      releaseBySeat: jest.fn().mockResolvedValue(true),
       releaseRoom: jest.fn().mockResolvedValue(0),
     };
     roomJoinService = { joinRoom: jest.fn() };
@@ -80,7 +81,6 @@ describe('RoomService active membership lifecycle', () => {
       undefined,
       undefined,
       undefined,
-      undefined,
       roomJoinService as unknown as RoomJoinService,
     );
     jest.spyOn(service, 'getRoom').mockResolvedValue(room);
@@ -94,15 +94,15 @@ describe('RoomService active membership lifecycle', () => {
   });
 
   it('rejects a cross-room conflict before mutating the target room', async () => {
-    membershipService.claim.mockResolvedValue({
-      result: 'conflict',
-      membership: { ...membership, roomId: 'room-existing' },
+    membershipService.get.mockResolvedValue({
+      ...membership,
+      roomId: 'room-existing',
     });
 
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-1',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
@@ -112,14 +112,14 @@ describe('RoomService active membership lifecycle', () => {
     expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
   });
 
-  it('claims and joins with the persisted room seat id', async () => {
+  it('joins with the persisted room seat id and leaves claiming to the atomic writer', async () => {
     const roomWithResolvedSeat: Room = {
       ...room,
-      hostId: 'seat-1',
+      hostSeatId: asSeatId('seat-1'),
       players: [
         {
           socketId: 'socket-old',
-          playerId: 'seat-1',
+          seatId: asSeatId('seat-1'),
           userId: 'user-1',
           isAuthenticated: true,
           name: 'Player 1',
@@ -133,31 +133,23 @@ describe('RoomService active membership lifecycle', () => {
       ],
     };
     jest.spyOn(service, 'getRoom').mockResolvedValue(roomWithResolvedSeat);
-    membershipService.claim.mockResolvedValue({
-      result: 'reconnected',
-      membership: { ...membership, playerId: 'seat-1' },
-    });
     roomJoinService.joinRoom.mockResolvedValue(true);
 
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-new',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
     ).resolves.toBe(true);
 
-    expect(membershipService.claim).toHaveBeenCalledWith(
-      'user-1',
-      'room-1',
-      'seat-1',
-    );
+    expect(membershipService.claim).not.toHaveBeenCalled();
     const joinRequest: unknown = roomJoinService.joinRoom.mock.calls[0]?.[0];
     expect(joinRequest).toMatchObject({
-      user: { playerId: 'seat-1' },
+      user: { seatId: asSeatId('seat-1') },
     });
-    expect(membershipService.get).not.toHaveBeenCalled();
+    expect(membershipService.get).toHaveBeenCalledWith('user-1');
   });
 
   it('rejects an ambiguous authenticated room identity before claiming membership', async () => {
@@ -176,15 +168,15 @@ describe('RoomService active membership lifecycle', () => {
     jest.spyOn(service, 'getRoom').mockResolvedValue({
       ...room,
       players: [
-        { ...duplicatePlayer, playerId: 'seat-1' },
-        { ...duplicatePlayer, playerId: 'seat-2' },
+        { ...duplicatePlayer, seatId: asSeatId('seat-1') },
+        { ...duplicatePlayer, seatId: asSeatId('seat-2') },
       ],
     });
 
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-new',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
@@ -194,40 +186,28 @@ describe('RoomService active membership lifecycle', () => {
     expect(roomJoinService.joinRoom).not.toHaveBeenCalled();
   });
 
-  it('rolls back a fresh claim with its membership version when joining fails', async () => {
-    membershipService.claim.mockResolvedValue({
-      result: 'claimed',
-      membership,
-    });
+  it('does not release membership separately when the atomic join fails', async () => {
     roomJoinService.joinRoom.mockResolvedValue(false);
 
     await expect(
       service.joinRoom('room-1', {
         socketId: 'socket-1',
-        playerId: 'user-1',
+        seatId: asSeatId('user-1'),
         userId: 'user-1',
         name: 'Player 1',
       }),
     ).resolves.toBe(false);
 
-    expect(membershipService.release).toHaveBeenCalledWith(
-      'user-1',
-      'room-1',
-      2,
-    );
-    expect(membershipService.releaseByPlayer).not.toHaveBeenCalled();
+    expect(membershipService.release).not.toHaveBeenCalled();
+    expect(membershipService.releaseBySeat).not.toHaveBeenCalled();
   });
 
   it('preserves an existing same-room membership when reconnect joining fails', async () => {
-    membershipService.claim.mockResolvedValue({
-      result: 'reconnected',
-      membership: { ...membership, membershipVersion: 3 },
-    });
     roomJoinService.joinRoom.mockResolvedValue(false);
 
     await service.joinRoom('room-1', {
       socketId: 'socket-2',
-      playerId: 'user-1',
+      seatId: asSeatId('user-1'),
       userId: 'user-1',
       name: 'Player 1',
     });

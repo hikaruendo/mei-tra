@@ -18,7 +18,9 @@ export function BlowSpectatorPanel({
   players,
 }: BlowSpectatorPanelProps) {
   const t = useTranslations('blowControls');
-  const playerMap = new Map(players.map((player) => [player.playerId, player]));
+  const playerMap = new Map<string, Player>(
+    players.map((player) => [player.seatId, player]),
+  );
   const currentPlayerName = whoseTurn
     ? playerMap.get(whoseTurn)?.name ?? whoseTurn
     : t('waiting');
@@ -26,7 +28,7 @@ export function BlowSpectatorPanel({
     ? blowActionHistory
     : blowDeclarations.map((declaration) => ({
       type: 'declare' as const,
-      playerId: declaration.playerId,
+      seatId: declaration.seatId,
       trumpType: declaration.trumpType,
       numberOfPairs: declaration.numberOfPairs,
       timestamp: declaration.timestamp,
@@ -35,12 +37,12 @@ export function BlowSpectatorPanel({
     (first, second) => first.timestamp - second.timestamp,
   );
 
-  const getPlayerName = (playerId: string) =>
-    playerMap.get(playerId)?.name ?? playerId;
+  const getPlayerName = (seatId: string) =>
+    playerMap.get(seatId)?.name ?? seatId;
   const isHighestDeclaration = (action: BlowAction) =>
     action.type === 'declare' &&
     currentHighestDeclaration?.timestamp === action.timestamp &&
-    currentHighestDeclaration.playerId === action.playerId;
+    currentHighestDeclaration.seatId === action.seatId;
 
   return (
     <section
@@ -65,9 +67,9 @@ export function BlowSpectatorPanel({
               <span className={styles.declarationValue}>
                 <span
                   className={styles.playerName}
-                  title={getPlayerName(currentHighestDeclaration.playerId)}
+                  title={getPlayerName(currentHighestDeclaration.seatId)}
                 >
-                  {getPlayerName(currentHighestDeclaration.playerId)}
+                  {getPlayerName(currentHighestDeclaration.seatId)}
                 </span>
                 <span
                   className={styles.trump}
@@ -88,16 +90,16 @@ export function BlowSpectatorPanel({
           <ol className={styles.historyList}>
             {chronologicalActions.map((action) => (
               <li
-                key={`${action.type}-${action.playerId}-${action.timestamp}`}
+                key={`${action.type}-${action.seatId}-${action.timestamp}`}
                 className={`${styles.historyItem} ${
                   action.type === 'pass' ? styles.pass : ''
                 } ${isHighestDeclaration(action) ? styles.highest : ''}`}
               >
                 <span
                   className={styles.playerName}
-                  title={getPlayerName(action.playerId)}
+                  title={getPlayerName(action.seatId)}
                 >
-                  {getPlayerName(action.playerId)}
+                  {getPlayerName(action.seatId)}
                 </span>
                 {action.type === 'pass' ? (
                   <span>{t('pass')}</span>

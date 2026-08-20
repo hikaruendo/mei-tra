@@ -11,6 +11,8 @@ import {
   buildPlayerSyncEvents,
   resolvePlayerByActorId,
 } from './helpers/player-resolution.helper';
+import { asSeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {
@@ -36,7 +38,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         return { success: false, error: 'Cannot select Negri card now' };
       }
 
-      if (!roomGameState.isPlayerTurn(player.playerId)) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to select Negri" };
       }
 
@@ -47,17 +49,18 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       state.playState = {
         currentField: {
           cards: [],
-          playedBy: [],
+          playedBySeatIds: [],
           baseCard: '',
-          dealerId: player.playerId,
+          dealerSeatId: asSeatId(player.seatId),
           isComplete: false,
         },
         negriCard: card,
+        negriSeatId: asSeatId(player.seatId),
         neguri: {},
         fields: [],
-        lastWinnerId: null,
+        lastWinnerSeatId: null,
         openDeclared: false,
-        openDeclarerId: null,
+        openDeclarerSeatId: null,
       };
 
       player.hand = player.hand.filter((c) => c !== card);
@@ -73,7 +76,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       }
 
       const winnerIndex = state.players.findIndex(
-        (p) => p.playerId === winner.playerId,
+        (p) => p.seatId === winner.seatId,
       );
       if (winnerIndex === -1) {
         return {
@@ -82,8 +85,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         };
       }
 
-      state.currentPlayerIndex = winnerIndex;
-      state.currentPlayerId = winner.playerId;
+      setCurrentSeat(state, winner.seatId);
       const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
@@ -96,14 +98,14 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           event: 'play-setup-complete',
           payload: {
             negriCard: card,
-            startingPlayer: state.players[winnerIndex].playerId,
+            startingSeatId: asSeatId(state.players[winnerIndex].seatId),
           },
         },
         {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: state.players[winnerIndex].playerId,
+          payload: state.players[winnerIndex].seatId,
         },
       ];
 

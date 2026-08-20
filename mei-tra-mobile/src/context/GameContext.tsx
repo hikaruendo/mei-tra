@@ -13,6 +13,13 @@ import type {
   RoomActionPayload,
 } from '@meitra/contracts/socket';
 import type { RoomContract } from '@meitra/contracts/room';
+import { asSeatId } from '@meitra/contracts/ids';
+import {
+  hasBlowActivity,
+  resolveLastBlowSeatId,
+  shouldAbortRevealOnTurn,
+  type FirstTurnReveal,
+} from '@meitra/game-client/first-turn-reveal';
 import { io } from 'socket.io-client';
 import {
   createContext,
@@ -25,18 +32,24 @@ import {
   useRef,
 } from 'react';
 import { AppState } from 'react-native';
+import {
+  createEmptyGameEventState,
+  createGameEventStateFromSnapshot,
+  createGameEventStateFromStartedGame,
+  reduceGameEvent,
+  type GameEventState,
+  type GameServerEvent,
+} from '@meitra/game-client/game-event-reducer';
 
 import { useAuth } from '@/context/AuthContext';
 import { config } from '@/lib/config';
 import {
   createEmptyBlowState,
   createStartedGameSnapshot,
-  dedupeCompletedFields,
-  extractDisconnectedPlayerIds,
-  inferNextTurnAfterCardPlayed,
+  extractDisconnectedSeatIds,
   mergePlayersByIdentity,
   normalizeGameStatePayload,
-  resolvePlayerId,
+  resolveSeatId,
   shouldAckTurn,
 } from '@/lib/game-state';
 import {
@@ -48,34 +61,43 @@ import type {
   ConnectionStatus,
   MobileGameOver,
   MobileGameSnapshot,
+  MobileRoom,
 } from '@/types/game';
+import type { FeedbackMessage } from '@/types/feedback';
 
 interface MobileState {
-  rooms: RoomContract[];
-  currentRoom: RoomContract | null;
+  rooms: MobileRoom[];
+  currentRoom: MobileRoom | null;
   game: MobileGameSnapshot | null;
   pendingGamePatches: Partial<MobileGameSnapshot> | null;
   connectionStatus: ConnectionStatus;
-  error: string | null;
-  notice: string | null;
+  error: FeedbackMessage | null;
+  notice: FeedbackMessage | null;
   gameOver: MobileGameOver | null;
+  /**
+   * Set only by the live 'game-started' event; snapshot restores clear it so a
+   * reconnect never replays the reveal.
+   */
+  firstTurnReveal: MobileFirstTurnReveal | null;
 }
+
+export type MobileFirstTurnReveal = FirstTurnReveal;
 
 type Action =
   | { type: 'connection'; status: ConnectionStatus }
   | { type: 'rooms'; rooms: RoomContract[] }
   | { type: 'room'; room: RoomContract | null }
-  | { type: 'roomUpdated'; room: RoomContract }
   | { type: 'game'; game: MobileGameSnapshot }
   | { type: 'patchGame'; patch: Partial<MobileGameSnapshot> }
   | { type: 'players'; players: PlayerContract[] }
-  | { type: 'playerDisconnected'; playerId: string }
-  | { type: 'playerIdle'; playerId: string }
-  | { type: 'playerIdleCleared'; playerId: string }
-  | { type: 'playerConvertedToCom'; playerId: string }
-  | { type: 'error'; message: string | null }
-  | { type: 'notice'; message: string | null }
+  | { type: 'playerDisconnected'; seatId: string }
+  | { type: 'playerIdle'; seatId: string }
+  | { type: 'playerIdleCleared'; seatId: string }
+  | { type: 'playerConvertedToCom'; seatId: string }
+  | { type: 'error'; message: FeedbackMessage | null }
+  | { type: 'notice'; message: FeedbackMessage | null }
   | { type: 'gameOver'; gameOver: MobileGameOver | null }
+  | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
   | { type: 'resetRoom' };
 
 type CurrentPlayerAckEvent = Extract<
@@ -96,44 +118,37 @@ const initialState: MobileState = {
   error: null,
   notice: null,
   gameOver: null,
+  firstTurnReveal: null,
 };
 
 function reducer(state: MobileState, action: Action): MobileState {
   switch (action.type) {
     case 'connection':
       return { ...state, connectionStatus: action.status };
-    case 'rooms':
+    case 'rooms': {
+      const rooms = action.rooms;
       return {
         ...state,
-        rooms: action.rooms,
+        rooms,
         currentRoom: state.currentRoom
-          ? action.rooms.find((room) => room.id === state.currentRoom?.id) ??
+          ? rooms.find((room) => room.id === state.currentRoom?.id) ??
             state.currentRoom
           : null,
       };
-    case 'room':
+    }
+    case 'room': {
+      const room = action.room;
       return {
         ...state,
-        currentRoom: action.room,
-        rooms: action.room
+        currentRoom: room,
+        rooms: room
           ? [
-              ...state.rooms.filter((room) => room.id !== action.room?.id),
-              action.room,
+              ...state.rooms.filter((item) => item.id !== room.id),
+              room,
             ]
           : state.rooms,
       };
-    case 'roomUpdated':
-      return {
-        ...state,
-        rooms: [
-          ...state.rooms.filter((room) => room.id !== action.room.id),
-          action.room,
-        ],
-        currentRoom:
-          state.currentRoom?.id === action.room.id
-            ? action.room
-            : state.currentRoom,
-      };
+    }
     case 'game':
       return {
         ...state,
@@ -156,13 +171,14 @@ function reducer(state: MobileState, action: Action): MobileState {
         },
       };
     case 'players': {
+      const players = action.players;
       const gamePlayers = state.game
-        ? mergePlayersByIdentity(state.game.players, action.players)
-        : action.players;
+        ? mergePlayersByIdentity(state.game.players, players)
+        : players;
       const roomPlayers = state.currentRoom
         ? state.currentRoom.players.map((roomPlayer) => {
-            const updated = action.players.find(
-              (player) => player.playerId === roomPlayer.playerId,
+            const updated = players.find(
+              (player) => player.seatId === roomPlayer.seatId,
             );
             return updated ? { ...roomPlayer, ...updated } : roomPlayer;
           })
@@ -184,15 +200,15 @@ function reducer(state: MobileState, action: Action): MobileState {
         game: {
           ...state.game,
           players: state.game.players.map((p) =>
-            p.playerId === action.playerId ? { ...p, socketId: '' } : p,
+            p.seatId === action.seatId ? { ...p, socketId: '' } : p,
           ),
-          disconnectedPlayerIds: state.game.disconnectedPlayerIds.includes(
-            action.playerId,
+          disconnectedSeatIds: state.game.disconnectedSeatIds.includes(
+            action.seatId,
           )
-            ? state.game.disconnectedPlayerIds
-            : [...state.game.disconnectedPlayerIds, action.playerId],
-          idlePlayerIds: state.game.idlePlayerIds.filter(
-            (id) => id !== action.playerId,
+            ? state.game.disconnectedSeatIds
+            : [...state.game.disconnectedSeatIds, action.seatId],
+          idleSeatIds: state.game.idleSeatIds.filter(
+            (id) => id !== action.seatId,
           ),
         },
       };
@@ -203,9 +219,9 @@ function reducer(state: MobileState, action: Action): MobileState {
         ...state,
         game: {
           ...state.game,
-          idlePlayerIds: state.game.idlePlayerIds.includes(action.playerId)
-            ? state.game.idlePlayerIds
-            : [...state.game.idlePlayerIds, action.playerId],
+          idleSeatIds: state.game.idleSeatIds.includes(action.seatId)
+            ? state.game.idleSeatIds
+            : [...state.game.idleSeatIds, action.seatId],
         },
       };
     }
@@ -215,8 +231,8 @@ function reducer(state: MobileState, action: Action): MobileState {
         ...state,
         game: {
           ...state.game,
-          idlePlayerIds: state.game.idlePlayerIds.filter(
-            (id) => id !== action.playerId,
+          idleSeatIds: state.game.idleSeatIds.filter(
+            (id) => id !== action.seatId,
           ),
         },
       };
@@ -227,11 +243,11 @@ function reducer(state: MobileState, action: Action): MobileState {
         ...state,
         game: {
           ...state.game,
-          disconnectedPlayerIds: state.game.disconnectedPlayerIds.filter(
-            (id) => id !== action.playerId,
+          disconnectedSeatIds: state.game.disconnectedSeatIds.filter(
+            (id) => id !== action.seatId,
           ),
-          idlePlayerIds: state.game.idlePlayerIds.filter(
-            (id) => id !== action.playerId,
+          idleSeatIds: state.game.idleSeatIds.filter(
+            (id) => id !== action.seatId,
           ),
         },
       };
@@ -242,6 +258,8 @@ function reducer(state: MobileState, action: Action): MobileState {
       return { ...state, notice: action.message };
     case 'gameOver':
       return { ...state, gameOver: action.gameOver };
+    case 'firstTurnReveal':
+      return { ...state, firstTurnReveal: action.reveal };
     case 'resetRoom':
       return {
         ...state,
@@ -251,6 +269,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         error: null,
         notice: null,
         gameOver: null,
+        firstTurnReveal: null,
       };
     default:
       return state;
@@ -258,7 +277,7 @@ function reducer(state: MobileState, action: Action): MobileState {
 }
 
 interface GameContextValue extends MobileState {
-  currentPlayerId: string | null;
+  currentSeatId: string | null;
   isHost: boolean;
   refreshRooms: () => void;
   resumeRoom: (roomId: string) => Promise<void>;
@@ -275,23 +294,39 @@ interface GameContextValue extends MobileState {
   playCard: (card: string) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
-  removePlayer: (targetPlayerId: string) => void;
-  replaceWithCOM: (targetPlayerId: string) => void;
+  removePlayer: (targetSeatId: string) => void;
+  replaceWithCOM: (targetSeatId: string) => void;
   changePlayerTeam: (teamChanges: Record<string, number>) => void;
   updateTeamNames: (teamNames: TeamNames) => void;
   clearFeedback: () => void;
   closeGameOver: () => void;
+  clearFirstTurnReveal: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
 
-const reconnectMessages: Record<ReconnectionFailureCode, string> = {
-  roomUnavailable: '部屋が終了したためロビーへ戻りました',
-  sessionInvalid: '参加情報を確認できなかったためロビーへ戻りました',
-  stateInconsistent: 'ゲーム状態を復元できなかったためロビーへ戻りました',
+// Catalogue keys; read through t() at dispatch time.
+const reconnectMessageKeys: Record<ReconnectionFailureCode, string> = {
+  roomUnavailable: 'game.roomUnavailable',
+  sessionInvalid: 'game.sessionInvalid',
+  stateInconsistent: 'game.stateInconsistent',
 };
 
 const RESYNC_TIMEOUT_MS = 10000;
+
+const toMobileGamePatch = (
+  game: GameEventState,
+): Partial<MobileGameSnapshot> => ({
+  gamePhase: game.gamePhase,
+  currentField: game.currentField,
+  currentTurnSeatId: game.currentTurnSeatId,
+  blowState: game.blowState,
+  teamScores: game.teamScores,
+  negriCard: game.negriCard,
+  negriSeatId: game.negriSeatId,
+  revealedAgari: game.revealedAgari,
+  fields: game.fields,
+});
 
 interface ResyncFlight {
   id: number;
@@ -309,6 +344,10 @@ export function GameProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<MobileSocket | null>(null);
   const stateRef = useRef(state);
+  const gameEventStateRef = useRef(createEmptyGameEventState());
+  // Mirrors state.firstTurnReveal for the long-lived socket handlers, which
+  // need it synchronously and would otherwise close over a stale value.
+  const firstTurnRevealRef = useRef<MobileFirstTurnReveal | null>(null);
   const userRef = useRef(user);
   const brokenRequestRef = useRef<string | null>(null);
   const agariRequestRef = useRef<string | null>(null);
@@ -319,10 +358,18 @@ export function GameProvider({ children }: PropsWithChildren) {
   const hasSession = session !== null;
   stateRef.current = state;
   userRef.current = user;
+  // Re-sync after reducer-only changes such as 'resetRoom'.
+  firstTurnRevealRef.current = state.firstTurnReveal;
 
-  const resolveCurrentPlayerId = useCallback(() => {
+  useEffect(() => {
+    if (!state.game && !state.currentRoom) {
+      gameEventStateRef.current = createEmptyGameEventState();
+    }
+  }, [state.currentRoom, state.game]);
+
+  const resolveCurrentSeatId = useCallback(() => {
     const snapshot = stateRef.current;
-    return resolvePlayerId(snapshot.game, snapshot.currentRoom, user?.id);
+    return resolveSeatId(snapshot.game, snapshot.currentRoom, user?.id);
   }, [user?.id]);
 
   const emitAck = useCallback(
@@ -375,8 +422,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         resolveFlight();
         dispatch({
           type: 'error',
-          message:
-            'ゲーム状態の再同期が完了していません。再接続を試してください',
+          message: { key: 'game.resyncIncomplete' },
         });
       }, RESYNC_TIMEOUT_MS),
     };
@@ -482,10 +528,12 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (showError) {
       dispatch({
         type: 'error',
-        message:
-          status === 'resyncing'
-            ? 'ゲーム状態を再同期しています。完了後に操作してください'
-            : 'サーバーへ再接続中です。接続後に操作してください',
+        message: {
+          key:
+            status === 'resyncing'
+              ? 'game.resyncWait'
+              : 'game.reconnectWait',
+        },
       });
     }
     return false;
@@ -534,6 +582,32 @@ export function GameProvider({ children }: PropsWithChildren) {
       void roomStorage.set(room.id);
     };
 
+    const setFirstTurnReveal = (reveal: MobileFirstTurnReveal | null) => {
+      firstTurnRevealRef.current = reveal;
+      dispatch({ type: 'firstTurnReveal', reveal });
+    };
+
+    const applyGameServerEvent = (event: GameServerEvent) => {
+      const previous = gameEventStateRef.current;
+      const next = reduceGameEvent(previous, event, {
+        selfSeatId: resolveCurrentSeatId(),
+      });
+      gameEventStateRef.current = next;
+      if (next.players !== previous.players) {
+        dispatch({ type: 'players', players: next.players });
+      }
+      const patch = toMobileGamePatch(next);
+      dispatch({
+        type: 'patchGame',
+        // While the start reveal plays, hold the turn back so the animation is
+        // not spoiled; `clearFirstTurnReveal` applies it afterwards.
+        patch: firstTurnRevealRef.current
+          ? { ...patch, currentTurnSeatId: null }
+          : patch,
+      });
+      return next;
+    };
+
     socket.on('connect', () => {
       dispatch({ type: 'error', message: null });
       void resyncActiveRoom();
@@ -543,7 +617,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'connection', status: 'connecting' });
       dispatch({
         type: 'error',
-        message: `サーバーへ接続中です: ${error.message}`,
+        message: {
+          key: 'game.connecting',
+          params: { message: error.message },
+        },
       });
     });
     socket.on('disconnect', () => {
@@ -561,9 +638,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'players', players });
       finishResyncFlight(room.id);
     });
-    socket.on('room-updated', (room) => {
-      dispatch({ type: 'roomUpdated', room });
-    });
     socket.on('set-room-id', (roomId) => {
       void roomStorage.set(roomId);
     });
@@ -573,252 +647,140 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('update-players', (players) => {
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players,
+      };
       dispatch({ type: 'players', players });
       if (stateRef.current.game) {
         dispatch({
           type: 'patchGame',
           patch: {
-            disconnectedPlayerIds: extractDisconnectedPlayerIds(players),
+            disconnectedSeatIds: extractDisconnectedSeatIds(players),
           },
         });
       }
     });
-    socket.on('room-playing', ({ players }) => {
-      dispatch({ type: 'players', players });
-    });
     socket.on('game-state', (payload) => {
+      gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
+      const snapshot = normalizeGameStatePayload(payload);
       dispatch({
         type: 'game',
-        game: normalizeGameStatePayload(payload),
+        // The bootstrap snapshot right after game start already carries the
+        // chosen seat; hold it back until the reveal finishes.
+        game: firstTurnRevealRef.current
+          ? { ...snapshot, currentTurnSeatId: null }
+          : snapshot,
       });
       void roomStorage.set(payload.roomId);
       finishResyncFlight(payload.roomId);
     });
-    socket.on('reconnect-token', (playerId) => {
-      dispatch({ type: 'patchGame', patch: { you: playerId } });
+    socket.on('reconnect-token', (seatId) => {
+      dispatch({
+        type: 'patchGame',
+        patch: { youSeatId: asSeatId(seatId) },
+      });
     });
     socket.on('game-started', (payload) => {
-      const currentPlayerId = resolvePlayerId(
+      const currentSeatId = resolveSeatId(
         stateRef.current.game,
         stateRef.current.currentRoom,
         userRef.current?.id,
       );
+      gameEventStateRef.current = createGameEventStateFromStartedGame(payload);
       dispatch({
         type: 'game',
         game: createStartedGameSnapshot(
           payload,
-          currentPlayerId,
-          stateRef.current.currentRoom?.hostId ?? null,
+          currentSeatId,
+          stateRef.current.currentRoom?.hostSeatId ?? null,
         ),
       });
+
+      // The server holds `update-turn` back for the reveal, so either animate
+      // it or, when the reveal is off, apply the turn now rather than idle.
+      const animate =
+        userRef.current?.profile?.startPlayerAnimation !== false;
+      // The payload array is the server roster order, i.e. blow order.
+      const lastBlowSeatId = payload.currentTurnSeatId
+        ? resolveLastBlowSeatId(
+            payload.players.map((player) => player.seatId),
+            payload.currentTurnSeatId,
+          )
+        : null;
+      if (payload.currentTurnSeatId && lastBlowSeatId && animate) {
+        setFirstTurnReveal({
+          roomId: payload.roomId,
+          seatId: payload.currentTurnSeatId,
+          lastBlowSeatId,
+          token: Date.now(),
+        });
+      } else {
+        setFirstTurnReveal(null);
+        if (payload.currentTurnSeatId) {
+          // Reduce it rather than patching directly, so the shared reducer
+          // agrees and a later event cannot blank the turn again.
+          applyGameServerEvent({
+            type: 'update-turn',
+            payload: payload.currentTurnSeatId,
+          });
+        }
+      }
+
       void roomStorage.set(payload.roomId);
     });
     socket.on('update-phase', (payload) => {
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          gamePhase: payload.phase,
-          teamScores: payload.scores,
-          blowState: stateRef.current.game
-            ? {
-                ...stateRef.current.game.blowState,
-                currentTrump:
-                  payload.phase === 'play'
-                    ? (payload.currentHighestDeclaration?.trumpType ?? null)
-                    : null,
-                currentHighestDeclaration:
-                  payload.currentHighestDeclaration ??
-                  stateRef.current.game.blowState.currentHighestDeclaration,
-              }
-            : createEmptyBlowState(),
-        },
-      });
+      applyGameServerEvent({ type: 'update-phase', payload });
     });
-    socket.on('update-turn', (playerId) => {
-      dispatch({ type: 'patchGame', patch: { currentTurn: playerId } });
+    socket.on('update-turn', (currentTurnSeatId) => {
+      if (
+        shouldAbortRevealOnTurn(firstTurnRevealRef.current, currentTurnSeatId)
+      ) {
+        setFirstTurnReveal(null);
+      }
+      applyGameServerEvent({ type: 'update-turn', payload: currentTurnSeatId });
       const roomId = stateRef.current.game?.roomId;
       if (shouldAckTurn(stateRef.current.game, roomId)) {
         socket.emit('turn-ack', { roomId });
       }
     });
-    socket.on('blow-started', ({ startingPlayer, players }) => {
-      dispatch({ type: 'players', players });
-      dispatch({
-        type: 'patchGame',
-        patch: { gamePhase: 'blow', currentTurn: startingPlayer },
-      });
+    socket.on('blow-updated', (payload) => {
+      // A player whose reveal is disabled can declare before our animation
+      // ends; cut it short rather than narrate a turn that already moved.
+      if (hasBlowActivity(payload)) {
+        setFirstTurnReveal(null);
+      }
+      applyGameServerEvent({ type: 'blow-updated', payload });
     });
-    socket.on(
-      'blow-updated',
-      ({
-        declarations,
-        actionHistory,
-        currentHighest,
-      }) => {
-        const current =
-          stateRef.current.game?.blowState ?? createEmptyBlowState();
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            blowState: {
-              ...current,
-              declarations,
-              actionHistory: actionHistory ?? [],
-              currentHighestDeclaration: currentHighest,
-            },
-          },
-        });
-      },
-    );
-    socket.on('broken', ({ nextPlayerId, players, gamePhase }) => {
-      dispatch({ type: 'players', players });
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentTurn: nextPlayerId,
-          gamePhase: gamePhase ?? 'blow',
-          currentField: null,
-          blowState: createEmptyBlowState(),
-          negriCard: null,
-          negriPlayerId: null,
-          revealedAgari: null,
-          fields: [],
-        } as Partial<MobileGameSnapshot>,
-      });
-      dispatch({ type: 'notice', message: '手役が成立したため配り直しました' });
+    socket.on('broken', (payload) => {
+      applyGameServerEvent({ type: 'broken', payload });
+      dispatch({ type: 'notice', message: { key: 'game.redealHand' } });
     });
-    socket.on(
-      'round-cancelled',
-      ({
-        nextDealer,
-        players,
-        currentTrump,
-        currentHighestDeclaration,
-        blowDeclarations,
-        actionHistory,
-      }) => {
-        dispatch({ type: 'players', players });
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            gamePhase: 'blow',
-            currentTurn: nextDealer,
-            currentField: null,
-            negriCard: null,
-            negriPlayerId: null,
-            revealedAgari: null,
-            fields: [],
-            blowState: {
-              ...createEmptyBlowState(),
-              currentTrump: currentTrump ?? null,
-              currentHighestDeclaration:
-                currentHighestDeclaration ?? null,
-              declarations: blowDeclarations ?? [],
-              actionHistory: actionHistory ?? [],
-            },
-          },
-        });
-        dispatch({ type: 'notice', message: '全員パスのため配り直しました' });
-      },
-    );
-    socket.on('reveal-agari', ({ agari, message }) => {
-      dispatch({ type: 'patchGame', patch: { revealedAgari: agari } });
-      dispatch({ type: 'notice', message });
+    socket.on('round-cancelled', (payload) => {
+      applyGameServerEvent({ type: 'round-cancelled', payload });
+      dispatch({ type: 'notice', message: { key: 'game.redealAllPass' } });
     });
-    socket.on(
-      'play-setup-complete',
-      ({
-        negriCard,
-        startingPlayer,
-      }) => {
-        const game = stateRef.current.game;
-        const players = game
-          ? game.players.map((player) =>
-              player.playerId === game.you
-                ? {
-                    ...player,
-                    hand: player.hand.filter((card) => card !== negriCard),
-                  }
-                : player,
-            )
-          : [];
-        dispatch({ type: 'players', players });
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            negriCard,
-            negriPlayerId: startingPlayer,
-            revealedAgari: null,
-            currentTurn: startingPlayer,
-          },
-        });
-      },
-    );
-    socket.on('card-played', ({ field, players, nextPlayerId }) => {
-      dispatch({ type: 'players', players });
-      const resolvedNextPlayerId =
-        nextPlayerId ??
-        inferNextTurnAfterCardPlayed(
-          stateRef.current.game?.players ?? players,
-          field,
-        );
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentField: field,
-          ...(resolvedNextPlayerId ? { currentTurn: resolvedNextPlayerId } : {}),
-        },
-      });
+    socket.on('reveal-agari', (payload) => {
+      applyGameServerEvent({ type: 'reveal-agari', payload });
+      dispatch({ type: 'notice', message: payload.message });
+    });
+    socket.on('play-setup-complete', (payload) => {
+      applyGameServerEvent({ type: 'play-setup-complete', payload });
+    });
+    socket.on('card-played', (payload) => {
+      applyGameServerEvent({ type: 'card-played', payload });
     });
     socket.on('field-updated', (field) => {
-      dispatch({ type: 'patchGame', patch: { currentField: field } });
+      applyGameServerEvent({ type: 'field-updated', payload: field });
     });
-    socket.on(
-      'field-complete',
-      ({ field, nextPlayerId }) => {
-        const fields = dedupeCompletedFields([
-          ...(stateRef.current.game?.fields ?? []),
-          field,
-        ]);
-        dispatch({
-          type: 'patchGame',
-          patch: {
-            fields,
-            currentField: {
-              cards: [],
-              playedBy: [],
-              baseCard: '',
-              dealerId: nextPlayerId,
-              isComplete: false,
-            },
-          },
-        });
-      },
-    );
-    socket.on('round-results', ({ scores }) => {
-      dispatch({ type: 'patchGame', patch: { teamScores: scores } });
+    socket.on('field-complete', (payload) => {
+      applyGameServerEvent({ type: 'field-complete', payload });
+    });
+    socket.on('round-results', (payload) => {
+      applyGameServerEvent({ type: 'round-results', payload });
     });
     socket.on('new-round-started', (payload) => {
-      dispatch({ type: 'players', players: payload.players });
-      dispatch({
-        type: 'patchGame',
-        patch: {
-          currentTurn: payload.currentTurn,
-          gamePhase: payload.gamePhase,
-          currentField: payload.currentField,
-          fields: dedupeCompletedFields(payload.completedFields),
-          negriCard: payload.negriCard,
-          negriPlayerId: payload.negriPlayerId,
-          revealedAgari: payload.revealedAgari,
-          blowState: {
-            ...createEmptyBlowState(),
-            currentTrump: payload.currentTrump,
-            currentHighestDeclaration:
-              payload.currentHighestDeclaration,
-            declarations: payload.blowDeclarations,
-          },
-        },
-      });
+      applyGameServerEvent({ type: 'new-round-started', payload });
     });
     socket.on('game-over', (payload) => {
       dispatch({ type: 'gameOver', gameOver: payload });
@@ -840,11 +802,14 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'resetRoom' });
       finishResyncFlight(undefined);
       if (payload?.code) {
-        dispatch({ type: 'notice', message: reconnectMessages[payload.code] });
+        dispatch({
+          type: 'notice',
+          message: { key: reconnectMessageKeys[payload.code] },
+        });
       }
     });
-    socket.on('player-left', ({ playerId }) => {
-      if (playerId === resolveCurrentPlayerId()) {
+    socket.on('player-left', ({ seatId }) => {
+      if (seatId === asSeatId(resolveCurrentSeatId() ?? '')) {
         void roomStorage.clear();
         dispatch({ type: 'resetRoom' });
       }
@@ -855,6 +820,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('round-reset', () => {
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        blowState: createEmptyBlowState(),
+      };
       dispatch({
         type: 'patchGame',
         patch: {
@@ -863,51 +832,65 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
     });
     socket.on('player-disconnected', (payload) => {
-      const { playerId } = payload;
+      const seatId = payload.seatId;
       const playerName = (payload as { playerName?: string }).playerName;
-      dispatch({ type: 'playerDisconnected', playerId });
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players: gameEventStateRef.current.players.map((player) =>
+          player.seatId === seatId
+            ? {
+                ...player,
+                socketId: '',
+                name: playerName ?? player.name,
+              }
+            : player,
+        ),
+      };
+      dispatch({ type: 'playerDisconnected', seatId: seatId });
       dispatch({
         type: 'notice',
-        message: `${playerName ?? playerId} が切断しました`,
+        message: {
+          key: 'game.playerDisconnected',
+          params: { name: playerName ?? seatId },
+        },
       });
     });
     socket.on('player-idle', (payload) => {
-      const { playerId } = payload;
+      const seatId = payload.seatId;
       const playerName = (payload as { playerName?: string }).playerName;
-      dispatch({ type: 'playerIdle', playerId });
+      dispatch({ type: 'playerIdle', seatId: seatId });
       dispatch({
         type: 'notice',
-        message: `${playerName ?? playerId} が無操作です`,
+        message: {
+          key: 'game.playerIdle',
+          params: { name: playerName ?? seatId },
+        },
       });
     });
-    socket.on('player-idle-cleared', ({ playerId }) => {
-      dispatch({ type: 'playerIdleCleared', playerId });
+    socket.on('player-idle-cleared', ({ seatId }) => {
+      dispatch({ type: 'playerIdleCleared', seatId });
     });
     socket.on(
       'player-converted-to-com',
-      ({ playerId, playerName, message }) => {
-        dispatch({ type: 'playerConvertedToCom', playerId });
-        if (playerId === resolveCurrentPlayerId()) {
+      ({ seatId, playerName, message }) => {
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          players: gameEventStateRef.current.players.map((player) =>
+            player.seatId === seatId
+              ? { ...player, isCOM: true, socketId: '' }
+              : player,
+          ),
+        };
+        dispatch({ type: 'playerConvertedToCom', seatId });
+        if (seatId === asSeatId(resolveCurrentSeatId() ?? '')) {
           void roomStorage.clear();
           dispatch({ type: 'resetRoom' });
         }
-        dispatch({ type: 'notice', message: message ?? `${playerName ?? playerId} がCOMに置換されました` });
+        dispatch({ type: 'notice', message:
+            message ??
+            { key: 'game.playerReplacedByCom', params: { name: playerName ?? seatId } } });
       },
     );
-    socket.on('name-updated', (payload) => {
-      if (!payload.success || !payload.playerId || !payload.name) return;
-      const game = stateRef.current.game;
-      if (!game) return;
-      dispatch({
-        type: 'players',
-        players: game.players.map((p) =>
-          p.playerId === payload.playerId
-            ? { ...p, name: payload.name! }
-            : p,
-        ),
-      });
-    });
-
     socket.connect();
 
     return () => {
@@ -924,7 +907,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     getAccessToken,
     hasSession,
     resyncActiveRoom,
-    resolveCurrentPlayerId,
+    resolveCurrentSeatId,
   ]);
 
   useEffect(() => {
@@ -945,25 +928,24 @@ export function GameProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const game = state.game;
     if (!canSendServerAction(false)) return;
-    if (!game || game.gamePhase !== 'blow' || !game.you) {
+    if (!game || game.gamePhase !== 'blow' || !game.youSeatId) {
       brokenRequestRef.current = null;
       return;
     }
 
     const currentPlayer = game.players.find(
-      (player) => player.playerId === game.you,
+      (player) => player.seatId === game.youSeatId,
     );
     if (!currentPlayer?.hasRequiredBroken) {
       brokenRequestRef.current = null;
       return;
     }
 
-    const key = `${game.roomId}:${game.you}:${currentPlayer.hand.join(',')}`;
+    const key = `${game.roomId}:${game.youSeatId}:${currentPlayer.hand.join(',')}`;
     if (brokenRequestRef.current === key) return;
     brokenRequestRef.current = key;
     socketRef.current?.emit('reveal-broken-hand', {
       roomId: game.roomId,
-      playerId: game.you,
     });
   }, [canSendServerAction, state.connectionStatus, state.game]);
 
@@ -974,8 +956,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (
       !game ||
       game.gamePhase !== 'play' ||
-      !game.you ||
-      declaration?.playerId !== game.you ||
+      !game.youSeatId ||
+      declaration?.seatId !== game.youSeatId ||
       game.revealedAgari ||
       game.negriCard
     ) {
@@ -1004,7 +986,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!response.success || !response.room) {
         dispatch({
           type: 'error',
-          message: response.error ?? '部屋を作成できませんでした',
+          message: response.error ?? { key: 'game.createRoomFailed' },
         });
         return false;
       }
@@ -1025,7 +1007,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!response.success || !response.room) {
         dispatch({
           type: 'error',
-          message: response.error ?? '部屋に参加できませんでした',
+          message: response.error ?? { key: 'game.joinRoomFailed' },
         });
         return false;
       }
@@ -1044,7 +1026,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (!response.success || !response.room) {
         dispatch({
           type: 'error',
-          message: response.error ?? '観戦を開始できませんでした',
+          message: response.error ?? { key: 'game.watchFailed' },
         });
         return false;
       }
@@ -1070,7 +1052,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (!response.success) {
       dispatch({
         type: 'error',
-        message: response.error ?? 'ルームから退出できませんでした',
+        message: response.error ?? { key: 'game.leaveFailed' },
       });
       return false;
     }
@@ -1087,7 +1069,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       const roomId =
         stateRef.current.game?.roomId ?? stateRef.current.currentRoom?.id;
       if (!roomId) {
-        dispatch({ type: 'error', message: 'プレイヤー情報を確認できません' });
+        dispatch({ type: 'error', message: { key: 'game.playerUnknown' } });
         return;
       }
 
@@ -1101,7 +1083,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         if (!response.success) {
           dispatch({
             type: 'error',
-            message: response.error ?? '操作を完了できませんでした',
+            message: response.error ?? { key: 'game.actionFailed' },
           });
         }
       } finally {
@@ -1130,7 +1112,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       const actionKey = [
         actionName,
         roomId,
-        game?.currentTurn ?? '',
+        game?.currentTurnSeatId ?? '',
         game?.currentField?.cards.join(',') ?? '',
         game?.blowState.actionHistory.length ?? 0,
       ].join(':');
@@ -1145,8 +1127,8 @@ export function GameProvider({ children }: PropsWithChildren) {
   const declareBlow = useCallback(
     (trumpType: TrumpType, numberOfPairs: number) => {
       const game = stateRef.current.game;
-      if (!game || game.currentTurn !== game.you) {
-        dispatch({ type: 'error', message: 'あなたの宣言順ではありません' });
+      if (!game || game.currentTurnSeatId !== game.youSeatId) {
+        dispatch({ type: 'error', message: { key: 'game.notYourBlowTurn' } });
         return;
       }
       emitOneWayAction('declare-blow', game.roomId, () => {
@@ -1161,8 +1143,8 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const passBlow = useCallback(() => {
     const game = stateRef.current.game;
-    if (!game || game.currentTurn !== game.you) {
-      dispatch({ type: 'error', message: 'あなたの宣言順ではありません' });
+    if (!game || game.currentTurnSeatId !== game.youSeatId) {
+      dispatch({ type: 'error', message: { key: 'game.notYourBlowTurn' } });
       return;
     }
     emitOneWayAction('pass-blow', game.roomId, () => {
@@ -1180,8 +1162,8 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const playCard = useCallback((card: string) => {
     const game = stateRef.current.game;
-    if (!game || game.currentTurn !== game.you) {
-      dispatch({ type: 'error', message: 'あなたのプレイ順ではありません' });
+    if (!game || game.currentTurnSeatId !== game.youSeatId) {
+      dispatch({ type: 'error', message: { key: 'game.notYourPlayTurn' } });
       return;
     }
     emitOneWayAction('play-card', game.roomId, () => {
@@ -1202,25 +1184,23 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const revealBrokenHand = useCallback(() => {
     const game = stateRef.current.game;
-    if (!game?.you) return;
-    const playerId = game.you;
+    if (!game?.youSeatId) return;
     emitOneWayAction('reveal-broken-hand', game.roomId, () => {
       socketRef.current?.emit('reveal-broken-hand', {
         roomId: game.roomId,
-        playerId,
       });
     });
   }, [emitOneWayAction]);
 
   const removePlayer = useCallback(
-    (targetPlayerId: string) => {
+    (targetSeatId: string) => {
       if (!canSendServerAction()) return;
       const roomId =
         stateRef.current.game?.roomId ?? stateRef.current.currentRoom?.id;
       if (!roomId) return;
       const payload: ModeratePlayerPayload = {
         roomId,
-        targetPlayerId,
+        targetSeatId: asSeatId(targetSeatId),
         action: 'remove',
       };
       void emitAck('moderate-player', payload);
@@ -1229,14 +1209,14 @@ export function GameProvider({ children }: PropsWithChildren) {
   );
 
   const replaceWithCOM = useCallback(
-    (targetPlayerId: string) => {
+    (targetSeatId: string) => {
       if (!canSendServerAction()) return;
       const roomId =
         stateRef.current.game?.roomId ?? stateRef.current.currentRoom?.id;
       if (!roomId) return;
       const payload: ModeratePlayerPayload = {
         roomId,
-        targetPlayerId,
+        targetSeatId: asSeatId(targetSeatId),
         action: 'replace-with-com',
       };
       void emitAck('moderate-player', payload);
@@ -1268,24 +1248,21 @@ export function GameProvider({ children }: PropsWithChildren) {
     [canSendServerAction],
   );
 
-  const currentPlayerId = useMemo(
-    () => resolvePlayerId(state.game, state.currentRoom, user?.id),
+  const currentSeatId = useMemo(
+    () => resolveSeatId(state.game, state.currentRoom, user?.id),
     [state.currentRoom, state.game, user?.id],
   );
-  // Prefer the room's hostId: room-sync/room-updated keep it current, while
-  // game.hostId is captured once at game start and never refreshed. Without
-  // this, a host transfer (e.g. the host disconnects) leaves every client
-  // believing the departed player is still host, so nobody can replace them
-  // with a COM. The web client reads a single currentHostId that both room and
-  // game events write, which is the behaviour mirrored here.
+  // The room snapshot is refreshed after host changes; the game snapshot is
+  // captured at game start and can still contain the previous host seat.
   const isHost =
-    Boolean(currentPlayerId) &&
-    (state.currentRoom?.hostId ?? state.game?.hostId) === currentPlayerId;
+    Boolean(currentSeatId) &&
+    (state.currentRoom?.hostSeatId ?? state.game?.hostSeatId) ===
+      currentSeatId;
 
   const value = useMemo<GameContextValue>(
     () => ({
       ...state,
-      currentPlayerId,
+      currentSeatId,
       isHost,
       refreshRooms,
       resumeRoom,
@@ -1311,11 +1288,23 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'notice', message: null });
       },
       closeGameOver: () => dispatch({ type: 'gameOver', gameOver: null }),
+      clearFirstTurnReveal: () => {
+        firstTurnRevealRef.current = null;
+        dispatch({ type: 'firstTurnReveal', reveal: null });
+        // Apply whatever turn the reducer learned while the reveal held it
+        // back, so the indicator is never left blank.
+        dispatch({
+          type: 'patchGame',
+          patch: {
+            currentTurnSeatId: gameEventStateRef.current.currentTurnSeatId,
+          },
+        });
+      },
     }),
     [
       changePlayerTeam,
       createRoom,
-      currentPlayerId,
+      currentSeatId,
       declareBlow,
       fillWithCOM,
       isHost,

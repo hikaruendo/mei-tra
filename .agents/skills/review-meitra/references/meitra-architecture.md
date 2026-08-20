@@ -58,7 +58,6 @@ socket handshake、auth、payload parse、room join/leave、UseCase呼び出し�
 - `GameStateManager`
 - `PlayerConnectionManager`
 - `SeatRestorationService`
-- `PlayerReferenceRemapperService`
 - `ComSessionService`
 - `ComAutoPlayService`
 - `ComAutoPlayRecoveryService`
@@ -72,7 +71,7 @@ room lifecycle、reconnect、置換、timer、復旧、永続化調整を担当�
 - `mei-tra-backend/src/database/`
 - `mei-tra-backend/supabase/migrations/`
 
-query、RPC、row / JSONB mapping、互換read/writeを担当する。
+query、RPC、row / JSONB mappingを担当する。
 
 ### Frontend
 
@@ -90,32 +89,33 @@ query、RPC、row / JSONB mapping、互換read/writeを担当する。
 | Auth account | Supabase Auth | `userId`は認証identity |
 | Profile | `user_profiles` | 表示名、avatar、preferences、stats |
 | Room | `rooms` | metadata、host参照、lifecycle |
-| Seat / roster | `room_players` | `playerId`、seat、team、ready、host、COM |
-| Gameplay state | `game_states` | deck、phase、turn、scores、`playerStates`、`playerOrder` |
+| Seat / roster | `room_players` | `id = seatId`、occupant、team、ready、COM |
+| Gameplay state | `game_states` | deck、phase、`current_seat_id`、scores、`playerStates[seatId]` |
 | Connection | process memory | `socketId`、接続中フラグ、timerは再生成可能にする |
 | Audit / replay | `game_history` | snapshotの代替ではなくaction log |
 | Transport shape | `contracts/` | DB rowやdomain typeを置かない |
 
-- `playerId`: room / game内でseatを指す安定identity。
+- `seatId`: `room_players.id` と同値の canonical seat UUID。部屋削除まで変更しない。
 - `userId`: Supabase Auth account。guestやCOMには存在しない場合がある。
 - `socketId`: 接続ごとに変わる一時identity。永続化やseat復旧のkeyにしない。
-- `playerOrder`: seat / turn順を保持する。
-- `playerStates[playerId]`: hand、pass、broken flagsなどgameplay stateを保持する。
+- `seat_index`: `room_players`に保存するseat / turn順の正本。
+- `playerStates[seatId]`: hand、pass、broken flagsなどgameplay stateを保持する。
 
 ## 必須の不変条件
 
 ### Roster
 
-- player数は最大4人で、seatと`playerId`が重複しない。
+- player数は最大4人で、`seatId`と`seat_index`が重複しない。
 - COM placeholder IDが衝突しない。
 - team値`0`をfalse扱いしない。
 - partnerが対面になるseat orderを保つ。
-- `rooms.host_id`とplayerのhost flagを一致させる。
+- `rooms.host_seat_id`が同じroomの`room_players.id`を参照する。
+- host表示は`host_seat_id`から導出し、重複したhost flagを保存しない。
 
 ### Replacement / reconnection
 
-- 人間とCOMの置換でhand、turn、team、宣言参照を失わない。
-- player ID変更時はturn、field、blow、winner、idle、timer参照を一括remapする。
+- 人間とCOMの置換で`seatId`を変更せず、hand、turn、team、宣言参照を失わない。
+- occupant変更を理由にturn、field、blow、winnerのseat参照をremapしない。
 - backend再起動後、DB snapshotとrosterからroomを再構成する。
 - socket room membershipとtimerをreconnect時に再登録する。
 
@@ -135,28 +135,12 @@ query、RPC、row / JSONB mapping、互換read/writeを担当する。
 - RPC途中失敗時に全更新をrollbackする。
 - DB failureを成功responseや空stateへ変換しない。
 
-## Migration playbook
+## Migration rules
 
-### PR A: 読めるようにする
-
-- 新column / JSON shapeとdual-readを追加する。
-- old snapshotからnew shapeへ復元できるtestを追加する。
-- backfillの件数と不変条件を検証する。
-
-### PR B: 新経路へ書く
-
-- atomic RPCとversion checkを追加する。
-- repository writeを新経路へ切り替える。
-- migration未適用環境だけ旧pathへfallbackする。
-- concurrency、rollback、roster置換を検証する。
-
-### PR C: 旧経路を消す
-
-- productionで新read/writeとerror rateを観測する。
-- rollback期間と古いdeployがないことを確認する。
-- legacy field、column、dual-read/writeを削除する。
-
-PR Cを日付だけで開始せず、観測証拠とrollback条件で開始する。
+- 適用済みmigrationは編集せず、新しいversioned migrationを追加する。
+- schema変更とrepository writeを同じPRで揃える。
+- backfill件数、concurrency、rollback、roster置換を検証する。
+- production反映はdeployとdatabase migrationを分けて確認する。
 
 ## Refactoring smells
 
@@ -166,6 +150,9 @@ PR Cを日付だけで開始せず、観測証拠とrollback条件で開始す�
 | UseCaseごとにrule判定が違う | ゲーム用語のpure helperへ統合する |
 | rosterとJSON playerを別々に更新する | atomic roster RPCへ統合する |
 | `socketId`でDB playerを復元する | stable identityを使う |
+| 同じidentityを複数serviceでremapする | canonicalな`seatId`を維持し、変換処理を削除する |
+| 既存型・helperと同義のものを別の階層へ追加する | canonical ownerを決め、既存の型配置・依存方向へ統合する |
+| 修正のたびにmapper、fallback、object再構築が増える | 横断して同じ根因を探し、source of truthを一本化してrepair pathを削除する |
 | Repositoryがgame phaseを判断する | domain / UseCaseへ移す |
 | Componentがruleを再計算する | hookとserver authorityを使う |
 | `team || 0`のfallback | `team ?? 0`またはvalidationを使う |
@@ -180,9 +167,9 @@ PR Cを日付だけで開始せず、観測証拠とrollback条件で開始す�
 | Game rule | 対象unit、phase前後、invalid action、COM経路 |
 | Player identity | human↔COM、vacant seat、満室復帰、team shuffle |
 | Reconnect | waiting、blow、play、field completion、game over |
-| Persistence | create/load、partial update、version conflict、rollback、旧JSON復元 |
+| Persistence | create/load、partial update、version conflict、rollback |
 | Gateway | auth、room membership、event recipient、duplicate trigger |
-| Frontend socket | reconnect、主eventと互換event、listener cleanup |
+| Frontend socket | reconnect、room sync、incremental event、listener cleanup |
 | Accessibility UI | 1.0x / 1.5x / 2.0x、mobile / desktop、keyboard、modal、card overlap |
 | Scale-to-zero | cold start、room reload、COM turn、失われたtimer再構築 |
 

@@ -5,8 +5,9 @@ import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { resolveRoomTransportPlayers } from '../use-cases/helpers/player-resolution.helper';
 import { DomainPlayer } from '../types/game.types';
 import { Room } from '../types/room.types';
-import { TransportPlayer } from '../types/player-adapters';
-import { toRoomContract, toRoomContracts } from '../types/room-adapters';
+import { TransportPlayer } from '../adapters/player-adapters';
+import { toRoomContract, toRoomContracts } from '../adapters/room-adapters';
+import { toFieldContract } from '../adapters/game-contract-adapters';
 import { IRoomService } from './interfaces/room-service.interface';
 
 interface RoomUpdateGatewayView {
@@ -58,11 +59,7 @@ export class RoomUpdateGatewayEffectsService {
       room: toRoomContract(room, { players }),
       currentField:
         state.gamePhase === 'play' && state.playState?.currentField
-          ? {
-              ...state.playState.currentField,
-              cards: [...state.playState.currentField.cards],
-              playedBy: [...state.playState.currentField.playedBy],
-            }
+          ? toFieldContract(state.playState.currentField)
           : null,
     };
   }
@@ -134,56 +131,14 @@ export class RoomUpdateGatewayEffectsService {
       roomId,
       socketId,
     });
-
-    if (scope === 'room') {
-      return [
-        roomSyncEvent,
-        {
-          scope: 'room',
-          roomId: roomId ?? room.id,
-          event: 'room-updated',
-          payload: roomView.room,
-        },
-        {
-          ...this.buildPlayersEvent({
-            players: roomView.players,
-            scope: 'room',
-            roomId: roomId ?? room.id,
-          }),
-        },
-        ...(roomView.currentField
-          ? [
-              {
-                scope: 'room' as const,
-                roomId: roomId ?? room.id,
-                event: 'field-updated',
-                payload: roomView.currentField,
-              },
-            ]
-          : []),
-      ];
-    }
-
     return [
       roomSyncEvent,
-      {
-        scope: 'socket',
-        socketId,
-        event: 'room-updated',
-        payload: roomView.room,
-      },
-      {
-        ...this.buildPlayersEvent({
-          players: roomView.players,
-          scope: 'socket',
-          socketId,
-        }),
-      },
       ...(roomView.currentField
         ? [
             {
-              scope: 'socket' as const,
-              socketId,
+              scope,
+              roomId: scope === 'room' ? (roomId ?? room.id) : undefined,
+              socketId: scope === 'socket' ? socketId : undefined,
               event: 'field-updated',
               payload: roomView.currentField,
             },

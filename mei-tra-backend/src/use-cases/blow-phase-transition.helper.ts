@@ -1,4 +1,4 @@
-import type { RevealAgariPayload, UpdatePhasePayload } from '@contracts/game';
+import type { UpdatePhasePayload } from '@contracts/game';
 import { GameState } from '../types/game.types';
 import { Room } from '../types/room.types';
 import { GameStateService } from '../services/game-state.service';
@@ -7,6 +7,10 @@ import { ICardService } from '../services/interfaces/card-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { buildPlayerSyncEvents } from './helpers/player-resolution.helper';
 import { GatewayEvent } from './interfaces/gateway-event.interface';
+import { asSeatId } from '../types/identity.types';
+import { setCurrentSeat } from '../domain/current-turn';
+import type { RevealAgariPayload } from '@contracts/game';
+import { toBlowDeclarationContract } from '../adapters/game-contract-adapters';
 
 export interface TransitionResult {
   events: GatewayEvent[];
@@ -36,7 +40,7 @@ export async function transitionToPlayPhase({
     state.blowState.declarations,
   );
   const winningPlayer = state.players.find(
-    (p) => p.playerId === highestDeclaration.playerId,
+    (p) => p.seatId === highestDeclaration.seatId,
   );
 
   if (!winningPlayer) {
@@ -48,17 +52,11 @@ export async function transitionToPlayPhase({
   }
   winningPlayer.hand.sort((a, b) => cardService.compareCards(a, b));
 
-  await roomGameState.transitionPhase('play');
+  roomGameState.transitionPhase('play');
   const nextState = roomGameState.getState();
 
   nextState.blowState.currentTrump = highestDeclaration.trumpType;
-  const winnerIndex = nextState.players.findIndex(
-    (p) => p.playerId === winningPlayer.playerId,
-  );
-  if (winnerIndex !== -1) {
-    nextState.currentPlayerId = winningPlayer.playerId;
-    nextState.currentPlayerIndex = winnerIndex;
-  }
+  setCurrentSeat(nextState, winningPlayer.seatId);
 
   const events: GatewayEvent[] = buildPlayerSyncEvents(
     roomGameState,
@@ -71,7 +69,9 @@ export async function transitionToPlayPhase({
     phase: 'play',
     scores: nextState.teamScores,
     winner: winningPlayer.team,
-    currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
+    currentHighestDeclaration: nextState.blowState.currentHighestDeclaration
+      ? toBlowDeclarationContract(nextState.blowState.currentHighestDeclaration)
+      : null,
   };
 
   const delayedEvents: GatewayEvent[] = [
@@ -79,7 +79,7 @@ export async function transitionToPlayPhase({
       scope: 'room',
       roomId,
       event: 'update-turn',
-      payload: winningPlayer.playerId,
+      payload: asSeatId(winningPlayer.seatId),
       delayMs: 3000,
     },
     {
@@ -91,19 +91,19 @@ export async function transitionToPlayPhase({
     },
   ];
 
-  const winningPlayerSession = roomGameState.findSessionUserByPlayerId(
-    winningPlayer.playerId,
+  const winningPlayerSession = roomGameState.findSessionUserBySeatId(
+    winningPlayer.seatId,
   );
   const winningPlayerSocketId =
     winningPlayerSession?.socketId ??
-    room?.players.find((player) => player.playerId === winningPlayer.playerId)
+    room?.players.find((player) => player.seatId === winningPlayer.seatId)
       ?.socketId;
 
   if (state.agari && winningPlayerSocketId) {
     const revealAgariPayload: RevealAgariPayload = {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
-      playerId: winningPlayer.playerId,
+      seatId: asSeatId(winningPlayer.seatId),
     };
     delayedEvents.unshift({
       scope: 'socket',
@@ -117,12 +117,12 @@ export async function transitionToPlayPhase({
   await gameEventLogService?.log({
     roomId,
     actionType: 'play_phase_started',
-    playerId: winningPlayer.playerId,
+    actorSeatId: asSeatId(winningPlayer.seatId),
     state: nextState,
     actionData: {
       currentHighestDeclaration: nextState.blowState.currentHighestDeclaration,
       currentTrump: nextState.blowState.currentTrump,
-      winnerPlayerId: winningPlayer.playerId,
+      winnerSeatId: winningPlayer.seatId,
     },
   });
 

@@ -1,0 +1,146 @@
+name: Meitra
+desc: Meitra の Supabase public スキーマ。認証アカウント、ゲーム上の席、接続セッションを分離して管理する。
+requiredVersion: '>= 1.95, < 2'
+dsn: ${TBLS_DSN}
+docPath: docs/database
+
+include:
+  - public.*
+
+format:
+  adjust: true
+  sort: true
+  showOnlyFirstParagraph: true
+  hideColumnsWithoutValues: true
+
+er:
+  format: svg
+  comment: true
+  hideDef: true
+  distance: 2
+
+comments:
+  - table: public.user_profiles
+    tableComment: アプリケーションで表示・集計に使うユーザープロフィール。auth.users と 1:1 で対応する。
+  - table: public.rooms
+    tableComment: 対局ルームの設定・状態を保持する。host_seat_id がホスト席の正本。
+  - table: public.room_players
+    tableComment: ルーム内の席ロスター。id が部屋削除まで不変の canonical seat UUID。
+  - table: public.game_states
+    tableComment: ルームごとのバージョン付きゲーム状態。current_seat_id と identitySchemaVersion 2 が席参照の正本。
+  - table: public.game_history
+    tableComment: リプレイと戦績表示に使うイベント履歴。actor_seat_id と表示用 snapshot を保持する。
+  - table: public.active_room_memberships
+    tableComment: 認証ユーザーが現在保持しているルーム所属リース。seat_id で実際の席を参照する。
+  - table: public.room_membership_events
+    tableComment: ルーム所属リースの遷移を追跡する監査イベント。席削除後も snapshot とイベントを残す。
+  - table: public.chat_rooms
+    tableComment: グローバル、ロビー、卓、プライベートのチャットルーム。
+  - table: public.chat_members
+    tableComment: チャットルームのメンバーシップとロール。
+  - table: public.chat_messages
+    tableComment: チャットメッセージと返信先メッセージ。
+  - table: public.push_tokens
+    tableComment: モバイル端末ごとの Expo Push Token。device_id と expo_push_token は外部 opaque ID。
+  - table: public.push_receipts
+    tableComment: Push 配信結果の再試行キュー。expo_receipt_id と worker_id は外部・実行単位の opaque ID。
+
+relations:
+  - table: public.chat_rooms
+    columns: [owner_id]
+    parentTable: public.user_profiles
+    parentColumns: [id]
+    def: chat room owner
+  - table: public.chat_members
+    columns: [user_id]
+    parentTable: public.user_profiles
+    parentColumns: [id]
+    def: chat member
+  - table: public.chat_messages
+    columns: [sender_id]
+    parentTable: public.user_profiles
+    parentColumns: [id]
+    def: message sender
+  - table: public.push_tokens
+    columns: [user_id]
+    parentTable: public.user_profiles
+    parentColumns: [id]
+    def: push token owner
+  - table: public.push_receipts
+    columns: [user_id]
+    parentTable: public.user_profiles
+    parentColumns: [id]
+    def: push receipt owner
+
+viewpoints:
+  - id: gameplay
+    name: ゲーム進行
+    desc: ルーム、canonical seat、ゲーム状態、リプレイ履歴の関係。
+    tables:
+      - public.user_profiles
+      - public.rooms
+      - public.room_players
+      - public.game_states
+      - public.game_history
+    groups:
+      - name: アカウントと席
+        desc: 認証ユーザーと、部屋内で不変の席UUIDを分離する。
+        tables:
+          - public.user_profiles
+          - public.rooms
+          - public.room_players
+      - name: 進行と履歴
+        desc: ライブ状態スナップショットと完了済みアクションの履歴。
+        tables:
+          - public.game_states
+          - public.game_history
+  - id: room-membership
+    name: ルーム所属リース
+    desc: 同一ユーザーの多重入室を防ぎ、再接続・退出を席UUIDとともに監査する。
+    tables:
+      - public.user_profiles
+      - public.rooms
+      - public.room_players
+      - public.active_room_memberships
+      - public.room_membership_events
+    groups:
+      - name: 現在の所属
+        desc: ユーザーが現在予約または保持しているルームと席。
+        tables:
+          - public.active_room_memberships
+          - public.room_players
+      - name: 遷移履歴
+        desc: 所属の予約、確定、切断、解放を追跡するイベント。
+        tables:
+          - public.room_membership_events
+      - name: 関連エンティティ
+        desc: 所属リースが参照するユーザーと対局ルーム。
+        tables:
+          - public.user_profiles
+          - public.rooms
+  - id: social-notifications
+    name: ソーシャルと通知
+    desc: チャットとモバイル Push 通知の永続化。
+    tables:
+      - public.user_profiles
+      - public.chat_rooms
+      - public.chat_members
+      - public.chat_messages
+      - public.push_tokens
+      - public.push_receipts
+    groups:
+      - name: チャット
+        desc: ルーム、参加者、メッセージのチャット基盤。
+        tables:
+          - public.chat_rooms
+          - public.chat_members
+          - public.chat_messages
+      - name: Push 通知
+        desc: 端末トークンと配信結果の再試行キュー。
+        tables:
+          - public.push_tokens
+          - public.push_receipts
+      - name: 通知先ユーザー
+        desc: チャットと Push 通知の送受信対象となるアプリケーションユーザー。
+        tables:
+          - public.user_profiles

@@ -23,14 +23,12 @@ const ACTIVE_ACCOUNT_ROOM_STATUSES = [
   RoomStatus.READY,
   RoomStatus.PLAYING,
 ];
-interface DeletableRoomRow {
-  id: string;
-  status?: RoomStatus;
-}
-
 interface DeletableJoinedRoomPlayerRow {
+  id: string;
   room_id: string;
-  rooms?: { status?: RoomStatus } | { status?: RoomStatus }[];
+  rooms?:
+    | { status?: RoomStatus; host_seat_id?: string | null }
+    | { status?: RoomStatus; host_seat_id?: string | null }[];
 }
 
 @Injectable()
@@ -100,6 +98,7 @@ export class SupabaseUserProfileRepository
         sound: true,
         theme: 'light',
         fontSize: 'standard',
+        startPlayerAnimation: true,
       };
 
       const insertData = {
@@ -298,22 +297,14 @@ export class SupabaseUserProfileRepository
       const { data: participantRows, error: participantError } =
         await this.supabase
           .from('room_players')
-          .select('room_id, rooms!inner(status)')
+          .select(
+            'id, room_id, rooms!room_players_room_id_fkey!inner(status, host_seat_id)',
+          )
           .eq('user_id', userId)
           .in('rooms.status', ACTIVE_ACCOUNT_ROOM_STATUSES);
 
       if (participantError) {
         throw participantError;
-      }
-
-      const { data: hostedRows, error: hostedError } = await this.supabase
-        .from('rooms')
-        .select('id, status')
-        .eq('host_id', userId)
-        .in('status', ACTIVE_ACCOUNT_ROOM_STATUSES);
-
-      if (hostedError) {
-        throw hostedError;
       }
 
       const blockersByKey = new Map<string, AccountDeletionBlocker>();
@@ -324,21 +315,15 @@ export class SupabaseUserProfileRepository
         if (!status) {
           continue;
         }
-        blockersByKey.set(`participant:${row.room_id}`, {
+        const joinedRoom = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+        const reason =
+          row.id && joinedRoom?.host_seat_id === row.id
+            ? 'host'
+            : 'participant';
+        blockersByKey.set(`${reason}:${row.room_id}`, {
           roomId: row.room_id,
           status,
-          reason: 'participant',
-        });
-      }
-
-      for (const row of (hostedRows ?? []) as DeletableRoomRow[]) {
-        if (!row.status) {
-          continue;
-        }
-        blockersByKey.set(`host:${row.id}`, {
-          roomId: row.id,
-          status: row.status,
-          reason: 'host',
+          reason,
         });
       }
 

@@ -1,3 +1,4 @@
+import { asSeatId } from '../../types/identity.types';
 import { CardService } from '../card.service';
 import { PlayService } from '../play.service';
 import { DomainPlayer, Field } from '../../types/game.types';
@@ -5,9 +6,9 @@ import { DomainPlayer, Field } from '../../types/game.types';
 describe('PlayService', () => {
   const playService = new PlayService(new CardService());
 
-  const makePlayer = (playerId: string, isCOM = false): DomainPlayer => ({
-    playerId,
-    name: playerId,
+  const makePlayer = (seatId: string, isCOM = false): DomainPlayer => ({
+    seatId: asSeatId(seatId),
+    name: seatId,
     hand: [],
     team: isCOM ? 1 : 0,
     isPasser: false,
@@ -24,15 +25,17 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', 'K♣', '6♣'],
-      playedBy: ['player-1', 'player-2', 'player-3', 'player-4'],
+      playedBySeatIds: ['player-1', 'player-2', 'player-3', 'player-4'].map(
+        asSeatId,
+      ),
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('player-2');
+    expect(winner?.seatId).toBe('player-2');
   });
 
   it('keeps COM seats in the play order when attributing cards to players', () => {
@@ -45,18 +48,18 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
-      playedBy: ['player-1', 'com-1', 'player-2', 'com-2'],
+      playedBySeatIds: ['player-1', 'com-1', 'player-2', 'com-2'].map(asSeatId),
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('com-1');
+    expect(winner?.seatId).toBe('com-1');
   });
 
-  it('uses playedBy as the source of truth when card attribution differs from current seat order', () => {
+  it('uses playedBySeatIds when card attribution differs from current seat order', () => {
     const players = [
       makePlayer('player-1'),
       makePlayer('player-2'),
@@ -66,44 +69,25 @@ describe('PlayService', () => {
 
     const field: Field = {
       cards: ['5♣', 'A♣', '6♣', 'K♣'],
-      playedBy: ['player-1', 'player-3', 'player-2', 'player-4'],
+      playedBySeatIds: ['player-1', 'player-3', 'player-2', 'player-4'].map(
+        asSeatId,
+      ),
       baseCard: '5♣',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: true,
     };
 
     const winner = playService.determineFieldWinner(field, players, null);
 
-    expect(winner?.playerId).toBe('player-3');
-  });
-
-  it('falls back to dealer order for legacy fields without playedBy attribution', () => {
-    const players = [
-      makePlayer('player-1'),
-      makePlayer('player-2'),
-      makePlayer('player-3'),
-      makePlayer('player-4'),
-    ];
-
-    const field: Field = {
-      cards: ['5♣', 'A♣', '6♣', 'K♣'],
-      playedBy: [],
-      baseCard: '5♣',
-      dealerId: 'player-1',
-      isComplete: true,
-    };
-
-    const winner = playService.determineFieldWinner(field, players, null);
-
-    expect(winner?.playerId).toBe('player-2');
+    expect(winner?.seatId).toBe('player-3');
   });
 
   it('returns only base-suit cards when the hand can follow suit', () => {
     const field: Field = {
       cards: ['K♠'],
-      playedBy: ['player-2'],
+      playedBySeatIds: [asSeatId('player-2')],
       baseCard: 'K♠',
-      dealerId: 'player-2',
+      dealerSeatId: asSeatId('player-2'),
       isComplete: false,
     };
 
@@ -115,9 +99,9 @@ describe('PlayService', () => {
   it('requires Joker in Tanzen when the hand has it', () => {
     const field: Field = {
       cards: [],
-      playedBy: [],
+      playedBySeatIds: [],
       baseCard: '',
-      dealerId: 'player-1',
+      dealerSeatId: asSeatId('player-1'),
       isComplete: false,
     };
 

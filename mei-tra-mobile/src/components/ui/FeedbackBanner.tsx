@@ -1,11 +1,17 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
+import type { FeedbackMessage } from '@/types/feedback';
 
 interface FeedbackBannerProps {
-  error?: string | null;
-  notice?: string | null;
+  error?: FeedbackMessage | null;
+  notice?: FeedbackMessage | null;
   onDismiss: () => void;
+}
+
+function resolve(message: FeedbackMessage): string {
+  return typeof message === 'string' ? message : t(message.key, message.params);
 }
 
 export function FeedbackBanner({
@@ -22,10 +28,10 @@ export function FeedbackBanner({
       accessibilityRole="alert"
       style={[styles.container, error ? styles.error : styles.notice]}
     >
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.message}>{resolve(message)}</Text>
       <Pressable
-        accessibilityLabel="メッセージを閉じる"
-        accessibilityHint="メッセージを閉じます"
+        accessibilityLabel={t('a11y.dismissMessage')}
+        accessibilityHint={t('a11y.dismissMessageHint')}
         accessibilityRole="button"
         hitSlop={12}
         onPress={onDismiss}

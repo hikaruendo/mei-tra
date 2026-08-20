@@ -12,19 +12,38 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false },
 });
 const roomId = randomUUID();
+const seatId = randomUUID();
 
 try {
   const { error: roomError } = await supabase.from('rooms').insert({
     id: roomId,
     name: 'Atomic concurrency test',
-    host_id: 'concurrency-host',
   });
   assert.ifError(roomError);
 
+  const { error: seatError } = await supabase.from('room_players').insert({
+    id: seatId,
+    room_id: roomId,
+    name: 'Concurrency test seat',
+    team: 0,
+    is_com: true,
+    seat_index: 0,
+  });
+  assert.ifError(seatError);
+
+  const { error: hostError } = await supabase
+    .from('rooms')
+    .update({ host_seat_id: seatId })
+    .eq('id', roomId);
+  assert.ifError(hostError);
+
   const { error: stateError } = await supabase.from('game_states').insert({
     room_id: roomId,
-    state_data: { players: [], playerStates: {} },
-    team_assignments: {},
+    state_data: {
+      identitySchemaVersion: 2,
+      playerStates: { [seatId]: { hand: [] } },
+    },
+    current_seat_id: seatId,
   });
   assert.ifError(stateError);
 

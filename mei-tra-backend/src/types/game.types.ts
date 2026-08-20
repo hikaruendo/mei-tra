@@ -1,9 +1,11 @@
+import type { SeatId } from './identity.types';
+
 export type Team = 0 | 1;
 
 export type TeamNames = Partial<Record<Team, string>>;
 
 export interface PlayerIdentity {
-  playerId: string; // Table participant identifier (future participantId equivalent)
+  seatId: SeatId;
   name: string;
 }
 
@@ -36,7 +38,7 @@ export interface TeamScores {
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface BlowDeclaration {
-  playerId: string;
+  seatId: SeatId;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -45,7 +47,7 @@ export interface BlowDeclaration {
 
 export interface BlowAction {
   type: 'declare' | 'pass';
-  playerId: string;
+  seatId: SeatId;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -56,40 +58,41 @@ export interface BlowState {
   currentHighestDeclaration: BlowDeclaration | null;
   declarations: BlowDeclaration[];
   actionHistory: BlowAction[];
-  lastPasser: string | null;
+  lastPasserSeatId?: SeatId | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
 }
 
 export interface Field {
   cards: string[];
-  playedBy: string[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
-  dealerId: string;
+  dealerSeatId: SeatId;
   declaredSuit?: string;
   isComplete: boolean;
 }
 
 export interface CompletedField {
   cards: string[];
-  winnerId: string;
+  winnerSeatId: SeatId;
   winnerTeam: Team;
-  dealerId: string;
+  dealerSeatId: SeatId;
 }
 
 export interface PlayState {
   currentField: Field | null;
   negriCard: string | null;
+  negriSeatId?: SeatId | null;
   neguri: Record<string, string>;
   fields: CompletedField[];
-  lastWinnerId: string | null;
+  lastWinnerSeatId?: SeatId | null;
   openDeclared: boolean;
-  openDeclarerId: string | null;
+  openDeclarerSeatId?: SeatId | null;
 }
 
 export interface PendingBrokenHandReveal {
-  playerId: string;
+  seatId: SeatId;
   handSnapshot: string[];
   startedAt: number;
 }
@@ -119,9 +122,9 @@ export interface ChomboViolation {
     | 'last-tanzen'
     | 'wrong-broken'
     | 'wrong-open';
-  playerId: string;
+  violatorSeatId: SeatId;
   timestamp: number;
-  reportedBy: string | null;
+  reportedBySeatId: SeatId | null;
   isExpired: boolean;
 }
 
@@ -129,9 +132,9 @@ export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
 
 export interface GameState {
   version?: number;
+  identitySchemaVersion?: 2;
   players: DomainPlayer[];
-  currentPlayerId?: string | null;
-  currentPlayerIndex: number;
+  currentSeatId?: SeatId | null;
   gamePhase: GamePhase;
   deck: string[];
   teamScores: Record<Team, { play: number; total: number }>;
@@ -142,7 +145,4 @@ export interface GameState {
   agari?: string;
   roundNumber: number;
   pointsToWin: number;
-  teamAssignments: {
-    [playerId: string]: Team;
-  };
 }

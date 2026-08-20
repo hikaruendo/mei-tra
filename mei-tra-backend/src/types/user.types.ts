@@ -24,6 +24,8 @@ export interface UserPreferences {
   sound: boolean;
   theme: 'light' | 'dark';
   fontSize: FontSizePreset;
+  /** Optional: profiles created before the setting existed omit it. */
+  startPlayerAnimation?: boolean;
 }
 
 export interface CreateUserProfileDto {
@@ -43,6 +45,8 @@ export interface UpdateUserProfileDto {
 export interface AuthenticatedUser {
   id: string; // Supabase auth user ID
   email?: string;
+  /** Supabase anonymous (guest) session; upgrading keeps the same id. */
+  isAnonymous: boolean;
   profile: UserProfile;
 }
 

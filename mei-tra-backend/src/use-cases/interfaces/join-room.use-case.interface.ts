@@ -8,6 +8,7 @@ import {
   CompletedField,
   TeamNames,
 } from '../../types/game.types';
+import type { SeatId } from '../../types/identity.types';
 import { Room, RoomStatus } from '../../types/room.types';
 import { SessionUser } from '../../types/session.types';
 
@@ -22,7 +23,7 @@ export interface JoinRoomRequest {
 
 export interface PreviousRoomNotification {
   roomId: string;
-  playerId: string;
+  seatId: SeatId;
 }
 
 export interface ResumeGamePayload {
@@ -31,10 +32,11 @@ export interface ResumeGamePayload {
     players: DomainPlayer[];
     gamePhase: GamePhase;
     currentField: Field | null;
-    currentTurn: string | null;
+    currentTurnSeatId: SeatId | null;
     blowState: BlowState;
     teamScores: TeamScores;
     negriCard: string | null;
+    negriSeatId: SeatId | null;
     fields: CompletedField[] | undefined;
     roomId: string;
     pointsToWin: number;

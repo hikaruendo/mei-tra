@@ -13,6 +13,7 @@ import {
   formatFileSize
 } from '@/lib/utils/imageOptimizer';
 import { clearPlayerProfileCache } from '@/lib/utils/profileUtils';
+import { normalizeUserPreferences } from '@/lib/preferences';
 import styles from './ProfileEditForm.module.scss';
 
 interface ProfileEditFormProps {
@@ -28,12 +29,15 @@ interface FormData {
 
 export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormProps) {
   const { user, refreshUserProfile, getAccessToken } = useAuth();
+  // Guest uploads would outlive the account on a public bucket; see
+  // 20260819000000_block_guest_avatar_upload.sql for the matching RLS rule.
+  const isGuest = Boolean(user?.isAnonymous);
   const t = useTranslations('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
     displayName: profile.displayName,
-    preferences: { ...profile.preferences },
+    preferences: normalizeUserPreferences(profile.preferences),
   });
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -242,33 +246,37 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             )}
           </div>
 
-          <div className={styles.avatarControls}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading || isSaving}
-              className={styles.uploadButton}
-            >
-              {isUploading ? t('processing') : t('selectImage')}
-            </button>
+          {isGuest ? (
+            <p className={styles.avatarGuestNote}>{t('avatarGuestBlocked')}</p>
+          ) : (
+            <div className={styles.avatarControls}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading || isSaving}
+                className={styles.uploadButton}
+              >
+                {isUploading ? t('processing') : t('selectImage')}
+              </button>
 
-            <div
-              className={styles.dropZone}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-            >
-              <p>{t('dragDrop')}</p>
-              <small>JPEG, PNG, WebP (最大2MB)</small>
+              <div
+                className={styles.dropZone}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+              >
+                <p>{t('dragDrop')}</p>
+                <small>JPEG, PNG, WebP (最大2MB)</small>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleFileInputChange}
+                className={styles.hiddenInput}
+              />
             </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleFileInputChange}
-              className={styles.hiddenInput}
-            />
-          </div>
+          )}
 
           {uploadProgress.original && (
             <div className={styles.uploadProgress}>
@@ -332,6 +340,20 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
               className={styles.checkbox}
             />
             <span className={styles.checkboxText}>{t('soundEffects')}</span>
+          </label>
+        </div>
+
+        <div className={styles.checkboxGroup}>
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              name="preferences.startPlayerAnimation"
+              checked={formData.preferences.startPlayerAnimation}
+              onChange={handleInputChange}
+              disabled={isSaving}
+              className={styles.checkbox}
+            />
+            <span className={styles.checkboxText}>{t('startPlayerAnimation')}</span>
           </label>
         </div>
       </div>

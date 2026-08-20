@@ -76,11 +76,8 @@ NODE_ENV=production
 ```
 
 #### 本番環境
-Supabaseダッシュボードの SQL Editor で以下のスクリプトを実行:
 
-```sql
--- database/schema.sql の内容をコピー＆ペースト
-```
+本番schemaはversion管理された `supabase/migrations/` だけから更新します。ローカルresetとtest、linked projectへのdry-runを済ませてから `supabase db push` を実行してください。単一のschema SQLをダッシュボードへ貼り付ける運用は行いません。
 
 ### Step 4: アプリケーションの起動
 
@@ -246,11 +243,7 @@ supabase db push
 # 注意: 本番データが失われる可能性があるため慎重に実行
 ```
 
-**代替方法（Supabaseダッシュボード使用）**:
-1. Supabaseダッシュボードにログイン
-2. SQL Editor を開く
-3. `database/schema.sql` の内容をコピー＆ペースト
-4. 実行前にバックアップを取得
+DB構造の閲覧には `npm run db:docs` で生成する `docs/database/README.md` を使います。生成物は説明用であり、本番適用には使いません。
 
 ### アプリケーション関連の問題
 

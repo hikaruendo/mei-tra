@@ -1,6 +1,7 @@
 import { DomainPlayer } from '../../types/game.types';
 import { RoomStatus } from '../../types/room.types';
-import { TransportPlayer } from '../../types/player-adapters';
+import { TransportPlayer } from '../../adapters/player-adapters';
+import { asSeatId } from '../../types/identity.types';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from '../room-update-gateway-effects.service';
 
@@ -11,7 +12,7 @@ describe('RoomUpdateGatewayEffectsService', () => {
         getState: jest.fn(() => ({
           players: [
             {
-              playerId: 'player-1',
+              seatId: asSeatId('player-1'),
               name: 'Player 1',
               hand: [],
               team: 0,
@@ -22,9 +23,9 @@ describe('RoomUpdateGatewayEffectsService', () => {
           playState: {
             currentField: {
               cards: ['J♠'],
-              playedBy: ['com-player-1'],
+              playedBySeatIds: [asSeatId('com-player-1')],
               baseCard: 'J♠',
-              dealerId: 'com-player-1',
+              dealerSeatId: asSeatId('com-player-1'),
               isComplete: false,
             },
           },
@@ -32,15 +33,14 @@ describe('RoomUpdateGatewayEffectsService', () => {
         getTransportPlayers: jest.fn(
           (players?: DomainPlayer[]): TransportPlayer[] =>
             (players ?? []).map((player) => ({
-              socketId:
-                player.playerId === 'player-1' ? 'socket-1' : 'socket-2',
-              playerId: player.playerId,
+              socketId: player.seatId === 'player-1' ? 'socket-1' : 'socket-2',
+              seatId: asSeatId(player.seatId),
               name: player.name,
               hand: [...player.hand],
               team: player.team,
               isPasser: player.isPasser,
               isCOM: player.isCOM,
-              isHost: player.playerId === 'player-1',
+              isHost: player.seatId === 'player-1',
             })),
         ),
       }),
@@ -50,12 +50,12 @@ describe('RoomUpdateGatewayEffectsService', () => {
     const room = {
       id: 'room-1',
       name: 'Room',
-      hostId: 'player-1',
+      hostSeatId: asSeatId('player-1'),
       status: RoomStatus.WAITING,
       players: [
         {
           socketId: 'socket-1',
-          playerId: 'player-1',
+          seatId: asSeatId('player-1'),
           name: 'Player 1',
           hand: [],
           team: 0 as const,
@@ -84,14 +84,14 @@ describe('RoomUpdateGatewayEffectsService', () => {
       expect.objectContaining({
         id: room.id,
         name: room.name,
-        hostId: room.hostId,
+        hostSeatId: room.hostSeatId,
         status: room.status,
         createdAt: room.createdAt.toISOString(),
         updatedAt: room.updatedAt.toISOString(),
         lastActivityAt: room.lastActivityAt.toISOString(),
         players: [
           expect.objectContaining({
-            playerId: 'player-1',
+            seatId: 'player-1',
             socketId: 'socket-1',
             isHost: true,
             isReady: true,
@@ -102,26 +102,27 @@ describe('RoomUpdateGatewayEffectsService', () => {
     );
     expect(roomView.players).toEqual([
       expect.objectContaining({
-        playerId: 'player-1',
+        seatId: 'player-1',
         socketId: 'socket-1',
         isHost: true,
       }),
     ]);
     expect(roomView.currentField).toEqual({
       cards: ['J♠'],
-      playedBy: ['com-player-1'],
+      playedBySeatIds: ['com-player-1'],
       baseCard: 'J♠',
-      dealerId: 'com-player-1',
+      dealerSeatId: asSeatId('com-player-1'),
+      declaredSuit: undefined,
       isComplete: false,
     });
   });
 
-  it('emits the remapped field after the updated player roster', async () => {
+  it('emits the canonical field after the updated player roster', async () => {
     const currentField = {
       cards: ['J♠'],
-      playedBy: ['com-player-1'],
+      playedBySeatIds: [asSeatId('com-player-1')],
       baseCard: 'J♠',
-      dealerId: 'com-player-1',
+      dealerSeatId: asSeatId('com-player-1'),
       isComplete: false,
     };
     const roomService = {
@@ -159,19 +160,28 @@ describe('RoomUpdateGatewayEffectsService', () => {
       scope: 'room',
       roomId: room.id,
     });
-    const playersEventIndex = events.findIndex(
-      (event) => event.event === 'update-players',
-    );
     const fieldEventIndex = events.findIndex(
       (event) => event.event === 'field-updated',
     );
 
-    expect(fieldEventIndex).toBeGreaterThan(playersEventIndex);
+    expect(events.map((event) => event.event)).toEqual([
+      'room-sync',
+      'field-updated',
+    ]);
+    expect(fieldEventIndex).toBe(1);
     expect(events[fieldEventIndex]).toEqual({
       scope: 'room',
       roomId: 'room-1',
       event: 'field-updated',
-      payload: currentField,
+      payload: {
+        cards: ['J♠'],
+        playedBySeatIds: ['com-player-1'],
+        baseCard: 'J♠',
+        baseSuit: undefined,
+        dealerSeatId: asSeatId('com-player-1'),
+        declaredSuit: undefined,
+        isComplete: false,
+      },
     });
   });
 });

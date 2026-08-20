@@ -9,6 +9,7 @@ import {
   GameHistoryQuery,
 } from '../../types/game-history.types';
 import { Database } from '../../types/database.types';
+import { asSeatId } from '../../types/identity.types';
 
 type GameHistoryRow = Database['public']['Tables']['game_history']['Row'];
 type GameStateIdRow = Pick<
@@ -38,13 +39,22 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Game state not found for room ${entry.roomId}`);
     }
 
+    const requestedActorId = entry.actorSeatId ?? null;
+    if (requestedActorId && !this.isUuid(requestedActorId)) {
+      throw new Error(
+        `Game history actor must be a canonical seat UUID: ${requestedActorId}`,
+      );
+    }
+    const actorSeatId = requestedActorId;
+
     const { data, error } = await this.supabase
       .from('game_history')
       .insert({
         room_id: entry.roomId,
         game_state_id: gameStateId,
         action_type: entry.actionType,
-        player_id: entry.playerId ?? null,
+        actor_seat_id: actorSeatId,
+        actor_key_snapshot: null,
         action_data: entry.actionData ?? {},
       })
       .select()
@@ -71,8 +81,8 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       request = request.eq('action_type', query.actionType);
     }
 
-    if (query?.playerId) {
-      request = request.eq('player_id', query.playerId);
+    if (query?.actorSeatId) {
+      request = request.eq('actor_seat_id', query.actorSeatId);
     }
 
     if (query?.since) {
@@ -191,7 +201,8 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       roomId: row.room_id,
       gameStateId: row.game_state_id,
       actionType: row.action_type as GameHistoryActionType,
-      playerId: row.player_id,
+      actorSeatId: row.actor_seat_id ? asSeatId(row.actor_seat_id) : null,
+      actorKeySnapshot: row.actor_key_snapshot,
       actionData: row.action_data ?? {},
       timestamp: new Date(row.timestamp),
     };
@@ -208,5 +219,9 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
     return typeof context?.roundNumber === 'number'
       ? context.roundNumber
       : null;
+  }
+
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
   }
 }

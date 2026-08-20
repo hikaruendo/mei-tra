@@ -49,8 +49,8 @@
       "titleHighlight": "A century old.",
       "titleTrailing": " Now in your browser.",
       "description": "A 4-player, 2-team trick-taking game with real depth—bidding, Jack hierarchy, and penalty calls. Play solo against AI or with four people in real time.",
-      "loginCta": "Log In",
-      "signupCta": "Play Free",
+      "loginCta": "Already have an account? Log in",
+      "signupCta": "Create a free account",
       "metrics": [
         {
           "value": "100+ years",
@@ -64,7 +64,9 @@
           "value": "Free",
           "label": "Browser only, no install"
         }
-      ]
+      ],
+      "guestCta": "Try without signing up",
+      "guestNote": "Stats are not saved, but you can carry them over by registering later."
     },
     "screenshot": {
       "placeholder": "Game Screen Preview",
@@ -170,9 +172,10 @@
       "eyebrow": "Ready?",
       "title": "Your first hand is waiting.",
       "description": "Free to sign up. First hand in under five minutes.",
-      "login": "Log In",
-      "signup": "Play Free",
-      "product": "Operating Company"
+      "login": "Already have an account? Log in",
+      "signup": "Create a free account",
+      "product": "Operating Company",
+      "guest": "Try without signing up"
     },
     "footer": {
       "links": [
@@ -252,6 +255,19 @@
       "invalidLink": "Link is invalid or expired. Please login again.",
       "unexpectedError": "An unexpected error occurred.",
       "backToLogin": "Back to Login"
+    },
+    "continueAsGuest": "Play as guest",
+    "guestHint": "Play instantly without an account. Register later to keep your stats.",
+    "guestDefaultName": "Guest {number}",
+    "upgrade": {
+      "title": "Create your account",
+      "description": "Set an email and password to keep your current stats and profile, and sign in next time.",
+      "passwordHint": "At least 8 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "submit": "Register",
+      "confirmEmailSent": "Confirmation email sent. Click the link in the email to finish registration.",
+      "completed": "Registration complete. You can sign in with this email and password from now on.",
+      "emailAlreadyRegistered": "This email is already registered. Please sign in with that account (guest stats will not carry over)."
     }
   },
   "room": {
@@ -331,14 +347,22 @@
     },
     "gameOver": {
       "title": "Game Over",
-      "message": "{winnerTeam} wins!\n\nFinal score\n{teamRedName}: {team0Score} points\n{teamBlackName}: {team1Score} points"
+      "message": "{winnerTeam} wins!\n\nFinal score\n{teamRedName}: {team0Score} points\n{teamBlackName}: {team1Score} points",
+      "guestPrompt": "You're playing as a guest. Register an account to keep these stats.",
+      "guestPromptCta": "Register"
     },
     "trumpFormat": "Trump: {suit} ({symbol})",
     "suitHerz": "Heart",
     "suitDaiya": "Diamond",
     "suitClub": "Club",
     "suitZuppe": "Spade",
-    "suitTra": "Tra"
+    "suitTra": "Tra",
+    "firstTurnReveal": {
+      "chant": "Jan-ken…",
+      "ready": "Shu!",
+      "shu": "Shu!",
+      "result": "{name} wins — blows last!"
+    }
   },
   "gamePhase": {
     "deal": "Deal",
@@ -479,7 +503,9 @@
       "round_reset": "Round reset",
       "broken_hand_revealed": "Broken hand revealed",
       "game_over": "Game over",
-      "player_stats_updated": "Player stats updated"
+      "player_stats_updated": "Player stats updated",
+      "player_joined": "Joined",
+      "player_left": "Left"
     },
     "summaries": {
       "game_started": "Game started. First blow: {firstBlow}. Target: {pointsToWin} points",
@@ -493,7 +519,9 @@
       "round_reset": "Round reset",
       "broken_hand_revealed": "{player} revealed a broken hand. Next: {nextPlayer}",
       "game_over": "Game over. {team} won",
-      "player_stats_updated": "Stats updated: {updated} succeeded / {failed} failed"
+      "player_stats_updated": "Stats updated: {updated} succeeded / {failed} failed",
+      "player_joined": "{player} joined",
+      "player_left": "{player} left"
     },
     "detailLabels": {
       "startedBy": "Started by",
@@ -518,6 +546,7 @@
       "nextDealer": "Next dealer",
       "nextPlayer": "Next player",
       "nextBlowIndex": "Next blow index",
+      "player": "Player",
       "finalScores": "Final scores",
       "updated": "Updated",
       "failed": "Failed"
@@ -757,9 +786,10 @@
     "imageProcessing": "Processing image...",
     "imageProcessingFailed": "Failed to process image",
     "basicInfo": "Basic Information",
-    "settings": "Settings (TBD)",
+    "settings": "Settings",
     "notifications": "Enable notifications",
-    "soundEffects": "Enable sound effects",
+    "soundEffects": "Enable sound effects (TBD)",
+    "startPlayerAnimation": "Show the janken animation at game start",
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
@@ -795,7 +825,12 @@
     "logout": "Logout",
     "unavailableDuringGame": "This action is unavailable during a game",
     "passwordResetConfirmTitle": "Send a password reset email?",
-    "passwordResetConfirmMessage": "A password setup/change email will be sent to {email}. Do you want to continue?"
+    "passwordResetConfirmMessage": "A password setup/change email will be sent to {email}. Do you want to continue?",
+    "guestBadge": "Guest",
+    "guestAccountLabel": "Guest account",
+    "guestSignOutTitle": "Log out?",
+    "guestSignOutMessage": "If you log out of a guest account you can never access it again and your stats will be lost. Register an account first if you want to keep them.",
+    "avatarGuestBlocked": "Setting an avatar requires a registered account."
   },
   "terms": {
     "title": "Terms of Service",

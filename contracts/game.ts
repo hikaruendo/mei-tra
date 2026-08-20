@@ -1,3 +1,5 @@
+import type { SeatId } from './ids';
+
 export type Team = 0 | 1;
 
 export type TeamNames = Partial<Record<Team, string>>;
@@ -8,7 +10,7 @@ export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
 export interface ConnectionUserContract {
   socketId: string;
-  playerId: string;
+  seatId: SeatId;
   name: string;
   userId?: string;
   isAuthenticated?: boolean;
@@ -25,7 +27,7 @@ export interface PlayerContract extends ConnectionUserContract {
 }
 
 export interface BlowDeclarationContract {
-  playerId: string;
+  seatId: SeatId;
   team?: Team;
   trumpType: TrumpType;
   numberOfPairs: number;
@@ -34,7 +36,7 @@ export interface BlowDeclarationContract {
 
 export interface BlowActionContract {
   type: 'declare' | 'pass';
-  playerId: string;
+  seatId: SeatId;
   trumpType?: TrumpType;
   numberOfPairs?: number;
   timestamp: number;
@@ -45,26 +47,26 @@ export interface BlowStateContract {
   currentHighestDeclaration: BlowDeclarationContract | null;
   declarations: BlowDeclarationContract[];
   actionHistory: BlowActionContract[];
-  lastPasser: string | null;
+  lastPasserSeatId: SeatId | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
 }
 
 export interface FieldContract {
   cards: string[];
-  playedBy: string[];
+  playedBySeatIds: SeatId[];
   baseCard: string;
   baseSuit?: string;
-  dealerId: string;
+  dealerSeatId: SeatId;
   declaredSuit?: string;
   isComplete: boolean;
 }
 
 export interface CompletedFieldContract {
   cards: string[];
-  winnerId: string;
+  winnerSeatId: SeatId;
   winnerTeam: Team;
-  dealerId: string;
+  dealerSeatId: SeatId;
 }
 
 export interface TransportTeamScore {
@@ -80,16 +82,17 @@ export interface GameStatePayload {
   players: PlayerContract[];
   gamePhase: TransportGamePhase;
   currentField: FieldContract | null;
-  currentTurn: string | null;
+  currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
-  you: string | null;
+  youSeatId: SeatId | null;
   isSpectator?: boolean;
   negriCard: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari?: string | null;
   fields: CompletedFieldContract[];
   roomId: string;
-  hostId?: string;
+  hostSeatId: SeatId;
   pointsToWin: number;
   teamNames?: TeamNames;
 }
@@ -98,6 +101,7 @@ export interface BlowUpdatedPayload {
   declarations: BlowDeclarationContract[];
   actionHistory?: BlowActionContract[];
   currentHighest: BlowDeclarationContract | null;
+  lastPasserSeatId: SeatId | null;
 }
 
 export interface SyncGameStatePayload {
@@ -128,24 +132,19 @@ export interface RequestAgariPayload {
 export interface RevealAgariPayload {
   agari: string;
   message: string;
-  playerId: string;
+  seatId: SeatId;
 }
 
 export interface BrokenPayload {
-  nextPlayerId: string;
+  nextSeatId: SeatId;
   players: PlayerContract[];
   gamePhase?: TransportGamePhase;
 }
 
-export interface BlowStartedPayload {
-  startingPlayer: string;
-  players: PlayerContract[];
-}
-
 export interface FieldCompletePayload {
-  winnerId: string;
+  winnerSeatId: SeatId;
   field: CompletedFieldContract;
-  nextPlayerId: string;
+  nextSeatId: SeatId;
 }
 
 export interface PlayCardPayload {
@@ -154,14 +153,14 @@ export interface PlayCardPayload {
 }
 
 export interface CardPlayedPayload {
-  playerId: string;
+  seatId: SeatId;
   card: string;
   field: FieldContract;
   players: PlayerContract[];
-  nextPlayerId?: string;
+  nextSeatId?: SeatId;
 }
 
-export type UpdateTurnPayload = string;
+export type UpdateTurnPayload = SeatId;
 
 export interface TurnAckPayload {
   roomId?: string;
@@ -172,7 +171,7 @@ export interface RoundResultsPayload {
 }
 
 export interface RoundCancelledPayload {
-  nextDealer: string;
+  nextDealerSeatId: SeatId;
   players: PlayerContract[];
   currentTrump?: TrumpType | null;
   currentHighestDeclaration?: BlowDeclarationContract | null;
@@ -182,12 +181,12 @@ export interface RoundCancelledPayload {
 
 export interface NewRoundStartedPayload {
   players: PlayerContract[];
-  currentTurn: string;
+  currentTurnSeatId: SeatId;
   gamePhase: TransportGamePhase;
   currentField: FieldContract | null;
   completedFields: CompletedFieldContract[];
   negriCard: string | null;
-  negriPlayerId: string | null;
+  negriSeatId: SeatId | null;
   revealedAgari: string | null;
   currentTrump: TrumpType | null;
   currentHighestDeclaration: BlowDeclarationContract | null;
@@ -199,20 +198,26 @@ export interface GameOverPayload {
   finalScores: TransportTeamScores;
 }
 
-export interface RoomPlayingPayload {
-  players: PlayerContract[];
-}
-
 export interface GameStartedPayload {
   roomId: string;
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
+  currentTurnSeatId?: SeatId;
 }
+
+/**
+ * `update-turn` is held back by this much at game start so clients can play
+ * the first-turn reveal animation. The animation may outlast it — clients do
+ * not abort the reveal when the rebroadcast repeats its own seat — but it
+ * must end before COM's earliest first action (this delay + pacing margin +
+ * COM think time).
+ */
+export const GAME_START_TURN_REVEAL_DELAY_MS = 5000;
 
 export interface PlaySetupCompletePayload {
   negriCard: string;
-  startingPlayer: string;
+  startingSeatId: SeatId;
 }
 
 export interface GameMessagePayload {
@@ -220,22 +225,28 @@ export interface GameMessagePayload {
 }
 
 export interface PlayerLeftPayload {
-  playerId: string;
+  seatId: SeatId;
   roomId: string;
 }
 
+export interface PlayerDisconnectedPayload extends PlayerLeftPayload {
+  playerName?: string;
+}
+
 export interface PlayerConvertedToComPayload {
-  playerId: string;
+  seatId: SeatId;
   playerName: string;
   message: string;
 }
 
 export interface TurnPingPayload {
   roomId: string;
+  seatId: SeatId;
 }
 
 export interface PlayerIdlePayload {
   roomId: string;
-  playerId: string;
+  seatId: SeatId;
+  playerName?: string;
   idleMs?: number;
 }

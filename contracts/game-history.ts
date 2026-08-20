@@ -1,4 +1,9 @@
-import type { TransportGamePhase, TransportTeamScores } from './game';
+import type {
+  TeamNames,
+  TransportGamePhase,
+  TransportTeamScores,
+} from './game';
+import type { SeatId } from './ids';
 
 export type GameHistoryActionType =
   | 'game_started'
@@ -14,10 +19,18 @@ export type GameHistoryActionType =
   | 'game_over'
   | 'player_stats_updated';
 
+export type GameHistoryReplayMembershipActionType =
+  | 'player_joined'
+  | 'player_left';
+
+export type GameHistoryReplayActionType =
+  | GameHistoryActionType
+  | GameHistoryReplayMembershipActionType;
+
 export interface GameHistoryContextContract {
   roundNumber: number;
   gamePhase: TransportGamePhase | null;
-  currentTurnPlayerId: string | null;
+  currentTurnSeatId: SeatId | null;
   teamScores?: TransportTeamScores;
 }
 
@@ -26,7 +39,8 @@ export interface GameHistoryEntryContract {
   roomId: string;
   gameStateId: string;
   actionType: GameHistoryActionType;
-  playerId: string | null;
+  actorSeatId: SeatId | null;
+  actorKeySnapshot?: string | null;
   actionData: Record<string, unknown>;
   timestamp: string;
 }
@@ -34,12 +48,13 @@ export interface GameHistoryEntryContract {
 export interface GameHistorySummaryContract {
   roomId: string;
   totalEntries: number;
-  byActionType: Partial<Record<GameHistoryActionType, number>>;
-  playerIds: string[];
+  byActionType: Partial<Record<GameHistoryReplayActionType, number>>;
+  actorSeatIds: SeatId[];
   playerNames: Record<string, string>;
+  teamNames?: TeamNames;
   status: 'completed' | 'in_progress';
   winningTeam: number | null;
-  lastActionType: GameHistoryActionType | null;
+  lastActionType: GameHistoryReplayActionType | null;
   roundNumbers: number[];
   firstTimestamp: string | null;
   lastTimestamp: string | null;
@@ -51,6 +66,7 @@ export interface RecentGameHistoryItemContract {
   completedAt: string;
   roundCount: number;
   totalEntries: number;
+  teamNames?: TeamNames;
   winningTeam: number | null;
   lastActionType: GameHistoryActionType | null;
 }
@@ -60,8 +76,8 @@ export interface GameHistoryReplayRoundContract {
   startedAt: string | null;
   endedAt: string | null;
   viewerStartingHand?: string[];
-  actionTypes: GameHistoryActionType[];
-  playerIds: string[];
+  actionTypes: GameHistoryReplayActionType[];
+  actorSeatIds: SeatId[];
   entries: GameHistoryEntryContract[];
   events: GameHistoryReplayEventContract[];
 }
@@ -73,8 +89,8 @@ export interface GameHistoryReplayViewContract {
 }
 
 export interface GameStartedReplayDetailsContract {
-  firstBlowPlayerId: string | null;
-  startedByPlayerId: string | null;
+  firstBlowSeatId: SeatId | null;
+  startedBySeatId: SeatId | null;
   pointsToWin: number | null;
 }
 
@@ -84,12 +100,12 @@ export interface BlowDeclaredReplayDetailsContract {
 }
 
 export interface BlowPassedReplayDetailsContract {
-  lastPasser: string | null;
+  lastPasserSeatId: SeatId | null;
   actedCount: number | null;
 }
 
 export interface PlayPhaseStartedReplayDetailsContract {
-  winnerPlayerId: string | null;
+  winnerSeatId: SeatId | null;
   currentTrump: string | null;
   revealBrokenRequired: boolean;
 }
@@ -101,7 +117,7 @@ export interface CardPlayedReplayDetailsContract {
 }
 
 export interface FieldCompletedReplayDetailsContract {
-  winnerPlayerId: string | null;
+  winnerSeatId: SeatId | null;
   winnerTeam: number | null;
   cards: string[];
 }
@@ -116,11 +132,11 @@ export interface RoundCancelledReplayDetailsContract {
 }
 
 export interface RoundResetReplayDetailsContract {
-  nextDealerId: string | null;
+  nextDealerSeatId: SeatId | null;
 }
 
 export interface BrokenHandRevealedReplayDetailsContract {
-  nextPlayerId: string | null;
+  nextSeatId: SeatId | null;
   nextBlowIndex: number | null;
 }
 
@@ -137,6 +153,11 @@ export interface PlayerStatsUpdatedReplayDetailsContract {
   failedCount: number;
 }
 
+export interface PlayerMembershipReplayDetailsContract {
+  seatId: SeatId | null;
+  playerName: string | null;
+}
+
 export type GameHistoryReplayDetailValueContract =
   | {
       kind: 'text';
@@ -144,7 +165,7 @@ export type GameHistoryReplayDetailValueContract =
     }
   | {
       kind: 'player';
-      playerId: string | null;
+      seatId: SeatId | null;
       playerName: string | null;
     }
   | {
@@ -174,15 +195,15 @@ export interface GameHistoryReplayDetailItemContract {
 }
 
 type GameHistoryReplayEventBaseContract<
-  TAction extends GameHistoryActionType,
-  TKind extends 'lifecycle' | 'blow' | 'play' | 'round' | 'stats',
+  TAction extends GameHistoryReplayActionType,
+  TKind extends 'lifecycle' | 'blow' | 'play' | 'round' | 'stats' | 'membership',
   TDetails,
 > = {
   id: string;
   timestamp: string;
   actionType: TAction;
   kind: TKind;
-  playerId: string | null;
+  actorSeatId: SeatId | null;
   roundNumber: number | null;
   gamePhase: TransportGamePhase | null;
   summary: string;
@@ -252,13 +273,23 @@ export type GameHistoryReplayEventContract =
       'player_stats_updated',
       'stats',
       PlayerStatsUpdatedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'player_joined',
+      'membership',
+      PlayerMembershipReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'player_left',
+      'membership',
+      PlayerMembershipReplayDetailsContract
     >;
 
 export interface GameHistoryReplayQueryContract {
   limit?: number;
   roundNumber?: number;
   actionType?: GameHistoryActionType;
-  playerId?: string;
+  actorSeatId?: SeatId;
   since?: string;
   until?: string;
 }

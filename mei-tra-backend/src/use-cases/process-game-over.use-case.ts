@@ -6,6 +6,7 @@ import {
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { SessionUser } from '../types/session.types';
+import type { SeatId } from '@contracts/ids';
 
 @Injectable()
 export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
@@ -34,8 +35,8 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       .map((roomPlayer) => {
         const sessionUser =
           roomGameState &&
-          typeof roomGameState.findSessionUserByPlayerId === 'function'
-            ? roomGameState.findSessionUserByPlayerId(roomPlayer.playerId)
+          typeof roomGameState.findSessionUserBySeatId === 'function'
+            ? roomGameState.findSessionUserBySeatId(roomPlayer.seatId)
             : null;
         const userId = this.resolveAuthenticatedUserId(roomPlayer, sessionUser);
 
@@ -44,14 +45,19 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
         }
 
         return {
-          playerId: roomPlayer.playerId,
+          seatId: roomPlayer.seatId,
           team: roomPlayer.team,
           userId,
         };
       })
       .filter(
-        (player): player is { playerId: string; team: 0 | 1; userId: string } =>
-          player !== null,
+        (
+          player,
+        ): player is {
+          seatId: SeatId;
+          team: 0 | 1;
+          userId: string;
+        } => player !== null,
       );
 
     const updatePromises = authenticatedPlayers.map(async (player) => {
@@ -77,7 +83,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
       }
     });
     const updatedPlayers = results.flatMap((result) =>
-      result.status === 'fulfilled' ? [result.value.playerId] : [],
+      result.status === 'fulfilled' ? [result.value.seatId] : [],
     );
     const failedUpdates = results.filter(
       (result) => result.status === 'rejected',
@@ -86,7 +92,7 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
     await this.gameEventLogService?.log({
       roomId,
       actionType: 'player_stats_updated',
-      playerId: null,
+      actorSeatId: null,
       actionData: {
         winningTeam,
         updatedPlayers,
@@ -95,10 +101,10 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
           .filter(
             (roomPlayer) =>
               !authenticatedPlayers.some(
-                (player) => player.playerId === roomPlayer.playerId,
+                (player) => player.seatId === roomPlayer.seatId,
               ),
           )
-          .map((roomPlayer) => roomPlayer.playerId),
+          .map((roomPlayer) => roomPlayer.seatId),
         failedCount: failedUpdates,
         finalScores: teamScores,
       },

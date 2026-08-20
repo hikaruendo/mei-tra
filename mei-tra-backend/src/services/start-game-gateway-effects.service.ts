@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  GameStartedPayload,
-  RoomPlayingPayload,
-  UpdatePhasePayload,
+import {
+  GAME_START_TURN_REVEAL_DELAY_MS,
+  type GameStartedPayload,
+  type UpdatePhasePayload,
 } from '@contracts/game';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { DomainPlayer } from '../types/game.types';
+import type { SeatId } from '../types/identity.types';
 import { IRoomService } from './interfaces/room-service.interface';
 import { RoomUpdateGatewayEffectsService } from './room-update-gateway-effects.service';
 
@@ -14,7 +15,9 @@ interface BuildStartGameEventsParams {
   players: DomainPlayer[];
   pointsToWin: number;
   updatePhase: UpdatePhasePayload;
-  currentTurnPlayerId: string;
+  currentTurnSeatId: SeatId;
+  /** False when no seated human wants the reveal; the turn goes out at once. */
+  firstTurnRevealEnabled: boolean;
 }
 
 @Injectable()
@@ -29,7 +32,8 @@ export class StartGameGatewayEffectsService {
     players,
     pointsToWin,
     updatePhase,
-    currentTurnPlayerId,
+    currentTurnSeatId,
+    firstTurnRevealEnabled,
   }: BuildStartGameEventsParams): Promise<GatewayEvent[]> {
     const room = await this.roomService.getRoom(roomId);
     const roomGameState = await this.roomService.getRoomGameState(roomId);
@@ -38,14 +42,12 @@ export class StartGameGatewayEffectsService {
       room?.players,
     );
 
-    const roomPlayingPayload: RoomPlayingPayload = {
-      players: transportPlayers,
-    };
     const gameStartedPayload: GameStartedPayload = {
       roomId,
       players: transportPlayers,
       pointsToWin,
       teamNames: room?.settings.teamNames,
+      currentTurnSeatId,
     };
     const roomEvents = room
       ? await this.roomUpdateGatewayEffectsService.buildRoomEvents({
@@ -66,12 +68,6 @@ export class StartGameGatewayEffectsService {
       {
         scope: 'room',
         roomId,
-        event: 'room-playing',
-        payload: roomPlayingPayload,
-      },
-      {
-        scope: 'room',
-        roomId,
         event: 'game-started',
         payload: gameStartedPayload,
       },
@@ -85,7 +81,13 @@ export class StartGameGatewayEffectsService {
         scope: 'room',
         roomId,
         event: 'update-turn',
-        payload: currentTurnPlayerId,
+        payload: currentTurnSeatId,
+        // Held back so clients can play the first-turn reveal; the seat is
+        // already in `game-started` for clients that animate it. When nobody
+        // seated wants the reveal, the turn goes out immediately.
+        ...(firstTurnRevealEnabled
+          ? { delayMs: GAME_START_TURN_REVEAL_DELAY_MS }
+          : {}),
       },
     ];
   }

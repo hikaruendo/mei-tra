@@ -18,10 +18,15 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function RoomsScreen() {
+  // Re-render this screen when the app language changes; t() is a bare
+  // function and cannot trigger that on its own.
+  useLocale();
   const router = useRouter();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const {
     rooms,
     connectionStatus,
@@ -61,7 +66,7 @@ export default function RoomsScreen() {
       <Screen contentStyle={styles.loadingState}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text accessibilityLiveRegion="polite" style={styles.loadingText}>
-          アカウント情報を読み込んでいます
+          {t('rooms.loadingAccount')}
         </Text>
       </Screen>
     );
@@ -78,7 +83,8 @@ export default function RoomsScreen() {
     setSubmitting(true);
     try {
       const points = Math.max(1, Number(pointsToWin) || 5);
-      const name = roomName.trim() || `${displayName}の部屋`;
+      const name =
+        roomName.trim() || t('rooms.defaultRoomName', { name: displayName });
       const success = await createRoom(name, points);
       if (success) {
         router.push('/room/current');
@@ -127,54 +133,38 @@ export default function RoomsScreen() {
       >
         <View style={styles.header}>
           <View style={styles.brandWrap}>
-            <BrandHeader subtitle={`${displayName}さん、対局を始めましょう`} />
+            <BrandHeader
+              subtitle={t('rooms.greeting', { name: displayName })}
+            />
           </View>
           <Button
-            accessibilityLabel="設定を開く"
+            accessibilityLabel={t('rooms.openSettings')}
             onPress={() => router.push('../settings')}
             style={styles.settings}
             variant="ghost"
           >
-            設定
-          </Button>
-          <Button
-            accessibilityLabel="ログアウト"
-            variant="ghost"
-            onPress={async () => {
-              if (submitting) return;
-              setSubmitting(true);
-              try {
-                await signOut();
-                router.replace('/sign-in');
-              } finally {
-                setSubmitting(false);
-              }
-            }}
-            style={styles.logout}
-            disabled={submitting}
-          >
-            ログアウト
+            {t('rooms.profile')}
           </Button>
         </View>
 
         <ConnectionBanner status={connectionStatus} onRetry={refreshRooms} />
 
         <View style={styles.createCard}>
-          <Text style={styles.sectionTitle}>部屋を作る</Text>
+          <Text style={styles.sectionTitle}>{t('rooms.createRoom')}</Text>
           <TextInput
-            accessibilityLabel="部屋名"
+            accessibilityLabel={t('rooms.roomName')}
             autoCapitalize="sentences"
             maxLength={80}
             onChangeText={setRoomName}
-            placeholder={`${displayName}の部屋`}
+            placeholder={t('rooms.defaultRoomName', { name: displayName })}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             value={roomName}
           />
           <View style={styles.pointsRow}>
-            <Text style={styles.label}>勝利点数</Text>
+            <Text style={styles.label}>{t('rooms.pointsToWin')}</Text>
             <TextInput
-              accessibilityLabel="勝利点数"
+              accessibilityLabel={t('rooms.pointsToWin')}
               keyboardType="number-pad"
               maxLength={3}
               onChangeText={(value) =>
@@ -189,16 +179,16 @@ export default function RoomsScreen() {
             loading={submitting}
             onPress={handleCreate}
           >
-            ルーム作成
+            {t('rooms.create')}
           </Button>
         </View>
 
         <View style={styles.listSection}>
-          <Text style={styles.sectionTitle}>参加できる部屋</Text>
+          <Text style={styles.sectionTitle}>{t('rooms.joinable')}</Text>
           <TextInput
-            accessibilityLabel="部屋を検索"
+            accessibilityLabel={t('rooms.searchRooms')}
             onChangeText={setSearch}
-            placeholder="部屋名で検索"
+            placeholder={t('rooms.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             value={search}
@@ -208,7 +198,7 @@ export default function RoomsScreen() {
             const players = room.players.filter(
               (player, index, all) =>
                 all.findIndex(
-                  (candidate) => candidate.playerId === player.playerId,
+                  (candidate) => candidate.seatId === player.seatId,
                 ) === index,
             );
             const humans = players.filter((player) => !player.isCOM);
@@ -228,16 +218,24 @@ export default function RoomsScreen() {
                       {room.name}
                     </Text>
                     <Text style={styles.roomMeta}>
-                      {humans.length}/{room.settings.maxPlayers}人・
-                      {room.settings.pointsToWin}点先取
+                      {t('rooms.capacity', {
+                        current: humans.length,
+                        max: room.settings.maxPlayers,
+                      })}
+                      {t('rooms.pointsSuffix', {
+                        points: room.settings.pointsToWin,
+                      })}
                     </Text>
                   </View>
                   <Text style={styles.status}>
-                    {room.status === 'playing' ? '対局中' : '待機中'}
+                    {room.status === 'playing'
+                      ? t('rooms.statusPlaying')
+                      : t('rooms.statusWaiting')}
                   </Text>
                 </View>
                 <Text numberOfLines={2} style={styles.players}>
-                  {players.map((player) => player.name).join('・') || '参加者なし'}
+                  {players.map((player) => player.name).join(', ') ||
+                    t('rooms.noParticipants')}
                 </Text>
                 <View style={styles.roomActions}>
                   {canJoin ? (
@@ -248,7 +246,7 @@ export default function RoomsScreen() {
                       onPress={() => enterRoom(room.id, joinRoom)}
                       style={styles.roomAction}
                     >
-                      参加
+                      {t('rooms.join')}
                     </Button>
                   ) : null}
                   {canWatch ? (
@@ -260,7 +258,7 @@ export default function RoomsScreen() {
                       style={styles.roomAction}
                       variant="secondary"
                     >
-                      観戦
+                      {t('rooms.watch')}
                     </Button>
                   ) : null}
                 </View>
@@ -272,8 +270,8 @@ export default function RoomsScreen() {
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
                 {search.trim()
-                  ? '条件に合う部屋はありません'
-                  : '現在参加できる部屋はありません'}
+                  ? t('rooms.noMatch')
+                  : t('rooms.noneAvailable')}
               </Text>
             </View>
           ) : null}
@@ -285,6 +283,9 @@ export default function RoomsScreen() {
 
 const styles = StyleSheet.create({
   content: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     gap: 18,
     padding: 18,
     paddingBottom: 42,
@@ -299,10 +300,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   settings: {
-    minHeight: 42,
-    paddingHorizontal: 10,
-  },
-  logout: {
     minHeight: 42,
     paddingHorizontal: 10,
   },
