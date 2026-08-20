@@ -1,6 +1,6 @@
 # Meitra モバイルネイティブアプリ設計
 
-更新日: 2026-07-24
+更新日: 2026-08-20
 対象: iOS / Android
 実装: Expo SDK 55 / React Native 0.83 / TypeScript / Expo Router / EAS
 
@@ -22,7 +22,7 @@
 | 対象 | 結果 | 検証境界 |
 | --- | --- | --- |
 | npm workspace | npm `10.9.2`でclean install成功 | root lockfileとworkspace packageのローカル解決 |
-| mobile | 14 suites / 63 tests、Expo Doctor 19/19、iOS / Android export成功 | JavaScript・設定・bundle export。署名済みnative buildではない |
+| mobile | 24 suites / 125 tests、Expo Doctor 18/18、iOS export成功 | JavaScript・設定・bundle export。署名済みnative buildではない |
 | backend | 52 suites / 300 tests、lint、build成功 | ローカルbackendとlocal Supabase |
 | frontend | 27 suites / 78 tests、lint、build成功 | Web buildと共有Socket契約 |
 | Web dev | HTTP 200 | ローカルdev serverの到達性 |
@@ -110,7 +110,11 @@ mei-tra-mobile/src/app/
 ├── sign-in.tsx               # email/password と Google OAuth
 ├── rooms.tsx                 # ルーム一覧・作成・参加・観戦
 ├── room/[roomId].tsx         # 待機室または対局画面
-└── settings.tsx              # 接続、通知、ログアウト、退会
+├── settings/index.tsx        # 設定トップ
+├── settings/account.tsx      # アカウント・退会
+├── settings/preferences.tsx  # 表示・通知設定
+├── settings/profile.tsx      # プロフィール
+└── settings/help.tsx         # ヘルプ・規約
 ```
 
 `room/[roomId]`はサーバ状態を見て`WaitingRoom`と`GameBoard`を切り替える。`room/current`は作成直後や復帰導線で解決するための論理的な入口であり、固定のサーバルームIDではない。
@@ -307,7 +311,7 @@ EAS Updateは初回リリースの要件ではないため、意図的に着手�
 ### 審査で確認が要る点
 
 - サインイン画面はGoogle loginを提供する (`signInWithGoogle`)。App Store Guideline 4.8はthird-party loginを使う場合に同等のprivacy優先の選択肢を求める。email / password (`signUp`・`signInWithPassword`) が実装済みなのでこれで満たせる可能性はあるが、Sign in with Appleの追加を求められる可能性は残る。
-- アプリ内account deletion (Guideline 5.1.1(v)) は`src/app/settings.tsx`に実装済みである。
+- アプリ内account deletion (Guideline 5.1.1(v)) は`src/app/settings/account.tsx`に実装済みである。
 - privacy policy / terms は web の `/ja/privacy` `/ja/terms` に実在し、設定画面からリンクしている。
 
 ## 10. テスト戦略と完了条件
@@ -316,7 +320,7 @@ EAS Updateは初回リリースの要件ではないため、意図的に着手�
 
 ローカルでは次の結果を確認済みである。
 
-- mobile: 14 suites / 63 tests、Expo Doctor 19/19、lint、typecheck、iOS / Android export。
+- mobile: 24 suites / 125 tests、Expo Doctor 18/18、lint、typecheck、iOS export。
 - backend: 52 suites / 300 tests、lint、build。
 - frontend: 27 suites / 78 tests、lint、build。
 - Web dev server: HTTP 200。

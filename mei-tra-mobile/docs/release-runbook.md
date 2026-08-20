@@ -13,14 +13,14 @@
 - app version: `0.1.0`
 - orientation: `portrait`
 
-このリリース設定では `development` / `preview` / `production` のEAS環境と同名channelを定義している。ただし、現行 `app.json` には `expo.extra.eas.projectId`、`expo.runtimeVersion`、`expo.updates.url` がまだないため、EAS Updateは意図的に実行しない。channel設定だけでOTAが有効になるわけではない。
+このリリース設定では `development` / `preview` / `production` のEAS環境と同名channelを定義している。EAS projectは `expo.extra.eas.projectId` でリンク済みだが、`expo.runtimeVersion` と `expo.updates.url` は未設定のため、EAS Updateは意図的に実行しない。channel設定だけでOTAが有効になるわけではない。
 
 development buildには、SDK 55対応の公式パッケージ `expo-dev-client` を利用する。`mei-tra-mobile/package.json` とrootの `package-lock.json` に依存関係を反映した状態で、development profileを実行できる。
 
-### 2026-07-24 ローカル検証済み基準
+### 2026-08-20 ローカル検証済み基準
 
 - npm `10.9.2`のclean installで、root workspacesの`mei-tra-mobile`、`@meitra/contracts`、`@meitra/game-client`を解決した。
-- mobileは14 suites / 63 tests、lint、typecheck、Expo Doctor 19/19、iOS / Android exportに成功した。
+- mobileは24 suites / 125 tests、lint、typecheck、Expo Doctor 18/18、iOS exportに成功した（Android exportはこの実行では未実施）。
 - backendは52 suites / 300 tests、lint、buildに成功した。
 - frontendは27 suites / 78 tests、lint、buildに成功し、Web dev serverはHTTP 200を返した。
 - local Supabase migration historyは`20260806165611_push_receipt_tracking.sql`と`20260806165711_serialize_account_deletion_room_membership.sql`を含む`20260806165711`まで適用し、push token register / delete smokeに成功した。
@@ -120,8 +120,8 @@ CIの `--freeze-credentials` は、CIが署名資格情報を自動更新しな�
 
 - [x] npm `10.9.2`のclean installがroot lockfileと一致する。
 - [x] root workspace lockfileで`@meitra/contracts`と`@meitra/game-client`を解決する。
-- [x] mobileのlint、typecheck、14 suites / 63 tests、Expo Doctor 19/19が成功する。
-- [x] iOS / AndroidのJavaScript exportが成功する。
+- [x] mobileのlint、typecheck、24 suites / 125 tests、Expo Doctor 18/18が成功する。
+- [x] iOSのJavaScript exportが成功する。
 - [x] backendの52 suites / 300 tests、lint、buildが成功する。
 - [x] frontendの27 suites / 78 tests、lint、buildが成功し、Web dev serverがHTTP 200を返す。
 - [x] `npm audit --omit=dev`でmoderate 10件、high / critical 0件を確認する。
@@ -190,12 +190,10 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 
 このリポジトリ内のリリース設定だけでは解消できない項目は次のとおり。
 
-1. EAS login未実施、`app.json`のEAS `projectId`未登録。
-2. EAS environment、`EXPO_TOKEN`、iOS / Android署名・提出資格情報が未設定または未確認。
-3. production Supabase migrationはこのworktreeから未適用・未検証。localではpush receipt trackingとaccount deletion room membership直列化を含む`20260806165711`まで適用済み。productionへ`20260806165611_push_receipt_tracking.sql`と`20260806165711_serialize_account_deletion_room_membership.sql`を適用・確認する必要がある。
-4. `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストを未実施。
-5. 実端末のpush token取得・通知受信・通知tap、background / foreground、process kill、Wi-Fi / mobile回線切替を未実施。
-6. `app.json`の`runtimeVersion` / `updates.url`未設定。OTAを開始する場合にだけ設計・追加する。
-7. `npm audit --omit=dev`のmoderate 10件はExpoの`xcode`→`uuid`経路に残る。high / criticalは0件だが解消済みとはせず、Expoをdowngradeしないupstream dependency更新を確認する。
+1. EAS login、`EXPO_TOKEN`、iOS / Android署名・提出資格情報が未設定または未確認。
+2. `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストを未実施。
+3. 実端末のpush token取得・通知受信・通知tap、background / foreground、process kill、Wi-Fi / mobile回線切替を未実施。
+4. `app.json`の`runtimeVersion` / `updates.url`未設定。OTAを開始する場合にだけ設計・追加する。
+5. `npm audit --omit=dev`のmoderate 10件はExpoの`xcode`→`uuid`経路に残る。high / criticalは0件だが解消済みとはせず、Expoをdowngradeしないupstream dependency更新を確認する。
 
 これらが未完了の間は、ローカルtest・build・export・browser smokeの成功を「ストアリリース可能」と解釈しない。exportはJavaScript bundleの検証であり、署名、EAS project、store metadata、実機対局、審査要件の代替ではない。
