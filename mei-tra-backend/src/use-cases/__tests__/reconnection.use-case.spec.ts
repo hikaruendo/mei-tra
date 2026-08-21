@@ -91,6 +91,73 @@ describe('ReconnectionUseCase', () => {
     expect(roomService.getRoomGameState).not.toHaveBeenCalled();
   });
 
+  it('loads a waiting-room snapshot without reconnect side effects', async () => {
+    const room = {
+      id: 'room-1',
+      hostSeatId: asSeatId('seat-1'),
+      status: RoomStatus.WAITING,
+      players: [
+        {
+          seatId: asSeatId('seat-1'),
+          socketId: 'socket-1',
+          userId: 'user-1',
+          isAuthenticated: true,
+          name: 'User 1',
+          hand: [],
+          team: 0 as const,
+          isReady: true,
+          isHost: true,
+          isPasser: false,
+          joinedAt: new Date(),
+        },
+      ],
+    };
+    const roomGameState = {
+      getState: jest.fn().mockReturnValue({ gamePhase: 'waiting' }),
+      findSessionUserByUserId: jest.fn(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(room),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      listRooms: jest.fn().mockResolvedValue([room]),
+      handlePlayerReconnection: jest.fn(),
+      initCOMPlaceholders: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const gameState = {
+      upsertSessionUser: jest.fn(),
+    } as Partial<IGameStateService> as IGameStateService;
+    const roomMembershipService = createRoomMembershipService();
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      gameState,
+      roomMembershipService,
+    );
+
+    const snapshot = await useCase.getWaitingRoomSnapshot({
+      roomId: 'room-1',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        isAnonymous: false,
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(snapshot).toEqual({
+      roomId: 'room-1',
+      roomsList: [room],
+      room,
+      selfSeatId: 'seat-1',
+      selfName: 'User 1',
+      selfTeam: 0,
+      isHost: true,
+    });
+    expect(roomMembershipService.claim).not.toHaveBeenCalled();
+    expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
+    expect(roomService.initCOMPlaceholders).not.toHaveBeenCalled();
+    expect(gameState.upsertSessionUser).not.toHaveBeenCalled();
+  });
+
   it('uses the persisted room player mapping after an active-game restart', async () => {
     const roomGameState = {
       findSessionUserByUserId: jest.fn().mockReturnValue(null),

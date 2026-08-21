@@ -1337,7 +1337,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (client.data as { user?: AuthenticatedUser }).user = authenticatedUser;
     }
 
-    await this.restoreRoomSession({ client, roomId, authenticatedUser });
+    const activeGameSnapshot =
+      await this.reconnectionUseCase.getActiveGameSnapshot({
+        roomId,
+        authenticatedUser,
+      });
+    if (activeGameSnapshot) {
+      this.playerRooms.set(client.id, roomId);
+      await client.join(roomId);
+      client.emit('game-state', activeGameSnapshot.gameState);
+      client.emit('reconnect-token', activeGameSnapshot.reconnectToken);
+      return;
+    }
+
+    const waitingRoomSnapshot =
+      await this.reconnectionUseCase.getWaitingRoomSnapshot({
+        roomId,
+        authenticatedUser,
+      });
+    if (!waitingRoomSnapshot) {
+      return;
+    }
+
+    this.playerRooms.set(client.id, roomId);
+    await client.join(roomId);
+    const roomEntryEvents =
+      await this.joinRoomGatewayEffectsService.buildRoomEntryEvents({
+        clientId: client.id,
+        room: waitingRoomSnapshot.room,
+        selfPlayer: {
+          seatId: waitingRoomSnapshot.selfSeatId,
+          name: waitingRoomSnapshot.selfName,
+          team: waitingRoomSnapshot.selfTeam,
+        },
+        isHost: waitingRoomSnapshot.isHost,
+        roomStatus: waitingRoomSnapshot.room.status,
+        roomsList: waitingRoomSnapshot.roomsList,
+        roomsListScope: 'socket',
+      });
+    this.dispatchEvents(roomEntryEvents);
   }
 
   @SubscribeMessage('change-player-team')
