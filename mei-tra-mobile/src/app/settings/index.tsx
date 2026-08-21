@@ -1,7 +1,6 @@
 import { Redirect, useRouter } from 'expo-router';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-import { GameHistoryItems } from '@/components/game-history/GameHistoryItems';
 import {
   SettingsCard,
   SettingsLinkRow,
@@ -13,7 +12,6 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { useLocale } from '@/context/LocaleContext';
-import { useProfileGameHistory } from '@/hooks/useProfileGameHistory';
 import { t } from '@/i18n';
 import { colors } from '@/theme/colors';
 
@@ -22,12 +20,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { connectionStatus, refreshRooms } = useGame();
-  const {
-    items: recentMatches,
-    loading: historyLoading,
-    error: historyError,
-    refresh: refreshHistory,
-  } = useProfileGameHistory(user?.id ?? null);
 
   if (!loading && !user) {
     return <Redirect href="/sign-in" />;
@@ -87,32 +79,6 @@ export default function SettingsScreen() {
         {user.isAnonymous ? (
           <Button onPress={() => router.push('/upgrade-account')}>
             {t('settings.upgradeCta')}
-          </Button>
-        ) : null}
-      </SettingsCard>
-
-      <SettingsCard
-        action={
-          <Button
-            disabled={historyLoading}
-            onPress={() => void refreshHistory()}
-            style={styles.compactButton}
-            variant="ghost"
-          >
-            {t('settings.refresh')}
-          </Button>
-        }
-        description={t('settings.recentGamesPreviewHint')}
-        title={t('settings.recentGames')}
-      >
-        <GameHistoryItems
-          error={historyError}
-          items={recentMatches.slice(0, 2)}
-          loading={historyLoading}
-        />
-        {recentMatches.length > 0 ? (
-          <Button onPress={() => router.push('/game-history')} variant="ghost">
-            {t('settings.viewAllHistory')}
           </Button>
         ) : null}
       </SettingsCard>
@@ -193,9 +159,5 @@ const styles = StyleSheet.create({
   email: {
     color: colors.textMuted,
     fontSize: 14,
-  },
-  compactButton: {
-    minHeight: 40,
-    paddingHorizontal: 10,
   },
 });

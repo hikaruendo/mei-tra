@@ -1,23 +1,14 @@
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Linking,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import {
   SettingsCard,
   SettingsScaffold,
 } from '@/components/settings/SettingsScaffold';
-import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
-import { useNotifications } from '@/context/NotificationContext';
 import { t } from '@/i18n';
 import { updateProfile } from '@/lib/profile-api';
 import { colors } from '@/theme/colors';
@@ -33,8 +24,6 @@ export default function PreferencesSettingsScreen() {
   const { user, loading, getAccessToken, refreshProfile } = useAuth();
   const { preference: localePreference, setPreference: setLocalePreference } =
     useLocale();
-  const { requestRegistration, status: notificationStatus } =
-    useNotifications();
   const [savingAnimation, setSavingAnimation] = useState(false);
   const [animationOverride, setAnimationOverride] = useState<boolean | null>(
     null,
@@ -80,17 +69,6 @@ export default function PreferencesSettingsScreen() {
     }
   };
 
-  const notificationLabel =
-    notificationStatus === 'registered'
-      ? t('settings.notifEnabled')
-      : notificationStatus === 'permission-denied'
-        ? t('settings.notifDenied')
-        : notificationStatus === 'unsupported'
-          ? t('settings.notifDeviceOnly')
-          : notificationStatus === 'registering'
-            ? t('settings.notifRegistering')
-            : t('settings.notifUnregistered');
-
   return (
     <SettingsScaffold
       onBack={() => router.replace('/settings')}
@@ -105,7 +83,6 @@ export default function PreferencesSettingsScreen() {
             value={startPlayerAnimation}
           />
         </View>
-        <Text style={styles.hint}>{t('settings.jankenHint')}</Text>
         {settingError ? (
           <Text accessibilityRole="alert" style={styles.error}>
             {settingError}
@@ -132,33 +109,6 @@ export default function PreferencesSettingsScreen() {
             ) : null}
           </Pressable>
         ))}
-        <Text style={styles.hint}>{t('settings.languageHint')}</Text>
-      </SettingsCard>
-
-      <SettingsCard
-        description={t('settings.notificationsContextHint')}
-        title={t('settings.notifications')}
-      >
-        <View style={styles.statusRow}>
-          <Text style={styles.settingLabel}>
-            {t('settings.notificationsLabel')}
-          </Text>
-          <Text style={styles.status}>{notificationLabel}</Text>
-        </View>
-        {notificationStatus === 'permission-denied' ? (
-          <Button onPress={() => void Linking.openSettings()} variant="secondary">
-            {t('settings.openDeviceSettings')}
-          </Button>
-        ) : notificationStatus !== 'registered' &&
-          notificationStatus !== 'unsupported' ? (
-          <Button
-            loading={notificationStatus === 'registering'}
-            onPress={() => void requestRegistration()}
-            variant="secondary"
-          >
-            {t('settings.enableNotifications')}
-          </Button>
-        ) : null}
       </SettingsCard>
     </SettingsScaffold>
   );
@@ -220,15 +170,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  status: {
-    color: colors.gold,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

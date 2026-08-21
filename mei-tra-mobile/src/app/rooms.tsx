@@ -17,6 +17,7 @@ import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 import { useLocale } from '@/context/LocaleContext';
@@ -27,6 +28,7 @@ export default function RoomsScreen() {
   useLocale();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { requestRegistration } = useNotifications();
   const {
     rooms,
     connectionStatus,
@@ -88,6 +90,7 @@ export default function RoomsScreen() {
       const success = await createRoom(name, points);
       if (success) {
         router.push('/room/current');
+        void requestRegistration();
       }
     } finally {
       setSubmitting(false);
@@ -97,6 +100,7 @@ export default function RoomsScreen() {
   const enterRoom = async (
     roomId: string,
     action: (id: string) => Promise<boolean>,
+    requestNotifications = false,
   ) => {
     if (submitting || connectionStatus !== 'connected') return;
     setSubmitting(true);
@@ -104,6 +108,7 @@ export default function RoomsScreen() {
       const success = await action(roomId);
       if (success) {
         router.push(`/room/${roomId}`);
+        if (requestNotifications) void requestRegistration();
       }
     } finally {
       setSubmitting(false);
@@ -243,7 +248,7 @@ export default function RoomsScreen() {
                       disabled={
                         submitting || connectionStatus !== 'connected'
                       }
-                      onPress={() => enterRoom(room.id, joinRoom)}
+                      onPress={() => enterRoom(room.id, joinRoom, true)}
                       style={styles.roomAction}
                     >
                       {t('rooms.join')}

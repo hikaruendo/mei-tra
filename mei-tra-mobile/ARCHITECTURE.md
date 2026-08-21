@@ -52,9 +52,9 @@ src/
 │   ├── sign-in.tsx               ← サインイン / サインアップ
 │   ├── rooms.tsx                 ← ルーム一覧・作成・参加・観戦
 │   ├── settings/                 ← プロフィールハブと各設定画面
-│   │   ├── index.tsx             ← プロフィール概要・最近の対局・設定導線
+│   │   ├── index.tsx             ← プロフィール概要・対局履歴・設定導線
 │   │   ├── profile.tsx           ← 表示名・アバター編集
-│   │   ├── preferences.tsx       ← 対局演出・通知・言語
+│   │   ├── preferences.tsx       ← 対局演出・言語
 │   │   ├── help.tsx              ← 規約・プライバシー・問い合わせ
 │   │   └── account.tsx           ← ログアウト・アカウント削除
 │   ├── game-history/             ← 対局履歴一覧・詳細
