@@ -207,7 +207,6 @@ export const useGame = () => {
   const gameOverShownRef = useRef<string | null>(null);
   const gameEventStateRef = useRef(createEmptyGameEventState());
   const agariRequestKeyRef = useRef<string | null>(null);
-  const roomBootstrapRef = useRef<string | null>(null);
   const gameStateSyncKeyRef = useRef<string | null>(null);
   // Read through a ref so the long-lived socket handlers see the current value.
   const startPlayerAnimationEnabledRef = useRef(
@@ -304,7 +303,6 @@ export const useGame = () => {
     gameEventStateRef.current = createEmptyGameEventState();
     gameOverShownRef.current = null;
     agariRequestKeyRef.current = null;
-    roomBootstrapRef.current = null;
     gameStateSyncKeyRef.current = null;
     setGameStarted(false);
     setGamePhase(null);
@@ -445,28 +443,6 @@ export const useGame = () => {
 
     setIsHost(currentHostSeatId === currentSeatId);
   }, [currentHostSeatId, currentSeatId]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !user || !socket?.connected || currentRoomId) {
-      return;
-    }
-
-    const storedRoomId = sessionStorage.getItem('roomId');
-    if (!storedRoomId || roomBootstrapRef.current === storedRoomId) {
-      return;
-    }
-
-    roomBootstrapRef.current = storedRoomId;
-
-    console.log('[useGame] Syncing room state from stored roomId:', storedRoomId);
-    socket.emit('sync-game-state', { roomId: storedRoomId });
-  }, [currentRoomId, socket, user]);
-
-  useEffect(() => {
-    if (currentRoomId) {
-      roomBootstrapRef.current = null;
-    }
-  }, [currentRoomId]);
 
   useEffect(() => {
     if (

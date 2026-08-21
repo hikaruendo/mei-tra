@@ -9,7 +9,7 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { DomainPlayer, Team } from '../types/game.types';
+import { DomainPlayer, GamePhase, Team } from '../types/game.types';
 import { RoomMembershipService } from '../services/room-membership.service';
 import { asSeatId, type SeatId } from '../types/identity.types';
 import { resolveCurrentSeatId } from '../domain/current-turn';
@@ -55,9 +55,25 @@ type ActiveGameReconnection = Extract<
   { success: true; mode: 'active-game' }
 >;
 
+type WaitingRoomReconnection = Extract<
+  ReconnectionResult,
+  { success: true; mode: 'waiting-room' }
+>;
+
 export type ActiveGameSnapshot = Pick<
   ActiveGameReconnection,
   'gameState' | 'reconnectToken' | 'currentTurnSeatId' | 'selfSeatId'
+>;
+
+export type WaitingRoomSnapshot = Pick<
+  WaitingRoomReconnection,
+  | 'roomId'
+  | 'roomsList'
+  | 'room'
+  | 'selfSeatId'
+  | 'selfName'
+  | 'selfTeam'
+  | 'isHost'
 >;
 
 type ActiveRoom = NonNullable<Awaited<ReturnType<IRoomService['getRoom']>>>;
@@ -94,10 +110,7 @@ export class ReconnectionUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
 
       const state = roomGameState.getState();
-      const isActiveGame =
-        room.status === RoomStatus.PLAYING &&
-        state.gamePhase !== null &&
-        state.gamePhase !== 'waiting';
+      const isActiveGame = this.isActiveGame(room, state.gamePhase);
 
       if (!isActiveGame) {
         try {
@@ -320,10 +333,7 @@ export class ReconnectionUseCase {
       const roomGameState = await this.roomService.getRoomGameState(roomId);
 
       const state = roomGameState.getState();
-      const isActiveGame =
-        room.status === RoomStatus.PLAYING &&
-        state.gamePhase !== null &&
-        state.gamePhase !== 'waiting';
+      const isActiveGame = this.isActiveGame(room, state.gamePhase);
       if (!isActiveGame) {
         return null;
       }
@@ -351,6 +361,50 @@ export class ReconnectionUseCase {
     }
   }
 
+  async getWaitingRoomSnapshot(request: {
+    roomId: string;
+    authenticatedUser: AuthenticatedUser;
+  }): Promise<WaitingRoomSnapshot | null> {
+    const { roomId, authenticatedUser } = request;
+
+    try {
+      const room = await this.roomService.getRoom(roomId);
+      if (!room) {
+        return null;
+      }
+      const roomGameState = await this.roomService.getRoomGameState(roomId);
+      const state = roomGameState.getState();
+      const isActiveGame = this.isActiveGame(room, state.gamePhase);
+      if (isActiveGame) {
+        return null;
+      }
+
+      const existingPlayer = this.resolveWaitingRoomPlayer(
+        roomGameState,
+        room.players,
+        authenticatedUser.id,
+      );
+      if (!existingPlayer) {
+        return null;
+      }
+
+      return {
+        roomId,
+        roomsList: await this.roomService.listRooms(),
+        room,
+        selfSeatId: asSeatId(existingPlayer.seatId),
+        selfName: existingPlayer.name,
+        selfTeam: existingPlayer.team,
+        isHost: room.hostSeatId === existingPlayer.seatId,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `[Reconnection] Failed to load waiting-room snapshot room=${roomId} user=${authenticatedUser.id}: ${String(error)}`,
+      );
+      return null;
+    }
+  }
+
   private resolveActiveGamePlayer(
     roomGameState: GameStateService,
     room: ActiveRoom,
@@ -368,6 +422,14 @@ export class ReconnectionUseCase {
             (player) => player.seatId === persistedRoomPlayer.seatId,
           ) ?? null)
       : resolvePlayerByActorId(roomGameState, authenticatedUserId);
+  }
+
+  private isActiveGame(room: ActiveRoom, gamePhase: GamePhase): boolean {
+    return (
+      room.status === RoomStatus.PLAYING &&
+      gamePhase !== null &&
+      gamePhase !== 'waiting'
+    );
   }
 
   private buildActiveGameSnapshot(

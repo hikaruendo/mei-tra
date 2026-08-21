@@ -568,6 +568,87 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
+  private async restoreRoomSession(params: {
+    client: Socket;
+    roomId: string;
+    authenticatedUser: AuthenticatedUser;
+  }): Promise<void> {
+    const { client, roomId, authenticatedUser } = params;
+    const previousControllerSocketId =
+      await this.connectionGatewayEffectsService.findExistingControllerSocketId(
+        {
+          server: this.server,
+          playerRooms: this.playerRooms,
+          roomId,
+          userId: authenticatedUser.id,
+        },
+      );
+    const result = await this.reconnectionUseCase.execute({
+      roomId,
+      socketId: client.id,
+      authenticatedUser,
+    });
+
+    if (!result.success) {
+      await this.connectionGatewayEffectsService.sendBackToLobby({
+        client,
+        playerRooms: this.playerRooms,
+        reason: result.reason,
+        code: result.code,
+        roomId,
+      });
+      return;
+    }
+
+    if (
+      previousControllerSocketId &&
+      previousControllerSocketId !== client.id
+    ) {
+      await this.connectionGatewayEffectsService.sendSocketBackToLobby({
+        server: this.server,
+        playerRooms: this.playerRooms,
+        socketId: previousControllerSocketId,
+        roomId,
+      });
+    }
+
+    this.playerRooms.set(client.id, roomId);
+    await client.join(roomId);
+
+    if (result.mode === 'waiting-room') {
+      const roomEntryEvents =
+        await this.joinRoomGatewayEffectsService.buildRoomEntryEvents({
+          clientId: client.id,
+          room: result.room,
+          selfPlayer: {
+            seatId: result.selfSeatId,
+            name: result.selfName,
+            team: result.selfTeam,
+          },
+          isHost: result.isHost,
+          roomStatus: result.room.status,
+          roomsList: result.roomsList,
+          roomsListScope: 'socket',
+        });
+      this.dispatchEvents(roomEntryEvents);
+      return;
+    }
+
+    const activeReconnectEvents =
+      await this.joinRoomGatewayEffectsService.buildActiveReconnectEvents({
+        clientId: client.id,
+        roomId,
+        room: result.room,
+        gameState: result.gameState,
+        reconnectToken: result.reconnectToken,
+      });
+    this.dispatchEvents(activeReconnectEvents);
+    if (result.currentTurnSeatId) {
+      void this.startTurnAckMonitor(roomId, result.currentTurnSeatId);
+    }
+    this.triggerComAutoPlayIfNeeded(roomId);
+  }
+
   //-------Connection-------
   async handleConnection(client: Socket) {
     this.activityTracker.incrementConnections();
@@ -609,79 +690,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (roomId && authenticatedUser) {
-      const previousControllerSocketId =
-        await this.connectionGatewayEffectsService.findExistingControllerSocketId(
-          {
-            server: this.server,
-            playerRooms: this.playerRooms,
-            roomId,
-            userId: authenticatedUser.id,
-          },
-        );
-      const result = await this.reconnectionUseCase.execute({
-        roomId,
-        socketId: client.id,
-        authenticatedUser,
-      });
-
-      if (!result.success) {
-        await this.connectionGatewayEffectsService.sendBackToLobby({
-          client,
-          playerRooms: this.playerRooms,
-          reason: result.reason,
-          code: result.code,
-          roomId,
-        });
-        return;
-      }
-
-      if (
-        previousControllerSocketId &&
-        previousControllerSocketId !== client.id
-      ) {
-        await this.connectionGatewayEffectsService.sendSocketBackToLobby({
-          server: this.server,
-          playerRooms: this.playerRooms,
-          socketId: previousControllerSocketId,
-          roomId,
-        });
-      }
-
-      this.playerRooms.set(client.id, roomId);
-      await client.join(roomId);
-
-      if (result.mode === 'waiting-room') {
-        const reconnectEntryEvents =
-          await this.joinRoomGatewayEffectsService.buildRoomEntryEvents({
-            clientId: client.id,
-            room: result.room,
-            selfPlayer: {
-              seatId: result.selfSeatId,
-              name: result.selfName,
-              team: result.selfTeam,
-            },
-            isHost: result.isHost,
-            roomStatus: result.room.status,
-            roomsList: result.roomsList,
-            roomsListScope: 'socket',
-          });
-        this.dispatchEvents(reconnectEntryEvents);
-        return;
-      }
-
-      const activeReconnectEvents =
-        await this.joinRoomGatewayEffectsService.buildActiveReconnectEvents({
-          clientId: client.id,
-          roomId,
-          room: result.room,
-          gameState: result.gameState,
-          reconnectToken: result.reconnectToken,
-        });
-      this.dispatchEvents(activeReconnectEvents);
-      if (result.currentTurnSeatId) {
-        void this.startTurnAckMonitor(roomId, result.currentTurnSeatId);
-      }
-      this.triggerComAutoPlayIfNeeded(roomId);
+      await this.restoreRoomSession({ client, roomId, authenticatedUser });
       return;
     }
 
@@ -1328,18 +1337,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (client.data as { user?: AuthenticatedUser }).user = authenticatedUser;
     }
 
-    const snapshot = await this.reconnectionUseCase.getActiveGameSnapshot({
-      roomId,
-      authenticatedUser,
-    });
-    if (!snapshot) {
+    const activeGameSnapshot =
+      await this.reconnectionUseCase.getActiveGameSnapshot({
+        roomId,
+        authenticatedUser,
+      });
+    if (activeGameSnapshot) {
+      this.playerRooms.set(client.id, roomId);
+      await client.join(roomId);
+      client.emit('game-state', activeGameSnapshot.gameState);
+      client.emit('reconnect-token', activeGameSnapshot.reconnectToken);
+      return;
+    }
+
+    const waitingRoomSnapshot =
+      await this.reconnectionUseCase.getWaitingRoomSnapshot({
+        roomId,
+        authenticatedUser,
+      });
+    if (!waitingRoomSnapshot) {
       return;
     }
 
     this.playerRooms.set(client.id, roomId);
     await client.join(roomId);
-    client.emit('game-state', snapshot.gameState);
-    client.emit('reconnect-token', snapshot.reconnectToken);
+    const roomEntryEvents =
+      await this.joinRoomGatewayEffectsService.buildRoomEntryEvents({
+        clientId: client.id,
+        room: waitingRoomSnapshot.room,
+        selfPlayer: {
+          seatId: waitingRoomSnapshot.selfSeatId,
+          name: waitingRoomSnapshot.selfName,
+          team: waitingRoomSnapshot.selfTeam,
+        },
+        isHost: waitingRoomSnapshot.isHost,
+        roomStatus: waitingRoomSnapshot.room.status,
+        roomsList: waitingRoomSnapshot.roomsList,
+        roomsListScope: 'socket',
+      });
+    this.dispatchEvents(roomEntryEvents);
   }
 
   @SubscribeMessage('change-player-team')
