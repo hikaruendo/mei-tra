@@ -75,40 +75,29 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
-  // Skipping a human's turn is normal, so this stays quiet unless nobody can act:
-  // auto-play declines (not a COM) AND the turn holder has no live socket. That
-  // combination is a stalled table, and it is otherwise completely silent.
-  private warnIfTurnIsUnplayable(
+  private isServerControlledPlayer(
+    gameState: GameStateService,
+    player: DomainPlayer,
+  ): boolean {
+    return (
+      this.comPlayerService.isComPlayer(player) ||
+      !gameState.getPlayerConnectionState(player.seatId)?.socketId
+    );
+  }
+
+  private warnIfCurrentPlayerMissing(
     roomId: string,
     gameState: GameStateService,
-    currentPlayer: DomainPlayer | null,
   ): void {
     const state = gameState.getState();
     if (state.gamePhase !== 'play' && state.gamePhase !== 'blow') {
       return;
     }
 
-    if (!currentPlayer) {
-      this.logger.warn(
-        `Turn unplayable in room ${roomId}: no current player resolved ` +
-          `(currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
-          `roster=[${state.players.map((player) => player.seatId).join(', ')}])`,
-      );
-      return;
-    }
-
-    const isConnected = Boolean(
-      gameState.getPlayerConnectionState(currentPlayer.seatId)?.socketId,
-    );
-    if (isConnected) {
-      return;
-    }
-
     this.logger.warn(
-      `Turn unplayable in room ${roomId}: auto-play skipped non-COM player ` +
-        `${currentPlayer.seatId} which has no live socket ` +
-        `(phase=${state.gamePhase}, currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
-        `isCOM=${String(currentPlayer.isCOM)})`,
+      `Turn unplayable in room ${roomId}: no current player resolved ` +
+        `(currentSeatId=${resolveCurrentSeatId(state) ?? 'null'}, ` +
+        `roster=[${state.players.map((player) => player.seatId).join(', ')}])`,
     );
   }
 
@@ -124,9 +113,15 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
 
       const currentPlayer = gameState.getCurrentPlayer();
 
-      // 2. COMプレイヤーでなければスキップ
-      if (!currentPlayer || !this.comPlayerService.isComPlayer(currentPlayer)) {
-        this.warnIfTurnIsUnplayable(roomId, gameState, currentPlayer);
+      if (!currentPlayer) {
+        this.warnIfCurrentPlayerMissing(roomId, gameState);
+        return { success: true, events: [], shouldContinue: false };
+      }
+
+      // Keep the two-minute reconnect ownership grace independent from turn
+      // liveness. A disconnected human remains the occupant of the seat, while
+      // the server temporarily chooses actions for that seat until it reconnects.
+      if (!this.isServerControlledPlayer(gameState, currentPlayer)) {
         return { success: true, events: [], shouldContinue: false };
       }
 
@@ -195,7 +190,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       const shouldContinue =
         negriResult.success &&
         !!nextPlayer &&
-        this.comPlayerService.isComPlayer(nextPlayer);
+        this.isServerControlledPlayer(gameState, nextPlayer);
 
       return {
         success: negriResult.success,
@@ -260,7 +255,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       !completeFieldTrigger &&
       result.success &&
       !!nextPlayer &&
-      this.comPlayerService.isComPlayer(nextPlayer);
+      this.isServerControlledPlayer(gameState, nextPlayer);
 
     return {
       success: result.success,
@@ -309,7 +304,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     const shouldContinue =
       state.gamePhase === 'blow' &&
       !!nextPlayer &&
-      this.comPlayerService.isComPlayer(nextPlayer);
+      this.isServerControlledPlayer(gameState, nextPlayer);
 
     return {
       success: result.success,
@@ -406,7 +401,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       success: true,
       events,
       shouldContinue:
-        !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
+        !!nextPlayer && this.isServerControlledPlayer(gameState, nextPlayer),
     };
   }
 
@@ -448,7 +443,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       success: true,
       events: completion.events ?? [],
       shouldContinue:
-        !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
+        !!nextPlayer && this.isServerControlledPlayer(gameState, nextPlayer),
     };
   }
 }

@@ -245,6 +245,12 @@ describe('GameGateway COM recovery integration', () => {
     } as unknown as Socket;
 
     await gateway.handleDisconnect(client);
+
+    expect(triggerRecovery).toHaveBeenCalledTimes(1);
+    expect(
+      testGateway.disconnectGatewayEffectsService.buildTimeoutEvents,
+    ).not.toHaveBeenCalled();
+
     await jest.advanceTimersByTimeAsync(2 * 60 * 1000);
 
     expect(
@@ -256,7 +262,11 @@ describe('GameGateway COM recovery integration', () => {
       timeoutMode: 'convert-to-com',
       membership: null,
     });
-    expect(triggerRecovery).toHaveBeenCalledWith('room-1', expect.anything());
+    expect(triggerRecovery).toHaveBeenCalledTimes(2);
+    expect(triggerRecovery).toHaveBeenLastCalledWith(
+      'room-1',
+      expect.anything(),
+    );
   });
 
   it('returns an active-game snapshot without reconnect side effects', async () => {
