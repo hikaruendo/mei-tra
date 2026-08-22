@@ -21,6 +21,7 @@ const buildUseCase = (options: {
     currentSeatId: options.currentPlayer?.seatId ?? null,
     gamePhase: 'play',
     pendingBrokenHandReveal: null,
+    blowState: { currentHighestDeclaration: null },
     playState: { currentField: null },
   };
 
@@ -34,12 +35,18 @@ const buildUseCase = (options: {
   const roomService = {
     getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
   };
+  const comStrategyService = {
+    choosePlayCard: jest.fn(() => '9♣'),
+  };
+  const playCardUseCase = {
+    execute: jest.fn().mockResolvedValue({ success: true, events: [] }),
+  };
 
-  return new ComAutoPlayUseCase(
+  const useCase = new ComAutoPlayUseCase(
     roomService as never,
     { isComPlayer: () => false } as never,
-    {} as never,
-    {} as never,
+    comStrategyService as never,
+    playCardUseCase as never,
     {} as never,
     {} as never,
     {} as never,
@@ -47,9 +54,11 @@ const buildUseCase = (options: {
     {} as never,
     {} as never,
   );
+
+  return { useCase, comStrategyService, playCardUseCase };
 };
 
-describe('ComAutoPlayUseCase stall instrumentation', () => {
+describe('ComAutoPlayUseCase disconnected turn control', () => {
   let warn: jest.SpyInstance;
 
   beforeEach(() => {
@@ -61,28 +70,47 @@ describe('ComAutoPlayUseCase stall instrumentation', () => {
   });
 
   it('stays silent when the turn belongs to a connected human', async () => {
-    const useCase = buildUseCase({ connected: true, currentPlayer: HUMAN });
+    const { useCase, playCardUseCase } = buildUseCase({
+      connected: true,
+      currentPlayer: HUMAN,
+    });
 
     const result = await useCase.execute({ roomId: 'room-1' });
 
     expect(result.success).toBe(true);
     expect(result.shouldContinue).toBe(false);
-    // A human's turn is ordinary — instrumentation must not add noise here.
+    expect(playCardUseCase.execute).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('warns when the turn holder is neither a COM nor connected', async () => {
-    const useCase = buildUseCase({ connected: false, currentPlayer: HUMAN });
+  it('auto-plays a disconnected human without converting the seat to COM', async () => {
+    const { useCase, comStrategyService, playCardUseCase } = buildUseCase({
+      connected: false,
+      currentPlayer: HUMAN,
+    });
 
-    await useCase.execute({ roomId: 'room-1' });
+    const result = await useCase.execute({ roomId: 'room-1' });
 
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0][0]).toContain('Turn unplayable in room room-1');
-    expect(warn.mock.calls[0][0]).toContain('human-1');
+    expect(result.success).toBe(true);
+    expect(result.shouldContinue).toBe(true);
+    expect(comStrategyService.choosePlayCard).toHaveBeenCalledWith(
+      expect.anything(),
+      HUMAN,
+    );
+    expect(playCardUseCase.execute).toHaveBeenCalledWith({
+      roomId: 'room-1',
+      actorId: HUMAN.seatId,
+      card: '9♣',
+    });
+    expect(HUMAN.isCOM).toBe(false);
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('warns when no current player can be resolved at all', async () => {
-    const useCase = buildUseCase({ connected: false, currentPlayer: null });
+    const { useCase } = buildUseCase({
+      connected: false,
+      currentPlayer: null,
+    });
 
     await useCase.execute({ roomId: 'room-1' });
 

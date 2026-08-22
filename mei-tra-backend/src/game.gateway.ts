@@ -765,6 +765,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.dispatchEvents(preparation.events);
+      this.triggerComAutoPlayIfNeeded(roomId);
 
       const timeoutMs =
         preparation.timeoutMode === 'convert-to-com'
