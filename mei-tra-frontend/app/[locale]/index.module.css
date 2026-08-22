@@ -68,7 +68,10 @@
   .activeGameWrapper {
     height: calc(100dvh - 4rem);
     min-height: 0;
-    padding-bottom: 0;
-    overflow: hidden;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
