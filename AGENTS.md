@@ -18,6 +18,17 @@
 - For UI or realtime regressions, verify through the app when possible: run the dev servers, inspect logs, and capture screenshots or browser state before claiming the fix.
 - Treat stale or duplicated docs as technical debt. Update or delete them when code changes, and avoid adding broad docs that future agents must read by default.
 
+## Agent-Friendly Architecture Contract
+These assumptions are model-agnostic: coding agents, including GPT- and Grok-based agents, tend to reuse the nearest working pattern, edit already-visible files, choose the shortest locally valid path, and preserve code whose callers are unclear. Do not rely on an agent remembering to be careful; make the correct path the easiest path.
+
+1. **The canonical path must require fewer decisions than a shortcut.** Following the established boundary, template, or command should be faster than inventing a local alternative. Treat recurring ambiguity as a missing repository guardrail, not as permission for a one-off choice.
+2. **Forbidden dependencies must fail mechanically.** Encode boundaries and invariants in types, lint rules, architecture checks, tests, CI, or schemas instead of prose alone.
+3. **Every persisted fact must have one canonical owner and writer.** Other layers derive, project, or reference that value; they must not maintain a second representation that requires synchronized writes.
+4. **Prefer additive, isolated extension points for genuinely independent work.** Add a focused file or module behind an existing boundary instead of adding branches to a shared root. This does not permit duplicate business rules, persisted representations, or writers: shared behavior must be changed at its canonical owner.
+5. **Exceptions must be narrow, explicit architecture changes.** Minimize their scope, document the reason next to the enforcement boundary, and review them as a deliberate design change rather than a temporary bypass.
+
+If a requested implementation conflicts with this contract or a repository invariant, state the conflict and propose a compliant alternative before editing. Before changing shared logic, check whether an isolated addition can solve the task without creating a second owner. Do not delete code with untraced callers; show search, type, or test evidence when deletion is necessary. Compilation or a passing happy path is not sufficient validation: finish by checking the dependency direction, canonical owner, write path, extension shape, and any exception introduced by the change.
+
 ## Build, Test, and Development Commands
 - Frontend: `cd mei-tra-frontend && npm run dev` (Turbopack dev server), `npm run build` (Next production build), `npm run lint` (ESLint), `npm run test` (Jest/RTL) when applicable.
 - Backend: `cd mei-tra-backend && npm run start:dev` (Nest hot reload), `npm run build` (tsc), `npm run lint` (ESLint + Prettier), `npm test` and `npm run test:cov` for core game logic.
