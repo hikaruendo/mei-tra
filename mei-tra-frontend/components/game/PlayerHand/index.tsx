@@ -8,6 +8,15 @@ import styles from './index.module.scss';
 import { useCardValidation } from './hooks/useCardValidation';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
 import { getTeamDisplayName } from '@/lib/utils/teamLabels';
+import {
+  DEAL_CARD_DURATION_MS,
+  DEAL_CARD_INITIAL_SCALE,
+  DEAL_CARD_STAGGER_MS,
+  DEAL_CARD_TRANSLATE_X,
+  dealAnimationRemainingMs,
+  type DealAnimationCue,
+} from '@meitra/game-client/deal-animation';
+import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 
 const HAND_CARD_METRICS = {
   width: 80,
@@ -46,6 +55,8 @@ interface PlayerHandProps {
   onReplaceWithCOM?: (seatId: string) => void;
   takenCount?: number;
   teamNames?: TeamNames;
+  dealAnimationCue?: DealAnimationCue | null;
+  onCardInteraction?: () => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -71,6 +82,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   onReplaceWithCOM,
   takenCount = 0,
   teamNames,
+  dealAnimationCue = null,
+  onCardInteraction = () => {},
 }) => {
   const t = useTranslations('playerHand');
   const tGameInfo = useTranslations('gameInfo');
@@ -80,8 +93,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const [displayHand, setDisplayHand] = useState(player.hand);
+  const displayHandRef = useRef(player.hand);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null);
+  const [dealAnimationElapsedMs, setDealAnimationElapsedMs] = useState<
+    number | null
+  >(null);
   const autoRevealAttemptedRef = useRef(false);
   const handCardMetrics = HAND_CARD_METRICS;
 
@@ -146,32 +163,61 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       const retainedCards = previousHand.filter((card) => currentCards.has(card));
       const addedCards = player.hand.filter((card) => !retainedCards.includes(card));
 
-      return [...retainedCards, ...addedCards];
+      const nextHand = [...retainedCards, ...addedCards];
+      displayHandRef.current = nextHand;
+      return nextHand;
     });
   }, [player.hand]);
+
+  useEffect(() => {
+    if (
+      !dealAnimationCue ||
+      !dealAnimationCue.seatIds.includes(player.seatId) ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setDealAnimationElapsedMs(null);
+      return;
+    }
+
+    const now = Date.now();
+    const remainingMs = dealAnimationRemainingMs(
+      dealAnimationCue,
+      player.hand.length,
+      now,
+    );
+    if (remainingMs <= 0) {
+      setDealAnimationElapsedMs(null);
+      return;
+    }
+
+    setDealAnimationElapsedMs(Math.max(0, now - dealAnimationCue.startedAt));
+    const timeout = setTimeout(() => setDealAnimationElapsedMs(null), remainingMs);
+    return () => clearTimeout(timeout);
+  }, [dealAnimationCue, player.hand.length, player.seatId]);
 
   const reorderDisplayHand = (
     sourceCard: string,
     targetCard: string,
     side: DropPlacement['side'],
   ) => {
-    if (sourceCard === targetCard) {
+    const previousHand = displayHandRef.current;
+    const sourceIndex = previousHand.indexOf(sourceCard);
+    const targetIndex = previousHand.indexOf(targetCard);
+    if (sourceCard === targetCard || sourceIndex < 0 || targetIndex < 0) {
       return;
     }
 
-    setDisplayHand((previousHand) => {
-      const sourceIndex = previousHand.indexOf(sourceCard);
-      const targetIndex = previousHand.indexOf(targetCard);
-      if (sourceIndex < 0 || targetIndex < 0) {
-        return previousHand;
-      }
+    const nextHand = [...previousHand];
+    nextHand.splice(sourceIndex, 1);
+    const nextTargetIndex = nextHand.indexOf(targetCard);
+    nextHand.splice(nextTargetIndex + (side === 'after' ? 1 : 0), 0, sourceCard);
+    if (nextHand.every((card, index) => card === previousHand[index])) {
+      return;
+    }
 
-      const nextHand = [...previousHand];
-      nextHand.splice(sourceIndex, 1);
-      const nextTargetIndex = nextHand.indexOf(targetCard);
-      nextHand.splice(nextTargetIndex + (side === 'after' ? 1 : 0), 0, sourceCard);
-      return nextHand;
-    });
+    displayHandRef.current = nextHand;
+    setDisplayHand(nextHand);
+    onCardInteraction();
   };
 
   const getDropSide = (event: React.PointerEvent<HTMLDivElement> | React.DragEvent<HTMLDivElement>) => {
@@ -223,8 +269,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
     if (gamePhase === 'play' && whoseTurn === currentSeatId) {
       if (!negriCard && currentHighestDeclaration?.seatId === player.seatId) {
+        if (shouldPlayCardSelectionSound(selectedNegriCard, card)) {
+          onCardInteraction();
+        }
         setSelectedNegriCard(card);
       } else {
+        if (shouldPlayCardSelectionSound(selectedCard, card)) {
+          onCardInteraction();
+        }
         setSelectedCard(card);
       }
     }
@@ -273,7 +325,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`${styles.card} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
+                className={`${styles.card} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
                 draggable={canActAsCurrentPlayer}
                 onClick={() => {
                   if (
@@ -328,6 +380,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   '--card-total': displayHand.length,
                   '--card-rotation': `${cardRotation}deg`,
                   '--card-translate-y': `${cardLift}px`,
+                  '--deal-card-delay': `${index * DEAL_CARD_STAGGER_MS}ms`,
+                  '--deal-card-duration': `${DEAL_CARD_DURATION_MS}ms`,
+                  '--deal-card-translate-x': `${DEAL_CARD_TRANSLATE_X}px`,
+                  '--deal-card-initial-scale': DEAL_CARD_INITIAL_SCALE,
+                  '--deal-animation-elapsed': `${dealAnimationElapsedMs ?? 0}ms`,
                 } as React.CSSProperties}
               >
                 <CardFace card={card} />
@@ -363,10 +420,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         {player.hand.map((card, cardIndex) => (
           <div
             key={cardIndex}
-            className={styles.cardFaceDown}
+            className={`${styles.cardFaceDown} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''}`}
             style={{
               '--card-index': cardIndex,
               '--card-total': player.hand.length,
+              '--deal-card-delay': `${cardIndex * DEAL_CARD_STAGGER_MS}ms`,
+              '--deal-card-duration': `${DEAL_CARD_DURATION_MS}ms`,
+              '--deal-card-translate-x': `${DEAL_CARD_TRANSLATE_X}px`,
+              '--deal-card-initial-scale': DEAL_CARD_INITIAL_SCALE,
+              '--deal-animation-elapsed': `${dealAnimationElapsedMs ?? 0}ms`,
             } as React.CSSProperties}
           >
             <CardFace faceDown />

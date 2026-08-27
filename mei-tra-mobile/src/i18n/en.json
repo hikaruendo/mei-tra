@@ -172,6 +172,7 @@
     "preferences": "Effects and language",
     "preferencesHint": "Configure effects and display language",
     "jankenToggle": "Janken intro at game start",
+    "soundEffects": "Sound effects",
     "connection": "Connection",
     "resyncHint": "During a game, bringing the app to the front resyncs the latest state.",
     "legal": "Legal and support",

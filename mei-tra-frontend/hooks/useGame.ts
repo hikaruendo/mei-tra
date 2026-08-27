@@ -74,6 +74,15 @@ import {
   resolveLastBlowSeatId,
   shouldAbortRevealOnTurn,
 } from '@meitra/game-client/first-turn-reveal';
+import type {
+  DealAnimationCue,
+  DealEvent,
+} from '@meitra/game-client/deal-animation';
+import {
+  shouldPlayConfirmedNegriSound,
+  soundEffectForGameEvent,
+} from '@meitra/game-client/sound-effects';
+import { useSoundEffects } from './useSoundEffects';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -204,17 +213,21 @@ export const useGame = () => {
   const t = useTranslations('game');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
+  const preferences = normalizeUserPreferences(user?.profile?.preferences);
+  const playSoundEffect = useSoundEffects(preferences.sound);
+  const playCardInteractionSound = useCallback(() => {
+    playSoundEffect('cardPlay');
+  }, [playSoundEffect]);
   const gameOverShownRef = useRef<string | null>(null);
   const gameEventStateRef = useRef(createEmptyGameEventState());
   const agariRequestKeyRef = useRef<string | null>(null);
   const gameStateSyncKeyRef = useRef<string | null>(null);
+  const pendingNegriCardRef = useRef<string | null>(null);
   // Read through a ref so the long-lived socket handlers see the current value.
   const startPlayerAnimationEnabledRef = useRef(
     DEFAULT_USER_PREFERENCES.startPlayerAnimation,
   );
-  startPlayerAnimationEnabledRef.current = normalizeUserPreferences(
-    user?.profile?.preferences,
-  ).startPlayerAnimation;
+  startPlayerAnimationEnabledRef.current = preferences.startPlayerAnimation;
 
   // Player and Game State
   const [name, setName] = useState('');
@@ -226,6 +239,9 @@ export const useGame = () => {
   // reconnect restores through the snapshot without replaying the reveal.
   const [firstTurnReveal, setFirstTurnReveal] =
     useState<FirstTurnReveal | null>(null);
+  const [dealAnimationCue, setDealAnimationCue] =
+    useState<DealAnimationCue | null>(null);
+  const dealAnimationSequenceRef = useRef(0);
   // Mirrors the state for the long-lived socket handlers, which need it
   // synchronously and would otherwise close over a stale value.
   const firstTurnRevealRef = useRef<FirstTurnReveal | null>(null);
@@ -242,6 +258,18 @@ export const useGame = () => {
     // so the indicator is never left blank if `update-turn` already landed.
     setWhoseTurn(gameEventStateRef.current.currentTurnSeatId);
   }, [updateFirstTurnReveal]);
+  const startDealAnimation = useCallback(
+    (event: DealEvent, playerContracts: readonly PlayerContract[]) => {
+      dealAnimationSequenceRef.current += 1;
+      setDealAnimationCue({
+        token: dealAnimationSequenceRef.current,
+        startedAt: Date.now(),
+        seatIds: playerContracts.map((player) => player.seatId),
+      });
+      playSoundEffect(soundEffectForGameEvent(event));
+    },
+    [playSoundEffect],
+  );
   const [teamScores, setTeamScores] = useState<TeamScores>(createEmptyTeamScores);
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
@@ -260,6 +288,16 @@ export const useGame = () => {
 
   // Client-side rendering guard
   const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    if (!isConnected) {
+      pendingNegriCardRef.current = null;
+    }
+
+    return () => {
+      pendingNegriCardRef.current = null;
+    };
+  }, [isConnected]);
 
   // Loading state details
   const [loadingState, setLoadingState] = useState<{
@@ -300,6 +338,7 @@ export const useGame = () => {
   const [paused, setPaused] = useState(false);
 
   const resetRoomState = useCallback(() => {
+    pendingNegriCardRef.current = null;
     gameEventStateRef.current = createEmptyGameEventState();
     gameOverShownRef.current = null;
     agariRequestKeyRef.current = null;
@@ -323,6 +362,7 @@ export const useGame = () => {
     setWhoseTurn(null);
     firstTurnRevealRef.current = null;
     setFirstTurnReveal(null);
+    setDealAnimationCue(null);
     setBlowDeclarations([]);
     setBlowActionHistory([]);
     setCurrentHighestDeclaration(null);
@@ -660,6 +700,7 @@ export const useGame = () => {
         teamNames,
         isSpectator,
       }: GameStatePayload) => {
+        pendingNegriCardRef.current = null;
         gameEventStateRef.current = createGameEventStateFromSnapshot({
           players: playerContracts,
           gamePhase,
@@ -782,6 +823,8 @@ export const useGame = () => {
         teamNames,
         currentTurnSeatId,
       }: GameStartedPayload) => {
+        pendingNegriCardRef.current = null;
+        startDealAnimation('game-started', playerContracts);
         gameEventStateRef.current = createGameEventStateFromStartedGame({
           roomId,
           players: playerContracts,
@@ -874,6 +917,7 @@ export const useGame = () => {
         }
       },
       'error-message': (message: string) => {
+        pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
       },
       'update-turn': (seatId: UpdateTurnPayload) => {
@@ -924,6 +968,8 @@ export const useGame = () => {
         applyGameServerEvent({ type: 'blow-updated', payload });
       },
       'broken': (payload: BrokenPayload) => {
+        pendingNegriCardRef.current = null;
+        startDealAnimation('broken', payload.players);
         setNotification({
           message: 'Broken happened, reset the game',
           type: 'warning'
@@ -940,6 +986,7 @@ export const useGame = () => {
       //   );
       // },
       'round-reset': () => {
+        pendingNegriCardRef.current = null;
         gameEventStateRef.current = {
           ...gameEventStateRef.current,
           blowState: createEmptyGameEventState().blowState,
@@ -952,6 +999,8 @@ export const useGame = () => {
         resetBlowState();
       },
       'round-cancelled': (payload: RoundCancelledPayload) => {
+        pendingNegriCardRef.current = null;
+        startDealAnimation('round-cancelled', payload.players);
         setNotification({
           message: 'Round cancelled! All players passed.',
           type: 'warning'
@@ -966,9 +1015,15 @@ export const useGame = () => {
         });
       },
       'play-setup-complete': (payload: PlaySetupCompletePayload) => {
+        const pendingNegriCard = pendingNegriCardRef.current;
+        pendingNegriCardRef.current = null;
+        if (shouldPlayConfirmedNegriSound(pendingNegriCard, payload.negriCard)) {
+          playSoundEffect(soundEffectForGameEvent('play-setup-complete'));
+        }
         applyGameServerEvent({ type: 'play-setup-complete', payload });
       },
       'card-played': (payload: CardPlayedPayload) => {
+        playSoundEffect(soundEffectForGameEvent('card-played'));
         applyGameServerEvent({ type: 'card-played', payload });
       },
       'field-updated': (field: FieldContract) => {
@@ -981,9 +1036,12 @@ export const useGame = () => {
         applyGameServerEvent({ type: 'round-results', payload });
       },
       'new-round-started': (payload: NewRoundStartedPayload) => {
+        pendingNegriCardRef.current = null;
+        startDealAnimation('new-round-started', payload.players);
         applyGameServerEvent({ type: 'new-round-started', payload });
       },
       'back-to-lobby': (payload?: BackToLobbyPayload) => {
+        pendingNegriCardRef.current = null;
         console.warn('[useGame] back-to-lobby received', {
           currentRoomId,
           currentSeatId,
@@ -1167,6 +1225,8 @@ export const useGame = () => {
     t,
     tStatus,
     updateFirstTurnReveal,
+    startDealAnimation,
+    playSoundEffect,
     user?.id,
   ]);
 
@@ -1249,7 +1309,12 @@ export const useGame = () => {
       });
     },
     selectNegri: (card: string) => {
-      socket?.emit('select-negri', {
+      if (!socket || !currentRoomId) {
+        pendingNegriCardRef.current = null;
+        return;
+      }
+      pendingNegriCardRef.current = card;
+      socket.emit('select-negri', {
         roomId: currentRoomId,
         card,
       });
@@ -1367,5 +1432,7 @@ export const useGame = () => {
     isConnecting,
     firstTurnReveal,
     clearFirstTurnReveal,
+    dealAnimationCue,
+    playCardInteractionSound,
   };
-}; 
+};

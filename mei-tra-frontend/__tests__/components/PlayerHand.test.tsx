@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import type { GameActions, Player } from '@/types/game.types';
@@ -79,8 +79,19 @@ jest.mock('@/components/game/CompletedFields', () => ({
 }));
 
 jest.mock('@/components/game/PlayAndCancelBtn', () => ({
-  PlayAndCancelBtn: ({ buttonText }: { buttonText: string }) => (
-    <button>{buttonText}</button>
+  PlayAndCancelBtn: ({
+    buttonText,
+    setSelectedCard,
+    onClick,
+  }: {
+    buttonText: string;
+    setSelectedCard: (card: string | null) => void;
+    onClick: () => void;
+  }) => (
+    <>
+      <button onClick={() => setSelectedCard(null)}>cancel</button>
+      <button onClick={onClick}>{buttonText}</button>
+    </>
   ),
 }));
 
@@ -125,6 +136,40 @@ const renderPlayerHand = (
   );
 
 describe('PlayerHand', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('deals every card from left to right only while a fresh cue is active', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-27T00:00:00.000Z'));
+    const startedAt = Date.now();
+
+    renderPlayerHand({
+      currentSeatId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+      dealAnimationCue: {
+        token: 1,
+        startedAt,
+        seatIds: ['player-2'],
+      },
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    expect(cards[0].parentElement).toHaveClass('dealingCard');
+    expect(cards[0].parentElement).toHaveStyle('--deal-card-delay: 0ms');
+    expect(cards[1].parentElement).toHaveStyle('--deal-card-delay: 45ms');
+
+    act(() => {
+      jest.advanceTimersByTime(225);
+    });
+    expect(cards[0].parentElement).not.toHaveClass('dealingCard');
+
+  });
+
   it('does not show replace-with-COM only because socketId is empty', () => {
     renderPlayerHand();
 
@@ -237,12 +282,14 @@ describe('PlayerHand', () => {
   });
 
   it('reorders the current player hand locally with pointer drag', () => {
+    const onCardInteraction = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
       player: {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
       },
+      onCardInteraction,
     });
 
     const cards = screen.getAllByTestId('card-front');
@@ -258,6 +305,94 @@ describe('PlayerHand', () => {
       'S-2',
       'H-A',
     ]);
+    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerUp(targetCard, { clientX: 170 });
+    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not play a sound when a pointer drop keeps the same order', () => {
+    const onCardInteraction = jest.fn();
+    renderPlayerHand({
+      currentSeatId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+      onCardInteraction,
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[0].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    fireEvent.pointerDown(cards[1], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 170 });
+    fireEvent.pointerUp(targetCard, { clientX: 170 });
+
+    expect(screen.getAllByTestId('card-front').map((card) => card.textContent)).toEqual([
+      'H-A',
+      'S-2',
+    ]);
+    expect(onCardInteraction).not.toHaveBeenCalled();
+  });
+
+  it('plays once for a successful native drag and ignores the repeated no-op', () => {
+    const onCardInteraction = jest.fn();
+    renderPlayerHand({
+      currentSeatId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+      onCardInteraction,
+    });
+
+    const dataTransfer = {
+      dropEffect: 'move',
+      effectAllowed: 'move',
+      getData: jest.fn(() => 'H-A'),
+      setData: jest.fn(),
+    };
+    const cards = screen.getAllByTestId('card-front');
+    const sourceCard = cards[0].parentElement as HTMLElement;
+    const targetCard = cards[1].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+
+    fireEvent.dragStart(sourceCard, { dataTransfer });
+    fireEvent.dragOver(targetCard, { clientX: 170, dataTransfer });
+    fireEvent.drop(targetCard, { clientX: 170, dataTransfer });
+    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+
+    fireEvent.dragStart(sourceCard, { dataTransfer });
+    fireEvent.drop(targetCard, { clientX: 170, dataTransfer });
+    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays only when selecting a new card, not when cancelling', () => {
+    const onCardInteraction = jest.fn();
+    renderPlayerHand({
+      currentSeatId: 'player-2',
+      whoseTurn: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+      onCardInteraction,
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    fireEvent.click(cards[0].parentElement as HTMLElement);
+    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(cards[1].parentElement as HTMLElement);
+    expect(onCardInteraction).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
+    expect(onCardInteraction).toHaveBeenCalledTimes(2);
   });
 
   it('shows an insertion marker on the target card while reordering', () => {

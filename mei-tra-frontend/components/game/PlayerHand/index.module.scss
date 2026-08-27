@@ -73,6 +73,28 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.dealingCard {
+  animation: deal-card-in var(--deal-card-duration, 180ms)
+    cubic-bezier(0.2, 0.82, 0.32, 1) both;
+  animation-delay: calc(
+    var(--deal-card-delay, 0ms) - var(--deal-animation-elapsed, 0ms)
+  );
+}
+
+@keyframes deal-card-in {
+  from {
+    opacity: 0;
+    translate: var(--deal-card-translate-x, -24px) 0;
+    scale: var(--deal-card-initial-scale, 0.96);
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
 .negriCard{
   border: 2px solid var(--mt-accent);
   box-shadow: 0 0 8px var(--mt-accent-subtle);
@@ -605,7 +627,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brokenButton {
+  .brokenButton,
+  .dealingCard {
     animation: none;
   }
 }

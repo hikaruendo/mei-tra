@@ -10,6 +10,7 @@ import { GameProvider, useGame } from '../GameContext';
 const mockAppStateHandlers: ((state: string) => void)[] = [];
 
 let mockAuthValue: unknown;
+const mockPlaySoundEffect = jest.fn();
 let mockSocket: ReturnType<typeof createMockSocket>;
 let mockStoredRoomId: string | null = null;
 let mockAckResponses: Map<string, { success: boolean; error?: string }>;
@@ -21,6 +22,10 @@ let mockRoomStorage: {
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockAuthValue,
+}));
+
+jest.mock('@/hooks/useSoundEffects', () => ({
+  useSoundEffects: () => mockPlaySoundEffect,
 }));
 
 jest.mock('@/lib/config', () => ({
@@ -252,6 +257,7 @@ describe('GameProvider realtime resync safety', () => {
     mockStoredRoomId = null;
     mockAckResponses = new Map();
     mockSocket = createMockSocket();
+    mockPlaySoundEffect.mockClear();
     mockAuthValue = {
       user: {
         id: 'user-1',
@@ -262,6 +268,132 @@ describe('GameProvider realtime resync safety', () => {
       loading: false,
       getAccessToken: jest.fn(async () => 'fresh-token'),
     };
+  });
+
+  it('starts deal cues and sounds only for live deal events', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+
+    await act(async () => {
+      mockSocket.trigger('game-state', gameState);
+      await flushPromises();
+    });
+    expect(screen.latestGame.dealAnimationCue).toBeNull();
+    expect(mockPlaySoundEffect).not.toHaveBeenCalled();
+
+    await act(async () => {
+      mockSocket.trigger('game-started', {
+        roomId: gameState.roomId,
+        players: gameState.players,
+        pointsToWin: gameState.pointsToWin,
+        currentTurnSeatId: gameState.currentTurnSeatId,
+      });
+      mockSocket.trigger('card-played', {
+        seatId: asSeatId('player-2'),
+        card: 'H-4',
+        field: gameState.currentField,
+        players: gameState.players,
+        nextSeatId: asSeatId('player-1'),
+      });
+      mockSocket.trigger('broken', {
+        nextSeatId: asSeatId('player-1'),
+        players: gameState.players,
+        gamePhase: 'blow',
+      });
+      mockSocket.trigger('round-cancelled', {
+        nextDealerSeatId: asSeatId('player-1'),
+        players: gameState.players,
+      });
+      mockSocket.trigger('new-round-started', {
+        players: gameState.players,
+        currentTurnSeatId: asSeatId('player-1'),
+        gamePhase: 'blow',
+        currentField: null,
+        completedFields: [],
+        negriCard: null,
+        negriSeatId: null,
+        revealedAgari: null,
+        currentTrump: null,
+        currentHighestDeclaration: null,
+        blowDeclarations: [],
+      });
+      await flushPromises();
+    });
+
+    expect(mockPlaySoundEffect.mock.calls).toEqual([
+      ['shuffle'],
+      ['cardPlay'],
+      ['shuffle'],
+      ['shuffle'],
+      ['shuffle'],
+    ]);
+    expect(screen.latestGame.dealAnimationCue).toMatchObject({
+      token: 4,
+      seatIds: gameState.players.map((player) => player.seatId),
+    });
+    await screen.unmount();
+  });
+
+  it('plays the confirmed Negri sound only for the client that selected it', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      mockSocket.trigger('game-state', gameState);
+      await flushPromises();
+    });
+    mockPlaySoundEffect.mockClear();
+
+    await act(async () => {
+      mockSocket.trigger('play-setup-complete', {
+        negriCard: 'H-4',
+        startingSeatId: asSeatId('player-1'),
+      });
+      await flushPromises();
+    });
+    expect(mockPlaySoundEffect).not.toHaveBeenCalled();
+
+    await act(async () => {
+      screen.latestGame.selectNegri('H-4');
+      mockSocket.trigger('play-setup-complete', {
+        negriCard: 'H-4',
+        startingSeatId: asSeatId('player-1'),
+      });
+      await flushPromises();
+    });
+    expect(mockPlaySoundEffect.mock.calls).toEqual([['negri']]);
+
+    await act(async () => {
+      mockSocket.trigger('play-setup-complete', {
+        negriCard: 'H-4',
+        startingSeatId: asSeatId('player-1'),
+      });
+      await flushPromises();
+    });
+    expect(mockPlaySoundEffect).toHaveBeenCalledTimes(1);
+
+    await screen.unmount();
+  });
+
+  it('clears a pending Negri sound when a snapshot restores the game', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      mockSocket.trigger('game-state', gameState);
+      screen.latestGame.selectNegri('H-4');
+      mockSocket.trigger('game-state', gameState);
+      mockSocket.trigger('play-setup-complete', {
+        negriCard: 'H-4',
+        startingSeatId: asSeatId('player-1'),
+      });
+      await flushPromises();
+    });
+
+    expect(mockPlaySoundEffect).not.toHaveBeenCalled();
+    await screen.unmount();
   });
 
   it('coalesces duplicate foreground resync triggers into one server sync', async () => {

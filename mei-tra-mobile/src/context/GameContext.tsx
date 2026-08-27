@@ -20,6 +20,10 @@ import {
   shouldAbortRevealOnTurn,
   type FirstTurnReveal,
 } from '@meitra/game-client/first-turn-reveal';
+import type {
+  DealAnimationCue,
+  DealEvent,
+} from '@meitra/game-client/deal-animation';
 import { io } from 'socket.io-client';
 import {
   createContext,
@@ -40,6 +44,10 @@ import {
   type GameEventState,
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
+import {
+  shouldPlayConfirmedNegriSound,
+  soundEffectForGameEvent,
+} from '@meitra/game-client/sound-effects';
 
 import { useAuth } from '@/context/AuthContext';
 import { config } from '@/lib/config';
@@ -57,6 +65,7 @@ import {
   type MobileSocket,
 } from '@/lib/realtime';
 import { roomStorage } from '@/lib/room-storage';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 import type {
   ConnectionStatus,
   MobileGameOver,
@@ -79,6 +88,7 @@ interface MobileState {
    * reconnect never replays the reveal.
    */
   firstTurnReveal: MobileFirstTurnReveal | null;
+  dealAnimationCue: DealAnimationCue | null;
 }
 
 export type MobileFirstTurnReveal = FirstTurnReveal;
@@ -98,6 +108,7 @@ type Action =
   | { type: 'notice'; message: FeedbackMessage | null }
   | { type: 'gameOver'; gameOver: MobileGameOver | null }
   | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
+  | { type: 'dealAnimationCue'; cue: DealAnimationCue | null }
   | { type: 'resetRoom' };
 
 type CurrentPlayerAckEvent = Extract<
@@ -119,6 +130,7 @@ const initialState: MobileState = {
   notice: null,
   gameOver: null,
   firstTurnReveal: null,
+  dealAnimationCue: null,
 };
 
 function reducer(state: MobileState, action: Action): MobileState {
@@ -260,6 +272,8 @@ function reducer(state: MobileState, action: Action): MobileState {
       return { ...state, gameOver: action.gameOver };
     case 'firstTurnReveal':
       return { ...state, firstTurnReveal: action.reveal };
+    case 'dealAnimationCue':
+      return { ...state, dealAnimationCue: action.cue };
     case 'resetRoom':
       return {
         ...state,
@@ -270,6 +284,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         notice: null,
         gameOver: null,
         firstTurnReveal: null,
+        dealAnimationCue: null,
       };
     default:
       return state;
@@ -291,6 +306,7 @@ interface GameContextValue extends MobileState {
   declareBlow: (trumpType: TrumpType, numberOfPairs: number) => void;
   passBlow: () => void;
   selectNegri: (card: string) => void;
+  playCardInteractionSound: () => void;
   playCard: (card: string) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -341,6 +357,7 @@ interface ResyncFlight {
 
 export function GameProvider({ children }: PropsWithChildren) {
   const { user, session, getAccessToken } = useAuth();
+  const playSoundEffect = useSoundEffects(user?.profile?.sound !== false);
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef<MobileSocket | null>(null);
   const stateRef = useRef(state);
@@ -348,6 +365,8 @@ export function GameProvider({ children }: PropsWithChildren) {
   // Mirrors state.firstTurnReveal for the long-lived socket handlers, which
   // need it synchronously and would otherwise close over a stale value.
   const firstTurnRevealRef = useRef<MobileFirstTurnReveal | null>(null);
+  const dealAnimationSequenceRef = useRef(0);
+  const pendingNegriCardRef = useRef<string | null>(null);
   const userRef = useRef(user);
   const brokenRequestRef = useRef<string | null>(null);
   const agariRequestRef = useRef<string | null>(null);
@@ -541,6 +560,7 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!authenticatedUserId || !hasSession) {
+      pendingNegriCardRef.current = null;
       finishResyncFlight(undefined, false);
       socketRef.current?.disconnect();
       socketRef.current = null;
@@ -587,6 +607,22 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'firstTurnReveal', reveal });
     };
 
+    const startDealAnimation = (
+      event: DealEvent,
+      players: readonly PlayerContract[],
+    ) => {
+      dealAnimationSequenceRef.current += 1;
+      dispatch({
+        type: 'dealAnimationCue',
+        cue: {
+          token: dealAnimationSequenceRef.current,
+          startedAt: Date.now(),
+          seatIds: players.map((player) => player.seatId),
+        },
+      });
+      playSoundEffect(soundEffectForGameEvent(event));
+    };
+
     const applyGameServerEvent = (event: GameServerEvent) => {
       const previous = gameEventStateRef.current;
       const next = reduceGameEvent(previous, event, {
@@ -624,6 +660,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
     });
     socket.on('disconnect', () => {
+      pendingNegriCardRef.current = null;
       finishResyncFlight(undefined, false);
       dispatch({ type: 'connection', status: 'connecting' });
     });
@@ -662,6 +699,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('game-state', (payload) => {
+      pendingNegriCardRef.current = null;
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       const snapshot = normalizeGameStatePayload(payload);
       dispatch({
@@ -682,6 +720,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
     });
     socket.on('game-started', (payload) => {
+      pendingNegriCardRef.current = null;
+      startDealAnimation('game-started', payload.players);
       const currentSeatId = resolveSeatId(
         stateRef.current.game,
         stateRef.current.currentRoom,
@@ -753,10 +793,14 @@ export function GameProvider({ children }: PropsWithChildren) {
       applyGameServerEvent({ type: 'blow-updated', payload });
     });
     socket.on('broken', (payload) => {
+      pendingNegriCardRef.current = null;
+      startDealAnimation('broken', payload.players);
       applyGameServerEvent({ type: 'broken', payload });
       dispatch({ type: 'notice', message: { key: 'game.redealHand' } });
     });
     socket.on('round-cancelled', (payload) => {
+      pendingNegriCardRef.current = null;
+      startDealAnimation('round-cancelled', payload.players);
       applyGameServerEvent({ type: 'round-cancelled', payload });
       dispatch({ type: 'notice', message: { key: 'game.redealAllPass' } });
     });
@@ -765,9 +809,15 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'notice', message: payload.message });
     });
     socket.on('play-setup-complete', (payload) => {
+      const pendingNegriCard = pendingNegriCardRef.current;
+      pendingNegriCardRef.current = null;
+      if (shouldPlayConfirmedNegriSound(pendingNegriCard, payload.negriCard)) {
+        playSoundEffect(soundEffectForGameEvent('play-setup-complete'));
+      }
       applyGameServerEvent({ type: 'play-setup-complete', payload });
     });
     socket.on('card-played', (payload) => {
+      playSoundEffect(soundEffectForGameEvent('card-played'));
       applyGameServerEvent({ type: 'card-played', payload });
     });
     socket.on('field-updated', (field) => {
@@ -780,9 +830,12 @@ export function GameProvider({ children }: PropsWithChildren) {
       applyGameServerEvent({ type: 'round-results', payload });
     });
     socket.on('new-round-started', (payload) => {
+      pendingNegriCardRef.current = null;
+      startDealAnimation('new-round-started', payload.players);
       applyGameServerEvent({ type: 'new-round-started', payload });
     });
     socket.on('game-over', (payload) => {
+      pendingNegriCardRef.current = null;
       dispatch({ type: 'gameOver', gameOver: payload });
       void roomStorage.clear();
     });
@@ -795,9 +848,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       dispatch({ type: 'notice', message });
     });
     socket.on('error-message', (message: string) => {
+      pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
     });
     socket.on('back-to-lobby', (payload) => {
+      pendingNegriCardRef.current = null;
       void roomStorage.clear();
       dispatch({ type: 'resetRoom' });
       finishResyncFlight(undefined);
@@ -820,6 +875,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('round-reset', () => {
+      pendingNegriCardRef.current = null;
       gameEventStateRef.current = {
         ...gameEventStateRef.current,
         blowState: createEmptyBlowState(),
@@ -894,6 +950,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.connect();
 
     return () => {
+      pendingNegriCardRef.current = null;
       finishResyncFlight(undefined, false);
       socket.removeAllListeners();
       socket.disconnect();
@@ -906,6 +963,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     finishResyncFlight,
     getAccessToken,
     hasSession,
+    playSoundEffect,
     resyncActiveRoom,
     resolveCurrentSeatId,
   ]);
@@ -1058,6 +1116,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     }
 
     await roomStorage.clear();
+    pendingNegriCardRef.current = null;
     dispatch({ type: 'resetRoom' });
     socketRef.current?.emit('list-rooms');
     return true;
@@ -1156,9 +1215,14 @@ export function GameProvider({ children }: PropsWithChildren) {
     const game = stateRef.current.game;
     if (!game) return;
     emitOneWayAction('select-negri', game.roomId, () => {
+      pendingNegriCardRef.current = card;
       socketRef.current?.emit('select-negri', { roomId: game.roomId, card });
     });
   }, [emitOneWayAction]);
+
+  const playCardInteractionSound = useCallback(() => {
+    playSoundEffect('cardPlay');
+  }, [playSoundEffect]);
 
   const playCard = useCallback((card: string) => {
     const game = stateRef.current.game;
@@ -1276,6 +1340,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       declareBlow,
       passBlow,
       selectNegri,
+      playCardInteractionSound,
       playCard,
       selectBaseSuit,
       revealBrokenHand,
@@ -1312,6 +1377,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       leaveRoom,
       passBlow,
       playCard,
+      playCardInteractionSound,
       refreshRooms,
       removePlayer,
       replaceWithCOM,

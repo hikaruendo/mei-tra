@@ -14,6 +14,7 @@ import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
 import { asSeatId } from '@contracts/ids';
+import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -48,6 +49,8 @@ interface GameTableProps {
   onReplaceWithCOM?: (seatId: string) => void;
   firstTurnReveal?: FirstTurnReveal | null;
   onFirstTurnRevealDone?: () => void;
+  dealAnimationCue?: DealAnimationCue | null;
+  onCardInteraction?: () => void;
 }
 
 
@@ -85,6 +88,8 @@ export const GameTable: React.FC<GameTableProps> = ({
   onReplaceWithCOM,
   firstTurnReveal = null,
   onFirstTurnRevealDone,
+  dealAnimationCue = null,
+  onCardInteraction = noop,
 }) => {
   const tRoot = useTranslations();
   usePreloadCards();
@@ -261,6 +266,8 @@ export const GameTable: React.FC<GameTableProps> = ({
                 isSpectator ? setSpectatorPerspectiveSeatId : undefined
               }
               onReplaceWithCOM={onReplaceWithCOM}
+              dealAnimationCue={dealAnimationCue}
+              onCardInteraction={onCardInteraction}
             />
           );
         })}

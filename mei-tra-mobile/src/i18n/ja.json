@@ -172,6 +172,7 @@
     "preferences": "演出・言語",
     "preferencesHint": "演出と表示言語を設定",
     "jankenToggle": "ゲーム開始時のじゃんけん演出",
+    "soundEffects": "効果音",
     "connection": "接続",
     "resyncHint": "対局中はアプリを前面に戻すと、最新のゲーム状態へ再同期します。",
     "legal": "法的情報・サポート",

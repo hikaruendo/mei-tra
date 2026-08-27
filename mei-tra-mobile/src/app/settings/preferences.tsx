@@ -25,9 +25,11 @@ export default function PreferencesSettingsScreen() {
   const { preference: localePreference, setPreference: setLocalePreference } =
     useLocale();
   const [savingAnimation, setSavingAnimation] = useState(false);
+  const [savingSound, setSavingSound] = useState(false);
   const [animationOverride, setAnimationOverride] = useState<boolean | null>(
     null,
   );
+  const [soundOverride, setSoundOverride] = useState<boolean | null>(null);
   const [settingError, setSettingError] = useState<string | null>(null);
 
   if (!loading && !user) {
@@ -44,6 +46,7 @@ export default function PreferencesSettingsScreen() {
 
   const startPlayerAnimation =
     animationOverride ?? user.profile?.startPlayerAnimation ?? true;
+  const soundEffects = soundOverride ?? user.profile?.sound ?? true;
 
   const handleToggleAnimation = async (next: boolean) => {
     setSavingAnimation(true);
@@ -69,6 +72,30 @@ export default function PreferencesSettingsScreen() {
     }
   };
 
+  const handleToggleSound = async (next: boolean) => {
+    setSavingSound(true);
+    setSettingError(null);
+    setSoundOverride(next);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error(t('settings.authExpired'));
+      await updateProfile(user.id, token, {
+        preferences: { sound: next },
+      });
+      await refreshProfile();
+      setSoundOverride(null);
+    } catch (error) {
+      setSoundOverride(null);
+      setSettingError(
+        error instanceof Error
+          ? error.message
+          : t('settings.settingUpdateFailed'),
+      );
+    } finally {
+      setSavingSound(false);
+    }
+  };
+
   return (
     <SettingsScaffold
       onBack={() => router.replace('/settings')}
@@ -81,6 +108,14 @@ export default function PreferencesSettingsScreen() {
             disabled={savingAnimation}
             onValueChange={(value) => void handleToggleAnimation(value)}
             value={startPlayerAnimation}
+          />
+        </View>
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>{t('settings.soundEffects')}</Text>
+          <Switch
+            disabled={savingSound}
+            onValueChange={(value) => void handleToggleSound(value)}
+            value={soundEffects}
           />
         </View>
         {settingError ? (

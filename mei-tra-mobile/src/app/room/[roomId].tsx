@@ -39,6 +39,7 @@ export default function RoomScreen() {
     declareBlow,
     passBlow,
     selectNegri,
+    playCardInteractionSound,
     playCard,
     selectBaseSuit,
     removePlayer,
@@ -48,6 +49,7 @@ export default function RoomScreen() {
     closeGameOver,
     firstTurnReveal,
     clearFirstTurnReveal,
+    dealAnimationCue,
   } = useGame();
 
   useKeepAwake();
@@ -160,10 +162,12 @@ export default function RoomScreen() {
           onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
+          onCardInteraction={playCardInteractionSound}
           history={history}
           roomId={resolvedRoomId}
           firstTurnReveal={firstTurnReveal}
           onFirstTurnRevealDone={clearFirstTurnReveal}
+          dealAnimationCue={dealAnimationCue}
           isGuest={Boolean(user?.isAnonymous)}
           onRegisterAccount={async () => {
             // Leave the finished game first so room state doesn't reset

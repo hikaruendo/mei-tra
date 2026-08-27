@@ -2,6 +2,8 @@ export interface MobileUserProfile {
   displayName: string;
   username: string;
   avatarUrl?: string;
+  /** Defaults to true for profiles saved before sound effects existed. */
+  sound: boolean;
   /** Defaults to true for profiles saved before the setting existed. */
   startPlayerAnimation: boolean;
 }
