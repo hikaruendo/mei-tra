@@ -1367,9 +1367,10 @@ export const useGame = () => {
     }
   };
 
-  const closeGameResult = () => {
+  const closeGameResult = useCallback(() => {
     setGameResult(null);
-  };
+    resetRoomState();
+  }, [resetRoomState]);
 
 
   if (!isClient) {

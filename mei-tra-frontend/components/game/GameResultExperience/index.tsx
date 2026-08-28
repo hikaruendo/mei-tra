@@ -15,6 +15,14 @@ interface Props {
 }
 
 const SUITS = ["♠", "♥", "♦", "♣", "♠", "♦", "♣", "♥"];
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 export function GameResultExperience({ result, onClose, onRegister }: Props) {
   const t = useTranslations("game.gameOver");
@@ -45,12 +53,59 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
   }, [result.token]);
 
   useEffect(() => {
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    return () => previouslyFocused?.focus();
+  }, []);
+
+  useEffect(() => {
     if (revealing) {
       overlayRef.current?.focus();
     } else {
       panelRef.current?.focus();
     }
   }, [revealing]);
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (revealing) {
+      if (
+        event.key === "Enter" ||
+        event.key === " " ||
+        event.key === "Escape"
+      ) {
+        event.preventDefault();
+        setRevealing(false);
+      }
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = Array.from(
+      panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+    );
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) {
+      event.preventDefault();
+      panel.focus();
+      return;
+    }
+
+    const active = document.activeElement;
+    if (event.shiftKey && (active === panel || active === first)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === panel || active === last)) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const headline =
     result.viewerRole === "winner"
@@ -68,20 +123,7 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
       aria-label={headline}
       tabIndex={revealing ? 0 : -1}
       onClick={revealing ? () => setRevealing(false) : undefined}
-      onKeyDown={
-        revealing
-          ? (event) => {
-              if (
-                event.key === "Enter" ||
-                event.key === " " ||
-                event.key === "Escape"
-              ) {
-                event.preventDefault();
-                setRevealing(false);
-              }
-            }
-          : undefined
-      }
+      onKeyDown={handleDialogKeyDown}
     >
       <div className={styles.vignette} />
       {SUITS.map((suit, index) => (

@@ -2,7 +2,7 @@
 import { asSeatId } from "@meitra/contracts/ids";
 import type { GameResultSnapshot } from "@meitra/game-client/game-result";
 import React from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, ScrollView } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 
 import { GameResultExperience } from "../GameResultExperience";
@@ -53,6 +53,9 @@ interface RendererHandle {
     findByProps: (props: Record<string, unknown>) => {
       props: { onPress: () => void };
     };
+    findByType: (type: unknown) => {
+      props: Record<string, unknown>;
+    };
   };
   toJSON: () => unknown;
   unmount: () => void;
@@ -102,6 +105,9 @@ describe("GameResultExperience", () => {
       await Promise.resolve();
     });
     expect(renderedText(renderer!)).toContain("最終結果");
+    expect(renderer!.root.findByType(ScrollView).props.accessible).not.toBe(
+      true,
+    );
     await act(async () => renderer!.unmount());
   });
 });

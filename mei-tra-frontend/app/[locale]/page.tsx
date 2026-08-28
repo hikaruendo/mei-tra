@@ -200,6 +200,7 @@ export default function Home() {
             result={gameResult}
             onClose={handleResultClose}
             onRegister={user?.isAnonymous ? () => {
+              handleLeaveRoom();
               closeGameResult();
               setIsUpgradeModalOpen(true);
             } : undefined}

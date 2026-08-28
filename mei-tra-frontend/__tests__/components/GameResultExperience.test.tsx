@@ -59,4 +59,37 @@ describe('GameResultExperience', () => {
     render(<GameResultExperience result={result} onClose={jest.fn()} />);
     expect(screen.getByText('finalResult')).toBeInTheDocument();
   });
+
+  it('keeps keyboard focus inside the result dialog and restores it on unmount', () => {
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const { unmount } = render(
+      <GameResultExperience
+        result={result}
+        onClose={jest.fn()}
+        onRegister={jest.fn()}
+      />,
+    );
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(dialog);
+
+    const register = screen.getByRole('button', {
+      name: 'gameOver.guestPromptCta',
+    });
+    const close = screen.getByRole('button', { name: 'toRooms' });
+
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(register).toHaveFocus();
+    close.focus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(register).toHaveFocus();
+    register.focus();
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(close).toHaveFocus();
+
+    unmount();
+    expect(trigger).toHaveFocus();
+    trigger.remove();
+  });
 });

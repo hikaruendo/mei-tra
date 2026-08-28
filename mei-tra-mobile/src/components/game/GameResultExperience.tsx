@@ -71,7 +71,7 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
       animationType="fade"
       onRequestClose={revealing ? () => setRevealing(false) : onClose}
     >
-      <SafeAreaView style={styles.overlay}>
+      <SafeAreaView accessibilityViewIsModal style={styles.overlay}>
         {revealing ? (
           <Pressable
             accessibilityRole="button"
@@ -139,7 +139,6 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
           </Pressable>
         ) : (
           <ScrollView
-            accessible
             contentContainerStyle={styles.panel}
             style={styles.panelScroll}
           >
