@@ -48,8 +48,8 @@ the Creative Commons 0 public-domain dedication.
 
 - Source: Procedurally generated for Meitra; no external audio source
 - Generated: 2026-08-28
-- Processing: sequenced two short C5/E5 pickup notes into a sustained C-major
-  chord with C6 sparkle, added a subtle 85 ms echo, applied short fades and a
-  4.8 kHz low-pass filter, peak limited, and encoded as 44.1 kHz / 128 kbps
-  mono MP3
-- SHA-256: `7f7532d4bdf2e897958b6a10f7d1ff18085e1c91f7279cca0e29ce0f37242f6e`
+- Processing: synthesized a two-part G4-to-C-major brass fanfare using layered
+  trumpet harmonics, added a short vibrato and subtle 75 ms room echo, filtered
+  the 180 Hz to 5.2 kHz band, compressed and peak limited the mix, and encoded
+  it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `11f03e3818e6d993a6dcc3402cf5140f52c03b05b515aa98eef10c3459708fc0`
