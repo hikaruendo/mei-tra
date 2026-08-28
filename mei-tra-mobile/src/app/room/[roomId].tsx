@@ -1,20 +1,21 @@
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useKeepAwake } from 'expo-keep-awake';
-import { useCallback, useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import { useKeepAwake } from "expo-keep-awake";
+import { useCallback } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
-import { GameBoard } from '@/components/game/GameBoard';
-import { WaitingRoom } from '@/components/game/WaitingRoom';
-import { Button } from '@/components/ui/Button';
-import { ConnectionBanner } from '@/components/ui/ConnectionBanner';
-import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
-import { Screen } from '@/components/ui/Screen';
-import { useAuth } from '@/context/AuthContext';
-import { useGame } from '@/context/GameContext';
-import { useGameHistory } from '@/hooks/useGameHistory';
-import { colors } from '@/theme/colors';
-import { t } from '@/i18n';
-import { useLocale } from '@/context/LocaleContext';
+import { GameBoard } from "@/components/game/GameBoard";
+import { GameResultExperience } from "@/components/game/GameResultExperience";
+import { WaitingRoom } from "@/components/game/WaitingRoom";
+import { Button } from "@/components/ui/Button";
+import { ConnectionBanner } from "@/components/ui/ConnectionBanner";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { Screen } from "@/components/ui/Screen";
+import { useAuth } from "@/context/AuthContext";
+import { useGame } from "@/context/GameContext";
+import { useGameHistory } from "@/hooks/useGameHistory";
+import { colors } from "@/theme/colors";
+import { t } from "@/i18n";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function RoomScreen() {
   // Re-render this screen when the app language changes; t() is a bare
@@ -32,7 +33,7 @@ export default function RoomScreen() {
     error,
     notice,
     refreshRooms,
-    gameOver,
+    gameResult,
     shuffleTeams,
     startGame,
     leaveRoom,
@@ -46,7 +47,7 @@ export default function RoomScreen() {
     replaceWithCOM,
     updateTeamNames,
     clearFeedback,
-    closeGameOver,
+    closeGameResult,
     firstTurnReveal,
     clearFirstTurnReveal,
     dealAnimationCue,
@@ -54,15 +55,8 @@ export default function RoomScreen() {
 
   useKeepAwake();
 
-  useEffect(() => {
-    if (gameOver && !currentRoom && !game) {
-      closeGameOver();
-      router.replace('/rooms');
-    }
-  }, [gameOver, currentRoom, game, closeGameOver, router]);
-
   const gameStarted = Boolean(
-    game && game.gamePhase && game.gamePhase !== 'waiting',
+    game && game.gamePhase && game.gamePhase !== "waiting",
   );
   const historyRoomId = game?.roomId ?? currentRoom?.id ?? null;
   const history = useGameHistory(historyRoomId, gameStarted);
@@ -70,7 +64,7 @@ export default function RoomScreen() {
   const doLeave = useCallback(async () => {
     const didLeave = await leaveRoom();
     if (didLeave) {
-      router.replace('/rooms');
+      router.replace("/rooms");
     }
     return didLeave;
   }, [leaveRoom, router]);
@@ -84,51 +78,47 @@ export default function RoomScreen() {
       <Screen contentStyle={styles.center}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text accessibilityLiveRegion="polite" style={styles.loadingText}>
-          {t('rooms.loadingAccount')}
+          {t("rooms.loadingAccount")}
         </Text>
       </Screen>
     );
   }
 
   const resolvedRoomId =
-    roomId === 'current' ? currentRoom?.id ?? game?.roomId : roomId;
+    roomId === "current" ? (currentRoom?.id ?? game?.roomId) : roomId;
   const roomMatches = currentRoom?.id === resolvedRoomId;
   const gameMatches = game?.roomId === resolvedRoomId;
 
-  if (!roomMatches && !gameMatches) {
+  if (!roomMatches && !gameMatches && !gameResult) {
     return (
       <Screen contentStyle={styles.center}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text style={styles.loadingText}>
-          {connectionStatus === 'connected'
-            ? t('room.restoring')
-            : t('room.reconnecting')}
+          {connectionStatus === "connected"
+            ? t("room.restoring")
+            : t("room.reconnecting")}
         </Text>
-        <Button variant="ghost" onPress={() => router.replace('/rooms')}>
-          {t('room.backToRooms')}
+        <Button variant="ghost" onPress={() => router.replace("/rooms")}>
+          {t("room.backToRooms")}
         </Button>
       </Screen>
     );
   }
 
   const isWaiting =
-    !gameMatches || !game || game.gamePhase === 'waiting' || !game.gamePhase;
-  const actionsDisabled = connectionStatus !== 'connected';
+    !gameMatches || !game || game.gamePhase === "waiting" || !game.gamePhase;
+  const actionsDisabled = connectionStatus !== "connected";
 
   return (
     <Screen>
-      {connectionStatus !== 'connected' ? (
+      {connectionStatus !== "connected" ? (
         <ConnectionBanner
           onRetry={refreshRooms}
-          retryLabel={t('room.retryConnect')}
+          retryLabel={t("room.retryConnect")}
           status={connectionStatus}
         />
       ) : null}
-      <FeedbackBanner
-        error={error}
-        notice={notice}
-        onDismiss={clearFeedback}
-      />
+      <FeedbackBanner error={error} notice={notice} onDismiss={clearFeedback} />
       {isWaiting && currentRoom ? (
         <WaitingRoom
           actionsDisabled={actionsDisabled}
@@ -146,14 +136,7 @@ export default function RoomScreen() {
         <GameBoard
           actionsDisabled={actionsDisabled}
           game={game}
-          gameOver={gameOver}
           isHost={isHost}
-          onCloseGameOver={async () => {
-            const didLeave = await doLeave();
-            if (didLeave) {
-              closeGameOver();
-            }
-          }}
           onDeclare={declareBlow}
           onLeave={() => void doLeave()}
           onPass={passBlow}
@@ -168,36 +151,45 @@ export default function RoomScreen() {
           firstTurnReveal={firstTurnReveal}
           onFirstTurnRevealDone={clearFirstTurnReveal}
           dealAnimationCue={dealAnimationCue}
-          isGuest={Boolean(user?.isAnonymous)}
-          onRegisterAccount={async () => {
-            // Leave the finished game first so room state doesn't reset
-            // underneath the upgrade screen, then navigate.
-            const didLeave = await doLeave();
-            if (didLeave) {
-              closeGameOver();
-            }
-            router.push('/upgrade-account');
-          }}
         />
       ) : (
         <View style={styles.center}>
           <ActivityIndicator color={colors.gold} size="large" />
         </View>
       )}
+      {gameResult ? (
+        <GameResultExperience
+          result={gameResult}
+          onClose={() => {
+            closeGameResult();
+            void doLeave();
+            router.replace("/rooms");
+          }}
+          onRegister={
+            user.isAnonymous
+              ? () => {
+                  closeGameResult();
+                  void doLeave();
+                  router.push("/upgrade-account");
+                }
+              : undefined
+          }
+        />
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   center: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 16,
     padding: 24,
   },
   loadingText: {
     color: colors.text,
     fontSize: 17,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

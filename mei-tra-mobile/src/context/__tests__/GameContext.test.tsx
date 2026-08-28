@@ -334,6 +334,57 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('captures a live result once and preserves it through room teardown', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+    const payload = {
+      winner: 'Team 0',
+      winningTeam: 0 as const,
+      finalScores: {
+        0: { play: 2, total: 5 },
+        1: { play: 1, total: 3 },
+      },
+    };
+
+    await act(async () => {
+      mockSocket.trigger('game-state', gameState);
+      await flushPromises();
+    });
+    mockPlaySoundEffect.mockClear();
+
+    await act(async () => {
+      mockSocket.trigger('game-over', payload);
+      mockSocket.trigger('game-over', payload);
+      await flushPromises();
+    });
+    expect(screen.latestGame.gameResult).toMatchObject({
+      winningTeam: 0,
+      viewerRole: 'winner',
+      teams: [{ team: 0, total: 5 }, { team: 1, total: 3 }],
+    });
+    expect(mockPlaySoundEffect.mock.calls).toEqual([['victory']]);
+
+    await act(async () => {
+      mockSocket.trigger('back-to-lobby');
+      await flushPromises();
+    });
+    expect(screen.latestGame.game).toBeNull();
+    expect(screen.latestGame.currentRoom).toBeNull();
+    expect(screen.latestGame.gameResult?.winningTeam).toBe(0);
+    await screen.unmount();
+  });
+
+  it('does not create or sound a result from a reconnect snapshot', async () => {
+    const screen = await renderProvider();
+    await act(async () => {
+      mockSocket.trigger('game-state', createGameState());
+      await flushPromises();
+    });
+    expect(screen.latestGame.gameResult).toBeNull();
+    expect(mockPlaySoundEffect).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
   it('plays the confirmed Negri sound only for the client that selected it', async () => {
     const screen = await renderProvider();
     const gameState = createGameState();

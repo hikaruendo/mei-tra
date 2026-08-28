@@ -13,8 +13,7 @@ import { RoomList } from '@/components/room/RoomList';
 import { LandingPage } from '@/components/landing/LandingPage';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { UpgradeAccountModal } from '@/components/auth/UpgradeAccountModal';
-import { GuestUpgradePrompt } from '@/components/auth/GuestUpgradePrompt';
-import { ConfirmModal } from '@/components/shared/ConfirmModal';
+import { GameResultExperience } from '@/components/game/GameResultExperience';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './index.module.css';
 
@@ -22,7 +21,6 @@ export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const t = useTranslations('game');
-  const commonT = useTranslations('common');
   const authT = useTranslations('auth');
   const locale = useLocale();
   const { user, loading: authLoading, signInAnonymously } = useAuth();
@@ -127,8 +125,8 @@ export default function Home() {
     currentSeatId = null,
     notification,
     setNotification,
-    gameOverModal = null,
-    closeGameOverModal = () => {},
+    gameResult = null,
+    closeGameResult = () => {},
     currentRoomId = null,
     isHost = false,
     isSpectator = false,
@@ -181,6 +179,11 @@ export default function Home() {
     }
   };
 
+  const handleResultClose = () => {
+    handleLeaveRoom();
+    closeGameResult();
+  };
+
   return (
     <ProtectedRoute requireAuth={true}>
       <Navigation gameStarted={gameStarted} inRoom={!!currentRoomId} />
@@ -192,25 +195,16 @@ export default function Home() {
             onClose={() => setNotification(null)}
           />
         )}
-        {gameOverModal && (
-          <ConfirmModal
-            isOpen={true}
-            title={gameOverModal.title}
-            message={gameOverModal.message}
-            onConfirm={closeGameOverModal}
-            onCancel={closeGameOverModal}
-            confirmText={commonT('close')}
-            showCancelButton={false}
-          >
-            {user?.isAnonymous && (
-              <GuestUpgradePrompt
-                onRegisterClick={() => {
-                  closeGameOverModal();
-                  setIsUpgradeModalOpen(true);
-                }}
-              />
-            )}
-          </ConfirmModal>
+        {gameResult && (
+          <GameResultExperience
+            result={gameResult}
+            onClose={handleResultClose}
+            onRegister={user?.isAnonymous ? () => {
+              handleLeaveRoom();
+              closeGameResult();
+              setIsUpgradeModalOpen(true);
+            } : undefined}
+          />
         )}
         <UpgradeAccountModal
           isOpen={isUpgradeModalOpen}

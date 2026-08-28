@@ -12,6 +12,9 @@ const FILES = [
   'card-select.mp3',
   'negri.mp3',
   'shuffle.mp3',
+  'victory.mp3',
+  'defeat.mp3',
+  'result-neutral.mp3',
 ];
 const checkOnly = process.argv.includes('--check');
 

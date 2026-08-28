@@ -3828,6 +3828,10 @@ describe('Game Use Cases', () => {
       expect(result.gameOver?.winningTeam).toBe(0);
       const gameOverEvent = result.events?.find((e) => e.event === 'game-over');
       expect(gameOverEvent).toBeDefined();
+      expect(gameOverEvent?.payload).toMatchObject({
+        winner: 'Team 0',
+        winningTeam: 0,
+      });
       expect(roomService.updateRoomStatus).toHaveBeenCalledWith(
         'room-1',
         RoomStatus.FINISHED,

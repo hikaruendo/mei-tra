@@ -143,10 +143,8 @@ describe('GameBoard card selection sounds', () => {
       renderer = TestRenderer.create(
         <GameBoard
           game={game}
-          gameOver={null}
           isHost
           onCardSelection={onCardSelection}
-          onCloseGameOver={jest.fn()}
           onDeclare={jest.fn()}
           onLeave={jest.fn()}
           onPass={jest.fn()}
@@ -216,9 +214,7 @@ describe('GameBoard card selection sounds', () => {
       renderer = TestRenderer.create(
         <GameBoard
           game={game}
-          gameOver={null}
           isHost
-          onCloseGameOver={jest.fn()}
           onDeclare={jest.fn()}
           onLeave={jest.fn()}
           onPass={jest.fn()}

@@ -43,3 +43,36 @@ the Creative Commons 0 public-domain dedication.
   transient, high-pass filtered the transient at 110 Hz, low-pass filtered the
   mix at 720 Hz, limited the peak, and encoded as 44.1 kHz / 128 kbps mono MP3
 - SHA-256: `163660dc14f0afd468fe011198fc8d91573d0eca19f59a53d304e9fd7c901fcb`
+
+## `victory.mp3`
+
+- Source: [Tada Fanfare F](https://freesound.org/people/plasterbrain/sounds/397354/)
+  by plasterbrain
+- Retrieved: 2026-08-28 (Freesound high-quality MP3 preview)
+- License: Creative Commons 0 (CC0)
+- Processing: removed leading and trailing silence, mixed the stereo recording
+  down to mono, normalized it to -16 LUFS / -1.5 dBTP, added a short ending
+  fade, and encoded it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `e88294b37cb6a3718a093e61c9d54d44d9af60bc1f96a09ea0e7520d20ad7b1b`
+
+## `defeat.mp3`
+
+- Source: [failfare.mp3](https://freesound.org/people/Wagna/sounds/242208/)
+  by Wagna
+- Retrieved: 2026-08-28 (Freesound high-quality MP3 preview)
+- License: Creative Commons 0 (CC0)
+- Processing: removed leading silence, shortened the descending trumpet phrase,
+  mixed it down to mono, normalized it to -20 LUFS / -2 dBTP, added a short
+  ending fade, and encoded it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `2470942d56e269c3d5f8ec0918a3119064e6ccb67557fa9add38d56abeb1f8dd`
+
+## `result-neutral.mp3`
+
+- Source: [Good Phone Notification Sound](https://freesound.org/people/qubodup/sounds/782969/)
+  by qubodup
+- Retrieved: 2026-08-28 (Freesound high-quality MP3 preview)
+- License: Creative Commons 0 (CC0)
+- Processing: removed leading and trailing silence, mixed it down to mono,
+  normalized it to -22 LUFS / -3 dBTP, added a short ending fade, and encoded
+  it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `68653ec389eeca112a5e1e2789350adced4e1ad66c1da7e4340c26ce58a00d8b`

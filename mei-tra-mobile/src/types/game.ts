@@ -35,11 +35,6 @@ export interface MobileGameSnapshot {
   teamNames?: TeamNames;
 }
 
-export interface MobileGameOver {
-  winner: string;
-  finalScores: TransportTeamScores;
-}
-
 export type ConnectionStatus =
   | 'disconnected'
   | 'connecting'

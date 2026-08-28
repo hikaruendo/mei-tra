@@ -6,7 +6,7 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from '../useSoundEffects';
 
 const mockSetAudioModeAsync = jest.fn(async (_options: unknown) => undefined);
-const mockPlayers = Array.from({ length: 6 }, () => ({
+const mockPlayers = Array.from({ length: 9 }, () => ({
   play: jest.fn(),
   seekTo: jest.fn(async () => undefined),
   volume: 1,
@@ -163,6 +163,29 @@ describe('useSoundEffects', () => {
     expect(mockPlayers[3].play).not.toHaveBeenCalled();
     expect(mockPlayers[5].play).not.toHaveBeenCalled();
 
+    await act(async () => renderer!.unmount());
+  });
+
+  it('uses dedicated players for each game-result viewpoint', async () => {
+    let playEffect: (effect: SoundEffect) => void = () => undefined;
+    let renderer: ReturnType<typeof TestRenderer.create>;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <CaptureSoundEffects enabled onValue={(play) => (playEffect = play)} />,
+      );
+    });
+    await act(async () => {
+      playEffect('victory');
+      playEffect('defeat');
+      playEffect('resultNeutral');
+      await Promise.resolve();
+    });
+    expect(mockPlayers[6].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[6].volume).toBe(0.4);
+    expect(mockPlayers[7].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[7].volume).toBe(0.4);
+    expect(mockPlayers[8].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[8].volume).toBe(0.4);
     await act(async () => renderer!.unmount());
   });
 });

@@ -3,6 +3,7 @@ import {
   shouldPlayConfirmedNegriSound,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
+  soundEffectForGameResultRole,
 } from '@meitra/game-client/sound-effects';
 
 import { WebSoundEffectsPlayer } from '@/lib/sound-effects';
@@ -14,11 +15,17 @@ const flushAudioSetup = async () => {
 };
 
 describe('sound effect event mapping', () => {
-  it('maps only live gameplay events to the two initial effects', () => {
+  it('maps live gameplay events to their effects', () => {
     expect(soundEffectForGameEvent('card-played')).toBe('cardPlay');
     expect(soundEffectForGameEvent('play-setup-complete')).toBe('negri');
     expect(soundEffectForGameEvent('game-started')).toBe('shuffle');
     expect(soundEffectForGameEvent('new-round-started')).toBe('shuffle');
+  });
+
+  it('maps each result viewpoint to its own effect', () => {
+    expect(soundEffectForGameResultRole('winner')).toBe('victory');
+    expect(soundEffectForGameResultRole('loser')).toBe('defeat');
+    expect(soundEffectForGameResultRole('spectator')).toBe('resultNeutral');
   });
 
   it('plays selection sounds only when a non-null card becomes selected', () => {
@@ -122,7 +129,7 @@ describe('WebSoundEffectsPlayer', () => {
         createAudioContext: () => context,
       });
       expect(() => player?.start()).not.toThrow();
-      expect(browserFetch).toHaveBeenCalledTimes(4);
+      expect(browserFetch).toHaveBeenCalledTimes(7);
     } finally {
       Object.defineProperty(window, 'fetch', {
         configurable: true,
@@ -177,7 +184,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.start();
     await flushAudioSetup();
 
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl).toHaveBeenCalledTimes(7);
     expect(context.decodeAudioData).not.toHaveBeenCalled();
   });
 
@@ -204,8 +211,9 @@ describe('WebSoundEffectsPlayer', () => {
     player.play('cardSelect');
     player.play('negri');
     player.play('shuffle');
+    player.play('victory');
 
-    expect(context.decodeAudioData).toHaveBeenCalledTimes(3);
-    expect(sourceStart).toHaveBeenCalledTimes(3);
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(6);
+    expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 });

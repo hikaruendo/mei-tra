@@ -186,6 +186,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
 
         const gameOverPayload: GameOverPayload = {
           winner: `Team ${winningTeam}`,
+          winningTeam,
           finalScores: state.teamScores,
         };
 

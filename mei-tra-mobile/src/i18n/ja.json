@@ -317,8 +317,6 @@
     "pausedTitle": "ゲームを一時停止しています",
     "pausedText": "プレイヤーの再接続を待っています",
     "replaceNamed": "{name} をCOMに置換",
-    "gameOver": "ゲーム終了",
-    "gameOverResult": "勝者: {winner}\n{redName} {redScore}点 / {blackName} {blackScore}点",
     "guestPrompt": "ゲストプレイ中です。アカウント登録すると、この戦績を残せます。",
     "registerAccount": "アカウント登録",
     "toRoomList": "ルーム一覧へ",
@@ -327,5 +325,17 @@
     "gameLog": "対局ログ",
     "leave": "退出",
     "close": "閉じる"
+  },
+  "result": {
+    "kicker": "RESULT",
+    "finalResult": "最終結果",
+    "victory": "勝利",
+    "defeat": "惜敗",
+    "spectatorVictory": "{team}チームの勝利",
+    "winnerBadge": "WINNER",
+    "points": "{score} pt",
+    "tapToSkip": "タップでスキップ",
+    "toRooms": "ルーム一覧へ",
+    "com": "(COM)"
   }
 }

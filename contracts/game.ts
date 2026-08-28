@@ -195,6 +195,7 @@ export interface NewRoundStartedPayload {
 
 export interface GameOverPayload {
   winner: string;
+  winningTeam?: Team;
   finalScores: TransportTeamScores;
 }
 

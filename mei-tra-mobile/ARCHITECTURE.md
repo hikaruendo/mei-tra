@@ -112,7 +112,7 @@ src/
 │
 └── types/
     ├── auth.ts                   ← MobileAuthUser, MobileUserProfile
-    └── game.ts                   ← MobileGameSnapshot, MobileGameOver
+    └── game.ts                   ← MobileGameSnapshot
 ```
 
 ---
@@ -170,7 +170,7 @@ interface MobileState {
   connectionStatus: ConnectionStatus;   // disconnected | connecting | resyncing | connected
   error: string | null;                 // エラーメッセージ
   notice: string | null;                // 通知メッセージ
-  gameOver: MobileGameOver | null;      // ゲーム終了結果
+  gameResult: GameResultSnapshot | null; // ルーム破棄後も保持する最終結果
 }
 ```
 
@@ -200,7 +200,7 @@ interface MobileGameSnapshot {
 }
 ```
 
-### Reducer Actions (16 種)
+### Reducer Actions
 
 | Action | 用途 |
 |--------|------|
@@ -217,7 +217,8 @@ interface MobileGameSnapshot {
 | `playerConvertedToCom` | COM 置換 |
 | `error` | エラーメッセージ設定 |
 | `notice` | 通知メッセージ設定 |
-| `gameOver` | ゲーム終了結果設定 |
+| `gameResult` | ライブ `game-over` から生成した最終結果設定 |
+| `finishRoom` | 最終結果を保持したままルーム状態を破棄 |
 | `resetRoom` | ルーム状態リセット |
 
 ### 公開される関数 (via `useGame()`)
