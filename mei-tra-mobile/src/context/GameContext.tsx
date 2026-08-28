@@ -1356,8 +1356,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       clearFirstTurnReveal: () => {
         firstTurnRevealRef.current = null;
         dispatch({ type: 'firstTurnReveal', reveal: null });
-        // Apply whatever turn the reducer learned while the reveal held it
-        // back, so the indicator is never left blank.
+        // `update-turn` may arrive while the reveal hides the turn indicator.
+        // After the reveal, show the latest turn received from the server.
         dispatch({
           type: 'patchGame',
           patch: {

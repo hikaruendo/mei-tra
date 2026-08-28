@@ -257,8 +257,8 @@ export const useGame = () => {
   );
   const clearFirstTurnReveal = useCallback(() => {
     updateFirstTurnReveal(null);
-    // Apply whatever turn the reducer learned while the reveal was held back,
-    // so the indicator is never left blank if `update-turn` already landed.
+    // `update-turn` may arrive while the reveal hides the turn indicator.
+    // After the reveal, show the latest turn received from the server.
     setWhoseTurn(gameEventStateRef.current.currentTurnSeatId);
   }, [updateFirstTurnReveal]);
   const startDealAnimation = useCallback(
