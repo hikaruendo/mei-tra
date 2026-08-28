@@ -18,7 +18,7 @@ export function ResultDemoClient() {
     useState<GameResultViewerRole>("winner");
   const [token, setToken] = useState(1);
   const [active, setActive] = useState(false);
-  const playSoundEffect = useSoundEffects(true);
+  const playSoundEffect = useSoundEffects(true, true);
 
   const result = useMemo<GameResultSnapshot>(
     () => ({
@@ -73,9 +73,7 @@ export function ResultDemoClient() {
       setViewerRole(role);
       setToken((current) => current + 1);
       setActive(true);
-
-      // The click unlocks browser audio; allow decoding to finish before playback.
-      window.setTimeout(() => playSoundEffect("victory"), 200);
+      playSoundEffect("victory");
     },
     [playSoundEffect],
   );

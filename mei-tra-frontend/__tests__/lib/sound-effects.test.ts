@@ -104,6 +104,16 @@ describe('WebSoundEffectsPlayer', () => {
     expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 
+  it('waits for decoding when playback is requested from a user gesture', async () => {
+    const soundPlayer = createPlayer();
+
+    soundPlayer.playFromUserGesture('victory');
+    expect(sourceStart).not.toHaveBeenCalled();
+
+    await flushAudioSetup();
+    expect(sourceStart).toHaveBeenCalledTimes(1);
+  });
+
   it('calls the browser fetch implementation with its Window context', () => {
     const originalFetch = window.fetch;
     const browserFetch = jest.fn(function (this: Window) {
