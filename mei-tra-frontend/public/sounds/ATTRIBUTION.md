@@ -48,7 +48,8 @@ the Creative Commons 0 public-domain dedication.
 
 - Source: Procedurally generated for Meitra; no external audio source
 - Generated: 2026-08-28
-- Processing: mixed rising 392 Hz and 523.25 Hz sine tones with a quiet 784 Hz
-  overtone, applied short fades and a 4.2 kHz low-pass filter, peak limited,
-  and encoded as 44.1 kHz / 128 kbps mono MP3
-- SHA-256: `a4ef94712a967b7a727aac9823a344609b8ad63c9a0ba5eb3c8cac3e0c6af5bc`
+- Processing: sequenced two short C5/E5 pickup notes into a sustained C-major
+  chord with C6 sparkle, added a subtle 85 ms echo, applied short fades and a
+  4.8 kHz low-pass filter, peak limited, and encoded as 44.1 kHz / 128 kbps
+  mono MP3
+- SHA-256: `7f7532d4bdf2e897958b6a10f7d1ff18085e1c91f7279cca0e29ce0f37242f6e`

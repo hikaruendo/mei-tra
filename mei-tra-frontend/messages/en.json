@@ -357,7 +357,18 @@
       "toRooms": "Back to rooms",
       "com": "(COM)",
       "guestPrompt": "You're playing as a guest. Register an account to keep these stats.",
-      "guestPromptCta": "Register"
+      "guestPromptCta": "Register",
+      "demoKicker": "MEITRA DEVELOPMENT PREVIEW",
+      "demoTitle": "Victory effect demo",
+      "demoDescription": "Choose a viewpoint to play the actual animation and victory sound.",
+      "demoControlsLabel": "Switch demo viewpoint",
+      "demoWinningTeam": "Spade",
+      "demoLosingTeam": "Heart",
+      "demoRole": {
+        "winner": "Play as winner",
+        "loser": "Play as loser",
+        "spectator": "Play as spectator"
+      }
     },
     "trumpFormat": "Trump: {suit} ({symbol})",
     "suitHerz": "Heart",
