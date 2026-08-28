@@ -2,7 +2,7 @@
 import type { MobileGameSnapshot } from '@/types/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { GameBoard } from '../GameBoard';
@@ -123,7 +123,7 @@ const game: MobileGameSnapshot = {
   idleSeatIds: [],
 };
 
-describe('GameBoard card selection sounds', () => {
+describe('GameBoard interactions', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -180,6 +180,50 @@ describe('GameBoard card selection sounds', () => {
     await act(async () => {
       renderer.unmount();
     });
+  });
+
+  it('keeps player info at its intrinsic height after selecting a card', async () => {
+    let renderer!: {
+      root: {
+        findByProps: (props: Record<string, unknown>) => {
+          props: { onPress?: () => void; style?: unknown };
+        };
+      };
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={game}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onRemovePlayer={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      renderer.root
+        .findByProps({ testID: 'mock-playing-card-S-3' })
+        .props.onPress?.();
+    });
+
+    const playerInfo = renderer.root.findByProps({
+      testID: 'self-player-info',
+    });
+    expect(StyleSheet.flatten(playerInfo.props.style)).toMatchObject({
+      alignSelf: 'flex-start',
+    });
+
+    await act(async () => renderer.unmount());
   });
 
   it('tracks reduce-motion changes while the board remains mounted', async () => {
