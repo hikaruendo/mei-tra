@@ -520,6 +520,7 @@ export function GameBoard({
           <View style={styles.handSection}>
             <View style={styles.selfRow}>
               <View
+                testID="self-player-info"
                 style={[
                   styles.selfCard,
                   (game.isSpectator
@@ -1058,6 +1059,7 @@ const styles = StyleSheet.create({
     minWidth: 64,
     maxWidth: 92,
     flexBasis: '22%',
+    alignSelf: 'flex-start',
     alignItems: 'center',
     gap: 3,
     padding: 6,
