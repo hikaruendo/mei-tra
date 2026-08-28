@@ -6,7 +6,7 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from '../useSoundEffects';
 
 const mockSetAudioModeAsync = jest.fn(async (_options: unknown) => undefined);
-const mockPlayers = Array.from({ length: 11 }, () => ({
+const mockPlayers = Array.from({ length: 10 }, () => ({
   play: jest.fn(),
   seekTo: jest.fn(async () => undefined),
   volume: 1,
@@ -158,15 +158,15 @@ describe('useSoundEffects', () => {
       await Promise.resolve();
     });
 
-    expect(mockPlayers[6].play).toHaveBeenCalledTimes(1);
-    expect(mockPlayers[6].volume).toBe(0.5);
+    expect(mockPlayers[5].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[5].volume).toBe(0.5);
     expect(mockPlayers[3].play).not.toHaveBeenCalled();
-    expect(mockPlayers[7].play).not.toHaveBeenCalled();
+    expect(mockPlayers[6].play).not.toHaveBeenCalled();
 
     await act(async () => renderer!.unmount());
   });
 
-  it('uses dedicated players for cancel and turn-transition sounds', async () => {
+  it('uses a dedicated player for cancellation sounds', async () => {
     let playEffect: (effect: SoundEffect) => void = () => undefined;
     let renderer: ReturnType<typeof TestRenderer.create>;
     await act(async () => {
@@ -177,14 +177,11 @@ describe('useSoundEffects', () => {
 
     await act(async () => {
       playEffect('cancel');
-      playEffect('turnTransition');
       await Promise.resolve();
     });
 
     expect(mockPlayers[4].play).toHaveBeenCalledTimes(1);
     expect(mockPlayers[4].volume).toBe(0.32);
-    expect(mockPlayers[5].play).toHaveBeenCalledTimes(1);
-    expect(mockPlayers[5].volume).toBe(0.3);
 
     await act(async () => renderer!.unmount());
   });
@@ -203,12 +200,12 @@ describe('useSoundEffects', () => {
       playEffect('resultNeutral');
       await Promise.resolve();
     });
+    expect(mockPlayers[7].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[7].volume).toBe(0.25);
     expect(mockPlayers[8].play).toHaveBeenCalledTimes(1);
     expect(mockPlayers[8].volume).toBe(0.25);
     expect(mockPlayers[9].play).toHaveBeenCalledTimes(1);
-    expect(mockPlayers[9].volume).toBe(0.25);
-    expect(mockPlayers[10].play).toHaveBeenCalledTimes(1);
-    expect(mockPlayers[10].volume).toBe(0.4);
+    expect(mockPlayers[9].volume).toBe(0.4);
     await act(async () => renderer!.unmount());
   });
 });

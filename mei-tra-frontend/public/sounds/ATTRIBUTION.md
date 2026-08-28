@@ -58,17 +58,6 @@ the Creative Commons 0 public-domain dedication.
   44.1 kHz / 128 kbps mono MP3
 - SHA-256: `d45b87196bed3c3d01c2fe0b9b1c70dfad53dfc35724bf9870201f864ed23a68`
 
-## `turn-transition.mp3`
-
-- Source: Derived from `cancel.mp3`, whose source is the former procedurally
-  generated Meitra card-selection tone; no external audio source
-- Derived: 2026-08-28
-- Processing: split the muted tone into two short pulses, raised the second
-  pulse to 115% of the source rate, staggered it by 72 ms, low-pass filtered
-  the pulses at 560 and 680 Hz, added short ending fades, reduced the mixed
-  result by 9 dB, limited it, and encoded it as a 44.1 kHz / 128 kbps mono MP3
-- SHA-256: `ebcfbc478cbbc1c614aac2e8242240d9b9a90c4aa55e8acbd5db2ddfd1c8c4dd`
-
 ## `victory.mp3`
 
 - Source: [Tada Fanfare F](https://freesound.org/people/plasterbrain/sounds/397354/)

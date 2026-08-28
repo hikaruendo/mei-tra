@@ -46,12 +46,10 @@ import {
 } from '@meitra/game-client/game-event-reducer';
 import {
   shouldPlayConfirmedNegriSound,
-  shouldPlayTurnTransitionSound,
   soundEffectForCancellation,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
   soundEffectForGameResultRole,
-  soundEffectForTurnTransition,
 } from '@meitra/game-client/sound-effects';
 import {
   buildGameResultSnapshot,
@@ -387,7 +385,6 @@ export function GameProvider({ children }: PropsWithChildren) {
   // Mirrors state.firstTurnReveal for the long-lived socket handlers, which
   // need it synchronously and would otherwise close over a stale value.
   const firstTurnRevealRef = useRef<MobileFirstTurnReveal | null>(null);
-  const visibleTurnSeatIdRef = useRef<string | null>(null);
   const gameResultTokenRef = useRef(0);
   const gameOverKeyRef = useRef<string | null>(null);
   const dealAnimationSequenceRef = useRef(0);
@@ -408,7 +405,6 @@ export function GameProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!state.game && !state.currentRoom) {
       gameEventStateRef.current = createEmptyGameEventState();
-      visibleTurnSeatIdRef.current = null;
     }
   }, [state.currentRoom, state.game]);
 
@@ -416,31 +412,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     const snapshot = stateRef.current;
     return resolveSeatId(snapshot.game, snapshot.currentRoom, user?.id);
   }, [user?.id]);
-
-  const commitVisibleTurn = useCallback(
-    (nextSeatId: string | null, playTransition = true) => {
-      const previousSeatId = visibleTurnSeatIdRef.current;
-      visibleTurnSeatIdRef.current = nextSeatId;
-      const snapshot = stateRef.current;
-      const viewerSeatId = resolveSeatId(
-        snapshot.game,
-        snapshot.currentRoom,
-        userRef.current?.id,
-      );
-      if (
-        playTransition &&
-        shouldPlayTurnTransitionSound(
-          previousSeatId,
-          nextSeatId,
-          viewerSeatId,
-          snapshot.game?.isSpectator ?? false,
-        )
-      ) {
-        playSoundEffect(soundEffectForTurnTransition());
-      }
-    },
-    [playSoundEffect],
-  );
 
   const emitAck = useCallback(
     <TEvent extends AckableClientEvent>(
@@ -684,10 +655,6 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'players', players: next.players });
       }
       const patch = toMobileGamePatch(next);
-      const visibleTurnSeatId = firstTurnRevealRef.current
-        ? null
-        : patch.currentTurnSeatId ?? null;
-      commitVisibleTurn(visibleTurnSeatId);
       dispatch({
         type: 'patchGame',
         // While the start reveal plays, hold the turn back so the animation is
@@ -757,10 +724,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       const snapshot = normalizeGameStatePayload(payload);
-      commitVisibleTurn(
-        firstTurnRevealRef.current ? null : snapshot.currentTurnSeatId,
-        false,
-      );
       dispatch({
         type: 'game',
         // The bootstrap snapshot right after game start already carries the
@@ -788,7 +751,6 @@ export function GameProvider({ children }: PropsWithChildren) {
         userRef.current?.id,
       );
       gameEventStateRef.current = createGameEventStateFromStartedGame(payload);
-      commitVisibleTurn(null, false);
       dispatch({
         type: 'game',
         game: createStartedGameSnapshot(
@@ -932,7 +894,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
       void roomStorage.clear();
-      commitVisibleTurn(null, false);
       dispatch({ type: stateRef.current.gameResult ? 'finishRoom' : 'resetRoom' });
       finishResyncFlight(undefined);
       if (payload?.code) {
@@ -945,7 +906,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('player-left', ({ seatId }) => {
       if (seatId === asSeatId(resolveCurrentSeatId() ?? '')) {
         void roomStorage.clear();
-        commitVisibleTurn(null, false);
         dispatch({ type: 'resetRoom' });
       }
     });
@@ -1040,7 +1000,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     };
   }, [
     authenticatedUserId,
-    commitVisibleTurn,
     finishResyncFlight,
     getAccessToken,
     hasSession,
@@ -1444,7 +1403,6 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'firstTurnReveal', reveal: null });
         // `update-turn` may arrive while the reveal hides the turn indicator.
         // After the reveal, show the latest turn received from the server.
-        commitVisibleTurn(gameEventStateRef.current.currentTurnSeatId);
         dispatch({
           type: 'patchGame',
           patch: {
@@ -1478,7 +1436,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       state,
       updateTeamNames,
       watchRoom,
-      commitVisibleTurn,
     ],
   );
 

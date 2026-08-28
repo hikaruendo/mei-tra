@@ -1,12 +1,10 @@
 import {
   shouldPlayCardSelectionSound,
   shouldPlayConfirmedNegriSound,
-  shouldPlayTurnTransitionSound,
   soundEffectForCancellation,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
   soundEffectForGameResultRole,
-  soundEffectForTurnTransition,
 } from '@meitra/game-client/sound-effects';
 
 import { WebSoundEffectsPlayer } from '@/lib/sound-effects';
@@ -38,15 +36,6 @@ describe('sound effect event mapping', () => {
     expect(shouldPlayCardSelectionSound('H-A', 'S-2')).toBe(true);
     expect(shouldPlayCardSelectionSound('H-A', 'H-A')).toBe(false);
     expect(shouldPlayCardSelectionSound('H-A', null)).toBe(false);
-  });
-
-  it('plays a turn sound only when the visible turn moves to another player', () => {
-    expect(soundEffectForTurnTransition()).toBe('turnTransition');
-    expect(shouldPlayTurnTransitionSound('seat-1', 'seat-2', 'seat-1', false)).toBe(true);
-    expect(shouldPlayTurnTransitionSound('seat-2', 'seat-2', 'seat-1', false)).toBe(false);
-    expect(shouldPlayTurnTransitionSound('seat-2', 'seat-1', 'seat-1', false)).toBe(false);
-    expect(shouldPlayTurnTransitionSound(null, 'seat-2', null, true)).toBe(true);
-    expect(shouldPlayTurnTransitionSound('seat-1', null, 'seat-1', false)).toBe(false);
   });
 
   it('plays a confirmed Negri sound only for the matching pending card', () => {
@@ -157,7 +146,7 @@ describe('WebSoundEffectsPlayer', () => {
         createAudioContext: () => context,
       });
       expect(() => player?.start()).not.toThrow();
-      expect(browserFetch).toHaveBeenCalledTimes(9);
+      expect(browserFetch).toHaveBeenCalledTimes(8);
     } finally {
       Object.defineProperty(window, 'fetch', {
         configurable: true,
@@ -212,7 +201,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.start();
     await flushAudioSetup();
 
-    expect(fetchImpl).toHaveBeenCalledTimes(9);
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
     expect(context.decodeAudioData).not.toHaveBeenCalled();
   });
 
@@ -241,7 +230,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.play('shuffle');
     player.play('victory');
 
-    expect(context.decodeAudioData).toHaveBeenCalledTimes(8);
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(7);
     expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 });

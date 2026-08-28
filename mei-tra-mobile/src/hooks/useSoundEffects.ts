@@ -10,7 +10,6 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 const CARD_PLAY_SOURCE = require('../../assets/sounds/card-play.mp3');
 const CARD_SELECT_SOURCE = require('../../assets/sounds/card-select.mp3');
 const CANCEL_SOURCE = require('../../assets/sounds/cancel.mp3');
-const TURN_TRANSITION_SOURCE = require('../../assets/sounds/turn-transition.mp3');
 const NEGRI_SOURCE = require('../../assets/sounds/negri.mp3');
 const SHUFFLE_SOURCE = require('../../assets/sounds/shuffle.mp3');
 const VICTORY_SOURCE = require('../../assets/sounds/victory.mp3');
@@ -33,7 +32,6 @@ export const useSoundEffects = (enabled: boolean) => {
   const cardPlayerC = useAudioPlayer(CARD_PLAY_SOURCE);
   const cardSelectPlayer = useAudioPlayer(CARD_SELECT_SOURCE);
   const cancelPlayer = useAudioPlayer(CANCEL_SOURCE);
-  const turnTransitionPlayer = useAudioPlayer(TURN_TRANSITION_SOURCE);
   const negriPlayer = useAudioPlayer(NEGRI_SOURCE);
   const shufflePlayer = useAudioPlayer(SHUFFLE_SOURCE);
   const victoryPlayer = useAudioPlayer(VICTORY_SOURCE);
@@ -43,7 +41,6 @@ export const useSoundEffects = (enabled: boolean) => {
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
     cardSelect: cardSelectPlayer,
     cancel: cancelPlayer,
-    turnTransition: turnTransitionPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
     victory: victoryPlayer,
@@ -58,7 +55,6 @@ export const useSoundEffects = (enabled: boolean) => {
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
     cardSelect: cardSelectPlayer,
     cancel: cancelPlayer,
-    turnTransition: turnTransitionPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
     victory: victoryPlayer,
@@ -117,11 +113,6 @@ export const useSoundEffects = (enabled: boolean) => {
 
     if (effect === 'cancel') {
       void replay(playersRef.current.cancel, 0.32);
-      return;
-    }
-
-    if (effect === 'turnTransition') {
-      void replay(playersRef.current.turnTransition, 0.3);
       return;
     }
 

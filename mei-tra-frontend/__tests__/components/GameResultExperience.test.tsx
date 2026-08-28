@@ -34,11 +34,14 @@ describe('GameResultExperience', () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it('moves from the reveal to a persistent result after 1.8 seconds', () => {
+  it('keeps the reveal visible for 2.5 seconds before showing the result', () => {
     render(<GameResultExperience result={result} onClose={jest.fn()} />);
     expect(screen.getByText('victory')).toBeInTheDocument();
     expect(screen.queryByText('finalResult')).not.toBeInTheDocument();
-    act(() => jest.advanceTimersByTime(GAME_RESULT_REVEAL_MS));
+    act(() => jest.advanceTimersByTime(GAME_RESULT_REVEAL_MS - 1));
+    expect(screen.getByText('victory')).toBeInTheDocument();
+    expect(screen.queryByText('finalResult')).not.toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(1));
     expect(screen.getByText('finalResult')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
