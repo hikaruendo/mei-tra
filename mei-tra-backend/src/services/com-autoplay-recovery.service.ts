@@ -13,8 +13,8 @@ import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
-const COM_AUTO_PLAY_INITIAL_DELAY_MS = 2_000;
-const COM_AUTO_PLAY_CONTINUE_DELAY_MS = 2_000;
+const COM_AUTO_PLAY_INITIAL_DELAY_MS = 1_500;
+const COM_AUTO_PLAY_CONTINUE_DELAY_MS = 1_500;
 const MAX_COM_AUTO_PLAY_RETRY_DELAY_MS = 60_000;
 
 export interface ComAutoPlayRecoveryHandlers {

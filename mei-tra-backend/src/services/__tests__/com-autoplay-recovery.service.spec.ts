@@ -85,7 +85,11 @@ describe('ComAutoPlayRecoveryService', () => {
     service.trigger('room-1', handlers);
     await flushPromises();
     roomService.getRoom.mockResolvedValue(null);
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_499);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
@@ -442,7 +446,7 @@ describe('ComAutoPlayRecoveryService', () => {
     await flushPromises();
 
     // The COM seat must stay silent while clients play the reveal, including
-    // the 2s initial auto-play delay that a plain trigger would start now.
+    // the 1.5s initial auto-play delay that a plain trigger would start now.
     await jest.advanceTimersByTimeAsync(4_000);
     await flushPromises();
     expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
