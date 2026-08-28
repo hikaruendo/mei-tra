@@ -89,6 +89,90 @@ describe('GameGateway COM recovery integration', () => {
     expect(trigger).toHaveBeenCalledWith('room-1', expect.anything());
   });
 
+  it.each([
+    {
+      action: 'declare blow',
+      configure: (gateway: GameGateway, execute: jest.Mock) => {
+        const testGateway = gateway as unknown as {
+          declareBlowUseCase: { execute: jest.Mock };
+        };
+        testGateway.declareBlowUseCase = { execute };
+      },
+      invoke: (gateway: GameGateway, client: Socket) =>
+        gateway.handleDeclareBlow(client, {
+          roomId: 'room-1',
+          declaration: { trumpType: 'tra', numberOfPairs: 1 },
+        }),
+    },
+    {
+      action: 'pass blow',
+      configure: (gateway: GameGateway, execute: jest.Mock) => {
+        const testGateway = gateway as unknown as {
+          passBlowUseCase: { execute: jest.Mock };
+        };
+        testGateway.passBlowUseCase = { execute };
+      },
+      invoke: (gateway: GameGateway, client: Socket) =>
+        gateway.handlePassBlow(client, { roomId: 'room-1' }),
+    },
+  ])(
+    'holds COM recovery until delayed events finish after $action',
+    async ({ configure, invoke }) => {
+      const gateway = createGateway();
+      const delayedEvents = [
+        {
+          scope: 'room' as const,
+          roomId: 'room-1',
+          event: 'update-phase',
+          payload: { phase: 'play' },
+          delayMs: 3_000,
+        },
+      ];
+      const execute = jest.fn().mockResolvedValue({
+        success: true,
+        events: [],
+        delayedEvents,
+      });
+      const trigger = jest.fn();
+      const triggerAfterDelay = jest.fn();
+      const testGateway = gateway as unknown as {
+        activityTracker: { recordActivity: jest.Mock };
+        spectatorGatewayEffectsService: { rejectAction: jest.Mock };
+        dispatchGameplayEvents: jest.Mock;
+        comAutoPlayRecoveryService: {
+          trigger: jest.Mock;
+          triggerAfterDelay: jest.Mock;
+        };
+      };
+
+      configure(gateway, execute);
+      testGateway.activityTracker = { recordActivity: jest.fn() };
+      testGateway.spectatorGatewayEffectsService = {
+        rejectAction: jest.fn().mockReturnValue(false),
+      };
+      testGateway.dispatchGameplayEvents = jest.fn();
+      testGateway.comAutoPlayRecoveryService = {
+        trigger,
+        triggerAfterDelay,
+      };
+
+      const client = {
+        id: 'socket-1',
+        data: { user: { id: 'user-1' } },
+        emit: jest.fn(),
+      } as unknown as Socket;
+
+      await invoke(gateway, client);
+
+      expect(triggerAfterDelay).toHaveBeenCalledWith(
+        'room-1',
+        expect.anything(),
+        3_100,
+      );
+      expect(trigger).not.toHaveBeenCalled();
+    },
+  );
+
   it('delegates COM recovery after an active-game reconnection', async () => {
     const gateway = createGateway();
     const testGateway = gateway as unknown as ActiveReconnectGatewayHarness;

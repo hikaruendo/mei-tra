@@ -85,7 +85,11 @@ describe('ComAutoPlayRecoveryService', () => {
     service.trigger('room-1', handlers);
     await flushPromises();
     roomService.getRoom.mockResolvedValue(null);
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_499);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
@@ -179,7 +183,11 @@ describe('ComAutoPlayRecoveryService', () => {
 
     expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_499);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
@@ -219,17 +227,116 @@ describe('ComAutoPlayRecoveryService', () => {
 
     expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_500);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
 
-    await jest.advanceTimersByTimeAsync(7_000);
+    await jest.advanceTimersByTimeAsync(4_999);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
     service.clearRoom('room-1');
     loggerError.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it('uses only one 1.5 second delay between consecutive COM moves', async () => {
+    jest.useFakeTimers();
+    const { service, roomService, comAutoPlayUseCase, handlers } =
+      createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'play',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute
+      .mockResolvedValueOnce({
+        success: true,
+        events: [],
+        shouldContinue: true,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        events: [],
+        shouldContinue: false,
+      });
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(1_500);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(1_499);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(1);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
+
+    service.clearRoom('room-1');
+    jest.useRealTimers();
+  });
+
+  it('does not add a think delay after the field reveal delay', async () => {
+    jest.useFakeTimers();
+    const {
+      service,
+      roomService,
+      comAutoPlayUseCase,
+      completeFieldUseCase,
+      handlers,
+    } = createService();
+    const field = {
+      cards: ['A♠', 'K♠', 'Q♠', 'J♠'],
+      playedBySeatIds: ['p1', 'p2', 'p3', 'com-1'].map(asSeatId),
+      baseCard: 'A♠',
+      dealerSeatId: asSeatId('p1'),
+      isComplete: true,
+    };
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'play',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    completeFieldUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+    });
+    comAutoPlayUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+      shouldContinue: false,
+    });
+
+    service.scheduleFieldCompletion(
+      { roomId: 'room-1', delayMs: 3_000, field },
+      handlers,
+    );
+
+    await jest.advanceTimersByTimeAsync(2_999);
+    await flushPromises();
+    expect(completeFieldUseCase.execute).not.toHaveBeenCalled();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
+    await flushPromises();
+    expect(completeFieldUseCase.execute).toHaveBeenCalledTimes(1);
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+
+    service.clearRoom('room-1');
     jest.useRealTimers();
   });
 
@@ -297,7 +404,7 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     await flushPromises();
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_500);
     await flushPromises();
 
     // Round transition scheduled a 3100ms continuation so COM cannot act before
@@ -307,13 +414,13 @@ describe('ComAutoPlayRecoveryService', () => {
     // A host reconnect re-triggers recovery mid-transition.
     service.trigger('room-1', handlers);
     await flushPromises();
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(3_099);
     await flushPromises();
 
     // The reconnect must not have replaced the pacing delay with a shorter one.
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
 
-    await jest.advanceTimersByTimeAsync(5_000);
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(2);
@@ -351,7 +458,7 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     await flushPromises();
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_500);
     await flushPromises();
 
     // Failure scheduled a 5000ms backoff.
@@ -359,7 +466,7 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     await flushPromises();
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_500);
     await flushPromises();
 
     // Reconnect supersedes the backoff and recovers on the shorter initial delay.
@@ -399,7 +506,7 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.trigger('room-1', handlers);
     await flushPromises();
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_500);
     await flushPromises();
     service.clearRoom('room-1');
     finishRun?.({
@@ -441,8 +548,7 @@ describe('ComAutoPlayRecoveryService', () => {
     service.triggerAfterDelay('room-1', handlers, 4_600);
     await flushPromises();
 
-    // The COM seat must stay silent while clients play the reveal, including
-    // the 2s initial auto-play delay that a plain trigger would start now.
+    // The COM seat must stay silent while clients play the reveal.
     await jest.advanceTimersByTimeAsync(4_000);
     await flushPromises();
     expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
@@ -452,7 +558,11 @@ describe('ComAutoPlayRecoveryService', () => {
     await flushPromises();
     expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(3_000);
+    await jest.advanceTimersByTimeAsync(599);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
 
@@ -488,7 +598,11 @@ describe('ComAutoPlayRecoveryService', () => {
     await flushPromises();
     expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(3_000);
+    await jest.advanceTimersByTimeAsync(599);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
 
@@ -496,7 +610,7 @@ describe('ComAutoPlayRecoveryService', () => {
     jest.useRealTimers();
   });
 
-  it('triggers immediately when no reveal delay is requested', async () => {
+  it('uses the regular think delay when no reveal delay is requested', async () => {
     jest.useFakeTimers();
     const { service, roomService, comAutoPlayUseCase, handlers } =
       createService();
@@ -516,7 +630,11 @@ describe('ComAutoPlayRecoveryService', () => {
 
     service.triggerAfterDelay('room-1', handlers, 0);
     await flushPromises();
-    await jest.advanceTimersByTimeAsync(2_000);
+    await jest.advanceTimersByTimeAsync(1_499);
+    await flushPromises();
+    expect(comAutoPlayUseCase.execute).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
     await flushPromises();
 
     expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);

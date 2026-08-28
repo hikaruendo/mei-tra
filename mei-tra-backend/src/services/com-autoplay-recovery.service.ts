@@ -13,8 +13,8 @@ import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
-const COM_AUTO_PLAY_INITIAL_DELAY_MS = 2_000;
-const COM_AUTO_PLAY_CONTINUE_DELAY_MS = 2_000;
+const COM_AUTO_PLAY_INITIAL_DELAY_MS = 1_500;
+const COM_AUTO_PLAY_CONTINUE_DELAY_MS = 1_500;
 const MAX_COM_AUTO_PLAY_RETRY_DELAY_MS = 60_000;
 
 export interface ComAutoPlayRecoveryHandlers {
@@ -40,7 +40,7 @@ interface PendingTrigger {
 export class ComAutoPlayRecoveryService {
   private readonly logger = new Logger(ComAutoPlayRecoveryService.name);
   private readonly activeRooms = new Set<string>();
-  private readonly pendingReruns = new Set<string>();
+  private readonly pendingReruns = new Map<string, boolean>();
   private readonly retryTimeouts = new Map<string, PendingTrigger>();
   private readonly fieldCompletionTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly retryAttempts = new Map<string, number>();
@@ -56,8 +56,19 @@ export class ComAutoPlayRecoveryService {
   ) {}
 
   trigger(roomId: string, handlers: ComAutoPlayRecoveryHandlers): void {
+    this.triggerInternal(roomId, handlers, false);
+  }
+
+  private triggerInternal(
+    roomId: string,
+    handlers: ComAutoPlayRecoveryHandlers,
+    pacingDelayElapsed: boolean,
+  ): void {
     if (this.activeRooms.has(roomId)) {
-      this.pendingReruns.add(roomId);
+      this.pendingReruns.set(
+        roomId,
+        (this.pendingReruns.get(roomId) ?? false) || pacingDelayElapsed,
+      );
       return;
     }
 
@@ -84,7 +95,11 @@ export class ComAutoPlayRecoveryService {
         !recoveredInterruptedProgress &&
         this.isCurrentGeneration(roomId, generation)
       ) {
-        this.scheduleInitialAutoPlay(roomId, handlers);
+        if (pacingDelayElapsed) {
+          await this.runAutoPlayStep(roomId, handlers, generation);
+        } else {
+          this.scheduleInitialAutoPlay(roomId, handlers);
+        }
       }
     })()
       .catch((error) =>
@@ -98,8 +113,11 @@ export class ComAutoPlayRecoveryService {
       )
       .finally(() => {
         this.activeRooms.delete(roomId);
-        if (this.pendingReruns.delete(roomId)) {
-          this.trigger(roomId, handlers);
+        if (this.pendingReruns.has(roomId)) {
+          const pendingPacingDelayElapsed =
+            this.pendingReruns.get(roomId) ?? false;
+          this.pendingReruns.delete(roomId);
+          this.triggerInternal(roomId, handlers, pendingPacingDelayElapsed);
         }
       });
   }
@@ -149,6 +167,7 @@ export class ComAutoPlayRecoveryService {
             handlers,
             generation,
             trigger.initiatingActorId,
+            true,
           ),
         )
         .catch((error) =>
@@ -208,6 +227,8 @@ export class ComAutoPlayRecoveryService {
           response,
           handlers,
           generation,
+          undefined,
+          false,
         );
       }
       return true;
@@ -278,6 +299,7 @@ export class ComAutoPlayRecoveryService {
     handlers: ComAutoPlayRecoveryHandlers,
     generation: number,
     initiatingActorId?: string,
+    pacingDelayElapsed = false,
   ): Promise<void> {
     if (!this.isCurrentGeneration(roomId, generation)) {
       return;
@@ -307,7 +329,7 @@ export class ComAutoPlayRecoveryService {
       return;
     }
 
-    this.trigger(roomId, handlers);
+    this.triggerInternal(roomId, handlers, pacingDelayElapsed);
   }
 
   private getMaxEventDelay(
@@ -393,7 +415,7 @@ export class ComAutoPlayRecoveryService {
       if (!this.isCurrentGeneration(roomId, generation)) {
         return;
       }
-      this.trigger(roomId, handlers);
+      this.triggerInternal(roomId, handlers, true);
     }, delayMs);
     this.retryTimeouts.set(roomId, { timeout, kind });
   }

@@ -128,15 +128,14 @@ const BEATS: Record<JankenHand, JankenHand> = {
 };
 
 // The chant marches at 60 BPM — one beat per second, like calling the janken
-// out loud — and the result holds longest for reading time. The script may
-// outlast the server's update-turn delay — the same-seat rebroadcast does not
-// abort the reveal — but it must end before COM's earliest first action
-// (delay + pacing + COM think time).
+// out loud — and the result holds longest for reading time. The reveal itself
+// is the COM pacing delay at game start, so it must finish before the server's
+// delayed turn event plus pacing margin elapses.
 export const JANKEN_STEP_DURATION_MS = {
   chant: 1000,
   ready: 1000,
   showdown: 1000,
-  result: 3000,
+  result: 2000,
 } as const;
 
 const STEP_DURATION_MS = JANKEN_STEP_DURATION_MS;

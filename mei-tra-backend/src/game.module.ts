@@ -10,7 +10,6 @@ import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
 import { ComPlayerService } from './services/com-player.service';
 import { ComStrategyService } from './services/com-strategy.service';
-import { ComAutoPlayService } from './services/com-autoplay.service';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social.module';
@@ -147,11 +146,6 @@ import { AccountActionGateService } from './services/account-action-gate.service
     {
       provide: 'IComStrategyService',
       useExisting: ComStrategyService,
-    },
-    ComAutoPlayService,
-    {
-      provide: 'IComAutoPlayService',
-      useExisting: ComAutoPlayService,
     },
     {
       provide: 'IJoinRoomUseCase',
