@@ -1,4 +1,4 @@
-export type SoundEffect = 'cardPlay' | 'negri' | 'shuffle';
+export type SoundEffect = 'cardPlay' | 'cardSelect' | 'negri' | 'shuffle';
 
 export type SoundEffectGameEvent =
   | 'card-played'
@@ -20,6 +20,8 @@ const SOUND_EFFECT_BY_EVENT: Record<SoundEffectGameEvent, SoundEffect> = {
 export const soundEffectForGameEvent = (
   event: SoundEffectGameEvent,
 ): SoundEffect => SOUND_EFFECT_BY_EVENT[event];
+
+export const soundEffectForCardSelection = (): SoundEffect => 'cardSelect';
 
 export const shouldPlayCardSelectionSound = (
   currentCard: string | null,

@@ -39,7 +39,7 @@ export default function RoomScreen() {
     declareBlow,
     passBlow,
     selectNegri,
-    playCardInteractionSound,
+    playCardSelectionSound,
     playCard,
     selectBaseSuit,
     removePlayer,
@@ -162,7 +162,7 @@ export default function RoomScreen() {
           onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
-          onCardInteraction={playCardInteractionSound}
+          onCardSelection={playCardSelectionSound}
           history={history}
           roomId={resolvedRoomId}
           firstTurnReveal={firstTurnReveal}

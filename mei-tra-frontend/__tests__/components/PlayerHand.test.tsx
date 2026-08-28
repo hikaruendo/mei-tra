@@ -282,7 +282,7 @@ describe('PlayerHand', () => {
   });
 
   it('reorders the current player hand locally with pointer drag', () => {
-    const onCardInteraction = jest.fn();
+    const onCardSelection = jest.fn();
     const onHandReorder = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
@@ -290,7 +290,7 @@ describe('PlayerHand', () => {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
       },
-      onCardInteraction,
+      onCardSelection,
       onHandReorder,
     });
 
@@ -308,7 +308,7 @@ describe('PlayerHand', () => {
       'H-A',
     ]);
     expect(onHandReorder).toHaveBeenCalledTimes(1);
-    expect(onCardInteraction).not.toHaveBeenCalled();
+    expect(onCardSelection).not.toHaveBeenCalled();
 
     fireEvent.pointerUp(targetCard, { clientX: 170 });
     expect(onHandReorder).toHaveBeenCalledTimes(1);
@@ -376,7 +376,7 @@ describe('PlayerHand', () => {
   });
 
   it('plays only when selecting a new card, not when cancelling', () => {
-    const onCardInteraction = jest.fn();
+    const onCardSelection = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
       whoseTurn: 'player-2',
@@ -384,18 +384,18 @@ describe('PlayerHand', () => {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
       },
-      onCardInteraction,
+      onCardSelection,
     });
 
     const cards = screen.getAllByTestId('card-front');
     fireEvent.click(cards[0].parentElement as HTMLElement);
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onCardSelection).toHaveBeenCalledTimes(1);
 
     fireEvent.click(cards[1].parentElement as HTMLElement);
-    expect(onCardInteraction).toHaveBeenCalledTimes(2);
+    expect(onCardSelection).toHaveBeenCalledTimes(2);
 
     fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
-    expect(onCardInteraction).toHaveBeenCalledTimes(2);
+    expect(onCardSelection).toHaveBeenCalledTimes(2);
   });
 
   it('shows an insertion marker on the target card while reordering', () => {

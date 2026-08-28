@@ -2,12 +2,14 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 
 const SOUND_URLS: Record<SoundEffect, string> = {
   cardPlay: '/sounds/card-play.mp3',
+  cardSelect: '/sounds/card-select.mp3',
   negri: '/sounds/negri.mp3',
   shuffle: '/sounds/shuffle.mp3',
 };
 
 const SOUND_VOLUMES: Record<SoundEffect, number> = {
   cardPlay: 0.55,
+  cardSelect: 0.42,
   negri: 0.5,
   shuffle: 0.45,
 };

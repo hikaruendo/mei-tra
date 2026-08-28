@@ -80,6 +80,7 @@ import type {
 } from '@meitra/game-client/deal-animation';
 import {
   shouldPlayConfirmedNegriSound,
+  soundEffectForCardSelection,
   soundEffectForGameEvent,
 } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from './useSoundEffects';
@@ -215,8 +216,8 @@ export const useGame = () => {
   const { user } = useAuth();
   const preferences = normalizeUserPreferences(user?.profile?.preferences);
   const playSoundEffect = useSoundEffects(preferences.sound);
-  const playCardInteractionSound = useCallback(() => {
-    playSoundEffect('cardPlay');
+  const playCardSelectionSound = useCallback(() => {
+    playSoundEffect(soundEffectForCardSelection());
   }, [playSoundEffect]);
   const playHandReorderSound = useCallback(() => {
     playSoundEffect('negri');
@@ -1436,7 +1437,7 @@ export const useGame = () => {
     firstTurnReveal,
     clearFirstTurnReveal,
     dealAnimationCue,
-    playCardInteractionSound,
+    playCardSelectionSound,
     playHandReorderSound,
   };
 };

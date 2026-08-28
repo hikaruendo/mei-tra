@@ -123,13 +123,13 @@ const game: MobileGameSnapshot = {
   idleSeatIds: [],
 };
 
-describe('GameBoard card interaction sounds', () => {
+describe('GameBoard card selection sounds', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   it('plays for a new selection or a different card, but not deselection', async () => {
-    const onCardInteraction = jest.fn();
+    const onCardSelection = jest.fn();
     let renderer!: {
       root: {
         findByProps: (props: Record<string, unknown>) => {
@@ -145,7 +145,7 @@ describe('GameBoard card interaction sounds', () => {
           game={game}
           gameOver={null}
           isHost
-          onCardInteraction={onCardInteraction}
+          onCardSelection={onCardSelection}
           onCloseGameOver={jest.fn()}
           onDeclare={jest.fn()}
           onLeave={jest.fn()}
@@ -166,18 +166,18 @@ describe('GameBoard card interaction sounds', () => {
     await act(async () => {
       findCard('S-3').props.onPress?.();
     });
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onCardSelection).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       findCard('S-3').props.onPress?.();
     });
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onCardSelection).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       findCard('S-3').props.onPress?.();
       findCard('H-4').props.onPress?.();
     });
-    expect(onCardInteraction).toHaveBeenCalledTimes(3);
+    expect(onCardSelection).toHaveBeenCalledTimes(3);
 
     await act(async () => {
       renderer.unmount();
