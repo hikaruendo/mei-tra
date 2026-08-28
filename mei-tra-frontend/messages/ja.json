@@ -349,7 +349,7 @@
       "resultKicker": "RESULT",
       "finalResult": "最終結果",
       "victory": "勝利",
-      "defeat": "惜敗",
+      "defeat": "敗北",
       "spectatorVictory": "{team}チームの勝利",
       "winnerBadge": "WINNER",
       "points": "{score} pt",

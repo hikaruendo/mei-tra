@@ -4,12 +4,14 @@ import styles from './index.module.scss';
 
 interface PlayAndCancelBtnProps {
   setSelectedCard: (card: string | null) => void;
+  onCancel: () => void;
   onClick: () => void;
   buttonText: string;
 }
 
 export const PlayAndCancelBtn: React.FC<PlayAndCancelBtnProps> = ({
   setSelectedCard,
+  onCancel,
   onClick,
   buttonText,
 }) => {
@@ -19,7 +21,10 @@ export const PlayAndCancelBtn: React.FC<PlayAndCancelBtnProps> = ({
       <div className={styles.confirmationButtons}>
         <button
           className={styles.cancelButton}
-          onClick={() => setSelectedCard(null)}
+          onClick={() => {
+            onCancel();
+            setSelectedCard(null);
+          }}
         >
           {t('cancel')}
         </button>

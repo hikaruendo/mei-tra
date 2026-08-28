@@ -37,12 +37,37 @@ the Creative Commons 0 public-domain dedication.
 
 ## `card-select.mp3`
 
-- Source: Procedurally generated for Meitra; no external audio source
-- Generated: 2026-08-28
-- Processing: mixed fading 175 Hz and 285 Hz sine tones with a short pink-noise
-  transient, high-pass filtered the transient at 110 Hz, low-pass filtered the
-  mix at 720 Hz, limited the peak, and encoded as 44.1 kHz / 128 kbps mono MP3
-- SHA-256: `163660dc14f0afd468fe011198fc8d91573d0eca19f59a53d304e9fd7c901fcb`
+- Source: Derived from `card-play.mp3` ("Playing Card Deal Variation 2" by el_boss)
+- URL: https://freesound.org/people/el_boss/sounds/571576/
+- License: Creative Commons 0
+- Retrieved: 2026-08-27
+- Derived: 2026-08-28
+- Processing: isolated the card impact, lowered its pitch to 84% of the
+  processed source rate, shortened it to 130 ms, low-pass filtered it at 2.6
+  kHz, reduced it by 6 dB, added short fades, and encoded it as a 44.1 kHz /
+  128 kbps mono MP3
+- SHA-256: `e5aa7237744416d703ac5af0cfb10ee69463a3d12a87f5331fef1e2f1dbc3ae9`
+
+## `cancel.mp3`
+
+- Source: Derived from the former procedurally generated Meitra card-selection
+  tone; no external audio source
+- Derived: 2026-08-28
+- Processing: lowered its pitch to 82% of the source rate, low-pass filtered it
+  at 520 Hz, reduced it by 8 dB, added a 65 ms ending fade, and encoded it as a
+  44.1 kHz / 128 kbps mono MP3
+- SHA-256: `d45b87196bed3c3d01c2fe0b9b1c70dfad53dfc35724bf9870201f864ed23a68`
+
+## `turn-transition.mp3`
+
+- Source: Derived from `cancel.mp3`, whose source is the former procedurally
+  generated Meitra card-selection tone; no external audio source
+- Derived: 2026-08-28
+- Processing: split the muted tone into two short pulses, raised the second
+  pulse to 115% of the source rate, staggered it by 72 ms, low-pass filtered
+  the pulses at 560 and 680 Hz, added short ending fades, reduced the mixed
+  result by 9 dB, limited it, and encoded it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `ebcfbc478cbbc1c614aac2e8242240d9b9a90c4aa55e8acbd5db2ddfd1c8c4dd`
 
 ## `victory.mp3`
 
@@ -52,8 +77,9 @@ the Creative Commons 0 public-domain dedication.
 - License: Creative Commons 0 (CC0)
 - Processing: removed leading and trailing silence, mixed the stereo recording
   down to mono, normalized it to -16 LUFS / -1.5 dBTP, added a short ending
-  fade, and encoded it as a 44.1 kHz / 128 kbps mono MP3
-- SHA-256: `e88294b37cb6a3718a093e61c9d54d44d9af60bc1f96a09ea0e7520d20ad7b1b`
+  fade, reduced the finished asset by another 9.5 dB, and encoded it as a 44.1
+  kHz / 128 kbps mono MP3
+- SHA-256: `13ddd9c56e08a1aacd1e7e4c2495ac0376a85813c25376a7ac6e5fa32b9fea66`
 
 ## `defeat.mp3`
 
@@ -63,8 +89,9 @@ the Creative Commons 0 public-domain dedication.
 - License: Creative Commons 0 (CC0)
 - Processing: removed leading silence, shortened the descending trumpet phrase,
   mixed it down to mono, normalized it to -20 LUFS / -2 dBTP, added a short
-  ending fade, and encoded it as a 44.1 kHz / 128 kbps mono MP3
-- SHA-256: `2470942d56e269c3d5f8ec0918a3119064e6ccb67557fa9add38d56abeb1f8dd`
+  ending fade, reduced it by another 6.7 dB to match the adjusted victory
+  asset, and encoded it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `ce59764594abf37399b26cb25fd4e0e65c06930f67c3854b15fa956e1811ab48`
 
 ## `result-neutral.mp3`
 

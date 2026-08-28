@@ -82,14 +82,19 @@ jest.mock('@/components/game/PlayAndCancelBtn', () => ({
   PlayAndCancelBtn: ({
     buttonText,
     setSelectedCard,
+    onCancel,
     onClick,
   }: {
     buttonText: string;
     setSelectedCard: (card: string | null) => void;
+    onCancel: () => void;
     onClick: () => void;
   }) => (
     <>
-      <button onClick={() => setSelectedCard(null)}>cancel</button>
+      <button onClick={() => {
+        onCancel();
+        setSelectedCard(null);
+      }}>cancel</button>
       <button onClick={onClick}>{buttonText}</button>
     </>
   ),
@@ -377,6 +382,7 @@ describe('PlayerHand', () => {
 
   it('plays only when selecting a new card, not when cancelling', () => {
     const onCardSelection = jest.fn();
+    const onCancel = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
       whoseTurn: 'player-2',
@@ -385,6 +391,7 @@ describe('PlayerHand', () => {
         hand: ['H-A', 'S-2'],
       },
       onCardSelection,
+      onCancel,
     });
 
     const cards = screen.getAllByTestId('card-front');
@@ -396,6 +403,7 @@ describe('PlayerHand', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
     expect(onCardSelection).toHaveBeenCalledTimes(2);
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   it('shows an insertion marker on the target card while reordering', () => {

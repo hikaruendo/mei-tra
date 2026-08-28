@@ -385,6 +385,40 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('sounds once when the visible turn moves to another player', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+    await act(async () => {
+      mockSocket.trigger('game-state', gameState);
+      await flushPromises();
+    });
+    mockPlaySoundEffect.mockClear();
+
+    await act(async () => {
+      mockSocket.trigger('update-turn', asSeatId('player-2'));
+      mockSocket.trigger('update-turn', asSeatId('player-2'));
+      await flushPromises();
+    });
+    expect(screen.latestGame.game?.currentTurnSeatId).toBe('player-2');
+    expect(mockPlaySoundEffect.mock.calls).toEqual([['turnTransition']]);
+
+    await act(async () => {
+      mockSocket.trigger('update-turn', asSeatId('player-1'));
+      await flushPromises();
+    });
+    expect(mockPlaySoundEffect.mock.calls).toEqual([['turnTransition']]);
+
+    await act(async () => {
+      mockSocket.trigger('game-state', {
+        ...gameState,
+        currentTurnSeatId: asSeatId('player-2'),
+      });
+      await flushPromises();
+    });
+    expect(mockPlaySoundEffect.mock.calls).toEqual([['turnTransition']]);
+    await screen.unmount();
+  });
+
   it('plays the confirmed Negri sound only for the client that selected it', async () => {
     const screen = await renderProvider();
     const gameState = createGameState();

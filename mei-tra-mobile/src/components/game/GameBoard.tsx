@@ -58,6 +58,7 @@ interface GameBoardProps {
   onPass: () => void;
   onSelectNegri: (card: string) => void;
   onCardSelection?: () => void;
+  onCancel?: () => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
   onRemovePlayer: (seatId: string) => void;
@@ -78,6 +79,7 @@ export function GameBoard({
   onPass,
   onSelectNegri,
   onCardSelection = () => undefined,
+  onCancel = () => undefined,
   onPlayCard,
   onSelectBaseSuit,
   onRemovePlayer,
@@ -643,7 +645,10 @@ export function GameBoard({
                     on the outside, the primary action under the thumb. */}
                 <Button
                   disabled={actionsDisabled || Boolean(pendingAction)}
-                  onPress={() => setSelectedCard(null)}
+                  onPress={() => {
+                    onCancel();
+                    setSelectedCard(null);
+                  }}
                   style={styles.actionButton}
                   variant="secondary"
                 >

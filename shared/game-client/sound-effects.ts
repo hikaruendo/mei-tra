@@ -1,6 +1,8 @@
 export type SoundEffect =
   | "cardPlay"
   | "cardSelect"
+  | "cancel"
+  | "turnTransition"
   | "negri"
   | "shuffle"
   | "victory"
@@ -30,6 +32,11 @@ export const soundEffectForGameEvent = (
 
 export const soundEffectForCardSelection = (): SoundEffect => "cardSelect";
 
+export const soundEffectForCancellation = (): SoundEffect => "cancel";
+
+export const soundEffectForTurnTransition = (): SoundEffect =>
+  "turnTransition";
+
 export const soundEffectForGameResultRole = (
   role: "winner" | "loser" | "spectator",
 ): SoundEffect => {
@@ -42,6 +49,16 @@ export const shouldPlayCardSelectionSound = (
   currentCard: string | null,
   nextCard: string | null,
 ): boolean => nextCard !== null && nextCard !== currentCard;
+
+export const shouldPlayTurnTransitionSound = (
+  previousSeatId: string | null,
+  nextSeatId: string | null,
+  viewerSeatId: string | null,
+  isSpectator: boolean,
+): boolean =>
+  nextSeatId !== null &&
+  nextSeatId !== previousSeatId &&
+  (isSpectator || (viewerSeatId !== null && nextSeatId !== viewerSeatId));
 
 export const shouldPlayConfirmedNegriSound = (
   pendingCard: string | null,

@@ -80,9 +80,12 @@ import type {
 } from '@meitra/game-client/deal-animation';
 import {
   shouldPlayConfirmedNegriSound,
+  shouldPlayTurnTransitionSound,
+  soundEffectForCancellation,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
   soundEffectForGameResultRole,
+  soundEffectForTurnTransition,
 } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from './useSoundEffects';
 import {
@@ -225,6 +228,9 @@ export const useGame = () => {
   const playCardSelectionSound = useCallback(() => {
     playSoundEffect(soundEffectForCardSelection());
   }, [playSoundEffect]);
+  const playCancelSound = useCallback(() => {
+    playSoundEffect(soundEffectForCancellation());
+  }, [playSoundEffect]);
   const playHandReorderSound = useCallback(() => {
     playSoundEffect('negri');
   }, [playSoundEffect]);
@@ -246,6 +252,28 @@ export const useGame = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
+  const visibleTurnSeatIdRef = useRef<string | null>(null);
+  const viewerSeatIdRef = useRef<string | null>(null);
+  const isSpectatorRef = useRef(false);
+  const commitVisibleTurn = useCallback(
+    (seatId: string | null, playTransition = true) => {
+      const previousSeatId = visibleTurnSeatIdRef.current;
+      visibleTurnSeatIdRef.current = seatId;
+      setWhoseTurn(seatId);
+      if (
+        playTransition &&
+        shouldPlayTurnTransitionSound(
+          previousSeatId,
+          seatId,
+          viewerSeatIdRef.current,
+          isSpectatorRef.current,
+        )
+      ) {
+        playSoundEffect(soundEffectForTurnTransition());
+      }
+    },
+    [playSoundEffect],
+  );
   // Set only by the live 'game-started' event; a reload starts it null, so a
   // reconnect restores through the snapshot without replaying the reveal.
   const [firstTurnReveal, setFirstTurnReveal] =
@@ -267,8 +295,8 @@ export const useGame = () => {
     updateFirstTurnReveal(null);
     // `update-turn` may arrive while the reveal hides the turn indicator.
     // After the reveal, show the latest turn received from the server.
-    setWhoseTurn(gameEventStateRef.current.currentTurnSeatId);
-  }, [updateFirstTurnReveal]);
+    commitVisibleTurn(gameEventStateRef.current.currentTurnSeatId);
+  }, [commitVisibleTurn, updateFirstTurnReveal]);
   const startDealAnimation = useCallback(
     (event: DealEvent, playerContracts: readonly PlayerContract[]) => {
       dealAnimationSequenceRef.current += 1;
@@ -336,6 +364,8 @@ export const useGame = () => {
   const [currentHostSeatId, setCurrentHostSeatId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
+  viewerSeatIdRef.current = currentSeatId;
+  isSpectatorRef.current = isSpectator;
   const [pointsToWin, setPointsToWin] = useState<number>(0);
   const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idleSeatIds, setIdleSeatIds] = useState<string[]>([]);
@@ -370,7 +400,7 @@ export const useGame = () => {
     setCurrentField(null);
     setCompletedFields([]);
     setCurrentTrump(null);
-    setWhoseTurn(null);
+    commitVisibleTurn(null, false);
     firstTurnRevealRef.current = null;
     setFirstTurnReveal(null);
     setDealAnimationCue(null);
@@ -383,7 +413,7 @@ export const useGame = () => {
     setPointsToWin(0);
     setPaused(false);
     sessionStorage.removeItem('roomId');
-  }, []);
+  }, [commitVisibleTurn]);
 
   const getTeamLabel = useCallback(
     (team: Team) =>
@@ -571,8 +601,14 @@ export const useGame = () => {
      * reserving animation time for. `clearFirstTurnReveal` applies the seat
      * once the animation ends.
      */
-    const commitTurn = (seatId: string | null) => {
-      setWhoseTurn(firstTurnRevealRef.current ? null : seatId);
+    const commitTurn = (
+      seatId: string | null,
+      playTransition = true,
+    ) => {
+      commitVisibleTurn(
+        firstTurnRevealRef.current ? null : seatId,
+        playTransition,
+      );
     };
 
     const commitGameEventState = (
@@ -741,7 +777,7 @@ export const useGame = () => {
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setRevealedAgari(syncedRevealedAgari ?? null);
-        commitTurn(currentTurnSeatId);
+        commitTurn(currentTurnSeatId, false);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
         setCurrentHighestDeclaration(
@@ -873,7 +909,7 @@ export const useGame = () => {
         // The server holds `update-turn` back for the reveal, so clear any turn
         // left over from a previous game and then either animate or, when the
         // reveal is off, apply the turn now instead of idling for the delay.
-        setWhoseTurn(null);
+        commitVisibleTurn(null, false);
         // The payload array is the server roster order, i.e. blow order —
         // the merged local players state may be ordered differently.
         const lastBlowSeatId = currentTurnSeatId
@@ -1238,6 +1274,7 @@ export const useGame = () => {
     t,
     tStatus,
     updateFirstTurnReveal,
+    commitVisibleTurn,
     startDealAnimation,
     playSoundEffect,
     user?.id,
@@ -1448,6 +1485,7 @@ export const useGame = () => {
     clearFirstTurnReveal,
     dealAnimationCue,
     playCardSelectionSound,
+    playCancelSound,
     playHandReorderSound,
   };
 };

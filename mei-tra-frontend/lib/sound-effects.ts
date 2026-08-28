@@ -3,6 +3,8 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 const SOUND_URLS: Record<SoundEffect, string> = {
   cardPlay: '/sounds/card-play.mp3',
   cardSelect: '/sounds/card-select.mp3',
+  cancel: '/sounds/cancel.mp3',
+  turnTransition: '/sounds/turn-transition.mp3',
   negri: '/sounds/negri.mp3',
   shuffle: '/sounds/shuffle.mp3',
   victory: '/sounds/victory.mp3',
@@ -13,10 +15,12 @@ const SOUND_URLS: Record<SoundEffect, string> = {
 const SOUND_VOLUMES: Record<SoundEffect, number> = {
   cardPlay: 0.55,
   cardSelect: 0.42,
+  cancel: 0.32,
+  turnTransition: 0.3,
   negri: 0.5,
   shuffle: 0.45,
-  victory: 0.4,
-  defeat: 0.4,
+  victory: 0.25,
+  defeat: 0.25,
   resultNeutral: 0.4,
 };
 

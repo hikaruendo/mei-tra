@@ -130,6 +130,7 @@ describe('GameBoard card selection sounds', () => {
 
   it('plays for a new selection or a different card, but not deselection', async () => {
     const onCardSelection = jest.fn();
+    const onCancel = jest.fn();
     let renderer!: {
       root: {
         findByProps: (props: Record<string, unknown>) => {
@@ -145,6 +146,7 @@ describe('GameBoard card selection sounds', () => {
           game={game}
           isHost
           onCardSelection={onCardSelection}
+          onCancel={onCancel}
           onDeclare={jest.fn()}
           onLeave={jest.fn()}
           onPass={jest.fn()}
@@ -176,6 +178,11 @@ describe('GameBoard card selection sounds', () => {
       findCard('H-4').props.onPress?.();
     });
     expect(onCardSelection).toHaveBeenCalledTimes(3);
+
+    await act(async () => {
+      renderer.root.findByProps({ variant: 'secondary' }).props.onPress?.();
+    });
+    expect(onCancel).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       renderer.unmount();
