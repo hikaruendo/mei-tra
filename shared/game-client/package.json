@@ -19,6 +19,10 @@
       "types": "./card-legality.ts",
       "default": "./card-legality.ts"
     },
+    "./deal-animation": {
+      "types": "./deal-animation.ts",
+      "default": "./deal-animation.ts"
+    },
     "./first-turn-reveal": {
       "types": "./first-turn-reveal.ts",
       "default": "./first-turn-reveal.ts"
@@ -30,6 +34,10 @@
     "./game-event-reducer": {
       "types": "./game-event-reducer.ts",
       "default": "./game-event-reducer.ts"
+    },
+    "./sound-effects": {
+      "types": "./sound-effects.ts",
+      "default": "./sound-effects.ts"
     }
   }
 }

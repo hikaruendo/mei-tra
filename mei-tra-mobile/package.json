@@ -15,7 +15,9 @@
     "validate:eas-monorepo": "node scripts/validate-eas-monorepo.mjs",
     "test": "jest --runInBand",
     "assets:cards": "node scripts/build-card-assets.mjs",
-    "assets:cards:check": "node scripts/build-card-assets.mjs --check"
+    "assets:cards:check": "node scripts/build-card-assets.mjs --check",
+    "assets:sounds": "node scripts/sync-sound-assets.mjs",
+    "assets:sounds:check": "node scripts/sync-sound-assets.mjs --check"
   },
   "dependencies": {
     "@meitra/contracts": "file:../contracts",
@@ -27,6 +29,8 @@
     "@react-navigation/native": "^7.1.33",
     "@supabase/supabase-js": "^2.110.8",
     "expo": "~55.0.29",
+    "expo-asset": "~55.0.19",
+    "expo-audio": "~55.0.17",
     "expo-auth-session": "~55.0.18",
     "expo-constants": "~55.0.17",
     "expo-crypto": "~55.0.18",

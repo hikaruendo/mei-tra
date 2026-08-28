@@ -74,6 +74,7 @@ const mapProfile = (record: Record<string, unknown>): MobileUserProfile => {
     username: typeof record.username === 'string' ? record.username : '',
     avatarUrl:
       typeof record.avatar_url === 'string' ? record.avatar_url : undefined,
+    sound: typeof preferences.sound === 'boolean' ? preferences.sound : true,
     startPlayerAnimation:
       typeof preferences.startPlayerAnimation === 'boolean'
         ? preferences.startPlayerAnimation

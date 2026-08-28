@@ -148,6 +148,9 @@ export default function Home() {
     socket = null,
     firstTurnReveal = null,
     clearFirstTurnReveal,
+    dealAnimationCue = null,
+    playCardInteractionSound = () => {},
+    playHandReorderSound = () => {},
   } = gameState;
 
   // Type guard to ensure gameActions exists
@@ -278,6 +281,9 @@ export default function Home() {
                   onReplaceWithCOM={replacePlayerWithCOM}
                   firstTurnReveal={firstTurnReveal}
                   onFirstTurnRevealDone={clearFirstTurnReveal}
+                  dealAnimationCue={dealAnimationCue}
+                  onCardInteraction={playCardInteractionSound}
+                  onHandReorder={playHandReorderSound}
                 />
                 )}
               </div>

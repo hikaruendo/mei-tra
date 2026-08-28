@@ -1,7 +1,9 @@
 import type { TeamNames } from '@meitra/contracts/game';
+import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { DealtCard } from '@/components/game/DealtCard';
 import { TurnClock } from '@/components/game/TurnClock';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
@@ -22,6 +24,8 @@ interface PlayerSeatProps {
   teamNames?: TeamNames;
   teamFieldCounts?: Record<number, number>;
   onPress?: () => void;
+  dealAnimationCue?: DealAnimationCue | null;
+  reducedMotion?: boolean | null;
 }
 
 export function PlayerSeat({
@@ -37,6 +41,8 @@ export function PlayerSeat({
   teamNames,
   teamFieldCounts,
   onPress,
+  dealAnimationCue = null,
+  reducedMotion = false,
 }: PlayerSeatProps) {
   const statusLabel = isDisconnected
     ? t('seat.disconnected')
@@ -115,7 +121,14 @@ export function PlayerSeat({
         <View style={styles.faceDownRow}>
           {Array.from({ length: faceDownCount }).map((_, i) => (
             <View key={i} style={i > 0 ? styles.faceDownOverlap : undefined}>
-              <PlayingCard faceDown size="seat" />
+              <DealtCard
+                cue={dealAnimationCue}
+                index={i}
+                reducedMotion={reducedMotion}
+                seatId={player.seatId}
+              >
+                <PlayingCard faceDown size="seat" />
+              </DealtCard>
             </View>
           ))}
         </View>

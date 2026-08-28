@@ -1,4 +1,6 @@
 import type { TrumpType } from '@meitra/contracts/game';
+import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
+import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
   GameHistoryReplayViewContract,
   GameHistorySummaryContract,
@@ -7,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  AccessibilityInfo,
   Modal,
   Pressable,
   ScrollView,
@@ -22,6 +25,7 @@ import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
 import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { DealtCard } from '@/components/game/DealtCard';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
@@ -59,6 +63,7 @@ interface GameBoardProps {
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
+  onCardInteraction?: () => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
   onRemovePlayer: (seatId: string) => void;
@@ -71,6 +76,7 @@ interface GameBoardProps {
   onFirstTurnRevealDone?: () => void;
   isGuest?: boolean;
   onRegisterAccount?: () => void;
+  dealAnimationCue?: DealAnimationCue | null;
 }
 
 export function GameBoard({
@@ -81,6 +87,7 @@ export function GameBoard({
   onDeclare,
   onPass,
   onSelectNegri,
+  onCardInteraction = () => undefined,
   onPlayCard,
   onSelectBaseSuit,
   onRemovePlayer,
@@ -93,6 +100,7 @@ export function GameBoard({
   onFirstTurnRevealDone,
   isGuest = false,
   onRegisterAccount,
+  dealAnimationCue = null,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -103,10 +111,29 @@ export function GameBoard({
   const [showHistory, setShowHistory] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
   const [spectatorPerspectiveId, setSpectatorPerspectiveId] = useState<
     string | null
   >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const updateReducedMotion = (enabled: boolean) => {
+      if (!cancelled) setReducedMotion(enabled);
+    };
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      updateReducedMotion,
+    );
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .catch(() => false)
+      .then(updateReducedMotion);
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, []);
 
   const hostSeatId =
     game.players.find((p) => p.isHost)?.seatId ??
@@ -262,6 +289,18 @@ export function GameBoard({
     setSelectedCard(null);
   };
 
+  const toggleSelectedCard = (card: string) => {
+    if (selectedCard === card) {
+      setSelectedCard(null);
+      return;
+    }
+
+    if (shouldPlayCardSelectionSound(selectedCard, card)) {
+      onCardInteraction();
+    }
+    setSelectedCard(card);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -332,6 +371,8 @@ export function GameBoard({
                     : undefined
                 }
                 player={player}
+                dealAnimationCue={dealAnimationCue}
+                reducedMotion={reducedMotion}
                 teamFieldCounts={teamFieldCounts}
                 teamNames={game.teamNames}
               />
@@ -580,25 +621,29 @@ export function GameBoard({
                       },
                     ]}
                   >
-                    <PlayingCard
-                      card={card}
-                      width={handCardWidth}
-                      disabled={
-                        isPlayPhase &&
-                        (actionsDisabled ||
-                          !playable ||
-                          Boolean(pendingAction))
-                      }
-                      onPress={
-                        isPlayPhase
-                          ? () =>
-                              setSelectedCard((current) =>
-                                current === card ? null : card,
-                              )
-                          : undefined
-                      }
-                      selected={isSelected}
-                    />
+                    <DealtCard
+                      cue={dealAnimationCue}
+                      index={index}
+                      reducedMotion={reducedMotion}
+                      seatId={self.seatId}
+                    >
+                      <PlayingCard
+                        card={card}
+                        width={handCardWidth}
+                        disabled={
+                          isPlayPhase &&
+                          (actionsDisabled ||
+                            !playable ||
+                            Boolean(pendingAction))
+                        }
+                        onPress={
+                          isPlayPhase
+                            ? () => toggleSelectedCard(card)
+                            : undefined
+                        }
+                        selected={isSelected}
+                      />
+                    </DealtCard>
                   </View>
                 );
               })}

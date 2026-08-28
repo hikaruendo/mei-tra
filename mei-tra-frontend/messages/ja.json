@@ -788,7 +788,7 @@
     "basicInfo": "基本情報",
     "settings": "設定",
     "notifications": "通知を受け取る",
-    "soundEffects": "効果音を有効にする（未実装）",
+    "soundEffects": "効果音を有効にする",
     "startPlayerAnimation": "ゲーム開始時のじゃんけん演出を表示する",
     "theme": "テーマ",
     "light": "ライト",
