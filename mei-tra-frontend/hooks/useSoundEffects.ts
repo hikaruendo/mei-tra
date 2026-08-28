@@ -3,10 +3,7 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 
 import { WebSoundEffectsPlayer } from '@/lib/sound-effects';
 
-export const useSoundEffects = (
-  enabled: boolean,
-  playFromUserGesture = false,
-) => {
+export const useSoundEffects = (enabled: boolean) => {
   const playerRef = useRef<WebSoundEffectsPlayer | null>(null);
 
   useEffect(() => {
@@ -25,10 +22,6 @@ export const useSoundEffects = (
   }, [enabled]);
 
   return useCallback((effect: SoundEffect) => {
-    if (playFromUserGesture) {
-      playerRef.current?.playFromUserGesture(effect);
-      return;
-    }
     playerRef.current?.play(effect);
-  }, [playFromUserGesture]);
+  }, []);
 };

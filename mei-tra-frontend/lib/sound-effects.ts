@@ -107,18 +107,6 @@ export class WebSoundEffectsPlayer {
     }
   }
 
-  playFromUserGesture(effect: SoundEffect): void {
-    if (
-      !this.enabled ||
-      this.disposed ||
-      this.documentRef.visibilityState === 'hidden'
-    ) {
-      return;
-    }
-
-    void this.unlock().then(() => this.play(effect));
-  }
-
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;

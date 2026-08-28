@@ -357,18 +357,7 @@
       "toRooms": "ルーム一覧へ",
       "com": "(COM)",
       "guestPrompt": "ゲストプレイ中です。アカウント登録すると、この戦績を残せます。",
-      "guestPromptCta": "アカウント登録",
-      "demoKicker": "MEITRA 開発プレビュー",
-      "demoTitle": "勝利エフェクト デモ",
-      "demoDescription": "表示する立場を選ぶと、それぞれの演出と結果音を再生します。",
-      "demoControlsLabel": "デモ表示切替",
-      "demoWinningTeam": "スペード",
-      "demoLosingTeam": "ハート",
-      "demoRole": {
-        "winner": "勝者として再生",
-        "loser": "敗者として再生",
-        "spectator": "観戦者として再生"
-      }
+      "guestPromptCta": "アカウント登録"
     },
     "trumpFormat": "キリ：{suit}（{symbol}）",
     "suitHerz": "ハート",
