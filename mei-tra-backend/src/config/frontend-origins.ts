@@ -56,7 +56,11 @@ export function createSocketCorsOriginHandler() {
     origin: string | undefined,
     callback: (error: Error | null, allow?: boolean) => void,
   ): void => {
-    if (isAllowedFrontendOrigin(origin)) {
+    // Native Socket.IO clients (React Native / Expo) do not send the browser
+    // Origin header. CORS cannot protect non-browser clients, so keep the
+    // configured allowlist for browser origins and authenticate native clients
+    // with the existing handshake token instead.
+    if (!origin || isAllowedFrontendOrigin(origin)) {
       callback(null, true);
       return;
     }

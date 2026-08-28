@@ -58,4 +58,13 @@ describe('frontend origins', () => {
 
     expect(callback).toHaveBeenCalledWith(expect.any(Error));
   });
+
+  it('allows socket clients without a browser Origin header', () => {
+    const handler = createSocketCorsOriginHandler();
+    const callback = jest.fn();
+
+    handler(undefined, callback);
+
+    expect(callback).toHaveBeenCalledWith(null, true);
+  });
 });

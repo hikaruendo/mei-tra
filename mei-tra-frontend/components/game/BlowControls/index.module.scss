@@ -206,9 +206,13 @@
 
 @media (max-width: 768px) {
   .blowControlsContainer {
-    top: 37%;
-    padding: 0.8rem 0.85rem;
-    width: calc(100vw - 2rem);
+    top: 39%;
+    gap: 0.65rem;
+    padding: 0.7rem 0.75rem;
+    width: min(20rem, calc(100vw - 4.5rem));
+    background: color-mix(in srgb, var(--mt-surface-raised) 84%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
 
   .title {
@@ -226,7 +230,7 @@
   }
 
   .controlsRow {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .buttonGroup {
@@ -238,7 +242,15 @@
   }
 
   .declarations {
-    margin-top: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  .declarationList {
+    gap: 0.2rem;
+  }
+
+  .declarationItem {
+    padding: 0.22rem 0.4rem;
   }
 }
 
