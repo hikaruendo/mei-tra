@@ -1665,7 +1665,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.dispatchGameplayEvents(result.events, actorId);
       this.dispatchGameplayEvents(result.delayedEvents, actorId);
-      this.triggerComAutoPlayIfNeeded(data.roomId);
+      this.triggerComAutoPlayAfterEvents(
+        data.roomId,
+        result.delayedEvents ?? [],
+      );
     } catch (error) {
       console.error('Error in handleDeclareBlow:', error);
       client.emit('error-message', 'Failed to declare blow');
@@ -1703,7 +1706,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.dispatchGameplayEvents(result.events, actorId);
       this.dispatchGameplayEvents(result.delayedEvents, actorId);
-      this.triggerComAutoPlayIfNeeded(data.roomId);
+      this.triggerComAutoPlayAfterEvents(
+        data.roomId,
+        result.delayedEvents ?? [],
+      );
     } catch (error) {
       console.error('Error in handlePassBlow:', error);
       client.emit('error-message', 'Failed to pass blow');
