@@ -34,7 +34,7 @@ describe('GameResultExperience', () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it('keeps the reveal visible for 2.5 seconds before showing the result', () => {
+  it('keeps the reveal visible for 4 seconds before showing the result', () => {
     render(<GameResultExperience result={result} onClose={jest.fn()} />);
     expect(screen.getByText('victory')).toBeInTheDocument();
     expect(screen.queryByText('finalResult')).not.toBeInTheDocument();
