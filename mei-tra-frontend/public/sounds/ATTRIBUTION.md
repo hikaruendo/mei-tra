@@ -30,7 +30,7 @@ the Creative Commons 0 public-domain dedication.
 - License: Creative Commons 0
 - Retrieved: 2026-08-27
 - Derived: 2026-08-28
-- Processing: lowered pitch to 78% of the processed source rate, tempo-adjusted
-  by 1.15x, reduced by 2 dB, faded out over 60 ms, and encoded as 44.1 kHz /
-  128 kbps mono MP3
-- SHA-256: `38f7e71a4cc748f0b1ebe5f3862645aba9717e7d63e7e9a31afd76afbe577d81`
+- Processing: lowered pitch to 64% of the processed source rate, tempo-adjusted
+  by 1.35x, low-pass filtered at 2.8 kHz, reduced by 1.5 dB, faded in over
+  10 ms and out over 70 ms, and encoded as 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `1f0b9f979c8833d1b64c6bbe8c991eae92882ef6ecec7b160530ebc07fd37cb8`
