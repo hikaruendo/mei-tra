@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": false,
       "icon": "./assets/images/meitra-icon.png",
-      "bundleIdentifier": "com.kando1.meitra"
+      "bundleIdentifier": "com.kando1.meitra",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.kando1.meitra",
@@ -53,6 +56,12 @@
         "projectId": "70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681"
       }
     },
-    "owner": "hikaruendo"
+    "owner": "hikaruendo",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/70c1dfba-ea8b-45a9-a0f9-4b6d46bc0681"
+    }
   }
 }
