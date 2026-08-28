@@ -40,7 +40,8 @@
       ],
       "expo-secure-store",
       "expo-notifications",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
