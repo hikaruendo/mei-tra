@@ -77,11 +77,11 @@ describe('buildFirstTurnRevealScript', () => {
   it('finishes before the earliest possible COM first action', () => {
     const script = buildFirstTurnRevealScript(params());
 
-    // COM's first move fires no sooner than the turn delay + 100ms pacing
-    // margin + a 1.5s think delay (COM_AUTO_PLAY_INITIAL_DELAY_MS); the reveal
+    // The reveal delay itself already paces COM, so its first move fires after
+    // the turn delay + 100ms margin without another think delay. The reveal
     // must be gone by then or its ending would be cut short.
     expect(script?.totalDurationMs).toBeLessThan(
-      GAME_START_TURN_REVEAL_DELAY_MS + 100 + 1_500,
+      GAME_START_TURN_REVEAL_DELAY_MS + 100,
     );
   });
 

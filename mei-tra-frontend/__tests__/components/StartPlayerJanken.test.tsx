@@ -1,5 +1,4 @@
 import { act, renderHook } from '@testing-library/react';
-import { GAME_START_TURN_REVEAL_DELAY_MS } from '@contracts/game';
 import { JANKEN_STEP_DURATION_MS as D } from '@meitra/game-client/first-turn-reveal';
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
 import type { FirstTurnReveal } from '@/types/game.types';
@@ -78,15 +77,14 @@ describe('useFirstTurnReveal', () => {
     const reveal = makeReveal();
     renderHook(() => useFirstTurnReveal({ reveal, seatIds: SEAT_IDS, onDone }));
 
-    // The script outlasts the server delay by design: the extended result
-    // beat gives the two-line verdict reading time.
+    // The result stays visible until the final millisecond of the reveal.
     act(() => {
-      jest.advanceTimersByTime(GAME_START_TURN_REVEAL_DELAY_MS);
+      jest.advanceTimersByTime(TOTAL_MS - 1);
     });
     expect(onDone).not.toHaveBeenCalled();
 
     act(() => {
-      jest.advanceTimersByTime(TOTAL_MS - GAME_START_TURN_REVEAL_DELAY_MS);
+      jest.advanceTimersByTime(1);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });

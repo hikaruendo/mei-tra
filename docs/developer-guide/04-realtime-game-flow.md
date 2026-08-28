@@ -440,7 +440,10 @@ frontend は idle 状態を `idleSeatIds` と notification に反映します。
 
 ### 12.5 COM 自動プレイ
 
-COM が current player の場合、`ComAutoPlayService` が 2 秒 delay で `ComAutoPlayUseCase` を呼びます。COM は:
+COM が current player の場合、`ComAutoPlayRecoveryService` が通常 1.5 秒の
+思考 delay を置いて `ComAutoPlayUseCase` を呼びます。場の完成、フェーズ遷移、
+ゲーム開始などですでに演出 delay を待った場合は、同じ手番へ思考 delay を
+重ねず、そのまま COM の行動を再開します。COM は:
 
 - blow では基本 pass
 - play では best card を選択
