@@ -13,7 +13,7 @@ const SOUND_VOLUMES: Record<SoundEffect, number> = {
   cardSelect: 0.42,
   negri: 0.5,
   shuffle: 0.45,
-  victory: 0.5,
+  victory: 0.4,
 };
 
 interface WebSoundEffectsPlayerOptions {

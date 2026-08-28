@@ -112,6 +112,9 @@ describe('WebSoundEffectsPlayer', () => {
 
     await flushAudioSetup();
     expect(sourceStart).toHaveBeenCalledTimes(1);
+    expect(
+      (context.createGain as jest.Mock).mock.results[0].value.gain.value,
+    ).toBe(0.4);
   });
 
   it('calls the browser fetch implementation with its Window context', () => {

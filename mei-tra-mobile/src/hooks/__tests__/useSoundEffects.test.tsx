@@ -179,7 +179,7 @@ describe('useSoundEffects', () => {
       await Promise.resolve();
     });
     expect(mockPlayers[6].play).toHaveBeenCalledTimes(1);
-    expect(mockPlayers[6].volume).toBe(0.5);
+    expect(mockPlayers[6].volume).toBe(0.4);
     await act(async () => renderer!.unmount());
   });
 });

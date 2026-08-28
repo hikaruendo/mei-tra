@@ -75,7 +75,7 @@ export const useSoundEffects = (enabled: boolean) => {
     }
 
     if (effect === 'victory') {
-      void replay(playersRef.current.victory, 0.5);
+      void replay(playersRef.current.victory, 0.4);
       return;
     }
 
