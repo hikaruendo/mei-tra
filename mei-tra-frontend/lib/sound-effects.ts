@@ -24,7 +24,7 @@ export class WebSoundEffectsPlayer {
   private readonly createAudioContext: () => AudioContext;
   private readonly encodedSources = new Map<
     SoundEffect,
-    Promise<ArrayBuffer>
+    Promise<ArrayBuffer | null>
   >();
   private readonly buffers = new Map<SoundEffect, AudioBuffer>();
   private context: AudioContext | null = null;
@@ -52,12 +52,14 @@ export class WebSoundEffectsPlayer {
     ][]) {
       this.encodedSources.set(
         effect,
-        this.fetchImpl(url).then((response) => {
-          if (!response.ok) {
-            throw new Error(`Failed to preload sound effect: ${url}`);
-          }
-          return response.arrayBuffer();
-        }),
+        this.fetchImpl(url)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Failed to preload sound effect: ${url}`);
+            }
+            return response.arrayBuffer();
+          })
+          .catch(() => null),
       );
     }
 
@@ -138,12 +140,17 @@ export class WebSoundEffectsPlayer {
     this.decodePromise = Promise.all(
       [...this.encodedSources.entries()].map(async ([effect, encoded]) => {
         const data = await encoded;
-        const buffer = await context.decodeAudioData(data.slice(0));
-        if (!this.disposed) this.buffers.set(effect, buffer);
+        if (!data || this.disposed) return;
+
+        try {
+          const buffer = await context.decodeAudioData(data.slice(0));
+          if (!this.disposed) this.buffers.set(effect, buffer);
+        } catch {
+          // A broken asset must not prevent the remaining effects from loading.
+        }
       }),
     )
-      .then(() => undefined)
-      .catch(() => undefined);
+      .then(() => undefined);
 
     return this.decodePromise;
   }

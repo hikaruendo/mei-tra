@@ -119,13 +119,19 @@ export function GameBoard({
 
   useEffect(() => {
     let cancelled = false;
+    const updateReducedMotion = (enabled: boolean) => {
+      if (!cancelled) setReducedMotion(enabled);
+    };
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      updateReducedMotion,
+    );
     void AccessibilityInfo.isReduceMotionEnabled()
       .catch(() => false)
-      .then((enabled) => {
-        if (!cancelled) setReducedMotion(enabled);
-      });
+      .then(updateReducedMotion);
     return () => {
       cancelled = true;
+      subscription.remove();
     };
   }, []);
 

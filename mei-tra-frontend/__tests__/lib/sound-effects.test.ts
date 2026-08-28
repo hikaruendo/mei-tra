@@ -162,4 +162,47 @@ describe('WebSoundEffectsPlayer', () => {
 
     expect(createBufferSource).not.toHaveBeenCalled();
   });
+
+  it('silently absorbs preload failures before the first user gesture', async () => {
+    const fetchImpl = jest.fn(async () => {
+      throw new TypeError('network unavailable');
+    }) as unknown as typeof fetch;
+    player = new WebSoundEffectsPlayer({
+      createAudioContext: () => context,
+      fetchImpl,
+    });
+
+    player.start();
+    await flushAudioSetup();
+
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(context.decodeAudioData).not.toHaveBeenCalled();
+  });
+
+  it('keeps loading the remaining effects when one asset fails', async () => {
+    const fetchImpl = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('card-play')) {
+        throw new TypeError('network unavailable');
+      }
+      return {
+        ok: true,
+        arrayBuffer: async () => new ArrayBuffer(8),
+      } as Response;
+    }) as unknown as typeof fetch;
+    player = new WebSoundEffectsPlayer({
+      createAudioContext: () => context,
+      fetchImpl,
+    });
+    player.start();
+
+    document.dispatchEvent(new Event('pointerdown'));
+    await flushAudioSetup();
+    player.play('cardPlay');
+    player.play('negri');
+    player.play('shuffle');
+
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(2);
+    expect(sourceStart).toHaveBeenCalledTimes(2);
+  });
 });

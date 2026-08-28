@@ -2,6 +2,7 @@
 import type { MobileGameSnapshot } from '@/types/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
+import { AccessibilityInfo } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { GameBoard } from '../GameBoard';
@@ -28,7 +29,28 @@ jest.mock('@/components/social/ChatPanel', () => ({
   ChatPanel: () => null,
 }));
 jest.mock('@/components/game/DealtCard', () => ({
-  DealtCard: ({ children }: { children: React.ReactNode }) => children,
+  DealtCard: ({
+    children,
+    index,
+    reducedMotion,
+    seatId,
+  }: {
+    children: React.ReactNode;
+    index: number;
+    reducedMotion: boolean | null;
+    seatId: string;
+  }) => {
+    const ReactModule = require('react') as typeof React;
+    const { View } = require('react-native') as typeof import('react-native');
+    return ReactModule.createElement(
+      View,
+      {
+        accessibilityLabel: String(reducedMotion),
+        testID: `mock-dealt-card-${seatId}-${index}`,
+      },
+      children,
+    );
+  },
 }));
 jest.mock('@/components/game/PlayingCard', () => ({
   PlayingCard: (props: Record<string, unknown>) => {
@@ -102,6 +124,10 @@ const game: MobileGameSnapshot = {
 };
 
 describe('GameBoard card interaction sounds', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('plays for a new selection or a different card, but not deselection', async () => {
     const onCardInteraction = jest.fn();
     let renderer!: {
@@ -156,5 +182,68 @@ describe('GameBoard card interaction sounds', () => {
     await act(async () => {
       renderer.unmount();
     });
+  });
+
+  it('tracks reduce-motion changes while the board remains mounted', async () => {
+    let reduceMotionHandler: ((enabled: boolean) => void) | null = null;
+    const removeListener = jest.fn();
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValue(false);
+    const addEventListenerSpy = jest.spyOn(
+      AccessibilityInfo,
+      'addEventListener',
+    ) as unknown as jest.SpyInstance<
+      { remove: () => void },
+      [string, (enabled: boolean) => void]
+    >;
+    addEventListenerSpy.mockImplementation((event, handler) => {
+        if (event === 'reduceMotionChanged') {
+          reduceMotionHandler = handler;
+        }
+        return { remove: removeListener };
+      });
+
+    let renderer!: {
+      root: {
+        findByProps: (props: Record<string, unknown>) => {
+          props: { accessibilityLabel?: string };
+        };
+      };
+      unmount: () => void;
+    };
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={game}
+          gameOver={null}
+          isHost
+          onCloseGameOver={jest.fn()}
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onRemovePlayer={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+
+    const dealtCard = () =>
+      renderer.root.findByProps({
+        testID: 'mock-dealt-card-player-1-0',
+      });
+    expect(dealtCard().props.accessibilityLabel).toBe('false');
+
+    await act(async () => {
+      reduceMotionHandler?.(true);
+    });
+    expect(dealtCard().props.accessibilityLabel).toBe('true');
+
+    await act(async () => renderer.unmount());
+    expect(removeListener).toHaveBeenCalledTimes(1);
   });
 });
