@@ -46,6 +46,7 @@ import {
 } from '@meitra/game-client/game-event-reducer';
 import {
   shouldPlayConfirmedNegriSound,
+  soundEffectForCancellation,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
   soundEffectForGameResultRole,
@@ -325,6 +326,7 @@ interface GameContextValue extends MobileState {
   passBlow: () => void;
   selectNegri: (card: string) => void;
   playCardSelectionSound: () => void;
+  playCancelSound: () => void;
   playCard: (card: string) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -1262,6 +1264,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     playSoundEffect(soundEffectForCardSelection());
   }, [playSoundEffect]);
 
+  const playCancelSound = useCallback(() => {
+    playSoundEffect(soundEffectForCancellation());
+  }, [playSoundEffect]);
+
   const playCard = useCallback((card: string) => {
     const game = stateRef.current.game;
     if (!game || game.currentTurnSeatId !== game.youSeatId) {
@@ -1379,6 +1385,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       passBlow,
       selectNegri,
       playCardSelectionSound,
+      playCancelSound,
       playCard,
       selectBaseSuit,
       revealBrokenHand,
@@ -1416,6 +1423,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       passBlow,
       playCard,
       playCardSelectionSound,
+      playCancelSound,
       refreshRooms,
       removePlayer,
       replaceWithCOM,

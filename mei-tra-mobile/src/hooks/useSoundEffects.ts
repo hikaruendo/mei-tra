@@ -9,6 +9,7 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 
 const CARD_PLAY_SOURCE = require('../../assets/sounds/card-play.mp3');
 const CARD_SELECT_SOURCE = require('../../assets/sounds/card-select.mp3');
+const CANCEL_SOURCE = require('../../assets/sounds/cancel.mp3');
 const NEGRI_SOURCE = require('../../assets/sounds/negri.mp3');
 const SHUFFLE_SOURCE = require('../../assets/sounds/shuffle.mp3');
 const VICTORY_SOURCE = require('../../assets/sounds/victory.mp3');
@@ -30,6 +31,7 @@ export const useSoundEffects = (enabled: boolean) => {
   const cardPlayerB = useAudioPlayer(CARD_PLAY_SOURCE);
   const cardPlayerC = useAudioPlayer(CARD_PLAY_SOURCE);
   const cardSelectPlayer = useAudioPlayer(CARD_SELECT_SOURCE);
+  const cancelPlayer = useAudioPlayer(CANCEL_SOURCE);
   const negriPlayer = useAudioPlayer(NEGRI_SOURCE);
   const shufflePlayer = useAudioPlayer(SHUFFLE_SOURCE);
   const victoryPlayer = useAudioPlayer(VICTORY_SOURCE);
@@ -38,6 +40,7 @@ export const useSoundEffects = (enabled: boolean) => {
   const playersRef = useRef({
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
     cardSelect: cardSelectPlayer,
+    cancel: cancelPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
     victory: victoryPlayer,
@@ -51,6 +54,7 @@ export const useSoundEffects = (enabled: boolean) => {
   playersRef.current = {
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
     cardSelect: cardSelectPlayer,
+    cancel: cancelPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
     victory: victoryPlayer,
@@ -83,12 +87,12 @@ export const useSoundEffects = (enabled: boolean) => {
     }
 
     if (effect === 'victory') {
-      void replay(playersRef.current.victory, 0.4);
+      void replay(playersRef.current.victory, 0.25);
       return;
     }
 
     if (effect === 'defeat') {
-      void replay(playersRef.current.defeat, 0.4);
+      void replay(playersRef.current.defeat, 0.25);
       return;
     }
 
@@ -104,6 +108,11 @@ export const useSoundEffects = (enabled: boolean) => {
 
     if (effect === 'cardSelect') {
       void replay(playersRef.current.cardSelect, 0.42);
+      return;
+    }
+
+    if (effect === 'cancel') {
+      void replay(playersRef.current.cancel, 0.32);
       return;
     }
 

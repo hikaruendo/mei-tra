@@ -349,7 +349,7 @@
       "resultKicker": "RESULT",
       "finalResult": "Final result",
       "victory": "VICTORY",
-      "defeat": "So close",
+      "defeat": "DEFEAT",
       "spectatorVictory": "{team} team wins",
       "winnerBadge": "WINNER",
       "points": "{score} pt",

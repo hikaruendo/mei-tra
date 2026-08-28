@@ -1,6 +1,7 @@
 export type SoundEffect =
   | "cardPlay"
   | "cardSelect"
+  | "cancel"
   | "negri"
   | "shuffle"
   | "victory"
@@ -29,6 +30,8 @@ export const soundEffectForGameEvent = (
 ): SoundEffect => SOUND_EFFECT_BY_EVENT[event];
 
 export const soundEffectForCardSelection = (): SoundEffect => "cardSelect";
+
+export const soundEffectForCancellation = (): SoundEffect => "cancel";
 
 export const soundEffectForGameResultRole = (
   role: "winner" | "loser" | "spectator",

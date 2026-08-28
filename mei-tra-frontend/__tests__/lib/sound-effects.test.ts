@@ -1,6 +1,7 @@
 import {
   shouldPlayCardSelectionSound,
   shouldPlayConfirmedNegriSound,
+  soundEffectForCancellation,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
   soundEffectForGameResultRole,
@@ -30,6 +31,7 @@ describe('sound effect event mapping', () => {
 
   it('plays selection sounds only when a non-null card becomes selected', () => {
     expect(soundEffectForCardSelection()).toBe('cardSelect');
+    expect(soundEffectForCancellation()).toBe('cancel');
     expect(shouldPlayCardSelectionSound(null, 'H-A')).toBe(true);
     expect(shouldPlayCardSelectionSound('H-A', 'S-2')).toBe(true);
     expect(shouldPlayCardSelectionSound('H-A', 'H-A')).toBe(false);
@@ -110,6 +112,21 @@ describe('WebSoundEffectsPlayer', () => {
     expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 
+  it('uses matching reduced playback gains for result sounds', async () => {
+    const soundPlayer = createPlayer();
+    document.dispatchEvent(new Event('pointerdown'));
+    await flushAudioSetup();
+
+    soundPlayer.play('victory');
+    soundPlayer.play('defeat');
+
+    const gainNodes = (context.createGain as jest.Mock).mock.results.map(
+      (result) => result.value,
+    );
+    expect(gainNodes[0].gain.value).toBe(0.25);
+    expect(gainNodes[1].gain.value).toBe(0.25);
+  });
+
   it('calls the browser fetch implementation with its Window context', () => {
     const originalFetch = window.fetch;
     const browserFetch = jest.fn(function (this: Window) {
@@ -129,7 +146,7 @@ describe('WebSoundEffectsPlayer', () => {
         createAudioContext: () => context,
       });
       expect(() => player?.start()).not.toThrow();
-      expect(browserFetch).toHaveBeenCalledTimes(7);
+      expect(browserFetch).toHaveBeenCalledTimes(8);
     } finally {
       Object.defineProperty(window, 'fetch', {
         configurable: true,
@@ -184,7 +201,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.start();
     await flushAudioSetup();
 
-    expect(fetchImpl).toHaveBeenCalledTimes(7);
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
     expect(context.decodeAudioData).not.toHaveBeenCalled();
   });
 
@@ -213,7 +230,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.play('shuffle');
     player.play('victory');
 
-    expect(context.decodeAudioData).toHaveBeenCalledTimes(6);
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(7);
     expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 });

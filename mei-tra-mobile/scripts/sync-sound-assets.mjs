@@ -10,6 +10,7 @@ const DEST = join(MOBILE, 'assets', 'sounds');
 const FILES = [
   'card-play.mp3',
   'card-select.mp3',
+  'cancel.mp3',
   'negri.mp3',
   'shuffle.mp3',
   'victory.mp3',

@@ -57,6 +57,7 @@ interface PlayerHandProps {
   teamNames?: TeamNames;
   dealAnimationCue?: DealAnimationCue | null;
   onCardSelection?: () => void;
+  onCancel?: () => void;
   onHandReorder?: () => void;
 }
 
@@ -85,6 +86,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   teamNames,
   dealAnimationCue = null,
   onCardSelection = () => {},
+  onCancel = () => {},
   onHandReorder = () => {},
 }) => {
   const t = useTranslations('playerHand');
@@ -396,6 +398,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           {!isSpectator && selectedCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedCard}
+              onCancel={onCancel}
               onClick={() => {
                 gameActions.playCard(selectedCard);
                 setSelectedCard(null);
@@ -406,6 +409,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           {!isSpectator && selectedNegriCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedNegriCard}
+              onCancel={onCancel}
               onClick={() => {
                 gameActions.selectNegri(selectedNegriCard);
                 setSelectedNegriCard(null);

@@ -51,6 +51,7 @@ interface GameTableProps {
   onFirstTurnRevealDone?: () => void;
   dealAnimationCue?: DealAnimationCue | null;
   onCardSelection?: () => void;
+  onCancel?: () => void;
   onHandReorder?: () => void;
 }
 
@@ -91,6 +92,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   onFirstTurnRevealDone,
   dealAnimationCue = null,
   onCardSelection = noop,
+  onCancel = noop,
   onHandReorder = noop,
 }) => {
   const tRoot = useTranslations();
@@ -270,6 +272,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               onReplaceWithCOM={onReplaceWithCOM}
               dealAnimationCue={dealAnimationCue}
               onCardSelection={onCardSelection}
+              onCancel={onCancel}
               onHandReorder={onHandReorder}
             />
           );

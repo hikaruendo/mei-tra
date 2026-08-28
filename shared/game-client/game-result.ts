@@ -6,7 +6,7 @@ import type {
 } from "@meitra/contracts/game";
 import type { SeatId } from "@meitra/contracts/ids";
 
-export const GAME_RESULT_REVEAL_MS = 1800;
+export const GAME_RESULT_REVEAL_MS = 4000;
 
 export type GameResultViewerRole = "winner" | "loser" | "spectator";
 
