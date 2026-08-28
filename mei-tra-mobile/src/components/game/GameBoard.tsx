@@ -40,11 +40,7 @@ import { getTeamDisplayName } from '@/lib/team-labels';
 import { trumpLabel } from '@/lib/trump-labels';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobileFirstTurnReveal } from '@/context/GameContext';
-import type {
-  MobileGameOver,
-  MobileGameSnapshot,
-  MobilePlayer,
-} from '@/types/game';
+import type { MobileGameSnapshot, MobilePlayer } from '@/types/game';
 import { t } from '@/i18n';
 
 interface GameHistoryData {
@@ -57,9 +53,7 @@ interface GameHistoryData {
 
 interface GameBoardProps {
   game: MobileGameSnapshot;
-  gameOver: MobileGameOver | null;
   isHost: boolean;
-  onCloseGameOver: () => void;
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
@@ -74,16 +68,12 @@ interface GameBoardProps {
   roomId?: string;
   firstTurnReveal?: MobileFirstTurnReveal | null;
   onFirstTurnRevealDone?: () => void;
-  isGuest?: boolean;
-  onRegisterAccount?: () => void;
   dealAnimationCue?: DealAnimationCue | null;
 }
 
 export function GameBoard({
   game,
-  gameOver,
   isHost,
-  onCloseGameOver,
   onDeclare,
   onPass,
   onSelectNegri,
@@ -98,8 +88,6 @@ export function GameBoard({
   roomId,
   firstTurnReveal = null,
   onFirstTurnRevealDone,
-  isGuest = false,
-  onRegisterAccount,
   dealAnimationCue = null,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
@@ -728,43 +716,6 @@ export function GameBoard({
 
       <Modal
         animationType="fade"
-        onRequestClose={onCloseGameOver}
-        transparent
-        visible={Boolean(gameOver)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('board.gameOver')}</Text>
-            <Text style={styles.modalText}>
-              {t('board.gameOverResult', {
-                winner: gameOver?.winner ?? '',
-                redName: getTeamDisplayName(0, game.teamNames),
-                redScore: gameOver?.finalScores[0]?.total ?? 0,
-                blackName: getTeamDisplayName(1, game.teamNames),
-                blackScore: gameOver?.finalScores[1]?.total ?? 0,
-              })}
-            </Text>
-            {isGuest && onRegisterAccount ? (
-              <View style={styles.guestPromptBox}>
-                <Text style={styles.guestPromptText}>
-                  {t('board.guestPrompt')}
-                </Text>
-                {/* Registration is REST/Supabase, so it stays enabled even when
-                    socket actions are disabled. */}
-                <Button onPress={onRegisterAccount}>
-                  {t('board.registerAccount')}
-                </Button>
-              </View>
-            ) : null}
-            <Button disabled={actionsDisabled} onPress={onCloseGameOver}>
-              {t('board.toRoomList')}
-            </Button>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        animationType="fade"
         onRequestClose={() => setShowOptions(false)}
         transparent
         visible={showOptions}
@@ -1231,46 +1182,6 @@ const styles = StyleSheet.create({
     color: colors.onDanger,
     fontSize: 15,
     fontWeight: '800',
-  },
-  modalOverlay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: colors.overlay,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 440,
-    gap: 16,
-    padding: 22,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.gold,
-    backgroundColor: colors.panel,
-  },
-  modalTitle: {
-    color: colors.gold,
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  modalText: {
-    color: colors.text,
-    fontSize: 17,
-    lineHeight: 26,
-  },
-  guestPromptBox: {
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panelStrong,
-  },
-  guestPromptText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
   },
   chatOverlay: {
     flex: 1,

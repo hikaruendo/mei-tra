@@ -11,6 +11,7 @@ const CARD_PLAY_SOURCE = require('../../assets/sounds/card-play.mp3');
 const CARD_SELECT_SOURCE = require('../../assets/sounds/card-select.mp3');
 const NEGRI_SOURCE = require('../../assets/sounds/negri.mp3');
 const SHUFFLE_SOURCE = require('../../assets/sounds/shuffle.mp3');
+const VICTORY_SOURCE = require('../../assets/sounds/victory.mp3');
 
 const replay = async (player: AudioPlayer, volume: number) => {
   try {
@@ -29,11 +30,13 @@ export const useSoundEffects = (enabled: boolean) => {
   const cardSelectPlayer = useAudioPlayer(CARD_SELECT_SOURCE);
   const negriPlayer = useAudioPlayer(NEGRI_SOURCE);
   const shufflePlayer = useAudioPlayer(SHUFFLE_SOURCE);
+  const victoryPlayer = useAudioPlayer(VICTORY_SOURCE);
   const playersRef = useRef({
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
     cardSelect: cardSelectPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
+    victory: victoryPlayer,
   });
   const nextCardPlayerRef = useRef(0);
   const enabledRef = useRef(enabled);
@@ -44,6 +47,7 @@ export const useSoundEffects = (enabled: boolean) => {
     cardSelect: cardSelectPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
+    victory: victoryPlayer,
   };
   enabledRef.current = enabled;
 
@@ -67,6 +71,11 @@ export const useSoundEffects = (enabled: boolean) => {
 
     if (effect === 'shuffle') {
       void replay(playersRef.current.shuffle, 0.45);
+      return;
+    }
+
+    if (effect === 'victory') {
+      void replay(playersRef.current.victory, 0.5);
       return;
     }
 

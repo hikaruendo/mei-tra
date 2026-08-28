@@ -346,8 +346,16 @@
       "notYourTurnBaseSuit": "ベーススートを選択するターンではありません"
     },
     "gameOver": {
-      "title": "ゲーム終了",
-      "message": "{winnerTeam} の勝利！\n\n最終スコア\n{teamRedName}: {team0Score} ポイント\n{teamBlackName}: {team1Score} ポイント",
+      "resultKicker": "RESULT",
+      "finalResult": "最終結果",
+      "victory": "勝利",
+      "defeat": "惜敗",
+      "spectatorVictory": "{team}チームの勝利",
+      "winnerBadge": "WINNER",
+      "points": "{score} pt",
+      "tapToSkip": "タップでスキップ",
+      "toRooms": "ルーム一覧へ",
+      "com": "(COM)",
       "guestPrompt": "ゲストプレイ中です。アカウント登録すると、この戦績を残せます。",
       "guestPromptCta": "アカウント登録"
     },

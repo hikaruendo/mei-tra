@@ -35,6 +35,10 @@
       "types": "./game-event-reducer.ts",
       "default": "./game-event-reducer.ts"
     },
+    "./game-result": {
+      "types": "./game-result.ts",
+      "default": "./game-result.ts"
+    },
     "./sound-effects": {
       "types": "./sound-effects.ts",
       "default": "./sound-effects.ts"

@@ -346,8 +346,16 @@
       "notYourTurnBaseSuit": "It's not your turn to select a base suit"
     },
     "gameOver": {
-      "title": "Game Over",
-      "message": "{winnerTeam} wins!\n\nFinal score\n{teamRedName}: {team0Score} points\n{teamBlackName}: {team1Score} points",
+      "resultKicker": "RESULT",
+      "finalResult": "Final result",
+      "victory": "VICTORY",
+      "defeat": "So close",
+      "spectatorVictory": "{team} team wins",
+      "winnerBadge": "WINNER",
+      "points": "{score} pt",
+      "tapToSkip": "Tap to skip",
+      "toRooms": "Back to rooms",
+      "com": "(COM)",
       "guestPrompt": "You're playing as a guest. Register an account to keep these stats.",
       "guestPromptCta": "Register"
     },

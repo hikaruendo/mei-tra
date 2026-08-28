@@ -14,11 +14,12 @@ const flushAudioSetup = async () => {
 };
 
 describe('sound effect event mapping', () => {
-  it('maps only live gameplay events to the two initial effects', () => {
+  it('maps live gameplay events to their effects', () => {
     expect(soundEffectForGameEvent('card-played')).toBe('cardPlay');
     expect(soundEffectForGameEvent('play-setup-complete')).toBe('negri');
     expect(soundEffectForGameEvent('game-started')).toBe('shuffle');
     expect(soundEffectForGameEvent('new-round-started')).toBe('shuffle');
+    expect(soundEffectForGameEvent('game-over')).toBe('victory');
   });
 
   it('plays selection sounds only when a non-null card becomes selected', () => {
@@ -122,7 +123,7 @@ describe('WebSoundEffectsPlayer', () => {
         createAudioContext: () => context,
       });
       expect(() => player?.start()).not.toThrow();
-      expect(browserFetch).toHaveBeenCalledTimes(4);
+      expect(browserFetch).toHaveBeenCalledTimes(5);
     } finally {
       Object.defineProperty(window, 'fetch', {
         configurable: true,
@@ -177,7 +178,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.start();
     await flushAudioSetup();
 
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
     expect(context.decodeAudioData).not.toHaveBeenCalled();
   });
 
@@ -204,8 +205,9 @@ describe('WebSoundEffectsPlayer', () => {
     player.play('cardSelect');
     player.play('negri');
     player.play('shuffle');
+    player.play('victory');
 
-    expect(context.decodeAudioData).toHaveBeenCalledTimes(3);
-    expect(sourceStart).toHaveBeenCalledTimes(3);
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(4);
+    expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 });

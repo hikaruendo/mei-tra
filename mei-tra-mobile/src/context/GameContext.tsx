@@ -49,6 +49,11 @@ import {
   soundEffectForCardSelection,
   soundEffectForGameEvent,
 } from '@meitra/game-client/sound-effects';
+import {
+  buildGameResultSnapshot,
+  resolveWinningTeam,
+  type GameResultSnapshot,
+} from '@meitra/game-client/game-result';
 
 import { useAuth } from '@/context/AuthContext';
 import { config } from '@/lib/config';
@@ -69,7 +74,6 @@ import { roomStorage } from '@/lib/room-storage';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import type {
   ConnectionStatus,
-  MobileGameOver,
   MobileGameSnapshot,
   MobileRoom,
 } from '@/types/game';
@@ -83,7 +87,7 @@ interface MobileState {
   connectionStatus: ConnectionStatus;
   error: FeedbackMessage | null;
   notice: FeedbackMessage | null;
-  gameOver: MobileGameOver | null;
+  gameResult: GameResultSnapshot | null;
   /**
    * Set only by the live 'game-started' event; snapshot restores clear it so a
    * reconnect never replays the reveal.
@@ -107,10 +111,11 @@ type Action =
   | { type: 'playerConvertedToCom'; seatId: string }
   | { type: 'error'; message: FeedbackMessage | null }
   | { type: 'notice'; message: FeedbackMessage | null }
-  | { type: 'gameOver'; gameOver: MobileGameOver | null }
+  | { type: 'gameResult'; result: GameResultSnapshot | null }
   | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
   | { type: 'dealAnimationCue'; cue: DealAnimationCue | null }
-  | { type: 'resetRoom' };
+  | { type: 'resetRoom' }
+  | { type: 'finishRoom' };
 
 type CurrentPlayerAckEvent = Extract<
   AckableClientEvent,
@@ -129,7 +134,7 @@ const initialState: MobileState = {
   connectionStatus: 'disconnected',
   error: null,
   notice: null,
-  gameOver: null,
+  gameResult: null,
   firstTurnReveal: null,
   dealAnimationCue: null,
 };
@@ -170,7 +175,7 @@ function reducer(state: MobileState, action: Action): MobileState {
           : action.game,
         pendingGamePatches: null,
         error: null,
-        gameOver: null,
+        gameResult: null,
       };
     case 'patchGame':
       if (state.game) {
@@ -269,8 +274,8 @@ function reducer(state: MobileState, action: Action): MobileState {
       return { ...state, error: action.message };
     case 'notice':
       return { ...state, notice: action.message };
-    case 'gameOver':
-      return { ...state, gameOver: action.gameOver };
+    case 'gameResult':
+      return { ...state, gameResult: action.result };
     case 'firstTurnReveal':
       return { ...state, firstTurnReveal: action.reveal };
     case 'dealAnimationCue':
@@ -283,7 +288,18 @@ function reducer(state: MobileState, action: Action): MobileState {
         pendingGamePatches: null,
         error: null,
         notice: null,
-        gameOver: null,
+        gameResult: null,
+        firstTurnReveal: null,
+        dealAnimationCue: null,
+      };
+    case 'finishRoom':
+      return {
+        ...state,
+        currentRoom: null,
+        game: null,
+        pendingGamePatches: null,
+        error: null,
+        notice: null,
         firstTurnReveal: null,
         dealAnimationCue: null,
       };
@@ -316,7 +332,7 @@ interface GameContextValue extends MobileState {
   changePlayerTeam: (teamChanges: Record<string, number>) => void;
   updateTeamNames: (teamNames: TeamNames) => void;
   clearFeedback: () => void;
-  closeGameOver: () => void;
+  closeGameResult: () => void;
   clearFirstTurnReveal: () => void;
 }
 
@@ -366,6 +382,8 @@ export function GameProvider({ children }: PropsWithChildren) {
   // Mirrors state.firstTurnReveal for the long-lived socket handlers, which
   // need it synchronously and would otherwise close over a stale value.
   const firstTurnRevealRef = useRef<MobileFirstTurnReveal | null>(null);
+  const gameResultTokenRef = useRef(0);
+  const gameOverKeyRef = useRef<string | null>(null);
   const dealAnimationSequenceRef = useRef(0);
   const pendingNegriCardRef = useRef<string | null>(null);
   const userRef = useRef(user);
@@ -722,6 +740,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('game-started', (payload) => {
       pendingNegriCardRef.current = null;
+      gameOverKeyRef.current = null;
       startDealAnimation('game-started', payload.players);
       const currentSeatId = resolveSeatId(
         stateRef.current.game,
@@ -837,7 +856,24 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('game-over', (payload) => {
       pendingNegriCardRef.current = null;
-      dispatch({ type: 'gameOver', gameOver: payload });
+      const game = stateRef.current.game;
+      const winningTeam = resolveWinningTeam(payload);
+      const key = `${winningTeam}-${payload.finalScores[0]?.total}-${payload.finalScores[1]?.total}`;
+      if (!game || winningTeam === null || gameOverKeyRef.current === key) return;
+      gameOverKeyRef.current = key;
+      gameResultTokenRef.current += 1;
+      const result = buildGameResultSnapshot({
+        payload,
+        players: game.players,
+        viewerSeatId: game.youSeatId,
+        isSpectator: game.isSpectator,
+        teamNames: game.teamNames,
+        token: gameResultTokenRef.current,
+      });
+      if (result) {
+        dispatch({ type: 'gameResult', result });
+        playSoundEffect(soundEffectForGameEvent('game-over'));
+      }
       void roomStorage.clear();
     });
     socket.on('game-paused', ({ message }) => {
@@ -855,7 +891,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
       void roomStorage.clear();
-      dispatch({ type: 'resetRoom' });
+      dispatch({ type: stateRef.current.gameResult ? 'finishRoom' : 'resetRoom' });
       finishResyncFlight(undefined);
       if (payload?.code) {
         dispatch({
@@ -1353,7 +1389,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         dispatch({ type: 'error', message: null });
         dispatch({ type: 'notice', message: null });
       },
-      closeGameOver: () => dispatch({ type: 'gameOver', gameOver: null }),
+      closeGameResult: () => dispatch({ type: 'gameResult', result: null }),
       clearFirstTurnReveal: () => {
         firstTurnRevealRef.current = null;
         dispatch({ type: 'firstTurnReveal', reveal: null });

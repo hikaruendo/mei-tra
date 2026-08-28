@@ -84,6 +84,11 @@ import {
   soundEffectForGameEvent,
 } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from './useSoundEffects';
+import {
+  buildGameResultSnapshot,
+  resolveWinningTeam,
+  type GameResultSnapshot,
+} from '@meitra/game-client/game-result';
 
 interface ProfileUpdatedPayload {
   userId: string;
@@ -223,6 +228,7 @@ export const useGame = () => {
     playSoundEffect('negri');
   }, [playSoundEffect]);
   const gameOverShownRef = useRef<string | null>(null);
+  const gameResultTokenRef = useRef(0);
   const gameEventStateRef = useRef(createEmptyGameEventState());
   const agariRequestKeyRef = useRef<string | null>(null);
   const gameStateSyncKeyRef = useRef<string | null>(null);
@@ -322,7 +328,7 @@ export const useGame = () => {
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
-  const [gameOverModal, setGameOverModal] = useState<{ title: string; message: string } | null>(null);
+  const [gameResult, setGameResult] = useState<GameResultSnapshot | null>(null);
   const [currentSeatId, setCurrentSeatId] = useState<string | null>(null);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
@@ -840,6 +846,7 @@ export const useGame = () => {
           fromPlayerContracts(playerContracts),
         );
         gameOverShownRef.current = null;
+        setGameResult(null);
         resetBlowState({ preservePlayers: true });
         commitPlayers(nextPlayers);
         syncDisconnectedSeatIdsFromPlayers(nextPlayers);
@@ -933,27 +940,27 @@ export const useGame = () => {
           socket.emit('turn-ack', { roomId: currentRoomId });
         }
       },
-      'game-over': ({ winner, finalScores }: GameOverPayload) => {
-        // Prevent showing alert multiple times for the same game
-        const gameOverKey = `${winner}-${finalScores[0].total}-${finalScores[1].total}`;
+      'game-over': (payload: GameOverPayload) => {
+        // Prevent replaying the result and victory sting for the same game.
+        const winningTeam = resolveWinningTeam(payload);
+        const gameOverKey = `${winningTeam}-${payload.finalScores[0]?.total}-${payload.finalScores[1]?.total}`;
         if (gameOverShownRef.current === gameOverKey) {
           return;
         }
         gameOverShownRef.current = gameOverKey;
-
-        const teamRedName = getTeamLabel(0);
-        const teamBlackName = getTeamLabel(1);
-        const winnerTeam = winner === 'Team 0' ? teamRedName : teamBlackName;
-        setGameOverModal({
-          title: t('gameOver.title'),
-          message: t('gameOver.message', {
-            winnerTeam,
-            teamRedName,
-            team0Score: finalScores[0]?.total ?? 0,
-            teamBlackName,
-            team1Score: finalScores[1]?.total ?? 0,
-          }),
+        gameResultTokenRef.current += 1;
+        const result = buildGameResultSnapshot({
+          payload,
+          players: playersRef.current,
+          viewerSeatId: currentSeatId,
+          isSpectator,
+          teamNames,
+          token: gameResultTokenRef.current,
         });
+        setGameResult(result);
+        if (result) {
+          playSoundEffect(soundEffectForGameEvent('game-over'));
+        }
         setGameStarted(false);
         setGamePhase(null);
         setTeamScores(createEmptyTeamScores());
@@ -1216,6 +1223,7 @@ export const useGame = () => {
     currentSeatId,
     currentRoomId,
     isSpectator,
+    teamNames,
     negriSeatId,
     commitPlayers,
     resolveCurrentUserSeatId,
@@ -1358,8 +1366,8 @@ export const useGame = () => {
     }
   };
 
-  const closeGameOverModal = () => {
-    setGameOverModal(null);
+  const closeGameResult = () => {
+    setGameResult(null);
   };
 
 
@@ -1370,8 +1378,8 @@ export const useGame = () => {
       socket,
       isConnected: false,
       isConnecting: false,
-      gameOverModal: null,
-      closeGameOverModal: () => {},
+      gameResult: null,
+      closeGameResult: () => {},
     };
   }
 
@@ -1383,8 +1391,8 @@ export const useGame = () => {
       socket,
       isConnected,
       isConnecting,
-      gameOverModal: null,
-      closeGameOverModal: () => {},
+      gameResult: null,
+      closeGameResult: () => {},
     };
   }
 
@@ -1415,8 +1423,8 @@ export const useGame = () => {
     currentSeatId,
     notification,
     setNotification,
-    gameOverModal,
-    closeGameOverModal,
+    gameResult,
+    closeGameResult,
     currentRoomId,
     isHost,
     isSpectator,

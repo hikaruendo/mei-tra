@@ -317,8 +317,6 @@
     "pausedTitle": "The game is paused",
     "pausedText": "Waiting for players to reconnect",
     "replaceNamed": "Replace {name} with COM",
-    "gameOver": "Game over",
-    "gameOverResult": "Winner: {winner}\n{redName} {redScore} / {blackName} {blackScore}",
     "guestPrompt": "You're playing as a guest. Register an account to keep these stats.",
     "registerAccount": "Register",
     "toRoomList": "Back to rooms",
@@ -327,5 +325,17 @@
     "gameLog": "Game log",
     "leave": "Leave",
     "close": "Close"
+  },
+  "result": {
+    "kicker": "RESULT",
+    "finalResult": "Final result",
+    "victory": "VICTORY",
+    "defeat": "So close",
+    "spectatorVictory": "{team} team wins",
+    "winnerBadge": "WINNER",
+    "points": "{score} pt",
+    "tapToSkip": "Tap to skip",
+    "toRooms": "Back to rooms",
+    "com": "(COM)"
   }
 }
