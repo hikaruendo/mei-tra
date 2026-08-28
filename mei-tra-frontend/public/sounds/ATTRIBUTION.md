@@ -46,10 +46,11 @@ the Creative Commons 0 public-domain dedication.
 
 ## `victory.mp3`
 
-- Source: Procedurally generated for Meitra; no external audio source
-- Generated: 2026-08-28
-- Processing: synthesized a two-part G4-to-C-major brass fanfare using layered
-  trumpet harmonics, added a short vibrato and subtle 75 ms room echo, filtered
-  the 180 Hz to 5.2 kHz band, compressed and peak limited the mix, and encoded
-  it as a 44.1 kHz / 128 kbps mono MP3
-- SHA-256: `11f03e3818e6d993a6dcc3402cf5140f52c03b05b515aa98eef10c3459708fc0`
+- Source: [Tada Fanfare F](https://freesound.org/people/plasterbrain/sounds/397354/)
+  by plasterbrain
+- Retrieved: 2026-08-28 (Freesound high-quality MP3 preview)
+- License: Creative Commons 0 (CC0)
+- Processing: removed leading and trailing silence, mixed the stereo recording
+  down to mono, normalized it to -16 LUFS / -1.5 dBTP, added a short ending
+  fade, and encoded it as a 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `e88294b37cb6a3718a093e61c9d54d44d9af60bc1f96a09ea0e7520d20ad7b1b`
