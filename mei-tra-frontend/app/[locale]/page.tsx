@@ -149,7 +149,7 @@ export default function Home() {
     firstTurnReveal = null,
     clearFirstTurnReveal,
     dealAnimationCue = null,
-    playCardInteractionSound = () => {},
+    playCardSelectionSound = () => {},
     playHandReorderSound = () => {},
   } = gameState;
 
@@ -282,7 +282,7 @@ export default function Home() {
                   firstTurnReveal={firstTurnReveal}
                   onFirstTurnRevealDone={clearFirstTurnReveal}
                   dealAnimationCue={dealAnimationCue}
-                  onCardInteraction={playCardInteractionSound}
+                  onCardSelection={playCardSelectionSound}
                   onHandReorder={playHandReorderSound}
                 />
                 )}

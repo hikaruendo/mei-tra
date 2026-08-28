@@ -1,6 +1,7 @@
 import {
   shouldPlayCardSelectionSound,
   shouldPlayConfirmedNegriSound,
+  soundEffectForCardSelection,
   soundEffectForGameEvent,
 } from '@meitra/game-client/sound-effects';
 
@@ -21,6 +22,7 @@ describe('sound effect event mapping', () => {
   });
 
   it('plays selection sounds only when a non-null card becomes selected', () => {
+    expect(soundEffectForCardSelection()).toBe('cardSelect');
     expect(shouldPlayCardSelectionSound(null, 'H-A')).toBe(true);
     expect(shouldPlayCardSelectionSound('H-A', 'S-2')).toBe(true);
     expect(shouldPlayCardSelectionSound('H-A', 'H-A')).toBe(false);
@@ -120,7 +122,7 @@ describe('WebSoundEffectsPlayer', () => {
         createAudioContext: () => context,
       });
       expect(() => player?.start()).not.toThrow();
-      expect(browserFetch).toHaveBeenCalledTimes(3);
+      expect(browserFetch).toHaveBeenCalledTimes(4);
     } finally {
       Object.defineProperty(window, 'fetch', {
         configurable: true,
@@ -175,7 +177,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.start();
     await flushAudioSetup();
 
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
     expect(context.decodeAudioData).not.toHaveBeenCalled();
   });
 
@@ -199,10 +201,11 @@ describe('WebSoundEffectsPlayer', () => {
     document.dispatchEvent(new Event('pointerdown'));
     await flushAudioSetup();
     player.play('cardPlay');
+    player.play('cardSelect');
     player.play('negri');
     player.play('shuffle');
 
-    expect(context.decodeAudioData).toHaveBeenCalledTimes(2);
-    expect(sourceStart).toHaveBeenCalledTimes(2);
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(3);
+    expect(sourceStart).toHaveBeenCalledTimes(3);
   });
 });

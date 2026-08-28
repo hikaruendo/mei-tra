@@ -46,6 +46,7 @@ import {
 } from '@meitra/game-client/game-event-reducer';
 import {
   shouldPlayConfirmedNegriSound,
+  soundEffectForCardSelection,
   soundEffectForGameEvent,
 } from '@meitra/game-client/sound-effects';
 
@@ -306,7 +307,7 @@ interface GameContextValue extends MobileState {
   declareBlow: (trumpType: TrumpType, numberOfPairs: number) => void;
   passBlow: () => void;
   selectNegri: (card: string) => void;
-  playCardInteractionSound: () => void;
+  playCardSelectionSound: () => void;
   playCard: (card: string) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -1220,8 +1221,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
-  const playCardInteractionSound = useCallback(() => {
-    playSoundEffect('cardPlay');
+  const playCardSelectionSound = useCallback(() => {
+    playSoundEffect(soundEffectForCardSelection());
   }, [playSoundEffect]);
 
   const playCard = useCallback((card: string) => {
@@ -1340,7 +1341,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       declareBlow,
       passBlow,
       selectNegri,
-      playCardInteractionSound,
+      playCardSelectionSound,
       playCard,
       selectBaseSuit,
       revealBrokenHand,
@@ -1377,7 +1378,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       leaveRoom,
       passBlow,
       playCard,
-      playCardInteractionSound,
+      playCardSelectionSound,
       refreshRooms,
       removePlayer,
       replaceWithCOM,

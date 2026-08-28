@@ -6,7 +6,7 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from '../useSoundEffects';
 
 const mockSetAudioModeAsync = jest.fn(async (_options: unknown) => undefined);
-const mockPlayers = Array.from({ length: 5 }, () => ({
+const mockPlayers = Array.from({ length: 6 }, () => ({
   play: jest.fn(),
   seekTo: jest.fn(async () => undefined),
   volume: 1,
@@ -123,6 +123,27 @@ describe('useSoundEffects', () => {
     await act(async () => renderer!.unmount());
   });
 
+  it('uses a dedicated player for card selection sounds', async () => {
+    let playEffect: (effect: SoundEffect) => void = () => undefined;
+    let renderer: ReturnType<typeof TestRenderer.create>;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <CaptureSoundEffects enabled onValue={(play) => (playEffect = play)} />,
+      );
+    });
+
+    await act(async () => {
+      playEffect('cardSelect');
+      await Promise.resolve();
+    });
+
+    expect(mockPlayers[3].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[3].volume).toBe(0.42);
+    expect(mockPlayers[4].play).not.toHaveBeenCalled();
+
+    await act(async () => renderer!.unmount());
+  });
+
   it('uses the dedicated player for Negri sounds', async () => {
     let playEffect: (effect: SoundEffect) => void = () => undefined;
     let renderer: ReturnType<typeof TestRenderer.create>;
@@ -137,9 +158,10 @@ describe('useSoundEffects', () => {
       await Promise.resolve();
     });
 
-    expect(mockPlayers[3].play).toHaveBeenCalledTimes(1);
-    expect(mockPlayers[3].volume).toBe(0.5);
-    expect(mockPlayers[4].play).not.toHaveBeenCalled();
+    expect(mockPlayers[4].play).toHaveBeenCalledTimes(1);
+    expect(mockPlayers[4].volume).toBe(0.5);
+    expect(mockPlayers[3].play).not.toHaveBeenCalled();
+    expect(mockPlayers[5].play).not.toHaveBeenCalled();
 
     await act(async () => renderer!.unmount());
   });

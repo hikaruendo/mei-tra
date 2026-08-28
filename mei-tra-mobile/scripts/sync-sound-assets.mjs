@@ -7,7 +7,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const MOBILE = join(HERE, '..');
 const SOURCE = join(MOBILE, '..', 'mei-tra-frontend', 'public', 'sounds');
 const DEST = join(MOBILE, 'assets', 'sounds');
-const FILES = ['card-play.mp3', 'negri.mp3', 'shuffle.mp3'];
+const FILES = [
+  'card-play.mp3',
+  'card-select.mp3',
+  'negri.mp3',
+  'shuffle.mp3',
+];
 const checkOnly = process.argv.includes('--check');
 
 await mkdir(DEST, { recursive: true });

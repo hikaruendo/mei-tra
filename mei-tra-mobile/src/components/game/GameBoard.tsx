@@ -63,7 +63,7 @@ interface GameBoardProps {
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
-  onCardInteraction?: () => void;
+  onCardSelection?: () => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
   onRemovePlayer: (seatId: string) => void;
@@ -87,7 +87,7 @@ export function GameBoard({
   onDeclare,
   onPass,
   onSelectNegri,
-  onCardInteraction = () => undefined,
+  onCardSelection = () => undefined,
   onPlayCard,
   onSelectBaseSuit,
   onRemovePlayer,
@@ -296,7 +296,7 @@ export function GameBoard({
     }
 
     if (shouldPlayCardSelectionSound(selectedCard, card)) {
-      onCardInteraction();
+      onCardSelection();
     }
     setSelectedCard(card);
   };

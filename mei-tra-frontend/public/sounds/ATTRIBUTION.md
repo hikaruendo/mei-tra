@@ -34,3 +34,12 @@ the Creative Commons 0 public-domain dedication.
   by 1.35x, low-pass filtered at 2.8 kHz, reduced by 1.5 dB, faded in over
   10 ms and out over 70 ms, and encoded as 44.1 kHz / 128 kbps mono MP3
 - SHA-256: `1f0b9f979c8833d1b64c6bbe8c991eae92882ef6ecec7b160530ebc07fd37cb8`
+
+## `card-select.mp3`
+
+- Source: Procedurally generated for Meitra; no external audio source
+- Generated: 2026-08-28
+- Processing: mixed fading 175 Hz and 285 Hz sine tones with a short pink-noise
+  transient, high-pass filtered the transient at 110 Hz, low-pass filtered the
+  mix at 720 Hz, limited the peak, and encoded as 44.1 kHz / 128 kbps mono MP3
+- SHA-256: `163660dc14f0afd468fe011198fc8d91573d0eca19f59a53d304e9fd7c901fcb`

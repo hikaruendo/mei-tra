@@ -56,7 +56,7 @@ interface PlayerHandProps {
   takenCount?: number;
   teamNames?: TeamNames;
   dealAnimationCue?: DealAnimationCue | null;
-  onCardInteraction?: () => void;
+  onCardSelection?: () => void;
   onHandReorder?: () => void;
 }
 
@@ -84,7 +84,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   takenCount = 0,
   teamNames,
   dealAnimationCue = null,
-  onCardInteraction = () => {},
+  onCardSelection = () => {},
   onHandReorder = () => {},
 }) => {
   const t = useTranslations('playerHand');
@@ -272,12 +272,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     if (gamePhase === 'play' && whoseTurn === currentSeatId) {
       if (!negriCard && currentHighestDeclaration?.seatId === player.seatId) {
         if (shouldPlayCardSelectionSound(selectedNegriCard, card)) {
-          onCardInteraction();
+          onCardSelection();
         }
         setSelectedNegriCard(card);
       } else {
         if (shouldPlayCardSelectionSound(selectedCard, card)) {
-          onCardInteraction();
+          onCardSelection();
         }
         setSelectedCard(card);
       }

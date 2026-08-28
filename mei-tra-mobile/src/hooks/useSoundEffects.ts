@@ -8,6 +8,7 @@ import { AppState } from 'react-native';
 import type { SoundEffect } from '@meitra/game-client/sound-effects';
 
 const CARD_PLAY_SOURCE = require('../../assets/sounds/card-play.mp3');
+const CARD_SELECT_SOURCE = require('../../assets/sounds/card-select.mp3');
 const NEGRI_SOURCE = require('../../assets/sounds/negri.mp3');
 const SHUFFLE_SOURCE = require('../../assets/sounds/shuffle.mp3');
 
@@ -25,10 +26,12 @@ export const useSoundEffects = (enabled: boolean) => {
   const cardPlayerA = useAudioPlayer(CARD_PLAY_SOURCE);
   const cardPlayerB = useAudioPlayer(CARD_PLAY_SOURCE);
   const cardPlayerC = useAudioPlayer(CARD_PLAY_SOURCE);
+  const cardSelectPlayer = useAudioPlayer(CARD_SELECT_SOURCE);
   const negriPlayer = useAudioPlayer(NEGRI_SOURCE);
   const shufflePlayer = useAudioPlayer(SHUFFLE_SOURCE);
   const playersRef = useRef({
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
+    cardSelect: cardSelectPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
   });
@@ -38,6 +41,7 @@ export const useSoundEffects = (enabled: boolean) => {
 
   playersRef.current = {
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
+    cardSelect: cardSelectPlayer,
     negri: negriPlayer,
     shuffle: shufflePlayer,
   };
@@ -68,6 +72,11 @@ export const useSoundEffects = (enabled: boolean) => {
 
     if (effect === 'negri') {
       void replay(playersRef.current.negri, 0.5);
+      return;
+    }
+
+    if (effect === 'cardSelect') {
+      void replay(playersRef.current.cardSelect, 0.42);
       return;
     }
 
