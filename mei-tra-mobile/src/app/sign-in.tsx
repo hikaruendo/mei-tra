@@ -89,6 +89,8 @@ export default function SignInScreen() {
     try {
       const result = await signInWithGoogle();
 
+      if (result.cancelled) return;
+
       if (result.error) {
         setError(result.error);
         return;

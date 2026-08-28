@@ -133,7 +133,7 @@ CIの `--freeze-credentials` は、CIが署名資格情報を自動更新しな�
 - [ ] Web / mobile混在、human→COM置換、トリック完了、次ラウンド、ゲーム終了を確認する。
 - [ ] background復帰、アプリkill後復帰、Wi-Fi/モバイル回線切替、WebSocket失敗時のpolling fallbackを確認する。
 - [ ] 最新JWTで再接続し、古いsocket IDを本人判定に使わないことを確認する。
-- [ ] production backend、Supabase Auth redirect、CORS、health endpointを確認する。
+- [ ] production backend、CORS、health endpointを確認する。Supabase AuthのRedirect URLsに`meitra://auth/callback`があり、Google OAuth完了後にWebのSite URLではなくネイティブアプリへ戻ることを実機で確認する。
 - [x] local migration historyを`20260806165711`まで揃え、transactional `account_anonymization`を含む全SQL self-testに成功する。
 - [ ] production Supabaseへ`20260806160844_add_account_deletion_started_at.sql`、`20260806162505_anonymize_account_references_atomically.sql`、`20260806162619_reject_deleting_room_players.sql`、`20260806165611_push_receipt_tracking.sql`、`20260806165711_serialize_account_deletion_room_membership.sql`を適用し、linked history、schema、RLS、receipt RPC、atomic RPC、room / Socket gate、room membership直列化を確認する。
 

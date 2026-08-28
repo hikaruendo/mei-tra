@@ -39,6 +39,7 @@ WebBrowser.maybeCompleteAuthSession();
 interface AuthResult {
   error: string | null;
   emailConfirmationRequired?: boolean;
+  cancelled?: boolean;
 }
 
 interface AuthContextValue {
@@ -255,6 +256,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (result.type !== 'success') {
       return {
         error: result.type === 'cancel' ? null : t('auth.googleFailed'),
+        cancelled: result.type === 'cancel',
       };
     }
 
