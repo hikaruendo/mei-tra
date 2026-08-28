@@ -360,7 +360,7 @@
       "guestPromptCta": "アカウント登録",
       "demoKicker": "MEITRA 開発プレビュー",
       "demoTitle": "勝利エフェクト デモ",
-      "demoDescription": "表示する立場を選ぶと、実際の演出と勝利音を再生します。",
+      "demoDescription": "表示する立場を選ぶと、それぞれの演出と結果音を再生します。",
       "demoControlsLabel": "デモ表示切替",
       "demoWinningTeam": "スペード",
       "demoLosingTeam": "ハート",

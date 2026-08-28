@@ -3,7 +3,9 @@ export type SoundEffect =
   | "cardSelect"
   | "negri"
   | "shuffle"
-  | "victory";
+  | "victory"
+  | "defeat"
+  | "resultNeutral";
 
 export type SoundEffectGameEvent =
   | "card-played"
@@ -11,8 +13,7 @@ export type SoundEffectGameEvent =
   | "game-started"
   | "new-round-started"
   | "broken"
-  | "round-cancelled"
-  | "game-over";
+  | "round-cancelled";
 
 const SOUND_EFFECT_BY_EVENT: Record<SoundEffectGameEvent, SoundEffect> = {
   "card-played": "cardPlay",
@@ -21,7 +22,6 @@ const SOUND_EFFECT_BY_EVENT: Record<SoundEffectGameEvent, SoundEffect> = {
   "new-round-started": "shuffle",
   broken: "shuffle",
   "round-cancelled": "shuffle",
-  "game-over": "victory",
 };
 
 export const soundEffectForGameEvent = (
@@ -29,6 +29,14 @@ export const soundEffectForGameEvent = (
 ): SoundEffect => SOUND_EFFECT_BY_EVENT[event];
 
 export const soundEffectForCardSelection = (): SoundEffect => "cardSelect";
+
+export const soundEffectForGameResultRole = (
+  role: "winner" | "loser" | "spectator",
+): SoundEffect => {
+  if (role === "winner") return "victory";
+  if (role === "loser") return "defeat";
+  return "resultNeutral";
+};
 
 export const shouldPlayCardSelectionSound = (
   currentCard: string | null,

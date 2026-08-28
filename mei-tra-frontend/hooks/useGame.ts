@@ -82,6 +82,7 @@ import {
   shouldPlayConfirmedNegriSound,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
+  soundEffectForGameResultRole,
 } from '@meitra/game-client/sound-effects';
 import { useSoundEffects } from './useSoundEffects';
 import {
@@ -941,7 +942,7 @@ export const useGame = () => {
         }
       },
       'game-over': (payload: GameOverPayload) => {
-        // Prevent replaying the result and victory sting for the same game.
+        // Prevent replaying the result and viewpoint-specific sound for the same game.
         const winningTeam = resolveWinningTeam(payload);
         const gameOverKey = `${winningTeam}-${payload.finalScores[0]?.total}-${payload.finalScores[1]?.total}`;
         if (gameOverShownRef.current === gameOverKey) {
@@ -959,7 +960,7 @@ export const useGame = () => {
         });
         setGameResult(result);
         if (result) {
-          playSoundEffect(soundEffectForGameEvent('game-over'));
+          playSoundEffect(soundEffectForGameResultRole(result.viewerRole));
         }
         setGameStarted(false);
         setGamePhase(null);

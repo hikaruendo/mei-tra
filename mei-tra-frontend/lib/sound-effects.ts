@@ -6,6 +6,8 @@ const SOUND_URLS: Record<SoundEffect, string> = {
   negri: '/sounds/negri.mp3',
   shuffle: '/sounds/shuffle.mp3',
   victory: '/sounds/victory.mp3',
+  defeat: '/sounds/defeat.mp3',
+  resultNeutral: '/sounds/result-neutral.mp3',
 };
 
 const SOUND_VOLUMES: Record<SoundEffect, number> = {
@@ -14,6 +16,8 @@ const SOUND_VOLUMES: Record<SoundEffect, number> = {
   negri: 0.5,
   shuffle: 0.45,
   victory: 0.4,
+  defeat: 0.4,
+  resultNeutral: 0.4,
 };
 
 interface WebSoundEffectsPlayerOptions {

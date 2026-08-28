@@ -7,6 +7,7 @@ import type {
   GameResultSnapshot,
   GameResultViewerRole,
 } from "@meitra/game-client/game-result";
+import { soundEffectForGameResultRole } from "@meitra/game-client/sound-effects";
 
 import { GameResultExperience } from "@/components/game/GameResultExperience";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -73,7 +74,7 @@ export function ResultDemoClient() {
       setViewerRole(role);
       setToken((current) => current + 1);
       setActive(true);
-      playSoundEffect("victory");
+      playSoundEffect(soundEffectForGameResultRole(role));
     },
     [playSoundEffect],
   );

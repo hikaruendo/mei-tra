@@ -48,6 +48,7 @@ import {
   shouldPlayConfirmedNegriSound,
   soundEffectForCardSelection,
   soundEffectForGameEvent,
+  soundEffectForGameResultRole,
 } from '@meitra/game-client/sound-effects';
 import {
   buildGameResultSnapshot,
@@ -872,7 +873,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       });
       if (result) {
         dispatch({ type: 'gameResult', result });
-        playSoundEffect(soundEffectForGameEvent('game-over'));
+        playSoundEffect(soundEffectForGameResultRole(result.viewerRole));
       }
       void roomStorage.clear();
     });
