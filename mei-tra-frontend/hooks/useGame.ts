@@ -218,6 +218,9 @@ export const useGame = () => {
   const playCardInteractionSound = useCallback(() => {
     playSoundEffect('cardPlay');
   }, [playSoundEffect]);
+  const playHandReorderSound = useCallback(() => {
+    playSoundEffect('negri');
+  }, [playSoundEffect]);
   const gameOverShownRef = useRef<string | null>(null);
   const gameEventStateRef = useRef(createEmptyGameEventState());
   const agariRequestKeyRef = useRef<string | null>(null);
@@ -1434,5 +1437,6 @@ export const useGame = () => {
     clearFirstTurnReveal,
     dealAnimationCue,
     playCardInteractionSound,
+    playHandReorderSound,
   };
 };

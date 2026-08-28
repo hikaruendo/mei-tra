@@ -283,6 +283,7 @@ describe('PlayerHand', () => {
 
   it('reorders the current player hand locally with pointer drag', () => {
     const onCardInteraction = jest.fn();
+    const onHandReorder = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
       player: {
@@ -290,6 +291,7 @@ describe('PlayerHand', () => {
         hand: ['H-A', 'S-2'],
       },
       onCardInteraction,
+      onHandReorder,
     });
 
     const cards = screen.getAllByTestId('card-front');
@@ -305,21 +307,22 @@ describe('PlayerHand', () => {
       'S-2',
       'H-A',
     ]);
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onHandReorder).toHaveBeenCalledTimes(1);
+    expect(onCardInteraction).not.toHaveBeenCalled();
 
     fireEvent.pointerUp(targetCard, { clientX: 170 });
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onHandReorder).toHaveBeenCalledTimes(1);
   });
 
   it('does not play a sound when a pointer drop keeps the same order', () => {
-    const onCardInteraction = jest.fn();
+    const onHandReorder = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
       player: {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
       },
-      onCardInteraction,
+      onHandReorder,
     });
 
     const cards = screen.getAllByTestId('card-front');
@@ -335,18 +338,18 @@ describe('PlayerHand', () => {
       'H-A',
       'S-2',
     ]);
-    expect(onCardInteraction).not.toHaveBeenCalled();
+    expect(onHandReorder).not.toHaveBeenCalled();
   });
 
   it('plays once for a successful native drag and ignores the repeated no-op', () => {
-    const onCardInteraction = jest.fn();
+    const onHandReorder = jest.fn();
     renderPlayerHand({
       currentSeatId: 'player-2',
       player: {
         ...otherPlayer,
         hand: ['H-A', 'S-2'],
       },
-      onCardInteraction,
+      onHandReorder,
     });
 
     const dataTransfer = {
@@ -365,11 +368,11 @@ describe('PlayerHand', () => {
     fireEvent.dragStart(sourceCard, { dataTransfer });
     fireEvent.dragOver(targetCard, { clientX: 170, dataTransfer });
     fireEvent.drop(targetCard, { clientX: 170, dataTransfer });
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onHandReorder).toHaveBeenCalledTimes(1);
 
     fireEvent.dragStart(sourceCard, { dataTransfer });
     fireEvent.drop(targetCard, { clientX: 170, dataTransfer });
-    expect(onCardInteraction).toHaveBeenCalledTimes(1);
+    expect(onHandReorder).toHaveBeenCalledTimes(1);
   });
 
   it('plays only when selecting a new card, not when cancelling', () => {

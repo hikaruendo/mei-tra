@@ -57,6 +57,7 @@ interface PlayerHandProps {
   teamNames?: TeamNames;
   dealAnimationCue?: DealAnimationCue | null;
   onCardInteraction?: () => void;
+  onHandReorder?: () => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -84,6 +85,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   teamNames,
   dealAnimationCue = null,
   onCardInteraction = () => {},
+  onHandReorder = () => {},
 }) => {
   const t = useTranslations('playerHand');
   const tGameInfo = useTranslations('gameInfo');
@@ -217,7 +219,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
     displayHandRef.current = nextHand;
     setDisplayHand(nextHand);
-    onCardInteraction();
+    onHandReorder();
   };
 
   const getDropSide = (event: React.PointerEvent<HTMLDivElement> | React.DragEvent<HTMLDivElement>) => {

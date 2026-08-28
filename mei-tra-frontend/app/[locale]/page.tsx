@@ -150,6 +150,7 @@ export default function Home() {
     clearFirstTurnReveal,
     dealAnimationCue = null,
     playCardInteractionSound = () => {},
+    playHandReorderSound = () => {},
   } = gameState;
 
   // Type guard to ensure gameActions exists
@@ -282,6 +283,7 @@ export default function Home() {
                   onFirstTurnRevealDone={clearFirstTurnReveal}
                   dealAnimationCue={dealAnimationCue}
                   onCardInteraction={playCardInteractionSound}
+                  onHandReorder={playHandReorderSound}
                 />
                 )}
               </div>
