@@ -119,6 +119,11 @@
     "noMatch": "No rooms match your search",
     "noneAvailable": "No rooms are available right now"
   },
+  "scoreboard": {
+    "firstTo": "First to {points}",
+    "onePointToWin": "1 to win",
+    "accessibilityLabel": "{team0} {score0} points, {team1} {score1} points, first to {target}"
+  },
   "room": {
     "restoring": "Restoring room information",
     "reconnecting": "Reconnecting to the server",
