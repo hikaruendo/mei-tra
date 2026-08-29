@@ -51,11 +51,15 @@ describe('BlowControls', () => {
       flexWrap: 'wrap',
     });
 
-    ['zuppe', 'club', 'daiya', 'herz', 'tra'].forEach((trump) => {
-      expect(
-        renderer.root.findByProps({ testID: `blow-trump-${trump}` }),
-      ).toBeDefined();
-    });
+    const optionWidths = ['zuppe', 'club', 'daiya', 'herz', 'tra'].map(
+      (trump) => {
+        const option = renderer.root.findByProps({
+          testID: `blow-trump-${trump}`,
+        });
+        return StyleSheet.flatten(option.props.style).width;
+      },
+    );
+    expect(optionWidths).toEqual(Array(5).fill('30%'));
   });
 
   it('preserves declare and pass actions inside the glass surface', () => {

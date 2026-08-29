@@ -266,8 +266,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    flexBasis: '30%',
-    flexGrow: 1,
+    width: '30%',
     minHeight: 44,
     paddingHorizontal: 12,
   },
