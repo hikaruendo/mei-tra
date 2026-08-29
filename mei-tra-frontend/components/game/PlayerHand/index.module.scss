@@ -150,12 +150,24 @@
   z-index: 70;
 }
 
+/* The card clips its artwork to the rounded corners, so the marker has to sit
+   on the card's own edge. In the gap beside the card it was cut off entirely. */
 .insertBefore::before {
-  left: -0.36rem;
+  left: 0;
 }
 
 .insertAfter::after {
-  right: -0.36rem;
+  right: 0;
+}
+
+/* Hand cards overlap, and the rotate transform makes each one its own stacking
+   context, so the next card paints over this card's marker unless the whole
+   card is raised. `all` transitions cover z-index, which holds the card down
+   for half the transition and shows the marker late. */
+.card.insertBefore,
+.card.insertAfter {
+  z-index: 70 !important;
+  transition: none;
 }
 
 .spectatorCard {
