@@ -105,6 +105,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const displayHandRef = useRef(player.hand);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null);
+  // Chromium cancels the pointer stream (pointercancel) when a native HTML5
+  // drag takes over. That cancel must not wipe the drag state the native drag
+  // is still using, or the drop marker dies a few frames into every drag.
+  const nativeDragRef = useRef(false);
   const [dealAnimationElapsedMs, setDealAnimationElapsedMs] = useState<
     number | null
   >(null);
@@ -300,6 +304,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             setDropPlacement(null);
           }}
           onPointerCancel={() => {
+            if (nativeDragRef.current) {
+              return;
+            }
             setDraggingCard(null);
             setDropPlacement(null);
           }}
@@ -352,6 +359,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
                   event.dataTransfer.setData('text/plain', card);
                   event.dataTransfer.effectAllowed = 'move';
+                  nativeDragRef.current = true;
                   setDraggingCard(card);
                   setDropPlacement(null);
                 }}
@@ -368,10 +376,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   if (sourceCard && canActAsCurrentPlayer) {
                     reorderDisplayHand(sourceCard, card, getDropSide(event));
                   }
+                  nativeDragRef.current = false;
                   setDraggingCard(null);
                   setDropPlacement(null);
                 }}
                 onDragEnd={() => {
+                  nativeDragRef.current = false;
                   setDraggingCard(null);
                   setDropPlacement(null);
                 }}
