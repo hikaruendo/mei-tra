@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/Button";
+import { LiquidGlassSurface } from "@/components/ui/LiquidGlassSurface";
 import { t } from "@/i18n";
 import { getTeamDisplayName } from "@/lib/team-labels";
 import { colors } from "@/theme/colors";
@@ -68,10 +69,16 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
       visible
       transparent
       statusBarTranslucent
-      animationType="fade"
+      animationType="none"
       onRequestClose={revealing ? () => setRevealing(false) : onClose}
     >
-      <SafeAreaView accessibilityViewIsModal style={styles.overlay}>
+      <SafeAreaView
+        accessibilityViewIsModal
+        style={[
+          styles.overlay,
+          revealing ? styles.revealOverlay : styles.resultOverlay,
+        ]}
+      >
         {revealing ? (
           <Pressable
             accessibilityRole="button"
@@ -138,56 +145,75 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
             </Animated.View>
           </Pressable>
         ) : (
-          <ScrollView
-            contentContainerStyle={styles.panel}
-            style={styles.panelScroll}
-          >
-            <Text style={styles.kicker}>{t("result.kicker")}</Text>
-            <Text style={styles.title}>{t("result.finalResult")}</Text>
-            <Text style={styles.headline}>{headline}</Text>
-            {result.teams.map((team, index) => (
-              <View
-                key={team.team}
-                style={[styles.team, index === 0 && styles.champion]}
-              >
-                <View style={styles.teamHeading}>
-                  <View style={styles.teamNameWrap}>
-                    {index === 0 ? (
-                      <Text style={styles.badge}>
-                        {t("result.winnerBadge")}
-                      </Text>
-                    ) : null}
-                    <Text style={styles.teamName}>
-                      {getTeamDisplayName(team.team, result.teamNames)}
-                    </Text>
-                  </View>
-                  <Text style={styles.score}>
-                    {t("result.points", { score: team.total })}
-                  </Text>
-                </View>
-                <View style={styles.members}>
-                  {team.members.map((member) => (
-                    <View key={member.seatId} style={styles.member}>
-                      <Text style={styles.initial}>{member.initial}</Text>
-                      <Text numberOfLines={1} style={styles.memberName}>
-                        {member.name}
-                        {member.isCOM ? ` ${t("result.com")}` : ""}
+          <View style={styles.resultFrame}>
+            <ScrollView
+              contentContainerStyle={styles.panel}
+              style={styles.panelScroll}
+            >
+              <Text style={styles.kicker}>{t("result.kicker")}</Text>
+              <Text style={styles.title}>{t("result.finalResult")}</Text>
+              <Text style={styles.headline}>{headline}</Text>
+              {result.teams.map((team, index) => (
+                <View
+                  key={team.team}
+                  style={[styles.team, index === 0 && styles.champion]}
+                >
+                  <View style={styles.teamHeading}>
+                    <View style={styles.teamNameWrap}>
+                      {index === 0 ? (
+                        <Text style={styles.badge}>
+                          {t("result.winnerBadge")}
+                        </Text>
+                      ) : null}
+                      <Text style={styles.teamName}>
+                        {getTeamDisplayName(team.team, result.teamNames)}
                       </Text>
                     </View>
-                  ))}
+                    <Text style={styles.score}>
+                      {t("result.points", { score: team.total })}
+                    </Text>
+                  </View>
+                  <View style={styles.members}>
+                    {team.members.map((member) => (
+                      <View key={member.seatId} style={styles.member}>
+                        <Text style={styles.initial}>{member.initial}</Text>
+                        <Text numberOfLines={1} style={styles.memberName}>
+                          {member.name}
+                          {member.isCOM ? ` ${t("result.com")}` : ""}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
-            {onRegister ? (
-              <View style={styles.guestBox}>
-                <Text style={styles.guestText}>{t("board.guestPrompt")}</Text>
-                <Button variant="ghost" onPress={onRegister}>
+              ))}
+              {onRegister ? (
+                <View style={styles.guestBox}>
+                  <Text style={styles.guestText}>
+                    {t("board.guestPrompt")}
+                  </Text>
+                </View>
+              ) : null}
+            </ScrollView>
+            <LiquidGlassSurface
+              fallbackStyle={styles.actionBarFallback}
+              style={styles.actionBar}
+              testID="result-action-bar"
+              tone="accent"
+            >
+              {onRegister ? (
+                <Button
+                  onPress={onRegister}
+                  testID="result-register"
+                  variant="ghost"
+                >
                   {t("board.registerAccount")}
                 </Button>
-              </View>
-            ) : null}
-            <Button onPress={onClose}>{t("result.toRooms")}</Button>
-          </ScrollView>
+              ) : null}
+              <Button onPress={onClose} testID="result-close">
+                {t("result.toRooms")}
+              </Button>
+            </LiquidGlassSurface>
+          </View>
         )}
       </SafeAreaView>
     </Modal>
@@ -200,7 +226,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
+  },
+  revealOverlay: {
     backgroundColor: colors.background,
+  },
+  resultOverlay: {
+    backgroundColor: colors.modalOverlay,
   },
   revealPressable: {
     ...StyleSheet.absoluteFillObject,
@@ -222,19 +253,24 @@ const styles = StyleSheet.create({
   revealTeam: { color: colors.text, fontSize: 22, marginTop: 8 },
   skip: { color: colors.textMuted, fontSize: 13, marginTop: 42 },
   suit: { position: "absolute", color: colors.gold, fontSize: 26 },
-  panelScroll: {
-    flexGrow: 0,
+  resultFrame: {
     width: "100%",
     maxWidth: 620,
     maxHeight: "96%",
-    borderRadius: 24,
+    gap: 10,
+  },
+  panelScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    width: "100%",
+    borderRadius: 30,
     backgroundColor: colors.panel,
   },
   panel: {
-    padding: 22,
+    padding: 20,
     borderWidth: 1,
     borderColor: colors.gold,
-    borderRadius: 24,
+    borderRadius: 30,
   },
   kicker: {
     color: colors.gold,
@@ -260,7 +296,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 15,
+    borderRadius: 20,
     marginBottom: 10,
   },
   champion: { borderColor: colors.gold, backgroundColor: colors.goldSubtle },
@@ -289,10 +325,19 @@ const styles = StyleSheet.create({
   memberName: { flex: 1, color: colors.text, fontSize: 15 },
   guestBox: {
     gap: 8,
-    marginBottom: 12,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: colors.goldSubtle,
   },
   guestText: { color: colors.textMuted, textAlign: "center" },
+  actionBar: {
+    gap: 8,
+    padding: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionBarFallback: {
+    backgroundColor: colors.panelStrong,
+  },
 });

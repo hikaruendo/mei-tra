@@ -29,6 +29,8 @@ import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
+import { LiquidGlassSurface } from '@/components/ui/LiquidGlassSurface';
+import { ModalSheet } from '@/components/ui/ModalSheet';
 import { isCardPlayable } from '@/lib/cards';
 import {
   getCardSeatPosition,
@@ -296,12 +298,19 @@ export function GameBoard({
           scores={game.teamScores}
           teamNames={game.teamNames}
         />
-        <Pressable
-          onPress={() => setShowOptions(true)}
-          style={styles.optionsButton}
+        <LiquidGlassSurface
+          fallbackStyle={styles.optionsButtonFallback}
+          interactive
+          style={styles.optionsButtonSurface}
         >
-          <Text style={styles.optionsButtonText}>···</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => setShowOptions(true)}
+            style={styles.optionsButton}
+            testID="game-options-trigger"
+          >
+            <Text style={styles.optionsButtonText}>···</Text>
+          </Pressable>
+        </LiquidGlassSurface>
       </View>
 
       <ScrollView
@@ -697,7 +706,7 @@ export function GameBoard({
       ) : null}
 
       <Modal
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowOptions(false)}
         transparent
         visible={showOptions}
@@ -707,10 +716,15 @@ export function GameBoard({
             onPress={() => setShowOptions(false)}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.optionsMenu}>
+          <LiquidGlassSurface
+            fallbackStyle={styles.optionsMenuFallback}
+            style={styles.optionsMenu}
+            testID="game-options-menu"
+          >
             <Pressable
               onPress={() => setShowOptions(false)}
               style={styles.optionsClose}
+              testID="game-options-close"
             >
               <Text style={styles.optionsCloseText}>×</Text>
             </Pressable>
@@ -760,64 +774,41 @@ export function GameBoard({
             >
               {t('board.leave')}
             </Button>
-          </View>
+          </LiquidGlassSurface>
         </View>
       </Modal>
 
       {roomId ? (
-        <Modal
-          animationType="slide"
-          onRequestClose={() => setShowChat(false)}
-          transparent
+        <ModalSheet
+          closeLabel={t('board.close')}
+          onClose={() => setShowChat(false)}
+          testID="game-chat-sheet"
+          title={t('board.chat')}
           visible={showChat}
         >
-          <View style={styles.chatOverlay}>
-            <View style={styles.chatCard}>
-              <View style={styles.chatHeader}>
-                <Text style={styles.chatTitle}>{t('board.chat')}</Text>
-                <Button
-                  onPress={() => setShowChat(false)}
-                  variant="ghost"
-                >
-                  {t('board.close')}
-                </Button>
-              </View>
-              <ChatPanel roomId={roomId} />
-            </View>
-          </View>
-        </Modal>
+          <ChatPanel roomId={roomId} />
+        </ModalSheet>
       ) : null}
 
       {history ? (
-        <Modal
-          animationType="slide"
-          onRequestClose={() => setShowHistory(false)}
-          transparent
+        <ModalSheet
+          closeLabel={t('board.close')}
+          contentStyle={styles.historySheetContent}
+          onClose={() => setShowHistory(false)}
+          testID="game-history-sheet"
+          title={t('board.gameLog')}
           visible={showHistory}
         >
-          <View style={styles.historyOverlay}>
-            <View style={styles.historyCard}>
-              <View style={styles.historyHeader}>
-                <Text style={styles.historyTitle}>{t('board.gameLog')}</Text>
-                <Button
-                  onPress={() => setShowHistory(false)}
-                  variant="ghost"
-                >
-                  {t('board.close')}
-                </Button>
-              </View>
-              <GameHistory
-                error={history.error}
-                loading={history.loading}
-                onRefresh={history.refresh}
-                players={game.players}
-                replay={history.replay}
-                summary={history.summary}
-                teamNames={game.teamNames}
-              />
-            </View>
-          </View>
-        </Modal>
+          <GameHistory
+            error={history.error}
+            loading={history.loading}
+            onRefresh={history.refresh}
+            players={game.players}
+            replay={history.replay}
+            summary={history.summary}
+            teamNames={game.teamNames}
+          />
+        </ModalSheet>
       ) : null}
 
       {firstTurnReveal ? (
@@ -868,13 +859,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panelStrong,
     overflow: 'hidden',
   },
-  optionsButton: {
+  optionsButtonSurface: {
     width: 40,
     alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
+  },
+  optionsButtonFallback: {
+    backgroundColor: colors.backgroundElevated,
+  },
+  optionsButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionsButtonText: {
     color: colors.text,
@@ -887,7 +884,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingTop: 60,
     paddingRight: 10,
-    backgroundColor: colors.overlay,
+    backgroundColor: colors.modalOverlay,
   },
   optionsMenu: {
     position: 'relative',
@@ -895,9 +892,11 @@ const styles = StyleSheet.create({
     width: 200,
     gap: 8,
     padding: 12,
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  optionsMenuFallback: {
     backgroundColor: colors.panel,
   },
   optionsClose: {
@@ -1166,56 +1165,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
-  chatOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.overlay,
-  },
-  chatCard: {
-    maxHeight: '80%',
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    backgroundColor: colors.background,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  chatTitle: {
-    color: colors.gold,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  historyOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.overlay,
-  },
-  historyCard: {
-    maxHeight: '80%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    backgroundColor: colors.background,
+  historySheetContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    // Horizontal inset lives on historyCard so the header, the table and the
-    // sheet edge all line up.
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  historyTitle: {
-    color: colors.gold,
-    fontSize: 20,
-    fontWeight: '800',
   },
 });

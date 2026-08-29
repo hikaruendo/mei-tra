@@ -2,7 +2,6 @@ import type { TeamNames } from '@meitra/contracts/game';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
 
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { Button } from '@/components/ui/Button';
+import { ModalSheet } from '@/components/ui/ModalSheet';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobileRoom } from '@/types/game';
@@ -322,27 +322,15 @@ export function WaitingRoom({
         </Button>
       </View>
 
-      <Modal
-        animationType="slide"
-        onRequestClose={() => setShowChat(false)}
-        transparent
+      <ModalSheet
+        closeLabel={t('waiting.close')}
+        onClose={() => setShowChat(false)}
+        testID="waiting-chat-sheet"
+        title={t('waiting.chat')}
         visible={showChat}
       >
-        <View style={styles.chatOverlay}>
-          <View style={styles.chatCard}>
-            <View style={styles.chatHeader}>
-              <Text style={styles.chatTitle}>{t('waiting.chat')}</Text>
-              <Button
-                onPress={() => setShowChat(false)}
-                variant="ghost"
-              >
-                {t('waiting.close')}
-              </Button>
-            </View>
-            <ChatPanel roomId={room.id} />
-          </View>
-        </View>
-      </Modal>
+        <ChatPanel roomId={room.id} />
+      </ModalSheet>
     </View>
   );
 }
@@ -530,30 +518,5 @@ const styles = StyleSheet.create({
   },
   leaveButton: {
     flex: 1,
-  },
-  chatOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.overlay,
-  },
-  chatCard: {
-    maxHeight: '80%',
-    flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    backgroundColor: colors.background,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  chatTitle: {
-    color: colors.gold,
-    fontSize: 20,
-    fontWeight: '800',
   },
 });

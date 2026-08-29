@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { LiquidGlassSurface } from '@/components/ui/LiquidGlassSurface';
 import { trumpLabel } from '@/lib/trump-labels';
 import { colors } from '@/theme/colors';
 import { getValidBlowPairValues } from '@meitra/game-client/blow';
@@ -93,7 +94,11 @@ export function BlowControls({
   };
 
   return (
-    <View style={styles.container}>
+    <LiquidGlassSurface
+      fallbackStyle={styles.containerFallback}
+      style={styles.container}
+      testID="blow-controls-surface"
+    >
       <Text style={styles.turn}>
         {t('blow.currentTurn', { name: turnName })}
         {isMyTurn ? t('blow.youSuffix') : ''}
@@ -111,6 +116,7 @@ export function BlowControls({
         {trumpOptions.map((option) => (
           <Button
             key={option.value}
+            testID={`blow-trump-${option.value}`}
             variant={selectedTrump === option.value ? 'primary' : 'ghost'}
             disabled={actionsDisabled || !isMyTurn || Boolean(pendingAction)}
             onPress={() => setSelectedTrump(option.value)}
@@ -130,6 +136,7 @@ export function BlowControls({
         {validPairs.map((pair) => (
           <Button
             key={pair}
+            testID={`blow-pairs-${pair}`}
             variant={selectedPairs === pair ? 'primary' : 'ghost'}
             disabled={actionsDisabled || !isMyTurn || Boolean(pendingAction)}
             onPress={() => setSelectedPairs(pair)}
@@ -142,6 +149,7 @@ export function BlowControls({
 
       <View style={styles.actions}>
         <Button
+          testID="blow-declare"
           disabled={
             !isMyTurn ||
             actionsDisabled ||
@@ -162,6 +170,7 @@ export function BlowControls({
           {t('blow.declare')}
         </Button>
         <Button
+          testID="blow-pass"
           variant="secondary"
           disabled={actionsDisabled || !isMyTurn || Boolean(pendingAction)}
           loading={pendingAction === 'pass'}
@@ -223,17 +232,19 @@ export function BlowControls({
           </ScrollView>
         </View>
       ) : null}
-    </View>
+    </LiquidGlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 10,
-    padding: 14,
-    borderRadius: 16,
+    gap: 8,
+    padding: 12,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  containerFallback: {
     backgroundColor: colors.panel,
   },
   turn: {
@@ -281,7 +292,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   historyScroll: {
-    maxHeight: 140,
+    maxHeight: 72,
   },
   historyEntry: {
     flexDirection: 'row',

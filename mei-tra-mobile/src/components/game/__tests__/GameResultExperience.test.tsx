@@ -14,14 +14,20 @@ jest.mock("@/components/ui/Button", () => ({
   Button: ({
     children,
     onPress,
+    testID,
   }: {
     children: React.ReactNode;
     onPress: () => void;
+    testID?: string;
   }) => {
     const ReactModule = require("react") as typeof React;
     const { Pressable: NativePressable } =
       require("react-native") as typeof import("react-native");
-    return ReactModule.createElement(NativePressable, { onPress }, children);
+    return ReactModule.createElement(
+      NativePressable,
+      { onPress, testID },
+      children,
+    );
   },
 }));
 
@@ -52,6 +58,9 @@ interface RendererHandle {
   root: {
     findByProps: (props: Record<string, unknown>) => {
       props: { onPress: () => void };
+      findAllByType: (type: unknown) => {
+        props: { onPress: () => void };
+      }[];
     };
     findByType: (type: unknown) => {
       props: Record<string, unknown>;
@@ -112,5 +121,38 @@ describe("GameResultExperience", () => {
       StyleSheet.flatten(renderer!.root.findByType(ScrollView).props.style),
     ).toMatchObject({ flexGrow: 0 });
     await act(async () => renderer!.unmount());
+  });
+
+  it("keeps result actions in the dedicated action bar", async () => {
+    jest
+      .spyOn(AccessibilityInfo, "isReduceMotionEnabled")
+      .mockResolvedValue(true);
+    const onClose = jest.fn();
+    const onRegister = jest.fn();
+    let renderer!: RendererHandle;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameResultExperience
+          result={result}
+          onClose={onClose}
+          onRegister={onRegister}
+        />,
+      ) as unknown as RendererHandle;
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByProps({ testID: "result-action-bar" }),
+    ).toBeDefined();
+    await act(async () =>
+      renderer.root.findByProps({ testID: "result-register" }).props.onPress(),
+    );
+    await act(async () =>
+      renderer.root.findByProps({ testID: "result-close" }).props.onPress(),
+    );
+    expect(onRegister).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => renderer.unmount());
   });
 });

@@ -237,6 +237,55 @@ describe('GameBoard interactions', () => {
     await act(async () => renderer.unmount());
   });
 
+  it('opens and closes the glass options menu from the header control', async () => {
+    let renderer!: {
+      root: {
+        findAllByProps: (props: Record<string, unknown>) => unknown[];
+        findByProps: (props: Record<string, unknown>) => {
+          props: { onPress?: () => void };
+        };
+      };
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={game}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      renderer.root
+        .findByProps({ testID: 'game-options-trigger' })
+        .props.onPress?.();
+    });
+    expect(
+      renderer.root.findByProps({ testID: 'game-options-menu' }),
+    ).toBeDefined();
+
+    await act(async () => {
+      renderer.root
+        .findByProps({ testID: 'game-options-close' })
+        .props.onPress?.();
+    });
+    expect(
+      renderer.root.findAllByProps({ testID: 'game-options-menu' }),
+    ).toHaveLength(0);
+
+    await act(async () => renderer.unmount());
+  });
+
   it('renders a human opponent directly and only offers visible moderation when unavailable', async () => {
     const players = [
       game.players[0],

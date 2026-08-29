@@ -94,6 +94,7 @@ export const palette = {
 
   overlay: {
     scrim: 'rgba(0, 0, 0, 0.7)',
+    modalScrim: 'rgba(0, 0, 0, 0.38)',
     // Laid over a disabled card. Web uses `filter: brightness(.45) saturate(.3)`,
     // which React Native has no dependable cross-platform equivalent for.
     cardDisabled: 'rgba(14, 42, 33, 0.55)',
