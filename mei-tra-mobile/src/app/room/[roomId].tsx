@@ -161,6 +161,7 @@ export default function RoomScreen() {
       {gameResult ? (
         <GameResultExperience
           result={gameResult}
+          showTableBackdrop={Boolean(game)}
           onClose={() => {
             closeGameResult();
             void doLeave();

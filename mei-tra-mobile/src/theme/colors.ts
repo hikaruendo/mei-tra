@@ -50,6 +50,7 @@ export const colors = {
   cardDisabled: palette.overlay.cardDisabled,
 
   overlay: palette.overlay.scrim,
+  modalOverlay: palette.overlay.modalScrim,
 } as const;
 
 /**
