@@ -24,7 +24,7 @@ import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
 import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
-import { DealtCard } from '@/components/game/DealtCard';
+import { HandFan } from '@/components/game/HandFan';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
@@ -60,6 +60,7 @@ interface GameBoardProps {
   onSelectNegri: (card: string) => void;
   onCardSelection?: () => void;
   onCancel?: () => void;
+  onHandReorder?: () => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
@@ -80,6 +81,7 @@ export function GameBoard({
   onSelectNegri,
   onCardSelection = () => undefined,
   onCancel = () => undefined,
+  onHandReorder = () => undefined,
   onPlayCard,
   onSelectBaseSuit,
   onReplaceWithCOM,
@@ -191,6 +193,7 @@ export function GameBoard({
     !game.negriCard;
   const isMyTurn =
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
+  const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
   const phaseLabel =
     game.gamePhase === 'blow'
       ? t('board.phaseBlow')
@@ -564,67 +567,30 @@ export function GameBoard({
                   )
                 ) : null}
 
-            <View style={styles.fanContainer}>
-              {self.hand.map((card, index) => {
-                const total = self.hand.length;
-                const half = Math.max((total - 1) / 2, 1);
-                const dist = index - (total - 1) / 2;
-                const norm = dist / half;
-                const rotation = norm * 15;
-                const lift = Math.pow(Math.abs(norm), 2) * 18;
-                const isPlayPhase =
-                  game.gamePhase === 'play' && !game.isSpectator;
-                const playable =
-                  isPlayPhase &&
-                  isMyTurn &&
-                  isCardPlayable(
+            <HandFan
+              canReorder={!game.isSpectator}
+              cardMargin={handCardMargin}
+              cardWidth={handCardWidth}
+              cards={self.hand}
+              dealAnimationCue={dealAnimationCue}
+              isCardDisabled={(card) =>
+                isHandPlayPhase &&
+                (actionsDisabled ||
+                  Boolean(pendingAction) ||
+                  !isMyTurn ||
+                  !isCardPlayable(
                     self.hand,
                     card,
                     game.currentField,
                     currentTrump,
-                  );
-                const isSelected = selectedCard === card;
-                return (
-                  <View
-                    key={`${card}-${index}`}
-                    style={[
-                      styles.fanCard,
-                      total > 1 && { marginHorizontal: handCardMargin },
-                      {
-                        transform: [
-                          { rotate: `${rotation}deg` },
-                          { translateY: lift + (isSelected ? -28 : 0) },
-                        ],
-                      },
-                    ]}
-                  >
-                    <DealtCard
-                      cue={dealAnimationCue}
-                      index={index}
-                      reducedMotion={reducedMotion}
-                      seatId={self.seatId}
-                    >
-                      <PlayingCard
-                        card={card}
-                        width={handCardWidth}
-                        disabled={
-                          isPlayPhase &&
-                          (actionsDisabled ||
-                            !playable ||
-                            Boolean(pendingAction))
-                        }
-                        onPress={
-                          isPlayPhase
-                            ? () => toggleSelectedCard(card)
-                            : undefined
-                        }
-                        selected={isSelected}
-                      />
-                    </DealtCard>
-                  </View>
-                );
-              })}
-            </View>
+                  ))
+              }
+              onReorder={onHandReorder}
+              onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
+              reducedMotion={reducedMotion}
+              seatId={self.seatId}
+              selectedCard={selectedCard}
+            />
 
             {game.gamePhase === 'play' && selectedCard ? (
               <View style={styles.selectedActions}>
@@ -1104,23 +1070,6 @@ const styles = StyleSheet.create({
   instruction: {
     color: colors.textMuted,
     fontSize: 13,
-  },
-  fanContainer: {
-    minHeight: 104,
-    flexShrink: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  fanCard: {
-    zIndex: 1,
-    // Web rotates hand cards about their bottom edge
-    // (PlayerHand/index.module.scss: transform-origin: bottom center).
-    // Without this the fan pivots about each card's centre and splays wrongly.
-    transformOrigin: 'bottom center',
   },
   selectedActions: {
     flexDirection: 'row',
