@@ -108,11 +108,7 @@ export function BlowControls({
       </Text>
 
       <Text style={styles.label}>{t('blow.selectTrump')}</Text>
-      <ScrollView
-        horizontal
-        contentContainerStyle={styles.options}
-        showsHorizontalScrollIndicator={false}
-      >
+      <View testID="blow-trump-options" style={styles.trumpOptions}>
         {trumpOptions.map((option) => (
           <Button
             key={option.value}
@@ -125,7 +121,7 @@ export function BlowControls({
             {option.label}
           </Button>
         ))}
-      </ScrollView>
+      </View>
 
       <Text style={styles.label}>{t('blow.selectPairs')}</Text>
       <ScrollView
@@ -264,7 +260,14 @@ const styles = StyleSheet.create({
   options: {
     gap: 8,
   },
+  trumpOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   optionButton: {
+    flexBasis: '30%',
+    flexGrow: 1,
     minHeight: 44,
     paddingHorizontal: 12,
   },

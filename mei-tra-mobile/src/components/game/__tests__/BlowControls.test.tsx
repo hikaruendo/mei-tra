@@ -1,5 +1,6 @@
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { BlowControls } from '../BlowControls';
@@ -17,13 +18,45 @@ const player = {
 interface RendererHandle {
   root: {
     findByProps: (props: Record<string, unknown>) => {
-      props: { onPress: () => void };
+      props: { onPress: () => void; style: StyleProp<ViewStyle> };
     };
   };
 }
 
 describe('BlowControls', () => {
   afterEach(() => jest.useRealTimers());
+
+  it('shows every trump option in a wrapping grid without horizontal scrolling', () => {
+    let renderer!: RendererHandle;
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <BlowControls
+          actionHistory={[]}
+          currentSeatId={player.seatId}
+          currentTurn={player.seatId}
+          highest={null}
+          onDeclare={jest.fn()}
+          onPass={jest.fn()}
+          players={[player]}
+        />,
+      ) as unknown as RendererHandle;
+    });
+
+    const options = renderer.root.findByProps({
+      testID: 'blow-trump-options',
+    });
+    expect(StyleSheet.flatten(options.props.style)).toMatchObject({
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    });
+
+    ['zuppe', 'club', 'daiya', 'herz', 'tra'].forEach((trump) => {
+      expect(
+        renderer.root.findByProps({ testID: `blow-trump-${trump}` }),
+      ).toBeDefined();
+    });
+  });
 
   it('preserves declare and pass actions inside the glass surface', () => {
     jest.useFakeTimers();
