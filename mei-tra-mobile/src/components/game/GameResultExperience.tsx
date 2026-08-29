@@ -25,11 +25,17 @@ interface Props {
   result: GameResultSnapshot;
   onClose: () => void;
   onRegister?: () => void;
+  showTableBackdrop?: boolean;
 }
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 
-export function GameResultExperience({ result, onClose, onRegister }: Props) {
+export function GameResultExperience({
+  result,
+  onClose,
+  onRegister,
+  showTableBackdrop = false,
+}: Props) {
   const [revealing, setRevealing] = useState(true);
   const progress = useRef(new Animated.Value(0)).current;
   const winner = result.teams[0];
@@ -74,9 +80,14 @@ export function GameResultExperience({ result, onClose, onRegister }: Props) {
     >
       <SafeAreaView
         accessibilityViewIsModal
+        testID="game-result-overlay"
         style={[
           styles.overlay,
-          revealing ? styles.revealOverlay : styles.resultOverlay,
+          revealing
+            ? styles.revealOverlay
+            : showTableBackdrop
+              ? styles.resultOverlay
+              : styles.resultOverlayOpaque,
         ]}
       >
         {revealing ? (
@@ -232,6 +243,9 @@ const styles = StyleSheet.create({
   },
   resultOverlay: {
     backgroundColor: colors.modalOverlay,
+  },
+  resultOverlayOpaque: {
+    backgroundColor: colors.background,
   },
   revealPressable: {
     ...StyleSheet.absoluteFillObject,

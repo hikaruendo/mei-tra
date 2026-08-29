@@ -5,10 +5,17 @@ import React from "react";
 import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 
+import { colors } from "@/theme/colors";
+
 import { GameResultExperience } from "../GameResultExperience";
 
 jest.mock("react-native-safe-area-context", () => ({
-  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaView: ({ children, ...props }: { children: React.ReactNode }) => {
+    const ReactModule = require("react") as typeof React;
+    const { View } =
+      require("react-native") as typeof import("react-native");
+    return ReactModule.createElement(View, props, children);
+  },
 }));
 jest.mock("@/components/ui/Button", () => ({
   Button: ({
@@ -57,7 +64,7 @@ const result: GameResultSnapshot = {
 interface RendererHandle {
   root: {
     findByProps: (props: Record<string, unknown>) => {
-      props: { onPress: () => void };
+      props: { onPress: () => void; style?: unknown };
       findAllByType: (type: unknown) => {
         props: { onPress: () => void };
       }[];
@@ -67,6 +74,7 @@ interface RendererHandle {
     };
   };
   toJSON: () => unknown;
+  update: (element: React.ReactElement) => void;
   unmount: () => void;
 }
 
@@ -153,6 +161,44 @@ describe("GameResultExperience", () => {
     );
     expect(onRegister).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => renderer.unmount());
+  });
+
+  it("uses an opaque result background after the table is released", async () => {
+    jest
+      .spyOn(AccessibilityInfo, "isReduceMotionEnabled")
+      .mockResolvedValue(true);
+    let renderer!: RendererHandle;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameResultExperience
+          result={result}
+          onClose={jest.fn()}
+          showTableBackdrop
+        />,
+      ) as unknown as RendererHandle;
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      StyleSheet.flatten(
+        renderer.root.findByProps({ testID: "game-result-overlay" }).props
+          .style,
+      ),
+    ).toMatchObject({ backgroundColor: colors.modalOverlay });
+
+    await act(async () => {
+      renderer.update(
+        <GameResultExperience result={result} onClose={jest.fn()} />,
+      );
+    });
+    expect(
+      StyleSheet.flatten(
+        renderer.root.findByProps({ testID: "game-result-overlay" }).props
+          .style,
+      ),
+    ).toMatchObject({ backgroundColor: colors.background });
     await act(async () => renderer.unmount());
   });
 });

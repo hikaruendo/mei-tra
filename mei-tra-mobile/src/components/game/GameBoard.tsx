@@ -302,6 +302,7 @@ export function GameBoard({
           fallbackStyle={styles.optionsButtonFallback}
           interactive
           style={styles.optionsButtonSurface}
+          testID="game-options-trigger-surface"
         >
           <Pressable
             onPress={() => setShowOptions(true)}
@@ -860,7 +861,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   optionsButtonSurface: {
-    width: 40,
+    width: 44,
     alignSelf: 'stretch',
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
@@ -901,8 +902,8 @@ const styles = StyleSheet.create({
   },
   optionsClose: {
     alignSelf: 'flex-end',
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 6,

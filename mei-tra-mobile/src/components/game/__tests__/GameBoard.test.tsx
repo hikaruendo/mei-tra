@@ -242,7 +242,7 @@ describe('GameBoard interactions', () => {
       root: {
         findAllByProps: (props: Record<string, unknown>) => unknown[];
         findByProps: (props: Record<string, unknown>) => {
-          props: { onPress?: () => void };
+          props: { onPress?: () => void; style?: unknown };
         };
       };
       unmount: () => void;
@@ -273,6 +273,18 @@ describe('GameBoard interactions', () => {
     expect(
       renderer.root.findByProps({ testID: 'game-options-menu' }),
     ).toBeDefined();
+    expect(
+      StyleSheet.flatten(
+        renderer.root.findByProps({
+          testID: 'game-options-trigger-surface',
+        }).props.style,
+      ),
+    ).toMatchObject({ width: 44 });
+    expect(
+      StyleSheet.flatten(
+        renderer.root.findByProps({ testID: 'game-options-close' }).props.style,
+      ),
+    ).toMatchObject({ width: 44, height: 44 });
 
     await act(async () => {
       renderer.root

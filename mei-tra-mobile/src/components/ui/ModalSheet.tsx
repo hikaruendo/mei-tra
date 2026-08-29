@@ -48,7 +48,12 @@ export function ModalSheet({
             <Text numberOfLines={1} style={styles.title}>
               {title}
             </Text>
-            <Button onPress={onClose} style={styles.close} variant="ghost">
+            <Button
+              onPress={onClose}
+              style={styles.close}
+              testID="modal-sheet-close"
+              variant="ghost"
+            >
               {closeLabel}
             </Button>
           </LiquidGlassSurface>
@@ -97,7 +102,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   close: {
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: 12,
   },
   content: {
