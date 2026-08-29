@@ -14,20 +14,10 @@ jest.mock('@/components/game/GameHistory', () => ({
   GameHistory: () => null,
 }));
 jest.mock('@/components/game/PlayerSeat', () => ({
-  PlayerSeat: ({
-    onLongPress,
-    onPress,
-    player,
-  }: {
-    onLongPress?: () => void;
-    onPress?: () => void;
-    player: { seatId: string };
-  }) => {
+  PlayerSeat: ({ player }: { player: { seatId: string } }) => {
     const ReactModule = require('react') as typeof React;
-    const { Pressable } = require('react-native') as typeof import('react-native');
-    return ReactModule.createElement(Pressable, {
-      onLongPress,
-      onPress,
+    const { View } = require('react-native') as typeof import('react-native');
+    return ReactModule.createElement(View, {
       testID: `mock-player-seat-${player.seatId}`,
     });
   },
@@ -167,7 +157,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
@@ -224,7 +213,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
@@ -249,7 +237,7 @@ describe('GameBoard interactions', () => {
     await act(async () => renderer.unmount());
   });
 
-  it('keeps host actions on the player seat without an extra layout wrapper', async () => {
+  it('renders a human opponent directly and only offers visible moderation when unavailable', async () => {
     const players = [
       game.players[0],
       ...['player-2', 'player-3', 'player-4'].map((seatId, index) => ({
@@ -263,11 +251,7 @@ describe('GameBoard interactions', () => {
       })),
     ];
     let renderer!: {
-      root: {
-        findByProps: (props: Record<string, unknown>) => {
-          props: { onLongPress?: () => void };
-        };
-      };
+      toJSON: () => unknown;
       unmount: () => void;
     };
 
@@ -280,7 +264,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
@@ -289,10 +272,57 @@ describe('GameBoard interactions', () => {
       await Promise.resolve();
     });
 
-    expect(
-      renderer.root.findByProps({ testID: 'mock-player-seat-player-2' }).props
-        .onLongPress,
-    ).toEqual(expect.any(Function));
+    const findByTestId = (
+      value: unknown,
+      testID: string,
+    ): { props?: Record<string, unknown>; children?: unknown[] } | null => {
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          const match = findByTestId(child, testID);
+          if (match) return match;
+        }
+        return null;
+      }
+      if (!value || typeof value !== 'object') return null;
+
+      const node = value as {
+        props?: Record<string, unknown>;
+        children?: unknown[];
+      };
+      if (node.props?.testID === testID) return node;
+      return findByTestId(node.children ?? [], testID);
+    };
+    const opponentSlot = findByTestId(
+      renderer.toJSON(),
+      'opponent-seat-player-2',
+    );
+    expect(opponentSlot?.children?.[0]).toMatchObject({
+      props: { testID: 'mock-player-seat-player-2' },
+    });
+    expect(JSON.stringify(renderer.toJSON())).not.toContain('COMに置換');
+
+    await act(async () => renderer.unmount());
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{
+            ...game,
+            players,
+            disconnectedSeatIds: [asSeatId('player-2')],
+          }}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+    expect(JSON.stringify(renderer.toJSON())).toContain('COMに置換');
 
     await act(async () => renderer.unmount());
   });
@@ -334,7 +364,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}

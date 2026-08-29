@@ -24,7 +24,6 @@ interface PlayerSeatProps {
   teamNames?: TeamNames;
   teamFieldCounts?: Record<number, number>;
   onPress?: () => void;
-  onLongPress?: () => void;
   dealAnimationCue?: DealAnimationCue | null;
   reducedMotion?: boolean | null;
 }
@@ -42,7 +41,6 @@ export function PlayerSeat({
   teamNames,
   teamFieldCounts,
   onPress,
-  onLongPress,
   dealAnimationCue = null,
   reducedMotion = false,
 }: PlayerSeatProps) {
@@ -65,9 +63,8 @@ export function PlayerSeat({
         count: player.hand.length,
       })}
       accessibilityHint={onPress ? t('seat.switchPerspective') : undefined}
-      accessibilityRole={onPress || onLongPress ? 'button' : undefined}
-      disabled={!onPress && !onLongPress}
-      onLongPress={onLongPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
       onPress={onPress}
       style={[
         styles.container,

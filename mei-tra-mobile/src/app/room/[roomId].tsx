@@ -142,7 +142,6 @@ export default function RoomScreen() {
           onLeave={() => void doLeave()}
           onPass={passBlow}
           onPlayCard={playCard}
-          onRemovePlayer={removePlayer}
           onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
