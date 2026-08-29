@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { HandFan } from '../HandFan';
@@ -234,6 +235,100 @@ describe('HandFan', () => {
     });
 
     expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D', 'E']);
+  });
+
+  it('keeps the drag alive while other players act', () => {
+    const renderer = render();
+    const gesture = startDrag(renderer, 'A', 2 * PITCH);
+
+    // Every player action rebuilds the snapshot, so the same hand arrives as a
+    // new array. That must not interrupt a drag in progress.
+    act(() => {
+      renderer.update(
+        <HandFan
+          canReorder
+          cardMargin={CARD_MARGIN}
+          cardWidth={CARD_WIDTH}
+          cards={['A', 'B', 'C', 'D']}
+          reducedMotion
+          seatId="seat-1"
+          selectedCard={null}
+        />,
+      );
+    });
+
+    expect(
+      renderer.root.findAll(
+        (node) =>
+          typeof node.type === 'string' &&
+          node.props.testID === 'hand-drop-caret-after',
+      ).length,
+    ).toBeGreaterThan(0);
+
+    gesture.release();
+    expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D']);
+  });
+
+  it('drops the held card when a re-deal takes it out of the hand', () => {
+    const renderer = render();
+    // 'A' is held, and the caret sits on 'C'.
+    startDrag(renderer, 'A', 2 * PITCH);
+
+    // A broken hand or an all-pass round deals every hand again. 'A' is gone,
+    // so no release will ever reach the fan; 'C' comes back.
+    act(() => {
+      renderer.update(
+        <HandFan
+          canReorder
+          cardMargin={CARD_MARGIN}
+          cardWidth={CARD_WIDTH}
+          cards={['X', 'C', 'Y', 'Z']}
+          reducedMotion
+          seatId="seat-1"
+          selectedCard={null}
+        />,
+      );
+    });
+
+    expect(
+      renderer.root.findAll(
+        (node) =>
+          typeof node.type === 'string' &&
+          typeof node.props.testID === 'string' &&
+          node.props.testID.startsWith('hand-drop-caret-'),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('puts a re-dealt held card back down', () => {
+    const renderer = render();
+    startDrag(renderer, 'A', 2 * PITCH);
+
+    act(() => {
+      renderer.update(
+        <HandFan
+          canReorder
+          cardMargin={CARD_MARGIN}
+          cardWidth={CARD_WIDTH}
+          cards={['X', 'A', 'Y', 'Z']}
+          reducedMotion
+          seatId="seat-1"
+          selectedCard={null}
+        />,
+      );
+    });
+
+    const card = renderer.root.find(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.testID === 'hand-card-A',
+    );
+    const transform = (
+      StyleSheet.flatten(card.props.style as StyleProp<ViewStyle>) ?? {}
+    ).transform as { scale?: number }[] | undefined;
+
+    // A held card is scaled up; back in the fan it must sit flat again.
+    expect(transform?.find((entry) => 'scale' in entry)?.scale).toBe(1);
   });
 
   it('does not pick up cards for a spectator', () => {

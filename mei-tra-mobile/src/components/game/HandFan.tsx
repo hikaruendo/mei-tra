@@ -68,13 +68,32 @@ export function HandFan({
   // The release event can arrive before React has re-rendered the last move, so
   // the drop the reorder commits is read from here rather than from state.
   const dropRef = useRef<HandDropPlacement | null>(null);
+  const syncedHandRef = useRef(cards);
 
   useEffect(() => {
+    const previousHand = syncedHandRef.current;
+    syncedHandRef.current = cards;
+
     setOrder((previousOrder) => {
       const nextOrder = syncHandOrder(previousOrder, cards);
       orderRef.current = nextOrder;
       return nextOrder;
     });
+
+    // A broken hand or an all-pass round deals every hand again, and the blow
+    // phase allows reordering, so that can land mid-drag. Carrying the drag
+    // over would move a card the player never picked up, and when the held card
+    // is not dealt back its card unmounts, so no release arrives to end it.
+    // Only the contents matter here: the hand arrives as a new array whenever
+    // any player acts, and those must not interrupt a drag.
+    const handChanged =
+      cards.length !== previousHand.length ||
+      cards.some((card) => !previousHand.includes(card));
+    if (handChanged) {
+      dropRef.current = null;
+      setDraggingCard(null);
+      setDrop(null);
+    }
   }, [cards]);
 
   const pitch = handFanPitch(cardWidth, cardMargin);
@@ -201,6 +220,15 @@ function HandFanCard({
   useEffect(() => {
     live.current = { canReorder, onDragStart, onDragMove, onDragEnd };
   });
+
+  // The parent also ends a drag on its own when the hand is dealt again, which
+  // sends no release, so the offset is cleared from the flag rather than only
+  // from the release handler.
+  useEffect(() => {
+    if (!isDragging) {
+      pan.setValue({ x: 0, y: 0 });
+    }
+  }, [isDragging, pan]);
 
   const panResponder = useRef<PanResponderInstance | null>(null);
   if (panResponder.current === null) {
