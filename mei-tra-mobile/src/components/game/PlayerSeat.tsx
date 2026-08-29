@@ -54,14 +54,18 @@ export function PlayerSeat({
 
   const faceDownCount = Math.min(player.hand.length, 5);
 
-  const content = (
-    <View
+  return (
+    <Pressable
       accessibilityLabel={t('seat.a11yLabel', {
         name: player.name,
         self: isSelf ? t('seat.a11ySelf') : '',
         status: statusLabel,
         count: player.hand.length,
       })}
+      accessibilityHint={onPress ? t('seat.switchPerspective') : undefined}
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={onPress}
       style={[
         styles.container,
         isTurn && styles.turn,
@@ -133,21 +137,8 @@ export function PlayerSeat({
           ))}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
-
-  if (onPress) {
-    return (
-      <Pressable
-        accessibilityHint={t('seat.switchPerspective')}
-        accessibilityRole="button"
-        onPress={onPress}
-      >
-        {content}
-      </Pressable>
-    );
-  }
-  return content;
 }
 
 const styles = StyleSheet.create({

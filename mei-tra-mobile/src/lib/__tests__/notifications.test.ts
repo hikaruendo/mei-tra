@@ -128,6 +128,21 @@ describe('notifications', () => {
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps foreground gameplay notifications out of banners and the notification list', async () => {
+    setupNotificationHandling(jest.fn());
+
+    const handler = (Notifications.setNotificationHandler as jest.Mock).mock
+      .calls[0]?.[0] as {
+      handleNotification: () => Promise<Notifications.NotificationBehavior>;
+    };
+    await expect(handler.handleNotification()).resolves.toEqual({
+      shouldShowBanner: false,
+      shouldShowList: false,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    });
+  });
+
   it('does not register a simulator token', async () => {
     mockIsDevice = false;
 

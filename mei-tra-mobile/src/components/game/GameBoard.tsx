@@ -8,7 +8,6 @@ import type {
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   AccessibilityInfo,
   Modal,
   Pressable,
@@ -61,7 +60,6 @@ interface GameBoardProps {
   onCancel?: () => void;
   onPlayCard: (card: string) => void;
   onSelectBaseSuit: (suit: string) => void;
-  onRemovePlayer: (seatId: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
   actionsDisabled?: boolean;
@@ -82,7 +80,6 @@ export function GameBoard({
   onCancel = () => undefined,
   onPlayCard,
   onSelectBaseSuit,
-  onRemovePlayer,
   onReplaceWithCOM,
   onLeave,
   actionsDisabled = false,
@@ -373,31 +370,6 @@ export function GameBoard({
                 : position === 'left'
                   ? styles.seatLeft
                   : styles.seatRight;
-            const wrapped = isHost && !player.isCOM ? (
-              <Pressable
-                key={player.seatId}
-                onLongPress={() => {
-                  Alert.alert(
-                    player.name,
-                    t('waiting.playerActionTitle'),
-                    [
-                      {
-                        text: t('waiting.replaceWithCom'),
-                        onPress: () => onReplaceWithCOM(player.seatId),
-                      },
-                      {
-                        text: t('waiting.removePlayer'),
-                        style: 'destructive',
-                        onPress: () => onRemovePlayer(player.seatId),
-                      },
-                      { text: t('common.cancel'), style: 'cancel' },
-                    ],
-                  );
-                }}
-              >
-                {seatEl}
-              </Pressable>
-            ) : seatEl;
             const isDisconnected = game.disconnectedSeatIds.includes(
               player.seatId,
             );
@@ -410,8 +382,12 @@ export function GameBoard({
               player.seatId !== game.youSeatId &&
               (isDisconnected || isIdle);
             return (
-              <View key={player.seatId} style={posStyle}>
-                {wrapped}
+              <View
+                key={player.seatId}
+                style={posStyle}
+                testID={`opponent-seat-${player.seatId}`}
+              >
+                {seatEl}
                 {showReplacePanel ? (
                   <View style={styles.replacePanel}>
                     <Text style={styles.replacePanelHeader}>

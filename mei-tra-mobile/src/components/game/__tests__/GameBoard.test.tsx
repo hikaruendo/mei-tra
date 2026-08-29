@@ -14,7 +14,13 @@ jest.mock('@/components/game/GameHistory', () => ({
   GameHistory: () => null,
 }));
 jest.mock('@/components/game/PlayerSeat', () => ({
-  PlayerSeat: () => null,
+  PlayerSeat: ({ player }: { player: { seatId: string } }) => {
+    const ReactModule = require('react') as typeof React;
+    const { View } = require('react-native') as typeof import('react-native');
+    return ReactModule.createElement(View, {
+      testID: `mock-player-seat-${player.seatId}`,
+    });
+  },
 }));
 jest.mock('@/components/game/StartPlayerJanken', () => ({
   StartPlayerJanken: () => null,
@@ -151,7 +157,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
@@ -208,7 +213,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
@@ -229,6 +233,96 @@ describe('GameBoard interactions', () => {
     expect(StyleSheet.flatten(playerInfo.props.style)).toMatchObject({
       alignSelf: 'flex-start',
     });
+
+    await act(async () => renderer.unmount());
+  });
+
+  it('renders a human opponent directly and only offers visible moderation when unavailable', async () => {
+    const players = [
+      game.players[0],
+      ...['player-2', 'player-3', 'player-4'].map((seatId, index) => ({
+        ...game.players[0],
+        socketId: `socket-${index + 2}`,
+        seatId: asSeatId(seatId),
+        userId: `user-${index + 2}`,
+        name: `Player ${index + 2}`,
+        team: ((index + 1) % 2) as 0 | 1,
+        isHost: false,
+      })),
+    ];
+    let renderer!: {
+      toJSON: () => unknown;
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{ ...game, players }}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+
+    const findByTestId = (
+      value: unknown,
+      testID: string,
+    ): { props?: Record<string, unknown>; children?: unknown[] } | null => {
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          const match = findByTestId(child, testID);
+          if (match) return match;
+        }
+        return null;
+      }
+      if (!value || typeof value !== 'object') return null;
+
+      const node = value as {
+        props?: Record<string, unknown>;
+        children?: unknown[];
+      };
+      if (node.props?.testID === testID) return node;
+      return findByTestId(node.children ?? [], testID);
+    };
+    const opponentSlot = findByTestId(
+      renderer.toJSON(),
+      'opponent-seat-player-2',
+    );
+    expect(opponentSlot?.children?.[0]).toMatchObject({
+      props: { testID: 'mock-player-seat-player-2' },
+    });
+    expect(JSON.stringify(renderer.toJSON())).not.toContain('COMに置換');
+
+    await act(async () => renderer.unmount());
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{
+            ...game,
+            players,
+            disconnectedSeatIds: [asSeatId('player-2')],
+          }}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+    expect(JSON.stringify(renderer.toJSON())).toContain('COMに置換');
 
     await act(async () => renderer.unmount());
   });
@@ -270,7 +364,6 @@ describe('GameBoard interactions', () => {
           onLeave={jest.fn()}
           onPass={jest.fn()}
           onPlayCard={jest.fn()}
-          onRemovePlayer={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
