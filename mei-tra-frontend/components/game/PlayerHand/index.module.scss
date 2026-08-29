@@ -140,12 +140,16 @@
 .insertAfter::after {
   content: '';
   position: absolute;
-  top: 8%;
-  bottom: 8%;
-  width: 0.22rem;
+  top: 3%;
+  bottom: 3%;
+  width: 0.45rem;
   border-radius: 999px;
   background: var(--mt-accent);
-  box-shadow: 0 0 0 0.16rem var(--mt-accent-subtle);
+  /* The marker now sits on the card's own cream artwork, where the accent gold
+     on its own is easy to miss. The dark ring separates it from the card. */
+  box-shadow:
+    0 0 0 1.5px rgba(0, 0, 0, 0.6),
+    0 0 10px 2px var(--mt-accent);
   pointer-events: none;
   z-index: 70;
 }
