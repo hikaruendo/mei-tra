@@ -119,6 +119,11 @@
     "noMatch": "条件に合う部屋はありません",
     "noneAvailable": "現在参加できる部屋はありません"
   },
+  "scoreboard": {
+    "firstTo": "{points}点先取",
+    "onePointToWin": "あと1点",
+    "accessibilityLabel": "{team0} {score0}点、{team1} {score1}点、{target}点先取"
+  },
   "room": {
     "restoring": "ルーム情報を復元しています",
     "reconnecting": "サーバーへ再接続しています",
