@@ -17,6 +17,11 @@ import {
   type DealAnimationCue,
 } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
+import {
+  reorderHand,
+  syncHandOrder,
+  type HandDropSide,
+} from '@meitra/game-client/hand-order';
 
 const HAND_CARD_METRICS = {
   width: 80,
@@ -29,7 +34,7 @@ const HAND_CARD_METRICS = {
 
 type DropPlacement = {
   card: string;
-  side: 'before' | 'after';
+  side: HandDropSide;
 };
 
 interface PlayerHandProps {
@@ -163,11 +168,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   useEffect(() => {
     setDisplayHand((previousHand) => {
-      const currentCards = new Set(player.hand);
-      const retainedCards = previousHand.filter((card) => currentCards.has(card));
-      const addedCards = player.hand.filter((card) => !retainedCards.includes(card));
-
-      const nextHand = [...retainedCards, ...addedCards];
+      const nextHand = syncHandOrder(previousHand, player.hand);
       displayHandRef.current = nextHand;
       return nextHand;
     });
@@ -204,18 +205,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     targetCard: string,
     side: DropPlacement['side'],
   ) => {
-    const previousHand = displayHandRef.current;
-    const sourceIndex = previousHand.indexOf(sourceCard);
-    const targetIndex = previousHand.indexOf(targetCard);
-    if (sourceCard === targetCard || sourceIndex < 0 || targetIndex < 0) {
-      return;
-    }
-
-    const nextHand = [...previousHand];
-    nextHand.splice(sourceIndex, 1);
-    const nextTargetIndex = nextHand.indexOf(targetCard);
-    nextHand.splice(nextTargetIndex + (side === 'after' ? 1 : 0), 0, sourceCard);
-    if (nextHand.every((card, index) => card === previousHand[index])) {
+    const nextHand = reorderHand(
+      displayHandRef.current,
+      sourceCard,
+      targetCard,
+      side,
+    );
+    if (!nextHand) {
       return;
     }
 

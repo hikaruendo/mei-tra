@@ -42,6 +42,7 @@ export default function RoomScreen() {
     selectNegri,
     playCardSelectionSound,
     playCancelSound,
+    playHandReorderSound,
     playCard,
     selectBaseSuit,
     removePlayer,
@@ -147,6 +148,7 @@ export default function RoomScreen() {
           onSelectNegri={selectNegri}
           onCardSelection={playCardSelectionSound}
           onCancel={playCancelSound}
+          onHandReorder={playHandReorderSound}
           history={history}
           roomId={resolvedRoomId}
           firstTurnReveal={firstTurnReveal}

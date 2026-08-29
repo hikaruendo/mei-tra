@@ -35,6 +35,10 @@
       "types": "./game-event-reducer.ts",
       "default": "./game-event-reducer.ts"
     },
+    "./hand-order": {
+      "types": "./hand-order.ts",
+      "default": "./hand-order.ts"
+    },
     "./game-result": {
       "types": "./game-result.ts",
       "default": "./game-result.ts"

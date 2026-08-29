@@ -327,6 +327,7 @@ interface GameContextValue extends MobileState {
   selectNegri: (card: string) => void;
   playCardSelectionSound: () => void;
   playCancelSound: () => void;
+  playHandReorderSound: () => void;
   playCard: (card: string) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -1268,6 +1269,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     playSoundEffect(soundEffectForCancellation());
   }, [playSoundEffect]);
 
+  const playHandReorderSound = useCallback(() => {
+    playSoundEffect('negri');
+  }, [playSoundEffect]);
+
   const playCard = useCallback((card: string) => {
     const game = stateRef.current.game;
     if (!game || game.currentTurnSeatId !== game.youSeatId) {
@@ -1386,6 +1391,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       selectNegri,
       playCardSelectionSound,
       playCancelSound,
+      playHandReorderSound,
       playCard,
       selectBaseSuit,
       revealBrokenHand,
@@ -1424,6 +1430,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCard,
       playCardSelectionSound,
       playCancelSound,
+      playHandReorderSound,
       refreshRooms,
       removePlayer,
       replaceWithCOM,
