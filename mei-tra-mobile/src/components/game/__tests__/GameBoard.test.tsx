@@ -14,7 +14,23 @@ jest.mock('@/components/game/GameHistory', () => ({
   GameHistory: () => null,
 }));
 jest.mock('@/components/game/PlayerSeat', () => ({
-  PlayerSeat: () => null,
+  PlayerSeat: ({
+    onLongPress,
+    onPress,
+    player,
+  }: {
+    onLongPress?: () => void;
+    onPress?: () => void;
+    player: { seatId: string };
+  }) => {
+    const ReactModule = require('react') as typeof React;
+    const { Pressable } = require('react-native') as typeof import('react-native');
+    return ReactModule.createElement(Pressable, {
+      onLongPress,
+      onPress,
+      testID: `mock-player-seat-${player.seatId}`,
+    });
+  },
 }));
 jest.mock('@/components/game/StartPlayerJanken', () => ({
   StartPlayerJanken: () => null,
@@ -229,6 +245,54 @@ describe('GameBoard interactions', () => {
     expect(StyleSheet.flatten(playerInfo.props.style)).toMatchObject({
       alignSelf: 'flex-start',
     });
+
+    await act(async () => renderer.unmount());
+  });
+
+  it('keeps host actions on the player seat without an extra layout wrapper', async () => {
+    const players = [
+      game.players[0],
+      ...['player-2', 'player-3', 'player-4'].map((seatId, index) => ({
+        ...game.players[0],
+        socketId: `socket-${index + 2}`,
+        seatId: asSeatId(seatId),
+        userId: `user-${index + 2}`,
+        name: `Player ${index + 2}`,
+        team: ((index + 1) % 2) as 0 | 1,
+        isHost: false,
+      })),
+    ];
+    let renderer!: {
+      root: {
+        findByProps: (props: Record<string, unknown>) => {
+          props: { onLongPress?: () => void };
+        };
+      };
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{ ...game, players }}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onRemovePlayer={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByProps({ testID: 'mock-player-seat-player-2' }).props
+        .onLongPress,
+    ).toEqual(expect.any(Function));
 
     await act(async () => renderer.unmount());
   });

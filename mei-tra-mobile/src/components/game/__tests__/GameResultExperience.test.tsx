@@ -2,7 +2,7 @@
 import { asSeatId } from "@meitra/contracts/ids";
 import type { GameResultSnapshot } from "@meitra/game-client/game-result";
 import React from "react";
-import { AccessibilityInfo, ScrollView } from "react-native";
+import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
 import TestRenderer, { act } from "react-test-renderer";
 
 import { GameResultExperience } from "../GameResultExperience";
@@ -108,6 +108,9 @@ describe("GameResultExperience", () => {
     expect(renderer!.root.findByType(ScrollView).props.accessible).not.toBe(
       true,
     );
+    expect(
+      StyleSheet.flatten(renderer!.root.findByType(ScrollView).props.style),
+    ).toMatchObject({ flexGrow: 0 });
     await act(async () => renderer!.unmount());
   });
 });

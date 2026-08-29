@@ -223,6 +223,7 @@ const styles = StyleSheet.create({
   skip: { color: colors.textMuted, fontSize: 13, marginTop: 42 },
   suit: { position: "absolute", color: colors.gold, fontSize: 26 },
   panelScroll: {
+    flexGrow: 0,
     width: "100%",
     maxWidth: 620,
     maxHeight: "96%",

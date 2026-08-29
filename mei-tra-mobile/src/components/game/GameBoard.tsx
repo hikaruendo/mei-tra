@@ -360,6 +360,28 @@ export function GameBoard({
                     ? () => setSpectatorPerspectiveId(player.seatId)
                     : undefined
                 }
+                onLongPress={
+                  isHost && !player.isCOM
+                    ? () => {
+                        Alert.alert(
+                          player.name,
+                          t('waiting.playerActionTitle'),
+                          [
+                            {
+                              text: t('waiting.replaceWithCom'),
+                              onPress: () => onReplaceWithCOM(player.seatId),
+                            },
+                            {
+                              text: t('waiting.removePlayer'),
+                              style: 'destructive',
+                              onPress: () => onRemovePlayer(player.seatId),
+                            },
+                            { text: t('common.cancel'), style: 'cancel' },
+                          ],
+                        );
+                      }
+                    : undefined
+                }
                 player={player}
                 dealAnimationCue={dealAnimationCue}
                 reducedMotion={reducedMotion}
@@ -373,31 +395,6 @@ export function GameBoard({
                 : position === 'left'
                   ? styles.seatLeft
                   : styles.seatRight;
-            const wrapped = isHost && !player.isCOM ? (
-              <Pressable
-                key={player.seatId}
-                onLongPress={() => {
-                  Alert.alert(
-                    player.name,
-                    t('waiting.playerActionTitle'),
-                    [
-                      {
-                        text: t('waiting.replaceWithCom'),
-                        onPress: () => onReplaceWithCOM(player.seatId),
-                      },
-                      {
-                        text: t('waiting.removePlayer'),
-                        style: 'destructive',
-                        onPress: () => onRemovePlayer(player.seatId),
-                      },
-                      { text: t('common.cancel'), style: 'cancel' },
-                    ],
-                  );
-                }}
-              >
-                {seatEl}
-              </Pressable>
-            ) : seatEl;
             const isDisconnected = game.disconnectedSeatIds.includes(
               player.seatId,
             );
@@ -411,7 +408,7 @@ export function GameBoard({
               (isDisconnected || isIdle);
             return (
               <View key={player.seatId} style={posStyle}>
-                {wrapped}
+                {seatEl}
                 {showReplacePanel ? (
                   <View style={styles.replacePanel}>
                     <Text style={styles.replacePanelHeader}>

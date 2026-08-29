@@ -24,6 +24,7 @@ interface PlayerSeatProps {
   teamNames?: TeamNames;
   teamFieldCounts?: Record<number, number>;
   onPress?: () => void;
+  onLongPress?: () => void;
   dealAnimationCue?: DealAnimationCue | null;
   reducedMotion?: boolean | null;
 }
@@ -41,6 +42,7 @@ export function PlayerSeat({
   teamNames,
   teamFieldCounts,
   onPress,
+  onLongPress,
   dealAnimationCue = null,
   reducedMotion = false,
 }: PlayerSeatProps) {
@@ -54,14 +56,19 @@ export function PlayerSeat({
 
   const faceDownCount = Math.min(player.hand.length, 5);
 
-  const content = (
-    <View
+  return (
+    <Pressable
       accessibilityLabel={t('seat.a11yLabel', {
         name: player.name,
         self: isSelf ? t('seat.a11ySelf') : '',
         status: statusLabel,
         count: player.hand.length,
       })}
+      accessibilityHint={onPress ? t('seat.switchPerspective') : undefined}
+      accessibilityRole={onPress || onLongPress ? 'button' : undefined}
+      disabled={!onPress && !onLongPress}
+      onLongPress={onLongPress}
+      onPress={onPress}
       style={[
         styles.container,
         isTurn && styles.turn,
@@ -133,21 +140,8 @@ export function PlayerSeat({
           ))}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
-
-  if (onPress) {
-    return (
-      <Pressable
-        accessibilityHint={t('seat.switchPerspective')}
-        accessibilityRole="button"
-        onPress={onPress}
-      >
-        {content}
-      </Pressable>
-    );
-  }
-  return content;
 }
 
 const styles = StyleSheet.create({
