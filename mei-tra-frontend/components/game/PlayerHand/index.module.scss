@@ -145,12 +145,12 @@
 .insertAfter::after {
   content: '';
   position: absolute;
-  top: 4%;
-  bottom: 4%;
-  width: 0.3rem;
+  top: 12%;
+  bottom: 12%;
+  width: 0.2rem;
   border-radius: 999px;
   background: var(--mt-accent);
-  box-shadow: 0 0 0 0.16rem var(--mt-accent-subtle);
+  opacity: 0.75;
   pointer-events: none;
   z-index: 70;
 }

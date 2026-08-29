@@ -426,6 +426,62 @@ describe('PlayerHand', () => {
     expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
   });
 
+  it('keeps the insertion marker when the native drag cancels the pointer stream', () => {
+    renderPlayerHand({
+      currentSeatId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2', 'D-3'],
+      },
+    });
+
+    const dataTransfer = {
+      dropEffect: 'move',
+      effectAllowed: 'move',
+      getData: jest.fn(() => 'H-A'),
+      setData: jest.fn(),
+    };
+    const cards = screen.getAllByTestId('card-front');
+    const sourceCard = cards[0].parentElement as HTMLElement;
+    const secondCard = cards[1].parentElement as HTMLElement;
+    const thirdCard = cards[2].parentElement as HTMLElement;
+
+    fireEvent.pointerDown(sourceCard, { isPrimary: true });
+    fireEvent.dragStart(sourceCard, { dataTransfer });
+    fireEvent.dragOver(secondCard, { clientX: 170, dataTransfer });
+    expect(secondCard.className).toMatch(/insertBefore|insertAfter/);
+
+    // Chromium cancels the pointer stream when the native drag takes over.
+    fireEvent.pointerCancel(sourceCard);
+    expect(secondCard.className).toMatch(/insertBefore|insertAfter/);
+
+    // The drag is still running, and later dragovers keep moving the marker.
+    fireEvent.dragOver(thirdCard, { clientX: 250, dataTransfer });
+    expect(thirdCard.className).toMatch(/insertBefore|insertAfter/);
+    expect(secondCard.className).not.toMatch(/insertBefore|insertAfter/);
+  });
+
+  it('still clears a cancelled pointer drag when no native drag is running', () => {
+    renderPlayerHand({
+      currentSeatId: 'player-2',
+      player: {
+        ...otherPlayer,
+        hand: ['H-A', 'S-2'],
+      },
+    });
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 110 });
+    expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
+
+    // A touch drag taken over by scrolling must still reset.
+    fireEvent.pointerCancel(cards[0]);
+    expect(targetCard.className).not.toMatch(/insertBefore|insertAfter/);
+  });
+
   it('overlays the animated current-turn clock on the player avatar', () => {
     renderPlayerHand({
       currentSeatId: 'player-2',
