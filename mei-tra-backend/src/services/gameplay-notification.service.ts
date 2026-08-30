@@ -137,7 +137,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
         }
 
         this.pendingTurnsByRoom.delete(roomId);
-        void this.sendTurnNotification(snapshot);
+        void this.deliverStalledTurnNotification(snapshot);
       }, delayMs);
       this.pendingTurnsByRoom.set(roomId, {
         eventId: snapshot.eventId,
@@ -155,7 +155,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
     }
   }
 
-  private async sendTurnNotification(
+  private async deliverStalledTurnNotification(
     snapshot: TurnNotificationSnapshot,
   ): Promise<void> {
     try {
