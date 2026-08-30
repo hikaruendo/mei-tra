@@ -1,4 +1,4 @@
-import { fetchProfileGameHistory } from '@/lib/profile-api';
+import { fetchPlayerProfile, fetchProfileGameHistory } from '@/lib/profile-api';
 
 jest.mock('@/lib/config', () => ({
   config: {
@@ -43,5 +43,27 @@ describe('fetchProfileGameHistory', () => {
     await expect(
       fetchProfileGameHistory('user-1', 'access-token', fetchImpl),
     ).rejects.toThrow('forbidden');
+  });
+});
+
+describe('fetchPlayerProfile', () => {
+  it('loads a public player profile with an encoded user id', async () => {
+    const profile = {
+      id: 'user/1',
+      username: 'player',
+      displayName: 'Player',
+      avatarUrl: 'https://cdn.example.com/avatar.webp',
+    };
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(profile),
+    });
+
+    await expect(fetchPlayerProfile('user/1', fetchImpl)).resolves.toEqual(
+      profile,
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://backend.example.com/api/user-profile/user%2F1',
+    );
   });
 });

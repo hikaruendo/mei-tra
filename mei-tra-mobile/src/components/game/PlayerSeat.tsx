@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { DealtCard } from '@/components/game/DealtCard';
 import { TurnClock } from '@/components/game/TurnClock';
+import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { colors, teamColors } from '@/theme/colors';
@@ -85,11 +86,7 @@ export function PlayerSeat({
           <TurnClock size={22} />
         </View>
       ) : null}
-      <View style={styles.avatarRow}>
-        <View style={[styles.avatar, player.isCOM && styles.comAvatar]}>
-          <Text style={styles.avatarText}>{player.isCOM ? '🤖' : '●'}</Text>
-        </View>
-      </View>
+      <PlayerAvatar player={player} size={32} />
       <Text numberOfLines={1} style={styles.name}>
         {player.name}
         {isSelf ? t('blow.youSuffix') : ''}
@@ -166,26 +163,6 @@ const styles = StyleSheet.create({
   turn: {
     borderColor: colors.gold,
     borderWidth: 2,
-  },
-  avatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: colors.gold,
-  },
-  comAvatar: {
-    backgroundColor: colors.backgroundElevated,
-  },
-  avatarText: {
-    color: colors.text,
-    fontSize: 17,
   },
   name: {
     maxWidth: 96,

@@ -340,28 +340,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     emit();
   }
 
-  private dispatchGameplayEvents(
-    events?: GatewayEvent[],
-    initiatingActorId?: string,
-  ): void {
+  private dispatchGameplayEvents(events?: GatewayEvent[]): void {
     this.dispatchEvents(events);
-    events?.forEach((event) => {
-      if (
-        event.scope !== 'room' ||
-        !event.roomId ||
-        event.event !== 'update-turn' ||
-        typeof event.payload !== 'string'
-      ) {
-        return;
-      }
-
-      void this.gameplayNotificationService.notifyTurnChanged({
-        roomId: event.roomId,
-        seatId: asSeatId(event.payload),
-        initiatingActorId,
-        delayMs: event.delayMs,
-      });
-    });
   }
 
   private clearTurnAckMonitor(roomId: string): void {
@@ -460,7 +440,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
           }
 
-          this.dispatchGameplayEvents(completion.events, followUp.seatId);
+          this.dispatchGameplayEvents(completion.events);
           this.triggerComAutoPlayIfNeeded(followUp.roomId);
         })
         .catch((error) =>
@@ -1611,7 +1591,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           firstTurnRevealEnabled,
         });
 
-      this.dispatchGameplayEvents(startGameEvents, actorSeatId);
+      this.dispatchGameplayEvents(startGameEvents);
       void this.gameplayNotificationService.notifyGameStarted({
         roomId: data.roomId,
         initiatingActorId: actorSeatId,
@@ -1663,8 +1643,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchGameplayEvents(result.events, actorId);
-      this.dispatchGameplayEvents(result.delayedEvents, actorId);
+      this.dispatchGameplayEvents(result.events);
+      this.dispatchGameplayEvents(result.delayedEvents);
       this.triggerComAutoPlayAfterEvents(
         data.roomId,
         result.delayedEvents ?? [],
@@ -1704,8 +1684,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchGameplayEvents(result.events, actorId);
-      this.dispatchGameplayEvents(result.delayedEvents, actorId);
+      this.dispatchGameplayEvents(result.events);
+      this.dispatchGameplayEvents(result.delayedEvents);
       this.triggerComAutoPlayAfterEvents(
         data.roomId,
         result.delayedEvents ?? [],
@@ -1743,7 +1723,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchGameplayEvents(result.events, actorId);
+      this.dispatchGameplayEvents(result.events);
     } catch (error) {
       console.error('Error in handleSelectNegri:', error);
       client.emit('error-message', 'Failed to select Negri');
@@ -1825,7 +1805,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchGameplayEvents(result.events, actorId);
+      this.dispatchGameplayEvents(result.events);
 
       if (result.completeFieldTrigger) {
         this.scheduleFieldCompletion(result.completeFieldTrigger);
@@ -1868,7 +1848,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      this.dispatchGameplayEvents(result.events, actorId);
+      this.dispatchGameplayEvents(result.events);
       this.triggerComAutoPlayIfNeeded(data.roomId);
     } catch (error) {
       console.error('Error in handleSelectBaseSuit:', error);

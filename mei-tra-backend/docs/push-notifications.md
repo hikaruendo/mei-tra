@@ -13,10 +13,9 @@ The `push_tokens` table is protected by RLS and is not granted to `anon` or `aut
 
 ## Sending API
 
-`PushNotificationService` exposes two post-commit-safe methods:
+`PushNotificationService` exposes one post-commit-safe method:
 
 - `sendGameStarted(userIds, { eventId, roomId, roundNumber })`
-- `sendTurnNotification(userIds, { eventId, roomId, roundNumber, phase })`
 
 The service resolves current tokens, batches requests to Expo, preserves each successful ticket's receipt ID, and reports ticket results. Immediate ticket-level `DeviceNotRegistered` errors remove the token without storing a receipt. Successful tickets create a `push_receipts` row containing only the Expo receipt ID and the token/device/user mapping; notification title, body, and data are never persisted. The optional `push_token_id` is only a historical row reference; the copied token/device/user fields keep receipt cleanup safe even if the token row is removed before polling.
 
@@ -31,7 +30,8 @@ Network or cleanup failures are logged and returned as failed delivery results r
 Triggers are wired only after the authoritative state write and the corresponding broadcast path:
 
 1. **Game start:** after `StartGameUseCase` has persisted the initial game state and the `RoomPlaying`/game-start broadcast has succeeded. Target authenticated human participants from the persisted roster; exclude COMs and spectators. Use a transition-specific `eventId` so reconnect logic can deduplicate the notification.
-2. **Turn:** after a blow/play turn transition has been persisted and the turn update has been broadcast. Target only the current human player's `userId`; do not notify a COM, spectator, or a stale player reference. Use the persisted state version or another transition identifier for `eventId`.
+
+Turn-by-turn pushes are intentionally not sent. They overwhelmed players during normal play; the in-app turn indicator remains the canonical prompt while a game is open.
 
 Do not send from a pre-persistence mutation, a reconnect handler, or a generic state-sync handler. A trigger must be fire-and-forget after commit, and a push failure must never roll back or block the game transition.
 
