@@ -627,4 +627,96 @@ describe('GameProvider realtime resync safety', () => {
 
     await screen.unmount();
   });
+
+  it('applies COM replacement to PlayerInfo before the next roster snapshot', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+    gameState.players[1] = player({
+      seatId: asSeatId('player-2'),
+      socketId: '',
+      userId: 'user-2',
+      name: 'Disconnected player',
+      team: 1,
+      hand: [],
+    });
+
+    await act(async () => {
+      mockSocket.trigger('game-state', gameState);
+      mockSocket.trigger('player-converted-to-com', {
+        seatId: asSeatId('player-2'),
+        playerName: 'COM 2',
+      });
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.game?.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          seatId: 'player-2',
+          name: 'Disconnected player',
+          userId: undefined,
+          isCOM: true,
+          isAuthenticated: false,
+        }),
+      ]),
+    );
+    expect(screen.latestGame.game?.disconnectedSeatIds).not.toContain(
+      'player-2',
+    );
+
+    await screen.unmount();
+  });
+
+  it('clears stale disconnected UI when room sync restores the same seat', async () => {
+    const screen = await renderProvider();
+    const disconnectedState = createGameState();
+    disconnectedState.players[1] = player({
+      seatId: asSeatId('player-2'),
+      socketId: '',
+      userId: 'user-2',
+      name: 'Before reconnect',
+      team: 1,
+      hand: [],
+    });
+
+    await act(async () => {
+      mockSocket.trigger('game-state', disconnectedState);
+      await flushPromises();
+    });
+    expect(screen.latestGame.game?.disconnectedSeatIds).toContain('player-2');
+
+    const reconnectedPlayer = player({
+      seatId: asSeatId('player-2'),
+      socketId: 'socket-reconnected',
+      userId: 'user-2',
+      name: 'After reconnect',
+      team: 1,
+      hand: [],
+      isAuthenticated: true,
+    });
+
+    await act(async () => {
+      mockSocket.trigger('room-sync', {
+        room: createRoom(),
+        players: [player(), reconnectedPlayer],
+      });
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.game?.disconnectedSeatIds).not.toContain(
+      'player-2',
+    );
+    expect(screen.latestGame.game?.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          seatId: 'player-2',
+          socketId: 'socket-reconnected',
+          name: 'After reconnect',
+          isAuthenticated: true,
+        }),
+      ]),
+    );
+
+    await screen.unmount();
+  });
 });

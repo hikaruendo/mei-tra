@@ -22,6 +22,15 @@ jest.mock('@/components/game/PlayerSeat', () => ({
     });
   },
 }));
+jest.mock('@/components/game/PlayerAvatar', () => ({
+  PlayerAvatar: ({ player }: { player: { seatId: string } }) => {
+    const ReactModule = require('react') as typeof React;
+    const { View } = require('react-native') as typeof import('react-native');
+    return ReactModule.createElement(View, {
+      testID: `mock-player-avatar-${player.seatId}`,
+    });
+  },
+}));
 jest.mock('@/components/game/StartPlayerJanken', () => ({
   StartPlayerJanken: () => null,
 }));

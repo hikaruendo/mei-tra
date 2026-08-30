@@ -21,6 +21,7 @@ import {
 import { BlowControls } from '@/components/game/BlowControls';
 import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
+import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
 import { MiniCard } from '@/components/game/MiniCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
@@ -517,11 +518,7 @@ export function GameBoard({
                     : isMyTurn) && styles.selfCardTurn,
                 ]}
               >
-                <View style={[styles.selfAvatar, self.isCOM && styles.selfComAvatar]}>
-                  <Text style={styles.selfAvatarText}>
-                    {self.isCOM ? '🤖' : '●'}
-                  </Text>
-                </View>
+                <PlayerAvatar player={self} size={48} />
                 <Text numberOfLines={1} style={styles.selfName}>
                   {self.name}
                 </Text>
@@ -1013,21 +1010,6 @@ const styles = StyleSheet.create({
   selfCardTurn: {
     borderColor: colors.gold,
     borderWidth: 2,
-  },
-  selfAvatar: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: colors.gold,
-  },
-  selfComAvatar: {
-    backgroundColor: colors.backgroundElevated,
-  },
-  selfAvatarText: {
-    color: colors.text,
-    fontSize: 24,
   },
   selfName: {
     maxWidth: 70,

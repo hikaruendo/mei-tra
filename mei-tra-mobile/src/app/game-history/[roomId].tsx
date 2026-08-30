@@ -45,6 +45,7 @@ export default function GameHistoryScreen() {
           loading={loading || authLoading}
           onRefresh={() => void refresh()}
           replay={replay}
+          showMembershipEvents={false}
           summary={summary}
           teamNames={summary?.teamNames}
         />

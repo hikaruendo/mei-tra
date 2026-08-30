@@ -206,7 +206,13 @@ function reducer(state: MobileState, action: Action): MobileState {
 
       return {
         ...state,
-        game: state.game ? { ...state.game, players: gamePlayers } : null,
+        game: state.game
+          ? {
+              ...state.game,
+              players: gamePlayers,
+              disconnectedSeatIds: extractDisconnectedSeatIds(gamePlayers),
+            }
+          : null,
         currentRoom:
           state.currentRoom && roomPlayers
             ? { ...state.currentRoom, players: roomPlayers }
@@ -263,6 +269,17 @@ function reducer(state: MobileState, action: Action): MobileState {
         ...state,
         game: {
           ...state.game,
+          players: state.game.players.map((player) =>
+            player.seatId === action.seatId
+              ? {
+                  ...player,
+                  isCOM: true,
+                  socketId: '',
+                  userId: undefined,
+                  isAuthenticated: false,
+                }
+              : player,
+          ),
           disconnectedSeatIds: state.game.disconnectedSeatIds.filter(
             (id) => id !== action.seatId,
           ),
@@ -694,6 +711,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
     });
     socket.on('room-sync', ({ room, players }) => {
+      gameEventStateRef.current = {
+        ...gameEventStateRef.current,
+        players,
+      };
       setRoom(room);
       dispatch({ type: 'players', players });
       finishResyncFlight(room.id);

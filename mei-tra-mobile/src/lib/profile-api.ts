@@ -9,6 +9,20 @@ import { config } from '@/lib/config';
 
 const BASE = `${config.backendUrl}/api/user-profile`;
 
+export async function fetchPlayerProfile(
+  userId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<UserProfileDto> {
+  const res = await fetchImpl(`${BASE}/${encodeURIComponent(userId)}`);
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(body || `Profile request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<UserProfileDto>;
+}
+
 export async function fetchProfileGameHistory(
   userId: string,
   token: string,
