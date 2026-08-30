@@ -30,10 +30,10 @@ Network or cleanup failures are logged and returned as failed delivery results r
 
 Triggers are wired only after the authoritative state write and the corresponding broadcast path:
 
-1. **Game start:** after `StartGameUseCase` has persisted the initial game state and the `RoomPlaying`/game-start broadcast has succeeded. Target authenticated human participants from the persisted roster; exclude COMs and spectators. Use a transition-specific `eventId` so reconnect logic can deduplicate the notification.
-2. **Turn:** after a blow/play turn transition has been persisted and the turn update has been broadcast. Target only the current human player's `userId`; do not notify a COM, spectator, or a stale player reference. Use the persisted state version or another transition identifier for `eventId`.
+1. **Game start:** send only for the initial `start-game` transition after `StartGameUseCase` has persisted the state and the room broadcast has succeeded. Target authenticated human participants whose canonical `GameStateService` connection has no live socket. The first-turn player is eligible when disconnected. Later rounds do not emit another game-start push.
+2. **Turn:** schedule after a persisted blow/play `update-turn` transition. Wait for the event's display delay and then another 60 seconds. Send one push only when the same room, seat, phase, and turn fingerprint still match and the canonical connection state still has no live socket. A newer turn replaces the room's pending timer; reconnect, phase changes, and COM replacement make the old snapshot ineligible.
 
-Do not send from a pre-persistence mutation, a reconnect handler, or a generic state-sync handler. A trigger must be fire-and-forget after commit, and a push failure must never roll back or block the game transition.
+Do not send from a pre-persistence mutation, a reconnect handler, or a generic state-sync handler. Do not infer connectivity from the persisted room projection or its `socketId`; `GameStateService.getPlayerConnectionState(seatId)` is the canonical source. A trigger must be fire-and-forget after commit, and a push failure must never roll back or block the game transition.
 
 The trigger dedupe cache is in-memory and bounded. It suppresses duplicate trigger calls inside one backend process, while `push_receipts` is the durable receipt ledger across deployments or process restarts. Receipt rows are removed automatically with the owning Auth user; operational cleanup should monitor `expired` rows and repeated lookup failures.
 
