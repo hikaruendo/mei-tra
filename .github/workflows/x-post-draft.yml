@@ -11,6 +11,7 @@ on:
         type: number
 
 permissions:
+  contents: read
   issues: write
   pull-requests: read
 
@@ -24,6 +25,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out draft formatter
+        uses: actions/checkout@v4
+
+      - name: Test draft length fitting
+        run: node --test .github/scripts/x-post-draft-text.test.cjs
+
       - name: Create a text-only approval draft
         uses: actions/github-script@v7
         env:
@@ -33,6 +40,10 @@ jobs:
             const prNumber = context.eventName === 'workflow_dispatch'
               ? Number(process.env.MANUAL_PR_NUMBER)
               : context.payload.pull_request.number;
+            const {
+              countCharacters,
+              fitXPostDraft,
+            } = require('./.github/scripts/x-post-draft-text.cjs');
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -82,14 +93,16 @@ jobs:
               core.setFailed(`PR #${prNumber} is labeled x:share but its AI-written sections say it is not for publication.`);
               return;
             }
-            const candidate = [userFacingChange, userBenefit].join('\n');
-            if (candidate.length > 240) {
-              core.setFailed(`PR #${prNumber} User-facing change plus User benefit must be 240 characters or fewer.`);
-              return;
-            }
-            if (/https?:\/\//i.test(candidate)) {
+            const originalCandidate = [userFacingChange, userBenefit].join('\n');
+            if (/https?:\/\//i.test(originalCandidate)) {
               core.setFailed(`PR #${prNumber} AI-written sections must not include URLs.`);
               return;
+            }
+            const candidate = fitXPostDraft(userFacingChange, userBenefit);
+            if (candidate !== originalCandidate) {
+              core.notice(
+                `Shortened PR #${prNumber} X draft from ${countCharacters(originalCandidate)} to ${countCharacters(candidate)} characters.`,
+              );
             }
 
             const openIssues = await github.paginate(github.rest.issues.listForRepo, {
