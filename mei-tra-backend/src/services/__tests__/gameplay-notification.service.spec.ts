@@ -386,6 +386,52 @@ describe('GameplayNotificationService', () => {
     );
   });
 
+  it('does not let an older scheduling request clear the latest turn timer', async () => {
+    let resolveFirstRoom!: (value: Room) => void;
+    const firstRoom = new Promise<Room>((resolve) => {
+      resolveFirstRoom = resolve;
+    });
+    roomService.getRoom
+      .mockImplementationOnce(() => firstRoom)
+      .mockImplementation(async () => currentRoom);
+
+    gameState = state({ currentSeatId: asSeatId('player-1') });
+    const olderRequest = service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-1'),
+    });
+
+    gameState = state({
+      currentSeatId: asSeatId('player-2'),
+      blowState: {
+        ...gameState.blowState,
+        currentBlowIndex: 1,
+        actionHistory: [
+          {
+            type: 'pass',
+            seatId: asSeatId('player-1'),
+            timestamp: 1,
+          },
+        ],
+      },
+    });
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+    });
+
+    resolveFirstRoom(currentRoom);
+    await olderRequest;
+    await jest.advanceTimersByTimeAsync(60_000);
+
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
+      ['user-2'],
+      expect.objectContaining({
+        eventId: 'turn:room-1:1:blow:player-2:1:1:0:0:player-1',
+      }),
+    );
+  });
+
   it('drops the old timer when the phase changes', async () => {
     await service.notifyTurnChanged({
       roomId: 'room-1',

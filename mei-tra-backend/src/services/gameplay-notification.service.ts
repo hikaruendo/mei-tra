@@ -48,6 +48,8 @@ export class GameplayNotificationService implements OnModuleDestroy {
     string,
     PendingTurnNotification
   >();
+  private readonly latestTurnRequestByRoom = new Map<string, number>();
+  private nextTurnRequestId = 0;
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
@@ -59,6 +61,7 @@ export class GameplayNotificationService implements OnModuleDestroy {
   onModuleDestroy(): void {
     this.pendingTurnsByRoom.forEach(({ timeout }) => clearTimeout(timeout));
     this.pendingTurnsByRoom.clear();
+    this.latestTurnRequestByRoom.clear();
   }
 
   async notifyGameStarted({
@@ -102,8 +105,15 @@ export class GameplayNotificationService implements OnModuleDestroy {
     seatId,
     transitionDelayMs,
   }: TurnNotificationParams): Promise<void> {
+    const requestId = ++this.nextTurnRequestId;
+    this.latestTurnRequestByRoom.set(roomId, requestId);
+
     try {
       const context = await this.loadContext(roomId);
+      if (this.latestTurnRequestByRoom.get(roomId) !== requestId) {
+        return;
+      }
+
       const snapshot = context
         ? this.createTurnSnapshot(roomId, seatId, context.state)
         : null;
@@ -138,6 +148,10 @@ export class GameplayNotificationService implements OnModuleDestroy {
         `Failed to schedule turn push notification for room ${roomId} seat ${seatId}`,
         error instanceof Error ? error.stack : String(error),
       );
+    } finally {
+      if (this.latestTurnRequestByRoom.get(roomId) === requestId) {
+        this.latestTurnRequestByRoom.delete(roomId);
+      }
     }
   }
 
