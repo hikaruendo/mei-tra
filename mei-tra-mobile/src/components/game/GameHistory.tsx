@@ -28,6 +28,7 @@ interface GameHistoryProps {
   onRefresh: () => void;
   players?: MobilePlayer[];
   teamNames?: TeamNames;
+  showMembershipEvents?: boolean;
 }
 
 /**
@@ -129,6 +130,7 @@ export function GameHistory({
   onRefresh,
   players,
   teamNames,
+  showMembershipEvents = true,
 }: GameHistoryProps) {
   const rows = useMemo(
     () => buildRoundTableRows(replay, players ?? [], teamNames),
@@ -136,18 +138,20 @@ export function GameHistory({
   );
   const membershipEvents = useMemo(
     () =>
-      (replay?.rounds ?? [])
-        .flatMap((round) => round.events)
-        .filter(
-          (event) =>
-            event.actionType === 'player_joined' ||
-            event.actionType === 'player_left',
-        )
-        .sort(
-          (left, right) =>
-            Date.parse(left.timestamp) - Date.parse(right.timestamp),
-        ),
-    [replay],
+      showMembershipEvents
+        ? (replay?.rounds ?? [])
+            .flatMap((round) => round.events)
+            .filter(
+              (event) =>
+                event.actionType === 'player_joined' ||
+                event.actionType === 'player_left',
+            )
+            .sort(
+              (left, right) =>
+                Date.parse(left.timestamp) - Date.parse(right.timestamp),
+            )
+        : [],
+    [replay, showMembershipEvents],
   );
   const startingHands = useMemo(
     () =>
@@ -193,7 +197,10 @@ export function GameHistory({
         <>
           <ScrollView showsVerticalScrollIndicator={false}>
             {membershipEvents.length > 0 ? (
-              <View style={styles.membershipSection}>
+              <View
+                style={styles.membershipSection}
+                testID="game-history-membership-section"
+              >
                 <Text style={styles.membershipTitle}>{t('gameLog.membership')}</Text>
                 {membershipEvents.map((event) => (
                   <MembershipRow event={event} key={event.id} />
