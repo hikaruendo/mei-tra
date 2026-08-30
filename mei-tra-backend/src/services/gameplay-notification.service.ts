@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { PushNotificationService } from '../push/push-notification.service';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IRoomService } from './interfaces/room-service.interface';
@@ -14,16 +14,24 @@ interface GameStartedNotificationParams {
   currentTurnSeatId?: SeatId;
 }
 
+interface TurnNotificationParams {
+  roomId: string;
+  seatId: SeatId;
+  initiatingActorId?: string;
+  delayMs?: number;
+}
+
 interface NotificationContext {
   room: Room;
   state: GameState;
 }
 
 @Injectable()
-export class GameplayNotificationService {
+export class GameplayNotificationService implements OnModuleDestroy {
   private readonly logger = new Logger(GameplayNotificationService.name);
   private readonly sentEventIds = new Set<string>();
   private readonly sentEventOrder: string[] = [];
+  private readonly pendingTimeouts = new Set<NodeJS.Timeout>();
 
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
@@ -31,6 +39,11 @@ export class GameplayNotificationService {
     private readonly userProfileRepository: IUserProfileRepository,
     private readonly pushNotificationService: PushNotificationService,
   ) {}
+
+  onModuleDestroy(): void {
+    this.pendingTimeouts.forEach((timeout) => clearTimeout(timeout));
+    this.pendingTimeouts.clear();
+  }
 
   async notifyGameStarted({
     roomId,
@@ -71,6 +84,77 @@ export class GameplayNotificationService {
         error instanceof Error ? error.stack : String(error),
       );
     }
+  }
+
+  async notifyTurnChanged({
+    roomId,
+    seatId,
+    initiatingActorId,
+    delayMs,
+  }: TurnNotificationParams): Promise<void> {
+    const send = async (): Promise<void> => {
+      try {
+        const context = await this.loadContext(roomId);
+        if (!context) {
+          return;
+        }
+
+        // A delayed notification carries a seat frozen at schedule time; if
+        // the turn already moved on, pushing "your turn" would mislead.
+        if ((context.state.currentSeatId ?? null) !== seatId) {
+          return;
+        }
+
+        const targetPlayer = context.room.players.find(
+          (player) => player.seatId === seatId,
+        );
+        if (!targetPlayer) {
+          return;
+        }
+
+        const phase = this.resolvePushPhase(context.state.gamePhase);
+        if (!phase) {
+          return;
+        }
+
+        const eventId = this.buildTurnEventId(roomId, seatId, context.state);
+        if (!this.markEvent(eventId)) {
+          return;
+        }
+
+        const recipients = await this.resolveNotificationUserIds(
+          [targetPlayer],
+          { excludeActorId: initiatingActorId },
+        );
+
+        if (recipients.length === 0) {
+          return;
+        }
+
+        await this.pushNotificationService.sendTurnNotification(recipients, {
+          eventId,
+          roomId,
+          roundNumber: context.state.roundNumber,
+          phase,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send turn push notification for room ${roomId} seat ${seatId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    };
+
+    if (delayMs && delayMs > 0) {
+      const timeout = setTimeout(() => {
+        this.pendingTimeouts.delete(timeout);
+        void send();
+      }, delayMs);
+      this.pendingTimeouts.add(timeout);
+      return;
+    }
+
+    await send();
   }
 
   private async loadContext(
@@ -138,6 +222,31 @@ export class GameplayNotificationService {
 
   private buildGameStartedEventId(roomId: string, state: GameState): string {
     return ['game-started', roomId, state.roundNumber].join(':');
+  }
+
+  private resolvePushPhase(
+    phase: GameState['gamePhase'],
+  ): 'blow' | 'play' | null {
+    return phase === 'blow' || phase === 'play' ? phase : null;
+  }
+
+  private buildTurnEventId(
+    roomId: string,
+    seatId: SeatId,
+    state: GameState,
+  ): string {
+    return [
+      'turn',
+      roomId,
+      state.roundNumber,
+      state.gamePhase,
+      seatId,
+      state.blowState.currentBlowIndex,
+      state.blowState.actionHistory?.length ?? 0,
+      state.playState?.fields?.length ?? 0,
+      state.playState?.currentField?.cards?.length ?? 0,
+      state.playState?.currentField?.dealerSeatId ?? '',
+    ].join(':');
   }
 
   private markEvent(eventId: string): boolean {

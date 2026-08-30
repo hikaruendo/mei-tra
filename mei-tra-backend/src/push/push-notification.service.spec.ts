@@ -95,10 +95,11 @@ describe('PushNotificationService', () => {
     ]);
     repository.deleteByExpoPushToken.mockResolvedValue(1);
 
-    const result = await service.sendGameStarted(['user-id'], {
-      eventId: 'game-1',
+    const result = await service.sendTurnNotification(['user-id'], {
+      eventId: 'turn-1',
       roomId: 'room-1',
       roundNumber: 2,
+      phase: 'play',
     });
 
     expect(repository.deleteByExpoPushToken).toHaveBeenCalledWith(
@@ -114,10 +115,11 @@ describe('PushNotificationService', () => {
     client.send.mockRejectedValue(new Error('network down'));
 
     await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-1',
+      service.sendTurnNotification(['user-id'], {
+        eventId: 'turn-1',
         roomId: 'room-1',
         roundNumber: 1,
+        phase: 'blow',
       }),
     ).resolves.toMatchObject({
       targetedTokenCount: 1,
@@ -137,10 +139,11 @@ describe('PushNotificationService', () => {
       },
     ]);
     await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-async',
+      service.sendTurnNotification(['user-id'], {
+        eventId: 'turn-async',
         roomId: 'room-1',
         roundNumber: 1,
+        phase: 'play',
       }),
     ).resolves.toMatchObject({ targetedTokenCount: 1 });
     expect(repository.upsertReceipts).toHaveBeenCalledTimes(1);
@@ -181,10 +184,11 @@ describe('PushNotificationService', () => {
     );
 
     await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-1',
+      service.sendTurnNotification(['user-id'], {
+        eventId: 'turn-1',
         roomId: 'room-1',
         roundNumber: 1,
+        phase: 'play',
       }),
     ).resolves.toMatchObject({
       targetedTokenCount: 1,

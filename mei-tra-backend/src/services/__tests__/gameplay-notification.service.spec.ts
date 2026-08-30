@@ -149,6 +149,7 @@ describe('GameplayNotificationService', () => {
     } as unknown as jest.Mocked<IUserProfileRepository>;
     pushNotificationService = {
       sendGameStarted: jest.fn().mockResolvedValue({}),
+      sendTurnNotification: jest.fn().mockResolvedValue({}),
     } as unknown as jest.Mocked<PushNotificationService>;
     service = new GameplayNotificationService(
       roomService,
@@ -178,5 +179,108 @@ describe('GameplayNotificationService', () => {
         roundNumber: 1,
       },
     );
+  });
+
+  it('drops a turn notification whose seat no longer holds the turn', async () => {
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-1'),
+      initiatingActorId: 'player-2',
+    });
+
+    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
+  });
+
+  it('sends one turn notification per transition and suppresses replay duplicates', async () => {
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+      initiatingActorId: 'player-1',
+    });
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+      initiatingActorId: 'player-1',
+    });
+
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
+      ['user-2'],
+      expect.objectContaining({
+        eventId: 'turn:room-1:1:blow:player-2:0:0:0:0:player-1',
+        roomId: 'room-1',
+        roundNumber: 1,
+        phase: 'blow',
+      }),
+    );
+  });
+
+  it('skips COM turns and players with notifications disabled', async () => {
+    userProfileRepository.findById.mockResolvedValue(profile('user-2', false));
+
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('com-3'),
+    });
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+    });
+
+    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
+  });
+
+  it('catches push failures so gameplay callers can continue', async () => {
+    pushNotificationService.sendTurnNotification.mockRejectedValue(
+      new Error('expo down'),
+    );
+
+    await expect(
+      service.notifyTurnChanged({
+        roomId: 'room-1',
+        seatId: asSeatId('player-2'),
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
+      1,
+    );
+  });
+
+  it('sends delayed turn notifications after the delayed transition', async () => {
+    jest.useFakeTimers();
+
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+      delayMs: 1_000,
+    });
+
+    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1_000);
+
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
+      1,
+    );
+    jest.useRealTimers();
+  });
+
+  it('clears delayed turn notification timers on module destroy', async () => {
+    jest.useFakeTimers();
+
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+      delayMs: 1_000,
+    });
+    service.onModuleDestroy();
+
+    await jest.advanceTimersByTimeAsync(1_000);
+
+    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 });
