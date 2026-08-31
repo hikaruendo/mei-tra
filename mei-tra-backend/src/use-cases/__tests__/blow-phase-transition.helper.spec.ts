@@ -5,6 +5,7 @@ import { Room, RoomStatus } from '../../types/room.types';
 import { IBlowService } from '../../services/interfaces/blow-service.interface';
 import { ICardService } from '../../services/interfaces/card-service.interface';
 import { asSeatId } from '../../types/identity.types';
+import { PLAY_PHASE_REVEAL_DELAY_MS } from '@contracts/game';
 
 describe('transitionToPlayPhase', () => {
   it('reveals the Agari card using room player socket when session lookup is empty', async () => {
@@ -151,6 +152,26 @@ describe('transitionToPlayPhase', () => {
     });
     expect(updatePhaseEvent?.payload).not.toHaveProperty('agariCard');
     expect(updatePhaseEvent?.payload).not.toHaveProperty('agariPlayerId');
+
+    // The hand carrying the agari must not go out ahead of the reveal that
+    // names it, so nothing this transition produces is emitted immediately.
+    expect(result.events).toEqual([]);
+    const playerSyncEvent = result.delayedEvents.find(
+      (event) =>
+        event.event === 'room-sync' || event.event === 'update-players',
+    );
+    expect(playerSyncEvent).toBeDefined();
+    expect(playerSyncEvent?.delayMs).toBe(PLAY_PHASE_REVEAL_DELAY_MS);
+    expect(
+      result.delayedEvents.every(
+        (event) => event.delayMs === PLAY_PHASE_REVEAL_DELAY_MS,
+      ),
+    ).toBe(true);
+    // The winner's hand has to be on the client before reveal-agari asks them
+    // to pick a negri out of it.
+    expect(result.delayedEvents.indexOf(playerSyncEvent!)).toBeLessThan(
+      result.delayedEvents.indexOf(revealAgariEvent!),
+    );
   });
 
   it('does not request broken reveal after the Agari card is added', async () => {
