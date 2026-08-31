@@ -66,6 +66,8 @@
         }
       ],
       "guestCta": "Try without signing up",
+      "guestNameLabel": "Nickname",
+      "guestNamePlaceholder": "Leave blank for a random name",
       "guestNote": "Stats are not saved, but you can carry them over by registering later."
     },
     "screenshot": {
@@ -257,6 +259,8 @@
       "backToLogin": "Back to Login"
     },
     "continueAsGuest": "Play as guest",
+    "guestNameLabel": "Nickname",
+    "guestNamePlaceholder": "Leave blank for a random name",
     "guestHint": "Play instantly without an account. Register later to keep your stats.",
     "guestDefaultName": "Guest {number}",
     "upgrade": {

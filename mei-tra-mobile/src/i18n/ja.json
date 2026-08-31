@@ -31,6 +31,8 @@
     "signUpSubmit": "登録する",
     "continueWithGoogle": "Googleで続ける",
     "playAsGuest": "ゲストとして遊ぶ",
+    "guestNameLabel": "ニックネーム",
+    "guestNamePlaceholder": "未入力ならランダムな名前になります",
     "guestHint": "登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。",
     "or": "または",
     "displayName": "表示名",

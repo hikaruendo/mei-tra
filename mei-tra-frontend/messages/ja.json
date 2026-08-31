@@ -66,6 +66,8 @@
         }
       ],
       "guestCta": "登録せずに試す",
+      "guestNameLabel": "ニックネーム",
+      "guestNamePlaceholder": "未入力ならランダムな名前になります",
       "guestNote": "戦績は残りませんが、あとから登録すれば引き継げます。"
     },
     "screenshot": {
@@ -257,6 +259,8 @@
       "backToLogin": "ログインページへ戻る"
     },
     "continueAsGuest": "ゲストとして遊ぶ",
+    "guestNameLabel": "ニックネーム",
+    "guestNamePlaceholder": "未入力ならランダムな名前になります",
     "guestHint": "登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。",
     "guestDefaultName": "ゲスト{number}",
     "upgrade": {

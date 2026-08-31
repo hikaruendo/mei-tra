@@ -94,17 +94,91 @@ $lp-content-width: min(1200px, 100%);
   margin-bottom: 20px;
 }
 
-// Groups the demoted guest link with the note explaining what it means, so
-// the note reads as attached to this one link rather than the row above it.
+// Groups the guest name field, its button and the note explaining what the
+// button means, so the note reads as attached to this one control rather than
+// to the login/signup row above it.
 .guestLinkGroup {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 8px;
   margin-bottom: 32px;
+}
 
-  .textCta {
-    margin-bottom: 0;
+.guestNameField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 20rem;
+}
+
+.guestNameLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mt-text-secondary);
+}
+
+.guestNameInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised);
+  color: var(--mt-text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+
+  &::placeholder {
+    color: var(--mt-text-muted);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--mt-accent);
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// A third tier under .primaryCta and .secondaryCta. It used to be .textCta —
+// an underlined muted link — which kept the two accounts choices unambiguous
+// but made playing as a guest look unavailable. Outlined in the accent rather
+// than filled, so it still reads as the quieter option.
+.guestCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 12px 24px;
+  border: 1px solid var(--mt-accent);
+  background: var(--mt-accent-subtle);
+  color: var(--mt-text-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--mt-surface-raised-2);
+    border-color: var(--mt-accent-strong);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
@@ -544,6 +618,10 @@ $lp-content-width: min(1200px, 100%);
   .textCta {
     margin-bottom: 0;
   }
+
+  .guestCta {
+    margin-bottom: 0;
+  }
 }
 
 // ── Responsive ──
@@ -644,7 +722,8 @@ $lp-content-width: min(1200px, 100%);
   }
 
   .primaryCta,
-  .secondaryCta {
+  .secondaryCta,
+  .guestCta {
     width: 100%;
     min-height: 3.25rem;
   }

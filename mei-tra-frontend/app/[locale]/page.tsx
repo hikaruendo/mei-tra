@@ -15,6 +15,10 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { UpgradeAccountModal } from '@/components/auth/UpgradeAccountModal';
 import { GameResultExperience } from '@/components/game/GameResultExperience';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  normalizeGuestName,
+  randomGuestNumber,
+} from '@meitra/game-client/guest-name';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +31,7 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [isGuestSigningIn, setIsGuestSigningIn] = useState(false);
+  const [guestName, setGuestName] = useState('');
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const gameState = useGame();
 
@@ -40,9 +45,11 @@ export default function Home() {
 
     setIsGuestSigningIn(true);
     try {
-      const guestNumber = Math.floor(1000 + Math.random() * 9000);
       const { error } = await signInAnonymously({
-        displayName: authT('guestDefaultName', { number: guestNumber }),
+        displayName: normalizeGuestName(
+          guestName,
+          authT('guestDefaultName', { number: randomGuestNumber() }),
+        ),
         locale: locale === 'en' ? 'en' : 'ja',
       });
 
@@ -78,6 +85,8 @@ export default function Home() {
           onSignupClick={() => openAuthModal('signup')}
           onGuestClick={handleGuestStart}
           guestPending={isGuestSigningIn}
+          guestName={guestName}
+          onGuestNameChange={setGuestName}
         />
         <AuthModal
           isOpen={isAuthModalOpen}

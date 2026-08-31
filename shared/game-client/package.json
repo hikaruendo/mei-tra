@@ -27,6 +27,10 @@
       "types": "./first-turn-reveal.ts",
       "default": "./first-turn-reveal.ts"
     },
+    "./guest-name": {
+      "types": "./guest-name.ts",
+      "default": "./guest-name.ts"
+    },
     "./table-order": {
       "types": "./table-order.ts",
       "default": "./table-order.ts"

@@ -6,6 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import { SignInData, SignUpData } from '@/types/user.types';
 import { supabase } from '@/lib/supabase';
+import {
+  GUEST_NAME_MAX_LENGTH,
+  normalizeGuestName,
+  randomGuestNumber,
+} from '@meitra/game-client/guest-name';
 import styles from './AuthForm.module.scss';
 
 interface AuthFormProps {
@@ -29,6 +34,9 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
   const [isSigningInAsGuest, setIsSigningInAsGuest] = useState(false);
+  // Its own state rather than formData.displayName: that field is the signup
+  // form's, and is only rendered in signup mode.
+  const [guestName, setGuestName] = useState('');
 
   const localePrefix = locale === 'en' ? '/en' : '';
   const authCallbackUrl =
@@ -125,9 +133,11 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     setIsSigningInAsGuest(true);
 
     try {
-      const guestNumber = Math.floor(1000 + Math.random() * 9000);
       const { error } = await signInAnonymously({
-        displayName: t('guestDefaultName', { number: guestNumber }),
+        displayName: normalizeGuestName(
+          guestName,
+          t('guestDefaultName', { number: randomGuestNumber() }),
+        ),
         locale: locale === 'en' ? 'en' : 'ja',
       });
 
@@ -188,6 +198,23 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             )}
             {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
           </button>
+
+          <div className={styles.fieldGroup}>
+            <label htmlFor="guestName" className={styles.label}>
+              {t('guestNameLabel')}
+            </label>
+            <input
+              id="guestName"
+              type="text"
+              autoComplete="nickname"
+              maxLength={GUEST_NAME_MAX_LENGTH}
+              value={guestName}
+              onChange={(event) => setGuestName(event.target.value)}
+              placeholder={t('guestNamePlaceholder')}
+              disabled={isSigningInAsGuest || loading}
+              className={styles.input}
+            />
+          </div>
 
           <button
             type="button"
