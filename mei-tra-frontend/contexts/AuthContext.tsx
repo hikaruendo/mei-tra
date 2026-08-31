@@ -7,6 +7,7 @@ import { disconnectSocket } from '@/app/socket';
 import { AuthUser, FontSizePreset, SignUpData, SignInData, GuestSignInData, UpgradeAccountData, UserProfile, UserPreferences } from '@/types/user.types';
 import {
   fetchUserProfileViaApi,
+  isRetryableUserProfileError,
   updateUserProfileViaApi,
 } from '@/lib/api/user-profile';
 import {
@@ -208,7 +209,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error: unknown) {
         clearTimeout(timeoutId);
 
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const isAbort = error instanceof DOMException && error.name === 'AbortError';
 
         if (isAbort) {
@@ -221,12 +221,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Network/connection errors should be retried
-        if ((errorMessage.includes('network') ||
-             errorMessage.includes('connection') ||
-             errorMessage.includes('fetch')) &&
-             attempt < maxRetries) {
-          console.warn(`[AuthContext] Connection error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, errorMessage);
+        if (isRetryableUserProfileError(error) && attempt < maxRetries) {
+          console.warn(`[AuthContext] Transient error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, error);
           return attemptLoad(attempt + 1);
         }
 

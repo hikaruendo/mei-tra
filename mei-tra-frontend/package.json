@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "check:architecture": "node scripts/check-no-direct-db-access.mjs",
+    "check:architecture": "node --test scripts/check-no-direct-db-access.test.mjs && node scripts/check-no-direct-db-access.mjs",
     "lint": "npm run check:architecture && eslint .",
     "test": "jest",
     "test:watch": "jest --watch",

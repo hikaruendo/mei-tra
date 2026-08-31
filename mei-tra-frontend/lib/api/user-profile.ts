@@ -16,6 +16,23 @@ export interface UpdateUserProfilePayload {
 
 export type UserProfileApiResponse = UserProfileDto;
 
+export class UserProfileApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'UserProfileApiError';
+  }
+}
+
+export function isRetryableUserProfileError(error: unknown): boolean {
+  return (
+    error instanceof TypeError ||
+    (error instanceof UserProfileApiError && error.status >= 500)
+  );
+}
+
 function resolveTransportTheme(
   theme: UserPreferences['theme'] | undefined,
 ): TransportTheme | undefined {
@@ -86,8 +103,9 @@ export async function fetchUserProfileViaApi(
     const errorData = (await response.json().catch(() => null)) as
       | { error?: string; message?: string }
       | null;
-    throw new Error(
+    throw new UserProfileApiError(
       errorData?.error ?? errorData?.message ?? 'Failed to load profile',
+      response.status,
     );
   }
 

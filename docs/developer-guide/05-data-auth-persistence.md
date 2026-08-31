@@ -111,7 +111,7 @@ Supabase Auth の canonical user は `auth.users` です。一方、このアプ
 
 ### 3.3 frontend での profile hydration
 
-`AuthContext` は session を得たあと、`user_profiles` から profile を読みに行きます。ここでは:
+`AuthContext` は session を得たあと、backend の user-profile API から profile を読みに行きます。ここでは:
 
 - sessionStorage cache
 - timeout

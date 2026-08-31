@@ -1,4 +1,8 @@
-import { fetchUserProfileViaApi } from '@/lib/api/user-profile';
+import {
+  fetchUserProfileViaApi,
+  isRetryableUserProfileError,
+  UserProfileApiError,
+} from '@/lib/api/user-profile';
 
 describe('fetchUserProfileViaApi', () => {
   const originalFetch = global.fetch;
@@ -55,5 +59,24 @@ describe('fetchUserProfileViaApi', () => {
     await expect(fetchUserProfileViaApi('missing')).rejects.toThrow(
       'Profile not found',
     );
+  });
+
+  it('preserves the status so transient backend failures can be retried', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: jest.fn().mockResolvedValue({ message: 'Temporarily unavailable' }),
+    } as unknown as Response);
+
+    const error = await fetchUserProfileViaApi('user-1').catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(UserProfileApiError);
+    expect(error).toMatchObject({ status: 503 });
+    expect(isRetryableUserProfileError(error)).toBe(true);
+    expect(
+      isRetryableUserProfileError(new UserProfileApiError('missing', 404)),
+    ).toBe(false);
   });
 });
