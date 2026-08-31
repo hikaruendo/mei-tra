@@ -31,6 +31,8 @@
     "signUpSubmit": "Sign up",
     "continueWithGoogle": "Continue with Google",
     "playAsGuest": "Play as guest",
+    "guestNameLabel": "Nickname",
+    "guestNamePlaceholder": "Leave blank for a random name",
     "guestHint": "Play right away without signing up. You can carry your stats over by registering later.",
     "or": "or",
     "displayName": "Display name",
