@@ -32,11 +32,7 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { asSeatId } from '../types/identity.types';
-import {
-  resolveCurrentPlayer,
-  resolveCurrentPlayerIndex,
-  setCurrentSeat,
-} from '../domain/current-turn';
+import { resolveCurrentPlayer, setCurrentSeat } from '../domain/current-turn';
 
 @Injectable()
 export class PassBlowUseCase implements IPassBlowUseCase {
@@ -227,18 +223,19 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.blowState.declarations = [];
     state.blowState.actionHistory = [];
     state.blowState.currentHighestDeclaration = null;
-    state.blowState.currentBlowIndex =
-      (state.blowState.currentBlowIndex + 1) % state.players.length;
 
-    roomGameState.nextTurn();
-    const nextDealerIndex = resolveCurrentPlayerIndex(state);
-    const firstBlowIndex = (nextDealerIndex + 1) % state.players.length;
+    // 全員パスの再配りでは吹き始めは移らず、同じ席がもう一度最初に吹く。
+    // 吹き始めが進むのはラウンド成立時 (CompleteFieldUseCase.prepareNextRound) と
+    // ブロークン / 4ジャックの再配り (RevealBrokenHandUseCase) だけ。
+    const firstBlowIndex =
+      state.blowState.currentBlowIndex % state.players.length;
     const firstBlowPlayer = state.players[firstBlowIndex];
 
     if (!firstBlowPlayer) {
       return { events: [] };
     }
 
+    state.blowState.currentBlowIndex = firstBlowIndex;
     setCurrentSeat(state, firstBlowPlayer.seatId);
     state.deck = this.cardService.generateDeck();
     roomGameState.dealCards();
