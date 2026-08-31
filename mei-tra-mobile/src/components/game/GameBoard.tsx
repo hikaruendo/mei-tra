@@ -23,7 +23,7 @@ import { GameHistory } from '@/components/game/GameHistory';
 import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
-import { MiniCard } from '@/components/game/MiniCard';
+import { CompletedTrickPiles } from '@/components/game/CompletedTrickPiles';
 import { FieldMat } from '@/components/game/FieldMat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { HandFan } from '@/components/game/HandFan';
@@ -632,23 +632,14 @@ export function GameBoard({
             ) : null}
               </View>
             </View>
-            {game.gamePhase === 'play' && self && (() => {
-              const myFields = game.fields.filter(
-                (field) => field.winnerTeam === self.team,
-              );
-              if (myFields.length === 0) return null;
-              return (
-                <View style={styles.completedWrap}>
-                  {myFields.map((field, idx) => (
-                    <View key={idx} style={styles.completedChip}>
-                      {field.cards.map((card, ci) => (
-                        <MiniCard card={card} key={ci} />
-                      ))}
-                    </View>
-                  ))}
-                </View>
-              );
-            })()}
+            {game.gamePhase === 'play' && self ? (
+              <CompletedTrickPiles
+                fields={game.fields.filter(
+                  (field) => field.winnerTeam === self.team,
+                )}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -983,18 +974,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     paddingHorizontal: 8,
-  },
-  completedWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    paddingVertical: 4,
-  },
-  completedChip: {
-    flexDirection: 'row',
-    padding: 2,
-    borderRadius: 4,
-    backgroundColor: colors.backgroundElevated,
   },
   handSection: {
     gap: 8,

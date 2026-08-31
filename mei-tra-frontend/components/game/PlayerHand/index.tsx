@@ -103,6 +103,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const [displayHand, setDisplayHand] = useState(player.hand);
   const displayHandRef = useRef(player.hand);
+  // The hand as the server last sent it, so the sync effect can tell an
+  // arrangement change from the hand itself changing.
+  const syncedHandRef = useRef(player.hand);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null);
   // Chromium cancels the pointer stream (pointercancel) when a native HTML5
@@ -171,11 +174,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   ]);
 
   useEffect(() => {
-    setDisplayHand((previousHand) => {
-      const nextHand = syncHandOrder(previousHand, player.hand);
-      displayHandRef.current = nextHand;
-      return nextHand;
-    });
+    const previousHand = syncedHandRef.current;
+    syncedHandRef.current = player.hand;
+
+    const nextHand = syncHandOrder(displayHandRef.current, player.hand);
+    displayHandRef.current = nextHand;
+    setDisplayHand(nextHand);
+
+    // A broken hand or an all-pass round deals every hand again, and the blow
+    // phase allows reordering, so that can land mid-drag. Carrying the drag
+    // over would move a card the player never picked up, and when the held
+    // card is not dealt back its element unmounts, so no release arrives to
+    // end it. Kept in step with mei-tra-mobile HandFan.tsx.
+    const handChanged =
+      player.hand.length !== previousHand.length ||
+      player.hand.some((card) => !previousHand.includes(card));
+    if (handChanged) {
+      nativeDragRef.current = false;
+      setDraggingCard(null);
+      setDropPlacement(null);
+    }
   }, [player.hand]);
 
   useEffect(() => {

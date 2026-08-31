@@ -223,6 +223,20 @@ $opacity-disabled: 0.5;
   }
 }
 
+// Next to the ivory Google button, the shared outline above read as an
+// unavailable control. Filled with the accent tint so it looks like a real
+// choice, while staying under .submitButton's solid brass.
+.guestButton {
+  background: var(--mt-accent-subtle);
+  border-color: var(--mt-accent);
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: var(--mt-surface-raised-2);
+    border-color: var(--mt-accent-strong);
+  }
+}
+
 .googleIcon {
   display: inline-flex;
   align-items: center;

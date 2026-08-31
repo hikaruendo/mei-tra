@@ -257,6 +257,10 @@
       "backToLogin": "ログインページへ戻る"
     },
     "continueAsGuest": "ゲストとして遊ぶ",
+    "guestTitle": "ゲストとして遊ぶ",
+    "guestStart": "この名前で始める",
+    "guestNameLabel": "ニックネーム",
+    "guestNamePlaceholder": "未入力ならランダムな名前になります",
     "guestHint": "登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。",
     "guestDefaultName": "ゲスト{number}",
     "upgrade": {
@@ -268,7 +272,8 @@
       "confirmEmailSent": "確認メールを送信しました。メール内のリンクをクリックすると登録が完了します。",
       "completed": "登録が完了しました。次回からこのメールアドレスとパスワードでログインできます。",
       "emailAlreadyRegistered": "このメールアドレスは既に登録されています。お持ちのアカウントでログインしてください（ゲスト中の戦績は引き継がれません）。"
-    }
+    },
+    "back": "戻る"
   },
   "room": {
     "title": "ルーム一覧",
@@ -428,7 +433,9 @@
   "completedFields": {
     "takenLabel": "取得組",
     "takenCount": "{count}組",
-    "unknown": "不明"
+    "unknown": "不明",
+    "revealTrick": "取得組 {index} を表にする",
+    "hideTrick": "取得組 {index} を裏に戻す"
   },
   "chatDock": {
     "title": "チャット",

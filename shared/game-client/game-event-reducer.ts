@@ -20,6 +20,7 @@ import type {
   UpdateTurnPayload,
 } from '@meitra/contracts/game';
 import type { SeatId } from '@meitra/contracts/ids';
+import { completedFieldKey } from './completed-field';
 
 export interface GameEventState {
   players: PlayerContract[];
@@ -47,10 +48,6 @@ export type GameServerEvent =
   | { type: 'field-complete'; payload: FieldCompletePayload }
   | { type: 'round-results'; payload: RoundResultsPayload }
   | { type: 'new-round-started'; payload: NewRoundStartedPayload };
-
-interface GameEventContext {
-  selfSeatId?: string | null;
-}
 
 export const createEmptyBlowState = (): BlowStateContract => ({
   currentTrump: null,
@@ -108,12 +105,7 @@ export const dedupeCompletedFields = (
 ): CompletedFieldContract[] => {
   const seen = new Set<string>();
   return fields.filter((field) => {
-    const key = [
-      field.dealerSeatId,
-      field.winnerSeatId,
-      field.winnerTeam,
-      field.cards.join(','),
-    ].join('|');
+    const key = completedFieldKey(field);
     if (seen.has(key)) {
       return false;
     }
@@ -133,7 +125,6 @@ const createEmptyField = (dealerSeatId: SeatId): FieldContract => ({
 export const reduceGameEvent = (
   state: GameEventState,
   event: GameServerEvent,
-  context: GameEventContext = {},
 ): GameEventState => {
   switch (event.type) {
     case 'update-phase': {
@@ -213,21 +204,13 @@ export const reduceGameEvent = (
     }
     case 'play-setup-complete': {
       const startingSeatId = event.payload.startingSeatId;
-      const selfSeatId = context.selfSeatId;
+      // The hand is left alone on purpose. SelectNegriUseCase is the only
+      // producer of this event and it always emits the authoritative players
+      // (room-sync / update-players) immediately before it, with the negri
+      // card already removed. Trimming the hand a second time here only gave
+      // a stale copy of the players a way to overwrite that fresh one.
       return {
         ...state,
-        players: selfSeatId
-          ? state.players.map((player) =>
-              player.seatId === selfSeatId
-                ? {
-                    ...player,
-                    hand: player.hand.filter(
-                      (card) => card !== event.payload.negriCard,
-                    ),
-                  }
-                : player,
-            )
-          : state.players,
         currentTurnSeatId: startingSeatId,
         negriCard: event.payload.negriCard,
         negriSeatId: startingSeatId,

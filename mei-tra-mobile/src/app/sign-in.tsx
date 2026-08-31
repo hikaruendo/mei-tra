@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
+import { GUEST_NAME_MAX_LENGTH } from '@meitra/game-client/guest-name';
 import { t } from '@/i18n';
 import { useLocale } from '@/context/LocaleContext';
 
@@ -34,6 +35,9 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  // Its own state rather than displayName: that field belongs to the sign-up
+  // form and is only rendered in sign-up mode.
+  const [guestName, setGuestName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +112,7 @@ export default function SignInScreen() {
     setError(null);
     setMessage(null);
     try {
-      const result = await signInAnonymously();
+      const result = await signInAnonymously(guestName);
 
       if (result.error) {
         setError(result.error);
@@ -147,6 +151,18 @@ export default function SignInScreen() {
           >
             {t('auth.continueWithGoogle')}
           </Button>
+
+          <TextInput
+            accessibilityLabel={t('auth.guestNameLabel')}
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={GUEST_NAME_MAX_LENGTH}
+            onChangeText={setGuestName}
+            placeholder={t('auth.guestNamePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            value={guestName}
+          />
 
           <Button
             variant="secondary"

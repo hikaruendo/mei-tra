@@ -18,14 +18,38 @@
   min-height: 2.1rem;
 }
 
-.completedField {
+// One won trick, face-down until it is picked. The grid columns are 1fr, so an
+// opened pile spreads over its neighbours instead of widening the row — this
+// block sits directly under the hand, and growing it in flow would shove the
+// cards.
+.pile {
+  position: relative;
+  z-index: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  gap: 0;
   padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pile:focus-visible {
+  outline: none;
+
+  .cardCorner {
+    border-color: var(--mt-focus-ring);
+    box-shadow: 0 0 0 2px var(--mt-focus-ring);
+  }
+}
+
+.pile.open {
+  z-index: 2;
 }
 
 .cards {
@@ -37,6 +61,57 @@
   width: 100%;
 }
 
+// Face-down the four cards sit almost on top of each other, with a small fan
+// so the pile reads as four cards rather than one. Opening returns them to the
+// spacing that keeps every rank readable.
+.slot {
+  position: relative;
+  flex: 0 0 calc(1.38rem * var(--mt-card-scale));
+  width: calc(1.38rem * var(--mt-card-scale));
+  height: calc(1.75rem * var(--mt-card-scale));
+  margin: 0 calc(-0.58rem * var(--mt-card-scale));
+  transform: rotate(calc((var(--slot-index) - 1.5) * 2deg));
+  transition: margin 0.26s ease, transform 0.26s ease;
+}
+
+.pile.open .slot {
+  margin: 0 calc(-0.16rem * var(--mt-card-scale));
+  transform: none;
+}
+
+.flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.26s ease;
+  transition-delay: calc(var(--slot-index) * 55ms);
+}
+
+.pile.open .flip {
+  transform: rotateY(180deg);
+}
+
+.flipBack,
+.flipFront {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flipFront {
+  transform: rotateY(180deg);
+}
+
+.backArt {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.25rem;
+  object-fit: cover;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
 .cardCorner {
   position: relative;
   display: flex;
@@ -46,7 +121,6 @@
   flex: 0 0 calc(1.38rem * var(--mt-card-scale));
   width: calc(1.38rem * var(--mt-card-scale));
   height: calc(1.75rem * var(--mt-card-scale));
-  margin: 0 calc(-0.16rem * var(--mt-card-scale));
   overflow: hidden;
   border: 1px solid var(--mt-border-hairline);
   border-radius: 0.25rem;
@@ -81,6 +155,13 @@
   line-height: 0.8;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .slot,
+  .flip {
+    transition: none;
+  }
+}
+
 @media (max-width: 768px) {
   .completedFieldsContainer {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -94,11 +175,21 @@
     height: calc(1.75rem * var(--mt-card-scale));
   }
 
+  .slot {
+    flex-basis: calc(1.1rem * var(--mt-card-scale));
+    width: calc(1.1rem * var(--mt-card-scale));
+    height: calc(1.45rem * var(--mt-card-scale));
+    margin: 0 calc(-0.46rem * var(--mt-card-scale));
+  }
+
+  .pile.open .slot {
+    margin: 0 calc(-0.16rem * var(--mt-card-scale));
+  }
+
   .cardCorner {
     flex-basis: calc(1.1rem * var(--mt-card-scale));
     width: calc(1.1rem * var(--mt-card-scale));
     height: calc(1.45rem * var(--mt-card-scale));
-    margin: 0 calc(-0.16rem * var(--mt-card-scale));
   }
 
   .cardRank {

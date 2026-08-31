@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { AuthForm } from '@/components/auth/AuthForm';
+import { GuestSignInForm } from '@/components/auth/GuestSignInForm';
 import styles from './AuthModal.module.scss';
 
 interface AuthModalProps {
@@ -12,13 +13,32 @@ interface AuthModalProps {
   onSuccess?: () => void;
 }
 
+// 'guest' is a step of this modal rather than a modal of its own: the auth
+// modal is already open when the guest button is pressed, and stacking a
+// second overlay on top of it reads as a mistake.
+type AuthModalView = 'signin' | 'signup' | 'guest';
+
+const titleKeys: Record<AuthModalView, 'login' | 'signup' | 'guestTitle'> = {
+  signin: 'login',
+  signup: 'signup',
+  guest: 'guestTitle',
+};
+
 export function AuthModal({ isOpen, onClose, initialMode = 'signin', onSuccess }: AuthModalProps) {
   const t = useTranslations('auth');
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [view, setView] = useState<AuthModalView>(initialMode);
 
   useEffect(() => {
-    setMode(initialMode);
+    setView(initialMode);
   }, [initialMode]);
+
+  // Reopening always starts from the mode the caller asked for, never on the
+  // guest step the last visit happened to end on.
+  useEffect(() => {
+    if (!isOpen) {
+      setView(initialMode);
+    }
+  }, [isOpen, initialMode]);
 
   const handleSuccess = () => {
     onSuccess?.();
@@ -31,9 +51,17 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signin', onSuccess }
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.header}>
-          <h2 className={styles.title}>
-            {mode === 'signin' ? t('login') : t('signup')}
-          </h2>
+          {view === 'guest' ? (
+            <button
+              type="button"
+              onClick={() => setView('signin')}
+              className={styles.backButton}
+              aria-label={t('back')}
+            >
+              ←
+            </button>
+          ) : null}
+          <h2 className={styles.title}>{t(titleKeys[view])}</h2>
           <button
             onClick={onClose}
             className={styles.closeButton}
@@ -43,11 +71,16 @@ export function AuthModal({ isOpen, onClose, initialMode = 'signin', onSuccess }
         </div>
 
         <div className={styles.content}>
-          <AuthForm
-            mode={mode}
-            onSuccess={handleSuccess}
-            onModeChange={setMode}
-          />
+          {view === 'guest' ? (
+            <GuestSignInForm onSuccess={handleSuccess} />
+          ) : (
+            <AuthForm
+              mode={view}
+              onSuccess={handleSuccess}
+              onModeChange={setView}
+              onGuestRequested={() => setView('guest')}
+            />
+          )}
         </div>
       </div>
     </div>

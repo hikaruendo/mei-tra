@@ -31,6 +31,8 @@
     "signUpSubmit": "Sign up",
     "continueWithGoogle": "Continue with Google",
     "playAsGuest": "Play as guest",
+    "guestNameLabel": "Nickname",
+    "guestNamePlaceholder": "Leave blank for a random name",
     "guestHint": "Play right away without signing up. You can carry your stats over by registering later.",
     "or": "or",
     "displayName": "Display name",
@@ -328,7 +330,9 @@
     "chat": "Chat",
     "gameLog": "Game log",
     "leave": "Leave",
-    "close": "Close"
+    "close": "Close",
+    "revealTrick": "Reveal trick {index}",
+    "hideTrick": "Turn trick {index} back over"
   },
   "result": {
     "kicker": "RESULT",

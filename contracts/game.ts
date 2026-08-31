@@ -216,6 +216,15 @@ export interface GameStartedPayload {
  */
 export const GAME_START_TURN_REVEAL_DELAY_MS = 5000;
 
+/**
+ * The blow phase ends with a beat before the play phase opens: the winning
+ * bid is left on screen, then the trump, the agari and the negri prompt
+ * arrive together. Everything the transition produces — including the
+ * winner's hand with the agari added — is held for this long, so the state
+ * never runs ahead of the presentation that explains it.
+ */
+export const PLAY_PHASE_REVEAL_DELAY_MS = 3000;
+
 export interface PlaySetupCompletePayload {
   negriCard: string;
   startingSeatId: SeatId;

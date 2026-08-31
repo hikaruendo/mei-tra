@@ -31,6 +31,8 @@
     "signUpSubmit": "登録する",
     "continueWithGoogle": "Googleで続ける",
     "playAsGuest": "ゲストとして遊ぶ",
+    "guestNameLabel": "ニックネーム",
+    "guestNamePlaceholder": "未入力ならランダムな名前になります",
     "guestHint": "登録なしで今すぐ遊べます。戦績は後からアカウント登録で引き継げます。",
     "or": "または",
     "displayName": "表示名",
@@ -328,7 +330,9 @@
     "chat": "チャット",
     "gameLog": "対局ログ",
     "leave": "退出",
-    "close": "閉じる"
+    "close": "閉じる",
+    "revealTrick": "取得組 {index} を表にする",
+    "hideTrick": "取得組 {index} を裏に戻す"
   },
   "result": {
     "kicker": "RESULT",

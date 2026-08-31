@@ -11,13 +11,42 @@ import { t } from '@/i18n';
  * A rank+suit chip, mirroring the web app's completed-field cards
  * (mei-tra-frontend/components/game/CompletedFields: .cardCorner).
  *
- * Won tricks are a tally, not something you read card by card, so web
- * deliberately drops the artwork for ordinary cards. JOKER is its one
- * exception, and this follows it — see below.
+ * Won tricks are read one card at a time only once their pile is turned over,
+ * so web deliberately drops the artwork for ordinary cards and prints the rank
+ * and suit instead. JOKER and the card back are its two exceptions — neither
+ * has a rank/suit pair to print — and this follows it; see below.
  */
-export function MiniCard({ card }: { card: string }) {
+export function MiniCard({
+  card,
+  faceDown = false,
+}: {
+  card: string;
+  faceDown?: boolean;
+}) {
   const { rank, suit, isRed } = parseCard(card);
   const ink = isRed ? palette.card.red : palette.card.ink;
+
+  if (faceDown) {
+    const back = resolveCardArt(card, true);
+    return (
+      <View
+        accessibilityLabel={t('a11y.faceDownCard')}
+        style={[styles.chip, styles.backChip]}
+      >
+        <View style={styles.artClip}>
+          {back.kind === 'vector' ? (
+            <back.Svg height="100%" preserveAspectRatio="none" width="100%" />
+          ) : (
+            <Image
+              contentFit="fill"
+              source={back.source}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+        </View>
+      </View>
+    );
+  }
 
   // JOKER has no rank/suit pair to print, so web drops the text treatment and
   // stretches the artwork across the chip instead (TakenCardPreview ->
@@ -72,6 +101,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 1,
     elevation: 1,
+  },
+  backChip: {
+    // The card back carries its own edge, so the ivory face colour would show
+    // as a rim around it.
+    backgroundColor: palette.card.back,
   },
   artClip: {
     ...StyleSheet.absoluteFillObject,

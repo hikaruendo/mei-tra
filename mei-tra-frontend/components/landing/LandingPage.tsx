@@ -97,7 +97,7 @@ export function LandingPage({
           <div className={styles.guestLinkGroup}>
             <button
               type="button"
-              className={styles.textCta}
+              className={styles.guestCta}
               onClick={onGuestClick}
               disabled={guestPending}
             >
@@ -235,7 +235,7 @@ export function LandingPage({
           {onGuestClick && (
             <button
               type="button"
-              className={styles.textCta}
+              className={styles.guestCta}
               onClick={onGuestClick}
               disabled={guestPending}
             >

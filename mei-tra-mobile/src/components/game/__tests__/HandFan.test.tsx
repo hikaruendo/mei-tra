@@ -215,11 +215,35 @@ describe('HandFan', () => {
     ).toHaveLength(0);
   });
 
-  it('keeps the arranged order when the server sends the hand back', () => {
+  it('keeps the arranged order when the server sends the same hand back', () => {
     const renderer = render();
     drag(renderer, 'A', 2 * PITCH);
     expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D']);
 
+    act(() => {
+      renderer.update(
+        <HandFan
+          canReorder
+          cardMargin={CARD_MARGIN}
+          cardWidth={CARD_WIDTH}
+          cards={['A', 'B', 'C', 'D']}
+          reducedMotion
+          seatId="seat-1"
+          selectedCard={null}
+        />,
+      );
+    });
+
+    expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D']);
+  });
+
+  it('takes the dealt order when a card joins an arranged hand', () => {
+    const renderer = render();
+    drag(renderer, 'A', 2 * PITCH);
+    expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D']);
+
+    // The server sorts by suit whenever it adds a card, so the arrangement
+    // gives way instead of stranding the new card at the end.
     act(() => {
       renderer.update(
         <HandFan
@@ -234,7 +258,7 @@ describe('HandFan', () => {
       );
     });
 
-    expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D', 'E']);
+    expect(cardOrder(renderer)).toEqual(['A', 'B', 'C', 'D', 'E']);
   });
 
   it('keeps the drag alive while other players act', () => {

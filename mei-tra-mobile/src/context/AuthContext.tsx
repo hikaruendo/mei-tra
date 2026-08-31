@@ -31,6 +31,10 @@ import {
   cleanupBeforeLocalSignOut,
 } from '@/lib/session-cleanup';
 import { clearLocalAuthSession, supabase } from '@/lib/supabase';
+import {
+  normalizeGuestName,
+  randomGuestNumber,
+} from '@meitra/game-client/guest-name';
 import type { MobileAuthUser, MobileUserProfile } from '@/types/auth';
 import { t } from '@/i18n';
 
@@ -53,7 +57,7 @@ interface AuthContextValue {
     displayName: string,
   ) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
-  signInAnonymously: () => Promise<AuthResult>;
+  signInAnonymously: (displayName?: string) => Promise<AuthResult>;
   upgradeAccount: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: AccountDeletionError | null }>;
@@ -264,14 +268,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: callback.error };
   }, []);
 
-  const signInAnonymously = useCallback(async () => {
-    const guestNumber = Math.floor(1000 + Math.random() * 9000);
+  const signInAnonymously = useCallback(async (displayName?: string) => {
     // display_name lands in raw_user_meta_data, which the handle_new_user
-    // trigger uses when creating the user_profiles row.
+    // trigger uses when creating the user_profiles row. Normalized rather than
+    // passed through: a blank or over-long name makes that trigger fail, and it
+    // swallows the error, leaving an auth user with no profile to sign in with.
     const { error } = await supabase.auth.signInAnonymously({
       options: {
         data: {
-          display_name: t('auth.guestName', { number: guestNumber }),
+          display_name: normalizeGuestName(
+            displayName ?? '',
+            t('auth.guestName', { number: randomGuestNumber() }),
+          ),
           locale: 'ja',
         },
       },

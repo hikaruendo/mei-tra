@@ -12,10 +12,15 @@ interface AuthFormProps {
   mode: 'signin' | 'signup';
   onSuccess?: () => void;
   onModeChange?: (mode: 'signin' | 'signup') => void;
+  /**
+   * Opens the guest step. Creating the account belongs to GuestSignInForm, so
+   * that the name is asked for the same way from every entry point.
+   */
+  onGuestRequested?: () => void;
 }
 
-export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
-  const { signIn, signUp, signInAnonymously, loading } = useAuth();
+export function AuthForm({ mode, onSuccess, onModeChange, onGuestRequested }: AuthFormProps) {
+  const { signIn, signUp, loading } = useAuth();
   const t = useTranslations('auth');
   const locale = useLocale();
   const [formData, setFormData] = useState({
@@ -28,7 +33,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
-  const [isSigningInAsGuest, setIsSigningInAsGuest] = useState(false);
 
   const localePrefix = locale === 'en' ? '/en' : '';
   const authCallbackUrl =
@@ -119,30 +123,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     }
   };
 
-  const handleGuestSignIn = async () => {
-    setError(null);
-    setSuccessMessage(null);
-    setIsSigningInAsGuest(true);
-
-    try {
-      const guestNumber = Math.floor(1000 + Math.random() * 9000);
-      const { error } = await signInAnonymously({
-        displayName: t('guestDefaultName', { number: guestNumber }),
-        locale: locale === 'en' ? 'en' : 'ja',
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        onSuccess?.();
-      }
-    } catch {
-      setError(t('unexpectedError'));
-    } finally {
-      setIsSigningInAsGuest(false);
-    }
-  };
-
   const handlePasswordReset = async () => {
     if (!formData.email.trim()) {
       setError(t('emailRequired'));
@@ -189,15 +169,19 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
           </button>
 
-          <button
-            type="button"
-            onClick={handleGuestSignIn}
-            disabled={isSigningInAsGuest || loading}
-            className={styles.guestButton}
-          >
-            {isSigningInAsGuest ? t('processing') : t('continueAsGuest')}
-          </button>
-          <p className={styles.guestHint}>{t('guestHint')}</p>
+          {onGuestRequested && (
+            <>
+              <button
+                type="button"
+                onClick={onGuestRequested}
+                disabled={loading}
+                className={styles.guestButton}
+              >
+                {t('continueAsGuest')}
+              </button>
+              <p className={styles.guestHint}>{t('guestHint')}</p>
+            </>
+          )}
 
           <div className={styles.divider}>
             <span>{t('or')}</span>

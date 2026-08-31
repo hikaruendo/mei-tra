@@ -257,6 +257,10 @@
       "backToLogin": "Back to Login"
     },
     "continueAsGuest": "Play as guest",
+    "guestTitle": "Play as a guest",
+    "guestStart": "Start with this name",
+    "guestNameLabel": "Nickname",
+    "guestNamePlaceholder": "Leave blank for a random name",
     "guestHint": "Play instantly without an account. Register later to keep your stats.",
     "guestDefaultName": "Guest {number}",
     "upgrade": {
@@ -268,7 +272,8 @@
       "confirmEmailSent": "Confirmation email sent. Click the link in the email to finish registration.",
       "completed": "Registration complete. You can sign in with this email and password from now on.",
       "emailAlreadyRegistered": "This email is already registered. Please sign in with that account (guest stats will not carry over)."
-    }
+    },
+    "back": "Back"
   },
   "room": {
     "title": "Room List",
@@ -428,7 +433,9 @@
   "completedFields": {
     "takenLabel": "Taken",
     "takenCount": "{count} sets",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "revealTrick": "Reveal trick {index}",
+    "hideTrick": "Turn trick {index} back over"
   },
   "chatDock": {
     "title": "Chat",

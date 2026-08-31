@@ -61,6 +61,17 @@ export interface BlowState {
   lastPasserSeatId?: SeatId | null;
   isRoundCancelled: boolean;
   currentBlowIndex: number;
+  /**
+   * How many times this round has been dealt again (全員パス / ブロークン /
+   * 4ジャック). Reset with the round.
+   *
+   * Server-side only, deliberately absent from BlowStateContract: no client
+   * renders it. It exists because a re-deal otherwise leaves the blow phase
+   * looking identical to how it started — same round, same seat, empty action
+   * history — and GameplayNotificationService needs to tell those two moments
+   * apart. Optional so states persisted before it default to 0.
+   */
+  redealCount?: number;
 }
 
 export interface Field {

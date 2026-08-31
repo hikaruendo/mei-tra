@@ -77,7 +77,7 @@ describe('reduceGameEvent', () => {
     expect(next.currentTurnSeatId).toBe('seat-1');
   });
 
-  it('removes the negri card only from the identified self seat', () => {
+  it('leaves the hands to the authoritative players sync', () => {
     const state = {
       ...createEmptyGameEventState(),
       players: [
@@ -95,20 +95,19 @@ describe('reduceGameEvent', () => {
       },
     };
 
-    const next = reduceGameEvent(
-      state,
-      {
-        type: 'play-setup-complete',
-        payload: {
-          negriCard: '5♣',
-          startingSeatId: asSeatId('seat-1'),
-        },
+    const next = reduceGameEvent(state, {
+      type: 'play-setup-complete',
+      payload: {
+        negriCard: '5♣',
+        startingSeatId: asSeatId('seat-1'),
       },
-      { selfSeatId: 'seat-1' },
-    );
+    });
 
-    expect(next.players[0]?.hand).toEqual(['6♣']);
-    expect(next.players[1]?.hand).toEqual(['5♣', '7♣']);
+    // SelectNegriUseCase emits the players with the negri already removed
+    // right before this event, so trimming the hand again here would only let
+    // a stale copy of the players win.
+    expect(next.players).toBe(state.players);
+    expect(next.negriCard).toBe('5♣');
     expect(next.negriSeatId).toBe('seat-1');
     expect(next.blowState.currentTrump).toBe('club');
   });

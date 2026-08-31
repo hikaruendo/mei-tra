@@ -1750,6 +1750,94 @@ describe('Game Use Cases', () => {
     });
   });
 
+  describe('PassBlowUseCase redeal', () => {
+    const buildAllPassState = () => ({
+      players: [0, 1, 2, 3].map((index) => ({
+        seatId: asSeatId(`player-${index + 1}`),
+        name: `Player ${index + 1}`,
+        hand: ['C1'],
+        team: (index % 2) as Team,
+        // 席 1-3 は既にパス済み。最後の席 4 がパスすると全員パスになる。
+        isPasser: index < 3,
+        hasRequiredBroken: false,
+      })),
+      gamePhase: 'blow' as GamePhase,
+      currentSeatId: asSeatId('player-4'),
+      deck: [] as string[],
+      blowState: {
+        currentTrump: null,
+        declarations: [],
+        actionHistory: [0, 1, 2].map((index) => ({
+          type: 'pass' as const,
+          seatId: asSeatId(`player-${index + 1}`),
+          timestamp: index + 1,
+        })),
+        currentHighestDeclaration: null,
+        lastPasserSeatId: asSeatId('player-3'),
+        isRoundCancelled: false,
+        // 吹き始めは player-1。全員パスしてもここは動かないことを確かめる。
+        currentBlowIndex: 0,
+        redealCount: 0,
+      },
+    });
+
+    it('keeps the blow starter when every player passes', async () => {
+      const roomService = createRoomServiceMock();
+      const cardService = createCardServiceMock();
+      const useCase = new PassBlowUseCase(
+        roomService,
+        {} as never,
+        cardService,
+      );
+      const state = buildAllPassState();
+      const dealCards = jest.fn();
+      const nextTurn = jest.fn();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(
+          (actorId: string) =>
+            state.players.find((player) => player.seatId === actorId) ?? null,
+        ),
+        isPlayerTurn: jest.fn(() => true),
+        dealCards,
+        nextTurn,
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.getRoom.mockResolvedValue(null);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-4',
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.blowState.currentBlowIndex).toBe(0);
+      // Nothing else about the blow phase moves across this re-deal, so this
+      // counter is what tells the new deal apart downstream.
+      expect(state.blowState.redealCount).toBe(1);
+      expect(state.currentSeatId).toBe(asSeatId('player-1'));
+      expect(state.blowState.declarations).toEqual([]);
+      expect(state.blowState.actionHistory).toEqual([]);
+      expect(state.blowState.lastPasserSeatId).toBeNull();
+      expect(state.players.every((player) => !player.isPasser)).toBe(true);
+      expect(dealCards).toHaveBeenCalled();
+      expect(nextTurn).not.toHaveBeenCalled();
+
+      const roundCancelled = result.events?.find(
+        (evt) => evt.event === 'round-cancelled',
+      );
+      expect(roundCancelled?.payload).toMatchObject({
+        nextDealerSeatId: 'player-1',
+      });
+
+      const updateTurn = result.events?.find(
+        (evt) => evt.event === 'update-turn',
+      );
+      expect(updateTurn?.payload).toBe('player-1');
+    });
+  });
+
   describe('PlayCardUseCase', () => {
     it('plays a card and advances turn when field not complete', async () => {
       const roomService = createRoomServiceMock();
@@ -2887,8 +2975,9 @@ describe('Game Use Cases', () => {
             actionType: 'broken_hand_revealed',
             actorSeatId: 'player-1',
             actionData: expect.objectContaining({
-              nextSeatId: 'player-1',
-              nextBlowIndex: 0,
+              // ブロークンの再配りで吹き始めが player-1 から player-2 へ1つ進む
+              nextSeatId: 'player-2',
+              nextBlowIndex: 1,
               startingHandsBySeatId: {
                 'player-1': ['X1', 'X2'],
                 'player-2': ['X1', 'X2'],
@@ -3039,7 +3128,7 @@ describe('Game Use Cases', () => {
       expect(roomGameState.saveState).not.toHaveBeenCalled();
     });
 
-    it('resets blow declarations after broken hand without changing starting order', async () => {
+    it('resets blow declarations and advances the blow starter after a broken hand', async () => {
       const roomService = createRoomServiceMock();
       const cardService = createCardServiceMock();
       const useCase = new RevealBrokenHandUseCase(roomService, cardService);
@@ -3158,8 +3247,10 @@ describe('Game Use Cases', () => {
 
       expect(completion.success).toBe(true);
       expect(state.pendingBrokenHandReveal).toBeNull();
-      expect(state.blowState.currentBlowIndex).toBe(2);
-      expect(state.currentSeatId).toBe(asSeatId('player-3'));
+      // ブロークンの再配りで吹き始めが player-3 (index 2) から player-4 (index 3) へ進む
+      expect(state.blowState.currentBlowIndex).toBe(3);
+      expect(state.blowState.redealCount).toBe(1);
+      expect(state.currentSeatId).toBe(asSeatId('player-4'));
       expect(state.blowState.declarations).toEqual([]);
       expect(state.blowState.actionHistory).toEqual([]);
       expect(state.blowState.currentHighestDeclaration).toBeNull();
@@ -3182,14 +3273,14 @@ describe('Game Use Cases', () => {
         (evt) => evt.event === 'broken',
       );
       expect(brokenEvent?.payload).toMatchObject({
-        nextSeatId: 'player-3',
+        nextSeatId: 'player-4',
         gamePhase: 'blow',
       });
 
       const updateTurnEvent = completion.events?.find(
         (evt) => evt.event === 'update-turn',
       );
-      expect(updateTurnEvent?.payload).toBe('player-3');
+      expect(updateTurnEvent?.payload).toBe('player-4');
     });
 
     it('allows a new broken hand reveal when a previous pending marker expired', async () => {

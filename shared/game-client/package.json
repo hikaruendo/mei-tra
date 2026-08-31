@@ -19,6 +19,10 @@
       "types": "./card-legality.ts",
       "default": "./card-legality.ts"
     },
+    "./completed-field": {
+      "types": "./completed-field.ts",
+      "default": "./completed-field.ts"
+    },
     "./deal-animation": {
       "types": "./deal-animation.ts",
       "default": "./deal-animation.ts"
@@ -26,6 +30,10 @@
     "./first-turn-reveal": {
       "types": "./first-turn-reveal.ts",
       "default": "./first-turn-reveal.ts"
+    },
+    "./guest-name": {
+      "types": "./guest-name.ts",
+      "default": "./guest-name.ts"
     },
     "./table-order": {
       "types": "./table-order.ts",

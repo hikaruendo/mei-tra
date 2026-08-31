@@ -1,20 +1,31 @@
 export type HandDropSide = "before" | "after";
 
 /**
- * Folds a freshly dealt hand into the order the player arranged by hand.
+ * Folds an incoming hand into the order the player arranged by hand.
  *
- * Cards the player still holds keep the position they were dragged to; cards
- * that were not in the hand before go to the end.
+ * Cards only ever leave a hand while the player is using it — they play one,
+ * or set one aside as ネグリ — so a hand that lost cards keeps the arrangement.
+ * A card *arriving* means the server dealt a new hand or handed over the アガリ,
+ * and the server sorts by suit whenever it does that. Adopt its order then,
+ * rather than pinning the old cards to where they used to sit and stranding the
+ * new ones at the end, which is what left a hand ungrouped by suit.
+ *
+ * The "a card arrived" test is a subset check, so a re-deal that happened to
+ * hand back only cards the player already held would keep the old arrangement.
+ * That needs the same 10 cards to come out of a 41-card shuffle, so it is not
+ * worth plumbing a re-deal signal through both clients to rule out.
  */
 export const syncHandOrder = (
   previousOrder: readonly string[],
   hand: readonly string[],
 ): string[] => {
-  const held = new Set(hand);
-  const retained = previousOrder.filter((card) => held.has(card));
-  const added = hand.filter((card) => !retained.includes(card));
+  const arranged = new Set(previousOrder);
+  if (hand.some((card) => !arranged.has(card))) {
+    return [...hand];
+  }
 
-  return [...retained, ...added];
+  const held = new Set(hand);
+  return previousOrder.filter((card) => held.has(card));
 };
 
 /**
