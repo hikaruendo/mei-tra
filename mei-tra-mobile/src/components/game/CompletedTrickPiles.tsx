@@ -104,7 +104,8 @@ function TrickCard({
 
 /**
  * The tricks this player's team has won, laid face-down. Selecting a pile
- * turns its whole four-card set over; only one is open at a time.
+ * turns its whole four-card set over. Any number can be open at once, and
+ * selecting an open pile turns it back over.
  */
 export function CompletedTrickPiles({
   fields,
@@ -113,13 +114,18 @@ export function CompletedTrickPiles({
   fields: CompletedFieldContract[];
   reducedMotion?: boolean | null;
 }) {
-  const [openedKey, setOpenedKey] = useState<string | null>(null);
+  const [openedKeys, setOpenedKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
-  // Derived, not reset in an effect: a new round arrives as an empty list and
-  // the key simply stops matching anything.
-  const openKey = fields.some((field) => completedFieldKey(field) === openedKey)
-    ? openedKey
-    : null;
+  const toggle = (key: string) =>
+    setOpenedKeys((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(key)) {
+        next.add(key);
+      }
+      return next;
+    });
 
   if (fields.length === 0) return null;
 
@@ -127,7 +133,10 @@ export function CompletedTrickPiles({
     <View style={styles.wrap}>
       {fields.map((field, index) => {
         const key = completedFieldKey(field);
-        const isOpen = key === openKey;
+        // Read straight from the set rather than pruning it: a new round
+        // arrives as an empty list and the keys simply stop matching, so
+        // nothing has to reset the state.
+        const isOpen = openedKeys.has(key);
 
         return (
           <Pressable
@@ -138,7 +147,7 @@ export function CompletedTrickPiles({
             accessibilityRole="button"
             accessibilityState={{ expanded: isOpen }}
             key={key}
-            onPress={() => setOpenedKey(isOpen ? null : key)}
+            onPress={() => toggle(key)}
             style={styles.pile}
             testID={`trick-pile-${index}`}
           >

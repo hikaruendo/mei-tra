@@ -59,22 +59,31 @@ describe('CompletedFields', () => {
       expect(first).toContainElement(screen.getByLabelText(card));
     });
 
-    // Picking one leaves the rest face down.
+    // Picking one does not turn the others.
     expect(second).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('turns the open pile back over, and only ever opens one', () => {
+  it('keeps several piles open at once', () => {
     render(<CompletedFields fields={[firstTrick, secondTrick]} />);
 
     const [first, second] = screen.getAllByRole('button');
     fireEvent.click(first);
     fireEvent.click(second);
 
+    expect(first).toHaveAttribute('aria-expanded', 'true');
+    expect(second).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('turns a pile back over without touching the others', () => {
+    render(<CompletedFields fields={[firstTrick, secondTrick]} />);
+
+    const [first, second] = screen.getAllByRole('button');
+    fireEvent.click(first);
+    fireEvent.click(second);
+    fireEvent.click(first);
+
     expect(first).toHaveAttribute('aria-expanded', 'false');
     expect(second).toHaveAttribute('aria-expanded', 'true');
-
-    fireEvent.click(second);
-    expect(second).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('keeps the ranks and suits readable once a set is turned over', () => {

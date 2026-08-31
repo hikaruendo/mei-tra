@@ -73,26 +73,33 @@ describe('CompletedTrickPiles', () => {
     found.forEach((pile) => expect(expanded(pile)).toBe(false));
   });
 
-  it('turns one whole set over, and only one at a time', () => {
+  it('turns one whole set over, leaving the others face down', () => {
     const renderer = render([first, second]);
 
     press(piles(renderer)[0]);
     expect(expanded(piles(renderer)[0])).toBe(true);
     expect(expanded(piles(renderer)[1])).toBe(false);
+  });
 
+  it('keeps several piles open at once', () => {
+    const renderer = render([first, second]);
+
+    press(piles(renderer)[0]);
     press(piles(renderer)[1]);
-    expect(expanded(piles(renderer)[0])).toBe(false);
+
+    expect(expanded(piles(renderer)[0])).toBe(true);
     expect(expanded(piles(renderer)[1])).toBe(true);
   });
 
-  it('turns the open pile back over when it is picked again', () => {
-    const renderer = render([first]);
+  it('turns a pile back over without touching the others', () => {
+    const renderer = render([first, second]);
 
     press(piles(renderer)[0]);
-    expect(expanded(piles(renderer)[0])).toBe(true);
-
+    press(piles(renderer)[1]);
     press(piles(renderer)[0]);
+
     expect(expanded(piles(renderer)[0])).toBe(false);
+    expect(expanded(piles(renderer)[1])).toBe(true);
   });
 
   it('drops the open pile when the round deals a new set of tricks', () => {

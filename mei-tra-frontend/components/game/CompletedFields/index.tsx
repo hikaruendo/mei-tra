@@ -70,13 +70,18 @@ export const TakenCardPreview: React.FC<TakenCardPreviewProps> = ({
 
 export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
   const t = useTranslations('completedFields');
-  const [openedKey, setOpenedKey] = useState<string | null>(null);
+  const [openedKeys, setOpenedKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
-  // Derived, not reset in an effect: a new round arrives as an empty list and
-  // the key simply stops matching anything.
-  const openKey = fields.some((field) => completedFieldKey(field) === openedKey)
-    ? openedKey
-    : null;
+  const toggle = (key: string) =>
+    setOpenedKeys((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(key)) {
+        next.add(key);
+      }
+      return next;
+    });
 
   return (
     <div className={styles.completedFieldsPanel}>
@@ -84,7 +89,10 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
         <div className={styles.completedFieldsContainer}>
           {fields.map((field, index) => {
             const key = completedFieldKey(field);
-            const isOpen = key === openKey;
+            // Read straight from the set rather than pruning it: a new round
+            // arrives as an empty list and the keys simply stop matching, so
+            // nothing has to reset the state.
+            const isOpen = openedKeys.has(key);
 
             return (
               <button
@@ -95,7 +103,7 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
                 aria-label={t(isOpen ? 'hideTrick' : 'revealTrick', {
                   index: index + 1,
                 })}
-                onClick={() => setOpenedKey(isOpen ? null : key)}
+                onClick={() => toggle(key)}
               >
                 <span className={styles.cards}>
                   {field.cards.map((card: string, cardIndex: number) => (
