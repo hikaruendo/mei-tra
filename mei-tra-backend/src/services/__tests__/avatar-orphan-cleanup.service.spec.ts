@@ -1,60 +1,57 @@
 import { AvatarOrphanCleanupService } from '../avatar-orphan-cleanup.service';
 import { SupabaseService } from '../../database/supabase.service';
+import { IAvatarStorage } from '../../storage/interfaces/avatar-storage.interface';
 
 const LIVE_USER_ID = '11111111-2222-4333-8444-555555555555';
 const ORPHAN_USER_ID = '99999999-8888-4777-8666-555555555555';
 
 describe('AvatarOrphanCleanupService', () => {
-  let bucket: { list: jest.Mock; remove: jest.Mock };
+  let avatarStorage: jest.Mocked<IAvatarStorage>;
   let profilesIn: jest.Mock;
   let service: AvatarOrphanCleanupService;
 
   const buildService = () => {
     const client = {
-      storage: { from: jest.fn(() => bucket) },
       from: jest.fn(() => ({
         select: jest.fn(() => ({ in: profilesIn })),
       })),
     };
-    return new AvatarOrphanCleanupService({
-      client,
-    } as unknown as SupabaseService);
+    return new AvatarOrphanCleanupService(
+      { client } as unknown as SupabaseService,
+      avatarStorage,
+    );
   };
 
   beforeEach(() => {
-    bucket = { list: jest.fn(), remove: jest.fn() };
+    avatarStorage = {
+      upload: jest.fn(),
+      getPublicUrl: jest.fn(),
+      remove: jest.fn(),
+      list: jest.fn(),
+      extractObjectPath: jest.fn(),
+    };
     profilesIn = jest.fn();
     service = buildService();
   });
 
   it('removes files only under folders whose profile row is gone', async () => {
-    bucket.list.mockImplementation((path: string) => {
+    avatarStorage.list.mockImplementation((path: string) => {
       if (path === '') {
-        return Promise.resolve({
-          data: [
-            { name: LIVE_USER_ID },
-            { name: ORPHAN_USER_ID },
-            { name: 'not-a-uuid' },
-          ],
-          error: null,
-        });
+        return Promise.resolve([LIVE_USER_ID, ORPHAN_USER_ID, 'not-a-uuid']);
       }
-      return Promise.resolve({
-        data: [{ name: 'avatar.webp' }],
-        error: null,
-      });
+      return Promise.resolve(['avatar.webp']);
     });
     profilesIn.mockResolvedValue({
       data: [{ id: LIVE_USER_ID }],
       error: null,
     });
-    bucket.remove.mockResolvedValue({ data: null, error: null });
+    avatarStorage.remove.mockResolvedValue();
 
     const removed = await service.removeOrphanedAvatarObjects();
 
     expect(removed).toBe(1);
-    expect(bucket.remove).toHaveBeenCalledTimes(1);
-    expect(bucket.remove).toHaveBeenCalledWith([
+    expect(avatarStorage.remove).toHaveBeenCalledTimes(1);
+    expect(avatarStorage.remove).toHaveBeenCalledWith([
       `${ORPHAN_USER_ID}/avatar.webp`,
     ]);
     expect(profilesIn).toHaveBeenCalledWith('id', [
@@ -64,10 +61,7 @@ describe('AvatarOrphanCleanupService', () => {
   });
 
   it('removes nothing when every folder still has a profile', async () => {
-    bucket.list.mockResolvedValue({
-      data: [{ name: LIVE_USER_ID }],
-      error: null,
-    });
+    avatarStorage.list.mockResolvedValue([LIVE_USER_ID]);
     profilesIn.mockResolvedValue({
       data: [{ id: LIVE_USER_ID }],
       error: null,
@@ -76,38 +70,39 @@ describe('AvatarOrphanCleanupService', () => {
     const removed = await service.removeOrphanedAvatarObjects();
 
     expect(removed).toBe(0);
-    expect(bucket.remove).not.toHaveBeenCalled();
+    expect(avatarStorage.remove).not.toHaveBeenCalled();
   });
 
   it('walks every page instead of stopping at the first one', async () => {
     const firstPage = Array.from({ length: 1000 }, (_, i) =>
-      i === 0 ? { name: ORPHAN_USER_ID } : { name: `filler-${i}` },
+      i === 0 ? ORPHAN_USER_ID : `filler-${i}`,
     );
-    bucket.list.mockImplementation((path: string, opts: { offset: number }) => {
-      if (path === '') {
-        // Only the second page carries the live folder, so a non-paginating
-        // implementation would treat it as absent.
-        return Promise.resolve({
-          data: opts.offset === 0 ? firstPage : [{ name: LIVE_USER_ID }],
-          error: null,
-        });
-      }
-      return Promise.resolve({ data: [{ name: 'avatar.webp' }], error: null });
-    });
+    avatarStorage.list.mockImplementation(
+      (path: string, opts: { offset?: number }) => {
+        if (path === '') {
+          // Only the second page carries the live folder, so a non-paginating
+          // implementation would treat it as absent.
+          return Promise.resolve(
+            opts.offset === 0 ? firstPage : [LIVE_USER_ID],
+          );
+        }
+        return Promise.resolve(['avatar.webp']);
+      },
+    );
     profilesIn.mockResolvedValue({
       data: [{ id: LIVE_USER_ID }],
       error: null,
     });
-    bucket.remove.mockResolvedValue({ data: null, error: null });
+    avatarStorage.remove.mockResolvedValue();
 
     const removed = await service.removeOrphanedAvatarObjects();
 
     expect(removed).toBe(1);
-    expect(bucket.remove).toHaveBeenCalledWith([
+    expect(avatarStorage.remove).toHaveBeenCalledWith([
       `${ORPHAN_USER_ID}/avatar.webp`,
     ]);
     // Pin the stride too: `offset: page` would also produce >1 call but skip rows.
-    const rootOffsets = bucket.list.mock.calls
+    const rootOffsets = avatarStorage.list.mock.calls
       .filter(([p]) => p === '')
       .map(([, opts]) => opts as { offset: number; limit: number });
     expect(rootOffsets.map((o) => o.offset)).toEqual([0, 1000]);
@@ -120,13 +115,11 @@ describe('AvatarOrphanCleanupService', () => {
       (_, i) =>
         `${i.toString(16).padStart(8, '0')}-2222-4333-8444-555555555555`,
     );
-    bucket.list.mockImplementation((path: string, opts: { offset: number }) =>
-      path === ''
-        ? Promise.resolve({
-            data: opts.offset === 0 ? ids.map((id) => ({ name: id })) : [],
-            error: null,
-          })
-        : Promise.resolve({ data: [], error: null }),
+    avatarStorage.list.mockImplementation(
+      (path: string, opts: { offset?: number }) =>
+        path === ''
+          ? Promise.resolve(opts.offset === 0 ? ids : [])
+          : Promise.resolve([]),
     );
     profilesIn.mockImplementation((_col: string, chunk: string[]) =>
       Promise.resolve({ data: chunk.map((id) => ({ id })), error: null }),
@@ -138,12 +131,12 @@ describe('AvatarOrphanCleanupService', () => {
     for (const [, chunk] of profilesIn.mock.calls) {
       expect((chunk as string[]).length).toBeLessThanOrEqual(200);
     }
-    expect(bucket.remove).not.toHaveBeenCalled();
+    expect(avatarStorage.remove).not.toHaveBeenCalled();
   });
 
   it('throws when the bucket root cannot be listed', async () => {
     const listError = new Error('storage down');
-    bucket.list.mockResolvedValue({ data: null, error: listError });
+    avatarStorage.list.mockRejectedValue(listError);
 
     await expect(service.removeOrphanedAvatarObjects()).rejects.toThrow(
       'storage down',

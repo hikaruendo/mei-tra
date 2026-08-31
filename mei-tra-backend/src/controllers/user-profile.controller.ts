@@ -34,7 +34,6 @@ import {
   UpdateUserProfileDto,
   UserProfile,
 } from '../types/user.types';
-import { SupabaseService } from '../database/supabase.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/decorators/user.decorator';
 import { AllowDeletingAccountAuth } from '../auth/decorators/allow-deleting-account.decorator';
@@ -47,6 +46,7 @@ import {
   IDeleteAccountUseCase,
 } from '../use-cases/interfaces/delete-account.use-case.interface';
 import * as sharp from 'sharp';
+import { IAvatarStorage } from '../storage/interfaces/avatar-storage.interface';
 
 @Controller('user-profile')
 export class UserProfileController {
@@ -55,7 +55,8 @@ export class UserProfileController {
   constructor(
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository,
-    private readonly supabaseService: SupabaseService,
+    @Inject('IAvatarStorage')
+    private readonly avatarStorage: IAvatarStorage,
     @Inject('IGetUserRecentGameHistoryUseCase')
     private readonly getUserRecentGameHistoryUseCase: IGetUserRecentGameHistoryUseCase,
     @Inject('IDeleteAccountUseCase')
@@ -184,17 +185,14 @@ export class UserProfileController {
         await this.deleteOldAvatar(existingProfile.avatarUrl);
       }
 
-      // Upload to Supabase Storage
       const objectPath = `${id}/avatar-${Date.now()}.webp`;
-      const { error } = await this.supabaseService.client.storage
-        .from('avatars')
-        .upload(objectPath, optimizedBuffer, {
+      try {
+        await this.avatarStorage.upload(objectPath, optimizedBuffer, {
           contentType: 'image/webp',
           cacheControl: '3600',
           upsert: false,
         });
-
-      if (error) {
+      } catch (error) {
         this.logger.error('Failed to upload avatar to storage:', error);
         throw new HttpException(
           'Failed to upload avatar',
@@ -202,19 +200,16 @@ export class UserProfileController {
         );
       }
 
-      // Get public URL
-      const { data: urlData } = this.supabaseService.client.storage
-        .from('avatars')
-        .getPublicUrl(objectPath);
+      const publicUrl = this.avatarStorage.getPublicUrl(objectPath);
 
       // Update user profile with new avatar URL
       const updatedProfile = await this.userProfileRepository.update(id, {
-        avatarUrl: urlData.publicUrl,
+        avatarUrl: publicUrl,
       });
 
       const response: AvatarUploadResponseDto = {
         message: 'Avatar uploaded successfully',
-        avatarUrl: urlData.publicUrl,
+        avatarUrl: publicUrl,
         profile: this.toUserProfileDto(updatedProfile),
       };
 
@@ -277,38 +272,14 @@ export class UserProfileController {
 
   private async deleteOldAvatar(avatarUrl: string): Promise<void> {
     try {
-      const objectPath = this.extractAvatarObjectPath(avatarUrl);
+      const objectPath = this.avatarStorage.extractObjectPath(avatarUrl);
 
       if (objectPath) {
-        const { error } = await this.supabaseService.client.storage
-          .from('avatars')
-          .remove([objectPath]);
-
-        if (error) {
-          this.logger.warn('Failed to delete old avatar:', error);
-          // Don't throw error as this is not critical
-        }
+        await this.avatarStorage.remove([objectPath]);
       }
     } catch (error) {
       this.logger.warn('Error deleting old avatar:', error);
       // Don't throw error as this is not critical
-    }
-  }
-
-  private extractAvatarObjectPath(avatarUrl: string): string | null {
-    try {
-      const parsed = new URL(avatarUrl);
-      const decodedPath = decodeURIComponent(parsed.pathname);
-      const marker = '/storage/v1/object/public/avatars/';
-      const markerIndex = decodedPath.indexOf(marker);
-
-      if (markerIndex === -1) {
-        return null;
-      }
-
-      return decodedPath.slice(markerIndex + marker.length);
-    } catch {
-      return null;
     }
   }
 
