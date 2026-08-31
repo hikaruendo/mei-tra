@@ -511,8 +511,11 @@ backend は `SENTRY_DSN` がある場合に初期化され、global filter も�
 ### 16.3 月次寄り
 
 - backup / restore 手順の見直し
+- scheduled `Backend Restore Drill`の成功確認
 - dependency update
 - docs と実装のズレ確認
+
+`npm run db:restore:check`は、隔離したSupabase DBへ全migrationを適用し、public schemaの検証データをdump、削除、restoreして復元件数を確認します。本番や通常のlocal DBには接続しません。GitHub Actionsでも毎月1日に同じ訓練を実行します。
 
 ここでいう定期メンテナンスは、単に package を更新することではありません。特に次のズレは放置すると新規参加者が最も困ります。
 

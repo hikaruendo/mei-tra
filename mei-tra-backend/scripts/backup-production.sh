@@ -18,6 +18,7 @@ supabase db dump \
   --linked \
   --data-only \
   --use-copy \
+  --schema public \
   > "$BACKUP_DIR/production_backup_$TIMESTAMP.sql"
 
 if [ $? -eq 0 ]; then
@@ -45,4 +46,5 @@ echo "   2. supabase db push --linked でデプロイ"
 echo "   3. 本番環境で動作確認"
 echo ""
 echo "🚨 問題が発生した場合のロールバック:"
-echo "   psql \"<本番DB URL>\" < $BACKUP_DIR/production_backup_$TIMESTAMP.sql"
+echo "   DEPLOYMENT_CHECKLIST.md の復元手順を確認してください。"
+echo "   data-only dumpをデータが残るDBへ直接流し込まないでください。"

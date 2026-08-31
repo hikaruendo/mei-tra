@@ -24,6 +24,7 @@
     "supabase:start": "./scripts/start-local-supabase.sh",
     "db:types": "bash scripts/generate-db-types.sh",
     "db:types:check": "bash scripts/generate-db-types.sh --check",
+    "db:restore:check": "bash scripts/verify-backup-restore.sh",
     "db:docs": "bash scripts/generate-db-docs.sh",
     "test:db:seat-concurrency": "bash scripts/test-seat-update-concurrency.sh",
     "clear:rooms": "ts-node scripts/clear-dev-rooms.ts"
