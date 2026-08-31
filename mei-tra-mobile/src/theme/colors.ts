@@ -35,6 +35,9 @@ export const colors = {
   goldStrong: palette.accent.strong,
   goldSubtle: palette.accent.subtle,
 
+  /** "It is your turn" — deliberately not brass. See palette.turn. */
+  turnRing: palette.turn.ring,
+
   // Status
   danger: palette.status.danger,
   dangerSubtle: palette.status.dangerSubtle,

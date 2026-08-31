@@ -29,5 +29,10 @@ export const raw = {
 
   cardRed: '#c0362c',
   cardRedDark: '#9e2a22',
+  cardRedMedium: '#e88b80',
   cardRedLight: '#eda79d',
+
+  // Brighter and more saturated than the card reds above. Those are ink for an
+  // ivory card face; this is a solid disc that has to catch the eye on felt.
+  alert500: '#d93a2b',
 } as const;

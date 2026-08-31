@@ -39,6 +39,25 @@ export const palette = {
     focus: raw.brass500,
   },
 
+  /**
+   * "It is your turn", in two roles that need opposite treatment.
+   *
+   * Neither is `accent`: brass is the ambient accent of every panel, badge and
+   * button, so the turn cue was one more gold thing among many.
+   *
+   * `clockDisc` is a SOLID fill carrying an ivory dial, so it is picked for
+   * the dial to read on it (ivory on brass was 2.09:1; on this red, 4.01:1).
+   * `ring` is a HAIRLINE seen against the panel it outlines, so it is picked
+   * for the panel and goes pale — the same reasoning as `team[0]` below.
+   *
+   * Mirrors the web `--mt-turn-*` tokens (dark values — see the note above).
+   */
+  turn: {
+    clockDisc: raw.alert500,
+    clockDial: raw.ivory,
+    ring: raw.cardRedMedium,
+  },
+
   status: {
     danger: '#c0362c',
     dangerSubtle: 'rgba(192, 54, 44, 0.16)',

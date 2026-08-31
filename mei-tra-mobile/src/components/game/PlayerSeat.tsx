@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panel,
   },
   turn: {
-    borderColor: colors.gold,
+    borderColor: colors.turnRing,
     borderWidth: 2,
   },
   name: {

@@ -165,6 +165,11 @@ $z-index-tooltip: 50;
   --mt-raw-card-red-dk: #9e2a22;
   --mt-raw-card-red-md: #e88b80;
   --mt-raw-card-red-lt: #eda79d;
+  // A brighter, more saturated red than the card reds above. Those are ink for
+  // an ivory card face; these are a solid disc that has to catch the eye
+  // against felt.
+  --mt-raw-alert-500: #d93a2b;
+  --mt-raw-alert-600: #b3271b;
 
   // Font stacks — JP fallback ordering is load-bearing (Latin faces render no CJK)
   --mt-font-heading: var(--font-fraunces), var(--font-shippori-mincho), 'Shippori Mincho', serif;
@@ -189,6 +194,23 @@ $z-index-tooltip: 50;
 
   --mt-border-hairline: rgba(236, 230, 214, 0.12);
   --mt-focus-ring: var(--mt-raw-brass-500);
+
+  // "It is your turn", in two roles that need opposite treatment — the same
+  // split as --mt-card-red vs --mt-suit-red a few lines below.
+  //
+  // Neither is --mt-accent: brass is the ambient accent of every panel, badge
+  // and button, so the turn cue was one more gold thing among many. Not
+  // --mt-danger either — that role means an error.
+  //
+  // -clock-bg is a SOLID DISC carrying an ivory dial, so it is picked for the
+  // dial to read on it (ivory on brass was 2.09:1; on this red it is 4.01:1).
+  // -ring is a HAIRLINE seen against the panel it outlines, so it is picked
+  // for the panel, and like --mt-suit-red it goes pale here and deep in light.
+  // Mirrored in mei-tra-mobile/src/theme/palette.ts (turn.*).
+  --mt-turn-clock-bg: var(--mt-raw-alert-500);
+  --mt-turn-clock-dial: var(--mt-raw-pale-100);
+  --mt-turn-ring: var(--mt-raw-card-red-md);
+  --mt-turn-ring-glow: rgba(232, 139, 128, 0.3);
 
   --mt-btn-primary-bg: linear-gradient(180deg, #c9a34e 0%, #a9863b 100%);
   --mt-btn-primary-bg-hover: linear-gradient(180deg, #e0c784 0%, #c9a34e 100%);
@@ -253,6 +275,16 @@ html[data-theme='light'] {
 
   --mt-border-hairline: rgba(35, 40, 31, 0.2);
   --mt-focus-ring: var(--mt-raw-brass-600);
+
+  // Daylight takes the deeper reds. The pale ring of the dark theme would be
+  // cream-on-cream here (the old brass ring managed only 2.32:1 against
+  // --mt-surface-raised-2, which is what made the two themes look alike);
+  // --mt-raw-card-red-dk reaches 5.08:1. The glow carries a higher alpha for
+  // the same reason — a faint halo disappears entirely on a pale ground.
+  --mt-turn-clock-bg: var(--mt-raw-alert-600);
+  --mt-turn-clock-dial: var(--mt-raw-pale-100);
+  --mt-turn-ring: var(--mt-raw-card-red-dk);
+  --mt-turn-ring-glow: rgba(158, 42, 34, 0.34);
 
   --mt-btn-primary-bg: linear-gradient(180deg, #a9863b 0%, #8a6c2e 100%);
   --mt-btn-primary-bg-hover: linear-gradient(180deg, #c9a34e 0%, #a9863b 100%);
