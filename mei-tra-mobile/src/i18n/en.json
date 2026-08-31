@@ -329,7 +329,9 @@
     "chat": "Chat",
     "gameLog": "Game log",
     "leave": "Leave",
-    "close": "Close"
+    "close": "Close",
+    "revealTrick": "Reveal trick {index}",
+    "hideTrick": "Turn trick {index} back over"
   },
   "result": {
     "kicker": "RESULT",

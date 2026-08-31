@@ -329,7 +329,9 @@
     "chat": "チャット",
     "gameLog": "対局ログ",
     "leave": "退出",
-    "close": "閉じる"
+    "close": "閉じる",
+    "revealTrick": "取得組 {index} を表にする",
+    "hideTrick": "取得組 {index} を裏に戻す"
   },
   "result": {
     "kicker": "RESULT",
