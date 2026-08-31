@@ -41,15 +41,6 @@ jobs:
         with:
           version: ${{ steps.supabase-cli.outputs.version }}
 
-      - name: Start local Supabase
-        working-directory: mei-tra-backend
-        run: supabase start
-
       - name: Verify generated database types
         working-directory: mei-tra-backend
         run: npm run db:types:check
-
-      - name: Stop local Supabase
-        if: always()
-        working-directory: mei-tra-backend
-        run: supabase stop --no-backup

@@ -13,9 +13,6 @@ if [[ -n "$mode" && "$mode" != '--check' ]]; then
   exit 2
 fi
 
-temp_file="$(mktemp "${TMPDIR:-/tmp}/meitra-database-types.XXXXXX")"
-trap 'rm -f "$temp_file"' EXIT
-
 installed_supabase_version=''
 if command -v supabase >/dev/null 2>&1; then
   installed_supabase_version="$(supabase --version 2>/dev/null)"
@@ -27,15 +24,38 @@ else
   supabase_command=(npx --yes "supabase@${SUPABASE_CLI_VERSION}")
 fi
 
-if ! "${supabase_command[@]}" status >/dev/null 2>&1; then
-  echo 'Local Supabase is not running. Start it with npm run supabase:start.' >&2
-  exit 1
-fi
+temporary_project_root="$(mktemp -d "${TMPDIR:-/tmp}/meitra-database-types.XXXXXX")"
+temp_file="$temporary_project_root/database.generated.types.ts"
+
+cleanup() {
+  "${supabase_command[@]}" stop \
+    --workdir "$temporary_project_root" \
+    --no-backup >/dev/null 2>&1 || true
+  if [[ -d "$temporary_project_root" ]]; then
+    find "$temporary_project_root" -depth -delete
+  fi
+}
+trap cleanup EXIT
+
+mkdir -p "$temporary_project_root/supabase"
+cp supabase/config.toml "$temporary_project_root/supabase/config.toml"
+cp -R supabase/migrations "$temporary_project_root/supabase/migrations"
+cp -R supabase/templates "$temporary_project_root/supabase/templates"
+
+database_port="$(node -e "const s=require('node:net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})")"
+temporary_project_id="meitra-db-types-$$"
+
+perl -0pi -e \
+  "s/project_id = \"[^\"]+\"/project_id = \"$temporary_project_id\"/; s/port = 54322/port = $database_port/" \
+  "$temporary_project_root/supabase/config.toml"
+
+"${supabase_command[@]}" db start --workdir "$temporary_project_root"
 
 "${supabase_command[@]}" gen types \
   --lang typescript \
   --schema public \
-  --local > "$temp_file"
+  --local \
+  --workdir "$temporary_project_root" > "$temp_file"
 
 npx --no-install prettier \
   --config .prettierrc \
@@ -50,10 +70,9 @@ if [[ "$mode" == '--check' ]]; then
 
   echo 'Generated database types are out of date.' >&2
   diff -u "$GENERATED_TYPES_PATH" "$temp_file" || true
-  echo 'Run npm run db:types with local Supabase running.' >&2
+  echo 'Run npm run db:types to regenerate them from the migrations.' >&2
   exit 1
 fi
 
-mv "$temp_file" "$GENERATED_TYPES_PATH"
-trap - EXIT
+cp "$temp_file" "$GENERATED_TYPES_PATH"
 echo "Updated $GENERATED_TYPES_PATH with Supabase CLI $SUPABASE_CLI_VERSION."

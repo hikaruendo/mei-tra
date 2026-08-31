@@ -67,24 +67,6 @@ export type Database = {
           },
         ];
       };
-      app_flags: {
-        Row: {
-          key: string;
-          updated_at: string;
-          value: Json;
-        };
-        Insert: {
-          key: string;
-          updated_at?: string;
-          value: Json;
-        };
-        Update: {
-          key?: string;
-          updated_at?: string;
-          value?: Json;
-        };
-        Relationships: [];
-      };
       chat_members: {
         Row: {
           id: string;
@@ -192,45 +174,6 @@ export type Database = {
           scope?: Database['public']['Enums']['chat_room_scope'];
           updated_at?: string | null;
           visibility?: Database['public']['Enums']['chat_room_visibility'];
-        };
-        Relationships: [];
-      };
-      entitlements: {
-        Row: {
-          entitlement: string;
-          expires_at: string | null;
-          granted_at: string;
-          id: string;
-          product_id: string | null;
-          rc_app_user_id: string | null;
-          source: string;
-          updated_at: string;
-          user_id: string;
-          will_renew: boolean;
-        };
-        Insert: {
-          entitlement: string;
-          expires_at?: string | null;
-          granted_at?: string;
-          id?: string;
-          product_id?: string | null;
-          rc_app_user_id?: string | null;
-          source: string;
-          updated_at?: string;
-          user_id: string;
-          will_renew?: boolean;
-        };
-        Update: {
-          entitlement?: string;
-          expires_at?: string | null;
-          granted_at?: string;
-          id?: string;
-          product_id?: string | null;
-          rc_app_user_id?: string | null;
-          source?: string;
-          updated_at?: string;
-          user_id?: string;
-          will_renew?: boolean;
         };
         Relationships: [];
       };
