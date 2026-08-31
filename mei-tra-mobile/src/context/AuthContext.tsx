@@ -26,6 +26,7 @@ import {
   unregisterPushToken,
 } from '@/lib/notifications';
 import { roomStorage } from '@/lib/room-storage';
+import { fetchPlayerProfile } from '@/lib/profile-api';
 import {
   cleanupAfterAccountDeletion,
   cleanupBeforeLocalSignOut,
@@ -67,22 +68,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const mapProfile = (record: Record<string, unknown>): MobileUserProfile => {
-  const preferences =
-    typeof record.preferences === 'object' && record.preferences !== null
-      ? (record.preferences as Record<string, unknown>)
-      : {};
-
+const mapProfile = (
+  record: Awaited<ReturnType<typeof fetchPlayerProfile>>,
+): MobileUserProfile => {
   return {
-    displayName:
-      typeof record.display_name === 'string' ? record.display_name : '',
-    username: typeof record.username === 'string' ? record.username : '',
-    avatarUrl:
-      typeof record.avatar_url === 'string' ? record.avatar_url : undefined,
-    sound: typeof preferences.sound === 'boolean' ? preferences.sound : true,
+    displayName: record.displayName,
+    username: record.username,
+    avatarUrl: record.avatarUrl,
+    sound:
+      typeof record.preferences.sound === 'boolean'
+        ? record.preferences.sound
+        : true,
     startPlayerAnimation:
-      typeof preferences.startPlayerAnimation === 'boolean'
-        ? preferences.startPlayerAnimation
+      typeof record.preferences.startPlayerAnimation === 'boolean'
+        ? record.preferences.startPlayerAnimation
         : true,
   };
 };
@@ -97,15 +96,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loadProfile = useCallback(async (authUser: User) => {
     const requestId = ++profileRequestRef.current;
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('display_name, username, avatar_url, preferences')
-        .eq('id', authUser.id)
-        .maybeSingle();
-
-      if (error) {
-        console.warn('[Auth] Failed to load profile:', error.message);
-      }
+      const profile = await fetchPlayerProfile(authUser.id);
 
       if (!mountedRef.current || requestId !== profileRequestRef.current) {
         return;
@@ -115,7 +106,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         id: authUser.id,
         email: authUser.email,
         isAnonymous: authUser.is_anonymous ?? false,
-        profile: data ? mapProfile(data) : null,
+        profile: mapProfile(profile),
       });
     } catch (error) {
       if (mountedRef.current && requestId === profileRequestRef.current) {
