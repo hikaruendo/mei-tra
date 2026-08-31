@@ -118,27 +118,30 @@ const otherPlayer: Player = {
   isCOM: false,
 };
 
+const buildPlayerHand = (
+  overrides: Partial<React.ComponentProps<typeof PlayerHand>> = {},
+) => (
+  <PlayerHand
+    player={otherPlayer}
+    isCurrentTurn={false}
+    negriCard={null}
+    gamePhase="play"
+    whoseTurn="player-1"
+    gameActions={gameActions}
+    position="left"
+    completedFields={[]}
+    currentSeatId="player-1"
+    currentField={null}
+    currentTrump={null}
+    isHost
+    onReplaceWithCOM={jest.fn()}
+    {...overrides}
+  />
+);
+
 const renderPlayerHand = (
   overrides: Partial<React.ComponentProps<typeof PlayerHand>> = {},
-) =>
-  render(
-    <PlayerHand
-      player={otherPlayer}
-      isCurrentTurn={false}
-      negriCard={null}
-      gamePhase="play"
-      whoseTurn="player-1"
-      gameActions={gameActions}
-      position="left"
-      completedFields={[]}
-      currentSeatId="player-1"
-      currentField={null}
-      currentTrump={null}
-      isHost
-      onReplaceWithCOM={jest.fn()}
-      {...overrides}
-    />,
-  );
+) => render(buildPlayerHand(overrides));
 
 describe('PlayerHand', () => {
   afterEach(() => {
@@ -459,6 +462,69 @@ describe('PlayerHand', () => {
     fireEvent.dragOver(thirdCard, { clientX: 250, dataTransfer });
     expect(thirdCard.className).toMatch(/insertBefore|insertAfter/);
     expect(secondCard.className).not.toMatch(/insertBefore|insertAfter/);
+  });
+
+  it('takes the dealt order when a card joins an arranged hand', () => {
+    const arranged = { ...otherPlayer, hand: ['H-A', 'S-2'] };
+    const view = render(
+      buildPlayerHand({ currentSeatId: 'player-2', player: arranged }),
+    );
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+    Object.defineProperty(targetCard, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 170 });
+    fireEvent.pointerUp(targetCard, { clientX: 170 });
+    expect(
+      screen.getAllByTestId('card-front').map((card) => card.textContent),
+    ).toEqual(['S-2', 'H-A']);
+
+    // A re-deal or the agari pickup arrives already sorted by suit, so the
+    // arrangement must give way rather than stranding the new card at the end.
+    view.rerender(
+      buildPlayerHand({
+        currentSeatId: 'player-2',
+        player: { ...otherPlayer, hand: ['S-2', 'S-5', 'H-A'] },
+      }),
+    );
+
+    expect(
+      screen.getAllByTestId('card-front').map((card) => card.textContent),
+    ).toEqual(['S-2', 'S-5', 'H-A']);
+  });
+
+  it('cancels an in-flight drag when the hand is dealt again', () => {
+    const view = render(
+      buildPlayerHand({
+        currentSeatId: 'player-2',
+        player: { ...otherPlayer, hand: ['H-A', 'S-2'] },
+      }),
+    );
+
+    const cards = screen.getAllByTestId('card-front');
+    const targetCard = cards[1].parentElement as HTMLElement;
+    fireEvent.pointerDown(cards[0], { isPrimary: true });
+    fireEvent.pointerMove(targetCard, { clientX: 110 });
+    expect(targetCard.className).toMatch(/insertBefore|insertAfter/);
+
+    // The re-deal keeps S-2, so a drag left running would still mark it.
+    view.rerender(
+      buildPlayerHand({
+        currentSeatId: 'player-2',
+        player: { ...otherPlayer, hand: ['S-2', 'S-5', 'H-A'] },
+      }),
+    );
+
+    const markers = screen
+      .getAllByTestId('card-front')
+      .map((card) => card.parentElement?.className ?? '');
+    expect(markers).not.toContainEqual(
+      expect.stringMatching(/insertBefore|insertAfter/),
+    );
+    expect(markers).not.toContainEqual(expect.stringMatching(/dragging/));
   });
 
   it('still clears a cancelled pointer drag when no native drag is running', () => {
