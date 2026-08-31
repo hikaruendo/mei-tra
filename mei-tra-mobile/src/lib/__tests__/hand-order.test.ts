@@ -7,7 +7,7 @@ describe('syncHandOrder', () => {
     );
   });
 
-  it('drops played cards and appends newly dealt ones', () => {
+  it('drops played cards and takes the dealt order when a card arrives', () => {
     expect(syncHandOrder(['3-1', '10-2', '5-4'], ['3-1', '5-4', 'JOKER'])).toEqual(
       ['3-1', '5-4', 'JOKER'],
     );
@@ -15,6 +15,29 @@ describe('syncHandOrder', () => {
 
   it('takes the dealt order when nothing was arranged yet', () => {
     expect(syncHandOrder([], ['5-4', '3-1'])).toEqual(['5-4', '3-1']);
+  });
+
+  it('keeps the arranged order when the negri card leaves the hand', () => {
+    expect(syncHandOrder(['A♥', '5♠', 'Q♦'], ['A♥', 'Q♦'])).toEqual([
+      'A♥',
+      'Q♦',
+    ]);
+  });
+
+  it('takes the suit-sorted order when a re-deal shares cards with the old hand', () => {
+    expect(syncHandOrder(['A♥', '5♠'], ['5♠', '10♠', 'A♥'])).toEqual([
+      '5♠',
+      '10♠',
+      'A♥',
+    ]);
+  });
+
+  it('takes the suit-sorted order when the agari joins the hand', () => {
+    expect(syncHandOrder(['7♦', 'A♦'], ['7♦', 'Q♦', 'A♦'])).toEqual([
+      '7♦',
+      'Q♦',
+      'A♦',
+    ]);
   });
 });
 
