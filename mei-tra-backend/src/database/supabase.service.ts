@@ -3,6 +3,7 @@ import { ConfigType } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import supabaseConfig from '../config/supabase.config';
 import { Database } from '../types/database.types';
+import type { Database as GeneratedDatabase } from '../types/database.generated.types';
 
 @Injectable()
 export class SupabaseService {
@@ -37,3 +38,8 @@ export class SupabaseService {
     }
   }
 }
+
+export const asGeneratedSupabaseClient = (
+  client: SupabaseClient<Database>,
+): SupabaseClient<GeneratedDatabase> =>
+  client as unknown as SupabaseClient<GeneratedDatabase>;

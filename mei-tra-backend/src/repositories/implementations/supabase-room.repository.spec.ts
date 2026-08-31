@@ -1,6 +1,7 @@
 import { SupabaseRoomRepository } from './supabase-room.repository';
 import { SupabaseService } from '../../database/supabase.service';
-import { RoomStatus } from '../../types/room.types';
+import { RoomStatus, type Room, type RoomPlayer } from '../../types/room.types';
+import { asSeatId } from '../../types/identity.types';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -55,6 +56,132 @@ describe('SupabaseRoomRepository', () => {
       seat_index: overrides.seat_index ?? 0,
     };
   }
+
+  it('uses the generated atomic room creation contract', async () => {
+    const hostSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
+    const room: Room = {
+      id: 'room-1',
+      name: 'Room 1',
+      hostSeatId,
+      status: RoomStatus.WAITING,
+      players: [],
+      settings: {
+        maxPlayers: 4,
+        isPrivate: false,
+        password: null,
+        teamAssignmentMethod: 'random',
+        pointsToWin: 8,
+        allowSpectators: true,
+      },
+      createdAt: new Date('2026-08-31T00:00:00.000Z'),
+      updatedAt: new Date('2026-08-31T00:00:00.000Z'),
+      lastActivityAt: new Date('2026-08-31T00:00:00.000Z'),
+    };
+    const hostPlayer: RoomPlayer = {
+      socketId: 'socket-1',
+      seatId: hostSeatId,
+      participantKey: 'user-1',
+      userId: 'user-1',
+      isAuthenticated: true,
+      name: 'Host',
+      hand: [],
+      team: 0,
+      isPasser: false,
+      hasBroken: false,
+      hasRequiredBroken: false,
+      isReady: false,
+      isHost: true,
+      isCOM: false,
+      joinedAt: new Date('2026-08-31T00:00:00.000Z'),
+    };
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        room: createRoomRow(
+          room.id,
+          room.name,
+          room.createdAt.toISOString(),
+          hostSeatId,
+        ),
+        roomPlayer: {
+          ...createPlayerRow(
+            room.id,
+            'unused',
+            hostPlayer.joinedAt.toISOString(),
+            { user_id: 'user-1', name: 'Host' },
+          ),
+          id: hostSeatId,
+        },
+      },
+      error: null,
+    });
+    const repository = new SupabaseRoomRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    await expect(
+      repository.createWithHostSeat(room, hostPlayer, 'transition-1'),
+    ).resolves.toMatchObject({ id: 'room-1', hostSeatId });
+    expect(rpc).toHaveBeenCalledWith('create_room_with_host_seat_atomic', {
+      p_room_id: 'room-1',
+      p_room_name: 'Room 1',
+      p_host_seat_id: hostSeatId,
+      p_host_user_id: 'user-1',
+      p_host_name: 'Host',
+      p_room_settings: room.settings,
+      p_points_to_win: 8,
+      p_transition_id: 'transition-1',
+    });
+  });
+
+  it('rejects a malformed atomic room creation payload', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: { room: { id: 'incomplete' }, roomPlayer: null },
+      error: null,
+    });
+    const repository = new SupabaseRoomRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+    const hostSeatId = asSeatId('11111111-1111-4111-8111-111111111111');
+    const room = {
+      id: 'room-1',
+      name: 'Room 1',
+      hostSeatId,
+      status: RoomStatus.WAITING,
+      players: [],
+      settings: {
+        maxPlayers: 4,
+        isPrivate: false,
+        password: null,
+        teamAssignmentMethod: 'random' as const,
+        pointsToWin: 8,
+        allowSpectators: true,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastActivityAt: new Date(),
+    };
+    const hostPlayer = {
+      socketId: 'socket-1',
+      seatId: hostSeatId,
+      userId: 'user-1',
+      isAuthenticated: true,
+      name: 'Host',
+      hand: [],
+      team: 0 as const,
+      isPasser: false,
+      hasBroken: false,
+      hasRequiredBroken: false,
+      isReady: false,
+      isHost: true,
+      joinedAt: new Date(),
+    };
+
+    await expect(
+      repository.createWithHostSeat(room, hostPlayer, 'transition-1'),
+    ).rejects.toThrow(
+      'create_room_with_host_seat_atomic returned an invalid payload',
+    );
+  });
 
   it('batches room player lookup for findAll and preserves player ordering', async () => {
     const roomsData = [

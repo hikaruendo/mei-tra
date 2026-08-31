@@ -151,6 +151,20 @@ describe('SupabaseGameStateRepository', () => {
     ]);
   });
 
+  it('rejects a malformed load RPC payload at the persistence boundary', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: { gameState: { id: 'incomplete' }, roomPlayers: [] },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    await expect(repository.findByRoomId(gameStateRow.room_id)).rejects.toThrow(
+      'load_room_game_state returned an invalid payload',
+    );
+  });
+
   it('uses room_players seat order as the authoritative roster', async () => {
     const secondRoomPlayer = {
       ...roomPlayerRow,
@@ -454,7 +468,6 @@ describe('SupabaseGameStateRepository', () => {
       p_scalar_patch: {
         currentSeatId: firstSeatId,
       },
-      p_expected_version: null,
     });
   });
 
@@ -479,7 +492,6 @@ describe('SupabaseGameStateRepository', () => {
       expect.objectContaining({
         p_expected_version: 4,
         p_host_id: firstSeatId,
-        p_membership_mutation: null,
         p_player_states: {
           [firstSeatId]: {
             hand: ['S1'],
@@ -506,6 +518,7 @@ describe('SupabaseGameStateRepository', () => {
       string,
       Record<string, unknown>,
     ];
+    expect(rosterPayload).not.toHaveProperty('p_membership_mutation');
     expect(rosterPayload).not.toHaveProperty('p_legacy_players');
     expect(rosterPayload).not.toHaveProperty('p_team_assignments');
     expect(state?.version).toBe(5);

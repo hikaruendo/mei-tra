@@ -1,6 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import { Injectable, Logger } from '@nestjs/common';
-import { SupabaseService } from '../../database/supabase.service';
+import {
+  asGeneratedSupabaseClient,
+  SupabaseService,
+} from '../../database/supabase.service';
+import { toJsonObject } from '../../database/json-value';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import { Database } from '../../types/database.types';
@@ -25,8 +28,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   private get supabase() {
-    // Return typed client, but cast for database operations due to strict typing issues
-    return this.supabaseService.client as any;
+    return this.supabaseService.client;
+  }
+
+  private get generatedSupabase() {
+    return asGeneratedSupabaseClient(this.supabaseService.client);
   }
 
   async createWithHostSeat(
@@ -40,7 +46,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       throw new Error('Authenticated host user is required');
     }
 
-    const { data, error } = await this.supabase.rpc(
+    const { data, error } = await this.generatedSupabase.rpc(
       'create_room_with_host_seat_atomic',
       {
         p_room_id: room.id,
@@ -48,7 +54,15 @@ export class SupabaseRoomRepository implements IRoomRepository {
         p_host_seat_id: hostSeatId,
         p_host_user_id: hostUserId,
         p_host_name: hostPlayer.name,
-        p_room_settings: room.settings,
+        p_room_settings: toJsonObject({
+          maxPlayers: room.settings.maxPlayers,
+          isPrivate: room.settings.isPrivate,
+          password: room.settings.password,
+          teamAssignmentMethod: room.settings.teamAssignmentMethod,
+          pointsToWin: room.settings.pointsToWin,
+          allowSpectators: room.settings.allowSpectators,
+          teamNames: room.settings.teamNames,
+        }),
         p_points_to_win: room.settings.pointsToWin,
         p_transition_id: transitionId,
       },
@@ -59,7 +73,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       throw new Error(`Failed to create room with host seat: ${error.message}`);
     }
 
-    const created = data as CreatedRoomWithHostSeat;
+    const created = this.parseCreatedRoomWithHostSeat(data);
     return this.mapDatabaseToRoom(created.room, [
       this.mapDatabaseToPlayer(created.roomPlayer),
     ]);
@@ -321,6 +335,71 @@ export class SupabaseRoomRepository implements IRoomRepository {
       this.logger.error('Error finding old rooms:', error);
       throw error;
     }
+  }
+
+  private parseCreatedRoomWithHostSeat(data: unknown): CreatedRoomWithHostSeat {
+    if (
+      !this.isRecord(data) ||
+      !this.isRoomRow(data.room) ||
+      !this.isRoomPlayerRow(data.roomPlayer)
+    ) {
+      throw new Error(
+        'create_room_with_host_seat_atomic returned an invalid payload',
+      );
+    }
+
+    return { room: data.room, roomPlayer: data.roomPlayer };
+  }
+
+  private isRoomRow(value: unknown): value is RoomRow {
+    return (
+      this.isRecord(value) &&
+      typeof value.id === 'string' &&
+      typeof value.name === 'string' &&
+      (typeof value.host_seat_id === 'string' || value.host_seat_id === null) &&
+      (value.status === 'waiting' ||
+        value.status === 'ready' ||
+        value.status === 'playing' ||
+        value.status === 'finished' ||
+        value.status === 'abandoned') &&
+      this.isRoomSettings(value.settings) &&
+      typeof value.created_at === 'string' &&
+      typeof value.updated_at === 'string' &&
+      typeof value.last_activity_at === 'string'
+    );
+  }
+
+  private isRoomPlayerRow(value: unknown): value is RoomPlayerRow {
+    return (
+      this.isRecord(value) &&
+      typeof value.id === 'string' &&
+      typeof value.room_id === 'string' &&
+      typeof value.name === 'string' &&
+      typeof value.team === 'number' &&
+      typeof value.is_ready === 'boolean' &&
+      typeof value.is_com === 'boolean' &&
+      typeof value.joined_at === 'string' &&
+      typeof value.seat_index === 'number' &&
+      (typeof value.user_id === 'string' || value.user_id === null)
+    );
+  }
+
+  private isRoomSettings(value: unknown): value is RoomRow['settings'] {
+    return (
+      this.isRecord(value) &&
+      typeof value.maxPlayers === 'number' &&
+      typeof value.isPrivate === 'boolean' &&
+      (typeof value.password === 'string' || value.password === null) &&
+      (value.teamAssignmentMethod === 'random' ||
+        value.teamAssignmentMethod === 'host-choice') &&
+      typeof value.pointsToWin === 'number' &&
+      typeof value.allowSpectators === 'boolean' &&
+      (value.teamNames === undefined || this.isRecord(value.teamNames))
+    );
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
   private mapDatabaseToRoom(dbRoom: RoomRow, players: RoomPlayer[]): Room {

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { SupabaseService } from '../../database/supabase.service';
+import {
+  asGeneratedSupabaseClient,
+  SupabaseService,
+} from '../../database/supabase.service';
 import type { Database as GeneratedDatabase } from '../../types/database.generated.types';
 import { asSeatId, type SeatId } from '../../types/identity.types';
 import type {
@@ -59,9 +61,8 @@ export class SupabaseRoomMembershipRepository
 {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  private get supabase(): SupabaseClient<GeneratedDatabase> {
-    return this.supabaseService
-      .client as unknown as SupabaseClient<GeneratedDatabase>;
+  private get supabase() {
+    return asGeneratedSupabaseClient(this.supabaseService.client);
   }
 
   async findByUserId(userId: string): Promise<ActiveRoomMembership | null> {
