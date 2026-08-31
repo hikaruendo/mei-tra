@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { Footer } from '@/components/layout/Footer';
-import { GUEST_NAME_MAX_LENGTH } from '@meitra/game-client/guest-name';
 import styles from './LandingPage.module.scss';
 
 interface LandingPageProps {
@@ -11,8 +10,6 @@ interface LandingPageProps {
   onSignupClick: () => void;
   onGuestClick?: () => void;
   guestPending?: boolean;
-  guestName?: string;
-  onGuestNameChange?: (name: string) => void;
   productUrl?: string;
 }
 
@@ -50,8 +47,6 @@ export function LandingPage({
   onSignupClick,
   onGuestClick,
   guestPending = false,
-  guestName,
-  onGuestNameChange,
   productUrl = 'https://kando1.com',
 }: LandingPageProps) {
   const t = useTranslations('landing');
@@ -100,22 +95,6 @@ export function LandingPage({
         </div>
         {onGuestClick && (
           <div className={styles.guestLinkGroup}>
-            <div className={styles.guestNameField}>
-              <label className={styles.guestNameLabel} htmlFor="guestName">
-                {t('hero.guestNameLabel')}
-              </label>
-              <input
-                className={styles.guestNameInput}
-                id="guestName"
-                type="text"
-                autoComplete="nickname"
-                maxLength={GUEST_NAME_MAX_LENGTH}
-                value={guestName ?? ''}
-                onChange={(event) => onGuestNameChange?.(event.target.value)}
-                placeholder={t('hero.guestNamePlaceholder')}
-                disabled={guestPending}
-              />
-            </div>
             <button
               type="button"
               className={styles.guestCta}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { GameTable } from '@/components/game/GameTable';
 import { PreGameTable } from '@/components/game/PreGameTable';
 import { Notification } from '@/components/shared/Notification';
@@ -12,54 +12,26 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RoomList } from '@/components/room/RoomList';
 import { LandingPage } from '@/components/landing/LandingPage';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { GuestSignInModal } from '@/components/auth/GuestSignInModal';
 import { UpgradeAccountModal } from '@/components/auth/UpgradeAccountModal';
 import { GameResultExperience } from '@/components/game/GameResultExperience';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  normalizeGuestName,
-  randomGuestNumber,
-} from '@meitra/game-client/guest-name';
 import styles from './index.module.css';
 
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const t = useTranslations('game');
-  const authT = useTranslations('auth');
-  const locale = useLocale();
-  const { user, loading: authLoading, signInAnonymously } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [isGuestSigningIn, setIsGuestSigningIn] = useState(false);
-  const [guestName, setGuestName] = useState('');
+  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const gameState = useGame();
 
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
-  };
-
-  const handleGuestStart = async () => {
-    if (isGuestSigningIn) return;
-
-    setIsGuestSigningIn(true);
-    try {
-      const { error } = await signInAnonymously({
-        displayName: normalizeGuestName(
-          guestName,
-          authT('guestDefaultName', { number: randomGuestNumber() }),
-        ),
-        locale: locale === 'en' ? 'en' : 'ja',
-      });
-
-      // On failure fall back to the auth modal, whose guest button surfaces errors.
-      if (error) {
-        openAuthModal('signin');
-      }
-    } finally {
-      setIsGuestSigningIn(false);
-    }
   };
 
   if (authLoading) {
@@ -83,15 +55,16 @@ export default function Home() {
         <LandingPage
           onLoginClick={() => openAuthModal('signin')}
           onSignupClick={() => openAuthModal('signup')}
-          onGuestClick={handleGuestStart}
-          guestPending={isGuestSigningIn}
-          guestName={guestName}
-          onGuestNameChange={setGuestName}
+          onGuestClick={() => setIsGuestModalOpen(true)}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           initialMode={authMode}
+        />
+        <GuestSignInModal
+          isOpen={isGuestModalOpen}
+          onClose={() => setIsGuestModalOpen(false)}
         />
       </>
     );

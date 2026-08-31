@@ -6,21 +6,21 @@ import { useAuth } from '@/hooks/useAuth';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import { SignInData, SignUpData } from '@/types/user.types';
 import { supabase } from '@/lib/supabase';
-import {
-  GUEST_NAME_MAX_LENGTH,
-  normalizeGuestName,
-  randomGuestNumber,
-} from '@meitra/game-client/guest-name';
 import styles from './AuthForm.module.scss';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup';
   onSuccess?: () => void;
   onModeChange?: (mode: 'signin' | 'signup') => void;
+  /**
+   * Opens the guest step. Creating the account belongs to GuestSignInForm, so
+   * that the name is asked for the same way from every entry point.
+   */
+  onGuestRequested?: () => void;
 }
 
-export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
-  const { signIn, signUp, signInAnonymously, loading } = useAuth();
+export function AuthForm({ mode, onSuccess, onModeChange, onGuestRequested }: AuthFormProps) {
+  const { signIn, signUp, loading } = useAuth();
   const t = useTranslations('auth');
   const locale = useLocale();
   const [formData, setFormData] = useState({
@@ -33,10 +33,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
-  const [isSigningInAsGuest, setIsSigningInAsGuest] = useState(false);
-  // Its own state rather than formData.displayName: that field is the signup
-  // form's, and is only rendered in signup mode.
-  const [guestName, setGuestName] = useState('');
 
   const localePrefix = locale === 'en' ? '/en' : '';
   const authCallbackUrl =
@@ -127,32 +123,6 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
     }
   };
 
-  const handleGuestSignIn = async () => {
-    setError(null);
-    setSuccessMessage(null);
-    setIsSigningInAsGuest(true);
-
-    try {
-      const { error } = await signInAnonymously({
-        displayName: normalizeGuestName(
-          guestName,
-          t('guestDefaultName', { number: randomGuestNumber() }),
-        ),
-        locale: locale === 'en' ? 'en' : 'ja',
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        onSuccess?.();
-      }
-    } catch {
-      setError(t('unexpectedError'));
-    } finally {
-      setIsSigningInAsGuest(false);
-    }
-  };
-
   const handlePasswordReset = async () => {
     if (!formData.email.trim()) {
       setError(t('emailRequired'));
@@ -199,32 +169,19 @@ export function AuthForm({ mode, onSuccess, onModeChange }: AuthFormProps) {
             {isSigningInWithGoogle ? t('processing') : t('continueWithGoogle')}
           </button>
 
-          <div className={styles.fieldGroup}>
-            <label htmlFor="guestName" className={styles.label}>
-              {t('guestNameLabel')}
-            </label>
-            <input
-              id="guestName"
-              type="text"
-              autoComplete="nickname"
-              maxLength={GUEST_NAME_MAX_LENGTH}
-              value={guestName}
-              onChange={(event) => setGuestName(event.target.value)}
-              placeholder={t('guestNamePlaceholder')}
-              disabled={isSigningInAsGuest || loading}
-              className={styles.input}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGuestSignIn}
-            disabled={isSigningInAsGuest || loading}
-            className={styles.guestButton}
-          >
-            {isSigningInAsGuest ? t('processing') : t('continueAsGuest')}
-          </button>
-          <p className={styles.guestHint}>{t('guestHint')}</p>
+          {onGuestRequested && (
+            <>
+              <button
+                type="button"
+                onClick={onGuestRequested}
+                disabled={loading}
+                className={styles.guestButton}
+              >
+                {t('continueAsGuest')}
+              </button>
+              <p className={styles.guestHint}>{t('guestHint')}</p>
+            </>
+          )}
 
           <div className={styles.divider}>
             <span>{t('or')}</span>

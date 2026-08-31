@@ -94,56 +94,15 @@ $lp-content-width: min(1200px, 100%);
   margin-bottom: 20px;
 }
 
-// Groups the guest name field, its button and the note explaining what the
-// button means, so the note reads as attached to this one control rather than
-// to the login/signup row above it.
+// Groups the guest button with the note explaining what it means, so the note
+// reads as attached to this one control rather than to the login/signup row
+// above it.
 .guestLinkGroup {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 32px;
-}
-
-.guestNameField {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  max-width: 20rem;
-}
-
-.guestNameLabel {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--mt-text-secondary);
-}
-
-.guestNameInput {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid var(--mt-border-hairline);
-  border-radius: var(--mt-radius);
-  background: var(--mt-surface-raised);
-  color: var(--mt-text-primary);
-  font-size: 0.9375rem;
-  font-family: inherit;
-
-  &::placeholder {
-    color: var(--mt-text-muted);
-  }
-
-  &:focus-visible {
-    outline: none;
-    border-color: var(--mt-accent);
-    box-shadow: 0 0 0 2px var(--mt-focus-ring);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
 }
 
 // A third tier under .primaryCta and .secondaryCta. It used to be .textCta —
