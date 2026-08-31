@@ -64,6 +64,7 @@ import {
   type GameEventState,
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
+import { completedFieldKey } from '@meitra/game-client/completed-field';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import {
   DEFAULT_USER_PREFERENCES,
@@ -111,7 +112,7 @@ const dedupeCompletedFields = (fields: CompletedField[]): CompletedField[] => {
   const seen = new Set<string>();
 
   return fields.filter((field) => {
-    const signature = `${field.winnerSeatId}|${field.winnerTeam}|${field.cards.join(',')}`;
+    const signature = completedFieldKey(field);
     if (seen.has(signature)) {
       return false;
     }

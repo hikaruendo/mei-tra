@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CompletedField } from '@/types/game.types';
 import { CardFace } from '@/components/game/CardFace';
+import { completedFieldKey } from '@meitra/game-client/completed-field';
 import styles from './index.module.scss';
 
 interface CompletedFieldsProps {
@@ -67,21 +68,13 @@ export const TakenCardPreview: React.FC<TakenCardPreviewProps> = ({
   );
 };
 
-/**
- * A trick is only ever added or dropped whole, so its contents identify it.
- * An array index would not: a `game-state` resync re-sends the whole list, and
- * a pile the player had opened would follow the index rather than the trick.
- */
-const trickKey = (field: CompletedField) =>
-  `${field.winnerSeatId}|${field.winnerTeam}|${field.cards.join(',')}`;
-
 export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
   const t = useTranslations('completedFields');
   const [openedKey, setOpenedKey] = useState<string | null>(null);
 
   // Derived, not reset in an effect: a new round arrives as an empty list and
   // the key simply stops matching anything.
-  const openKey = fields.some((field) => trickKey(field) === openedKey)
+  const openKey = fields.some((field) => completedFieldKey(field) === openedKey)
     ? openedKey
     : null;
 
@@ -90,7 +83,7 @@ export const CompletedFields: React.FC<CompletedFieldsProps> = ({ fields }) => {
       {fields.length > 0 && (
         <div className={styles.completedFieldsContainer}>
           {fields.map((field, index) => {
-            const key = trickKey(field);
+            const key = completedFieldKey(field);
             const isOpen = key === openKey;
 
             return (

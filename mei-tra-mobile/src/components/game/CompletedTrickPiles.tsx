@@ -4,6 +4,7 @@ import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { MiniCard } from '@/components/game/MiniCard';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
+import { completedFieldKey } from '@meitra/game-client/completed-field';
 import type { CompletedFieldContract } from '@meitra/contracts/game';
 
 /**
@@ -22,15 +23,6 @@ const OPEN_OVERLAP = -4;
 const FLIP_MS = 260;
 /** Staggered so the four cards read as one movement. Matches web. */
 const FLIP_STAGGER_MS = 55;
-
-/**
- * A trick is only ever added or dropped whole, so its contents identify it. An
- * array index would not: a `game-state` resync re-sends the whole list, and a
- * pile the player had opened would follow the index rather than the trick.
- * Kept in step with mei-tra-frontend/components/game/CompletedFields.
- */
-export const trickKey = (field: CompletedFieldContract) =>
-  `${field.winnerSeatId}|${field.winnerTeam}|${field.cards.join(',')}`;
 
 function TrickCard({
   card,
@@ -125,7 +117,7 @@ export function CompletedTrickPiles({
 
   // Derived, not reset in an effect: a new round arrives as an empty list and
   // the key simply stops matching anything.
-  const openKey = fields.some((field) => trickKey(field) === openedKey)
+  const openKey = fields.some((field) => completedFieldKey(field) === openedKey)
     ? openedKey
     : null;
 
@@ -134,7 +126,7 @@ export function CompletedTrickPiles({
   return (
     <View style={styles.wrap}>
       {fields.map((field, index) => {
-        const key = trickKey(field);
+        const key = completedFieldKey(field);
         const isOpen = key === openKey;
 
         return (

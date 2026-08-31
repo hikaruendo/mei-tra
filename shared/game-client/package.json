@@ -19,6 +19,10 @@
       "types": "./card-legality.ts",
       "default": "./card-legality.ts"
     },
+    "./completed-field": {
+      "types": "./completed-field.ts",
+      "default": "./completed-field.ts"
+    },
     "./deal-animation": {
       "types": "./deal-animation.ts",
       "default": "./deal-animation.ts"
