@@ -1,4 +1,9 @@
-import { fetchPlayerProfile, fetchProfileGameHistory } from '@/lib/profile-api';
+import {
+  fetchPlayerProfile,
+  fetchPlayerProfileWithRetry,
+  fetchProfileGameHistory,
+  ProfileApiError,
+} from '@/lib/profile-api';
 
 jest.mock('@/lib/config', () => ({
   config: {
@@ -65,5 +70,47 @@ describe('fetchPlayerProfile', () => {
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://backend.example.com/api/user-profile/user%2F1',
     );
+  });
+
+  it('retries transient server failures and then succeeds', async () => {
+    const profile = { id: 'user-1', username: 'player', displayName: 'Player' };
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        text: jest.fn().mockResolvedValue('temporarily unavailable'),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(profile),
+      });
+    const wait = jest.fn().mockResolvedValue(undefined);
+
+    await expect(
+      fetchPlayerProfileWithRetry('user-1', { fetchImpl, wait }),
+    ).resolves.toEqual(profile);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(wait).toHaveBeenCalledWith(500);
+  });
+
+  it('does not retry permanent profile errors', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: jest.fn().mockResolvedValue('not found'),
+    });
+    const wait = jest.fn().mockResolvedValue(undefined);
+
+    const error = await fetchPlayerProfileWithRetry('missing', {
+      fetchImpl,
+      wait,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ProfileApiError);
+    expect(error).toMatchObject({ status: 404 });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(wait).not.toHaveBeenCalled();
   });
 });

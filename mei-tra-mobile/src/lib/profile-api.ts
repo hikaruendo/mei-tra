@@ -9,6 +9,23 @@ import { config } from '@/lib/config';
 
 const BASE = `${config.backendUrl}/api/user-profile`;
 
+export class ProfileApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ProfileApiError';
+  }
+}
+
+export function isRetryableProfileError(error: unknown): boolean {
+  return (
+    error instanceof TypeError ||
+    (error instanceof ProfileApiError && error.status >= 500)
+  );
+}
+
 export async function fetchPlayerProfile(
   userId: string,
   fetchImpl: typeof fetch = fetch,
@@ -17,10 +34,42 @@ export async function fetchPlayerProfile(
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(body || `Profile request failed: ${res.status}`);
+    throw new ProfileApiError(
+      body || `Profile request failed: ${res.status}`,
+      res.status,
+    );
   }
 
   return res.json() as Promise<UserProfileDto>;
+}
+
+interface ProfileRetryOptions {
+  fetchImpl?: typeof fetch;
+  maxAttempts?: number;
+  wait?: (delayMs: number) => Promise<void>;
+}
+
+export async function fetchPlayerProfileWithRetry(
+  userId: string,
+  {
+    fetchImpl = fetch,
+    maxAttempts = 3,
+    wait = (delayMs) =>
+      new Promise((resolve) => setTimeout(resolve, delayMs)),
+  }: ProfileRetryOptions = {},
+): Promise<UserProfileDto> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await fetchPlayerProfile(userId, fetchImpl);
+    } catch (error) {
+      if (!isRetryableProfileError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+      await wait(500 * 2 ** (attempt - 1));
+    }
+  }
+
+  throw new Error('Profile retry loop completed unexpectedly');
 }
 
 export async function fetchProfileGameHistory(

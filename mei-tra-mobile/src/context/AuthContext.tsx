@@ -26,7 +26,10 @@ import {
   unregisterPushToken,
 } from '@/lib/notifications';
 import { roomStorage } from '@/lib/room-storage';
-import { fetchPlayerProfile } from '@/lib/profile-api';
+import {
+  fetchPlayerProfile,
+  fetchPlayerProfileWithRetry,
+} from '@/lib/profile-api';
 import {
   cleanupAfterAccountDeletion,
   cleanupBeforeLocalSignOut,
@@ -96,7 +99,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loadProfile = useCallback(async (authUser: User) => {
     const requestId = ++profileRequestRef.current;
     try {
-      const profile = await fetchPlayerProfile(authUser.id);
+      const profile = await fetchPlayerProfileWithRetry(authUser.id);
 
       if (!mountedRef.current || requestId !== profileRequestRef.current) {
         return;
@@ -194,9 +197,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
           snapshot.appState === 'active' &&
           snapshot.isOnline &&
           (previous.appState !== 'active' || !previous.isOnline);
-        if (becameAvailable) void getAccessToken();
+        if (becameAvailable) {
+          void getAccessToken();
+          if (session?.user && !user?.profile) {
+            void loadProfile(session.user);
+          }
+        }
       }),
-    [getAccessToken],
+    [getAccessToken, loadProfile, session?.user, user?.profile],
   );
 
   const signIn = useCallback(async (email: string, password: string) => {

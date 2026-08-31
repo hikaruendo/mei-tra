@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "check:architecture": "node scripts/check-no-direct-db-access.mjs",
+    "check:architecture": "node --test scripts/check-no-direct-db-access.test.mjs && node scripts/check-no-direct-db-access.mjs",
     "lint": "npm run check:architecture && expo lint",
     "typecheck": "tsc --noEmit",
     "doctor": "npx --yes expo-doctor",
