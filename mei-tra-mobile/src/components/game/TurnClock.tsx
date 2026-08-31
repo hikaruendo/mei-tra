@@ -102,9 +102,9 @@ const styles = StyleSheet.create({
     // than brass because brass is the ambient accent everywhere else here.
     backgroundColor: palette.turn.clockDisc,
     borderCurve: 'circular',
-    // No border here, unlike the web badge's box-shadow ring: a React Native
-    // border grows inwards and would push the dial off the disc edge, which is
-    // the one piece of geometry this component keeps in step with web.
+    // No border, matching the web badge: an outline ring around the disc read
+    // as a second border where the badge overlaps the avatar. A React Native
+    // border would also grow inwards and push the dial off the disc edge.
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.35,

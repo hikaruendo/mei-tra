@@ -335,11 +335,11 @@
   // the problem. Red rather than brass: brass is the ambient accent of every
   // panel and badge here, so the turn cue was one more gold thing among many.
   background: var(--mt-turn-clock-bg);
-  // The ring in the panel colour cuts the disc away from the avatar edge, so
-  // it stays a disc in both themes rather than merging with what is under it.
-  box-shadow:
-    0 0 0 2px var(--mt-surface-raised),
-    0 1px 4px rgba(0, 0, 0, 0.35);
+  // Shadow only, no outline ring. The badge straddles the avatar's corner, so
+  // a ring in the panel colour was cream in light mode and drew a bright arc
+  // across the avatar — a second border around the disc. The disc separates
+  // from both the avatar and the panel on its own.
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   color: var(--mt-turn-clock-dial);
   line-height: 1;
   box-sizing: border-box;
