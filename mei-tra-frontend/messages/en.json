@@ -428,7 +428,9 @@
   "completedFields": {
     "takenLabel": "Taken",
     "takenCount": "{count} sets",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "revealTrick": "Reveal trick {index}",
+    "hideTrick": "Turn trick {index} back over"
   },
   "chatDock": {
     "title": "Chat",
