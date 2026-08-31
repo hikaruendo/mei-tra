@@ -496,6 +496,8 @@ GitHub Actionsの`Backend Load Test`は手動実行専用です。対象HTTPS or
 
 これはゲーム1局の業務負荷を再現するものではなく、Fly cold start後のHTTP応答とSocket接続入口の基準測定です。実行時は同時にFly metrics、`/api/health`のmemory/connection数、Sentry、Fly logsを記録し、閾値を変更する場合は測定結果をPRへ残します。
 
+`Backend Health Monitor`は6時間ごとと手動実行時にproduction `/api/health`を確認します。常時pingせずscale-to-zeroを維持しながら、cold start込み30秒、RSS 450MB未満、fresh timestamp、非負のconnection数を判定します。同じcheckはFly deploy直後にも走り、失敗時はworkflowを失敗させます。
+
 この project では observability が一枚岩ではないため、browser、health endpoint、workflow、Fly の複数観測点をまとめて見るのが実務上の基本になります。
 
 ## 16. 定期メンテナンス観点
