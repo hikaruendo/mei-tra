@@ -312,6 +312,11 @@ export class GameplayNotificationService implements OnModuleDestroy {
       state.gamePhase,
       seatId,
       state.blowState.currentBlowIndex,
+      // A 全員パス re-deal keeps the round, the starting seat and the blow
+      // index, and empties the action history, so without this the first turn
+      // of the new deal reuses the id of the first turn of the old one and is
+      // dropped as a duplicate.
+      state.blowState.redealCount ?? 0,
       state.blowState.actionHistory?.length ?? 0,
       state.playState?.fields?.length ?? 0,
       state.playState?.currentField?.cards?.length ?? 0,

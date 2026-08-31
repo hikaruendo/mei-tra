@@ -149,9 +149,20 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       nextState.blowState.lastPasserSeatId = null;
       nextState.blowState.isRoundCancelled = false;
 
-      const firstBlowIndex = nextState.blowState.currentBlowIndex;
+      // ブロークン / 4ジャックの再配りでは吹き始めが1つ進む。
+      // 全員パスの再配り (PassBlowUseCase.handleNoDeclarations) だけは据え置き。
+      const firstBlowIndex =
+        nextState.players.length > 0
+          ? (nextState.blowState.currentBlowIndex + 1) %
+            nextState.players.length
+          : 0;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
+      // 次のラウンドの吹き始め (CompleteFieldUseCase.prepareNextRound) は
+      // currentBlowIndex から導かれるので、進めた値を書き戻す必要がある。
+      nextState.blowState.currentBlowIndex = firstBlowIndex;
+      nextState.blowState.redealCount =
+        (nextState.blowState.redealCount ?? 0) + 1;
       setCurrentSeat(nextState, firstBlowPlayer?.seatId ?? null);
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;
