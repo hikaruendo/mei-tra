@@ -2,37 +2,20 @@
      fill as much of the element as it can, because the four played cards land
      inside it and need a margin of table showing around them.
 
-     The cushion outline is written out at each place it is used rather than
-     defined once and referenced with <use href="#id">. The indirection renders
-     inconsistently across SVG engines — react-native-svg on device and some
-     browsers drop the referenced shape and leave only the plainly-drawn parts,
-     which showed as a bare gold cross on an empty table. Repeating the path is
-     the price of the artwork looking the same everywhere. Same reason there is
-     no <filter>: the drop shadow is drawn as a soft underlay instead. -->
+     Two things are written the long way on purpose, so the artwork looks the
+     same on every SVG engine rather than only in a browser:
+
+     1. The cushion outline is repeated at each place it is used instead of
+        being defined once and referenced with <use href="#id">. Some engines
+        drop the referenced shape and leave only the plainly-drawn parts.
+     2. Every colour is a solid, and depth comes from translucent solids laid
+        over each other. Gradient references (fill="url(#someGradient)") were
+        silently ignored on device, which left the cushion grey with no red
+        ground and no gold border. Patterns and clip paths do resolve, so the
+        weave and the brocade still come from <pattern>. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 568 568" width="568" height="568" role="presentation">
   <title>西陣織の座布団</title>
   <defs>
-    <!-- Lit from above and in front, so the crown of the cushion is lighter
-         than the seams. -->
-    <radialGradient id="zabutonGround" cx="42%" cy="34%" r="78%">
-      <stop offset="0%" stop-color="#a8352a" />
-      <stop offset="52%" stop-color="#8d251c" />
-      <stop offset="100%" stop-color="#5e150f" />
-    </radialGradient>
-
-    <linearGradient id="zabutonGold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#e0c784" />
-      <stop offset="50%" stop-color="#c9a34e" />
-      <stop offset="100%" stop-color="#8a6c2e" />
-    </linearGradient>
-
-    <!-- Rolled edge: the seam catches light on top and loses it underneath. -->
-    <linearGradient id="zabutonEdge" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f4f0e3" stop-opacity="0.24" />
-      <stop offset="46%" stop-color="#f4f0e3" stop-opacity="0.03" />
-      <stop offset="100%" stop-color="#1c0503" stop-opacity="0.34" />
-    </linearGradient>
-
     <!-- The weave itself: warp and weft at a 6px pitch. Almost invisible on
          its own, but it stops the ground reading as flat paint. -->
     <pattern id="zabutonWeave" width="6" height="6" patternUnits="userSpaceOnUse">
@@ -63,17 +46,18 @@
     </clipPath>
   </defs>
 
-  <!-- Shadow, drawn rather than filtered: the same outline in black, nudged
-       down and softened by stacking it at low opacity. -->
-  <g fill="#000000" opacity="0.16">
-    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 14)" />
-    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 9)" />
-    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 4)" />
+  <!-- Shadow: the same outline in black, nudged down and stacked so the edge
+       softens. fill-opacity per path rather than opacity on the group, which
+       not every engine honours. -->
+  <g fill="#000000">
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 14)" fill-opacity="0.10" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 9)" fill-opacity="0.10" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 4)" fill-opacity="0.10" />
   </g>
 
   <!-- 房 (tassels) at the four corners, behind the body so they read as
        tucked under the seam. -->
-  <g stroke="url(#zabutonGold)" stroke-linecap="round" fill="none" opacity="0.92" stroke-width="4">
+  <g stroke="#c9a34e" stroke-linecap="round" fill="none" stroke-opacity="0.92" stroke-width="4">
     <path d="M94 94 L58 58" />
     <path d="M86 102 L52 68" />
     <path d="M102 86 L68 52" />
@@ -88,32 +72,65 @@
     <path d="M538 554 L572 588" />
   </g>
 
-  <!-- Cushion ground. -->
-  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="url(#zabutonGround)" />
+  <!-- Cushion ground: one solid red, so the colour never depends on a
+       gradient resolving. -->
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="#8d251c" />
 
-  <!-- Weave, brocade and the rolled-edge shading, all kept inside the body. -->
   <g clip-path="url(#zabutonClip)">
+    <!-- Lit crown, then a darkened rim: the stuffing reads as domed. -->
+    <ellipse cx="272" cy="248" rx="215" ry="185" fill="#a8352a" fill-opacity="0.55" />
+    <ellipse cx="252" cy="228" rx="130" ry="110" fill="#b53d30" fill-opacity="0.4" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.34" stroke-width="46" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.26" stroke-width="24" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#2a0805" stroke-opacity="0.22" stroke-width="10" />
+
     <rect x="36" y="36" width="568" height="568" fill="url(#zabutonWeave)" />
     <rect x="36" y="36" width="568" height="568" fill="url(#zabutonShippo)" />
-    <rect x="36" y="36" width="568" height="568" fill="url(#zabutonEdge)" />
+
+    <!-- Rolled edge: light catches the top, the underside loses it. Banded
+         rather than one translucent block, which would leave a hard line
+         across the cushion where it ends — there is no gradient to fade with. -->
+    <rect x="36" y="36" width="568" height="13" fill="#f4f0e3" fill-opacity="0.075" />
+    <rect x="36" y="49" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0687" />
+    <rect x="36" y="62" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0625" />
+    <rect x="36" y="75" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0562" />
+    <rect x="36" y="88" width="568" height="13" fill="#f4f0e3" fill-opacity="0.05" />
+    <rect x="36" y="101" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0437" />
+    <rect x="36" y="114" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0375" />
+    <rect x="36" y="127" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0312" />
+    <rect x="36" y="140" width="568" height="13" fill="#f4f0e3" fill-opacity="0.025" />
+    <rect x="36" y="153" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0187" />
+    <rect x="36" y="166" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0125" />
+    <rect x="36" y="179" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0063" />
+    <rect x="36" y="591" width="568" height="13" fill="#1c0503" fill-opacity="0.2" />
+    <rect x="36" y="578" width="568" height="13" fill="#1c0503" fill-opacity="0.1857" />
+    <rect x="36" y="565" width="568" height="13" fill="#1c0503" fill-opacity="0.1714" />
+    <rect x="36" y="552" width="568" height="13" fill="#1c0503" fill-opacity="0.1571" />
+    <rect x="36" y="539" width="568" height="13" fill="#1c0503" fill-opacity="0.1429" />
+    <rect x="36" y="526" width="568" height="13" fill="#1c0503" fill-opacity="0.1286" />
+    <rect x="36" y="513" width="568" height="13" fill="#1c0503" fill-opacity="0.1143" />
+    <rect x="36" y="500" width="568" height="13" fill="#1c0503" fill-opacity="0.1" />
+    <rect x="36" y="487" width="568" height="13" fill="#1c0503" fill-opacity="0.0857" />
+    <rect x="36" y="474" width="568" height="13" fill="#1c0503" fill-opacity="0.0714" />
+    <rect x="36" y="461" width="568" height="13" fill="#1c0503" fill-opacity="0.0571" />
+    <rect x="36" y="448" width="568" height="13" fill="#1c0503" fill-opacity="0.0429" />
+    <rect x="36" y="435" width="568" height="13" fill="#1c0503" fill-opacity="0.0286" />
+    <rect x="36" y="422" width="568" height="13" fill="#1c0503" fill-opacity="0.0143" />
   </g>
 
   <!-- 縁 (border band) plus the stitch line just inside it. -->
-  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="url(#zabutonGold)" stroke-width="7" />
-  <path
-    d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z"
-    fill="none"
-    stroke="#e0c784"
-    stroke-opacity="0.4"
-    stroke-width="1.6"
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#8a6c2e" stroke-width="9" />
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#c9a34e" stroke-width="6" />
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#e0c784" stroke-opacity="0.55" stroke-width="2"
+    transform="translate(320 320) scale(0.985) translate(-320 -320)" />
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#e0c784" stroke-opacity="0.4" stroke-width="1.6"
     stroke-dasharray="9 8"
-    transform="translate(320 320) scale(0.9) translate(-320 -320)"
-  />
+    transform="translate(320 320) scale(0.9) translate(-320 -320)" />
 
   <!-- 綴じ (the tuft that holds the stuffing at the centre). -->
-  <g opacity="0.85">
-    <circle cx="320" cy="320" r="9" fill="url(#zabutonGold)" />
-    <g stroke="#e0c784" stroke-opacity="0.75" stroke-width="3" stroke-linecap="round">
+  <g stroke-opacity="0.85">
+    <circle cx="320" cy="320" r="9" fill="#c9a34e" />
+    <g stroke="#e0c784" stroke-opacity="0.75" stroke-width="3" stroke-linecap="round" fill="none">
       <path d="M320 320 L306 300" />
       <path d="M320 320 L334 300" />
       <path d="M320 320 L306 340" />
