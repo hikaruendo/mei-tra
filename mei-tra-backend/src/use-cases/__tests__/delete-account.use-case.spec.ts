@@ -7,10 +7,10 @@ import {
   IAccountDeletionRepository,
   IUserProfileRepository,
 } from '../../repositories/interfaces/user-profile.repository.interface';
-import { SupabaseService } from '../../database/supabase.service';
 import { RoomStatus } from '../../types/room.types';
 import { AuthService } from '../../auth/auth.service';
 import { IAvatarStorage } from '../../storage/interfaces/avatar-storage.interface';
+import { IIdentityProvider } from '../../identity/interfaces/identity-provider.interface';
 
 describe('DeleteAccountUseCase', () => {
   const createRepository = (
@@ -76,25 +76,13 @@ describe('DeleteAccountUseCase', () => {
       ...overrides,
     }) as IUserProfileRepository & IAccountDeletionRepository;
 
-  const createSupabaseService = (
-    overrides: {
-      deleteUser?: jest.Mock;
-    } = {},
-  ): SupabaseService => {
-    const deleteUser =
-      overrides.deleteUser ??
-      jest.fn().mockResolvedValue({ data: { user: null }, error: null });
-
-    return {
-      client: {
-        auth: {
-          admin: {
-            deleteUser,
-          },
-        },
-      },
-    } as unknown as SupabaseService;
-  };
+  const createIdentityProvider = (
+    deleteUser: jest.Mock = jest.fn().mockResolvedValue('deleted'),
+  ): jest.Mocked<IIdentityProvider> =>
+    ({
+      verifyAccessToken: jest.fn(),
+      deleteUser,
+    }) as jest.Mocked<IIdentityProvider>;
 
   const createAvatarStorage = (
     overrides: Partial<jest.Mocked<IAvatarStorage>> = {},
@@ -117,12 +105,7 @@ describe('DeleteAccountUseCase', () => {
     const repository = createRepository();
     const list = jest.fn().mockResolvedValue(['old-avatar.webp']);
     const remove = jest.fn().mockResolvedValue(undefined);
-    const deleteUser = jest
-      .fn()
-      .mockResolvedValue({ data: { user: null }, error: null });
-    const supabaseService = createSupabaseService({
-      deleteUser,
-    });
+    const deleteUser = jest.fn().mockResolvedValue('deleted');
     const avatarStorage = createAvatarStorage({
       list,
       remove,
@@ -130,9 +113,9 @@ describe('DeleteAccountUseCase', () => {
     const authService = createAuthService();
     const useCase = new DeleteAccountUseCase(
       repository,
-      supabaseService,
       authService,
       avatarStorage,
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).resolves.toEqual({
@@ -157,7 +140,7 @@ describe('DeleteAccountUseCase', () => {
     expect(repository.anonymizeAccountReferences).toHaveBeenCalledWith(
       'user-1',
     );
-    expect(deleteUser).toHaveBeenCalledWith('user-1', false);
+    expect(deleteUser).toHaveBeenCalledWith('user-1');
     expect(authService.invalidateUser).toHaveBeenCalledWith('user-1');
     expect(repository.findAccountDeletionBlockers).toHaveBeenCalledTimes(2);
     expect(
@@ -177,13 +160,12 @@ describe('DeleteAccountUseCase', () => {
       ]),
     });
     const deleteUser = jest.fn();
-    const supabaseService = createSupabaseService({ deleteUser });
     const authService = createAuthService();
     const useCase = new DeleteAccountUseCase(
       repository,
-      supabaseService,
       authService,
       createAvatarStorage(),
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).rejects.toBeInstanceOf(
@@ -212,9 +194,9 @@ describe('DeleteAccountUseCase', () => {
     const deleteUser = jest.fn();
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({ deleteUser }),
       createAuthService(),
       createAvatarStorage(),
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).rejects.toBeInstanceOf(
@@ -247,9 +229,9 @@ describe('DeleteAccountUseCase', () => {
     const deleteUser = jest.fn();
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({ deleteUser }),
       createAuthService(),
       createAvatarStorage(),
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).rejects.toMatchObject({
@@ -295,9 +277,9 @@ describe('DeleteAccountUseCase', () => {
     });
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService(),
       createAuthService(),
       avatarStorage,
+      createIdentityProvider(),
     );
 
     await expect(useCase.execute('user-1')).resolves.toMatchObject({
@@ -317,9 +299,9 @@ describe('DeleteAccountUseCase', () => {
     });
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({ deleteUser }),
       createAuthService(),
       avatarStorage,
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).rejects.toEqual(
@@ -337,14 +319,11 @@ describe('DeleteAccountUseCase', () => {
     const authService = createAuthService();
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({
-        deleteUser: jest.fn().mockResolvedValue({
-          data: { user: null },
-          error: { name: 'AuthApiError', status: 500 },
-        }),
-      }),
       authService,
       createAvatarStorage(),
+      createIdentityProvider(
+        jest.fn().mockRejectedValue(new Error('identity provider unavailable')),
+      ),
     );
 
     await expect(useCase.execute('user-1')).rejects.toEqual(
@@ -367,9 +346,9 @@ describe('DeleteAccountUseCase', () => {
     const deleteUser = jest.fn();
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({ deleteUser }),
       createAuthService(),
       createAvatarStorage(),
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).rejects.toEqual(
@@ -398,17 +377,14 @@ describe('DeleteAccountUseCase', () => {
     });
     const deleteUser = jest
       .fn()
-      .mockResolvedValueOnce({
-        data: { user: null },
-        error: { name: 'AuthApiError', status: 500 },
-      })
-      .mockResolvedValueOnce({ data: { user: null }, error: null });
+      .mockRejectedValueOnce(new Error('identity provider unavailable'))
+      .mockResolvedValueOnce('deleted');
     const authService = createAuthService();
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({ deleteUser }),
       authService,
       createAvatarStorage(),
+      createIdentityProvider(deleteUser),
     );
 
     await expect(useCase.execute('user-1')).rejects.toEqual(
@@ -435,18 +411,9 @@ describe('DeleteAccountUseCase', () => {
     const authService = createAuthService();
     const useCase = new DeleteAccountUseCase(
       repository,
-      createSupabaseService({
-        deleteUser: jest.fn().mockResolvedValue({
-          data: { user: null },
-          error: {
-            name: 'AuthApiError',
-            status: 404,
-            message: 'User not found',
-          },
-        }),
-      }),
       authService,
       createAvatarStorage(),
+      createIdentityProvider(jest.fn().mockResolvedValue('not-found')),
     );
 
     await expect(useCase.execute('user-1')).resolves.toEqual({

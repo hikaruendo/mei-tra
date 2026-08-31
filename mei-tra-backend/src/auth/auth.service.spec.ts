@@ -1,7 +1,7 @@
 import { AuthService } from './auth.service';
-import { SupabaseService } from '../database/supabase.service';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { UserProfile } from '../types/user.types';
+import { IIdentityProvider } from '../identity/interfaces/identity-provider.interface';
 
 describe('AuthService', () => {
   const profile: UserProfile = {
@@ -22,14 +22,13 @@ describe('AuthService', () => {
     },
   };
 
-  const createSupabaseService = (getUser: jest.Mock): SupabaseService =>
+  const createIdentityProvider = (
+    verifyAccessToken: jest.Mock,
+  ): jest.Mocked<IIdentityProvider> =>
     ({
-      client: {
-        auth: {
-          getUser,
-        },
-      },
-    }) as unknown as SupabaseService;
+      verifyAccessToken,
+      deleteUser: jest.fn(),
+    }) as jest.Mocked<IIdentityProvider>;
 
   const createRepository = (
     overrides: Partial<jest.Mocked<IUserProfileRepository>> = {},
@@ -47,20 +46,15 @@ describe('AuthService', () => {
       ...overrides,
     }) as unknown as jest.Mocked<IUserProfileRepository>;
 
-  const createGetUser = () =>
+  const createVerifyAccessToken = () =>
     jest.fn().mockResolvedValue({
-      data: {
-        user: {
-          id: 'user-1',
-          email: 'user@example.com',
-          user_metadata: {},
-        },
-      },
-      error: null,
+      id: 'user-1',
+      email: 'user@example.com',
+      isAnonymous: false,
     });
 
   it('rechecks profile existence before accepting a cached token', async () => {
-    const getUser = createGetUser();
+    const verifyAccessToken = createVerifyAccessToken();
     const repository = createRepository({
       findById: jest
         .fn()
@@ -68,7 +62,7 @@ describe('AuthService', () => {
         .mockResolvedValueOnce(null),
     });
     const authService = new AuthService(
-      createSupabaseService(getUser),
+      createIdentityProvider(verifyAccessToken),
       repository,
     );
 
@@ -77,16 +71,16 @@ describe('AuthService', () => {
     });
     await expect(authService.validateToken('token')).resolves.toBeNull();
 
-    expect(getUser).toHaveBeenCalledTimes(1);
+    expect(verifyAccessToken).toHaveBeenCalledTimes(1);
     expect(repository.findById).toHaveBeenCalledTimes(2);
     expect(repository.create).not.toHaveBeenCalled();
   });
 
   it('rejects an invalidated already-issued token even if Supabase still returns the user', async () => {
-    const getUser = createGetUser();
+    const verifyAccessToken = createVerifyAccessToken();
     const repository = createRepository();
     const authService = new AuthService(
-      createSupabaseService(getUser),
+      createIdentityProvider(verifyAccessToken),
       repository,
     );
 
@@ -94,18 +88,18 @@ describe('AuthService', () => {
 
     await expect(authService.validateToken('token')).resolves.toBeNull();
 
-    expect(getUser).toHaveBeenCalledTimes(1);
+    expect(verifyAccessToken).toHaveBeenCalledTimes(1);
     expect(repository.findById).not.toHaveBeenCalled();
     expect(repository.updateLastSeen).not.toHaveBeenCalled();
   });
 
   it('rejects uncached tokens when the profile row is gone', async () => {
-    const getUser = createGetUser();
+    const verifyAccessToken = createVerifyAccessToken();
     const repository = createRepository({
       findById: jest.fn().mockResolvedValue(null),
     });
     const authService = new AuthService(
-      createSupabaseService(getUser),
+      createIdentityProvider(verifyAccessToken),
       repository,
     );
 
@@ -116,7 +110,7 @@ describe('AuthService', () => {
   });
 
   it('rejects deleting accounts for normal authenticated actions', async () => {
-    const getUser = createGetUser();
+    const verifyAccessToken = createVerifyAccessToken();
     const repository = createRepository({
       findById: jest.fn().mockResolvedValue({
         ...profile,
@@ -124,7 +118,7 @@ describe('AuthService', () => {
       }),
     });
     const authService = new AuthService(
-      createSupabaseService(getUser),
+      createIdentityProvider(verifyAccessToken),
       repository,
     );
 
@@ -134,7 +128,7 @@ describe('AuthService', () => {
   });
 
   it('allows deleting accounts only when the caller opts into delete retry auth', async () => {
-    const getUser = createGetUser();
+    const verifyAccessToken = createVerifyAccessToken();
     const repository = createRepository({
       findById: jest.fn().mockResolvedValue({
         ...profile,
@@ -142,7 +136,7 @@ describe('AuthService', () => {
       }),
     });
     const authService = new AuthService(
-      createSupabaseService(getUser),
+      createIdentityProvider(verifyAccessToken),
       repository,
     );
 

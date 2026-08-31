@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SupabaseService } from './supabase.service';
 import supabaseConfig from '../config/supabase.config';
 import { SupabaseAvatarStorage } from '../storage/supabase-avatar-storage';
+import { SupabaseIdentityProvider } from '../identity/supabase-identity-provider';
 
 @Module({
   imports: [ConfigModule.forFeature(supabaseConfig)],
@@ -12,7 +13,11 @@ import { SupabaseAvatarStorage } from '../storage/supabase-avatar-storage';
       provide: 'IAvatarStorage',
       useClass: SupabaseAvatarStorage,
     },
+    {
+      provide: 'IIdentityProvider',
+      useClass: SupabaseIdentityProvider,
+    },
   ],
-  exports: [SupabaseService, 'IAvatarStorage'],
+  exports: [SupabaseService, 'IAvatarStorage', 'IIdentityProvider'],
 })
 export class DatabaseModule {}

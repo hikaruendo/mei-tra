@@ -5,9 +5,9 @@ import {
   OnModuleInit,
   OnModuleDestroy,
 } from '@nestjs/common';
-import { SupabaseService } from '../database/supabase.service';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { AuthenticatedUser, UserProfile } from '../types/user.types';
+import { IIdentityProvider } from '../identity/interfaces/identity-provider.interface';
 
 interface CachedTokenValidation {
   user: AuthenticatedUser;
@@ -29,7 +29,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   private cleanupInterval: ReturnType<typeof setInterval>;
 
   constructor(
-    private readonly supabase: SupabaseService,
+    @Inject('IIdentityProvider')
+    private readonly identityProvider: IIdentityProvider,
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository,
   ) {}
@@ -80,62 +81,46 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         `[AuthService] Validating token with length: ${token?.length || 0}`,
       );
 
-      // Verify JWT token with Supabase
-      const { data: user, error } =
-        await this.supabase.client.auth.getUser(token);
-
-      if (error) {
-        this.logger.warn(
-          `[AuthService] Supabase auth error: ${error.message}`,
-          {
-            errorCode: error.name,
-            tokenLength: token?.length || 0,
-          },
-        );
-        // Remove from cache if validation failed
-        this.tokenCache.delete(token);
-        return null;
-      }
-
-      if (!user.user) {
-        this.logger.warn('[AuthService] No user data returned from Supabase');
+      const identity = await this.identityProvider.verifyAccessToken(token);
+      if (!identity) {
+        this.logger.warn('[AuthService] Identity provider rejected token');
         this.tokenCache.delete(token);
         return null;
       }
 
       this.logger.debug(
-        `[AuthService] Token validated for user: ${user.user.id}`,
+        `[AuthService] Token validated for user: ${identity.id}`,
       );
 
-      if (this.invalidatedUserIds.has(user.user.id)) {
+      if (this.invalidatedUserIds.has(identity.id)) {
         this.logger.warn(
-          `[AuthService] Token rejected for invalidated user: ${user.user.id}`,
+          `[AuthService] Token rejected for invalidated user: ${identity.id}`,
         );
         this.tokenCache.delete(token);
         return null;
       }
 
-      const profile = await this.userProfileRepository.findById(user.user.id);
+      const profile = await this.userProfileRepository.findById(identity.id);
 
       if (!profile || this.isAccountDeleting(profile, options)) {
         this.logger.warn(
-          `[AuthService] Token rejected because profile is unavailable for user ${user.user.id}`,
+          `[AuthService] Token rejected because profile is unavailable for user ${identity.id}`,
         );
         this.tokenCache.delete(token);
         return null;
       }
 
       // Update last seen timestamp
-      await this.userProfileRepository.updateLastSeen(user.user.id);
+      await this.userProfileRepository.updateLastSeen(identity.id);
 
       this.logger.debug(
-        `[AuthService] Successfully validated user: ${user.user.id} with profile: ${profile.displayName}`,
+        `[AuthService] Successfully validated user: ${identity.id} with profile: ${profile.displayName}`,
       );
 
       const authenticatedUser: AuthenticatedUser = {
-        id: user.user.id,
-        email: user.user.email,
-        isAnonymous: user.user.is_anonymous ?? false,
+        id: identity.id,
+        email: identity.email,
+        isAnonymous: identity.isAnonymous,
         profile,
       };
 

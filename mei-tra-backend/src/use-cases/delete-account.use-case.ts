@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
-import { SupabaseService } from '../database/supabase.service';
 import { IAvatarStorage } from '../storage/interfaces/avatar-storage.interface';
+import { IIdentityProvider } from '../identity/interfaces/identity-provider.interface';
 import {
   IAccountDeletionRepository,
   IUserProfileRepository,
@@ -21,10 +21,11 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
     @Inject('IUserProfileRepository')
     private readonly userProfileRepository: IUserProfileRepository &
       IAccountDeletionRepository,
-    private readonly supabaseService: SupabaseService,
     private readonly authService: AuthService,
     @Inject('IAvatarStorage')
     private readonly avatarStorage: IAvatarStorage,
+    @Inject('IIdentityProvider')
+    private readonly identityProvider: IIdentityProvider,
   ) {}
 
   async execute(userId: string): Promise<DeleteAccountResult> {
@@ -70,24 +71,17 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
       throw new AccountDeletionFailedError('database');
     }
 
-    const { error } = await this.supabaseService.client.auth.admin.deleteUser(
-      userId,
-      false,
-    );
-    if (error) {
-      if (this.isAuthUserAlreadyDeleted(error)) {
-        this.logger.warn('Supabase Auth user was already deleted', { userId });
-        this.authService.invalidateUser(userId);
-        return {
-          deleted: true,
-          cleanup,
-        };
+    try {
+      const deleteResult = await this.identityProvider.deleteUser(userId);
+      if (deleteResult === 'not-found') {
+        this.logger.warn('Identity provider user was already deleted', {
+          userId,
+        });
       }
-
-      this.logger.error('Failed to delete Supabase Auth user', {
+    } catch (error) {
+      this.logger.error('Failed to delete identity provider user', {
         userId,
-        errorName: error.name,
-        errorStatus: error.status,
+        error: this.describeUnknownError(error),
       });
       throw new AccountDeletionFailedError('auth');
     }
@@ -185,17 +179,6 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
     }
 
     return objectPath;
-  }
-
-  private isAuthUserAlreadyDeleted(error: {
-    status?: number;
-    message?: string;
-  }): boolean {
-    return (
-      error.status === 404 &&
-      typeof error.message === 'string' &&
-      error.message.toLowerCase().includes('not found')
-    );
   }
 
   private isConcurrentRoomMembershipBlock(error: unknown): boolean {
