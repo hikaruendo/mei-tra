@@ -4,14 +4,51 @@ on:
   push:
     branches:
       - main  # mainブランチへのpushをトリガーに
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  deploy:
+  verify-migrations:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mei-tra-backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: mei-tra-backend
+        run: npm ci
+
+      - name: Read Supabase CLI version
+        id: supabase-cli
+        working-directory: mei-tra-backend
+        run: echo "version=$(cat .supabase-cli-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: ${{ steps.supabase-cli.outputs.version }}
+
+      - name: Apply migrations and verify generated database types
+        working-directory: mei-tra-backend
+        run: npm run db:types:check
+
+  deploy:
+    needs: verify-migrations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master

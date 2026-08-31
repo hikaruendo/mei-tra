@@ -82,6 +82,8 @@
 
 ### 本番環境への適用
 
+- [ ] **migrationを含むPRはmerge前に本番DBへ適用する**
+      （main push後のFly deployはmigration検証を行うが、本番DBへの`db push`は行わない）
 - [ ] 本番プロジェクトにリンクされていることを確認
   ```bash
   supabase projects list
@@ -92,6 +94,7 @@
   supabase db push --include-all --linked
   ```
 - [ ] エラーなく完了したことを確認
+- [ ] GitHub Actionsの`verify-migrations`成功後にFly deployが開始されたことを確認
 - [ ] デプロイ時刻を記録: `____年__月__日 __:__`
 
 ### Supabase ダッシュボード設定

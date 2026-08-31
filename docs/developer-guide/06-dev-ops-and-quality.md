@@ -203,15 +203,17 @@ runbook 詳細は `mei-tra-backend/SUPABASE_OPERATIONS.md` と `mei-tra-backend/
 
 ### 7.1 deploy workflow
 
-`.github/workflows/deploy.yml` は `main` push を契機に backend を Fly.io へ deploy します。
+`.github/workflows/deploy.yml` は `main` push または手動実行を契機に backend を Fly.io へ deploy します。
 
 流れ:
 
 - checkout
+- migration を隔離DBへ適用
+- migration 由来の生成DB型にdriftがないことを確認
 - Fly CLI setup
 - `flyctl deploy --remote-only -c fly.toml`
 
-working directory は `mei-tra-backend` です。つまり repo 全体ではなく backend ディレクトリ単位で deploy しています。
+migration検証が失敗した場合、Fly deployは開始されません。検証は本番DBを変更せず、production migrationの適用は引き続き`DEPLOYMENT_CHECKLIST.md`に従ってmerge前に行います。Fly deployのbuild contextはrepo root、設定とDockerfileは`mei-tra-backend`配下です。
 
 ### 7.2 auto-scale workflow
 
