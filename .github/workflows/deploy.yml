@@ -42,8 +42,49 @@ jobs:
         working-directory: mei-tra-backend
         run: npm run db:types:check
 
+  verify-production-migrations:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read Supabase CLI version
+        id: supabase-cli
+        working-directory: mei-tra-backend
+        run: echo "version=$(cat .supabase-cli-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: ${{ steps.supabase-cli.outputs.version }}
+
+      - name: Require production Supabase credentials
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -n "$SUPABASE_DB_PASSWORD"
+
+      - name: Compare production and repository migration history
+        working-directory: mei-tra-backend
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" > migration-list.txt
+          node scripts/check-production-migrations.mjs migration-list.txt
+
   deploy:
-    needs: verify-migrations
+    needs:
+      - verify-migrations
+      - verify-production-migrations
     runs-on: ubuntu-latest
 
     steps:

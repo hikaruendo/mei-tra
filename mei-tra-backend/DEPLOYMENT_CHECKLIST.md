@@ -83,7 +83,7 @@
 ### 本番環境への適用
 
 - [ ] **migrationを含むPRはmerge前に本番DBへ適用する**
-      （main push後のFly deployはmigration検証を行うが、本番DBへの`db push`は行わない）
+      （main push後のFly deployはlocal検証に加え、linked productionとのmigration履歴一致を確認する。本番DBへの`db push`は行わない）
 - [ ] 本番プロジェクトにリンクされていることを確認
   ```bash
   supabase projects list
@@ -93,6 +93,11 @@
   ```bash
   supabase db push --include-all --linked
   ```
+
+  GitHubの`production` environmentには、deploy gate用の
+  `SUPABASE_ACCESS_TOKEN`、`SUPABASE_PROJECT_REF`、`SUPABASE_DB_PASSWORD`
+  を登録する。いずれかが未設定、またはproduction migrationが未適用の場合、
+  Fly deployは開始されない。
 - [ ] エラーなく完了したことを確認
 - [ ] GitHub Actionsの`verify-migrations`成功後にFly deployが開始されたことを確認
 - [ ] デプロイ時刻を記録: `____年__月__日 __:__`

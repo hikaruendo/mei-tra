@@ -210,10 +210,11 @@ runbook 詳細は `mei-tra-backend/SUPABASE_OPERATIONS.md` と `mei-tra-backend/
 - checkout
 - migration を隔離DBへ適用
 - migration 由来の生成DB型にdriftがないことを確認
+- linked productionとrepositoryのmigration履歴が完全一致することを確認
 - Fly CLI setup
 - `flyctl deploy --remote-only -c fly.toml`
 
-migration検証が失敗した場合、Fly deployは開始されません。検証は本番DBを変更せず、production migrationの適用は引き続き`DEPLOYMENT_CHECKLIST.md`に従ってmerge前に行います。Fly deployのbuild contextはrepo root、設定とDockerfileは`mei-tra-backend`配下です。
+migration検証またはproduction履歴照合が失敗した場合、Fly deployは開始されません。workflowは本番DBを変更せず、production migrationの適用は引き続き`DEPLOYMENT_CHECKLIST.md`に従ってmerge前に行います。Fly deployのbuild contextはrepo root、設定とDockerfileは`mei-tra-backend`配下です。
 
 ### 7.2 auto-scale workflow
 
