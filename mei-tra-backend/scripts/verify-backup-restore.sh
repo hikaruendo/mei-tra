@@ -25,7 +25,10 @@ done
 
 temporary_project_root="$(mktemp -d "${TMPDIR:-/tmp}/meitra-restore-drill.XXXXXX")"
 dump_file="$temporary_project_root/public-data.sql"
-readonly sentinel_id='00000000-0000-4000-8000-000000000099'
+readonly sentinel_room_id='00000000-0000-4000-8000-000000000099'
+readonly sentinel_seat_id='00000000-0000-4000-8000-000000000199'
+readonly sentinel_game_state_id='00000000-0000-4000-8000-000000000299'
+readonly sentinel_history_id='00000000-0000-4000-8000-000000000399'
 
 cleanup() {
   "${supabase_command[@]}" stop \
@@ -55,8 +58,74 @@ database_url="postgresql://postgres:postgres@127.0.0.1:${database_port}/postgres
 
 psql "$database_url" --set ON_ERROR_STOP=1 <<SQL
 INSERT INTO public.rooms (id, name)
-VALUES ('$sentinel_id', 'restore-drill');
+VALUES ('$sentinel_room_id', 'restore-drill');
+
+INSERT INTO public.room_players (
+  id,
+  room_id,
+  name,
+  team,
+  is_ready,
+  is_com,
+  seat_index
+)
+VALUES (
+  '$sentinel_seat_id',
+  '$sentinel_room_id',
+  'restore-player',
+  0,
+  true,
+  false,
+  0
+);
+
+UPDATE public.rooms
+SET host_seat_id = '$sentinel_seat_id'
+WHERE id = '$sentinel_room_id';
+
+INSERT INTO public.game_states (
+  id,
+  room_id,
+  state_data,
+  current_seat_id,
+  game_phase,
+  round_number,
+  points_to_win
+)
+VALUES (
+  '$sentinel_game_state_id',
+  '$sentinel_room_id',
+  '{"identitySchemaVersion":2,"playerStates":{}}'::jsonb,
+  '$sentinel_seat_id',
+  'play',
+  2,
+  10
+);
+
+INSERT INTO public.game_history (
+  id,
+  room_id,
+  game_state_id,
+  action_type,
+  actor_seat_id,
+  action_data
+)
+VALUES (
+  '$sentinel_history_id',
+  '$sentinel_room_id',
+  '$sentinel_game_state_id',
+  'card_played',
+  '$sentinel_seat_id',
+  '{"card":"A-tra"}'::jsonb
+);
 SQL
+
+expected_counts="$(psql "$database_url" --tuples-only --no-align --field-separator='|' --set ON_ERROR_STOP=1 \
+  --command "SELECT
+    (SELECT count(*) FROM public.rooms WHERE id = '$sentinel_room_id'),
+    (SELECT count(*) FROM public.room_players WHERE id = '$sentinel_seat_id'),
+    (SELECT count(*) FROM public.game_states WHERE id = '$sentinel_game_state_id'),
+    (SELECT count(*) FROM public.game_history WHERE id = '$sentinel_history_id');")"
 
 "${supabase_command[@]}" db dump \
   --local \
@@ -76,7 +145,7 @@ psql "$database_url" --tuples-only --no-align --set ON_ERROR_STOP=1 \
   | psql "$database_url" --set ON_ERROR_STOP=1 >/dev/null
 
 if [[ "$(psql "$database_url" --tuples-only --no-align --set ON_ERROR_STOP=1 \
-  --command "SELECT count(*) FROM public.rooms WHERE id = '$sentinel_id';")" != '0' ]]; then
+  --command "SELECT count(*) FROM public.rooms WHERE id = '$sentinel_room_id';")" != '0' ]]; then
   echo 'Restore drill failed to clear the target application data.' >&2
   exit 1
 fi
@@ -87,12 +156,57 @@ fi
   echo 'SET session_replication_role = DEFAULT;'
 } | psql "$database_url" --set ON_ERROR_STOP=1 >/dev/null
 
-restored_count="$(psql "$database_url" --tuples-only --no-align --set ON_ERROR_STOP=1 \
-  --command "SELECT count(*) FROM public.rooms WHERE id = '$sentinel_id';")"
+restored_counts="$(psql "$database_url" --tuples-only --no-align --field-separator='|' --set ON_ERROR_STOP=1 \
+  --command "SELECT
+    (SELECT count(*) FROM public.rooms WHERE id = '$sentinel_room_id'),
+    (SELECT count(*) FROM public.room_players WHERE id = '$sentinel_seat_id'),
+    (SELECT count(*) FROM public.game_states WHERE id = '$sentinel_game_state_id'),
+    (SELECT count(*) FROM public.game_history WHERE id = '$sentinel_history_id');")"
 
-if [[ "$restored_count" != '1' ]]; then
-  echo "Restore drill failed: expected one sentinel room, found $restored_count." >&2
+if [[ "$restored_counts" != "$expected_counts" ]]; then
+  echo "Restore drill failed: expected graph counts $expected_counts, found $restored_counts." >&2
   exit 1
 fi
 
-echo 'Backup restore drill passed for the public application schema.'
+orphan_count="$(psql "$database_url" --tuples-only --no-align --set ON_ERROR_STOP=1 \
+  --command "SELECT
+    (SELECT count(*)
+       FROM public.room_players AS player
+       LEFT JOIN public.rooms AS room ON room.id = player.room_id
+      WHERE player.room_id IS NOT NULL AND room.id IS NULL)
+    +
+    (SELECT count(*)
+       FROM public.rooms AS room
+       LEFT JOIN public.room_players AS host
+         ON host.room_id = room.id AND host.id = room.host_seat_id
+      WHERE room.host_seat_id IS NOT NULL AND host.id IS NULL)
+    +
+    (SELECT count(*)
+       FROM public.game_states AS state
+       LEFT JOIN public.rooms AS room ON room.id = state.room_id
+      WHERE state.room_id IS NOT NULL AND room.id IS NULL)
+    +
+    (SELECT count(*)
+       FROM public.game_states AS state
+       LEFT JOIN public.room_players AS current_seat
+         ON current_seat.room_id = state.room_id
+        AND current_seat.id = state.current_seat_id
+      WHERE state.current_seat_id IS NOT NULL AND current_seat.id IS NULL)
+    +
+    (SELECT count(*)
+       FROM public.game_history AS history
+       LEFT JOIN public.rooms AS room ON room.id = history.room_id
+       LEFT JOIN public.game_states AS state ON state.id = history.game_state_id
+       LEFT JOIN public.room_players AS actor
+         ON actor.room_id = history.room_id
+        AND actor.id = history.actor_seat_id
+      WHERE (history.room_id IS NOT NULL AND room.id IS NULL)
+         OR (history.game_state_id IS NOT NULL AND state.id IS NULL)
+         OR (history.actor_seat_id IS NOT NULL AND actor.id IS NULL));")"
+
+if [[ "$orphan_count" != '0' ]]; then
+  echo "Restore drill failed: found $orphan_count orphaned application references." >&2
+  exit 1
+fi
+
+echo 'Backup restore drill passed for the representative public application graph.'
