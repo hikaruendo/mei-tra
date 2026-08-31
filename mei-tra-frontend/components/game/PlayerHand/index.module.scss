@@ -325,17 +325,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.8rem;
+  height: 1.8rem;
   padding: 0;
   border-radius: 50%;
-  // Inverted on purpose: a solid brass disc with an ivory dial. A light disc
-  // sat on a light card in light mode and read as the card's fill bleeding past
-  // its border-radius, and no amount of outline fixed that — the fill itself
-  // was the problem. Brass also carries the "your turn" accent semantics.
-  background: var(--mt-accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  color: var(--mt-raw-pale-100);
+  // Inverted on purpose: a solid disc with an ivory dial. A light disc sat on
+  // a light card in light mode and read as the card's fill bleeding past its
+  // border-radius, and no amount of outline fixed that — the fill itself was
+  // the problem. Red rather than brass: brass is the ambient accent of every
+  // panel and badge here, so the turn cue was one more gold thing among many.
+  background: var(--mt-turn-clock-bg);
+  // Shadow only, no outline ring. The badge straddles the avatar's corner, so
+  // a ring in the panel colour was cream in light mode and drew a bright arc
+  // across the avatar — a second border around the disc. The disc separates
+  // from both the avatar and the panel on its own.
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  color: var(--mt-turn-clock-dial);
   line-height: 1;
   box-sizing: border-box;
 }
@@ -408,10 +413,10 @@
 }
 
 .currentTurn{
-  border: 2px solid var(--mt-accent) !important;
+  border: 2px solid var(--mt-turn-ring) !important;
   background:
     linear-gradient(180deg, var(--mt-surface-raised) 0%, var(--mt-surface-raised-2) 100%) !important;
-  box-shadow: 0 0 8px var(--mt-accent-subtle) !important;
+  box-shadow: 0 0 8px var(--mt-turn-ring-glow) !important;
   transition: all 0.3s ease;
 }
 
@@ -643,6 +648,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .brokenButton,
+  .clockHand,
   .dealingCard {
     animation: none;
   }
@@ -980,9 +986,11 @@
     padding: 0.2rem;
   }
 
+  // !important because the base rule above uses it; without it this narrower
+  // ring never applied.
   .currentTurn{
-    border: 1px solid var(--mt-accent);
-    box-shadow: 0 0 8px var(--mt-accent-subtle);
+    border: 1px solid var(--mt-turn-ring) !important;
+    box-shadow: 0 0 8px var(--mt-turn-ring-glow) !important;
   }
 
   .playerName{

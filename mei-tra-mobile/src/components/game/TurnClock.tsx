@@ -6,12 +6,12 @@ import { palette } from '@/theme/palette';
 import { radius } from '@/theme/radius';
 import { t } from '@/i18n';
 
-const DIAL = palette.text.primary;
+const DIAL = palette.turn.clockDial;
 
 /**
  * The "it's your turn" clock, matching the web badge
  * (mei-tra-frontend/components/game/PlayerHand: .turnBadge + inline svg):
- * a brass disc with an ivory dial, the hand sweeping once every 3s.
+ * a red disc with an ivory dial, the hand sweeping once every 3s.
  *
  * The hand lives in its own layer rotated by an Animated.View rather than an
  * animated <G>. Wrapping G in createAnimatedComponent leaks `collapsable` and
@@ -44,7 +44,7 @@ export function TurnClock({ size = 26 }: { size?: number }) {
   });
 
   // The dial fills the disc: its outer stroke is the badge's visible edge, so
-  // the ring and the brass circle read as one shape rather than a small clock
+  // the ring and the red circle read as one shape rather than a small clock
   // floating inside a larger button.
   const inner = size;
 
@@ -97,13 +97,17 @@ const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
     justifyContent: 'center',
-    // Solid brass disc with an ivory dial, matching web. A light disc on a
-    // light card read as the card's fill bleeding past its border-radius.
-    backgroundColor: palette.accent.base,
+    // Solid red disc with an ivory dial, matching web. A light disc on a light
+    // card read as the card's fill bleeding past its border-radius. Red rather
+    // than brass because brass is the ambient accent everywhere else here.
+    backgroundColor: palette.turn.clockDisc,
     borderCurve: 'circular',
+    // No border, matching the web badge: an outline ring around the disc read
+    // as a second border where the badge overlaps the avatar. A React Native
+    // border would also grow inwards and push the dial off the disc edge.
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.35,
     shadowRadius: radius.sm / 2,
     elevation: 2,
   },
