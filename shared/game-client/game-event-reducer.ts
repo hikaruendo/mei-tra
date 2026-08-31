@@ -20,6 +20,7 @@ import type {
   UpdateTurnPayload,
 } from '@meitra/contracts/game';
 import type { SeatId } from '@meitra/contracts/ids';
+import { completedFieldKey } from './completed-field';
 
 export interface GameEventState {
   players: PlayerContract[];
@@ -104,12 +105,7 @@ export const dedupeCompletedFields = (
 ): CompletedFieldContract[] => {
   const seen = new Set<string>();
   return fields.filter((field) => {
-    const key = [
-      field.dealerSeatId,
-      field.winnerSeatId,
-      field.winnerTeam,
-      field.cards.join(','),
-    ].join('|');
+    const key = completedFieldKey(field);
     if (seen.has(key)) {
       return false;
     }

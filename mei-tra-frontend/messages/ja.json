@@ -433,7 +433,9 @@
   "completedFields": {
     "takenLabel": "取得組",
     "takenCount": "{count}組",
-    "unknown": "不明"
+    "unknown": "不明",
+    "revealTrick": "取得組 {index} を表にする",
+    "hideTrick": "取得組 {index} を裏に戻す"
   },
   "chatDock": {
     "title": "チャット",
