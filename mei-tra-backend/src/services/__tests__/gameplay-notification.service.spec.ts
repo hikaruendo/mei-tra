@@ -243,10 +243,51 @@ describe('GameplayNotificationService', () => {
     expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
       ['user-2'],
       expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:0:0:0:0:player-1',
+        eventId: 'turn:room-1:1:blow:player-2:0:0:0:0:0:player-1',
         roomId: 'room-1',
         roundNumber: 1,
         phase: 'blow',
+      }),
+    );
+  });
+
+  // A 全員パス re-deal keeps the round, the starting seat and the blow index,
+  // and empties the action history, so the new deal's first turn otherwise
+  // reuses the id of the old deal's first turn and is dropped as a replay.
+  it('notifies the same seat again after an all-pass re-deal', async () => {
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+    });
+    await jest.advanceTimersByTimeAsync(60_000);
+
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
+      1,
+    );
+
+    // Everyone passed: same round, same starting seat, blow index unchanged,
+    // action history cleared. Only the deal is new.
+    gameState = state({
+      blowState: {
+        ...gameState.blowState,
+        redealCount: 1,
+      },
+    });
+    await service.notifyTurnChanged({
+      roomId: 'room-1',
+      seatId: asSeatId('player-2'),
+    });
+    await jest.advanceTimersByTimeAsync(60_000);
+
+    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(
+      pushNotificationService.sendTurnNotification,
+    ).toHaveBeenLastCalledWith(
+      ['user-2'],
+      expect.objectContaining({
+        eventId: 'turn:room-1:1:blow:player-2:0:1:0:0:0:player-1',
       }),
     );
   });
@@ -381,7 +422,7 @@ describe('GameplayNotificationService', () => {
     expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
       ['user-1'],
       expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-1:1:1:0:0:player-1',
+        eventId: 'turn:room-1:1:blow:player-1:1:0:1:0:0:player-1',
       }),
     );
   });
@@ -427,7 +468,7 @@ describe('GameplayNotificationService', () => {
     expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
       ['user-2'],
       expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:1:1:0:0:player-1',
+        eventId: 'turn:room-1:1:blow:player-2:1:0:1:0:0:player-1',
       }),
     );
   });
@@ -496,7 +537,7 @@ describe('GameplayNotificationService', () => {
     expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
       ['user-2'],
       expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:4:4:0:0:player-1',
+        eventId: 'turn:room-1:1:blow:player-2:4:0:4:0:0:player-1',
       }),
     );
   });

@@ -236,6 +236,10 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     }
 
     state.blowState.currentBlowIndex = firstBlowIndex;
+    // Nothing else about the blow phase changes across this re-deal — same
+    // round, same starting seat, empty action history — so this is the only
+    // thing telling the new deal apart from the one that just ended.
+    state.blowState.redealCount = (state.blowState.redealCount ?? 0) + 1;
     setCurrentSeat(state, firstBlowPlayer.seatId);
     state.deck = this.cardService.generateDeck();
     roomGameState.dealCards();
