@@ -665,9 +665,7 @@ export function GameProvider({ children }: PropsWithChildren) {
 
     const applyGameServerEvent = (event: GameServerEvent) => {
       const previous = gameEventStateRef.current;
-      const next = reduceGameEvent(previous, event, {
-        selfSeatId: resolveCurrentSeatId(),
-      });
+      const next = reduceGameEvent(previous, event);
       gameEventStateRef.current = next;
       if (next.players !== previous.players) {
         dispatch({ type: 'players', players: next.players });

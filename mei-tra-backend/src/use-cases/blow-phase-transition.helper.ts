@@ -1,3 +1,4 @@
+import { PLAY_PHASE_REVEAL_DELAY_MS } from '@contracts/game';
 import type { UpdatePhasePayload } from '@contracts/game';
 import { GameState } from '../types/game.types';
 import { Room } from '../types/room.types';
@@ -58,13 +59,6 @@ export async function transitionToPlayPhase({
   nextState.blowState.currentTrump = highestDeclaration.trumpType;
   setCurrentSeat(nextState, winningPlayer.seatId);
 
-  const events: GatewayEvent[] = buildPlayerSyncEvents(
-    roomGameState,
-    roomId,
-    nextState.players,
-    { room },
-  );
-
   const updatePhasePayload: UpdatePhasePayload = {
     phase: 'play',
     scores: nextState.teamScores,
@@ -74,23 +68,6 @@ export async function transitionToPlayPhase({
       : null,
   };
 
-  const delayedEvents: GatewayEvent[] = [
-    {
-      scope: 'room',
-      roomId,
-      event: 'update-turn',
-      payload: asSeatId(winningPlayer.seatId),
-      delayMs: 3000,
-    },
-    {
-      scope: 'room',
-      roomId,
-      event: 'update-phase',
-      payload: updatePhasePayload,
-      delayMs: 3000,
-    },
-  ];
-
   const winningPlayerSession = roomGameState.findSessionUserBySeatId(
     winningPlayer.seatId,
   );
@@ -99,20 +76,51 @@ export async function transitionToPlayPhase({
     room?.players.find((player) => player.seatId === winningPlayer.seatId)
       ?.socketId;
 
+  // The whole transition is held for one beat. The player sync goes with it:
+  // its payload is a snapshot taken here and already carries the agari the
+  // winner just picked up, so sending it now would grow their hand by a card
+  // three seconds before the reveal that names it — with no trump, no agari
+  // and no negri prompt on screen to explain where it came from. The callers
+  // already broadcast the pre-agari hands immediately, so nothing is lost by
+  // waiting. Ordered so the hand lands before the reveal reads from it.
+  const delayedEvents: GatewayEvent[] = buildPlayerSyncEvents(
+    roomGameState,
+    roomId,
+    nextState.players,
+    { room },
+  ).map((event) => ({ ...event, delayMs: PLAY_PHASE_REVEAL_DELAY_MS }));
+
   if (state.agari && winningPlayerSocketId) {
     const revealAgariPayload: RevealAgariPayload = {
       agari: state.agari,
       message: 'Select a card from your hand as Negri',
       seatId: asSeatId(winningPlayer.seatId),
     };
-    delayedEvents.unshift({
+    delayedEvents.push({
       scope: 'socket',
       socketId: winningPlayerSocketId,
       event: 'reveal-agari',
       payload: revealAgariPayload,
-      delayMs: 3000,
+      delayMs: PLAY_PHASE_REVEAL_DELAY_MS,
     });
   }
+
+  delayedEvents.push(
+    {
+      scope: 'room',
+      roomId,
+      event: 'update-turn',
+      payload: asSeatId(winningPlayer.seatId),
+      delayMs: PLAY_PHASE_REVEAL_DELAY_MS,
+    },
+    {
+      scope: 'room',
+      roomId,
+      event: 'update-phase',
+      payload: updatePhasePayload,
+      delayMs: PLAY_PHASE_REVEAL_DELAY_MS,
+    },
+  );
 
   await gameEventLogService?.log({
     roomId,
@@ -129,7 +137,7 @@ export async function transitionToPlayPhase({
   await roomGameState.saveState();
 
   return {
-    events,
+    events: [],
     delayedEvents,
   };
 }

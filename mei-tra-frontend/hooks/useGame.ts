@@ -624,9 +624,7 @@ export const useGame = () => {
 
     const applyGameServerEvent = (event: GameServerEvent) => {
       const previous = gameEventStateRef.current;
-      const next = reduceGameEvent(previous, event, {
-        selfSeatId: getCurrentUserSeatId(),
-      });
+      const next = reduceGameEvent(previous, event);
       gameEventStateRef.current = next;
       commitGameEventState(previous, next);
       return next;
@@ -678,6 +676,16 @@ export const useGame = () => {
         if (!isCurrentRoom) {
           return;
         }
+
+        // The reducer keeps its own copy of the players and reduces from it,
+        // so a room-sync that only reached React state would leave the reducer
+        // working from a hand the server has already changed — and the next
+        // reduced event would write that stale hand back over the fresh one.
+        // Holds the raw contracts, like 'update-players' above.
+        gameEventStateRef.current = {
+          ...gameEventStateRef.current,
+          players: payload.players,
+        };
 
         const mergedPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
