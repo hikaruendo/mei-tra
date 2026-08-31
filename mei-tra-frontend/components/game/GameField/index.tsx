@@ -29,17 +29,19 @@ export const GameField: React.FC<GameFieldProps> = ({
   const isRedBaseSuit = currentField?.baseSuit === '♥' || currentField?.baseSuit === '♦';
 
   const orderedPlayers = getSeatOrderWithSelfBottom(players, currentSeatId);
-
-  if (!currentField || currentField.cards.length === 0) {
-    return null;
-  }
+  const playedCards = currentField?.cards ?? [];
 
   return (
     <div className={styles.fieldContainer}>
       <div className={styles.fieldContainerOuter}>
+        {/* The cushion is set on the table for the whole hand, so it stays put
+            between tricks — the cards land on it rather than it appearing with
+            them. Decorative, so it is hidden from assistive tech. */}
+        <div className={styles.fieldMat} aria-hidden="true" />
+
         <div className={styles.fieldContainerInner}>
-          {currentField.cards.map((card: string, index: number) => {
-            const playedBySeatId = currentField.playedBySeatIds[index] ?? '';
+          {playedCards.map((card: string, index: number) => {
+            const playedBySeatId = currentField?.playedBySeatIds[index] ?? '';
             const position = getCardSeatPosition(playedBySeatId, orderedPlayers);
 
             return (

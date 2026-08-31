@@ -17,7 +17,9 @@
     "assets:cards": "node scripts/build-card-assets.mjs",
     "assets:cards:check": "node scripts/build-card-assets.mjs --check",
     "assets:sounds": "node scripts/sync-sound-assets.mjs",
-    "assets:sounds:check": "node scripts/sync-sound-assets.mjs --check"
+    "assets:sounds:check": "node scripts/sync-sound-assets.mjs --check",
+    "assets:table": "node scripts/sync-table-assets.mjs",
+    "assets:table:check": "node scripts/sync-table-assets.mjs --check"
   },
   "dependencies": {
     "@meitra/contracts": "file:../contracts",

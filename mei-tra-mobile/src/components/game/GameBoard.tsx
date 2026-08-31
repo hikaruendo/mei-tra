@@ -24,6 +24,7 @@ import { PlayerSeat } from '@/components/game/PlayerSeat';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
 import { StartPlayerJanken } from '@/components/game/StartPlayerJanken';
 import { CompletedTrickPiles } from '@/components/game/CompletedTrickPiles';
+import { FieldMat } from '@/components/game/FieldMat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { HandFan } from '@/components/game/HandFan';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
@@ -44,6 +45,18 @@ import { colors, teamColors } from '@/theme/colors';
 import type { MobileFirstTurnReveal } from '@/context/GameContext';
 import type { MobileGameSnapshot, MobilePlayer } from '@/types/game';
 import { t } from '@/i18n';
+
+/**
+ * Side of the cushion under the trick.
+ *
+ * The four played cards make a cross about 116 wide and 114 tall — a
+ * `size="field"` card is 44x66, offset 36 sideways and 24 up/down from the
+ * centre. The artwork paints a cushion a little smaller than this box (it
+ * reserves a margin for the tassels and the shadow), so 164 leaves the cards
+ * resting on it with a margin of table showing all round, while still fitting
+ * inside `field`'s 160 min-height plus its padding.
+ */
+const FIELD_MAT_SIZE = 164;
 
 interface GameHistoryData {
   replay: GameHistoryReplayViewContract | null;
@@ -425,6 +438,7 @@ export function GameBoard({
         {game.gamePhase === 'play' ? (
           <View style={styles.field}>
             <View style={styles.fieldCenter}>
+              <FieldMat size={FIELD_MAT_SIZE} />
               {game.currentField?.cards.length ? (
                 game.currentField.cards.map((card, index) => {
                   const seatId = game.currentField!.playedBySeatIds[index];
@@ -457,9 +471,7 @@ export function GameBoard({
                     </View>
                   );
                 })
-              ) : (
-                <Text style={styles.emptyField}>{t('board.emptyField')}</Text>
-              )}
+              ) : null}
             </View>
             {game.currentField?.baseSuit ? (
               <Text style={styles.baseSuit}>
@@ -945,9 +957,6 @@ const styles = StyleSheet.create({
   fieldCardAbsolute: {
     position: 'absolute',
     alignItems: 'center',
-  },
-  emptyField: {
-    color: colors.textMuted,
   },
   baseSuit: {
     color: colors.gold,

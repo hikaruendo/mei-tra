@@ -1,0 +1,398 @@
+<!-- viewBox is cropped to the drawing rather than padded: the cushion has to
+     fill as much of the element as it can, because the four played cards land
+     inside it and need a margin of table showing around them.
+
+     Everything here is a plain shape in a solid colour, drawn out in full.
+     That is deliberate and costs repetition, because the shorthands an SVG
+     normally uses for this were each ignored somewhere:
+
+       <use href="#id">   dropped the referenced shape, leaving a bare gold
+                          cross on an empty table
+       fill="url(#grad)"  ignored, leaving the cushion grey with no red ground
+                          and no gold border
+       fill="url(#pat)"   ignored, leaving the cushion a flat red with no
+                          brocade
+
+     So: the outline is repeated at each place it is used, depth comes from
+     translucent solids stacked on each other, and the 七宝 lattice is written
+     out as circles rather than tiled with <pattern>. Only <clipPath> is still
+     relied on, which does resolve. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 568 568" width="568" height="568" role="presentation">
+  <title>西陣織の座布団</title>
+  <defs>
+    <clipPath id="zabutonClip">
+      <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" />
+    </clipPath>
+  </defs>
+
+  <!-- Shadow: the same outline in black, nudged down and stacked so the edge
+       softens. fill-opacity per path rather than opacity on the group, which
+       not every engine honours. -->
+  <g fill="#000000">
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 14)" fill-opacity="0.10" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 9)" fill-opacity="0.10" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" transform="translate(0 4)" fill-opacity="0.10" />
+  </g>
+
+  <!-- 房 (tassels) at the four corners, behind the body so they read as
+       tucked under the seam. -->
+  <g stroke="#c9a34e" stroke-linecap="round" fill="none" stroke-opacity="0.92" stroke-width="4">
+    <path d="M94 94 L58 58" />
+    <path d="M86 102 L52 68" />
+    <path d="M102 86 L68 52" />
+    <path d="M546 94 L582 58" />
+    <path d="M554 102 L588 68" />
+    <path d="M538 86 L572 52" />
+    <path d="M94 546 L58 582" />
+    <path d="M86 538 L52 572" />
+    <path d="M102 554 L68 588" />
+    <path d="M546 546 L582 582" />
+    <path d="M554 538 L588 572" />
+    <path d="M538 554 L572 588" />
+  </g>
+
+  <!-- Cushion ground: one solid red, so the colour never depends on a
+       gradient resolving. -->
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="#8d251c" />
+
+  <g clip-path="url(#zabutonClip)">
+    <!-- Lit crown and darkened rim, so the stuffing reads as domed. Both are
+         built from many faint layers rather than a few solid ones: with no
+         gradient to fade with, two overlapping shapes show their own outlines,
+         which read as a smudge sitting on the cushion. -->
+    <ellipse cx="276" cy="252" rx="236" ry="204" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="226" ry="195" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="216" ry="186" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="206" ry="177" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="196" ry="168" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="186" ry="159" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="176" ry="150" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="166" ry="141" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="156" ry="132" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="146" ry="123" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="136" ry="114" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="126" ry="105" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="116" ry="96" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="106" ry="87" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="96" ry="78" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="86" ry="69" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="76" ry="60" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="66" ry="51" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="56" ry="42" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="46" ry="33" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="36" ry="24" fill="#b53d30" fill-opacity="0.035" />
+    <ellipse cx="276" cy="252" rx="26" ry="15" fill="#b53d30" fill-opacity="0.035" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="52" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="49" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="46" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="43" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="40" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="37" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="34" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="31" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="28" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="25" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="22" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="19" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="16" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="13" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="10" />
+    <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.045" stroke-width="7" />
+
+    <!-- 七宝 (shippo), woven in gold thread. -->
+    <g fill="none" stroke="#c9a34e" stroke-opacity="0.42" stroke-width="2">
+      <circle cx="14" cy="14" r="28" />
+      <circle cx="14" cy="70" r="28" />
+      <circle cx="14" cy="126" r="28" />
+      <circle cx="14" cy="182" r="28" />
+      <circle cx="14" cy="238" r="28" />
+      <circle cx="14" cy="294" r="28" />
+      <circle cx="14" cy="350" r="28" />
+      <circle cx="14" cy="406" r="28" />
+      <circle cx="14" cy="462" r="28" />
+      <circle cx="14" cy="518" r="28" />
+      <circle cx="14" cy="574" r="28" />
+      <circle cx="42" cy="42" r="28" />
+      <circle cx="42" cy="98" r="28" />
+      <circle cx="42" cy="154" r="28" />
+      <circle cx="42" cy="210" r="28" />
+      <circle cx="42" cy="266" r="28" />
+      <circle cx="42" cy="322" r="28" />
+      <circle cx="42" cy="378" r="28" />
+      <circle cx="42" cy="434" r="28" />
+      <circle cx="42" cy="490" r="28" />
+      <circle cx="42" cy="546" r="28" />
+      <circle cx="42" cy="602" r="28" />
+      <circle cx="70" cy="14" r="28" />
+      <circle cx="70" cy="70" r="28" />
+      <circle cx="70" cy="126" r="28" />
+      <circle cx="70" cy="182" r="28" />
+      <circle cx="70" cy="238" r="28" />
+      <circle cx="70" cy="294" r="28" />
+      <circle cx="70" cy="350" r="28" />
+      <circle cx="70" cy="406" r="28" />
+      <circle cx="70" cy="462" r="28" />
+      <circle cx="70" cy="518" r="28" />
+      <circle cx="70" cy="574" r="28" />
+      <circle cx="98" cy="42" r="28" />
+      <circle cx="98" cy="98" r="28" />
+      <circle cx="98" cy="154" r="28" />
+      <circle cx="98" cy="210" r="28" />
+      <circle cx="98" cy="266" r="28" />
+      <circle cx="98" cy="322" r="28" />
+      <circle cx="98" cy="378" r="28" />
+      <circle cx="98" cy="434" r="28" />
+      <circle cx="98" cy="490" r="28" />
+      <circle cx="98" cy="546" r="28" />
+      <circle cx="98" cy="602" r="28" />
+      <circle cx="126" cy="14" r="28" />
+      <circle cx="126" cy="70" r="28" />
+      <circle cx="126" cy="126" r="28" />
+      <circle cx="126" cy="182" r="28" />
+      <circle cx="126" cy="238" r="28" />
+      <circle cx="126" cy="294" r="28" />
+      <circle cx="126" cy="350" r="28" />
+      <circle cx="126" cy="406" r="28" />
+      <circle cx="126" cy="462" r="28" />
+      <circle cx="126" cy="518" r="28" />
+      <circle cx="126" cy="574" r="28" />
+      <circle cx="154" cy="42" r="28" />
+      <circle cx="154" cy="98" r="28" />
+      <circle cx="154" cy="154" r="28" />
+      <circle cx="154" cy="210" r="28" />
+      <circle cx="154" cy="266" r="28" />
+      <circle cx="154" cy="322" r="28" />
+      <circle cx="154" cy="378" r="28" />
+      <circle cx="154" cy="434" r="28" />
+      <circle cx="154" cy="490" r="28" />
+      <circle cx="154" cy="546" r="28" />
+      <circle cx="154" cy="602" r="28" />
+      <circle cx="182" cy="14" r="28" />
+      <circle cx="182" cy="70" r="28" />
+      <circle cx="182" cy="126" r="28" />
+      <circle cx="182" cy="182" r="28" />
+      <circle cx="182" cy="238" r="28" />
+      <circle cx="182" cy="294" r="28" />
+      <circle cx="182" cy="350" r="28" />
+      <circle cx="182" cy="406" r="28" />
+      <circle cx="182" cy="462" r="28" />
+      <circle cx="182" cy="518" r="28" />
+      <circle cx="182" cy="574" r="28" />
+      <circle cx="210" cy="42" r="28" />
+      <circle cx="210" cy="98" r="28" />
+      <circle cx="210" cy="154" r="28" />
+      <circle cx="210" cy="210" r="28" />
+      <circle cx="210" cy="266" r="28" />
+      <circle cx="210" cy="322" r="28" />
+      <circle cx="210" cy="378" r="28" />
+      <circle cx="210" cy="434" r="28" />
+      <circle cx="210" cy="490" r="28" />
+      <circle cx="210" cy="546" r="28" />
+      <circle cx="210" cy="602" r="28" />
+      <circle cx="238" cy="14" r="28" />
+      <circle cx="238" cy="70" r="28" />
+      <circle cx="238" cy="126" r="28" />
+      <circle cx="238" cy="182" r="28" />
+      <circle cx="238" cy="238" r="28" />
+      <circle cx="238" cy="294" r="28" />
+      <circle cx="238" cy="350" r="28" />
+      <circle cx="238" cy="406" r="28" />
+      <circle cx="238" cy="462" r="28" />
+      <circle cx="238" cy="518" r="28" />
+      <circle cx="238" cy="574" r="28" />
+      <circle cx="266" cy="42" r="28" />
+      <circle cx="266" cy="98" r="28" />
+      <circle cx="266" cy="154" r="28" />
+      <circle cx="266" cy="210" r="28" />
+      <circle cx="266" cy="266" r="28" />
+      <circle cx="266" cy="322" r="28" />
+      <circle cx="266" cy="378" r="28" />
+      <circle cx="266" cy="434" r="28" />
+      <circle cx="266" cy="490" r="28" />
+      <circle cx="266" cy="546" r="28" />
+      <circle cx="266" cy="602" r="28" />
+      <circle cx="294" cy="14" r="28" />
+      <circle cx="294" cy="70" r="28" />
+      <circle cx="294" cy="126" r="28" />
+      <circle cx="294" cy="182" r="28" />
+      <circle cx="294" cy="238" r="28" />
+      <circle cx="294" cy="294" r="28" />
+      <circle cx="294" cy="350" r="28" />
+      <circle cx="294" cy="406" r="28" />
+      <circle cx="294" cy="462" r="28" />
+      <circle cx="294" cy="518" r="28" />
+      <circle cx="294" cy="574" r="28" />
+      <circle cx="322" cy="42" r="28" />
+      <circle cx="322" cy="98" r="28" />
+      <circle cx="322" cy="154" r="28" />
+      <circle cx="322" cy="210" r="28" />
+      <circle cx="322" cy="266" r="28" />
+      <circle cx="322" cy="322" r="28" />
+      <circle cx="322" cy="378" r="28" />
+      <circle cx="322" cy="434" r="28" />
+      <circle cx="322" cy="490" r="28" />
+      <circle cx="322" cy="546" r="28" />
+      <circle cx="322" cy="602" r="28" />
+      <circle cx="350" cy="14" r="28" />
+      <circle cx="350" cy="70" r="28" />
+      <circle cx="350" cy="126" r="28" />
+      <circle cx="350" cy="182" r="28" />
+      <circle cx="350" cy="238" r="28" />
+      <circle cx="350" cy="294" r="28" />
+      <circle cx="350" cy="350" r="28" />
+      <circle cx="350" cy="406" r="28" />
+      <circle cx="350" cy="462" r="28" />
+      <circle cx="350" cy="518" r="28" />
+      <circle cx="350" cy="574" r="28" />
+      <circle cx="378" cy="42" r="28" />
+      <circle cx="378" cy="98" r="28" />
+      <circle cx="378" cy="154" r="28" />
+      <circle cx="378" cy="210" r="28" />
+      <circle cx="378" cy="266" r="28" />
+      <circle cx="378" cy="322" r="28" />
+      <circle cx="378" cy="378" r="28" />
+      <circle cx="378" cy="434" r="28" />
+      <circle cx="378" cy="490" r="28" />
+      <circle cx="378" cy="546" r="28" />
+      <circle cx="378" cy="602" r="28" />
+      <circle cx="406" cy="14" r="28" />
+      <circle cx="406" cy="70" r="28" />
+      <circle cx="406" cy="126" r="28" />
+      <circle cx="406" cy="182" r="28" />
+      <circle cx="406" cy="238" r="28" />
+      <circle cx="406" cy="294" r="28" />
+      <circle cx="406" cy="350" r="28" />
+      <circle cx="406" cy="406" r="28" />
+      <circle cx="406" cy="462" r="28" />
+      <circle cx="406" cy="518" r="28" />
+      <circle cx="406" cy="574" r="28" />
+      <circle cx="434" cy="42" r="28" />
+      <circle cx="434" cy="98" r="28" />
+      <circle cx="434" cy="154" r="28" />
+      <circle cx="434" cy="210" r="28" />
+      <circle cx="434" cy="266" r="28" />
+      <circle cx="434" cy="322" r="28" />
+      <circle cx="434" cy="378" r="28" />
+      <circle cx="434" cy="434" r="28" />
+      <circle cx="434" cy="490" r="28" />
+      <circle cx="434" cy="546" r="28" />
+      <circle cx="434" cy="602" r="28" />
+      <circle cx="462" cy="14" r="28" />
+      <circle cx="462" cy="70" r="28" />
+      <circle cx="462" cy="126" r="28" />
+      <circle cx="462" cy="182" r="28" />
+      <circle cx="462" cy="238" r="28" />
+      <circle cx="462" cy="294" r="28" />
+      <circle cx="462" cy="350" r="28" />
+      <circle cx="462" cy="406" r="28" />
+      <circle cx="462" cy="462" r="28" />
+      <circle cx="462" cy="518" r="28" />
+      <circle cx="462" cy="574" r="28" />
+      <circle cx="490" cy="42" r="28" />
+      <circle cx="490" cy="98" r="28" />
+      <circle cx="490" cy="154" r="28" />
+      <circle cx="490" cy="210" r="28" />
+      <circle cx="490" cy="266" r="28" />
+      <circle cx="490" cy="322" r="28" />
+      <circle cx="490" cy="378" r="28" />
+      <circle cx="490" cy="434" r="28" />
+      <circle cx="490" cy="490" r="28" />
+      <circle cx="490" cy="546" r="28" />
+      <circle cx="490" cy="602" r="28" />
+      <circle cx="518" cy="14" r="28" />
+      <circle cx="518" cy="70" r="28" />
+      <circle cx="518" cy="126" r="28" />
+      <circle cx="518" cy="182" r="28" />
+      <circle cx="518" cy="238" r="28" />
+      <circle cx="518" cy="294" r="28" />
+      <circle cx="518" cy="350" r="28" />
+      <circle cx="518" cy="406" r="28" />
+      <circle cx="518" cy="462" r="28" />
+      <circle cx="518" cy="518" r="28" />
+      <circle cx="518" cy="574" r="28" />
+      <circle cx="546" cy="42" r="28" />
+      <circle cx="546" cy="98" r="28" />
+      <circle cx="546" cy="154" r="28" />
+      <circle cx="546" cy="210" r="28" />
+      <circle cx="546" cy="266" r="28" />
+      <circle cx="546" cy="322" r="28" />
+      <circle cx="546" cy="378" r="28" />
+      <circle cx="546" cy="434" r="28" />
+      <circle cx="546" cy="490" r="28" />
+      <circle cx="546" cy="546" r="28" />
+      <circle cx="546" cy="602" r="28" />
+      <circle cx="574" cy="14" r="28" />
+      <circle cx="574" cy="70" r="28" />
+      <circle cx="574" cy="126" r="28" />
+      <circle cx="574" cy="182" r="28" />
+      <circle cx="574" cy="238" r="28" />
+      <circle cx="574" cy="294" r="28" />
+      <circle cx="574" cy="350" r="28" />
+      <circle cx="574" cy="406" r="28" />
+      <circle cx="574" cy="462" r="28" />
+      <circle cx="574" cy="518" r="28" />
+      <circle cx="574" cy="574" r="28" />
+      <circle cx="602" cy="42" r="28" />
+      <circle cx="602" cy="98" r="28" />
+      <circle cx="602" cy="154" r="28" />
+      <circle cx="602" cy="210" r="28" />
+      <circle cx="602" cy="266" r="28" />
+      <circle cx="602" cy="322" r="28" />
+      <circle cx="602" cy="378" r="28" />
+      <circle cx="602" cy="434" r="28" />
+      <circle cx="602" cy="490" r="28" />
+      <circle cx="602" cy="546" r="28" />
+      <circle cx="602" cy="602" r="28" />
+    </g>
+
+    <!-- Rolled edge: light catches the top, the underside loses it. Banded
+         rather than one translucent block, which would leave a hard line
+         across the cushion where it ends — there is no gradient to fade with. -->
+    <rect x="36" y="36" width="568" height="13" fill="#f4f0e3" fill-opacity="0.075" />
+    <rect x="36" y="49" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0687" />
+    <rect x="36" y="62" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0625" />
+    <rect x="36" y="75" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0562" />
+    <rect x="36" y="88" width="568" height="13" fill="#f4f0e3" fill-opacity="0.05" />
+    <rect x="36" y="101" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0437" />
+    <rect x="36" y="114" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0375" />
+    <rect x="36" y="127" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0312" />
+    <rect x="36" y="140" width="568" height="13" fill="#f4f0e3" fill-opacity="0.025" />
+    <rect x="36" y="153" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0187" />
+    <rect x="36" y="166" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0125" />
+    <rect x="36" y="179" width="568" height="13" fill="#f4f0e3" fill-opacity="0.0063" />
+    <rect x="36" y="591" width="568" height="13" fill="#1c0503" fill-opacity="0.2" />
+    <rect x="36" y="578" width="568" height="13" fill="#1c0503" fill-opacity="0.1857" />
+    <rect x="36" y="565" width="568" height="13" fill="#1c0503" fill-opacity="0.1714" />
+    <rect x="36" y="552" width="568" height="13" fill="#1c0503" fill-opacity="0.1571" />
+    <rect x="36" y="539" width="568" height="13" fill="#1c0503" fill-opacity="0.1429" />
+    <rect x="36" y="526" width="568" height="13" fill="#1c0503" fill-opacity="0.1286" />
+    <rect x="36" y="513" width="568" height="13" fill="#1c0503" fill-opacity="0.1143" />
+    <rect x="36" y="500" width="568" height="13" fill="#1c0503" fill-opacity="0.1" />
+    <rect x="36" y="487" width="568" height="13" fill="#1c0503" fill-opacity="0.0857" />
+    <rect x="36" y="474" width="568" height="13" fill="#1c0503" fill-opacity="0.0714" />
+    <rect x="36" y="461" width="568" height="13" fill="#1c0503" fill-opacity="0.0571" />
+    <rect x="36" y="448" width="568" height="13" fill="#1c0503" fill-opacity="0.0429" />
+    <rect x="36" y="435" width="568" height="13" fill="#1c0503" fill-opacity="0.0286" />
+    <rect x="36" y="422" width="568" height="13" fill="#1c0503" fill-opacity="0.0143" />
+  </g>
+
+  <!-- 縁 (border band) plus the stitch line just inside it. -->
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#8a6c2e" stroke-width="9" />
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#c9a34e" stroke-width="6" />
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#e0c784" stroke-opacity="0.55" stroke-width="2"
+    transform="translate(320 320) scale(0.985) translate(-320 -320)" />
+  <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#e0c784" stroke-opacity="0.4" stroke-width="1.6"
+    stroke-dasharray="9 8"
+    transform="translate(320 320) scale(0.9) translate(-320 -320)" />
+
+  <!-- 綴じ (the tuft that holds the stuffing at the centre). -->
+  <g>
+    <circle cx="320" cy="320" r="9" fill="#c9a34e" />
+    <g stroke="#e0c784" stroke-opacity="0.75" stroke-width="3" stroke-linecap="round" fill="none">
+      <path d="M320 320 L306 300" />
+      <path d="M320 320 L334 300" />
+      <path d="M320 320 L306 340" />
+      <path d="M320 320 L334 340" />
+    </g>
+  </g>
+</svg>
