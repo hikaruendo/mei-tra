@@ -22,6 +22,13 @@ export function evaluateHealthResponse(
     failures.push(`unexpected status: ${String(payload.status)}`);
   }
   if (
+    payload.dependencies === null ||
+    typeof payload.dependencies !== 'object' ||
+    payload.dependencies.database !== 'ok'
+  ) {
+    failures.push('database readiness is unavailable');
+  }
+  if (
     typeof payload.timestamp !== 'number' ||
     Math.abs(now - payload.timestamp) > MAX_TIMESTAMP_AGE_MS
   ) {
@@ -133,6 +140,7 @@ if (isDirectExecution) {
         attempt: result.attempt,
         rssMb: result.payload.memory.rss,
         activeConnections: result.payload.activity.activeConnections,
+        database: result.payload.dependencies.database,
       }),
     );
   } catch (error) {

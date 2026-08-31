@@ -27,7 +27,7 @@ jobs:
 
       - name: Check production health after cold start
         env:
-          HEALTH_URL: https://mei-tra-backend.fly.dev/api/health
+          HEALTH_URL: https://mei-tra-backend.fly.dev/api/health/readiness
           HEALTH_MAX_RESPONSE_MS: '30000'
           HEALTH_MAX_RSS_MB: '450'
           HEALTH_ATTEMPTS: '3'

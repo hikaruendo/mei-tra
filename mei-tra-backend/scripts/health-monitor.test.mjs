@@ -9,6 +9,7 @@ const healthyPayload = {
   uptime: 12,
   activity: { activeConnections: 2 },
   memory: { rss: 120 },
+  dependencies: { database: 'ok' },
 };
 
 test('accepts a fresh healthy or idle response below thresholds', () => {
@@ -37,6 +38,15 @@ test('rejects stale timestamps and invalid connection counts', () => {
 
   assert.ok(failures.includes('timestamp is missing or stale'));
   assert.ok(failures.includes('active connection count is invalid'));
+});
+
+test('rejects responses that do not confirm database readiness', () => {
+  const failures = evaluateHealthResponse(
+    { ...healthyPayload, dependencies: { database: 'error' } },
+    { now, responseMs: 500 },
+  );
+
+  assert.ok(failures.includes('database readiness is unavailable'));
 });
 
 test('rejects memory and response latency at their limits', () => {
