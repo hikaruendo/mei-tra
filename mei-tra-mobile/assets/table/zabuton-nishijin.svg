@@ -2,45 +2,24 @@
      fill as much of the element as it can, because the four played cards land
      inside it and need a margin of table showing around them.
 
-     Two things are written the long way on purpose, so the artwork looks the
-     same on every SVG engine rather than only in a browser:
+     Everything here is a plain shape in a solid colour, drawn out in full.
+     That is deliberate and costs repetition, because the shorthands an SVG
+     normally uses for this were each ignored somewhere:
 
-     1. The cushion outline is repeated at each place it is used instead of
-        being defined once and referenced with <use href="#id">. Some engines
-        drop the referenced shape and leave only the plainly-drawn parts.
-     2. Every colour is a solid, and depth comes from translucent solids laid
-        over each other. Gradient references (fill="url(#someGradient)") were
-        silently ignored on device, which left the cushion grey with no red
-        ground and no gold border. Patterns and clip paths do resolve, so the
-        weave and the brocade still come from <pattern>. -->
+       <use href="#id">   dropped the referenced shape, leaving a bare gold
+                          cross on an empty table
+       fill="url(#grad)"  ignored, leaving the cushion grey with no red ground
+                          and no gold border
+       fill="url(#pat)"   ignored, leaving the cushion a flat red with no
+                          brocade
+
+     So: the outline is repeated at each place it is used, depth comes from
+     translucent solids stacked on each other, and the 七宝 lattice is written
+     out as circles rather than tiled with <pattern>. Only <clipPath> is still
+     relied on, which does resolve. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 568 568" width="568" height="568" role="presentation">
   <title>西陣織の座布団</title>
   <defs>
-    <!-- The weave itself: warp and weft at a 6px pitch. Almost invisible on
-         its own, but it stops the ground reading as flat paint. -->
-    <pattern id="zabutonWeave" width="6" height="6" patternUnits="userSpaceOnUse">
-      <path d="M0 0 V6" stroke="#f4f0e3" stroke-opacity="0.05" stroke-width="1" />
-      <path d="M0 0 H6" stroke="#200604" stroke-opacity="0.09" stroke-width="1" />
-    </pattern>
-
-    <!-- 七宝 (shippo): four overlapping circles per tile, the motif Nishijin
-         brocade is most often woven in gold thread. -->
-    <pattern id="zabutonShippo" width="56" height="56" patternUnits="userSpaceOnUse">
-      <g fill="none" stroke="#c9a34e" stroke-opacity="0.46" stroke-width="2">
-        <circle cx="0" cy="0" r="28" />
-        <circle cx="56" cy="0" r="28" />
-        <circle cx="0" cy="56" r="28" />
-        <circle cx="56" cy="56" r="28" />
-        <circle cx="28" cy="28" r="28" />
-      </g>
-      <g fill="#e0c784" fill-opacity="0.3">
-        <circle cx="28" cy="0" r="3.2" />
-        <circle cx="0" cy="28" r="3.2" />
-        <circle cx="56" cy="28" r="3.2" />
-        <circle cx="28" cy="56" r="3.2" />
-      </g>
-    </pattern>
-
     <clipPath id="zabutonClip">
       <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" />
     </clipPath>
@@ -84,8 +63,251 @@
     <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#3d0c07" stroke-opacity="0.26" stroke-width="24" />
     <path d="M 116,62 Q 320,42 524,62 Q 578,70 578,116 Q 598,320 578,524 Q 570,578 524,578 Q 320,598 116,578 Q 62,570 62,524 Q 42,320 62,116 Q 70,62 116,62 Z" fill="none" stroke="#2a0805" stroke-opacity="0.22" stroke-width="10" />
 
-    <rect x="36" y="36" width="568" height="568" fill="url(#zabutonWeave)" />
-    <rect x="36" y="36" width="568" height="568" fill="url(#zabutonShippo)" />
+    <!-- 七宝 (shippo), woven in gold thread. -->
+    <g fill="none" stroke="#c9a34e" stroke-opacity="0.42" stroke-width="2">
+      <circle cx="14" cy="14" r="28" />
+      <circle cx="14" cy="70" r="28" />
+      <circle cx="14" cy="126" r="28" />
+      <circle cx="14" cy="182" r="28" />
+      <circle cx="14" cy="238" r="28" />
+      <circle cx="14" cy="294" r="28" />
+      <circle cx="14" cy="350" r="28" />
+      <circle cx="14" cy="406" r="28" />
+      <circle cx="14" cy="462" r="28" />
+      <circle cx="14" cy="518" r="28" />
+      <circle cx="14" cy="574" r="28" />
+      <circle cx="42" cy="42" r="28" />
+      <circle cx="42" cy="98" r="28" />
+      <circle cx="42" cy="154" r="28" />
+      <circle cx="42" cy="210" r="28" />
+      <circle cx="42" cy="266" r="28" />
+      <circle cx="42" cy="322" r="28" />
+      <circle cx="42" cy="378" r="28" />
+      <circle cx="42" cy="434" r="28" />
+      <circle cx="42" cy="490" r="28" />
+      <circle cx="42" cy="546" r="28" />
+      <circle cx="42" cy="602" r="28" />
+      <circle cx="70" cy="14" r="28" />
+      <circle cx="70" cy="70" r="28" />
+      <circle cx="70" cy="126" r="28" />
+      <circle cx="70" cy="182" r="28" />
+      <circle cx="70" cy="238" r="28" />
+      <circle cx="70" cy="294" r="28" />
+      <circle cx="70" cy="350" r="28" />
+      <circle cx="70" cy="406" r="28" />
+      <circle cx="70" cy="462" r="28" />
+      <circle cx="70" cy="518" r="28" />
+      <circle cx="70" cy="574" r="28" />
+      <circle cx="98" cy="42" r="28" />
+      <circle cx="98" cy="98" r="28" />
+      <circle cx="98" cy="154" r="28" />
+      <circle cx="98" cy="210" r="28" />
+      <circle cx="98" cy="266" r="28" />
+      <circle cx="98" cy="322" r="28" />
+      <circle cx="98" cy="378" r="28" />
+      <circle cx="98" cy="434" r="28" />
+      <circle cx="98" cy="490" r="28" />
+      <circle cx="98" cy="546" r="28" />
+      <circle cx="98" cy="602" r="28" />
+      <circle cx="126" cy="14" r="28" />
+      <circle cx="126" cy="70" r="28" />
+      <circle cx="126" cy="126" r="28" />
+      <circle cx="126" cy="182" r="28" />
+      <circle cx="126" cy="238" r="28" />
+      <circle cx="126" cy="294" r="28" />
+      <circle cx="126" cy="350" r="28" />
+      <circle cx="126" cy="406" r="28" />
+      <circle cx="126" cy="462" r="28" />
+      <circle cx="126" cy="518" r="28" />
+      <circle cx="126" cy="574" r="28" />
+      <circle cx="154" cy="42" r="28" />
+      <circle cx="154" cy="98" r="28" />
+      <circle cx="154" cy="154" r="28" />
+      <circle cx="154" cy="210" r="28" />
+      <circle cx="154" cy="266" r="28" />
+      <circle cx="154" cy="322" r="28" />
+      <circle cx="154" cy="378" r="28" />
+      <circle cx="154" cy="434" r="28" />
+      <circle cx="154" cy="490" r="28" />
+      <circle cx="154" cy="546" r="28" />
+      <circle cx="154" cy="602" r="28" />
+      <circle cx="182" cy="14" r="28" />
+      <circle cx="182" cy="70" r="28" />
+      <circle cx="182" cy="126" r="28" />
+      <circle cx="182" cy="182" r="28" />
+      <circle cx="182" cy="238" r="28" />
+      <circle cx="182" cy="294" r="28" />
+      <circle cx="182" cy="350" r="28" />
+      <circle cx="182" cy="406" r="28" />
+      <circle cx="182" cy="462" r="28" />
+      <circle cx="182" cy="518" r="28" />
+      <circle cx="182" cy="574" r="28" />
+      <circle cx="210" cy="42" r="28" />
+      <circle cx="210" cy="98" r="28" />
+      <circle cx="210" cy="154" r="28" />
+      <circle cx="210" cy="210" r="28" />
+      <circle cx="210" cy="266" r="28" />
+      <circle cx="210" cy="322" r="28" />
+      <circle cx="210" cy="378" r="28" />
+      <circle cx="210" cy="434" r="28" />
+      <circle cx="210" cy="490" r="28" />
+      <circle cx="210" cy="546" r="28" />
+      <circle cx="210" cy="602" r="28" />
+      <circle cx="238" cy="14" r="28" />
+      <circle cx="238" cy="70" r="28" />
+      <circle cx="238" cy="126" r="28" />
+      <circle cx="238" cy="182" r="28" />
+      <circle cx="238" cy="238" r="28" />
+      <circle cx="238" cy="294" r="28" />
+      <circle cx="238" cy="350" r="28" />
+      <circle cx="238" cy="406" r="28" />
+      <circle cx="238" cy="462" r="28" />
+      <circle cx="238" cy="518" r="28" />
+      <circle cx="238" cy="574" r="28" />
+      <circle cx="266" cy="42" r="28" />
+      <circle cx="266" cy="98" r="28" />
+      <circle cx="266" cy="154" r="28" />
+      <circle cx="266" cy="210" r="28" />
+      <circle cx="266" cy="266" r="28" />
+      <circle cx="266" cy="322" r="28" />
+      <circle cx="266" cy="378" r="28" />
+      <circle cx="266" cy="434" r="28" />
+      <circle cx="266" cy="490" r="28" />
+      <circle cx="266" cy="546" r="28" />
+      <circle cx="266" cy="602" r="28" />
+      <circle cx="294" cy="14" r="28" />
+      <circle cx="294" cy="70" r="28" />
+      <circle cx="294" cy="126" r="28" />
+      <circle cx="294" cy="182" r="28" />
+      <circle cx="294" cy="238" r="28" />
+      <circle cx="294" cy="294" r="28" />
+      <circle cx="294" cy="350" r="28" />
+      <circle cx="294" cy="406" r="28" />
+      <circle cx="294" cy="462" r="28" />
+      <circle cx="294" cy="518" r="28" />
+      <circle cx="294" cy="574" r="28" />
+      <circle cx="322" cy="42" r="28" />
+      <circle cx="322" cy="98" r="28" />
+      <circle cx="322" cy="154" r="28" />
+      <circle cx="322" cy="210" r="28" />
+      <circle cx="322" cy="266" r="28" />
+      <circle cx="322" cy="322" r="28" />
+      <circle cx="322" cy="378" r="28" />
+      <circle cx="322" cy="434" r="28" />
+      <circle cx="322" cy="490" r="28" />
+      <circle cx="322" cy="546" r="28" />
+      <circle cx="322" cy="602" r="28" />
+      <circle cx="350" cy="14" r="28" />
+      <circle cx="350" cy="70" r="28" />
+      <circle cx="350" cy="126" r="28" />
+      <circle cx="350" cy="182" r="28" />
+      <circle cx="350" cy="238" r="28" />
+      <circle cx="350" cy="294" r="28" />
+      <circle cx="350" cy="350" r="28" />
+      <circle cx="350" cy="406" r="28" />
+      <circle cx="350" cy="462" r="28" />
+      <circle cx="350" cy="518" r="28" />
+      <circle cx="350" cy="574" r="28" />
+      <circle cx="378" cy="42" r="28" />
+      <circle cx="378" cy="98" r="28" />
+      <circle cx="378" cy="154" r="28" />
+      <circle cx="378" cy="210" r="28" />
+      <circle cx="378" cy="266" r="28" />
+      <circle cx="378" cy="322" r="28" />
+      <circle cx="378" cy="378" r="28" />
+      <circle cx="378" cy="434" r="28" />
+      <circle cx="378" cy="490" r="28" />
+      <circle cx="378" cy="546" r="28" />
+      <circle cx="378" cy="602" r="28" />
+      <circle cx="406" cy="14" r="28" />
+      <circle cx="406" cy="70" r="28" />
+      <circle cx="406" cy="126" r="28" />
+      <circle cx="406" cy="182" r="28" />
+      <circle cx="406" cy="238" r="28" />
+      <circle cx="406" cy="294" r="28" />
+      <circle cx="406" cy="350" r="28" />
+      <circle cx="406" cy="406" r="28" />
+      <circle cx="406" cy="462" r="28" />
+      <circle cx="406" cy="518" r="28" />
+      <circle cx="406" cy="574" r="28" />
+      <circle cx="434" cy="42" r="28" />
+      <circle cx="434" cy="98" r="28" />
+      <circle cx="434" cy="154" r="28" />
+      <circle cx="434" cy="210" r="28" />
+      <circle cx="434" cy="266" r="28" />
+      <circle cx="434" cy="322" r="28" />
+      <circle cx="434" cy="378" r="28" />
+      <circle cx="434" cy="434" r="28" />
+      <circle cx="434" cy="490" r="28" />
+      <circle cx="434" cy="546" r="28" />
+      <circle cx="434" cy="602" r="28" />
+      <circle cx="462" cy="14" r="28" />
+      <circle cx="462" cy="70" r="28" />
+      <circle cx="462" cy="126" r="28" />
+      <circle cx="462" cy="182" r="28" />
+      <circle cx="462" cy="238" r="28" />
+      <circle cx="462" cy="294" r="28" />
+      <circle cx="462" cy="350" r="28" />
+      <circle cx="462" cy="406" r="28" />
+      <circle cx="462" cy="462" r="28" />
+      <circle cx="462" cy="518" r="28" />
+      <circle cx="462" cy="574" r="28" />
+      <circle cx="490" cy="42" r="28" />
+      <circle cx="490" cy="98" r="28" />
+      <circle cx="490" cy="154" r="28" />
+      <circle cx="490" cy="210" r="28" />
+      <circle cx="490" cy="266" r="28" />
+      <circle cx="490" cy="322" r="28" />
+      <circle cx="490" cy="378" r="28" />
+      <circle cx="490" cy="434" r="28" />
+      <circle cx="490" cy="490" r="28" />
+      <circle cx="490" cy="546" r="28" />
+      <circle cx="490" cy="602" r="28" />
+      <circle cx="518" cy="14" r="28" />
+      <circle cx="518" cy="70" r="28" />
+      <circle cx="518" cy="126" r="28" />
+      <circle cx="518" cy="182" r="28" />
+      <circle cx="518" cy="238" r="28" />
+      <circle cx="518" cy="294" r="28" />
+      <circle cx="518" cy="350" r="28" />
+      <circle cx="518" cy="406" r="28" />
+      <circle cx="518" cy="462" r="28" />
+      <circle cx="518" cy="518" r="28" />
+      <circle cx="518" cy="574" r="28" />
+      <circle cx="546" cy="42" r="28" />
+      <circle cx="546" cy="98" r="28" />
+      <circle cx="546" cy="154" r="28" />
+      <circle cx="546" cy="210" r="28" />
+      <circle cx="546" cy="266" r="28" />
+      <circle cx="546" cy="322" r="28" />
+      <circle cx="546" cy="378" r="28" />
+      <circle cx="546" cy="434" r="28" />
+      <circle cx="546" cy="490" r="28" />
+      <circle cx="546" cy="546" r="28" />
+      <circle cx="546" cy="602" r="28" />
+      <circle cx="574" cy="14" r="28" />
+      <circle cx="574" cy="70" r="28" />
+      <circle cx="574" cy="126" r="28" />
+      <circle cx="574" cy="182" r="28" />
+      <circle cx="574" cy="238" r="28" />
+      <circle cx="574" cy="294" r="28" />
+      <circle cx="574" cy="350" r="28" />
+      <circle cx="574" cy="406" r="28" />
+      <circle cx="574" cy="462" r="28" />
+      <circle cx="574" cy="518" r="28" />
+      <circle cx="574" cy="574" r="28" />
+      <circle cx="602" cy="42" r="28" />
+      <circle cx="602" cy="98" r="28" />
+      <circle cx="602" cy="154" r="28" />
+      <circle cx="602" cy="210" r="28" />
+      <circle cx="602" cy="266" r="28" />
+      <circle cx="602" cy="322" r="28" />
+      <circle cx="602" cy="378" r="28" />
+      <circle cx="602" cy="434" r="28" />
+      <circle cx="602" cy="490" r="28" />
+      <circle cx="602" cy="546" r="28" />
+      <circle cx="602" cy="602" r="28" />
+    </g>
 
     <!-- Rolled edge: light catches the top, the underside loses it. Banded
          rather than one translucent block, which would leave a hard line
@@ -128,7 +350,7 @@
     transform="translate(320 320) scale(0.9) translate(-320 -320)" />
 
   <!-- 綴じ (the tuft that holds the stuffing at the centre). -->
-  <g stroke-opacity="0.85">
+  <g>
     <circle cx="320" cy="320" r="9" fill="#c9a34e" />
     <g stroke="#e0c784" stroke-opacity="0.75" stroke-width="3" stroke-linecap="round" fill="none">
       <path d="M320 320 L306 300" />
