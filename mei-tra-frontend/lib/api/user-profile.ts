@@ -74,6 +74,28 @@ export function mapUserProfileResponse(
   };
 }
 
+export async function fetchUserProfileViaApi(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserProfile> {
+  const response = await fetch(`/api/user-profile/${encodeURIComponent(userId)}`, {
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => null)) as
+      | { error?: string; message?: string }
+      | null;
+    throw new Error(
+      errorData?.error ?? errorData?.message ?? 'Failed to load profile',
+    );
+  }
+
+  return mapUserProfileResponse(
+    (await response.json()) as UserProfileApiResponse,
+  );
+}
+
 export async function updateUserProfileViaApi(
   userId: string,
   accessToken: string,

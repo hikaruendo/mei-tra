@@ -5,7 +5,10 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { disconnectSocket } from '@/app/socket';
 import { AuthUser, FontSizePreset, SignUpData, SignInData, GuestSignInData, UpgradeAccountData, UserProfile, UserPreferences } from '@/types/user.types';
-import { updateUserProfileViaApi } from '@/lib/api/user-profile';
+import {
+  fetchUserProfileViaApi,
+  updateUserProfileViaApi,
+} from '@/lib/api/user-profile';
 import {
   DEFAULT_FONT_SIZE_PRESET,
   DEFAULT_THEME_PREFERENCE,
@@ -176,65 +179,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('[AuthContext] Loading profile for user:', supabaseUser.id);
         }
 
-        const { data: profile, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .abortSignal(controller.signal)
-          .single();
+        const profile = await fetchUserProfileViaApi(
+          supabaseUser.id,
+          controller.signal,
+        );
 
         clearTimeout(timeoutId);
 
-        if (error) {
-          // Network/connection errors should be retried
-          if ((error.message.includes('network') ||
-               error.message.includes('connection') ||
-               error.message.includes('timeout')) &&
-               attempt < maxRetries) {
-            console.warn(`[AuthContext] Network error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, error.message);
-            return attemptLoad(attempt + 1);
-          }
-
-          if (error.code === 'PGRST116') {
-            // No profile found - this is expected for new users
-            console.log('[AuthContext] No profile found, creating basic user');
-          } else {
-            console.warn('[AuthContext] Error loading user profile, keeping existing data:', error.message);
-          }
-
-          loadingUserRef.current = null;
-          return;
-        }
-
         if (profile) {
           console.log('[AuthContext] Profile loaded successfully');
-
-          const preferences = normalizeUserPreferences(profile.preferences);
-
-          const userProfile: UserProfile = {
-            id: profile.id,
-            username: profile.username,
-            displayName: profile.display_name,
-            avatarUrl: profile.avatar_url || undefined,
-            createdAt: new Date(profile.created_at),
-            updatedAt: new Date(profile.updated_at),
-            lastSeenAt: new Date(profile.last_seen_at),
-            gamesPlayed: profile.games_played || 0,
-            gamesWon: profile.games_won || 0,
-            totalScore: profile.total_score || 0,
-            preferences,
-          };
 
           setUser({
             id: supabaseUser.id,
             email: supabaseUser.email,
             isAnonymous: supabaseUser.is_anonymous ?? false,
-            profile: userProfile,
+            profile,
           });
 
           // Cache the profile (browser only)
           if (typeof window !== 'undefined' && retryCount >= 0) {
-            cacheUserProfile(supabaseUser.id, userProfile);
+            cacheUserProfile(supabaseUser.id, profile);
           }
         } else {
           console.log('[AuthContext] No profile data returned');
