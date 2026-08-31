@@ -1,0 +1,126 @@
+<!-- viewBox is cropped to the drawing rather than padded: the cushion has to
+     fill as much of the element as it can, because the four played cards land
+     inside it and need a margin of table showing around them. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 568 568" width="568" height="568" role="presentation">
+  <title>西陣織の座布団</title>
+  <defs>
+    <!-- The cushion body: a rounded square whose sides bow outward, because a
+         stuffed zabuton is not flat. Reused as fill, clip and seam. -->
+    <path id="zabuton-body" d="
+      M 116,62
+      Q 320,42 524,62
+      Q 578,70 578,116
+      Q 598,320 578,524
+      Q 570,578 524,578
+      Q 320,598 116,578
+      Q 62,570 62,524
+      Q 42,320 62,116
+      Q 70,62 116,62 Z" />
+
+    <clipPath id="zabuton-clip">
+      <use href="#zabuton-body" />
+    </clipPath>
+
+    <!-- Lit from above and in front, so the crown of the cushion is lighter
+         than the seams. -->
+    <radialGradient id="zabuton-ground" cx="42%" cy="34%" r="78%">
+      <stop offset="0%" stop-color="#a8352a" />
+      <stop offset="52%" stop-color="#8d251c" />
+      <stop offset="100%" stop-color="#5e150f" />
+    </radialGradient>
+
+    <linearGradient id="zabuton-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0c784" />
+      <stop offset="50%" stop-color="#c9a34e" />
+      <stop offset="100%" stop-color="#8a6c2e" />
+    </linearGradient>
+
+    <!-- The weave itself: warp and weft at a 6px pitch. Almost invisible on
+         its own, but it stops the ground reading as flat paint. -->
+    <pattern id="zabuton-weave" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 0 V6" stroke="#f4f0e3" stroke-opacity="0.05" stroke-width="1" />
+      <path d="M0 0 H6" stroke="#200604" stroke-opacity="0.09" stroke-width="1" />
+    </pattern>
+
+    <!-- 七宝 (shippō): four overlapping circles per tile, the motif Nishijin
+         brocade is most often woven in gold thread. -->
+    <pattern id="zabuton-shippo" width="56" height="56" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="#c9a34e" stroke-opacity="0.46" stroke-width="2">
+        <circle cx="0" cy="0" r="28" />
+        <circle cx="56" cy="0" r="28" />
+        <circle cx="0" cy="56" r="28" />
+        <circle cx="56" cy="56" r="28" />
+        <circle cx="28" cy="28" r="28" />
+      </g>
+      <g fill="#e0c784" fill-opacity="0.3">
+        <circle cx="28" cy="0" r="3.2" />
+        <circle cx="0" cy="28" r="3.2" />
+        <circle cx="56" cy="28" r="3.2" />
+        <circle cx="28" cy="56" r="3.2" />
+      </g>
+    </pattern>
+
+    <!-- Rolled edge: the seam catches light on top and loses it underneath. -->
+    <linearGradient id="zabuton-edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f4f0e3" stop-opacity="0.24" />
+      <stop offset="46%" stop-color="#f4f0e3" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#1c0503" stop-opacity="0.34" />
+    </linearGradient>
+
+    <filter id="zabuton-shadow" x="-16%" y="-16%" width="132%" height="132%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.42" />
+    </filter>
+  </defs>
+
+  <!-- 房 (tassels) at the four corners, behind the body so they read as
+       tucked under the seam. -->
+  <g stroke="url(#zabuton-gold)" stroke-linecap="round" fill="none" opacity="0.92">
+    <g stroke-width="4">
+      <path d="M94 94 L58 58" />
+      <path d="M86 102 L52 68" />
+      <path d="M102 86 L68 52" />
+      <path d="M546 94 L582 58" />
+      <path d="M554 102 L588 68" />
+      <path d="M538 86 L572 52" />
+      <path d="M94 546 L58 582" />
+      <path d="M86 538 L52 572" />
+      <path d="M102 554 L68 588" />
+      <path d="M546 546 L582 582" />
+      <path d="M554 538 L588 572" />
+      <path d="M538 554 L572 588" />
+    </g>
+  </g>
+
+  <g filter="url(#zabuton-shadow)">
+    <use href="#zabuton-body" fill="url(#zabuton-ground)" />
+
+    <g clip-path="url(#zabuton-clip)">
+      <rect width="640" height="640" fill="url(#zabuton-weave)" />
+      <rect width="640" height="640" fill="url(#zabuton-shippo)" />
+      <rect width="640" height="640" fill="url(#zabuton-edge)" />
+    </g>
+
+    <!-- 縁 (border band) plus the stitch line just inside it. -->
+    <use href="#zabuton-body" fill="none" stroke="url(#zabuton-gold)" stroke-width="7" />
+    <use
+      href="#zabuton-body"
+      fill="none"
+      stroke="#e0c784"
+      stroke-opacity="0.4"
+      stroke-width="1.6"
+      stroke-dasharray="9 8"
+      transform="translate(320 320) scale(0.9) translate(-320 -320)"
+    />
+  </g>
+
+  <!-- 綴じ (the tuft that holds the stuffing at the centre). -->
+  <g opacity="0.85">
+    <circle cx="320" cy="320" r="9" fill="url(#zabuton-gold)" />
+    <g stroke="#e0c784" stroke-opacity="0.75" stroke-width="3" stroke-linecap="round">
+      <path d="M320 320 L306 300" />
+      <path d="M320 320 L334 300" />
+      <path d="M320 320 L306 340" />
+      <path d="M320 320 L334 340" />
+    </g>
+  </g>
+</svg>

@@ -310,7 +310,6 @@
     "phaseBlow": "吹き",
     "phasePlay": "プレイ",
     "phaseWaiting": "待機",
-    "emptyField": "まだカードはありません",
     "baseSuit": "台札のスート: {suit}",
     "selectBaseSuit": "台札のスートを選択",
     "spectatingHand": "{name} の手札（観戦中）",
