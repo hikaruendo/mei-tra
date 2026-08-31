@@ -32,4 +32,22 @@ describe('normalizeGuestName', () => {
     const padded = `${' '.repeat(50)}たろう${' '.repeat(50)}`;
     expect(normalizeGuestName(padded, 'ゲスト1234')).toBe('たろう');
   });
+
+  it('measures the limit in code points, not UTF-16 units', () => {
+    const result = normalizeGuestName('🂡'.repeat(30), 'ゲスト1234');
+
+    expect([...result]).toHaveLength(GUEST_NAME_MAX_LENGTH);
+    expect(result).toBe('🂡'.repeat(GUEST_NAME_MAX_LENGTH));
+  });
+
+  // The boundary falls inside the surrogate pair here: 19 kana plus the high
+  // half of the emoji is exactly 20 UTF-16 units. Cutting there leaves a lone
+  // surrogate, which is not valid UTF-8 and cannot reach the profile row
+  // intact. encodeURIComponent is the cheapest way to assert that.
+  it('does not cut a surrogate pair in half at the limit', () => {
+    const result = normalizeGuestName(`${'あ'.repeat(19)}🂡x`, 'ゲスト1234');
+
+    expect(result).toBe(`${'あ'.repeat(19)}🂡`);
+    expect(() => encodeURIComponent(result)).not.toThrow();
+  });
 });
