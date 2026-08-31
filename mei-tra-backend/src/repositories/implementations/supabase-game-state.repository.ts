@@ -1,8 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  asGeneratedSupabaseClient,
-  SupabaseService,
-} from '../../database/supabase.service';
+import { SupabaseService } from '../../database/supabase.service';
 import {
   toJson,
   toJsonObject,
@@ -22,8 +19,7 @@ import {
   toPersistedPlayerStates,
   toRuntimePlayer,
 } from '../../adapters/player-adapters';
-import { Database } from '../../types/database.types';
-import type { Database as GeneratedDatabase } from '../../types/database.generated.types';
+import type { Database } from '../../types/database.generated.types';
 import { RoomPlayer } from '../../types/room.types';
 import { asSeatId } from '../../types/identity.types';
 import type { SeatId } from '../../types/identity.types';
@@ -36,12 +32,41 @@ import {
   toPersistedPlayState,
 } from '../../adapters/game-state-persistence';
 
-type GameStateRow = Database['public']['Tables']['game_states']['Row'];
-type PersistedGameStateRow = Omit<GameStateRow, 'state_data'> & {
+type GeneratedGameStateRow = Database['public']['Tables']['game_states']['Row'];
+type PersistedGameStateRow = Omit<
+  GeneratedGameStateRow,
+  | 'room_id'
+  | 'state_data'
+  | 'team_scores'
+  | 'team_score_records'
+  | 'round_number'
+  | 'points_to_win'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  room_id: string;
   state_data: Record<string, unknown>;
+  team_scores: Record<0 | 1, { play: number; total: number }>;
+  team_score_records: Record<
+    string,
+    Array<{ points: number; timestamp: string; reason: string }>
+  >;
+  round_number: number;
+  points_to_win: number;
+  created_at: string;
+  updated_at: string;
 };
-type RoomPlayerRow = Database['public']['Tables']['room_players']['Row'];
-type GeneratedFunctions = GeneratedDatabase['public']['Functions'];
+type GeneratedRoomPlayerRow =
+  Database['public']['Tables']['room_players']['Row'];
+type RoomPlayerRow = Omit<
+  GeneratedRoomPlayerRow,
+  'room_id' | 'is_ready' | 'joined_at'
+> & {
+  room_id: string;
+  is_ready: boolean;
+  joined_at: string;
+};
+type GeneratedFunctions = Database['public']['Functions'];
 
 interface LoadedRoomGameState {
   gameState: PersistedGameStateRow;
@@ -65,10 +90,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     return this.supabaseService.client;
   }
 
-  private get generatedSupabase() {
-    return asGeneratedSupabaseClient(this.supabaseService.client);
-  }
-
   async create(roomId: string, gameState: GameState): Promise<GameState> {
     try {
       const canonicalGameState = normalizeGameStateIdentity(gameState);
@@ -76,7 +97,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         .from('game_states')
         .insert({
           room_id: roomId,
-          state_data: {
+          state_data: toJsonObject({
             identitySchemaVersion: 2,
             playerStates: toPersistedPlayerStates(canonicalGameState.players),
             deck: canonicalGameState.deck,
@@ -86,14 +107,16 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
             pendingBrokenHandReveal: toPersistedPendingBrokenHandReveal(
               canonicalGameState.pendingBrokenHandReveal,
             ),
-          },
+          }),
           current_seat_id: canonicalGameState.currentSeatId,
           game_phase: canonicalGameState.gamePhase,
           round_number: canonicalGameState.roundNumber,
           points_to_win: canonicalGameState.pointsToWin,
-          team_scores: canonicalGameState.teamScores,
-          team_score_records: this.convertScoreRecordsForPersistence(
-            canonicalGameState.teamScoreRecords,
+          team_scores: toJson(canonicalGameState.teamScores),
+          team_score_records: toJson(
+            this.convertScoreRecordsForPersistence(
+              canonicalGameState.teamScoreRecords,
+            ),
           ),
         })
         .select()
@@ -113,10 +136,12 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async findByRoomId(roomId: string): Promise<GameState | null> {
     try {
-      const { data: loadedState, error: loadError } =
-        await this.generatedSupabase.rpc('load_room_game_state', {
+      const { data: loadedState, error: loadError } = await this.supabase.rpc(
+        'load_room_game_state',
+        {
           p_room_id: roomId,
-        });
+        },
+      );
 
       if (!loadError) {
         if (!loadedState) {
@@ -151,7 +176,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           ? {}
           : { p_expected_version: expectedVersion }),
       };
-      const { data, error } = await this.generatedSupabase.rpc(
+      const { data, error } = await this.supabase.rpc(
         'atomic_update_game_state',
         args,
       );
@@ -210,7 +235,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           ? { p_membership_mutation: toJson(membershipMutation) }
           : {}),
       };
-      const { data, error } = await this.generatedSupabase.rpc(
+      const { data, error } = await this.supabase.rpc(
         'persist_room_roster_atomic',
         args,
       );
@@ -473,7 +498,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     );
   }
 
-  private isTeamScores(value: unknown): value is GameStateRow['team_scores'] {
+  private isTeamScores(
+    value: unknown,
+  ): value is PersistedGameStateRow['team_scores'] {
     return (
       this.isRecord(value) &&
       Object.values(value).every(
@@ -487,7 +514,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   private isTeamScoreRecords(
     value: unknown,
-  ): value is GameStateRow['team_score_records'] {
+  ): value is PersistedGameStateRow['team_score_records'] {
     return (
       this.isRecord(value) &&
       Object.values(value).every(

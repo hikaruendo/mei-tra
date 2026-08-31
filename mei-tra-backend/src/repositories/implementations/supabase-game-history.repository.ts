@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
+import { toJsonObject } from '../../database/json-value';
 import { IGameHistoryRepository } from '../interfaces/game-history.repository.interface';
 import {
   CreateGameHistoryEntry,
@@ -8,18 +8,10 @@ import {
   GameHistoryEntry,
   GameHistoryQuery,
 } from '../../types/game-history.types';
-import { Database } from '../../types/database.types';
+import type { Database } from '../../types/database.generated.types';
 import { asSeatId } from '../../types/identity.types';
 
 type GameHistoryRow = Database['public']['Tables']['game_history']['Row'];
-type GameStateIdRow = Pick<
-  Database['public']['Tables']['game_states']['Row'],
-  'id'
->;
-type FinishedRoomIdRow = Pick<
-  Database['public']['Tables']['rooms']['Row'],
-  'id'
->;
 
 @Injectable()
 export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
@@ -28,7 +20,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   private get supabase() {
-    return this.supabaseService.client as any;
+    return this.supabaseService.client;
   }
 
   async create(entry: CreateGameHistoryEntry): Promise<GameHistoryEntry> {
@@ -55,7 +47,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
         action_type: entry.actionType,
         actor_seat_id: actorSeatId,
         actor_key_snapshot: null,
-        action_data: entry.actionData ?? {},
+        action_data: toJsonObject(entry.actionData ?? {}),
       })
       .select()
       .single();
@@ -65,7 +57,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Failed to insert game history entry: ${error.message}`);
     }
 
-    return this.mapRow(data as GameHistoryRow);
+    return this.mapRow(data);
   }
 
   async findByRoomId(
@@ -106,9 +98,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Failed to list game history entries: ${error.message}`);
     }
 
-    const entries = ((data as GameHistoryRow[]) ?? []).map((row) =>
-      this.mapRow(row),
-    );
+    const entries = (data ?? []).map((row) => this.mapRow(row));
 
     if (typeof query?.roundNumber !== 'number') {
       return entries;
@@ -138,9 +128,7 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       );
     }
 
-    const roomIds = ((data as FinishedRoomIdRow[]) ?? []).map(
-      (room) => room.id,
-    );
+    const roomIds = (data ?? []).map((room) => room.id);
     const staleRoomIds = roomIds.slice(Math.max(1, limit));
     let deletedCount = 0;
 
@@ -192,10 +180,18 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       throw new Error(`Failed to resolve game_state_id: ${error.message}`);
     }
 
-    return (data as GameStateIdRow | null)?.id ?? null;
+    return data?.id ?? null;
   }
 
   private mapRow(row: GameHistoryRow): GameHistoryEntry {
+    if (
+      !row.room_id ||
+      !row.game_state_id ||
+      !row.timestamp ||
+      !this.isRecord(row.action_data)
+    ) {
+      throw new Error(`Game history row ${row.id} is missing required data`);
+    }
     return {
       id: row.id,
       roomId: row.room_id,
@@ -206,6 +202,10 @@ export class SupabaseGameHistoryRepository implements IGameHistoryRepository {
       actionData: row.action_data ?? {},
       timestamp: new Date(row.timestamp),
     };
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
   private extractRoundNumber(entry: GameHistoryEntry): number | null {

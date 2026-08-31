@@ -1,18 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  asGeneratedSupabaseClient,
-  SupabaseService,
-} from '../../database/supabase.service';
+import { SupabaseService } from '../../database/supabase.service';
 import { toJsonObject } from '../../database/json-value';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
-import { Database } from '../../types/database.types';
+import type { Database } from '../../types/database.generated.types';
 import { asSeatId } from '../../types/identity.types';
 import type { GameParticipant } from '../../types/game-participant.types';
 
-type RoomRow = Database['public']['Tables']['rooms']['Row'];
+type GeneratedRoomRow = Database['public']['Tables']['rooms']['Row'];
+type RoomRow = Omit<
+  GeneratedRoomRow,
+  'settings' | 'created_at' | 'updated_at' | 'last_activity_at'
+> & {
+  settings: Room['settings'];
+  created_at: string;
+  updated_at: string;
+  last_activity_at: string;
+};
 type RoomUpdate = Database['public']['Tables']['rooms']['Update'];
-type RoomPlayerRow = Database['public']['Tables']['room_players']['Row'];
+type GeneratedRoomPlayerRow =
+  Database['public']['Tables']['room_players']['Row'];
+type RoomPlayerRow = Omit<
+  GeneratedRoomPlayerRow,
+  'room_id' | 'is_ready' | 'joined_at'
+> & {
+  room_id: string;
+  is_ready: boolean;
+  joined_at: string;
+};
 type GameParticipantRow =
   Database['public']['Tables']['game_participants']['Row'];
 
@@ -31,10 +46,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
     return this.supabaseService.client;
   }
 
-  private get generatedSupabase() {
-    return asGeneratedSupabaseClient(this.supabaseService.client);
-  }
-
   async createWithHostSeat(
     room: Room,
     hostPlayer: RoomPlayer,
@@ -46,7 +57,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
       throw new Error('Authenticated host user is required');
     }
 
-    const { data, error } = await this.generatedSupabase.rpc(
+    const { data, error } = await this.supabase.rpc(
       'create_room_with_host_seat_atomic',
       {
         p_room_id: room.id,
@@ -112,7 +123,9 @@ export class SupabaseRoomRepository implements IRoomRepository {
         updateData.host_seat_id = updates.hostSeatId;
       }
       if (updates.status) updateData.status = updates.status;
-      if (updates.settings) updateData.settings = updates.settings;
+      if (updates.settings) {
+        updateData.settings = toJsonObject({ ...updates.settings });
+      }
       if (updates.lastActivityAt)
         updateData.last_activity_at = updates.lastActivityAt.toISOString();
 
@@ -229,7 +242,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         );
       }
 
-      return this.mapRoomsWithPlayers((roomsData ?? []) as RoomRow[]);
+      return this.mapRoomsWithPlayers(roomsData ?? []);
     } catch (error) {
       this.logger.error(
         'Error finding recent finished rooms by user ID:',
@@ -402,7 +415,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
-  private mapDatabaseToRoom(dbRoom: RoomRow, players: RoomPlayer[]): Room {
+  private mapDatabaseToRoom(rawRoom: unknown, players: RoomPlayer[]): Room {
+    if (!this.isRoomRow(rawRoom)) {
+      throw new Error('Room has invalid persisted data');
+    }
+    const dbRoom = rawRoom;
     const hostSeatId = dbRoom.host_seat_id ?? players[0]?.seatId;
     if (!hostSeatId) {
       throw new Error(`Room ${dbRoom.id} has no canonical host seat`);
@@ -424,12 +441,18 @@ export class SupabaseRoomRepository implements IRoomRepository {
     };
   }
 
-  private async mapRoomsWithPlayers(roomsData: RoomRow[]): Promise<Room[]> {
+  private async mapRoomsWithPlayers(roomsData: unknown[]): Promise<Room[]> {
+    const parsedRooms = roomsData.map((room) => {
+      if (!this.isRoomRow(room)) {
+        throw new Error('Room has invalid persisted data');
+      }
+      return room;
+    });
     const playersByRoomId = await this.fetchPlayersByRoomIds(
-      roomsData.map((room) => room.id),
+      parsedRooms.map((room) => room.id),
     );
 
-    return roomsData.map((roomData) =>
+    return parsedRooms.map((roomData) =>
       this.mapDatabaseToRoom(roomData, playersByRoomId.get(roomData.id) ?? []),
     );
   }
@@ -459,6 +482,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
     }
 
     for (const dbPlayer of playersData ?? []) {
+      if (!this.isRoomPlayerRow(dbPlayer)) {
+        throw new Error(
+          `Room player ${dbPlayer.id} has invalid persisted data`,
+        );
+      }
       const players = playersByRoomId.get(dbPlayer.room_id);
       if (players) {
         players.push(this.mapDatabaseToPlayer(dbPlayer));
@@ -468,7 +496,11 @@ export class SupabaseRoomRepository implements IRoomRepository {
     return playersByRoomId;
   }
 
-  private mapDatabaseToPlayer(dbPlayer: RoomPlayerRow): RoomPlayer {
+  private mapDatabaseToPlayer(rawPlayer: GeneratedRoomPlayerRow): RoomPlayer {
+    if (!this.isRoomPlayerRow(rawPlayer)) {
+      throw new Error(`Room player ${rawPlayer.id} has invalid persisted data`);
+    }
+    const dbPlayer = rawPlayer;
     const seatId = asSeatId(dbPlayer.id);
     return {
       socketId: '',
