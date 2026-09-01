@@ -68,6 +68,21 @@ describe('game-state persistence identity', () => {
       lastWinnerSeatId: firstSeatId,
       openDeclared: true,
       openDeclarerSeatId: secondSeatId,
+      fieldCheckpoint: {
+        roundNumber: 2,
+        currentSeatId: firstSeatId,
+        handsBySeatId: {
+          [firstSeatId]: ['H7'],
+          [secondSeatId]: ['S9'],
+        },
+        currentField: {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: firstSeatId,
+          isComplete: false,
+        },
+      },
     });
     const persistedReveal = toPersistedPendingBrokenHandReveal({
       seatId: firstSeatId,
@@ -80,6 +95,13 @@ describe('game-state persistence identity', () => {
       firstSeatId,
     ]);
     expect(persistedPlayState?.fields[0].winnerSeatId).toBe(firstSeatId);
+    expect(persistedPlayState?.fieldCheckpoint).toMatchObject({
+      currentSeatId: firstSeatId,
+      handsBySeatId: {
+        [firstSeatId]: ['H7'],
+        [secondSeatId]: ['S9'],
+      },
+    });
     expect(persistedReveal?.seatId).toBe(firstSeatId);
     expect(serialized).not.toContain('playerId');
     expect(serialized).not.toContain('playedBy"');

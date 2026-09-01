@@ -28,6 +28,7 @@ import {
   TeamScores,
   Field,
   CompletedField,
+  FieldCheckpoint,
   Team,
 } from '../../types/game.types';
 import { ICardService } from '../../services/interfaces/card-service.interface';
@@ -1929,6 +1930,10 @@ describe('Game Use Cases', () => {
       );
       expect(updateTurnEvent?.payload).toBe('player-2');
       expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
+      expect(state.playState).toHaveProperty(
+        'fieldCheckpoint.handsBySeatId.player-1',
+        ['C1', 'C2'],
+      );
     });
 
     it('returns complete field trigger when field reaches four cards', async () => {
@@ -1940,9 +1945,9 @@ describe('Game Use Cases', () => {
 
       const fieldBefore: Field = {
         cards: ['C1', 'C2', 'C3'],
-        playedBySeatIds: asSeatIds('player-1', 'player-2', 'player-3'),
+        playedBySeatIds: asSeatIds('player-2', 'player-3', 'player-4'),
         baseCard: 'C1',
-        dealerSeatId: asSeatId('player-1'),
+        dealerSeatId: asSeatId('player-2'),
         isComplete: false,
       };
 
@@ -1957,6 +1962,27 @@ describe('Game Use Cases', () => {
             name: 'Player 1',
             hand: ['C4'],
             team: 0,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-2'),
+            name: 'Player 2',
+            hand: [],
+            team: 1,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-3'),
+            name: 'Player 3',
+            hand: [],
+            team: 0,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-4'),
+            name: 'Player 4',
+            hand: [],
+            team: 1,
             isPasser: false,
           },
         ],
@@ -2102,6 +2128,13 @@ describe('Game Use Cases', () => {
             name: 'Player 1',
             hand: ['5♠', 'A♥'],
             team: 0 as Team,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-2'),
+            name: 'Player 2',
+            hand: [],
+            team: 1 as Team,
             isPasser: false,
           },
         ],
@@ -3534,12 +3567,18 @@ describe('Game Use Cases', () => {
       ] as DomainPlayer[],
       playState: {
         fields: [] as CompletedField[],
+        fieldCheckpoint: null as FieldCheckpoint | null,
         currentField: {
-          cards: [],
-          playedBySeatIds: [],
-          baseCard: '',
+          cards: ['A', 'B', 'C', 'D'],
+          playedBySeatIds: asSeatIds(
+            'player-1',
+            'player-2',
+            'player-3',
+            'player-4',
+          ),
+          baseCard: 'A',
           dealerSeatId: asSeatId('player-1'),
-          isComplete: false,
+          isComplete: true,
         } as Field,
       },
       blowState: {
@@ -3564,6 +3603,9 @@ describe('Game Use Cases', () => {
         1: [],
       },
       pointsToWin: 10,
+      currentSeatId: asSeatId('player-1'),
+      gamePhase: 'play' as GamePhase,
+      deck: [] as string[],
       currentPlayerIndex: 0,
       roundNumber: 1,
     });
@@ -3580,6 +3622,18 @@ describe('Game Use Cases', () => {
 
       const state = buildState();
       state.playState.fields = [{ winnerTeam: 0 } as unknown as CompletedField];
+      state.playState.currentField = {
+        cards: ['A', 'C', 'E', 'F'],
+        playedBySeatIds: asSeatIds(
+          'player-1',
+          'player-2',
+          'player-3',
+          'player-4',
+        ),
+        baseCard: 'A',
+        dealerSeatId: asSeatId('player-1'),
+        isComplete: true,
+      };
       const completeFieldMock = jest.fn(() => ({
         cards: ['A', 'B', 'C', 'D'],
         winnerSeatId: asSeatId('player-1'),
@@ -3630,7 +3684,7 @@ describe('Game Use Cases', () => {
       expect(result.gameOver).toBeUndefined();
     });
 
-    it('rejects completing a field when cards and playedBy are not aligned', async () => {
+    it('ignores a stale malformed completion request', async () => {
       const roomService = createRoomServiceMock();
       const playService = createPlayServiceMock('player-1');
       const scoreService = createScoreServiceMock(2);
@@ -3660,13 +3714,13 @@ describe('Game Use Cases', () => {
         },
       });
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Field card/player attribution mismatch');
+      expect(result.success).toBe(true);
+      expect(result.events).toEqual([]);
       expect(playService.determineFieldWinner).not.toHaveBeenCalled();
       expect(completeFieldMock).not.toHaveBeenCalled();
     });
 
-    it('rejects completing a stale field that differs from current field attribution', async () => {
+    it('ignores a stale field that differs from current field attribution', async () => {
       const roomService = createRoomServiceMock();
       const playService = createPlayServiceMock('player-1');
       const scoreService = createScoreServiceMock(2);
@@ -3714,12 +3768,133 @@ describe('Game Use Cases', () => {
         },
       });
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe(
-        'Field completion request is stale or mismatched',
-      );
+      expect(result.success).toBe(true);
+      expect(result.events).toEqual([]);
       expect(playService.determineFieldWinner).not.toHaveBeenCalled();
       expect(completeFieldMock).not.toHaveBeenCalled();
+    });
+
+    it('restores the field checkpoint when persisted attribution is corrupt', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+      const state = buildState();
+      state.currentSeatId = asSeatId('player-4');
+      state.playState.currentField = {
+        cards: ['A', 'B', 'C', 'D'],
+        playedBySeatIds: asSeatIds(
+          'player-1',
+          'player-2',
+          'player-3',
+          'player-1',
+        ),
+        baseCard: 'A',
+        dealerSeatId: asSeatId('player-1'),
+        isComplete: true,
+      };
+      state.playState.fieldCheckpoint = {
+        roundNumber: 1,
+        currentSeatId: asSeatId('player-1'),
+        handsBySeatId: Object.fromEntries(
+          state.players.map((player, index) => [
+            player.seatId,
+            [`restored-${index}`],
+          ]),
+        ),
+        currentField: {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId('player-1'),
+          isComplete: false,
+        },
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: state.playState.currentField,
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.currentSeatId).toBe('player-1');
+      expect(state.players.map((player) => player.hand)).toEqual([
+        ['restored-0'],
+        ['restored-1'],
+        ['restored-2'],
+        ['restored-3'],
+      ]);
+      expect(state.playState.currentField.cards).toEqual([]);
+      expect(result.events?.map((event) => event.event)).toEqual([
+        'field-updated',
+        'update-players',
+        'update-turn',
+      ]);
+      expect(playService.determineFieldWinner).not.toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
+    });
+
+    it('redeals the same round when an old corrupt state has no checkpoint', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+      const state = buildState();
+      state.teamScores[0].total = 3;
+      state.playState.currentField.playedBySeatIds = asSeatIds(
+        'player-1',
+        'player-2',
+        'player-3',
+        'player-1',
+      );
+      const resetRoundState = jest.fn(() => {
+        state.players.forEach((player, index) => {
+          player.hand = [`redealt-${index}`];
+        });
+      });
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        resetRoundState,
+        transitionPhase: jest.fn((phase: string) => {
+          state.gamePhase = phase as 'blow';
+        }),
+        updateState: jest.fn((updates) => {
+          Object.assign(state, updates);
+        }),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: state.playState.currentField,
+      });
+
+      expect(result.success).toBe(true);
+      expect(resetRoundState).toHaveBeenCalledTimes(1);
+      expect(state.roundNumber).toBe(1);
+      expect(state.teamScores[0].total).toBe(3);
+      expect(state.gamePhase).toBe('blow');
+      expect(state.players[0].hand).toEqual(['redealt-0']);
+      expect(
+        result.events?.find((event) => event.event === 'round-cancelled')
+          ?.payload,
+      ).toMatchObject({ reason: 'field-recovery' });
+      expect(playService.determineFieldWinner).not.toHaveBeenCalled();
+      expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
     });
 
     it('adds completed sets to the team of the player who actually won the field', async () => {
@@ -3829,6 +4004,18 @@ describe('Game Use Cases', () => {
       const state = buildState();
       state.players[0].hand = ['A', 'C'];
       state.players[1].hand = ['E', 'F'];
+      state.playState.currentField = {
+        cards: ['A', 'C', 'E', 'F'],
+        playedBySeatIds: asSeatIds(
+          'player-1',
+          'player-2',
+          'player-3',
+          'player-4',
+        ),
+        baseCard: 'A',
+        dealerSeatId: asSeatId('player-1'),
+        isComplete: true,
+      };
       const updateState = jest.fn(async (updates) => {
         Object.assign(state, updates);
       });

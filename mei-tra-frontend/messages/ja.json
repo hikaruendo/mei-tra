@@ -332,6 +332,8 @@
     },
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
+    "redealAllPass": "全員パスのため配り直しました",
+    "fieldRecoveryRedeal": "場の不整合を検出したため、安全に配り直しました",
     "orderButton": "強さ順",
     "teamRed": "赤",
     "teamBlack": "黒",

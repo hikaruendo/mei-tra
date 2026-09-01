@@ -173,6 +173,7 @@ export interface RoundResultsPayload {
 export interface RoundCancelledPayload {
   nextDealerSeatId: SeatId;
   players: PlayerContract[];
+  reason?: 'all-passed' | 'field-recovery';
   currentTrump?: TrumpType | null;
   currentHighestDeclaration?: BlowDeclarationContract | null;
   blowDeclarations?: BlowDeclarationContract[];

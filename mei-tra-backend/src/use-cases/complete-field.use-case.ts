@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type {
   GameOverPayload,
+  RoundCancelledPayload,
   RoundResultsPayload,
   UpdatePhasePayload,
 } from '@contracts/game';
@@ -26,9 +27,17 @@ import {
   buildPlayerSyncEvents,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { toCompletedFieldContract } from '../adapters/game-contract-adapters';
-import { asSeatId, type SeatId } from '../types/identity.types';
+import {
+  toBlowUpdatedPayload,
+  toCompletedFieldContract,
+  toFieldContract,
+} from '../adapters/game-contract-adapters';
+import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
+import {
+  getFieldIntegrityError,
+  restoreFieldCheckpoint,
+} from '../domain/field-recovery';
 
 @Injectable()
 export class CompleteFieldUseCase implements ICompleteFieldUseCase {
@@ -45,14 +54,34 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
 
   async execute(request: CompleteFieldRequest): Promise<CompleteFieldResponse> {
     try {
-      const { roomId, field } = request;
+      const { roomId, field: requestedField } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      const currentField = state.playState?.currentField;
 
-      const fieldValidationError = this.validateFieldAttribution(state, field);
-      if (fieldValidationError) {
-        return { success: false, error: fieldValidationError };
+      if (!currentField || currentField.cards.length === 0) {
+        return { success: true, events: [] };
       }
+
+      const fieldValidationError = getFieldIntegrityError(state, currentField);
+      if (fieldValidationError) {
+        return this.recoverInvalidField(
+          roomId,
+          roomGameState,
+          state,
+          fieldValidationError,
+        );
+      }
+
+      if (
+        !currentField.isComplete ||
+        currentField.cards.length !== state.players.length ||
+        !this.isSameField(currentField, requestedField)
+      ) {
+        return { success: true, events: [] };
+      }
+
+      const field = currentField;
 
       const winner = this.playService.determineFieldWinner(
         field,
@@ -99,6 +128,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           dealerSeatId: asSeatId(winner.seatId),
           isComplete: false,
         };
+        state.playState.fieldCheckpoint = null;
       }
 
       const fieldCompletePayload: FieldCompletePayload = {
@@ -246,47 +276,14 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     });
   }
 
-  private validateFieldAttribution(
-    state: GameState,
-    field: Field,
-  ): string | null {
-    if (field.cards.length !== field.playedBySeatIds.length) {
-      return 'Field card/player attribution mismatch';
-    }
-
-    if (field.cards.length !== 4) {
-      return 'Field is not complete';
-    }
-
-    const seatIds = new Set<SeatId>(
-      state.players.map((player) => player.seatId),
+  private isSameField(left: Field, right: Field): boolean {
+    return (
+      this.isSameSequence(left.cards, right.cards) &&
+      this.isSameSequence(left.playedBySeatIds, right.playedBySeatIds) &&
+      left.dealerSeatId === right.dealerSeatId &&
+      left.baseCard === right.baseCard &&
+      left.baseSuit === right.baseSuit
     );
-    if (field.playedBySeatIds.some((seatId) => !seatIds.has(seatId))) {
-      return 'Field contains unknown player attribution';
-    }
-
-    if (new Set(field.playedBySeatIds).size !== field.playedBySeatIds.length) {
-      return 'Field contains duplicate player attribution';
-    }
-
-    const currentField = state.playState?.currentField;
-    if (currentField && currentField.cards.length > 0) {
-      const isSameField =
-        this.isSameSequence(currentField.cards, field.cards) &&
-        this.isSameSequence(
-          currentField.playedBySeatIds,
-          field.playedBySeatIds,
-        ) &&
-        currentField.dealerSeatId === field.dealerSeatId &&
-        currentField.baseCard === field.baseCard &&
-        currentField.baseSuit === field.baseSuit;
-
-      if (!isSameField) {
-        return 'Field completion request is stale or mismatched';
-      }
-    }
-
-    return null;
   }
 
   private isSameSequence(left: string[], right: string[]): boolean {
@@ -294,6 +291,162 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       left.length === right.length &&
       left.every((value, index) => value === right[index])
     );
+  }
+
+  private async recoverInvalidField(
+    roomId: string,
+    roomGameState: GameStateService,
+    state: GameState,
+    reason: string,
+  ): Promise<CompleteFieldResponse> {
+    this.logger.error(`Recovering invalid field in room ${roomId}: ${reason}`);
+
+    if (restoreFieldCheckpoint(state)) {
+      await roomGameState.saveState();
+      const room = await this.roomService.getRoom(roomId);
+      const restoredField = state.playState?.currentField;
+      const currentSeatId = state.currentSeatId;
+      const events: GatewayEvent[] = [
+        ...(restoredField
+          ? [
+              {
+                scope: 'room' as const,
+                roomId,
+                event: 'field-updated',
+                payload: toFieldContract(restoredField),
+              },
+            ]
+          : []),
+        ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
+          room,
+        }),
+        ...(currentSeatId
+          ? [
+              {
+                scope: 'room' as const,
+                roomId,
+                event: 'update-turn',
+                payload: currentSeatId,
+              },
+            ]
+          : []),
+      ];
+      return { success: true, events };
+    }
+
+    return this.redealCurrentRound(roomId, roomGameState, state, reason);
+  }
+
+  private async redealCurrentRound(
+    roomId: string,
+    roomGameState: GameStateService,
+    state: GameState,
+    recoveryReason: string,
+  ): Promise<CompleteFieldResponse> {
+    const roundNumber = state.roundNumber;
+    const playerCount = state.players.length;
+    const firstBlowIndex =
+      playerCount > 0 ? state.blowState.currentBlowIndex % playerCount : 0;
+    const redealCount = (state.blowState.redealCount ?? 0) + 1;
+
+    roomGameState.resetRoundState();
+    const resetState = roomGameState.getState();
+    const firstBlowPlayer =
+      resetState.players[firstBlowIndex] ?? resetState.players[0];
+    if (!firstBlowPlayer) {
+      return { success: false, error: 'Cannot recover a game without players' };
+    }
+
+    roomGameState.transitionPhase('blow');
+    roomGameState.updateState({
+      roundNumber,
+      currentSeatId: asSeatId(firstBlowPlayer.seatId),
+      blowState: {
+        currentTrump: null,
+        currentHighestDeclaration: null,
+        declarations: [],
+        actionHistory: [],
+        lastPasserSeatId: null,
+        isRoundCancelled: false,
+        currentBlowIndex: firstBlowIndex,
+        redealCount,
+      },
+      playState: {
+        currentField: {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId(firstBlowPlayer.seatId),
+          isComplete: false,
+        },
+        negriCard: null,
+        negriSeatId: null,
+        neguri: {},
+        fields: [],
+        lastWinnerSeatId: null,
+        openDeclared: false,
+        openDeclarerSeatId: null,
+        fieldCheckpoint: null,
+      },
+    });
+
+    await roomGameState.saveState();
+    const recoveredState = roomGameState.getState();
+    const room = await this.roomService.getRoom(roomId);
+    const roundCancelledPayload: RoundCancelledPayload = {
+      nextDealerSeatId: asSeatId(firstBlowPlayer.seatId),
+      players: resolveTransportPlayers(roomGameState, recoveredState.players, {
+        roomPlayers: room?.players,
+      }),
+      reason: 'field-recovery',
+      currentTrump: null,
+      currentHighestDeclaration: null,
+      blowDeclarations: [],
+      actionHistory: [],
+    };
+
+    await this.gameEventLogService?.log({
+      roomId,
+      actionType: 'round_cancelled',
+      actorSeatId: null,
+      state: recoveredState,
+      actionData: {
+        reason: 'field_recovery',
+        recoveryReason,
+        nextDealerSeatId: firstBlowPlayer.seatId,
+        nextBlowIndex: firstBlowIndex,
+      },
+    });
+
+    return {
+      success: true,
+      events: [
+        ...buildPlayerSyncEvents(
+          roomGameState,
+          roomId,
+          recoveredState.players,
+          { room },
+        ),
+        {
+          scope: 'room',
+          roomId,
+          event: 'blow-updated',
+          payload: toBlowUpdatedPayload(recoveredState.blowState),
+        },
+        {
+          scope: 'room',
+          roomId,
+          event: 'round-cancelled',
+          payload: roundCancelledPayload,
+        },
+        {
+          scope: 'room',
+          roomId,
+          event: 'update-turn',
+          payload: asSeatId(firstBlowPlayer.seatId),
+        },
+      ],
+    };
   }
 
   private findDeclaringTeam(state: GameState): Team | null {
@@ -388,6 +541,7 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       lastWinnerSeatId: null,
       openDeclared: false,
       openDeclarerSeatId: null,
+      fieldCheckpoint: null,
     };
 
     const newBlowState = {

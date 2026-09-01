@@ -269,6 +269,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     );
     const roundCancelledPayload: RoundCancelledPayload = {
       nextDealerSeatId: asSeatId(firstBlowPlayer.seatId),
+      reason: 'all-passed',
       players: resolveTransportPlayers(roomGameState, state.players, {
         roomPlayers: room?.players,
       }),

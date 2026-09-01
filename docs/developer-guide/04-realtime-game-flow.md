@@ -281,7 +281,7 @@ COM の default 行動も含め、pass も UseCase 化されています。実�
 
 ### 7.5 round cancel
 
-全員 pass などの条件で round がキャンセルされると、frontend は `round-cancelled` を受けて blow state を reset しつつ、次 dealer や action history を表示に反映します。
+全員 pass や場の不整合からの安全な再配札で round がキャンセルされると、frontend は `round-cancelled` を受けて blow state を reset しつつ、次 dealer や action history を表示に反映します。
 
 ## 8. play phase
 

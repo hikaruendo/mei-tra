@@ -845,7 +845,15 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       startDealAnimation('round-cancelled', payload.players);
       applyGameServerEvent({ type: 'round-cancelled', payload });
-      dispatch({ type: 'notice', message: { key: 'game.redealAllPass' } });
+      dispatch({
+        type: 'notice',
+        message: {
+          key:
+            payload.reason === 'field-recovery'
+              ? 'game.fieldRecoveryRedeal'
+              : 'game.redealAllPass',
+        },
+      });
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });

@@ -64,6 +64,28 @@ export function normalizeGameStateIdentity(state: GameState): GameState {
         }),
         lastWinnerSeatId: state.playState.lastWinnerSeatId ?? null,
         openDeclarerSeatId: state.playState.openDeclarerSeatId ?? null,
+        fieldCheckpoint: state.playState.fieldCheckpoint
+          ? {
+              ...state.playState.fieldCheckpoint,
+              currentSeatId: asSeatId(
+                state.playState.fieldCheckpoint.currentSeatId,
+              ),
+              handsBySeatId: Object.fromEntries(
+                Object.entries(
+                  state.playState.fieldCheckpoint.handsBySeatId,
+                ).map(([seatId, hand]) => [asSeatId(seatId), [...hand]]),
+              ),
+              currentField: {
+                ...state.playState.fieldCheckpoint.currentField,
+                dealerSeatId: asSeatId(
+                  state.playState.fieldCheckpoint.currentField.dealerSeatId,
+                ),
+                playedBySeatIds: normalizePlayedBySeatIds(
+                  state.playState.fieldCheckpoint.currentField,
+                ),
+              },
+            }
+          : null,
       }
     : undefined;
   const pendingBrokenHandReveal = state.pendingBrokenHandReveal

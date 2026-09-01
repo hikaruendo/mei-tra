@@ -1027,7 +1027,10 @@ export const useGame = () => {
         pendingNegriCardRef.current = null;
         startDealAnimation('round-cancelled', payload.players);
         setNotification({
-          message: 'Round cancelled! All players passed.',
+          message:
+            payload.reason === 'field-recovery'
+              ? t('fieldRecoveryRedeal')
+              : t('redealAllPass'),
           type: 'warning'
         });
         applyGameServerEvent({ type: 'round-cancelled', payload });

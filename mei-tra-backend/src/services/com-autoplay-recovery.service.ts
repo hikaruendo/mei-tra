@@ -12,6 +12,7 @@ import { CompleteFieldTrigger } from '../use-cases/interfaces/play-card.use-case
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
 import { RoomGameActionQueueService } from './room-game-action-queue.service';
+import { getFieldIntegrityError } from '../domain/field-recovery';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
 const COM_AUTO_PLAY_INITIAL_DELAY_MS = 1_500;
@@ -215,11 +216,17 @@ export class ComAutoPlayRecoveryService {
     const state = roomGameState.getState();
     const currentField = state.playState?.currentField;
 
-    if (
+    const fieldIntegrityError = currentField
+      ? getFieldIntegrityError(state, currentField)
+      : null;
+    const shouldResumeFieldCompletion =
       state.gamePhase === 'play' &&
-      currentField?.isComplete &&
-      currentField.cards.length === 4
-    ) {
+      currentField &&
+      (fieldIntegrityError !== null ||
+        (currentField.isComplete &&
+          currentField.cards.length === state.players.length));
+
+    if (shouldResumeFieldCompletion) {
       if (!this.fieldCompletionTimeouts.has(roomId)) {
         const response = await this.roomGameActionQueueService.run(roomId, () =>
           this.completeFieldUseCase.execute({

@@ -117,6 +117,9 @@ describe('ComAutoPlayRecoveryService', () => {
     };
     const state = {
       gamePhase: 'play',
+      players: ['p1', 'p2', 'p3', 'com-1'].map((seatId) => ({
+        seatId: asSeatId(seatId),
+      })),
       playState: { currentField: field },
       pendingBrokenHandReveal: null,
     };
@@ -130,6 +133,7 @@ describe('ComAutoPlayRecoveryService', () => {
         ...field,
         cards: [],
         playedBySeatIds: [],
+        baseCard: '',
         isComplete: false,
       };
       return Promise.resolve(completionResponse);

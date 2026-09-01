@@ -77,6 +77,7 @@
     "connecting": "サーバーへ接続中です: {message}",
     "redealHand": "手役が成立したため配り直しました",
     "redealAllPass": "全員パスのため配り直しました",
+    "fieldRecoveryRedeal": "場の不整合を検出したため、安全に配り直しました",
     "playerDisconnected": "{name} が切断しました",
     "playerIdle": "{name} が無操作です",
     "playerReplacedByCom": "{name} がCOMに置換されました",

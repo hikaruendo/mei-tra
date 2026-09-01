@@ -332,6 +332,8 @@
     },
     "yourTurn": "Your turn",
     "waiting": "Waiting...",
+    "redealAllPass": "Redealt because everyone passed",
+    "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
     "orderButton": "Order",
     "teamRed": "Red",
     "teamBlack": "Black",
