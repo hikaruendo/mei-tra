@@ -68,13 +68,18 @@
   - [ ] backups/ ディレクトリ内に保存済み
   - [ ] 念のため、別の場所にもコピー（推奨）
 
-### バックアップの検証（オプション）
+### バックアップの検証
 
 - [ ] バックアップファイルの内容確認
   ```bash
   head -n 50 backups/production_backup_YYYYMMDD_HHMMSS.sql
-  # COPY auth.users や COPY user_profiles が含まれているか確認
+  # COPY public.user_profiles などpublic schemaの対象が含まれているか確認
   ```
+- [ ] `npm run db:restore:check` が成功することを確認
+
+> `backup-production.sh` はpublic schemaのアプリデータ用です。Supabase Authの
+> `auth.users`、Storage object本体、platform設定は含みません。それぞれ別の
+> export/backup手順が必要です。
 
 ---
 
@@ -160,18 +165,18 @@ flyctl scale count 0 --app mei-tra-backend
 
 ### Step 2: データベース復元
 
-```bash
-# 方法1: psql コマンドで復元
-# 本番DB URLは Supabase Dashboard > Settings > Database > Connection string から取得
-psql "postgresql://postgres.[PROJECT-REF]@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres" \
-  < backups/production_backup_YYYYMMDD_HHMMSS.sql
+`production_backup_*.sql`はdata-only dumpです。既存データが残るDBへ直接
+`psql < dump.sql`すると、主キー重複や循環FKで失敗します。次の順序で行います。
 
-# 方法2: Supabase Studio で復元
-# 1. Supabase Dashboard を開く
-# 2. SQL Editor に移動
-# 3. backups/production_backup_YYYYMMDD_HHMMSS.sql の内容を貼り付け
-# 4. 実行
-```
+1. 可能ならSupabaseのPITRまたは新規recovery projectを用意する
+2. recovery targetへ同じmigrationを適用する
+3. 復元対象のpublic tableが空であることを確認する
+4. `session_replication_role = replica`の同一session内でdumpを流し込む
+5. `session_replication_role = DEFAULT`へ戻し、件数と主要FKを検証する
+
+具体的なSQLと対象tableは障害内容に応じて変わるため、復元前に
+`npm run db:restore:check`で手順を再検証し、元DBを上書きせずrecovery targetで
+成功を確認してください。
 
 ### Step 3: アプリケーション再起動
 
