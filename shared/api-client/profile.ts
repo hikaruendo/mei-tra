@@ -97,9 +97,10 @@ async function readErrorMessage(
 
 export function createProfileApiClient({
   baseUrl,
-  fetchImpl = fetch,
+  fetchImpl,
 }: CreateProfileApiClientOptions): ProfileApiClient {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+  const request = fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const userPath = (userId: string, suffix = '') =>
     `${normalizedBaseUrl}/${encodeURIComponent(userId)}${suffix}`;
 
@@ -108,7 +109,7 @@ export function createProfileApiClient({
     init: RequestInit,
     fallback: string,
   ): Promise<T> => {
-    const response = await fetchImpl(url, init);
+    const response = await request(url, init);
     if (!response.ok) {
       throw new ProfileApiError(
         await readErrorMessage(response, fallback),
