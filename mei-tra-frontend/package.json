@@ -6,13 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "check:architecture": "node --test scripts/check-no-direct-db-access.test.mjs && node scripts/check-no-direct-db-access.mjs",
+    "lint": "npm run check:architecture && eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "vercel-build": "next build"
   },
   "dependencies": {
+    "@meitra/api-client": "file:../shared/api-client",
     "@meitra/contracts": "file:../contracts",
     "@meitra/game-client": "file:../shared/game-client",
     "@supabase/ssr": "^0.7.0",

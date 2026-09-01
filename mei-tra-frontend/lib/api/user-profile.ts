@@ -4,17 +4,24 @@ import type {
   UpdateUserProfileRequestDto,
   UserProfileDto,
 } from '@contracts/profile';
+import {
+  createProfileApiClient,
+} from '@meitra/api-client/profile';
+import {
+  fromRecentGameHistoryItemContract,
+  RecentGameHistoryItem,
+} from '@/types/game-history.types';
 import { UserPreferences, UserProfile } from '@/types/user.types';
 import { normalizeUserPreferences } from '@/lib/preferences';
 
-export interface UpdateUserProfilePayload {
+interface UpdateUserProfilePayload {
   username?: string;
   displayName?: string;
   avatarUrl?: string;
   preferences?: Partial<UserPreferences>;
 }
 
-export type UserProfileApiResponse = UserProfileDto;
+const profileApi = createProfileApiClient({ baseUrl: '/api/user-profile' });
 
 function resolveTransportTheme(
   theme: UserPreferences['theme'] | undefined,
@@ -56,9 +63,7 @@ function mapPreferencesForTransport(
   return mapped;
 }
 
-export function mapUserProfileResponse(
-  profile: UserProfileApiResponse,
-): UserProfile {
+function mapUserProfileResponse(profile: UserProfileDto): UserProfile {
   return {
     id: profile.id,
     username: profile.username,
@@ -74,6 +79,23 @@ export function mapUserProfileResponse(
   };
 }
 
+export async function fetchProfileGameHistory(
+  userId: string,
+  accessToken: string,
+): Promise<RecentGameHistoryItem[]> {
+  const items = await profileApi.fetchGameHistory(userId, accessToken);
+  return items.map(fromRecentGameHistoryItemContract);
+}
+
+export async function fetchUserProfileViaApi(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserProfile> {
+  return mapUserProfileResponse(
+    await profileApi.fetchProfile(userId, { signal }),
+  );
+}
+
 export async function updateUserProfileViaApi(
   userId: string,
   accessToken: string,
@@ -86,25 +108,23 @@ export async function updateUserProfileViaApi(
     preferences: mapPreferencesForTransport(payload.preferences),
   };
 
-  const response = await fetch(`/api/user-profile/${userId}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(transportPayload),
-  });
-
-  if (!response.ok) {
-    const errorData = (await response.json().catch(() => null)) as
-      | { error?: string; message?: string }
-      | null;
-
-    throw new Error(
-      errorData?.error ?? errorData?.message ?? 'Failed to update profile',
-    );
-  }
-
-  const result = (await response.json()) as UserProfileApiResponse;
+  const result = await profileApi.updateProfile(
+    userId,
+    accessToken,
+    transportPayload,
+  );
   return mapUserProfileResponse(result);
+}
+
+export async function uploadUserAvatarViaApi(
+  userId: string,
+  accessToken: string,
+  formData: FormData,
+): Promise<string> {
+  const result = await profileApi.uploadAvatar(
+    userId,
+    accessToken,
+    formData,
+  );
+  return result.avatarUrl;
 }

@@ -1,4 +1,5 @@
 import type { Player } from '@/types/game.types';
+import { fetchUserProfileViaApi } from '@/lib/api/user-profile';
 
 export interface PlayerProfile {
   displayName: string;
@@ -56,22 +57,19 @@ export const getPlayerProfile = async (
 
     const request = (async () => {
       try {
-        const response = await fetch(`/api/user-profile/${userId}`);
-        if (response.ok) {
-          const profileData = await response.json();
-          const profile = {
-            displayName: profileData.displayName || player.name,
-            avatarUrl: profileData.avatarUrl,
-            isAuthenticated: true,
-          };
+        const profileData = await fetchUserProfileViaApi(userId);
+        const profile = {
+          displayName: profileData.displayName || player.name,
+          avatarUrl: profileData.avatarUrl,
+          isAuthenticated: true,
+        };
 
-          profileCache.set(userId, {
-            profile,
-            expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
-          });
+        profileCache.set(userId, {
+          profile,
+          expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
+        });
 
-          return profile;
-        }
+        return profile;
       } catch (error) {
         console.warn('Failed to fetch user profile:', error);
       } finally {

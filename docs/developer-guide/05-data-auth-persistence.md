@@ -111,7 +111,7 @@ Supabase Auth の canonical user は `auth.users` です。一方、このアプ
 
 ### 3.3 frontend での profile hydration
 
-`AuthContext` は session を得たあと、`user_profiles` から profile を読みに行きます。ここでは:
+`AuthContext` は session を得たあと、backend の user-profile API から profile を読みに行きます。ここでは:
 
 - sessionStorage cache
 - timeout
@@ -477,7 +477,7 @@ text profile update と preference update も current frontend では `/api/user
   - `mei-tra-frontend/components/profile/ProfilePage.tsx`
   - `mei-tra-frontend/components/profile/ProfileRecentMatchesSection.tsx`
   - `mei-tra-frontend/hooks/useProfileGameHistory.ts`
-  - `mei-tra-frontend/lib/api/profile-game-history.ts`
+  - `mei-tra-frontend/lib/api/user-profile.ts`
 - Next.js proxy route:
   - `mei-tra-frontend/app/api/user-profile/[id]/game-history/route.ts`
 - backend endpoint / use-case:
