@@ -40,7 +40,11 @@ const MAX_SIZE = Math.round((CROSS_HEIGHT * 1.54) / FACE_HEIGHT);
 /** Between those bounds the mat tracks the screen. */
 const HEIGHT_FRACTION = 0.26;
 
-/** `scrollContent` padding either side, plus `field`'s own. */
+/**
+ * `scrollContent` pads 10 either side; the rest is breathing room so the
+ * cushion never runs edge-to-edge on a narrow window. (`field` itself pads
+ * only vertically.)
+ */
 const CHROME_WIDTH = 48;
 
 const clamp = (min: number, max: number, value: number) =>

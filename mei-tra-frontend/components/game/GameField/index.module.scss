@@ -84,7 +84,11 @@
   // scripts/table-art/manifest.json; the 0.23 cap on `.card` comes from the
   // 82%, so they move together.
   width: 100%;
-  aspect-ratio: 1 / 1;
+  // height, not aspect-ratio: when the outer's max-height bites, the box goes
+  // oblong, and a width-based square here would overflow the grid row — the
+  // very case max-height exists to absorb. With both axes bound to the outer,
+  // `contain` below keeps the image square and centred inside whatever is left.
+  height: 100%;
   transform: translate(-50%, -50%);
   background-image: url('/table/zabuton-nishijin.webp');
   background-size: contain;
