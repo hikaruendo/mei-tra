@@ -22,6 +22,8 @@
     "deploy:production": "./scripts/set-production-mode.sh",
     "deploy:standby": "./scripts/set-standby-mode.sh",
     "supabase:start": "./scripts/start-local-supabase.sh",
+    "db:types": "bash scripts/generate-db-types.sh",
+    "db:types:check": "bash scripts/generate-db-types.sh --check",
     "db:docs": "bash scripts/generate-db-docs.sh",
     "test:db:seat-concurrency": "bash scripts/test-seat-update-concurrency.sh",
     "clear:rooms": "ts-node scripts/clear-dev-rooms.ts"

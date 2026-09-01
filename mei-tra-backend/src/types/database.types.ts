@@ -1,3 +1,5 @@
+// Application-facing database contract with stronger JSON and nullability types.
+// The migration-derived schema snapshot lives in database.generated.types.ts.
 export interface Database {
   public: {
     Tables: {
