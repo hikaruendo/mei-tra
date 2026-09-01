@@ -1,46 +1,52 @@
+import type { RecentGameHistoryItemContract } from '@meitra/contracts/game-history';
 import type {
   AvatarUploadResponseDto,
   UpdateUserProfileRequestDto,
   UserProfileDto,
 } from '@meitra/contracts/profile';
-import type { RecentGameHistoryItemContract } from '@meitra/contracts/game-history';
+import {
+  createProfileApiClient,
+  fetchProfileWithRetry,
+  type ProfileRetryOptions as SharedProfileRetryOptions,
+} from '@meitra/api-client/profile';
 
 import { config } from '@/lib/config';
 
 const BASE = `${config.backendUrl}/api/user-profile`;
 
+const createClient = (fetchImpl?: typeof fetch) =>
+  createProfileApiClient({ baseUrl: BASE, fetchImpl });
+
+const profileApi = createClient();
+
 export async function fetchPlayerProfile(
   userId: string,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl?: typeof fetch,
 ): Promise<UserProfileDto> {
-  const res = await fetchImpl(`${BASE}/${encodeURIComponent(userId)}`);
+  return createClient(fetchImpl).fetchProfile(userId);
+}
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(body || `Profile request failed: ${res.status}`);
-  }
+interface ProfileRetryOptions extends SharedProfileRetryOptions {
+  fetchImpl?: typeof fetch;
+}
 
-  return res.json() as Promise<UserProfileDto>;
+export async function fetchPlayerProfileWithRetry(
+  userId: string,
+  { fetchImpl, ...retryOptions }: ProfileRetryOptions = {},
+): Promise<UserProfileDto> {
+  return fetchProfileWithRetry(
+    createClient(fetchImpl),
+    userId,
+    retryOptions,
+  );
 }
 
 export async function fetchProfileGameHistory(
   userId: string,
   token: string,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl?: typeof fetch,
 ): Promise<RecentGameHistoryItemContract[]> {
-  const res = await fetchImpl(
-    `${BASE}/${encodeURIComponent(userId)}/game-history`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  );
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(body || `Game history request failed: ${res.status}`);
-  }
-
-  return res.json() as Promise<RecentGameHistoryItemContract[]>;
+  return createClient(fetchImpl).fetchGameHistory(userId, token);
 }
 
 export async function updateProfile(
@@ -48,21 +54,7 @@ export async function updateProfile(
   token: string,
   data: UpdateUserProfileRequestDto,
 ): Promise<UserProfileDto> {
-  const res = await fetch(`${BASE}/${userId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(body || `Profile update failed: ${res.status}`);
-  }
-
-  return res.json() as Promise<UserProfileDto>;
+  return profileApi.updateProfile(userId, token, data);
 }
 
 export async function uploadAvatar(
@@ -79,19 +71,5 @@ export async function uploadAvatar(
     name: filename,
     type: mimeType,
   } as unknown as Blob);
-
-  const res = await fetch(`${BASE}/${userId}/avatar`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: form,
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(body || `Avatar upload failed: ${res.status}`);
-  }
-
-  return res.json() as Promise<AvatarUploadResponseDto>;
+  return profileApi.uploadAvatar(userId, token, form);
 }

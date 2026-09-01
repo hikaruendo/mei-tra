@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
+    "check:architecture": "node --test scripts/check-no-direct-db-access.test.mjs && node scripts/check-no-direct-db-access.mjs",
+    "lint": "npm run check:architecture && expo lint",
     "typecheck": "tsc --noEmit",
     "doctor": "npx --yes expo-doctor",
     "export:ios": "expo export --platform ios",
@@ -22,6 +23,7 @@
     "assets:table:check": "node scripts/sync-table-assets.mjs --check"
   },
   "dependencies": {
+    "@meitra/api-client": "file:../shared/api-client",
     "@meitra/contracts": "file:../contracts",
     "@meitra/game-client": "file:../shared/game-client",
     "@react-native-async-storage/async-storage": "2.2.0",
