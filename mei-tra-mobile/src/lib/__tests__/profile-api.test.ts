@@ -3,6 +3,7 @@ import {
   fetchPlayerProfileWithRetry,
   fetchProfileGameHistory,
   ProfileApiError,
+  updateProfile,
 } from '@/lib/profile-api';
 
 jest.mock('@/lib/config', () => ({
@@ -10,6 +11,12 @@ jest.mock('@/lib/config', () => ({
     backendUrl: 'https://backend.example.com',
   },
 }));
+
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  global.fetch = originalFetch;
+});
 
 describe('fetchProfileGameHistory', () => {
   it('loads the authenticated user recent matches', async () => {
@@ -34,7 +41,10 @@ describe('fetchProfileGameHistory', () => {
     ).resolves.toEqual(history);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://backend.example.com/api/user-profile/user%2F1/game-history',
-      { headers: { Authorization: 'Bearer access-token' } },
+      {
+        headers: { Authorization: 'Bearer access-token' },
+        signal: undefined,
+      },
     );
   });
 
@@ -69,6 +79,7 @@ describe('fetchPlayerProfile', () => {
     );
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://backend.example.com/api/user-profile/user%2F1',
+      { signal: undefined },
     );
   });
 
@@ -112,5 +123,37 @@ describe('fetchPlayerProfile', () => {
     expect(error).toMatchObject({ status: 404 });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(wait).not.toHaveBeenCalled();
+  });
+
+  it('encodes the user id when updating an authenticated profile', async () => {
+    const profile = {
+      id: 'user/1',
+      username: 'player',
+      displayName: 'Updated Player',
+    };
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(profile),
+    });
+    global.fetch = fetchMock;
+
+    await expect(
+      updateProfile('user/1', 'access-token', {
+        displayName: 'Updated Player',
+      }),
+    ).resolves.toEqual(profile);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://backend.example.com/api/user-profile/user%2F1',
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Bearer access-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ displayName: 'Updated Player' }),
+        signal: undefined,
+      },
+    );
   });
 });

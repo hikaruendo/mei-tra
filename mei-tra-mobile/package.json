@@ -23,6 +23,7 @@
     "assets:table:check": "node scripts/sync-table-assets.mjs --check"
   },
   "dependencies": {
+    "@meitra/api-client": "file:../shared/api-client",
     "@meitra/contracts": "file:../contracts",
     "@meitra/game-client": "file:../shared/game-client",
     "@react-native-async-storage/async-storage": "2.2.0",
