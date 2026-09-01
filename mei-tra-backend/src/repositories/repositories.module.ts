@@ -6,6 +6,7 @@ import { SupabaseUserProfileRepository } from './implementations/supabase-user-p
 import { SupabaseChatRoomRepository } from './implementations/supabase-chat-room.repository';
 import { SupabaseChatMessageRepository } from './implementations/supabase-chat-message.repository';
 import { SupabaseGameHistoryRepository } from './implementations/supabase-game-history.repository';
+import { SupabaseRoomMembershipRepository } from './implementations/supabase-room-membership.repository';
 import { SupabaseService } from '../database/supabase.service';
 
 @Module({
@@ -40,6 +41,10 @@ import { SupabaseService } from '../database/supabase.service';
       provide: 'IGameHistoryRepository',
       useClass: SupabaseGameHistoryRepository,
     },
+    {
+      provide: 'IRoomMembershipRepository',
+      useClass: SupabaseRoomMembershipRepository,
+    },
   ],
   exports: [
     'SUPABASE_CLIENT',
@@ -49,6 +54,7 @@ import { SupabaseService } from '../database/supabase.service';
     'IChatRoomRepository',
     'IChatMessageRepository',
     'IGameHistoryRepository',
+    'IRoomMembershipRepository',
   ],
 })
 export class RepositoriesModule {}
