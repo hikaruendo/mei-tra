@@ -5,6 +5,7 @@
   "workspaces": [
     "mei-tra-mobile",
     "contracts",
+    "shared/api-client",
     "shared/game-client"
   ],
   "devDependencies": {
