@@ -4,6 +4,11 @@ import type {
   UpdateUserProfileRequestDto,
   UserProfileDto,
 } from '@contracts/profile';
+import {
+  createProfileApiClient,
+  isRetryableProfileError,
+  ProfileApiError,
+} from '@meitra/api-client/profile';
 import { UserPreferences, UserProfile } from '@/types/user.types';
 import { normalizeUserPreferences } from '@/lib/preferences';
 
@@ -16,22 +21,10 @@ export interface UpdateUserProfilePayload {
 
 export type UserProfileApiResponse = UserProfileDto;
 
-export class UserProfileApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = 'UserProfileApiError';
-  }
-}
+export { ProfileApiError as UserProfileApiError };
+export const isRetryableUserProfileError = isRetryableProfileError;
 
-export function isRetryableUserProfileError(error: unknown): boolean {
-  return (
-    error instanceof TypeError ||
-    (error instanceof UserProfileApiError && error.status >= 500)
-  );
-}
+const profileApi = createProfileApiClient({ baseUrl: '/api/user-profile' });
 
 function resolveTransportTheme(
   theme: UserPreferences['theme'] | undefined,
@@ -95,22 +88,8 @@ export async function fetchUserProfileViaApi(
   userId: string,
   signal?: AbortSignal,
 ): Promise<UserProfile> {
-  const response = await fetch(`/api/user-profile/${encodeURIComponent(userId)}`, {
-    signal,
-  });
-
-  if (!response.ok) {
-    const errorData = (await response.json().catch(() => null)) as
-      | { error?: string; message?: string }
-      | null;
-    throw new UserProfileApiError(
-      errorData?.error ?? errorData?.message ?? 'Failed to load profile',
-      response.status,
-    );
-  }
-
   return mapUserProfileResponse(
-    (await response.json()) as UserProfileApiResponse,
+    await profileApi.fetchProfile(userId, { signal }),
   );
 }
 
@@ -126,25 +105,10 @@ export async function updateUserProfileViaApi(
     preferences: mapPreferencesForTransport(payload.preferences),
   };
 
-  const response = await fetch(`/api/user-profile/${userId}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(transportPayload),
-  });
-
-  if (!response.ok) {
-    const errorData = (await response.json().catch(() => null)) as
-      | { error?: string; message?: string }
-      | null;
-
-    throw new Error(
-      errorData?.error ?? errorData?.message ?? 'Failed to update profile',
-    );
-  }
-
-  const result = (await response.json()) as UserProfileApiResponse;
+  const result = await profileApi.updateProfile(
+    userId,
+    accessToken,
+    transportPayload,
+  );
   return mapUserProfileResponse(result);
 }

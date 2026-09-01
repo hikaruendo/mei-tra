@@ -1,6 +1,7 @@
 import {
   fetchUserProfileViaApi,
   isRetryableUserProfileError,
+  updateUserProfileViaApi,
   UserProfileApiError,
 } from '@/lib/api/user-profile';
 
@@ -53,6 +54,8 @@ describe('fetchUserProfileViaApi', () => {
   it('surfaces backend errors without exposing database response types', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
+      status: 404,
+      text: jest.fn().mockResolvedValue(''),
       json: jest.fn().mockResolvedValue({ message: 'Profile not found' }),
     } as unknown as Response);
 
@@ -65,6 +68,7 @@ describe('fetchUserProfileViaApi', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 503,
+      text: jest.fn().mockResolvedValue(''),
       json: jest.fn().mockResolvedValue({ message: 'Temporarily unavailable' }),
     } as unknown as Response);
 
@@ -78,5 +82,54 @@ describe('fetchUserProfileViaApi', () => {
     expect(
       isRetryableUserProfileError(new UserProfileApiError('missing', 404)),
     ).toBe(false);
+  });
+
+  it('encodes the user id and sends authenticated updates through the shared client', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        id: 'user/1',
+        username: 'user',
+        displayName: 'Updated User',
+        avatarUrl: null,
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-04-02T00:00:00.000Z',
+        lastSeenAt: '2026-04-03T00:00:00.000Z',
+        gamesPlayed: 3,
+        gamesWon: 2,
+        totalScore: 10,
+        preferences: {
+          notifications: true,
+          sound: true,
+          theme: 'dark',
+          fontSize: 'standard',
+          startPlayerAnimation: true,
+        },
+      }),
+    } as unknown as Response);
+    global.fetch = fetchMock;
+
+    await updateUserProfileViaApi('user/1', 'access-token', {
+      displayName: 'Updated User',
+      preferences: { sound: true },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/user-profile/user%2F1', {
+      method: 'PUT',
+      headers: {
+        Authorization: 'Bearer access-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        displayName: 'Updated User',
+        preferences: {
+          notifications: undefined,
+          sound: true,
+          fontSize: undefined,
+          startPlayerAnimation: undefined,
+        },
+      }),
+      signal: undefined,
+    });
   });
 });

@@ -14,6 +14,7 @@
     "vercel-build": "next build"
   },
   "dependencies": {
+    "@meitra/api-client": "file:../shared/api-client",
     "@meitra/contracts": "file:../contracts",
     "@meitra/game-client": "file:../shared/game-client",
     "@supabase/ssr": "^0.7.0",
