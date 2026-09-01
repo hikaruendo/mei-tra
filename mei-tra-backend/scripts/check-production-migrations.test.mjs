@@ -12,11 +12,11 @@ test('accepts migration histories that match exactly', () => {
   assert.deepEqual(findMigrationHistoryMismatches(output), []);
 });
 
-test('accepts the Unicode table separators emitted by Supabase CLI', () => {
+test('accepts the Unicode separators and code spans emitted by Supabase CLI', () => {
   const output = `
         LOCAL          │ REMOTE         │ TIME (UTC)
     ───────────────────┼────────────────┼──────────────────────
-    20260817010000     │ 20260817010000 │ 2026-08-17
+    \`20260817010000\`   │ \`20260817010000\` │ \`2026-08-17\`
   `;
 
   assert.deepEqual(findMigrationHistoryMismatches(output), []);
@@ -24,9 +24,9 @@ test('accepts the Unicode table separators emitted by Supabase CLI', () => {
 
 test('reports migrations missing on either side', () => {
   const output = `
-    LOCAL          | REMOTE         | TIME (UTC)
-    20260817010000 |                | 2026-08-17
-                   | 20260818010000 | 2026-08-18
+    LOCAL                  │ REMOTE                 │ TIME (UTC)
+    \`20260817010000\`     │ \` \`                    │ \`2026-08-17\`
+    \` \`                  │ \`20260818010000\`     │ \`2026-08-18\`
   `;
 
   assert.deepEqual(findMigrationHistoryMismatches(output), [

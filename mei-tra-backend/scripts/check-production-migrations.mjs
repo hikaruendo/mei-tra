@@ -6,7 +6,9 @@ export function findMigrationHistoryMismatches(output) {
   const rows = output
     .split(/\r?\n/)
     .map((line) => {
-      const match = line.match(/^\s*(\d*)\s*[|│]\s*(\d*)\s*[|│]/);
+      const match = line.match(
+        /^\s*`?\s*(\d*)\s*`?\s*[|│]\s*`?\s*(\d*)\s*`?\s*[|│]/,
+      );
       if (!match || (!match[1] && !match[2])) return null;
       return { local: match[1], remote: match[2] };
     })
