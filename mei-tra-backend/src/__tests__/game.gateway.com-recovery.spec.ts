@@ -1,6 +1,7 @@
 import { Socket } from 'socket.io';
 import { GameGateway } from '../game.gateway';
 import { asSeatId } from '../types/identity.types';
+import { RoomGameActionQueueService } from '../services/room-game-action-queue.service';
 
 const createGateway = (): GameGateway => {
   const GatewayConstructor = GameGateway as unknown as new (
@@ -25,6 +26,7 @@ const createGateway = (): GameGateway => {
     connectionGatewayEffectsService,
     gameplayNotificationService,
     accountActionGateService,
+    new RoomGameActionQueueService(),
   );
 };
 
@@ -90,7 +92,7 @@ describe('GameGateway COM recovery integration', () => {
     });
   });
 
-  it('retries COM progress after a turn acknowledgement', async () => {
+  it('does not start COM progress from a human turn acknowledgement', async () => {
     const gateway = createGateway();
     const testGateway = gateway as unknown as {
       spectatorGatewayEffectsService: { isSpectatorSocket: jest.Mock };
@@ -114,7 +116,7 @@ describe('GameGateway COM recovery integration', () => {
     await gateway.handleTurnAck(client, { roomId: 'room-1' });
 
     expect(acknowledge).toHaveBeenCalledWith('room-1', 'socket-1', 'user-1');
-    expect(trigger).toHaveBeenCalledWith('room-1', expect.anything());
+    expect(trigger).not.toHaveBeenCalled();
   });
 
   it.each([
