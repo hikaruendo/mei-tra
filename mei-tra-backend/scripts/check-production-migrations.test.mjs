@@ -12,6 +12,16 @@ test('accepts migration histories that match exactly', () => {
   assert.deepEqual(findMigrationHistoryMismatches(output), []);
 });
 
+test('accepts the Unicode table separators emitted by Supabase CLI', () => {
+  const output = `
+        LOCAL          │ REMOTE         │ TIME (UTC)
+    ───────────────────┼────────────────┼──────────────────────
+    20260817010000     │ 20260817010000 │ 2026-08-17
+  `;
+
+  assert.deepEqual(findMigrationHistoryMismatches(output), []);
+});
+
 test('reports migrations missing on either side', () => {
   const output = `
     LOCAL          | REMOTE         | TIME (UTC)
