@@ -1,6 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
+import {
+  toJson,
+  toJsonObject,
+  type JsonObject,
+} from '../../database/json-value';
 import { IGameStateRepository } from '../interfaces/game-state.repository.interface';
 import {
   BlowState,
@@ -15,7 +19,7 @@ import {
   toPersistedPlayerStates,
   toRuntimePlayer,
 } from '../../adapters/player-adapters';
-import { Database } from '../../types/database.types';
+import type { Database } from '../../types/database.generated.types';
 import { RoomPlayer } from '../../types/room.types';
 import { asSeatId } from '../../types/identity.types';
 import type { SeatId } from '../../types/identity.types';
@@ -28,18 +32,46 @@ import {
   toPersistedPlayState,
 } from '../../adapters/game-state-persistence';
 
-type GameStateRow = Database['public']['Tables']['game_states']['Row'];
-type GameStateUpdate = Database['public']['Tables']['game_states']['Update'];
-type RoomPlayerRow = Database['public']['Tables']['room_players']['Row'];
+type GeneratedGameStateRow = Database['public']['Tables']['game_states']['Row'];
+type PersistedGameStateRow = Omit<
+  GeneratedGameStateRow,
+  | 'room_id'
+  | 'state_data'
+  | 'team_scores'
+  | 'team_score_records'
+  | 'round_number'
+  | 'points_to_win'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  room_id: string;
+  state_data: Record<string, unknown>;
+  team_scores: Record<0 | 1, { play: number; total: number }>;
+  team_score_records: Record<
+    string,
+    Array<{ points: number; timestamp: string; reason: string }>
+  >;
+  round_number: number;
+  points_to_win: number;
+  created_at: string;
+  updated_at: string;
+};
+type GeneratedRoomPlayerRow =
+  Database['public']['Tables']['room_players']['Row'];
+type RoomPlayerRow = Omit<
+  GeneratedRoomPlayerRow,
+  'room_id' | 'is_ready' | 'joined_at'
+> & {
+  room_id: string;
+  is_ready: boolean;
+  joined_at: string;
+};
+type GeneratedFunctions = Database['public']['Functions'];
 
 interface LoadedRoomGameState {
-  gameState: GameStateRow;
+  gameState: PersistedGameStateRow;
   roomPlayers: RoomPlayerRow[];
 }
-
-type PersistedRosterResult = GameStateRow & {
-  roomPlayers?: RoomPlayerRow[];
-};
 
 interface RosterPlayerSnapshot {
   seatId: string;
@@ -55,8 +87,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   private get supabase() {
-    // Return typed client, but cast for database operations due to strict typing issues
-    return this.supabaseService.client as any;
+    return this.supabaseService.client;
   }
 
   async create(roomId: string, gameState: GameState): Promise<GameState> {
@@ -66,7 +97,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         .from('game_states')
         .insert({
           room_id: roomId,
-          state_data: {
+          state_data: toJsonObject({
             identitySchemaVersion: 2,
             playerStates: toPersistedPlayerStates(canonicalGameState.players),
             deck: canonicalGameState.deck,
@@ -76,13 +107,17 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
             pendingBrokenHandReveal: toPersistedPendingBrokenHandReveal(
               canonicalGameState.pendingBrokenHandReveal,
             ),
-          },
+          }),
           current_seat_id: canonicalGameState.currentSeatId,
           game_phase: canonicalGameState.gamePhase,
           round_number: canonicalGameState.roundNumber,
           points_to_win: canonicalGameState.pointsToWin,
-          team_scores: canonicalGameState.teamScores,
-          team_score_records: canonicalGameState.teamScoreRecords,
+          team_scores: toJson(canonicalGameState.teamScores),
+          team_score_records: toJson(
+            this.convertScoreRecordsForPersistence(
+              canonicalGameState.teamScoreRecords,
+            ),
+          ),
         })
         .select()
         .single();
@@ -103,7 +138,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     try {
       const { data: loadedState, error: loadError } = await this.supabase.rpc(
         'load_room_game_state',
-        { p_room_id: roomId },
+        {
+          p_room_id: roomId,
+        },
       );
 
       if (!loadError) {
@@ -111,7 +148,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           return null;
         }
 
-        const payload = loadedState as LoadedRoomGameState;
+        const payload = this.parseLoadedRoomGameState(loadedState);
         return this.mapDatabaseToGameState(
           payload.gameState,
           payload.roomPlayers,
@@ -131,14 +168,17 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     expectedVersion?: number,
   ): Promise<GameState | null> {
     try {
+      const args: GeneratedFunctions['atomic_update_game_state']['Args'] = {
+        p_room_id: roomId,
+        p_state_patch: this.buildStatePatch(gameState),
+        p_scalar_patch: this.buildScalarPatch(gameState),
+        ...(expectedVersion === undefined
+          ? {}
+          : { p_expected_version: expectedVersion }),
+      };
       const { data, error } = await this.supabase.rpc(
         'atomic_update_game_state',
-        {
-          p_room_id: roomId,
-          p_state_patch: this.buildStatePatch(gameState),
-          p_scalar_patch: this.buildScalarPatch(gameState),
-          p_expected_version: expectedVersion ?? null,
-        },
+        args,
       );
 
       if (error) {
@@ -150,7 +190,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       }
 
       const roomPlayers = await this.fetchRoomPlayers(roomId);
-      return this.mapDatabaseToGameState(data as GameStateRow, roomPlayers);
+      return this.mapDatabaseToGameState(
+        this.parseGameStateRow(data),
+        roomPlayers,
+      );
     } catch (error) {
       this.logger.error('Error updating game state:', error);
       throw error;
@@ -178,18 +221,23 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }));
 
     try {
+      const args: GeneratedFunctions['persist_room_roster_atomic']['Args'] = {
+        p_room_id: roomId,
+        p_room_players: toJson(persistedRoomPlayers),
+        p_player_states: toJson(playerStates),
+        p_state_patch: this.buildStatePatch(canonicalGameState),
+        p_scalar_patch: this.buildScalarPatch(canonicalGameState),
+        ...(hostSeatId ? { p_host_id: hostSeatId } : {}),
+        ...(canonicalGameState.version === undefined
+          ? {}
+          : { p_expected_version: canonicalGameState.version }),
+        ...(membershipMutation
+          ? { p_membership_mutation: toJson(membershipMutation) }
+          : {}),
+      };
       const { data, error } = await this.supabase.rpc(
         'persist_room_roster_atomic',
-        {
-          p_room_id: roomId,
-          p_room_players: persistedRoomPlayers,
-          p_player_states: playerStates,
-          p_state_patch: this.buildStatePatch(canonicalGameState),
-          p_scalar_patch: this.buildScalarPatch(canonicalGameState),
-          p_host_id: hostSeatId ?? null,
-          p_expected_version: canonicalGameState.version ?? null,
-          p_membership_mutation: membershipMutation ?? null,
-        },
+        args,
       );
 
       if (error) {
@@ -200,18 +248,18 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         return null;
       }
 
-      const persisted = data as PersistedRosterResult;
-      const persistedRoomRoster = persisted.roomPlayers ?? [];
-      return this.mapDatabaseToGameState(persisted, persistedRoomRoster);
+      const persisted = this.parsePersistedRosterResult(data);
+      return this.mapDatabaseToGameState(
+        persisted.gameState,
+        persisted.roomPlayers,
+      );
     } catch (error) {
       this.logger.error('Error persisting room roster:', error);
       throw error;
     }
   }
 
-  private buildStatePatch(
-    gameState: Partial<GameState>,
-  ): Record<string, unknown> {
+  private buildStatePatch(gameState: Partial<GameState>): JsonObject {
     const patch: Record<string, unknown> = {};
 
     patch.identitySchemaVersion = 2;
@@ -233,12 +281,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       );
     }
 
-    return patch;
+    return toJsonObject(patch);
   }
 
-  private buildScalarPatch(
-    gameState: Partial<GameState>,
-  ): Record<string, unknown> {
+  private buildScalarPatch(gameState: Partial<GameState>): JsonObject {
     const patch: Record<string, unknown> = {};
 
     if (gameState.currentSeatId !== undefined) {
@@ -259,7 +305,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         gameState.teamScoreRecords,
       );
     }
-    return patch;
+    return toJsonObject(patch);
   }
 
   private convertScoreRecordsForPersistence(
@@ -322,14 +368,12 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
-  async updateGamePhase(roomId: string, phase: string): Promise<boolean> {
+  async updateGamePhase(
+    roomId: string,
+    phase: GameState['gamePhase'],
+  ): Promise<boolean> {
     try {
-      return Boolean(
-        await this.update(roomId, {
-          gamePhase:
-            phase as Database['public']['Tables']['game_states']['Row']['game_phase'],
-        }),
-      );
+      return Boolean(await this.update(roomId, { gamePhase: phase }));
     } catch (error) {
       this.logger.error('Error updating game phase:', error);
       return false;
@@ -338,26 +382,15 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
   async bulkUpdate(
     roomId: string,
-    updates: Partial<GameStateUpdate>,
+    updates: Partial<
+      Pick<
+        GameState,
+        'roundNumber' | 'currentSeatId' | 'gamePhase' | 'pointsToWin'
+      >
+    >,
   ): Promise<boolean> {
     try {
-      const gameStateUpdates: Partial<GameState> = {};
-      if (updates.round_number !== undefined) {
-        gameStateUpdates.roundNumber = updates.round_number;
-      }
-      if (updates.current_seat_id !== undefined) {
-        gameStateUpdates.currentSeatId = updates.current_seat_id
-          ? asSeatId(updates.current_seat_id)
-          : null;
-      }
-      if (updates.game_phase !== undefined) {
-        gameStateUpdates.gamePhase = updates.game_phase;
-      }
-      if (updates.points_to_win !== undefined) {
-        gameStateUpdates.pointsToWin = updates.points_to_win;
-      }
-
-      return Boolean(await this.update(roomId, gameStateUpdates));
+      return Boolean(await this.update(roomId, updates));
     } catch (error) {
       this.logger.error('Error bulk updating game state:', error);
       return false;
@@ -387,8 +420,123 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
   }
 
+  private parseLoadedRoomGameState(data: unknown): LoadedRoomGameState {
+    if (
+      !this.isRecord(data) ||
+      !this.isGameStateRow(data.gameState) ||
+      !Array.isArray(data.roomPlayers) ||
+      !data.roomPlayers.every((player) => this.isRoomPlayerRow(player))
+    ) {
+      throw new Error('load_room_game_state returned an invalid payload');
+    }
+
+    return {
+      gameState: data.gameState,
+      roomPlayers: data.roomPlayers,
+    };
+  }
+
+  private parsePersistedRosterResult(data: unknown): LoadedRoomGameState {
+    if (!this.isRecord(data)) {
+      throw new Error('persist_room_roster_atomic returned an invalid payload');
+    }
+
+    const roomPlayers = data.roomPlayers ?? [];
+    if (
+      !this.isGameStateRow(data) ||
+      !Array.isArray(roomPlayers) ||
+      !roomPlayers.every((player) => this.isRoomPlayerRow(player))
+    ) {
+      throw new Error('persist_room_roster_atomic returned an invalid roster');
+    }
+
+    return { gameState: data, roomPlayers };
+  }
+
+  private parseGameStateRow(data: unknown): PersistedGameStateRow {
+    if (!this.isGameStateRow(data)) {
+      throw new Error('Game state RPC returned an invalid row');
+    }
+    return data;
+  }
+
+  private isGameStateRow(value: unknown): value is PersistedGameStateRow {
+    return (
+      this.isRecord(value) &&
+      typeof value.id === 'string' &&
+      typeof value.room_id === 'string' &&
+      this.isRecord(value.state_data) &&
+      (typeof value.current_seat_id === 'string' ||
+        value.current_seat_id === null) &&
+      (value.game_phase === 'deal' ||
+        value.game_phase === 'blow' ||
+        value.game_phase === 'play' ||
+        value.game_phase === 'waiting' ||
+        value.game_phase === null) &&
+      typeof value.round_number === 'number' &&
+      typeof value.points_to_win === 'number' &&
+      this.isTeamScores(value.team_scores) &&
+      this.isTeamScoreRecords(value.team_score_records) &&
+      typeof value.version === 'number' &&
+      typeof value.created_at === 'string' &&
+      typeof value.updated_at === 'string'
+    );
+  }
+
+  private isRoomPlayerRow(value: unknown): value is RoomPlayerRow {
+    return (
+      this.isRecord(value) &&
+      typeof value.id === 'string' &&
+      typeof value.room_id === 'string' &&
+      typeof value.name === 'string' &&
+      typeof value.team === 'number' &&
+      typeof value.is_ready === 'boolean' &&
+      typeof value.is_com === 'boolean' &&
+      typeof value.joined_at === 'string' &&
+      typeof value.seat_index === 'number' &&
+      (typeof value.user_id === 'string' || value.user_id === null)
+    );
+  }
+
+  private isTeamScores(
+    value: unknown,
+  ): value is PersistedGameStateRow['team_scores'] {
+    return (
+      this.isRecord(value) &&
+      Object.values(value).every(
+        (score) =>
+          this.isRecord(score) &&
+          typeof score.play === 'number' &&
+          typeof score.total === 'number',
+      )
+    );
+  }
+
+  private isTeamScoreRecords(
+    value: unknown,
+  ): value is PersistedGameStateRow['team_score_records'] {
+    return (
+      this.isRecord(value) &&
+      Object.values(value).every(
+        (records) =>
+          Array.isArray(records) &&
+          records.every(
+            (record) =>
+              this.isRecord(record) &&
+              typeof record.points === 'number' &&
+              typeof record.timestamp === 'string' &&
+              typeof record.reason === 'string',
+          ),
+      )
+    );
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
   private mapDatabaseToGameState(
-    dbGameState: GameStateRow,
+    dbGameState: PersistedGameStateRow,
     roomPlayers?: Array<RoomPlayerRow | RoomPlayer>,
   ): GameState {
     const stateData = dbGameState.state_data || {};
@@ -463,7 +611,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         ? asSeatId(canonicalCurrentSeatId)
         : null,
       gamePhase: dbGameState.game_phase,
-      deck: stateData.deck || [],
+      deck: this.readDeck(stateData.deck),
       teamScores: dbGameState.team_scores as Record<
         0 | 1,
         { play: number; total: number }
@@ -473,11 +621,22 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       ),
       blowState,
       playState: stateData.playState as PlayState | undefined,
-      pendingBrokenHandReveal: stateData.pendingBrokenHandReveal ?? null,
-      agari: stateData.agari ?? undefined,
+      pendingBrokenHandReveal: (stateData.pendingBrokenHandReveal ??
+        null) as GameState['pendingBrokenHandReveal'],
+      agari: (stateData.agari ?? undefined) as GameState['agari'],
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
     });
+  }
+
+  private readDeck(value: unknown): GameState['deck'] {
+    if (
+      !Array.isArray(value) ||
+      !value.every((card) => typeof card === 'string')
+    ) {
+      return [];
+    }
+    return value;
   }
 
   private toRosterPlayerSnapshot(

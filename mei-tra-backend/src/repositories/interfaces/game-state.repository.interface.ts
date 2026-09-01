@@ -25,10 +25,21 @@ export interface IGameStateRepository {
   updatePlayers(roomId: string, players: DomainPlayer[]): Promise<boolean>;
 
   // Game phase management
-  updateGamePhase(roomId: string, phase: string): Promise<boolean>;
+  updateGamePhase(
+    roomId: string,
+    phase: GameState['gamePhase'],
+  ): Promise<boolean>;
 
   // Bulk operations for performance
-  bulkUpdate(roomId: string, updates: Record<string, any>): Promise<boolean>;
+  bulkUpdate(
+    roomId: string,
+    updates: Partial<
+      Pick<
+        GameState,
+        'roundNumber' | 'currentSeatId' | 'gamePhase' | 'pointsToWin'
+      >
+    >,
+  ): Promise<boolean>;
 
   // Cleanup operations
   deleteExpiredGameStates(expiryTime: number): Promise<number>;
