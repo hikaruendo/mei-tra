@@ -7,16 +7,12 @@ import type {
 import {
   createProfileApiClient,
   fetchProfileWithRetry,
-  isRetryableProfileError,
-  ProfileApiError,
   type ProfileRetryOptions as SharedProfileRetryOptions,
 } from '@meitra/api-client/profile';
 
 import { config } from '@/lib/config';
 
 const BASE = `${config.backendUrl}/api/user-profile`;
-
-export { isRetryableProfileError, ProfileApiError };
 
 const createClient = (fetchImpl?: typeof fetch) =>
   createProfileApiClient({ baseUrl: BASE, fetchImpl });

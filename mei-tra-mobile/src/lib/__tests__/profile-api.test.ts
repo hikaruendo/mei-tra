@@ -2,9 +2,9 @@ import {
   fetchPlayerProfile,
   fetchPlayerProfileWithRetry,
   fetchProfileGameHistory,
-  ProfileApiError,
   updateProfile,
 } from '@/lib/profile-api';
+import { ProfileApiError } from '@meitra/api-client/profile';
 
 jest.mock('@/lib/config', () => ({
   config: {
@@ -42,6 +42,7 @@ describe('fetchProfileGameHistory', () => {
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://backend.example.com/api/user-profile/user%2F1/game-history',
       {
+        cache: 'no-store',
         headers: { Authorization: 'Bearer access-token' },
         signal: undefined,
       },
