@@ -13,7 +13,7 @@
 - app version: `0.1.0`
 - orientation: `portrait`
 
-このリリース設定では `development` / `preview` / `production` のEAS環境と同名channelを定義している。EAS projectは `expo.extra.eas.projectId` でリンク済みだが、`expo.runtimeVersion` と `expo.updates.url` は未設定のため、EAS Updateは意図的に実行しない。channel設定だけでOTAが有効になるわけではない。
+このリリース設定では `development` / `preview` / `production` のEAS環境と同名channelを定義している。EAS projectは `expo.extra.eas.projectId` でリンク済みで、`expo.runtimeVersion` は `appVersion` policy、`expo.updates.url` は同じEAS projectを参照する。production buildはproduction channelから互換性のあるOTA updateを取得する。
 
 development buildには、SDK 55対応の公式パッケージ `expo-dev-client` を利用する。`mei-tra-mobile/package.json` とrootの `package-lock.json` に依存関係を反映した状態で、development profileを実行できる。
 
@@ -52,7 +52,9 @@ productionはEASのremote app version sourceとbuild number自動増分を使う
 
 ### CIの起動
 
-品質CIはモバイルコード、共有 `contracts/`、共有 `shared/game-client/`、npm workspace metadata、またはworkflow変更時に自動実行する。
+品質CIはモバイルコード、共有 `contracts/`、共有 `shared/game-client/`、npm workspace metadata、またはworkflow変更時に自動実行する。`main`へのpushでは、lint・typecheck・unit test・iOS/Android exportがすべて成功した後、実行時コードやassetの変更をproduction channelへEAS Updateとして自動公開する。docs・test・workflowだけの変更では公開しない。
+
+`app.json`、`eas.json`、依存package、lockfile、native directory、config pluginに変更がある場合は、既存binaryとの互換性を保証できないため自動OTAを失敗させる。アプリversionを上げ、`Mobile EAS Release` workflowで新しいproduction buildを作成する。
 
 ```bash
 gh workflow run mobile-release.yml \
@@ -83,7 +85,7 @@ npx eas-cli@21.1.0 build:version:set --platform android --profile production
 
 既存ストアアプリがある場合は、現在ストアにあるbuild number / version codeを入力する。新規アプリなら初回値を1から始める。
 
-5. OTAを有効化する場合は、実装側で `expo.runtimeVersion` を設計どおり `appVersion` policyにし、`expo.updates.url` をEAS projectへ紐付ける。現行の変更範囲ではここを自動変更しない。
+5. `expo.runtimeVersion` が `appVersion` policy、`expo.updates.url` がEAS project URL、production build profileのchannelが `production` であることを確認する。
 
 ## 4. EAS環境変数
 
@@ -169,7 +171,7 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 
 ## 8. OTAとnative変更のルール
 
-現在は `runtimeVersion` / `updates.url` 未設定のため、`eas update` を実行しない。将来OTAを有効化した後も、次を守る。
+`main`へ入った互換性のあるJavaScript・文言・レイアウト・asset変更は、Mobile CI成功後にproduction channelへ自動公開する。次を守る。
 
 - JavaScript、文言、純粋なレイアウト修正だけを、同じruntime versionのchannelへ公開する。
 - Expo SDK、React Native、Expo module、native config、permissions、bundle identifier、`app.json` のnative関連変更はOTAで配信しない。runtime versionを上げ、iOS/Androidのproduction buildを作成する。
@@ -193,7 +195,7 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 1. EAS login、`EXPO_TOKEN`、iOS / Android署名・提出資格情報が未設定または未確認。
 2. `eas build:inspect`、署名済みpreview build、TestFlight / Play内部テストを未実施。
 3. 実端末のpush token取得・通知受信・通知tap、background / foreground、process kill、Wi-Fi / mobile回線切替を未実施。
-4. `app.json`の`runtimeVersion` / `updates.url`未設定。OTAを開始する場合にだけ設計・追加する。
+4. production OTAの実端末反映、rollback、更新失敗時の復旧手順を継続的に確認する。
 5. `npm audit --omit=dev`のmoderate 10件はExpoの`xcode`→`uuid`経路に残る。high / criticalは0件だが解消済みとはせず、Expoをdowngradeしないupstream dependency更新を確認する。
 
 これらが未完了の間は、ローカルtest・build・export・browser smokeの成功を「ストアリリース可能」と解釈しない。exportはJavaScript bundleの検証であり、署名、EAS project、store metadata、実機対局、審査要件の代替ではない。
