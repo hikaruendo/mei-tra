@@ -11,7 +11,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "vercel-build": "next build"
+    "vercel-build": "next build",
+    "assets:table:build": "node scripts/build-table-art.mjs",
+    "assets:table:build:check": "node scripts/build-table-art.mjs --check"
   },
   "dependencies": {
     "@meitra/api-client": "file:../shared/api-client",
@@ -34,12 +36,15 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.185.4",
     "eslint": "^9",
     "eslint-config-next": "15.2.6",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "sass": "^1.88.0",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4",
+    "three": "^0.185.1",
     "typescript": "^5"
   }
 }

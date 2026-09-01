@@ -27,6 +27,7 @@ import { CompletedTrickPiles } from '@/components/game/CompletedTrickPiles';
 import { FieldMat } from '@/components/game/FieldMat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { HandFan } from '@/components/game/HandFan';
+import { useFieldMatSize } from '@/hooks/useFieldMatSize';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
@@ -45,18 +46,6 @@ import { colors, teamColors } from '@/theme/colors';
 import type { MobileFirstTurnReveal } from '@/context/GameContext';
 import type { MobileGameSnapshot, MobilePlayer } from '@/types/game';
 import { t } from '@/i18n';
-
-/**
- * Side of the cushion under the trick.
- *
- * The four played cards make a cross about 116 wide and 114 tall — a
- * `size="field"` card is 44x66, offset 36 sideways and 24 up/down from the
- * centre. The artwork paints a cushion a little smaller than this box (it
- * reserves a margin for the tassels and the shadow), so 164 leaves the cards
- * resting on it with a margin of table showing all round, while still fitting
- * inside `field`'s 160 min-height plus its padding.
- */
-const FIELD_MAT_SIZE = 164;
 
 interface GameHistoryData {
   replay: GameHistoryReplayViewContract | null;
@@ -160,6 +149,7 @@ export function GameBoard({
     (player) => player.seatId === perspectiveSeatId,
   );
   const { width: windowWidth } = useWindowDimensions();
+  const fieldMatSize = useFieldMatSize();
   // Size the fan from the hand it actually renders. Spectators have no
   // `game.youSeatId`, so keying off that collapsed the count to 0 and the metrics
   // fell through to the single-card branch (max width, zero overlap).
@@ -437,8 +427,12 @@ export function GameBoard({
 
         {game.gamePhase === 'play' ? (
           <View style={styles.field}>
-            <View style={styles.fieldCenter}>
-              <FieldMat size={FIELD_MAT_SIZE} />
+            {/* One number sizes both, so the mat can never overhang it. */}
+            <View
+              style={[styles.fieldCenter, { width: fieldMatSize, height: fieldMatSize }]}
+              testID="field-center"
+            >
+              <FieldMat />
               {game.currentField?.cards.length ? (
                 game.currentField.cards.map((card, index) => {
                   const seatId = game.currentField!.playedBySeatIds[index];
@@ -938,10 +932,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   field: {
-    minHeight: 160,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    // No minHeight: fieldCenter is always at least 190 now, so it set nothing.
+    // Horizontal padding did nothing either — the mat is centred and far
+    // narrower than the screen — and the vertical is trimmed to buy back the
+    // room the larger cushion costs on a small phone.
+    paddingVertical: 10,
   },
   sectionLabel: {
     color: colors.text,
@@ -949,8 +946,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   fieldCenter: {
-    width: 180,
-    height: 150,
+    // Sized at the call site from useFieldMatSize. Square, because the card
+    // cross is 116x114 and the mat is square.
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -962,6 +959,9 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 15,
     textAlign: 'center',
+    // `field` has no gap, and the bigger cushion reaches close enough to this
+    // that the text would otherwise sit on the gold border.
+    marginTop: 6,
   },
   suitSelector: {
     gap: 8,

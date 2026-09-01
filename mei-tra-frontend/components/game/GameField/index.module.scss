@@ -21,7 +21,19 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: min(100%, clamp(12rem, 34vh, 20rem));
+  // Published so `.card` below can cap itself against it. No percentage in
+  // this value: a custom property substitutes as a token, so a `100%` here
+  // would resolve against the card's own box at the use site, not this one.
+  --mt-field-mat-size: clamp(14rem, 42vh, 23rem);
+  width: min(100%, var(--mt-field-mat-size));
+  // `inline-size`, never `size`: at <=768px this sits in a scrolling column
+  // where the height is indefinite, and `size` containment would collapse it.
+  // Width is always definite, and it is what `.card` needs — see there.
+  container: fieldMat / inline-size;
+  // The grid row is the hard ceiling. If it is shorter than the width the box
+  // goes oblong, and `background-size: contain` keeps the cushion square and
+  // centred inside it — smaller, never stretched.
+  max-height: 100%;
   aspect-ratio: 1 / 1;
   padding: 0.25rem;
 }
@@ -64,19 +76,26 @@
   top: 50%;
   left: 50%;
   z-index: 0;
-  // Fills the field cell. The artwork keeps a margin inside its own viewBox
-  // for the tassels and the drop shadow, so the painted cushion comes out
-  // about 87% of this box — which is what has to contain the card cross.
+  // Fills the field cell. The artwork is a render of a three.js scene (see
+  // mei-tra-frontend/scripts/build-table-art.mjs), so the cushion has real
+  // thickness: only the *top face* is somewhere a card can rest, and it spans
+  // 96% of this box across but 82% down — the rest is the thickness and the
+  // contact shadow. Those two numbers are measured at render time into
+  // scripts/table-art/manifest.json; the 0.23 cap on `.card` comes from the
+  // 82%, so they move together.
   width: 100%;
   aspect-ratio: 1 / 1;
   transform: translate(-50%, -50%);
-  background-image: url('/table/zabuton-nishijin.svg');
+  background-image: url('/table/zabuton-nishijin.webp');
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: none;
 }
 
+// Only a positioning origin. Every card is absolutely positioned from this
+// box's centre, and the outer's `justify-content: center` puts that centre on
+// the outer's centre — so changing this size stacks the cards no differently.
 .fieldContainerInner {
   position: relative;
   z-index: 1;
@@ -111,10 +130,18 @@
 
 .card {
   position: relative;
-  width: min(
-    calc(var(--card-width) * var(--mt-card-scale)),
-    calc(4.5rem * var(--mt-card-scale))
-  );
+  // Capped by the cushion, not just by the card scale. The cross the four
+  // cards make is 3.15x a card wide (1.05 offset either side, 3:2 aspect) and
+  // the top face is 82% of the mat, so 23% leaves 4.8% of the mat clear above
+  // and below at the tightest. Without this the cards overhang the cushion at
+  // --mt-card-scale: 1.2, and on desktop below about 676px of viewport.
+  //
+  // 23cqw rather than 23% of --mt-field-mat-size: that property is what the
+  // mat *asks* for, and `max-height` on the outer can hand it less, which
+  // would leave the cards sized for a cushion bigger than the one drawn.
+  // The container query unit is the width it actually got.
+  // (The old second term, 4.5rem, was dead: --card-width is 70px.)
+  width: min(calc(var(--card-width) * var(--mt-card-scale)), 23cqw);
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   display: flex;
@@ -264,7 +291,11 @@
   }
 
   .fieldContainerOuter {
-    width: min(100%, 208px);
+    // The tightest case in the app: the cross is 189px tall at scale 1 and the
+    // mat used to be 208, leaving 5px of cushion. 268 restores a real margin,
+    // and still fits a 320px-wide phone.
+    --mt-field-mat-size: 268px;
+    width: min(100%, 84vw, var(--mt-field-mat-size));
     aspect-ratio: 1 / 1;
     min-height: 0;
     justify-content: center;
@@ -290,7 +321,7 @@
   }
 
   .card {
-    width: calc(60px * var(--mt-card-scale));
+    width: min(calc(60px * var(--mt-card-scale)), 23cqw);
     aspect-ratio: 2 / 3;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
@@ -312,7 +343,24 @@
   }
 }
 
+// Companion to the row relaxation at the same breakpoint in
+// GameTable/index.module.scss: a short desktop has less row to spend.
+@media (min-width: 769px) and (max-height: 760px) {
+  .fieldContainerOuter {
+    --mt-field-mat-size: clamp(13rem, 38vh, 17rem);
+  }
+}
+
 :global(html[data-font-size='xlarge']) {
+  // The mat does not track --mt-font-scale: its job is to hold the card cross,
+  // and the only scale that changes is --mt-card-scale, which the cap above
+  // already answers by shrinking the card instead. This is the one concession,
+  // and there is room for it only because GameTable relaxes the field row to
+  // minmax(10rem, 1fr) in this mode.
+  .fieldContainerOuter {
+    --mt-field-mat-size: clamp(15rem, 44vh, 24rem);
+  }
+
   .baseSuitSelection {
     width: min(100%, 22rem);
     padding: 1rem;

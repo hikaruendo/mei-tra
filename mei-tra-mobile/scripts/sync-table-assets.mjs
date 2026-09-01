@@ -5,6 +5,10 @@
  * Same shape as sync-sound-assets.mjs: metro needs a literal path inside the
  * mobile package, so the file is copied rather than reached across, and
  * `--check` (run in CI) is what stops the copy drifting from the original.
+ *
+ * The artwork itself is rendered from a three.js scene by the web app's
+ * `scripts/build-table-art.mjs`; a byte comparison is right here because this
+ * is a plain copy, whereas that script has to hash its own sources instead.
  */
 import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -14,7 +18,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const MOBILE = join(HERE, '..');
 const SOURCE = join(MOBILE, '..', 'mei-tra-frontend', 'public', 'table');
 const DEST = join(MOBILE, 'assets', 'table');
-const FILES = ['zabuton-nishijin.svg'];
+const FILES = ['zabuton-nishijin.webp'];
 const checkOnly = process.argv.includes('--check');
 
 await mkdir(DEST, { recursive: true });

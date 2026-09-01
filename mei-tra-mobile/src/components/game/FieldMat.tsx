@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 // Metro resolves require at build time, so the specifier has to be a literal.
@@ -5,35 +6,36 @@ import { StyleSheet, View } from 'react-native';
 // `npm run assets:table` and checked in CI. Relative rather than `@/assets/*`
 // for the same reason as card-art-assets.ts: the tsconfig alias overlaps with
 // `@/*` -> `src/*`, and only the relative form satisfies metro, tsc and jest.
-import Zabuton from '../../../assets/table/zabuton-nishijin.svg';
+const ZABUTON = require('../../../assets/table/zabuton-nishijin.webp');
 
 /**
  * 西陣織の座布団, laid under the trick. The cushion is on the table for the
  * whole hand, so this renders whether or not a card has been played — the
  * field is emptied every time a trick completes.
  *
- * Sized off the played-card cross rather than the field box: the artwork keeps
- * a small margin inside its own viewBox for the tassels and drop shadow, so
- * the painted cushion comes out a little under this size, and that is what has
- * to contain the cards.
+ * It carries no size of its own: it fills its parent, and `GameBoard` sizes
+ * that parent square from `useFieldMatSize`. That is deliberate. The previous
+ * version took a `size` prop set from a constant larger than the box it sat
+ * in, so it overhung its parent and only drew because RN views do not clip.
+ * With one owner of the number, that cannot happen.
+ *
+ * The artwork is a render of a three.js scene, not a drawing — see
+ * `mei-tra-frontend/scripts/build-table-art.mjs`. The cushion has thickness,
+ * so only `FACE_HEIGHT` of this box is top face that a card can rest on.
  */
-export function FieldMat({ size }: { size: number }) {
+export function FieldMat() {
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
-      style={[styles.mat, { width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }]}
+      style={styles.mat}
     >
-      <Zabuton height="100%" width="100%" />
+      <Image contentFit="contain" source={ZABUTON} style={StyleSheet.absoluteFill} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mat: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-  },
+  mat: StyleSheet.absoluteFillObject,
 });

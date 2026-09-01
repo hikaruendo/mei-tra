@@ -3,6 +3,7 @@ import type { MobileGameSnapshot } from '@/types/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
 import { AccessibilityInfo, StyleSheet } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { GameBoard } from '../GameBoard';
@@ -455,5 +456,47 @@ describe('GameBoard interactions', () => {
 
     await act(async () => renderer.unmount());
     expect(removeListener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GameBoard field mat', () => {
+  it('sizes the cushion box square, from the one place that owns the number', () => {
+    // The invariant that replaced the old mismatch: fieldCenter and the mat
+    // are the same box, so the artwork can never hang past its parent.
+    const { Dimensions } = require('react-native') as typeof import('react-native');
+    const {
+      computeFieldMatSize,
+    } = require('@/hooks/useFieldMatSize') as typeof import('@/hooks/useFieldMatSize');
+    const { width, height } = Dimensions.get('window');
+
+    let renderer!: {
+      root: { findByProps: (props: Record<string, unknown>) => { props: { style?: unknown } } };
+      unmount: () => void;
+    };
+    act(() => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={game}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+    });
+
+    const style = StyleSheet.flatten(
+      renderer.root.findByProps({ testID: 'field-center' }).props.style as ViewStyle,
+    ) as ViewStyle;
+    const expected = computeFieldMatSize(width, height);
+    expect(style.width).toBe(expected);
+    expect(style.height).toBe(expected);
+    expect(expected).toBeGreaterThan(164);
+
+    act(() => renderer.unmount());
   });
 });
