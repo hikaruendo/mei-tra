@@ -477,7 +477,7 @@ text profile update と preference update も current frontend では `/api/user
   - `mei-tra-frontend/components/profile/ProfilePage.tsx`
   - `mei-tra-frontend/components/profile/ProfileRecentMatchesSection.tsx`
   - `mei-tra-frontend/hooks/useProfileGameHistory.ts`
-  - `mei-tra-frontend/lib/api/profile-game-history.ts`
+  - `mei-tra-frontend/lib/api/user-profile.ts`
 - Next.js proxy route:
   - `mei-tra-frontend/app/api/user-profile/[id]/game-history/route.ts`
 - backend endpoint / use-case:

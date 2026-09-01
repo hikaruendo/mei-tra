@@ -6,23 +6,20 @@ import type {
 } from '@contracts/profile';
 import {
   createProfileApiClient,
-  isRetryableProfileError,
-  ProfileApiError,
 } from '@meitra/api-client/profile';
+import {
+  fromRecentGameHistoryItemContract,
+  RecentGameHistoryItem,
+} from '@/types/game-history.types';
 import { UserPreferences, UserProfile } from '@/types/user.types';
 import { normalizeUserPreferences } from '@/lib/preferences';
 
-export interface UpdateUserProfilePayload {
+interface UpdateUserProfilePayload {
   username?: string;
   displayName?: string;
   avatarUrl?: string;
   preferences?: Partial<UserPreferences>;
 }
-
-export type UserProfileApiResponse = UserProfileDto;
-
-export { ProfileApiError as UserProfileApiError };
-export const isRetryableUserProfileError = isRetryableProfileError;
 
 const profileApi = createProfileApiClient({ baseUrl: '/api/user-profile' });
 
@@ -66,9 +63,7 @@ function mapPreferencesForTransport(
   return mapped;
 }
 
-export function mapUserProfileResponse(
-  profile: UserProfileApiResponse,
-): UserProfile {
+function mapUserProfileResponse(profile: UserProfileDto): UserProfile {
   return {
     id: profile.id,
     username: profile.username,
@@ -82,6 +77,14 @@ export function mapUserProfileResponse(
     totalScore: profile.totalScore,
     preferences: normalizeUserPreferences(profile.preferences),
   };
+}
+
+export async function fetchProfileGameHistory(
+  userId: string,
+  accessToken: string,
+): Promise<RecentGameHistoryItem[]> {
+  const items = await profileApi.fetchGameHistory(userId, accessToken);
+  return items.map(fromRecentGameHistoryItemContract);
 }
 
 export async function fetchUserProfileViaApi(
@@ -111,4 +114,17 @@ export async function updateUserProfileViaApi(
     transportPayload,
   );
   return mapUserProfileResponse(result);
+}
+
+export async function uploadUserAvatarViaApi(
+  userId: string,
+  accessToken: string,
+  formData: FormData,
+): Promise<string> {
+  const result = await profileApi.uploadAvatar(
+    userId,
+    accessToken,
+    formData,
+  );
+  return result.avatarUrl;
 }

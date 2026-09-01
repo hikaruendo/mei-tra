@@ -1,9 +1,13 @@
 import {
+  fetchProfileGameHistory,
   fetchUserProfileViaApi,
-  isRetryableUserProfileError,
   updateUserProfileViaApi,
-  UserProfileApiError,
+  uploadUserAvatarViaApi,
 } from '@/lib/api/user-profile';
+import {
+  isRetryableProfileError,
+  ProfileApiError,
+} from '@meitra/api-client/profile';
 
 describe('fetchUserProfileViaApi', () => {
   const originalFetch = global.fetch;
@@ -76,11 +80,11 @@ describe('fetchUserProfileViaApi', () => {
       (caught: unknown) => caught,
     );
 
-    expect(error).toBeInstanceOf(UserProfileApiError);
+    expect(error).toBeInstanceOf(ProfileApiError);
     expect(error).toMatchObject({ status: 503 });
-    expect(isRetryableUserProfileError(error)).toBe(true);
+    expect(isRetryableProfileError(error)).toBe(true);
     expect(
-      isRetryableUserProfileError(new UserProfileApiError('missing', 404)),
+      isRetryableProfileError(new ProfileApiError('missing', 404)),
     ).toBe(false);
   });
 
@@ -131,5 +135,64 @@ describe('fetchUserProfileViaApi', () => {
       }),
       signal: undefined,
     });
+  });
+
+  it('loads recent game history through the shared profile client', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue([
+        {
+          roomId: 'room-1',
+          roomName: 'Recent match',
+          completedAt: '2026-04-04T00:00:00.000Z',
+          roundCount: 2,
+          totalEntries: 30,
+          winningTeam: 0,
+          lastActionType: 'game_over',
+        },
+      ]),
+    } as unknown as Response);
+    global.fetch = fetchMock;
+
+    await expect(
+      fetchProfileGameHistory('user/1', 'access-token'),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        roomId: 'room-1',
+        completedAt: new Date('2026-04-04T00:00:00.000Z'),
+      }),
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/user-profile/user%2F1/game-history',
+      {
+        cache: 'no-store',
+        headers: { Authorization: 'Bearer access-token' },
+        signal: undefined,
+      },
+    );
+  });
+
+  it('uploads avatars through the shared profile client', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        avatarUrl: 'https://example.test/avatar.webp',
+      }),
+    } as unknown as Response);
+    global.fetch = fetchMock;
+    const formData = new FormData();
+
+    await expect(
+      uploadUserAvatarViaApi('user/1', 'access-token', formData),
+    ).resolves.toBe('https://example.test/avatar.webp');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/user-profile/user%2F1/avatar',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer access-token' },
+        body: formData,
+        signal: undefined,
+      },
+    );
   });
 });

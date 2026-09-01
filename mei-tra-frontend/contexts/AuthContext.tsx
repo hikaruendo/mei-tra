@@ -7,9 +7,9 @@ import { disconnectSocket } from '@/app/socket';
 import { AuthUser, FontSizePreset, SignUpData, SignInData, GuestSignInData, UpgradeAccountData, UserProfile, UserPreferences } from '@/types/user.types';
 import {
   fetchUserProfileViaApi,
-  isRetryableUserProfileError,
   updateUserProfileViaApi,
 } from '@/lib/api/user-profile';
+import { isRetryableProfileError } from '@meitra/api-client/profile';
 import {
   DEFAULT_FONT_SIZE_PRESET,
   DEFAULT_THEME_PREFERENCE,
@@ -221,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        if (isRetryableUserProfileError(error) && attempt < maxRetries) {
+        if (isRetryableProfileError(error) && attempt < maxRetries) {
           console.warn(`[AuthContext] Transient error loading profile (attempt ${attempt + 1}/${maxRetries + 1}). Retrying:`, error);
           return attemptLoad(attempt + 1);
         }

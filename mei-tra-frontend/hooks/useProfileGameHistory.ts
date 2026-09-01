@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { fetchProfileGameHistory } from '@/lib/api/profile-game-history';
+import { fetchProfileGameHistory } from '@/lib/api/user-profile';
 import { RecentGameHistoryItem } from '@/types/game-history.types';
 
 export function useProfileGameHistory(

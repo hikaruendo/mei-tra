@@ -5,7 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { UserProfile, UserPreferences } from '@/types/user.types';
 import { getExistingSocket } from '@/app/socket';
 import { useTranslations } from 'next-intl';
-import { updateUserProfileViaApi } from '@/lib/api/user-profile';
+import {
+  updateUserProfileViaApi,
+  uploadUserAvatarViaApi,
+} from '@/lib/api/user-profile';
 import {
   optimizeImage,
   validateImageFile,
@@ -139,21 +142,7 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
     const formData = new FormData();
     formData.append('avatar', avatarFile);
 
-    const response = await fetch(`/api/user-profile/${user.id}/avatar`, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || t('uploadFailed'));
-    }
-
-    const result = await response.json();
-    return result.avatarUrl;
+    return uploadUserAvatarViaApi(user.id, accessToken, formData);
   };
 
   const updateProfile = async (): Promise<UserProfile> => {
