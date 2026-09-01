@@ -107,9 +107,9 @@ jobs:
             );
           }
 
-          if (!app.runtimeVersion) {
-            console.warn(
-              'expo.runtimeVersion is not configured. EAS Update is intentionally unavailable until it is added to app.json.',
+          if (!app.runtimeVersion || !app.updates?.url) {
+            throw new Error(
+              'app.json must contain expo.runtimeVersion and expo.updates.url for EAS Update.',
             );
           }
           NODE

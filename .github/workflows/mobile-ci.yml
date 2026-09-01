@@ -36,16 +36,15 @@ defaults:
   run:
     working-directory: mei-tra-mobile
 
-env:
-  CI: '1'
-  EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
-  EXPO_PUBLIC_BACKEND_URL: https://ci-placeholder.invalid
-
 jobs:
   quality:
     name: Lint, typecheck, and unit tests
     runs-on: ubuntu-latest
+    env:
+      CI: '1'
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      EXPO_PUBLIC_BACKEND_URL: https://ci-placeholder.invalid
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -81,6 +80,11 @@ jobs:
   platform-exports:
     name: Expo ${{ matrix.platform }} export
     runs-on: ubuntu-latest
+    env:
+      CI: '1'
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      EXPO_PUBLIC_BACKEND_URL: https://ci-placeholder.invalid
     strategy:
       fail-fast: false
       matrix:
@@ -120,3 +124,109 @@ jobs:
 
       - name: Export JavaScript bundle
         run: npm run export:${{ matrix.platform }}
+
+  publish-production-update:
+    name: Publish production EAS Update
+    needs:
+      - quality
+      - platform-exports
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: mobile-production
+    concurrency:
+      group: mobile-eas-update-production
+      cancel-in-progress: true
+    env:
+      CI: '1'
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_CLI_VERSION: 21.1.0
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine whether an OTA update is required
+        id: update-scope
+        working-directory: .
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          base_sha="$BEFORE_SHA"
+          if [ -z "$base_sha" ] || [ "$base_sha" = 0000000000000000000000000000000000000000 ]; then
+            base_sha="$(git rev-parse "$GITHUB_SHA^")"
+          fi
+
+          changed_files="$(git diff --name-only "$base_sha" "$GITHUB_SHA")"
+          printf '%s\n' "$changed_files"
+
+          native_changes="$(printf '%s\n' "$changed_files" | grep -E '^(package\.json|package-lock\.json|mei-tra-mobile/(app\.json|eas\.json|package\.json|ios/.*|android/.*|plugins/.*))$' || true)"
+          if [ -n "$native_changes" ]; then
+            {
+              echo '### EAS Update was not published'
+              echo
+              echo 'This push changes native runtime inputs and requires a new EAS Build:'
+              echo '```text'
+              printf '%s\n' "$native_changes"
+              echo '```'
+              echo 'Run the Mobile EAS Release workflow after incrementing the app version.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo 'Native runtime changes cannot be delivered safely with EAS Update.' >&2
+            exit 1
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(contracts/|shared/game-client/|mei-tra-frontend/public/cards/|mei-tra-mobile/(src/|assets/|metro\.config\.js$))'; then
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+            echo 'No mobile runtime files changed, so no EAS Update is needed.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Node.js
+        if: steps.update-scope.outputs.publish == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: steps.update-scope.outputs.publish == 'true'
+        run: npm ci
+
+      - name: Validate EAS Update prerequisites
+        if: steps.update-scope.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo 'EXPO_TOKEN is required in the mobile-production GitHub environment.' >&2
+            exit 1
+          fi
+
+          npm run validate:eas-monorepo
+
+          node - <<'NODE'
+          const app = require('./app.json').expo;
+
+          if (!app.extra?.eas?.projectId || !app.runtimeVersion || !app.updates?.url) {
+            throw new Error(
+              'app.json must contain the EAS project ID, runtime version, and updates URL.',
+            );
+          }
+          NODE
+
+      - name: Publish update to production
+        if: steps.update-scope.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+          short_sha="${GITHUB_SHA:0:7}"
+          npx --yes eas-cli@${EAS_CLI_VERSION} update \
+            --channel production \
+            --platform all \
+            --environment production \
+            --message "main@${short_sha}" \
+            --non-interactive
