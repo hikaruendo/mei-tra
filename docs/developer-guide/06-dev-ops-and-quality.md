@@ -490,6 +490,12 @@ backend は `SENTRY_DSN` がある場合に初期化され、global filter も�
 - standby / production 切替が効かない: `.github/workflows/auto-scale.yml` と Fly machine 状態
 - 起動はするが安定しない: `/api/health` と platform logs
 
+### 15.5 bounded load test
+
+GitHub Actionsの`Backend Load Test`は手動実行専用です。対象HTTPS origin、VU数、時間を明示し、`LOAD`確認を入力した場合だけ`/api/health`とSocket.IO handshakeへ制限付き負荷を掛けます。上限は100 VUで、初期基準はerror rate 1%未満、check成功率99%超、HTTP p95 1秒未満です。
+
+これはゲーム1局の業務負荷を再現するものではなく、Fly cold start後のHTTP応答とSocket接続入口の基準測定です。実行時は同時にFly metrics、`/api/health`のmemory/connection数、Sentry、Fly logsを記録し、閾値を変更する場合は測定結果をPRへ残します。
+
 この project では observability が一枚岩ではないため、browser、health endpoint、workflow、Fly の複数観測点をまとめて見るのが実務上の基本になります。
 
 ## 16. 定期メンテナンス観点

@@ -1,0 +1,77 @@
+name: Backend Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: HTTPS backend origin without a trailing path
+        required: true
+        default: https://mei-tra-backend.fly.dev
+        type: string
+      virtual_users:
+        description: Concurrent health-read virtual users
+        required: true
+        default: '10'
+        type: string
+      duration:
+        description: Test duration such as 30s or 2m
+        required: true
+        default: 30s
+        type: string
+      confirmation:
+        description: Type LOAD to confirm traffic generation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Validate explicit target and load settings
+        env:
+          TARGET_URL: ${{ inputs.target_url }}
+          VIRTUAL_USERS: ${{ inputs.virtual_users }}
+          DURATION: ${{ inputs.duration }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRMATION" == 'LOAD' ]] || {
+            echo 'Confirmation must be LOAD.' >&2
+            exit 1
+          }
+          [[ "$TARGET_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?$ ]] || {
+            echo 'Target must be an HTTPS origin without a path.' >&2
+            exit 1
+          }
+          [[ "$VIRTUAL_USERS" =~ ^[1-9][0-9]*$ ]] || {
+            echo 'Virtual users must be a positive integer.' >&2
+            exit 1
+          }
+          (( VIRTUAL_USERS <= 100 )) || {
+            echo 'This workflow caps virtual users at 100.' >&2
+            exit 1
+          }
+          [[ "$DURATION" =~ ^[1-9][0-9]*(s|m)$ ]] || {
+            echo 'Duration must use seconds or minutes, for example 30s or 2m.' >&2
+            exit 1
+          }
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: '2.2.0'
+
+      - name: Run bounded backend load test
+        env:
+          BASE_URL: ${{ inputs.target_url }}
+          K6_VUS: ${{ inputs.virtual_users }}
+          K6_DURATION: ${{ inputs.duration }}
+        run: k6 run mei-tra-backend/load/k6-smoke.js
