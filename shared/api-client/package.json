@@ -1,0 +1,15 @@
+{
+  "name": "@meitra/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "@meitra/contracts": "file:../../contracts"
+  },
+  "exports": {
+    "./profile": {
+      "types": "./profile.ts",
+      "default": "./profile.ts"
+    }
+  }
+}
