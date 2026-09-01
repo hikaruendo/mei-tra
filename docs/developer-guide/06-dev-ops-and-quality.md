@@ -476,7 +476,7 @@ backend は `SENTRY_DSN` がある場合に初期化され、global filter も�
 
 ### 15.2 health endpoint
 
-`/api/health` は liveness だけでなく、接続数、last activity、idle、memory を返すため、運用上の第一観測点です。
+`/api/health` は軽量なlivenessとして、接続数、last activity、idle、memoryを返します。`/api/health/readiness`は同じ情報に加えてSupabaseへのquery成功を確認し、DBが利用できない場合は503を返します。
 
 ### 15.3 frontend 側の console
 
@@ -495,6 +495,8 @@ backend は `SENTRY_DSN` がある場合に初期化され、global filter も�
 GitHub Actionsの`Backend Load Test`は手動実行専用です。対象HTTPS origin、VU数、時間を明示し、`LOAD`確認を入力した場合だけ`/api/health`とSocket.IO handshakeへ制限付き負荷を掛けます。上限は100 VUで、初期基準はerror rate 1%未満、check成功率99%超、HTTP p95 1秒未満です。
 
 これはゲーム1局の業務負荷を再現するものではなく、Fly cold start後のHTTP応答とSocket接続入口の基準測定です。実行時は同時にFly metrics、`/api/health`のmemory/connection数、Sentry、Fly logsを記録し、閾値を変更する場合は測定結果をPRへ残します。
+
+`Backend Health Monitor`は6時間ごとと手動実行時にproduction `/api/health/readiness`を確認します。常時pingせずscale-to-zeroを維持しながら、cold start込み30秒、RSS 450MB未満、fresh timestamp、非負のconnection数、DB readinessを判定します。同じcheckはFly deploy直後にも走り、失敗時はworkflowを失敗させます。Fly自身のliveness checkは軽量な`/api/health`を使い続けます。
 
 この project では observability が一枚岩ではないため、browser、health endpoint、workflow、Fly の複数観測点をまとめて見るのが実務上の基本になります。
 
@@ -521,7 +523,7 @@ GitHub Actionsの`Backend Load Test`は手動実行専用です。対象HTTPS or
 - dependency update
 - docs と実装のズレ確認
 
-`npm run db:restore:check`は、隔離したSupabase DBへ全migrationを適用し、public schemaの検証データをdump、削除、restoreして復元件数を確認します。本番や通常のlocal DBには接続しません。GitHub Actionsでも毎月1日に同じ訓練を実行します。
+`npm run db:restore:check`は、隔離したSupabase DBへ全migrationを適用し、room・seat・game state・historyの関係グラフをdump、削除、restoreして件数と孤立参照を確認します。本番や通常のlocal DBには接続しません。GitHub Actionsでも毎月1日に同じ訓練を実行します。
 
 ここでいう定期メンテナンスは、単に package を更新することではありません。特に次のズレは放置すると新規参加者が最も困ります。
 

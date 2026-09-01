@@ -1,6 +1,15 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import {
+  DATABASE_HEALTH,
+  type IDatabaseHealth,
+} from '../database/interfaces/database-health.interface';
 import { IActivityTrackerService } from '../services/interfaces/activity-tracker-service.interface';
-import { HealthResponse } from '../types/activity.types';
+import { HealthResponse, ReadinessResponse } from '../types/activity.types';
 
 @Controller('health')
 export class HealthController {
@@ -9,10 +18,33 @@ export class HealthController {
   constructor(
     @Inject('IActivityTrackerService')
     private readonly activityTracker: IActivityTrackerService,
+    @Inject(DATABASE_HEALTH)
+    private readonly databaseHealth: IDatabaseHealth,
   ) {}
 
   @Get()
   getHealth(): HealthResponse {
+    return this.buildHealthResponse();
+  }
+
+  @Get('readiness')
+  async getReadiness(): Promise<ReadinessResponse> {
+    const response = this.buildHealthResponse();
+    if (!(await this.databaseHealth.healthCheck())) {
+      throw new ServiceUnavailableException({
+        ...response,
+        status: 'error',
+        dependencies: { database: 'error' },
+      });
+    }
+
+    return {
+      ...response,
+      dependencies: { database: 'ok' },
+    };
+  }
+
+  private buildHealthResponse(): HealthResponse {
     const activity = this.activityTracker.getStatus();
     const idle = this.activityTracker.isIdle(
       HealthController.IDLE_THRESHOLD_MS,

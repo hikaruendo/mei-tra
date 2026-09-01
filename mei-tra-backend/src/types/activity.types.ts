@@ -18,3 +18,9 @@ export interface HealthResponse {
   activity: ActivityStatus;
   memory: MemoryInfo;
 }
+
+export interface ReadinessResponse extends HealthResponse {
+  dependencies: {
+    database: 'ok';
+  };
+}

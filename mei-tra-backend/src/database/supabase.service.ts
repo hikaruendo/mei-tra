@@ -3,9 +3,10 @@ import { ConfigType } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import supabaseConfig from '../config/supabase.config';
 import type { Database } from '../types/database.generated.types';
+import type { IDatabaseHealth } from './interfaces/database-health.interface';
 
 @Injectable()
-export class SupabaseService {
+export class SupabaseService implements IDatabaseHealth {
   private supabase: SupabaseClient<Database>;
 
   constructor(

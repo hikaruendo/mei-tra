@@ -4,11 +4,16 @@ import { SupabaseService } from './supabase.service';
 import supabaseConfig from '../config/supabase.config';
 import { SupabaseAvatarStorage } from '../storage/supabase-avatar-storage';
 import { SupabaseIdentityProvider } from '../identity/supabase-identity-provider';
+import { DATABASE_HEALTH } from './interfaces/database-health.interface';
 
 @Module({
   imports: [ConfigModule.forFeature(supabaseConfig)],
   providers: [
     SupabaseService,
+    {
+      provide: DATABASE_HEALTH,
+      useExisting: SupabaseService,
+    },
     {
       provide: 'IAvatarStorage',
       useClass: SupabaseAvatarStorage,
@@ -18,6 +23,11 @@ import { SupabaseIdentityProvider } from '../identity/supabase-identity-provider
       useClass: SupabaseIdentityProvider,
     },
   ],
-  exports: [SupabaseService, 'IAvatarStorage', 'IIdentityProvider'],
+  exports: [
+    SupabaseService,
+    DATABASE_HEALTH,
+    'IAvatarStorage',
+    'IIdentityProvider',
+  ],
 })
 export class DatabaseModule {}
