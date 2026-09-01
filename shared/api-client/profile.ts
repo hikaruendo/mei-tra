@@ -100,7 +100,8 @@ export function createProfileApiClient({
   fetchImpl,
 }: CreateProfileApiClientOptions): ProfileApiClient {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
-  const request = fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
+  const request =
+    fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const userPath = (userId: string, suffix = '') =>
     `${normalizedBaseUrl}/${encodeURIComponent(userId)}${suffix}`;
 
@@ -130,6 +131,7 @@ export function createProfileApiClient({
       requestJson<RecentGameHistoryItemContract[]>(
         userPath(userId, '/game-history'),
         {
+          cache: 'no-store',
           headers: { Authorization: `Bearer ${token}` },
           signal: options.signal,
         },

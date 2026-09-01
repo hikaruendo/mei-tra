@@ -525,6 +525,9 @@ contracts/               ← Mobile / Web / Backend 共有
 
 shared/game-client/       ← Mobile / Web 共有
 └── src/card-validation.ts ← カードプレイ可否判定ロジック
+
+shared/api-client/        ← Mobile / Web 共有 REST client
+└── profile.ts            ← profile URL・認証header・HTTP error・retry
 ```
 
 ---
