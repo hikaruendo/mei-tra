@@ -1,6 +1,7 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../database/supabase.service';
+import { IAvatarStorage } from '../storage/interfaces/avatar-storage.interface';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,8 +10,6 @@ const LIST_PAGE_SIZE = 1000;
 const MAX_LIST_PAGES = 100;
 /** Keeps the `in` filter out of URL-length limits on large buckets. */
 const PROFILE_LOOKUP_CHUNK = 200;
-
-type AvatarBucket = ReturnType<SupabaseService['client']['storage']['from']>;
 
 /**
  * The avatars bucket has no FK to auth.users, so purged accounts (notably the
@@ -25,7 +24,11 @@ type AvatarBucket = ReturnType<SupabaseService['client']['storage']['from']>;
 export class AvatarOrphanCleanupService implements OnModuleInit {
   private readonly logger = new Logger(AvatarOrphanCleanupService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    @Inject('IAvatarStorage')
+    private readonly avatarStorage: IAvatarStorage,
+  ) {}
 
   /**
    * Fly stops the machine when idle, so a wall-clock cron alone can go days
@@ -49,11 +52,9 @@ export class AvatarOrphanCleanupService implements OnModuleInit {
   }
 
   async removeOrphanedAvatarObjects(): Promise<number> {
-    const bucket = this.supabaseService.client.storage.from('avatars');
-
     // Folder names are user ids by upload convention; ignore anything else.
-    const candidateIds = (await this.listEntryNames(bucket, '')).filter(
-      (name) => UUID_PATTERN.test(name),
+    const candidateIds = (await this.listEntryNames('')).filter((name) =>
+      UUID_PATTERN.test(name),
     );
     if (candidateIds.length === 0) {
       return 0;
@@ -66,7 +67,7 @@ export class AvatarOrphanCleanupService implements OnModuleInit {
     for (const userId of orphanIds) {
       let paths: string[];
       try {
-        paths = (await this.listEntryNames(bucket, userId)).map(
+        paths = (await this.listEntryNames(userId)).map(
           (name) => `${userId}/${name}`,
         );
       } catch (error) {
@@ -78,11 +79,12 @@ export class AvatarOrphanCleanupService implements OnModuleInit {
         continue;
       }
 
-      const { error: removeError } = await bucket.remove(paths);
-      if (removeError) {
+      try {
+        await this.avatarStorage.remove(paths);
+      } catch (error) {
         this.logger.warn(
           `Failed to remove avatar objects for ${userId}`,
-          removeError,
+          error,
         );
         continue;
       }
@@ -94,27 +96,15 @@ export class AvatarOrphanCleanupService implements OnModuleInit {
   }
 
   /** Walks every page so buckets larger than one page are not silently cut off. */
-  private async listEntryNames(
-    bucket: AvatarBucket,
-    prefix: string,
-  ): Promise<string[]> {
+  private async listEntryNames(prefix: string): Promise<string[]> {
     const names: string[] = [];
 
     for (let page = 0; page < MAX_LIST_PAGES; page += 1) {
-      const { data, error } = await bucket.list(prefix, {
+      const entries = await this.avatarStorage.list(prefix, {
         limit: LIST_PAGE_SIZE,
         offset: page * LIST_PAGE_SIZE,
       });
-      if (error) {
-        throw error;
-      }
-
-      const entries = data ?? [];
-      for (const entry of entries) {
-        if (entry.name) {
-          names.push(entry.name);
-        }
-      }
+      names.push(...entries);
 
       if (entries.length < LIST_PAGE_SIZE) {
         return names;

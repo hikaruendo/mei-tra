@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
 import { SupabaseService } from '../database/supabase.service';
+import { IAvatarStorage } from '../storage/interfaces/avatar-storage.interface';
 import {
   IAccountDeletionRepository,
   IUserProfileRepository,
@@ -22,6 +23,8 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
       IAccountDeletionRepository,
     private readonly supabaseService: SupabaseService,
     private readonly authService: AuthService,
+    @Inject('IAvatarStorage')
+    private readonly avatarStorage: IAvatarStorage,
   ) {}
 
   async execute(userId: string): Promise<DeleteAccountResult> {
@@ -109,7 +112,6 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
     userId: string,
     avatarUrl?: string,
   ): Promise<number> {
-    const avatarBucket = this.supabaseService.client.storage.from('avatars');
     const objectPaths = new Set<string>();
     const avatarObjectPath = avatarUrl
       ? this.extractOwnedAvatarObjectPath(userId, avatarUrl)
@@ -119,35 +121,35 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
       objectPaths.add(avatarObjectPath);
     }
 
-    const { data: listedObjects, error: listError } = await avatarBucket.list(
-      userId,
-      { limit: 1000 },
-    );
-    if (listError) {
+    let listedObjectNames: string[];
+    try {
+      listedObjectNames = await this.avatarStorage.list(userId, {
+        limit: 1000,
+      });
+    } catch (error) {
       this.logger.error('Failed to list avatar objects before account delete', {
         userId,
-        error: this.describeUnknownError(listError),
+        error: this.describeUnknownError(error),
       });
       throw new AccountDeletionFailedError('storage');
     }
 
-    for (const object of listedObjects ?? []) {
-      if (object.name) {
-        objectPaths.add(`${userId}/${object.name}`);
-      }
+    for (const objectName of listedObjectNames) {
+      objectPaths.add(`${userId}/${objectName}`);
     }
 
     if (objectPaths.size === 0) {
       return 0;
     }
 
-    const { error: removeError } = await avatarBucket.remove([...objectPaths]);
-    if (removeError) {
+    try {
+      await this.avatarStorage.remove([...objectPaths]);
+    } catch (error) {
       this.logger.error(
         'Failed to remove avatar objects before account delete',
         {
           userId,
-          error: this.describeUnknownError(removeError),
+          error: this.describeUnknownError(error),
         },
       );
       throw new AccountDeletionFailedError('storage');
@@ -160,7 +162,7 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
     userId: string,
     avatarUrl: string,
   ): string | null {
-    const objectPath = this.extractAvatarObjectPath(avatarUrl);
+    const objectPath = this.avatarStorage.extractObjectPath(avatarUrl);
     if (!objectPath) {
       return null;
     }
@@ -183,23 +185,6 @@ export class DeleteAccountUseCase implements IDeleteAccountUseCase {
     }
 
     return objectPath;
-  }
-
-  private extractAvatarObjectPath(avatarUrl: string): string | null {
-    try {
-      const parsed = new URL(avatarUrl);
-      const decodedPath = decodeURIComponent(parsed.pathname);
-      const marker = '/storage/v1/object/public/avatars/';
-      const markerIndex = decodedPath.indexOf(marker);
-
-      if (markerIndex === -1) {
-        return null;
-      }
-
-      return decodedPath.slice(markerIndex + marker.length);
-    } catch {
-      return null;
-    }
   }
 
   private isAuthUserAlreadyDeleted(error: {

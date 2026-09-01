@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { UserProfileController } from './user-profile.controller';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
-import { SupabaseService } from '../database/supabase.service';
+import { IAvatarStorage } from '../storage/interfaces/avatar-storage.interface';
 import { IGetUserRecentGameHistoryUseCase } from '../use-cases/interfaces/get-user-recent-game-history.use-case.interface';
 import {
   AccountDeletionBlockedError,
@@ -41,7 +41,7 @@ describe('UserProfileController', () => {
   ) =>
     new UserProfileController(
       {} as IUserProfileRepository,
-      {} as SupabaseService,
+      {} as IAvatarStorage,
       overrides.getUserRecentGameHistoryUseCase ?? { execute: jest.fn() },
       overrides.deleteAccountUseCase ?? { execute: jest.fn() },
     );
@@ -178,7 +178,7 @@ describe('UserProfileController', () => {
   describe('uploadAvatar', () => {
     const file = { buffer: Buffer.from('fake') } as Express.Multer.File;
 
-    // createController injects an empty SupabaseService, so anything that
+    // createController injects an empty avatar storage, so anything that
     // reached image processing or storage would throw TypeError instead —
     // getting ForbiddenException proves the guard short-circuits first.
     it('rejects guests before touching storage', async () => {
