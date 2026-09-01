@@ -1,0 +1,168 @@
+<!doctype html>
+<!--
+  Render host for the zabuton. Served over http by scripts/build-table-art.mjs
+  and screenshotted; opening it directly from disk will fail, because Chromium
+  refuses ES module imports across file:// origins.
+
+  Open it in a browser against that same server to iterate on the scene — the
+  page renders on load and prints the measured framing to the console.
+-->
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>zabuton render host</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        /* Transparent all the way down, so the screenshot's omitBackground
+           leaves the felt table showing through the cushion's contact shadow. */
+        background: transparent;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from '/node_modules/three/build/three.module.js';
+      import {
+        buildZabuton,
+        seamRing,
+        TARGET_FACE_HEIGHT,
+      } from './zabuton-scene.mjs';
+
+      const params = new URLSearchParams(location.search);
+      const size = Number(params.get('size') ?? 1280);
+      const elevation = THREE.MathUtils.degToRad(Number(params.get('elevation') ?? 67));
+
+      const renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: true,
+        preserveDrawingBuffer: true,
+      });
+      renderer.setPixelRatio(1);
+      renderer.setSize(size, size, false);
+      renderer.setClearColor(0x000000, 0);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      // No tone mapping: the cushion's red is a brand colour carried over from
+      // the SVG, and ACES would desaturate it into brick.
+      renderer.toneMapping = THREE.NoToneMapping;
+      document.body.appendChild(renderer.domElement);
+
+      const { scene, camera, cushion, content } = buildZabuton(THREE, { elevation });
+
+      /** Projected bounds, in fractions of the canvas, of a set of world points. */
+      function project(points) {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        const v = new THREE.Vector3();
+        for (const point of points) {
+          v.copy(point).project(camera);
+          minX = Math.min(minX, v.x);
+          maxX = Math.max(maxX, v.x);
+          minY = Math.min(minY, v.y);
+          maxY = Math.max(maxY, v.y);
+        }
+        // NDC spans -1..1 across the canvas, so a span of s covers s/2 of it:
+        // `width`/`height` are fractions of the canvas, `center` stays in NDC.
+        // Half the NDC span happens to equal the canvas fraction, so
+        // `centerY - height` is the NDC bottom edge.
+        return {
+          width: (maxX - minX) / 2,
+          height: (maxY - minY) / 2,
+          centerX: (minX + maxX) / 2,
+          centerY: (minY + maxY) / 2,
+        };
+      }
+
+      const seamLocal = seamRing(THREE);
+      const seamWorld = () => {
+        content.updateMatrixWorld(true);
+        return seamLocal.map((p) => p.clone().applyMatrix4(cushion.matrixWorld));
+      };
+
+      /**
+       * Solve for the two things the layout code depends on: the top face
+       * spans TARGET_FACE_HEIGHT of the canvas, and its centre is the canvas
+       * centre. Measuring beats trusting a hand-picked camera distance — the
+       * numbers this writes into the manifest are what the CSS and the mobile
+       * hook are derived from.
+       *
+       * Distance scales the projection roughly as 1/d, so the first correction
+       * lands close and the rest is refinement. Centring slides the subject
+       * along the camera's own up axis, which is the only direction that moves
+       * the image vertically without also moving it sideways.
+       */
+      const cameraUp = new THREE.Vector3(0, Math.sin(elevation), Math.cos(elevation));
+      let distance = camera.position.length();
+
+      const placeCamera = () => {
+        camera.position.set(
+          0,
+          -Math.cos(elevation) * distance,
+          Math.sin(elevation) * distance,
+        );
+        camera.lookAt(0, 0, 0);
+        camera.updateMatrixWorld(true);
+      };
+      const slide = (amount) => {
+        content.position.addScaledVector(cameraUp, amount);
+        content.updateMatrixWorld(true);
+      };
+
+      for (let i = 0; i < 16; i += 1) {
+        // Size: the projection scales as roughly 1/distance, so this lands
+        // close on the first pass and refines after.
+        distance *= project(seamWorld()).height / TARGET_FACE_HEIGHT;
+        placeCamera();
+
+        // Centre: one Newton step against a measured slope, rather than
+        // deriving the world-to-image factor by hand and getting the sign
+        // wrong. The probe is undone before the real move.
+        const before = project(seamWorld()).centerY;
+        const probe = 0.01;
+        slide(probe);
+        const slope = (project(seamWorld()).centerY - before) / probe;
+        slide(-probe);
+        if (Math.abs(slope) > 1e-9) slide(-before / slope);
+      }
+
+      const face = project(seamWorld());
+
+      // Silhouette of everything solid, to prove nothing is clipped. The
+      // contact shadow reaches past this, which is what the margin is for.
+      const solid = [];
+      cushion.updateMatrixWorld(true);
+      cushion.traverse((object) => {
+        if (!object.isMesh) return;
+        const position = object.geometry.getAttribute('position');
+        const v = new THREE.Vector3();
+        for (let i = 0; i < position.count; i += 1) {
+          solid.push(v.fromBufferAttribute(position, i).clone().applyMatrix4(object.matrixWorld));
+        }
+      });
+      const silhouette = project(solid);
+
+      renderer.render(scene, camera);
+
+      window.__zabuton = {
+        size,
+        elevationDeg: THREE.MathUtils.radToDeg(elevation),
+        faceWidth: Number(face.width.toFixed(4)),
+        faceHeight: Number(face.height.toFixed(4)),
+        faceCenterY: Number(face.centerY.toFixed(4)),
+        silhouetteWidth: Number(silhouette.width.toFixed(4)),
+        silhouetteHeight: Number(silhouette.height.toFixed(4)),
+        silhouetteBottom: Number(((silhouette.centerY - silhouette.height) / 1).toFixed(4)),
+      };
+      console.log('zabuton framing', window.__zabuton);
+      window.__zabutonReady = true;
+    </script>
+  </body>
+</html>

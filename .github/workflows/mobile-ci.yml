@@ -8,6 +8,8 @@ on:
       - 'shared/game-client/**'
       - 'mei-tra-frontend/public/cards/**'
       - 'mei-tra-frontend/public/table/**'
+      - 'mei-tra-frontend/scripts/table-art/**'
+      - 'mei-tra-frontend/scripts/build-table-art.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/mobile-ci.yml'
@@ -20,6 +22,8 @@ on:
       - 'shared/game-client/**'
       - 'mei-tra-frontend/public/cards/**'
       - 'mei-tra-frontend/public/table/**'
+      - 'mei-tra-frontend/scripts/table-art/**'
+      - 'mei-tra-frontend/scripts/build-table-art.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/mobile-ci.yml'
@@ -67,6 +71,12 @@ jobs:
 
       - name: Table assets are current
         run: npm run assets:table:check
+
+      # The web app owns the render, but there is no frontend workflow and this
+      # is the one that already guards the artwork. It only hashes files, so it
+      # needs neither the frontend's dependencies nor a GPU.
+      - name: Table art matches its three.js scene
+        run: node ../mei-tra-frontend/scripts/build-table-art.mjs --check
 
       - name: Lint
         run: npm run lint

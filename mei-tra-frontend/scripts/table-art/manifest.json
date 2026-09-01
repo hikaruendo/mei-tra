@@ -1,0 +1,18 @@
+{
+  "renderSize": 1280,
+  "framing": {
+    "size": 1280,
+    "elevationDeg": 67,
+    "faceWidth": 0.9083,
+    "faceHeight": 0.82,
+    "faceCenterY": 0,
+    "silhouetteWidth": 0.9513,
+    "silhouetteHeight": 0.8494,
+    "silhouetteBottom": -0.855
+  },
+  "sources": {
+    "scripts/table-art/zabuton-scene.mjs": "09a6ea765449960c07e4f7448a903e3d20fce71f17f2b0d85e2ca598777eec3b",
+    "scripts/table-art/render.html": "e840986aa124cb4087f145b9033b5481f7d868caf330aef79e88fbededa941bc",
+    "scripts/build-table-art.mjs": "e06ba4daf5e9ed6d709268c700fb06e797409097d3485a6b32f0ed7d47ce083f"
+  }
+}
