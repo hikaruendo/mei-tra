@@ -334,6 +334,8 @@
     "waiting": "Waiting...",
     "redealAllPass": "Redealt because everyone passed",
     "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
+    "fieldRecoveryRestored": "The table was restored. Please play your card again.",
+    "closeNotification": "Close notification",
     "orderButton": "Order",
     "teamRed": "Red",
     "teamBlack": "Black",

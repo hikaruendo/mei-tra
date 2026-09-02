@@ -357,6 +357,12 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       const restoredField = state.playState?.currentField;
       const currentSeatId = state.currentSeatId;
       const events: GatewayEvent[] = [
+        {
+          scope: 'room',
+          roomId,
+          event: 'field-recovered',
+          payload: undefined,
+        },
         ...(restoredField
           ? [
               {

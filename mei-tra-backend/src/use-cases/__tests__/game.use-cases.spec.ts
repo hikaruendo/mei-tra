@@ -3837,6 +3837,7 @@ describe('Game Use Cases', () => {
       ]);
       expect(state.playState.currentField.cards).toEqual([]);
       expect(result.events?.map((event) => event.event)).toEqual([
+        'field-recovered',
         'field-updated',
         'update-players',
         'update-turn',

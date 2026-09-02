@@ -334,6 +334,42 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('keeps every field recovery notice until it is dismissed', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('field-recovered', undefined);
+      await flushPromises();
+    });
+    expect(screen.latestGame.recoveryNotice).toEqual({
+      key: 'game.fieldRecoveryRestored',
+    });
+
+    act(() => {
+      screen.latestGame.clearFeedback();
+    });
+    expect(screen.latestGame.recoveryNotice).toBeNull();
+
+    await act(async () => {
+      mockSocket.trigger('round-cancelled', {
+        nextDealerSeatId: asSeatId('player-1'),
+        players: createGameState().players,
+        reason: 'field-recovery',
+      });
+      await flushPromises();
+    });
+    expect(screen.latestGame.recoveryNotice).toEqual({
+      key: 'game.fieldRecoveryRedeal',
+    });
+
+    act(() => {
+      screen.latestGame.clearFeedback();
+    });
+    expect(screen.latestGame.recoveryNotice).toBeNull();
+
+    await screen.unmount();
+  });
+
   it('captures a live result once and preserves it through room teardown', async () => {
     const screen = await renderProvider();
     const gameState = createGameState();
