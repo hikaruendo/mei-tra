@@ -119,6 +119,92 @@ describe('GameGateway COM recovery integration', () => {
     expect(trigger).not.toHaveBeenCalled();
   });
 
+  it('serializes an unresponsive-player conversion with room game actions', async () => {
+    const gateway = createGateway();
+    const testGateway = gateway as unknown as {
+      server: object;
+      startTurnAckMonitor: (roomId: string, seatId: string) => Promise<void>;
+      turnMonitorService: { startMonitor: jest.Mock };
+      forceReplacePlayerWithCOM: jest.Mock;
+      roomGameActionQueueService: RoomGameActionQueueService;
+    };
+    const forceReplacePlayerWithCOM = jest.fn().mockResolvedValue(true);
+    const queueRun = jest.spyOn(testGateway.roomGameActionQueueService, 'run');
+
+    testGateway.server = {};
+    testGateway.forceReplacePlayerWithCOM = forceReplacePlayerWithCOM;
+    testGateway.turnMonitorService = {
+      startMonitor: jest.fn(
+        async (
+          _roomId: string,
+          _seatId: string,
+          _server: object,
+          onTimeout: (roomId: string, seatId: string) => Promise<void>,
+        ) => onTimeout('room-1', 'player-1'),
+      ),
+    };
+
+    await testGateway.startTurnAckMonitor('room-1', 'player-1');
+
+    expect(queueRun).toHaveBeenCalledWith('room-1', expect.any(Function));
+    expect(forceReplacePlayerWithCOM).toHaveBeenCalledWith(
+      'room-1',
+      'player-1',
+      'Player became unresponsive during their turn - converted to COM',
+    );
+  });
+
+  it('serializes a room join that may reclaim a COM seat', async () => {
+    const gateway = createGateway();
+    const testGateway = gateway as unknown as {
+      activityTracker: { recordActivity: jest.Mock };
+      rejectInactiveMutatingAction: jest.Mock;
+      spectatorGatewayEffectsService: { leaveCurrentRoom: jest.Mock };
+      connectionGatewayEffectsService: {
+        findExistingControllerSocketId: jest.Mock;
+      };
+      joinRoomUseCase: { execute: jest.Mock };
+      roomGameActionQueueService: RoomGameActionQueueService;
+      playerRooms: Map<string, string>;
+      server: object;
+    };
+    const execute = jest.fn().mockResolvedValue({
+      success: false,
+      errorMessage: 'join stopped for test',
+    });
+    const queueRun = jest.spyOn(testGateway.roomGameActionQueueService, 'run');
+
+    testGateway.activityTracker = { recordActivity: jest.fn() };
+    testGateway.rejectInactiveMutatingAction = jest
+      .fn()
+      .mockResolvedValue(false);
+    testGateway.spectatorGatewayEffectsService = {
+      leaveCurrentRoom: jest.fn().mockResolvedValue(undefined),
+    };
+    testGateway.connectionGatewayEffectsService = {
+      findExistingControllerSocketId: jest.fn().mockResolvedValue(null),
+    };
+    testGateway.joinRoomUseCase = { execute };
+    testGateway.playerRooms = new Map();
+    testGateway.server = {};
+
+    const client = {
+      id: 'socket-1',
+      data: { user: { id: 'user-1' } },
+      emit: jest.fn(),
+    } as unknown as Socket;
+
+    await gateway.handleJoinRoom(client, { roomId: 'room-1' });
+
+    expect(queueRun).toHaveBeenCalledWith('room-1', expect.any(Function));
+    expect(execute).toHaveBeenCalledWith({
+      socketId: 'socket-1',
+      targetRoomId: 'room-1',
+      currentRoomId: undefined,
+      authenticatedUser: { id: 'user-1' },
+    });
+  });
+
   it.each([
     {
       action: 'declare blow',
@@ -208,6 +294,14 @@ describe('GameGateway COM recovery integration', () => {
     const testGateway = gateway as unknown as ActiveReconnectGatewayHarness;
     const startTurnAckMonitor = jest.fn().mockResolvedValue(undefined);
     const triggerRecovery = jest.fn();
+    const queueRun = jest.spyOn(
+      (
+        testGateway as unknown as {
+          roomGameActionQueueService: RoomGameActionQueueService;
+        }
+      ).roomGameActionQueueService,
+      'run',
+    );
     const previousSocket = {
       id: 'socket-old',
       data: {
@@ -293,6 +387,7 @@ describe('GameGateway COM recovery integration', () => {
 
     await gateway.handleConnection(client);
 
+    expect(queueRun).toHaveBeenCalledWith('room-1', expect.any(Function));
     expect(startTurnAckMonitor).toHaveBeenCalledWith('room-1', 'com-1');
     expect(triggerRecovery).toHaveBeenCalledWith('room-1', expect.anything());
     expect(previousSocket.leave).toHaveBeenCalledWith('room-1');

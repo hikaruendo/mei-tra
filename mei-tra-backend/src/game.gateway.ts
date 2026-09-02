@@ -429,10 +429,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       seatId,
       this.server,
       async (monitoredRoomId, monitoredSeatId) => {
-        await this.forceReplacePlayerWithCOM(
-          monitoredRoomId,
-          monitoredSeatId,
-          'Player became unresponsive during their turn - converted to COM',
+        await this.roomGameActionQueueService.run(monitoredRoomId, () =>
+          this.forceReplacePlayerWithCOM(
+            monitoredRoomId,
+            monitoredSeatId,
+            'Player became unresponsive during their turn - converted to COM',
+          ),
         );
       },
     );
@@ -583,11 +585,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           userId: authenticatedUser.id,
         },
       );
-    const result = await this.reconnectionUseCase.execute({
-      roomId,
-      socketId: client.id,
-      authenticatedUser,
-    });
+    const result = await this.roomGameActionQueueService.run(roomId, () =>
+      this.reconnectionUseCase.execute({
+        roomId,
+        socketId: client.id,
+        authenticatedUser,
+      }),
+    );
 
     if (!result.success) {
       await this.connectionGatewayEffectsService.sendBackToLobby({
@@ -907,12 +911,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         : null;
       await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
 
-      const result = await this.joinRoomUseCase.execute({
-        socketId: client.id,
-        targetRoomId: data.roomId,
-        currentRoomId,
-        authenticatedUser,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.joinRoomUseCase.execute({
+            socketId: client.id,
+            targetRoomId: data.roomId,
+            currentRoomId,
+            authenticatedUser,
+          }),
+      );
 
       if (!result.success || !result.data) {
         const errorMessage = result.errorMessage ?? 'Failed to join room';
@@ -1060,10 +1068,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.togglePlayerReadyUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.togglePlayerReadyUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+          }),
+      );
 
       if (!result.success || !result.updatedRoom) {
         const error = result.error || 'Failed to toggle ready state';
@@ -1410,11 +1422,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.changePlayerTeamUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-        teamChanges: data.teamChanges,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.changePlayerTeamUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+            teamChanges: data.teamChanges,
+          }),
+      );
 
       if (!result.success || !result.updatedRoom) {
         const error = result.error || 'Failed to change teams';
@@ -1457,10 +1473,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.shuffleTeamsUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.shuffleTeamsUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+          }),
+      );
       if (!result.success || !result.updatedRoom) {
         client.emit('error-message', result.error || 'Failed to change teams');
         return { success: false };
@@ -1503,10 +1523,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.updateTeamNamesUseCase.execute({
-        ...data,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.updateTeamNamesUseCase.execute({
+            ...data,
+            actorSeatId,
+          }),
+      );
       if (!result.success || !result.updatedRoom) {
         client.emit(
           'error-message',
@@ -1549,10 +1573,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.fillWithComUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.fillWithComUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+          }),
+      );
 
       if (!result.success || !result.updatedRoom) {
         const error = result.error || 'Failed to fill with COM players';
@@ -1964,15 +1992,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { token?: string },
   ): Promise<void> {
     try {
-      const result = await this.updateAuthUseCase.execute({
-        socketId: client.id,
-        token: data?.token,
-        currentRoomId: this.playerRooms.get(client.id),
-        handshakeName:
-          typeof client.handshake.auth?.name === 'string'
-            ? client.handshake.auth?.name
-            : undefined,
-      });
+      const currentRoomId = this.playerRooms.get(client.id);
+      const executeUpdate = () =>
+        this.updateAuthUseCase.execute({
+          socketId: client.id,
+          token: data?.token,
+          currentRoomId,
+          handshakeName:
+            typeof client.handshake.auth?.name === 'string'
+              ? client.handshake.auth?.name
+              : undefined,
+        });
+      const result = currentRoomId
+        ? await this.roomGameActionQueueService.run(
+            currentRoomId,
+            executeUpdate,
+          )
+        : await executeUpdate();
 
       if (!result.success || !result.authenticatedUser) {
         client.emit('error-message', result.error ?? 'Authentication failed');
