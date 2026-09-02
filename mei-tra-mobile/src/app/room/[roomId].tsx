@@ -55,7 +55,7 @@ export default function RoomScreen() {
     dealAnimationCue,
   } = useGame();
 
-  useKeepAwake();
+  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
 
   const gameStarted = Boolean(
     game && game.gamePhase && game.gamePhase !== "waiting",
