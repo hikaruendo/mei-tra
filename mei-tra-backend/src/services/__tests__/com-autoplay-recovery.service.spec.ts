@@ -8,6 +8,7 @@ import {
   ComAutoPlayRecoveryHandlers,
   ComAutoPlayRecoveryService,
 } from '../com-autoplay-recovery.service';
+import { RoomGameActionQueueService } from '../room-game-action-queue.service';
 
 const flushPromises = async (): Promise<void> => {
   for (let index = 0; index < 10; index += 1) {
@@ -34,6 +35,7 @@ const createService = () => {
     roomService as unknown as IRoomService,
     comAutoPlayUseCase as IComAutoPlayUseCase,
     completeFieldUseCase as ICompleteFieldUseCase,
+    new RoomGameActionQueueService(),
   );
 
   return {

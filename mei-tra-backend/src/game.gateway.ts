@@ -69,6 +69,7 @@ import {
 import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 import { GameplayNotificationService } from './services/gameplay-notification.service';
 import { AccountActionGateService } from './services/account-action-gate.service';
+import { RoomGameActionQueueService } from './services/room-game-action-queue.service';
 import { asSeatId } from './types/identity.types';
 import type { SeatId } from './types/identity.types';
 
@@ -148,6 +149,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly connectionGatewayEffectsService: ConnectionGatewayEffectsService,
     private readonly gameplayNotificationService: GameplayNotificationService,
     private readonly accountActionGateService: AccountActionGateService,
+    private readonly roomGameActionQueueService: RoomGameActionQueueService,
   ) {}
 
   /**
@@ -427,10 +429,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       seatId,
       this.server,
       async (monitoredRoomId, monitoredSeatId) => {
-        await this.forceReplacePlayerWithCOM(
-          monitoredRoomId,
-          monitoredSeatId,
-          'Player became unresponsive during their turn - converted to COM',
+        await this.roomGameActionQueueService.run(monitoredRoomId, () =>
+          this.forceReplacePlayerWithCOM(
+            monitoredRoomId,
+            monitoredSeatId,
+            'Player became unresponsive during their turn - converted to COM',
+          ),
         );
       },
     );
@@ -445,8 +449,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     delayMs: number,
   ): void {
     setTimeout(() => {
-      void this.revealBrokenHandUseCase
-        .finalize(followUp)
+      void this.roomGameActionQueueService
+        .run(followUp.roomId, () =>
+          this.revealBrokenHandUseCase.finalize(followUp),
+        )
         .then((completion) => {
           if (!completion.success) {
             console.error(
@@ -579,11 +585,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           userId: authenticatedUser.id,
         },
       );
-    const result = await this.reconnectionUseCase.execute({
-      roomId,
-      socketId: client.id,
-      authenticatedUser,
-    });
+    const result = await this.roomGameActionQueueService.run(roomId, () =>
+      this.reconnectionUseCase.execute({
+        roomId,
+        socketId: client.id,
+        authenticatedUser,
+      }),
+    );
 
     if (!result.success) {
       await this.connectionGatewayEffectsService.sendBackToLobby({
@@ -743,12 +751,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.playerRooms.delete(client.id);
       await client.leave(roomId);
       const authenticatedUser = this.getAuthenticatedUser(client);
-      const preparation =
-        await this.disconnectGatewayEffectsService.prepareDisconnect({
-          roomId,
-          socketId: client.id,
-          displayName: authenticatedUser?.profile?.displayName,
-        });
+      const preparation = await this.roomGameActionQueueService.run(
+        roomId,
+        () =>
+          this.disconnectGatewayEffectsService.prepareDisconnect({
+            roomId,
+            socketId: client.id,
+            displayName: authenticatedUser?.profile?.displayName,
+          }),
+      );
 
       if (!preparation) {
         return;
@@ -767,14 +778,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ? DISCONNECT_TO_COM_TIMEOUT_MS
           : 10000;
       const timeout: NodeJS.Timeout = setTimeout(() => {
-        void this.disconnectGatewayEffectsService
-          .buildTimeoutEvents({
-            roomId,
-            seatId: preparation.seatId,
-            playerName: preparation.playerName,
-            timeoutMode: preparation.timeoutMode,
-            membership: preparation.membership,
-          })
+        void this.roomGameActionQueueService
+          .run(roomId, () =>
+            this.disconnectGatewayEffectsService.buildTimeoutEvents({
+              roomId,
+              seatId: preparation.seatId,
+              playerName: preparation.playerName,
+              timeoutMode: preparation.timeoutMode,
+              membership: preparation.membership,
+            }),
+          )
           .then((events) => {
             this.dispatchEvents(events);
             if (
@@ -898,12 +911,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         : null;
       await this.spectatorGatewayEffectsService.leaveCurrentRoom(client);
 
-      const result = await this.joinRoomUseCase.execute({
-        socketId: client.id,
-        targetRoomId: data.roomId,
-        currentRoomId,
-        authenticatedUser,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.joinRoomUseCase.execute({
+            socketId: client.id,
+            targetRoomId: data.roomId,
+            currentRoomId,
+            authenticatedUser,
+          }),
+      );
 
       if (!result.success || !result.data) {
         const errorMessage = result.errorMessage ?? 'Failed to join room';
@@ -1051,10 +1068,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.togglePlayerReadyUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.togglePlayerReadyUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+          }),
+      );
 
       if (!result.success || !result.updatedRoom) {
         const error = result.error || 'Failed to toggle ready state';
@@ -1084,10 +1105,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const authenticatedUser = this.getAuthenticatedUser(client);
       const seatId = await this.resolveClientRoomSeatId(data.roomId, client);
-      const result = await this.leaveRoomUseCase.execute({
-        seatId,
-        roomId: data.roomId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.leaveRoomUseCase.execute({
+            seatId,
+            roomId: data.roomId,
+          }),
+      );
 
       if (!result.success || !result.data) {
         const errorMessage = result.errorMessage || 'Failed to leave room';
@@ -1192,13 +1217,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.moderatePlayerUseCase.execute({
-        roomId: data.roomId,
-        requesterSeatId,
-        targetSeatId: data.targetSeatId,
-        action: data.action,
-        isPlayerIdle: this.isPlayerIdle(data.roomId, data.targetSeatId),
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.moderatePlayerUseCase.execute({
+            roomId: data.roomId,
+            requesterSeatId,
+            targetSeatId: data.targetSeatId,
+            action: data.action,
+            isPlayerIdle: this.isPlayerIdle(data.roomId, data.targetSeatId),
+          }),
+      );
 
       if (!result.success) {
         client.emit('error-message', result.error);
@@ -1299,7 +1328,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.id,
       this.getAuthenticatedUser(client)?.id,
     );
-    this.triggerComAutoPlayIfNeeded(roomId);
   }
 
   @SubscribeMessage('sync-game-state')
@@ -1394,11 +1422,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.changePlayerTeamUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-        teamChanges: data.teamChanges,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.changePlayerTeamUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+            teamChanges: data.teamChanges,
+          }),
+      );
 
       if (!result.success || !result.updatedRoom) {
         const error = result.error || 'Failed to change teams';
@@ -1441,10 +1473,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.shuffleTeamsUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.shuffleTeamsUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+          }),
+      );
       if (!result.success || !result.updatedRoom) {
         client.emit('error-message', result.error || 'Failed to change teams');
         return { success: false };
@@ -1487,10 +1523,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.updateTeamNamesUseCase.execute({
-        ...data,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.updateTeamNamesUseCase.execute({
+            ...data,
+            actorSeatId,
+          }),
+      );
       if (!result.success || !result.updatedRoom) {
         client.emit(
           'error-message',
@@ -1533,10 +1573,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.fillWithComUseCase.execute({
-        roomId: data.roomId,
-        actorSeatId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.fillWithComUseCase.execute({
+            roomId: data.roomId,
+            actorSeatId,
+          }),
+      );
 
       if (!result.success || !result.updatedRoom) {
         const error = result.error || 'Failed to fill with COM players';
@@ -1579,10 +1623,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         client,
       );
-      const result = await this.startGameUseCase.execute({
-        actorSeatId,
-        roomId: data.roomId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.startGameUseCase.execute({
+            actorSeatId,
+            roomId: data.roomId,
+          }),
+      );
 
       if (!result.success || !result.data) {
         const errorMessage = result.errorMessage || 'Failed to start game';
@@ -1643,11 +1691,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
-      const result = await this.declareBlowUseCase.execute({
-        roomId: data.roomId,
-        actorId,
-        declaration: data.declaration,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.declareBlowUseCase.execute({
+            roomId: data.roomId,
+            actorId,
+            declaration: data.declaration,
+          }),
+      );
 
       if (!result.success) {
         this.logger.warn(
@@ -1685,10 +1737,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
-      const result = await this.passBlowUseCase.execute({
-        roomId: data.roomId,
-        actorId,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.passBlowUseCase.execute({
+            roomId: data.roomId,
+            actorId,
+          }),
+      );
 
       if (!result.success) {
         this.logger.warn(
@@ -1726,11 +1782,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
-      const result = await this.selectNegriUseCase.execute({
-        roomId: data.roomId,
-        actorId,
-        card: data.card,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.selectNegriUseCase.execute({
+            roomId: data.roomId,
+            actorId,
+            card: data.card,
+          }),
+      );
 
       if (!result.success) {
         client.emit('error-message', result.error ?? 'Failed to select Negri');
@@ -1808,11 +1868,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
-      const result = await this.playCardUseCase.execute({
-        roomId: data.roomId,
-        actorId,
-        card: data.card,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.playCardUseCase.execute({
+            roomId: data.roomId,
+            actorId,
+            card: data.card,
+          }),
+      );
 
       if (!result.success) {
         client.emit('error-message', result.error ?? 'Failed to play card');
@@ -1851,11 +1915,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const actorId = this.getActorId(client);
-      const result = await this.selectBaseSuitUseCase.execute({
-        roomId: data.roomId,
-        actorId,
-        suit: data.suit,
-      });
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.selectBaseSuitUseCase.execute({
+            roomId: data.roomId,
+            actorId,
+            suit: data.suit,
+          }),
+      );
 
       if (!result.success) {
         client.emit('error-message', result.error ?? 'Cannot select base suit');
@@ -1890,11 +1958,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const actorId = this.getActorId(client);
       const seatId = await this.resolveClientRoomSeatId(data.roomId, client);
-      const preparation = await this.revealBrokenHandUseCase.prepare({
-        roomId: data.roomId,
-        actorId,
-        seatId,
-      });
+      const preparation = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.revealBrokenHandUseCase.prepare({
+            roomId: data.roomId,
+            actorId,
+            seatId,
+          }),
+      );
 
       if (!preparation.success || !preparation.followUp) {
         client.emit(
@@ -1920,15 +1992,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { token?: string },
   ): Promise<void> {
     try {
-      const result = await this.updateAuthUseCase.execute({
-        socketId: client.id,
-        token: data?.token,
-        currentRoomId: this.playerRooms.get(client.id),
-        handshakeName:
-          typeof client.handshake.auth?.name === 'string'
-            ? client.handshake.auth?.name
-            : undefined,
-      });
+      const currentRoomId = this.playerRooms.get(client.id);
+      const executeUpdate = () =>
+        this.updateAuthUseCase.execute({
+          socketId: client.id,
+          token: data?.token,
+          currentRoomId,
+          handshakeName:
+            typeof client.handshake.auth?.name === 'string'
+              ? client.handshake.auth?.name
+              : undefined,
+        });
+      const result = currentRoomId
+        ? await this.roomGameActionQueueService.run(
+            currentRoomId,
+            executeUpdate,
+          )
+        : await executeUpdate();
 
       if (!result.success || !result.authenticatedUser) {
         client.emit('error-message', result.error ?? 'Authentication failed');
