@@ -67,6 +67,7 @@ export function PlayerSeat({
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
       onPress={onPress}
+      testID={`player-seat-${player.seatId}`}
       style={[
         styles.container,
         isTurn && styles.turn,
@@ -148,9 +149,10 @@ const styles = StyleSheet.create({
     zIndex: 4,
   },
   container: {
+    width: '100%',
     minWidth: 0,
-    flex: 1,
     maxWidth: 110,
+    flexGrow: 0,
     flexShrink: 1,
     alignItems: 'center',
     gap: 2,
