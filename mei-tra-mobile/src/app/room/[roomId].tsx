@@ -1,5 +1,4 @@
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import { useKeepAwake } from "expo-keep-awake";
 import { useCallback } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
@@ -12,6 +11,7 @@ import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { Screen } from "@/components/ui/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useGame } from "@/context/GameContext";
+import { useGameKeepAwake } from "@/hooks/useGameKeepAwake";
 import { useGameHistory } from "@/hooks/useGameHistory";
 import { colors } from "@/theme/colors";
 import { t } from "@/i18n";
@@ -55,7 +55,7 @@ export default function RoomScreen() {
     dealAnimationCue,
   } = useGame();
 
-  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
+  useGameKeepAwake();
 
   const gameStarted = Boolean(
     game && game.gamePhase && game.gamePhase !== "waiting",
