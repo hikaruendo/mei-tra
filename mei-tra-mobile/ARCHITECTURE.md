@@ -589,7 +589,7 @@ foreground 復帰時に:
 
 ### 画面ロック防止
 
-`room/[roomId].tsx` で `expo-keep-awake` を使用。ゲーム中は画面が消えない。
+`room/[roomId].tsx` から `useGameKeepAwake` を使用。ゲーム中は画面が消えず、画面を離れる際は進行中の有効化を待ってから解除する。
 
 ### React Compiler
 
