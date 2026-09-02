@@ -34,6 +34,7 @@ export default function RoomsScreen() {
     connectionStatus,
     error,
     notice,
+    recoveryNotice,
     refreshRooms,
     createRoom,
     joinRoom,
@@ -118,8 +119,8 @@ export default function RoomsScreen() {
   return (
     <Screen>
       <FeedbackBanner
-        error={error}
-        notice={notice}
+        error={recoveryNotice ? null : error}
+        notice={recoveryNotice ?? notice}
         onDismiss={clearFeedback}
       />
       <ScrollView

@@ -140,6 +140,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         lastWinnerSeatId: null,
         openDeclared: false,
         openDeclarerSeatId: null,
+        fieldCheckpoint: null,
       };
 
       nextState.blowState.declarations = [];

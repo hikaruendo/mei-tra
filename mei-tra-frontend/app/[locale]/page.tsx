@@ -175,6 +175,8 @@ export default function Home() {
           <Notification
             message={notification.message}
             type={notification.type}
+            persistent={notification.persistent}
+            closeLabel={t('closeNotification')}
             onClose={() => setNotification(null)}
           />
         )}

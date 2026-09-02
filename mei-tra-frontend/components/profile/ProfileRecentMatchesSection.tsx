@@ -22,6 +22,7 @@ const ACTION_TYPE_MESSAGE_KEYS: Record<GameHistoryActionType, string> = {
   blow_passed: 'actionTypes.blow_passed',
   play_phase_started: 'actionTypes.play_phase_started',
   card_played: 'actionTypes.card_played',
+  field_recovered: 'actionTypes.field_recovered',
   field_completed: 'actionTypes.field_completed',
   round_completed: 'actionTypes.round_completed',
   round_cancelled: 'actionTypes.round_cancelled',

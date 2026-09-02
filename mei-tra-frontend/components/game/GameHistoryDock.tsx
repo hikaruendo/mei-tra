@@ -37,6 +37,7 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   blow_passed: 'actionTypes.blow_passed',
   play_phase_started: 'actionTypes.play_phase_started',
   card_played: 'actionTypes.card_played',
+  field_recovered: 'actionTypes.field_recovered',
   field_completed: 'actionTypes.field_completed',
   round_completed: 'actionTypes.round_completed',
   round_cancelled: 'actionTypes.round_cancelled',
@@ -561,6 +562,8 @@ export function GameHistoryDock({
           player,
           card: getDetailValue(event, 'card') ?? t('unknownValue'),
         } as never);
+      case 'field_recovered':
+        return t('summaries.field_recovered' as never);
       case 'field_completed':
         return t('summaries.field_completed' as never, {
           winner: getDetailValue(event, 'winner') ?? t('unknownPlayer'),

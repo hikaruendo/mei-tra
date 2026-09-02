@@ -1,5 +1,5 @@
 import { GatewayEvent } from './gateway-event.interface';
-import { Field } from '../../types/game.types';
+import { Field, FieldIdentity } from '../../types/game.types';
 import type { PlayCardPayload, UpdateTurnPayload } from '@contracts/game';
 import type { CardPlayedPayload } from '@contracts/game';
 
@@ -15,6 +15,7 @@ export interface CompleteFieldTrigger {
   roomId: string;
   delayMs: number;
   field: Field;
+  fieldIdentity: FieldIdentity;
   initiatingActorId?: string;
 }
 

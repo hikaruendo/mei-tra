@@ -406,6 +406,48 @@ describe('GameEventLogService', () => {
     });
   });
 
+  it('projects a field recovery as an explicit replay event', async () => {
+    const history = [
+      {
+        id: 'history-recovery',
+        roomId: 'room-1',
+        gameStateId: 'state-1',
+        actionType: 'field_recovered' as const,
+        actorSeatId: null,
+        actorKeySnapshot: null,
+        actionData: {
+          reason:
+            'Scheduled field completion no longer matches the current field',
+          fieldIndex: 2,
+          abandonedCards: ['AS', 'KS', 'QS'],
+          context: { roundNumber: 1, gamePhase: 'play' },
+        },
+        timestamp: new Date('2026-04-16T00:05:00.000Z'),
+      },
+    ];
+    const repository = {
+      create: jest.fn(),
+      findByRoomId: jest.fn().mockResolvedValue(history),
+    } as unknown as IGameHistoryRepository;
+    const service = new GameEventLogService(repository);
+
+    const replay = await service.replayByRoomId('room-1');
+
+    expect(replay.rounds[0]?.events[0]).toEqual(
+      expect.objectContaining({
+        actionType: 'field_recovered',
+        kind: 'play',
+        summary: 'Field restored after invalid game state',
+        details: {
+          reason:
+            'Scheduled field completion no longer matches the current field',
+          fieldIndex: 2,
+          abandonedCards: ['AS', 'KS', 'QS'],
+        },
+      }),
+    );
+  });
+
   it('builds action-aware summaries for replay events', async () => {
     const repository = {
       create: jest.fn(),

@@ -1,9 +1,10 @@
 import { GatewayEvent } from './gateway-event.interface';
-import { Field, Team, TeamScores } from '../../types/game.types';
+import { Field, FieldIdentity, Team, TeamScores } from '../../types/game.types';
 
 export interface CompleteFieldRequest {
   roomId: string;
   field: Field;
+  fieldIdentity?: FieldIdentity;
 }
 
 export interface GameOverInstruction {

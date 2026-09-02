@@ -113,6 +113,7 @@ export class GameStateService implements IGameStateService {
       lastWinnerSeatId: null,
       openDeclared: false,
       openDeclarerSeatId: null,
+      fieldCheckpoint: null,
     };
   }
 
@@ -585,6 +586,7 @@ export class GameStateService implements IGameStateService {
       lastWinnerSeatId: null,
       openDeclared: false,
       openDeclarerSeatId: null,
+      fieldCheckpoint: null,
     };
 
     // Randomize the first blow player
