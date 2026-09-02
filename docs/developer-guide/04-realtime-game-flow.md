@@ -281,7 +281,7 @@ COM の default 行動も含め、pass も UseCase 化されています。実�
 
 ### 7.5 round cancel
 
-全員 pass などの条件で round がキャンセルされると、frontend は `round-cancelled` を受けて blow state を reset しつつ、次 dealer や action history を表示に反映します。
+全員 pass や場の不整合からの安全な再配札で round がキャンセルされると、frontend は `round-cancelled` を受けて blow state を reset しつつ、次 dealer や action history を表示に反映します。
 
 ## 8. play phase
 
@@ -349,6 +349,12 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 を行います。
 
 frontend 側は `field-complete` を受けると、completedFields に追加し、current field を空にします。
+
+### 9.3 場の復旧
+
+各 field の試行は `roundNumber`、completed field 数からなる `fieldIndex`、復旧ごとに変わる `attemptId` で識別します。完了待ちの同じ試行からカードが欠落した場合は、最初のカードを出す前に保存した checkpoint へ戻します。前の試行の遅延 trigger は identity が一致しないため、やり直し中の field を巻き戻しません。
+
+checkpoint 復旧は `field_recovered` として game history に記録し、破棄した場札と理由を監査・replay で確認できるようにします。checkpoint がない旧状態は、得点と round 番号を維持したまま同じ round を再配札します。
 
 ## 10. round 終了と次ラウンド
 

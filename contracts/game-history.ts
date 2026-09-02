@@ -11,6 +11,7 @@ export type GameHistoryActionType =
   | 'blow_passed'
   | 'play_phase_started'
   | 'card_played'
+  | 'field_recovered'
   | 'field_completed'
   | 'round_completed'
   | 'round_cancelled'
@@ -120,6 +121,12 @@ export interface FieldCompletedReplayDetailsContract {
   winnerSeatId: SeatId | null;
   winnerTeam: number | null;
   cards: string[];
+}
+
+export interface FieldRecoveredReplayDetailsContract {
+  reason: string | null;
+  fieldIndex: number | null;
+  abandonedCards: string[];
 }
 
 export interface RoundCompletedReplayDetailsContract {
@@ -238,6 +245,11 @@ export type GameHistoryReplayEventContract =
       'card_played',
       'play',
       CardPlayedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'field_recovered',
+      'play',
+      FieldRecoveredReplayDetailsContract
     >
   | GameHistoryReplayEventBaseContract<
       'field_completed',

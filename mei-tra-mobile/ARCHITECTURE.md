@@ -407,7 +407,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 | `update-turn` | ターン更新 |
 | `blow-updated` | 吹き宣言更新 |
 | `broken` | 手札崩れ |
-| `round-cancelled` | ラウンドキャンセル (全パス) |
+| `round-cancelled` | ラウンドキャンセル (全パス / 場復旧) |
 | `reveal-agari` | アゲカード公開 |
 | `play-setup-complete` | ネグリ選択完了 |
 | `card-played` | カードプレイ |

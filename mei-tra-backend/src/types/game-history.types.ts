@@ -7,6 +7,7 @@ export const GAME_HISTORY_ACTION_TYPES = [
   'blow_passed',
   'play_phase_started',
   'card_played',
+  'field_recovered',
   'field_completed',
   'round_completed',
   'round_cancelled',
@@ -134,6 +135,12 @@ export interface FieldCompletedReplayDetails {
   cards: string[];
 }
 
+export interface FieldRecoveredReplayDetails {
+  reason: string | null;
+  fieldIndex: number | null;
+  abandonedCards: string[];
+}
+
 export interface RoundCompletedReplayDetails {
   declaringTeam: number | null;
   teamScores: Record<string, unknown> | null;
@@ -249,6 +256,11 @@ export type GameHistoryReplayEvent =
       PlayPhaseStartedReplayDetails
     >
   | GameHistoryReplayEventBase<'card_played', 'play', CardPlayedReplayDetails>
+  | GameHistoryReplayEventBase<
+      'field_recovered',
+      'play',
+      FieldRecoveredReplayDetails
+    >
   | GameHistoryReplayEventBase<
       'field_completed',
       'play',

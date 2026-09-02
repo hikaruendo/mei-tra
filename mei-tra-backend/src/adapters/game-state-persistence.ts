@@ -4,6 +4,7 @@ import {
   BlowState,
   CompletedField,
   Field,
+  FieldCheckpoint,
   PendingBrokenHandReveal,
   PlayState,
 } from '../types/game.types';
@@ -21,7 +22,12 @@ const SCALAR_SEAT_FIELDS = new Set([
 ]);
 
 const ARRAY_SEAT_FIELDS = new Set(['playedBySeatIds']);
-const SEAT_KEYED_FIELDS = new Set(['playerStates', 'playerNames', 'neguri']);
+const SEAT_KEYED_FIELDS = new Set([
+  'playerStates',
+  'playerNames',
+  'neguri',
+  'handsBySeatId',
+]);
 
 export type PersistedBlowDeclaration = Omit<BlowDeclaration, 'seatId'> & {
   seatId: SeatId;
@@ -51,6 +57,10 @@ export type PersistedField = Omit<Field, 'playedBySeatIds'> & {
 
 export type PersistedCompletedField = CompletedField;
 
+export type PersistedFieldCheckpoint = Omit<FieldCheckpoint, 'currentField'> & {
+  currentField: PersistedField;
+};
+
 export type PersistedPlayState = Omit<
   PlayState,
   | 'currentField'
@@ -58,12 +68,14 @@ export type PersistedPlayState = Omit<
   | 'fields'
   | 'lastWinnerSeatId'
   | 'openDeclarerSeatId'
+  | 'fieldCheckpoint'
 > & {
   currentField: PersistedField | null;
   negriSeatId: SeatId | null;
   fields: PersistedCompletedField[];
   lastWinnerSeatId: SeatId | null;
   openDeclarerSeatId: SeatId | null;
+  fieldCheckpoint: PersistedFieldCheckpoint | null;
 };
 
 export type PersistedPendingBrokenHandReveal = Omit<
@@ -131,6 +143,22 @@ function toPersistedCompletedField(
   return { ...field };
 }
 
+function toPersistedFieldCheckpoint(
+  checkpoint: FieldCheckpoint,
+): PersistedFieldCheckpoint {
+  return {
+    ...omitKeys(checkpoint, ['currentField']),
+    currentSeatId: checkpoint.currentSeatId,
+    handsBySeatId: Object.fromEntries(
+      Object.entries(checkpoint.handsBySeatId).map(([seatId, hand]) => [
+        asSeatId(seatId),
+        [...hand],
+      ]),
+    ),
+    currentField: toPersistedField(checkpoint.currentField),
+  } as PersistedFieldCheckpoint;
+}
+
 export function toPersistedPlayState(
   playState: PlayState | undefined,
 ): PersistedPlayState | undefined {
@@ -145,6 +173,7 @@ export function toPersistedPlayState(
       'fields',
       'lastWinnerSeatId',
       'openDeclarerSeatId',
+      'fieldCheckpoint',
     ]),
     currentField: playState.currentField
       ? toPersistedField(playState.currentField)
@@ -153,6 +182,9 @@ export function toPersistedPlayState(
     fields: playState.fields.map(toPersistedCompletedField),
     lastWinnerSeatId: playState.lastWinnerSeatId ?? null,
     openDeclarerSeatId: playState.openDeclarerSeatId ?? null,
+    fieldCheckpoint: playState.fieldCheckpoint
+      ? toPersistedFieldCheckpoint(playState.fieldCheckpoint)
+      : null,
   } as PersistedPlayState;
 }
 

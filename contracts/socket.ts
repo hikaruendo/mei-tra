@@ -204,6 +204,7 @@ export interface ServerToClientEvents {
   'reveal-agari': (payload: RevealAgariPayload) => void;
   'play-setup-complete': (payload: PlaySetupCompletePayload) => void;
   'card-played': (payload: CardPlayedPayload) => void;
+  'field-recovered': () => void;
   'field-updated': (field: FieldContract) => void;
   'field-complete': (payload: FieldCompletePayload) => void;
   'round-results': (payload: RoundResultsPayload) => void;

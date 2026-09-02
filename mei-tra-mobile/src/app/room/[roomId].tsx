@@ -32,6 +32,7 @@ export default function RoomScreen() {
     isHost,
     error,
     notice,
+    recoveryNotice,
     refreshRooms,
     gameResult,
     shuffleTeams,
@@ -120,7 +121,11 @@ export default function RoomScreen() {
           status={connectionStatus}
         />
       ) : null}
-      <FeedbackBanner error={error} notice={notice} onDismiss={clearFeedback} />
+      <FeedbackBanner
+        error={recoveryNotice ? null : error}
+        notice={recoveryNotice ?? notice}
+        onDismiss={clearFeedback}
+      />
       {isWaiting && currentRoom ? (
         <WaitingRoom
           actionsDisabled={actionsDisabled}

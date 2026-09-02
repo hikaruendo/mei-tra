@@ -61,6 +61,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         lastWinnerSeatId: null,
         openDeclared: false,
         openDeclarerSeatId: null,
+        fieldCheckpoint: null,
       };
 
       player.hand = player.hand.filter((c) => c !== card);

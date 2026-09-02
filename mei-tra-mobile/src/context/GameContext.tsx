@@ -89,6 +89,7 @@ interface MobileState {
   connectionStatus: ConnectionStatus;
   error: FeedbackMessage | null;
   notice: FeedbackMessage | null;
+  recoveryNotice: FeedbackMessage | null;
   gameResult: GameResultSnapshot | null;
   /**
    * Set only by the live 'game-started' event; snapshot restores clear it so a
@@ -113,6 +114,7 @@ type Action =
   | { type: 'playerConvertedToCom'; seatId: string }
   | { type: 'error'; message: FeedbackMessage | null }
   | { type: 'notice'; message: FeedbackMessage | null }
+  | { type: 'recoveryNotice'; message: FeedbackMessage | null }
   | { type: 'gameResult'; result: GameResultSnapshot | null }
   | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
   | { type: 'dealAnimationCue'; cue: DealAnimationCue | null }
@@ -136,6 +138,7 @@ const initialState: MobileState = {
   connectionStatus: 'disconnected',
   error: null,
   notice: null,
+  recoveryNotice: null,
   gameResult: null,
   firstTurnReveal: null,
   dealAnimationCue: null,
@@ -293,6 +296,8 @@ function reducer(state: MobileState, action: Action): MobileState {
       return { ...state, error: action.message };
     case 'notice':
       return { ...state, notice: action.message };
+    case 'recoveryNotice':
+      return { ...state, recoveryNotice: action.message };
     case 'gameResult':
       return { ...state, gameResult: action.result };
     case 'firstTurnReveal':
@@ -307,6 +312,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         pendingGamePatches: null,
         error: null,
         notice: null,
+        recoveryNotice: null,
         gameResult: null,
         firstTurnReveal: null,
         dealAnimationCue: null,
@@ -319,6 +325,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         pendingGamePatches: null,
         error: null,
         notice: null,
+        recoveryNotice: null,
         firstTurnReveal: null,
         dealAnimationCue: null,
       };
@@ -598,6 +605,16 @@ export function GameProvider({ children }: PropsWithChildren) {
     return false;
   }, []);
 
+  const showRecoveryNotice = useCallback((message: FeedbackMessage) => {
+    dispatch({ type: 'recoveryNotice', message });
+  }, []);
+
+  const clearFeedback = useCallback(() => {
+    dispatch({ type: 'error', message: null });
+    dispatch({ type: 'notice', message: null });
+    dispatch({ type: 'recoveryNotice', message: null });
+  }, []);
+
   useEffect(() => {
     if (!authenticatedUserId || !hasSession) {
       pendingNegriCardRef.current = null;
@@ -845,7 +862,14 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       startDealAnimation('round-cancelled', payload.players);
       applyGameServerEvent({ type: 'round-cancelled', payload });
-      dispatch({ type: 'notice', message: { key: 'game.redealAllPass' } });
+      if (payload.reason === 'field-recovery') {
+        showRecoveryNotice({ key: 'game.fieldRecoveryRedeal' });
+      } else {
+        dispatch({
+          type: 'notice',
+          message: { key: 'game.redealAllPass' },
+        });
+      }
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });
@@ -862,6 +886,9 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('card-played', (payload) => {
       playSoundEffect(soundEffectForGameEvent('card-played'));
       applyGameServerEvent({ type: 'card-played', payload });
+    });
+    socket.on('field-recovered', () => {
+      showRecoveryNotice({ key: 'game.fieldRecoveryRestored' });
     });
     socket.on('field-updated', (field) => {
       applyGameServerEvent({ type: 'field-updated', payload: field });
@@ -1026,6 +1053,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     playSoundEffect,
     resyncActiveRoom,
     resolveCurrentSeatId,
+    showRecoveryNotice,
   ]);
 
   useEffect(() => {
@@ -1418,10 +1446,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       replaceWithCOM,
       changePlayerTeam,
       updateTeamNames,
-      clearFeedback: () => {
-        dispatch({ type: 'error', message: null });
-        dispatch({ type: 'notice', message: null });
-      },
+      clearFeedback,
       closeGameResult: () => dispatch({ type: 'gameResult', result: null }),
       clearFirstTurnReveal: () => {
         firstTurnRevealRef.current = null;
@@ -1438,6 +1463,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     }),
     [
       changePlayerTeam,
+      clearFeedback,
       createRoom,
       currentSeatId,
       declareBlow,

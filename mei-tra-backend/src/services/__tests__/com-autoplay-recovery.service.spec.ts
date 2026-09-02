@@ -8,6 +8,7 @@ import {
   ComAutoPlayRecoveryHandlers,
   ComAutoPlayRecoveryService,
 } from '../com-autoplay-recovery.service';
+import { RoomGameActionQueueService } from '../room-game-action-queue.service';
 
 const flushPromises = async (): Promise<void> => {
   for (let index = 0; index < 10; index += 1) {
@@ -34,6 +35,7 @@ const createService = () => {
     roomService as unknown as IRoomService,
     comAutoPlayUseCase as IComAutoPlayUseCase,
     completeFieldUseCase as ICompleteFieldUseCase,
+    new RoomGameActionQueueService(),
   );
 
   return {
@@ -114,8 +116,12 @@ describe('ComAutoPlayRecoveryService', () => {
       isComplete: true,
     };
     const state = {
+      roundNumber: 1,
       gamePhase: 'play',
-      playState: { currentField: field },
+      players: ['p1', 'p2', 'p3', 'com-1'].map((seatId) => ({
+        seatId: asSeatId(seatId),
+      })),
+      playState: { currentField: field, fields: [] },
       pendingBrokenHandReveal: null,
     };
     const completionResponse = { success: true, events: [] };
@@ -128,6 +134,7 @@ describe('ComAutoPlayRecoveryService', () => {
         ...field,
         cards: [],
         playedBySeatIds: [],
+        baseCard: '',
         isComplete: false,
       };
       return Promise.resolve(completionResponse);
@@ -143,6 +150,11 @@ describe('ComAutoPlayRecoveryService', () => {
 
     expect(completeFieldUseCase.execute).toHaveBeenCalledWith({
       roomId: 'room-1',
+      fieldIdentity: {
+        roundNumber: 1,
+        fieldIndex: 0,
+        attemptId: 'legacy:1:0',
+      },
       field,
     });
     expect(handlers.processFieldCompletion).toHaveBeenCalledWith(
@@ -322,7 +334,16 @@ describe('ComAutoPlayRecoveryService', () => {
     });
 
     service.scheduleFieldCompletion(
-      { roomId: 'room-1', delayMs: 3_000, field },
+      {
+        roomId: 'room-1',
+        delayMs: 3_000,
+        fieldIdentity: {
+          roundNumber: 1,
+          fieldIndex: 0,
+          attemptId: 'attempt-1',
+        },
+        field,
+      },
       handlers,
     );
 

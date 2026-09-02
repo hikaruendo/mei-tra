@@ -333,7 +333,32 @@ export const useGame = () => {
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
 
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [notification, setNotificationState] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'warning';
+    persistent?: boolean;
+  } | null>(null);
+  const recoveryNotificationActiveRef = useRef(false);
+  const setNotification = useCallback(
+    (
+      next: {
+        message: string;
+        type: 'success' | 'error' | 'warning';
+        persistent?: boolean;
+      } | null,
+    ) => {
+      if (next?.persistent) {
+        recoveryNotificationActiveRef.current = true;
+      } else if (next === null) {
+        recoveryNotificationActiveRef.current = false;
+      } else if (recoveryNotificationActiveRef.current) {
+        return;
+      }
+
+      setNotificationState(next);
+    },
+    [],
+  );
   const [gameResult, setGameResult] = useState<GameResultSnapshot | null>(null);
   const [currentSeatId, setCurrentSeatId] = useState<string | null>(null);
 
@@ -1027,8 +1052,12 @@ export const useGame = () => {
         pendingNegriCardRef.current = null;
         startDealAnimation('round-cancelled', payload.players);
         setNotification({
-          message: 'Round cancelled! All players passed.',
-          type: 'warning'
+          message:
+            payload.reason === 'field-recovery'
+              ? t('fieldRecoveryRedeal')
+              : t('redealAllPass'),
+          type: 'warning',
+          persistent: payload.reason === 'field-recovery',
         });
         applyGameServerEvent({ type: 'round-cancelled', payload });
       },
@@ -1050,6 +1079,13 @@ export const useGame = () => {
       'card-played': (payload: CardPlayedPayload) => {
         playSoundEffect(soundEffectForGameEvent('card-played'));
         applyGameServerEvent({ type: 'card-played', payload });
+      },
+      'field-recovered': () => {
+        setNotification({
+          message: t('fieldRecoveryRestored'),
+          type: 'warning',
+          persistent: true,
+        });
       },
       'field-updated': (field: FieldContract) => {
         applyGameServerEvent({ type: 'field-updated', payload: field });
@@ -1253,6 +1289,7 @@ export const useGame = () => {
     updateFirstTurnReveal,
     startDealAnimation,
     playSoundEffect,
+    setNotification,
     user?.id,
   ]);
 

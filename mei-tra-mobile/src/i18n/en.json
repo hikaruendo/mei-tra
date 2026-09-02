@@ -77,6 +77,8 @@
     "connecting": "Connecting to the server: {message}",
     "redealHand": "Redealt because a special hand was declared",
     "redealAllPass": "Redealt because everyone passed",
+    "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
+    "fieldRecoveryRestored": "The table was restored. Please play your card again.",
     "playerDisconnected": "{name} disconnected",
     "playerIdle": "{name} is not responding",
     "playerReplacedByCom": "{name} was replaced with COM",

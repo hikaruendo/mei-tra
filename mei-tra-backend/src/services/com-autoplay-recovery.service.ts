@@ -11,6 +11,11 @@ import {
 import { CompleteFieldTrigger } from '../use-cases/interfaces/play-card.use-case.interface';
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
+import { RoomGameActionQueueService } from './room-game-action-queue.service';
+import {
+  getCurrentFieldIdentity,
+  getFieldIntegrityError,
+} from '../domain/field-recovery';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
 const COM_AUTO_PLAY_INITIAL_DELAY_MS = 1_500;
@@ -53,6 +58,7 @@ export class ComAutoPlayRecoveryService {
     private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
     @Inject('ICompleteFieldUseCase')
     private readonly completeFieldUseCase: ICompleteFieldUseCase,
+    private readonly roomGameActionQueueService: RoomGameActionQueueService,
   ) {}
 
   trigger(roomId: string, handlers: ComAutoPlayRecoveryHandlers): void {
@@ -158,8 +164,14 @@ export class ComAutoPlayRecoveryService {
       if (!this.isCurrentGeneration(trigger.roomId, generation)) {
         return;
       }
-      void this.completeFieldUseCase
-        .execute({ roomId: trigger.roomId, field: trigger.field })
+      void this.roomGameActionQueueService
+        .run(trigger.roomId, () =>
+          this.completeFieldUseCase.execute({
+            roomId: trigger.roomId,
+            field: trigger.field,
+            fieldIdentity: trigger.fieldIdentity,
+          }),
+        )
         .then((response) =>
           this.handleFieldCompletionResponse(
             trigger.roomId,
@@ -208,20 +220,29 @@ export class ComAutoPlayRecoveryService {
     const state = roomGameState.getState();
     const currentField = state.playState?.currentField;
 
-    if (
+    const fieldIntegrityError = currentField
+      ? getFieldIntegrityError(state, currentField)
+      : null;
+    const shouldResumeFieldCompletion =
       state.gamePhase === 'play' &&
-      currentField?.isComplete &&
-      currentField.cards.length === 4
-    ) {
+      currentField &&
+      (fieldIntegrityError !== null ||
+        (currentField.isComplete &&
+          currentField.cards.length === state.players.length));
+
+    if (shouldResumeFieldCompletion) {
       if (!this.fieldCompletionTimeouts.has(roomId)) {
-        const response = await this.completeFieldUseCase.execute({
-          roomId,
-          field: {
-            ...currentField,
-            cards: [...currentField.cards],
-            playedBySeatIds: [...currentField.playedBySeatIds],
-          },
-        });
+        const response = await this.roomGameActionQueueService.run(roomId, () =>
+          this.completeFieldUseCase.execute({
+            roomId,
+            fieldIdentity: getCurrentFieldIdentity(state) ?? undefined,
+            field: {
+              ...currentField,
+              cards: [...currentField.cards],
+              playedBySeatIds: [...currentField.playedBySeatIds],
+            },
+          }),
+        );
         await this.handleFieldCompletionResponse(
           roomId,
           response,
@@ -255,7 +276,9 @@ export class ComAutoPlayRecoveryService {
     handlers: ComAutoPlayRecoveryHandlers,
     generation: number,
   ): Promise<void> {
-    const result = await this.comAutoPlayUseCase.execute({ roomId });
+    const result = await this.roomGameActionQueueService.run(roomId, () =>
+      this.comAutoPlayUseCase.execute({ roomId }),
+    );
     if (!this.isCurrentGeneration(roomId, generation)) {
       return;
     }
