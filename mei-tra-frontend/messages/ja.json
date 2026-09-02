@@ -334,7 +334,7 @@
     "waiting": "待機中...",
     "redealAllPass": "全員パスのため配り直しました",
     "fieldRecoveryRedeal": "場の不整合を検出したため、安全に配り直しました",
-    "fieldRecoveryRestored": "場の状態を復旧しました。もう一度カードを出してください",
+    "fieldRecoveryRestored": "不整合が起きたため、場の状態を復旧しました。もう一度カードを出してください。",
     "closeNotification": "通知を閉じる",
     "orderButton": "強さ順",
     "teamRed": "赤",
