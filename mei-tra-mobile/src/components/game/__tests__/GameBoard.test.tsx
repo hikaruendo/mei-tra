@@ -367,6 +367,13 @@ describe('GameBoard interactions', () => {
       renderer.toJSON(),
       'opponent-seat-player-2',
     );
+    expect(
+      StyleSheet.flatten(opponentSlot?.props?.style as ViewStyle),
+    ).toMatchObject({
+      flex: 1,
+      minWidth: 0,
+      maxWidth: 110,
+    });
     expect(opponentSlot?.children?.[0]).toMatchObject({
       props: { testID: 'mock-player-seat-player-2' },
     });

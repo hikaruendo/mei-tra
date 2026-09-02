@@ -401,7 +401,7 @@ export function GameBoard({
             return (
               <View
                 key={player.seatId}
-                style={posStyle}
+                style={[styles.opponentSeatSlot, posStyle]}
                 testID={`opponent-seat-${player.seatId}`}
               >
                 {seatEl}
@@ -893,6 +893,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 4,
+  },
+  opponentSeatSlot: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 110,
   },
   seatLeft: {
     marginTop: 24,
