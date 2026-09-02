@@ -10,6 +10,7 @@ import {
   BrokenHandRevealedReplayDetails,
   CardPlayedReplayDetails,
   FieldCompletedReplayDetails,
+  FieldRecoveredReplayDetails,
   GameHistoryContext,
   GameHistoryEntry,
   GameHistoryQuery,
@@ -373,6 +374,13 @@ export class GameEventLogService implements IGameEventLogService {
           kind: 'play',
           details: details as CardPlayedReplayDetails,
         };
+      case 'field_recovered':
+        return {
+          ...base,
+          actionType: entry.actionType,
+          kind: 'play',
+          details: details as FieldRecoveredReplayDetails,
+        };
       case 'field_completed':
         return {
           ...base,
@@ -450,6 +458,8 @@ export class GameEventLogService implements IGameEventLogService {
         return this.formatPlayPhaseStartedSummary(actionData);
       case 'card_played':
         return this.formatCardPlayedSummary(playerLabel, actionData);
+      case 'field_recovered':
+        return 'Field restored after invalid game state';
       case 'field_completed':
         return this.formatFieldCompletedSummary(actionData);
       case 'round_completed':
@@ -477,6 +487,7 @@ export class GameEventLogService implements IGameEventLogService {
     | BlowPassedReplayDetails
     | PlayPhaseStartedReplayDetails
     | CardPlayedReplayDetails
+    | FieldRecoveredReplayDetails
     | FieldCompletedReplayDetails
     | RoundCompletedReplayDetails
     | RoundCancelledReplayDetails
@@ -545,6 +556,20 @@ export class GameEventLogService implements IGameEventLogService {
             typeof actionData.baseCard === 'string'
               ? actionData.baseCard
               : null,
+        };
+      case 'field_recovered':
+        return {
+          reason:
+            typeof actionData.reason === 'string' ? actionData.reason : null,
+          fieldIndex:
+            typeof actionData.fieldIndex === 'number'
+              ? actionData.fieldIndex
+              : null,
+          abandonedCards: Array.isArray(actionData.abandonedCards)
+            ? actionData.abandonedCards.filter(
+                (value): value is string => typeof value === 'string',
+              )
+            : [],
         };
       case 'field_completed': {
         const winnerSeatId = this.readSeatId(actionData, 'winnerSeatId');
@@ -640,6 +665,7 @@ export class GameEventLogService implements IGameEventLogService {
       | BlowPassedReplayDetails
       | PlayPhaseStartedReplayDetails
       | CardPlayedReplayDetails
+      | FieldRecoveredReplayDetails
       | FieldCompletedReplayDetails
       | RoundCompletedReplayDetails
       | RoundCancelledReplayDetails
@@ -696,6 +722,14 @@ export class GameEventLogService implements IGameEventLogService {
           this.textDetail('card', typedDetails.card),
           this.textDetail('baseCard', typedDetails.baseCard),
           this.cardsDetail('cards', typedDetails.fieldCards),
+        ].filter((item): item is GameHistoryReplayDetailItem => Boolean(item));
+      }
+      case 'field_recovered': {
+        const typedDetails = details as FieldRecoveredReplayDetails;
+        return [
+          this.textDetail('reason', typedDetails.reason),
+          this.numberDetail('fieldIndex', typedDetails.fieldIndex),
+          this.cardsDetail('abandonedCards', typedDetails.abandonedCards),
         ].filter((item): item is GameHistoryReplayDetailItem => Boolean(item));
       }
       case 'field_completed': {

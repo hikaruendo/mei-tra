@@ -350,6 +350,12 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 
 frontend 側は `field-complete` を受けると、completedFields に追加し、current field を空にします。
 
+### 9.3 場の復旧
+
+各 field の試行は `roundNumber`、completed field 数からなる `fieldIndex`、復旧ごとに変わる `attemptId` で識別します。完了待ちの同じ試行からカードが欠落した場合は、最初のカードを出す前に保存した checkpoint へ戻します。前の試行の遅延 trigger は identity が一致しないため、やり直し中の field を巻き戻しません。
+
+checkpoint 復旧は `field_recovered` として game history に記録し、破棄した場札と理由を監査・replay で確認できるようにします。checkpoint がない旧状態は、得点と round 番号を維持したまま同じ round を再配札します。
+
 ## 10. round 終了と次ラウンド
 
 全員の hand が空になると round end です。

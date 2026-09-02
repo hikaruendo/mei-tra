@@ -73,6 +73,8 @@ describe('field recovery', () => {
     expect(state.currentSeatId).toBe(seatIds[0]);
     expect(state.playState?.currentField?.cards).toEqual([]);
     expect(state.playState?.fieldCheckpoint).toBeNull();
+    const retryCheckpoint = createFieldCheckpoint(state);
+    expect(retryCheckpoint?.attemptId).not.toBe(checkpoint?.attemptId);
   });
 
   it('rejects a checkpoint from another round', () => {

@@ -3799,6 +3799,8 @@ describe('Game Use Cases', () => {
       };
       state.playState.fieldCheckpoint = {
         roundNumber: 1,
+        fieldIndex: 0,
+        attemptId: 'attempt-corrupt',
         currentSeatId: asSeatId('player-1'),
         handsBySeatId: Object.fromEntries(
           state.players.map((player, index) => [
@@ -3841,6 +3843,134 @@ describe('Game Use Cases', () => {
       ]);
       expect(playService.determineFieldWinner).not.toHaveBeenCalled();
       expect(roomGameState.saveState).toHaveBeenCalledTimes(1);
+    });
+
+    it('restores the same field when its scheduled completion has lost a play', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const eventLog = {
+        log: jest.fn().mockResolvedValue(undefined),
+      } as unknown as IGameEventLogService;
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+        eventLog,
+      );
+      const state = buildState();
+      const scheduledField = { ...state.playState.currentField };
+      state.currentSeatId = asSeatId('player-4');
+      state.playState.currentField = {
+        cards: ['A', 'B', 'C'],
+        playedBySeatIds: asSeatIds('player-1', 'player-2', 'player-3'),
+        baseCard: 'A',
+        dealerSeatId: asSeatId('player-1'),
+        isComplete: false,
+      };
+      state.playState.fieldCheckpoint = {
+        roundNumber: 1,
+        fieldIndex: 0,
+        attemptId: 'attempt-0',
+        currentSeatId: asSeatId('player-1'),
+        handsBySeatId: Object.fromEntries(
+          state.players.map((player, index) => [
+            player.seatId,
+            [`restored-${index}`],
+          ]),
+        ),
+        currentField: {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId('player-1'),
+          isComplete: false,
+        },
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: scheduledField,
+        fieldIdentity: {
+          roundNumber: 1,
+          fieldIndex: 0,
+          attemptId: 'attempt-0',
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.playState.currentField.cards).toEqual([]);
+      expect(state.currentSeatId).toBe('player-1');
+      expect(eventLog.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          roomId: 'room-1',
+          actionType: 'field_recovered',
+          actionData: expect.objectContaining({
+            fieldIndex: 0,
+            abandonedCards: ['A', 'B', 'C'],
+          }),
+        }),
+      );
+    });
+
+    it('does not restore a newer attempt of the same field for an older trigger', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayServiceMock('player-1');
+      const scoreService = createScoreServiceMock(2);
+      const useCase = new CompleteFieldUseCase(
+        roomService,
+        playService,
+        scoreService,
+      );
+      const state = buildState();
+      const scheduledField = { ...state.playState.currentField };
+      state.playState.currentField = {
+        cards: ['E', 'F', 'G'],
+        playedBySeatIds: asSeatIds('player-1', 'player-2', 'player-3'),
+        baseCard: 'E',
+        dealerSeatId: asSeatId('player-1'),
+        isComplete: false,
+      };
+      state.playState.fieldCheckpoint = {
+        roundNumber: 1,
+        fieldIndex: 0,
+        attemptId: 'attempt-1',
+        currentSeatId: asSeatId('player-1'),
+        handsBySeatId: Object.fromEntries(
+          state.players.map((player) => [player.seatId, [...player.hand]]),
+        ),
+        currentField: {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId('player-1'),
+          isComplete: false,
+        },
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        field: scheduledField,
+        fieldIdentity: {
+          roundNumber: 1,
+          fieldIndex: 0,
+          attemptId: 'attempt-0',
+        },
+      });
+
+      expect(result).toEqual({ success: true, events: [] });
+      expect(state.playState.currentField.cards).toEqual(['E', 'F', 'G']);
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
     });
 
     it('redeals the same round when an old corrupt state has no checkpoint', async () => {

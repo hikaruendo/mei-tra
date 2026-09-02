@@ -91,13 +91,18 @@ export interface CompletedField {
   dealerSeatId: SeatId;
 }
 
-export interface FieldCheckpoint {
+export interface FieldIdentity {
+  roundNumber: number;
+  fieldIndex: number;
+  attemptId: string;
+}
+
+export interface FieldCheckpoint extends FieldIdentity {
   /**
    * Immutable rollback data captured before the first play in a field. Runtime
    * hands/currentField remain authoritative; this snapshot is never updated and
    * is cleared when the field completes or recovery consumes it.
    */
-  roundNumber: number;
   currentSeatId: SeatId;
   handsBySeatId: Record<string, string[]>;
   currentField: Field;

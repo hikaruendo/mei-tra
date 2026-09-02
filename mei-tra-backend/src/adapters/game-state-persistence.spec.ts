@@ -70,6 +70,8 @@ describe('game-state persistence identity', () => {
       openDeclarerSeatId: secondSeatId,
       fieldCheckpoint: {
         roundNumber: 2,
+        fieldIndex: 1,
+        attemptId: 'attempt-1',
         currentSeatId: firstSeatId,
         handsBySeatId: {
           [firstSeatId]: ['H7'],
@@ -96,6 +98,8 @@ describe('game-state persistence identity', () => {
     ]);
     expect(persistedPlayState?.fields[0].winnerSeatId).toBe(firstSeatId);
     expect(persistedPlayState?.fieldCheckpoint).toMatchObject({
+      fieldIndex: 1,
+      attemptId: 'attempt-1',
       currentSeatId: firstSeatId,
       handsBySeatId: {
         [firstSeatId]: ['H7'],

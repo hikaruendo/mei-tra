@@ -1,4 +1,10 @@
-import type { Field, FieldCheckpoint, GameState } from '../types/game.types';
+import { randomUUID } from 'node:crypto';
+import type {
+  Field,
+  FieldCheckpoint,
+  FieldIdentity,
+  GameState,
+} from '../types/game.types';
 import type { SeatId } from '../types/identity.types';
 import { setCurrentSeat } from './current-turn';
 
@@ -65,6 +71,8 @@ export const createFieldCheckpoint = (
 
   return {
     roundNumber: state.roundNumber,
+    fieldIndex: state.playState?.fields?.length ?? 0,
+    attemptId: randomUUID(),
     currentSeatId,
     handsBySeatId: Object.fromEntries(
       state.players.map((player) => [player.seatId, [...player.hand]]),
@@ -73,13 +81,58 @@ export const createFieldCheckpoint = (
   };
 };
 
+export const getCurrentFieldIdentity = (
+  state: GameState,
+): FieldIdentity | null => {
+  const playState = state.playState;
+  if (!playState?.currentField) {
+    return null;
+  }
+  const checkpoint = playState.fieldCheckpoint;
+  if (
+    !checkpoint &&
+    playState.currentField.cards.length === 0 &&
+    playState.currentField.playedBySeatIds.length === 0
+  ) {
+    return null;
+  }
+
+  if (checkpoint) {
+    return {
+      roundNumber: checkpoint.roundNumber,
+      fieldIndex: checkpoint.fieldIndex,
+      attemptId: checkpoint.attemptId,
+    };
+  }
+
+  const fieldIndex = playState.fields?.length ?? 0;
+  return {
+    roundNumber: state.roundNumber,
+    fieldIndex,
+    attemptId: `legacy:${state.roundNumber}:${fieldIndex}`,
+  };
+};
+
+export const isSameFieldIdentity = (
+  left: FieldIdentity | null | undefined,
+  right: FieldIdentity | null | undefined,
+): boolean =>
+  Boolean(
+    left &&
+      right &&
+      left.roundNumber === right.roundNumber &&
+      left.fieldIndex === right.fieldIndex &&
+      left.attemptId === right.attemptId,
+  );
+
 export const restoreFieldCheckpoint = (state: GameState): boolean => {
   const playState = state.playState;
   const checkpoint = playState?.fieldCheckpoint;
   if (
     !playState ||
     !checkpoint ||
-    checkpoint.roundNumber !== state.roundNumber
+    checkpoint.roundNumber !== state.roundNumber ||
+    checkpoint.fieldIndex !== (playState.fields?.length ?? 0)
   ) {
     return false;
   }

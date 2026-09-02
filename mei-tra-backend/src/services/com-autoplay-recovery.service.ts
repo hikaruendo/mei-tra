@@ -12,7 +12,10 @@ import { CompleteFieldTrigger } from '../use-cases/interfaces/play-card.use-case
 import { GatewayEvent } from '../use-cases/interfaces/gateway-event.interface';
 import { BROKEN_HAND_REVEAL_PENDING_TTL_MS } from '../use-cases/helpers/broken-hand.helper';
 import { RoomGameActionQueueService } from './room-game-action-queue.service';
-import { getFieldIntegrityError } from '../domain/field-recovery';
+import {
+  getCurrentFieldIdentity,
+  getFieldIntegrityError,
+} from '../domain/field-recovery';
 
 const COM_AUTO_PLAY_RETRY_DELAY_MS = 5_000;
 const COM_AUTO_PLAY_INITIAL_DELAY_MS = 1_500;
@@ -166,6 +169,7 @@ export class ComAutoPlayRecoveryService {
           this.completeFieldUseCase.execute({
             roomId: trigger.roomId,
             field: trigger.field,
+            fieldIdentity: trigger.fieldIdentity,
           }),
         )
         .then((response) =>
@@ -231,6 +235,7 @@ export class ComAutoPlayRecoveryService {
         const response = await this.roomGameActionQueueService.run(roomId, () =>
           this.completeFieldUseCase.execute({
             roomId,
+            fieldIdentity: getCurrentFieldIdentity(state) ?? undefined,
             field: {
               ...currentField,
               cards: [...currentField.cards],

@@ -35,7 +35,9 @@ import {
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
 import {
+  getCurrentFieldIdentity,
   getFieldIntegrityError,
+  isSameFieldIdentity,
   restoreFieldCheckpoint,
 } from '../domain/field-recovery';
 
@@ -59,8 +61,26 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       const state = roomGameState.getState();
       const currentField = state.playState?.currentField;
 
-      if (!currentField || currentField.cards.length === 0) {
+      if (!currentField) {
         return { success: true, events: [] };
+      }
+
+      if (currentField.cards.length === 0) {
+        const requestRepresentsThisFieldCompletion =
+          requestedField.isComplete &&
+          requestedField.cards.length === state.players.length &&
+          isSameFieldIdentity(
+            request.fieldIdentity,
+            getCurrentFieldIdentity(state),
+          );
+        return requestRepresentsThisFieldCompletion
+          ? this.recoverInvalidField(
+              roomId,
+              roomGameState,
+              state,
+              'Scheduled field completion lost every play in the current field',
+            )
+          : { success: true, events: [] };
       }
 
       const fieldValidationError = getFieldIntegrityError(state, currentField);
@@ -73,11 +93,24 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         );
       }
 
-      if (
+      const completionDoesNotMatchCurrentState =
         !currentField.isComplete ||
         currentField.cards.length !== state.players.length ||
-        !this.isSameField(currentField, requestedField)
-      ) {
+        !this.isSameField(currentField, requestedField);
+      if (completionDoesNotMatchCurrentState) {
+        const currentFieldIdentity = getCurrentFieldIdentity(state);
+        const requestRepresentsThisFieldCompletion =
+          requestedField.isComplete &&
+          requestedField.cards.length === state.players.length &&
+          isSameFieldIdentity(request.fieldIdentity, currentFieldIdentity);
+        if (requestRepresentsThisFieldCompletion) {
+          return this.recoverInvalidField(
+            roomId,
+            roomGameState,
+            state,
+            'Scheduled field completion no longer matches the current field',
+          );
+        }
         return { success: true, events: [] };
       }
 
@@ -300,9 +333,26 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     reason: string,
   ): Promise<CompleteFieldResponse> {
     this.logger.error(`Recovering invalid field in room ${roomId}: ${reason}`);
+    const fieldIdentity = getCurrentFieldIdentity(state);
+    const abandonedCards = [...(state.playState?.currentField?.cards ?? [])];
+    const abandonedPlayedBySeatIds = [
+      ...(state.playState?.currentField?.playedBySeatIds ?? []),
+    ];
 
     if (restoreFieldCheckpoint(state)) {
       await roomGameState.saveState();
+      await this.gameEventLogService?.log({
+        roomId,
+        actionType: 'field_recovered',
+        state,
+        actionData: {
+          reason,
+          fieldIndex: fieldIdentity?.fieldIndex ?? null,
+          fieldAttemptId: fieldIdentity?.attemptId ?? null,
+          abandonedCards,
+          abandonedPlayedBySeatIds,
+        },
+      });
       const room = await this.roomService.getRoom(roomId);
       const restoredField = state.playState?.currentField;
       const currentSeatId = state.currentSeatId;
