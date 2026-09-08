@@ -50,6 +50,7 @@ export interface CreateRoomPayload {
   name: string;
   pointsToWin: number;
   teamAssignmentMethod: 'random' | 'host-choice';
+  gameMode?: 'normal' | 'pro';
 }
 
 export interface JoinRoomPayload {

@@ -5,6 +5,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -42,6 +43,7 @@ export default function RoomsScreen() {
   } = useGame();
   const [roomName, setRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState('5');
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,7 +89,7 @@ export default function RoomsScreen() {
       const points = Math.max(1, Number(pointsToWin) || 5);
       const name =
         roomName.trim() || t('rooms.defaultRoomName', { name: displayName });
-      const success = await createRoom(name, points);
+      const success = await createRoom(name, points, gameMode);
       if (success) {
         router.push('/room/current');
         void requestRegistration();
@@ -177,6 +179,14 @@ export default function RoomsScreen() {
               }
               style={[styles.input, styles.pointsInput]}
               value={pointsToWin}
+            />
+          </View>
+          <View style={styles.pointsRow}>
+            <Text style={styles.label}>プロモード</Text>
+            <Switch
+              accessibilityLabel="プロモード"
+              onValueChange={(enabled) => setGameMode(enabled ? 'pro' : 'normal')}
+              value={gameMode === 'pro'}
             />
           </View>
           <Button

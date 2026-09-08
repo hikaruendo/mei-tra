@@ -332,7 +332,7 @@ interface GameContextValue extends MobileState {
   isHost: boolean;
   refreshRooms: () => void;
   resumeRoom: (roomId: string) => Promise<void>;
-  createRoom: (name: string, pointsToWin: number) => Promise<boolean>;
+  createRoom: (name: string, pointsToWin: number, gameMode?: 'normal' | 'pro') => Promise<boolean>;
   joinRoom: (roomId: string) => Promise<boolean>;
   watchRoom: (roomId: string) => Promise<boolean>;
   leaveRoom: () => Promise<boolean>;
@@ -1094,12 +1094,13 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, [resyncActiveRoom]);
 
   const createRoom = useCallback(
-    async (name: string, pointsToWin: number) => {
+    async (name: string, pointsToWin: number, gameMode: 'normal' | 'pro' = 'normal') => {
       if (!canSendServerAction()) return false;
       const response = await emitAck('create-room', {
         name: name.trim(),
         pointsToWin,
         teamAssignmentMethod: 'random',
+        gameMode,
       });
       if (!response.success || !response.room) {
         dispatch({
