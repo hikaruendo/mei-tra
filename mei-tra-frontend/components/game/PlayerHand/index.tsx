@@ -356,8 +356,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   if (
                     canActAsCurrentPlayer &&
                     gamePhase === 'play' &&
-                    whoseTurn === currentSeatId &&
-                    isPlayable
+                    whoseTurn === currentSeatId
                   ) {
                     handleCardClick(card);
                   }

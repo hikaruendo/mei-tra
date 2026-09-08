@@ -586,13 +586,7 @@ export function GameBoard({
                 isHandPlayPhase &&
                 (actionsDisabled ||
                   Boolean(pendingAction) ||
-                  !isMyTurn ||
-                  !isCardPlayable(
-                    self.hand,
-                    card,
-                    game.currentField,
-                    currentTrump,
-                  ))
+                  !isMyTurn)
               }
               onReorder={onHandReorder}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
