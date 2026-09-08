@@ -128,13 +128,14 @@ export const RoomList: React.FC<RoomListProps> = ({
               className={styles.pointsToWinInput}
             />
           </div>
-          <label>
+          <label className={styles.proModeLabel}>
             <input
+              className={styles.proModeCheckbox}
               type="checkbox"
               checked={gameMode === 'pro'}
               onChange={(e) => setGameMode(e.target.checked ? 'pro' : 'normal')}
             />
-            {t('room.proMode')}
+            <span>{t('room.proMode')}</span>
           </label>
           <button
             type="submit"
