@@ -257,7 +257,7 @@ function HandFanCard({
       onPanResponderGrant: () => live.current.onDragStart(),
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
-        live.current.onDragMove(gesture.dx);
+        live.current.onDragMove(gesture.dx, gesture.dy);
       },
       // Once the card is held, the surrounding scroll view must not take it away.
       onPanResponderTerminationRequest: () => false,
