@@ -182,9 +182,9 @@ export default function RoomsScreen() {
             />
           </View>
           <View style={styles.pointsRow}>
-            <Text style={styles.label}>プロモード</Text>
+            <Text style={styles.label}>{t('rooms.proMode')}</Text>
             <Switch
-              accessibilityLabel="プロモード"
+              accessibilityLabel={t('rooms.proMode')}
               onValueChange={(enabled) => setGameMode(enabled ? 'pro' : 'normal')}
               value={gameMode === 'pro'}
             />
