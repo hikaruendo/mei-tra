@@ -79,6 +79,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentHighestDeclaration,
   completedFields,
   currentSeatId,
+  currentField,
+  currentTrump,
   gameMode,
   isHost = false,
   isIdle = false,
