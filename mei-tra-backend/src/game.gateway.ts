@@ -821,6 +821,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       name: string;
       pointsToWin: number;
       teamAssignmentMethod: 'random' | 'host-choice';
+      gameMode?: 'normal' | 'pro';
     },
   ) {
     this.activityTracker.recordActivity();
@@ -841,6 +842,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomName: data.name,
         pointsToWin: data.pointsToWin,
         teamAssignmentMethod: data.teamAssignmentMethod,
+        gameMode: data.gameMode,
         playerName,
         socketId: client.id,
         authenticatedUser,
