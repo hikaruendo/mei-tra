@@ -74,17 +74,17 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
+      const room = await this.roomService.getRoom(roomId);
+
       const legalPlayError = this.playService.getCardPlayError(
         player.hand,
         state.playState.currentField,
         state.blowState?.currentTrump ?? null,
         card,
       );
-      if (legalPlayError) {
+      if (legalPlayError && room?.settings.gameMode !== 'pro') {
         return { success: false, error: legalPlayError };
       }
-
-      const room = await this.roomService.getRoom(roomId);
 
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);

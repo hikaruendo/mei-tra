@@ -107,6 +107,7 @@ export const createStartedGameSnapshot = (
     fields: [],
     hostSeatId,
     pointsToWin: payload.pointsToWin,
+    gameMode: payload.gameMode ?? 'normal',
     paused: false,
     disconnectedSeatIds: [],
     idleSeatIds: [],

@@ -200,7 +200,9 @@ export function GameBoard({
     return counts;
   }, [game.fields]);
   const highest = game.blowState.currentHighestDeclaration;
+  const isProMode = game.gameMode === 'pro';
   const mustSelectNegri =
+    !isProMode &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
     highest?.seatId === game.youSeatId &&
@@ -225,14 +227,10 @@ export function GameBoard({
       Boolean(
         selectedCard &&
           self &&
-          isCardPlayable(
-            self.hand,
-            selectedCard,
-            game.currentField,
-            currentTrump,
-          ),
+          (isProMode ||
+            isCardPlayable(self.hand, selectedCard, game.currentField, currentTrump)),
       ),
-    [currentTrump, game.currentField, selectedCard, self],
+    [currentTrump, game.currentField, isProMode, selectedCard, self],
   );
   const fieldCardsKey = game.currentField?.cards.join(',') ?? '';
 
@@ -345,7 +343,7 @@ export function GameBoard({
         </View>
 
 
-        {showStrength && currentTrump ? (
+        {!isProMode && showStrength && currentTrump ? (
           <View style={styles.strengthPanel}>
             <Text style={styles.strengthOrder}>
               {getStrengthOrderLabel(currentTrump)}
@@ -584,15 +582,10 @@ export function GameBoard({
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
-                (actionsDisabled ||
+                (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
+                  actionsDisabled ||
                   Boolean(pendingAction) ||
-                  !isMyTurn ||
-                  !isCardPlayable(
-                    self.hand,
-                    card,
-                    game.currentField,
-                    currentTrump,
-                  ))
+                  !isMyTurn)
               }
               onReorder={onHandReorder}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
@@ -695,7 +688,7 @@ export function GameBoard({
             >
               <Text style={styles.optionsCloseText}>×</Text>
             </Pressable>
-            {currentTrump ? (
+            {!isProMode && currentTrump ? (
               <Button
                 onPress={() => {
                   setShowStrength((v) => !v);
