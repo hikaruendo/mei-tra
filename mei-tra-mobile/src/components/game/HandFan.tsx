@@ -17,6 +17,7 @@ import {
   type HandDropPlacement,
 } from '@/lib/hand-drag';
 import { colors } from '@/theme/colors';
+import { classifyCardDrop } from '@meitra/game-client/drag-action';
 
 /** How far the finger must travel sideways before the card is picked up. */
 const DRAG_ACTIVATE_PX = 6;
@@ -151,7 +152,7 @@ export function HandFan({
             }
             onDragEnd={(committed) => endDrag(card, committed)}
             onDragMove={(dx, dy) => {
-              dropActionRef.current = dy < -80 ? 'play' : dy > 80 ? 'negri' : null;
+              dropActionRef.current = classifyCardDrop(dy);
               const next = handDropPlacement(
                 orderRef.current,
                 card,

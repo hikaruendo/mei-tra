@@ -16,6 +16,7 @@ import {
   type DealAnimationCue,
 } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
+import { classifyCardDrop, type CardDropAction } from '@meitra/game-client/drag-action';
 import { useCardValidation } from './hooks/useCardValidation';
 import {
   reorderHand,
@@ -112,6 +113,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   // drag takes over. That cancel must not wipe the drag state the native drag
   // is still using, or the drop marker dies a few frames into every drag.
   const nativeDragRef = useRef(false);
+  const dragStartYRef = useRef<number | null>(null);
+  const [dropAction, setDropAction] = useState<CardDropAction | null>(null);
   const [dealAnimationElapsedMs, setDealAnimationElapsedMs] = useState<
     number | null
   >(null);
@@ -308,11 +311,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           className={styles.handContainer}
           onPointerMove={(event) => {
             if (canActAsCurrentPlayer) {
+              const deltaY = dragStartYRef.current === null ? 0 : event.clientY - dragStartYRef.current;
+              setDropAction(gameMode === 'pro' ? classifyCardDrop(deltaY) : null);
               updatePointerDropPlacement(event);
             }
           }}
           onPointerUp={() => {
-            if (draggingCard && dropPlacement) {
+            if (draggingCard && dropAction && gameMode === 'pro' && canActAsCurrentPlayer) {
+              if (dropAction === 'negri' && isWinningPlayer && !negriCard) gameActions.selectNegri(draggingCard);
+              if (dropAction === 'play') gameActions.playCard(draggingCard);
+            } else if (draggingCard && dropPlacement) {
               reorderDisplayHand(draggingCard, dropPlacement.card, dropPlacement.side);
             }
             setDraggingCard(null);
@@ -358,6 +366,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 onPointerDown={() => {
                   if (canActAsCurrentPlayer) {
                     setDraggingCard(card);
+                    dragStartYRef.current = event.clientY;
+                    setDropAction(null);
                     setDropPlacement(null);
                   }
                 }}
