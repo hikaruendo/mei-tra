@@ -46,6 +46,7 @@ interface HandFanProps {
   canReorder: boolean;
   /** Fires once per committed move, for the sound. */
   onReorder?: () => void;
+  onDropAction?: (card: string, action: 'play' | 'negri') => void;
 }
 
 export function HandFan({
@@ -60,11 +61,13 @@ export function HandFan({
   isCardDisabled,
   canReorder,
   onReorder,
+  onDropAction,
 }: HandFanProps) {
   const [order, setOrder] = useState(cards);
   const orderRef = useRef(order);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [drop, setDrop] = useState<HandDropPlacement | null>(null);
+  const dropActionRef = useRef<'play' | 'negri' | null>(null);
   // The release event can arrive before React has re-rendered the last move, so
   // the drop the reorder commits is read from here rather than from state.
   const dropRef = useRef<HandDropPlacement | null>(null);
@@ -101,6 +104,9 @@ export function HandFan({
 
   const endDrag = (card: string, committed: boolean) => {
     const placement = dropRef.current;
+    const action = dropActionRef.current;
+    dropActionRef.current = null;
+    if (committed && action) { onDropAction?.(card, action); return; }
     dropRef.current = null;
     setDraggingCard(null);
     setDrop(null);
@@ -144,7 +150,8 @@ export function HandFan({
               (isSelected ? -SELECTED_LIFT : 0)
             }
             onDragEnd={(committed) => endDrag(card, committed)}
-            onDragMove={(dx) => {
+            onDragMove={(dx, dy) => {
+              dropActionRef.current = dy < -80 ? 'play' : dy > 80 ? 'negri' : null;
               const next = handDropPlacement(
                 orderRef.current,
                 card,
@@ -184,7 +191,7 @@ interface HandFanCardProps {
   isDragging: boolean;
   lift: number;
   onDragEnd: (committed: boolean) => void;
-  onDragMove: (dx: number) => void;
+  onDragMove: (dx: number, dy: number) => void;
   onDragStart: () => void;
   onPress?: () => void;
   reducedMotion: boolean | null;

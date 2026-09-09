@@ -588,6 +588,12 @@ export function GameBoard({
                   !isMyTurn)
               }
               onReorder={onHandReorder}
+              onDropAction={(card, action) => {
+                if (isProMode && isMyTurn) {
+                  if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
+                  if (action === 'play') onPlayCard(card);
+                }
+              }}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
               reducedMotion={reducedMotion}
               seatId={self.seatId}
