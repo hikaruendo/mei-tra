@@ -365,7 +365,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     handleCardClick(card);
                   }
                 }}
-                onPointerDown={() => {
+                onPointerDown={(event) => {
                   if (canActAsCurrentPlayer) {
                     setDraggingCard(card);
                     dragStartYRef.current = event.clientY;
