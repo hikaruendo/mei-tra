@@ -1857,6 +1857,20 @@ describe('Game Use Cases', () => {
       expect(state.players[0].hand).toEqual([]);
     });
 
+    it('rejects an off-suit card in normal mode', async () => {
+      const roomService = createRoomServiceMock();
+      const playService = createPlayRulesService();
+      playService.getCardPlayError = jest.fn(() => 'Must follow suit');
+      const useCase = new PlayCardUseCase(roomService, playService);
+      const state = { players: [{ seatId: asSeatId('player-1'), name: 'Player 1', hand: ['D1'], team: 0 as Team, isPasser: false }], playState: { currentField: { cards: ['C1'], playedBySeatIds: asSeatIds('player-2'), baseCard: 'C1', dealerSeatId: asSeatId('player-1'), isComplete: false } }, currentSeatId: asSeatId('player-1') };
+      const roomGameState = { getState: jest.fn(() => state), saveState: jest.fn(), nextTurn: jest.fn(), findPlayerByActorId: jest.fn(() => state.players[0]), isPlayerTurn: jest.fn(() => true) } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.getRoom.mockResolvedValue({ settings: { gameMode: 'normal' } } as Room);
+      const result = await useCase.execute({ roomId: 'room-1', actorId: 'user-1', card: 'D1' });
+      expect(result.success).toBe(false);
+      expect(state.players[0].hand).toEqual(['D1']);
+    });
+
     it('plays a card and advances turn when field not complete', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PlayCardUseCase(

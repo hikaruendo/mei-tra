@@ -478,6 +478,7 @@ export class ReconnectionUseCase {
         hostSeatId: asSeatId(room.hostSeatId),
         pointsToWin: state.pointsToWin,
         teamNames: room.settings.teamNames,
+        gameMode: room.settings.gameMode ?? 'normal',
       },
     };
   }

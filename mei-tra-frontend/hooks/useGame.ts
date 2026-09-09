@@ -342,6 +342,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idleSeatIds, setIdleSeatIds] = useState<string[]>([]);
   const [disconnectedSeatIds, setDisconnectedSeatIds] = useState<string[]>([]);
@@ -363,6 +364,7 @@ export const useGame = () => {
     setGamePhase(null);
     setCurrentRoomId(null);
     setCurrentHostSeatId(null);
+    setGameMode('normal');
     setCurrentSeatId(null);
     setIsHost(false);
     setIsSpectator(false);
@@ -702,6 +704,7 @@ export const useGame = () => {
 
         setCurrentHostSeatId(nextRoom.hostSeatId);
         setTeamNames(nextRoom.settings.teamNames);
+        setGameMode(nextRoom.settings.gameMode ?? 'normal');
         if (selfSeatId) {
           setCurrentSeatId(selfSeatId);
         }
@@ -722,8 +725,10 @@ export const useGame = () => {
         hostSeatId,
         pointsToWin,
         teamNames,
+        gameMode: nextGameMode,
         isSpectator,
       }: GameStatePayload) => {
+        setGameMode(nextGameMode ?? 'normal');
         pendingNegriCardRef.current = null;
         gameEventStateRef.current = createGameEventStateFromSnapshot({
           players: playerContracts,
@@ -1452,6 +1457,7 @@ export const useGame = () => {
     idleSeatIds,
     disconnectedSeatIds,
     pointsToWin,
+    gameMode,
     users,
     paused,
     socket,

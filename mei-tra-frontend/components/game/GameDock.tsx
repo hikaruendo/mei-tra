@@ -5,12 +5,14 @@ import { useTranslations } from 'next-intl';
 import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
+import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
 
 interface GameDockProps {
   roomId: string;
   gameStarted: boolean;
   currentTrump: TrumpType | null;
+  gameMode: 'normal' | 'pro';
   gamePhase?: string | null;
   players?: Player[];
   teamNames?: TeamNames;
@@ -20,6 +22,8 @@ interface GameDockProps {
 export function GameDock({
   roomId,
   gameStarted,
+  currentTrump,
+  gameMode,
   gamePhase,
   players,
   teamNames,
@@ -83,6 +87,11 @@ export function GameDock({
 
   const tools = (
     <>
+      {gameMode === 'normal' && (
+        <div className={styles.dockItem}>
+          <StrengthOrderDock currentTrump={currentTrump} placement="topbar" />
+        </div>
+      )}
       <div className={styles.dockItem}>
         <ChatDock
           roomId={roomId}

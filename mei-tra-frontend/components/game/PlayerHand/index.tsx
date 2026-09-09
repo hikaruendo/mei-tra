@@ -16,6 +16,7 @@ import {
   type DealAnimationCue,
 } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
+import { useCardValidation } from './hooks/useCardValidation';
 import {
   reorderHand,
   syncHandOrder,
@@ -50,6 +51,7 @@ interface PlayerHandProps {
   currentSeatId: string;
   currentField: Field | null;
   currentTrump: TrumpType | null;
+  gameMode: 'normal' | 'pro';
   isHost?: boolean;
   isIdle?: boolean;
   isDisconnected?: boolean;
@@ -77,6 +79,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentHighestDeclaration,
   completedFields,
   currentSeatId,
+  gameMode,
   isHost = false,
   isIdle = false,
   isDisconnected = false,
@@ -114,6 +117,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   >(null);
   const autoRevealAttemptedRef = useRef(false);
   const handCardMetrics = HAND_CARD_METRICS;
+  const { isValidCardPlay } = useCardValidation(player.hand, currentField, currentTrump);
+  const isCardPlayable = (card: string) => gameMode === 'pro' || isValidCardPlay(card);
 
   const isCurrentPlayer = currentSeatId === player.seatId;
   const canActAsCurrentPlayer = isCurrentPlayer && !isSpectator;
@@ -125,7 +130,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
     : null;
   const shouldSelectNegri =
-    gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
+    gameMode === 'normal' && gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
@@ -281,7 +286,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return;
     }
 
-    if (gamePhase === 'play' && whoseTurn === currentSeatId) {
+    if (gamePhase === 'play' && whoseTurn === currentSeatId && isCardPlayable(card)) {
       if (!negriCard && currentHighestDeclaration?.seatId === player.seatId) {
         if (shouldPlayCardSelectionSound(selectedNegriCard, card)) {
           onCardSelection();
@@ -339,7 +344,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             return (
               <div
                 key={index}
-                className={`${styles.card} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''} ${isSelected ? styles.selected : ''} ${styles.playable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
+                className={`${styles.card} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''} ${isSelected ? styles.selected : ''} ${isCardPlayable(card) ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
                 draggable={canActAsCurrentPlayer}
                 onClick={() => {
                   if (
