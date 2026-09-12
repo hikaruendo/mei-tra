@@ -98,6 +98,43 @@ describe('Chombo report adjudication from room state', () => {
     expect(fixture.game.getState().teamScores[1].total).toBe(0);
   });
 
+  it('rejects reports from normal-mode rooms', async () => {
+    fixture.room.settings.gameMode = 'normal';
+    const result = await report('wrong-open');
+    expect(result).toEqual({
+      success: false,
+      error: 'Chombo reports are only available in pro mode',
+    });
+  });
+
+  it('rejects a same-team target before scoring', async () => {
+    fixture.game
+      .getState()
+      .players.find((player) => player.seatId === winner)!.team = 1;
+    fixture.game.getState().playState!.chomboViolations = [
+      candidate('wrong-suit'),
+    ];
+    const result = await report('wrong-suit');
+    expect(result).toEqual({
+      success: false,
+      error: 'You can only report the opposing team',
+    });
+    expect(fixture.game.getState().teamScores[0].total).toBe(0);
+    expect(fixture.game.getState().teamScores[1].total).toBe(0);
+  });
+
+  it('rejects reports issued by COM', async () => {
+    fixture.game
+      .getState()
+      .players.find((player) => player.seatId === asSeatId('opponent'))!.isCOM =
+      true;
+    const result = await report('wrong-open');
+    expect(result).toEqual({
+      success: false,
+      error: 'COM cannot report chombos',
+    });
+  });
+
   it('uses the room score target for immediate game-over', async () => {
     const state = fixture.game.getState();
     state.pointsToWin = 12;

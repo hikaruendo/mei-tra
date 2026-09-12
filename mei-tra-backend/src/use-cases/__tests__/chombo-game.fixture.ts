@@ -64,6 +64,9 @@ export async function createGame(hand: string[]) {
     timestamp: 1,
   };
   const updateRoomStatus = jest.fn(async () => true);
+  const room: { settings: { gameMode: 'pro' | 'normal' } } = {
+    settings: { gameMode: 'pro' },
+  };
   const module = await Test.createTestingModule({
     providers: [
       PlayCardUseCase,
@@ -71,7 +74,7 @@ export async function createGame(hand: string[]) {
       {
         provide: 'IRoomService',
         useValue: {
-          getRoom: async () => ({ settings: { gameMode: 'pro' } }),
+          getRoom: async () => room,
           getRoomGameState: async () => game,
           updateRoomStatus,
         },
@@ -84,6 +87,7 @@ export async function createGame(hand: string[]) {
     game,
     chombo,
     updateRoomStatus,
+    room,
     module,
     play: module.get(PlayCardUseCase),
     report: module.get(ReportChomboUseCase),
