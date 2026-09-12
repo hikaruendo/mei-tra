@@ -34,6 +34,7 @@ import {
 } from '../adapters/game-contract-adapters';
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
+import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import {
   getCurrentFieldIdentity,
   getFieldIntegrityError,
@@ -52,6 +53,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('IChomboService')
+    private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: CompleteFieldRequest): Promise<CompleteFieldResponse> {
@@ -581,6 +585,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
       (state.blowState.currentBlowIndex + 1) % state.players.length;
     const nextBlowPlayer =
       updatedState.players[nextBlowIndex] ?? updatedState.players[0];
+
+    // Candidates belong to the completed round. Keep persisted state reset and
+    // prevent the singleton service from resolving a stale candidate next round.
+    this.chomboService?.expireViolations();
 
     const newPlayState = {
       currentField: {
