@@ -97,6 +97,38 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
+      if (
+        room?.settings.gameMode === 'pro' &&
+        !state.playState.negriCard &&
+        state.playState.fields.length === 0 &&
+        state.playState.currentField.cards.length === 0 &&
+        state.blowState.currentHighestDeclaration?.seatId
+      ) {
+        const winnerSeatId = asSeatId(
+          state.blowState.currentHighestDeclaration.seatId,
+        );
+        const winner = state.players.find((candidate) => candidate.seatId === winnerSeatId);
+        const alreadyRecorded = state.playState.chomboViolations?.some(
+          (candidate) =>
+            candidate.violatorSeatId === winnerSeatId &&
+            candidate.type === 'negri-forget' &&
+            !candidate.isExpired &&
+            !candidate.reportedBySeatId,
+        );
+        if (winner && !alreadyRecorded) {
+          const violation = this.chomboService?.recordViolation(
+            winnerSeatId,
+            'negri-forget',
+          );
+          if (violation) {
+            state.playState.chomboViolations = [
+              ...(state.playState.chomboViolations ?? []),
+              violation,
+            ];
+          }
+        }
+      }
+
       if (room?.settings.gameMode === 'pro') {
         const lastTanzenViolation = this.chomboService?.checkViolations(
           asSeatId(player.seatId),
