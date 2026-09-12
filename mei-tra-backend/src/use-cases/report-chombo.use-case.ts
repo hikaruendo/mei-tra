@@ -22,17 +22,30 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
   async execute(request: ReportChomboRequest): Promise<ReportChomboResponse> {
     const room = await this.roomService.getRoom(request.roomId);
     if (room?.settings.gameMode !== 'pro') {
-      return { success: false, error: 'Chombo reports are only available in pro mode' };
+      return {
+        success: false,
+        error: 'Chombo reports are only available in pro mode',
+      };
     }
 
-    const roomGameState = await this.roomService.getRoomGameState(request.roomId);
+    const roomGameState = await this.roomService.getRoomGameState(
+      request.roomId,
+    );
     const state = roomGameState.getState();
     if (state.gamePhase !== 'play' || !state.playState) {
-      return { success: false, error: 'Chombo reports are only available during play' };
+      return {
+        success: false,
+        error: 'Chombo reports are only available during play',
+      };
+    }
+    if (state.playState.chomboRoundNumber !== state.roundNumber) {
+      return { success: false, error: 'Chombo reporting window has ended' };
     }
 
     const reporter = resolvePlayerByActorId(roomGameState, request.actorId);
-    const violator = state.players.find((player) => player.seatId === request.violatorSeatId);
+    const violator = state.players.find(
+      (player) => player.seatId === request.violatorSeatId,
+    );
     if (!reporter || !violator) {
       return { success: false, error: 'Player not found in game state' };
     }
@@ -44,10 +57,13 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
     }
 
     const reports = state.playState.chomboReports ?? [];
-    if (reports.some((report) =>
-      report.violatorSeatId === violator.seatId &&
-      report.violationType === request.violationType,
-    )) {
+    if (
+      reports.some(
+        (report) =>
+          report.violatorSeatId === violator.seatId &&
+          report.violationType === request.violationType,
+      )
+    ) {
       return { success: false, error: 'This chombo has already been reported' };
     }
 
@@ -96,7 +112,12 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       scores: state.teamScores,
     };
     const events: GatewayEvent[] = [
-      { scope: 'room', roomId: request.roomId, event: 'chombo-resolved', payload },
+      {
+        scope: 'room',
+        roomId: request.roomId,
+        event: 'chombo-resolved',
+        payload,
+      },
     ];
     const pointsToWin = state.pointsToWin;
     if (state.teamScores[awardedTeam].total >= pointsToWin) {
@@ -105,7 +126,10 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
         winningTeam: awardedTeam,
         finalScores: state.teamScores,
       };
-      await this.roomService.updateRoomStatus(request.roomId, RoomStatus.FINISHED);
+      await this.roomService.updateRoomStatus(
+        request.roomId,
+        RoomStatus.FINISHED,
+      );
       events.push({
         scope: 'room',
         roomId: request.roomId,

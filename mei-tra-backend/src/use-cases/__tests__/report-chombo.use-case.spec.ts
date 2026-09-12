@@ -18,11 +18,18 @@ describe('ReportChomboUseCase', () => {
     isPasser: false,
   } as DomainPlayer;
 
-  const createFixture = (violation: object | null = { reportedBySeatId: null }) => {
+  const createFixture = (
+    violation: object | null = { reportedBySeatId: null },
+  ) => {
     const state = {
       gamePhase: 'play',
       players: [reporter, violator],
-      playState: { currentField: null, negriCard: null, neguri: {}, fields: [] },
+      playState: {
+        currentField: null,
+        negriCard: null,
+        neguri: {},
+        fields: [],
+      },
       pointsToWin: 20,
       teamScores: { 0: { play: 0, total: 16 }, 1: { play: 0, total: 0 } },
     } as unknown as GameState;
@@ -58,9 +65,16 @@ describe('ReportChomboUseCase', () => {
 
     expect(result.success).toBe(true);
     expect(fixture.state.teamScores[0].total).toBe(21);
-    expect(result.events?.[0].payload).toEqual(expect.objectContaining({ isCorrect: true, awardedTeam: 0 }));
-    expect(fixture.roomService.updateRoomStatus).toHaveBeenCalledWith('room-1', 'finished');
-    expect(result.events?.[1]).toEqual(expect.objectContaining({ event: 'game-over' }));
+    expect(result.events?.[0].payload).toEqual(
+      expect.objectContaining({ isCorrect: true, awardedTeam: 0 }),
+    );
+    expect(fixture.roomService.updateRoomStatus).toHaveBeenCalledWith(
+      'room-1',
+      'finished',
+    );
+    expect(result.events?.[1]).toEqual(
+      expect.objectContaining({ event: 'game-over' }),
+    );
   });
 
   it('awards five points to the violator team for an invalid report', async () => {
@@ -79,18 +93,22 @@ describe('ReportChomboUseCase', () => {
 
     expect(result.success).toBe(true);
     expect(fixture.state.teamScores[1].total).toBe(5);
-    expect(result.events?.[0].payload).toEqual(expect.objectContaining({ isCorrect: false, awardedTeam: 1 }));
+    expect(result.events?.[0].payload).toEqual(
+      expect.objectContaining({ isCorrect: false, awardedTeam: 1 }),
+    );
   });
 
   it('resolves a persisted violation after the service instance is recreated', async () => {
     const fixture = createFixture(null);
-    fixture.state.playState!.chomboViolations = [{
-      type: 'wrong-suit',
-      violatorSeatId: asSeatId('violator'),
-      timestamp: Date.now(),
-      reportedBySeatId: null,
-      isExpired: false,
-    }];
+    fixture.state.playState!.chomboViolations = [
+      {
+        type: 'wrong-suit',
+        violatorSeatId: asSeatId('violator'),
+        timestamp: Date.now(),
+        reportedBySeatId: null,
+        isExpired: false,
+      },
+    ];
     const useCase = new ReportChomboUseCase(
       fixture.roomService as never,
       fixture.chomboService as never,
@@ -104,8 +122,33 @@ describe('ReportChomboUseCase', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.events?.[0].payload).toEqual(expect.objectContaining({ isCorrect: true }));
-    expect(fixture.state.playState!.chomboViolations![0].reportedBySeatId).toBe('reporter');
+    expect(result.events?.[0].payload).toEqual(
+      expect.objectContaining({ isCorrect: true }),
+    );
+    expect(fixture.state.playState!.chomboViolations![0].reportedBySeatId).toBe(
+      'reporter',
+    );
     expect(fixture.chomboService.reportViolation).not.toHaveBeenCalled();
+  });
+  it('rejects reports after the round reporting window has reset', async () => {
+    const fixture = createFixture();
+    const state = fixture.state;
+    state.roundNumber = 2;
+    (state.playState as any).chomboRoundNumber = 1;
+    const useCase = new ReportChomboUseCase(
+      fixture.roomService as never,
+      fixture.chomboService as never,
+    );
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      actorId: 'reporter',
+      violatorSeatId: asSeatId('violator'),
+      violationType: 'wrong-open',
+    });
+    expect(result).toEqual({
+      success: false,
+      error: 'Chombo reporting window has ended',
+    });
+    expect(fixture.gameState.saveState).not.toHaveBeenCalled();
   });
 });

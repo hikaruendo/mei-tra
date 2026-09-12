@@ -120,6 +120,7 @@ export interface PlayState {
   fieldCheckpoint?: FieldCheckpoint | null;
   chomboViolations?: ChomboViolation[];
   chomboReports?: ChomboReport[];
+  chomboRoundNumber?: number;
 }
 
 export interface PendingBrokenHandReveal {
