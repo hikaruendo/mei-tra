@@ -199,6 +199,12 @@ export function GameBoard({
     !game.negriCard;
   const isMyTurn =
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
+  const canPlaceProNegri =
+    isProMode &&
+    !game.isSpectator &&
+    highest?.seatId === game.youSeatId &&
+    !game.negriCard &&
+    game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
   const phaseLabel =
     game.gamePhase === 'blow'
@@ -568,7 +574,7 @@ export function GameBoard({
                   )
                 ) : null}
 
-            {isProMode && isMyTurn && !game.isSpectator ? (
+            {isProMode && (isMyTurn || canPlaceProNegri) && !game.isSpectator ? (
               <View style={styles.proDropZones}>
                 <Text style={styles.proDropZonePlay}>{t('board.choosePlayCard')} ↑</Text>
                 {highest?.seatId === self.seatId && !game.negriCard ? (
@@ -585,16 +591,16 @@ export function GameBoard({
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
-                (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
+                  (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
                   actionsDisabled ||
                   Boolean(pendingAction) ||
-                  !isMyTurn)
+                  (!isMyTurn && !canPlaceProNegri))
               }
               onReorder={onHandReorder}
               onDropAction={(card, action) => {
-                if (isProMode && isMyTurn) {
+                if (isProMode && (isMyTurn || canPlaceProNegri)) {
                   if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
-                  if (action === 'play') onPlayCard(card);
+                  if (action === 'play' && isMyTurn) onPlayCard(card);
                 }
               }}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}

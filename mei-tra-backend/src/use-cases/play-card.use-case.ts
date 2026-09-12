@@ -35,6 +35,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      const room = await this.roomService.getRoom(roomId);
       const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
@@ -48,10 +49,32 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      if (!state.playState?.currentField) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
+        return { success: false, error: "It's not your turn to play" };
+      }
+
+      if (!state.playState) {
         return {
           success: false,
-          error: 'Game state error: No current field',
+          error: 'Play state is unavailable',
+        };
+      }
+
+      // Pro mode allows the declaration winner to skip Negri and play first.
+      // Create the empty field lazily for that flow only.
+      if (!state.playState.currentField) {
+        if (room?.settings.gameMode !== 'pro') {
+          return {
+            success: false,
+            error: 'Game state error: No current field',
+          };
+        }
+        state.playState.currentField = {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId(player.seatId),
+          isComplete: false,
         };
       }
 
@@ -63,18 +86,12 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      if (!roomGameState.isPlayerTurn(player.seatId)) {
-        return { success: false, error: "It's not your turn to play" };
-      }
-
       if (state.playState.currentField.cards.includes(card)) {
         return {
           success: false,
           error: 'Card already played on the field',
         };
       }
-
-      const room = await this.roomService.getRoom(roomId);
 
       const legalPlayError = this.playService.getCardPlayError(
         player.hand,

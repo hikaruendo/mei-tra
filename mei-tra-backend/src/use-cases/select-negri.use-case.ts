@@ -43,7 +43,7 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         return { success: false, error: 'Play state is unavailable' };
       }
 
-      if (!roomGameState.isPlayerTurn(player.seatId)) {
+      if (!isProMode && !roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to select Negri" };
       }
 
@@ -63,27 +63,22 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         return { success: false, error: 'Selected card is not in hand' };
       }
 
-      if (isProMode && (state.playState?.fields.length ?? 0) > 0) {
-        state.playState.negriCard = card;
-        state.playState.negriSeatId = asSeatId(player.seatId);
-      } else {
-        state.playState = {
-        currentField: {
+      const currentField = state.playState.currentField;
+      const playHasStarted = Boolean(
+        currentField?.cards.length || state.playState.fields.length,
+      );
+
+      if (!state.playState.currentField) {
+        state.playState.currentField = {
           cards: [],
           playedBySeatIds: [],
           baseCard: '',
           dealerSeatId: asSeatId(player.seatId),
           isComplete: false,
-        },
-        negriCard: card,
-        negriSeatId: asSeatId(player.seatId),
-        neguri: {},
-        fields: [],
-        lastWinnerSeatId: null,
-        openDeclared: false,
-        openDeclarerSeatId: null,
         };
       }
+      state.playState.negriCard = card;
+      state.playState.negriSeatId = asSeatId(player.seatId);
 
       player.hand = player.hand.filter((c) => c !== card);
 
@@ -97,7 +92,13 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         };
       }
 
-      setCurrentSeat(state, winner.seatId);
+      // A pro-mode Negri can be placed outside the owner's turn. Preserve the
+      // active player in that case; only initial Negri selection starts play
+      // at the declaration winner as in normal mode.
+      if (!isProMode || !playHasStarted) {
+        setCurrentSeat(state, winner.seatId);
+      }
+      const startingSeatId = state.currentSeatId ?? winner.seatId;
       const events: GatewayEvent[] = [
         ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
           room,
@@ -108,14 +109,15 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           event: 'play-setup-complete',
           payload: {
             negriCard: card,
-            startingSeatId: asSeatId(state.players[winnerIndex].seatId),
+            negriSeatId: asSeatId(player.seatId),
+            startingSeatId: asSeatId(startingSeatId),
           },
         },
         {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: state.players[winnerIndex].seatId,
+          payload: startingSeatId,
         },
       ];
 

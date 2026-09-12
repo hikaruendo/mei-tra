@@ -230,6 +230,7 @@ export const PLAY_PHASE_REVEAL_DELAY_MS = 3000;
 
 export interface PlaySetupCompletePayload {
   negriCard: string;
+  negriSeatId: SeatId;
   startingSeatId: SeatId;
 }
 

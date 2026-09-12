@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './index.module.scss';
-import { Card } from '@/components/game/Card';
 import { CardFace } from '@/components/game/CardFace';
+import { TakenCardPreview } from '@/components/game/CompletedFields';
 
 interface NegriCardProps {
   negriCard: string;
@@ -15,17 +15,39 @@ export const NegriCard: React.FC<NegriCardProps> = ({
   currentSeatId,
 }) => {
   const isNegriPlayer = currentSeatId === negriSeatId;
+  const [isRevealed, setIsRevealed] = useState(false);
+
+  useEffect(() => setIsRevealed(false), [negriCard]);
+
+  const stopParentInteraction = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+  };
 
   return (
     <div className={styles.negriCardDisplay}>
-      {isNegriPlayer ? (
-        <div className={styles.negriField}>
-          <Card card={negriCard} />
-        </div>
+      {isNegriPlayer && isRevealed ? (
+        <button
+          type="button"
+          className={styles.negriField}
+          onClick={(event) => {
+            stopParentInteraction(event);
+            setIsRevealed(false);
+          }}
+        >
+          <TakenCardPreview card={negriCard} />
+        </button>
       ) : (
-        <div className={styles.cardFaceDown}>
+        <button
+          type="button"
+          className={styles.cardFaceDown}
+          onClick={isNegriPlayer ? (event) => {
+            stopParentInteraction(event);
+            setIsRevealed(true);
+          } : undefined}
+          aria-label={isNegriPlayer ? 'Reveal Negri card' : 'Negri card'}
+        >
           <CardFace faceDown />
-        </div>
+        </button>
       )}
     </div>
   );
