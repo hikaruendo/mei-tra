@@ -17,6 +17,7 @@ import type {
   PlayerIdlePayload,
   PlayerLeftPayload,
   PlaySetupCompletePayload,
+  ChomboResolvedPayload,
   RequestAgariPayload,
   RevealAgariPayload,
   RoundCancelledPayload,
@@ -204,6 +205,7 @@ export interface ServerToClientEvents {
   'round-cancelled': (payload: RoundCancelledPayload) => void;
   'reveal-agari': (payload: RevealAgariPayload) => void;
   'play-setup-complete': (payload: PlaySetupCompletePayload) => void;
+  'chombo-resolved': (payload: ChomboResolvedPayload) => void;
   'card-played': (payload: CardPlayedPayload) => void;
   'field-recovered': () => void;
   'field-updated': (field: FieldContract) => void;

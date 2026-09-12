@@ -234,6 +234,29 @@ export interface PlaySetupCompletePayload {
   startingSeatId: SeatId;
 }
 
+export type ChomboViolationType =
+  | 'negri-forget'
+  | 'wrong-suit'
+  | 'four-jack'
+  | 'last-tanzen'
+  | 'wrong-broken'
+  | 'wrong-open';
+
+export interface ReportChomboPayload {
+  roomId: string;
+  violatorSeatId: SeatId;
+  violationType: ChomboViolationType;
+}
+
+export interface ChomboResolvedPayload {
+  violatorSeatId: SeatId;
+  reporterSeatId: SeatId;
+  violationType: ChomboViolationType;
+  isCorrect: boolean;
+  awardedTeam: Team;
+  scores: TransportTeamScores;
+}
+
 export interface GameMessagePayload {
   message: string;
 }
