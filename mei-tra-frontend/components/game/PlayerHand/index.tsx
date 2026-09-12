@@ -343,6 +343,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             '--player-hand-card-container-min-height': `${handCardMetrics.minHeight}px`,
           } as React.CSSProperties}
         >
+          {gameMode === 'pro' && canActAsCurrentPlayer && whoseTurn === currentSeatId ? (
+            <div className={styles.proDropHints} aria-live="polite">
+              <span>{t('play')} ↑</span>
+              {isWinningPlayer && !negriCard ? <span>{t('negri')} ↓</span> : null}
+            </div>
+          ) : null}
           {displayHand.map((card, index) => {
             const isSelected = card === selectedCard || card === selectedNegriCard;
             const distanceFromCenter = index - (displayHand.length - 1) / 2;
