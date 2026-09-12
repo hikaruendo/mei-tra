@@ -19,7 +19,7 @@ interface ChomboReportPanelProps {
 
 export function ChomboReportPanel({ players, currentSeatId, onReport }: ChomboReportPanelProps) {
   const opponents = players.filter((player) => player.seatId !== currentSeatId && !player.isCOM);
-  const [violatorSeatId, setViolatorSeatId] = useState(opponents[0]?.seatId ?? '');
+  const [violatorSeatId, setViolatorSeatId] = useState<string>(opponents[0]?.seatId ?? '');
   const [violationType, setViolationType] = useState<ChomboViolationType>('negri-forget');
 
   if (opponents.length === 0) return null;
