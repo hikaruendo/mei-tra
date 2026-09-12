@@ -152,6 +152,30 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         }
       }
 
+      if (room?.settings.gameMode === 'pro') {
+        const fourJackViolation = this.chomboService?.checkViolations(
+          asSeatId(player.seatId),
+          'check-four-jack',
+          { player, hasBroken: player.hasBroken },
+        );
+        if (
+          fourJackViolation &&
+          !(state.playState.chomboViolations ?? []).some(
+            (candidate) =>
+              candidate.violatorSeatId === fourJackViolation.violatorSeatId &&
+              candidate.type === fourJackViolation.type &&
+              !candidate.isExpired &&
+              !candidate.reportedBySeatId,
+          )
+        ) {
+          state.playState.chomboViolations = [
+            ...(state.playState.chomboViolations ?? []),
+            fourJackViolation,
+          ];
+        }
+      }
+
+
       const legalPlayError = this.playService.getCardPlayError(
         player.hand,
         state.playState.currentField,
