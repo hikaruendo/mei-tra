@@ -31,7 +31,8 @@ export class PlayCardUseCase implements IPlayCardUseCase {
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
     @Optional()
-    @Inject('IChomboService') private readonly chomboService?: IChomboService,
+    @Inject('IChomboService')
+    private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: PlayCardRequest): Promise<PlayCardResponse> {
@@ -99,6 +100,11 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
       if (
         room?.settings.gameMode === 'pro' &&
+        !state.players.find(
+          (candidate) =>
+            candidate.seatId ===
+            state.blowState.currentHighestDeclaration?.seatId,
+        )?.isCOM &&
         !state.playState.negriCard &&
         state.playState.fields.length === 0 &&
         state.playState.currentField.cards.length === 0 &&
@@ -107,7 +113,9 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         const winnerSeatId = asSeatId(
           state.blowState.currentHighestDeclaration.seatId,
         );
-        const winner = state.players.find((candidate) => candidate.seatId === winnerSeatId);
+        const winner = state.players.find(
+          (candidate) => candidate.seatId === winnerSeatId,
+        );
         const alreadyRecorded = state.playState.chomboViolations?.some(
           (candidate) =>
             candidate.violatorSeatId === winnerSeatId &&
@@ -129,7 +137,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         }
       }
 
-      if (room?.settings.gameMode === 'pro') {
+      if (room?.settings.gameMode === 'pro' && !player.isCOM) {
         const lastTanzenViolation = this.chomboService?.checkViolations(
           asSeatId(player.seatId),
           'check-last-card',
@@ -152,7 +160,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         }
       }
 
-      if (room?.settings.gameMode === 'pro') {
+      if (room?.settings.gameMode === 'pro' && !player.isCOM) {
         const fourJackViolation = this.chomboService?.checkViolations(
           asSeatId(player.seatId),
           'check-four-jack',
@@ -175,19 +183,26 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         }
       }
 
-
       const legalPlayError = this.playService.getCardPlayError(
         player.hand,
         state.playState.currentField,
         state.blowState?.currentTrump ?? null,
         card,
       );
-      if (room?.settings.gameMode === 'pro' && legalPlayError) {
-        const violation = this.chomboService?.checkViolations(asSeatId(player.seatId), 'play-card', {
-          player,
-          field: state.playState.currentField,
-          card,
-        });
+      if (
+        room?.settings.gameMode === 'pro' &&
+        !player.isCOM &&
+        legalPlayError
+      ) {
+        const violation = this.chomboService?.checkViolations(
+          asSeatId(player.seatId),
+          'play-card',
+          {
+            player,
+            field: state.playState.currentField,
+            card,
+          },
+        );
         if (violation) {
           state.playState.chomboViolations = [
             ...(state.playState.chomboViolations ?? []),

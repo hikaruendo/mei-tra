@@ -71,7 +71,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       }
 
       if (!hasRevealableBrokenHand) {
-        if (room?.settings.gameMode !== 'pro') {
+        if (room?.settings.gameMode !== 'pro' || player.isCOM) {
           return { success: false, error: 'Player does not have broken hand' };
         }
 
