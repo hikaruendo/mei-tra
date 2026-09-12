@@ -51,13 +51,25 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       return { success: false, error: 'This chombo has already been reported' };
     }
 
-    const violation = this.chomboService.reportViolation(
-      asSeatId(reporter.seatId),
-      asSeatId(violator.seatId),
-      request.violationType,
-      reporter.team,
-      violator.team,
+    const persistedViolation = (state.playState.chomboViolations ?? []).find(
+      (candidate) =>
+        candidate.violatorSeatId === violator.seatId &&
+        candidate.type === request.violationType &&
+        !candidate.isExpired &&
+        !candidate.reportedBySeatId,
     );
+    const violation = persistedViolation
+      ? (() => {
+          persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
+          return persistedViolation;
+        })()
+      : this.chomboService.reportViolation(
+          asSeatId(reporter.seatId),
+          asSeatId(violator.seatId),
+          request.violationType,
+          reporter.team,
+          violator.team,
+        );
     const isCorrect = Boolean(violation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;
     state.teamScores[awardedTeam].play += 5;

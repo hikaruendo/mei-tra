@@ -118,6 +118,7 @@ export interface PlayState {
   openDeclared: boolean;
   openDeclarerSeatId?: SeatId | null;
   fieldCheckpoint?: FieldCheckpoint | null;
+  chomboViolations?: ChomboViolation[];
   chomboReports?: ChomboReport[];
 }
 
