@@ -83,6 +83,10 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
+      if (room?.settings.gameMode === 'pro') {
+        state.playState.chomboRoundNumber ??= state.roundNumber;
+      }
+
       // Prevent playing on a field that is being completed
       if (state.playState.currentField.isComplete) {
         return {

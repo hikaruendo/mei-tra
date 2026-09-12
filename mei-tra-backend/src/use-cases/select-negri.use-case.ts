@@ -51,10 +51,16 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         state.blowState.declarations,
       );
       if (!winner) {
-        return { success: false, error: 'Failed to determine declaration winner' };
+        return {
+          success: false,
+          error: 'Failed to determine declaration winner',
+        };
       }
       if (winner.seatId !== player.seatId) {
-        return { success: false, error: 'Only the declaration winner may select Negri' };
+        return {
+          success: false,
+          error: 'Only the declaration winner may select Negri',
+        };
       }
       if (isProMode && (state.playState?.fields.length ?? 0) >= 10) {
         return { success: false, error: 'Negri selection window has ended' };
@@ -77,9 +83,14 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           isComplete: false,
         };
       }
+      if (isProMode) {
+        state.playState.chomboRoundNumber ??= state.roundNumber;
+      }
       state.playState.negriCard = card;
       state.playState.negriSeatId = asSeatId(player.seatId);
-      state.playState.chomboViolations = (state.playState.chomboViolations ?? []).filter(
+      state.playState.chomboViolations = (
+        state.playState.chomboViolations ?? []
+      ).filter(
         (violation) =>
           !(
             violation.violatorSeatId === player.seatId &&
