@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ChomboResolvedPayload, GameOverPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
-import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import {
   IReportChomboUseCase,
   ReportChomboRequest,
@@ -16,7 +15,6 @@ import { RoomStatus } from '../types/room.types';
 export class ReportChomboUseCase implements IReportChomboUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
-    @Inject('IChomboService') private readonly chomboService: IChomboService,
   ) {}
 
   async execute(request: ReportChomboRequest): Promise<ReportChomboResponse> {
@@ -74,19 +72,10 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
         !candidate.isExpired &&
         !candidate.reportedBySeatId,
     );
-    const violation = persistedViolation
-      ? (() => {
-          persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
-          return persistedViolation;
-        })()
-      : this.chomboService.reportViolation(
-          asSeatId(reporter.seatId),
-          asSeatId(violator.seatId),
-          request.violationType,
-          reporter.team,
-          violator.team,
-        );
-    const isCorrect = Boolean(violation);
+    if (persistedViolation) {
+      persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
+    }
+    const isCorrect = Boolean(persistedViolation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;
     state.teamScores[awardedTeam].play += 5;
     state.teamScores[awardedTeam].total += 5;
