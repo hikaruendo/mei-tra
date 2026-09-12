@@ -362,7 +362,7 @@ describe('HandFan', () => {
     expect(cardOrder(renderer)).toEqual(['A', 'B', 'C', 'D']);
   });
 
-  it('leaves a vertical swipe to the surrounding scroll view', () => {
+  it('claims a vertical drag for the play or negri drop target', () => {
     const renderer = render();
     const handlers = handlersFor(renderer, 'A');
 
@@ -373,7 +373,7 @@ describe('HandFan', () => {
       ),
     );
 
-    expect(claimed).toBe(false);
+    expect(claimed).toBe(true);
   });
 
   it('lets a tap through to the card underneath', () => {
