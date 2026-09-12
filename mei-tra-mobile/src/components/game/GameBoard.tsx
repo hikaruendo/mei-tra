@@ -1,4 +1,4 @@
-import type { TrumpType } from '@meitra/contracts/game';
+import type { ChomboViolationType, TrumpType } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
@@ -65,6 +65,7 @@ interface GameBoardProps {
   onCancel?: () => void;
   onHandReorder?: () => void;
   onPlayCard: (card: string) => void;
+  onReportChombo?: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
@@ -86,6 +87,7 @@ export function GameBoard({
   onCancel = () => undefined,
   onHandReorder = () => undefined,
   onPlayCard,
+  onReportChombo = () => undefined,
   onSelectBaseSuit,
   onReplaceWithCOM,
   onLeave,
@@ -337,6 +339,22 @@ export function GameBoard({
             </Text>
           ) : null}
         </View>
+
+        {isProMode && game.gamePhase === 'play' && !game.isSpectator ? (
+          <View style={styles.chomboPanel}>
+            <Text style={styles.chomboPanelTitle}>Chombo report</Text>
+            {opponentSlots.map(({ player }) => (
+              <View key={player.seatId} style={styles.chomboTargetRow}>
+                <Text style={styles.chomboTarget}>{player.name}</Text>
+                {(['negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen', 'wrong-broken', 'wrong-open'] as ChomboViolationType[]).map((type) => (
+                  <Pressable key={type} onPress={() => onReportChombo(player.seatId, type)} style={styles.chomboButton}>
+                    <Text style={styles.chomboButtonText}>{type}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
 
 
         {!isProMode && showStrength && currentTrump ? (
@@ -1073,6 +1091,36 @@ const styles = StyleSheet.create({
   proDropZoneNegri: {
     color: colors.gold,
     fontSize: 12,
+  },
+  chomboPanel: {
+    gap: 6,
+    marginBottom: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: colors.panel,
+  },
+  chomboPanelTitle: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  chomboTargetRow: {
+    gap: 4,
+  },
+  chomboTarget: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  chomboButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 5,
+    backgroundColor: colors.panelStrong,
+  },
+  chomboButtonText: {
+    color: colors.textMuted,
+    fontSize: 10,
   },
   selectedActions: {
     flexDirection: 'row',
