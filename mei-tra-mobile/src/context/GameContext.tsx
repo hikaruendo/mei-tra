@@ -3,6 +3,7 @@ import type {
   ReconnectionFailureCode,
   TeamNames,
   TrumpType,
+  ChomboViolationType,
 } from '@meitra/contracts/game';
 import type {
   AckableClientEvent,
@@ -353,6 +354,7 @@ interface GameContextValue extends MobileState {
   playCancelSound: () => void;
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
+  reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
   removePlayer: (targetSeatId: string) => void;
@@ -1332,6 +1334,18 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const reportChombo = useCallback((violatorSeatId: string, violationType: ChomboViolationType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('report-chombo', game.roomId, () => {
+      socketRef.current?.emit('report-chombo', {
+        roomId: game.roomId,
+        violatorSeatId: asSeatId(violatorSeatId),
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
   const selectBaseSuit = useCallback((suit: string) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1441,6 +1455,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCancelSound,
       playHandReorderSound,
       playCard,
+      reportChombo,
       selectBaseSuit,
       revealBrokenHand,
       removePlayer,
@@ -1474,6 +1489,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       leaveRoom,
       passBlow,
       playCard,
+      reportChombo,
       playCardSelectionSound,
       playCancelSound,
       playHandReorderSound,

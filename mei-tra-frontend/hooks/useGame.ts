@@ -23,6 +23,7 @@ import type {
   PlayerLeftPayload,
   ReconnectionFailureCode,
   RequestAgariPayload,
+  ChomboViolationType,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -1400,6 +1401,14 @@ export const useGame = () => {
         card,
       };
       socket?.emit('play-card', payload);
+    },
+    reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => {
+      if (!currentRoomId) return;
+      socket?.emit('report-chombo', {
+        roomId: currentRoomId,
+        violatorSeatId,
+        violationType,
+      });
     },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {

@@ -19,6 +19,7 @@ import type {
   PlaySetupCompletePayload,
   ChomboResolvedPayload,
   RequestAgariPayload,
+  ReportChomboPayload,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -181,6 +182,7 @@ export interface ClientToServerEvents {
   'select-negri': (payload: SelectNegriPayload) => void;
   'request-agari': (payload: RequestAgariPayload) => void;
   'play-card': (payload: PlayCardPayload) => void;
+  'report-chombo': (payload: ReportChomboPayload) => void;
   'select-base-suit': (payload: SelectBaseSuitPayload) => void;
   'reveal-broken-hand': (payload: RevealBrokenHandPayload) => void;
   'update-auth': (payload: UpdateAuthPayload) => void;
