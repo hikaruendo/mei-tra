@@ -361,7 +361,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               <div
                 key={index}
                 className={`${styles.card} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''} ${isSelected ? styles.selected : ''} ${isCardPlayable(card) ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
-                draggable={canActAsCurrentPlayer}
+                draggable={canActAsCurrentPlayer && gameMode !== 'pro'}
                 onClick={() => {
                   if (
                     canActAsCurrentPlayer &&
