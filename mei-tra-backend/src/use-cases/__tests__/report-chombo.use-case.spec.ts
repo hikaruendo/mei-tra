@@ -23,7 +23,8 @@ describe('ReportChomboUseCase', () => {
       gamePhase: 'play',
       players: [reporter, violator],
       playState: { currentField: null, negriCard: null, neguri: {}, fields: [] },
-      teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+      pointsToWin: 17,
+      teamScores: { 0: { play: 0, total: 16 }, 1: { play: 0, total: 0 } },
     } as unknown as GameState;
     const gameState = {
       getState: () => state,
@@ -36,6 +37,7 @@ describe('ReportChomboUseCase', () => {
     const roomService = {
       getRoom: jest.fn(async () => ({ settings: { gameMode: 'pro' } })),
       getRoomGameState: jest.fn(async () => gameState),
+      updateRoomStatus: jest.fn(async () => true),
     };
     return { state, gameState, chomboService, roomService };
   };
@@ -55,8 +57,10 @@ describe('ReportChomboUseCase', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(fixture.state.teamScores[0].total).toBe(5);
+    expect(fixture.state.teamScores[0].total).toBe(21);
     expect(result.events?.[0].payload).toEqual(expect.objectContaining({ isCorrect: true, awardedTeam: 0 }));
+    expect(fixture.roomService.updateRoomStatus).toHaveBeenCalledWith('room-1', 'finished');
+    expect(result.events?.[1]).toEqual(expect.objectContaining({ event: 'game-over' }));
   });
 
   it('awards five points to the violator team for an invalid report', async () => {
