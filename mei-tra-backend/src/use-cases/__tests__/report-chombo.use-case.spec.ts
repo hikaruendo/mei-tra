@@ -23,7 +23,7 @@ describe('ReportChomboUseCase', () => {
       gamePhase: 'play',
       players: [reporter, violator],
       playState: { currentField: null, negriCard: null, neguri: {}, fields: [] },
-      pointsToWin: 17,
+      pointsToWin: 20,
       teamScores: { 0: { play: 0, total: 16 }, 1: { play: 0, total: 0 } },
     } as unknown as GameState;
     const gameState = {

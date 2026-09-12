@@ -86,7 +86,7 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
     const events: GatewayEvent[] = [
       { scope: 'room', roomId: request.roomId, event: 'chombo-resolved', payload },
     ];
-    const pointsToWin = state.pointsToWin ?? 17;
+    const pointsToWin = state.pointsToWin;
     if (state.teamScores[awardedTeam].total >= pointsToWin) {
       const gameOverPayload: GameOverPayload = {
         winner: `Team ${awardedTeam}`,
