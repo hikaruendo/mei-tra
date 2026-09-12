@@ -7,6 +7,7 @@ import type {
   BlowUpdatedPayload,
   BrokenPayload,
   CardPlayedPayload,
+  ChomboResolvedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -975,6 +976,13 @@ export const useGame = () => {
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
+      },
+      'chombo-resolved': (payload: ChomboResolvedPayload) => {
+        const result = payload.isCorrect ? 'correct' : 'incorrect';
+        setNotification({
+          message: `Chombo report ${result}: Team ${payload.awardedTeam} receives 5 points.`,
+          type: payload.isCorrect ? 'success' : 'error',
+        });
       },
       'update-turn': (seatId: UpdateTurnPayload) => {
         if (shouldAbortRevealOnTurn(firstTurnRevealRef.current, seatId)) {

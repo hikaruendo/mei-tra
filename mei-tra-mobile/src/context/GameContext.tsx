@@ -1,5 +1,6 @@
 import type {
   PlayerContract,
+  ChomboResolvedPayload,
   ReconnectionFailureCode,
   TeamNames,
   TrumpType,
@@ -939,6 +940,13 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
+    });
+    socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
+      dispatch({ type: 'patchGame', patch: { teamScores: payload.scores } });
+      dispatch({
+        type: 'notice',
+        message: `Chombo report ${payload.isCorrect ? 'correct' : 'incorrect'}: Team ${payload.awardedTeam} receives 5 points.`,
+      });
     });
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
