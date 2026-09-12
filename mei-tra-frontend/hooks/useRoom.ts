@@ -388,7 +388,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   ]);
 
   // ルーム作成
-  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice') => {
+  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice', gameMode: 'normal' | 'pro' = 'normal') => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -423,7 +423,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
 
     socket.emit(
       'create-room',
-      { name: trimmedName, pointsToWin, teamAssignmentMethod },
+      { name: trimmedName, pointsToWin, teamAssignmentMethod, gameMode },
       (response: { success: boolean; room?: RoomContract; error?: string }) => {
         console.log('[useRoom] create-room ack:', {
           success: response.success,
