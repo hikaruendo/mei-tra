@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ChomboResolvedPayload } from '@contracts/game';
+import type { ChomboResolvedPayload, GameOverPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
@@ -8,7 +8,9 @@ import {
   ReportChomboRequest,
   ReportChomboResponse,
 } from './interfaces/report-chombo.use-case.interface';
+import type { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
+import { RoomStatus } from '../types/room.types';
 
 @Injectable()
 export class ReportChomboUseCase implements IReportChomboUseCase {
@@ -81,9 +83,28 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       awardedTeam,
       scores: state.teamScores,
     };
+    const events: GatewayEvent[] = [
+      { scope: 'room', roomId: request.roomId, event: 'chombo-resolved', payload },
+    ];
+    const pointsToWin = state.pointsToWin;
+    if (state.teamScores[awardedTeam].total >= pointsToWin) {
+      const gameOverPayload: GameOverPayload = {
+        winner: `Team ${awardedTeam}`,
+        winningTeam: awardedTeam,
+        finalScores: state.teamScores,
+      };
+      await this.roomService.updateRoomStatus(request.roomId, RoomStatus.FINISHED);
+      events.push({
+        scope: 'room',
+        roomId: request.roomId,
+        event: 'game-over',
+        payload: gameOverPayload,
+      });
+    }
+
     return {
       success: true,
-      events: [{ scope: 'room', roomId: request.roomId, event: 'chombo-resolved', payload }],
+      events,
     };
   }
 }

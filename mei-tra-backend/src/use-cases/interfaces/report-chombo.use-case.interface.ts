@@ -1,4 +1,4 @@
-import type { ChomboResolvedPayload, ReportChomboPayload } from '@contracts/game';
+import type { ReportChomboPayload } from '@contracts/game';
 import type { GatewayEvent } from './gateway-event.interface';
 
 export interface ReportChomboRequest extends ReportChomboPayload {
@@ -8,7 +8,7 @@ export interface ReportChomboRequest extends ReportChomboPayload {
 export interface ReportChomboResponse {
   success: boolean;
   error?: string;
-  events?: GatewayEvent<ChomboResolvedPayload, 'chombo-resolved'>[];
+  events?: GatewayEvent[];
 }
 
 export interface IReportChomboUseCase {
