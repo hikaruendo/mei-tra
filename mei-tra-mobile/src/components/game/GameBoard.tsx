@@ -574,6 +574,15 @@ export function GameBoard({
                   )
                 ) : null}
 
+            {isProMode && isMyTurn && !game.isSpectator ? (
+              <View style={styles.proDropZones}>
+                <Text style={styles.proDropZonePlay}>{t('board.choosePlayCard')} ↑</Text>
+                {highest?.seatId === self.seatId && !game.negriCard ? (
+                  <Text style={styles.proDropZoneNegri}>{t('seat.negri')} ↓</Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <HandFan
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
@@ -588,6 +597,12 @@ export function GameBoard({
                   !isMyTurn)
               }
               onReorder={onHandReorder}
+              onDropAction={(card, action) => {
+                if (isProMode && isMyTurn) {
+                  if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
+                  if (action === 'play') onPlayCard(card);
+                }
+              }}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
               reducedMotion={reducedMotion}
               seatId={self.seatId}
@@ -1033,6 +1048,20 @@ const styles = StyleSheet.create({
   instruction: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  proDropZones: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+    marginBottom: 6,
+  },
+  proDropZonePlay: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  proDropZoneNegri: {
+    color: colors.gold,
+    fontSize: 12,
   },
   selectedActions: {
     flexDirection: 'row',

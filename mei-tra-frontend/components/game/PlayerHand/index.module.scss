@@ -1264,3 +1264,16 @@
     }
   }
 }
+
+.proDropHints {
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  color: var(--mt-text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
