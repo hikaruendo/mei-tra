@@ -81,4 +81,31 @@ describe('ReportChomboUseCase', () => {
     expect(fixture.state.teamScores[1].total).toBe(5);
     expect(result.events?.[0].payload).toEqual(expect.objectContaining({ isCorrect: false, awardedTeam: 1 }));
   });
+
+  it('resolves a persisted violation after the service instance is recreated', async () => {
+    const fixture = createFixture(null);
+    fixture.state.playState!.chomboViolations = [{
+      type: 'wrong-suit',
+      violatorSeatId: asSeatId('violator'),
+      timestamp: Date.now(),
+      reportedBySeatId: null,
+      isExpired: false,
+    }];
+    const useCase = new ReportChomboUseCase(
+      fixture.roomService as never,
+      fixture.chomboService as never,
+    );
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      actorId: 'reporter',
+      violatorSeatId: asSeatId('violator'),
+      violationType: 'wrong-suit',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.events?.[0].payload).toEqual(expect.objectContaining({ isCorrect: true }));
+    expect(fixture.state.playState!.chomboViolations![0].reportedBySeatId).toBe('reporter');
+    expect(fixture.chomboService.reportViolation).not.toHaveBeenCalled();
+  });
 });

@@ -104,11 +104,17 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         card,
       );
       if (room?.settings.gameMode === 'pro' && legalPlayError) {
-        this.chomboService?.checkViolations(asSeatId(player.seatId), 'play-card', {
+        const violation = this.chomboService?.checkViolations(asSeatId(player.seatId), 'play-card', {
           player,
           field: state.playState.currentField,
           card,
         });
+        if (violation) {
+          state.playState.chomboViolations = [
+            ...(state.playState.chomboViolations ?? []),
+            violation,
+          ];
+        }
       }
       if (legalPlayError && room?.settings.gameMode !== 'pro') {
         return { success: false, error: legalPlayError };
