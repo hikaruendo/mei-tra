@@ -247,13 +247,12 @@ function HandFanCard({
 
     panResponder.current = PanResponder.create({
       // A tap has to keep reaching the card underneath, so the drag only claims
-      // the touch once the finger moves sideways. Capturing is what lets it take
+      // the touch after a meaningful horizontal or vertical movement. Capturing is what lets it take
       // the touch off the Pressable that is already holding it.
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
         live.current.canReorder &&
-        Math.abs(gesture.dx) > DRAG_ACTIVATE_PX &&
-        Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) > DRAG_ACTIVATE_PX,
       onPanResponderGrant: () => live.current.onDragStart(),
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
