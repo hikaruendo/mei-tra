@@ -12,6 +12,7 @@ import type {
   RequestAgariPayload,
   RevealAgariPayload,
   SyncGameStatePayload,
+  ReportChomboPayload,
 } from '@contracts/game';
 import type { UpdateTeamNamesPayload } from '@contracts/room';
 import type {
@@ -38,6 +39,7 @@ import { GatewayEvent } from './use-cases/interfaces/gateway-event.interface';
 import { IDeclareBlowUseCase } from './use-cases/interfaces/declare-blow.use-case.interface';
 import { IPassBlowUseCase } from './use-cases/interfaces/pass-blow.use-case.interface';
 import { ISelectNegriUseCase } from './use-cases/interfaces/select-negri.use-case.interface';
+import { IReportChomboUseCase } from './use-cases/interfaces/report-chombo.use-case.interface';
 import {
   CompleteFieldTrigger,
   IPlayCardUseCase,
@@ -115,7 +117,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject('ISelectNegriUseCase')
     private readonly selectNegriUseCase: ISelectNegriUseCase,
     @Inject('IPlayCardUseCase')
-    private readonly playCardUseCase: IPlayCardUseCase,
+  private readonly playCardUseCase: IPlayCardUseCase,
+    @Inject('IReportChomboUseCase')
+    private readonly reportChomboUseCase: IReportChomboUseCase,
     @Inject('ISelectBaseSuitUseCase')
     private readonly selectBaseSuitUseCase: ISelectBaseSuitUseCase,
     @Inject('IRevealBrokenHandUseCase')
@@ -1803,6 +1807,37 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       console.error('Error in handleSelectNegri:', error);
       client.emit('error-message', 'Failed to select Negri');
+    }
+  }
+
+  @SubscribeMessage('report-chombo')
+  async handleReportChombo(
+    client: Socket,
+    @MessageBody() data: ReportChomboPayload,
+  ): Promise<void> {
+    if (this.spectatorGatewayEffectsService.rejectAction(client, 'report chombo')) {
+      return;
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'report chombo')) {
+      return;
+    }
+
+    try {
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () => this.reportChomboUseCase.execute({
+          ...data,
+          actorId: this.getActorId(client),
+        }),
+      );
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to report chombo');
+        return;
+      }
+      this.dispatchGameplayEvents(result.events);
+    } catch (error) {
+      this.logger.error('Error in handleReportChombo:', error);
+      client.emit('error-message', 'Failed to report chombo');
     }
   }
 

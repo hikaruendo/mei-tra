@@ -99,6 +99,7 @@ describe('reduceGameEvent', () => {
       type: 'play-setup-complete',
       payload: {
         negriCard: '5♣',
+        negriSeatId: asSeatId('seat-1'),
         startingSeatId: asSeatId('seat-1'),
       },
     });

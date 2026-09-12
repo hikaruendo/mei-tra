@@ -118,6 +118,7 @@ export interface PlayState {
   openDeclared: boolean;
   openDeclarerSeatId?: SeatId | null;
   fieldCheckpoint?: FieldCheckpoint | null;
+  chomboReports?: ChomboReport[];
 }
 
 export interface PendingBrokenHandReveal {
@@ -155,6 +156,15 @@ export interface ChomboViolation {
   timestamp: number;
   reportedBySeatId: SeatId | null;
   isExpired: boolean;
+}
+
+export interface ChomboReport {
+  violatorSeatId: SeatId;
+  violationType: ChomboViolation['type'];
+  reporterSeatId: SeatId;
+  resolved: boolean;
+  awardedTeam: Team;
+  timestamp: number;
 }
 
 export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;

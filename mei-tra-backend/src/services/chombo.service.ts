@@ -25,6 +25,20 @@ export class ChomboService implements IChomboService {
     let violationType: ChomboViolation['type'] | null = null;
 
     switch (action) {
+      case 'play-card': {
+        if (context.field && context.card) {
+          const legalPlayError = this.playService.getCardPlayError(
+            context.player.hand,
+            context.field,
+            null,
+            context.card,
+          );
+          if (legalPlayError) {
+            violationType = 'wrong-suit';
+          }
+        }
+        break;
+      }
       case 'select-negri': {
         if (!context.neguri?.[seatId]) {
           violationType = 'negri-forget';

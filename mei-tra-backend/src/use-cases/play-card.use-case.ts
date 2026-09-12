@@ -17,6 +17,8 @@ import { IPlayService } from '../services/interfaces/play-service.interface';
 import { asSeatId } from '../types/identity.types';
 import { resolveCurrentPlayer } from '../domain/current-turn';
 import { toFieldContract } from '../adapters/game-contract-adapters';
+import { getCurrentFieldIdentity } from '../domain/field-recovery';
+import { IChomboService } from '../services/interfaces/chombo-service.interface';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -28,6 +30,8 @@ export class PlayCardUseCase implements IPlayCardUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('IChomboService') private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: PlayCardRequest): Promise<PlayCardResponse> {
@@ -99,6 +103,13 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         state.blowState?.currentTrump ?? null,
         card,
       );
+      if (room?.settings.gameMode === 'pro' && legalPlayError) {
+        this.chomboService?.checkViolations(asSeatId(player.seatId), 'play-card', {
+          player,
+          field: state.playState.currentField,
+          card,
+        });
+      }
       if (legalPlayError && room?.settings.gameMode !== 'pro') {
         return { success: false, error: legalPlayError };
       }
@@ -154,6 +165,11 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         const trigger: CompleteFieldTrigger = {
           roomId,
           delayMs: 3000,
+          fieldIdentity: getCurrentFieldIdentity(state) ?? {
+            roundNumber: state.roundNumber,
+            fieldIndex: state.playState.fields.length,
+            attemptId: `legacy:${state.roundNumber}:${state.playState.fields.length}`,
+          },
           field: {
             ...currentField,
             cards: [...currentField.cards],

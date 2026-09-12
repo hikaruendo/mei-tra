@@ -25,6 +25,7 @@ import { DeclareBlowUseCase } from './use-cases/declare-blow.use-case';
 import { PassBlowUseCase } from './use-cases/pass-blow.use-case';
 import { SelectNegriUseCase } from './use-cases/select-negri.use-case';
 import { PlayCardUseCase } from './use-cases/play-card.use-case';
+import { ReportChomboUseCase } from './use-cases/report-chombo.use-case';
 import { SelectBaseSuitUseCase } from './use-cases/select-base-suit.use-case';
 import { RevealBrokenHandUseCase } from './use-cases/reveal-broken-hand.use-case';
 import { CompleteFieldUseCase } from './use-cases/complete-field.use-case';
@@ -196,6 +197,10 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
     {
       provide: 'IPlayCardUseCase',
       useClass: PlayCardUseCase,
+    },
+    {
+      provide: 'IReportChomboUseCase',
+      useClass: ReportChomboUseCase,
     },
     {
       provide: 'ISelectBaseSuitUseCase',
