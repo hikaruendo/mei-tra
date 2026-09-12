@@ -9,6 +9,7 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
@@ -319,6 +320,14 @@ export const GameTable: React.FC<GameTableProps> = ({
           />
         )}
       </div>
+
+      {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
+        <ChomboReportPanel
+          players={players}
+          currentSeatId={currentSeatId}
+          onReport={gameActions.reportChombo}
+        />
+      )}
     </div>
   );
 };
