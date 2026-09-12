@@ -79,6 +79,14 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       }
       state.playState.negriCard = card;
       state.playState.negriSeatId = asSeatId(player.seatId);
+      state.playState.chomboViolations = (state.playState.chomboViolations ?? []).filter(
+        (violation) =>
+          !(
+            violation.violatorSeatId === player.seatId &&
+            violation.type === 'negri-forget' &&
+            !violation.reportedBySeatId
+          ),
+      );
 
       player.hand = player.hand.filter((c) => c !== card);
 
