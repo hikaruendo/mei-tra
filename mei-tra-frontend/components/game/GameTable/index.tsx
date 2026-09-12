@@ -39,6 +39,7 @@ interface GameTableProps {
   idleSeatIds?: string[];
   disconnectedSeatIds?: string[];
   pointsToWin: number;
+  gameMode: 'normal' | 'pro';
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -79,6 +80,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentSeatId,
   currentRoomId,
   pointsToWin,
+  gameMode,
   teamNames,
   idleSeatIds = [],
   disconnectedSeatIds = [],
@@ -173,6 +175,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 gamePhase={gamePhase}
                 players={players}
                 teamNames={teamNames}
+                gameMode={gameMode}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -257,6 +260,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
               currentTrump={currentTrump}
+              gameMode={gameMode}
               takenCount={takenCount}
               teamNames={teamNames}
               isHost={isHost}

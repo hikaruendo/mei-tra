@@ -122,6 +122,7 @@ export default function Home() {
     disconnectedSeatIds = [],
     paused = false,
     pointsToWin = 0,
+    gameMode = 'normal',
     isConnected = false,
     isConnecting = false,
     users = [],
@@ -256,6 +257,7 @@ export default function Home() {
                   idleSeatIds={idleSeatIds}
                   disconnectedSeatIds={disconnectedSeatIds}
                   pointsToWin={pointsToWin}
+                  gameMode={gameMode}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
                   firstTurnReveal={firstTurnReveal}

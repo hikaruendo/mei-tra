@@ -17,11 +17,6 @@ import { IPlayService } from '../services/interfaces/play-service.interface';
 import { asSeatId } from '../types/identity.types';
 import { resolveCurrentPlayer } from '../domain/current-turn';
 import { toFieldContract } from '../adapters/game-contract-adapters';
-import {
-  createFieldCheckpoint,
-  getCurrentFieldIdentity,
-  getFieldIntegrityError,
-} from '../domain/field-recovery';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -60,39 +55,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      const currentField = state.playState.currentField;
-      const fieldIntegrityError = getFieldIntegrityError(state, currentField);
-      if (
-        fieldIntegrityError ||
-        currentField.playedBySeatIds.includes(player.seatId)
-      ) {
-        const fieldIdentity = getCurrentFieldIdentity(state);
-        this.logger.error(
-          `Recovering invalid field before card play in room ${roomId}: ${
-            fieldIntegrityError ?? 'Current seat already played in this field'
-          }`,
-        );
-        return fieldIdentity
-          ? {
-              success: true,
-              events: [],
-              completeFieldTrigger: {
-                roomId,
-                delayMs: 0,
-                fieldIdentity,
-                field: {
-                  ...currentField,
-                  cards: [...currentField.cards],
-                  playedBySeatIds: [...currentField.playedBySeatIds],
-                },
-              },
-            }
-          : {
-              success: false,
-              error: 'Field identity is unavailable',
-            };
-      }
-
       // Prevent playing on a field that is being completed
       if (state.playState.currentField.isComplete) {
         return {
@@ -112,25 +74,22 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
+      const room = await this.roomService.getRoom(roomId);
+
       const legalPlayError = this.playService.getCardPlayError(
         player.hand,
         state.playState.currentField,
         state.blowState?.currentTrump ?? null,
         card,
       );
-      if (legalPlayError) {
+      if (legalPlayError && room?.settings.gameMode !== 'pro') {
         return { success: false, error: legalPlayError };
-      }
-
-      const room = await this.roomService.getRoom(roomId);
-
-      if (currentField.cards.length === 0) {
-        state.playState.fieldCheckpoint = createFieldCheckpoint(state);
       }
 
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
 
+      const currentField = state.playState.currentField;
       const playedBySeatIds = [...currentField.playedBySeatIds];
       playedBySeatIds.push(asSeatId(player.seatId));
       currentField.cards.push(card);
@@ -139,7 +98,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         currentField.baseCard = card;
       }
 
-      const activeFieldIdentity = getCurrentFieldIdentity(state);
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'card_played',
@@ -147,8 +105,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         state,
         actionData: {
           card,
-          fieldIndex: activeFieldIdentity?.fieldIndex ?? null,
-          fieldAttemptId: activeFieldIdentity?.attemptId ?? null,
           fieldCards: [...currentField.cards],
           baseCard: currentField.baseCard,
           playedBySeatIds: [...playedBySeatIds],
@@ -178,16 +134,9 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         currentField.isComplete = true;
 
         await roomGameState.saveState();
-        if (!activeFieldIdentity) {
-          return {
-            success: false,
-            error: 'Field checkpoint is unavailable',
-          };
-        }
         const trigger: CompleteFieldTrigger = {
           roomId,
           delayMs: 3000,
-          fieldIdentity: activeFieldIdentity,
           field: {
             ...currentField,
             cards: [...currentField.cards],

@@ -28,6 +28,8 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      const room = await this.roomService.getRoom(roomId);
+      const isProMode = room?.settings.gameMode === 'pro';
       const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
@@ -37,16 +39,35 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       if (state.gamePhase !== 'play') {
         return { success: false, error: 'Cannot select Negri card now' };
       }
+      if (!state.playState) {
+        return { success: false, error: 'Play state is unavailable' };
+      }
 
       if (!roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to select Negri" };
       }
 
+      const winner = this.blowService.findHighestDeclaration(
+        state.blowState.declarations,
+      );
+      if (!winner) {
+        return { success: false, error: 'Failed to determine declaration winner' };
+      }
+      if (winner.seatId !== player.seatId) {
+        return { success: false, error: 'Only the declaration winner may select Negri' };
+      }
+      if (isProMode && (state.playState?.fields.length ?? 0) >= 10) {
+        return { success: false, error: 'Negri selection window has ended' };
+      }
       if (!player.hand.includes(card)) {
         return { success: false, error: 'Selected card is not in hand' };
       }
 
-      state.playState = {
+      if (isProMode && (state.playState?.fields.length ?? 0) > 0) {
+        state.playState.negriCard = card;
+        state.playState.negriSeatId = asSeatId(player.seatId);
+      } else {
+        state.playState = {
         currentField: {
           cards: [],
           playedBySeatIds: [],
@@ -61,20 +82,10 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         lastWinnerSeatId: null,
         openDeclared: false,
         openDeclarerSeatId: null,
-        fieldCheckpoint: null,
-      };
-
-      player.hand = player.hand.filter((c) => c !== card);
-
-      const winner = this.blowService.findHighestDeclaration(
-        state.blowState.declarations,
-      );
-      if (!winner) {
-        return {
-          success: false,
-          error: 'Failed to determine declaration winner',
         };
       }
+
+      player.hand = player.hand.filter((c) => c !== card);
 
       const winnerIndex = state.players.findIndex(
         (p) => p.seatId === winner.seatId,
@@ -87,8 +98,6 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       }
 
       setCurrentSeat(state, winner.seatId);
-      const room = await this.roomService.getRoom(roomId);
-
       const events: GatewayEvent[] = [
         ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
           room,

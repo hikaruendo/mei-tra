@@ -95,6 +95,7 @@ export interface GameStatePayload {
   hostSeatId: SeatId;
   pointsToWin: number;
   teamNames?: TeamNames;
+  gameMode?: 'normal' | 'pro';
 }
 
 export interface BlowUpdatedPayload {
@@ -205,6 +206,7 @@ export interface GameStartedPayload {
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
+  gameMode?: 'normal' | 'pro';
   currentTurnSeatId?: SeatId;
 }
 
