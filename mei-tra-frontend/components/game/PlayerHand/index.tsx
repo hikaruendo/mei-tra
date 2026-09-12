@@ -82,7 +82,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   currentSeatId,
   currentField,
   currentTrump,
-  gameMode,
+  gameMode = 'normal',
   isHost = false,
   isIdle = false,
   isDisconnected = false,
@@ -116,6 +116,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   // is still using, or the drop marker dies a few frames into every drag.
   const nativeDragRef = useRef(false);
   const dragStartYRef = useRef<number | null>(null);
+  const dropActionRef = useRef<CardDropAction | null>(null);
   const [dropAction, setDropAction] = useState<CardDropAction | null>(null);
   const [dealAnimationElapsedMs, setDealAnimationElapsedMs] = useState<
     number | null
@@ -286,6 +287,37 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     });
   };
 
+  const finishPointerDrag = (event?: React.PointerEvent<HTMLDivElement>) => {
+    if (event && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    const completedDropAction = dropActionRef.current ?? dropAction;
+    if (
+      draggingCard &&
+      completedDropAction &&
+      gameMode === 'pro' &&
+      canActAsCurrentPlayer &&
+      gamePhase === 'play' &&
+      whoseTurn === currentSeatId
+    ) {
+      if (completedDropAction === 'negri' && isWinningPlayer && !negriCard) {
+        gameActions.selectNegri(draggingCard);
+      }
+      if (completedDropAction === 'play') {
+        gameActions.playCard(draggingCard);
+      }
+    } else if (draggingCard && dropPlacement) {
+      reorderDisplayHand(draggingCard, dropPlacement.card, dropPlacement.side);
+    }
+
+    dragStartYRef.current = null;
+    dropActionRef.current = null;
+    setDraggingCard(null);
+    setDropAction(null);
+    setDropPlacement(null);
+  };
+
   const handleCardClick = (card: string) => {
     if (!canActAsCurrentPlayer) {
       return;
@@ -314,25 +346,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           onPointerMove={(event) => {
             if (canActAsCurrentPlayer) {
               const deltaY = dragStartYRef.current === null ? 0 : event.clientY - dragStartYRef.current;
-              setDropAction(gameMode === 'pro' ? classifyCardDrop(deltaY) : null);
+              const nextDropAction = gameMode === 'pro' ? classifyCardDrop(deltaY) : null;
+              dropActionRef.current = nextDropAction;
+              setDropAction(nextDropAction);
               updatePointerDropPlacement(event);
             }
           }}
-          onPointerUp={() => {
-            if (draggingCard && dropAction && gameMode === 'pro' && canActAsCurrentPlayer) {
-              if (dropAction === 'negri' && isWinningPlayer && !negriCard) gameActions.selectNegri(draggingCard);
-              if (dropAction === 'play') gameActions.playCard(draggingCard);
-            } else if (draggingCard && dropPlacement) {
-              reorderDisplayHand(draggingCard, dropPlacement.card, dropPlacement.side);
-            }
-            setDraggingCard(null);
-            setDropPlacement(null);
-          }}
+          onPointerUp={finishPointerDrag}
           onPointerCancel={() => {
             if (nativeDragRef.current) {
               return;
             }
+            dragStartYRef.current = null;
+            dropActionRef.current = null;
             setDraggingCard(null);
+            setDropAction(null);
             setDropPlacement(null);
           }}
           style={{
@@ -373,12 +401,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 }}
                 onPointerDown={(event) => {
                   if (canActAsCurrentPlayer) {
+                    event.currentTarget.setPointerCapture?.(event.pointerId);
                     setDraggingCard(card);
                     dragStartYRef.current = event.clientY;
+                    dropActionRef.current = null;
                     setDropAction(null);
                     setDropPlacement(null);
                   }
                 }}
+                onPointerUp={finishPointerDrag}
                 data-hand-card={card}
                 onDragStart={(event) => {
                   if (!canActAsCurrentPlayer) {
