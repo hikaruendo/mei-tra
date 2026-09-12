@@ -129,6 +129,29 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         }
       }
 
+      if (room?.settings.gameMode === 'pro') {
+        const lastTanzenViolation = this.chomboService?.checkViolations(
+          asSeatId(player.seatId),
+          'check-last-card',
+          { player },
+        );
+        if (
+          lastTanzenViolation &&
+          !(state.playState.chomboViolations ?? []).some(
+            (candidate) =>
+              candidate.violatorSeatId === lastTanzenViolation.violatorSeatId &&
+              candidate.type === lastTanzenViolation.type &&
+              !candidate.isExpired &&
+              !candidate.reportedBySeatId,
+          )
+        ) {
+          state.playState.chomboViolations = [
+            ...(state.playState.chomboViolations ?? []),
+            lastTanzenViolation,
+          ];
+        }
+      }
+
       const legalPlayError = this.playService.getCardPlayError(
         player.hand,
         state.playState.currentField,
