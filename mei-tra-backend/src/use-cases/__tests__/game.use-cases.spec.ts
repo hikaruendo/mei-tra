@@ -2509,6 +2509,7 @@ describe('Game Use Cases', () => {
             event: 'play-setup-complete',
             payload: {
               negriCard: '6♥',
+              negriSeatId: 'com-timeout-1',
               startingSeatId: 'com-timeout-1',
             },
           },
@@ -2535,6 +2536,7 @@ describe('Game Use Cases', () => {
           event: 'play-setup-complete',
           payload: {
             negriCard: '6♥',
+            negriSeatId: 'com-timeout-1',
             startingSeatId: 'com-timeout-1',
           },
         },

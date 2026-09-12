@@ -213,7 +213,7 @@ export const reduceGameEvent = (
         ...state,
         currentTurnSeatId: startingSeatId,
         negriCard: event.payload.negriCard,
-        negriSeatId: startingSeatId,
+        negriSeatId: event.payload.negriSeatId,
         revealedAgari: null,
         blowState: {
           ...state.blowState,

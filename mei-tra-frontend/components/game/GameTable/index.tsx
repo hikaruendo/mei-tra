@@ -23,6 +23,7 @@ interface GameTableProps {
   currentField: Field | null;
   players: Player[];
   negriCard: string | null;
+  negriSeatId?: string | null;
   completedFields: CompletedField[];
   revealedAgari: string | null;
   gameActions: GameActions;
@@ -66,6 +67,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentField,
   players,
   negriCard,
+  negriSeatId = null,
   completedFields,
   revealedAgari,
   gameActions,
@@ -250,6 +252,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 highlightSeatId === player_.seatId
               }
               negriCard={negriCard}
+              negriSeatId={negriSeatId}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
               gameActions={gameActions}
@@ -297,13 +300,15 @@ export const GameTable: React.FC<GameTableProps> = ({
             </button>
           </div>
         ) : (
-          <GameField
-            currentField={currentField}
-            players={players}
-            onBaseSuitSelect={gameActions.selectBaseSuit}
-            isCurrentPlayer={!isSpectator && currentSeatId === whoseTurn}
-            currentSeatId={tablePerspectiveSeatId || ''}
-          />
+          <>
+            <GameField
+              currentField={currentField}
+              players={players}
+              onBaseSuitSelect={gameActions.selectBaseSuit}
+              isCurrentPlayer={!isSpectator && currentSeatId === whoseTurn}
+              currentSeatId={tablePerspectiveSeatId || ''}
+            />
+          </>
         )}
 
         {revealStep && armedReveal && (

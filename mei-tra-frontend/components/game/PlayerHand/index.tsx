@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent } from '@dnd-kit/core';
 import { useLocale, useTranslations } from 'next-intl';
 import { Player, GamePhase, GameActions, CompletedField, Field, TrumpType, BlowDeclaration, TeamNames } from '@/types/game.types';
 import { CardFace } from '@/components/game/CardFace';
+import { ProDraggableCard } from './ProDraggableCard';
 import { CompletedFields, TakenCardPreview } from '@/components/game/CompletedFields';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
+import { NegriCard } from '@/components/game/NegriCard';
 import styles from './index.module.scss';
 import { PlayAndCancelBtn } from '@/components/game/PlayAndCancelBtn';
 import { getTeamDisplayName } from '@/lib/utils/teamLabels';
@@ -42,6 +45,7 @@ interface PlayerHandProps {
   player: Player;
   isCurrentTurn: boolean;
   negriCard: string | null;
+  negriSeatId?: string | null;
   gamePhase: GamePhase | null;
   whoseTurn: string | null;
   gameActions: GameActions;
@@ -72,6 +76,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   player,
   isCurrentTurn,
   negriCard,
+  negriSeatId = null,
   gamePhase,
   whoseTurn,
   gameActions,
@@ -110,13 +115,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   // arrangement change from the hand itself changing.
   const syncedHandRef = useRef(player.hand);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [activeDragCard, setActiveDragCard] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null);
   // Chromium cancels the pointer stream (pointercancel) when a native HTML5
   // drag takes over. That cancel must not wipe the drag state the native drag
   // is still using, or the drop marker dies a few frames into every drag.
   const nativeDragRef = useRef(false);
   const dragStartYRef = useRef<number | null>(null);
+  const dragStartXRef = useRef<number | null>(null);
   const dropActionRef = useRef<CardDropAction | null>(null);
+  const pointerDragFinishedRef = useRef(false);
   const [dropAction, setDropAction] = useState<CardDropAction | null>(null);
   const [dealAnimationElapsedMs, setDealAnimationElapsedMs] = useState<
     number | null
@@ -137,6 +147,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     : null;
   const shouldSelectNegri =
     gameMode === 'normal' && gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
+  const canPlaceProNegri =
+    gameMode === 'pro' && gamePhase === 'play' && canActAsCurrentPlayer &&
+    isWinningPlayer && !negriCard;
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
@@ -195,6 +208,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     if (handChanged) {
       nativeDragRef.current = false;
       setDraggingCard(null);
+      setDragOffset({ x: 0, y: 0 });
       setDropPlacement(null);
     }
   }, [player.hand]);
@@ -288,6 +302,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const finishPointerDrag = (event?: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerDragFinishedRef.current) {
+      return;
+    }
+    pointerDragFinishedRef.current = true;
+
     if (event && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -312,13 +331,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
 
     dragStartYRef.current = null;
+    dragStartXRef.current = null;
     dropActionRef.current = null;
     setDraggingCard(null);
+    setDragOffset({ x: 0, y: 0 });
     setDropAction(null);
     setDropPlacement(null);
   };
 
   const handleCardClick = (card: string) => {
+    if (gameMode === 'pro') return;
     if (!canActAsCurrentPlayer) {
       return;
     }
@@ -338,28 +360,71 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
   };
 
+  const handleDndMove = ({ delta }: DragMoveEvent) => {
+    if (gameMode !== 'pro') return;
+    const action = classifyCardDrop(delta.y);
+    dropActionRef.current = action;
+    setDropAction(action);
+  };
+
+  const handleDndEnd = ({ active, delta }: DragEndEvent) => {
+    const card = String(active.data.current?.card ?? '');
+    const action = classifyCardDrop(delta.y);
+    if (
+      gameMode === 'pro' &&
+      card &&
+      action &&
+      canActAsCurrentPlayer &&
+      gamePhase === 'play' &&
+      (action === 'negri' || whoseTurn === currentSeatId)
+    ) {
+      if (action === 'negri' && isWinningPlayer && !negriCard) {
+        gameActions.selectNegri(card);
+      } else if (action === 'play') {
+        gameActions.playCard(card);
+      }
+    }
+    dropActionRef.current = null;
+    setDropAction(null);
+    setActiveDragCard(null);
+  };
+
   const renderPlayerHand = (isCurrentPlayer: boolean) => {
     if (isCurrentPlayer) {
       return (
+        <DndContext
+          sensors={sensors}
+          onDragStart={({ active }) => setActiveDragCard(String(active.data.current?.card ?? ''))}
+          onDragMove={handleDndMove}
+          onDragCancel={() => {
+            dropActionRef.current = null;
+            setDropAction(null);
+            setActiveDragCard(null);
+          }}
+          onDragEnd={handleDndEnd}
+        >
         <div
           className={styles.handContainer}
           onPointerMove={(event) => {
-            if (canActAsCurrentPlayer) {
+            if (canActAsCurrentPlayer && gameMode !== 'pro') {
               const deltaY = dragStartYRef.current === null ? 0 : event.clientY - dragStartYRef.current;
-              const nextDropAction = gameMode === 'pro' ? classifyCardDrop(deltaY) : null;
-              dropActionRef.current = nextDropAction;
-              setDropAction(nextDropAction);
+              const deltaX = dragStartXRef.current === null ? 0 : event.clientX - dragStartXRef.current;
+              setDragOffset({ x: deltaX, y: deltaY });
+              dropActionRef.current = null;
+              setDropAction(null);
               updatePointerDropPlacement(event);
             }
           }}
-          onPointerUp={finishPointerDrag}
+          onPointerUp={gameMode === 'pro' ? undefined : finishPointerDrag}
           onPointerCancel={() => {
-            if (nativeDragRef.current) {
+            if (nativeDragRef.current || gameMode === 'pro') {
               return;
             }
             dragStartYRef.current = null;
+            dragStartXRef.current = null;
             dropActionRef.current = null;
             setDraggingCard(null);
+            setDragOffset({ x: 0, y: 0 });
             setDropAction(null);
             setDropPlacement(null);
           }}
@@ -371,7 +436,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             '--player-hand-card-container-min-height': `${handCardMetrics.minHeight}px`,
           } as React.CSSProperties}
         >
-          {gameMode === 'pro' && canActAsCurrentPlayer && whoseTurn === currentSeatId ? (
+          {gameMode === 'pro' && canActAsCurrentPlayer && (whoseTurn === currentSeatId || canPlaceProNegri) ? (
             <div className={styles.proDropHints} aria-live="polite">
               <span>{t('play')} ↑</span>
               {isWinningPlayer && !negriCard ? <span>{t('negri')} ↓</span> : null}
@@ -386,9 +451,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * handCardMetrics.spreadLift;
 
             return (
+              <ProDraggableCard key={card} card={card} enabled={gameMode === 'pro' && canActAsCurrentPlayer}>
               <div
                 key={index}
-                className={`${styles.card} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''} ${isSelected ? styles.selected : ''} ${isCardPlayable(card) ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
+                className={`${styles.card} ${dealAnimationElapsedMs !== null ? styles.dealingCard : ''} ${isSelected ? styles.selected : ''} ${isCardPlayable(card) ? styles.playable : styles.unplayable} ${isSpectator ? styles.spectatorCard : ''} ${gameMode !== 'pro' && draggingCard === card ? styles.dragging : ''} ${dropPlacement?.card === card && dropPlacement.side === 'before' ? styles.insertBefore : ''} ${dropPlacement?.card === card && dropPlacement.side === 'after' ? styles.insertAfter : ''}`}
                 draggable={canActAsCurrentPlayer && gameMode !== 'pro'}
                 onClick={() => {
                   if (
@@ -400,16 +466,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   }
                 }}
                 onPointerDown={(event) => {
-                  if (canActAsCurrentPlayer) {
+                  if (canActAsCurrentPlayer && gameMode !== 'pro') {
+                    pointerDragFinishedRef.current = false;
+                    // Normal mode still uses the local pointer path for hand
+                    // reordering; Pro mode is owned entirely by dnd-kit.
                     event.currentTarget.setPointerCapture?.(event.pointerId);
                     setDraggingCard(card);
+                    setDragOffset({ x: 0, y: 0 });
                     dragStartYRef.current = event.clientY;
+                    dragStartXRef.current = event.clientX;
                     dropActionRef.current = null;
                     setDropAction(null);
                     setDropPlacement(null);
                   }
                 }}
-                onPointerUp={finishPointerDrag}
+                onPointerUp={gameMode === 'pro' ? undefined : finishPointerDrag}
                 data-hand-card={card}
                 onDragStart={(event) => {
                   if (!canActAsCurrentPlayer) {
@@ -438,11 +509,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   }
                   nativeDragRef.current = false;
                   setDraggingCard(null);
+                  setDragOffset({ x: 0, y: 0 });
                   setDropPlacement(null);
                 }}
                 onDragEnd={() => {
                   nativeDragRef.current = false;
                   setDraggingCard(null);
+                  setDragOffset({ x: 0, y: 0 });
                   setDropPlacement(null);
                 }}
                 style={{
@@ -455,13 +528,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   '--deal-card-translate-x': `${DEAL_CARD_TRANSLATE_X}px`,
                   '--deal-card-initial-scale': DEAL_CARD_INITIAL_SCALE,
                   '--deal-animation-elapsed': `${dealAnimationElapsedMs ?? 0}ms`,
+                  '--drag-x': `${dragOffset.x}px`,
+                  '--drag-y': `${dragOffset.y}px`,
                 } as React.CSSProperties}
               >
                 <CardFace card={card} />
               </div>
+              </ProDraggableCard>
             );
           })}
-          {!isSpectator && selectedCard && (
+          {gameMode !== 'pro' && !isSpectator && selectedCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedCard}
               onCancel={onCancel}
@@ -472,7 +548,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               buttonText={t('play')}
             />
           )}
-          {!isSpectator && selectedNegriCard && (
+          {gameMode !== 'pro' && !isSpectator && selectedNegriCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedNegriCard}
               onCancel={onCancel}
@@ -484,6 +560,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             />
           )}
         </div>
+        <DragOverlay dropAnimation={null}>
+          {gameMode === 'pro' && activeDragCard ? (
+            <div className={styles.dragOverlayCard}><CardFace card={activeDragCard} /></div>
+          ) : null}
+        </DragOverlay>
+        </DndContext>
       );
     }
 
@@ -655,6 +737,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             <div className={styles.agariTakenCard}>
               <span className={styles.agariTakenLabel}>{t('agari')}</span>
               <TakenCardPreview card={agariCard!} />
+            </div>
+          )}
+          {negriCard && negriSeatId === player.seatId && (
+            <div className={styles.negriSlot}>
+              <NegriCard
+                negriCard={negriCard}
+                negriSeatId={negriSeatId}
+                currentSeatId={currentSeatId}
+              />
             </div>
           )}
         </div>
