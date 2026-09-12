@@ -118,6 +118,19 @@ describe('Pro card play and chombo reporting', () => {
     }
   });
 
+  it('records a four-jack candidate before a report', async () => {
+    const fixture = await createGame(['J♠', 'J♥', 'J♦', 'J♣']);
+    try {
+      const played = await fixture.play.execute({ roomId: 'room-1', actorId: 'winner', card: 'J♠' });
+      expect(played.success).toBe(true);
+      const result = await fixture.report.execute({ roomId: 'room-1', actorId: 'opponent', violatorSeatId: asSeatId('winner'), violationType: 'four-jack' });
+      expect(result.success).toBe(true);
+      expect(result.events).toContainEqual(expect.objectContaining({ event: 'chombo-resolved', payload: expect.objectContaining({ isCorrect: true, awardedTeam: 1 }) }));
+    } finally {
+      await fixture.module.close();
+    }
+  });
+
   it('awards a last-Tanzen report after the last Joker leaves the hand', async () => {
     const fixture = await createGame(['JOKER']);
     try {
