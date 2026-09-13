@@ -334,7 +334,7 @@ export const useGame = () => {
   const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
   const [negriCard, setNegriCard] = useState<string | null>(null);
   const [negriSeatId, setNegriSeatId] = useState<string | null>(null);
-  const [revealedHands, setRevealedHands] = useState<Record<string, string[]>>({});
+  const [revealedHands, setRevealedHands] = useState<Partial<Record<string, string[]>>>({});
 
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
