@@ -339,7 +339,7 @@ export function GameBoard({
         <View style={styles.topBar}>
           <Text style={styles.phase}>{phaseLabel}</Text>
           {canDeclareOpen ? (
-            <Button label="オープン" onPress={onDeclareOpen} />
+            <Button onPress={onDeclareOpen}>オープン</Button>
           ) : null}
           {highest ? (
             <Text style={styles.trumpBadge}>
