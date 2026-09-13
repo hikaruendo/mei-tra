@@ -105,6 +105,13 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       revealedHands: state.playState?.revealedHands ?? {},
       openDeclared: state.playState?.openDeclared ?? false,
       openResolved: state.playState?.openResolved ?? false,
+      gameOver: state.gameOver
+        ? {
+            winner: state.gameOver.winner,
+            winningTeam: state.gameOver.winningTeam,
+            finalScores: state.gameOver.finalScores,
+          }
+        : null,
       fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
       roomId: room.id,
       hostSeatId: asSeatId(room.hostSeatId),

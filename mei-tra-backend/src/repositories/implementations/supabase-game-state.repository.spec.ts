@@ -40,6 +40,14 @@ describe('SupabaseGameStateRepository', () => {
         openDeclared: false,
         openDeclarerSeatId: null,
       },
+      gameOver: {
+        winner: 'Team 0',
+        winningTeam: 0,
+        finalScores: {
+          0: { play: 5, total: 5 },
+          1: { play: 0, total: 0 },
+        },
+      },
     },
     current_seat_id: firstSeatId,
     game_phase: 'waiting' as const,
@@ -149,6 +157,7 @@ describe('SupabaseGameStateRepository', () => {
         hasBroken: true,
       }),
     ]);
+    expect(state?.gameOver).toEqual(gameStateRow.state_data.gameOver);
   });
 
   it('rejects a malformed load RPC payload at the persistence boundary', async () => {

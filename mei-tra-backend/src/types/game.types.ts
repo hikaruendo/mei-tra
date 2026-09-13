@@ -148,6 +148,12 @@ export interface ScoreRecord {
   reason: string;
 }
 
+export interface GameOverState {
+  winner: string;
+  winningTeam?: Team;
+  finalScores: Record<Team, TeamScore>;
+}
+
 export interface ChomboViolation {
   type:
     | 'negri-forget'
@@ -188,4 +194,5 @@ export interface GameState {
   agari?: string;
   roundNumber: number;
   pointsToWin: number;
+  gameOver?: GameOverState | null;
 }
