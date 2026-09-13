@@ -335,6 +335,7 @@ export const GameTable: React.FC<GameTableProps> = ({
           players={players}
           currentSeatId={currentSeatId}
           onReport={gameActions.reportChombo}
+          onReveal={gameActions.revealChomboHand}
         />
       )}
     </div>
