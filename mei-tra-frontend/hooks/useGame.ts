@@ -1426,6 +1426,10 @@ export const useGame = () => {
         violationType,
       });
     },
+    declareOpen: () => {
+      if (!socket || !currentRoomId) return;
+      socket.emit('declare-open', { roomId: currentRoomId });
+    },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });

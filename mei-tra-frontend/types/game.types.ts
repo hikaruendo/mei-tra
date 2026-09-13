@@ -109,6 +109,7 @@ export interface GameActions {
   selectNegri: (card: string) => void;
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  declareOpen: () => void;
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
