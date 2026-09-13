@@ -61,6 +61,7 @@ interface GameBoardProps {
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
+  onDeclareOpen?: () => void;
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
@@ -82,6 +83,7 @@ export function GameBoard({
   onDeclare,
   onPass,
   onSelectNegri,
+  onDeclareOpen = () => undefined,
   onCardSelection = () => undefined,
   onCancel = () => undefined,
   onHandReorder = () => undefined,
@@ -212,6 +214,11 @@ export function GameBoard({
       : game.gamePhase === 'play'
         ? t('board.phasePlay')
         : t('board.phaseWaiting');
+  const canDeclareOpen =
+    isProMode &&
+    !game.isSpectator &&
+    game.gamePhase === 'play' &&
+    highest?.seatId === game.youSeatId;
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
@@ -331,6 +338,9 @@ export function GameBoard({
       >
         <View style={styles.topBar}>
           <Text style={styles.phase}>{phaseLabel}</Text>
+          {canDeclareOpen ? (
+            <Button label="オープン" onPress={onDeclareOpen} />
+          ) : null}
           {highest ? (
             <Text style={styles.trumpBadge}>
               {trumpLabel(highest.trumpType)} {highest.numberOfPairs}
