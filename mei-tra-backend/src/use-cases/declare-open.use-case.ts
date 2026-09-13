@@ -42,7 +42,10 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
 
     const payload: OpenDeclaredPayload = { declarerSeatId: asSeatId(player.seatId), hand: [...player.hand], valid };
     const events: GatewayEvent[] = [{ scope: 'room', roomId: request.roomId, event: 'open-declared', payload }];
-    if (valid) events.push(...this.settleValidOpen(state, request.roomId));
+    if (valid) {
+      state.playState.openResolved = true;
+      events.push(...this.settleValidOpen(state, request.roomId));
+    }
     await roomGameState.saveState();
     return { success: true, events };
   }
