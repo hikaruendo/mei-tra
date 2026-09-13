@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Player } from '@/types/game.types';
 import type { ChomboViolationType } from '@contracts/game';
+import styles from './ChomboReportPanel.module.scss';
 
 const violationTypes: ChomboViolationType[] = [
   'negri-forget',
@@ -26,25 +27,26 @@ export function ChomboReportPanel({ players, currentSeatId, onReport }: ChomboRe
 
   return (
     <form
+      className={styles.panel}
       aria-label="Chombo report"
       onSubmit={(event) => {
         event.preventDefault();
         if (violatorSeatId) onReport(violatorSeatId, violationType);
       }}
     >
-      <label>
-        Player
-        <select value={violatorSeatId} onChange={(event) => setViolatorSeatId(event.target.value)}>
+      <label className={styles.field}>
+        <span className={styles.label}>Player</span>
+        <select className={styles.select} value={violatorSeatId} onChange={(event) => setViolatorSeatId(event.target.value)}>
           {opponents.map((player) => <option key={player.seatId} value={player.seatId}>{player.name}</option>)}
         </select>
       </label>
-      <label>
-        Violation
-        <select value={violationType} onChange={(event) => setViolationType(event.target.value as ChomboViolationType)}>
+      <label className={styles.field}>
+        <span className={styles.label}>Violation</span>
+        <select className={styles.select} value={violationType} onChange={(event) => setViolationType(event.target.value as ChomboViolationType)}>
           {violationTypes.map((type) => <option key={type} value={type}>{type}</option>)}
         </select>
       </label>
-      <button type="submit">Report chombo</button>
+      <button className={styles.button} type="submit">Report chombo</button>
     </form>
   );
 }
