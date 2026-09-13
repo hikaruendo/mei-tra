@@ -36,6 +36,8 @@ export interface GameEventState {
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
   revealedHands: Partial<Record<SeatId, string[]>>;
+  openDeclared: boolean;
+  openResolved: boolean;
   fields: CompletedFieldContract[];
 }
 
@@ -80,6 +82,8 @@ export const createEmptyGameEventState = (): GameEventState => ({
   negriSeatId: null,
   revealedAgari: null,
   revealedHands: {},
+  openDeclared: false,
+  openResolved: false,
   fields: [],
 });
 
@@ -97,6 +101,8 @@ export const createGameEventStateFromSnapshot = (
     negriSeatId: payload.negriSeatId,
     revealedAgari: payload.revealedAgari ?? null,
     revealedHands: payload.revealedHands ?? {},
+    openDeclared: payload.openDeclared ?? false,
+    openResolved: payload.openResolved ?? false,
     fields: dedupeCompletedFields(payload.fields),
   };
 };
@@ -183,6 +189,8 @@ export const reduceGameEvent = (
         negriSeatId: null,
         revealedAgari: null,
         revealedHands: {},
+        openDeclared: false,
+        openResolved: false,
         fields: [],
       };
     }
@@ -207,6 +215,8 @@ export const reduceGameEvent = (
         negriSeatId: null,
         revealedAgari: null,
         revealedHands: {},
+        openDeclared: false,
+        openResolved: false,
         fields: [],
       };
     }
@@ -226,6 +236,8 @@ export const reduceGameEvent = (
         negriCard: event.payload.negriCard,
         negriSeatId: event.payload.negriSeatId,
         revealedAgari: null,
+        openDeclared: false,
+        openResolved: false,
         blowState: {
           ...state.blowState,
           currentTrump:
@@ -236,6 +248,8 @@ export const reduceGameEvent = (
     case 'open-declared': {
       return {
         ...state,
+        openDeclared: true,
+        openResolved: event.payload.valid,
         revealedHands: {
           ...state.revealedHands,
           [event.payload.declarerSeatId]: [...event.payload.hand],
@@ -289,6 +303,8 @@ export const reduceGameEvent = (
         negriSeatId,
         revealedAgari: event.payload.revealedAgari,
         revealedHands: {},
+        openDeclared: false,
+        openResolved: false,
         blowState: {
           ...createEmptyBlowState(),
           currentTrump: event.payload.currentTrump,

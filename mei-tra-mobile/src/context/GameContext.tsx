@@ -394,6 +394,8 @@ const toMobileGamePatch = (
   negriSeatId: game.negriSeatId,
   revealedAgari: game.revealedAgari,
   revealedHands: game.revealedHands,
+  openDeclared: game.openDeclared,
+  openResolved: game.openResolved,
   fields: game.fields,
 });
 

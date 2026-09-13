@@ -220,4 +220,9 @@ describe('GameTable pro open control', () => {
     });
     expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
   });
+
+  it('hides the open action after the server marks the open as declared or resolved', () => {
+    renderTable({ gameMode: 'pro', gamePhase: 'play', openDeclared: true });
+    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+  });
 });

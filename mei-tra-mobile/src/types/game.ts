@@ -27,6 +27,8 @@ export interface MobileGameSnapshot {
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
   revealedHands?: Partial<Record<SeatId, string[]>>;
+  openDeclared?: boolean;
+  openResolved?: boolean;
   fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;
