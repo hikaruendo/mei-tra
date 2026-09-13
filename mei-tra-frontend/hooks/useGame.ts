@@ -978,6 +978,7 @@ export const useGame = () => {
         setNotification({ message, type: 'error' });
       },
       'chombo-resolved': (payload: ChomboResolvedPayload) => {
+        applyGameServerEvent({ type: 'chombo-resolved', payload });
         const result = payload.isCorrect ? 'correct' : 'incorrect';
         setNotification({
           message: `Chombo report ${result}: Team ${payload.awardedTeam} receives 5 points.`,
