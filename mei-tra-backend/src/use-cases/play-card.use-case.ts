@@ -58,6 +58,10 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: false, error: "It's not your turn to play" };
       }
 
+      if (state.playState?.openResolved) {
+        return { success: false, error: 'Play is settled after a valid open' };
+      }
+
       if (!state.playState) {
         return {
           success: false,

@@ -4,6 +4,8 @@ import type {
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
+  OpenDeclaredPayload,
+  ChomboHandRevealedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -33,6 +35,7 @@ export interface GameEventState {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
+  revealedHands: Partial<Record<SeatId, string[]>>;
   fields: CompletedFieldContract[];
 }
 
@@ -46,6 +49,8 @@ export type GameServerEvent =
   | { type: 'play-setup-complete'; payload: PlaySetupCompletePayload }
   | { type: 'card-played'; payload: CardPlayedPayload }
   | { type: 'chombo-resolved'; payload: ChomboResolvedPayload }
+  | { type: 'open-declared'; payload: OpenDeclaredPayload }
+  | { type: 'chombo-hand-revealed'; payload: ChomboHandRevealedPayload }
   | { type: 'field-updated'; payload: FieldContract }
   | { type: 'field-complete'; payload: FieldCompletePayload }
   | { type: 'round-results'; payload: RoundResultsPayload }
@@ -74,6 +79,7 @@ export const createEmptyGameEventState = (): GameEventState => ({
   negriCard: null,
   negriSeatId: null,
   revealedAgari: null,
+  revealedHands: {},
   fields: [],
 });
 
@@ -90,6 +96,7 @@ export const createGameEventStateFromSnapshot = (
     negriCard: payload.negriCard,
     negriSeatId: payload.negriSeatId,
     revealedAgari: payload.revealedAgari ?? null,
+    revealedHands: payload.revealedHands ?? {},
     fields: dedupeCompletedFields(payload.fields),
   };
 };
@@ -175,6 +182,7 @@ export const reduceGameEvent = (
         negriCard: null,
         negriSeatId: null,
         revealedAgari: null,
+        revealedHands: {},
         fields: [],
       };
     }
@@ -198,6 +206,7 @@ export const reduceGameEvent = (
         negriCard: null,
         negriSeatId: null,
         revealedAgari: null,
+        revealedHands: {},
         fields: [],
       };
     }
@@ -223,6 +232,18 @@ export const reduceGameEvent = (
             state.blowState.currentHighestDeclaration?.trumpType ?? null,
         },
       };
+    }
+    case 'open-declared': {
+      return {
+        ...state,
+        revealedHands: {
+          ...state.revealedHands,
+          [event.payload.declarerSeatId]: [...event.payload.hand],
+        },
+      };
+    }
+    case 'chombo-hand-revealed': {
+      return { ...state, revealedHands: { ...state.revealedHands, [event.payload.seatId]: [...event.payload.hand] } };
     }
     case 'chombo-resolved': {
       return { ...state, teamScores: event.payload.scores };
@@ -267,6 +288,7 @@ export const reduceGameEvent = (
         negriCard: event.payload.negriCard,
         negriSeatId,
         revealedAgari: event.payload.revealedAgari,
+        revealedHands: {},
         blowState: {
           ...createEmptyBlowState(),
           currentTrump: event.payload.currentTrump,
