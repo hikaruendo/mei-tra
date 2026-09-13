@@ -1812,7 +1812,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('report-chombo')
   async handleReportChombo(
-    client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() data: ReportChomboPayload,
   ): Promise<void> {
     if (this.spectatorGatewayEffectsService.rejectAction(client, 'report chombo')) {
