@@ -26,7 +26,7 @@ export interface MobileGameSnapshot {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
-  revealedHands: Record<string, string[]>;
+  revealedHands?: Partial<Record<SeatId, string[]>>;
   fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;

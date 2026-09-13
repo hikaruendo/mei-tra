@@ -1367,9 +1367,10 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const revealChomboHand = useCallback(() => {
     const game = stateRef.current.game;
-    if (!game?.youSeatId) return;
+    const seatId = game?.youSeatId;
+    if (!game || !seatId) return;
     emitOneWayAction('reveal-chombo-hand', game.roomId, () => {
-      socketRef.current?.emit('reveal-chombo-hand', { roomId: game.roomId, seatId: game.youSeatId });
+      socketRef.current?.emit('reveal-chombo-hand', { roomId: game.roomId, seatId });
     });
   }, [emitOneWayAction]);
 

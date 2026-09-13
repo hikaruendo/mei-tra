@@ -168,7 +168,7 @@ describe('open declaration events', () => {
     const next = reduceGameEvent(state, {
       type: 'open-declared',
       payload: {
-        declarerSeatId: 'seat-1',
+        declarerSeatId: 'seat-1' as import('@meitra/contracts/ids').SeatId,
         hand: ['A♠', 'K♠'],
         valid: true,
       },
