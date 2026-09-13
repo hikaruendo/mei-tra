@@ -6,6 +6,7 @@ import { ScoreService } from './services/score.service';
 import { ChomboService } from './services/chombo.service';
 import { BlowService } from './services/blow.service';
 import { PlayService } from './services/play.service';
+import { OpenDeclarationService } from './services/open-declaration.service';
 import { RoomService } from './services/room.service';
 import { GameStateFactory } from './services/game-state.factory';
 import { ComPlayerService } from './services/com-player.service';
@@ -26,6 +27,7 @@ import { PassBlowUseCase } from './use-cases/pass-blow.use-case';
 import { SelectNegriUseCase } from './use-cases/select-negri.use-case';
 import { PlayCardUseCase } from './use-cases/play-card.use-case';
 import { ReportChomboUseCase } from './use-cases/report-chombo.use-case';
+import { DeclareOpenUseCase } from './use-cases/declare-open.use-case';
 import { SelectBaseSuitUseCase } from './use-cases/select-base-suit.use-case';
 import { RevealBrokenHandUseCase } from './use-cases/reveal-broken-hand.use-case';
 import { CompleteFieldUseCase } from './use-cases/complete-field.use-case';
@@ -130,6 +132,7 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
       useExisting: BlowService,
     },
     PlayService,
+    OpenDeclarationService,
     {
       provide: 'IPlayService',
       useExisting: PlayService,
@@ -201,6 +204,10 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
     {
       provide: 'IReportChomboUseCase',
       useClass: ReportChomboUseCase,
+    },
+    {
+      provide: 'IDeclareOpenUseCase',
+      useClass: DeclareOpenUseCase,
     },
     {
       provide: 'ISelectBaseSuitUseCase',

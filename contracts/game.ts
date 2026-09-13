@@ -248,6 +248,16 @@ export interface ReportChomboPayload {
   violationType: ChomboViolationType;
 }
 
+export interface DeclareOpenPayload {
+  roomId: string;
+}
+
+export interface OpenDeclaredPayload {
+  declarerSeatId: SeatId;
+  hand: string[];
+  valid: boolean;
+}
+
 export interface ChomboResolvedPayload {
   violatorSeatId: SeatId;
   reporterSeatId: SeatId;

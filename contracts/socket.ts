@@ -18,6 +18,7 @@ import type {
   PlayerLeftPayload,
   PlaySetupCompletePayload,
   ChomboResolvedPayload,
+  OpenDeclaredPayload,
   RequestAgariPayload,
   ReportChomboPayload,
   RevealAgariPayload,
@@ -183,6 +184,7 @@ export interface ClientToServerEvents {
   'request-agari': (payload: RequestAgariPayload) => void;
   'play-card': (payload: PlayCardPayload) => void;
   'report-chombo': (payload: ReportChomboPayload) => void;
+  'declare-open': (payload: RoomActionPayload) => void;
   'select-base-suit': (payload: SelectBaseSuitPayload) => void;
   'reveal-broken-hand': (payload: RevealBrokenHandPayload) => void;
   'update-auth': (payload: UpdateAuthPayload) => void;
@@ -208,6 +210,7 @@ export interface ServerToClientEvents {
   'reveal-agari': (payload: RevealAgariPayload) => void;
   'play-setup-complete': (payload: PlaySetupCompletePayload) => void;
   'chombo-resolved': (payload: ChomboResolvedPayload) => void;
+  'open-declared': (payload: OpenDeclaredPayload) => void;
   'card-played': (payload: CardPlayedPayload) => void;
   'field-recovered': () => void;
   'field-updated': (field: FieldContract) => void;
