@@ -330,7 +330,11 @@ export const GameTable: React.FC<GameTableProps> = ({
         !openDeclared &&
         !openResolved &&
         currentSeatId && currentHighestDeclaration && (
-          <button type="button" onClick={gameActions.declareOpen}>
+          <button
+            className={styles.openButton}
+            type="button"
+            onClick={gameActions.declareOpen}
+          >
             オープン
           </button>
         )}
