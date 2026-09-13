@@ -182,6 +182,7 @@ export const reduceGameEvent = (
         negriCard: null,
         negriSeatId: null,
         revealedAgari: null,
+        revealedHands: {},
         fields: [],
       };
     }
@@ -205,6 +206,7 @@ export const reduceGameEvent = (
         negriCard: null,
         negriSeatId: null,
         revealedAgari: null,
+        revealedHands: {},
         fields: [],
       };
     }
@@ -286,6 +288,7 @@ export const reduceGameEvent = (
         negriCard: event.payload.negriCard,
         negriSeatId,
         revealedAgari: event.payload.revealedAgari,
+        revealedHands: {},
         blowState: {
           ...createEmptyBlowState(),
           currentTrump: event.payload.currentTrump,

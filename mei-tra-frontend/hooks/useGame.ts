@@ -332,6 +332,7 @@ export const useGame = () => {
   const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
   const [negriCard, setNegriCard] = useState<string | null>(null);
   const [negriSeatId, setNegriSeatId] = useState<string | null>(null);
+  const [revealedHands, setRevealedHands] = useState<Record<string, string[]>>({});
 
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
@@ -617,7 +618,11 @@ export const useGame = () => {
       if (next.players !== previous.players) {
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
-          fromPlayerContracts(next.players),
+          fromPlayerContracts(next.players).map((player) =>
+            next.revealedHands[player.seatId]
+              ? { ...player, hand: next.revealedHands[player.seatId] }
+              : player,
+          ),
         );
         commitPlayers(nextPlayers);
         syncDisconnectedSeatIdsFromPlayers(nextPlayers);
@@ -650,6 +655,7 @@ export const useGame = () => {
       setNegriCard(next.negriCard);
       setNegriSeatId(next.negriSeatId);
       setRevealedAgari(next.revealedAgari);
+      setRevealedHands(next.revealedHands);
       setCompletedFields(toUiCompletedFields(next.fields));
     };
 
@@ -1505,6 +1511,7 @@ export const useGame = () => {
     negriSeatId,
     completedFields,
     revealedAgari,
+    revealedHands,
     gameActions,
     blowDeclarations,
     blowActionHistory,
