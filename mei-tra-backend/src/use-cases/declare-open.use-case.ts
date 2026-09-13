@@ -27,8 +27,9 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     if (state.gamePhase !== 'play' || !state.playState) return { success: false, error: 'Open is only available during play' };
     const player = resolvePlayerByActorId(roomGameState, request.actorId);
     if (!player || player.isCOM) return { success: false, error: 'Player not found in game state' };
-    const winnerSeatId = state.blowState.currentHighestDeclaration?.seatId;
-    if (!winnerSeatId || winnerSeatId !== player.seatId) return { success: false, error: 'Only the declaration winner may open' };
+    if (!state.blowState.currentHighestDeclaration) {
+      return { success: false, error: 'Open requires a completed declaration' };
+    }
     if (state.playState.openDeclared) return { success: false, error: 'Open has already been declared' };
 
     const valid = this.openDeclarationService.canDeclareOpen(state, asSeatId(player.seatId));

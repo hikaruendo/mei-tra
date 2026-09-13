@@ -218,7 +218,7 @@ export function GameBoard({
     isProMode &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
-    highest?.seatId === game.youSeatId;
+    Boolean(highest);
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&

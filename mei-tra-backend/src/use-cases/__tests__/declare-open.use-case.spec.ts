@@ -86,4 +86,30 @@ describe('DeclareOpenUseCase', () => {
     }));
     expect(result.events).not.toContainEqual(expect.objectContaining({ event: 'round-results' }));
   });
+
+  it('allows a player from either team to declare open', async () => {
+    state.playState!.openDeclared = false;
+    state.playState!.openResolved = false;
+    state.playState!.chomboViolations = [];
+    const opponent = players[2];
+    const roomGameState = {
+      getState: jest.fn(() => state),
+      findPlayerByActorId: jest.fn(() => opponent),
+      saveState: jest.fn(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({ settings: { gameMode: 'pro' } }),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+    };
+    const openRules = { canDeclareOpen: jest.fn(() => true) };
+    const chombo = { recordViolation: jest.fn() };
+    const score = { calculatePlayPoints: jest.fn(() => 3) };
+    const useCase = new DeclareOpenUseCase(roomService as never, openRules as never, chombo as never, score as never);
+
+    const result = await useCase.execute({ roomId: 'room-1', actorId: 'opponent-user' });
+
+    expect(result.success).toBe(true);
+    expect(state.playState?.openDeclarerSeatId).toBe(opponent.seatId);
+    expect(openRules.canDeclareOpen).toHaveBeenCalledWith(state, opponent.seatId);
+  });
 });

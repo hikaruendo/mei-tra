@@ -178,7 +178,7 @@ describe('GameTable first-turn reveal', () => {
 });
 
 describe('GameTable pro open control', () => {
-  it('shows the open action only to the declaration winner', () => {
+  it('shows the open action to a player from either team', () => {
     renderTable({
       gameMode: 'pro',
       gamePhase: 'play',
@@ -191,6 +191,19 @@ describe('GameTable pro open control', () => {
       },
     });
     expect(screen.getByRole('button', { name: 'オープン' })).toBeInTheDocument();
+
+    renderTable({
+      gameMode: 'pro',
+      gamePhase: 'play',
+      currentHighestDeclaration: {
+        seatId: 'seat-1',
+        team: 1,
+        trumpType: 'tra',
+        numberOfPairs: 1,
+        timestamp: 1,
+      },
+    });
+    expect(screen.getAllByRole('button', { name: 'オープン' })).toHaveLength(2);
   });
 
   it('does not show the open action in normal mode', () => {

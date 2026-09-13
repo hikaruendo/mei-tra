@@ -323,8 +323,7 @@ export const GameTable: React.FC<GameTableProps> = ({
 
       {gameMode === 'pro' &&
         gamePhase === 'play' &&
-        currentSeatId &&
-        currentHighestDeclaration?.seatId === currentSeatId && (
+        currentSeatId && currentHighestDeclaration && (
           <button type="button" onClick={gameActions.declareOpen}>
             オープン
           </button>
