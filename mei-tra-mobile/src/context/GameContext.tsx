@@ -356,6 +356,8 @@ interface GameContextValue extends MobileState {
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  declareOpen: () => void;
+  revealChomboHand: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
   removePlayer: (targetSeatId: string) => void;
@@ -942,6 +944,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
     });
+    socket.on('chombo-hand-revealed', (payload) => {
+      applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
+    });
     socket.on('open-declared', (payload) => {
       applyGameServerEvent({ type: 'open-declared', payload });
       dispatch({
@@ -1350,6 +1355,22 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const declareOpen = useCallback(() => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('declare-open', game.roomId, () => {
+      socketRef.current?.emit('declare-open', { roomId: game.roomId });
+    });
+  }, [emitOneWayAction]);
+
+  const revealChomboHand = useCallback(() => {
+    const game = stateRef.current.game;
+    if (!game?.youSeatId) return;
+    emitOneWayAction('reveal-chombo-hand', game.roomId, () => {
+      socketRef.current?.emit('reveal-chombo-hand', { roomId: game.roomId, seatId: game.youSeatId });
+    });
+  }, [emitOneWayAction]);
+
   const reportChombo = useCallback((violatorSeatId: string, violationType: ChomboViolationType) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1472,6 +1493,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       playHandReorderSound,
       playCard,
       reportChombo,
+      declareOpen,
+      revealChomboHand,
       selectBaseSuit,
       revealBrokenHand,
       removePlayer,
@@ -1506,6 +1529,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       passBlow,
       playCard,
       reportChombo,
+      declareOpen,
+      revealChomboHand,
       playCardSelectionSound,
       playCancelSound,
       playHandReorderSound,

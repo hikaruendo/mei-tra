@@ -1,3 +1,4 @@
+import { asSeatId } from '@contracts/ids';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type {
@@ -977,6 +978,9 @@ export const useGame = () => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
       },
+      'chombo-hand-revealed': (payload) => {
+        applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
+      },
       'open-declared': (payload) => {
         applyGameServerEvent({ type: 'open-declared', payload });
         setNotification({
@@ -1425,6 +1429,10 @@ export const useGame = () => {
         violatorSeatId,
         violationType,
       });
+    },
+    revealChomboHand: () => {
+      if (!socket || !currentRoomId || !currentSeatId) return;
+      socket.emit('reveal-chombo-hand', { roomId: currentRoomId, seatId: asSeatId(currentSeatId) });
     },
     declareOpen: () => {
       if (!socket || !currentRoomId) return;

@@ -253,6 +253,10 @@ export interface DeclareOpenPayload {
   roomId: string;
 }
 
+export interface RevealChomboHandPayload { roomId: string; seatId: SeatId; }
+
+export interface ChomboHandRevealedPayload { seatId: SeatId; hand: string[]; }
+
 export interface OpenDeclaredPayload {
   declarerSeatId: SeatId;
   hand: string[];

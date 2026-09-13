@@ -19,8 +19,10 @@ import type {
   PlaySetupCompletePayload,
   ChomboResolvedPayload,
   OpenDeclaredPayload,
+  ChomboHandRevealedPayload,
   RequestAgariPayload,
   ReportChomboPayload,
+  RevealChomboHandPayload,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -185,6 +187,7 @@ export interface ClientToServerEvents {
   'play-card': (payload: PlayCardPayload) => void;
   'report-chombo': (payload: ReportChomboPayload) => void;
   'declare-open': (payload: RoomActionPayload) => void;
+  'reveal-chombo-hand': (payload: RevealChomboHandPayload) => void;
   'select-base-suit': (payload: SelectBaseSuitPayload) => void;
   'reveal-broken-hand': (payload: RevealBrokenHandPayload) => void;
   'update-auth': (payload: UpdateAuthPayload) => void;
@@ -211,6 +214,7 @@ export interface ServerToClientEvents {
   'play-setup-complete': (payload: PlaySetupCompletePayload) => void;
   'chombo-resolved': (payload: ChomboResolvedPayload) => void;
   'open-declared': (payload: OpenDeclaredPayload) => void;
+  'chombo-hand-revealed': (payload: ChomboHandRevealedPayload) => void;
   'card-played': (payload: CardPlayedPayload) => void;
   'field-recovered': () => void;
   'field-updated': (field: FieldContract) => void;

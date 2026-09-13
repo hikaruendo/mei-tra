@@ -41,6 +41,7 @@ import { IPassBlowUseCase } from './use-cases/interfaces/pass-blow.use-case.inte
 import { ISelectNegriUseCase } from './use-cases/interfaces/select-negri.use-case.interface';
 import { IReportChomboUseCase } from './use-cases/interfaces/report-chombo.use-case.interface';
 import { IDeclareOpenUseCase } from './use-cases/interfaces/declare-open.use-case.interface';
+import { IRevealChomboHandUseCase } from './use-cases/interfaces/reveal-chombo-hand.use-case.interface';
 import {
   CompleteFieldTrigger,
   IPlayCardUseCase,
@@ -123,6 +124,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly reportChomboUseCase: IReportChomboUseCase,
     @Inject('IDeclareOpenUseCase')
     private readonly declareOpenUseCase: IDeclareOpenUseCase,
+    @Inject('IRevealChomboHandUseCase')
+    private readonly revealChomboHandUseCase: IRevealChomboHandUseCase,
     @Inject('ISelectBaseSuitUseCase')
     private readonly selectBaseSuitUseCase: ISelectBaseSuitUseCase,
     @Inject('IRevealBrokenHandUseCase')
@@ -1872,6 +1875,28 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       this.logger.error('Error in handleDeclareOpen:', error);
       client.emit('error-message', 'Failed to declare open');
+    }
+  }
+
+  @SubscribeMessage('reveal-chombo-hand')
+  async handleRevealChomboHand(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; seatId: SeatId },
+  ): Promise<void> {
+    if (this.spectatorGatewayEffectsService.rejectAction(client, 'reveal chombo hand')) return;
+    if (await this.rejectInactiveMutatingAction(client, 'reveal chombo hand')) return;
+    try {
+      const result = await this.roomGameActionQueueService.run(data.roomId, () =>
+        this.revealChomboHandUseCase.execute({ roomId: data.roomId, seatId: data.seatId, actorId: this.getActorId(client) }),
+      );
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to reveal chombo hand');
+        return;
+      }
+      this.dispatchGameplayEvents(result.events);
+    } catch (error) {
+      this.logger.error('Error in handleRevealChomboHand:', error);
+      client.emit('error-message', 'Failed to reveal chombo hand');
     }
   }
 
