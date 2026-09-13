@@ -39,6 +39,26 @@ describe('SupabaseGameStateRepository', () => {
         lastWinnerSeatId: null,
         openDeclared: false,
         openDeclarerSeatId: null,
+        chomboRoundNumber: 1,
+        chomboViolations: [
+          {
+            type: 'wrong-suit' as const,
+            violatorSeatId: firstSeatId,
+            timestamp: 1,
+            reportedBySeatId: secondSeatId,
+            isExpired: false,
+          },
+        ],
+        chomboReports: [
+          {
+            reporterSeatId: secondSeatId,
+            violatorSeatId: firstSeatId,
+            violationType: 'wrong-suit' as const,
+            resolved: true,
+            awardedTeam: 0 as const,
+            timestamp: 1,
+          },
+        ],
       },
       gameOver: {
         winner: 'Team 0',
@@ -158,6 +178,12 @@ describe('SupabaseGameStateRepository', () => {
       }),
     ]);
     expect(state?.gameOver).toEqual(gameStateRow.state_data.gameOver);
+    expect(state?.playState?.chomboViolations).toEqual(
+      gameStateRow.state_data.playState.chomboViolations,
+    );
+    expect(state?.playState?.chomboReports).toEqual(
+      gameStateRow.state_data.playState.chomboReports,
+    );
   });
 
   it('rejects a malformed load RPC payload at the persistence boundary', async () => {
