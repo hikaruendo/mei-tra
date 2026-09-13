@@ -5,7 +5,7 @@ import { PlayService } from './play.service';
 
 /**
  * Evaluates the open rule against the authoritative server state.
- * A valid open means the declarer's team has a strategy that wins every
+ * A valid open means the opener's team has a strategy that wins every
  * remaining trick, even when the opposing team chooses its cards adversarially.
  */
 @Injectable()
