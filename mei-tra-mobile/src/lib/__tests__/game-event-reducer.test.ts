@@ -160,3 +160,20 @@ describe('reduceGameEvent', () => {
     expect(twice.currentField?.dealerSeatId).toBe('seat-1');
   });
 });
+
+describe('open declaration events', () => {
+  it('retains the explicitly revealed hand without exposing other hands', () => {
+    const state = createEmptyGameEventState();
+
+    const next = reduceGameEvent(state, {
+      type: 'open-declared',
+      payload: {
+        declarerSeatId: 'seat-1',
+        hand: ['A♠', 'K♠'],
+        valid: true,
+      },
+    });
+
+    expect(next.revealedHands).toEqual({ 'seat-1': ['A♠', 'K♠'] });
+  });
+});

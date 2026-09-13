@@ -389,6 +389,7 @@ const toMobileGamePatch = (
   negriCard: game.negriCard,
   negriSeatId: game.negriSeatId,
   revealedAgari: game.revealedAgari,
+  revealedHands: game.revealedHands,
   fields: game.fields,
 });
 
@@ -940,6 +941,13 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
+    });
+    socket.on('open-declared', (payload) => {
+      applyGameServerEvent({ type: 'open-declared', payload });
+      dispatch({
+        type: 'notice',
+        message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+      });
     });
     socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
       dispatch({ type: 'patchGame', patch: { teamScores: payload.scores } });

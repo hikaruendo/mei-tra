@@ -4,6 +4,7 @@ import type {
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
+  OpenDeclaredPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -33,6 +34,7 @@ export interface GameEventState {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
+  revealedHands: Record<string, string[]>;
   fields: CompletedFieldContract[];
 }
 
@@ -46,6 +48,7 @@ export type GameServerEvent =
   | { type: 'play-setup-complete'; payload: PlaySetupCompletePayload }
   | { type: 'card-played'; payload: CardPlayedPayload }
   | { type: 'chombo-resolved'; payload: ChomboResolvedPayload }
+  | { type: 'open-declared'; payload: OpenDeclaredPayload }
   | { type: 'field-updated'; payload: FieldContract }
   | { type: 'field-complete'; payload: FieldCompletePayload }
   | { type: 'round-results'; payload: RoundResultsPayload }
@@ -74,6 +77,7 @@ export const createEmptyGameEventState = (): GameEventState => ({
   negriCard: null,
   negriSeatId: null,
   revealedAgari: null,
+  revealedHands: {},
   fields: [],
 });
 
@@ -90,6 +94,7 @@ export const createGameEventStateFromSnapshot = (
     negriCard: payload.negriCard,
     negriSeatId: payload.negriSeatId,
     revealedAgari: payload.revealedAgari ?? null,
+    revealedHands: payload.revealedHands ?? {},
     fields: dedupeCompletedFields(payload.fields),
   };
 };
@@ -221,6 +226,15 @@ export const reduceGameEvent = (
           ...state.blowState,
           currentTrump:
             state.blowState.currentHighestDeclaration?.trumpType ?? null,
+        },
+      };
+    }
+    case 'open-declared': {
+      return {
+        ...state,
+        revealedHands: {
+          ...state.revealedHands,
+          [event.payload.declarerSeatId]: [...event.payload.hand],
         },
       };
     }

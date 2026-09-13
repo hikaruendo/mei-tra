@@ -977,6 +977,13 @@ export const useGame = () => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
       },
+      'open-declared': (payload) => {
+        applyGameServerEvent({ type: 'open-declared', payload });
+        setNotification({
+          message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+          type: payload.valid ? 'success' : 'error',
+        });
+      },
       'chombo-resolved': (payload: ChomboResolvedPayload) => {
         applyGameServerEvent({ type: 'chombo-resolved', payload });
         const result = payload.isCorrect ? 'correct' : 'incorrect';

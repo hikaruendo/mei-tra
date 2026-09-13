@@ -90,6 +90,7 @@ export interface GameStatePayload {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari?: string | null;
+  revealedHands?: Partial<Record<SeatId, string[]>>;
   fields: CompletedFieldContract[];
   roomId: string;
   hostSeatId: SeatId;

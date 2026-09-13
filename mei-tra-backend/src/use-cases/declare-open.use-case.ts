@@ -52,6 +52,10 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     );
     state.playState.openDeclared = true;
     state.playState.openDeclarerSeatId = asSeatId(player.seatId);
+    state.playState.revealedHands = {
+      ...(state.playState.revealedHands ?? {}),
+      [player.seatId]: [...player.hand],
+    };
 
     if (!valid) {
       const violation = this.chomboService.recordViolation(
