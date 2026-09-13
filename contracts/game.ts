@@ -90,6 +90,7 @@ export interface GameStatePayload {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari?: string | null;
+  revealedHands?: Partial<Record<SeatId, string[]>>;
   fields: CompletedFieldContract[];
   roomId: string;
   hostSeatId: SeatId;
@@ -246,6 +247,20 @@ export interface ReportChomboPayload {
   roomId: string;
   violatorSeatId: SeatId;
   violationType: ChomboViolationType;
+}
+
+export interface DeclareOpenPayload {
+  roomId: string;
+}
+
+export interface RevealChomboHandPayload { roomId: string; seatId: SeatId; }
+
+export interface ChomboHandRevealedPayload { seatId: SeatId; hand: string[]; }
+
+export interface OpenDeclaredPayload {
+  declarerSeatId: SeatId;
+  hand: string[];
+  valid: boolean;
 }
 
 export interface ChomboResolvedPayload {

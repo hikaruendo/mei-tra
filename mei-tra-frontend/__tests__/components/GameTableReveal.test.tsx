@@ -73,6 +73,9 @@ const gameActions = {
   declareBlow: jest.fn(),
   passBlow: jest.fn(),
   revealBrokenHand: jest.fn(),
+  reportChombo: jest.fn(),
+  declareOpen: jest.fn(),
+  revealChomboHand: jest.fn(),
 } as unknown as GameActions;
 
 function renderTable(overrides: Partial<React.ComponentProps<typeof GameTable>>) {
@@ -88,6 +91,7 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof GameTable>>)
       currentTrump={null}
       gameActions={gameActions}
       gamePhase="blow"
+      gameMode="normal"
       negriCard={null}
       numberOfPairs={0}
       players={players}
@@ -170,5 +174,50 @@ describe('GameTable first-turn reveal', () => {
       jest.advanceTimersByTime(D.result);
     });
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GameTable pro open control', () => {
+  it('shows the open action to a player from either team', () => {
+    renderTable({
+      gameMode: 'pro',
+      gamePhase: 'play',
+      currentHighestDeclaration: {
+        seatId: 'seat-0',
+        team: 0,
+        trumpType: 'tra',
+        numberOfPairs: 1,
+        timestamp: 1,
+      },
+    });
+    expect(screen.getByRole('button', { name: 'オープン' })).toBeInTheDocument();
+
+    renderTable({
+      gameMode: 'pro',
+      gamePhase: 'play',
+      currentHighestDeclaration: {
+        seatId: 'seat-1',
+        team: 1,
+        trumpType: 'tra',
+        numberOfPairs: 1,
+        timestamp: 1,
+      },
+    });
+    expect(screen.getAllByRole('button', { name: 'オープン' })).toHaveLength(2);
+  });
+
+  it('does not show the open action in normal mode', () => {
+    renderTable({
+      gameMode: 'normal',
+      gamePhase: 'play',
+      currentHighestDeclaration: {
+        seatId: 'seat-0',
+        team: 0,
+        trumpType: 'tra',
+        numberOfPairs: 1,
+        timestamp: 1,
+      },
+    });
+    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
   });
 });

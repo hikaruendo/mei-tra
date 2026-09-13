@@ -473,6 +473,7 @@ export class ReconnectionUseCase {
           state.blowState.currentHighestDeclaration?.seatId === player.seatId
             ? (state.agari ?? null)
             : null,
+        revealedHands: state.playState?.revealedHands ?? {},
         fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
         roomId,
         hostSeatId: asSeatId(room.hostSeatId),

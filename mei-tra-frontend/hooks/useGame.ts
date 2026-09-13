@@ -1,3 +1,4 @@
+import { asSeatId } from '@contracts/ids';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type {
@@ -8,6 +9,8 @@ import type {
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
+  ChomboHandRevealedPayload,
+  OpenDeclaredPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -331,6 +334,7 @@ export const useGame = () => {
   const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
   const [negriCard, setNegriCard] = useState<string | null>(null);
   const [negriSeatId, setNegriSeatId] = useState<string | null>(null);
+  const [revealedHands, setRevealedHands] = useState<Partial<Record<string, string[]>>>({});
 
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
@@ -616,7 +620,11 @@ export const useGame = () => {
       if (next.players !== previous.players) {
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
-          fromPlayerContracts(next.players),
+          fromPlayerContracts(next.players).map((player) =>
+            next.revealedHands[player.seatId]
+              ? { ...player, hand: next.revealedHands[player.seatId] ?? player.hand }
+              : player,
+          ),
         );
         commitPlayers(nextPlayers);
         syncDisconnectedSeatIdsFromPlayers(nextPlayers);
@@ -649,6 +657,7 @@ export const useGame = () => {
       setNegriCard(next.negriCard);
       setNegriSeatId(next.negriSeatId);
       setRevealedAgari(next.revealedAgari);
+      setRevealedHands(next.revealedHands);
       setCompletedFields(toUiCompletedFields(next.fields));
     };
 
@@ -976,6 +985,16 @@ export const useGame = () => {
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
+      },
+      'chombo-hand-revealed': (payload: ChomboHandRevealedPayload) => {
+        applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
+      },
+      'open-declared': (payload: OpenDeclaredPayload) => {
+        applyGameServerEvent({ type: 'open-declared', payload });
+        setNotification({
+          message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+          type: payload.valid ? 'success' : 'error',
+        });
       },
       'chombo-resolved': (payload: ChomboResolvedPayload) => {
         applyGameServerEvent({ type: 'chombo-resolved', payload });
@@ -1419,6 +1438,14 @@ export const useGame = () => {
         violationType,
       });
     },
+    revealChomboHand: () => {
+      if (!socket || !currentRoomId || !currentSeatId) return;
+      socket.emit('reveal-chombo-hand', { roomId: currentRoomId, seatId: asSeatId(currentSeatId) });
+    },
+    declareOpen: () => {
+      if (!socket || !currentRoomId) return;
+      socket.emit('declare-open', { roomId: currentRoomId });
+    },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });
@@ -1486,6 +1513,7 @@ export const useGame = () => {
     negriSeatId,
     completedFields,
     revealedAgari,
+    revealedHands,
     gameActions,
     blowDeclarations,
     blowActionHistory,

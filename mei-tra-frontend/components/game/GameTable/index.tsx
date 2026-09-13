@@ -321,11 +321,20 @@ export const GameTable: React.FC<GameTableProps> = ({
         )}
       </div>
 
+      {gameMode === 'pro' &&
+        gamePhase === 'play' &&
+        currentSeatId && currentHighestDeclaration && (
+          <button type="button" onClick={gameActions.declareOpen}>
+            オープン
+          </button>
+        )}
+
       {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
         <ChomboReportPanel
           players={players}
           currentSeatId={currentSeatId}
           onReport={gameActions.reportChombo}
+          onReveal={gameActions.revealChomboHand}
         />
       )}
     </div>

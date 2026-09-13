@@ -102,6 +102,7 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       negriSeatId: state.playState?.negriSeatId
         ? asSeatId(state.playState.negriSeatId)
         : null,
+      revealedHands: state.playState?.revealedHands ?? {},
       fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
       roomId: room.id,
       hostSeatId: asSeatId(room.hostSeatId),
