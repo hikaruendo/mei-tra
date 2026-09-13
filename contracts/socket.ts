@@ -17,7 +17,9 @@ import type {
   PlayerIdlePayload,
   PlayerLeftPayload,
   PlaySetupCompletePayload,
+  ChomboResolvedPayload,
   RequestAgariPayload,
+  ReportChomboPayload,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -50,6 +52,7 @@ export interface CreateRoomPayload {
   name: string;
   pointsToWin: number;
   teamAssignmentMethod: 'random' | 'host-choice';
+  gameMode?: 'normal' | 'pro';
 }
 
 export interface JoinRoomPayload {
@@ -179,6 +182,7 @@ export interface ClientToServerEvents {
   'select-negri': (payload: SelectNegriPayload) => void;
   'request-agari': (payload: RequestAgariPayload) => void;
   'play-card': (payload: PlayCardPayload) => void;
+  'report-chombo': (payload: ReportChomboPayload) => void;
   'select-base-suit': (payload: SelectBaseSuitPayload) => void;
   'reveal-broken-hand': (payload: RevealBrokenHandPayload) => void;
   'update-auth': (payload: UpdateAuthPayload) => void;
@@ -203,6 +207,7 @@ export interface ServerToClientEvents {
   'round-cancelled': (payload: RoundCancelledPayload) => void;
   'reveal-agari': (payload: RevealAgariPayload) => void;
   'play-setup-complete': (payload: PlaySetupCompletePayload) => void;
+  'chombo-resolved': (payload: ChomboResolvedPayload) => void;
   'card-played': (payload: CardPlayedPayload) => void;
   'field-recovered': () => void;
   'field-updated': (field: FieldContract) => void;

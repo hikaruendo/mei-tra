@@ -176,6 +176,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     hostUser: SessionUser,
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
+    gameMode: 'normal' | 'pro' = 'normal',
   ): Promise<Room> {
     if (!hostUser.userId) {
       throw new Error('Authenticated host user is required');
@@ -208,6 +209,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         teamAssignmentMethod,
         pointsToWin,
         allowSpectators: true,
+        gameMode,
       },
       createdAt: new Date(),
       updatedAt: new Date(),

@@ -29,6 +29,7 @@ export interface MobileGameSnapshot {
   fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;
+  gameMode?: 'normal' | 'pro';
   paused: boolean;
   disconnectedSeatIds: string[];
   idleSeatIds: string[];

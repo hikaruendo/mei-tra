@@ -15,6 +15,27 @@ const createPlayer = (seatId: string, hand: string[]): PlayerContract => ({
 });
 
 describe('reduceGameEvent', () => {
+  it('applies chombo result scores to the shared game state', () => {
+    const state = createEmptyGameEventState();
+
+    const next = reduceGameEvent(state, {
+      type: 'chombo-resolved',
+      payload: {
+        violatorSeatId: asSeatId('seat-1'),
+        reporterSeatId: asSeatId('seat-2'),
+        violationType: 'negri-forget',
+        isCorrect: true,
+        awardedTeam: 1,
+        scores: {
+          0: { play: 0, total: 0 },
+          1: { play: 5, total: 5 },
+        },
+      },
+    });
+
+    expect(next.teamScores[1]).toEqual({ play: 5, total: 5 });
+  });
+
   it('uses only canonical seat fields through one event path', () => {
     const players = [
       createPlayer('seat-1', ['5♣']),
@@ -99,6 +120,7 @@ describe('reduceGameEvent', () => {
       type: 'play-setup-complete',
       payload: {
         negriCard: '5♣',
+        negriSeatId: asSeatId('seat-1'),
         startingSeatId: asSeatId('seat-1'),
       },
     });

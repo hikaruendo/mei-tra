@@ -93,6 +93,7 @@ export default function Home() {
     currentField = null,
     players = [],
     negriCard = null,
+    negriSeatId = null,
     completedFields = [],
     revealedAgari = null,
     gameActions,
@@ -122,6 +123,7 @@ export default function Home() {
     disconnectedSeatIds = [],
     paused = false,
     pointsToWin = 0,
+    gameMode = 'normal',
     isConnected = false,
     isConnecting = false,
     users = [],
@@ -237,6 +239,7 @@ export default function Home() {
                   currentField={currentField}
                   players={players}
                   negriCard={negriCard}
+                  negriSeatId={negriSeatId}
                   completedFields={completedFields}
                   revealedAgari={revealedAgari}
                   gameActions={gameActions}
@@ -256,6 +259,7 @@ export default function Home() {
                   idleSeatIds={idleSeatIds}
                   disconnectedSeatIds={disconnectedSeatIds}
                   pointsToWin={pointsToWin}
+                  gameMode={gameMode}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
                   firstTurnReveal={firstTurnReveal}

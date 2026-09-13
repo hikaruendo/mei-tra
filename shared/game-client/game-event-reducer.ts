@@ -3,6 +3,7 @@ import type {
   BlowUpdatedPayload,
   BrokenPayload,
   CardPlayedPayload,
+  ChomboResolvedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -44,6 +45,7 @@ export type GameServerEvent =
   | { type: 'reveal-agari'; payload: RevealAgariPayload }
   | { type: 'play-setup-complete'; payload: PlaySetupCompletePayload }
   | { type: 'card-played'; payload: CardPlayedPayload }
+  | { type: 'chombo-resolved'; payload: ChomboResolvedPayload }
   | { type: 'field-updated'; payload: FieldContract }
   | { type: 'field-complete'; payload: FieldCompletePayload }
   | { type: 'round-results'; payload: RoundResultsPayload }
@@ -213,7 +215,7 @@ export const reduceGameEvent = (
         ...state,
         currentTurnSeatId: startingSeatId,
         negriCard: event.payload.negriCard,
-        negriSeatId: startingSeatId,
+        negriSeatId: event.payload.negriSeatId,
         revealedAgari: null,
         blowState: {
           ...state.blowState,
@@ -221,6 +223,9 @@ export const reduceGameEvent = (
             state.blowState.currentHighestDeclaration?.trumpType ?? null,
         },
       };
+    }
+    case 'chombo-resolved': {
+      return { ...state, teamScores: event.payload.scores };
     }
     case 'card-played': {
       return {

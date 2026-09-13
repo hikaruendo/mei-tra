@@ -7,6 +7,7 @@ import type {
   BlowUpdatedPayload,
   BrokenPayload,
   CardPlayedPayload,
+  ChomboResolvedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -23,6 +24,7 @@ import type {
   PlayerLeftPayload,
   ReconnectionFailureCode,
   RequestAgariPayload,
+  ChomboViolationType,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -367,6 +369,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idleSeatIds, setIdleSeatIds] = useState<string[]>([]);
   const [disconnectedSeatIds, setDisconnectedSeatIds] = useState<string[]>([]);
@@ -388,6 +391,7 @@ export const useGame = () => {
     setGamePhase(null);
     setCurrentRoomId(null);
     setCurrentHostSeatId(null);
+    setGameMode('normal');
     setCurrentSeatId(null);
     setIsHost(false);
     setIsSpectator(false);
@@ -727,6 +731,7 @@ export const useGame = () => {
 
         setCurrentHostSeatId(nextRoom.hostSeatId);
         setTeamNames(nextRoom.settings.teamNames);
+        setGameMode(nextRoom.settings.gameMode ?? 'normal');
         if (selfSeatId) {
           setCurrentSeatId(selfSeatId);
         }
@@ -747,8 +752,10 @@ export const useGame = () => {
         hostSeatId,
         pointsToWin,
         teamNames,
+        gameMode: nextGameMode,
         isSpectator,
       }: GameStatePayload) => {
+        setGameMode(nextGameMode ?? 'normal');
         pendingNegriCardRef.current = null;
         gameEventStateRef.current = createGameEventStateFromSnapshot({
           players: playerContracts,
@@ -969,6 +976,14 @@ export const useGame = () => {
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
+      },
+      'chombo-resolved': (payload: ChomboResolvedPayload) => {
+        applyGameServerEvent({ type: 'chombo-resolved', payload });
+        const result = payload.isCorrect ? 'correct' : 'incorrect';
+        setNotification({
+          message: `Chombo report ${result}: Team ${payload.awardedTeam} receives 5 points.`,
+          type: payload.isCorrect ? 'success' : 'error',
+        });
       },
       'update-turn': (seatId: UpdateTurnPayload) => {
         if (shouldAbortRevealOnTurn(firstTurnRevealRef.current, seatId)) {
@@ -1396,6 +1411,14 @@ export const useGame = () => {
       };
       socket?.emit('play-card', payload);
     },
+    reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => {
+      if (!currentRoomId) return;
+      socket?.emit('report-chombo', {
+        roomId: currentRoomId,
+        violatorSeatId,
+        violationType,
+      });
+    },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });
@@ -1489,6 +1512,7 @@ export const useGame = () => {
     idleSeatIds,
     disconnectedSeatIds,
     pointsToWin,
+    gameMode,
     users,
     paused,
     socket,

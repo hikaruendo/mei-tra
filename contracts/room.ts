@@ -21,6 +21,7 @@ export interface RoomSettingsContract {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
+  gameMode?: 'normal' | 'pro';
   teamNames?: TeamNames;
 }
 

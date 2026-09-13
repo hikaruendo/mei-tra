@@ -1,8 +1,10 @@
 import type {
   PlayerContract,
+  ChomboResolvedPayload,
   ReconnectionFailureCode,
   TeamNames,
   TrumpType,
+  ChomboViolationType,
 } from '@meitra/contracts/game';
 import type {
   AckableClientEvent,
@@ -339,7 +341,7 @@ interface GameContextValue extends MobileState {
   isHost: boolean;
   refreshRooms: () => void;
   resumeRoom: (roomId: string) => Promise<void>;
-  createRoom: (name: string, pointsToWin: number) => Promise<boolean>;
+  createRoom: (name: string, pointsToWin: number, gameMode?: 'normal' | 'pro') => Promise<boolean>;
   joinRoom: (roomId: string) => Promise<boolean>;
   watchRoom: (roomId: string) => Promise<boolean>;
   leaveRoom: () => Promise<boolean>;
@@ -353,6 +355,7 @@ interface GameContextValue extends MobileState {
   playCancelSound: () => void;
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
+  reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
   removePlayer: (targetSeatId: string) => void;
@@ -938,6 +941,13 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
     });
+    socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
+      dispatch({ type: 'patchGame', patch: { teamScores: payload.scores } });
+      dispatch({
+        type: 'notice',
+        message: `Chombo report ${payload.isCorrect ? 'correct' : 'incorrect'}: Team ${payload.awardedTeam} receives 5 points.`,
+      });
+    });
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
       void roomStorage.clear();
@@ -1122,12 +1132,13 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, [resyncActiveRoom]);
 
   const createRoom = useCallback(
-    async (name: string, pointsToWin: number) => {
+    async (name: string, pointsToWin: number, gameMode: 'normal' | 'pro' = 'normal') => {
       if (!canSendServerAction()) return false;
       const response = await emitAck('create-room', {
         name: name.trim(),
         pointsToWin,
         teamAssignmentMethod: 'random',
+        gameMode,
       });
       if (!response.success || !response.room) {
         dispatch({
@@ -1331,6 +1342,18 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const reportChombo = useCallback((violatorSeatId: string, violationType: ChomboViolationType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('report-chombo', game.roomId, () => {
+      socketRef.current?.emit('report-chombo', {
+        roomId: game.roomId,
+        violatorSeatId: asSeatId(violatorSeatId),
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
   const selectBaseSuit = useCallback((suit: string) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1440,6 +1463,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCancelSound,
       playHandReorderSound,
       playCard,
+      reportChombo,
       selectBaseSuit,
       revealBrokenHand,
       removePlayer,
@@ -1473,6 +1497,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       leaveRoom,
       passBlow,
       playCard,
+      reportChombo,
       playCardSelectionSound,
       playCancelSound,
       playHandReorderSound,

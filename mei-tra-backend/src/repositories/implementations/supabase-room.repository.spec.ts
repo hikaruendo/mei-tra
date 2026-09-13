@@ -127,7 +127,10 @@ describe('SupabaseRoomRepository', () => {
       p_host_seat_id: hostSeatId,
       p_host_user_id: 'user-1',
       p_host_name: 'Host',
-      p_room_settings: room.settings,
+      p_room_settings: {
+        ...room.settings,
+        gameMode: 'normal',
+      },
       p_points_to_win: 8,
       p_transition_id: 'transition-1',
     });

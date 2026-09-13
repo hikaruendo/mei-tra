@@ -190,13 +190,21 @@ export function GameBoard({
     return counts;
   }, [game.fields]);
   const highest = game.blowState.currentHighestDeclaration;
+  const isProMode = game.gameMode === 'pro';
   const mustSelectNegri =
+    !isProMode &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
     highest?.seatId === game.youSeatId &&
     !game.negriCard;
   const isMyTurn =
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
+  const canPlaceProNegri =
+    isProMode &&
+    !game.isSpectator &&
+    highest?.seatId === game.youSeatId &&
+    !game.negriCard &&
+    game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
   const phaseLabel =
     game.gamePhase === 'blow'
@@ -215,14 +223,10 @@ export function GameBoard({
       Boolean(
         selectedCard &&
           self &&
-          isCardPlayable(
-            self.hand,
-            selectedCard,
-            game.currentField,
-            currentTrump,
-          ),
+          (isProMode ||
+            isCardPlayable(self.hand, selectedCard, game.currentField, currentTrump)),
       ),
-    [currentTrump, game.currentField, selectedCard, self],
+    [currentTrump, game.currentField, isProMode, selectedCard, self],
   );
   const fieldCardsKey = game.currentField?.cards.join(',') ?? '';
 
@@ -335,7 +339,7 @@ export function GameBoard({
         </View>
 
 
-        {showStrength && currentTrump ? (
+        {!isProMode && showStrength && currentTrump ? (
           <View style={styles.strengthPanel}>
             <Text style={styles.strengthOrder}>
               {getStrengthOrderLabel(currentTrump)}
@@ -570,6 +574,15 @@ export function GameBoard({
                   )
                 ) : null}
 
+            {isProMode && (isMyTurn || canPlaceProNegri) && !game.isSpectator ? (
+              <View style={styles.proDropZones}>
+                <Text style={styles.proDropZonePlay}>{t('board.choosePlayCard')} ↑</Text>
+                {highest?.seatId === self.seatId && !game.negriCard ? (
+                  <Text style={styles.proDropZoneNegri}>{t('seat.negri')} ↓</Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <HandFan
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
@@ -578,17 +591,18 @@ export function GameBoard({
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
-                (actionsDisabled ||
+                  (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
+                  actionsDisabled ||
                   Boolean(pendingAction) ||
-                  !isMyTurn ||
-                  !isCardPlayable(
-                    self.hand,
-                    card,
-                    game.currentField,
-                    currentTrump,
-                  ))
+                  (!isMyTurn && !canPlaceProNegri))
               }
               onReorder={onHandReorder}
+              onDropAction={(card, action) => {
+                if (isProMode && (isMyTurn || canPlaceProNegri)) {
+                  if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
+                  if (action === 'play' && isMyTurn) onPlayCard(card);
+                }
+              }}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
               reducedMotion={reducedMotion}
               seatId={self.seatId}
@@ -689,7 +703,7 @@ export function GameBoard({
             >
               <Text style={styles.optionsCloseText}>×</Text>
             </Pressable>
-            {currentTrump ? (
+            {!isProMode && currentTrump ? (
               <Button
                 onPress={() => {
                   setShowStrength((v) => !v);
@@ -1045,6 +1059,20 @@ const styles = StyleSheet.create({
   instruction: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  proDropZones: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+    marginBottom: 6,
+  },
+  proDropZonePlay: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  proDropZoneNegri: {
+    color: colors.gold,
+    fontSize: 12,
   },
   selectedActions: {
     flexDirection: 'row',
