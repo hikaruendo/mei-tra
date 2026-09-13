@@ -245,7 +245,10 @@ describe('open declaration events', () => {
         isComplete: false,
       },
       teamScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
-      revealedHands: { 'seat-1': ['5♣'], 'seat-2': ['A♠'] },
+      revealedHands: {
+        [asSeatId('seat-1')]: ['5♣'],
+        [asSeatId('seat-2')]: ['A♠'],
+      },
       openDeclared: true,
       openResolved: true,
       fields: [field],
