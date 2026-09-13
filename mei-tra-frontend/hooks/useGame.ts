@@ -1514,6 +1514,8 @@ export const useGame = () => {
     completedFields,
     revealedAgari,
     revealedHands,
+    openDeclared: gameEventStateRef.current.openDeclared,
+    openResolved: gameEventStateRef.current.openResolved,
     gameActions,
     blowDeclarations,
     blowActionHistory,

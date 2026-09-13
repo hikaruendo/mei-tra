@@ -175,5 +175,7 @@ describe('open declaration events', () => {
     });
 
     expect(next.revealedHands).toEqual({ 'seat-1': ['A♠', 'K♠'] });
+    expect(next.openDeclared).toBe(true);
+    expect(next.openResolved).toBe(true);
   });
 });

@@ -42,6 +42,8 @@ interface GameTableProps {
   disconnectedSeatIds?: string[];
   pointsToWin: number;
   gameMode: 'normal' | 'pro';
+  openDeclared?: boolean;
+  openResolved?: boolean;
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -84,6 +86,8 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentRoomId,
   pointsToWin,
   gameMode,
+  openDeclared = false,
+  openResolved = false,
   teamNames,
   idleSeatIds = [],
   disconnectedSeatIds = [],
@@ -323,8 +327,14 @@ export const GameTable: React.FC<GameTableProps> = ({
 
       {gameMode === 'pro' &&
         gamePhase === 'play' &&
+        !openDeclared &&
+        !openResolved &&
         currentSeatId && currentHighestDeclaration && (
-          <button type="button" onClick={gameActions.declareOpen}>
+          <button
+            className={styles.openButton}
+            type="button"
+            onClick={gameActions.declareOpen}
+          >
             オープン
           </button>
         )}

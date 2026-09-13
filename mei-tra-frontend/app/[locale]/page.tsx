@@ -96,6 +96,8 @@ export default function Home() {
     negriSeatId = null,
     completedFields = [],
     revealedAgari = null,
+    openDeclared = false,
+    openResolved = false,
     gameActions,
     blowDeclarations = [],
     blowActionHistory = [],
@@ -260,6 +262,8 @@ export default function Home() {
                   disconnectedSeatIds={disconnectedSeatIds}
                   pointsToWin={pointsToWin}
                   gameMode={gameMode}
+                  openDeclared={openDeclared}
+                  openResolved={openResolved}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
                   firstTurnReveal={firstTurnReveal}

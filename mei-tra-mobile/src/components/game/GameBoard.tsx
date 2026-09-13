@@ -218,6 +218,8 @@ export function GameBoard({
     isProMode &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
+    !game.openDeclared &&
+    !game.openResolved &&
     Boolean(highest);
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =

@@ -60,6 +60,38 @@
     var(--mt-shadow-btn);
 }
 
+.openButton {
+  align-self: center;
+  min-width: 8rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1.15rem;
+  border: 2px solid var(--mt-accent);
+  border-radius: var(--mt-radius);
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
+  font-size: typography.scale(0.95rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+    var(--mt-shadow-btn);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    background: var(--mt-btn-primary-bg-hover);
+    filter: brightness(1.04);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--mt-accent);
+    outline-offset: 3px;
+  }
+}
+
 .startButton {
   font-size: typography.scale(1.05rem);
   background: var(--mt-btn-primary-bg);

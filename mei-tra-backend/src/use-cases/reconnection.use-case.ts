@@ -474,6 +474,8 @@ export class ReconnectionUseCase {
             ? (state.agari ?? null)
             : null,
         revealedHands: state.playState?.revealedHands ?? {},
+        openDeclared: state.playState?.openDeclared ?? false,
+        openResolved: state.playState?.openResolved ?? false,
         fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
         roomId,
         hostSeatId: asSeatId(room.hostSeatId),

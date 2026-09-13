@@ -91,6 +91,8 @@ export interface GameStatePayload {
   negriSeatId: SeatId | null;
   revealedAgari?: string | null;
   revealedHands?: Partial<Record<SeatId, string[]>>;
+  openDeclared?: boolean;
+  openResolved?: boolean;
   fields: CompletedFieldContract[];
   roomId: string;
   hostSeatId: SeatId;
