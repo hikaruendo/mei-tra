@@ -2,8 +2,10 @@ import type { PlayerContract } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import {
   createEmptyGameEventState,
+  createGameEventStateFromSnapshot,
   reduceGameEvent,
 } from '@meitra/game-client/game-event-reducer';
+import type { GameStatePayload } from '@meitra/contracts/game';
 
 const createPlayer = (seatId: string, hand: string[]): PlayerContract => ({
   socketId: `socket-${seatId}`,
@@ -177,5 +179,78 @@ describe('open declaration events', () => {
     expect(next.revealedHands).toEqual({ 'seat-1': ['A♠', 'K♠'] });
     expect(next.openDeclared).toBe(true);
     expect(next.openResolved).toBe(true);
+  });
+
+  it('replays the pro-mode lifecycle to the same state as a reconnect snapshot', () => {
+    const field = {
+      cards: ['5♣', '6♣'],
+      winnerSeatId: asSeatId('seat-1'),
+      winnerTeam: 0 as const,
+      dealerSeatId: asSeatId('seat-2'),
+    };
+    const initial: GameStatePayload = {
+      roomId: 'room-1',
+      gameMode: 'pro',
+      players: [createPlayer('seat-1', ['5♣']), createPlayer('seat-2', [])],
+      gamePhase: 'play',
+      currentField: null,
+      currentTurnSeatId: asSeatId('seat-1'),
+      blowState: createEmptyGameEventState().blowState,
+      teamScores: { 0: { play: 0, total: 0 }, 1: { play: 0, total: 0 } },
+      youSeatId: asSeatId('seat-1'),
+      isSpectator: false,
+      negriCard: '7♣',
+      negriSeatId: asSeatId('seat-1'),
+      fields: [],
+      hostSeatId: asSeatId('seat-1'),
+      pointsToWin: 12,
+    };
+    let live = createGameEventStateFromSnapshot(initial);
+    live = reduceGameEvent(live, {
+      type: 'open-declared',
+      payload: { declarerSeatId: asSeatId('seat-1'), hand: ['5♣'], valid: true },
+    });
+    live = reduceGameEvent(live, {
+      type: 'chombo-hand-revealed',
+      payload: { seatId: asSeatId('seat-2'), hand: ['A♠'] },
+    });
+    live = reduceGameEvent(live, {
+      type: 'chombo-resolved',
+      payload: {
+        violatorSeatId: asSeatId('seat-2'),
+        reporterSeatId: asSeatId('seat-1'),
+        violationType: 'wrong-open',
+        isCorrect: true,
+        awardedTeam: 0,
+        scores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
+      },
+    });
+    live = reduceGameEvent(live, {
+      type: 'field-complete',
+      payload: {
+        winnerSeatId: asSeatId('seat-1'),
+        nextSeatId: asSeatId('seat-2'),
+        field,
+      },
+    });
+
+    const reconnect = createGameEventStateFromSnapshot({
+      ...initial,
+      currentTurnSeatId: asSeatId('seat-2'),
+      currentField: {
+        cards: [],
+        playedBySeatIds: [],
+        baseCard: '',
+        dealerSeatId: asSeatId('seat-2'),
+        isComplete: false,
+      },
+      teamScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
+      revealedHands: { 'seat-1': ['5♣'], 'seat-2': ['A♠'] },
+      openDeclared: true,
+      openResolved: true,
+      fields: [field],
+    });
+
+    expect(live).toMatchObject(reconnect);
   });
 });
