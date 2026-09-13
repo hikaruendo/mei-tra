@@ -41,6 +41,7 @@ export default function RoomScreen() {
     declareBlow,
     passBlow,
     selectNegri,
+    declareOpen,
     playCardSelectionSound,
     playCancelSound,
     playHandReorderSound,
