@@ -1,6 +1,8 @@
 import type {
   PlayerContract,
   ChomboResolvedPayload,
+  ChomboHandRevealedPayload,
+  OpenDeclaredPayload,
   ReconnectionFailureCode,
   TeamNames,
   TrumpType,
@@ -944,10 +946,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
     });
-    socket.on('chombo-hand-revealed', (payload) => {
+    socket.on('chombo-hand-revealed', (payload: ChomboHandRevealedPayload) => {
       applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
     });
-    socket.on('open-declared', (payload) => {
+    socket.on('open-declared', (payload: OpenDeclaredPayload) => {
       applyGameServerEvent({ type: 'open-declared', payload });
       dispatch({
         type: 'notice',

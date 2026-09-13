@@ -9,6 +9,8 @@ import type {
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
+  ChomboHandRevealedPayload,
+  OpenDeclaredPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -984,10 +986,10 @@ export const useGame = () => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
       },
-      'chombo-hand-revealed': (payload) => {
+      'chombo-hand-revealed': (payload: ChomboHandRevealedPayload) => {
         applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
       },
-      'open-declared': (payload) => {
+      'open-declared': (payload: OpenDeclaredPayload) => {
         applyGameServerEvent({ type: 'open-declared', payload });
         setNotification({
           message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
