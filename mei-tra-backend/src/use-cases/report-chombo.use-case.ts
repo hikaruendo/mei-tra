@@ -115,7 +115,7 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
         winningTeam: awardedTeam,
         finalScores: state.teamScores,
       };
-      state.gameOver = {
+      roomGameState.getState().gameOver = {
         ...gameOverPayload,
         finalScores: state.teamScores,
       };

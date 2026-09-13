@@ -26,10 +26,15 @@ export async function createGame(hand: string[]) {
   const game = new GameStateService(cards, chombo, repository);
   game.setRoomId('room-1');
   const state = game.getState();
-  repository.update.mockImplementation(async () => ({
-    ...state,
-    version: (state.version ?? 0) + 1,
-  }));
+  let persistedState = state;
+  repository.update.mockImplementation(async (_roomId, patch) => {
+    persistedState = {
+      ...persistedState,
+      ...patch,
+      version: (persistedState.version ?? 0) + 1,
+    };
+    return persistedState;
+  });
   state.gamePhase = 'play';
   state.pointsToWin = 30;
   state.currentSeatId = asSeatId('winner');
@@ -67,17 +72,18 @@ export async function createGame(hand: string[]) {
   const room: { settings: { gameMode: 'pro' | 'normal' } } = {
     settings: { gameMode: 'pro' },
   };
+  const roomService = {
+    getRoom: async () => room,
+    getRoomGameState: async () => game,
+    updateRoomStatus,
+  };
   const module = await Test.createTestingModule({
     providers: [
       PlayCardUseCase,
       ReportChomboUseCase,
       {
         provide: 'IRoomService',
-        useValue: {
-          getRoom: async () => room,
-          getRoomGameState: async () => game,
-          updateRoomStatus,
-        },
+        useValue: roomService,
       },
       { provide: 'IPlayService', useValue: play },
       { provide: 'IChomboService', useValue: chombo },
@@ -88,6 +94,7 @@ export async function createGame(hand: string[]) {
     chombo,
     updateRoomStatus,
     room,
+    roomService,
     module,
     play: module.get(PlayCardUseCase),
     report: module.get(ReportChomboUseCase),
