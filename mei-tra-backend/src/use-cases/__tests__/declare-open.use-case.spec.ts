@@ -53,5 +53,37 @@ describe('DeclareOpenUseCase', () => {
       expect.objectContaining({ event: 'open-declared' }),
       expect.objectContaining({ event: 'round-results' }),
     ]));
+    expect(state.playState?.openResolved).toBe(true);
+  });
+
+  it('records an invalid open for the later chombo report flow without settling the round', async () => {
+    state.playState!.openDeclared = false;
+    state.playState!.openResolved = false;
+    state.playState!.chomboViolations = [];
+    const roomGameState = {
+      getState: jest.fn(() => state),
+      findPlayerByActorId: jest.fn(() => players[0]),
+      saveState: jest.fn(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue({ settings: { gameMode: 'pro' } }),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+    };
+    const openRules = { canDeclareOpen: jest.fn(() => false) };
+    const violation = { type: 'wrong-open', violatorSeatId: players[0].seatId, timestamp: 1, reportedBySeatId: null, isExpired: false };
+    const chombo = { recordViolation: jest.fn(() => violation) };
+    const score = { calculatePlayPoints: jest.fn(() => 3) };
+    const useCase = new DeclareOpenUseCase(roomService as never, openRules as never, chombo as never, score as never);
+
+    const result = await useCase.execute({ roomId: 'room-1', actorId: 'user-1' });
+
+    expect(result.success).toBe(true);
+    expect(state.playState?.openResolved).toBe(false);
+    expect(state.playState?.chomboViolations).toEqual([violation]);
+    expect(result.events).toContainEqual(expect.objectContaining({
+      event: 'open-declared',
+      payload: expect.objectContaining({ valid: false }),
+    }));
+    expect(result.events).not.toContainEqual(expect.objectContaining({ event: 'round-results' }));
   });
 });
