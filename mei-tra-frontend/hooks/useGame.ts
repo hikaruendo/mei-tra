@@ -622,7 +622,7 @@ export const useGame = () => {
           playersRef.current,
           fromPlayerContracts(next.players).map((player) =>
             next.revealedHands[player.seatId]
-              ? { ...player, hand: next.revealedHands[player.seatId] }
+              ? { ...player, hand: next.revealedHands[player.seatId] ?? player.hand }
               : player,
           ),
         );
