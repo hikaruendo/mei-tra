@@ -11,12 +11,14 @@ import type { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
 import { RoomStatus } from '../types/room.types';
 import { ChomboService } from '../services/chombo.service';
+import type { IScoreService } from '../services/interfaces/score-service.interface';
 
 @Injectable()
 export class ReportChomboUseCase implements IReportChomboUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Optional() private readonly chomboService?: ChomboService,
+    @Optional() @Inject('IScoreService') private readonly scoreService?: IScoreService,
   ) {}
 
   async execute(request: ReportChomboRequest): Promise<ReportChomboResponse> {
@@ -78,8 +80,12 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
     if (persistedViolation && !persistedViolation.reportedBySeatId) persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
     const isCorrect = Boolean(persistedViolation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;
-    state.teamScores[awardedTeam].play += 5;
-    state.teamScores[awardedTeam].total += 5;
+    if (this.scoreService) {
+      this.scoreService.addPoints(awardedTeam, 5, state.teamScores);
+    } else {
+      state.teamScores[awardedTeam].play += 5;
+      state.teamScores[awardedTeam].total += 5;
+    }
     state.playState.chomboReports = [
       ...reports,
       {
