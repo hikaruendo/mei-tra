@@ -1,11 +1,10 @@
-import type { PlayerContract } from '@meitra/contracts/game';
+import type { GameStatePayload, PlayerContract } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import {
   createEmptyGameEventState,
   createGameEventStateFromSnapshot,
   reduceGameEvent,
 } from '@meitra/game-client/game-event-reducer';
-import type { GameStatePayload } from '@meitra/contracts/game';
 
 const createPlayer = (seatId: string, hand: string[]): PlayerContract => ({
   socketId: `socket-${seatId}`,
