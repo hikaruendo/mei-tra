@@ -48,7 +48,7 @@ export class ChomboService implements IChomboService {
 
       case 'check-four-jack': {
         const jackCount = context.player.hand.filter((c) =>
-          c.includes('J'),
+          /^J[♠♣♥♦]$/.test(c),
         ).length;
         if (jackCount === 4 && !context.hasBroken) {
           violationType = 'four-jack';
@@ -100,7 +100,6 @@ export class ChomboService implements IChomboService {
       isExpired: false,
     };
 
-    this.violations.push(violation);
     return violation;
   }
 

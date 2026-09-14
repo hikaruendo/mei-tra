@@ -17,7 +17,10 @@ import { IPlayService } from '../services/interfaces/play-service.interface';
 import { asSeatId } from '../types/identity.types';
 import { resolveCurrentPlayer } from '../domain/current-turn';
 import { toFieldContract } from '../adapters/game-contract-adapters';
-import { getCurrentFieldIdentity } from '../domain/field-recovery';
+import {
+  getCurrentFieldIdentity,
+  getFieldIntegrityError,
+} from '../domain/field-recovery';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
 
 @Injectable()
@@ -69,6 +72,33 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
+      const integrityField = state.playState.currentField;
+      if (integrityField) {
+        const fieldIntegrityError = getFieldIntegrityError(state, integrityField);
+        if (fieldIntegrityError || integrityField.playedBySeatIds.includes(player.seatId)) {
+          const fieldIdentity = getCurrentFieldIdentity(state);
+          this.logger.error(
+            `Recovering invalid field before card play in room ${roomId}: ${fieldIntegrityError ?? 'Current seat already played in this field'}`,
+          );
+          return fieldIdentity
+            ? {
+                success: true,
+                events: [],
+                completeFieldTrigger: {
+                  roomId,
+                  delayMs: 0,
+                  fieldIdentity,
+                  field: {
+                    ...integrityField,
+                    cards: [...integrityField.cards],
+                    playedBySeatIds: [...integrityField.playedBySeatIds],
+                  },
+                },
+              }
+            : { success: false, error: 'Field identity is unavailable' };
+        }
+      }
+
       // Pro mode allows the declaration winner to skip Negri and play first.
       // Create the empty field lazily for that flow only.
       if (!state.playState.currentField) {
@@ -89,6 +119,10 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
       if (room?.settings.gameMode === 'pro') {
         state.playState.chomboRoundNumber ??= state.roundNumber;
+      }
+
+      if (!state.playState.currentField) {
+        return { success: false, error: 'Play field is unavailable' };
       }
 
       // Prevent playing on a field that is being completed

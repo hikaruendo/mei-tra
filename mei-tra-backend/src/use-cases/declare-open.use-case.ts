@@ -47,6 +47,16 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     if (valid) {
       state.playState.openResolved = true;
       events.push(...this.settleValidOpen(state, request.roomId));
+      if (!state.gameOver) {
+        state.gamePhase = 'waiting';
+        state.currentSeatId = null;
+        events.push({
+          scope: 'room',
+          roomId: request.roomId,
+          event: 'update-phase',
+          payload: 'waiting',
+        });
+      }
     }
     await roomGameState.saveState();
     if (state.gameOver) {

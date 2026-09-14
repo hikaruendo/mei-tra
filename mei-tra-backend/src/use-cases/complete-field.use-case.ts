@@ -592,7 +592,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
 
     // Candidates belong to the completed round. Keep persisted state reset and
     // prevent the singleton service from resolving a stale candidate next round.
-    this.chomboService?.expireViolations();
 
     const newPlayState = {
       currentField: {
