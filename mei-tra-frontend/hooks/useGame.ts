@@ -780,6 +780,7 @@ export const useGame = () => {
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setRevealedAgari(syncedRevealedAgari ?? null);
+        setRevealedHands(payload.revealedHands ?? {});
         commitTurn(currentTurnSeatId);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
