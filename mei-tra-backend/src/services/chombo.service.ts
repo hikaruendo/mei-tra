@@ -10,6 +10,21 @@ export class ChomboService implements IChomboService {
 
   constructor(private readonly playService: PlayService) {}
 
+  resolveReport(
+    violations: ChomboViolation[],
+    reporterSeatId: SeatId,
+    violatorSeatId: SeatId,
+    violationType: ChomboViolation['type'],
+  ): ChomboViolation | null {
+    const violation = violations.find(
+      (candidate) => candidate.violatorSeatId === violatorSeatId &&
+        candidate.type === violationType &&
+        !candidate.isExpired && !candidate.reportedBySeatId,
+    );
+    if (violation) violation.reportedBySeatId = reporterSeatId;
+    return violation ?? null;
+  }
+
   checkViolations(
     seatId: SeatId,
     action: string,
