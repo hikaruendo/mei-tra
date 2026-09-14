@@ -115,6 +115,11 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
         winningTeam: awardedTeam,
         finalScores: state.teamScores,
       };
+      state.gameOver = {
+        ...gameOverPayload,
+        finalScores: state.teamScores,
+      };
+      await roomGameState.saveState();
       await this.roomService.updateRoomStatus(
         request.roomId,
         RoomStatus.FINISHED,

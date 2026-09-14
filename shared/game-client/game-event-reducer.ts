@@ -38,6 +38,7 @@ export interface GameEventState {
   revealedHands: Partial<Record<SeatId, string[]>>;
   openDeclared: boolean;
   openResolved: boolean;
+  gameOver: GameStatePayload['gameOver'];
   fields: CompletedFieldContract[];
 }
 
@@ -84,6 +85,7 @@ export const createEmptyGameEventState = (): GameEventState => ({
   revealedHands: {},
   openDeclared: false,
   openResolved: false,
+  gameOver: null,
   fields: [],
 });
 
@@ -103,6 +105,7 @@ export const createGameEventStateFromSnapshot = (
     revealedHands: payload.revealedHands ?? {},
     openDeclared: payload.openDeclared ?? false,
     openResolved: payload.openResolved ?? false,
+    gameOver: payload.gameOver ?? null,
     fields: dedupeCompletedFields(payload.fields),
   };
 };

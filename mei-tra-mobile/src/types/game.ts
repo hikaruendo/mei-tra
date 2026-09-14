@@ -2,6 +2,7 @@ import type {
   BlowStateContract,
   CompletedFieldContract,
   FieldContract,
+  GameOverPayload,
   PlayerContract,
   TeamNames,
   TransportGamePhase,
@@ -29,6 +30,7 @@ export interface MobileGameSnapshot {
   revealedHands?: Partial<Record<SeatId, string[]>>;
   openDeclared?: boolean;
   openResolved?: boolean;
+  gameOver?: GameOverPayload | null;
   fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;

@@ -256,6 +256,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
           winningTeam,
           finalScores: state.teamScores,
         };
+        state.gameOver = {
+          ...gameOverPayload,
+          finalScores: state.teamScores,
+        };
 
         events.push({
           scope: 'room',

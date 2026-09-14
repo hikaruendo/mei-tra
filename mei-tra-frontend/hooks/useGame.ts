@@ -745,28 +745,8 @@ export const useGame = () => {
           setCurrentSeatId(selfSeatId);
         }
       },
-      'game-state': ({
-        players: playerContracts,
-        gamePhase,
-        currentField,
-        currentTurnSeatId,
-        blowState,
-        teamScores,
-        youSeatId,
-        negriCard,
-        negriSeatId,
-        revealedAgari: syncedRevealedAgari,
-        fields,
-        roomId,
-        hostSeatId,
-        pointsToWin,
-        teamNames,
-        gameMode: nextGameMode,
-        isSpectator,
-      }: GameStatePayload) => {
-        setGameMode(nextGameMode ?? 'normal');
-        pendingNegriCardRef.current = null;
-        gameEventStateRef.current = createGameEventStateFromSnapshot({
+      'game-state': (payload: GameStatePayload) => {
+        const {
           players: playerContracts,
           gamePhase,
           currentField,
@@ -782,8 +762,13 @@ export const useGame = () => {
           hostSeatId,
           pointsToWin,
           teamNames,
+          gameMode: nextGameMode,
           isSpectator,
-        });
+          gameOver,
+        } = payload;
+        setGameMode(nextGameMode ?? 'normal');
+        pendingNegriCardRef.current = null;
+        gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -820,6 +805,19 @@ export const useGame = () => {
         setGameStarted(true);
         setPointsToWin(pointsToWin);
         setTeamNames(teamNames);
+        if (gameOver) {
+          gameResultTokenRef.current += 1;
+          setGameResult(buildGameResultSnapshot({
+            payload: gameOver,
+            players: nextPlayers,
+            viewerSeatId: youSeatId,
+            isSpectator: Boolean(isSpectator),
+            teamNames,
+            token: gameResultTokenRef.current,
+          }));
+          setGameStarted(false);
+          setGamePhase(null);
+        }
         setIdleSeatIds((prev) =>
           prev.filter((seatId) =>
             nextPlayers.some((player) => player.seatId === seatId),

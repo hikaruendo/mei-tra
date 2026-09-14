@@ -396,6 +396,7 @@ const toMobileGamePatch = (
   revealedHands: game.revealedHands,
   openDeclared: game.openDeclared,
   openResolved: game.openResolved,
+  gameOver: game.gameOver,
   fields: game.fields,
 });
 
@@ -771,6 +772,20 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       const snapshot = normalizeGameStatePayload(payload);
+      if (payload.gameOver) {
+        gameResultTokenRef.current += 1;
+        dispatch({
+          type: 'gameResult',
+          result: buildGameResultSnapshot({
+            payload: payload.gameOver,
+            players: snapshot.players,
+            viewerSeatId: snapshot.youSeatId,
+            isSpectator: snapshot.isSpectator,
+            teamNames: snapshot.teamNames,
+            token: gameResultTokenRef.current,
+          }),
+        });
+      }
       dispatch({
         type: 'game',
         // The bootstrap snapshot right after game start already carries the

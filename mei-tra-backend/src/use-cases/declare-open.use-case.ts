@@ -3,6 +3,7 @@ import type { GameOverPayload, OpenDeclaredPayload, RoundResultsPayload } from '
 import { asSeatId } from '../types/identity.types';
 import type { GameState, Team } from '../types/game.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
+import { RoomStatus } from '../types/room.types';
 import { OpenDeclarationService } from '../services/open-declaration.service';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import { IScoreService } from '../services/interfaces/score-service.interface';
@@ -48,6 +49,9 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       events.push(...this.settleValidOpen(state, request.roomId));
     }
     await roomGameState.saveState();
+    if (state.gameOver) {
+      await this.roomService.updateRoomStatus(request.roomId, RoomStatus.FINISHED);
+    }
     return { success: true, events };
   }
 
@@ -68,7 +72,9 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       { scope: 'room', roomId, event: 'round-results', payload: { scores: state.teamScores } satisfies RoundResultsPayload },
     ];
     if (state.teamScores[awardedTeam].total >= state.pointsToWin) {
-      events.push({ scope: 'room', roomId, event: 'game-over', payload: { winner: `Team ${awardedTeam}`, winningTeam: awardedTeam, finalScores: state.teamScores } satisfies GameOverPayload });
+      const gameOverPayload = { winner: `Team ${awardedTeam}`, winningTeam: awardedTeam, finalScores: state.teamScores } satisfies GameOverPayload;
+      state.gameOver = { ...gameOverPayload, finalScores: state.teamScores };
+      events.push({ scope: 'room', roomId, event: 'game-over', payload: gameOverPayload });
     }
     return events;
   }

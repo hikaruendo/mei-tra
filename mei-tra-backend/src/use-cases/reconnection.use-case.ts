@@ -426,7 +426,8 @@ export class ReconnectionUseCase {
 
   private isActiveGame(room: ActiveRoom, gamePhase: GamePhase): boolean {
     return (
-      room.status === RoomStatus.PLAYING &&
+      (room.status === RoomStatus.PLAYING ||
+        room.status === RoomStatus.FINISHED) &&
       gamePhase !== null &&
       gamePhase !== 'waiting'
     );
@@ -476,6 +477,13 @@ export class ReconnectionUseCase {
         revealedHands: state.playState?.revealedHands ?? {},
         openDeclared: state.playState?.openDeclared ?? false,
         openResolved: state.playState?.openResolved ?? false,
+        gameOver: state.gameOver
+          ? {
+              winner: state.gameOver.winner,
+              winningTeam: state.gameOver.winningTeam,
+              finalScores: state.gameOver.finalScores,
+            }
+          : null,
         fields: (state.playState?.fields ?? []).map(toCompletedFieldContract),
         roomId,
         hostSeatId: asSeatId(room.hostSeatId),

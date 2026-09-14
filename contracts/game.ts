@@ -93,6 +93,7 @@ export interface GameStatePayload {
   revealedHands?: Partial<Record<SeatId, string[]>>;
   openDeclared?: boolean;
   openResolved?: boolean;
+  gameOver?: GameOverPayload | null;
   fields: CompletedFieldContract[];
   roomId: string;
   hostSeatId: SeatId;
