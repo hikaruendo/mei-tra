@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
@@ -16,6 +16,7 @@ interface GameDockProps {
   gamePhase?: string | null;
   players?: Player[];
   teamNames?: TeamNames;
+  chomboReport?: ReactNode;
   onLeaveRequest?: () => void;
 }
 
@@ -27,14 +28,18 @@ export function GameDock({
   gamePhase,
   players,
   teamNames,
+  chomboReport,
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
   const tHistory = useTranslations('gameHistoryDock');
+  const tChombo = useTranslations('chomboReport');
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isChomboOpen, setIsChomboOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const hasChomboReport = Boolean(chomboReport);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') {
@@ -70,20 +75,27 @@ export function GameDock({
   }, [isMenuOpen]);
 
   useEffect(() => {
-    if (!isHistoryOpen) {
+    if (!isHistoryOpen && !isChomboOpen) {
       return;
     }
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) {
         setIsHistoryOpen(false);
+        setIsChomboOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handlePointerDown);
 
     return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [isHistoryOpen]);
+  }, [isHistoryOpen, isChomboOpen]);
+
+  useEffect(() => {
+    if (!hasChomboReport) {
+      setIsChomboOpen(false);
+    }
+  }, [hasChomboReport]);
 
   const tools = (
     <>
@@ -106,6 +118,7 @@ export function GameDock({
           className={styles.historyButton}
           onClick={() => {
             setIsHistoryOpen((previous) => !previous);
+            setIsChomboOpen(false);
             setIsMenuOpen(false);
           }}
           aria-expanded={isHistoryOpen}
@@ -113,6 +126,22 @@ export function GameDock({
           {tHistory('title')}
         </button>
       </div>
+      {hasChomboReport && (
+        <div className={styles.dockItem}>
+          <button
+            type="button"
+            className={styles.historyButton}
+            onClick={() => {
+              setIsChomboOpen((previous) => !previous);
+              setIsHistoryOpen(false);
+              setIsMenuOpen(false);
+            }}
+            aria-expanded={isChomboOpen}
+          >
+            {tChombo('dockLabel')}
+          </button>
+        </div>
+      )}
       {isMobile && onLeaveRequest && (
         <div className={styles.dockItem}>
           <button
@@ -126,6 +155,27 @@ export function GameDock({
             {tCommon('leave')}
           </button>
         </div>
+      )}
+    </>
+  );
+
+  const panels = (
+    <>
+      {isHistoryOpen && (
+        <div className={styles.historyPanel}>
+          <GameHistoryDock
+            roomId={roomId}
+            gameStarted={gameStarted}
+            players={players}
+            teamNames={teamNames}
+            defaultOpen
+            hideOpenPage
+            onClose={() => setIsHistoryOpen(false)}
+          />
+        </div>
+      )}
+      {isChomboOpen && hasChomboReport && (
+        <div className={styles.chomboPanel}>{chomboReport}</div>
       )}
     </>
   );
@@ -151,19 +201,7 @@ export function GameDock({
         >
           {tools}
         </div>
-        {isHistoryOpen && (
-          <div className={styles.historyPanel}>
-            <GameHistoryDock
-              roomId={roomId}
-              gameStarted={gameStarted}
-              players={players}
-              teamNames={teamNames}
-              defaultOpen
-              hideOpenPage
-              onClose={() => setIsHistoryOpen(false)}
-            />
-          </div>
-        )}
+        {panels}
       </div>
     );
   }
@@ -171,19 +209,7 @@ export function GameDock({
   return (
     <div className={styles.container} ref={menuRef}>
       {tools}
-      {isHistoryOpen && (
-        <div className={styles.historyPanel}>
-          <GameHistoryDock
-            roomId={roomId}
-            gameStarted={gameStarted}
-            players={players}
-            teamNames={teamNames}
-            defaultOpen
-            hideOpenPage
-            onClose={() => setIsHistoryOpen(false)}
-          />
-        </div>
-      )}
+      {panels}
     </div>
   );
 }

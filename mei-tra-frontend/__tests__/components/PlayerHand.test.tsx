@@ -602,4 +602,120 @@ describe('PlayerHand', () => {
 
     expect(onSpectatorPerspectiveChange).toHaveBeenCalledWith('player-2');
   });
+
+  it('reveals a four-jack hand automatically on its blow turn in normal mode', () => {
+    const revealBrokenHand = gameActions.revealBrokenHand as jest.Mock;
+    revealBrokenHand.mockClear();
+
+    renderPlayerHand({
+      player: { ...otherPlayer, seatId: 'player-1', hasRequiredBroken: true },
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'normal',
+    });
+
+    expect(revealBrokenHand).toHaveBeenCalledWith('player-1');
+  });
+
+  it('leaves a four-jack hand to the player in pro mode', () => {
+    const revealBrokenHand = gameActions.revealBrokenHand as jest.Mock;
+    revealBrokenHand.mockClear();
+
+    renderPlayerHand({
+      player: { ...otherPlayer, seatId: 'player-1', hasRequiredBroken: true },
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'pro',
+    });
+
+    expect(revealBrokenHand).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'revealBroken' }));
+
+    expect(revealBrokenHand).toHaveBeenCalledWith('player-1');
+  });
+
+  it.each(['normal', 'pro'] as const)(
+    'shows the broken hand button only for a broken hand in %s mode',
+    (gameMode) => {
+      const blowTurn = {
+        position: 'bottom',
+        gamePhase: 'blow',
+        whoseTurn: 'player-1',
+        isCurrentTurn: true,
+        currentSeatId: 'player-1',
+        gameMode,
+      } as const;
+      const { rerender } = renderPlayerHand({
+        ...blowTurn,
+        player: { ...otherPlayer, seatId: 'player-1' },
+      });
+
+      expect(
+        screen.queryByRole('button', { name: 'revealBroken' }),
+      ).not.toBeInTheDocument();
+
+      rerender(
+        buildPlayerHand({
+          ...blowTurn,
+          player: { ...otherPlayer, seatId: 'player-1', hasBroken: true },
+        }),
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'revealBroken' }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it('hides the broken hand button once the player has acted or the blow is over', () => {
+    const brokenPlayer: Player = {
+      ...otherPlayer,
+      seatId: 'player-1',
+      hasBroken: true,
+    };
+    const blowTurn = {
+      player: brokenPlayer,
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'pro',
+    } as const;
+    const { rerender } = renderPlayerHand({
+      ...blowTurn,
+      hasActedInBlow: true,
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'revealBroken' }),
+    ).not.toBeInTheDocument();
+
+    rerender(buildPlayerHand({ ...blowTurn, gamePhase: 'play' }));
+
+    expect(
+      screen.queryByRole('button', { name: 'revealBroken' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a revealed hand face up to the other players', () => {
+    const player: Player = { ...otherPlayer, hand: ['H-A', 'S-2'] };
+    const { rerender } = renderPlayerHand({ player });
+
+    expect(screen.getAllByTestId('card-back')).toHaveLength(2);
+
+    rerender(buildPlayerHand({ player, revealedHand: ['H-A', 'S-2'] }));
+
+    expect(screen.queryAllByTestId('card-back')).toHaveLength(0);
+    expect(
+      screen.getAllByTestId('card-front').map((card) => card.textContent),
+    ).toEqual(['H-A', 'S-2']);
+  });
 });

@@ -1,4 +1,9 @@
-import { ChomboViolation, DomainPlayer, Field } from '../../types/game.types';
+import {
+  ChomboViolation,
+  DomainPlayer,
+  Field,
+  TrumpType,
+} from '../../types/game.types';
 import type { SeatId } from '../../types/identity.types';
 
 export interface IChomboService {
@@ -18,6 +23,7 @@ export interface IChomboService {
       neguri?: { [key: string]: string };
       hasBroken?: boolean;
       canDeclareOpen?: boolean;
+      trump?: TrumpType | null;
     },
   ): ChomboViolation | null;
   recordViolation(

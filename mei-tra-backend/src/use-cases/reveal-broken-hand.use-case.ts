@@ -1,6 +1,5 @@
-import { appendChomboCandidate, findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import type { BrokenPayload } from '@contracts/game';
+import type { BrokenHandRevealedPayload, BrokenPayload } from '@contracts/game';
 import {
   IRevealBrokenHandUseCase,
   RevealBrokenHandRequest,
@@ -15,11 +14,13 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
+import {
+  BROKEN_HAND_REVEAL_DELAY_MS,
+  getBrokenHandRevealPendingError,
+} from './helpers/broken-hand.helper';
 import { asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
-import { IChomboService } from '../services/interfaces/chombo-service.interface';
 
 @Injectable()
 export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
@@ -31,9 +32,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
-    @Optional()
-    @Inject('IChomboService')
-    private readonly chomboService?: IChomboService,
   ) {}
 
   async prepare(
@@ -43,7 +41,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const { roomId, actorId, seatId } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
-      const room = await this.roomService.getRoom(roomId);
       const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
@@ -65,28 +62,13 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Cannot reveal broken hand now' };
       }
 
-      const hasRevealableBrokenHand = this.hasRevealableBrokenHand(player);
+      if (!this.hasRevealableBrokenHand(player)) {
+        return { success: false, error: 'Player does not have broken hand' };
+      }
+
       const pendingError = await getBrokenHandRevealPendingError(roomGameState);
       if (pendingError) {
         return { success: false, error: pendingError };
-      }
-
-      if (!hasRevealableBrokenHand) {
-        if (room?.settings.gameMode !== 'pro' || player.isCOM) {
-          return { success: false, error: 'Player does not have broken hand' };
-        }
-
-        const violation = this.chomboService?.checkViolations(
-          asSeatId(player.seatId),
-          'declare-broken',
-          { player, hasBroken: false },
-        );
-        if (violation && state.playState) {
-          state.playState.chomboViolations = appendChomboCandidate(
-            state.playState.chomboViolations ?? [],
-            violation,
-          );
-        }
       }
 
       const handSnapshot = [...player.hand];
@@ -95,12 +77,31 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         handSnapshot,
         startedAt: Date.now(),
       };
+      // The table sees the hand until the redeal replaces the play state.
+      if (state.playState) {
+        state.playState.revealedHands = {
+          ...(state.playState.revealedHands ?? {}),
+          [seatId]: [...handSnapshot],
+        };
+      }
       await roomGameState.saveState();
 
+      const revealedPayload: BrokenHandRevealedPayload = {
+        seatId,
+        hand: [...handSnapshot],
+      };
       return {
         success: true,
-        delayMs: 3000,
+        delayMs: BROKEN_HAND_REVEAL_DELAY_MS,
         followUp: { roomId, seatId, handSnapshot },
+        events: [
+          {
+            scope: 'room',
+            roomId,
+            event: 'broken-hand-revealed',
+            payload: revealedPayload,
+          },
+        ],
       };
     } catch (error) {
       this.logger.error(
@@ -127,14 +128,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         return { success: false, error: 'Player not found in game state' };
       }
 
-      const hasRevealableBrokenHand = this.hasRevealableBrokenHand(player);
-      const hasWrongBrokenCandidate = Boolean(
-        findActiveChomboCandidate(state.playState?.chomboViolations ?? [], seatId, 'wrong-broken'),
-      );
-      if (
-        !hasRevealableBrokenHand &&
-        !(room?.settings.gameMode === 'pro' && hasWrongBrokenCandidate)
-      ) {
+      if (!this.hasRevealableBrokenHand(player)) {
         return { success: false, error: 'Player does not have broken hand' };
       }
 
@@ -159,9 +153,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const nextState = roomGameState.getState();
       nextState.pendingBrokenHandReveal = null;
 
-      const chomboViolations = [
-        ...(nextState.playState?.chomboViolations ?? []),
-      ];
       nextState.playState = {
         currentField: null,
         negriCard: null,
@@ -172,7 +163,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         openDeclared: false,
         openDeclarerSeatId: null,
         fieldCheckpoint: null,
-        chomboViolations,
       };
 
       nextState.blowState.declarations = [];
@@ -191,7 +181,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           : 0;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
-      // 次のラウンドの吹き始め (CompleteFieldUseCase.prepareNextRound) は
+      // 次のラウンドの吹き始め (round-completion.helper の prepareNextRound) は
       // currentBlowIndex から導かれるので、進めた値を書き戻す必要がある。
       nextState.blowState.currentBlowIndex = firstBlowIndex;
       nextState.blowState.redealCount =

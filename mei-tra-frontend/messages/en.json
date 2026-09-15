@@ -450,6 +450,9 @@
     "connectingPlaceholder": "Connecting...",
     "inputPlaceholder": "Type a message..."
   },
+  "chomboReport": {
+    "dockLabel": "Chombo"
+  },
   "gameHistoryDock": {
     "title": "Replay Log",
     "reportLabel": "Audit report",
@@ -727,20 +730,26 @@
       "tip4": "High declarations have higher base points but greater risk"
     },
     "chombo": {
-      "title": "Chombo (Violation) System [Not Implemented]",
-      "description": "Chombo (violation) rules are not implemented in the current version of Meitra. The items below describe rules planned for a future implementation.",
+      "title": "Chombo (Violation) System [Pro Mode]",
+      "description": "In pro mode a violation is not blocked when it happens. The server records it without showing it, and it is judged only when the opposing team reports it.",
       "negriForget": "Negri Forget (negri-forget)",
-      "negriForgetDesc": "A violation for forgetting to choose a Negri card.",
-      "negriForgetExample": "Negri not selected at play start → Can be reported as violation",
+      "negriForgetDesc": "The declaration winner lets the first card of the round be played before placing the Negri.",
+      "negriForgetExample": "First card played without a Negri → Reportable (placing the Negri before a report clears it)",
+      "wrongSuit": "Wrong Suit (wrong-suit)",
+      "wrongSuitDesc": "Playing a card the rules do not allow, judged with the trump, main and sub jacks, and Joker rules.",
+      "wrongSuitExample": "Holding the lead suit but playing another suit → Reportable",
+      "fourJack": "Four Jacks (four-jack)",
+      "fourJackDesc": "Playing a card while holding all four jacks. In pro mode you may bid or pass without revealing them.",
+      "fourJackExample": "Keeping four jacks and playing on → Reportable",
       "lastTanzen": "Last Tanzen (last-tanzen)",
-      "lastTanzenDesc": "A special violation when the last card in hand is JOKER.",
-      "lastTanzenExample": "Last card in hand is JOKER → Processed as special violation",
-      "wrongBroken": "Wrong Broken Declaration",
-      "wrongBrokenDesc": "A violation for declaring Broken when the hand is not actually Broken.",
-      "wrongBrokenExample": "Declaring Broken with face cards → Can be reported as violation",
-      "reportSystem": "Violation Report System",
-      "reportSystemDesc": "Only the opposing team can point out violations; not your own team.",
-      "reportSystemExample": "Violation detected → Opposing team reports → Penalty applied"
+      "lastTanzenDesc": "Playing a card while the Joker is the last card in hand.",
+      "lastTanzenExample": "Keeping the Joker as the last card → Reportable",
+      "wrongOpen": "Wrong Open (wrong-open)",
+      "wrongOpenDesc": "Declaring Open when your team cannot take every remaining field. Open is only available with four or fewer cards in hand.",
+      "wrongOpenExample": "Opening without a sure win → Play continues with the hand revealed, and it is reportable",
+      "reportSystem": "Reporting Violations",
+      "reportSystemDesc": "Only players on the opposing team can report, and only during play in the same round. Each player and violation type can be reported once.",
+      "reportSystemExample": "Correct report → Reporting team gets 5 points / Report with no violation → Reported team gets 5 points"
     },
     "strategy": {
       "title": "Strategy and Tips",
@@ -768,7 +777,7 @@
       "bonus": "Strength Bonus\nTrump Suit: +100 / Base Suit: +50",
       "jackSystem": "Jack System\nMain J (Jack of the trump suit) / Sub J (varies by trump)",
       "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y'<'X: Y-X points\n(X=declared sets, Y=fields won)",
-      "violations": "Chombo [Not Implemented]\nViolation rules are planned for a future update",
+      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen / Wrong open\nCorrect report: reporting team +5 / Report with no violation: reported team +5",
       "flow": "Game Flow\nDeal -> Bid -> Trick (until 10 fields are complete)",
       "settings": "Basic Settings\n4 players, 2 teams / Opposite seat = partner / Target score is configurable per room / Minimum bid is 6 sets"
     }

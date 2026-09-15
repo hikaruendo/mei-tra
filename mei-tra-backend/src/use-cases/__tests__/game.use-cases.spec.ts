@@ -1620,6 +1620,75 @@ describe('Game Use Cases', () => {
       expect(roomGameState.saveState).not.toHaveBeenCalled();
     });
 
+    it('lets a pro-mode player declare while holding a required broken hand', async () => {
+      const roomService = createRoomServiceMock();
+      roomService.getRoom.mockResolvedValue({
+        settings: { gameMode: 'pro' },
+      } as Room);
+      const blowService = {
+        isValidDeclaration: jest.fn(() => false),
+        createDeclaration: jest.fn(),
+      };
+      const useCase = new DeclareBlowUseCase(
+        roomService,
+        blowService as never,
+        createCardServiceMock(),
+      );
+      const state = buildRequiredBrokenState();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        declaration: { trumpType: 'club', numberOfPairs: 6 },
+      });
+
+      // The guard lets the declaration through to the ordinary validity check.
+      expect(result).toEqual({ success: false, error: 'Invalid declaration' });
+      expect(blowService.isValidDeclaration).toHaveBeenCalled();
+    });
+
+    it('lets a pro-mode player pass while holding a required broken hand', async () => {
+      const roomService = createRoomServiceMock();
+      roomService.getRoom.mockResolvedValue({
+        settings: { gameMode: 'pro' },
+      } as Room);
+      const useCase = new PassBlowUseCase(
+        roomService,
+        {} as never,
+        createCardServiceMock(),
+      );
+      const state = buildRequiredBrokenState();
+      state.players[0].isPasser = true;
+      state.blowState.actionHistory = [
+        { type: 'pass', seatId: asSeatId('player-1'), timestamp: 1 },
+      ] as never;
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+      });
+
+      // The guard lets the pass through to the ordinary duplicate-pass check.
+      expect(result).toEqual({
+        success: false,
+        error: 'You have already passed in this blow phase',
+      });
+    });
+
     it('rejects pass outside blow phase', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PassBlowUseCase(
@@ -2690,9 +2759,20 @@ describe('Game Use Cases', () => {
       const declareBlowUseCase = { execute: jest.fn() };
       const passBlowUseCase = { execute: jest.fn() };
       const selectNegriUseCase = { execute: jest.fn() };
+      const revealEvent = {
+        scope: 'room',
+        roomId: 'room-1',
+        event: 'broken-hand-revealed',
+        payload: {
+          seatId: 'com-0',
+          hand: ['J♠', 'J♣', 'J♥', 'J♦'],
+        },
+      };
       const revealBrokenHandUseCase = {
         prepare: jest.fn().mockResolvedValue({
           success: true,
+          delayMs: 5000,
+          events: [revealEvent],
           followUp: {
             roomId: 'room-1',
             seatId: asSeatId('com-0'),
@@ -2763,12 +2843,14 @@ describe('Game Use Cases', () => {
       expect(comStrategyService.chooseBlowAction).not.toHaveBeenCalled();
       expect(declareBlowUseCase.execute).not.toHaveBeenCalled();
       expect(passBlowUseCase.execute).not.toHaveBeenCalled();
-      expect(result.events).toEqual([
+      expect(result.events).toEqual([revealEvent]);
+      expect(result.delayedEvents).toEqual([
         {
           scope: 'room',
           roomId: 'room-1',
           event: 'broken',
           payload: { nextSeatId: 'com-0' },
+          delayMs: 5000,
         },
       ]);
     });
@@ -3024,7 +3106,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(preparation.success).toBe(true);
-      expect(preparation.delayMs).toBe(3000);
+      expect(preparation.delayMs).toBe(5000);
       expect(preparation.followUp).toBeDefined();
       expect(state.pendingBrokenHandReveal).toEqual({
         seatId: asSeatId('player-1'),

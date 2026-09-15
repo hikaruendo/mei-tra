@@ -96,6 +96,7 @@ export default function Home() {
     negriSeatId = null,
     completedFields = [],
     revealedAgari = null,
+    revealedHands = {},
     openDeclared = false,
     openResolved = false,
     gameActions,
@@ -264,6 +265,7 @@ export default function Home() {
                   gameMode={gameMode}
                   openDeclared={openDeclared}
                   openResolved={openResolved}
+                  revealedHands={revealedHands}
                   onLeave={handleLeaveRoom}
                   onReplaceWithCOM={replacePlayerWithCOM}
                   firstTurnReveal={firstTurnReveal}

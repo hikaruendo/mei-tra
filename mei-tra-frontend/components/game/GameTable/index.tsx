@@ -9,11 +9,12 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
-import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { ChomboReportPanel, getChomboReportTargets } from '@/components/game/ChomboReportPanel';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
+import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import { asSeatId } from '@contracts/ids';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 
@@ -44,6 +45,7 @@ interface GameTableProps {
   gameMode: 'normal' | 'pro';
   openDeclared?: boolean;
   openResolved?: boolean;
+  revealedHands?: Partial<Record<string, string[]>>;
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -88,6 +90,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   gameMode,
   openDeclared = false,
   openResolved = false,
+  revealedHands = {},
   teamNames,
   idleSeatIds = [],
   disconnectedSeatIds = [],
@@ -116,6 +119,28 @@ export const GameTable: React.FC<GameTableProps> = ({
   const perspectivePlayerTeam = players.find(
     (player) => player.seatId === tablePerspectiveSeatId,
   )?.team ?? 0;
+  const viewerHandSize = players.find(
+    (player) => player.seatId === currentSeatId,
+  )?.hand.length;
+  const canDeclareOpen =
+    gameMode === 'pro' &&
+    gamePhase === 'play' &&
+    !openDeclared &&
+    !openResolved &&
+    Boolean(currentSeatId && currentHighestDeclaration) &&
+    viewerHandSize !== undefined &&
+    viewerHandSize <= OPEN_MAX_HAND_SIZE;
+  const chomboReport =
+    gameMode === 'pro' &&
+    gamePhase === 'play' &&
+    currentSeatId &&
+    getChomboReportTargets(players, currentSeatId).length > 0 ? (
+      <ChomboReportPanel
+        players={players}
+        currentSeatId={currentSeatId}
+        onReport={gameActions.reportChombo}
+      />
+    ) : undefined;
 
   useEffect(() => {
     if (!isSpectator) {
@@ -183,6 +208,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 players={players}
                 teamNames={teamNames}
                 gameMode={gameMode}
+                chomboReport={chomboReport}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -264,6 +290,16 @@ export const GameTable: React.FC<GameTableProps> = ({
               position={positions[idx]}
               agariCard={revealedAgari || undefined}
               currentHighestDeclaration={currentHighestDeclaration || undefined}
+              hasActedInBlow={
+                Boolean(player_.isPasser) ||
+                blowDeclarations.some(
+                  (declaration) => declaration.seatId === player_.seatId,
+                ) ||
+                blowActionHistory.some(
+                  (action) => action.seatId === player_.seatId,
+                )
+              }
+              revealedHand={revealedHands[player_.seatId]}
               completedFields={teamCompletedFields}
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
@@ -325,27 +361,14 @@ export const GameTable: React.FC<GameTableProps> = ({
         )}
       </div>
 
-      {gameMode === 'pro' &&
-        gamePhase === 'play' &&
-        !openDeclared &&
-        !openResolved &&
-        currentSeatId && currentHighestDeclaration && (
-          <button
-            className={styles.openButton}
-            type="button"
-            onClick={gameActions.declareOpen}
-          >
-            オープン
-          </button>
-        )}
-
-      {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
-        <ChomboReportPanel
-          players={players}
-          currentSeatId={currentSeatId}
-          onReport={gameActions.reportChombo}
-          onReveal={gameActions.revealChomboHand}
-        />
+      {canDeclareOpen && (
+        <button
+          className={styles.openButton}
+          type="button"
+          onClick={gameActions.declareOpen}
+        >
+          オープン
+        </button>
       )}
     </div>
   );

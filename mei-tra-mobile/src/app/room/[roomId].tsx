@@ -42,6 +42,7 @@ export default function RoomScreen() {
     passBlow,
     selectNegri,
     declareOpen,
+    revealBrokenHand,
     playCardSelectionSound,
     playCancelSound,
     playHandReorderSound,
@@ -155,6 +156,7 @@ export default function RoomScreen() {
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
           onDeclareOpen={declareOpen}
+          onRevealBrokenHand={revealBrokenHand}
           onCardSelection={playCardSelectionSound}
           onCancel={playCancelSound}
           onHandReorder={playHandReorderSound}

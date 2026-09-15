@@ -324,7 +324,9 @@ current field の最初が `JOKER` で `baseSuit` 未設定の場合、通常の
 
 ### 8.5 broken / chombo
 
-broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフローと結び付いており、frontend には `broken` や `reveal-agari` といった event が通知されます。表示上は警告や hand reveal のタイミングに使われます。
+broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフローと結び付いており、frontend には `broken-hand-revealed`、`broken`、`reveal-agari` といった event が通知されます。
+
+`reveal-broken-hand` を受けた server は、公開した手札を `broken-hand-revealed` で全員に送り、5 秒後に配り直して `broken` を送ります。COM の4ジャックも同じ間隔で配り直します。公開中の手札は `revealedHands` に入り、web と mobile はその席の手札を表向きに表示します。`broken` で配り直すと `revealedHands` は空に戻ります。オープンで公開した手札も同じ `revealedHands` で表示し、カードが出されるたびにその札を取り除きます。
 
 ## 9. field completion
 
@@ -358,14 +360,14 @@ checkpoint 復旧は `field_recovered` として game history に記録し、破
 
 ## 10. round 終了と次ラウンド
 
-全員の hand が空になると round end です。
+全員の hand が空になると round end です。プロモードで有効なオープンが通った場合も、その時点で round end になります。
 
 ### 10.1 round end で行うこと
 
-`CompleteFieldUseCase` は:
+round end の処理は `use-cases/helpers/round-completion.helper.ts` の `completeRound()` にまとまっていて、`CompleteFieldUseCase`（最後の field の完了時）と `DeclareOpenUseCase`（有効なオープン時）が共通で使います。`completeRound()` は:
 
 - highest declaration から declaring team を特定
-- wonFields を数える
+- wonFields を数える（オープン時は、まだ出していない field をオープンしたチームがすべて取ったものとして数える）
 - `ScoreService.calculatePlayPoints()` を使って play points を加算
 - `round-results` を返す
 

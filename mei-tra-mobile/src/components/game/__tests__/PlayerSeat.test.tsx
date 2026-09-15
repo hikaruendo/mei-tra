@@ -56,4 +56,42 @@ describe('PlayerSeat layout', () => {
 
     await act(async () => renderer.unmount());
   });
+
+  it('shows a revealed hand face up', async () => {
+    const hand = ['2♠', '3♠', '4♠', '5♠', '6♠', '7♠', '8♠', '9♠', '10♠', 'Q♠'];
+    let renderer!: {
+      root: {
+        findAllByProps: (props: Record<string, unknown>) => unknown[];
+      };
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <PlayerSeat
+          isTurn={false}
+          player={{
+            socketId: 'socket-2',
+            seatId: asSeatId('seat-2'),
+            name: 'Player 2',
+            team: 1,
+            hand,
+            isHost: false,
+            isCOM: false,
+            hasRequiredBroken: false,
+          }}
+          revealedHand={hand}
+        />,
+      ) as unknown as typeof renderer;
+    });
+
+    expect(renderer.root.findAllByProps({ faceDown: true })).toHaveLength(0);
+    for (const card of hand) {
+      expect(
+        renderer.root.findAllByProps({ card, size: 'seat' }),
+      ).toHaveLength(1);
+    }
+
+    await act(async () => renderer.unmount());
+  });
 });
