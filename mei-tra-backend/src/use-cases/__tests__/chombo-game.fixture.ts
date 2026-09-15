@@ -1,3 +1,12 @@
+import { BlowService } from '../../services/blow.service';
+import { ScoreService } from '../../services/score.service';
+import { OpenDeclarationService } from '../../services/open-declaration.service';
+import { DeclareOpenUseCase } from '../declare-open.use-case';
+import { RevealBrokenHandUseCase } from '../reveal-broken-hand.use-case';
+import { DeclareBlowUseCase } from '../declare-blow.use-case';
+import { PassBlowUseCase } from '../pass-blow.use-case';
+import { SelectNegriUseCase } from '../select-negri.use-case';
+import type { DomainPlayer } from '../../types/game.types';
 import { Test } from '@nestjs/testing';
 import { PlayCardUseCase } from '../play-card.use-case';
 import { ReportChomboUseCase } from '../report-chombo.use-case';
@@ -8,7 +17,7 @@ import { GameStateService } from '../../services/game-state.service';
 import { IGameStateRepository } from '../../repositories/interfaces/game-state.repository.interface';
 import { asSeatId } from '../../types/identity.types';
 
-export async function createGame(hand: string[]) {
+export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) {
   const repository: jest.Mocked<IGameStateRepository> = {
     create: jest.fn(),
     findByRoomId: jest.fn(),
@@ -54,6 +63,9 @@ export async function createGame(hand: string[]) {
       isPasser: false,
     },
   ];
+  if (otherPlayers) {
+    state.players = [state.players[0], ...otherPlayers];
+  }
   for (const player of state.players) {
     game.upsertSessionUser({
       seatId: player.seatId,
@@ -81,6 +93,16 @@ export async function createGame(hand: string[]) {
     providers: [
       PlayCardUseCase,
       ReportChomboUseCase,
+      DeclareOpenUseCase,
+      RevealBrokenHandUseCase,
+      DeclareBlowUseCase,
+      PassBlowUseCase,
+      SelectNegriUseCase,
+      { provide: OpenDeclarationService, useValue: new OpenDeclarationService(play) },
+      { provide: ChomboService, useValue: chombo },
+      { provide: 'IScoreService', useValue: new ScoreService() },
+      { provide: 'ICardService', useValue: cards },
+      { provide: 'IBlowService', useValue: new BlowService(cards) },
       {
         provide: 'IRoomService',
         useValue: roomService,
@@ -92,6 +114,12 @@ export async function createGame(hand: string[]) {
   return {
     game,
     chombo,
+    cards,
+    open: module.get(DeclareOpenUseCase),
+    broken: module.get(RevealBrokenHandUseCase),
+    declare: module.get(DeclareBlowUseCase),
+    pass: module.get(PassBlowUseCase),
+    negri: module.get(SelectNegriUseCase),
     updateRoomStatus,
     room,
     roomService,

@@ -1,3 +1,4 @@
+import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { ChomboResolvedPayload, GameOverPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
@@ -74,9 +75,7 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       asSeatId(reporter.seatId),
       asSeatId(violator.seatId),
       request.violationType,
-    ) ?? (state.playState.chomboViolations ?? []).find(
-      (candidate) => candidate.violatorSeatId === violator.seatId && candidate.type === request.violationType && !candidate.isExpired && !candidate.reportedBySeatId,
-    );
+    ) ?? findActiveChomboCandidate(state.playState.chomboViolations ?? [], asSeatId(violator.seatId), request.violationType);
     if (persistedViolation && !persistedViolation.reportedBySeatId) persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
     const isCorrect = Boolean(persistedViolation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;

@@ -1,3 +1,4 @@
+import { appendChomboCandidate, findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { BrokenPayload } from '@contracts/game';
 import {
@@ -81,18 +82,10 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           { player, hasBroken: false },
         );
         if (violation && state.playState) {
-          state.playState.chomboViolations = [
-            ...(state.playState.chomboViolations ?? []).filter(
-              (candidate) =>
-                !(
-                  candidate.type === 'wrong-broken' &&
-                  candidate.violatorSeatId === player.seatId &&
-                  !candidate.reportedBySeatId &&
-                  !candidate.isExpired
-                ),
-            ),
+          state.playState.chomboViolations = appendChomboCandidate(
+            state.playState.chomboViolations ?? [],
             violation,
-          ];
+          );
         }
       }
 
@@ -136,13 +129,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       const hasRevealableBrokenHand = this.hasRevealableBrokenHand(player);
       const hasWrongBrokenCandidate = Boolean(
-        state.playState?.chomboViolations?.some(
-          (violation) =>
-            violation.type === 'wrong-broken' &&
-            violation.violatorSeatId === seatId &&
-            !violation.reportedBySeatId &&
-            !violation.isExpired,
-        ),
+        findActiveChomboCandidate(state.playState?.chomboViolations ?? [], seatId, 'wrong-broken'),
       );
       if (
         !hasRevealableBrokenHand &&

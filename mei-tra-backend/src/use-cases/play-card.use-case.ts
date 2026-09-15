@@ -1,3 +1,4 @@
+import { appendChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { CardPlayedPayload } from '@contracts/game';
 import {
@@ -158,24 +159,11 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         const winner = state.players.find(
           (candidate) => candidate.seatId === winnerSeatId,
         );
-        const alreadyRecorded = state.playState.chomboViolations?.some(
-          (candidate) =>
-            candidate.violatorSeatId === winnerSeatId &&
-            candidate.type === 'negri-forget' &&
-            !candidate.isExpired &&
-            !candidate.reportedBySeatId,
-        );
-        if (winner && !alreadyRecorded) {
-          const violation = this.chomboService?.recordViolation(
-            winnerSeatId,
-            'negri-forget',
+        if (winner) {
+          state.playState.chomboViolations = appendChomboCandidate(
+            state.playState.chomboViolations ?? [],
+            this.chomboService?.recordViolation(winnerSeatId, 'negri-forget'),
           );
-          if (violation) {
-            state.playState.chomboViolations = [
-              ...(state.playState.chomboViolations ?? []),
-              violation,
-            ];
-          }
         }
       }
 
@@ -185,21 +173,10 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           'check-last-card',
           { player },
         );
-        if (
-          lastTanzenViolation &&
-          !(state.playState.chomboViolations ?? []).some(
-            (candidate) =>
-              candidate.violatorSeatId === lastTanzenViolation.violatorSeatId &&
-              candidate.type === lastTanzenViolation.type &&
-              !candidate.isExpired &&
-              !candidate.reportedBySeatId,
-          )
-        ) {
-          state.playState.chomboViolations = [
-            ...(state.playState.chomboViolations ?? []),
-            lastTanzenViolation,
-          ];
-        }
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          lastTanzenViolation,
+        );
       }
 
       if (room?.settings.gameMode === 'pro' && !player.isCOM) {
@@ -208,21 +185,10 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           'check-four-jack',
           { player, hasBroken: player.hasBroken },
         );
-        if (
-          fourJackViolation &&
-          !(state.playState.chomboViolations ?? []).some(
-            (candidate) =>
-              candidate.violatorSeatId === fourJackViolation.violatorSeatId &&
-              candidate.type === fourJackViolation.type &&
-              !candidate.isExpired &&
-              !candidate.reportedBySeatId,
-          )
-        ) {
-          state.playState.chomboViolations = [
-            ...(state.playState.chomboViolations ?? []),
-            fourJackViolation,
-          ];
-        }
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          fourJackViolation,
+        );
       }
 
       const legalPlayError = this.playService.getCardPlayError(

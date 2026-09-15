@@ -116,4 +116,42 @@ describe('Pro card play and chombo reporting', () => {
       await fixture.module.close();
     }
   });
+
+  it('records a wrong-suit candidate from an illegal card play', async () => {
+    const fixture = await createGame(['A♥', 'A♠']);
+    try {
+      fixture.game.getState().playState!.currentField = {
+        cards: ['A♠'],
+        playedBySeatIds: [asSeatId('opponent')],
+        baseCard: 'A♠',
+        dealerSeatId: asSeatId('winner'),
+        isComplete: false,
+      };
+      const played = await fixture.play.execute({ roomId: 'room-1', actorId: 'winner', card: 'A♥' });
+      expect(played.success).toBe(true);
+      const report = await fixture.report.execute({ roomId: 'room-1', actorId: 'opponent', violatorSeatId: asSeatId('winner'), violationType: 'wrong-suit' });
+      expect(report.events).toContainEqual(expect.objectContaining({ event: 'chombo-resolved', payload: expect.objectContaining({ isCorrect: true }) }));
+    } finally {
+      await fixture.module.close();
+    }
+  });
+
+  it('records wrong-broken and wrong-open candidates through their actions', async () => {
+    const fixture = await createGame(['2♠']);
+    try {
+      fixture.game.getState().gamePhase = 'blow';
+      const reveal = await fixture.broken.prepare({ roomId: 'room-1', actorId: 'winner', seatId: asSeatId('winner') });
+      expect(reveal.success).toBe(true);
+      expect(fixture.game.getState().playState?.chomboViolations).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'wrong-broken' })]));
+
+      fixture.game.getState().gamePhase = 'play';
+      fixture.game.getState().players[1].hand = ['A♠'];
+      fixture.game.getState().playState!.openDeclared = false;
+      const open = await fixture.open.execute({ roomId: 'room-1', actorId: 'winner' });
+      expect(open.success).toBe(true);
+      expect(fixture.game.getState().playState?.chomboViolations).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'wrong-open' })]));
+    } finally {
+      await fixture.module.close();
+    }
+  });
 });
