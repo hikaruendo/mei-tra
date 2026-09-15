@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme/colors';
 
 const violationTypes: ChomboViolationType[] = [
-  'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen', 'wrong-broken', 'wrong-open',
+  'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen', 'wrong-open',
 ];
 
 interface Props {

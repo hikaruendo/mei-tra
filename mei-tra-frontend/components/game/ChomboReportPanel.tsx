@@ -8,7 +8,6 @@ const violationTypes: ChomboViolationType[] = [
   'wrong-suit',
   'four-jack',
   'last-tanzen',
-  'wrong-broken',
   'wrong-open',
 ];
 

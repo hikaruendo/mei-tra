@@ -160,7 +160,6 @@ export interface ChomboViolation {
     | 'wrong-suit'
     | 'four-jack'
     | 'last-tanzen'
-    | 'wrong-broken'
     | 'wrong-open';
   violatorSeatId: SeatId;
   timestamp: number;

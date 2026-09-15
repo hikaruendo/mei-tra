@@ -8,7 +8,6 @@ const types: ChomboViolation['type'][] = [
   'wrong-suit',
   'four-jack',
   'last-tanzen',
-  'wrong-broken',
   'wrong-open',
 ];
 

@@ -243,7 +243,6 @@ export type ChomboViolationType =
   | 'wrong-suit'
   | 'four-jack'
   | 'last-tanzen'
-  | 'wrong-broken'
   | 'wrong-open';
 
 export interface ReportChomboPayload {

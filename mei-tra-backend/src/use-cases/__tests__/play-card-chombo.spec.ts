@@ -136,20 +136,42 @@ describe('Pro card play and chombo reporting', () => {
     }
   });
 
-  it('records wrong-broken and wrong-open candidates through their actions', async () => {
+  it('rejects a pro mode broken reveal without a broken or four-jack hand', async () => {
     const fixture = await createGame(['2♠']);
     try {
       fixture.game.getState().gamePhase = 'blow';
-      const reveal = await fixture.broken.prepare({ roomId: 'room-1', actorId: 'winner', seatId: asSeatId('winner') });
-      expect(reveal.success).toBe(true);
-      expect(fixture.game.getState().playState?.chomboViolations).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'wrong-broken' })]));
+      const reveal = await fixture.broken.prepare({
+        roomId: 'room-1',
+        actorId: 'winner',
+        seatId: asSeatId('winner'),
+      });
+      expect(reveal).toEqual({
+        success: false,
+        error: 'Player does not have broken hand',
+      });
+      const { pendingBrokenHandReveal, playState } = fixture.game.getState();
+      expect(pendingBrokenHandReveal).toBeFalsy();
+      expect(playState?.chomboViolations ?? []).toEqual([]);
+    } finally {
+      await fixture.module.close();
+    }
+  });
 
-      fixture.game.getState().gamePhase = 'play';
+  it('records a wrong-open candidate through its action', async () => {
+    const fixture = await createGame(['2♠']);
+    try {
       fixture.game.getState().players[1].hand = ['A♠'];
       fixture.game.getState().playState!.openDeclared = false;
-      const open = await fixture.open.execute({ roomId: 'room-1', actorId: 'winner' });
+      const open = await fixture.open.execute({
+        roomId: 'room-1',
+        actorId: 'winner',
+      });
       expect(open.success).toBe(true);
-      expect(fixture.game.getState().playState?.chomboViolations).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'wrong-open' })]));
+      expect(fixture.game.getState().playState?.chomboViolations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'wrong-open' }),
+        ]),
+      );
     } finally {
       await fixture.module.close();
     }

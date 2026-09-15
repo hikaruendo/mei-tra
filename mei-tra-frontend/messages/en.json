@@ -744,9 +744,6 @@
       "lastTanzen": "Last Tanzen (last-tanzen)",
       "lastTanzenDesc": "Playing a card while the Joker is the last card in hand.",
       "lastTanzenExample": "Keeping the Joker as the last card → Reportable",
-      "wrongBroken": "Wrong Broken (wrong-broken)",
-      "wrongBrokenDesc": "Revealing Broken without a broken or four-jack hand. The redeal still happens.",
-      "wrongBrokenExample": "Revealing Broken with face cards → Reportable during play after the redeal",
       "wrongOpen": "Wrong Open (wrong-open)",
       "wrongOpenDesc": "Declaring Open when your team cannot take every remaining field. Open is only available with four or fewer cards in hand.",
       "wrongOpenExample": "Opening without a sure win → Play continues with the hand revealed, and it is reportable",
@@ -780,7 +777,7 @@
       "bonus": "Strength Bonus\nTrump Suit: +100 / Base Suit: +50",
       "jackSystem": "Jack System\nMain J (Jack of the trump suit) / Sub J (varies by trump)",
       "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y'<'X: Y-X points\n(X=declared sets, Y=fields won)",
-      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen / Wrong broken / Wrong open\nCorrect report: reporting team +5 / Report with no violation: reported team +5",
+      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen / Wrong open\nCorrect report: reporting team +5 / Report with no violation: reported team +5",
       "flow": "Game Flow\nDeal -> Bid -> Trick (until 10 fields are complete)",
       "settings": "Basic Settings\n4 players, 2 teams / Opposite seat = partner / Target score is configurable per room / Minimum bid is 6 sets"
     }
