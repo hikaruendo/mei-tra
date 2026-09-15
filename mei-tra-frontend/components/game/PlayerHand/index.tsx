@@ -52,6 +52,7 @@ interface PlayerHandProps {
   position: string;
   agariCard?: string;
   currentHighestDeclaration?: Pick<BlowDeclaration, 'seatId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
+  hasActedInBlow?: boolean;
   completedFields: CompletedField[];
   currentSeatId: string;
   currentField: Field | null;
@@ -83,6 +84,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   position,
   agariCard,
   currentHighestDeclaration,
+  hasActedInBlow = false,
   completedFields,
   currentSeatId,
   currentField,
@@ -643,7 +645,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           {tStatus('reconnecting')}
         </span>
       )}
-      {gamePhase === 'blow' && canActAsCurrentPlayer && (player.hasBroken || (gameMode === 'pro' && player.hasRequiredBroken)) && (
+      {gamePhase === 'blow' && canActAsCurrentPlayer && !hasActedInBlow && (player.hasBroken || (gameMode === 'pro' && player.hasRequiredBroken)) && (
         <button
           className={styles.brokenButton}
           onClick={() => gameActions.revealBrokenHand(player.seatId)}

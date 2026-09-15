@@ -673,4 +673,35 @@ describe('PlayerHand', () => {
       ).toBeInTheDocument();
     },
   );
+
+  it('hides the broken hand button once the player has acted or the blow is over', () => {
+    const brokenPlayer: Player = {
+      ...otherPlayer,
+      seatId: 'player-1',
+      hasBroken: true,
+    };
+    const blowTurn = {
+      player: brokenPlayer,
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'pro',
+    } as const;
+    const { rerender } = renderPlayerHand({
+      ...blowTurn,
+      hasActedInBlow: true,
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'revealBroken' }),
+    ).not.toBeInTheDocument();
+
+    rerender(buildPlayerHand({ ...blowTurn, gamePhase: 'play' }));
+
+    expect(
+      screen.queryByRole('button', { name: 'revealBroken' }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -232,9 +232,18 @@ export function GameBoard({
     Boolean(highest) &&
     Boolean(self) &&
     selfHandCount <= OPEN_MAX_HAND_SIZE;
+  const hasActedInBlow =
+    Boolean(self?.isPasser) ||
+    game.blowState.declarations.some(
+      (declaration) => declaration.seatId === self?.seatId,
+    ) ||
+    game.blowState.actionHistory.some(
+      (action) => action.seatId === self?.seatId,
+    );
   const canRevealBrokenHand =
     game.gamePhase === 'blow' &&
     isMyTurn &&
+    !hasActedInBlow &&
     Boolean(self?.hasBroken || (isProMode && self?.hasRequiredBroken));
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =

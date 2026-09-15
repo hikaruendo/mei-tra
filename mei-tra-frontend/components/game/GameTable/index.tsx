@@ -288,6 +288,15 @@ export const GameTable: React.FC<GameTableProps> = ({
               position={positions[idx]}
               agariCard={revealedAgari || undefined}
               currentHighestDeclaration={currentHighestDeclaration || undefined}
+              hasActedInBlow={
+                Boolean(player_.isPasser) ||
+                blowDeclarations.some(
+                  (declaration) => declaration.seatId === player_.seatId,
+                ) ||
+                blowActionHistory.some(
+                  (action) => action.seatId === player_.seatId,
+                )
+              }
               completedFields={teamCompletedFields}
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
