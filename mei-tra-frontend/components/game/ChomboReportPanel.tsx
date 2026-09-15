@@ -16,11 +16,14 @@ interface ChomboReportPanelProps {
   players: Player[];
   currentSeatId: string | null;
   onReport: (violatorSeatId: string, violationType: ChomboViolationType) => void;
-  onReveal?: () => void;
 }
 
-export function ChomboReportPanel({ players, currentSeatId, onReport, onReveal }: ChomboReportPanelProps) {
-  const opponents = players.filter((player) => player.seatId !== currentSeatId && !player.isCOM);
+export function getChomboReportTargets(players: Player[], currentSeatId: string | null): Player[] {
+  return players.filter((player) => player.seatId !== currentSeatId && !player.isCOM);
+}
+
+export function ChomboReportPanel({ players, currentSeatId, onReport }: ChomboReportPanelProps) {
+  const opponents = getChomboReportTargets(players, currentSeatId);
   const [violatorSeatId, setViolatorSeatId] = useState<string>(opponents[0]?.seatId ?? '');
   const [violationType, setViolationType] = useState<ChomboViolationType>('negri-forget');
 
@@ -48,7 +51,6 @@ export function ChomboReportPanel({ players, currentSeatId, onReport, onReveal }
         </select>
       </label>
       <button className={styles.button} type="submit">Report chombo</button>
-      {onReveal && <button className={styles.button} type="button" onClick={onReveal}>Reveal my hand</button>}
     </form>
   );
 }

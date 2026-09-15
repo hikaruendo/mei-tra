@@ -210,10 +210,6 @@ describe('open declaration events', () => {
       payload: { declarerSeatId: asSeatId('seat-1'), hand: ['5♣'], valid: true },
     });
     live = reduceGameEvent(live, {
-      type: 'chombo-hand-revealed',
-      payload: { seatId: asSeatId('seat-2'), hand: ['A♠'] },
-    });
-    live = reduceGameEvent(live, {
       type: 'chombo-resolved',
       payload: {
         violatorSeatId: asSeatId('seat-2'),
@@ -246,7 +242,6 @@ describe('open declaration events', () => {
       teamScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
       revealedHands: {
         [asSeatId('seat-1')]: ['5♣'],
-        [asSeatId('seat-2')]: ['A♠'],
       },
       openDeclared: true,
       openResolved: true,

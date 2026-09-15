@@ -9,7 +9,7 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
-import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { ChomboReportPanel, getChomboReportTargets } from '@/components/game/ChomboReportPanel';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
@@ -128,6 +128,17 @@ export const GameTable: React.FC<GameTableProps> = ({
     Boolean(currentSeatId && currentHighestDeclaration) &&
     viewerHandSize !== undefined &&
     viewerHandSize <= OPEN_MAX_HAND_SIZE;
+  const chomboReport =
+    gameMode === 'pro' &&
+    gamePhase === 'play' &&
+    currentSeatId &&
+    getChomboReportTargets(players, currentSeatId).length > 0 ? (
+      <ChomboReportPanel
+        players={players}
+        currentSeatId={currentSeatId}
+        onReport={gameActions.reportChombo}
+      />
+    ) : undefined;
 
   useEffect(() => {
     if (!isSpectator) {
@@ -195,6 +206,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 players={players}
                 teamNames={teamNames}
                 gameMode={gameMode}
+                chomboReport={chomboReport}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -345,15 +357,6 @@ export const GameTable: React.FC<GameTableProps> = ({
         >
           オープン
         </button>
-      )}
-
-      {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
-        <ChomboReportPanel
-          players={players}
-          currentSeatId={currentSeatId}
-          onReport={gameActions.reportChombo}
-          onReveal={gameActions.revealChomboHand}
-        />
       )}
     </div>
   );

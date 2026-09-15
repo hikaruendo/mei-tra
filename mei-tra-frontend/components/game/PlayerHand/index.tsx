@@ -166,8 +166,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   );
 
   useEffect(() => {
+    // Pro mode lets the player keep four jacks, so it only reveals on request.
     if (
       gamePhase !== 'blow' ||
+      gameMode === 'pro' ||
       !canActAsCurrentPlayer ||
       !player.hasRequiredBroken
     ) {
@@ -183,6 +185,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     gameActions.revealBrokenHand(player.seatId);
   }, [
     gamePhase,
+    gameMode,
     gameActions,
     canActAsCurrentPlayer,
     player.hasRequiredBroken,
@@ -640,7 +643,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           {tStatus('reconnecting')}
         </span>
       )}
-      {gamePhase === 'blow' && canActAsCurrentPlayer && player.hasBroken && (
+      {gamePhase === 'blow' && canActAsCurrentPlayer && (player.hasBroken || (gameMode === 'pro' && player.hasRequiredBroken)) && (
         <button
           className={styles.brokenButton}
           onClick={() => gameActions.revealBrokenHand(player.seatId)}

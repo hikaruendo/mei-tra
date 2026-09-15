@@ -1,4 +1,5 @@
 import { DomainPlayer, GameState } from '../../types/game.types';
+import type { GameMode } from '../../types/room.types';
 
 export const BROKEN_HAND_REVEAL_PENDING_ERROR = 'Broken hand reveal is pending';
 export const BROKEN_HAND_REVEAL_PENDING_TTL_MS = 10_000;
@@ -38,8 +39,14 @@ export async function getBrokenHandRevealPendingError(
   return BROKEN_HAND_REVEAL_PENDING_ERROR;
 }
 
+// Pro mode leaves a four-jack hand to the player: keeping it is a chombo the
+// opponents can report, so bidding and passing stay open.
 export function getRequiredBrokenHandRevealError(
   player: Pick<DomainPlayer, 'hasRequiredBroken'>,
+  gameMode?: GameMode,
 ): string | null {
+  if (gameMode === 'pro') {
+    return null;
+  }
   return player.hasRequiredBroken ? REQUIRED_BROKEN_HAND_REVEAL_ERROR : null;
 }

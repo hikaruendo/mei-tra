@@ -450,6 +450,9 @@
     "connectingPlaceholder": "接続中...",
     "inputPlaceholder": "メッセージを入力..."
   },
+  "chomboReport": {
+    "dockLabel": "チョンボ"
+  },
   "gameHistoryDock": {
     "title": "対局ログ",
     "reportLabel": "Audit report",
@@ -727,20 +730,29 @@
       "tip4": "高宣言は成功時の基本点が高いが、リスクも大きい"
     },
     "chombo": {
-      "title": "チョンボ（違反）システム［未実装］",
-      "description": "現在の Meitra ではチョンボ（違反）システムは未実装です。以下は将来的に実装予定のルールです。",
+      "title": "チョンボ（違反）システム［プロモード］",
+      "description": "プロモードでは、違反をしてもその場では止められず、サーバーが違反として記録します。記録は画面に表示されず、相手チームが指摘したときに判定されます。",
       "negriForget": "ネグリ忘れ（negri-forget）",
-      "negriForgetDesc": "ネグリカードの選択を忘れた場合の違反",
-      "negriForgetExample": "プレイ開始時にネグリ未選択 → 違反として報告可能",
+      "negriForgetDesc": "吹きに勝った人がネグリを置く前に、そのラウンドの最初のカードが出された場合の違反",
+      "negriForgetExample": "ネグリを置かずに最初のカードを出す → 指摘できる（指摘される前にネグリを置けば取り消し）",
+      "wrongSuit": "出し方の違反（wrong-suit）",
+      "wrongSuitDesc": "出してはいけないカードを出した場合の違反。切り札、正J・副J、JOKER のルールも含めて判定します",
+      "wrongSuitExample": "台札のスートを持っているのに別のスートを出す → 指摘できる",
+      "fourJack": "4ジャック（four-jack）",
+      "fourJackDesc": "J を4枚持ったままカードを出した場合の違反。プロモードでは4ジャックを公開せずに吹き・パスもできます",
+      "fourJackExample": "4ジャックを公開せずにプレイを続ける → 指摘できる",
       "lastTanzen": "最後タンツェン（last-tanzen）",
-      "lastTanzenDesc": "最後の1枚がJOKERの場合の特殊違反",
-      "lastTanzenExample": "手札最後の1枚がJOKER → 特殊違反として処理",
-      "wrongBroken": "間違ったブロークン宣言",
-      "wrongBrokenDesc": "ブロークン状態でないのにブロークン宣言した場合",
-      "wrongBrokenExample": "絵札ありでブロークン宣言 → 違反として報告可能",
-      "reportSystem": "違反報告システム",
-      "reportSystemDesc": "相手チームのみが違反を指摘可能、同チーム内では不可",
-      "reportSystemExample": "違反発見 → 相手チームが報告 → ペナルティ適用"
+      "lastTanzenDesc": "手札の最後の1枚が JOKER の状態でカードを出した場合の違反",
+      "lastTanzenExample": "JOKER を最後の1枚まで残す → 指摘できる",
+      "wrongBroken": "ブロークンの誤り（wrong-broken）",
+      "wrongBrokenDesc": "ブロークンでも4ジャックでもないのにブロークンを公開した場合の違反。配り直しはそのまま行われます",
+      "wrongBrokenExample": "絵札があるのにブロークンを公開 → 配り直した後のプレイ中に指摘できる",
+      "wrongOpen": "オープンの誤り（wrong-open）",
+      "wrongOpenDesc": "残りの場をすべて取り切れないのにオープンした場合の違反。オープンは手札4枚以下のときだけ宣言できます",
+      "wrongOpenExample": "取り切れないのにオープン → 手札を公開したままプレイが続き、指摘できる",
+      "reportSystem": "違反の指摘",
+      "reportSystemDesc": "指摘できるのは相手チームのプレイヤーだけで、違反と同じラウンドのプレイ中に限ります。同じ相手・同じ種類の指摘は1回までです",
+      "reportSystemExample": "正しい指摘 → 指摘したチームに5点 / 違反がない指摘 → 指摘されたチームに5点"
     },
     "strategy": {
       "title": "戦略とコツ",
@@ -768,7 +780,7 @@
       "bonus": "強度ボーナス\nトランプスート: +100 / ベーススート: +50",
       "jackSystem": "ジャックシステム\n正J（トランプスートのJ） / 副J（トランプにより異なる）",
       "scoreCalc": "スコア計算\nY≥X: 0.5×(Y-X)+X-5点 / Y'<'X: Y-X点\n(X=宣言組数, Y=獲得フィールド数)",
-      "violations": "チョンボ（未実装）\n違反ルールは今後実装予定",
+      "violations": "チョンボ（プロモード）\nネグリ忘れ / 出し方の違反 / 4ジャック / 最後タンツェン / ブロークンの誤り / オープンの誤り\n正しい指摘: 指摘したチームに5点 / 違反がない指摘: 指摘されたチームに5点",
       "flow": "ゲームフロー\nDeal → Bit → Trick（10フィールド完了まで）",
       "settings": "基本設定\n4人2チーム / 対面がパートナー / 勝利点数はルーム設定で変更可能 / 最低6組のビット"
     }

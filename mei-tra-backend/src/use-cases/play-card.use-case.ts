@@ -209,6 +209,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
             player,
             field: state.playState.currentField,
             card,
+            trump: state.blowState?.currentTrump ?? null,
           },
         );
         if (violation) {

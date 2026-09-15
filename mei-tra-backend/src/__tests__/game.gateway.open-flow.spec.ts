@@ -5,9 +5,7 @@ import { asSeatId } from '../types/identity.types';
 
 type Harness = {
   handleDeclareOpen: GameGateway['handleDeclareOpen'];
-  handleRevealChomboHand: GameGateway['handleRevealChomboHand'];
   declareOpenUseCase: { execute: jest.Mock };
-  revealChomboHandUseCase: { execute: jest.Mock };
   processGameOverUseCase: { execute: jest.Mock };
   spectatorGatewayEffectsService: { rejectAction: jest.Mock };
   accountActionGateService: { ensureActiveSocketActor: jest.Mock };
@@ -25,7 +23,6 @@ function createGateway(): Harness {
     ...Array.from({ length: 31 }, () => ({})),
   ) as unknown as Harness;
   gateway.declareOpenUseCase = { execute: jest.fn() };
-  gateway.revealChomboHandUseCase = { execute: jest.fn() };
   gateway.processGameOverUseCase = {
     execute: jest.fn().mockResolvedValue(undefined),
   };
@@ -65,7 +62,7 @@ const openEvents = [
   },
 ];
 
-describe('GameGateway open and chombo reveal behavior', () => {
+describe('GameGateway open behavior', () => {
   afterEach(() => {
     jest.useRealTimers();
   });
@@ -130,25 +127,5 @@ describe('GameGateway open and chombo reveal behavior', () => {
     expect(gateway.triggerComAutoPlayAfterEvents).not.toHaveBeenCalled();
     jest.advanceTimersByTime(gameOver.resetDelayMs);
     expect(gateway.closeFinishedRoom).toHaveBeenCalledWith('room-1');
-  });
-
-  it('returns a rejection to the requesting client when reveal is refused or expired', async () => {
-    const gateway = createGateway();
-    gateway.revealChomboHandUseCase.execute.mockResolvedValue({
-      success: false,
-      error: 'No chombo check requires this hand',
-    });
-    const socket = client();
-
-    await gateway.handleRevealChomboHand(socket, {
-      roomId: 'room-1',
-      seatId: asSeatId('seat-1'),
-    });
-
-    expect(socket.emit).toHaveBeenCalledWith(
-      'error-message',
-      'No chombo check requires this hand',
-    );
-    expect(gateway.dispatchGameplayEvents).not.toHaveBeenCalled();
   });
 });

@@ -67,6 +67,7 @@ interface GameBoardProps {
   onPass: () => void;
   onSelectNegri: (card: string) => void;
   onDeclareOpen?: () => void;
+  onRevealBrokenHand?: () => void;
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
@@ -90,6 +91,7 @@ export function GameBoard({
   onPass,
   onSelectNegri,
   onDeclareOpen = () => undefined,
+  onRevealBrokenHand = () => undefined,
   onCardSelection = () => undefined,
   onCancel = () => undefined,
   onHandReorder = () => undefined,
@@ -230,6 +232,10 @@ export function GameBoard({
     Boolean(highest) &&
     Boolean(self) &&
     selfHandCount <= OPEN_MAX_HAND_SIZE;
+  const canRevealBrokenHand =
+    game.gamePhase === 'blow' &&
+    isMyTurn &&
+    Boolean(self?.hasBroken || (isProMode && self?.hasRequiredBroken));
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
@@ -351,6 +357,9 @@ export function GameBoard({
           <Text style={styles.phase}>{phaseLabel}</Text>
           {canDeclareOpen ? (
             <Button onPress={onDeclareOpen}>オープン</Button>
+          ) : null}
+          {canRevealBrokenHand ? (
+            <Button onPress={onRevealBrokenHand}>{t('board.revealBroken')}</Button>
           ) : null}
           {highest ? (
             <Text style={styles.trumpBadge}>

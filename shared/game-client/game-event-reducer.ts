@@ -5,7 +5,6 @@ import type {
   CardPlayedPayload,
   ChomboResolvedPayload,
   OpenDeclaredPayload,
-  ChomboHandRevealedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -53,7 +52,6 @@ export type GameServerEvent =
   | { type: 'card-played'; payload: CardPlayedPayload }
   | { type: 'chombo-resolved'; payload: ChomboResolvedPayload }
   | { type: 'open-declared'; payload: OpenDeclaredPayload }
-  | { type: 'chombo-hand-revealed'; payload: ChomboHandRevealedPayload }
   | { type: 'field-updated'; payload: FieldContract }
   | { type: 'field-complete'; payload: FieldCompletePayload }
   | { type: 'round-results'; payload: RoundResultsPayload }
@@ -258,9 +256,6 @@ export const reduceGameEvent = (
           [event.payload.declarerSeatId]: [...event.payload.hand],
         },
       };
-    }
-    case 'chombo-hand-revealed': {
-      return { ...state, revealedHands: { ...state.revealedHands, [event.payload.seatId]: [...event.payload.hand] } };
     }
     case 'chombo-resolved': {
       return { ...state, teamScores: event.payload.scores };
