@@ -1,4 +1,5 @@
 import type { DeclareOpenPayload } from '@contracts/game';
+import type { GameOverInstruction } from './complete-field.use-case.interface';
 import type { GatewayEvent } from './gateway-event.interface';
 
 export interface DeclareOpenRequest extends DeclareOpenPayload {
@@ -9,6 +10,8 @@ export interface DeclareOpenResponse {
   success: boolean;
   error?: string;
   events?: GatewayEvent[];
+  delayedEvents?: GatewayEvent[];
+  gameOver?: GameOverInstruction;
 }
 
 export interface IDeclareOpenUseCase {
