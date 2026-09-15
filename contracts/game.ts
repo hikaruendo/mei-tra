@@ -146,6 +146,11 @@ export interface BrokenPayload {
   gamePhase?: TransportGamePhase;
 }
 
+export interface BrokenHandRevealedPayload {
+  seatId: SeatId;
+  hand: string[];
+}
+
 export interface FieldCompletePayload {
   winnerSeatId: SeatId;
   field: CompletedFieldContract;

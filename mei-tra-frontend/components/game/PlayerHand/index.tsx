@@ -53,6 +53,7 @@ interface PlayerHandProps {
   agariCard?: string;
   currentHighestDeclaration?: Pick<BlowDeclaration, 'seatId'> & Partial<Pick<BlowDeclaration, 'trumpType' | 'numberOfPairs'>>;
   hasActedInBlow?: boolean;
+  revealedHand?: string[];
   completedFields: CompletedField[];
   currentSeatId: string;
   currentField: Field | null;
@@ -85,6 +86,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   agariCard,
   currentHighestDeclaration,
   hasActedInBlow = false,
+  revealedHand,
   completedFields,
   currentSeatId,
   currentField,
@@ -571,6 +573,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           ) : null}
         </DragOverlay>
         </DndContext>
+      );
+    }
+
+    if (revealedHand) {
+      return (
+        <div className={styles.otherPlayerHandContainer}>
+          {revealedHand.map((card) => (
+            <div key={card} className={styles.revealedCard}>
+              <CardFace card={card} />
+            </div>
+          ))}
+        </div>
       );
     }
 

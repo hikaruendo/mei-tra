@@ -425,6 +425,7 @@ export function GameBoard({
                     : undefined
                 }
                 player={player}
+                revealedHand={game.revealedHands?.[player.seatId]}
                 dealAnimationCue={dealAnimationCue}
                 reducedMotion={reducedMotion}
                 teamFieldCounts={teamFieldCounts}

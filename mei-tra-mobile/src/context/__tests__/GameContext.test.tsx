@@ -270,6 +270,39 @@ describe('GameProvider realtime resync safety', () => {
     };
   });
 
+  it('shows a revealed broken hand until the redeal', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+
+    await act(async () => {
+      mockSocket.trigger('game-state', gameState);
+      await flushPromises();
+    });
+
+    await act(async () => {
+      mockSocket.trigger('broken-hand-revealed', {
+        seatId: asSeatId('player-2'),
+        hand: ['2♠', '3♠'],
+      });
+      await flushPromises();
+    });
+    expect(screen.latestGame.game?.revealedHands).toEqual({
+      'player-2': ['2♠', '3♠'],
+    });
+
+    await act(async () => {
+      mockSocket.trigger('broken', {
+        nextSeatId: asSeatId('player-1'),
+        players: gameState.players,
+        gamePhase: 'blow',
+      });
+      await flushPromises();
+    });
+    expect(screen.latestGame.game?.revealedHands).toEqual({});
+
+    await screen.unmount();
+  });
+
   it('starts deal cues and sounds only for live deal events', async () => {
     const screen = await renderProvider();
     const gameState = createGameState();

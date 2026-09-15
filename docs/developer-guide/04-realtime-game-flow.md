@@ -324,7 +324,9 @@ current field の最初が `JOKER` で `baseSuit` 未設定の場合、通常の
 
 ### 8.5 broken / chombo
 
-broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフローと結び付いており、frontend には `broken` や `reveal-agari` といった event が通知されます。表示上は警告や hand reveal のタイミングに使われます。
+broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフローと結び付いており、frontend には `broken-hand-revealed`、`broken`、`reveal-agari` といった event が通知されます。
+
+`reveal-broken-hand` を受けた server は、公開した手札を `broken-hand-revealed` で全員に送り、5 秒後に配り直して `broken` を送ります。COM の4ジャックも同じ間隔で配り直します。公開中の手札は `revealedHands` に入り、web と mobile はその席の手札を表向きに表示します。`broken` で配り直すと `revealedHands` は空に戻ります。オープンで公開した手札も同じ `revealedHands` で表示し、カードが出されるたびにその札を取り除きます。
 
 ## 9. field completion
 

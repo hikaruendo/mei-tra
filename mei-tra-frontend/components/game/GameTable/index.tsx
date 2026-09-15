@@ -45,6 +45,7 @@ interface GameTableProps {
   gameMode: 'normal' | 'pro';
   openDeclared?: boolean;
   openResolved?: boolean;
+  revealedHands?: Partial<Record<string, string[]>>;
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -89,6 +90,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   gameMode,
   openDeclared = false,
   openResolved = false,
+  revealedHands = {},
   teamNames,
   idleSeatIds = [],
   disconnectedSeatIds = [],
@@ -297,6 +299,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                   (action) => action.seatId === player_.seatId,
                 )
               }
+              revealedHand={revealedHands[player_.seatId]}
               completedFields={teamCompletedFields}
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}

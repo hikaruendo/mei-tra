@@ -2050,6 +2050,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      this.dispatchGameplayEvents(preparation.events);
       const delay = preparation.delayMs ?? 0;
       const followUp = preparation.followUp;
       this.finalizeBrokenHandAfterDelay(followUp, delay);

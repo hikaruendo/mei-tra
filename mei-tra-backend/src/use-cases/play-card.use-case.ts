@@ -225,6 +225,13 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
+      const revealedHand = state.playState.revealedHands?.[player.seatId];
+      if (revealedHand) {
+        state.playState.revealedHands = {
+          ...state.playState.revealedHands,
+          [player.seatId]: revealedHand.filter((c) => c !== card),
+        };
+      }
 
       const currentField = state.playState.currentField;
       const playedBySeatIds = [...currentField.playedBySeatIds];

@@ -875,6 +875,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
       applyGameServerEvent({ type: 'blow-updated', payload });
     });
+    socket.on('broken-hand-revealed', (payload) => {
+      applyGameServerEvent({ type: 'broken-hand-revealed', payload });
+    });
     socket.on('broken', (payload) => {
       pendingNegriCardRef.current = null;
       startDealAnimation('broken', payload.players);

@@ -704,4 +704,18 @@ describe('PlayerHand', () => {
       screen.queryByRole('button', { name: 'revealBroken' }),
     ).not.toBeInTheDocument();
   });
+
+  it('shows a revealed hand face up to the other players', () => {
+    const player: Player = { ...otherPlayer, hand: ['H-A', 'S-2'] };
+    const { rerender } = renderPlayerHand({ player });
+
+    expect(screen.getAllByTestId('card-back')).toHaveLength(2);
+
+    rerender(buildPlayerHand({ player, revealedHand: ['H-A', 'S-2'] }));
+
+    expect(screen.queryAllByTestId('card-back')).toHaveLength(0);
+    expect(
+      screen.getAllByTestId('card-front').map((card) => card.textContent),
+    ).toEqual(['H-A', 'S-2']);
+  });
 });

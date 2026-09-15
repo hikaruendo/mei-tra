@@ -4,7 +4,11 @@ import { asSeatId } from '@contracts/ids';
 import { GameTable } from '@/components/game/GameTable';
 import type { GameActions, Player, TeamScores } from '@/types/game.types';
 
-type MockPlayerHandProps = { player: Player; hasActedInBlow?: boolean };
+type MockPlayerHandProps = {
+  player: Player;
+  hasActedInBlow?: boolean;
+  revealedHand?: string[];
+};
 const mockPlayerHand = jest.fn<void, [MockPlayerHandProps]>();
 
 jest.mock('next-intl', () => ({
@@ -175,6 +179,25 @@ describe('GameTable broken hand action', () => {
       'player-2': true,
       'player-3': true,
       'player-4': true,
+    });
+  });
+});
+
+describe('GameTable revealed hands', () => {
+  it('hands each seat its revealed cards', () => {
+    mockPlayerHand.mockClear();
+
+    renderGameTable({ revealedHands: { 'player-2': ['A♠', 'K♠'] } });
+
+    const revealedBySeat = Object.fromEntries(
+      mockPlayerHand.mock.calls.map(([props]) => [
+        props.player.seatId,
+        props.revealedHand,
+      ]),
+    );
+    expect(revealedBySeat).toEqual({
+      'player-1': undefined,
+      'player-2': ['A♠', 'K♠'],
     });
   });
 });

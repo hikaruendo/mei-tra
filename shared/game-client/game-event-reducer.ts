@@ -1,6 +1,7 @@
 import type {
   BlowStateContract,
   BlowUpdatedPayload,
+  BrokenHandRevealedPayload,
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
@@ -45,6 +46,7 @@ export type GameServerEvent =
   | { type: 'update-phase'; payload: UpdatePhasePayload }
   | { type: 'update-turn'; payload: UpdateTurnPayload }
   | { type: 'blow-updated'; payload: BlowUpdatedPayload }
+  | { type: 'broken-hand-revealed'; payload: BrokenHandRevealedPayload }
   | { type: 'broken'; payload: BrokenPayload }
   | { type: 'round-cancelled'; payload: RoundCancelledPayload }
   | { type: 'reveal-agari'; payload: RevealAgariPayload }
@@ -178,6 +180,15 @@ export const reduceGameEvent = (
         },
       };
     }
+    case 'broken-hand-revealed': {
+      return {
+        ...state,
+        revealedHands: {
+          ...state.revealedHands,
+          [event.payload.seatId]: [...event.payload.hand],
+        },
+      };
+    }
     case 'broken': {
       return {
         ...state,
@@ -261,12 +272,20 @@ export const reduceGameEvent = (
       return { ...state, teamScores: event.payload.scores };
     }
     case 'card-played': {
+      const { seatId, card } = event.payload;
+      const revealedHand = state.revealedHands[seatId];
       return {
         ...state,
         players: event.payload.players,
         currentField: event.payload.field,
         currentTurnSeatId:
           event.payload.nextSeatId ?? state.currentTurnSeatId,
+        revealedHands: revealedHand
+          ? {
+              ...state.revealedHands,
+              [seatId]: revealedHand.filter((revealed) => revealed !== card),
+            }
+          : state.revealedHands,
       };
     }
     case 'field-updated': {

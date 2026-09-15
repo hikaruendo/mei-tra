@@ -176,4 +176,24 @@ describe('Pro card play and chombo reporting', () => {
       await fixture.module.close();
     }
   });
+
+  it('drops a played card from a revealed hand', async () => {
+    const fixture = await createGame(['A♠', 'K♠']);
+    try {
+      fixture.game.getState().playState!.revealedHands = {
+        winner: ['A♠', 'K♠'],
+      };
+      const played = await fixture.play.execute({
+        roomId: 'room-1',
+        actorId: 'winner',
+        card: 'A♠',
+      });
+      expect(played.success).toBe(true);
+      expect(fixture.game.getState().playState?.revealedHands).toEqual({
+        winner: ['K♠'],
+      });
+    } finally {
+      await fixture.module.close();
+    }
+  });
 });

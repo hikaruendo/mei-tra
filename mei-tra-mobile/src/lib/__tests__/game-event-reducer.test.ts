@@ -162,6 +162,54 @@ describe('reduceGameEvent', () => {
   });
 });
 
+describe('revealed hand events', () => {
+  it('shows a broken hand until the redeal', () => {
+    const revealed = reduceGameEvent(createEmptyGameEventState(), {
+      type: 'broken-hand-revealed',
+      payload: { seatId: asSeatId('seat-1'), hand: ['2♠', '3♠'] },
+    });
+    expect(revealed.revealedHands).toEqual({ 'seat-1': ['2♠', '3♠'] });
+
+    const redealt = reduceGameEvent(revealed, {
+      type: 'broken',
+      payload: {
+        nextSeatId: asSeatId('seat-2'),
+        players: [],
+        gamePhase: 'blow',
+      },
+    });
+    expect(redealt.revealedHands).toEqual({});
+  });
+
+  it('drops a played card from a revealed hand', () => {
+    const state = {
+      ...createEmptyGameEventState(),
+      players: [createPlayer('seat-1', ['5♣', '6♣'])],
+      revealedHands: { [asSeatId('seat-1')]: ['5♣', '6♣'] },
+      gamePhase: 'play' as const,
+    };
+
+    const next = reduceGameEvent(state, {
+      type: 'card-played',
+      payload: {
+        seatId: asSeatId('seat-1'),
+        card: '5♣',
+        players: [createPlayer('seat-1', ['6♣'])],
+        field: {
+          cards: ['5♣'],
+          playedBySeatIds: [asSeatId('seat-1')],
+          baseCard: '5♣',
+          dealerSeatId: asSeatId('seat-1'),
+          isComplete: false,
+        },
+        nextSeatId: asSeatId('seat-2'),
+      },
+    });
+
+    expect(next.revealedHands).toEqual({ 'seat-1': ['6♣'] });
+  });
+});
+
 describe('open declaration events', () => {
   it('retains the explicitly revealed hand without exposing other hands', () => {
     const state = createEmptyGameEventState();

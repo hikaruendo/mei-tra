@@ -16,6 +16,7 @@ export interface RevealBrokenHandPreparation {
     handSnapshot?: string[];
   };
   delayMs?: number;
+  events?: GatewayEvent[];
 }
 
 export interface RevealBrokenHandCompletion {

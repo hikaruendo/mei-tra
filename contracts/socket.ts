@@ -1,6 +1,7 @@
 import type {
   BackToLobbyPayload,
   BlowUpdatedPayload,
+  BrokenHandRevealedPayload,
   BrokenPayload,
   CardPlayedPayload,
   FieldCompletePayload,
@@ -205,6 +206,7 @@ export interface ServerToClientEvents {
   'update-phase': (payload: UpdatePhasePayload) => void;
   'update-turn': (payload: UpdateTurnPayload) => void;
   'blow-updated': (payload: BlowUpdatedPayload) => void;
+  'broken-hand-revealed': (payload: BrokenHandRevealedPayload) => void;
   broken: (payload: BrokenPayload) => void;
   'round-cancelled': (payload: RoundCancelledPayload) => void;
   'reveal-agari': (payload: RevealAgariPayload) => void;

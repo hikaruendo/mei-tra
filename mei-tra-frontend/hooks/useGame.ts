@@ -5,6 +5,7 @@ import type {
   BlowActionContract,
   BlowDeclarationContract,
   BlowUpdatedPayload,
+  BrokenHandRevealedPayload,
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
@@ -1044,6 +1045,9 @@ export const useGame = () => {
           updateFirstTurnReveal(null);
         }
         applyGameServerEvent({ type: 'blow-updated', payload });
+      },
+      'broken-hand-revealed': (payload: BrokenHandRevealedPayload) => {
+        applyGameServerEvent({ type: 'broken-hand-revealed', payload });
       },
       'broken': (payload: BrokenPayload) => {
         pendingNegriCardRef.current = null;

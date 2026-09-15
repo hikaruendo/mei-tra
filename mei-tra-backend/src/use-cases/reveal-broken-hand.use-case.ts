@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import type { BrokenPayload } from '@contracts/game';
+import type { BrokenHandRevealedPayload, BrokenPayload } from '@contracts/game';
 import {
   IRevealBrokenHandUseCase,
   RevealBrokenHandRequest,
@@ -14,7 +14,10 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
+import {
+  BROKEN_HAND_REVEAL_DELAY_MS,
+  getBrokenHandRevealPendingError,
+} from './helpers/broken-hand.helper';
 import { asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
@@ -74,12 +77,31 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         handSnapshot,
         startedAt: Date.now(),
       };
+      // The table sees the hand until the redeal replaces the play state.
+      if (state.playState) {
+        state.playState.revealedHands = {
+          ...(state.playState.revealedHands ?? {}),
+          [seatId]: [...handSnapshot],
+        };
+      }
       await roomGameState.saveState();
 
+      const revealedPayload: BrokenHandRevealedPayload = {
+        seatId,
+        hand: [...handSnapshot],
+      };
       return {
         success: true,
-        delayMs: 3000,
+        delayMs: BROKEN_HAND_REVEAL_DELAY_MS,
         followUp: { roomId, seatId, handSnapshot },
+        events: [
+          {
+            scope: 'room',
+            roomId,
+            event: 'broken-hand-revealed',
+            payload: revealedPayload,
+          },
+        ],
       };
     } catch (error) {
       this.logger.error(

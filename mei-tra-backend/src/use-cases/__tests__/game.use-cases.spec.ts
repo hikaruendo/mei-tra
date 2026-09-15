@@ -2759,9 +2759,20 @@ describe('Game Use Cases', () => {
       const declareBlowUseCase = { execute: jest.fn() };
       const passBlowUseCase = { execute: jest.fn() };
       const selectNegriUseCase = { execute: jest.fn() };
+      const revealEvent = {
+        scope: 'room',
+        roomId: 'room-1',
+        event: 'broken-hand-revealed',
+        payload: {
+          seatId: 'com-0',
+          hand: ['J♠', 'J♣', 'J♥', 'J♦'],
+        },
+      };
       const revealBrokenHandUseCase = {
         prepare: jest.fn().mockResolvedValue({
           success: true,
+          delayMs: 5000,
+          events: [revealEvent],
           followUp: {
             roomId: 'room-1',
             seatId: asSeatId('com-0'),
@@ -2832,12 +2843,14 @@ describe('Game Use Cases', () => {
       expect(comStrategyService.chooseBlowAction).not.toHaveBeenCalled();
       expect(declareBlowUseCase.execute).not.toHaveBeenCalled();
       expect(passBlowUseCase.execute).not.toHaveBeenCalled();
-      expect(result.events).toEqual([
+      expect(result.events).toEqual([revealEvent]);
+      expect(result.delayedEvents).toEqual([
         {
           scope: 'room',
           roomId: 'room-1',
           event: 'broken',
           payload: { nextSeatId: 'com-0' },
+          delayMs: 5000,
         },
       ]);
     });
@@ -3093,7 +3106,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(preparation.success).toBe(true);
-      expect(preparation.delayMs).toBe(3000);
+      expect(preparation.delayMs).toBe(5000);
       expect(preparation.followUp).toBeDefined();
       expect(state.pendingBrokenHandReveal).toEqual({
         seatId: asSeatId('player-1'),

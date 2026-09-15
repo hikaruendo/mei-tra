@@ -2,6 +2,7 @@ import { DomainPlayer, GameState } from '../../types/game.types';
 import type { GameMode } from '../../types/room.types';
 
 export const BROKEN_HAND_REVEAL_PENDING_ERROR = 'Broken hand reveal is pending';
+export const BROKEN_HAND_REVEAL_DELAY_MS = 5_000;
 export const BROKEN_HAND_REVEAL_PENDING_TTL_MS = 10_000;
 export const REQUIRED_BROKEN_HAND_REVEAL_ERROR =
   'Required broken hand must be revealed';
