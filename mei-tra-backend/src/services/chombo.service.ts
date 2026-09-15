@@ -1,3 +1,4 @@
+import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Injectable } from '@nestjs/common';
 import { ChomboViolation, DomainPlayer, Field } from '../types/game.types';
 import { PlayService } from './play.service';
@@ -9,6 +10,17 @@ export class ChomboService implements IChomboService {
   private violations: ChomboViolation[] = [];
 
   constructor(private readonly playService: PlayService) {}
+
+  resolveReport(
+    violations: ChomboViolation[],
+    reporterSeatId: SeatId,
+    violatorSeatId: SeatId,
+    violationType: ChomboViolation['type'],
+  ): ChomboViolation | null {
+    const violation = findActiveChomboCandidate(violations, violatorSeatId, violationType);
+    if (violation) violation.reportedBySeatId = reporterSeatId;
+    return violation ?? null;
+  }
 
   checkViolations(
     seatId: SeatId,
@@ -48,7 +60,7 @@ export class ChomboService implements IChomboService {
 
       case 'check-four-jack': {
         const jackCount = context.player.hand.filter((c) =>
-          c.includes('J'),
+          /^J[♠♣♥♦]$/.test(c),
         ).length;
         if (jackCount === 4 && !context.hasBroken) {
           violationType = 'four-jack';
@@ -100,7 +112,6 @@ export class ChomboService implements IChomboService {
       isExpired: false,
     };
 
-    this.violations.push(violation);
     return violation;
   }
 
@@ -117,13 +128,7 @@ export class ChomboService implements IChomboService {
     }
 
     // Find the violation
-    const violation = this.violations.find(
-      (v) =>
-        v.violatorSeatId === violatorSeatId &&
-        v.type === violationType &&
-        !v.isExpired &&
-        !v.reportedBySeatId,
-    );
+    const violation = findActiveChomboCandidate(this.violations, violatorSeatId, violationType);
 
     if (!violation) {
       return null;

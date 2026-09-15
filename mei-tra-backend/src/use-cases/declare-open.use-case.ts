@@ -47,6 +47,16 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     if (valid) {
       state.playState.openResolved = true;
       events.push(...this.settleValidOpen(state, request.roomId));
+      if (!state.gameOver) {
+        state.gamePhase = 'waiting';
+        state.currentSeatId = null;
+        events.push({
+          scope: 'room',
+          roomId: request.roomId,
+          event: 'update-phase',
+          payload: 'waiting',
+        });
+      }
     }
     await roomGameState.saveState();
     if (state.gameOver) {
@@ -66,8 +76,12 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     const points = this.scoreService.calculatePlayPoints(declaredPairs, wonFields);
     const awardedTeam: Team = points >= 0 ? declarerTeam : (1 - declarerTeam) as Team;
     const awardedPoints = Math.abs(points);
-    state.teamScores[awardedTeam].play += awardedPoints;
-    state.teamScores[awardedTeam].total += awardedPoints;
+    if (typeof this.scoreService.addPoints === 'function') {
+      this.scoreService.addPoints(awardedTeam, awardedPoints, state.teamScores);
+    } else {
+      state.teamScores[awardedTeam].play += awardedPoints;
+      state.teamScores[awardedTeam].total += awardedPoints;
+    }
     const events: Array<{ scope: 'room'; roomId: string; event: string; payload: unknown }> = [
       { scope: 'room', roomId, event: 'round-results', payload: { scores: state.teamScores } satisfies RoundResultsPayload },
     ];

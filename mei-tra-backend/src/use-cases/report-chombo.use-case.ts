@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { findActiveChomboCandidate } from '../domain/chombo-candidates';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { ChomboResolvedPayload, GameOverPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
@@ -10,11 +11,15 @@ import {
 import type { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
 import { RoomStatus } from '../types/room.types';
+import { ChomboService } from '../services/chombo.service';
+import type { IScoreService } from '../services/interfaces/score-service.interface';
 
 @Injectable()
 export class ReportChomboUseCase implements IReportChomboUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
+    @Optional() private readonly chomboService?: ChomboService,
+    @Optional() @Inject('IScoreService') private readonly scoreService?: IScoreService,
   ) {}
 
   async execute(request: ReportChomboRequest): Promise<ReportChomboResponse> {
@@ -65,20 +70,21 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       return { success: false, error: 'This chombo has already been reported' };
     }
 
-    const persistedViolation = (state.playState.chomboViolations ?? []).find(
-      (candidate) =>
-        candidate.violatorSeatId === violator.seatId &&
-        candidate.type === request.violationType &&
-        !candidate.isExpired &&
-        !candidate.reportedBySeatId,
-    );
-    if (persistedViolation) {
-      persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
-    }
+    const persistedViolation = this.chomboService?.resolveReport(
+      state.playState.chomboViolations ?? [],
+      asSeatId(reporter.seatId),
+      asSeatId(violator.seatId),
+      request.violationType,
+    ) ?? findActiveChomboCandidate(state.playState.chomboViolations ?? [], asSeatId(violator.seatId), request.violationType);
+    if (persistedViolation && !persistedViolation.reportedBySeatId) persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
     const isCorrect = Boolean(persistedViolation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;
-    state.teamScores[awardedTeam].play += 5;
-    state.teamScores[awardedTeam].total += 5;
+    if (this.scoreService) {
+      this.scoreService.addPoints(awardedTeam, 5, state.teamScores);
+    } else {
+      state.teamScores[awardedTeam].play += 5;
+      state.teamScores[awardedTeam].total += 5;
+    }
     state.playState.chomboReports = [
       ...reports,
       {

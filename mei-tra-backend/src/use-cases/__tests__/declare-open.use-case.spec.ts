@@ -30,6 +30,13 @@ const state: GameState = {
 };
 
 describe('DeclareOpenUseCase', () => {
+  beforeEach(() => {
+    state.gamePhase = 'play';
+    state.currentSeatId = asSeatId('declarer');
+    state.playState!.openDeclared = false;
+    state.playState!.openResolved = false;
+  });
+
   it('settles the remaining tricks for the declarer team after a valid open', async () => {
     const roomGameState = {
       getState: jest.fn(() => state),

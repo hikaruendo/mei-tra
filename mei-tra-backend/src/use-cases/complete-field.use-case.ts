@@ -590,10 +590,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     const nextBlowPlayer =
       updatedState.players[nextBlowIndex] ?? updatedState.players[0];
 
-    // Candidates belong to the completed round. Keep persisted state reset and
-    // prevent the singleton service from resolving a stale candidate next round.
-    this.chomboService?.expireViolations();
-
     const newPlayState = {
       currentField: {
         cards: [],
