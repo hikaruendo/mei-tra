@@ -1871,7 +1871,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('error-message', result.error ?? 'Failed to declare open');
         return;
       }
-      this.dispatchGameplayEvents(result.events);
+      await this.processFieldCompletionResult(data.roomId, result);
+      if (result.delayedEvents) {
+        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      }
     } catch (error) {
       this.logger.error('Error in handleDeclareOpen:', error);
       client.emit('error-message', 'Failed to declare open');

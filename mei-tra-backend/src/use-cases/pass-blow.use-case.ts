@@ -225,7 +225,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.blowState.currentHighestDeclaration = null;
 
     // 全員パスの再配りでは吹き始めは移らず、同じ席がもう一度最初に吹く。
-    // 吹き始めが進むのはラウンド成立時 (CompleteFieldUseCase.prepareNextRound) と
+    // 吹き始めが進むのはラウンド成立時 (round-completion.helper の prepareNextRound) と
     // ブロークン / 4ジャックの再配り (RevealBrokenHandUseCase) だけ。
     const firstBlowIndex =
       state.blowState.currentBlowIndex % state.players.length;
