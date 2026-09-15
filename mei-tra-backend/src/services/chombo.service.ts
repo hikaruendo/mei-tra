@@ -1,3 +1,4 @@
+import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Injectable } from '@nestjs/common';
 import { ChomboViolation, DomainPlayer, Field } from '../types/game.types';
 import { PlayService } from './play.service';
@@ -16,11 +17,7 @@ export class ChomboService implements IChomboService {
     violatorSeatId: SeatId,
     violationType: ChomboViolation['type'],
   ): ChomboViolation | null {
-    const violation = violations.find(
-      (candidate) => candidate.violatorSeatId === violatorSeatId &&
-        candidate.type === violationType &&
-        !candidate.isExpired && !candidate.reportedBySeatId,
-    );
+    const violation = findActiveChomboCandidate(violations, violatorSeatId, violationType);
     if (violation) violation.reportedBySeatId = reporterSeatId;
     return violation ?? null;
   }
@@ -131,13 +128,7 @@ export class ChomboService implements IChomboService {
     }
 
     // Find the violation
-    const violation = this.violations.find(
-      (v) =>
-        v.violatorSeatId === violatorSeatId &&
-        v.type === violationType &&
-        !v.isExpired &&
-        !v.reportedBySeatId,
-    );
+    const violation = findActiveChomboCandidate(this.violations, violatorSeatId, violationType);
 
     if (!violation) {
       return null;
