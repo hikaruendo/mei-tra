@@ -9,6 +9,7 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
@@ -23,6 +24,7 @@ interface GameTableProps {
   currentField: Field | null;
   players: Player[];
   negriCard: string | null;
+  negriSeatId?: string | null;
   completedFields: CompletedField[];
   revealedAgari: string | null;
   gameActions: GameActions;
@@ -39,6 +41,9 @@ interface GameTableProps {
   idleSeatIds?: string[];
   disconnectedSeatIds?: string[];
   pointsToWin: number;
+  gameMode: 'normal' | 'pro';
+  openDeclared?: boolean;
+  openResolved?: boolean;
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -65,6 +70,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentField,
   players,
   negriCard,
+  negriSeatId = null,
   completedFields,
   revealedAgari,
   gameActions,
@@ -79,6 +85,9 @@ export const GameTable: React.FC<GameTableProps> = ({
   currentSeatId,
   currentRoomId,
   pointsToWin,
+  gameMode,
+  openDeclared = false,
+  openResolved = false,
   teamNames,
   idleSeatIds = [],
   disconnectedSeatIds = [],
@@ -173,6 +182,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 gamePhase={gamePhase}
                 players={players}
                 teamNames={teamNames}
+                gameMode={gameMode}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -247,6 +257,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 highlightSeatId === player_.seatId
               }
               negriCard={negriCard}
+              negriSeatId={negriSeatId}
               gamePhase={gamePhase}
               whoseTurn={whoseTurn}
               gameActions={gameActions}
@@ -257,6 +268,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
               currentTrump={currentTrump}
+              gameMode={gameMode}
               takenCount={takenCount}
               teamNames={teamNames}
               isHost={isHost}
@@ -293,13 +305,15 @@ export const GameTable: React.FC<GameTableProps> = ({
             </button>
           </div>
         ) : (
-          <GameField
-            currentField={currentField}
-            players={players}
-            onBaseSuitSelect={gameActions.selectBaseSuit}
-            isCurrentPlayer={!isSpectator && currentSeatId === whoseTurn}
-            currentSeatId={tablePerspectiveSeatId || ''}
-          />
+          <>
+            <GameField
+              currentField={currentField}
+              players={players}
+              onBaseSuitSelect={gameActions.selectBaseSuit}
+              isCurrentPlayer={!isSpectator && currentSeatId === whoseTurn}
+              currentSeatId={tablePerspectiveSeatId || ''}
+            />
+          </>
         )}
 
         {revealStep && armedReveal && (
@@ -310,6 +324,29 @@ export const GameTable: React.FC<GameTableProps> = ({
           />
         )}
       </div>
+
+      {gameMode === 'pro' &&
+        gamePhase === 'play' &&
+        !openDeclared &&
+        !openResolved &&
+        currentSeatId && currentHighestDeclaration && (
+          <button
+            className={styles.openButton}
+            type="button"
+            onClick={gameActions.declareOpen}
+          >
+            オープン
+          </button>
+        )}
+
+      {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
+        <ChomboReportPanel
+          players={players}
+          currentSeatId={currentSeatId}
+          onReport={gameActions.reportChombo}
+          onReveal={gameActions.revealChomboHand}
+        />
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { asSeatId } from '@contracts/ids';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type {
@@ -7,6 +8,9 @@ import type {
   BlowUpdatedPayload,
   BrokenPayload,
   CardPlayedPayload,
+  ChomboResolvedPayload,
+  ChomboHandRevealedPayload,
+  OpenDeclaredPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -23,6 +27,7 @@ import type {
   PlayerLeftPayload,
   ReconnectionFailureCode,
   RequestAgariPayload,
+  ChomboViolationType,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -329,6 +334,7 @@ export const useGame = () => {
   const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
   const [negriCard, setNegriCard] = useState<string | null>(null);
   const [negriSeatId, setNegriSeatId] = useState<string | null>(null);
+  const [revealedHands, setRevealedHands] = useState<Partial<Record<string, string[]>>>({});
 
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
@@ -367,6 +373,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idleSeatIds, setIdleSeatIds] = useState<string[]>([]);
   const [disconnectedSeatIds, setDisconnectedSeatIds] = useState<string[]>([]);
@@ -388,6 +395,7 @@ export const useGame = () => {
     setGamePhase(null);
     setCurrentRoomId(null);
     setCurrentHostSeatId(null);
+    setGameMode('normal');
     setCurrentSeatId(null);
     setIsHost(false);
     setIsSpectator(false);
@@ -612,7 +620,11 @@ export const useGame = () => {
       if (next.players !== previous.players) {
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
-          fromPlayerContracts(next.players),
+          fromPlayerContracts(next.players).map((player) =>
+            next.revealedHands[player.seatId]
+              ? { ...player, hand: next.revealedHands[player.seatId] ?? player.hand }
+              : player,
+          ),
         );
         commitPlayers(nextPlayers);
         syncDisconnectedSeatIdsFromPlayers(nextPlayers);
@@ -645,6 +657,7 @@ export const useGame = () => {
       setNegriCard(next.negriCard);
       setNegriSeatId(next.negriSeatId);
       setRevealedAgari(next.revealedAgari);
+      setRevealedHands(next.revealedHands);
       setCompletedFields(toUiCompletedFields(next.fields));
     };
 
@@ -727,30 +740,13 @@ export const useGame = () => {
 
         setCurrentHostSeatId(nextRoom.hostSeatId);
         setTeamNames(nextRoom.settings.teamNames);
+        setGameMode(nextRoom.settings.gameMode ?? 'normal');
         if (selfSeatId) {
           setCurrentSeatId(selfSeatId);
         }
       },
-      'game-state': ({
-        players: playerContracts,
-        gamePhase,
-        currentField,
-        currentTurnSeatId,
-        blowState,
-        teamScores,
-        youSeatId,
-        negriCard,
-        negriSeatId,
-        revealedAgari: syncedRevealedAgari,
-        fields,
-        roomId,
-        hostSeatId,
-        pointsToWin,
-        teamNames,
-        isSpectator,
-      }: GameStatePayload) => {
-        pendingNegriCardRef.current = null;
-        gameEventStateRef.current = createGameEventStateFromSnapshot({
+      'game-state': (payload: GameStatePayload) => {
+        const {
           players: playerContracts,
           gamePhase,
           currentField,
@@ -766,8 +762,13 @@ export const useGame = () => {
           hostSeatId,
           pointsToWin,
           teamNames,
+          gameMode: nextGameMode,
           isSpectator,
-        });
+          gameOver,
+        } = payload;
+        setGameMode(nextGameMode ?? 'normal');
+        pendingNegriCardRef.current = null;
+        gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -779,6 +780,7 @@ export const useGame = () => {
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setRevealedAgari(syncedRevealedAgari ?? null);
+        setRevealedHands(payload.revealedHands ?? {});
         commitTurn(currentTurnSeatId);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
@@ -804,6 +806,19 @@ export const useGame = () => {
         setGameStarted(true);
         setPointsToWin(pointsToWin);
         setTeamNames(teamNames);
+        if (gameOver) {
+          gameResultTokenRef.current += 1;
+          setGameResult(buildGameResultSnapshot({
+            payload: gameOver,
+            players: nextPlayers,
+            viewerSeatId: youSeatId,
+            isSpectator: Boolean(isSpectator),
+            teamNames,
+            token: gameResultTokenRef.current,
+          }));
+          setGameStarted(false);
+          setGamePhase(null);
+        }
         setIdleSeatIds((prev) =>
           prev.filter((seatId) =>
             nextPlayers.some((player) => player.seatId === seatId),
@@ -969,6 +984,24 @@ export const useGame = () => {
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
         setNotification({ message, type: 'error' });
+      },
+      'chombo-hand-revealed': (payload: ChomboHandRevealedPayload) => {
+        applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
+      },
+      'open-declared': (payload: OpenDeclaredPayload) => {
+        applyGameServerEvent({ type: 'open-declared', payload });
+        setNotification({
+          message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+          type: payload.valid ? 'success' : 'error',
+        });
+      },
+      'chombo-resolved': (payload: ChomboResolvedPayload) => {
+        applyGameServerEvent({ type: 'chombo-resolved', payload });
+        const result = payload.isCorrect ? 'correct' : 'incorrect';
+        setNotification({
+          message: `Chombo report ${result}: Team ${payload.awardedTeam} receives 5 points.`,
+          type: payload.isCorrect ? 'success' : 'error',
+        });
       },
       'update-turn': (seatId: UpdateTurnPayload) => {
         if (shouldAbortRevealOnTurn(firstTurnRevealRef.current, seatId)) {
@@ -1396,6 +1429,22 @@ export const useGame = () => {
       };
       socket?.emit('play-card', payload);
     },
+    reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => {
+      if (!currentRoomId) return;
+      socket?.emit('report-chombo', {
+        roomId: currentRoomId,
+        violatorSeatId,
+        violationType,
+      });
+    },
+    revealChomboHand: () => {
+      if (!socket || !currentRoomId || !currentSeatId) return;
+      socket.emit('reveal-chombo-hand', { roomId: currentRoomId, seatId: asSeatId(currentSeatId) });
+    },
+    declareOpen: () => {
+      if (!socket || !currentRoomId) return;
+      socket.emit('declare-open', { roomId: currentRoomId });
+    },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });
@@ -1463,6 +1512,9 @@ export const useGame = () => {
     negriSeatId,
     completedFields,
     revealedAgari,
+    revealedHands,
+    openDeclared: gameEventStateRef.current.openDeclared,
+    openResolved: gameEventStateRef.current.openResolved,
     gameActions,
     blowDeclarations,
     blowActionHistory,
@@ -1489,6 +1541,7 @@ export const useGame = () => {
     idleSeatIds,
     disconnectedSeatIds,
     pointsToWin,
+    gameMode,
     users,
     paused,
     socket,

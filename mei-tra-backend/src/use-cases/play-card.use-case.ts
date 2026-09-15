@@ -1,3 +1,4 @@
+import { appendChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { CardPlayedPayload } from '@contracts/game';
 import {
@@ -18,10 +19,10 @@ import { asSeatId } from '../types/identity.types';
 import { resolveCurrentPlayer } from '../domain/current-turn';
 import { toFieldContract } from '../adapters/game-contract-adapters';
 import {
-  createFieldCheckpoint,
   getCurrentFieldIdentity,
   getFieldIntegrityError,
 } from '../domain/field-recovery';
+import { IChomboService } from '../services/interfaces/chombo-service.interface';
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -33,6 +34,9 @@ export class PlayCardUseCase implements IPlayCardUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('IChomboService')
+    private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: PlayCardRequest): Promise<PlayCardResponse> {
@@ -40,6 +44,7 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      const room = await this.roomService.getRoom(roomId);
       const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
@@ -53,44 +58,72 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      if (!state.playState?.currentField) {
+      if (!roomGameState.isPlayerTurn(player.seatId)) {
+        return { success: false, error: "It's not your turn to play" };
+      }
+
+      if (state.playState?.openResolved) {
+        return { success: false, error: 'Play is settled after a valid open' };
+      }
+
+      if (!state.playState) {
         return {
           success: false,
-          error: 'Game state error: No current field',
+          error: 'Play state is unavailable',
         };
       }
 
-      const currentField = state.playState.currentField;
-      const fieldIntegrityError = getFieldIntegrityError(state, currentField);
-      if (
-        fieldIntegrityError ||
-        currentField.playedBySeatIds.includes(player.seatId)
-      ) {
-        const fieldIdentity = getCurrentFieldIdentity(state);
-        this.logger.error(
-          `Recovering invalid field before card play in room ${roomId}: ${
-            fieldIntegrityError ?? 'Current seat already played in this field'
-          }`,
-        );
-        return fieldIdentity
-          ? {
-              success: true,
-              events: [],
-              completeFieldTrigger: {
-                roomId,
-                delayMs: 0,
-                fieldIdentity,
-                field: {
-                  ...currentField,
-                  cards: [...currentField.cards],
-                  playedBySeatIds: [...currentField.playedBySeatIds],
+      const integrityField = state.playState.currentField;
+      if (integrityField) {
+        const fieldIntegrityError = getFieldIntegrityError(state, integrityField);
+        if (fieldIntegrityError || integrityField.playedBySeatIds.includes(player.seatId)) {
+          const fieldIdentity = getCurrentFieldIdentity(state);
+          this.logger.error(
+            `Recovering invalid field before card play in room ${roomId}: ${fieldIntegrityError ?? 'Current seat already played in this field'}`,
+          );
+          return fieldIdentity
+            ? {
+                success: true,
+                events: [],
+                completeFieldTrigger: {
+                  roomId,
+                  delayMs: 0,
+                  fieldIdentity,
+                  field: {
+                    ...integrityField,
+                    cards: [...integrityField.cards],
+                    playedBySeatIds: [...integrityField.playedBySeatIds],
+                  },
                 },
-              },
-            }
-          : {
-              success: false,
-              error: 'Field identity is unavailable',
-            };
+              }
+            : { success: false, error: 'Field identity is unavailable' };
+        }
+      }
+
+      // Pro mode allows the declaration winner to skip Negri and play first.
+      // Create the empty field lazily for that flow only.
+      if (!state.playState.currentField) {
+        if (room?.settings.gameMode !== 'pro') {
+          return {
+            success: false,
+            error: 'Game state error: No current field',
+          };
+        }
+        state.playState.currentField = {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId(player.seatId),
+          isComplete: false,
+        };
+      }
+
+      if (room?.settings.gameMode === 'pro') {
+        state.playState.chomboRoundNumber ??= state.roundNumber;
+      }
+
+      if (!state.playState.currentField) {
+        return { success: false, error: 'Play field is unavailable' };
       }
 
       // Prevent playing on a field that is being completed
@@ -101,15 +134,61 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         };
       }
 
-      if (!roomGameState.isPlayerTurn(player.seatId)) {
-        return { success: false, error: "It's not your turn to play" };
-      }
-
       if (state.playState.currentField.cards.includes(card)) {
         return {
           success: false,
           error: 'Card already played on the field',
         };
+      }
+
+      if (
+        room?.settings.gameMode === 'pro' &&
+        !state.players.find(
+          (candidate) =>
+            candidate.seatId ===
+            state.blowState.currentHighestDeclaration?.seatId,
+        )?.isCOM &&
+        !state.playState.negriCard &&
+        state.playState.fields.length === 0 &&
+        state.playState.currentField.cards.length === 0 &&
+        state.blowState.currentHighestDeclaration?.seatId
+      ) {
+        const winnerSeatId = asSeatId(
+          state.blowState.currentHighestDeclaration.seatId,
+        );
+        const winner = state.players.find(
+          (candidate) => candidate.seatId === winnerSeatId,
+        );
+        if (winner) {
+          state.playState.chomboViolations = appendChomboCandidate(
+            state.playState.chomboViolations ?? [],
+            this.chomboService?.recordViolation(winnerSeatId, 'negri-forget'),
+          );
+        }
+      }
+
+      if (room?.settings.gameMode === 'pro' && !player.isCOM) {
+        const lastTanzenViolation = this.chomboService?.checkViolations(
+          asSeatId(player.seatId),
+          'check-last-card',
+          { player },
+        );
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          lastTanzenViolation,
+        );
+      }
+
+      if (room?.settings.gameMode === 'pro' && !player.isCOM) {
+        const fourJackViolation = this.chomboService?.checkViolations(
+          asSeatId(player.seatId),
+          'check-four-jack',
+          { player, hasBroken: player.hasBroken },
+        );
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          fourJackViolation,
+        );
       }
 
       const legalPlayError = this.playService.getCardPlayError(
@@ -118,19 +197,35 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         state.blowState?.currentTrump ?? null,
         card,
       );
-      if (legalPlayError) {
-        return { success: false, error: legalPlayError };
+      if (
+        room?.settings.gameMode === 'pro' &&
+        !player.isCOM &&
+        legalPlayError
+      ) {
+        const violation = this.chomboService?.checkViolations(
+          asSeatId(player.seatId),
+          'play-card',
+          {
+            player,
+            field: state.playState.currentField,
+            card,
+          },
+        );
+        if (violation) {
+          state.playState.chomboViolations = [
+            ...(state.playState.chomboViolations ?? []),
+            violation,
+          ];
+        }
       }
-
-      const room = await this.roomService.getRoom(roomId);
-
-      if (currentField.cards.length === 0) {
-        state.playState.fieldCheckpoint = createFieldCheckpoint(state);
+      if (legalPlayError && room?.settings.gameMode !== 'pro') {
+        return { success: false, error: legalPlayError };
       }
 
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
 
+      const currentField = state.playState.currentField;
       const playedBySeatIds = [...currentField.playedBySeatIds];
       playedBySeatIds.push(asSeatId(player.seatId));
       currentField.cards.push(card);
@@ -139,7 +234,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         currentField.baseCard = card;
       }
 
-      const activeFieldIdentity = getCurrentFieldIdentity(state);
       await this.gameEventLogService?.log({
         roomId,
         actionType: 'card_played',
@@ -147,8 +241,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         state,
         actionData: {
           card,
-          fieldIndex: activeFieldIdentity?.fieldIndex ?? null,
-          fieldAttemptId: activeFieldIdentity?.attemptId ?? null,
           fieldCards: [...currentField.cards],
           baseCard: currentField.baseCard,
           playedBySeatIds: [...playedBySeatIds],
@@ -178,16 +270,14 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         currentField.isComplete = true;
 
         await roomGameState.saveState();
-        if (!activeFieldIdentity) {
-          return {
-            success: false,
-            error: 'Field checkpoint is unavailable',
-          };
-        }
         const trigger: CompleteFieldTrigger = {
           roomId,
           delayMs: 3000,
-          fieldIdentity: activeFieldIdentity,
+          fieldIdentity: getCurrentFieldIdentity(state) ?? {
+            roundNumber: state.roundNumber,
+            fieldIndex: state.playState.fields.length,
+            attemptId: `legacy:${state.roundNumber}:${state.playState.fields.length}`,
+          },
           field: {
             ...currentField,
             cards: [...currentField.cards],

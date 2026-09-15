@@ -41,6 +41,7 @@ describe('CreateRoomUseCase', () => {
       teamAssignmentMethod: 'random',
       pointsToWin: 10,
       allowSpectators: true,
+      gameMode: 'pro',
     },
     players: [],
     createdAt: new Date(),
@@ -94,6 +95,7 @@ describe('CreateRoomUseCase', () => {
       roomName: 'Test Game Room',
       pointsToWin: 10,
       teamAssignmentMethod: 'random',
+      gameMode: 'pro',
       playerName: 'Test Player',
       socketId: 'socket-1',
       authenticatedUser: { id: userId, isAnonymous: false, profile: {} as any },
@@ -108,6 +110,7 @@ describe('CreateRoomUseCase', () => {
       }),
       10,
       'random',
+      'pro',
     );
     expect(roomService.joinRoom).toHaveBeenCalledWith(
       roomId,
@@ -164,4 +167,19 @@ describe('CreateRoomUseCase', () => {
     );
     expect(roomService.initCOMPlaceholders).not.toHaveBeenCalled();
   });
+  it('rejects an invalid game mode before creating a room', async () => {
+    const result = await createRoomUseCase.execute({
+      roomName: 'Invalid mode room',
+      pointsToWin: 10,
+      teamAssignmentMethod: 'random',
+      gameMode: 'invalid' as never,
+      playerName: 'Test Player',
+      socketId: 'socket-1',
+      authenticatedUser: { id: userId, isAnonymous: false, profile: {} as any },
+    });
+
+    expect(result).toEqual({ success: false, errorMessage: 'Invalid game mode' });
+    expect(roomService.createNewRoom).not.toHaveBeenCalled();
+  });
+
 });

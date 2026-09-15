@@ -285,6 +285,7 @@
     "search": "Search by room name",
     "defaultRoomName": "{name}'s Room",
     "pointsToWin": "Points to Win",
+    "proMode": "Pro mode (beta)",
     "teamAssignment": "Team Assignment",
     "teamAuto": "Auto",
     "teamManual": "Manual",

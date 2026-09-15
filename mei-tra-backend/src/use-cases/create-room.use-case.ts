@@ -37,10 +37,15 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         roomName,
         pointsToWin,
         teamAssignmentMethod,
+        gameMode,
         playerName,
         socketId,
         authenticatedUser,
       } = request;
+
+      if (gameMode !== undefined && gameMode !== 'normal' && gameMode !== 'pro') {
+        return { success: false, errorMessage: 'Invalid game mode' };
+      }
 
       if (!playerName) {
         this.logger.warn('Room creation attempted without player name');
@@ -67,12 +72,20 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         isAuthenticated: true,
       };
 
-      const room = await this.roomService.createNewRoom(
-        roomName,
-        hostUser,
-        pointsToWin,
-        teamAssignmentMethod,
-      );
+      const room = gameMode
+        ? await this.roomService.createNewRoom(
+            roomName,
+            hostUser,
+            pointsToWin,
+            teamAssignmentMethod,
+            gameMode,
+          )
+        : await this.roomService.createNewRoom(
+            roomName,
+            hostUser,
+            pointsToWin,
+            teamAssignmentMethod,
+          );
       createdRoomId = room.id;
 
       const joined = await this.roomService.joinRoom(room.id, hostUser);

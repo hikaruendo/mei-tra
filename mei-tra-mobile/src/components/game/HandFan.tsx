@@ -17,6 +17,7 @@ import {
   type HandDropPlacement,
 } from '@/lib/hand-drag';
 import { colors } from '@/theme/colors';
+import { classifyCardDrop } from '@meitra/game-client/drag-action';
 
 /** How far the finger must travel sideways before the card is picked up. */
 const DRAG_ACTIVATE_PX = 6;
@@ -46,6 +47,7 @@ interface HandFanProps {
   canReorder: boolean;
   /** Fires once per committed move, for the sound. */
   onReorder?: () => void;
+  onDropAction?: (card: string, action: 'play' | 'negri') => void;
 }
 
 export function HandFan({
@@ -60,11 +62,13 @@ export function HandFan({
   isCardDisabled,
   canReorder,
   onReorder,
+  onDropAction,
 }: HandFanProps) {
   const [order, setOrder] = useState(cards);
   const orderRef = useRef(order);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [drop, setDrop] = useState<HandDropPlacement | null>(null);
+  const dropActionRef = useRef<'play' | 'negri' | null>(null);
   // The release event can arrive before React has re-rendered the last move, so
   // the drop the reorder commits is read from here rather than from state.
   const dropRef = useRef<HandDropPlacement | null>(null);
@@ -101,6 +105,9 @@ export function HandFan({
 
   const endDrag = (card: string, committed: boolean) => {
     const placement = dropRef.current;
+    const action = dropActionRef.current;
+    dropActionRef.current = null;
+    if (committed && action) { onDropAction?.(card, action); return; }
     dropRef.current = null;
     setDraggingCard(null);
     setDrop(null);
@@ -144,7 +151,8 @@ export function HandFan({
               (isSelected ? -SELECTED_LIFT : 0)
             }
             onDragEnd={(committed) => endDrag(card, committed)}
-            onDragMove={(dx) => {
+            onDragMove={(dx, dy) => {
+              dropActionRef.current = classifyCardDrop(dy);
               const next = handDropPlacement(
                 orderRef.current,
                 card,
@@ -184,7 +192,7 @@ interface HandFanCardProps {
   isDragging: boolean;
   lift: number;
   onDragEnd: (committed: boolean) => void;
-  onDragMove: (dx: number) => void;
+  onDragMove: (dx: number, dy: number) => void;
   onDragStart: () => void;
   onPress?: () => void;
   reducedMotion: boolean | null;
@@ -239,17 +247,16 @@ function HandFanCard({
 
     panResponder.current = PanResponder.create({
       // A tap has to keep reaching the card underneath, so the drag only claims
-      // the touch once the finger moves sideways. Capturing is what lets it take
+      // the touch after a meaningful horizontal or vertical movement. Capturing is what lets it take
       // the touch off the Pressable that is already holding it.
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
         live.current.canReorder &&
-        Math.abs(gesture.dx) > DRAG_ACTIVATE_PX &&
-        Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) > DRAG_ACTIVATE_PX,
       onPanResponderGrant: () => live.current.onDragStart(),
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
-        live.current.onDragMove(gesture.dx);
+        live.current.onDragMove(gesture.dx, gesture.dy);
       },
       // Once the card is held, the surrounding scroll view must not take it away.
       onPanResponderTerminationRequest: () => false,

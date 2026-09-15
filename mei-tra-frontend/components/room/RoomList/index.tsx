@@ -64,6 +64,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const { backendStatus, isLoading } = useBackendStatus();
   const effectiveIsConnected = isConnected ?? roomSocketConnected;
   const effectiveIsConnecting = isConnecting ?? roomSocketConnecting;
@@ -98,10 +99,11 @@ export const RoomList: React.FC<RoomListProps> = ({
       user?.email?.split('@')[0]?.trim() ||
       'Host';
     const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
-    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random');
+    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
 
     setNewRoomName('');
     setPointsToWin(5);
+    setGameMode('normal');
   };
 
   return (
@@ -126,6 +128,15 @@ export const RoomList: React.FC<RoomListProps> = ({
               className={styles.pointsToWinInput}
             />
           </div>
+          <label className={styles.proModeLabel}>
+            <input
+              className={styles.proModeCheckbox}
+              type="checkbox"
+              checked={gameMode === 'pro'}
+              onChange={(e) => setGameMode(e.target.checked ? 'pro' : 'normal')}
+            />
+            <span>{t('room.proMode')}</span>
+          </label>
           <button
             type="submit"
             className={styles.createButton}

@@ -2,6 +2,7 @@ import type {
   BlowStateContract,
   CompletedFieldContract,
   FieldContract,
+  GameOverPayload,
   PlayerContract,
   TeamNames,
   TransportGamePhase,
@@ -26,9 +27,14 @@ export interface MobileGameSnapshot {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
+  revealedHands?: Partial<Record<SeatId, string[]>>;
+  openDeclared?: boolean;
+  openResolved?: boolean;
+  gameOver?: GameOverPayload | null;
   fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;
+  gameMode?: 'normal' | 'pro';
   paused: boolean;
   disconnectedSeatIds: string[];
   idleSeatIds: string[];

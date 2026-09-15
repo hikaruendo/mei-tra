@@ -923,4 +923,108 @@ describe('ReconnectionUseCase', () => {
     );
     expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
   });
+  it('restores a finished pro-mode game snapshot before room cleanup', async () => {
+    const room = {
+      id: 'room-finished',
+      hostSeatId: asSeatId('seat-1'),
+      status: RoomStatus.FINISHED,
+      settings: { gameMode: 'pro', teamNames: undefined },
+      players: [
+        {
+          seatId: asSeatId('seat-1'),
+          socketId: '',
+          userId: 'user-1',
+          isAuthenticated: true,
+          name: 'User 1',
+          hand: ['A♠'],
+          team: 0 as const,
+          isReady: true,
+          isHost: true,
+          isPasser: false,
+          joinedAt: new Date(),
+        },
+      ],
+    };
+    const state = {
+      players: [
+        {
+          seatId: asSeatId('seat-1'),
+          name: 'User 1',
+          team: 0 as const,
+          hand: ['A♠'],
+          isPasser: false,
+        },
+      ],
+      gamePhase: 'play' as const,
+      currentSeatId: asSeatId('seat-1'),
+      blowState: {
+        declarations: [],
+        actionHistory: [],
+        currentTrump: null,
+        currentHighestDeclaration: null,
+        lastPasserSeatId: null,
+        isRoundCancelled: false,
+        currentBlowIndex: 0,
+      },
+      playState: {
+        currentField: null,
+        negriCard: null,
+        negriSeatId: null,
+        neguri: {},
+        fields: [],
+        openDeclared: true,
+        openDeclarerSeatId: asSeatId('seat-1'),
+        openResolved: true,
+        revealedHands: { 'seat-1': ['A♠'] },
+        chomboViolations: [],
+        chomboReports: [],
+      },
+      teamScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
+      pointsToWin: 5,
+      gameOver: {
+        winner: 'Team 0',
+        winningTeam: 0 as const,
+        finalScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
+      },
+    };
+    const roomGameState = {
+      getState: jest.fn(() => state),
+      findSessionUserByUserId: jest.fn(),
+      findSessionUserBySeatId: jest.fn(),
+      findPlayerByActorId: jest.fn(),
+    };
+    const roomService = {
+      getRoom: jest.fn().mockResolvedValue(room),
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      handlePlayerReconnection: jest.fn().mockResolvedValue({ success: true }),
+      listRooms: jest.fn().mockResolvedValue([]),
+    } as Partial<IRoomService> as IRoomService;
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      { upsertSessionUser: jest.fn() } as unknown as IGameStateService,
+      createRoomMembershipService(),
+    );
+
+    const result = await useCase.execute({
+      roomId: 'room-finished',
+      socketId: 'socket-new',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        isAnonymous: false,
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      mode: 'active-game',
+      gameState: expect.objectContaining({
+        gameMode: 'pro',
+        openDeclared: true,
+        openResolved: true,
+        revealedHands: { 'seat-1': ['A♠'] },
+      }),
+    });
+  });
 });

@@ -8,8 +8,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--mt-accent-subtle);
-  border-radius: var(--mt-radius);
+  background: transparent;
+  border-radius: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .negriCard {
@@ -18,8 +21,8 @@
 }
 
 .cardFaceDown {
-  width: calc(2rem * var(--mt-card-scale));
-  height: calc(3rem * var(--mt-card-scale));
+  width: calc(1.38rem * var(--mt-card-scale));
+  height: calc(1.75rem * var(--mt-card-scale));
   margin: 0 calc(-15px * var(--mt-card-scale));
   display: flex;
   overflow: hidden;
@@ -30,4 +33,7 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  border: 0;
+  padding: 0;
+  background: transparent;
 }

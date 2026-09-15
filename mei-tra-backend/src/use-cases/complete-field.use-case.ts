@@ -34,6 +34,7 @@ import {
 } from '../adapters/game-contract-adapters';
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
+import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import {
   getCurrentFieldIdentity,
   getFieldIntegrityError,
@@ -52,6 +53,9 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('IChomboService')
+    private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: CompleteFieldRequest): Promise<CompleteFieldResponse> {
@@ -250,6 +254,10 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         const gameOverPayload: GameOverPayload = {
           winner: `Team ${winningTeam}`,
           winningTeam,
+          finalScores: state.teamScores,
+        };
+        state.gameOver = {
+          ...gameOverPayload,
           finalScores: state.teamScores,
         };
 

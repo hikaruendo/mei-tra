@@ -1,8 +1,12 @@
 import type {
   PlayerContract,
+  ChomboResolvedPayload,
+  ChomboHandRevealedPayload,
+  OpenDeclaredPayload,
   ReconnectionFailureCode,
   TeamNames,
   TrumpType,
+  ChomboViolationType,
 } from '@meitra/contracts/game';
 import type {
   AckableClientEvent,
@@ -339,7 +343,7 @@ interface GameContextValue extends MobileState {
   isHost: boolean;
   refreshRooms: () => void;
   resumeRoom: (roomId: string) => Promise<void>;
-  createRoom: (name: string, pointsToWin: number) => Promise<boolean>;
+  createRoom: (name: string, pointsToWin: number, gameMode?: 'normal' | 'pro') => Promise<boolean>;
   joinRoom: (roomId: string) => Promise<boolean>;
   watchRoom: (roomId: string) => Promise<boolean>;
   leaveRoom: () => Promise<boolean>;
@@ -353,6 +357,9 @@ interface GameContextValue extends MobileState {
   playCancelSound: () => void;
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
+  reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  declareOpen: () => void;
+  revealChomboHand: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
   removePlayer: (targetSeatId: string) => void;
@@ -386,6 +393,10 @@ const toMobileGamePatch = (
   negriCard: game.negriCard,
   negriSeatId: game.negriSeatId,
   revealedAgari: game.revealedAgari,
+  revealedHands: game.revealedHands,
+  openDeclared: game.openDeclared,
+  openResolved: game.openResolved,
+  gameOver: game.gameOver,
   fields: game.fields,
 });
 
@@ -761,6 +772,20 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       const snapshot = normalizeGameStatePayload(payload);
+      if (payload.gameOver) {
+        gameResultTokenRef.current += 1;
+        dispatch({
+          type: 'gameResult',
+          result: buildGameResultSnapshot({
+            payload: payload.gameOver,
+            players: snapshot.players,
+            viewerSeatId: snapshot.youSeatId,
+            isSpectator: snapshot.isSpectator,
+            teamNames: snapshot.teamNames,
+            token: gameResultTokenRef.current,
+          }),
+        });
+      }
       dispatch({
         type: 'game',
         // The bootstrap snapshot right after game start already carries the
@@ -937,6 +962,23 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
+    });
+    socket.on('chombo-hand-revealed', (payload: ChomboHandRevealedPayload) => {
+      applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
+    });
+    socket.on('open-declared', (payload: OpenDeclaredPayload) => {
+      applyGameServerEvent({ type: 'open-declared', payload });
+      dispatch({
+        type: 'notice',
+        message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+      });
+    });
+    socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
+      dispatch({ type: 'patchGame', patch: { teamScores: payload.scores } });
+      dispatch({
+        type: 'notice',
+        message: `Chombo report ${payload.isCorrect ? 'correct' : 'incorrect'}: Team ${payload.awardedTeam} receives 5 points.`,
+      });
     });
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
@@ -1122,12 +1164,13 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, [resyncActiveRoom]);
 
   const createRoom = useCallback(
-    async (name: string, pointsToWin: number) => {
+    async (name: string, pointsToWin: number, gameMode: 'normal' | 'pro' = 'normal') => {
       if (!canSendServerAction()) return false;
       const response = await emitAck('create-room', {
         name: name.trim(),
         pointsToWin,
         teamAssignmentMethod: 'random',
+        gameMode,
       });
       if (!response.success || !response.room) {
         dispatch({
@@ -1331,6 +1374,35 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const declareOpen = useCallback(() => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('declare-open', game.roomId, () => {
+      socketRef.current?.emit('declare-open', { roomId: game.roomId });
+    });
+  }, [emitOneWayAction]);
+
+  const revealChomboHand = useCallback(() => {
+    const game = stateRef.current.game;
+    const seatId = game?.youSeatId;
+    if (!game || !seatId) return;
+    emitOneWayAction('reveal-chombo-hand', game.roomId, () => {
+      socketRef.current?.emit('reveal-chombo-hand', { roomId: game.roomId, seatId });
+    });
+  }, [emitOneWayAction]);
+
+  const reportChombo = useCallback((violatorSeatId: string, violationType: ChomboViolationType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('report-chombo', game.roomId, () => {
+      socketRef.current?.emit('report-chombo', {
+        roomId: game.roomId,
+        violatorSeatId: asSeatId(violatorSeatId),
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
   const selectBaseSuit = useCallback((suit: string) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1440,6 +1512,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCancelSound,
       playHandReorderSound,
       playCard,
+      reportChombo,
+      declareOpen,
+      revealChomboHand,
       selectBaseSuit,
       revealBrokenHand,
       removePlayer,
@@ -1473,6 +1548,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       leaveRoom,
       passBlow,
       playCard,
+      reportChombo,
+      declareOpen,
+      revealChomboHand,
       playCardSelectionSound,
       playCancelSound,
       playHandReorderSound,

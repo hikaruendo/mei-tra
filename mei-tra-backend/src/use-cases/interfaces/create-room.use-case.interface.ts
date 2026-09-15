@@ -6,6 +6,7 @@ export interface CreateRoomRequest {
   roomName: string;
   pointsToWin: number;
   teamAssignmentMethod: 'random' | 'host-choice';
+  gameMode?: 'normal' | 'pro';
   playerName?: string;
   socketId: string;
   authenticatedUser?: AuthenticatedUser | null;

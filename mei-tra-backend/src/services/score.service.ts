@@ -4,6 +4,10 @@ import { IScoreService } from './interfaces/score-service.interface';
 
 @Injectable()
 export class ScoreService implements IScoreService {
+  addPoints(team: number, points: number, scores: { [key: number]: TeamScore }): void {
+    scores[team].play += points;
+    scores[team].total += points;
+  }
   calculatePlayPoints(declaredPairs: number, wonFields: number): number {
     const X = declaredPairs;
     const Y = wonFields;

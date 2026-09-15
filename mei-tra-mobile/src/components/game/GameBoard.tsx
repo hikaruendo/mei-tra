@@ -1,4 +1,5 @@
-import type { TrumpType } from '@meitra/contracts/game';
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import type { ChomboViolationType, TrumpType } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
@@ -61,10 +62,12 @@ interface GameBoardProps {
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
+  onDeclareOpen?: () => void;
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
   onPlayCard: (card: string) => void;
+  onReportChombo?: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
@@ -82,10 +85,12 @@ export function GameBoard({
   onDeclare,
   onPass,
   onSelectNegri,
+  onDeclareOpen = () => undefined,
   onCardSelection = () => undefined,
   onCancel = () => undefined,
   onHandReorder = () => undefined,
   onPlayCard,
+  onReportChombo = () => undefined,
   onSelectBaseSuit,
   onReplaceWithCOM,
   onLeave,
@@ -190,13 +195,21 @@ export function GameBoard({
     return counts;
   }, [game.fields]);
   const highest = game.blowState.currentHighestDeclaration;
+  const isProMode = game.gameMode === 'pro';
   const mustSelectNegri =
+    !isProMode &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
     highest?.seatId === game.youSeatId &&
     !game.negriCard;
   const isMyTurn =
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
+  const canPlaceProNegri =
+    isProMode &&
+    !game.isSpectator &&
+    highest?.seatId === game.youSeatId &&
+    !game.negriCard &&
+    game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
   const phaseLabel =
     game.gamePhase === 'blow'
@@ -204,6 +217,13 @@ export function GameBoard({
       : game.gamePhase === 'play'
         ? t('board.phasePlay')
         : t('board.phaseWaiting');
+  const canDeclareOpen =
+    isProMode &&
+    !game.isSpectator &&
+    game.gamePhase === 'play' &&
+    !game.openDeclared &&
+    !game.openResolved &&
+    Boolean(highest);
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
@@ -215,14 +235,10 @@ export function GameBoard({
       Boolean(
         selectedCard &&
           self &&
-          isCardPlayable(
-            self.hand,
-            selectedCard,
-            game.currentField,
-            currentTrump,
-          ),
+          (isProMode ||
+            isCardPlayable(self.hand, selectedCard, game.currentField, currentTrump)),
       ),
-    [currentTrump, game.currentField, selectedCard, self],
+    [currentTrump, game.currentField, isProMode, selectedCard, self],
   );
   const fieldCardsKey = game.currentField?.cards.join(',') ?? '';
 
@@ -327,6 +343,9 @@ export function GameBoard({
       >
         <View style={styles.topBar}>
           <Text style={styles.phase}>{phaseLabel}</Text>
+          {canDeclareOpen ? (
+            <Button onPress={onDeclareOpen}>オープン</Button>
+          ) : null}
           {highest ? (
             <Text style={styles.trumpBadge}>
               {trumpLabel(highest.trumpType)} {highest.numberOfPairs}
@@ -334,8 +353,15 @@ export function GameBoard({
           ) : null}
         </View>
 
+        {isProMode && game.gamePhase === 'play' && !game.isSpectator ? (
+          <ChomboReportPanel
+            players={opponentSlots.map(({ player }) => player)}
+            onReport={onReportChombo}
+          />
+        ) : null}
 
-        {showStrength && currentTrump ? (
+
+        {!isProMode && showStrength && currentTrump ? (
           <View style={styles.strengthPanel}>
             <Text style={styles.strengthOrder}>
               {getStrengthOrderLabel(currentTrump)}
@@ -570,6 +596,15 @@ export function GameBoard({
                   )
                 ) : null}
 
+            {isProMode && (isMyTurn || canPlaceProNegri) && !game.isSpectator ? (
+              <View style={styles.proDropZones}>
+                <Text style={styles.proDropZonePlay}>{t('board.choosePlayCard')} ↑</Text>
+                {highest?.seatId === self.seatId && !game.negriCard ? (
+                  <Text style={styles.proDropZoneNegri}>{t('seat.negri')} ↓</Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <HandFan
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
@@ -578,17 +613,18 @@ export function GameBoard({
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
-                (actionsDisabled ||
+                  (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
+                  actionsDisabled ||
                   Boolean(pendingAction) ||
-                  !isMyTurn ||
-                  !isCardPlayable(
-                    self.hand,
-                    card,
-                    game.currentField,
-                    currentTrump,
-                  ))
+                  (!isMyTurn && !canPlaceProNegri))
               }
               onReorder={onHandReorder}
+              onDropAction={(card, action) => {
+                if (isProMode && (isMyTurn || canPlaceProNegri)) {
+                  if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
+                  if (action === 'play' && isMyTurn) onPlayCard(card);
+                }
+              }}
               onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
               reducedMotion={reducedMotion}
               seatId={self.seatId}
@@ -689,7 +725,7 @@ export function GameBoard({
             >
               <Text style={styles.optionsCloseText}>×</Text>
             </Pressable>
-            {currentTrump ? (
+            {!isProMode && currentTrump ? (
               <Button
                 onPress={() => {
                   setShowStrength((v) => !v);
@@ -1045,6 +1081,20 @@ const styles = StyleSheet.create({
   instruction: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  proDropZones: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+    marginBottom: 6,
+  },
+  proDropZonePlay: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  proDropZoneNegri: {
+    color: colors.gold,
+    fontSize: 12,
   },
   selectedActions: {
     flexDirection: 'row',

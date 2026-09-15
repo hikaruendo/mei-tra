@@ -90,11 +90,16 @@ export interface GameStatePayload {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari?: string | null;
+  revealedHands?: Partial<Record<SeatId, string[]>>;
+  openDeclared?: boolean;
+  openResolved?: boolean;
+  gameOver?: GameOverPayload | null;
   fields: CompletedFieldContract[];
   roomId: string;
   hostSeatId: SeatId;
   pointsToWin: number;
   teamNames?: TeamNames;
+  gameMode?: 'normal' | 'pro';
 }
 
 export interface BlowUpdatedPayload {
@@ -205,6 +210,7 @@ export interface GameStartedPayload {
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
+  gameMode?: 'normal' | 'pro';
   currentTurnSeatId?: SeatId;
 }
 
@@ -228,7 +234,45 @@ export const PLAY_PHASE_REVEAL_DELAY_MS = 3000;
 
 export interface PlaySetupCompletePayload {
   negriCard: string;
+  negriSeatId: SeatId;
   startingSeatId: SeatId;
+}
+
+export type ChomboViolationType =
+  | 'negri-forget'
+  | 'wrong-suit'
+  | 'four-jack'
+  | 'last-tanzen'
+  | 'wrong-broken'
+  | 'wrong-open';
+
+export interface ReportChomboPayload {
+  roomId: string;
+  violatorSeatId: SeatId;
+  violationType: ChomboViolationType;
+}
+
+export interface DeclareOpenPayload {
+  roomId: string;
+}
+
+export interface RevealChomboHandPayload { roomId: string; seatId: SeatId; }
+
+export interface ChomboHandRevealedPayload { seatId: SeatId; hand: string[]; }
+
+export interface OpenDeclaredPayload {
+  declarerSeatId: SeatId;
+  hand: string[];
+  valid: boolean;
+}
+
+export interface ChomboResolvedPayload {
+  violatorSeatId: SeatId;
+  reporterSeatId: SeatId;
+  violationType: ChomboViolationType;
+  isCorrect: boolean;
+  awardedTeam: Team;
+  scores: TransportTeamScores;
 }
 
 export interface GameMessagePayload {

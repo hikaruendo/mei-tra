@@ -108,6 +108,11 @@ describe('recovery helpers', () => {
       negriCard: '5♣',
       negriSeatId: asSeatId('server-player'),
       revealedAgari: 'J♣',
+      gameOver: {
+        winner: 'Team 0',
+        winningTeam: 0,
+        finalScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
+      },
       fields: [completedField(['J♠', 'Q♠']), completedField(['J♠', 'Q♠'])],
       hostSeatId: asSeatId('server-player'),
       pointsToWin: 5,
@@ -118,6 +123,7 @@ describe('recovery helpers', () => {
     expect(snapshot.youSeatId).toBe('server-player');
     expect(snapshot.negriSeatId).toBe('server-player');
     expect(snapshot.revealedAgari).toBe('J♣');
+    expect(snapshot.gameOver?.winningTeam).toBe(0);
   });
 
   it('resolves the current seat from game state before userId', () => {

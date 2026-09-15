@@ -75,6 +75,24 @@
   }
 }
 
+.proModeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 0.25rem;
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.9rem);
+  white-space: nowrap;
+}
+
+.proModeCheckbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--mt-accent);
+}
+
 .createButton:hover {
   background: var(--mt-btn-primary-bg-hover);
   box-shadow: var(--mt-shadow-btn);

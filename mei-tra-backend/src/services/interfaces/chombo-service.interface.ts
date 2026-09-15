@@ -2,6 +2,12 @@ import { ChomboViolation, DomainPlayer, Field } from '../../types/game.types';
 import type { SeatId } from '../../types/identity.types';
 
 export interface IChomboService {
+  resolveReport(
+    violations: ChomboViolation[],
+    reporterSeatId: SeatId,
+    violatorSeatId: SeatId,
+    violationType: ChomboViolation['type'],
+  ): ChomboViolation | null;
   checkViolations(
     seatId: SeatId,
     action: string,
