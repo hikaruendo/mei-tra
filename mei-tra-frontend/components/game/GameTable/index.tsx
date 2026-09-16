@@ -310,6 +310,7 @@ export const GameTable: React.FC<GameTableProps> = ({
               }
               revealedHand={revealedHands[player_.seatId]}
               completedFields={teamCompletedFields}
+              completedFieldCount={completedFields.length}
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
               currentTrump={currentTrump}

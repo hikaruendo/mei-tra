@@ -27,6 +27,10 @@ import {
   type HandDropSide,
 } from '@meitra/game-client/hand-order';
 
+// SelectNegriUseCase closes the pro-mode Negri window once the round's fields
+// are all played.
+const PRO_NEGRI_MAX_FIELDS = 10;
+
 const HAND_CARD_METRICS = {
   width: 80,
   overlap: '-15px',
@@ -55,6 +59,8 @@ interface PlayerHandProps {
   hasActedInBlow?: boolean;
   revealedHand?: string[];
   completedFields: CompletedField[];
+  /** Fields completed this round by either team, unlike the team-filtered completedFields. */
+  completedFieldCount?: number;
   currentSeatId: string;
   currentField: Field | null;
   currentTrump: TrumpType | null;
@@ -88,6 +94,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   hasActedInBlow = false,
   revealedHand,
   completedFields,
+  completedFieldCount = 0,
   currentSeatId,
   currentField,
   currentTrump,
@@ -138,7 +145,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const autoRevealAttemptedRef = useRef(false);
   const handCardMetrics = HAND_CARD_METRICS;
   const { isValidCardPlay } = useCardValidation(player.hand, currentField, currentTrump);
-  const isCardPlayable = (card: string) => gameMode === 'pro' || isValidCardPlay(card);
+  // Pro mode deliberately lets an illegal card go out; the server records it as
+  // a chombo candidate.
+  const isCardPlayable = (card: string) =>
+    gameMode === 'pro' || isValidCardPlay(card).isValid;
 
   const isCurrentPlayer = currentSeatId === player.seatId;
   const canActAsCurrentPlayer = isCurrentPlayer && !isSpectator;
@@ -153,7 +163,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     gameMode === 'normal' && gamePhase === 'play' && canActAsCurrentPlayer && isWinningPlayer && !negriCard;
   const canPlaceProNegri =
     gameMode === 'pro' && gamePhase === 'play' && canActAsCurrentPlayer &&
-    isWinningPlayer && !negriCard;
+    isWinningPlayer && !negriCard &&
+    completedFieldCount < PRO_NEGRI_MAX_FIELDS;
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
@@ -385,7 +396,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       gamePhase === 'play' &&
       (action === 'negri' || whoseTurn === currentSeatId)
     ) {
-      if (action === 'negri' && isWinningPlayer && !negriCard) {
+      if (action === 'negri' && canPlaceProNegri) {
         gameActions.selectNegri(card);
       } else if (action === 'play') {
         gameActions.playCard(card);
