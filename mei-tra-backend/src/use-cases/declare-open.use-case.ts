@@ -2,6 +2,10 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import type { OpenDeclaredPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
+import {
+  appendChomboCandidate,
+  findActiveChomboCandidate,
+} from '../domain/chombo-candidates';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { OpenDeclarationService } from '../services/open-declaration.service';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
@@ -47,13 +51,23 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     if (!state.blowState.currentHighestDeclaration) {
       return { success: false, error: 'Open requires a completed declaration' };
     }
-    if (state.playState.openDeclared) {
+    if (state.playState.openResolved) {
+      return { success: false, error: 'Open has already been declared' };
+    }
+    // A wrong open only locks out the seat that made it, not the whole round.
+    if (
+      findActiveChomboCandidate(
+        state.playState.chomboViolations ?? [],
+        asSeatId(player.seatId),
+        'wrong-open',
+      )
+    ) {
       return { success: false, error: 'Open has already been declared' };
     }
     if (player.hand.length > OPEN_MAX_HAND_SIZE) {
       return {
         success: false,
-        error: `Open is only available with ${OPEN_MAX_HAND_SIZE} or fewer cards in hand`,
+        error: 'Open is only available with four or fewer cards in hand',
       };
     }
     // The last field of a round is completed on a delay, so an empty hand
@@ -97,10 +111,10 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
         asSeatId(player.seatId),
         'wrong-open',
       );
-      state.playState.chomboViolations = [
-        ...(state.playState.chomboViolations ?? []),
+      state.playState.chomboViolations = appendChomboCandidate(
+        state.playState.chomboViolations ?? [],
         violation,
-      ];
+      );
       await roomGameState.saveState();
       return { success: true, events };
     }
