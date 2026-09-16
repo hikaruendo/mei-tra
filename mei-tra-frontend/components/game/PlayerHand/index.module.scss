@@ -128,8 +128,11 @@
 }
 
 /* Card states */
+/* dnd-kit does not capture the pointer, so while a pro-mode card is held the
+   cards it passes over would take :hover and lift one after another. The
+   :where() keeps these selectors at their old specificity. */
 .card.selected,
-.card:hover {
+:where(.handContainer:not(.holdingCard)) .card:hover {
   transform: translateY(calc((var(--card-translate-y, 0px) - var(--player-hand-card-hover-lift, 28px)) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
   z-index: calc(var(--card-index, 0) + 1) !important;
   margin: 0 var(--player-hand-card-scaled-hover-overlap, calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale)));
@@ -150,6 +153,13 @@
     translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale)))
     rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
   box-shadow: var(--shadow-selected);
+}
+
+/* The overlay sits under the pointer for the whole drag. It has to let hit
+   tests through, or the reorder hit test finds the overlay instead of the
+   hand card beneath it. */
+.dragOverlay {
+  pointer-events: none;
 }
 
 .dragOverlayCard {
@@ -989,7 +999,7 @@
   }
 
   .card.selected,
-  .card:hover {
+  :where(.handContainer:not(.holdingCard)) .card:hover {
     transform: translateY(calc(-20px * var(--mt-card-scale))) rotate(0deg) scale(1.1) !important;
     z-index: var(--z-index-card);
     margin: 0 var(--spacing-md);
@@ -1265,7 +1275,7 @@
   }
 
   .playerPosition.bottom .card.selected,
-  .playerPosition.bottom .card:hover {
+  .playerPosition.bottom :where(.handContainer:not(.holdingCard)) .card:hover {
     z-index: calc(var(--card-index, 0) + 1) !important;
     transform: translateY(calc((var(--card-translate-y, 0px) - 26px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
     margin: 0 calc(-0.72rem * var(--mt-card-scale));
