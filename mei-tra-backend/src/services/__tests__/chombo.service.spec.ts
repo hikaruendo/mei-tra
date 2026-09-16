@@ -50,4 +50,36 @@ describe('ChomboService', () => {
       }),
     ).toEqual(expect.objectContaining({ type: 'wrong-suit' }));
   });
+
+  it('leaves a Joker held back at two cards to the last-tanzen check', () => {
+    const service = new ChomboService(new PlayService(new CardService()));
+    const field = {
+      cards: ['9♠'],
+      playedBySeatIds: [asSeatId('seat-0')],
+      baseCard: '9♠',
+      dealerSeatId: asSeatId('seat-0'),
+      isComplete: false,
+    };
+    const player = (hand: string[]) => ({
+      seatId: asSeatId('seat-1'),
+      name: 'Player',
+      team: 0 as const,
+      hand,
+      isPasser: false,
+    });
+
+    expect(
+      service.checkViolations(asSeatId('seat-1'), 'play-card', {
+        player: player(['5♠', 'JOKER']),
+        field,
+        card: '5♠',
+        trump: 'club',
+      }),
+    ).toBeNull();
+    expect(
+      service.checkViolations(asSeatId('seat-1'), 'check-last-card', {
+        player: player(['JOKER']),
+      }),
+    ).toEqual(expect.objectContaining({ type: 'last-tanzen' }));
+  });
 });
