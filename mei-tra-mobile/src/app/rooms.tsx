@@ -92,6 +92,11 @@ export default function RoomsScreen() {
         roomName.trim() || t('rooms.defaultRoomName', { name: displayName });
       const success = await createRoom(name, points, gameMode);
       if (success) {
+        // Web clears the form here too; otherwise the next room silently
+        // inherits the pro toggle.
+        setRoomName('');
+        setPointsToWin('5');
+        setGameMode('normal');
         router.push('/room/current');
         void requestRegistration();
       }
