@@ -69,6 +69,7 @@ import {
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
 import { completedFieldKey } from '@meitra/game-client/completed-field';
+import { serverErrorKey } from '@meitra/game-client/server-errors';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import {
   DEFAULT_USER_PREFERENCES,
@@ -224,6 +225,7 @@ const mergePlayersPreservingIdentity = (
 export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
+  const tServerErrors = useTranslations('serverErrors');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
   const preferences = normalizeUserPreferences(user?.profile?.preferences);
@@ -428,6 +430,16 @@ export const useGame = () => {
         t(fallbackTeam === 0 ? 'teamRed' : 'teamBlack'),
       ),
     [teamNames, t],
+  );
+
+  // The server sends its errors as English text; show the translation when the
+  // message is one this app knows.
+  const translateServerError = useCallback(
+    (message: string) => {
+      const key = serverErrorKey(message);
+      return key ? tServerErrors(key as 'internalServerError') : message;
+    },
+    [tServerErrors],
   );
 
   const syncDisconnectedSeatIdsFromPlayers = useCallback(
@@ -982,7 +994,10 @@ export const useGame = () => {
       },
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
-        setNotification({ message, type: 'error' });
+        setNotification({
+          message: translateServerError(message),
+          type: 'error',
+        });
       },
       'open-declared': (payload: OpenDeclaredPayload) => {
         applyGameServerEvent({ type: 'open-declared', payload });
@@ -1319,6 +1334,7 @@ export const useGame = () => {
     getTeamLabel,
     t,
     tStatus,
+    translateServerError,
     updateFirstTurnReveal,
     startDealAnimation,
     playSoundEffect,
