@@ -49,16 +49,6 @@ describe('SupabaseGameStateRepository', () => {
             isExpired: false,
           },
         ],
-        chomboReports: [
-          {
-            reporterSeatId: secondSeatId,
-            violatorSeatId: firstSeatId,
-            violationType: 'wrong-suit' as const,
-            resolved: true,
-            awardedTeam: 0 as const,
-            timestamp: 1,
-          },
-        ],
       },
       gameOver: {
         winner: 'Team 0',
@@ -180,9 +170,6 @@ describe('SupabaseGameStateRepository', () => {
     expect(state?.gameOver).toEqual(gameStateRow.state_data.gameOver);
     expect(state?.playState?.chomboViolations).toEqual(
       gameStateRow.state_data.playState.chomboViolations,
-    );
-    expect(state?.playState?.chomboReports).toEqual(
-      gameStateRow.state_data.playState.chomboReports,
     );
   });
 

@@ -9,6 +9,7 @@ import {
   BlowPassedReplayDetails,
   BrokenHandRevealedReplayDetails,
   CardPlayedReplayDetails,
+  ChomboReportedReplayDetails,
   FieldCompletedReplayDetails,
   FieldRecoveredReplayDetails,
   GameHistoryContext,
@@ -388,6 +389,13 @@ export class GameEventLogService implements IGameEventLogService {
           kind: 'play',
           details: details as FieldCompletedReplayDetails,
         };
+      case 'chombo_reported':
+        return {
+          ...base,
+          actionType: entry.actionType,
+          kind: 'play',
+          details: details as ChomboReportedReplayDetails,
+        };
       case 'round_completed':
         return {
           ...base,
@@ -462,6 +470,8 @@ export class GameEventLogService implements IGameEventLogService {
         return 'Field restored after invalid game state';
       case 'field_completed':
         return this.formatFieldCompletedSummary(actionData);
+      case 'chombo_reported':
+        return this.formatChomboReportedSummary(playerLabel, actionData);
       case 'round_completed':
         return this.formatRoundCompletedSummary(actionData);
       case 'round_cancelled':
@@ -489,6 +499,7 @@ export class GameEventLogService implements IGameEventLogService {
     | CardPlayedReplayDetails
     | FieldRecoveredReplayDetails
     | FieldCompletedReplayDetails
+    | ChomboReportedReplayDetails
     | RoundCompletedReplayDetails
     | RoundCancelledReplayDetails
     | RoundResetReplayDetails
@@ -586,6 +597,19 @@ export class GameEventLogService implements IGameEventLogService {
             : [],
         };
       }
+      case 'chombo_reported':
+        return {
+          violatorSeatId: this.readSeatId(actionData, 'violatorSeatId'),
+          violationType:
+            typeof actionData.violationType === 'string'
+              ? actionData.violationType
+              : null,
+          isCorrect: actionData.isCorrect === true,
+          awardedTeam:
+            typeof actionData.awardedTeam === 'number'
+              ? actionData.awardedTeam
+              : null,
+        };
       case 'round_completed':
         return {
           declaringTeam:
@@ -667,6 +691,7 @@ export class GameEventLogService implements IGameEventLogService {
       | CardPlayedReplayDetails
       | FieldRecoveredReplayDetails
       | FieldCompletedReplayDetails
+      | ChomboReportedReplayDetails
       | RoundCompletedReplayDetails
       | RoundCancelledReplayDetails
       | RoundResetReplayDetails
@@ -738,6 +763,14 @@ export class GameEventLogService implements IGameEventLogService {
           this.playerDetail('winner', entry, typedDetails.winnerSeatId),
           this.teamDetail('winnerTeam', typedDetails.winnerTeam),
           this.cardsDetail('cards', typedDetails.cards),
+        ].filter((item): item is GameHistoryReplayDetailItem => Boolean(item));
+      }
+      case 'chombo_reported': {
+        const typedDetails = details as ChomboReportedReplayDetails;
+        return [
+          this.playerDetail('violator', entry, typedDetails.violatorSeatId),
+          this.textDetail('violation', typedDetails.violationType),
+          this.teamDetail('awardedTeam', typedDetails.awardedTeam),
         ].filter((item): item is GameHistoryReplayDetailItem => Boolean(item));
       }
       case 'round_completed': {
@@ -919,6 +952,25 @@ export class GameEventLogService implements IGameEventLogService {
     return value && typeof value === 'object' && value !== null
       ? (value as Record<string, unknown>)
       : null;
+  }
+
+  private formatChomboReportedSummary(
+    playerLabel: string,
+    actionData: Record<string, unknown>,
+  ): string {
+    const violatorLabel =
+      this.resolvePlayerLabel(
+        actionData,
+        this.readSeatId(actionData, 'violatorSeatId'),
+      ) ?? 'Unknown player';
+    const violationType =
+      typeof actionData.violationType === 'string'
+        ? actionData.violationType
+        : 'chombo';
+
+    return actionData.isCorrect === true
+      ? `${playerLabel} reported ${violatorLabel} for ${violationType}`
+      : `${playerLabel} reported ${violatorLabel} for ${violationType}, but there was none`;
   }
 
   private readSeatId(actionData: Record<string, unknown>, key: string) {

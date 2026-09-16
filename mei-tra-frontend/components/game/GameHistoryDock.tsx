@@ -39,6 +39,7 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   card_played: 'actionTypes.card_played',
   field_recovered: 'actionTypes.field_recovered',
   field_completed: 'actionTypes.field_completed',
+  chombo_reported: 'actionTypes.chombo_reported',
   round_completed: 'actionTypes.round_completed',
   round_cancelled: 'actionTypes.round_cancelled',
   round_reset: 'actionTypes.round_reset',
@@ -48,6 +49,16 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   player_joined: 'actionTypes.player_joined',
   player_left: 'actionTypes.player_left',
 } as const;
+
+// The history stores the violation as the rule name the server uses, which the
+// report panel already names for players.
+const CHOMBO_VIOLATION_MESSAGE_KEYS: Record<string, string> = {
+  'negri-forget': 'negriForget',
+  'wrong-suit': 'wrongSuit',
+  'four-jack': 'fourJack',
+  'last-tanzen': 'lastTanzen',
+  'wrong-open': 'wrongOpen',
+};
 
 const extractScoreTotals = (
   value: Record<string, unknown> | null,
@@ -138,6 +149,7 @@ export function GameHistoryDock({
 }: GameHistoryDockProps) {
   const t = useTranslations('gameHistoryDock');
   const trumpT = useTranslations('blowControls');
+  const chomboT = useTranslations('chomboReport');
   const getActionLabel = (actionType: GameHistoryReplayActionType) =>
     t(ACTION_TYPE_MESSAGE_KEYS[actionType] as never);
   const getDetailLabel = (
@@ -569,6 +581,20 @@ export function GameHistoryDock({
           winner: getDetailValue(event, 'winner') ?? t('unknownPlayer'),
           team: getDetailValue(event, 'winnerTeam') ?? t('unknownValue'),
         } as never);
+      case 'chombo_reported': {
+        const violation = getDetailValue(event, 'violation');
+        const violationKey = violation
+          ? CHOMBO_VIOLATION_MESSAGE_KEYS[violation]
+          : undefined;
+        return t('summaries.chombo_reported' as never, {
+          player,
+          violator: getDetailValue(event, 'violator') ?? t('unknownPlayer'),
+          violation: violationKey
+            ? chomboT(violationKey as never)
+            : (violation ?? t('unknownValue')),
+          team: getDetailValue(event, 'awardedTeam') ?? t('unknownValue'),
+        } as never);
+      }
       case 'round_completed':
         return t('summaries.round_completed' as never, {
           team: getDetailValue(event, 'declaringTeam') ?? t('unknownValue'),

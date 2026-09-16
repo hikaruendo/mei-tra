@@ -1,4 +1,3 @@
-import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { ChomboResolvedPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
@@ -10,7 +9,7 @@ import {
 } from './interfaces/report-chombo.use-case.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
 import { completeRoundAfterChombo } from './helpers/round-completion.helper';
-import { ChomboService } from '../services/chombo.service';
+import type { IChomboService } from '../services/interfaces/chombo-service.interface';
 import type { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import type { IScoreService } from '../services/interfaces/score-service.interface';
 
@@ -18,8 +17,8 @@ import type { IScoreService } from '../services/interfaces/score-service.interfa
 export class ReportChomboUseCase implements IReportChomboUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
-    @Optional() private readonly chomboService?: ChomboService,
-    @Optional() @Inject('IScoreService') private readonly scoreService?: IScoreService,
+    @Inject('IChomboService') private readonly chomboService: IChomboService,
+    @Inject('IScoreService') private readonly scoreService: IScoreService,
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
@@ -62,32 +61,28 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       return { success: false, error: 'You can only report the opposing team' };
     }
 
-    const persistedViolation = this.chomboService?.resolveReport(
+    const persistedViolation = this.chomboService.resolveReport(
       state.playState.chomboViolations ?? [],
       asSeatId(reporter.seatId),
       asSeatId(violator.seatId),
       request.violationType,
-    ) ?? findActiveChomboCandidate(state.playState.chomboViolations ?? [], asSeatId(violator.seatId), request.violationType);
-    if (persistedViolation && !persistedViolation.reportedBySeatId) persistedViolation.reportedBySeatId = asSeatId(reporter.seatId);
+    );
     const isCorrect = Boolean(persistedViolation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;
-    if (this.scoreService) {
-      this.scoreService.addPoints(awardedTeam, 5, state.teamScores);
-    } else {
-      state.teamScores[awardedTeam].play += 5;
-      state.teamScores[awardedTeam].total += 5;
-    }
-    state.playState.chomboReports = [
-      ...(state.playState.chomboReports ?? []),
-      {
-        violatorSeatId: asSeatId(violator.seatId),
+    this.scoreService.addPoints(awardedTeam, 5, state.teamScores);
+
+    await this.gameEventLogService?.log({
+      roomId: request.roomId,
+      actionType: 'chombo_reported',
+      actorSeatId: asSeatId(reporter.seatId),
+      state,
+      actionData: {
+        violatorSeatId: violator.seatId,
         violationType: request.violationType,
-        reporterSeatId: asSeatId(reporter.seatId),
-        resolved: true,
+        isCorrect,
         awardedTeam,
-        timestamp: Date.now(),
       },
-    ];
+    });
 
     const payload: ChomboResolvedPayload = {
       violatorSeatId: asSeatId(violator.seatId),
@@ -120,6 +115,7 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       ],
       delayedEvents: completion.delayedEvents,
       gameOver: completion.gameOver,
+      roundStoppedEarly: true,
     };
   }
 }
