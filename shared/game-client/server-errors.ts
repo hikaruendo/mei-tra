@@ -66,6 +66,7 @@ const SERVER_ERROR_KEYS = new Map<string, string>([
   ["Game state error: No current field", 'gameStateErrorNoCurrentField'],
   ["Game state not found", 'gameStateNotFound'],
   ["Host cannot moderate themselves", 'hostCannotModerateThemselves'],
+  ["In Tanzen round, you must play the Joker if you have it.", 'inTanzenRoundYouMustPlayTheJoker'],
   ["Internal server error", 'internalServerError'],
   ["Invalid declaration", 'invalidDeclaration'],
   ["It's not your turn to declare", 'itsNotYourTurnToDeclare'],
@@ -87,6 +88,7 @@ const SERVER_ERROR_KEYS = new Map<string, string>([
   ["Open is only available during play", 'openIsOnlyAvailableDuringPlay'],
   ["Open is only available in pro mode", 'openIsOnlyAvailableInProMode'],
   ["Open is only available while you hold cards", 'openIsOnlyAvailableWhileYouHoldCards'],
+  ["Open is only available with four or fewer cards in hand", 'openIsOnlyAvailableWithFourOrFewer'],
   ["Open requires a completed declaration", 'openRequiresACompletedDeclaration'],
   ["Play field is unavailable", 'playFieldIsUnavailable'],
   ["Play is settled after a valid open", 'playIsSettledAfterAValidOpen'],
@@ -116,14 +118,77 @@ const SERVER_ERROR_KEYS = new Map<string, string>([
 const SPECTATOR_ACTION_PREFIX = 'Spectators cannot ';
 const SPECTATOR_ACTION_KEY = 'spectatorAction';
 
-/** Every key `serverErrorKey` can return, for the catalogue tests. */
-export const SERVER_ERROR_TRANSLATION_KEYS: readonly string[] = [
-  ...new Set([...SERVER_ERROR_KEYS.values(), SPECTATOR_ACTION_KEY]),
+/**
+ * Messages the server builds from game state. Each regex is anchored and its
+ * capture groups are named in `params`, so the client can feed them to its own
+ * placeholders instead of showing the English sentence.
+ */
+const SERVER_ERROR_PATTERNS: readonly {
+  readonly pattern: RegExp;
+  readonly key: string;
+  readonly params: readonly string[];
+}[] = [
+  {
+    pattern: /^You must play the Joker since you have no (.+) cards\.$/,
+    key: 'youMustPlayTheJokerSinceYouHaveNoSuitCards',
+    params: ['suit'],
+  },
+  {
+    pattern: /^You must play a card of suit (.+)\.$/,
+    key: 'youMustPlayACardOfSuit',
+    params: ['suit'],
+  },
+  {
+    pattern: /^Invalid team for seat (.+)$/,
+    key: 'invalidTeamForSeat',
+    params: ['seatId'],
+  },
+  {
+    pattern: /^Seat (.+) not found$/,
+    key: 'seatNotFound',
+    params: ['seatId'],
+  },
 ];
 
+export interface ServerErrorTranslation {
+  key: string;
+  params?: Record<string, string>;
+}
+
+/** Every key `serverErrorTranslation` can return, for the catalogue tests. */
+export const SERVER_ERROR_TRANSLATION_KEYS: readonly string[] = [
+  ...new Set([
+    ...SERVER_ERROR_KEYS.values(),
+    ...SERVER_ERROR_PATTERNS.map((entry) => entry.key),
+    SPECTATOR_ACTION_KEY,
+  ]),
+];
+
+export function serverErrorTranslation(
+  message: string,
+): ServerErrorTranslation | null {
+  const exact = SERVER_ERROR_KEYS.get(message);
+  if (exact) {
+    return { key: exact };
+  }
+
+  for (const { pattern, key, params } of SERVER_ERROR_PATTERNS) {
+    const match = pattern.exec(message);
+    if (match) {
+      return {
+        key,
+        params: Object.fromEntries(
+          params.map((name, index) => [name, match[index + 1] ?? '']),
+        ),
+      };
+    }
+  }
+
+  return message.startsWith(SPECTATOR_ACTION_PREFIX)
+    ? { key: SPECTATOR_ACTION_KEY }
+    : null;
+}
+
 export function serverErrorKey(message: string): string | null {
-  return (
-    SERVER_ERROR_KEYS.get(message) ??
-    (message.startsWith(SPECTATOR_ACTION_PREFIX) ? SPECTATOR_ACTION_KEY : null)
-  );
+  return serverErrorTranslation(message)?.key ?? null;
 }

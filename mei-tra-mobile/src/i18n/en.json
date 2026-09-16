@@ -163,6 +163,7 @@
     "gameStateErrorNoCurrentField": "Game state error: No current field",
     "gameStateNotFound": "Game state not found",
     "hostCannotModerateThemselves": "Host cannot moderate themselves",
+    "inTanzenRoundYouMustPlayTheJoker": "In Tanzen round, you must play the Joker if you have it.",
     "internalServerError": "Internal server error",
     "invalidDeclaration": "Invalid declaration",
     "itsNotYourTurnToDeclare": "It's not your turn to declare",
@@ -184,6 +185,7 @@
     "openIsOnlyAvailableDuringPlay": "Open is only available during play",
     "openIsOnlyAvailableInProMode": "Open is only available in pro mode",
     "openIsOnlyAvailableWhileYouHoldCards": "Open is only available while you hold cards",
+    "openIsOnlyAvailableWithFourOrFewer": "Open is only available with four or fewer cards in hand",
     "openRequiresACompletedDeclaration": "Open requires a completed declaration",
     "playerDoesNotHaveBrokenHand": "Player does not have broken hand",
     "playerMismatchForBrokenHand": "Player mismatch for broken hand",
@@ -207,7 +209,11 @@
     "youCanOnlyReportTheOpposingTeam": "You can only report the opposing team",
     "youHaveAlreadyDeclaredInThisBlowPhase": "You have already declared in this blow phase",
     "youHaveAlreadyPassedInThisBlowPhase": "You have already passed in this blow phase",
-    "spectatorAction": "Spectators cannot do that"
+    "spectatorAction": "Spectators cannot do that",
+    "invalidTeamForSeat": "Invalid team for seat {seatId}",
+    "seatNotFound": "Seat {seatId} not found",
+    "youMustPlayACardOfSuit": "You must play a card of suit {suit}.",
+    "youMustPlayTheJokerSinceYouHaveNoSuitCards": "You must play the Joker since you have no {suit} cards."
   },
   "upgrade": {
     "title": "Create your account",

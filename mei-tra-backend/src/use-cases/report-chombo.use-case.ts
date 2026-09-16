@@ -69,7 +69,13 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
     );
     const isCorrect = Boolean(persistedViolation);
     const awardedTeam = isCorrect ? reporter.team : violator.team;
-    this.scoreService.addPoints(awardedTeam, 5, state.teamScores);
+    this.scoreService.addPoints(
+      awardedTeam,
+      5,
+      state.teamScores,
+      state.teamScoreRecords,
+      'Chombo points',
+    );
 
     await this.gameEventLogService?.log({
       roomId: request.roomId,

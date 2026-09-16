@@ -158,6 +158,58 @@ describe('DeclareOpenUseCase', () => {
     expect(result.delayedEvents).toBeUndefined();
   });
 
+  it('still lets an opposing seat open after another seat opened wrongly', async () => {
+    const wrongOpener = createMockedUseCase(players[0], false);
+    await wrongOpener.useCase.execute({ roomId: 'room-1', actorId: 'user-1' });
+
+    const defender = createMockedUseCase(players[2], false);
+    const result = await defender.useCase.execute({
+      roomId: 'room-1',
+      actorId: 'user-3',
+    });
+
+    expect(result.success).toBe(true);
+    expect(defender.openRules.canDeclareOpen).toHaveBeenCalled();
+    expect(state.playState?.chomboViolations).toEqual([
+      wrongOpener.violation,
+      defender.violation,
+    ]);
+  });
+
+  it('rejects a second open from the seat that already opened wrongly', async () => {
+    const { useCase, openRules } = createMockedUseCase(players[0], false);
+    await useCase.execute({ roomId: 'room-1', actorId: 'user-1' });
+    openRules.canDeclareOpen.mockClear();
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      actorId: 'user-1',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Open has already been declared',
+    });
+    expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
+    expect(state.playState?.chomboViolations).toHaveLength(1);
+  });
+
+  it('rejects an open once a valid open has settled the round', async () => {
+    const { useCase, openRules } = createMockedUseCase(players[2], true);
+    state.playState!.openResolved = true;
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      actorId: 'user-3',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Open has already been declared',
+    });
+    expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
+  });
+
   it(`rejects an open while the player holds more than ${OPEN_MAX_HAND_SIZE} cards`, async () => {
     const declarer = seat(
       'declarer',
@@ -176,7 +228,7 @@ describe('DeclareOpenUseCase', () => {
 
     expect(result).toEqual({
       success: false,
-      error: `Open is only available with ${OPEN_MAX_HAND_SIZE} or fewer cards in hand`,
+      error: 'Open is only available with four or fewer cards in hand',
     });
     expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
     expect(state.playState?.openDeclared).toBe(false);

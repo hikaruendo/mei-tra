@@ -178,8 +178,10 @@ describe('CreateRoomUseCase', () => {
       authenticatedUser: { id: userId, isAnonymous: false, profile: {} as any },
     });
 
-    expect(result).toEqual({ success: false, errorMessage: 'Invalid game mode' });
+    expect(result).toEqual({
+      success: false,
+      errorMessage: 'Invalid game mode',
+    });
     expect(roomService.createNewRoom).not.toHaveBeenCalled();
   });
-
 });

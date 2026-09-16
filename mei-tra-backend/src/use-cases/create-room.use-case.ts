@@ -43,7 +43,11 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         authenticatedUser,
       } = request;
 
-      if (gameMode !== undefined && gameMode !== 'normal' && gameMode !== 'pro') {
+      if (
+        gameMode !== undefined &&
+        gameMode !== 'normal' &&
+        gameMode !== 'pro'
+      ) {
         return { success: false, errorMessage: 'Invalid game mode' };
       }
 

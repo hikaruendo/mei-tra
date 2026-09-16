@@ -18,7 +18,10 @@ import { IGameStateRepository } from '../../repositories/interfaces/game-state.r
 import type { LogGameEventInput } from '../../services/interfaces/game-event-log.service.interface';
 import { asSeatId } from '../../types/identity.types';
 
-export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) {
+export async function createGame(
+  hand: string[],
+  otherPlayers?: DomainPlayer[],
+) {
   const repository: jest.Mocked<IGameStateRepository> = {
     create: jest.fn(),
     findByRoomId: jest.fn(),
@@ -37,13 +40,13 @@ export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) 
   game.setRoomId('room-1');
   const state = game.getState();
   let persistedState = state;
-  repository.update.mockImplementation(async (_roomId, patch) => {
+  repository.update.mockImplementation((_roomId, patch) => {
     persistedState = {
       ...persistedState,
       ...patch,
       version: (persistedState.version ?? 0) + 1,
     };
-    return persistedState;
+    return Promise.resolve(persistedState);
   });
   state.gamePhase = 'play';
   state.pointsToWin = 30;
@@ -81,7 +84,7 @@ export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) 
     numberOfPairs: 7,
     timestamp: 1,
   };
-  const updateRoomStatus = jest.fn(async () => true);
+  const updateRoomStatus = jest.fn(() => Promise.resolve(true));
   const loggedEvents: LogGameEventInput[] = [];
   const gameEventLog = {
     log: jest.fn((input: LogGameEventInput) => {
@@ -93,8 +96,8 @@ export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) 
     settings: { gameMode: 'pro' },
   };
   const roomService = {
-    getRoom: async () => room,
-    getRoomGameState: async () => game,
+    getRoom: () => Promise.resolve(room),
+    getRoomGameState: () => Promise.resolve(game),
     updateRoomStatus,
   };
   const module = await Test.createTestingModule({
@@ -106,7 +109,10 @@ export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) 
       DeclareBlowUseCase,
       PassBlowUseCase,
       SelectNegriUseCase,
-      { provide: OpenDeclarationService, useValue: new OpenDeclarationService(play) },
+      {
+        provide: OpenDeclarationService,
+        useValue: new OpenDeclarationService(play),
+      },
       { provide: ChomboService, useValue: chombo },
       { provide: 'IScoreService', useValue: new ScoreService() },
       { provide: 'ICardService', useValue: cards },

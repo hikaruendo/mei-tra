@@ -1,5 +1,6 @@
 import { asSeatId } from '../../types/identity.types';
 import { createGame } from './chombo-game.fixture';
+import type { GatewayEvent } from '../interfaces/gateway-event.interface';
 
 describe('Pro card play and chombo reporting', () => {
   it('does not create a chombo candidate for a COM player', async () => {
@@ -19,7 +20,7 @@ describe('Pro card play and chombo reporting', () => {
         violationType: 'negri-forget',
       });
       expect(result.events).toContainEqual(
-        expect.objectContaining({
+        expect.objectContaining<Partial<GatewayEvent>>({
           event: 'chombo-resolved',
           payload: expect.objectContaining({
             isCorrect: false,
@@ -49,7 +50,7 @@ describe('Pro card play and chombo reporting', () => {
       });
       expect(result.success).toBe(true);
       expect(result.events).toContainEqual(
-        expect.objectContaining({
+        expect.objectContaining<Partial<GatewayEvent>>({
           event: 'chombo-resolved',
           payload: expect.objectContaining({
             isCorrect: true,
@@ -80,7 +81,7 @@ describe('Pro card play and chombo reporting', () => {
       });
       expect(result.success).toBe(true);
       expect(result.events).toContainEqual(
-        expect.objectContaining({
+        expect.objectContaining<Partial<GatewayEvent>>({
           event: 'chombo-resolved',
           payload: expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
         }),
@@ -198,10 +199,24 @@ describe('Pro card play and chombo reporting', () => {
         dealerSeatId: asSeatId('winner'),
         isComplete: false,
       };
-      const played = await fixture.play.execute({ roomId: 'room-1', actorId: 'winner', card: 'A♥' });
+      const played = await fixture.play.execute({
+        roomId: 'room-1',
+        actorId: 'winner',
+        card: 'A♥',
+      });
       expect(played.success).toBe(true);
-      const report = await fixture.report.execute({ roomId: 'room-1', actorId: 'opponent', violatorSeatId: asSeatId('winner'), violationType: 'wrong-suit' });
-      expect(report.events).toContainEqual(expect.objectContaining({ event: 'chombo-resolved', payload: expect.objectContaining({ isCorrect: true }) }));
+      const report = await fixture.report.execute({
+        roomId: 'room-1',
+        actorId: 'opponent',
+        violatorSeatId: asSeatId('winner'),
+        violationType: 'wrong-suit',
+      });
+      expect(report.events).toContainEqual(
+        expect.objectContaining<Partial<GatewayEvent>>({
+          event: 'chombo-resolved',
+          payload: expect.objectContaining({ isCorrect: true }),
+        }),
+      );
     } finally {
       await fixture.module.close();
     }

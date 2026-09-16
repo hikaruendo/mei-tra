@@ -120,7 +120,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject('ISelectNegriUseCase')
     private readonly selectNegriUseCase: ISelectNegriUseCase,
     @Inject('IPlayCardUseCase')
-  private readonly playCardUseCase: IPlayCardUseCase,
+    private readonly playCardUseCase: IPlayCardUseCase,
     @Inject('IReportChomboUseCase')
     private readonly reportChomboUseCase: IReportChomboUseCase,
     @Inject('IDeclareOpenUseCase')
@@ -1827,7 +1827,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: ReportChomboPayload,
   ): Promise<void> {
-    if (this.spectatorGatewayEffectsService.rejectAction(client, 'report chombo')) {
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(client, 'report chombo')
+    ) {
       return;
     }
     if (await this.rejectInactiveMutatingAction(client, 'report chombo')) {
@@ -1837,10 +1839,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const result = await this.roomGameActionQueueService.run(
         data.roomId,
-        () => this.reportChomboUseCase.execute({
-          ...data,
-          actorId: this.getActorId(client),
-        }),
+        () =>
+          this.reportChomboUseCase.execute({
+            ...data,
+            actorId: this.getActorId(client),
+          }),
       );
       if (!result.success) {
         client.emit('error-message', result.error ?? 'Failed to report chombo');
@@ -1861,7 +1864,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string },
   ): Promise<void> {
-    if (this.spectatorGatewayEffectsService.rejectAction(client, 'declare open')) {
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(client, 'declare open')
+    ) {
       return;
     }
     if (await this.rejectInactiveMutatingAction(client, 'declare open')) {
@@ -1871,10 +1876,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const result = await this.roomGameActionQueueService.run(
         data.roomId,
-        () => this.declareOpenUseCase.execute({
-          roomId: data.roomId,
-          actorId: this.getActorId(client),
-        }),
+        () =>
+          this.declareOpenUseCase.execute({
+            roomId: data.roomId,
+            actorId: this.getActorId(client),
+          }),
       );
       if (!result.success) {
         client.emit('error-message', result.error ?? 'Failed to declare open');

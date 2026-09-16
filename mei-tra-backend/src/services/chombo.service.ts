@@ -12,8 +12,6 @@ import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class ChomboService implements IChomboService {
-  private violations: ChomboViolation[] = [];
-
   constructor(private readonly playService: PlayService) {}
 
   resolveReport(
@@ -22,7 +20,11 @@ export class ChomboService implements IChomboService {
     violatorSeatId: SeatId,
     violationType: ChomboViolation['type'],
   ): ChomboViolation | null {
-    const violation = findActiveChomboCandidate(violations, violatorSeatId, violationType);
+    const violation = findActiveChomboCandidate(
+      violations,
+      violatorSeatId,
+      violationType,
+    );
     if (violation) violation.reportedBySeatId = reporterSeatId;
     return violation ?? null;
   }
@@ -118,45 +120,6 @@ export class ChomboService implements IChomboService {
     };
 
     return violation;
-  }
-
-  reportViolation(
-    reporterSeatId: SeatId,
-    violatorSeatId: SeatId,
-    violationType: ChomboViolation['type'],
-    reporterTeam: number,
-    violatorTeam: number,
-  ): ChomboViolation | null {
-    // Can't report your own team
-    if (reporterTeam === violatorTeam) {
-      return null;
-    }
-
-    // Find the violation
-    const violation = findActiveChomboCandidate(this.violations, violatorSeatId, violationType);
-
-    if (!violation) {
-      return null;
-    }
-
-    // Mark violation as reported
-    violation.reportedBySeatId = reporterSeatId;
-    return violation;
-  }
-
-  expireViolations(): void {
-    this.violations = this.violations.map((v) => ({
-      ...v,
-      isExpired: true,
-    }));
-  }
-
-  getActiveViolations(): ChomboViolation[] {
-    return this.violations.filter((v) => !v.isExpired && !v.reportedBySeatId);
-  }
-
-  clearViolations(): void {
-    this.violations = [];
   }
 
   checkForBrokenHand(player: DomainPlayer): void {

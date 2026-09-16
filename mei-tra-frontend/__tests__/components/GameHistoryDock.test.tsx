@@ -218,8 +218,10 @@ describe('GameHistoryDock', () => {
     expect(screen.getByRole('columnheader', { name: 'ラウンド' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '宣言' })).toBeInTheDocument();
     const roundTable = screen.getByRole('table');
-    expect(within(roundTable).getByText('Current Player')).toBeInTheDocument();
-    expect(within(roundTable).queryByText('Stored Player')).not.toBeInTheDocument();
+    // The replay log keeps the name recorded with the event, so a later seat
+    // change does not rewrite who declared the blow at the time.
+    expect(within(roundTable).getByText('Stored Player')).toBeInTheDocument();
+    expect(within(roundTable).queryByText('Current Player')).not.toBeInTheDocument();
     expect(within(roundTable).queryByText('COM 4')).not.toBeInTheDocument();
     expect(within(roundTable).getByText('6組 / クラブ')).toBeInTheDocument();
     expect(within(roundTable).queryByText(/pairs/i)).not.toBeInTheDocument();

@@ -30,16 +30,6 @@ export interface IChomboService {
     seatId: SeatId,
     type: ChomboViolation['type'],
   ): ChomboViolation;
-  reportViolation(
-    reporterSeatId: SeatId,
-    violatorSeatId: SeatId,
-    violationType: ChomboViolation['type'],
-    reporterTeam: number,
-    violatorTeam: number,
-  ): ChomboViolation | null;
-  expireViolations(): void;
-  getActiveViolations(): ChomboViolation[];
-  clearViolations(): void;
   checkForBrokenHand(player: DomainPlayer): void;
   checkForRequiredBrokenHand(player: DomainPlayer): void;
 }

@@ -69,7 +69,7 @@ import {
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
 import { completedFieldKey } from '@meitra/game-client/completed-field';
-import { serverErrorKey } from '@meitra/game-client/server-errors';
+import { serverErrorTranslation } from '@meitra/game-client/server-errors';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import {
   DEFAULT_USER_PREFERENCES,
@@ -436,8 +436,12 @@ export const useGame = () => {
   // message is one this app knows.
   const translateServerError = useCallback(
     (message: string) => {
-      const key = serverErrorKey(message);
-      return key ? tServerErrors(key as 'internalServerError') : message;
+      const translation = serverErrorTranslation(message);
+      if (!translation) return message;
+      return tServerErrors(
+        translation.key as 'internalServerError',
+        translation.params,
+      );
     },
     [tServerErrors],
   );
