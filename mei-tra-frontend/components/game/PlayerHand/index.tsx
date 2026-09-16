@@ -228,6 +228,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       setDraggingCard(null);
       setDragOffset({ x: 0, y: 0 });
       setDropPlacement(null);
+      // dnd-kit keeps its pro-mode drag alive; handleDndEnd ignores a drag
+      // whose card is no longer the one recorded here.
+      setActiveDragCard(null);
     }
   }, [player.hand]);
 
@@ -397,10 +400,30 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       ? { x: activatorEvent.clientX + delta.x, y: activatorEvent.clientY + delta.y }
       : null;
 
-  const dndDropPlacement = (event: DragMoveEvent | DragEndEvent) => {
+  // The card of a pro-mode drag that is still live. A re-deal mid-drag clears
+  // activeDragCard, and the drag must then neither act nor reorder.
+  const heldDndCard = (event: DragMoveEvent | DragEndEvent) => {
     const card = String(event.active.data.current?.card ?? '');
+    return card && card === activeDragCard ? card : null;
+  };
+
+  // What releasing at this height does in pro mode: play the card, place the
+  // Negri, or nothing (then it reorders). The marker while dragging and the
+  // release both read this, so the marker never shows a reorder that the
+  // release turns into a play.
+  const proDropAction = (deltaY: number): CardDropAction | null => {
+    if (gameMode !== 'pro' || !canActAsCurrentPlayer || gamePhase !== 'play') {
+      return null;
+    }
+    const action = classifyCardDrop(deltaY);
+    if (action === 'negri' && canPlaceProNegri) return 'negri';
+    if (action === 'play' && whoseTurn === currentSeatId) return 'play';
+    return null;
+  };
+
+  const dndDropPlacement = (card: string, event: DragMoveEvent | DragEndEvent) => {
     const pointer = dndPointer(event);
-    return card && pointer ? findDropPlacement(card, pointer.x, pointer.y) : null;
+    return pointer ? findDropPlacement(card, pointer.x, pointer.y) : null;
   };
 
   const handleDndMove = (event: DragMoveEvent) => {
@@ -408,35 +431,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     const action = classifyCardDrop(event.delta.y);
     dropActionRef.current = action;
     setDropAction(action);
-    setDropPlacement(dndDropPlacement(event));
+    const card = heldDndCard(event);
+    setDropPlacement(
+      card && !proDropAction(event.delta.y) ? dndDropPlacement(card, event) : null,
+    );
   };
 
   const handleDndEnd = (event: DragEndEvent) => {
-    const card = String(event.active.data.current?.card ?? '');
-    const action = classifyCardDrop(event.delta.y);
-    let acted = false;
-    if (
-      gameMode === 'pro' &&
-      card &&
-      action &&
-      canActAsCurrentPlayer &&
-      gamePhase === 'play' &&
-      (action === 'negri' || whoseTurn === currentSeatId)
-    ) {
-      if (action === 'negri' && canPlaceProNegri) {
-        gameActions.selectNegri(card);
-        acted = true;
-      } else if (action === 'play') {
-        gameActions.playCard(card);
-        acted = true;
+    const card = heldDndCard(event);
+    const action = card ? proDropAction(event.delta.y) : null;
+    if (card && action === 'negri') {
+      gameActions.selectNegri(card);
+    } else if (card && action === 'play') {
+      gameActions.playCard(card);
+    } else if (card) {
+      // The placement is read from the release point because the release can
+      // arrive before the last move has re-rendered.
+      const placement = dndDropPlacement(card, event);
+      if (placement) {
+        reorderDisplayHand(card, placement.card, placement.side);
       }
-    }
-    // Like finishPointerDrag: a drop that plays or places the card does not
-    // also reorder. The placement is read from the release point because the
-    // release can arrive before the last move has re-rendered.
-    const placement = acted ? null : dndDropPlacement(event);
-    if (card && placement) {
-      reorderDisplayHand(card, placement.card, placement.side);
     }
     dropActionRef.current = null;
     setDropAction(null);
