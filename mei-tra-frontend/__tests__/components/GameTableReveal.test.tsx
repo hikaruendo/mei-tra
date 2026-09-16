@@ -76,7 +76,6 @@ const gameActions = {
   revealBrokenHand: jest.fn(),
   reportChombo: jest.fn(),
   declareOpen: jest.fn(),
-  revealChomboHand: jest.fn(),
 } as unknown as GameActions;
 
 function renderTable(overrides: Partial<React.ComponentProps<typeof GameTable>>) {

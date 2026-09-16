@@ -315,6 +315,7 @@
     "phaseBlow": "Bid",
     "phasePlay": "Play",
     "phaseWaiting": "Waiting",
+    "revealBroken": "Replace broken hand",
     "baseSuit": "Lead suit: {suit}",
     "selectBaseSuit": "Choose the lead suit",
     "spectatingHand": "{name}'s hand (spectating)",

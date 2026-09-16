@@ -146,6 +146,11 @@ export interface BrokenPayload {
   gamePhase?: TransportGamePhase;
 }
 
+export interface BrokenHandRevealedPayload {
+  seatId: SeatId;
+  hand: string[];
+}
+
 export interface FieldCompletePayload {
   winnerSeatId: SeatId;
   field: CompletedFieldContract;
@@ -243,7 +248,6 @@ export type ChomboViolationType =
   | 'wrong-suit'
   | 'four-jack'
   | 'last-tanzen'
-  | 'wrong-broken'
   | 'wrong-open';
 
 export interface ReportChomboPayload {
@@ -262,10 +266,6 @@ export const OPEN_MAX_HAND_SIZE = 4;
 export interface DeclareOpenPayload {
   roomId: string;
 }
-
-export interface RevealChomboHandPayload { roomId: string; seatId: SeatId; }
-
-export interface ChomboHandRevealedPayload { seatId: SeatId; hand: string[]; }
 
 export interface OpenDeclaredPayload {
   declarerSeatId: SeatId;

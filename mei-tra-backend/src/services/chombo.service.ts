@@ -1,6 +1,11 @@
 import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Injectable } from '@nestjs/common';
-import { ChomboViolation, DomainPlayer, Field } from '../types/game.types';
+import {
+  ChomboViolation,
+  DomainPlayer,
+  Field,
+  TrumpType,
+} from '../types/game.types';
 import { PlayService } from './play.service';
 import { IChomboService } from './interfaces/chombo-service.interface';
 import type { SeatId } from '../types/identity.types';
@@ -32,6 +37,7 @@ export class ChomboService implements IChomboService {
       neguri?: { [key: string]: string };
       hasBroken?: boolean;
       canDeclareOpen?: boolean;
+      trump?: TrumpType | null;
     },
   ): ChomboViolation | null {
     let violationType: ChomboViolation['type'] | null = null;
@@ -42,7 +48,7 @@ export class ChomboService implements IChomboService {
           const legalPlayError = this.playService.getCardPlayError(
             context.player.hand,
             context.field,
-            null,
+            context.trump ?? null,
             context.card,
           );
           if (legalPlayError) {
@@ -74,13 +80,6 @@ export class ChomboService implements IChomboService {
           context.player.hand[0].includes('JOKER')
         ) {
           violationType = 'last-tanzen';
-        }
-        break;
-      }
-
-      case 'declare-broken': {
-        if (!context.hasBroken) {
-          violationType = 'wrong-broken';
         }
         break;
       }

@@ -1,7 +1,6 @@
 import type {
   PlayerContract,
   ChomboResolvedPayload,
-  ChomboHandRevealedPayload,
   OpenDeclaredPayload,
   ReconnectionFailureCode,
   TeamNames,
@@ -359,7 +358,6 @@ interface GameContextValue extends MobileState {
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   declareOpen: () => void;
-  revealChomboHand: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
   removePlayer: (targetSeatId: string) => void;
@@ -877,6 +875,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
       applyGameServerEvent({ type: 'blow-updated', payload });
     });
+    socket.on('broken-hand-revealed', (payload) => {
+      applyGameServerEvent({ type: 'broken-hand-revealed', payload });
+    });
     socket.on('broken', (payload) => {
       pendingNegriCardRef.current = null;
       startDealAnimation('broken', payload.players);
@@ -962,9 +963,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
       dispatch({ type: 'error', message });
-    });
-    socket.on('chombo-hand-revealed', (payload: ChomboHandRevealedPayload) => {
-      applyGameServerEvent({ type: 'chombo-hand-revealed', payload });
     });
     socket.on('open-declared', (payload: OpenDeclaredPayload) => {
       applyGameServerEvent({ type: 'open-declared', payload });
@@ -1124,7 +1122,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     const currentPlayer = game.players.find(
       (player) => player.seatId === game.youSeatId,
     );
-    if (!currentPlayer?.hasRequiredBroken) {
+    // Pro mode lets the player keep four jacks, so it only reveals on request.
+    if (game.gameMode === 'pro' || !currentPlayer?.hasRequiredBroken) {
       brokenRequestRef.current = null;
       return;
     }
@@ -1382,15 +1381,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
-  const revealChomboHand = useCallback(() => {
-    const game = stateRef.current.game;
-    const seatId = game?.youSeatId;
-    if (!game || !seatId) return;
-    emitOneWayAction('reveal-chombo-hand', game.roomId, () => {
-      socketRef.current?.emit('reveal-chombo-hand', { roomId: game.roomId, seatId });
-    });
-  }, [emitOneWayAction]);
-
   const reportChombo = useCallback((violatorSeatId: string, violationType: ChomboViolationType) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1514,7 +1504,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCard,
       reportChombo,
       declareOpen,
-      revealChomboHand,
       selectBaseSuit,
       revealBrokenHand,
       removePlayer,
@@ -1550,7 +1539,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCard,
       reportChombo,
       declareOpen,
-      revealChomboHand,
       playCardSelectionSound,
       playCancelSound,
       playHandReorderSound,

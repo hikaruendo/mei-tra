@@ -9,7 +9,7 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
-import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { ChomboReportPanel, getChomboReportTargets } from '@/components/game/ChomboReportPanel';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
@@ -45,6 +45,7 @@ interface GameTableProps {
   gameMode: 'normal' | 'pro';
   openDeclared?: boolean;
   openResolved?: boolean;
+  revealedHands?: Partial<Record<string, string[]>>;
   teamNames?: TeamNames;
   // Waiting-room props (shown before game starts)
   isWaiting?: boolean;
@@ -89,6 +90,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   gameMode,
   openDeclared = false,
   openResolved = false,
+  revealedHands = {},
   teamNames,
   idleSeatIds = [],
   disconnectedSeatIds = [],
@@ -128,6 +130,17 @@ export const GameTable: React.FC<GameTableProps> = ({
     Boolean(currentSeatId && currentHighestDeclaration) &&
     viewerHandSize !== undefined &&
     viewerHandSize <= OPEN_MAX_HAND_SIZE;
+  const chomboReport =
+    gameMode === 'pro' &&
+    gamePhase === 'play' &&
+    currentSeatId &&
+    getChomboReportTargets(players, currentSeatId).length > 0 ? (
+      <ChomboReportPanel
+        players={players}
+        currentSeatId={currentSeatId}
+        onReport={gameActions.reportChombo}
+      />
+    ) : undefined;
 
   useEffect(() => {
     if (!isSpectator) {
@@ -195,6 +208,7 @@ export const GameTable: React.FC<GameTableProps> = ({
                 players={players}
                 teamNames={teamNames}
                 gameMode={gameMode}
+                chomboReport={chomboReport}
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -276,6 +290,16 @@ export const GameTable: React.FC<GameTableProps> = ({
               position={positions[idx]}
               agariCard={revealedAgari || undefined}
               currentHighestDeclaration={currentHighestDeclaration || undefined}
+              hasActedInBlow={
+                Boolean(player_.isPasser) ||
+                blowDeclarations.some(
+                  (declaration) => declaration.seatId === player_.seatId,
+                ) ||
+                blowActionHistory.some(
+                  (action) => action.seatId === player_.seatId,
+                )
+              }
+              revealedHand={revealedHands[player_.seatId]}
               completedFields={teamCompletedFields}
               currentSeatId={tablePerspectiveSeatId || ''}
               currentField={currentField}
@@ -345,15 +369,6 @@ export const GameTable: React.FC<GameTableProps> = ({
         >
           オープン
         </button>
-      )}
-
-      {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
-        <ChomboReportPanel
-          players={players}
-          currentSeatId={currentSeatId}
-          onReport={gameActions.reportChombo}
-          onReveal={gameActions.revealChomboHand}
-        />
       )}
     </div>
   );

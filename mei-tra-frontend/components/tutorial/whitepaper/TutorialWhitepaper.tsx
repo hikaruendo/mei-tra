@@ -100,8 +100,10 @@ ${t('overview.gameFlowExample')}` }
       content: [
         { type: 'text', content: t('chombo.description') },
         { type: 'rule', content: { title: t('chombo.negriForget'), description: t('chombo.negriForgetDesc'), example: t('chombo.negriForgetExample') } },
+        { type: 'rule', content: { title: t('chombo.wrongSuit'), description: t('chombo.wrongSuitDesc'), example: t('chombo.wrongSuitExample') } },
+        { type: 'rule', content: { title: t('chombo.fourJack'), description: t('chombo.fourJackDesc'), example: t('chombo.fourJackExample') } },
         { type: 'rule', content: { title: t('chombo.lastTanzen'), description: t('chombo.lastTanzenDesc'), example: t('chombo.lastTanzenExample') } },
-        { type: 'rule', content: { title: t('chombo.wrongBroken'), description: t('chombo.wrongBrokenDesc'), example: t('chombo.wrongBrokenExample') } },
+        { type: 'rule', content: { title: t('chombo.wrongOpen'), description: t('chombo.wrongOpenDesc'), example: t('chombo.wrongOpenExample') } },
         { type: 'rule', content: { title: t('chombo.reportSystem'), description: t('chombo.reportSystemDesc'), example: t('chombo.reportSystemExample') } }
       ]
     },

@@ -565,3 +565,114 @@ describe('GameBoard open action', () => {
     act(() => atLimit.unmount());
   });
 });
+
+describe('GameBoard broken hand action', () => {
+  const renderBlowBoard = (
+    gameMode: 'normal' | 'pro',
+    onRevealBrokenHand: jest.Mock,
+    selfFlags: {
+      hasBroken?: boolean;
+      hasRequiredBroken?: boolean;
+      isPasser?: boolean;
+    } = { hasRequiredBroken: true },
+    blowState: Partial<MobileGameSnapshot['blowState']> = {},
+  ) => {
+    let renderer!: {
+      root: { findAllByProps: (props: Record<string, unknown>) => unknown[] };
+      unmount: () => void;
+    };
+    act(() => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{
+            ...game,
+            gameMode,
+            gamePhase: 'blow',
+            blowState: { ...game.blowState, ...blowState },
+            players: [{ ...game.players[0], ...selfFlags }],
+          }}
+          isHost
+          onDeclare={jest.fn()}
+          onRevealBrokenHand={onRevealBrokenHand}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+    });
+    return renderer;
+  };
+
+  it('hides the broken hand action once the player has bid or passed', () => {
+    const onRevealBrokenHand = jest.fn();
+
+    const passedBoard = renderBlowBoard('pro', onRevealBrokenHand, {
+      hasBroken: true,
+      isPasser: true,
+    });
+    expect(
+      passedBoard.root.findAllByProps({ onPress: onRevealBrokenHand }),
+    ).toHaveLength(0);
+    act(() => passedBoard.unmount());
+
+    const declaredBoard = renderBlowBoard(
+      'pro',
+      onRevealBrokenHand,
+      { hasBroken: true },
+      {
+        declarations: [
+          {
+            seatId: asSeatId('player-1'),
+            trumpType: 'herz',
+            numberOfPairs: 6,
+            timestamp: 1,
+          },
+        ],
+      },
+    );
+    expect(
+      declaredBoard.root.findAllByProps({ onPress: onRevealBrokenHand }),
+    ).toHaveLength(0);
+    act(() => declaredBoard.unmount());
+  });
+
+  it('offers a manual four-jack reveal only in pro mode', () => {
+    const onRevealBrokenHand = jest.fn();
+
+    const proBoard = renderBlowBoard('pro', onRevealBrokenHand);
+    expect(
+      proBoard.root.findAllByProps({ onPress: onRevealBrokenHand }).length,
+    ).toBeGreaterThan(0);
+    act(() => proBoard.unmount());
+
+    const normalBoard = renderBlowBoard('normal', onRevealBrokenHand);
+    expect(
+      normalBoard.root.findAllByProps({ onPress: onRevealBrokenHand }),
+    ).toHaveLength(0);
+    act(() => normalBoard.unmount());
+  });
+
+  it.each(['normal', 'pro'] as const)(
+    'offers the broken hand action only for a broken hand in %s mode',
+    (gameMode) => {
+      const onRevealBrokenHand = jest.fn();
+
+      const plainBoard = renderBlowBoard(gameMode, onRevealBrokenHand, {});
+      expect(
+        plainBoard.root.findAllByProps({ onPress: onRevealBrokenHand }),
+      ).toHaveLength(0);
+      act(() => plainBoard.unmount());
+
+      const brokenBoard = renderBlowBoard(gameMode, onRevealBrokenHand, {
+        hasBroken: true,
+      });
+      expect(
+        brokenBoard.root.findAllByProps({ onPress: onRevealBrokenHand }).length,
+      ).toBeGreaterThan(0);
+      act(() => brokenBoard.unmount());
+    },
+  );
+});

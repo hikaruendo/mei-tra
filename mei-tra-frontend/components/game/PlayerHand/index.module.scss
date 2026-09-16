@@ -64,7 +64,8 @@
   border-radius: inherit;
 }
 
-.cardFaceDown{
+.cardFaceDown,
+.revealedCard{
   width: calc(1.55rem * var(--mt-card-scale));
   aspect-ratio: 2 / 3;
   border-radius: 0.25rem;
@@ -1010,7 +1011,8 @@
     overflow: visible;
   }
 
-  .cardFaceDown{
+  .cardFaceDown,
+  .revealedCard{
     width: calc(1.25rem * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
     border-radius: 0.25rem;

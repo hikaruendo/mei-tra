@@ -446,7 +446,13 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     const nextPlayer = gameState.getCurrentPlayer();
     return {
       success: true,
-      events: completion.events ?? [],
+      // The redeal waits out the reveal delay, as it does after a player
+      // reveals, so the table can see the COM's hand first.
+      events: preparation.events ?? [],
+      delayedEvents: (completion.events ?? []).map((event) => ({
+        ...event,
+        delayMs: preparation.delayMs,
+      })),
       shouldContinue:
         !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
     };

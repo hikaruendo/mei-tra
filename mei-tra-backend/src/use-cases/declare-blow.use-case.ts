@@ -67,7 +67,11 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
         return { success: false, error: "It's not your turn to declare" };
       }
 
-      const requiredBrokenError = getRequiredBrokenHandRevealError(player);
+      const room = await this.roomService.getRoom(roomId);
+      const requiredBrokenError = getRequiredBrokenHandRevealError(
+        player,
+        room?.settings.gameMode,
+      );
       if (requiredBrokenError) {
         return { success: false, error: requiredBrokenError };
       }
@@ -129,7 +133,6 @@ export class DeclareBlowUseCase implements IDeclareBlowUseCase {
           declarationsCount: state.blowState.declarations.length,
         },
       });
-      const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
         {

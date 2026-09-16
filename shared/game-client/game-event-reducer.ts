@@ -1,11 +1,11 @@
 import type {
   BlowStateContract,
   BlowUpdatedPayload,
+  BrokenHandRevealedPayload,
   BrokenPayload,
   CardPlayedPayload,
   ChomboResolvedPayload,
   OpenDeclaredPayload,
-  ChomboHandRevealedPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -46,6 +46,7 @@ export type GameServerEvent =
   | { type: 'update-phase'; payload: UpdatePhasePayload }
   | { type: 'update-turn'; payload: UpdateTurnPayload }
   | { type: 'blow-updated'; payload: BlowUpdatedPayload }
+  | { type: 'broken-hand-revealed'; payload: BrokenHandRevealedPayload }
   | { type: 'broken'; payload: BrokenPayload }
   | { type: 'round-cancelled'; payload: RoundCancelledPayload }
   | { type: 'reveal-agari'; payload: RevealAgariPayload }
@@ -53,7 +54,6 @@ export type GameServerEvent =
   | { type: 'card-played'; payload: CardPlayedPayload }
   | { type: 'chombo-resolved'; payload: ChomboResolvedPayload }
   | { type: 'open-declared'; payload: OpenDeclaredPayload }
-  | { type: 'chombo-hand-revealed'; payload: ChomboHandRevealedPayload }
   | { type: 'field-updated'; payload: FieldContract }
   | { type: 'field-complete'; payload: FieldCompletePayload }
   | { type: 'round-results'; payload: RoundResultsPayload }
@@ -180,6 +180,15 @@ export const reduceGameEvent = (
         },
       };
     }
+    case 'broken-hand-revealed': {
+      return {
+        ...state,
+        revealedHands: {
+          ...state.revealedHands,
+          [event.payload.seatId]: [...event.payload.hand],
+        },
+      };
+    }
     case 'broken': {
       return {
         ...state,
@@ -259,19 +268,24 @@ export const reduceGameEvent = (
         },
       };
     }
-    case 'chombo-hand-revealed': {
-      return { ...state, revealedHands: { ...state.revealedHands, [event.payload.seatId]: [...event.payload.hand] } };
-    }
     case 'chombo-resolved': {
       return { ...state, teamScores: event.payload.scores };
     }
     case 'card-played': {
+      const { seatId, card } = event.payload;
+      const revealedHand = state.revealedHands[seatId];
       return {
         ...state,
         players: event.payload.players,
         currentField: event.payload.field,
         currentTurnSeatId:
           event.payload.nextSeatId ?? state.currentTurnSeatId,
+        revealedHands: revealedHand
+          ? {
+              ...state.revealedHands,
+              [seatId]: revealedHand.filter((revealed) => revealed !== card),
+            }
+          : state.revealedHands,
       };
     }
     case 'field-updated': {
