@@ -97,6 +97,10 @@
   },
   "chomboReport": {
     "title": "チョンボの指摘",
+    "menuLabel": "チョンボ",
+    "player": "相手",
+    "violation": "違反",
+    "submit": "指摘する",
     "negriForget": "ネグリ忘れ",
     "wrongSuit": "出し方の違反",
     "fourJack": "4ジャック",
@@ -105,6 +109,20 @@
     "confirmTitle": "チョンボを指摘しますか？",
     "confirmMessage": "{name}の「{violation}」を指摘します。この操作は取り消せず、ラウンドが終了します。",
     "confirm": "指摘する"
+  },
+  "chomboScenario": {
+    "title": "チョンボのテスト（開発環境のみ）",
+    "description": "押すと、自分がそのチョンボをできる場面になります。指摘は相手チームの人が行ってください。",
+    "negriForget": "ネグリ忘れ",
+    "negriForgetHint": "吹きに勝ったところです。ネグリを置かずにカードを出してください",
+    "wrongSuit": "出し方の違反",
+    "wrongSuitHint": "場に 9♠ が出ています。♠ を持ったまま ♦ を出してください",
+    "fourJack": "4ジャック",
+    "fourJackHint": "J を4枚持っています。そのままカードを出してください",
+    "lastTanzen": "最後タンツェン",
+    "lastTanzenHint": "残り2枚で JOKER を持っています。JOKER ではない方を出すと、その時点で指摘できます",
+    "wrongOpen": "オープンの誤り",
+    "wrongOpenHint": "残りの場を取り切れない4枚の手札です。オープンを押してください"
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "アカウントの削除中です。削除を終えてから操作してください",

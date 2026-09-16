@@ -381,6 +381,8 @@ interface GameContextValue extends MobileState {
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  /** Present in development builds only, like the web hook. */
+  setupChomboScenario?: (violationType: ChomboViolationType) => void;
   declareOpen: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -1438,6 +1440,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const setupChomboScenario = useCallback((violationType: ChomboViolationType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('dev-chombo-scenario', game.roomId, () => {
+      socketRef.current?.emit('dev-chombo-scenario', {
+        roomId: game.roomId,
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
   const selectBaseSuit = useCallback((suit: string) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1548,6 +1561,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       playHandReorderSound,
       playCard,
       reportChombo,
+      // The server refuses it in production too; this keeps the entry point
+      // out of release builds.
+      ...(__DEV__ ? { setupChomboScenario } : {}),
       declareOpen,
       selectBaseSuit,
       revealBrokenHand,
@@ -1583,6 +1599,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       passBlow,
       playCard,
       reportChombo,
+      setupChomboScenario,
       declareOpen,
       playCardSelectionSound,
       playCancelSound,

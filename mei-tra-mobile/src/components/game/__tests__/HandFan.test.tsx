@@ -28,6 +28,7 @@ interface Renderer {
     findAll: (predicate: (node: TestNode) => boolean) => TestNode[];
   };
   update: (element: React.ReactElement) => void;
+  unmount: () => void;
 }
 
 /**
@@ -367,6 +368,44 @@ describe('HandFan', () => {
     });
 
     expect(cardScale(renderer, 'A')).toBe(1);
+  });
+
+  it('tells the parent a card is held until it is released', () => {
+    const onDragActiveChange = jest.fn();
+    const renderer = render({ onDragActiveChange });
+
+    const gesture = startDrag(renderer, 'A', 0, -DROP_PX);
+    expect(onDragActiveChange.mock.calls).toEqual([[true]]);
+
+    gesture.release();
+    expect(onDragActiveChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('tells the parent the hold is over when no release can arrive', () => {
+    const onDragActiveChange = jest.fn();
+    const renderer = render({ onDragActiveChange });
+
+    startDrag(renderer, 'A', 2 * PITCH);
+    act(() => {
+      renderer.update(
+        <HandFan
+          canReorder
+          cardMargin={CARD_MARGIN}
+          cardWidth={CARD_WIDTH}
+          cards={['X', 'C', 'Y', 'Z']}
+          onDragActiveChange={onDragActiveChange}
+          reducedMotion
+          seatId="seat-1"
+          selectedCard={null}
+        />,
+      );
+    });
+    expect(onDragActiveChange).toHaveBeenLastCalledWith(false);
+
+    startDrag(renderer, 'C', 2 * PITCH);
+    expect(onDragActiveChange).toHaveBeenLastCalledWith(true);
+    act(() => renderer.unmount());
+    expect(onDragActiveChange).toHaveBeenLastCalledWith(false);
   });
 
   it('does not pick up cards for a spectator', () => {

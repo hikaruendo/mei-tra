@@ -652,6 +652,29 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('asks the server for a chombo scenario in development builds', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      mockSocket.trigger('game-state', createGameState());
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.setupChomboScenario).toBeDefined();
+    await act(async () => {
+      screen.latestGame.setupChomboScenario?.('four-jack');
+      await flushPromises();
+    });
+
+    expect(mockSocket.emit).toHaveBeenCalledWith('dev-chombo-scenario', {
+      roomId: 'room-1',
+      violationType: 'four-jack',
+    });
+
+    await screen.unmount();
+  });
+
   it('clears a pending Negri sound when a snapshot restores the game', async () => {
     const screen = await renderProvider();
     const gameState = createGameState();

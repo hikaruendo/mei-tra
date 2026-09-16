@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   PanResponder,
+  Platform,
   StyleSheet,
   View,
   type PanResponderInstance,
+  type ViewStyle,
 } from 'react-native';
 
 import { DealtCard } from '@/components/game/DealtCard';
@@ -48,6 +50,8 @@ interface HandFanProps {
   /** Fires once per committed move, for the sound. */
   onReorder?: () => void;
   onDropAction?: (card: string, action: 'play' | 'negri') => void;
+  /** Lets the parent stop its scroll view from panning while a card is held. */
+  onDragActiveChange?: (active: boolean) => void;
 }
 
 export function HandFan({
@@ -63,6 +67,7 @@ export function HandFan({
   canReorder,
   onReorder,
   onDropAction,
+  onDragActiveChange,
 }: HandFanProps) {
   const [order, setOrder] = useState(cards);
   const orderRef = useRef(order);
@@ -99,6 +104,14 @@ export function HandFan({
       setDrop(null);
     }
   }, [cards]);
+
+  const dragActive = draggingCard !== null;
+  useEffect(() => {
+    if (!dragActive) return;
+    onDragActiveChange?.(true);
+    // Also runs when the fan unmounts mid-drag, which sends no release.
+    return () => onDragActiveChange?.(false);
+  }, [dragActive, onDragActiveChange]);
 
   const pitch = handFanPitch(cardWidth, cardMargin);
   const total = order.length;
@@ -265,6 +278,8 @@ function HandFanCard({
         live.current.onDragMove(gesture.dx, gesture.dy);
       },
       // Once the card is held, the surrounding scroll view must not take it away.
+      // Refusing only covers JS responders; the parent also disables scrolling
+      // through onDragActiveChange, or the platform scroll pans anyway.
       onPanResponderTerminationRequest: () => false,
       onPanResponderRelease: () => release(true),
       onPanResponderTerminate: () => release(false),
@@ -276,6 +291,7 @@ function HandFanCard({
       {...panResponder.current.panHandlers}
       style={[
         styles.fanCard,
+        canReorder && webDraggableCard,
         { marginHorizontal: cardMargin },
         isDragging && styles.fanCardDragging,
         {
@@ -322,6 +338,12 @@ function HandFanCard({
     </Animated.View>
   );
 }
+
+// A browser decides whether a touch pans the page when the touch starts, before
+// the drag can turn the board's scrolling off, so a card that can be dragged
+// opts out of panning up front. React Native has no such style.
+const webDraggableCard =
+  Platform.OS === 'web' ? ({ touchAction: 'none' } as ViewStyle) : null;
 
 const styles = StyleSheet.create({
   fanContainer: {
