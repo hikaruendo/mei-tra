@@ -19,6 +19,7 @@ import { asSeatId } from '../types/identity.types';
 import { resolveCurrentPlayer } from '../domain/current-turn';
 import { toFieldContract } from '../adapters/game-contract-adapters';
 import {
+  createFieldCheckpoint,
   getCurrentFieldIdentity,
   getFieldIntegrityError,
 } from '../domain/field-recovery';
@@ -75,8 +76,14 @@ export class PlayCardUseCase implements IPlayCardUseCase {
 
       const integrityField = state.playState.currentField;
       if (integrityField) {
-        const fieldIntegrityError = getFieldIntegrityError(state, integrityField);
-        if (fieldIntegrityError || integrityField.playedBySeatIds.includes(player.seatId)) {
+        const fieldIntegrityError = getFieldIntegrityError(
+          state,
+          integrityField,
+        );
+        if (
+          fieldIntegrityError ||
+          integrityField.playedBySeatIds.includes(player.seatId)
+        ) {
           const fieldIdentity = getCurrentFieldIdentity(state);
           this.logger.error(
             `Recovering invalid field before card play in room ${roomId}: ${fieldIntegrityError ?? 'Current seat already played in this field'}`,
@@ -211,6 +218,10 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         return { success: false, error: legalPlayError };
       }
 
+      if (state.playState.currentField.cards.length === 0) {
+        state.playState.fieldCheckpoint = createFieldCheckpoint(state);
+      }
+
       // Remove the card from player's hand
       player.hand = player.hand.filter((c) => c !== card);
       const revealedHand = state.playState.revealedHands?.[player.seatId];
@@ -278,15 +289,15 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         // Mark field as complete immediately to prevent 5th card
         currentField.isComplete = true;
 
+        const activeFieldIdentity = getCurrentFieldIdentity(state);
         await roomGameState.saveState();
+        if (!activeFieldIdentity) {
+          return { success: false, error: 'Field identity is unavailable' };
+        }
         const trigger: CompleteFieldTrigger = {
           roomId,
           delayMs: 3000,
-          fieldIdentity: getCurrentFieldIdentity(state) ?? {
-            roundNumber: state.roundNumber,
-            fieldIndex: state.playState.fields.length,
-            attemptId: `legacy:${state.roundNumber}:${state.playState.fields.length}`,
-          },
+          fieldIdentity: activeFieldIdentity,
           field: {
             ...currentField,
             cards: [...currentField.cards],
