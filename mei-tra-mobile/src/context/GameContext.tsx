@@ -76,6 +76,7 @@ import {
   type MobileSocket,
 } from '@/lib/realtime';
 import { roomStorage } from '@/lib/room-storage';
+import { getTeamDisplayName } from '@/lib/team-labels';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import type {
   ConnectionStatus,
@@ -968,14 +969,24 @@ export function GameProvider({ children }: PropsWithChildren) {
       applyGameServerEvent({ type: 'open-declared', payload });
       dispatch({
         type: 'notice',
-        message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+        message: {
+          key: payload.valid ? 'game.openDeclared' : 'game.openInvalid',
+        },
       });
     });
     socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
       dispatch({ type: 'patchGame', patch: { teamScores: payload.scores } });
       dispatch({
         type: 'notice',
-        message: `Chombo report ${payload.isCorrect ? 'correct' : 'incorrect'}: Team ${payload.awardedTeam} receives 5 points.`,
+        message: {
+          key: payload.isCorrect ? 'game.chomboCorrect' : 'game.chomboIncorrect',
+          params: {
+            teamName: getTeamDisplayName(
+              payload.awardedTeam,
+              stateRef.current.game?.teamNames,
+            ),
+          },
+        },
       });
     });
     socket.on('back-to-lobby', (payload) => {

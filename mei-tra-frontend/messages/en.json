@@ -334,6 +334,11 @@
     "yourTurn": "Your turn",
     "waiting": "Waiting...",
     "redealAllPass": "Redealt because everyone passed",
+    "redealBroken": "Redealt because of a broken hand",
+    "openDeclared": "The open holds",
+    "openInvalid": "The open does not hold. Play continues with the hand revealed",
+    "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",
+    "chomboIncorrect": "No violation. {teamName} gets 5 points and the round ends",
     "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
     "fieldRecoveryRestored": "The table was restored. Please play your card again.",
     "closeNotification": "Close notification",
@@ -451,7 +456,16 @@
     "inputPlaceholder": "Type a message..."
   },
   "chomboReport": {
-    "dockLabel": "Chombo"
+    "dockLabel": "Chombo",
+    "title": "Chombo report",
+    "player": "Player",
+    "violation": "Violation",
+    "submit": "Report chombo",
+    "negriForget": "Negri forget",
+    "wrongSuit": "Wrong suit",
+    "fourJack": "Four jacks",
+    "lastTanzen": "Last tanzen",
+    "wrongOpen": "Wrong open"
   },
   "chomboScenario": {
     "title": "Chombo test (development only)",

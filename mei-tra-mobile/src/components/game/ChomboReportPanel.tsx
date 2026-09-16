@@ -1,10 +1,19 @@
 import type { ChomboViolationType } from '@meitra/contracts/game';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 const violationTypes: ChomboViolationType[] = [
   'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen', 'wrong-open',
 ];
+
+const violationLabelKeys: Record<ChomboViolationType, string> = {
+  'negri-forget': 'chomboReport.negriForget',
+  'wrong-suit': 'chomboReport.wrongSuit',
+  'four-jack': 'chomboReport.fourJack',
+  'last-tanzen': 'chomboReport.lastTanzen',
+  'wrong-open': 'chomboReport.wrongOpen',
+};
 
 interface Props {
   players: { seatId: string; name: string }[];
@@ -14,13 +23,13 @@ interface Props {
 export function ChomboReportPanel({ players, onReport }: Props) {
   return (
     <View style={styles.panel}>
-      <Text style={styles.title}>Chombo report</Text>
+      <Text style={styles.title}>{t('chomboReport.title')}</Text>
       {players.map((player) => (
         <View key={player.seatId} style={styles.row}>
           <Text style={styles.target}>{player.name}</Text>
           {violationTypes.map((type) => (
             <Pressable key={type} onPress={() => onReport(player.seatId, type)} style={styles.button}>
-              <Text style={styles.buttonText}>{type}</Text>
+              <Text style={styles.buttonText}>{t(violationLabelKeys[type])}</Text>
             </Pressable>
           ))}
         </View>
