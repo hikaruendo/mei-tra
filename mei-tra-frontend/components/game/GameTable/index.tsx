@@ -14,6 +14,7 @@ import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/table
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
+import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import { asSeatId } from '@contracts/ids';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 
@@ -116,6 +117,17 @@ export const GameTable: React.FC<GameTableProps> = ({
   const perspectivePlayerTeam = players.find(
     (player) => player.seatId === tablePerspectiveSeatId,
   )?.team ?? 0;
+  const viewerHandSize = players.find(
+    (player) => player.seatId === currentSeatId,
+  )?.hand.length;
+  const canDeclareOpen =
+    gameMode === 'pro' &&
+    gamePhase === 'play' &&
+    !openDeclared &&
+    !openResolved &&
+    Boolean(currentSeatId && currentHighestDeclaration) &&
+    viewerHandSize !== undefined &&
+    viewerHandSize <= OPEN_MAX_HAND_SIZE;
 
   useEffect(() => {
     if (!isSpectator) {
@@ -325,19 +337,15 @@ export const GameTable: React.FC<GameTableProps> = ({
         )}
       </div>
 
-      {gameMode === 'pro' &&
-        gamePhase === 'play' &&
-        !openDeclared &&
-        !openResolved &&
-        currentSeatId && currentHighestDeclaration && (
-          <button
-            className={styles.openButton}
-            type="button"
-            onClick={gameActions.declareOpen}
-          >
-            オープン
-          </button>
-        )}
+      {canDeclareOpen && (
+        <button
+          className={styles.openButton}
+          type="button"
+          onClick={gameActions.declareOpen}
+        >
+          オープン
+        </button>
+      )}
 
       {gameMode === 'pro' && gamePhase === 'play' && currentSeatId && (
         <ChomboReportPanel

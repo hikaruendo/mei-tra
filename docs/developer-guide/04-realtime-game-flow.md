@@ -358,14 +358,14 @@ checkpoint 復旧は `field_recovered` として game history に記録し、破
 
 ## 10. round 終了と次ラウンド
 
-全員の hand が空になると round end です。
+全員の hand が空になると round end です。プロモードで有効なオープンが通った場合も、その時点で round end になります。
 
 ### 10.1 round end で行うこと
 
-`CompleteFieldUseCase` は:
+round end の処理は `use-cases/helpers/round-completion.helper.ts` の `completeRound()` にまとまっていて、`CompleteFieldUseCase`（最後の field の完了時）と `DeclareOpenUseCase`（有効なオープン時）が共通で使います。`completeRound()` は:
 
 - highest declaration から declaring team を特定
-- wonFields を数える
+- wonFields を数える（オープン時は、まだ出していない field をオープンしたチームがすべて取ったものとして数える）
 - `ScoreService.calculatePlayPoints()` を使って play points を加算
 - `round-results` を返す
 

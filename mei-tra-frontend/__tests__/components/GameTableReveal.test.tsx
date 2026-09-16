@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { GameTable } from '@/components/game/GameTable';
 import { JANKEN_STEP_DURATION_MS as D } from '@meitra/game-client/first-turn-reveal';
+import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import type { GameActions, Player, TeamScores } from '@/types/game.types';
 
 jest.mock('next-intl', () => ({
@@ -224,5 +225,32 @@ describe('GameTable pro open control', () => {
   it('hides the open action after the server marks the open as declared or resolved', () => {
     renderTable({ gameMode: 'pro', gamePhase: 'play', openDeclared: true });
     expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+  });
+
+  it('offers the open action only once the viewer is down to the open hand size', () => {
+    const withViewerHand = (cardCount: number) =>
+      players.map((player) =>
+        player.seatId === 'seat-0'
+          ? { ...player, hand: Array.from({ length: cardCount }, (_, index) => String(index + 5) + '♠') }
+          : player,
+      );
+    const proPlay: Partial<React.ComponentProps<typeof GameTable>> = {
+      gameMode: 'pro',
+      gamePhase: 'play',
+      currentHighestDeclaration: {
+        seatId: 'seat-0',
+        team: 0,
+        trumpType: 'tra',
+        numberOfPairs: 1,
+        timestamp: 1,
+      },
+    };
+
+    const { unmount } = renderTable({ ...proPlay, players: withViewerHand(OPEN_MAX_HAND_SIZE + 1) });
+    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+    unmount();
+
+    renderTable({ ...proPlay, players: withViewerHand(OPEN_MAX_HAND_SIZE) });
+    expect(screen.getByRole('button', { name: 'オープン' })).toBeInTheDocument();
   });
 });

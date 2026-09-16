@@ -1,5 +1,9 @@
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
-import type { ChomboViolationType, TrumpType } from '@meitra/contracts/game';
+import {
+  OPEN_MAX_HAND_SIZE,
+  type ChomboViolationType,
+  type TrumpType,
+} from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
@@ -223,7 +227,9 @@ export function GameBoard({
     game.gamePhase === 'play' &&
     !game.openDeclared &&
     !game.openResolved &&
-    Boolean(highest);
+    Boolean(highest) &&
+    Boolean(self) &&
+    selfHandCount <= OPEN_MAX_HAND_SIZE;
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
