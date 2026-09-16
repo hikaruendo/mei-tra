@@ -10,6 +10,8 @@ const CARD_MARGIN = -20;
 const PITCH = 20;
 /** Must clear HandFan's DRAG_ACTIVATE_PX before the card is picked up. */
 const ACTIVATE_PX = 8;
+/** Must clear classifyCardDrop's threshold to count as a play or negri drop. */
+const DROP_PX = 120;
 const START_X = 200;
 const START_Y = 500;
 
@@ -142,6 +144,28 @@ const render = (props: Partial<React.ComponentProps<typeof HandFan>> = {}) => {
   });
   return renderer;
 };
+
+/** A held card is scaled up; back in the fan it sits flat again. */
+const cardScale = (renderer: Renderer, card: string): number | undefined => {
+  const node = renderer.root.find(
+    (candidate) =>
+      typeof candidate.type === 'string' &&
+      candidate.props.testID === `hand-card-${card}`,
+  );
+  const transform = (
+    StyleSheet.flatten(node.props.style as StyleProp<ViewStyle>) ?? {}
+  ).transform as { scale?: number }[] | undefined;
+
+  return transform?.find((entry) => 'scale' in entry)?.scale;
+};
+
+const caretCount = (renderer: Renderer): number =>
+  renderer.root.findAll(
+    (node) =>
+      typeof node.type === 'string' &&
+      typeof node.props.testID === 'string' &&
+      node.props.testID.startsWith('hand-drop-caret-'),
+  ).length;
 
 const cardOrder = (renderer: Renderer): string[] =>
   renderer.root
@@ -342,17 +366,7 @@ describe('HandFan', () => {
       );
     });
 
-    const card = renderer.root.find(
-      (node) =>
-        typeof node.type === 'string' &&
-        node.props.testID === 'hand-card-A',
-    );
-    const transform = (
-      StyleSheet.flatten(card.props.style as StyleProp<ViewStyle>) ?? {}
-    ).transform as { scale?: number }[] | undefined;
-
-    // A held card is scaled up; back in the fan it must sit flat again.
-    expect(transform?.find((entry) => 'scale' in entry)?.scale).toBe(1);
+    expect(cardScale(renderer, 'A')).toBe(1);
   });
 
   it('does not pick up cards for a spectator', () => {
@@ -374,6 +388,59 @@ describe('HandFan', () => {
     );
 
     expect(claimed).toBe(true);
+  });
+
+  it('reports an upward drop as a play and a downward one as a negri', () => {
+    const onDropAction = jest.fn();
+    const renderer = render({ onDropAction });
+
+    startDrag(renderer, 'A', 0, -DROP_PX).release();
+    expect(onDropAction).toHaveBeenNthCalledWith(1, 'A', 'play');
+
+    startDrag(renderer, 'B', 0, DROP_PX).release();
+    expect(onDropAction).toHaveBeenNthCalledWith(2, 'B', 'negri');
+  });
+
+  it('puts the card back down once the drop action is reported', () => {
+    const onDropAction = jest.fn();
+    const renderer = render({ onDropAction });
+
+    const gesture = startDrag(renderer, 'A', 0, -DROP_PX);
+    expect(cardScale(renderer, 'A')).toBe(1.05);
+
+    gesture.release();
+
+    expect(onDropAction).toHaveBeenCalledWith('A', 'play');
+    expect(cardScale(renderer, 'A')).toBe(1);
+  });
+
+  it('puts the card back down, and still reorders, when nothing acts on the drop', () => {
+    // Outside pro mode, and out of turn within it, the parent ignores the
+    // action. The card must not stay lifted, and a drag that strayed past the
+    // vertical threshold must still land the move the player made sideways.
+    const onDropAction = jest.fn();
+    const onReorder = jest.fn();
+    const renderer = render({ onDropAction, onReorder });
+
+    const gesture = startDrag(renderer, 'A', 2 * PITCH, -DROP_PX);
+    expect(caretCount(renderer)).toBeGreaterThan(0);
+
+    gesture.release();
+
+    expect(onDropAction).toHaveBeenCalledWith('A', 'play');
+    expect(cardScale(renderer, 'A')).toBe(1);
+    expect(caretCount(renderer)).toBe(0);
+    expect(cardOrder(renderer)).toEqual(['B', 'C', 'A', 'D']);
+    expect(onReorder).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the card back down when no drop handler is attached at all', () => {
+    const renderer = render();
+
+    startDrag(renderer, 'A', 0, -DROP_PX).release();
+
+    expect(cardScale(renderer, 'A')).toBe(1);
+    expect(caretCount(renderer)).toBe(0);
   });
 
   it('lets a tap through to the card underneath', () => {
