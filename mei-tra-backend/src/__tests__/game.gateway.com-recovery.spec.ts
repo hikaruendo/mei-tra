@@ -3,31 +3,37 @@ import { GameGateway } from '../game.gateway';
 import { asSeatId } from '../types/identity.types';
 import { RoomGameActionQueueService } from '../services/room-game-action-queue.service';
 
+// The gateway constructor only assigns its injected dependencies to same-named
+// fields, so every positional slot is filled with an inert stub and the mocks the
+// tests rely on are attached by field name. This keeps the harness correct when
+// new dependencies are added to the constructor.
+const GATEWAY_DEPENDENCY_SLOTS = 64;
+
 const createGateway = (): GameGateway => {
   const GatewayConstructor = GameGateway as unknown as new (
     ...dependencies: object[]
   ) => GameGateway;
-  const connectionGatewayEffectsService = {
-    findExistingControllerSocketId: jest.fn(),
-    sendBackToLobby: jest.fn(),
-    sendRoomPlayersBackToLobby: jest.fn(),
-    sendSocketBackToLobby: jest.fn(),
-    sendUserSocketsBackToLobby: jest.fn(),
-  };
-  const gameplayNotificationService = {
-    notifyGameStarted: jest.fn(),
-    notifyTurnChanged: jest.fn(),
-  };
-  const accountActionGateService = {
-    ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
-  };
-  return new GatewayConstructor(
-    ...Array.from({ length: 31 }, () => ({})),
-    connectionGatewayEffectsService,
-    gameplayNotificationService,
-    accountActionGateService,
-    new RoomGameActionQueueService(),
+  const gateway = new GatewayConstructor(
+    ...Array.from({ length: GATEWAY_DEPENDENCY_SLOTS }, () => ({})),
   );
+
+  return Object.assign(gateway, {
+    connectionGatewayEffectsService: {
+      findExistingControllerSocketId: jest.fn(),
+      sendBackToLobby: jest.fn(),
+      sendRoomPlayersBackToLobby: jest.fn(),
+      sendSocketBackToLobby: jest.fn(),
+      sendUserSocketsBackToLobby: jest.fn(),
+    },
+    gameplayNotificationService: {
+      notifyGameStarted: jest.fn(),
+      notifyTurnChanged: jest.fn(),
+    },
+    accountActionGateService: {
+      ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
+    },
+    roomGameActionQueueService: new RoomGameActionQueueService(),
+  });
 };
 
 interface ActiveReconnectGatewayHarness {
