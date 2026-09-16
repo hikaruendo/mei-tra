@@ -81,7 +81,7 @@ describe('Rule service characterization', () => {
     ]);
   });
 
-  it('records and reports chombo violations across teams only', () => {
+  it('resolves chombo reports against the state-held candidate list', () => {
     const player = {
       seatId: asSeatId('p1'),
       name: 'A',
@@ -101,23 +101,38 @@ describe('Rule service characterization', () => {
       },
     );
     expect(violation?.type).toBe('four-jack');
+
+    const violations = violation ? [violation] : [];
+
     expect(
-      chomboService.reportViolation(
-        asSeatId('ally'),
+      chomboService.resolveReport(
+        violations,
+        asSeatId('enemy'),
         asSeatId('p1'),
-        'four-jack',
-        0,
-        0,
+        'wrong-suit',
       ),
     ).toBeNull();
     expect(
-      chomboService.reportViolation(
+      chomboService.resolveReport(
+        violations,
+        asSeatId('enemy'),
+        asSeatId('p2'),
+        'four-jack',
+      ),
+    ).toBeNull();
+    expect(
+      chomboService.resolveReport(
+        violations,
         asSeatId('enemy'),
         asSeatId('p1'),
         'four-jack',
-        1,
-        0,
       ),
-    ).toEqual(expect.objectContaining({ reportedBySeatId: 'enemy' }));
+    ).toEqual(
+      expect.objectContaining({
+        type: 'four-jack',
+        violatorSeatId: 'p1',
+        reportedBySeatId: 'enemy',
+      }),
+    );
   });
 });
