@@ -56,22 +56,52 @@ describe('Chombo report adjudication from room state', () => {
     });
   });
 
-  it.each(types)('awards a persisted %s report exactly once', async (type) => {
-    fixture.game.getState().playState!.chomboViolations = [candidate(type)];
-    const first = await report(type);
-    expect(first.success).toBe(true);
-    expect(first.events).toContainEqual(
-      expect.objectContaining({
-        event: 'chombo-resolved',
-        payload: expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
-      }),
+  it.each(types)('ends the round after a correct %s report', async (type) => {
+    const state = fixture.game.getState();
+    state.playState!.chomboViolations = [candidate(type)];
+    const roundNumber = state.roundNumber;
+
+    const result = await report(type);
+    expect(result.events?.map((event) => event.event)).toEqual([
+      'chombo-resolved',
+      'round-results',
+    ]);
+    const resolved = result.events?.find(
+      (event) => event.event === 'chombo-resolved',
     );
-    expect(fixture.game.getState().gamePhase).toBe('play');
-    const second = await report(type);
-    expect(second.success).toBe(false);
-    expect(fixture.game.getState().teamScores).toEqual({
+    expect(resolved?.payload).toEqual(
+      expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
+    );
+    expect(result.delayedEvents?.map((event) => event.event)).toContain(
+      'new-round-started',
+    );
+
+    const nextState = fixture.game.getState();
+    expect(nextState.gamePhase).toBe('blow');
+    expect(nextState.roundNumber).toBe(roundNumber + 1);
+    // Only the report scores. The fields of the stopped round are not counted.
+    expect(nextState.teamScores).toEqual({
       0: { play: 0, total: 0 },
       1: { play: 5, total: 5 },
+    });
+    expect((await report(type)).success).toBe(false);
+  });
+
+  it('ends the round after a report that found no chombo', async () => {
+    const result = await report('wrong-suit');
+    const resolved = result.events?.find(
+      (event) => event.event === 'chombo-resolved',
+    );
+    expect(resolved?.payload).toEqual(
+      expect.objectContaining({ isCorrect: false, awardedTeam: 0 }),
+    );
+    expect(result.delayedEvents?.map((event) => event.event)).toContain(
+      'new-round-started',
+    );
+    expect(fixture.game.getState().gamePhase).toBe('blow');
+    expect(fixture.game.getState().teamScores).toEqual({
+      0: { play: 5, total: 5 },
+      1: { play: 0, total: 0 },
     });
   });
 
@@ -143,7 +173,27 @@ describe('Chombo report adjudication from room state', () => {
     expect(result.events).toContainEqual(
       expect.objectContaining({ event: 'game-over' }),
     );
+    expect(result.gameOver).toEqual(
+      expect.objectContaining({ winningTeam: 1 }),
+    );
+    expect(result.delayedEvents).toBeUndefined();
     expect(state.teamScores[1].total).toBe(12);
     expect(fixture.updateRoomStatus).toHaveBeenCalledWith('room-1', 'finished');
+  });
+
+  it('rejects reports once the game is over', async () => {
+    const state = fixture.game.getState();
+    state.gameOver = {
+      winner: 'Team 1',
+      winningTeam: 1,
+      finalScores: state.teamScores,
+    };
+    state.playState!.chomboViolations = [candidate('wrong-suit')];
+    const result = await report('wrong-suit');
+    expect(result).toEqual({
+      success: false,
+      error: 'Chombo reports are only available during play',
+    });
+    expect(state.teamScores[1].total).toBe(0);
   });
 });

@@ -1842,7 +1842,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('error-message', result.error ?? 'Failed to report chombo');
         return;
       }
-      this.dispatchGameplayEvents(result.events);
+      // The report ends the round, so a field completion or COM turn still
+      // pending in it must not run into the next one.
+      this.comAutoPlayRecoveryService.clearRoom(data.roomId);
+      await this.processFieldCompletionResult(data.roomId, result);
+      if (result.delayedEvents) {
+        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      }
     } catch (error) {
       this.logger.error('Error in handleReportChombo:', error);
       client.emit('error-message', 'Failed to report chombo');

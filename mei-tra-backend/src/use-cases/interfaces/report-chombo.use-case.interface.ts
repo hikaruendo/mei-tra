@@ -1,4 +1,5 @@
 import type { ReportChomboPayload } from '@contracts/game';
+import type { GameOverInstruction } from './complete-field.use-case.interface';
 import type { GatewayEvent } from './gateway-event.interface';
 
 export interface ReportChomboRequest extends ReportChomboPayload {
@@ -9,6 +10,8 @@ export interface ReportChomboResponse {
   success: boolean;
   error?: string;
   events?: GatewayEvent[];
+  delayedEvents?: GatewayEvent[];
+  gameOver?: GameOverInstruction;
 }
 
 export interface IReportChomboUseCase {

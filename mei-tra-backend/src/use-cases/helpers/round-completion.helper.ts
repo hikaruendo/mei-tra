@@ -21,14 +21,17 @@ export interface RoundCompletion {
   gameOver?: GameOverInstruction;
 }
 
-interface CompleteRoundParams {
+interface RoundEndParams {
   roomId: string;
   roomGameState: GameStateService;
   state: GameState;
   room: Room | null;
   roomService: IRoomService;
-  scoreService: IScoreService;
   gameEventLogService?: IGameEventLogService;
+}
+
+interface CompleteRoundParams extends RoundEndParams {
+  scoreService: IScoreService;
   /** Set when a valid open ends the round: every unplayed field goes to this team. */
   remainingFieldsWinnerTeam?: Team;
 }
@@ -37,16 +40,10 @@ interface CompleteRoundParams {
  * Scores the round for the declaring team, then either ends the game or deals
  * the next round. Returns null when the declaring team cannot be determined.
  */
-export async function completeRound({
-  roomId,
-  roomGameState,
-  state,
-  room,
-  roomService,
-  scoreService,
-  gameEventLogService,
-  remainingFieldsWinnerTeam,
-}: CompleteRoundParams): Promise<RoundCompletion | null> {
+export async function completeRound(
+  params: CompleteRoundParams,
+): Promise<RoundCompletion | null> {
+  const { state, scoreService, remainingFieldsWinnerTeam } = params;
   const declaringTeam = findDeclaringTeam(state);
   if (declaringTeam == null) {
     return null;
@@ -62,6 +59,31 @@ export async function completeRound({
     countWonFields(state, declaringTeam) + unplayedWonFields,
     scoreService,
   );
+  return endRound(params, declaringTeam);
+}
+
+/**
+ * Ends a round that a chombo report stopped, the same way as a finished
+ * round. The report's points are already added, and the fields played so far
+ * are not scored.
+ */
+export function completeRoundAfterChombo(
+  params: RoundEndParams,
+): Promise<RoundCompletion> {
+  return endRound(params, findDeclaringTeam(params.state));
+}
+
+async function endRound(
+  {
+    roomId,
+    roomGameState,
+    state,
+    room,
+    roomService,
+    gameEventLogService,
+  }: RoundEndParams,
+  declaringTeam: Team | null,
+): Promise<RoundCompletion> {
   await gameEventLogService?.log({
     roomId,
     actionType: 'round_completed',
@@ -89,17 +111,12 @@ export async function completeRound({
     },
   ];
 
-  const hasTeamReachedGoal = Object.values(state.teamScores).some(
-    (score) => score.total >= state.pointsToWin,
+  const winningTeamEntry = Object.entries(state.teamScores).find(
+    ([, score]) => score.total >= state.pointsToWin,
   );
 
-  if (hasTeamReachedGoal) {
-    const winningTeamEntry = Object.entries(state.teamScores).find(
-      ([, score]) => score.total >= state.pointsToWin,
-    );
-    const winningTeam = winningTeamEntry
-      ? (Number(winningTeamEntry[0]) as Team)
-      : declaringTeam;
+  if (winningTeamEntry) {
+    const winningTeam = Number(winningTeamEntry[0]) as Team;
 
     const gameOverPayload: GameOverPayload = {
       winner: `Team ${winningTeam}`,

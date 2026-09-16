@@ -762,7 +762,7 @@
       "wrongOpenDesc": "Declaring Open when your team cannot take every remaining field. Open is only available with four or fewer cards in hand.",
       "wrongOpenExample": "Opening without a sure win → Play continues with the hand revealed, and it is reportable",
       "reportSystem": "Reporting Violations",
-      "reportSystemDesc": "Only players on the opposing team can report, and only during play in the same round. Each player and violation type can be reported once.",
+      "reportSystemDesc": "Only players on the opposing team can report, and only during play in the same round. Every report gives 5 points to one of the teams, then the round ends and the next round begins.",
       "reportSystemExample": "Correct report → Reporting team gets 5 points / Report with no violation → Reported team gets 5 points"
     },
     "strategy": {
@@ -791,7 +791,7 @@
       "bonus": "Strength Bonus\nTrump Suit: +100 / Base Suit: +50",
       "jackSystem": "Jack System\nMain J (Jack of the trump suit) / Sub J (varies by trump)",
       "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y'<'X: Y-X points\n(X=declared sets, Y=fields won)",
-      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen / Wrong open\nCorrect report: reporting team +5 / Report with no violation: reported team +5",
+      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen / Wrong open\nCorrect report: reporting team +5 / Report with no violation: reported team +5\nEither way, the round ends and the next round begins",
       "flow": "Game Flow\nDeal -> Bid -> Trick (until 10 fields are complete)",
       "settings": "Basic Settings\n4 players, 2 teams / Opposite seat = partner / Target score is configurable per room / Minimum bid is 6 sets"
     }

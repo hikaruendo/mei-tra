@@ -1,6 +1,6 @@
 import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import type { ChomboResolvedPayload, GameOverPayload } from '@contracts/game';
+import type { ChomboResolvedPayload } from '@contracts/game';
 import { asSeatId } from '../types/identity.types';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import {
@@ -8,10 +8,10 @@ import {
   ReportChomboRequest,
   ReportChomboResponse,
 } from './interfaces/report-chombo.use-case.interface';
-import type { GatewayEvent } from './interfaces/gateway-event.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
-import { RoomStatus } from '../types/room.types';
+import { completeRoundAfterChombo } from './helpers/round-completion.helper';
 import { ChomboService } from '../services/chombo.service';
+import type { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import type { IScoreService } from '../services/interfaces/score-service.interface';
 
 @Injectable()
@@ -20,6 +20,9 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Optional() private readonly chomboService?: ChomboService,
     @Optional() @Inject('IScoreService') private readonly scoreService?: IScoreService,
+    @Optional()
+    @Inject('IGameEventLogService')
+    private readonly gameEventLogService?: IGameEventLogService,
   ) {}
 
   async execute(request: ReportChomboRequest): Promise<ReportChomboResponse> {
@@ -35,7 +38,7 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       request.roomId,
     );
     const state = roomGameState.getState();
-    if (state.gamePhase !== 'play' || !state.playState) {
+    if (state.gamePhase !== 'play' || !state.playState || state.gameOver) {
       return {
         success: false,
         error: 'Chombo reports are only available during play',
@@ -59,17 +62,6 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       return { success: false, error: 'You can only report the opposing team' };
     }
 
-    const reports = state.playState.chomboReports ?? [];
-    if (
-      reports.some(
-        (report) =>
-          report.violatorSeatId === violator.seatId &&
-          report.violationType === request.violationType,
-      )
-    ) {
-      return { success: false, error: 'This chombo has already been reported' };
-    }
-
     const persistedViolation = this.chomboService?.resolveReport(
       state.playState.chomboViolations ?? [],
       asSeatId(reporter.seatId),
@@ -86,7 +78,7 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       state.teamScores[awardedTeam].total += 5;
     }
     state.playState.chomboReports = [
-      ...reports,
+      ...(state.playState.chomboReports ?? []),
       {
         violatorSeatId: asSeatId(violator.seatId),
         violationType: request.violationType,
@@ -96,7 +88,6 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
         timestamp: Date.now(),
       },
     ];
-    await roomGameState.saveState();
 
     const payload: ChomboResolvedPayload = {
       violatorSeatId: asSeatId(violator.seatId),
@@ -106,41 +97,29 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       awardedTeam,
       scores: state.teamScores,
     };
-    const events: GatewayEvent[] = [
-      {
-        scope: 'room',
-        roomId: request.roomId,
-        event: 'chombo-resolved',
-        payload,
-      },
-    ];
-    const pointsToWin = state.pointsToWin;
-    if (state.teamScores[awardedTeam].total >= pointsToWin) {
-      const gameOverPayload: GameOverPayload = {
-        winner: `Team ${awardedTeam}`,
-        winningTeam: awardedTeam,
-        finalScores: state.teamScores,
-      };
-      roomGameState.getState().gameOver = {
-        ...gameOverPayload,
-        finalScores: state.teamScores,
-      };
-      await roomGameState.saveState();
-      await this.roomService.updateRoomStatus(
-        request.roomId,
-        RoomStatus.FINISHED,
-      );
-      events.push({
-        scope: 'room',
-        roomId: request.roomId,
-        event: 'game-over',
-        payload: gameOverPayload,
-      });
-    }
+    // Every report scores for one of the teams, so the round ends with it.
+    const completion = await completeRoundAfterChombo({
+      roomId: request.roomId,
+      roomGameState,
+      state,
+      room,
+      roomService: this.roomService,
+      gameEventLogService: this.gameEventLogService,
+    });
 
     return {
       success: true,
-      events,
+      events: [
+        {
+          scope: 'room',
+          roomId: request.roomId,
+          event: 'chombo-resolved',
+          payload,
+        },
+        ...completion.events,
+      ],
+      delayedEvents: completion.delayedEvents,
+      gameOver: completion.gameOver,
     };
   }
 }
