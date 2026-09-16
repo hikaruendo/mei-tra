@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { SeatId } from '../types/identity.types';
-import type { DomainPlayer, Field, GameState } from '../types/game.types';
+import type {
+  DomainPlayer,
+  Field,
+  GameState,
+  TrumpType,
+} from '../types/game.types';
+import { CardService } from './card.service';
 import { PlayService } from './play.service';
+
+const SUITED_TRUMPS: TrumpType[] = ['zuppe', 'club', 'daiya', 'herz'];
 
 /**
  * Evaluates the open rule against the authoritative server state.
@@ -12,7 +20,10 @@ import { PlayService } from './play.service';
 export class OpenDeclarationService {
   private readonly maxSearchNodes = 100_000;
 
-  constructor(private readonly playService: PlayService) {}
+  constructor(
+    private readonly playService: PlayService,
+    private readonly cardService: CardService = new CardService(),
+  ) {}
 
   canDeclareOpen(state: GameState, declarerSeatId: SeatId): boolean {
     if (state.gamePhase !== 'play' || !state.playState) return false;
@@ -67,7 +78,7 @@ export class OpenDeclarationService {
         state.blowState.currentTrump,
       );
       const choices = legalCards.length > 0 ? legalCards : hand;
-      const outcomes = choices.map((card) => {
+      const outcomes = choices.flatMap((card) => {
         hands.set(
           turnSeatId,
           hand.filter((candidate) => candidate !== card),
@@ -79,17 +90,30 @@ export class OpenDeclarationService {
           baseCard: nextField.cards.length === 0 ? card : nextField.baseCard,
           isComplete: nextField.cards.length + 1 === state.players.length,
         };
-        const outcome = playedField.isComplete
-          ? this.resolveCompletedField(
-              state,
-              declarer.team,
-              hands,
-              playedField,
-              solve,
-            )
-          : solve(this.nextSeat(state.players, turnSeatId), playedField);
+        // Leading the Joker hands the base suit choice to the leader, so the
+        // suit is another branch owned by this seat and folded into the same
+        // minimax rule below.
+        const fields: Field[] =
+          nextField.cards.length === 0 && card === 'JOKER'
+            ? this.baseSuitChoices(
+                hands,
+                turnSeatId,
+                state.blowState.currentTrump,
+              ).map((baseSuit) => ({ ...playedField, baseSuit }))
+            : [playedField];
+        const branchOutcomes = fields.map((branchField) =>
+          branchField.isComplete
+            ? this.resolveCompletedField(
+                state,
+                declarer.team,
+                hands,
+                branchField,
+                solve,
+              )
+            : solve(this.nextSeat(state.players, turnSeatId), branchField),
+        );
         hands.set(turnSeatId, hand);
-        return outcome;
+        return branchOutcomes;
       });
 
       const result =
@@ -126,6 +150,35 @@ export class OpenDeclarationService {
       dealerSeatId: winner.seatId,
       isComplete: false,
     });
+  }
+
+  /**
+   * Base suits the Joker leader can pick from. Suits nobody else can follow
+   * all constrain the field identically, so a single one stands in for them.
+   */
+  private baseSuitChoices(
+    hands: Map<SeatId, string[]>,
+    leadSeatId: SeatId,
+    trump: TrumpType | null,
+  ): string[] {
+    const suits = SUITED_TRUMPS.map((trumpType) =>
+      this.cardService.getTrumpSuit(trumpType),
+    );
+    const followable = new Set<string>();
+    for (const [seatId, hand] of hands) {
+      if (seatId === leadSeatId) continue;
+      for (const card of hand) {
+        if (card === 'JOKER') continue;
+        followable.add(this.cardService.getCardSuit(card, trump));
+      }
+    }
+
+    const choices = suits.filter((suit) => followable.has(suit));
+    const unfollowable = suits.find((suit) => !followable.has(suit));
+    if (unfollowable !== undefined) {
+      choices.push(unfollowable);
+    }
+    return choices;
   }
 
   private nextSeat(players: DomainPlayer[], seatId: SeatId): SeatId {
