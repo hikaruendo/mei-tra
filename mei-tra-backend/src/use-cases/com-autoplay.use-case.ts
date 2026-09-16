@@ -137,11 +137,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
         return await this.handleComPlayPhase(roomId, currentPlayer, gameState);
       } else if (phase === 'blow') {
         if (currentPlayer.hasRequiredBroken) {
-          return await this.handleComRequiredBrokenHand(
-            roomId,
-            currentPlayer,
-            gameState,
-          );
+          return await this.handleComRequiredBrokenHand(roomId, currentPlayer);
         }
 
         return await this.handleComBlowPhase(roomId, currentPlayer, gameState);
@@ -413,7 +409,6 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
   private async handleComRequiredBrokenHand(
     roomId: string,
     comPlayer: DomainPlayer,
-    gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
     const preparation = await this.revealBrokenHandUseCase.prepare({
       roomId,
@@ -430,31 +425,19 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       };
     }
 
-    const completion = await this.revealBrokenHandUseCase.finalize(
-      preparation.followUp,
-    );
-
-    if (!completion.success) {
-      return {
-        success: false,
-        events: [],
-        shouldContinue: false,
-        error: completion.error ?? 'Failed to finalize COM broken hand reveal',
-      };
-    }
-
-    const nextPlayer = gameState.getCurrentPlayer();
     return {
       success: true,
-      // The redeal waits out the reveal delay, as it does after a player
-      // reveals, so the table can see the COM's hand first.
       events: preparation.events ?? [],
-      delayedEvents: (completion.events ?? []).map((event) => ({
-        ...event,
-        delayMs: preparation.delayMs,
-      })),
-      shouldContinue:
-        !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
+      // The redeal itself waits out the reveal delay, as it does after a
+      // player reveals. Redealing now and only delaying the events would show
+      // the table the next deal while claiming the old hand is still up.
+      brokenHandRevealTrigger: {
+        followUp: preparation.followUp,
+        delayMs: preparation.delayMs ?? 0,
+      },
+      // Whose turn it is can only be read after the redeal, so the caller
+      // continues from there.
+      shouldContinue: false,
     };
   }
 }
