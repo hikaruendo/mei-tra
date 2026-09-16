@@ -705,7 +705,7 @@ describe('PlayerHand', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows a revealed hand face up to the other players', () => {
+  it('shows a revealed hand as rank and suit marks', () => {
     const player: Player = { ...otherPlayer, hand: ['H-A', 'S-2'] };
     const { rerender } = renderPlayerHand({ player });
 
@@ -714,8 +714,8 @@ describe('PlayerHand', () => {
     rerender(buildPlayerHand({ player, revealedHand: ['H-A', 'S-2'] }));
 
     expect(screen.queryAllByTestId('card-back')).toHaveLength(0);
-    expect(
-      screen.getAllByTestId('card-front').map((card) => card.textContent),
-    ).toEqual(['H-A', 'S-2']);
+    expect(screen.queryAllByTestId('card-front')).toHaveLength(0);
+    expect(screen.getByText('H-A')).toBeInTheDocument();
+    expect(screen.getByText('S-2')).toBeInTheDocument();
   });
 });

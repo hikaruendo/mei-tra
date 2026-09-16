@@ -37,6 +37,13 @@
   z-index: var(--z-index-card);
 }
 
+/* A revealed hand is drawn as rank-and-suit marks, so the row wraps instead of
+   stacking cards. */
+.revealedHandContainer{
+  flex-wrap: wrap;
+  gap: calc(0.08rem * var(--mt-card-scale));
+}
+
 .card {
   flex-shrink: 0;
   margin: 0 var(--player-hand-card-scaled-overlap, calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale)));
@@ -64,8 +71,7 @@
   border-radius: inherit;
 }
 
-.cardFaceDown,
-.revealedCard{
+.cardFaceDown{
   width: calc(1.55rem * var(--mt-card-scale));
   aspect-ratio: 2 / 3;
   border-radius: 0.25rem;
@@ -1011,8 +1017,7 @@
     overflow: visible;
   }
 
-  .cardFaceDown,
-  .revealedCard{
+  .cardFaceDown{
     width: calc(1.25rem * var(--mt-card-scale));
     aspect-ratio: 2 / 3;
     border-radius: 0.25rem;
