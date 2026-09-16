@@ -15,6 +15,7 @@ import { PlayService } from '../../services/play.service';
 import { ChomboService } from '../../services/chombo.service';
 import { GameStateService } from '../../services/game-state.service';
 import { IGameStateRepository } from '../../repositories/interfaces/game-state.repository.interface';
+import type { LogGameEventInput } from '../../services/interfaces/game-event-log.service.interface';
 import { asSeatId } from '../../types/identity.types';
 
 export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) {
@@ -81,6 +82,13 @@ export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) 
     timestamp: 1,
   };
   const updateRoomStatus = jest.fn(async () => true);
+  const loggedEvents: LogGameEventInput[] = [];
+  const gameEventLog = {
+    log: jest.fn((input: LogGameEventInput) => {
+      loggedEvents.push(input);
+      return Promise.resolve();
+    }),
+  };
   const room: { settings: { gameMode: 'pro' | 'normal' } } = {
     settings: { gameMode: 'pro' },
   };
@@ -109,12 +117,15 @@ export async function createGame(hand: string[], otherPlayers?: DomainPlayer[]) 
       },
       { provide: 'IPlayService', useValue: play },
       { provide: 'IChomboService', useValue: chombo },
+      { provide: 'IGameEventLogService', useValue: gameEventLog },
     ],
   }).compile();
   return {
     game,
     chombo,
     cards,
+    gameEventLog,
+    loggedEvents,
     open: module.get(DeclareOpenUseCase),
     broken: module.get(RevealBrokenHandUseCase),
     declare: module.get(DeclareBlowUseCase),

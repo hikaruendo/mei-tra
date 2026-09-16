@@ -202,11 +202,19 @@ function countWonFields(state: GameState, team: Team): number {
 // the fields it still takes part in.
 function countRemainingFields(state: GameState): number {
   const playedBySeatIds = state.playState?.currentField?.playedBySeatIds ?? [];
+  // Pro mode lets the declarer place the negri after play has started. Until
+  // they do, the agari they took sits in their hand without standing for a
+  // field, so it would count one field too many.
+  const unplacedNegriSeatId = state.playState?.negriCard
+    ? null
+    : (state.blowState.currentHighestDeclaration?.seatId ?? null);
   return Math.max(
     0,
     ...state.players.map(
       (player) =>
-        player.hand.length + (playedBySeatIds.includes(player.seatId) ? 1 : 0),
+        player.hand.length +
+        (playedBySeatIds.includes(player.seatId) ? 1 : 0) -
+        (player.seatId === unplacedNegriSeatId ? 1 : 0),
     ),
   );
 }

@@ -977,7 +977,6 @@ describe('ReconnectionUseCase', () => {
         openResolved: true,
         revealedHands: { 'seat-1': ['A♠'] },
         chomboViolations: [],
-        chomboReports: [],
       },
       teamScores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },
       pointsToWin: 5,

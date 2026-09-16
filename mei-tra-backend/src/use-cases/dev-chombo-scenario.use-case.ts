@@ -97,7 +97,6 @@ export class DevChomboScenarioUseCase implements IDevChomboScenarioUseCase {
       seat.hasBroken = false;
       seat.hasRequiredBroken = false;
     });
-    state.gamePhase = 'play';
     state.pendingBrokenHandReveal = null;
     state.agari = scenario.agari ?? undefined;
     state.blowState = {
@@ -133,10 +132,12 @@ export class DevChomboScenarioUseCase implements IDevChomboScenarioUseCase {
       openResolved: false,
       fieldCheckpoint: null,
       chomboViolations: [],
-      chomboReports: [],
       chomboRoundNumber: state.roundNumber,
     };
     setCurrentSeat(state, scenario.currentSeatId);
+    // Last, because it replaces the state object: every phase change goes
+    // through the phase service, the only check that the move is legal.
+    roomGameState.transitionPhase('play');
     await roomGameState.saveState();
 
     const newRoundPayload: NewRoundStartedPayload = {

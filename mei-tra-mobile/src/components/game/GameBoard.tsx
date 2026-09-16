@@ -231,6 +231,7 @@ export function GameBoard({
     !game.openResolved &&
     Boolean(highest) &&
     Boolean(self) &&
+    selfHandCount > 0 &&
     selfHandCount <= OPEN_MAX_HAND_SIZE;
   const hasActedInBlow =
     Boolean(self?.isPasser) ||

@@ -86,6 +86,7 @@ const SERVER_ERROR_KEYS = new Map<string, string>([
   ["Open has already been declared", 'openHasAlreadyBeenDeclared'],
   ["Open is only available during play", 'openIsOnlyAvailableDuringPlay'],
   ["Open is only available in pro mode", 'openIsOnlyAvailableInProMode'],
+  ["Open is only available while you hold cards", 'openIsOnlyAvailableWhileYouHoldCards'],
   ["Open requires a completed declaration", 'openRequiresACompletedDeclaration'],
   ["Play field is unavailable", 'playFieldIsUnavailable'],
   ["Play is settled after a valid open", 'playIsSettledAfterAValidOpen'],

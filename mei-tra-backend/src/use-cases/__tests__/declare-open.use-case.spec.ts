@@ -182,6 +182,23 @@ describe('DeclareOpenUseCase', () => {
     expect(state.playState?.openDeclared).toBe(false);
   });
 
+  it('rejects an open once the hand is empty', async () => {
+    const declarer = seat('declarer', 0, []);
+    const { useCase, openRules } = createMockedUseCase(declarer, true);
+
+    const result = await useCase.execute({
+      roomId: 'room-1',
+      actorId: 'user-1',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Open is only available while you hold cards',
+    });
+    expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
+    expect(state.playState?.openDeclared).toBe(false);
+  });
+
   describe('valid open', () => {
     it('scores the unplayed fields for the opener like a played-out round and deals the next round', async () => {
       const fixture = await createOpenGame(
@@ -244,6 +261,34 @@ describe('DeclareOpenUseCase', () => {
         expect(teamScores[0].total).toBe(0);
         expect(teamScores[1].total).toBe(
           Math.abs(scoreService.calculatePlayPoints(7, 6)),
+        );
+      } finally {
+        await fixture.module.close();
+      }
+    });
+
+    it('does not count a negri the declarer has not placed yet', async () => {
+      // Pro mode lets the declarer keep the agari until they place it, so they
+      // hold one card more than the fields that are left.
+      const fixture = await createOpenGame(
+        {
+          winner: ['A♣', 'K♣', 'Q♣', 'J♣'],
+          opponent: ['5♥', '6♥', '7♥'],
+        },
+        completedFields(4, 3),
+      );
+      try {
+        expect(fixture.game.getState().playState?.negriCard).toBeNull();
+
+        const result = await fixture.open.execute({
+          roomId: 'room-1',
+          actorId: 'winner',
+        });
+
+        expect(result.success).toBe(true);
+        // 4 won + 3 left, not 4: the unplaced negri is not a field.
+        expect(fixture.game.getState().teamScores[0].total).toBe(
+          scoreService.calculatePlayPoints(7, 7),
         );
       } finally {
         await fixture.module.close();

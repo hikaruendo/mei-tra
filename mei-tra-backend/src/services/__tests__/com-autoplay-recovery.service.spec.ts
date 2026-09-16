@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { IRoomService } from '../interfaces/room-service.interface';
 import { IComAutoPlayUseCase } from '../../use-cases/interfaces/com-autoplay-use-case.interface';
 import { ICompleteFieldUseCase } from '../../use-cases/interfaces/complete-field.use-case.interface';
+import { IRevealBrokenHandUseCase } from '../../use-cases/interfaces/reveal-broken-hand.use-case.interface';
 import { GatewayEvent } from '../../use-cases/interfaces/gateway-event.interface';
 import {
   ComAutoPlayRecoveryHandlers,
@@ -27,6 +28,10 @@ const createService = () => {
   const completeFieldUseCase = {
     execute: jest.fn(),
   };
+  const revealBrokenHandUseCase = {
+    prepare: jest.fn(),
+    finalize: jest.fn(),
+  };
   const handlers: ComAutoPlayRecoveryHandlers = {
     dispatchEvents: jest.fn(),
     processFieldCompletion: jest.fn().mockResolvedValue(undefined),
@@ -35,6 +40,7 @@ const createService = () => {
     roomService as unknown as IRoomService,
     comAutoPlayUseCase as IComAutoPlayUseCase,
     completeFieldUseCase as ICompleteFieldUseCase,
+    revealBrokenHandUseCase as unknown as IRevealBrokenHandUseCase,
     new RoomGameActionQueueService(),
   );
 
@@ -43,11 +49,101 @@ const createService = () => {
     roomService,
     comAutoPlayUseCase,
     completeFieldUseCase,
+    revealBrokenHandUseCase,
     handlers,
   };
 };
 
 describe('ComAutoPlayRecoveryService', () => {
+  it('redeals a COM broken hand only after the table has seen it', async () => {
+    jest.useFakeTimers();
+    const {
+      service,
+      roomService,
+      comAutoPlayUseCase,
+      revealBrokenHandUseCase,
+      handlers,
+    } = createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'blow',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    const followUp = {
+      roomId: 'room-1',
+      seatId: asSeatId('com-0'),
+      handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+    };
+    comAutoPlayUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+      brokenHandRevealTrigger: { followUp, delayMs: 5_000 },
+      shouldContinue: false,
+    });
+    revealBrokenHandUseCase.finalize.mockResolvedValue({
+      success: true,
+      events: [],
+    });
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(1_500);
+    await flushPromises();
+
+    expect(comAutoPlayUseCase.execute).toHaveBeenCalledTimes(1);
+    expect(revealBrokenHandUseCase.finalize).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(5_000);
+    await flushPromises();
+
+    expect(revealBrokenHandUseCase.finalize).toHaveBeenCalledWith(followUp);
+    jest.useRealTimers();
+  });
+
+  it('drops a scheduled COM redeal when the room is cleared', async () => {
+    jest.useFakeTimers();
+    const {
+      service,
+      roomService,
+      comAutoPlayUseCase,
+      revealBrokenHandUseCase,
+      handlers,
+    } = createService();
+
+    roomService.getRoomGameState.mockResolvedValue({
+      getState: () => ({
+        gamePhase: 'blow',
+        playState: { currentField: null },
+        pendingBrokenHandReveal: null,
+      }),
+    });
+    comAutoPlayUseCase.execute.mockResolvedValue({
+      success: true,
+      events: [],
+      brokenHandRevealTrigger: {
+        followUp: { roomId: 'room-1', seatId: asSeatId('com-0') },
+        delayMs: 5_000,
+      },
+      shouldContinue: false,
+    });
+
+    service.trigger('room-1', handlers);
+    await flushPromises();
+    await jest.advanceTimersByTimeAsync(1_500);
+    await flushPromises();
+
+    service.clearRoom('room-1');
+    await jest.advanceTimersByTimeAsync(5_000);
+    await flushPromises();
+
+    expect(revealBrokenHandUseCase.finalize).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+    jest.useRealTimers();
+  });
+
   it('stops recovery when the room no longer exists', async () => {
     jest.useFakeTimers();
     const { service, roomService, comAutoPlayUseCase, handlers } =

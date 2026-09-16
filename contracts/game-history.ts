@@ -13,6 +13,7 @@ export type GameHistoryActionType =
   | 'card_played'
   | 'field_recovered'
   | 'field_completed'
+  | 'chombo_reported'
   | 'round_completed'
   | 'round_cancelled'
   | 'round_reset'
@@ -127,6 +128,13 @@ export interface FieldRecoveredReplayDetailsContract {
   reason: string | null;
   fieldIndex: number | null;
   abandonedCards: string[];
+}
+
+export interface ChomboReportedReplayDetailsContract {
+  violatorSeatId: SeatId | null;
+  violationType: string | null;
+  isCorrect: boolean;
+  awardedTeam: number | null;
 }
 
 export interface RoundCompletedReplayDetailsContract {
@@ -255,6 +263,11 @@ export type GameHistoryReplayEventContract =
       'field_completed',
       'play',
       FieldCompletedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'chombo_reported',
+      'play',
+      ChomboReportedReplayDetailsContract
     >
   | GameHistoryReplayEventBaseContract<
       'round_completed',

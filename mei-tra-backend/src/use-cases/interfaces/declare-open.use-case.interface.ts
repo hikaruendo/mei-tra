@@ -12,6 +12,7 @@ export interface DeclareOpenResponse {
   events?: GatewayEvent[];
   delayedEvents?: GatewayEvent[];
   gameOver?: GameOverInstruction;
+  roundStoppedEarly?: boolean;
 }
 
 export interface IDeclareOpenUseCase {

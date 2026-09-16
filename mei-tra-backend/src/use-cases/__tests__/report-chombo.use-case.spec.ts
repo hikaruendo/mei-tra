@@ -119,6 +119,37 @@ describe('Chombo report adjudication from room state', () => {
     );
   });
 
+  it('keeps the report in the game history', async () => {
+    const state = fixture.game.getState();
+    state.playState!.chomboViolations = [candidate('last-tanzen')];
+
+    await report('last-tanzen');
+
+    const logged = fixture.loggedEvents.find(
+      (event) => event.actionType === 'chombo_reported',
+    );
+    expect(logged?.roomId).toBe('room-1');
+    expect(logged?.actorSeatId).toBe(asSeatId('opponent'));
+    expect(logged?.actionData).toEqual({
+      violatorSeatId: winner,
+      violationType: 'last-tanzen',
+      isCorrect: true,
+      awardedTeam: 1,
+    });
+  });
+
+  it('records a report that found no chombo too', async () => {
+    await report('wrong-suit');
+
+    const logged = fixture.loggedEvents.find(
+      (event) => event.actionType === 'chombo_reported',
+    );
+    expect(logged?.actionData).toMatchObject({
+      isCorrect: false,
+      awardedTeam: 0,
+    });
+  });
+
   it('rejects a report after the room changes round', async () => {
     fixture.game.getState().roundNumber = 2;
     const result = await report('wrong-open');

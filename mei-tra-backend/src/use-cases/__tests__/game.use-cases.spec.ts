@@ -2835,24 +2835,22 @@ describe('Game Use Cases', () => {
         actorId: 'com-0',
         seatId: asSeatId('com-0'),
       });
-      expect(revealBrokenHandUseCase.finalize).toHaveBeenCalledWith({
-        roomId: 'room-1',
-        seatId: asSeatId('com-0'),
-        handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+      // The redeal itself waits out the reveal delay, as it does for a player,
+      // so the caller finalizes on its own timer.
+      expect(revealBrokenHandUseCase.finalize).not.toHaveBeenCalled();
+      expect(result.brokenHandRevealTrigger).toEqual({
+        followUp: {
+          roomId: 'room-1',
+          seatId: asSeatId('com-0'),
+          handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+        },
+        delayMs: 5000,
       });
       expect(comStrategyService.chooseBlowAction).not.toHaveBeenCalled();
       expect(declareBlowUseCase.execute).not.toHaveBeenCalled();
       expect(passBlowUseCase.execute).not.toHaveBeenCalled();
       expect(result.events).toEqual([revealEvent]);
-      expect(result.delayedEvents).toEqual([
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'broken',
-          payload: { nextSeatId: 'com-0' },
-          delayMs: 5000,
-        },
-      ]);
+      expect(result.delayedEvents).toBeUndefined();
     });
   });
 
