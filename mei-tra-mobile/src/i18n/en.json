@@ -77,6 +77,8 @@
     "connecting": "Connecting to the server: {message}",
     "redealHand": "Redealt because a special hand was declared",
     "redealAllPass": "Redealt because everyone passed",
+    "negriPrompt": "Select a card from your hand as Negri",
+    "negriPromptPro": "Drag a card from your hand down to set it as Negri",
     "openDeclared": "The open holds",
     "openInvalid": "The open does not hold. Play continues with the hand revealed",
     "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",

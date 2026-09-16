@@ -335,6 +335,8 @@
     "yourTurn": "あなたのターンです",
     "waiting": "待機中...",
     "redealAllPass": "全員パスのため配り直しました",
+    "negriPrompt": "手札からネグリにするカードを選んでください",
+    "negriPromptPro": "ネグリにするカードを手札から下へドラッグしてください",
     "redealBroken": "ブロークンのため配り直しました",
     "openDeclared": "オープンが通りました",
     "openInvalid": "オープンは通りませんでした。手札を公開したままプレイが続きます",

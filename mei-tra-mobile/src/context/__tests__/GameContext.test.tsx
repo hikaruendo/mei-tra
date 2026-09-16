@@ -652,6 +652,36 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it.each([
+    ['pro', 'game.negriPromptPro'],
+    ['normal', 'game.negriPrompt'],
+  ] as const)(
+    'shows the %s-mode Negri prompt instead of the server text',
+    async (gameMode, key) => {
+      const screen = await renderProvider();
+
+      await act(async () => {
+        mockSocket.trigger('connect');
+        mockSocket.trigger('game-state', { ...createGameState(), gameMode });
+        await flushPromises();
+      });
+      // The reveal comes seconds after the play phase starts, so the snapshot
+      // has rendered by then.
+      await act(async () => {
+        mockSocket.trigger('reveal-agari', {
+          agari: 'A♠',
+          message: 'Select a card from your hand as Negri',
+          seatId: asSeatId('player-1'),
+        });
+        await flushPromises();
+      });
+
+      expect(screen.latestGame.notice).toEqual({ key });
+
+      await screen.unmount();
+    },
+  );
+
   it('asks the server for a chombo scenario in development builds', async () => {
     const screen = await renderProvider();
 

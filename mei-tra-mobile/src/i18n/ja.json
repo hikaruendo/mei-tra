@@ -77,6 +77,8 @@
     "connecting": "サーバーへ接続中です: {message}",
     "redealHand": "ブロークンのため配り直しました",
     "redealAllPass": "全員パスのため配り直しました",
+    "negriPrompt": "手札からネグリにするカードを選んでください",
+    "negriPromptPro": "ネグリにするカードを手札から下へドラッグしてください",
     "openDeclared": "オープンが通りました",
     "openInvalid": "オープンは通りませんでした。手札を公開したままプレイが続きます",
     "chomboCorrect": "正しい指摘です。{teamName} に5点入り、このラウンドは終わります",

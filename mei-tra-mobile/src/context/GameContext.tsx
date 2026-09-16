@@ -925,7 +925,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });
-      dispatch({ type: 'notice', message: payload.message });
+      // payload.message is fixed English and knows nothing of pro mode, where
+      // the Negri is dragged down rather than picked.
+      dispatch({
+        type: 'notice',
+        message: {
+          key:
+            stateRef.current.game?.gameMode === 'pro'
+              ? 'game.negriPromptPro'
+              : 'game.negriPrompt',
+        },
+      });
     });
     socket.on('play-setup-complete', (payload) => {
       const pendingNegriCard = pendingNegriCardRef.current;
