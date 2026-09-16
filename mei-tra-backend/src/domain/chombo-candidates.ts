@@ -21,7 +21,11 @@ export function appendChomboCandidate(
 ): ChomboViolation[] {
   if (
     !candidate ||
-    findActiveChomboCandidate(candidates, candidate.violatorSeatId, candidate.type)
+    findActiveChomboCandidate(
+      candidates,
+      candidate.violatorSeatId,
+      candidate.type,
+    )
   ) {
     return candidates;
   }

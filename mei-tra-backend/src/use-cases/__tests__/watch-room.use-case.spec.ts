@@ -92,7 +92,10 @@ describe('WatchRoomUseCase', () => {
     pointsToWin: roomValue.settings.pointsToWin,
   });
 
-  const createUseCase = (roomValue: Room, mutateState?: (state: GameState) => void) => {
+  const createUseCase = (
+    roomValue: Room,
+    mutateState?: (state: GameState) => void,
+  ) => {
     const state = gameState(roomValue);
     mutateState?.(state);
     const roomGameState = {
@@ -161,6 +164,8 @@ describe('WatchRoomUseCase', () => {
     const result = await useCase.execute({ roomId: roomValue.id });
 
     expect(result.success).toBe(true);
-    expect(result.data?.gameState.revealedHands).toEqual({ p1: ['A♠', 'K♠'] });
+    expect(result.data?.gameState.revealedHands).toEqual({
+      p1: ['A♠', 'K♠'],
+    });
   });
 });
