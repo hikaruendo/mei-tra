@@ -494,6 +494,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    if (response.roundStoppedEarly) {
+      this.comAutoPlayRecoveryService.clearRoom(roomId);
+    }
+
     this.dispatchGameplayEvents(response.events);
     this.dispatchGameplayEvents(response.delayedEvents);
 
@@ -1842,9 +1846,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('error-message', result.error ?? 'Failed to report chombo');
         return;
       }
-      // The report ends the round, so a field completion or COM turn still
-      // pending in it must not run into the next one.
-      this.comAutoPlayRecoveryService.clearRoom(data.roomId);
       await this.processFieldCompletionResult(data.roomId, result);
       if (result.delayedEvents) {
         this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);

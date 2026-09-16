@@ -12,6 +12,7 @@ export interface ReportChomboResponse {
   events?: GatewayEvent[];
   delayedEvents?: GatewayEvent[];
   gameOver?: GameOverInstruction;
+  roundStoppedEarly?: boolean;
 }
 
 export interface IReportChomboUseCase {
