@@ -2,6 +2,7 @@ import { ReconnectionUseCase } from '../reconnection.use-case';
 import { asSeatId } from '../../types/identity.types';
 import { RoomStatus } from '../../types/room.types';
 import type { UserProfile } from '../../types/user.types';
+import type { GameOverPayload } from '@contracts/game';
 import { createGame } from './chombo-game.fixture';
 
 describe('pro-mode start-to-reconnect scenario', () => {
@@ -87,11 +88,9 @@ describe('pro-mode start-to-reconnect scenario', () => {
         getRoomGameState: jest.fn().mockResolvedValue(fixture.game),
         listRooms: jest.fn().mockResolvedValue([room]),
       } as never;
-      const reconnection = new ReconnectionUseCase(
-        roomService,
-        fixture.game,
-        { claim: jest.fn() } as never,
-      );
+      const reconnection = new ReconnectionUseCase(roomService, fixture.game, {
+        claim: jest.fn(),
+      } as never);
       const snapshot = await reconnection.getActiveGameSnapshot({
         roomId: 'room-1',
         authenticatedUser: {
@@ -109,7 +108,9 @@ describe('pro-mode start-to-reconnect scenario', () => {
         revealedHands: { [asSeatId('winner')]: ['K♠'] },
         openDeclared: true,
         openResolved: true,
-        gameOver: expect.objectContaining({ winningTeam: 1 }),
+        gameOver: expect.objectContaining({
+          winningTeam: 1,
+        }) as GameOverPayload,
         teamScores: { 0: { play: 0, total: 0 }, 1: { play: 5, total: 5 } },
       });
     } finally {

@@ -5,6 +5,7 @@ import { RoomStatus } from '../../types/room.types';
 import { UserProfile } from '../../types/user.types';
 import { RoomMembershipService } from '../../services/room-membership.service';
 import { asSeatId } from '../../types/identity.types';
+import type { GameStatePayload } from '@contracts/game';
 
 const createRoomMembershipService = (): RoomMembershipService =>
   ({
@@ -1023,7 +1024,7 @@ describe('ReconnectionUseCase', () => {
         openDeclared: true,
         openResolved: true,
         revealedHands: { 'seat-1': ['A♠'] },
-      }),
+      }) as GameStatePayload,
     });
   });
 });

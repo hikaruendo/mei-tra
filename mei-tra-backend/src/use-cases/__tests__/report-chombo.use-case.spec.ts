@@ -1,4 +1,5 @@
 import { createGame } from './chombo-game.fixture';
+import type { GatewayEvent } from '../interfaces/gateway-event.interface';
 import { asSeatId } from '../../types/identity.types';
 import type { ChomboViolation } from '../../types/game.types';
 
@@ -45,7 +46,7 @@ describe('Chombo report adjudication from room state', () => {
     const result = await report('negri-forget');
     expect(result.success).toBe(true);
     expect(result.events).toContainEqual(
-      expect.objectContaining({
+      expect.objectContaining<Partial<GatewayEvent>>({
         event: 'chombo-resolved',
         payload: expect.objectContaining({ isCorrect: false, awardedTeam: 0 }),
       }),
@@ -112,7 +113,7 @@ describe('Chombo report adjudication from room state', () => {
     ];
     const result = await report('wrong-open');
     expect(result.events).toContainEqual(
-      expect.objectContaining({
+      expect.objectContaining<Partial<GatewayEvent>>({
         event: 'chombo-resolved',
         payload: expect.objectContaining({ isCorrect: false, awardedTeam: 0 }),
       }),
