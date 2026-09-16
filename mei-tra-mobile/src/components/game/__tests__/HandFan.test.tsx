@@ -440,6 +440,54 @@ describe('HandFan', () => {
     expect(onDropAction).toHaveBeenNthCalledWith(2, 'B', 'negri');
   });
 
+  it('picks up a lone card so a pro drop can still play it', () => {
+    const onDropAction = jest.fn();
+    const renderer = render({ cards: ['A'], onDropAction });
+
+    const gesture = startDrag(renderer, 'A', 0, -DROP_PX);
+    expect(gesture.claimed).toBe(true);
+    gesture.release();
+
+    expect(onDropAction).toHaveBeenCalledWith('A', 'play');
+  });
+
+  it('offers the drops that act as screen reader actions', () => {
+    const onDropAction = jest.fn();
+    const renderer = render({ dropActions: ['play', 'negri'], onDropAction });
+    const cardA = renderer.root.find(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityLabel === 'A',
+    ).props as {
+      accessibilityActions: { name: string; label: string }[];
+      accessibilityState: { disabled: boolean };
+      onAccessibilityAction: (event: unknown) => void;
+    };
+
+    expect(cardA.accessibilityActions.map((action) => action.name)).toEqual([
+      'play',
+      'negri',
+    ]);
+    // A card with actions must not be announced as dimmed.
+    expect(cardA.accessibilityState.disabled).toBe(false);
+
+    act(() => {
+      cardA.onAccessibilityAction({ nativeEvent: { actionName: 'negri' } });
+    });
+    expect(onDropAction).toHaveBeenCalledWith('A', 'negri');
+  });
+
+  it('offers no screen reader actions when no drop acts', () => {
+    const renderer = render();
+    const cardA = renderer.root.find(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityLabel === 'A',
+    );
+
+    expect(cardA.props.accessibilityActions).toBeUndefined();
+  });
+
   it('puts the card back down once the drop action is reported', () => {
     const onDropAction = jest.fn();
     const renderer = render({ onDropAction });

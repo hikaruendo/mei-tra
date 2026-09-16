@@ -590,7 +590,11 @@ describe('GameBoard pro drag gating', () => {
     root: {
       findAllByProps: (props: Record<string, unknown>) => unknown[];
       findByProps: (props: Record<string, unknown>) => {
-        props: { scrollEnabled?: boolean; onPress?: () => void };
+        props: {
+          scrollEnabled?: boolean;
+          onPress?: () => void;
+          accessibilityActions?: { name: string }[];
+        };
       };
       findByType: (type: typeof HandFan) => {
         props: {
@@ -673,6 +677,40 @@ describe('GameBoard pro drag gating', () => {
     });
     expect(handlers.onPlayCard).toHaveBeenCalledWith('S-3');
     expect(handlers.onSelectNegri).toHaveBeenCalledWith('H-4');
+
+    act(() => renderer.unmount());
+  });
+
+  it('offers the same pro moves to a screen reader as to the drag', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+    const card = () =>
+      renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props as {
+        accessibilityActions?: { name: string }[];
+        onAccessibilityAction?: (actionName: string) => void;
+      };
+
+    expect(card().accessibilityActions?.map((action) => action.name)).toEqual([
+      'play',
+      'negri',
+    ]);
+
+    act(() => card().onAccessibilityAction?.('play'));
+    act(() => card().onAccessibilityAction?.('negri'));
+    expect(handlers.onPlayCard).toHaveBeenCalledWith('S-3');
+    expect(handlers.onSelectNegri).toHaveBeenCalledWith('S-3');
+
+    act(() => renderer.unmount());
+  });
+
+  it('offers no pro moves during the blow phase', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('blow', handlers);
+
+    expect(
+      renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props
+        .accessibilityActions,
+    ).toBeUndefined();
 
     act(() => renderer.unmount());
   });

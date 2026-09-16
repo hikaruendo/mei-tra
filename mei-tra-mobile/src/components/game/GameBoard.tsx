@@ -6,6 +6,7 @@ import {
   type TrumpType,
 } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
+import type { CardDropAction } from '@meitra/game-client/drag-action';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
   GameHistoryReplayViewContract,
@@ -233,8 +234,16 @@ export function GameBoard({
     game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
   // The hand renders during the blow phase too, so the drop affordance needs
-  // its own phase gate or it offers plays the server refuses.
-  const canProDrop = isProMode && isHandPlayPhase && (isMyTurn || canPlaceProNegri);
+  // its own phase gate or it offers plays the server refuses. The drag and the
+  // screen reader actions both read this list, so they offer the same moves.
+  const proDropActions: CardDropAction[] =
+    isProMode && isHandPlayPhase
+      ? [
+          ...(isMyTurn ? (['play'] as const) : []),
+          ...(canPlaceProNegri ? (['negri'] as const) : []),
+        ]
+      : [];
+  const canProDrop = proDropActions.length > 0;
   const canReportChombo =
     isProMode && isHandPlayPhase && chomboReportTargets.length > 0;
   const setupChomboScenario =
@@ -673,11 +682,11 @@ export function GameBoard({
               }
               onReorder={onHandReorder}
               onDragActiveChange={setHandDragActive}
+              dropActions={proDropActions}
               onDropAction={(card, action) => {
-                if (canProDrop) {
-                  if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
-                  if (action === 'play' && isMyTurn) onPlayCard(card);
-                }
+                if (!proDropActions.includes(action)) return;
+                if (action === 'negri') onSelectNegri(card);
+                else onPlayCard(card);
               }}
               // Pro mode plays by dragging only, as the web hand does
               // (PlayerHand handleCardClick), so a tap selects nothing.
