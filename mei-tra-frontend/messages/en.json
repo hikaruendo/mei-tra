@@ -453,6 +453,20 @@
   "chomboReport": {
     "dockLabel": "Chombo"
   },
+  "chomboScenario": {
+    "title": "Chombo test (development only)",
+    "description": "Jumps to a moment where you can commit that chombo. Report it as a player on the other team.",
+    "negriForget": "Negri forget",
+    "negriForgetHint": "You won the bid. Play a card without placing the Negri.",
+    "wrongSuit": "Wrong suit",
+    "wrongSuitHint": "9♠ is on the table. Play a ♦ while you still hold a ♠.",
+    "fourJack": "Four jacks",
+    "fourJackHint": "You hold all four jacks. Play any card.",
+    "lastTanzen": "Last tanzen",
+    "lastTanzenHint": "You have two cards, one of them the Joker. Play the other one and it is reportable right away.",
+    "wrongOpen": "Wrong open",
+    "wrongOpenHint": "Your four cards cannot take every remaining field. Press Open."
+  },
   "gameHistoryDock": {
     "title": "Replay Log",
     "reportLabel": "Audit report",

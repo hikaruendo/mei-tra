@@ -209,6 +209,14 @@ export const GameTable: React.FC<GameTableProps> = ({
                 teamNames={teamNames}
                 gameMode={gameMode}
                 chomboReport={chomboReport}
+                onSetupChomboScenario={
+                  gameMode === 'pro' &&
+                  !isSpectator &&
+                  process.env.NODE_ENV !== 'production' &&
+                  (gamePhase === 'blow' || gamePhase === 'play')
+                    ? gameActions.setupChomboScenario
+                    : undefined
+                }
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined

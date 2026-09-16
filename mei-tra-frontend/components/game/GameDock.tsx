@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import type { ChomboViolationType } from '@contracts/game';
 import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
+import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
@@ -17,6 +19,7 @@ interface GameDockProps {
   players?: Player[];
   teamNames?: TeamNames;
   chomboReport?: ReactNode;
+  onSetupChomboScenario?: (violationType: ChomboViolationType) => void;
   onLeaveRequest?: () => void;
 }
 
@@ -29,6 +32,7 @@ export function GameDock({
   players,
   teamNames,
   chomboReport,
+  onSetupChomboScenario,
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
@@ -39,7 +43,7 @@ export function GameDock({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isChomboOpen, setIsChomboOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const hasChomboReport = Boolean(chomboReport);
+  const hasChomboPanel = Boolean(chomboReport || onSetupChomboScenario);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') {
@@ -92,10 +96,10 @@ export function GameDock({
   }, [isHistoryOpen, isChomboOpen]);
 
   useEffect(() => {
-    if (!hasChomboReport) {
+    if (!hasChomboPanel) {
       setIsChomboOpen(false);
     }
-  }, [hasChomboReport]);
+  }, [hasChomboPanel]);
 
   const tools = (
     <>
@@ -126,7 +130,7 @@ export function GameDock({
           {tHistory('title')}
         </button>
       </div>
-      {hasChomboReport && (
+      {hasChomboPanel && (
         <div className={styles.dockItem}>
           <button
             type="button"
@@ -174,8 +178,18 @@ export function GameDock({
           />
         </div>
       )}
-      {isChomboOpen && hasChomboReport && (
-        <div className={styles.chomboPanel}>{chomboReport}</div>
+      {isChomboOpen && hasChomboPanel && (
+        <div className={styles.chomboPanel}>
+          {chomboReport}
+          {onSetupChomboScenario && (
+            <ChomboScenarioPanel
+              onSelect={(violationType) => {
+                setIsChomboOpen(false);
+                onSetupChomboScenario(violationType);
+              }}
+            />
+          )}
+        </div>
       )}
     </>
   );

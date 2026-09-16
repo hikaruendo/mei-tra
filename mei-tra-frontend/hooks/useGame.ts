@@ -1440,6 +1440,13 @@ export const useGame = () => {
       if (!socket || !currentRoomId) return;
       socket.emit('declare-open', { roomId: currentRoomId });
     },
+    setupChomboScenario: (violationType: ChomboViolationType) => {
+      if (!socket || !currentRoomId) return;
+      socket.emit('dev-chombo-scenario', {
+        roomId: currentRoomId,
+        violationType,
+      });
+    },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });

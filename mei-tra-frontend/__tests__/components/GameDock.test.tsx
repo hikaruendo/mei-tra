@@ -217,4 +217,26 @@ describe('GameDock', () => {
 
     expect(screen.queryByRole('button', { name: 'dockLabel' })).not.toBeInTheDocument();
   });
+
+  it('opens the chombo scenarios without a report and closes after one is chosen', () => {
+    mockMatchMedia(false);
+    const onSetupChomboScenario = jest.fn();
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gameMode="pro"
+        gamePhase="blow"
+        onSetupChomboScenario={onSetupChomboScenario}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'dockLabel' }));
+    fireEvent.click(screen.getByText('fourJack'));
+
+    expect(onSetupChomboScenario).toHaveBeenCalledWith('four-jack');
+    expect(screen.queryByText('fourJack')).not.toBeInTheDocument();
+  });
 });

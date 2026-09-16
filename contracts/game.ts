@@ -250,6 +250,11 @@ export type ChomboViolationType =
   | 'last-tanzen'
   | 'wrong-open';
 
+export interface DevChomboScenarioPayload {
+  roomId: string;
+  violationType: ChomboViolationType;
+}
+
 export interface ReportChomboPayload {
   roomId: string;
   violatorSeatId: SeatId;

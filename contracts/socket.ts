@@ -19,6 +19,7 @@ import type {
   PlayerLeftPayload,
   PlaySetupCompletePayload,
   ChomboResolvedPayload,
+  DevChomboScenarioPayload,
   OpenDeclaredPayload,
   RequestAgariPayload,
   ReportChomboPayload,
@@ -185,6 +186,7 @@ export interface ClientToServerEvents {
   'request-agari': (payload: RequestAgariPayload) => void;
   'play-card': (payload: PlayCardPayload) => void;
   'report-chombo': (payload: ReportChomboPayload) => void;
+  'dev-chombo-scenario': (payload: DevChomboScenarioPayload) => void;
   'declare-open': (payload: RoomActionPayload) => void;
   'select-base-suit': (payload: SelectBaseSuitPayload) => void;
   'reveal-broken-hand': (payload: RevealBrokenHandPayload) => void;
