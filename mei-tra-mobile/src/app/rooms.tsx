@@ -230,9 +230,14 @@ export default function RoomsScreen() {
               <View key={room.id} style={styles.roomCard}>
                 <View style={styles.roomHeading}>
                   <View style={styles.roomTitleWrap}>
-                    <Text numberOfLines={1} style={styles.roomTitle}>
-                      {room.name}
-                    </Text>
+                    <View style={styles.roomTitleRow}>
+                      <Text numberOfLines={1} style={styles.roomTitle}>
+                        {room.name}
+                      </Text>
+                      {room.settings.gameMode === 'pro' ? (
+                        <Text style={styles.proBadge}>{t('rooms.proBadge')}</Text>
+                      ) : null}
+                    </View>
                     <Text style={styles.roomMeta}>
                       {t('rooms.capacity', {
                         current: humans.length,
@@ -386,9 +391,24 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  roomTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   roomTitle: {
+    flexShrink: 1,
     color: colors.text,
     fontSize: 19,
+    fontWeight: '800',
+  },
+  proBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: colors.panelStrong,
+    color: colors.gold,
+    fontSize: 11,
     fontWeight: '800',
   },
   roomMeta: {

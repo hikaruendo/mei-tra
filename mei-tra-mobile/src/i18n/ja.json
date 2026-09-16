@@ -227,6 +227,7 @@
     "roomName": "部屋名",
     "pointsToWin": "勝利点数",
     "proMode": "プロモード",
+    "proBadge": "Pro",
     "create": "ルーム作成",
     "joinable": "参加できる部屋",
     "searchRooms": "部屋を検索",

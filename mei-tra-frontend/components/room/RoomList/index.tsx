@@ -190,7 +190,12 @@ export const RoomList: React.FC<RoomListProps> = ({
             return (
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
-                  <h3 title={room.name}>{room.name}</h3>
+                  <div className={styles.roomTitleRow}>
+                    <h3 title={room.name}>{room.name}</h3>
+                    {room.settings.gameMode === 'pro' && (
+                      <span className={styles.proBadge}>{t('room.proBadge')}</span>
+                    )}
+                  </div>
                   <p>{t('room.players')}: {actualPlayerCount}/{room.settings.maxPlayers}</p>
                   <p className={`${styles.status} ${getStatusClass(room.status)}`}>
                     {t('room.status')}: {getStatusText(room.status, t)}
