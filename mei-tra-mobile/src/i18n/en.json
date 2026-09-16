@@ -77,6 +77,8 @@
     "connecting": "Connecting to the server: {message}",
     "redealHand": "Redealt because a special hand was declared",
     "redealAllPass": "Redealt because everyone passed",
+    "negriPrompt": "Select a card from your hand as Negri",
+    "negriPromptPro": "Drag a card from your hand down to set it as Negri",
     "openDeclared": "The open holds",
     "openInvalid": "The open does not hold. Play continues with the hand revealed",
     "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",
@@ -97,6 +99,10 @@
   },
   "chomboReport": {
     "title": "Chombo report",
+    "menuLabel": "Chombo",
+    "player": "Player",
+    "violation": "Violation",
+    "submit": "Report chombo",
     "negriForget": "Negri forget",
     "wrongSuit": "Wrong suit",
     "fourJack": "Four jacks",
@@ -105,6 +111,20 @@
     "confirmTitle": "Report a chombo?",
     "confirmMessage": "Report {name} for {violation}? This ends the round and cannot be undone.",
     "confirm": "Report"
+  },
+  "chomboScenario": {
+    "title": "Chombo test (development only)",
+    "description": "Jumps to a moment where you can commit that chombo. Report it as a player on the other team.",
+    "negriForget": "Negri forget",
+    "negriForgetHint": "You won the bid. Play a card without placing the Negri.",
+    "wrongSuit": "Wrong suit",
+    "wrongSuitHint": "9♠ is on the table. Play a ♦ while you still hold a ♠.",
+    "fourJack": "Four jacks",
+    "fourJackHint": "You hold all four jacks. Play any card.",
+    "lastTanzen": "Last tanzen",
+    "lastTanzenHint": "You have two cards, one of them the Joker. Play the other one and it is reportable right away.",
+    "wrongOpen": "Wrong open",
+    "wrongOpenHint": "Your four cards cannot take every remaining field. Press Open."
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "Account deletion is in progress. Please finish deleting this account before continuing.",

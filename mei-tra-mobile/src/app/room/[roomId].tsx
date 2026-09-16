@@ -48,6 +48,7 @@ export default function RoomScreen() {
     playHandReorderSound,
     playCard,
     reportChombo,
+    setupChomboScenario,
     selectBaseSuit,
     removePlayer,
     replaceWithCOM,
@@ -152,6 +153,7 @@ export default function RoomScreen() {
           onPass={passBlow}
           onPlayCard={playCard}
           onReportChombo={reportChombo}
+          onSetupChomboScenario={setupChomboScenario}
           onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}

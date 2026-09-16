@@ -28,6 +28,7 @@ interface Renderer {
     findAll: (predicate: (node: TestNode) => boolean) => TestNode[];
   };
   update: (element: React.ReactElement) => void;
+  unmount: () => void;
 }
 
 /**
@@ -369,6 +370,44 @@ describe('HandFan', () => {
     expect(cardScale(renderer, 'A')).toBe(1);
   });
 
+  it('tells the parent a card is held until it is released', () => {
+    const onDragActiveChange = jest.fn();
+    const renderer = render({ onDragActiveChange });
+
+    const gesture = startDrag(renderer, 'A', 0, -DROP_PX);
+    expect(onDragActiveChange.mock.calls).toEqual([[true]]);
+
+    gesture.release();
+    expect(onDragActiveChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('tells the parent the hold is over when no release can arrive', () => {
+    const onDragActiveChange = jest.fn();
+    const renderer = render({ onDragActiveChange });
+
+    startDrag(renderer, 'A', 2 * PITCH);
+    act(() => {
+      renderer.update(
+        <HandFan
+          canReorder
+          cardMargin={CARD_MARGIN}
+          cardWidth={CARD_WIDTH}
+          cards={['X', 'C', 'Y', 'Z']}
+          onDragActiveChange={onDragActiveChange}
+          reducedMotion
+          seatId="seat-1"
+          selectedCard={null}
+        />,
+      );
+    });
+    expect(onDragActiveChange).toHaveBeenLastCalledWith(false);
+
+    startDrag(renderer, 'C', 2 * PITCH);
+    expect(onDragActiveChange).toHaveBeenLastCalledWith(true);
+    act(() => renderer.unmount());
+    expect(onDragActiveChange).toHaveBeenLastCalledWith(false);
+  });
+
   it('does not pick up cards for a spectator', () => {
     const renderer = render({ canReorder: false });
 
@@ -399,6 +438,54 @@ describe('HandFan', () => {
 
     startDrag(renderer, 'B', 0, DROP_PX).release();
     expect(onDropAction).toHaveBeenNthCalledWith(2, 'B', 'negri');
+  });
+
+  it('picks up a lone card so a pro drop can still play it', () => {
+    const onDropAction = jest.fn();
+    const renderer = render({ cards: ['A'], onDropAction });
+
+    const gesture = startDrag(renderer, 'A', 0, -DROP_PX);
+    expect(gesture.claimed).toBe(true);
+    gesture.release();
+
+    expect(onDropAction).toHaveBeenCalledWith('A', 'play');
+  });
+
+  it('offers the drops that act as screen reader actions', () => {
+    const onDropAction = jest.fn();
+    const renderer = render({ dropActions: ['play', 'negri'], onDropAction });
+    const cardA = renderer.root.find(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityLabel === 'A',
+    ).props as {
+      accessibilityActions: { name: string; label: string }[];
+      accessibilityState: { disabled: boolean };
+      onAccessibilityAction: (event: unknown) => void;
+    };
+
+    expect(cardA.accessibilityActions.map((action) => action.name)).toEqual([
+      'play',
+      'negri',
+    ]);
+    // A card with actions must not be announced as dimmed.
+    expect(cardA.accessibilityState.disabled).toBe(false);
+
+    act(() => {
+      cardA.onAccessibilityAction({ nativeEvent: { actionName: 'negri' } });
+    });
+    expect(onDropAction).toHaveBeenCalledWith('A', 'negri');
+  });
+
+  it('offers no screen reader actions when no drop acts', () => {
+    const renderer = render();
+    const cardA = renderer.root.find(
+      (node) =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityLabel === 'A',
+    );
+
+    expect(cardA.props.accessibilityActions).toBeUndefined();
   });
 
   it('puts the card back down once the drop action is reported', () => {

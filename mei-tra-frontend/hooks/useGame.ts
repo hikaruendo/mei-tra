@@ -1115,8 +1115,10 @@ export const useGame = () => {
       },
       'reveal-agari': (payload: RevealAgariPayload) => {
         applyGameServerEvent({ type: 'reveal-agari', payload });
+        // payload.message is fixed English and knows nothing of pro mode, where
+        // the Negri is dragged down rather than picked.
         setNotification({
-          message: payload.message,
+          message: t(gameMode === 'pro' ? 'negriPromptPro' : 'negriPrompt'),
           type: 'success'
         });
       },
@@ -1326,6 +1328,7 @@ export const useGame = () => {
     currentRoomId,
     isSpectator,
     teamNames,
+    gameMode,
     negriSeatId,
     commitPlayers,
     resolveCurrentUserSeatId,

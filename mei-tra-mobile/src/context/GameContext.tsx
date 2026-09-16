@@ -381,6 +381,8 @@ interface GameContextValue extends MobileState {
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  /** Present in development builds only, like the web hook. */
+  setupChomboScenario?: (violationType: ChomboViolationType) => void;
   declareOpen: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -923,7 +925,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });
-      dispatch({ type: 'notice', message: payload.message });
+      // payload.message is fixed English and knows nothing of pro mode, where
+      // the Negri is dragged down rather than picked.
+      dispatch({
+        type: 'notice',
+        message: {
+          key:
+            stateRef.current.game?.gameMode === 'pro'
+              ? 'game.negriPromptPro'
+              : 'game.negriPrompt',
+        },
+      });
     });
     socket.on('play-setup-complete', (payload) => {
       const pendingNegriCard = pendingNegriCardRef.current;
@@ -1438,6 +1450,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const setupChomboScenario = useCallback((violationType: ChomboViolationType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('dev-chombo-scenario', game.roomId, () => {
+      socketRef.current?.emit('dev-chombo-scenario', {
+        roomId: game.roomId,
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
   const selectBaseSuit = useCallback((suit: string) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1548,6 +1571,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       playHandReorderSound,
       playCard,
       reportChombo,
+      // The server refuses it in production too; this keeps the entry point
+      // out of release builds.
+      ...(__DEV__ ? { setupChomboScenario } : {}),
       declareOpen,
       selectBaseSuit,
       revealBrokenHand,
@@ -1583,6 +1609,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       passBlow,
       playCard,
       reportChombo,
+      setupChomboScenario,
       declareOpen,
       playCardSelectionSound,
       playCancelSound,

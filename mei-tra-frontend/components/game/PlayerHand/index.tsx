@@ -228,6 +228,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       setDraggingCard(null);
       setDragOffset({ x: 0, y: 0 });
       setDropPlacement(null);
+      // dnd-kit keeps its pro-mode drag alive; handleDndEnd ignores a drag
+      // whose card is no longer the one recorded here.
+      setActiveDragCard(null);
     }
   }, [player.hand]);
 
@@ -293,30 +296,42 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     setDropPlacement({ card, side: getDropSide(event) });
   };
 
+  // Hit-tests the hand card under the pointer. Both the normal-mode pointer
+  // drag and the pro-mode dnd-kit drag read their drop point from here.
+  const findDropPlacement = (
+    draggedCard: string,
+    clientX: number,
+    clientY: number,
+    fallbackTarget: EventTarget | null = null,
+  ): DropPlacement | null => {
+    const elementAtPointer =
+      typeof document.elementFromPoint === 'function'
+        ? document.elementFromPoint(clientX, clientY)
+        : fallbackTarget instanceof Element
+          ? fallbackTarget
+          : null;
+    const targetElement = elementAtPointer?.closest<HTMLElement>('[data-hand-card]');
+    const targetCard = targetElement?.dataset.handCard;
+
+    if (!targetElement || !targetCard || targetCard === draggedCard) {
+      return null;
+    }
+
+    const bounds = targetElement.getBoundingClientRect();
+    return {
+      card: targetCard,
+      side: clientX < bounds.left + bounds.width / 2 ? 'before' : 'after',
+    };
+  };
+
   const updatePointerDropPlacement = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!draggingCard) {
       return;
     }
 
-    const elementAtPointer =
-      typeof document.elementFromPoint === 'function'
-        ? document.elementFromPoint(event.clientX, event.clientY)
-        : event.target instanceof Element
-          ? event.target
-          : null;
-    const targetElement = elementAtPointer?.closest<HTMLElement>('[data-hand-card]');
-    const targetCard = targetElement?.dataset.handCard;
-
-    if (!targetElement || !targetCard || targetCard === draggingCard) {
-      setDropPlacement(null);
-      return;
-    }
-
-    const bounds = targetElement.getBoundingClientRect();
-    setDropPlacement({
-      card: targetCard,
-      side: event.clientX < bounds.left + bounds.width / 2 ? 'before' : 'after',
-    });
+    setDropPlacement(
+      findDropPlacement(draggingCard, event.clientX, event.clientY, event.target),
+    );
   };
 
   const finishPointerDrag = (event?: React.PointerEvent<HTMLDivElement>) => {
@@ -378,32 +393,68 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
   };
 
-  const handleDndMove = ({ delta }: DragMoveEvent) => {
-    if (gameMode !== 'pro') return;
-    const action = classifyCardDrop(delta.y);
-    dropActionRef.current = action;
-    setDropAction(action);
+  // dnd-kit reports how far the pointer moved since it went down, not where it
+  // is now.
+  const dndPointer = ({ activatorEvent, delta }: DragMoveEvent | DragEndEvent) =>
+    activatorEvent instanceof MouseEvent
+      ? { x: activatorEvent.clientX + delta.x, y: activatorEvent.clientY + delta.y }
+      : null;
+
+  // The card of a pro-mode drag that is still live. A re-deal mid-drag clears
+  // activeDragCard, and the drag must then neither act nor reorder.
+  const heldDndCard = (event: DragMoveEvent | DragEndEvent) => {
+    const card = String(event.active.data.current?.card ?? '');
+    return card && card === activeDragCard ? card : null;
   };
 
-  const handleDndEnd = ({ active, delta }: DragEndEvent) => {
-    const card = String(active.data.current?.card ?? '');
-    const action = classifyCardDrop(delta.y);
-    if (
-      gameMode === 'pro' &&
-      card &&
-      action &&
-      canActAsCurrentPlayer &&
-      gamePhase === 'play' &&
-      (action === 'negri' || whoseTurn === currentSeatId)
-    ) {
-      if (action === 'negri' && canPlaceProNegri) {
-        gameActions.selectNegri(card);
-      } else if (action === 'play') {
-        gameActions.playCard(card);
+  // What releasing at this height does in pro mode: play the card, place the
+  // Negri, or nothing (then it reorders). The marker while dragging and the
+  // release both read this, so the marker never shows a reorder that the
+  // release turns into a play.
+  const proDropAction = (deltaY: number): CardDropAction | null => {
+    if (gameMode !== 'pro' || !canActAsCurrentPlayer || gamePhase !== 'play') {
+      return null;
+    }
+    const action = classifyCardDrop(deltaY);
+    if (action === 'negri' && canPlaceProNegri) return 'negri';
+    if (action === 'play' && whoseTurn === currentSeatId) return 'play';
+    return null;
+  };
+
+  const dndDropPlacement = (card: string, event: DragMoveEvent | DragEndEvent) => {
+    const pointer = dndPointer(event);
+    return pointer ? findDropPlacement(card, pointer.x, pointer.y) : null;
+  };
+
+  const handleDndMove = (event: DragMoveEvent) => {
+    if (gameMode !== 'pro') return;
+    const action = classifyCardDrop(event.delta.y);
+    dropActionRef.current = action;
+    setDropAction(action);
+    const card = heldDndCard(event);
+    setDropPlacement(
+      card && !proDropAction(event.delta.y) ? dndDropPlacement(card, event) : null,
+    );
+  };
+
+  const handleDndEnd = (event: DragEndEvent) => {
+    const card = heldDndCard(event);
+    const action = card ? proDropAction(event.delta.y) : null;
+    if (card && action === 'negri') {
+      gameActions.selectNegri(card);
+    } else if (card && action === 'play') {
+      gameActions.playCard(card);
+    } else if (card) {
+      // The placement is read from the release point because the release can
+      // arrive before the last move has re-rendered.
+      const placement = dndDropPlacement(card, event);
+      if (placement) {
+        reorderDisplayHand(card, placement.card, placement.side);
       }
     }
     dropActionRef.current = null;
     setDropAction(null);
+    setDropPlacement(null);
     setActiveDragCard(null);
   };
 
@@ -417,12 +468,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           onDragCancel={() => {
             dropActionRef.current = null;
             setDropAction(null);
+            setDropPlacement(null);
             setActiveDragCard(null);
           }}
           onDragEnd={handleDndEnd}
         >
         <div
-          className={styles.handContainer}
+          className={`${styles.handContainer} ${activeDragCard ? styles.holdingCard : ''}`}
           onPointerMove={(event) => {
             if (canActAsCurrentPlayer && gameMode !== 'pro') {
               const deltaY = dragStartYRef.current === null ? 0 : event.clientY - dragStartYRef.current;
@@ -578,7 +630,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             />
           )}
         </div>
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay className={styles.dragOverlay} dropAnimation={null}>
           {gameMode === 'pro' && activeDragCard ? (
             <div className={styles.dragOverlayCard}><CardFace card={activeDragCard} /></div>
           ) : null}

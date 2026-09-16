@@ -1,10 +1,12 @@
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import {
   OPEN_MAX_HAND_SIZE,
   type ChomboViolationType,
   type TrumpType,
 } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
+import type { CardDropAction } from '@meitra/game-client/drag-action';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
   GameHistoryReplayViewContract,
@@ -73,6 +75,8 @@ interface GameBoardProps {
   onHandReorder?: () => void;
   onPlayCard: (card: string) => void;
   onReportChombo?: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  /** Development builds only. */
+  onSetupChomboScenario?: (violationType: ChomboViolationType) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
@@ -97,6 +101,7 @@ export function GameBoard({
   onHandReorder = () => undefined,
   onPlayCard,
   onReportChombo = () => undefined,
+  onSetupChomboScenario,
   onSelectBaseSuit,
   onReplaceWithCOM,
   onLeave,
@@ -115,7 +120,9 @@ export function GameBoard({
   const [showStrength, setShowStrength] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showChombo, setShowChombo] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [handDragActive, setHandDragActive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
   const [spectatorPerspectiveId, setSpectatorPerspectiveId] = useState<
     string | null
@@ -227,8 +234,25 @@ export function GameBoard({
     game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
   // The hand renders during the blow phase too, so the drop affordance needs
-  // its own phase gate or it offers plays the server refuses.
-  const canProDrop = isProMode && isHandPlayPhase && (isMyTurn || canPlaceProNegri);
+  // its own phase gate or it offers plays the server refuses. The drag and the
+  // screen reader actions both read this list, so they offer the same moves.
+  const proDropActions: CardDropAction[] =
+    isProMode && isHandPlayPhase
+      ? [
+          ...(isMyTurn ? (['play'] as const) : []),
+          ...(canPlaceProNegri ? (['negri'] as const) : []),
+        ]
+      : [];
+  const canProDrop = proDropActions.length > 0;
+  const canReportChombo =
+    isProMode && isHandPlayPhase && chomboReportTargets.length > 0;
+  const setupChomboScenario =
+    isProMode &&
+    !game.isSpectator &&
+    (game.gamePhase === 'blow' || game.gamePhase === 'play')
+      ? onSetupChomboScenario
+      : undefined;
+  const hasChomboSheet = canReportChombo || Boolean(setupChomboScenario);
   const phaseLabel =
     game.gamePhase === 'blow'
       ? t('board.phaseBlow')
@@ -270,10 +294,9 @@ export function GameBoard({
       Boolean(
         selectedCard &&
           self &&
-          (isProMode ||
-            isCardPlayable(self.hand, selectedCard, game.currentField, currentTrump)),
+          isCardPlayable(self.hand, selectedCard, game.currentField, currentTrump),
       ),
-    [currentTrump, game.currentField, isProMode, selectedCard, self],
+    [currentTrump, game.currentField, selectedCard, self],
   );
   const fieldCardsKey = game.currentField?.cards.join(',') ?? '';
 
@@ -294,6 +317,12 @@ export function GameBoard({
     game.blowState.currentHighestDeclaration?.timestamp,
     game.negriCard,
   ]);
+
+  // A round can end while the sheet is open; without this it would pop back
+  // open the next time a report becomes possible.
+  useEffect(() => {
+    if (!hasChomboSheet) setShowChombo(false);
+  }, [hasChomboSheet]);
 
   const fieldsCount = game.fields.length;
   const prevFieldsCount = useRef(fieldsCount);
@@ -374,7 +403,9 @@ export function GameBoard({
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        scrollEnabled={!handDragActive}
         showsVerticalScrollIndicator={false}
+        testID="game-board-scroll"
       >
         <View style={styles.topBar}>
           <Text style={styles.phase}>{phaseLabel}</Text>
@@ -390,14 +421,6 @@ export function GameBoard({
             </Text>
           ) : null}
         </View>
-
-        {isProMode && isHandPlayPhase && chomboReportTargets.length > 0 ? (
-          <ChomboReportPanel
-            players={chomboReportTargets}
-            onReport={onReportChombo}
-          />
-        ) : null}
-
 
         {!isProMode && showStrength && currentTrump ? (
           <View style={styles.strengthPanel}>
@@ -658,13 +681,18 @@ export function GameBoard({
                   (!isMyTurn && !canPlaceProNegri))
               }
               onReorder={onHandReorder}
+              onDragActiveChange={setHandDragActive}
+              dropActions={proDropActions}
               onDropAction={(card, action) => {
-                if (canProDrop) {
-                  if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
-                  if (action === 'play' && isMyTurn) onPlayCard(card);
-                }
+                if (!proDropActions.includes(action)) return;
+                if (action === 'negri') onSelectNegri(card);
+                else onPlayCard(card);
               }}
-              onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
+              // Pro mode plays by dragging only, as the web hand does
+              // (PlayerHand handleCardClick), so a tap selects nothing.
+              onSelectCard={
+                isHandPlayPhase && !isProMode ? toggleSelectedCard : undefined
+              }
               reducedMotion={reducedMotion}
               seatId={self.seatId}
               selectedCard={selectedCard}
@@ -798,6 +826,18 @@ export function GameBoard({
                 {t('board.gameLog')}
               </Button>
             ) : null}
+            {hasChomboSheet ? (
+              <Button
+                onPress={() => {
+                  setShowChombo(true);
+                  setShowOptions(false);
+                }}
+                testID="game-options-chombo"
+                variant="secondary"
+              >
+                {t('chomboReport.menuLabel')}
+              </Button>
+            ) : null}
             <Button
               disabled={actionsDisabled || leaving}
               loading={leaving}
@@ -844,6 +884,34 @@ export function GameBoard({
             summary={history.summary}
             teamNames={game.teamNames}
           />
+        </ModalSheet>
+      ) : null}
+
+      {hasChomboSheet ? (
+        <ModalSheet
+          closeLabel={t('board.close')}
+          onClose={() => setShowChombo(false)}
+          testID="game-chombo-sheet"
+          title={t('chomboReport.menuLabel')}
+          visible={showChombo}
+        >
+          <ScrollView contentContainerStyle={styles.chomboSheetContent}>
+            {canReportChombo ? (
+              <ChomboReportPanel
+                onReport={onReportChombo}
+                onReported={() => setShowChombo(false)}
+                players={chomboReportTargets}
+              />
+            ) : null}
+            {setupChomboScenario ? (
+              <ChomboScenarioPanel
+                onSelect={(violationType) => {
+                  setShowChombo(false);
+                  setupChomboScenario(violationType);
+                }}
+              />
+            ) : null}
+          </ScrollView>
         </ModalSheet>
       ) : null}
 
@@ -1182,5 +1250,10 @@ const styles = StyleSheet.create({
   historySheetContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  chomboSheetContent: {
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
 });

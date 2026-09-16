@@ -791,3 +791,163 @@ describe('PlayerHand', () => {
     expect(screen.getByText('S-2')).toBeInTheDocument();
   });
 });
+
+describe('PlayerHand pro mode drag', () => {
+  // jsdom has no PointerEvent, and dnd-kit reads the pointer position from it.
+  class TestPointerEvent extends MouseEvent {
+    readonly isPrimary = true;
+    readonly pointerId = 1;
+  }
+  const originalPointerEvent = window.PointerEvent;
+
+  beforeAll(() => {
+    window.PointerEvent = TestPointerEvent as typeof PointerEvent;
+  });
+
+  afterAll(() => {
+    window.PointerEvent = originalPointerEvent;
+  });
+
+  afterEach(() => {
+    // jsdom has no hit testing either; each test points at a card itself.
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+    jest.mocked(gameActions.playCard).mockClear();
+  });
+
+  const pointAt = (element: HTMLElement) => {
+    Object.defineProperty(element, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => element,
+    });
+  };
+
+  const handOrder = () =>
+    screen.getAllByTestId('card-front').map((card) => card.textContent);
+
+  const handContainer = () => handCards()[0].closest('.handContainer');
+
+  const markedCards = () =>
+    handCards().filter((card) => /insertBefore|insertAfter/.test(card.className));
+
+  const drag = async (
+    card: HTMLElement,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    onMoved: () => void = () => {},
+  ) => {
+    await act(async () => {
+      fireEvent.pointerDown(card, { clientX: from.x, clientY: from.y, button: 0 });
+      // Clears dnd-kit's activation distance before the real move.
+      fireEvent.pointerMove(document, { clientX: from.x + 10, clientY: from.y });
+    });
+    await act(async () => {
+      fireEvent.pointerMove(document, { clientX: to.x, clientY: to.y });
+    });
+    try {
+      onMoved();
+    } finally {
+      // Always release: a drag left open would carry into the next test.
+      await act(async () => {
+        fireEvent.pointerUp(document, { clientX: to.x, clientY: to.y });
+      });
+    }
+  };
+
+  it('reorders the hand when a card is dropped sideways on another card', async () => {
+    const onHandReorder = jest.fn();
+    renderPlayerHand({
+      gameMode: 'pro',
+      currentSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+      onHandReorder,
+    });
+    const [first, , third] = handCards();
+    pointAt(third);
+
+    await drag(first, { x: 20, y: 50 }, { x: 170, y: 50 }, () => {
+      expect(third.className).toMatch(/insertAfter/);
+      // Turns off :hover lift on the cards the held one passes over.
+      expect(handContainer()).toHaveClass('holdingCard');
+    });
+
+    expect(handContainer()).not.toHaveClass('holdingCard');
+    expect(handOrder()).toEqual(['S-2', 'D-3', 'H-A']);
+    expect(onHandReorder).toHaveBeenCalledTimes(1);
+    // Moved cards remount, so the marker is checked on a fresh query.
+    expect(markedCards()).toHaveLength(0);
+  });
+
+  it('plays a card dropped upward on its turn without also reordering', async () => {
+    const onHandReorder = jest.fn();
+    renderPlayerHand({
+      gameMode: 'pro',
+      whoseTurn: 'player-2',
+      currentSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['H-A', 'S-2'] },
+      onHandReorder,
+    });
+    const [first, second] = handCards();
+    // Released over another card, so only the play keeps it from reordering.
+    pointAt(second);
+
+    await drag(first, { x: 20, y: 200 }, { x: 170, y: 100 }, () => {
+      // The release will play, so no marker may promise a reorder.
+      expect(markedCards()).toHaveLength(0);
+    });
+
+    expect(gameActions.playCard).toHaveBeenCalledWith('H-A');
+    expect(onHandReorder).not.toHaveBeenCalled();
+    expect(handOrder()).toEqual(['H-A', 'S-2']);
+  });
+
+  it('marks a sideways reorder at the same height when the release cannot play', async () => {
+    renderPlayerHand({
+      gameMode: 'pro',
+      whoseTurn: 'player-1',
+      currentSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['H-A', 'S-2'] },
+    });
+    const [first, second] = handCards();
+    pointAt(second);
+
+    // Not this player's turn, so the upward release reorders instead.
+    await drag(first, { x: 20, y: 200 }, { x: 170, y: 100 }, () => {
+      expect(markedCards()).toHaveLength(1);
+    });
+
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    expect(handOrder()).toEqual(['S-2', 'H-A']);
+  });
+
+  it('drops the held card when the hand is dealt again mid-drag', async () => {
+    const onHandReorder = jest.fn();
+    const props = {
+      gameMode: 'pro',
+      currentSeatId: 'player-2',
+      onHandReorder,
+    } as const;
+    const { rerender } = renderPlayerHand({
+      ...props,
+      player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+    });
+    const [first, , third] = handCards();
+    pointAt(third);
+
+    await drag(first, { x: 20, y: 50 }, { x: 170, y: 50 }, () => {
+      // An all-pass round deals H-A back, so the drag's card is still mounted.
+      rerender(buildPlayerHand({
+        ...props,
+        player: { ...otherPlayer, hand: ['H-A', 'C-4', 'D-5'] },
+      }));
+      pointAt(handCards()[2]);
+      expect(handContainer()).not.toHaveClass('holdingCard');
+    });
+
+    expect(onHandReorder).not.toHaveBeenCalled();
+    expect(handOrder()).toEqual(['H-A', 'C-4', 'D-5']);
+    expect(markedCards()).toHaveLength(0);
+  });
+});

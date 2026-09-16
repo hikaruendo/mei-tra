@@ -8,6 +8,7 @@ import type { ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import { HandFan } from '@/components/game/HandFan';
 
 import { GameBoard } from '../GameBoard';
@@ -588,8 +589,18 @@ describe('GameBoard pro drag gating', () => {
   type ProRenderer = {
     root: {
       findAllByProps: (props: Record<string, unknown>) => unknown[];
+      findByProps: (props: Record<string, unknown>) => {
+        props: {
+          scrollEnabled?: boolean;
+          onPress?: () => void;
+          accessibilityActions?: { name: string }[];
+        };
+      };
       findByType: (type: typeof HandFan) => {
-        props: { onDropAction?: (card: string, action: 'play' | 'negri') => void };
+        props: {
+          onDropAction?: (card: string, action: 'play' | 'negri') => void;
+          onDragActiveChange?: (active: boolean) => void;
+        };
       };
     };
     unmount: () => void;
@@ -669,36 +680,109 @@ describe('GameBoard pro drag gating', () => {
 
     act(() => renderer.unmount());
   });
+
+  it('offers the same pro moves to a screen reader as to the drag', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+    const card = () =>
+      renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props as {
+        accessibilityActions?: { name: string }[];
+        onAccessibilityAction?: (actionName: string) => void;
+      };
+
+    expect(card().accessibilityActions?.map((action) => action.name)).toEqual([
+      'play',
+      'negri',
+    ]);
+
+    act(() => card().onAccessibilityAction?.('play'));
+    act(() => card().onAccessibilityAction?.('negri'));
+    expect(handlers.onPlayCard).toHaveBeenCalledWith('S-3');
+    expect(handlers.onSelectNegri).toHaveBeenCalledWith('S-3');
+
+    act(() => renderer.unmount());
+  });
+
+  it('offers no pro moves during the blow phase', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('blow', handlers);
+
+    expect(
+      renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props
+        .accessibilityActions,
+    ).toBeUndefined();
+
+    act(() => renderer.unmount());
+  });
+
+  it('leaves tapping out, so no play or cancel button can appear', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+
+    expect(
+      renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props
+        .onPress,
+    ).toBeUndefined();
+
+    act(() => renderer.unmount());
+  });
+
+  it('stops the board scrolling while a card is held', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+    const scrollEnabled = () =>
+      renderer.root.findByProps({ testID: 'game-board-scroll' }).props
+        .scrollEnabled;
+
+    expect(scrollEnabled()).toBe(true);
+
+    const handFan = renderer.root.findByType(HandFan);
+    act(() => handFan.props.onDragActiveChange?.(true));
+    expect(scrollEnabled()).toBe(false);
+
+    act(() => handFan.props.onDragActiveChange?.(false));
+    expect(scrollEnabled()).toBe(true);
+
+    act(() => renderer.unmount());
+  });
 });
 
-describe('GameBoard chombo report targets', () => {
-  it('leaves COM seats out of the reportable opponents', () => {
-    const players = [
-      game.players[0],
-      ...['player-2', 'player-3', 'player-4'].map((seatId, index) => ({
-        ...game.players[0],
-        socketId: `socket-${index + 2}`,
-        seatId: asSeatId(seatId),
-        userId: `user-${index + 2}`,
-        name: `Player ${index + 2}`,
-        team: ((index + 1) % 2) as 0 | 1,
-        isHost: false,
-        isCOM: seatId === 'player-3',
-      })),
-    ];
-    let renderer!: {
-      root: {
-        findByType: (type: typeof ChomboReportPanel) => {
-          props: { players: { seatId: string }[] };
-        };
-      };
-      unmount: () => void;
+describe('GameBoard chombo sheet', () => {
+  type ChomboRenderer = {
+    root: {
+      findAllByProps: (props: Record<string, unknown>) => {
+        props: { onPress?: () => void };
+      }[];
+      findAllByType: (
+        type: typeof ChomboReportPanel | typeof ChomboScenarioPanel,
+      ) => { props: { players?: { seatId: string }[] } }[];
     };
+    unmount: () => void;
+  };
 
+  const players = [
+    game.players[0],
+    ...['player-2', 'player-3', 'player-4'].map((seatId, index) => ({
+      ...game.players[0],
+      socketId: `socket-${index + 2}`,
+      seatId: asSeatId(seatId),
+      userId: `user-${index + 2}`,
+      name: `Player ${index + 2}`,
+      team: ((index + 1) % 2) as 0 | 1,
+      isHost: false,
+      isCOM: seatId === 'player-3',
+    })),
+  ];
+
+  const renderChomboBoard = (
+    overrides: Partial<MobileGameSnapshot>,
+    onSetupChomboScenario?: jest.Mock,
+  ) => {
+    let renderer!: ChomboRenderer;
     act(() => {
       renderer = TestRenderer.create(
         <GameBoard
-          game={{ ...game, gameMode: 'pro', players }}
+          game={{ ...game, gameMode: 'pro', players, ...overrides }}
           isHost
           onDeclare={jest.fn()}
           onLeave={jest.fn()}
@@ -706,20 +790,80 @@ describe('GameBoard chombo report targets', () => {
           onPlayCard={jest.fn()}
           onReplaceWithCOM={jest.fn()}
           onReportChombo={jest.fn()}
+          onSetupChomboScenario={onSetupChomboScenario}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={jest.fn()}
         />,
-      ) as unknown as typeof renderer;
+      ) as unknown as ChomboRenderer;
     });
+    return renderer;
+  };
 
-    const targets = renderer.root
-      .findByType(ChomboReportPanel)
-      .props.players.map((player) => player.seatId);
-    expect(targets).toEqual(
-      expect.arrayContaining(['player-2', 'player-4']),
-    );
+  const press = (renderer: ChomboRenderer, testID: string) => {
+    const node = renderer.root
+      .findAllByProps({ testID })
+      .find((candidate) => typeof candidate.props.onPress === 'function');
+    if (!node) throw new Error(`no pressable ${testID}`);
+    act(() => node.props.onPress?.());
+  };
+
+  const chomboMenuItems = (renderer: ChomboRenderer) =>
+    renderer.root.findAllByProps({ testID: 'game-options-chombo' });
+
+  it('keeps the report off the board until the options menu opens it', () => {
+    const renderer = renderChomboBoard({});
+
+    expect(renderer.root.findAllByType(ChomboReportPanel)).toHaveLength(0);
+
+    press(renderer, 'game-options-trigger');
+    press(renderer, 'game-options-chombo');
+
+    const panels = renderer.root.findAllByType(ChomboReportPanel);
+    expect(panels).toHaveLength(1);
+    // COM seats cannot be reported, and nobody reports themselves.
+    const targets = panels[0].props.players?.map((player) => player.seatId);
+    expect(targets).toEqual(expect.arrayContaining(['player-2', 'player-4']));
     expect(targets).not.toContain('player-3');
     expect(targets).not.toContain('player-1');
+
+    act(() => renderer.unmount());
+  });
+
+  it('offers no chombo entry outside pro mode', () => {
+    const renderer = renderChomboBoard({ gameMode: 'normal' }, jest.fn());
+
+    press(renderer, 'game-options-trigger');
+    expect(chomboMenuItems(renderer)).toHaveLength(0);
+
+    act(() => renderer.unmount());
+  });
+
+  it('offers the development scenarios in the blow phase and closes after a pick', () => {
+    const onSetupChomboScenario = jest.fn();
+    const renderer = renderChomboBoard(
+      { gamePhase: 'blow' },
+      onSetupChomboScenario,
+    );
+
+    press(renderer, 'game-options-trigger');
+    press(renderer, 'game-options-chombo');
+
+    expect(renderer.root.findAllByType(ChomboReportPanel)).toHaveLength(0);
+    expect(renderer.root.findAllByType(ChomboScenarioPanel)).toHaveLength(1);
+
+    press(renderer, 'chombo-scenario-four-jack');
+
+    expect(onSetupChomboScenario).toHaveBeenCalledWith('four-jack');
+    expect(renderer.root.findAllByType(ChomboScenarioPanel)).toHaveLength(0);
+
+    act(() => renderer.unmount());
+  });
+
+  it('has nothing to open in the blow phase without the development handler', () => {
+    const renderer = renderChomboBoard({ gamePhase: 'blow' });
+
+    press(renderer, 'game-options-trigger');
+    expect(chomboMenuItems(renderer)).toHaveLength(0);
 
     act(() => renderer.unmount());
   });

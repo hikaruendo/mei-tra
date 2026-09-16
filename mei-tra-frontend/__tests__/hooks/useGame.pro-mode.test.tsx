@@ -79,3 +79,22 @@ describe('useGame pro-mode reconnect', () => {
     expect(result.current.openDeclared).toBe(false);
   });
 });
+
+describe('useGame Negri prompt', () => {
+  beforeEach(() => { mockHandlers.clear(); sessionStorage.clear(); });
+
+  it.each([
+    ['pro', 'negriPromptPro'],
+    ['normal', 'negriPrompt'],
+  ] as const)('shows the %s-mode prompt instead of the server text when the Agari is revealed', (gameMode, key) => {
+    const { result } = renderHook(() => useGame());
+    act(() => mockHandlers.get('game-state')?.({ ...snapshot(false), gameMode }));
+    act(() => mockHandlers.get('reveal-agari')?.({
+      agari: 'A♠',
+      message: 'Select a card from your hand as Negri',
+      seatId: asSeatId('viewer'),
+    }));
+
+    expect(result.current.notification?.message).toBe(key);
+  });
+});
