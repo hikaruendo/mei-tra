@@ -86,6 +86,23 @@ import type {
 } from '@/types/game';
 import type { FeedbackMessage } from '@/types/feedback';
 
+/**
+ * How a notice should read. The web app routes a failed open and an incorrect
+ * chombo report to its error style and the successful ones to success; mobile
+ * carries the same distinction on the notice itself rather than through the
+ * error slot, which is sticky and would mask later messages.
+ */
+export type NoticeSeverity = 'success' | 'error';
+
+/** A {@link FeedbackMessage} that may also carry a severity. */
+export type NoticeMessage =
+  | string
+  | {
+      key: string;
+      params?: Record<string, string | number>;
+      severity?: NoticeSeverity;
+    };
+
 interface MobileState {
   rooms: MobileRoom[];
   currentRoom: MobileRoom | null;
@@ -93,7 +110,7 @@ interface MobileState {
   pendingGamePatches: Partial<MobileGameSnapshot> | null;
   connectionStatus: ConnectionStatus;
   error: FeedbackMessage | null;
-  notice: FeedbackMessage | null;
+  notice: NoticeMessage | null;
   recoveryNotice: FeedbackMessage | null;
   gameResult: GameResultSnapshot | null;
   /**
@@ -118,7 +135,7 @@ type Action =
   | { type: 'playerIdleCleared'; seatId: string }
   | { type: 'playerConvertedToCom'; seatId: string }
   | { type: 'error'; message: FeedbackMessage | null }
-  | { type: 'notice'; message: FeedbackMessage | null }
+  | { type: 'notice'; message: NoticeMessage | null }
   | { type: 'recoveryNotice'; message: FeedbackMessage | null }
   | { type: 'gameResult'; result: GameResultSnapshot | null }
   | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
@@ -300,7 +317,12 @@ function reducer(state: MobileState, action: Action): MobileState {
     case 'error':
       return { ...state, error: action.message };
     case 'notice':
-      return { ...state, notice: action.message };
+      // The banner shows `error ?? notice` and an ordinary error only clears on
+      // dismiss, so a newer notice takes the slot instead of being masked by a
+      // stale one. The persistent recovery notice lives in its own slot.
+      return action.message
+        ? { ...state, notice: action.message, error: null }
+        : { ...state, notice: null };
     case 'recoveryNotice':
       return { ...state, recoveryNotice: action.message };
     case 'gameResult':
@@ -981,6 +1003,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         type: 'notice',
         message: {
           key: payload.valid ? 'game.openDeclared' : 'game.openInvalid',
+          severity: payload.valid ? 'success' : 'error',
         },
       });
     });
@@ -990,6 +1013,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         type: 'notice',
         message: {
           key: payload.isCorrect ? 'game.chomboCorrect' : 'game.chomboIncorrect',
+          severity: payload.isCorrect ? 'success' : 'error',
           params: {
             teamName: getTeamDisplayName(
               payload.awardedTeam,
