@@ -14,7 +14,12 @@ import {
   View,
 } from 'react-native';
 
-import { buildRoundTableRows, type RoundRow } from '@/lib/game-log-rows';
+import {
+  buildProEventRows,
+  buildRoundTableRows,
+  type ProEventRow,
+  type RoundRow,
+} from '@/lib/game-log-rows';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobilePlayer } from '@/types/game';
 import { MiniCard } from '@/components/game/MiniCard';
@@ -100,6 +105,17 @@ function getEventPlayerName(event: GameHistoryReplayEventContract): string {
   return t('common.player');
 }
 
+function ProEventLogRow({ row }: { row: ProEventRow }) {
+  return (
+    <View style={styles.membershipRow}>
+      <Text style={styles.membershipTime}>
+        {new Date(row.timestamp).toLocaleTimeString(getLocaleTag())}
+      </Text>
+      <Text style={styles.membershipText}>{row.text}</Text>
+    </View>
+  );
+}
+
 function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
   const playerName = getEventPlayerName(event);
   const actionLabel =
@@ -134,6 +150,10 @@ export function GameHistory({
 }: GameHistoryProps) {
   const rows = useMemo(
     () => buildRoundTableRows(replay, players ?? [], teamNames),
+    [replay, players, teamNames],
+  );
+  const proEventRows = useMemo(
+    () => buildProEventRows(replay, players ?? [], teamNames),
     [replay, players, teamNames],
   );
   const membershipEvents = useMemo(
@@ -189,7 +209,9 @@ export function GameHistory({
         </Pressable>
       </View>
 
-      {rows.length === 0 && membershipEvents.length === 0 ? (
+      {rows.length === 0 &&
+      membershipEvents.length === 0 &&
+      proEventRows.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>{t('gameLog.empty')}</Text>
         </View>
@@ -227,6 +249,19 @@ export function GameHistory({
                   <Row index={index} key={row.roundNumber} row={row} />
                 ))}
               </>
+            ) : null}
+            {proEventRows.length > 0 ? (
+              <View
+                style={styles.membershipSection}
+                testID="game-history-pro-events-section"
+              >
+                <Text style={styles.membershipTitle}>
+                  {t('gameLog.proEvents')}
+                </Text>
+                {proEventRows.map((row) => (
+                  <ProEventLogRow key={row.id} row={row} />
+                ))}
+              </View>
             ) : null}
             {startingHands.length > 0 ? (
               <View style={styles.handsSection}>

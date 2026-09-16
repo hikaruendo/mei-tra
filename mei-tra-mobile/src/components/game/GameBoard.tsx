@@ -193,6 +193,14 @@ export function GameBoard({
       ),
     [leftPlayer, topPlayer, rightPlayer],
   );
+  // COM seats cannot be reported (web: ChomboReportPanel).
+  const chomboReportTargets = useMemo(
+    () =>
+      opponentSlots
+        .map(({ player }) => player)
+        .filter((player) => !player.isCOM),
+    [opponentSlots],
+  );
   const teamFieldCounts = useMemo(() => {
     const counts: Record<number, number> = { 0: 0, 1: 0 };
     for (const field of game.fields) {
@@ -213,10 +221,14 @@ export function GameBoard({
   const canPlaceProNegri =
     isProMode &&
     !game.isSpectator &&
+    game.gamePhase === 'play' &&
     highest?.seatId === game.youSeatId &&
     !game.negriCard &&
     game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
+  // The hand renders during the blow phase too, so the drop affordance needs
+  // its own phase gate or it offers plays the server refuses.
+  const canProDrop = isProMode && isHandPlayPhase && (isMyTurn || canPlaceProNegri);
   const phaseLabel =
     game.gamePhase === 'blow'
       ? t('board.phaseBlow')
@@ -225,6 +237,7 @@ export function GameBoard({
         : t('board.phaseWaiting');
   const canDeclareOpen =
     isProMode &&
+    !actionsDisabled &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
     !game.openDeclared &&
@@ -378,9 +391,9 @@ export function GameBoard({
           ) : null}
         </View>
 
-        {isProMode && game.gamePhase === 'play' && !game.isSpectator ? (
+        {isProMode && isHandPlayPhase && chomboReportTargets.length > 0 ? (
           <ChomboReportPanel
-            players={opponentSlots.map(({ player }) => player)}
+            players={chomboReportTargets}
             onReport={onReportChombo}
           />
         ) : null}
@@ -622,9 +635,9 @@ export function GameBoard({
                   )
                 ) : null}
 
-            {isProMode && (isMyTurn || canPlaceProNegri) && !game.isSpectator ? (
-              <View style={styles.proDropZones}>
-                <Text style={styles.proDropZonePlay}>{t('board.choosePlayCard')} ↑</Text>
+            {canProDrop ? (
+              <View style={styles.proDropZones} testID="pro-drop-zones">
+                <Text style={styles.proDropZonePlay}>{t('board.dropToPlay')} ↑</Text>
                 {highest?.seatId === self.seatId && !game.negriCard ? (
                   <Text style={styles.proDropZoneNegri}>{t('seat.negri')} ↓</Text>
                 ) : null}
@@ -646,7 +659,7 @@ export function GameBoard({
               }
               onReorder={onHandReorder}
               onDropAction={(card, action) => {
-                if (isProMode && (isMyTurn || canPlaceProNegri)) {
+                if (canProDrop) {
                   if (action === 'negri' && highest?.seatId === self.seatId && !game.negriCard) onSelectNegri(card);
                   if (action === 'play' && isMyTurn) onPlayCard(card);
                 }

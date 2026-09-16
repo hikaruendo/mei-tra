@@ -1461,13 +1461,19 @@ export const useGame = () => {
       if (!socket || !currentRoomId) return;
       socket.emit('declare-open', { roomId: currentRoomId });
     },
-    setupChomboScenario: (violationType: ChomboViolationType) => {
-      if (!socket || !currentRoomId) return;
-      socket.emit('dev-chombo-scenario', {
-        roomId: currentRoomId,
-        violationType,
-      });
-    },
+    // Dev only, like the panel that calls it. The bundler folds this branch
+    // away in production, so the emit path never ships.
+    ...(process.env.NODE_ENV !== 'production'
+      ? {
+          setupChomboScenario: (violationType: ChomboViolationType) => {
+            if (!socket || !currentRoomId) return;
+            socket.emit('dev-chombo-scenario', {
+              roomId: currentRoomId,
+              violationType,
+            });
+          },
+        }
+      : {}),
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });

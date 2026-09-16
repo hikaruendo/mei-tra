@@ -7,6 +7,9 @@ import { AccessibilityInfo, StyleSheet } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { HandFan } from '@/components/game/HandFan';
+
 import { GameBoard } from '../GameBoard';
 
 jest.mock('@/components/game/BlowControls', () => ({
@@ -510,7 +513,11 @@ describe('GameBoard field mat', () => {
 });
 
 describe('GameBoard open action', () => {
-  const renderProBoard = (handSize: number, onDeclareOpen: jest.Mock) => {
+  const renderProBoard = (
+    handSize: number,
+    onDeclareOpen: jest.Mock,
+    actionsDisabled = false,
+  ) => {
     let renderer!: {
       root: { findAllByProps: (props: Record<string, unknown>) => unknown[] };
       unmount: () => void;
@@ -538,6 +545,7 @@ describe('GameBoard open action', () => {
               },
             },
           }}
+          actionsDisabled={actionsDisabled}
           isHost
           onDeclare={jest.fn()}
           onDeclareOpen={onDeclareOpen}
@@ -563,6 +571,157 @@ describe('GameBoard open action', () => {
     const atLimit = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
     expect(atLimit.root.findAllByProps({ onPress: onDeclareOpen }).length).toBeGreaterThan(0);
     act(() => atLimit.unmount());
+  });
+
+  it('withholds open while the socket is down', () => {
+    const onDeclareOpen = jest.fn();
+
+    const disconnected = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen, true);
+    expect(
+      disconnected.root.findAllByProps({ onPress: onDeclareOpen }),
+    ).toHaveLength(0);
+    act(() => disconnected.unmount());
+  });
+});
+
+describe('GameBoard pro drag gating', () => {
+  type ProRenderer = {
+    root: {
+      findAllByProps: (props: Record<string, unknown>) => unknown[];
+      findByType: (type: typeof HandFan) => {
+        props: { onDropAction?: (card: string, action: 'play' | 'negri') => void };
+      };
+    };
+    unmount: () => void;
+  };
+
+  const renderProBoard = (
+    gamePhase: 'blow' | 'play',
+    handlers: { onPlayCard: jest.Mock; onSelectNegri: jest.Mock },
+  ) => {
+    let renderer!: ProRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{
+            ...game,
+            gameMode: 'pro',
+            gamePhase,
+            blowState: {
+              ...game.blowState,
+              currentHighestDeclaration: {
+                seatId: asSeatId('player-1'),
+                team: 0,
+                trumpType: 'zuppe',
+                numberOfPairs: 6,
+                timestamp: 1,
+              },
+            },
+          }}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={handlers.onPlayCard}
+          onReplaceWithCOM={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={handlers.onSelectNegri}
+        />,
+      ) as unknown as ProRenderer;
+    });
+    return renderer;
+  };
+
+  it('offers no drop target during the blow phase', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('blow', handlers);
+
+    expect(
+      renderer.root.findAllByProps({ testID: 'pro-drop-zones' }),
+    ).toHaveLength(0);
+
+    const handFan = renderer.root.findByType(HandFan);
+    act(() => {
+      handFan.props.onDropAction?.('S-3', 'play');
+      handFan.props.onDropAction?.('S-3', 'negri');
+    });
+    expect(handlers.onPlayCard).not.toHaveBeenCalled();
+    expect(handlers.onSelectNegri).not.toHaveBeenCalled();
+
+    act(() => renderer.unmount());
+  });
+
+  it('drops to play and to negri during the play phase', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+
+    expect(
+      renderer.root.findAllByProps({ testID: 'pro-drop-zones' }).length,
+    ).toBeGreaterThan(0);
+
+    const handFan = renderer.root.findByType(HandFan);
+    act(() => {
+      handFan.props.onDropAction?.('S-3', 'play');
+      handFan.props.onDropAction?.('H-4', 'negri');
+    });
+    expect(handlers.onPlayCard).toHaveBeenCalledWith('S-3');
+    expect(handlers.onSelectNegri).toHaveBeenCalledWith('H-4');
+
+    act(() => renderer.unmount());
+  });
+});
+
+describe('GameBoard chombo report targets', () => {
+  it('leaves COM seats out of the reportable opponents', () => {
+    const players = [
+      game.players[0],
+      ...['player-2', 'player-3', 'player-4'].map((seatId, index) => ({
+        ...game.players[0],
+        socketId: `socket-${index + 2}`,
+        seatId: asSeatId(seatId),
+        userId: `user-${index + 2}`,
+        name: `Player ${index + 2}`,
+        team: ((index + 1) % 2) as 0 | 1,
+        isHost: false,
+        isCOM: seatId === 'player-3',
+      })),
+    ];
+    let renderer!: {
+      root: {
+        findByType: (type: typeof ChomboReportPanel) => {
+          props: { players: { seatId: string }[] };
+        };
+      };
+      unmount: () => void;
+    };
+
+    act(() => {
+      renderer = TestRenderer.create(
+        <GameBoard
+          game={{ ...game, gameMode: 'pro', players }}
+          isHost
+          onDeclare={jest.fn()}
+          onLeave={jest.fn()}
+          onPass={jest.fn()}
+          onPlayCard={jest.fn()}
+          onReplaceWithCOM={jest.fn()}
+          onReportChombo={jest.fn()}
+          onSelectBaseSuit={jest.fn()}
+          onSelectNegri={jest.fn()}
+        />,
+      ) as unknown as typeof renderer;
+    });
+
+    const targets = renderer.root
+      .findByType(ChomboReportPanel)
+      .props.players.map((player) => player.seatId);
+    expect(targets).toEqual(
+      expect.arrayContaining(['player-2', 'player-4']),
+    );
+    expect(targets).not.toContain('player-3');
+    expect(targets).not.toContain('player-1');
+
+    act(() => renderer.unmount());
   });
 });
 

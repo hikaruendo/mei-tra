@@ -4,7 +4,11 @@ import type {
 } from '@meitra/contracts/game-history';
 import type { SeatId } from '@meitra/contracts/ids';
 
-import { buildRoundTableRows, formatBid } from '../game-log-rows';
+import {
+  buildProEventRows,
+  buildRoundTableRows,
+  formatBid,
+} from '../game-log-rows';
 
 type AnyEvent = GameHistoryReplayEventContract;
 
@@ -156,5 +160,144 @@ describe('buildRoundTableRows', () => {
 
   it('returns an empty table for a null replay', () => {
     expect(buildRoundTableRows(null)).toEqual([]);
+  });
+});
+
+describe('buildProEventRows', () => {
+  const chomboEvent = (over: Partial<AnyEvent> = {}): AnyEvent =>
+    event({
+      id: 'chombo-1',
+      actionType: 'chombo_reported',
+      timestamp: '2026-01-01T00:02:00.000Z',
+      actorSeatId: 'seat-1' as SeatId,
+      actionData: { playerNames: { 'seat-1': 'あかり' } },
+      detailItems: [
+        {
+          labelKey: 'violator',
+          value: { kind: 'player', seatId: 'seat-2', playerName: 'ひかる' },
+        },
+        { labelKey: 'violation', value: { kind: 'text', text: 'negri-forget' } },
+        { labelKey: 'awardedTeam', value: { kind: 'team', team: 1 } },
+      ],
+      ...over,
+    } as Partial<AnyEvent> as never);
+
+  const brokenEvent = (over: Partial<AnyEvent> = {}): AnyEvent =>
+    event({
+      id: 'broken-1',
+      actionType: 'broken_hand_revealed',
+      timestamp: '2026-01-01T00:01:00.000Z',
+      actorSeatId: 'seat-1' as SeatId,
+      actionData: { playerNames: { 'seat-1': 'あかり' } },
+      detailItems: [
+        {
+          labelKey: 'nextPlayer',
+          value: { kind: 'player', seatId: 'seat-2', playerName: 'ひかる' },
+        },
+      ],
+      ...over,
+    } as Partial<AnyEvent> as never);
+
+  it('names the reporter, the violator, the violation and the scoring team', () => {
+    const rows = buildProEventRows(replay([round(1, [chomboEvent()])]));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe('chombo-1');
+    expect(rows[0].text).toBe('あかりがひかるのネグリ忘れを指摘。黒に5点');
+  });
+
+  it('uses the room team name for the scoring team', () => {
+    const rows = buildProEventRows(
+      replay([round(1, [chomboEvent()])]),
+      [],
+      { 0: 'A班', 1: 'B班' },
+    );
+
+    expect(rows[0].text).toContain('B班に5点');
+  });
+
+  it('names the revealer and who bids next on a broken hand', () => {
+    const rows = buildProEventRows(replay([round(1, [brokenEvent()])]));
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].text).toBe('あかりがブロークンを公開。次: ひかる');
+  });
+
+  it('prefers the name stored with the event over the current seat holder', () => {
+    const players = [
+      { seatId: 'seat-1', name: '別の人' },
+      { seatId: 'seat-2', name: 'また別の人' },
+    ] as never;
+
+    const rows = buildProEventRows(replay([round(1, [chomboEvent()])]), players);
+
+    expect(rows[0].text).toContain('あかり');
+    expect(rows[0].text).toContain('ひかる');
+    expect(rows[0].text).not.toContain('別の人');
+  });
+
+  it('falls back to the current seat holder when the event stored no name', () => {
+    const players = [
+      { seatId: 'seat-1', name: '現在の席' },
+      { seatId: 'seat-2', name: '次の席' },
+    ] as never;
+
+    const rows = buildProEventRows(
+      replay([
+        round(1, [
+          brokenEvent({
+            actionData: {},
+            detailItems: [
+              {
+                labelKey: 'nextPlayer',
+                value: { kind: 'player', seatId: 'seat-2', playerName: null },
+              },
+            ],
+          } as Partial<AnyEvent> as never),
+        ]),
+      ]),
+      players,
+    );
+
+    expect(rows[0].text).toBe('現在の席がブロークンを公開。次: 次の席');
+  });
+
+  it('keeps an unknown violation readable and falls back for a missing team', () => {
+    const rows = buildProEventRows(
+      replay([
+        round(1, [
+          chomboEvent({
+            detailItems: [
+              { labelKey: 'violation', value: { kind: 'text', text: 'mystery' } },
+            ],
+          } as Partial<AnyEvent> as never),
+        ]),
+      ]),
+    );
+
+    expect(rows[0].text).toBe('あかりがプレイヤーのmysteryを指摘。不明に5点');
+  });
+
+  it('returns the incidents oldest-first across rounds, ignoring other events', () => {
+    const rows = buildProEventRows(
+      replay([
+        round(1, [
+          chomboEvent(),
+          event({ id: 'other', actionType: 'card_played' }),
+        ]),
+        round(2, [brokenEvent()]),
+      ]),
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(['broken-1', 'chombo-1']);
+  });
+
+  it('returns nothing for a null replay or a game without incidents', () => {
+    expect(buildProEventRows(null)).toEqual([]);
+    expect(
+      buildProEventRows(
+        replay([round(1, [event({ id: 'a', actionType: 'blow_declared' })])]),
+      ),
+    ).toEqual([]);
   });
 });

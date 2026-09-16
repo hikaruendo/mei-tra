@@ -1,5 +1,5 @@
 import type { ChomboViolationType } from '@meitra/contracts/game';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 
@@ -15,6 +15,38 @@ const violationLabelKeys: Record<ChomboViolationType, string> = {
   'wrong-open': 'chomboReport.wrongOpen',
 };
 
+/**
+ * A report is irreversible and moves the score, so a tap only proposes it.
+ * Mirrors confirmGuestSignOut: react-native-web ships Alert as a no-op stub,
+ * so the web build falls back to the browser's confirm dialog.
+ */
+function confirmReport(
+  playerName: string,
+  violationLabel: string,
+  onConfirm: () => void,
+): void {
+  const title = t('chomboReport.confirmTitle');
+  const message = t('chomboReport.confirmMessage', {
+    name: playerName,
+    violation: violationLabel,
+  });
+
+  if (Platform.OS === 'web') {
+    const confirm = (
+      globalThis as { confirm?: (message: string) => boolean }
+    ).confirm;
+    if (confirm?.(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+    return;
+  }
+
+  Alert.alert(title, message, [
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('chomboReport.confirm'), style: 'destructive', onPress: onConfirm },
+  ]);
+}
+
 interface Props {
   players: { seatId: string; name: string }[];
   onReport: (seatId: string, type: ChomboViolationType) => void;
@@ -28,7 +60,16 @@ export function ChomboReportPanel({ players, onReport }: Props) {
         <View key={player.seatId} style={styles.row}>
           <Text style={styles.target}>{player.name}</Text>
           {violationTypes.map((type) => (
-            <Pressable key={type} onPress={() => onReport(player.seatId, type)} style={styles.button}>
+            <Pressable
+              key={type}
+              onPress={() =>
+                confirmReport(player.name, t(violationLabelKeys[type]), () =>
+                  onReport(player.seatId, type),
+                )
+              }
+              style={styles.button}
+              testID={`chombo-report-${player.seatId}-${type}`}
+            >
               <Text style={styles.buttonText}>{t(violationLabelKeys[type])}</Text>
             </Pressable>
           ))}

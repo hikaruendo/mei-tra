@@ -107,12 +107,18 @@ export function HandFan({
     const placement = dropRef.current;
     const action = dropActionRef.current;
     dropActionRef.current = null;
-    if (committed && action) { onDropAction?.(card, action); return; }
     dropRef.current = null;
     setDraggingCard(null);
     setDrop(null);
 
-    if (!committed || !placement) return;
+    if (!committed) return;
+
+    // The parent takes a drop action only in pro mode, and only when the drop
+    // is legal, so the sideways half of the drag is still honoured below: a
+    // reorder must not be swallowed because the finger strayed vertically.
+    if (action) onDropAction?.(card, action);
+
+    if (!placement) return;
 
     const nextOrder = reorderHand(
       orderRef.current,

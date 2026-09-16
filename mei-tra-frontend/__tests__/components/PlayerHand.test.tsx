@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
+import { asSeatId } from '@contracts/ids';
 import { PlayerHand } from '@/components/game/PlayerHand';
-import type { GameActions, Player } from '@/types/game.types';
+import type { Field, GameActions, Player } from '@/types/game.types';
 
 jest.mock('next-intl', () => ({
   useTranslations: (namespace: string) => {
@@ -142,6 +143,30 @@ const buildPlayerHand = (
 const renderPlayerHand = (
   overrides: Partial<React.ComponentProps<typeof PlayerHand>> = {},
 ) => render(buildPlayerHand(overrides));
+
+const ledField = (baseCard: string): Field => ({
+  cards: [baseCard],
+  playedBySeatIds: [asSeatId('player-1')],
+  baseCard,
+  dealerSeatId: asSeatId('player-1'),
+  isComplete: false,
+});
+
+// '5♠' follows the led suit; 'A♥' does not while a spade is in hand.
+const followSuitTurn = {
+  position: 'bottom',
+  gamePhase: 'play',
+  whoseTurn: 'player-2',
+  currentSeatId: 'player-2',
+  currentField: ledField('9♠'),
+  currentTrump: 'tra',
+  player: { ...otherPlayer, hand: ['5♠', 'A♥'] },
+} as const;
+
+const handCards = () =>
+  screen
+    .getAllByTestId('card-front')
+    .map((card) => card.parentElement as HTMLElement);
 
 describe('PlayerHand', () => {
   afterEach(() => {
@@ -703,6 +728,53 @@ describe('PlayerHand', () => {
     expect(
       screen.queryByRole('button', { name: 'revealBroken' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('greys out an illegal card in normal mode and refuses to select it', () => {
+    const onCardSelection = jest.fn();
+    renderPlayerHand({ ...followSuitTurn, gameMode: 'normal', onCardSelection });
+
+    const [legalCard, illegalCard] = handCards();
+    expect(illegalCard).toHaveClass('unplayable');
+    expect(illegalCard).not.toHaveClass('playable');
+    expect(legalCard).toHaveClass('playable');
+
+    fireEvent.click(illegalCard);
+    expect(screen.queryByRole('button', { name: 'play' })).not.toBeInTheDocument();
+    expect(onCardSelection).not.toHaveBeenCalled();
+
+    fireEvent.click(legalCard);
+    expect(screen.getByRole('button', { name: 'play' })).toBeInTheDocument();
+    expect(onCardSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves an illegal card selectable in pro mode', () => {
+    renderPlayerHand({ ...followSuitTurn, gameMode: 'pro' });
+
+    const [, illegalCard] = handCards();
+    expect(illegalCard).toHaveClass('playable');
+    expect(illegalCard).not.toHaveClass('unplayable');
+    expect(illegalCard.parentElement).toHaveAttribute(
+      'aria-roledescription',
+      'draggable',
+    );
+  });
+
+  it('closes the pro Negri window once the round fields are all played', () => {
+    const proNegriTurn = {
+      ...followSuitTurn,
+      whoseTurn: 'player-1',
+      gameMode: 'pro',
+      currentHighestDeclaration: { seatId: 'player-2' },
+      completedFieldCount: 9,
+    } as const;
+    const { rerender } = renderPlayerHand(proNegriTurn);
+
+    expect(screen.getByText('Negri ↓')).toBeInTheDocument();
+
+    rerender(buildPlayerHand({ ...proNegriTurn, completedFieldCount: 10 }));
+
+    expect(screen.queryByText('Negri ↓')).not.toBeInTheDocument();
   });
 
   it('shows a revealed hand as rank and suit marks', () => {
