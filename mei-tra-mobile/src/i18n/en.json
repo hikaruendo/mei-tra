@@ -101,7 +101,10 @@
     "wrongSuit": "Wrong suit",
     "fourJack": "Four jacks",
     "lastTanzen": "Last tanzen",
-    "wrongOpen": "Wrong open"
+    "wrongOpen": "Wrong open",
+    "confirmTitle": "Report a chombo?",
+    "confirmMessage": "Report {name} for {violation}? This ends the round and cannot be undone.",
+    "confirm": "Report"
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "Account deletion is in progress. Please finish deleting this account before continuing.",
@@ -233,7 +236,7 @@
     "createRoom": "Create a room",
     "roomName": "Room name",
     "pointsToWin": "Points to win",
-    "proMode": "Pro mode",
+    "proMode": "Pro mode (beta)",
     "proBadge": "Pro",
     "create": "Create room",
     "joinable": "Rooms you can join",
@@ -432,6 +435,9 @@
     "startingHands": "Starting hands",
     "preGame": "Before start",
     "roundN": "Round {n}",
+    "proEvents": "Chombos and broken hands",
+    "chomboReported": "{player} reported {violator} for {violation}. 5 points to {team}",
+    "brokenHandRevealed": "{player} revealed a broken hand. Next: {nextPlayer}",
     "title": "Game log",
     "subtitle": "Review past games",
     "back": "Back"
@@ -446,6 +452,7 @@
     "spectatingHand": "{name}'s hand (spectating)",
     "chooseNegri": "Choose a card to set as Negri",
     "choosePlayCard": "Choose a card to play",
+    "dropToPlay": "Play",
     "waitingTurn": "Waiting for your turn",
     "setNegri": "Set as Negri",
     "play": "Play",

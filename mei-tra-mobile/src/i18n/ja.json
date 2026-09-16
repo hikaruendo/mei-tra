@@ -101,7 +101,10 @@
     "wrongSuit": "出し方の違反",
     "fourJack": "4ジャック",
     "lastTanzen": "最後タンツェン",
-    "wrongOpen": "オープンの誤り"
+    "wrongOpen": "オープンの誤り",
+    "confirmTitle": "チョンボを指摘しますか？",
+    "confirmMessage": "{name}の「{violation}」を指摘します。この操作は取り消せず、ラウンドが終了します。",
+    "confirm": "指摘する"
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "アカウントの削除中です。削除を終えてから操作してください",
@@ -233,7 +236,7 @@
     "createRoom": "部屋を作る",
     "roomName": "部屋名",
     "pointsToWin": "勝利点数",
-    "proMode": "プロモード",
+    "proMode": "プロモード（ベータ版）",
     "proBadge": "Pro",
     "create": "ルーム作成",
     "joinable": "参加できる部屋",
@@ -432,6 +435,9 @@
     "startingHands": "開始時の手札",
     "preGame": "開始前",
     "roundN": "{n}ラウンド",
+    "proEvents": "チョンボ・ブロークン",
+    "chomboReported": "{player}が{violator}の{violation}を指摘。{team}に5点",
+    "brokenHandRevealed": "{player}がブロークンを公開。次: {nextPlayer}",
     "title": "対局ログ",
     "subtitle": "過去の対局を確認",
     "back": "戻る"
@@ -446,6 +452,7 @@
     "spectatingHand": "{name} の手札（観戦中）",
     "chooseNegri": "ネグリにするカードを選んでください",
     "choosePlayCard": "プレイするカードを選んでください",
+    "dropToPlay": "プレイ",
     "waitingTurn": "順番を待っています",
     "setNegri": "ネグリにする",
     "play": "プレイ",
