@@ -542,6 +542,7 @@
     "gameStateErrorNoCurrentField": "ゲームの状態が不正です。場がありません",
     "gameStateNotFound": "ゲームの状態が見つかりません",
     "hostCannotModerateThemselves": "ホストは自分を操作できません",
+    "inTanzenRoundYouMustPlayTheJoker": "タンゼンの場ではジョーカーを必ず出してください",
     "internalServerError": "サーバーでエラーが発生しました",
     "invalidDeclaration": "宣言の内容が正しくありません",
     "itsNotYourTurnToDeclare": "宣言するターンではありません",
@@ -563,6 +564,7 @@
     "openIsOnlyAvailableDuringPlay": "オープンはプレイ中だけ宣言できます",
     "openIsOnlyAvailableInProMode": "オープンはプロモードだけで宣言できます",
     "openIsOnlyAvailableWhileYouHoldCards": "手札がなくなった後はオープンを宣言できません",
+    "openIsOnlyAvailableWithFourOrFewer": "オープンは手札が4枚以下のときだけ宣言できます",
     "openRequiresACompletedDeclaration": "オープンには宣言の確定が必要です",
     "playerDoesNotHaveBrokenHand": "ブロークンの手札ではありません",
     "playerMismatchForBrokenHand": "ブロークンを公開したプレイヤーと一致しません",
@@ -586,7 +588,11 @@
     "youCanOnlyReportTheOpposingTeam": "指摘できるのは相手チームだけです",
     "youHaveAlreadyDeclaredInThisBlowPhase": "この吹きフェーズではすでに宣言しています",
     "youHaveAlreadyPassedInThisBlowPhase": "この吹きフェーズではすでにパスしています",
-    "spectatorAction": "観戦中はこの操作を行えません"
+    "spectatorAction": "観戦中はこの操作を行えません",
+    "invalidTeamForSeat": "座席 {seatId} のチーム指定が不正です",
+    "seatNotFound": "座席 {seatId} が見つかりません",
+    "youMustPlayACardOfSuit": "{suit} のカードを出してください",
+    "youMustPlayTheJokerSinceYouHaveNoSuitCards": "{suit} のカードがないため、ジョーカーを出してください"
   },
   "gameHistoryDock": {
     "title": "対局ログ",

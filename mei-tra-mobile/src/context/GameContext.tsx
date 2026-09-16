@@ -76,7 +76,7 @@ import {
   type MobileSocket,
 } from '@/lib/realtime';
 import { roomStorage } from '@/lib/room-storage';
-import { serverErrorKey } from '@meitra/game-client/server-errors';
+import { serverErrorTranslation } from '@meitra/game-client/server-errors';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import type {
@@ -964,10 +964,15 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
-      const key = serverErrorKey(message);
+      const translation = serverErrorTranslation(message);
       dispatch({
         type: 'error',
-        message: key ? { key: `serverErrors.${key}` } : message,
+        message: translation
+          ? {
+              key: `serverErrors.${translation.key}`,
+              params: translation.params,
+            }
+          : message,
       });
     });
     socket.on('open-declared', (payload: OpenDeclaredPayload) => {
