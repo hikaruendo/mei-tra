@@ -136,6 +136,12 @@ export interface RequestAgariPayload {
 
 export interface RevealAgariPayload {
   agari: string;
+  /**
+   * Fixed English prompt. The web and mobile clients in this repository show
+   * their own translated prompt (`game.negriPrompt` / `game.negriPromptPro`)
+   * and ignore this; it stays for app versions already installed that still
+   * display it.
+   */
   message: string;
   seatId: SeatId;
 }
