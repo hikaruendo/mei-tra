@@ -129,6 +129,7 @@ export const GameTable: React.FC<GameTableProps> = ({
     !openResolved &&
     Boolean(currentSeatId && currentHighestDeclaration) &&
     viewerHandSize !== undefined &&
+    viewerHandSize > 0 &&
     viewerHandSize <= OPEN_MAX_HAND_SIZE;
   const chomboReport =
     gameMode === 'pro' &&

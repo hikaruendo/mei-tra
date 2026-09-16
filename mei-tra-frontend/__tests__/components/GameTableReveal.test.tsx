@@ -62,6 +62,13 @@ const players: Player[] = [0, 1, 2, 3].map((idx) => ({
   hand: [],
 }));
 
+const withViewerHand = (cardCount: number) =>
+  players.map((player) =>
+    player.seatId === 'seat-0'
+      ? { ...player, hand: Array.from({ length: cardCount }, (_, index) => String(index + 5) + '♠') }
+      : player,
+  );
+
 const teamScores: TeamScores = {
   0: { deal: 0, blow: 0, play: 0, total: 0 },
   1: { deal: 0, blow: 0, play: 0, total: 0 },
@@ -189,6 +196,7 @@ describe('GameTable pro open control', () => {
         numberOfPairs: 1,
         timestamp: 1,
       },
+      players: withViewerHand(1),
     });
     expect(screen.getByRole('button', { name: 'オープン' })).toBeInTheDocument();
 
@@ -202,8 +210,27 @@ describe('GameTable pro open control', () => {
         numberOfPairs: 1,
         timestamp: 1,
       },
+      players: withViewerHand(1),
     });
     expect(screen.getAllByRole('button', { name: 'オープン' })).toHaveLength(2);
+  });
+
+  it('takes the open action away once the viewer has played their last card', () => {
+    // The last field of a round is completed on a delay, so an empty hand is a
+    // real state here. Nothing is left to open on, and the server rejects it.
+    renderTable({
+      gameMode: 'pro',
+      gamePhase: 'play',
+      currentHighestDeclaration: {
+        seatId: 'seat-0',
+        team: 0,
+        trumpType: 'tra',
+        numberOfPairs: 1,
+        timestamp: 1,
+      },
+      players: withViewerHand(0),
+    });
+    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
   });
 
   it('does not show the open action in normal mode', () => {
@@ -227,12 +254,6 @@ describe('GameTable pro open control', () => {
   });
 
   it('offers the open action only once the viewer is down to the open hand size', () => {
-    const withViewerHand = (cardCount: number) =>
-      players.map((player) =>
-        player.seatId === 'seat-0'
-          ? { ...player, hand: Array.from({ length: cardCount }, (_, index) => String(index + 5) + '♠') }
-          : player,
-      );
     const proPlay: Partial<React.ComponentProps<typeof GameTable>> = {
       gameMode: 'pro',
       gamePhase: 'play',

@@ -56,6 +56,16 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
         error: `Open is only available with ${OPEN_MAX_HAND_SIZE} or fewer cards in hand`,
       };
     }
+    // The last field of a round is completed on a delay, so an empty hand
+    // still reaches here. There is nothing left to win, and an empty hand
+    // reads as "every trick taken", which would end the round and score the
+    // field that is still waiting to be completed.
+    if (player.hand.length === 0) {
+      return {
+        success: false,
+        error: 'Open is only available while you hold cards',
+      };
+    }
 
     const valid = this.openDeclarationService.canDeclareOpen(
       state,
@@ -118,6 +128,7 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       events: [...events, ...completion.events],
       delayedEvents: completion.delayedEvents,
       gameOver: completion.gameOver,
+      roundStoppedEarly: true,
     };
   }
 }
