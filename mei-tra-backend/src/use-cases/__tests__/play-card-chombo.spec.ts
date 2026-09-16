@@ -90,8 +90,40 @@ describe('Pro card play and chombo reporting', () => {
     }
   });
 
-  it('awards a last-Tanzen report after the last Joker leaves the hand', async () => {
-    const fixture = await createGame(['JOKER']);
+  it('awards a last-tanzen report once the Joker is the only card left', async () => {
+    const fixture = await createGame(['5♠', 'JOKER']);
+    try {
+      const played = await fixture.play.execute({
+        roomId: 'room-1',
+        actorId: 'winner',
+        card: '5♠',
+      });
+      expect(played.success).toBe(true);
+      const candidateTypes = (
+        fixture.game.getState().playState?.chomboViolations ?? []
+      ).map((violation) => violation.type);
+      expect(candidateTypes).toContain('last-tanzen');
+      expect(candidateTypes).not.toContain('wrong-suit');
+
+      const result = await fixture.report.execute({
+        roomId: 'room-1',
+        actorId: 'opponent',
+        violatorSeatId: asSeatId('winner'),
+        violationType: 'last-tanzen',
+      });
+      const resolved = result.events?.find(
+        (event) => event.event === 'chombo-resolved',
+      );
+      expect(resolved?.payload).toEqual(
+        expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
+      );
+    } finally {
+      await fixture.module.close();
+    }
+  });
+
+  it('does not count a Joker played by the second-to-last card as a last-tanzen', async () => {
+    const fixture = await createGame(['5♠', 'JOKER']);
     try {
       const played = await fixture.play.execute({
         roomId: 'room-1',
@@ -99,18 +131,57 @@ describe('Pro card play and chombo reporting', () => {
         card: 'JOKER',
       });
       expect(played.success).toBe(true);
+
       const result = await fixture.report.execute({
         roomId: 'room-1',
         actorId: 'opponent',
         violatorSeatId: asSeatId('winner'),
         violationType: 'last-tanzen',
       });
-      expect(result.success).toBe(true);
-      expect(result.events).toContainEqual(
-        expect.objectContaining({
-          event: 'chombo-resolved',
-          payload: expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
-        }),
+      const resolved = result.events?.find(
+        (event) => event.event === 'chombo-resolved',
+      );
+      expect(resolved?.payload).toEqual(
+        expect.objectContaining({ isCorrect: false, awardedTeam: 0 }),
+      );
+    } finally {
+      await fixture.module.close();
+    }
+  });
+
+  it('awards a last-tanzen report when the Negri leaves only the Joker', async () => {
+    const fixture = await createGame(['5♠', 'JOKER']);
+    try {
+      // Placing a Negri syncs the room, which needs the room's own details.
+      Object.assign(fixture.room, {
+        id: 'room-1',
+        players: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastActivityAt: new Date(),
+      });
+      const state = fixture.game.getState();
+      state.blowState.declarations = [
+        state.blowState.currentHighestDeclaration!,
+      ];
+      const placed = await fixture.negri.execute({
+        roomId: 'room-1',
+        actorId: 'winner',
+        card: '5♠',
+      });
+      expect(placed.success).toBe(true);
+
+      const result = await fixture.report.execute({
+        roomId: 'room-1',
+        actorId: 'opponent',
+        violatorSeatId: asSeatId('winner'),
+        violationType: 'last-tanzen',
+      });
+      const resolved = result.events?.find(
+        (event) => event.event === 'chombo-resolved',
+      );
+      expect(resolved?.payload).toEqual(
+        expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
       );
     } finally {
       await fixture.module.close();

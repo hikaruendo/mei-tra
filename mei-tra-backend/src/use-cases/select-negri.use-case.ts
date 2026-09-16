@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   SelectNegriRequest,
   SelectNegriResponse,
@@ -13,6 +13,8 @@ import {
 } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
+import { appendChomboCandidate } from '../domain/chombo-candidates';
+import { IChomboService } from '../services/interfaces/chombo-service.interface';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {
@@ -21,6 +23,9 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('IBlowService') private readonly blowService: IBlowService,
+    @Optional()
+    @Inject('IChomboService')
+    private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: SelectNegriRequest): Promise<SelectNegriResponse> {
@@ -100,6 +105,18 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       );
 
       player.hand = player.hand.filter((c) => c !== card);
+      // Setting the other card aside can leave only the Joker, which misses the
+      // tanzen just as playing that card would.
+      if (isProMode && !player.isCOM) {
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          this.chomboService?.checkViolations(
+            asSeatId(player.seatId),
+            'check-last-card',
+            { player },
+          ),
+        );
+      }
 
       const winnerIndex = state.players.findIndex(
         (p) => p.seatId === winner.seatId,

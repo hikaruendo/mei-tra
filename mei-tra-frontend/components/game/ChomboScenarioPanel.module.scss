@@ -1,0 +1,61 @@
+@use '../../styles/base/typography' as typography;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--mt-border-hairline);
+  border-radius: var(--border-radius-lg);
+  background: color-mix(in srgb, var(--mt-surface-raised) 94%, transparent);
+  box-shadow: var(--mt-shadow-panel);
+  backdrop-filter: blur(10px);
+}
+
+.title {
+  margin: 0;
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.875rem);
+  font-weight: 800;
+}
+
+.description {
+  margin: 0;
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.75rem);
+}
+
+.scenario {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised-2);
+  color: var(--mt-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scenario:hover {
+  border-color: var(--mt-text-muted);
+  background: var(--mt-surface-raised);
+}
+
+.scenario:focus-visible {
+  outline: 2px solid var(--mt-accent);
+  outline-offset: 2px;
+}
+
+.label {
+  font-size: typography.scale(0.875rem);
+  font-weight: 800;
+}
+
+.hint {
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.75rem);
+}

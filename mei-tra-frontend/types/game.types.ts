@@ -114,7 +114,9 @@ export interface GameActions {
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: (seatId: string) => void;
-} 
+  /** Development only: jumps to a table where the viewer can commit the chombo. */
+  setupChomboScenario?: (violationType: ChomboViolationType) => void;
+}
 
 export function fromPlayerContract(player: PlayerContract): Player {
   return {

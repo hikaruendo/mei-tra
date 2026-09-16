@@ -578,11 +578,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
     if (revealedHand) {
       return (
-        <div className={styles.otherPlayerHandContainer}>
+        <div
+          className={`${styles.otherPlayerHandContainer} ${styles.revealedHandContainer}`}
+        >
           {revealedHand.map((card) => (
-            <div key={card} className={styles.revealedCard}>
-              <CardFace card={card} />
-            </div>
+            <TakenCardPreview key={card} card={card} />
           ))}
         </div>
       );

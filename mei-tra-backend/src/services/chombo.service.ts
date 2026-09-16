@@ -51,7 +51,13 @@ export class ChomboService implements IChomboService {
             context.trump ?? null,
             context.card,
           );
-          if (legalPlayError) {
+          // Holding back the Joker at two cards is judged as a last-tanzen once
+          // it is the only card left, not as a wrong suit.
+          const holdsBackTanzen =
+            context.player.hand.length === 2 &&
+            context.player.hand.includes('JOKER') &&
+            context.card !== 'JOKER';
+          if (legalPlayError && !holdsBackTanzen) {
             violationType = 'wrong-suit';
           }
         }

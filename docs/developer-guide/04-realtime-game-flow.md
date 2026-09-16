@@ -328,6 +328,10 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 
 `reveal-broken-hand` を受けた server は、公開した手札を `broken-hand-revealed` で全員に送り、5 秒後に配り直して `broken` を送ります。COM の4ジャックも同じ間隔で配り直します。公開中の手札は `revealedHands` に入り、web と mobile はその席の手札を表向きに表示します。`broken` で配り直すと `revealedHands` は空に戻ります。オープンで公開した手札も同じ `revealedHands` で表示し、カードが出されるたびにその札を取り除きます。
 
+`report-chombo` を受けた server は、指摘された違反の候補があれば指摘したチームに、なければ指摘されたチームに 5 点を加えて `chombo-resolved` を送ります。どちらの場合もそこでラウンドを終えます。場の得点は計算せず、`completeRoundAfterChombo` が通常のラウンド終了と同じく `round-results` を送り、目標点に届けば `game-over`、届かなければ 3 秒後に次のラウンドを配ります。gateway は、そのラウンドに残っている field completion と COM の timer を止めてから送ります。
+
+開発環境では、web の「チョンボ」メニューにある「チョンボのテスト」から `dev-chombo-scenario` を送ると、プロモードの対局を各チョンボの直前の場面に組み直せます。`DevChomboScenarioUseCase` が手札・場・吹き・ネグリを組み直し、`new-round-started` と `update-turn` で全員に送ります。`NODE_ENV=production` では受け付けません。
+
 ## 9. field completion
 
 1 field に 4 枚そろうと、`PlayCardUseCase` はその場で winner を決めません。`completeFieldTrigger` を返し、少し delay を置いて `CompleteFieldUseCase` に渡します。

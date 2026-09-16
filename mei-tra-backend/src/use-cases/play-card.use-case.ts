@@ -168,18 +168,6 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       }
 
       if (room?.settings.gameMode === 'pro' && !player.isCOM) {
-        const lastTanzenViolation = this.chomboService?.checkViolations(
-          asSeatId(player.seatId),
-          'check-last-card',
-          { player },
-        );
-        state.playState.chomboViolations = appendChomboCandidate(
-          state.playState.chomboViolations ?? [],
-          lastTanzenViolation,
-        );
-      }
-
-      if (room?.settings.gameMode === 'pro' && !player.isCOM) {
         const fourJackViolation = this.chomboService?.checkViolations(
           asSeatId(player.seatId),
           'check-four-jack',
@@ -231,6 +219,19 @@ export class PlayCardUseCase implements IPlayCardUseCase {
           ...state.playState.revealedHands,
           [player.seatId]: revealedHand.filter((c) => c !== card),
         };
+      }
+
+      // A hand left with only the Joker missed the tanzen, and is reportable
+      // from this moment on.
+      if (room?.settings.gameMode === 'pro' && !player.isCOM) {
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          this.chomboService?.checkViolations(
+            asSeatId(player.seatId),
+            'check-last-card',
+            { player },
+          ),
+        );
       }
 
       const currentField = state.playState.currentField;

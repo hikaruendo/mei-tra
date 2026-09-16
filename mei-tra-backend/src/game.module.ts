@@ -28,6 +28,7 @@ import { SelectNegriUseCase } from './use-cases/select-negri.use-case';
 import { PlayCardUseCase } from './use-cases/play-card.use-case';
 import { ReportChomboUseCase } from './use-cases/report-chombo.use-case';
 import { DeclareOpenUseCase } from './use-cases/declare-open.use-case';
+import { DevChomboScenarioUseCase } from './use-cases/dev-chombo-scenario.use-case';
 import { SelectBaseSuitUseCase } from './use-cases/select-base-suit.use-case';
 import { RevealBrokenHandUseCase } from './use-cases/reveal-broken-hand.use-case';
 import { CompleteFieldUseCase } from './use-cases/complete-field.use-case';
@@ -208,6 +209,10 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
     {
       provide: 'IDeclareOpenUseCase',
       useClass: DeclareOpenUseCase,
+    },
+    {
+      provide: 'IDevChomboScenarioUseCase',
+      useClass: DevChomboScenarioUseCase,
     },
     {
       provide: 'ISelectBaseSuitUseCase',

@@ -77,6 +77,10 @@
     "connecting": "Connecting to the server: {message}",
     "redealHand": "Redealt because a special hand was declared",
     "redealAllPass": "Redealt because everyone passed",
+    "openDeclared": "The open holds",
+    "openInvalid": "The open does not hold. Play continues with the hand revealed",
+    "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",
+    "chomboIncorrect": "No violation. {teamName} gets 5 points and the round ends",
     "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
     "fieldRecoveryRestored": "The table was restored. Please play your card again.",
     "playerDisconnected": "{name} disconnected",
@@ -90,6 +94,14 @@
     "actionFailed": "Could not complete the action",
     "notYourBlowTurn": "It is not your turn to bid",
     "notYourPlayTurn": "It is not your turn to play"
+  },
+  "chomboReport": {
+    "title": "Chombo report",
+    "negriForget": "Negri forget",
+    "wrongSuit": "Wrong suit",
+    "fourJack": "Four jacks",
+    "lastTanzen": "Last tanzen",
+    "wrongOpen": "Wrong open"
   },
   "upgrade": {
     "title": "Create your account",

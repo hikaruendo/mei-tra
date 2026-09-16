@@ -87,9 +87,7 @@ describe('PlayerSeat layout', () => {
 
     expect(renderer.root.findAllByProps({ faceDown: true })).toHaveLength(0);
     for (const card of hand) {
-      expect(
-        renderer.root.findAllByProps({ card, size: 'seat' }),
-      ).toHaveLength(1);
+      expect(renderer.root.findAllByProps({ card })).toHaveLength(1);
     }
 
     await act(async () => renderer.unmount());

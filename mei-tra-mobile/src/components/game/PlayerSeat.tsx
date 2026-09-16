@@ -3,6 +3,7 @@ import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { MiniCard } from '@/components/game/MiniCard';
 import { DealtCard } from '@/components/game/DealtCard';
 import { TurnClock } from '@/components/game/TurnClock';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
@@ -136,10 +137,8 @@ export function PlayerSeat({
       {revealedRows ? (
         revealedRows.map((cards, row) => (
           <View key={row} style={styles.cardRow}>
-            {cards.map((card, i) => (
-              <View key={card} style={i > 0 ? styles.cardOverlap : undefined}>
-                <PlayingCard card={card} size="seat" />
-              </View>
+            {cards.map((card) => (
+              <MiniCard key={card} card={card} />
             ))}
           </View>
         ))

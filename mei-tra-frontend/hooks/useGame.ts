@@ -987,15 +987,16 @@ export const useGame = () => {
       'open-declared': (payload: OpenDeclaredPayload) => {
         applyGameServerEvent({ type: 'open-declared', payload });
         setNotification({
-          message: payload.valid ? 'Open declared.' : 'Invalid open declared.',
+          message: payload.valid ? t('openDeclared') : t('openInvalid'),
           type: payload.valid ? 'success' : 'error',
         });
       },
       'chombo-resolved': (payload: ChomboResolvedPayload) => {
         applyGameServerEvent({ type: 'chombo-resolved', payload });
-        const result = payload.isCorrect ? 'correct' : 'incorrect';
         setNotification({
-          message: `Chombo report ${result}: Team ${payload.awardedTeam} receives 5 points.`,
+          message: t(payload.isCorrect ? 'chomboCorrect' : 'chomboIncorrect', {
+            teamName: getTeamLabel(payload.awardedTeam),
+          }),
           type: payload.isCorrect ? 'success' : 'error',
         });
       },
@@ -1053,7 +1054,7 @@ export const useGame = () => {
         pendingNegriCardRef.current = null;
         startDealAnimation('broken', payload.players);
         setNotification({
-          message: 'Broken happened, reset the game',
+          message: t('redealBroken'),
           type: 'warning'
         });
         applyGameServerEvent({ type: 'broken', payload });
@@ -1439,6 +1440,13 @@ export const useGame = () => {
     declareOpen: () => {
       if (!socket || !currentRoomId) return;
       socket.emit('declare-open', { roomId: currentRoomId });
+    },
+    setupChomboScenario: (violationType: ChomboViolationType) => {
+      if (!socket || !currentRoomId) return;
+      socket.emit('dev-chombo-scenario', {
+        roomId: currentRoomId,
+        violationType,
+      });
     },
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
