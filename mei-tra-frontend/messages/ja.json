@@ -286,6 +286,7 @@
     "defaultRoomName": "{name}'s Room",
     "pointsToWin": "勝利点数",
     "proMode": "プロモード（ベータ版）",
+    "proBadge": "Pro",
     "teamAssignment": "チーム分け",
     "teamAuto": "自動",
     "teamManual": "手動",
