@@ -107,11 +107,11 @@ function getEventPlayerName(event: GameHistoryReplayEventContract): string {
 
 function ProEventLogRow({ row }: { row: ProEventRow }) {
   return (
-    <View style={styles.membershipRow}>
-      <Text style={styles.membershipTime}>
+    <View style={styles.eventCard}>
+      <Text style={styles.eventTime}>
         {new Date(row.timestamp).toLocaleTimeString(getLocaleTag())}
       </Text>
-      <Text style={styles.membershipText}>{row.text}</Text>
+      <Text style={styles.eventText}>{row.text}</Text>
     </View>
   );
 }
@@ -217,20 +217,23 @@ export function GameHistory({
         </View>
       ) : (
         <>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={styles.sections}
+            showsVerticalScrollIndicator={false}
+          >
             {membershipEvents.length > 0 ? (
               <View
-                style={styles.membershipSection}
+                style={styles.section}
                 testID="game-history-membership-section"
               >
-                <Text style={styles.membershipTitle}>{t('gameLog.membership')}</Text>
+                <Text style={styles.sectionTitle}>{t('gameLog.membership')}</Text>
                 {membershipEvents.map((event) => (
                   <MembershipRow event={event} key={event.id} />
                 ))}
               </View>
             ) : null}
             {rows.length > 0 ? (
-              <>
+              <View>
                 <View style={[styles.row, styles.headRow]}>
                   <Text numberOfLines={1} style={[styles.headCell, { flex: COL.round }]}>
                     {t('gameLog.round')}
@@ -248,14 +251,14 @@ export function GameHistory({
                 {rows.map((row, index) => (
                   <Row index={index} key={row.roundNumber} row={row} />
                 ))}
-              </>
+              </View>
             ) : null}
             {proEventRows.length > 0 ? (
               <View
-                style={styles.membershipSection}
+                style={styles.section}
                 testID="game-history-pro-events-section"
               >
-                <Text style={styles.membershipTitle}>
+                <Text style={styles.sectionTitle}>
                   {t('gameLog.proEvents')}
                 </Text>
                 {proEventRows.map((row) => (
@@ -264,8 +267,8 @@ export function GameHistory({
               </View>
             ) : null}
             {startingHands.length > 0 ? (
-              <View style={styles.handsSection}>
-                <Text style={styles.handsTitle}>{t('gameLog.startingHands')}</Text>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('gameLog.startingHands')}</Text>
                 {startingHands.map((round) => (
                   <View
                     key={`starting-hand-${round.roundNumber ?? 'pre-game'}`}
@@ -352,14 +355,17 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontVariant: ['tabular-nums'],
   },
-  membershipSection: {
-    gap: 6,
+  sections: {
+    gap: 18,
     paddingBottom: 8,
   },
-  membershipTitle: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
+  section: {
+    gap: 10,
+  },
+  sectionTitle: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: '800',
   },
   membershipRow: {
     flexDirection: 'row',
@@ -375,8 +381,27 @@ const styles = StyleSheet.create({
     minWidth: 72,
   },
   membershipText: {
+    flex: 1,
     color: colors.text,
     fontSize: 13,
+    fontWeight: '700',
+  },
+  eventCard: {
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: colors.panelStrong,
+  },
+  eventTime: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
+  },
+  eventText: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '700',
   },
   inProgress: {
@@ -406,15 +431,6 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 13,
-  },
-  handsSection: {
-    gap: 12,
-    paddingTop: 18,
-  },
-  handsTitle: {
-    color: colors.gold,
-    fontSize: 15,
-    fontWeight: '800',
   },
   handRow: {
     gap: 8,
