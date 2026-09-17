@@ -67,7 +67,6 @@ old-maid-mobile/
 ├── mei-tra-frontend/           # Next.js Web
 ├── mei-tra-backend/            # NestJS + Socket.IO + Supabase
 │   ├── src/push/               # token API とExpo送信
-│   ├── src/services/           # gameplay push trigger
 │   └── supabase/migrations/    # push_tokens migration
 └── mei-tra-mobile/             # Expo React Native
     ├── src/app/                # Expo Router routes
@@ -245,7 +244,7 @@ mobileの参加payloadは認証accountを`userId`として送り、参加後にs
 
 ### mobile
 
-`expo-notifications`を使い、native実機で権限を取得してExpo Push Tokenを作る。端末IDとlocal registrationはAsyncStorageへ保存し、認証後に`POST /api/push-tokens`へ送る。logout時は`DELETE /api/push-tokens?deviceId=...&platform=...`を試行してからlocal sign outする。通知tapの`roomId`は、未ログインなら保留し、認証後に`room/[roomId]`へ合流させる。
+`expo-notifications`を使い、通知を許可済みのnative実機でExpo Push Tokenを作る。アプリから許可は求めない。端末IDとlocal registrationはAsyncStorageへ保存し、認証後に`POST /api/push-tokens`へ送る。logout時は`DELETE /api/push-tokens?deviceId=...&platform=...`を試行してからlocal sign outする。通知tapの`roomId`は、未ログインなら保留し、認証後に`room/[roomId]`へ合流させる。
 
 `app.json`にEAS project IDがない場合、通知登録は`missing-project-id`で止まる。シミュレーター、Web、通知拒否では対局自体は継続するが、pushは登録されない。
 
@@ -258,7 +257,7 @@ mobileの参加payloadは認証accountを`userId`として送り、参加後にs
 - 現在、ゲームからプッシュ通知は送っていない（手番とゲーム開始の通知は削除した）。token登録・送信・receipt追跡の仕組みは残しており、通知を足すときは`PushNotificationService.sendToUsers`を使う。mobileは通知の許可を求めず、許可済みの端末だけtokenを登録する。
 - `20260806090000_create_push_tokens.sql`、`20260806150938_harden_push_token_access.sql`、`20260806165611_push_receipt_tracking.sql`はlocal Supabaseへ適用済みである。本番Supabaseへの適用・schema確認は未完了である。
 
-push送信・receipt workerのunit/spec、SQL self-test、local push tokenのregister / delete smokeは検証済みである。ただし、本番migration、実機token登録、Expo受信、通知tap、無効token cleanup、delivery metricsは外部作業または実機検証の対象である。`push_receipts`はprovider delivery結果を追跡するが、Gameplay通知のin-memory dedupeは再起動・複数backend instanceをまたぐ重複event抑止ではない。
+push送信・receipt workerのunit/spec、SQL self-test、local push tokenのregister / delete smokeは検証済みである。ただし、本番migration、実機token登録、Expo受信、通知tap、無効token cleanup、delivery metricsは外部作業または実機検証の対象である。
 
 ## 8. アカウント削除
 
@@ -350,7 +349,7 @@ npm --workspace mei-tra-mobile run export:android
 - Web + mobile + COM混在で1ゲーム完了。
 - WebSocket failureからpolling fallback、background、process kill、Wi-Fi↔mobile回線切替。
 - 無効JWT、終了room、古いroom ID、COM置換後の復帰。
-- 通知許可・拒否、実機token登録、logout削除、通知tapからroom復帰。
+- 通知を許可済み・未許可の実機での起動、許可済み実機のtoken登録、logout削除、通知tapからroom復帰。
 - active roomでの退会拒否、削除成功後のlocal cleanup。
 
 browser smokeはnative lifecycle、署名、APNs / FCM、OS permission、実回線切替の代替ではない。TestFlight / Play、実端末push、background / foregroundのrunはまだ実施されていないため、これらを確認する前にストア提出を開始しない。

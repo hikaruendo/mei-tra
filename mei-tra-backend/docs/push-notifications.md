@@ -37,6 +37,7 @@ The removed game-started push (see the history of `mei-tra-backend/src/services/
 - Skip COM seats, guests, players who turned `preferences.notifications` off, and players with a live socket. Read connectivity from `GameStateService.getPlayerConnectionState(seatId)`, not from the persisted room projection or its `socketId`.
 - Fire and forget: a push failure must never roll back or block the game transition. Deduplicate trigger calls if the same transition can be dispatched twice.
 - Bring back the mobile permission prompt: `requestRegistration` in `mei-tra-mobile/src/context/NotificationContext.tsx` asks for permission, and nothing calls it at the moment. Without it, only devices that granted permission earlier have a registered token.
+- Bring back the "receive notifications" checkbox on the web profile edit form (`mei-tra-frontend/components/profile/ProfileEditForm.tsx`, message key `profile.notifications` in `messages/ja.json` and `messages/en.json`). The stored `preferences.notifications` value is still saved and loaded, but without the checkbox a player who turned it off cannot turn it back on.
 
 ## Remaining release work
 
