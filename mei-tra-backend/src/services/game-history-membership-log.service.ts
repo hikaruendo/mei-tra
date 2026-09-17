@@ -6,7 +6,17 @@ import {
   GameHistoryReplayView,
   GameHistorySummary,
 } from '../types/game-history.types';
-import type { RoomMembershipReplayEvent } from '../types/room-membership.types';
+import type {
+  RoomMembershipReplayEvent,
+  RoomMembershipReplayEventType,
+} from '../types/room-membership.types';
+
+const MEMBERSHIP_SUMMARY_VERBS: Record<RoomMembershipReplayEventType, string> =
+  {
+    player_joined: 'joined',
+    player_reconnected: 'reconnected',
+    player_left: 'left',
+  };
 
 @Injectable()
 export class GameHistoryMembershipLogService {
@@ -252,9 +262,7 @@ export class GameHistoryMembershipLogService {
       actorSeatId: event.seatId,
       roundNumber,
       gamePhase: null,
-      summary: `${playerName ?? 'Player'} ${
-        event.eventType === 'player_joined' ? 'joined' : 'left'
-      }`,
+      summary: `${playerName ?? 'Player'} ${MEMBERSHIP_SUMMARY_VERBS[event.eventType]}`,
       details: {
         seatId: event.seatId,
         playerName,

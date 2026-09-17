@@ -38,8 +38,11 @@ type MembershipRpcName =
 const JOINED_MEMBERSHIP_EVENT_TYPES = [
   'room_claimed',
   'room_created_and_claimed',
-  'room_reconnected',
 ] as const;
+
+// A socket coming back to a seat it already holds: a page reload, a dropped
+// connection or a server restart. The log keeps it apart from a real join.
+const RECONNECTED_MEMBERSHIP_EVENT_TYPES = ['room_reconnected'] as const;
 
 const LEFT_MEMBERSHIP_EVENT_TYPES = [
   'room_released',
@@ -49,6 +52,7 @@ const LEFT_MEMBERSHIP_EVENT_TYPES = [
 
 const REPLAY_MEMBERSHIP_EVENT_TYPES = [
   ...JOINED_MEMBERSHIP_EVENT_TYPES,
+  ...RECONNECTED_MEMBERSHIP_EVENT_TYPES,
   ...LEFT_MEMBERSHIP_EVENT_TYPES,
 ] as const;
 
@@ -365,6 +369,15 @@ export class SupabaseRoomMembershipRepository
       )
     ) {
       return 'player_joined';
+    }
+
+    if (
+      row.to_room_id === roomId &&
+      RECONNECTED_MEMBERSHIP_EVENT_TYPES.includes(
+        row.event_type as (typeof RECONNECTED_MEMBERSHIP_EVENT_TYPES)[number],
+      )
+    ) {
+      return 'player_reconnected';
     }
 
     if (

@@ -532,6 +532,14 @@ describe('GameHistoryController', () => {
         timestamp: new Date('2026-04-16T00:02:00.000Z'),
       },
       {
+        id: 'membership-reconnected',
+        eventType: 'player_reconnected',
+        userId: 'user-2',
+        roomId: room.id,
+        seatId: room.players[0].seatId,
+        timestamp: new Date('2026-04-16T00:02:30.000Z'),
+      },
+      {
         id: 'membership-2',
         eventType: 'player_left',
         userId: 'user-2',
@@ -579,18 +587,24 @@ describe('GameHistoryController', () => {
       (detailItem) => detailItem.labelKey === 'player',
     );
 
-    expect(result.totalEntries).toBe(3);
+    expect(result.totalEntries).toBe(4);
     expect(round.actionTypes).toEqual([
       'game_started',
       'player_joined',
+      'player_reconnected',
       'player_left',
     ]);
     expect(round.actorSeatIds).toEqual([room.players[0].seatId]);
     expect(round.events.map((event) => event.actionType)).toEqual([
       'game_started',
       'player_joined',
+      'player_reconnected',
       'player_left',
     ]);
+    expect(
+      round.events.find((event) => event.actionType === 'player_reconnected')
+        ?.summary,
+    ).toBe('Player 2 reconnected');
     expect(joinedEvent?.actorSeatId).toBe(room.players[0].seatId);
     expect(leftEvent?.actorSeatId).toBe(room.players[0].seatId);
     expect(playerDetail?.value).toEqual({

@@ -24,6 +24,7 @@ export type GameHistoryActionType =
 
 export type GameHistoryReplayMembershipActionType =
   | 'player_joined'
+  | 'player_reconnected'
   | 'player_left';
 
 export type GameHistoryReplayActionType =
@@ -312,6 +313,11 @@ export type GameHistoryReplayEventContract =
     >
   | GameHistoryReplayEventBaseContract<
       'player_joined',
+      'membership',
+      PlayerMembershipReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'player_reconnected',
       'membership',
       PlayerMembershipReplayDetailsContract
     >

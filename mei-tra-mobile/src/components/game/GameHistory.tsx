@@ -116,12 +116,19 @@ function ProEventLogRow({ row }: { row: ProEventRow }) {
   );
 }
 
+// A reconnect is a socket coming back to a seat it already holds, so it is
+// named apart from a join.
+const MEMBERSHIP_ACTION_LABEL_KEYS: Partial<
+  Record<GameHistoryReplayEventContract['actionType'], string>
+> = {
+  player_joined: 'gameLog.joined',
+  player_reconnected: 'gameLog.reconnected',
+  player_left: 'gameLog.left',
+};
+
 function MembershipRow({ event }: { event: GameHistoryReplayEventContract }) {
   const playerName = getEventPlayerName(event);
-  const actionLabel =
-    event.actionType === 'player_joined'
-      ? t('gameLog.joined')
-      : t('gameLog.left');
+  const actionLabel = t(MEMBERSHIP_ACTION_LABEL_KEYS[event.actionType] ?? 'gameLog.left');
 
   return (
     <View style={styles.membershipRow}>
@@ -162,9 +169,7 @@ export function GameHistory({
         ? (replay?.rounds ?? [])
             .flatMap((round) => round.events)
             .filter(
-              (event) =>
-                event.actionType === 'player_joined' ||
-                event.actionType === 'player_left',
+              (event) => event.actionType in MEMBERSHIP_ACTION_LABEL_KEYS,
             )
             .sort(
               (left, right) =>

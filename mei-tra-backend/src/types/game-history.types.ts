@@ -23,6 +23,7 @@ export type GameHistoryActionType = (typeof GAME_HISTORY_ACTION_TYPES)[number];
 
 export const GAME_HISTORY_REPLAY_MEMBERSHIP_ACTION_TYPES = [
   'player_joined',
+  'player_reconnected',
   'player_left',
 ] as const;
 
@@ -310,6 +311,11 @@ export type GameHistoryReplayEvent =
     >
   | GameHistoryReplayEventBase<
       'player_joined',
+      'membership',
+      PlayerMembershipReplayDetails
+    >
+  | GameHistoryReplayEventBase<
+      'player_reconnected',
       'membership',
       PlayerMembershipReplayDetails
     >
