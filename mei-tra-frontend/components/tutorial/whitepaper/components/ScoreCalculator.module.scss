@@ -19,7 +19,7 @@
 
 .description {
   text-align: center;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   margin-bottom: $spacing-lg;
   font-size: $font-size-base;
   line-height: 1.6;
@@ -139,7 +139,7 @@
   gap: $spacing-xs;
   font-family: monospace;
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 
   span:last-child {
     font-weight: 700;
@@ -207,7 +207,7 @@
 
 .exampleDetail {
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-family: monospace;
 }
 
@@ -231,7 +231,7 @@
   padding-left: $spacing-lg;
 
   li {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     font-size: $font-size-base;
     line-height: 1.6;
     margin-bottom: $spacing-xs;

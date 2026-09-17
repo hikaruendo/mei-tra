@@ -21,7 +21,7 @@
 }
 
 .scenarioText {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: $font-size-base;
 }
 
@@ -63,7 +63,7 @@
 }
 
 .explanation {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   line-height: 1.6;
   margin-top: $spacing-md;
   font-size: $font-size-base;

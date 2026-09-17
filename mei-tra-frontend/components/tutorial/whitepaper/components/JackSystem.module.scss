@@ -144,7 +144,7 @@
 .cardLabel {
   text-align: center;
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-weight: 500;
 }
 
@@ -163,7 +163,7 @@
 }
 
 .orderText {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-family: monospace;
 }
 
@@ -194,7 +194,7 @@
 
 .traException p {
   margin: 0;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: $font-size-base;
   line-height: 1.6;
 }

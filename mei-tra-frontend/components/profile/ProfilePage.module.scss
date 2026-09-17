@@ -47,7 +47,7 @@ $transition-button: all 0.3s ease;
 }
 
 .loadingText {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .noAuthContainer {
@@ -197,7 +197,7 @@ $transition-button: all 0.3s ease;
 
 .profileEmail {
   max-width: 100%;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: $font-size-sm;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,7 +244,7 @@ $transition-button: all 0.3s ease;
 }
 
 .statLabel {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: $font-size-sm;
 }
 
@@ -287,7 +287,7 @@ $transition-button: all 0.3s ease;
 
 .accountLabel {
   flex: 0 0 auto;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .accountValue {
@@ -350,7 +350,7 @@ $transition-button: all 0.3s ease;
 .noProfileText {
   text-align: center;
   padding: $spacing-xl;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .headerActions {

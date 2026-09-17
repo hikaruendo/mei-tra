@@ -120,7 +120,7 @@ $desktop-breakpoint: 960px;
 }
 
 .navLink {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   padding: $spacing-sm $spacing-sm;
   border-radius: $radius-md;
   font-size: typography.scale($font-size-sm);
@@ -310,7 +310,7 @@ $desktop-breakpoint: 960px;
   border-radius: 999px;
   border: 1px solid var(--mt-border-hairline);
   background: var(--mt-surface-raised-2);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   cursor: pointer;
   transition: $transition-button;
 
@@ -435,7 +435,7 @@ $desktop-breakpoint: 960px;
   display: flex;
   align-items: center;
   padding: 0.42rem 0.6rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   text-decoration: none;
   font-size: typography.scale(1rem);
   font-weight: 500;
@@ -551,7 +551,7 @@ $desktop-breakpoint: 960px;
   margin-top: 0.45rem;
   padding: $spacing-sm;
   background-color: var(--mt-surface-raised-2);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   text-decoration: none;
   font-size: typography.scale(1rem);
   font-weight: 500;

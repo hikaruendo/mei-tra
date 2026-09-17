@@ -53,7 +53,7 @@ $opacity-disabled: 0.5;
   display: block;
   font-size: $font-size-sm;
   font-weight: 500;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   margin-bottom: $spacing-xs;
 }
 
@@ -70,7 +70,7 @@ $opacity-disabled: 0.5;
   transition: $transition-button;
 
   &::placeholder {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
   }
 
   &:focus {
@@ -89,7 +89,7 @@ $opacity-disabled: 0.5;
 .helperText {
   margin-top: $spacing-xs;
   font-size: $font-size-xs;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .error {
@@ -162,7 +162,7 @@ $opacity-disabled: 0.5;
 
   span {
     padding: 0 $spacing-md;
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     font-size: $font-size-sm;
   }
 }
@@ -247,12 +247,12 @@ $opacity-disabled: 0.5;
 .guestHint {
   margin: 0 0 $spacing-sm;
   font-size: $font-size-xs;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   text-align: center;
 }
 
 .resetButton {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   border: none;
   background: none;
 
@@ -270,7 +270,7 @@ $opacity-disabled: 0.5;
 
 .modeToggleButton {
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   background: none;
   border: none;
   cursor: pointer;

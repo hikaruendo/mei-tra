@@ -19,7 +19,6 @@ export const palette = {
   text: {
     primary: raw.ivory,
     secondary: raw.sage,
-    muted: 'rgba(169, 183, 166, 0.6)',
     // Text sitting on an accent (brass) fill.
     onAccent: raw.felt800,
     // Text sitting on a danger fill. Mode-stable on web.

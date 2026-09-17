@@ -86,8 +86,7 @@ export function PlayerSeat({
       style={[
         styles.container,
         isTurn && styles.turn,
-        isDisconnected && styles.disconnected,
-        isIdle && styles.idle,
+        (isDisconnected || isIdle) && styles.unresponsive,
       ]}
     >
       {isBlowWinner && declaration ? (
@@ -206,10 +205,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
   },
-  disconnected: {
-    opacity: 0.5,
-  },
-  idle: {
+  // A disconnected or idle seat keeps its text at full strength; the border
+  // and the status label below the name say what is wrong.
+  unresponsive: {
     borderColor: colors.warning,
     borderWidth: 2,
   },

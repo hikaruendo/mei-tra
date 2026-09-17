@@ -61,7 +61,7 @@
 
 .summaryRow dt {
   flex: 0 0 auto;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-weight: 700;
 }
 
@@ -83,7 +83,7 @@
 .historyTitle {
   display: block;
   margin-bottom: 0.3rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: typography.scale(0.68rem);
   font-weight: 700;
 }
@@ -111,7 +111,6 @@
 
 .historyItem.pass {
   background: transparent;
-  color: var(--mt-text-muted);
 }
 
 .historyItem.highest {
@@ -153,7 +152,7 @@
 
 .emptyHistory {
   margin: 0;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: typography.scale(0.75rem);
 }
 

@@ -25,7 +25,7 @@
 
   &:hover {
     background: var(--mt-surface-raised);
-    border-color: var(--mt-text-muted);
+    border-color: var(--mt-text-secondary);
   }
 
   @media (max-width: 768px) {
@@ -131,7 +131,7 @@
 
 .strengthLabel {
   font-size: typography.scale(0.75rem);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   margin-bottom: 0.25rem;
 }
 
@@ -160,7 +160,7 @@
 
 .traNoteDesc {
   font-size: typography.scale(0.75rem);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .genericSection {

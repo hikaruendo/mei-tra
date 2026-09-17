@@ -348,6 +348,7 @@ const styles = StyleSheet.create({
   roundCell: {
     fontVariant: ['tabular-nums'],
     fontWeight: '700',
+    textAlign: 'center',
   },
   scoreCell: {
     gap: 2,

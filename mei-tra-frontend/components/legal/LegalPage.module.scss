@@ -33,7 +33,7 @@
 
 .updated {
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   margin: 0;
 }
 
@@ -88,7 +88,7 @@
   border-top: 1px solid var(--mt-border-hairline);
 
   a {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     text-decoration: none;
 
     &:hover {

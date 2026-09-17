@@ -54,7 +54,7 @@ $transition-button: all 0.3s ease;
 .backButton {
   background: none;
   border: none;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: typography.scale(1.25rem);
   line-height: 1;
   padding: 0;
@@ -71,7 +71,7 @@ $transition-button: all 0.3s ease;
 .closeButton {
   background: none;
   border: none;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: typography.scale(1.5rem);
   font-weight: bold;
   cursor: pointer;

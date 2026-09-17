@@ -54,14 +54,14 @@
 }
 
 .separator {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-weight: 600;
   margin: 0 $spacing-xs;
 }
 
 .note {
   text-align: center;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: $font-size-sm;
   margin-top: $spacing-md;
   margin-bottom: 0;

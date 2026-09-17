@@ -457,7 +457,7 @@
 }
 
 .currentTurn .takenCount {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   background: var(--mt-surface-raised);
   border: 1px solid var(--mt-border-hairline);
 }
@@ -480,7 +480,7 @@
 
 .takenCount{
   font-size: typography.scale(0.72rem);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   background: var(--mt-surface-raised);
   padding: 0.1rem 0.28rem;
   border-radius: var(--mt-radius);
@@ -1061,7 +1061,7 @@
   .takenCount{
     flex: 0 1 auto;
     font-size: typography.scale(0.52rem);
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     padding: 0.1rem 0.14rem;
     border-radius: var(--mt-radius);
     border: 1px solid var(--mt-border-hairline);

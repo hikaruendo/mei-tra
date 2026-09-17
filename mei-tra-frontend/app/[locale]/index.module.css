@@ -30,7 +30,7 @@
 
 .loadingText {
   font-size: calc(1.1rem * var(--mt-font-scale));
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-weight: 500;
 }
 
