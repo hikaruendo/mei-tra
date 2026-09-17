@@ -317,7 +317,7 @@
 
 .roundSectionWindow {
   font-size: 0.72rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .roundSectionMetrics {
@@ -365,7 +365,7 @@
 
 .startingHandEmpty {
   font-size: 0.72rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .roundTitle {
@@ -467,7 +467,7 @@
 }
 
 .roundInProgress {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: 0.64rem;
   white-space: nowrap;
 }
@@ -533,7 +533,7 @@
 .eventTimestamp {
   flex: 0 0 auto;
   font-size: 0.7rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .eventBadge,

@@ -156,7 +156,7 @@ $transition-standard: all 0.3s ease;
 
   &:disabled {
     background: var(--mt-surface-raised-2);
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     cursor: not-allowed;
   }
 }
@@ -177,12 +177,12 @@ $transition-standard: all 0.3s ease;
 
   p {
     margin: 0 0 $spacing-xs 0;
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     font-weight: 500;
   }
 
   small {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     font-size: $font-size-sm;
   }
 }
@@ -194,7 +194,7 @@ $transition-standard: all 0.3s ease;
 .uploadProgress {
   text-align: center;
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 
   .sizeInfo {
     color: var(--mt-success);
@@ -239,7 +239,7 @@ $transition-standard: all 0.3s ease;
 
   &:disabled {
     background: var(--mt-surface-raised);
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     cursor: not-allowed;
   }
 }
@@ -351,6 +351,6 @@ $transition-standard: all 0.3s ease;
   border: 1px dashed var(--mt-border-hairline);
   border-radius: var(--mt-radius);
   background: var(--mt-surface-raised-2);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: var(--font-size-sm);
 }

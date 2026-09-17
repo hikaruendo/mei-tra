@@ -32,7 +32,7 @@
 
 .historyButton:hover,
 .historyButton[aria-expanded='true'] {
-  border-color: var(--mt-text-muted);
+  border-color: var(--mt-text-secondary);
   background: var(--mt-surface-raised);
 }
 
@@ -71,7 +71,7 @@
 
   &:hover {
     background: var(--mt-surface-raised);
-    border-color: var(--mt-text-muted);
+    border-color: var(--mt-text-secondary);
   }
 }
 
@@ -134,7 +134,7 @@
 
   &:hover {
     background: var(--mt-surface-raised);
-    border-color: var(--mt-text-muted);
+    border-color: var(--mt-text-secondary);
   }
 }
 

@@ -320,6 +320,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   historyPass: {
-    color: colors.textMuted,
+    color: colors.text,
   },
 });

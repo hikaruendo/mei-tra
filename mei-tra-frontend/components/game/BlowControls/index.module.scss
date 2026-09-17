@@ -49,7 +49,7 @@
 
 .currentTurn.inactive {
   background-color: var(--mt-surface-raised-2);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .controls {
@@ -196,7 +196,6 @@
 
 .declarationItem.pass {
   background-color: var(--mt-surface-raised);
-  color: var(--mt-text-muted);
 }
 
 .declarationItem.highest {

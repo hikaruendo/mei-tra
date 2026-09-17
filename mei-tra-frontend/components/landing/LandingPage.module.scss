@@ -59,7 +59,7 @@ $lp-content-width: min(1200px, 100%);
   border-radius: 999px;
   background: var(--mt-accent-subtle);
   font-size: 0.85rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -81,7 +81,7 @@ $lp-content-width: min(1200px, 100%);
 
 .heroDescription {
   font-size: 1.1rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   margin-bottom: 32px;
   max-width: 640px;
 }
@@ -144,7 +144,7 @@ $lp-content-width: min(1200px, 100%);
 .ctaNote {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 // Demoted from a button so the two real choices above stay unambiguous.
@@ -154,7 +154,7 @@ $lp-content-width: min(1200px, 100%);
   padding: 4px 0;
   border: none;
   background: none;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: 0.9375rem;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -233,7 +233,7 @@ $lp-content-width: min(1200px, 100%);
   }
 
   span {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
     font-size: 0.9rem;
   }
 }
@@ -241,7 +241,6 @@ $lp-content-width: min(1200px, 100%);
 .metricPrefix {
   font-size: 0.75em;
   font-weight: 400;
-  opacity: 0.9;
 }
 
 // ── Shared section ──
@@ -265,7 +264,7 @@ $lp-content-width: min(1200px, 100%);
 .sectionEyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: 0.85rem;
   margin: 0 0 8px;
 }
@@ -278,7 +277,7 @@ $lp-content-width: min(1200px, 100%);
 }
 
 .sectionDescription {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   max-width: 520px;
   margin: 0;
 }
@@ -310,7 +309,7 @@ $lp-content-width: min(1200px, 100%);
 
 .screenshotCaption {
   margin-top: 16px;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: 0.95rem;
 }
 
@@ -345,7 +344,7 @@ $lp-content-width: min(1200px, 100%);
 
   p {
     margin: 0;
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
   }
 }
 
@@ -389,7 +388,7 @@ $lp-content-width: min(1200px, 100%);
 
   p {
     margin: 0;
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
   }
 }
 
@@ -397,7 +396,7 @@ $lp-content-width: min(1200px, 100%);
   font-size: 0.9rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 // ── Testimonials ──
@@ -444,7 +443,7 @@ $lp-content-width: min(1200px, 100%);
 }
 
 .testimonialRole {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: 0.85rem;
 }
 
@@ -503,7 +502,7 @@ $lp-content-width: min(1200px, 100%);
   &::after {
     content: '';
     position: absolute;
-    background: var(--mt-text-muted);
+    background: var(--mt-text-secondary);
     transition: transform 0.2s ease;
   }
 
@@ -528,7 +527,7 @@ $lp-content-width: min(1200px, 100%);
 
 .faqAnswer {
   padding: 0 0 20px;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   line-height: 1.7;
   font-size: 0.95rem;
 }
@@ -552,7 +551,7 @@ $lp-content-width: min(1200px, 100%);
 }
 
 .ctaSectionDescription {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   max-width: 520px;
   margin: 0 auto 32px;
   font-size: 1.05rem;

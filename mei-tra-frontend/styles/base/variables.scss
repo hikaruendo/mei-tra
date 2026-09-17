@@ -160,7 +160,7 @@ $z-index-tooltip: 50;
   --mt-raw-ivory: #ece6d6;
   --mt-raw-sage: #a9b7a6;
   --mt-raw-ink-900: #23281f;
-  --mt-raw-ink-600: #4a5142;
+  --mt-raw-ink-700: #33392d;
   --mt-raw-card-red: #c0362c;
   --mt-raw-card-red-dk: #9e2a22;
   --mt-raw-card-red-md: #e88b80;
@@ -184,9 +184,10 @@ $z-index-tooltip: 50;
   --mt-surface-raised-2: var(--mt-raw-felt-700);
   --mt-overlay-scrim: rgba(0, 0, 0, 0.7);
 
+  // Secondary is the quietest text tier. Keep text colors opaque: sage at 60%
+  // alpha reads under 3.6:1 on the felt and on both raised surfaces.
   --mt-text-primary: var(--mt-raw-ivory);
   --mt-text-secondary: var(--mt-raw-sage);
-  --mt-text-muted: rgba(169, 183, 166, 0.6);
 
   --mt-accent: var(--mt-raw-brass-500);
   --mt-accent-strong: var(--mt-raw-brass-300);
@@ -266,8 +267,8 @@ html[data-theme='light'] {
   --mt-overlay-scrim: rgba(35, 40, 31, 0.55);
 
   --mt-text-primary: var(--mt-raw-ink-900);
-  --mt-text-secondary: var(--mt-raw-ink-600);
-  --mt-text-muted: rgba(74, 81, 66, 0.65);
+  // Dark enough for text placed straight on the daylight felt (4.83:1).
+  --mt-text-secondary: var(--mt-raw-ink-700);
 
   --mt-accent: var(--mt-raw-brass-600);
   --mt-accent-strong: var(--mt-raw-brass-700);

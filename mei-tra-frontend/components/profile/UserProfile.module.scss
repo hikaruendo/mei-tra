@@ -31,7 +31,7 @@ $opacity-disabled: 0.5;
 
 .loadingText {
   font-size: $font-size-sm;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .loginButton {
@@ -152,7 +152,7 @@ $opacity-disabled: 0.5;
 
 .stats {
   font-size: $font-size-xs;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .statsRow {
@@ -347,7 +347,7 @@ $opacity-disabled: 0.5;
   border: 1px solid var(--mt-border-hairline);
   border-radius: 999px;
   background: var(--mt-accent-subtle);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 500;
   vertical-align: middle;

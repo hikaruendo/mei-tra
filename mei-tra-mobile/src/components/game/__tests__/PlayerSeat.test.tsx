@@ -57,6 +57,46 @@ describe('PlayerSeat layout', () => {
     await act(async () => renderer.unmount());
   });
 
+  it('marks a disconnected seat with a border and a label, not by fading it', async () => {
+    let renderer!: {
+      root: {
+        findByProps: (props: Record<string, unknown>) => {
+          props: { style?: unknown };
+        };
+        findAllByProps: (props: Record<string, unknown>) => unknown[];
+      };
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <PlayerSeat
+          isDisconnected
+          isTurn={false}
+          player={{
+            socketId: 'socket-2',
+            seatId: asSeatId('seat-2'),
+            name: 'Player 2',
+            team: 1,
+            hand: ['S-3'],
+            isHost: false,
+            isCOM: false,
+            hasRequiredBroken: false,
+          }}
+        />,
+      ) as unknown as typeof renderer;
+    });
+
+    const seatStyle = StyleSheet.flatten(
+      renderer.root.findByProps({ testID: 'player-seat-seat-2' }).props.style,
+    ) as { opacity?: number; borderWidth?: number };
+    expect(seatStyle.opacity).toBeUndefined();
+    expect(seatStyle.borderWidth).toBe(2);
+    expect(renderer.root.findAllByProps({ children: '切断中' })).not.toHaveLength(0);
+
+    await act(async () => renderer.unmount());
+  });
+
   it('shows a revealed hand face up', async () => {
     const hand = ['2♠', '3♠', '4♠', '5♠', '6♠', '7♠', '8♠', '9♠', '10♠', 'Q♠'];
     let renderer!: {

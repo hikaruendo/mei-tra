@@ -43,7 +43,7 @@
   color: var(--mt-text-primary);
 
   &::placeholder {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
   }
 
   &:focus {
@@ -142,7 +142,7 @@
   color: var(--mt-text-primary);
 
   &::placeholder {
-    color: var(--mt-text-muted);
+    color: var(--mt-text-secondary);
   }
 
   &:focus {
@@ -174,7 +174,7 @@
   border: 1px solid var(--mt-border-hairline);
   border-radius: 8px;
   background: var(--mt-surface-raised);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   text-align: center;
   line-height: 1.5;
 }
@@ -234,7 +234,7 @@
   overflow: hidden;
   font-size: typography.scale(0.95rem);
   line-height: 1.45;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -282,7 +282,7 @@
 
 .joinButton:disabled {
   background: var(--mt-surface-raised-2);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -307,7 +307,7 @@
 
 .watchButton:disabled {
   background: transparent;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   border-color: var(--mt-border-hairline);
   cursor: not-allowed;
 }
@@ -453,7 +453,7 @@
 }
 
 .pointsToWinText {
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-size: typography.scale(0.88rem);
   line-height: 1;
 }
@@ -512,7 +512,7 @@
 
 .teamLabel {
   font-size: 0.95em;
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .hostLabel {

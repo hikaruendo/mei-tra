@@ -3,7 +3,7 @@
 .systemMessage {
   text-align: center;
   font-size: typography.scale(0.875rem);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
   font-style: italic;
   padding: 0.25rem 0;
 }
@@ -64,7 +64,7 @@
 .timestamp {
   flex: 0 0 auto;
   font-size: typography.scale(0.75rem);
-  color: var(--mt-text-muted);
+  color: var(--mt-text-secondary);
 }
 
 .text {
