@@ -60,6 +60,7 @@ describe('GameDock', () => {
         roomId="room-1"
         gameStarted
         currentTrump={null}
+        gameMode="normal"
         gamePhase="play"
       />,
     );
@@ -83,6 +84,7 @@ describe('GameDock', () => {
         roomId="room-1"
         gameStarted
         currentTrump={null}
+        gameMode="normal"
         gamePhase="play"
       />,
     );
@@ -103,6 +105,7 @@ describe('GameDock', () => {
         roomId="room-1"
         gameStarted
         currentTrump={null}
+        gameMode="normal"
         gamePhase="play"
       />,
     );
@@ -121,6 +124,7 @@ describe('GameDock', () => {
         roomId="room-1"
         gameStarted
         currentTrump={null}
+        gameMode="normal"
         gamePhase="play"
       />,
     );
@@ -150,6 +154,7 @@ describe('GameDock', () => {
         roomId="room-1"
         gameStarted
         currentTrump={null}
+        gameMode="normal"
         gamePhase="play"
         onLeaveRequest={onLeaveRequest}
       />,
@@ -165,5 +170,73 @@ describe('GameDock', () => {
 
     expect(onLeaveRequest).toHaveBeenCalledTimes(1);
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens the chombo report from the dock and closes it on an outside click', () => {
+    mockMatchMedia(false);
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gameMode="pro"
+        gamePhase="play"
+        chomboReport={<div>chombo report form</div>}
+      />,
+    );
+
+    const chomboButton = screen.getByRole('button', { name: 'dockLabel' });
+    expect(chomboButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('chombo report form')).not.toBeInTheDocument();
+
+    fireEvent.click(chomboButton);
+
+    expect(screen.getByText('chombo report form')).toBeInTheDocument();
+    expect(chomboButton).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.mouseDown(screen.getByText('chombo report form'));
+    expect(screen.getByText('chombo report form')).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('chombo report form')).not.toBeInTheDocument();
+  });
+
+  it('offers no chombo button when there is no report to show', () => {
+    mockMatchMedia(false);
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gameMode="pro"
+        gamePhase="blow"
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'dockLabel' })).not.toBeInTheDocument();
+  });
+
+  it('opens the chombo scenarios without a report and closes after one is chosen', () => {
+    mockMatchMedia(false);
+    const onSetupChomboScenario = jest.fn();
+
+    render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gameMode="pro"
+        gamePhase="blow"
+        onSetupChomboScenario={onSetupChomboScenario}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'dockLabel' }));
+    fireEvent.click(screen.getByText('fourJack'));
+
+    expect(onSetupChomboScenario).toHaveBeenCalledWith('four-jack');
+    expect(screen.queryByText('fourJack')).not.toBeInTheDocument();
   });
 });

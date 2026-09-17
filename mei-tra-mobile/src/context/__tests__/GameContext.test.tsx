@@ -1,9 +1,18 @@
-import type { GameStatePayload, PlayerContract } from '@meitra/contracts/game';
+import type {
+  ChomboResolvedPayload,
+  GameStatePayload,
+  OpenDeclaredPayload,
+  PlayerContract,
+} from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import type { RoomContract, RoomPlayerContract } from '@meitra/contracts/room';
 import React, { useEffect } from 'react';
-import { AppState } from 'react-native';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { AppState, StyleSheet } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
+
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
+import { colors } from '@/theme/colors';
 
 import { GameProvider, useGame } from '../GameContext';
 
@@ -206,6 +215,68 @@ const createGameState = (): GameStatePayload => ({
   pointsToWin: 5,
 });
 
+const openDeclared = (valid: boolean): OpenDeclaredPayload =>
+  valid
+    ? { declarerSeatId: asSeatId('player-1'), hand: ['S-3'], valid: true }
+    : {
+        declarerSeatId: asSeatId('player-1'),
+        hand: ['S-3'],
+        valid: false,
+        awardedTeam: 1,
+      };
+
+const chomboResolved = (
+  overrides: Partial<ChomboResolvedPayload> = {},
+): ChomboResolvedPayload => ({
+  violatorSeatId: asSeatId('player-2'),
+  reporterSeatId: asSeatId('player-1'),
+  violationType: 'four-jack',
+  isCorrect: true,
+  awardedTeam: 0,
+  scores: {
+    0: { play: 0, total: 5 },
+    1: { play: 0, total: 0 },
+  },
+  ...overrides,
+});
+
+interface RenderedNode {
+  props: { style?: StyleProp<ViewStyle & TextStyle> };
+  children: (RenderedNode | string)[] | null;
+}
+
+// The ambient react-test-renderer declaration only exposes unmount().
+interface BannerRenderer {
+  toJSON: () => RenderedNode | null;
+  unmount: () => void;
+}
+
+/** Renders the banner exactly as the room screens feed it. */
+const renderBanner = (game: ReturnType<typeof useGame>) => {
+  let created: ReturnType<typeof TestRenderer.create> | null = null;
+  act(() => {
+    created = TestRenderer.create(
+      <FeedbackBanner
+        error={game.recoveryNotice ? null : game.error}
+        notice={game.recoveryNotice ?? game.notice}
+        onDismiss={() => undefined}
+      />,
+    );
+  });
+
+  const renderer = created as unknown as BannerRenderer | null;
+  const root = renderer?.toJSON() ?? null;
+  act(() => renderer?.unmount());
+  if (!root) return null;
+
+  const [message] = (root.children ?? []) as RenderedNode[];
+  return {
+    text: ((message.children ?? []) as string[]).join(''),
+    container: StyleSheet.flatten(root.props.style),
+    message: StyleSheet.flatten(message.props.style),
+  };
+};
+
 function CaptureGame({
   onValue,
 }: {
@@ -268,6 +339,39 @@ describe('GameProvider realtime resync safety', () => {
       loading: false,
       getAccessToken: jest.fn(async () => 'fresh-token'),
     };
+  });
+
+  it('shows a revealed broken hand until the redeal', async () => {
+    const screen = await renderProvider();
+    const gameState = createGameState();
+
+    await act(async () => {
+      mockSocket.trigger('game-state', gameState);
+      await flushPromises();
+    });
+
+    await act(async () => {
+      mockSocket.trigger('broken-hand-revealed', {
+        seatId: asSeatId('player-2'),
+        hand: ['2♠', '3♠'],
+      });
+      await flushPromises();
+    });
+    expect(screen.latestGame.game?.revealedHands).toEqual({
+      'player-2': ['2♠', '3♠'],
+    });
+
+    await act(async () => {
+      mockSocket.trigger('broken', {
+        nextSeatId: asSeatId('player-1'),
+        players: gameState.players,
+        gamePhase: 'blow',
+      });
+      await flushPromises();
+    });
+    expect(screen.latestGame.game?.revealedHands).toEqual({});
+
+    await screen.unmount();
   });
 
   it('starts deal cues and sounds only for live deal events', async () => {
@@ -370,6 +474,100 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('shows a chombo notice even when an error was never dismissed', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('game-state', createGameState());
+      mockSocket.trigger('error-message', 'Not your turn');
+      await flushPromises();
+    });
+    expect(screen.latestGame.error).not.toBeNull();
+
+    await act(async () => {
+      mockSocket.trigger('chombo-resolved', chomboResolved());
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.error).toBeNull();
+    expect(screen.latestGame.notice).toMatchObject({
+      key: 'game.chomboCorrect',
+    });
+    expect(screen.latestGame.game?.teamScores[0]?.total).toBe(5);
+    expect(renderBanner(screen.latestGame)?.text).toContain('正しい指摘です');
+
+    await screen.unmount();
+  });
+
+  it('gives every pro mode outcome a severity the banner paints', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('game-state', createGameState());
+      await flushPromises();
+    });
+
+    const outcome = async (event: string, payload: unknown) => {
+      await act(async () => {
+        mockSocket.trigger(event, payload);
+        await flushPromises();
+      });
+      return {
+        notice: screen.latestGame.notice,
+        banner: renderBanner(screen.latestGame),
+      };
+    };
+
+    const validOpen = await outcome('open-declared', openDeclared(true));
+    expect(validOpen.notice).toMatchObject({
+      key: 'game.openDeclared',
+      severity: 'success',
+    });
+    expect(validOpen.banner?.message.color).toBe(colors.success);
+    expect(validOpen.banner?.container.borderColor).toBe(colors.success);
+
+    const invalidOpen = await outcome('open-declared', openDeclared(false));
+    expect(invalidOpen.notice).toMatchObject({
+      key: 'game.openInvalid',
+      severity: 'error',
+      params: { teamName: '黒' },
+    });
+    // The failed open scores for the other team, which the banner names.
+    expect(invalidOpen.banner?.text).toBe(
+      'オープンは通りませんでした。黒 に5点入り、このラウンドは終わります',
+    );
+    expect(invalidOpen.banner?.message.color).toBe(colors.dangerText);
+    expect(invalidOpen.banner?.container.borderColor).toBe(colors.danger);
+
+    const correctReport = await outcome('chombo-resolved', chomboResolved());
+    expect(correctReport.notice).toMatchObject({
+      key: 'game.chomboCorrect',
+      severity: 'success',
+    });
+    expect(correctReport.banner?.message.color).toBe(colors.success);
+
+    const incorrectReport = await outcome(
+      'chombo-resolved',
+      chomboResolved({ isCorrect: false, awardedTeam: 1 }),
+    );
+    expect(incorrectReport.notice).toMatchObject({
+      key: 'game.chomboIncorrect',
+      severity: 'error',
+    });
+    expect(incorrectReport.banner?.message.color).toBe(colors.dangerText);
+
+    // A notice without a severity keeps the neutral chrome.
+    const redeal = await outcome('broken', {
+      nextSeatId: asSeatId('player-1'),
+      players: createGameState().players,
+      gamePhase: 'blow',
+    });
+    expect(redeal.banner?.message.color).toBe(colors.text);
+    expect(redeal.banner?.container.borderColor).toBeUndefined();
+
+    await screen.unmount();
+  });
+
   it('captures a live result once and preserves it through room teardown', async () => {
     const screen = await renderProvider();
     const gameState = createGameState();
@@ -459,6 +657,59 @@ describe('GameProvider realtime resync safety', () => {
       await flushPromises();
     });
     expect(mockPlaySoundEffect).toHaveBeenCalledTimes(1);
+
+    await screen.unmount();
+  });
+
+  it.each([
+    ['pro', 'game.negriPromptPro'],
+    ['normal', 'game.negriPrompt'],
+  ] as const)(
+    'shows the %s-mode Negri prompt instead of the server text',
+    async (gameMode, key) => {
+      const screen = await renderProvider();
+
+      await act(async () => {
+        mockSocket.trigger('connect');
+        mockSocket.trigger('game-state', { ...createGameState(), gameMode });
+        await flushPromises();
+      });
+      // The reveal comes seconds after the play phase starts, so the snapshot
+      // has rendered by then.
+      await act(async () => {
+        mockSocket.trigger('reveal-agari', {
+          agari: 'A♠',
+          message: 'Select a card from your hand as Negri',
+          seatId: asSeatId('player-1'),
+        });
+        await flushPromises();
+      });
+
+      expect(screen.latestGame.notice).toEqual({ key });
+
+      await screen.unmount();
+    },
+  );
+
+  it('asks the server for a chombo scenario in development builds', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      mockSocket.trigger('game-state', createGameState());
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.setupChomboScenario).toBeDefined();
+    await act(async () => {
+      screen.latestGame.setupChomboScenario?.('four-jack');
+      await flushPromises();
+    });
+
+    expect(mockSocket.emit).toHaveBeenCalledWith('dev-chombo-scenario', {
+      roomId: 'room-1',
+      violationType: 'four-jack',
+    });
 
     await screen.unmount();
   });

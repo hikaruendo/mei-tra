@@ -12,11 +12,12 @@ interface RenderedHistory {
     findByProps: (props: Record<string, unknown>) => unknown;
     findAllByProps: (props: Record<string, unknown>) => unknown[];
   };
+  toJSON: () => unknown;
   unmount: () => void;
 }
 
 const membershipEvent = (
-  actionType: 'player_joined' | 'player_left',
+  actionType: 'player_joined' | 'player_reconnected' | 'player_left',
 ): GameHistoryReplayEventContract =>
   ({
     id: actionType,
@@ -40,11 +41,12 @@ const replay: GameHistoryReplayViewContract = {
       roundNumber: null,
       startedAt: null,
       endedAt: null,
-      actionTypes: ['player_joined', 'player_left'],
+      actionTypes: ['player_joined', 'player_reconnected', 'player_left'],
       actorSeatIds: [],
       entries: [],
       events: [
         membershipEvent('player_joined'),
+        membershipEvent('player_reconnected'),
         membershipEvent('player_left'),
       ],
     },
@@ -71,6 +73,28 @@ describe('GameHistory membership events', () => {
         testID: 'game-history-membership-section',
       }),
     ).toBeTruthy();
+
+    await act(async () => renderer.unmount());
+  });
+
+  it('names a reconnect apart from a join', async () => {
+    let renderer!: RenderedHistory;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <GameHistory
+          error={null}
+          loading={false}
+          onRefresh={jest.fn()}
+          replay={replay}
+          summary={null}
+        />,
+      ) as unknown as RenderedHistory;
+    });
+
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain('プレイヤーが入室');
+    expect(text).toContain('プレイヤーが再接続');
+    expect(text).toContain('プレイヤーが退出');
 
     await act(async () => renderer.unmount());
   });

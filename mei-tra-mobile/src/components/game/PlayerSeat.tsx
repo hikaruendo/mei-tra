@@ -3,6 +3,7 @@ import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { MiniCard } from '@/components/game/MiniCard';
 import { DealtCard } from '@/components/game/DealtCard';
 import { TurnClock } from '@/components/game/TurnClock';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
@@ -11,6 +12,8 @@ import { CARD_BASE_WIDTHS, cardStackMargin } from '@/theme/cards';
 import { colors, teamColors } from '@/theme/colors';
 import type { MobilePlayer } from '@/types/game';
 import { t } from '@/i18n';
+
+const SEAT_CARD_ROW_SIZE = 5;
 
 interface PlayerSeatProps {
   player: MobilePlayer;
@@ -22,6 +25,7 @@ interface PlayerSeatProps {
   isIdle?: boolean;
   negriCard?: string;
   agariCard?: string;
+  revealedHand?: string[];
   teamNames?: TeamNames;
   teamFieldCounts?: Record<number, number>;
   onPress?: () => void;
@@ -39,6 +43,7 @@ export function PlayerSeat({
   isIdle = false,
   negriCard,
   agariCard,
+  revealedHand,
   teamNames,
   teamFieldCounts,
   onPress,
@@ -53,7 +58,17 @@ export function PlayerSeat({
         ? t('seat.currentTurn')
         : t('seat.waitingTurn');
 
-  const faceDownCount = Math.min(player.hand.length, 5);
+  const faceDownCount = Math.min(player.hand.length, SEAT_CARD_ROW_SIZE);
+  const revealedRows = revealedHand
+    ? Array.from(
+        { length: Math.ceil(revealedHand.length / SEAT_CARD_ROW_SIZE) },
+        (_, row) =>
+          revealedHand.slice(
+            row * SEAT_CARD_ROW_SIZE,
+            (row + 1) * SEAT_CARD_ROW_SIZE,
+          ),
+      )
+    : null;
 
   return (
     <Pressable
@@ -119,10 +134,18 @@ export function PlayerSeat({
           <Text style={styles.specialCardLabel}>{t('seat.agariShort')}</Text>
         </View>
       ) : null}
-      {faceDownCount > 0 ? (
-        <View style={styles.faceDownRow}>
+      {revealedRows ? (
+        revealedRows.map((cards, row) => (
+          <View key={row} style={styles.cardRow}>
+            {cards.map((card) => (
+              <MiniCard key={card} card={card} />
+            ))}
+          </View>
+        ))
+      ) : faceDownCount > 0 ? (
+        <View style={styles.cardRow}>
           {Array.from({ length: faceDownCount }).map((_, i) => (
-            <View key={i} style={i > 0 ? styles.faceDownOverlap : undefined}>
+            <View key={i} style={i > 0 ? styles.cardOverlap : undefined}>
               <DealtCard
                 cue={dealAnimationCue}
                 index={i}
@@ -223,11 +246,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 9,
   },
-  faceDownRow: {
+  cardRow: {
     flexDirection: 'row',
     marginTop: 2,
   },
-  faceDownOverlap: {
+  cardOverlap: {
     marginLeft: cardStackMargin(CARD_BASE_WIDTHS.seat),
   },
 });

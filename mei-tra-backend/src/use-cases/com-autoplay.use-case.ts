@@ -118,6 +118,10 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     try {
       // 1. ゲーム状態取得
       const gameState = await this.roomService.getRoomGameState(roomId);
+      // The turn can still point at a COM after a chombo report ends the game.
+      if (gameState.getState().gameOver) {
+        return { success: true, events: [], shouldContinue: false };
+      }
       if (await getBrokenHandRevealPendingError(gameState)) {
         return { success: true, events: [], shouldContinue: false };
       }
@@ -137,11 +141,7 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
         return await this.handleComPlayPhase(roomId, currentPlayer, gameState);
       } else if (phase === 'blow') {
         if (currentPlayer.hasRequiredBroken) {
-          return await this.handleComRequiredBrokenHand(
-            roomId,
-            currentPlayer,
-            gameState,
-          );
+          return await this.handleComRequiredBrokenHand(roomId, currentPlayer);
         }
 
         return await this.handleComBlowPhase(roomId, currentPlayer, gameState);
@@ -413,7 +413,6 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
   private async handleComRequiredBrokenHand(
     roomId: string,
     comPlayer: DomainPlayer,
-    gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
     const preparation = await this.revealBrokenHandUseCase.prepare({
       roomId,
@@ -430,25 +429,19 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       };
     }
 
-    const completion = await this.revealBrokenHandUseCase.finalize(
-      preparation.followUp,
-    );
-
-    if (!completion.success) {
-      return {
-        success: false,
-        events: [],
-        shouldContinue: false,
-        error: completion.error ?? 'Failed to finalize COM broken hand reveal',
-      };
-    }
-
-    const nextPlayer = gameState.getCurrentPlayer();
     return {
       success: true,
-      events: completion.events ?? [],
-      shouldContinue:
-        !!nextPlayer && this.comPlayerService.isComPlayer(nextPlayer),
+      events: preparation.events ?? [],
+      // The redeal itself waits out the reveal delay, as it does after a
+      // player reveals. Redealing now and only delaying the events would show
+      // the table the next deal while claiming the old hand is still up.
+      brokenHandRevealTrigger: {
+        followUp: preparation.followUp,
+        delayMs: preparation.delayMs ?? 0,
+      },
+      // Whose turn it is can only be read after the redeal, so the caller
+      // continues from there.
+      shouldContinue: false,
     };
   }
 }

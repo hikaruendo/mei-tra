@@ -90,11 +90,16 @@ export interface GameStatePayload {
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari?: string | null;
+  revealedHands?: Partial<Record<SeatId, string[]>>;
+  openDeclared?: boolean;
+  openResolved?: boolean;
+  gameOver?: GameOverPayload | null;
   fields: CompletedFieldContract[];
   roomId: string;
   hostSeatId: SeatId;
   pointsToWin: number;
   teamNames?: TeamNames;
+  gameMode?: 'normal' | 'pro';
 }
 
 export interface BlowUpdatedPayload {
@@ -131,6 +136,12 @@ export interface RequestAgariPayload {
 
 export interface RevealAgariPayload {
   agari: string;
+  /**
+   * Fixed English prompt. The web and mobile clients in this repository show
+   * their own translated prompt (`game.negriPrompt` / `game.negriPromptPro`)
+   * and ignore this; it stays for app versions already installed that still
+   * display it.
+   */
   message: string;
   seatId: SeatId;
 }
@@ -139,6 +150,11 @@ export interface BrokenPayload {
   nextSeatId: SeatId;
   players: PlayerContract[];
   gamePhase?: TransportGamePhase;
+}
+
+export interface BrokenHandRevealedPayload {
+  seatId: SeatId;
+  hand: string[];
 }
 
 export interface FieldCompletePayload {
@@ -205,6 +221,7 @@ export interface GameStartedPayload {
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
+  gameMode?: 'normal' | 'pro';
   currentTurnSeatId?: SeatId;
 }
 
@@ -228,7 +245,59 @@ export const PLAY_PHASE_REVEAL_DELAY_MS = 3000;
 
 export interface PlaySetupCompletePayload {
   negriCard: string;
+  negriSeatId: SeatId;
   startingSeatId: SeatId;
+}
+
+export type ChomboViolationType =
+  | 'negri-forget'
+  | 'wrong-suit'
+  | 'four-jack'
+  | 'last-tanzen';
+
+/**
+ * Development scenarios: one per chombo, plus a hand whose open fails. A failed
+ * open is not a chombo; it scores for the other team on the spot.
+ */
+export type DevChomboScenarioType = ChomboViolationType | 'failed-open';
+
+export interface DevChomboScenarioPayload {
+  roomId: string;
+  violationType: DevChomboScenarioType;
+}
+
+export interface ReportChomboPayload {
+  roomId: string;
+  violatorSeatId: SeatId;
+  violationType: ChomboViolationType;
+}
+
+/**
+ * Open is offered only at this hand size or below. The server proves an open
+ * by searching every remaining play, and larger hands can exhaust that search
+ * and reject a winning open.
+ */
+export const OPEN_MAX_HAND_SIZE = 4;
+
+export interface DeclareOpenPayload {
+  roomId: string;
+}
+
+/**
+ * A valid open settles the remaining fields for the declaring team. A failed
+ * open gives `awardedTeam` 5 points. Either way the round ends.
+ */
+export type OpenDeclaredPayload =
+  | { declarerSeatId: SeatId; hand: string[]; valid: true }
+  | { declarerSeatId: SeatId; hand: string[]; valid: false; awardedTeam: Team };
+
+export interface ChomboResolvedPayload {
+  violatorSeatId: SeatId;
+  reporterSeatId: SeatId;
+  violationType: ChomboViolationType;
+  isCorrect: boolean;
+  awardedTeam: Team;
+  scores: TransportTeamScores;
 }
 
 export interface GameMessagePayload {

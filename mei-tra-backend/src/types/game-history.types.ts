@@ -9,6 +9,8 @@ export const GAME_HISTORY_ACTION_TYPES = [
   'card_played',
   'field_recovered',
   'field_completed',
+  'chombo_reported',
+  'open_failed',
   'round_completed',
   'round_cancelled',
   'round_reset',
@@ -21,6 +23,7 @@ export type GameHistoryActionType = (typeof GAME_HISTORY_ACTION_TYPES)[number];
 
 export const GAME_HISTORY_REPLAY_MEMBERSHIP_ACTION_TYPES = [
   'player_joined',
+  'player_reconnected',
   'player_left',
 ] as const;
 
@@ -139,6 +142,18 @@ export interface FieldRecoveredReplayDetails {
   reason: string | null;
   fieldIndex: number | null;
   abandonedCards: string[];
+}
+
+export interface ChomboReportedReplayDetails {
+  violatorSeatId: SeatId | null;
+  violationType: string | null;
+  isCorrect: boolean;
+  awardedTeam: number | null;
+}
+
+export interface OpenFailedReplayDetails {
+  hand: string[];
+  awardedTeam: number | null;
 }
 
 export interface RoundCompletedReplayDetails {
@@ -267,6 +282,12 @@ export type GameHistoryReplayEvent =
       FieldCompletedReplayDetails
     >
   | GameHistoryReplayEventBase<
+      'chombo_reported',
+      'play',
+      ChomboReportedReplayDetails
+    >
+  | GameHistoryReplayEventBase<'open_failed', 'play', OpenFailedReplayDetails>
+  | GameHistoryReplayEventBase<
       'round_completed',
       'round',
       RoundCompletedReplayDetails
@@ -290,6 +311,11 @@ export type GameHistoryReplayEvent =
     >
   | GameHistoryReplayEventBase<
       'player_joined',
+      'membership',
+      PlayerMembershipReplayDetails
+    >
+  | GameHistoryReplayEventBase<
+      'player_reconnected',
       'membership',
       PlayerMembershipReplayDetails
     >

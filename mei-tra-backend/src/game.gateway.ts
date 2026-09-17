@@ -5,13 +5,15 @@ import {
   OnGatewayDisconnect,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Inject, Logger } from '@nestjs/common';
+import { Inject, Logger, Optional } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import type {
   PlayCardPayload,
   RequestAgariPayload,
   RevealAgariPayload,
   SyncGameStatePayload,
+  ReportChomboPayload,
+  DevChomboScenarioPayload,
 } from '@contracts/game';
 import type { UpdateTeamNamesPayload } from '@contracts/room';
 import type {
@@ -38,6 +40,9 @@ import { GatewayEvent } from './use-cases/interfaces/gateway-event.interface';
 import { IDeclareBlowUseCase } from './use-cases/interfaces/declare-blow.use-case.interface';
 import { IPassBlowUseCase } from './use-cases/interfaces/pass-blow.use-case.interface';
 import { ISelectNegriUseCase } from './use-cases/interfaces/select-negri.use-case.interface';
+import { IReportChomboUseCase } from './use-cases/interfaces/report-chombo.use-case.interface';
+import { IDeclareOpenUseCase } from './use-cases/interfaces/declare-open.use-case.interface';
+import { IDevChomboScenarioUseCase } from './use-cases/interfaces/dev-chombo-scenario.use-case.interface';
 import {
   CompleteFieldTrigger,
   IPlayCardUseCase,
@@ -116,6 +121,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly selectNegriUseCase: ISelectNegriUseCase,
     @Inject('IPlayCardUseCase')
     private readonly playCardUseCase: IPlayCardUseCase,
+    @Inject('IReportChomboUseCase')
+    private readonly reportChomboUseCase: IReportChomboUseCase,
+    @Inject('IDeclareOpenUseCase')
+    private readonly declareOpenUseCase: IDeclareOpenUseCase,
     @Inject('ISelectBaseSuitUseCase')
     private readonly selectBaseSuitUseCase: ISelectBaseSuitUseCase,
     @Inject('IRevealBrokenHandUseCase')
@@ -150,6 +159,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly gameplayNotificationService: GameplayNotificationService,
     private readonly accountActionGateService: AccountActionGateService,
     private readonly roomGameActionQueueService: RoomGameActionQueueService,
+    @Optional()
+    @Inject('IDevChomboScenarioUseCase')
+    private readonly devChomboScenarioUseCase?: IDevChomboScenarioUseCase,
   ) {}
 
   /**
@@ -480,6 +492,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `Field completion failed for room ${roomId}: ${response.error}`,
       );
       return;
+    }
+
+    if (response.roundStoppedEarly) {
+      this.comAutoPlayRecoveryService.clearRoom(roomId);
     }
 
     this.dispatchGameplayEvents(response.events);
@@ -821,6 +837,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       name: string;
       pointsToWin: number;
       teamAssignmentMethod: 'random' | 'host-choice';
+      gameMode?: 'normal' | 'pro';
     },
   ) {
     this.activityTracker.recordActivity();
@@ -841,6 +858,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         roomName: data.name,
         pointsToWin: data.pointsToWin,
         teamAssignmentMethod: data.teamAssignmentMethod,
+        gameMode: data.gameMode,
         playerName,
         socketId: client.id,
         authenticatedUser,
@@ -1804,6 +1822,135 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('report-chombo')
+  async handleReportChombo(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: ReportChomboPayload,
+  ): Promise<void> {
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(client, 'report chombo')
+    ) {
+      return;
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'report chombo')) {
+      return;
+    }
+
+    try {
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.reportChomboUseCase.execute({
+            ...data,
+            actorId: this.getActorId(client),
+          }),
+      );
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to report chombo');
+        return;
+      }
+      await this.processFieldCompletionResult(data.roomId, result);
+      if (result.delayedEvents) {
+        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      }
+    } catch (error) {
+      this.logger.error('Error in handleReportChombo:', error);
+      client.emit('error-message', 'Failed to report chombo');
+    }
+  }
+
+  @SubscribeMessage('declare-open')
+  async handleDeclareOpen(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ): Promise<void> {
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(client, 'declare open')
+    ) {
+      return;
+    }
+    if (await this.rejectInactiveMutatingAction(client, 'declare open')) {
+      return;
+    }
+
+    try {
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          this.declareOpenUseCase.execute({
+            roomId: data.roomId,
+            actorId: this.getActorId(client),
+          }),
+      );
+      if (!result.success) {
+        client.emit('error-message', result.error ?? 'Failed to declare open');
+        return;
+      }
+      await this.processFieldCompletionResult(data.roomId, result);
+      if (result.delayedEvents) {
+        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      }
+    } catch (error) {
+      this.logger.error('Error in handleDeclareOpen:', error);
+      client.emit('error-message', 'Failed to declare open');
+    }
+  }
+
+  @SubscribeMessage('dev-chombo-scenario')
+  async handleDevChomboScenario(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: DevChomboScenarioPayload,
+  ): Promise<void> {
+    const scenarioUseCase = this.devChomboScenarioUseCase;
+    if (!scenarioUseCase) {
+      return;
+    }
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(
+        client,
+        'set up a chombo scenario',
+      )
+    ) {
+      return;
+    }
+    if (
+      await this.rejectInactiveMutatingAction(
+        client,
+        'set up a chombo scenario',
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () =>
+          scenarioUseCase.execute({
+            roomId: data.roomId,
+            actorId: this.getActorId(client),
+            violationType: data.violationType,
+          }),
+      );
+      if (!result.success) {
+        client.emit(
+          'error-message',
+          result.error ?? 'Failed to set up the chombo scenario',
+        );
+        return;
+      }
+
+      // COM steps and field completions queued for the old table must not act
+      // on the rearranged one.
+      this.comAutoPlayRecoveryService.clearRoom(data.roomId);
+      this.dispatchGameplayEvents(result.events);
+      this.triggerComAutoPlayIfNeeded(data.roomId);
+    } catch (error) {
+      this.logger.error('Error in handleDevChomboScenario:', error);
+      client.emit('error-message', 'Failed to set up the chombo scenario');
+    }
+  }
+
   @SubscribeMessage('request-agari')
   async handleRequestAgari(
     @ConnectedSocket() client: Socket,
@@ -1976,6 +2123,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      this.dispatchGameplayEvents(preparation.events);
       const delay = preparation.delayMs ?? 0;
       const followUp = preparation.followUp;
       this.finalizeBrokenHandAfterDelay(followUp, delay);

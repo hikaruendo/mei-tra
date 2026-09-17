@@ -117,7 +117,11 @@ export interface PlayState {
   lastWinnerSeatId?: SeatId | null;
   openDeclared: boolean;
   openDeclarerSeatId?: SeatId | null;
+  revealedHands?: Record<string, string[]>;
+  openResolved?: boolean;
   fieldCheckpoint?: FieldCheckpoint | null;
+  chomboViolations?: ChomboViolation[];
+  chomboRoundNumber?: number;
 }
 
 export interface PendingBrokenHandReveal {
@@ -143,14 +147,14 @@ export interface ScoreRecord {
   reason: string;
 }
 
+export interface GameOverState {
+  winner: string;
+  winningTeam?: Team;
+  finalScores: Record<Team, TeamScore>;
+}
+
 export interface ChomboViolation {
-  type:
-    | 'negri-forget'
-    | 'wrong-suit'
-    | 'four-jack'
-    | 'last-tanzen'
-    | 'wrong-broken'
-    | 'wrong-open';
+  type: 'negri-forget' | 'wrong-suit' | 'four-jack' | 'last-tanzen';
   violatorSeatId: SeatId;
   timestamp: number;
   reportedBySeatId: SeatId | null;
@@ -174,4 +178,5 @@ export interface GameState {
   agari?: string;
   roundNumber: number;
   pointsToWin: number;
+  gameOver?: GameOverState | null;
 }

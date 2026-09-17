@@ -1,7 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
+import { asSeatId } from '@contracts/ids';
 import { GameTable } from '@/components/game/GameTable';
 import type { GameActions, Player, TeamScores } from '@/types/game.types';
+
+type MockPlayerHandProps = {
+  player: Player;
+  hasActedInBlow?: boolean;
+  revealedHand?: string[];
+};
+const mockPlayerHand = jest.fn<void, [MockPlayerHandProps]>();
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -24,7 +32,10 @@ jest.mock('@/components/game/GameDock', () => ({
 }));
 
 jest.mock('@/components/game/PlayerHand', () => ({
-  PlayerHand: () => <div>player hand</div>,
+  PlayerHand: (props: MockPlayerHandProps) => {
+    mockPlayerHand(props);
+    return <div>player hand</div>;
+  },
 }));
 
 jest.mock('@/components/game/GameField', () => ({
@@ -76,7 +87,9 @@ const gameActions: GameActions = {
   revealBrokenHand: jest.fn(),
 };
 
-const renderGameTable = (isSpectator: boolean) =>
+const renderGameTable = (
+  overrides: Partial<React.ComponentProps<typeof GameTable>> = {},
+) =>
   render(
     <GameTable
       whoseTurn="player-1"
@@ -99,22 +112,92 @@ const renderGameTable = (isSpectator: boolean) =>
       currentSeatId="player-1"
       currentRoomId="room-1"
       pointsToWin={5}
-      isSpectator={isSpectator}
+      {...overrides}
     />,
   );
 
 describe('GameTable spectator blow controls', () => {
   it('renders only the read-only blow panel for spectators', () => {
-    renderGameTable(true);
+    renderGameTable({ isSpectator: true });
 
     expect(screen.getByText('spectator bid progress')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Declare' })).not.toBeInTheDocument();
   });
 
   it('keeps declaration controls available to players', () => {
-    renderGameTable(false);
+    renderGameTable();
 
     expect(screen.queryByText('spectator bid progress')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Declare' })).toBeInTheDocument();
+  });
+});
+
+describe('GameTable broken hand action', () => {
+  it('tells each hand whether its player has already bid or passed', () => {
+    mockPlayerHand.mockClear();
+
+    renderGameTable({
+      players: [
+        ...players,
+        {
+          socketId: 'player-3',
+          seatId: 'player-3',
+          name: 'Player 3',
+          team: 0,
+          hand: [],
+          isPasser: true,
+        },
+        {
+          socketId: 'player-4',
+          seatId: 'player-4',
+          name: 'Player 4',
+          team: 1,
+          hand: [],
+        },
+      ],
+      blowDeclarations: [
+        {
+          seatId: asSeatId('player-2'),
+          trumpType: 'herz',
+          numberOfPairs: 6,
+          timestamp: 1,
+        },
+      ],
+      blowActionHistory: [
+        { type: 'pass', seatId: asSeatId('player-4'), timestamp: 2 },
+      ],
+    });
+
+    const hasActedBySeat = Object.fromEntries(
+      mockPlayerHand.mock.calls.map(([props]) => [
+        props.player.seatId,
+        props.hasActedInBlow,
+      ]),
+    );
+    expect(hasActedBySeat).toEqual({
+      'player-1': false,
+      'player-2': true,
+      'player-3': true,
+      'player-4': true,
+    });
+  });
+});
+
+describe('GameTable revealed hands', () => {
+  it('hands each seat its revealed cards', () => {
+    mockPlayerHand.mockClear();
+
+    renderGameTable({ revealedHands: { 'player-2': ['A♠', 'K♠'] } });
+
+    const revealedBySeat = Object.fromEntries(
+      mockPlayerHand.mock.calls.map(([props]) => [
+        props.player.seatId,
+        props.revealedHand,
+      ]),
+    );
+    expect(revealedBySeat).toEqual({
+      'player-1': undefined,
+      'player-2': ['A♠', 'K♠'],
+    });
   });
 });

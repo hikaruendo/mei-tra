@@ -70,7 +70,8 @@ ${t('overview.gameFlowExample')}` }
         { type: 'rule', content: { title: t('play.order'), description: t('play.orderDesc'), example: t('play.orderExample') } },
         { type: 'rule', content: { title: t('play.winner'), description: t('play.winnerDesc'), example: t('play.winnerExample') } },
         { type: 'rule', content: { title: t('play.baseSuit'), description: t('play.baseSuitDesc'), example: t('play.baseSuitExample') } },
-        { type: 'rule', content: { title: t('play.strength'), description: t('play.strengthDesc'), example: t('play.strengthExample') } }
+        { type: 'rule', content: { title: t('play.strength'), description: t('play.strengthDesc'), example: t('play.strengthExample') } },
+        { type: 'rule', content: { title: t('play.open'), description: t('play.openDesc'), example: t('play.openExample') } }
       ]
     },
     {
@@ -100,8 +101,9 @@ ${t('overview.gameFlowExample')}` }
       content: [
         { type: 'text', content: t('chombo.description') },
         { type: 'rule', content: { title: t('chombo.negriForget'), description: t('chombo.negriForgetDesc'), example: t('chombo.negriForgetExample') } },
+        { type: 'rule', content: { title: t('chombo.wrongSuit'), description: t('chombo.wrongSuitDesc'), example: t('chombo.wrongSuitExample') } },
+        { type: 'rule', content: { title: t('chombo.fourJack'), description: t('chombo.fourJackDesc'), example: t('chombo.fourJackExample') } },
         { type: 'rule', content: { title: t('chombo.lastTanzen'), description: t('chombo.lastTanzenDesc'), example: t('chombo.lastTanzenExample') } },
-        { type: 'rule', content: { title: t('chombo.wrongBroken'), description: t('chombo.wrongBrokenDesc'), example: t('chombo.wrongBrokenExample') } },
         { type: 'rule', content: { title: t('chombo.reportSystem'), description: t('chombo.reportSystemDesc'), example: t('chombo.reportSystemExample') } }
       ]
     },

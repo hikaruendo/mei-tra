@@ -1,4 +1,8 @@
-import type { PlayerContract } from '@contracts/game';
+import type {
+  ChomboViolationType,
+  DevChomboScenarioType,
+  PlayerContract,
+} from '@contracts/game';
 import type { SeatId } from '@contracts/ids';
 
 export type Team = 0 | 1;
@@ -108,11 +112,15 @@ export type { FirstTurnReveal } from '@meitra/game-client/first-turn-reveal';
 export interface GameActions {
   selectNegri: (card: string) => void;
   playCard: (card: string) => void;
+  reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  declareOpen: () => void;
   declareBlow: () => void;
   passBlow: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: (seatId: string) => void;
-} 
+  /** Development only: jumps to a table where the viewer can commit the chombo. */
+  setupChomboScenario?: (violationType: DevChomboScenarioType) => void;
+}
 
 export function fromPlayerContract(player: PlayerContract): Player {
   return {

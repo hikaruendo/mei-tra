@@ -47,6 +47,7 @@ export class StartGameGatewayEffectsService {
       players: transportPlayers,
       pointsToWin,
       teamNames: room?.settings.teamNames,
+      gameMode: room?.settings.gameMode ?? 'normal',
       currentTurnSeatId,
     };
     const roomEvents = room

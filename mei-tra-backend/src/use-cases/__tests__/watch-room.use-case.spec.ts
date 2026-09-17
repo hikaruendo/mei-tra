@@ -92,8 +92,12 @@ describe('WatchRoomUseCase', () => {
     pointsToWin: roomValue.settings.pointsToWin,
   });
 
-  const createUseCase = (roomValue: Room) => {
+  const createUseCase = (
+    roomValue: Room,
+    mutateState?: (state: GameState) => void,
+  ) => {
     const state = gameState(roomValue);
+    mutateState?.(state);
     const roomGameState = {
       getState: jest.fn(() => state),
       getTransportPlayers: jest.fn(
@@ -148,6 +152,20 @@ describe('WatchRoomUseCase', () => {
     await expect(useCase.execute({ roomId: roomValue.id })).resolves.toEqual({
       success: false,
       error: 'Spectators are not allowed',
+    });
+  });
+
+  it('includes only explicitly revealed hands in the spectator reveal projection', async () => {
+    const roomValue = room();
+    const useCase = createUseCase(roomValue, (state) => {
+      state.playState!.revealedHands = { [asSeatId('p1')]: ['A♠', 'K♠'] };
+    });
+
+    const result = await useCase.execute({ roomId: roomValue.id });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.gameState.revealedHands).toEqual({
+      p1: ['A♠', 'K♠'],
     });
   });
 });

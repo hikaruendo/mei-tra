@@ -1,6 +1,18 @@
-import { TeamScore, TeamScoreRecord } from '../../types/game.types';
+import {
+  ScoreRecord,
+  Team,
+  TeamScore,
+  TeamScoreRecord,
+} from '../../types/game.types';
 
 export interface IScoreService {
+  addPoints(
+    team: Team,
+    points: number,
+    scores: { [key: number]: TeamScore },
+    records: Record<Team, ScoreRecord[]>,
+    reason: string,
+  ): void;
   calculatePlayPoints(declaredPairs: number, wonFields: number): number;
   updateTeamScore(
     team: number,

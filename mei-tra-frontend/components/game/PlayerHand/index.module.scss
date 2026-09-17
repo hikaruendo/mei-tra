@@ -37,6 +37,13 @@
   z-index: var(--z-index-card);
 }
 
+/* A revealed hand is drawn as rank-and-suit marks, so the row wraps instead of
+   stacking cards. */
+.revealedHandContainer{
+  flex-wrap: wrap;
+  gap: calc(0.08rem * var(--mt-card-scale));
+}
+
 .card {
   flex-shrink: 0;
   margin: 0 var(--player-hand-card-scaled-overlap, calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale)));
@@ -121,8 +128,11 @@
 }
 
 /* Card states */
+/* dnd-kit does not capture the pointer, so while a pro-mode card is held the
+   cards it passes over would take :hover and lift one after another. The
+   :where() keeps these selectors at their old specificity. */
 .card.selected,
-.card:hover {
+:where(.handContainer:not(.holdingCard)) .card:hover {
   transform: translateY(calc((var(--card-translate-y, 0px) - var(--player-hand-card-hover-lift, 28px)) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
   z-index: calc(var(--card-index, 0) + 1) !important;
   margin: 0 var(--player-hand-card-scaled-hover-overlap, calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale)));
@@ -136,9 +146,30 @@
 
 .dragging {
   cursor: grabbing;
-  opacity: 0.58;
+  opacity: 0.9;
   filter: brightness(1.1);
   z-index: 60 !important;
+  transform: translate3d(var(--drag-x, 0px), var(--drag-y, 0px), 0)
+    translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale)))
+    rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
+  box-shadow: var(--shadow-selected);
+}
+
+/* The overlay sits under the pointer for the whole drag. It has to let hit
+   tests through, or the reorder hit test finds the overlay instead of the
+   hand card beneath it. */
+.dragOverlay {
+  pointer-events: none;
+}
+
+.dragOverlayCard {
+  width: var(--player-hand-card-scaled-width, 80px);
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-selected);
+  transform: rotate(2deg) scale(1.05);
+  pointer-events: none;
 }
 
 .insertBefore::before,
@@ -249,6 +280,7 @@
 }
 
 .playerInfoGroup{
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -694,6 +726,33 @@
   margin-top: -0.7rem;
 }
 
+/* The Negri place belongs to the declaring seat, so every mode and every
+   viewer gets the same seat-relative location. */
+.negriSlot {
+  position: absolute;
+  z-index: 45;
+  top: 0.7rem;
+  left: calc(100% + 1rem);
+}
+
+.playerPosition.bottom .negriSlot {
+  right: calc(100% + 1rem);
+  left: auto;
+}
+
+@media (max-width: 768px) {
+  .negriSlot {
+    top: 0.35rem;
+    left: calc(100% + 0.25rem);
+  }
+
+  .playerPosition.bottom .negriSlot {
+    right: calc(100% + 0.25rem);
+    left: auto;
+  }
+
+}
+
 .playerPosition.bottom .statusPanel,
 .playerPosition.bottom .bottomStatusZone,
 .playerPosition.bottom .playerInfoGroup {
@@ -940,7 +999,7 @@
   }
 
   .card.selected,
-  .card:hover {
+  :where(.handContainer:not(.holdingCard)) .card:hover {
     transform: translateY(calc(-20px * var(--mt-card-scale))) rotate(0deg) scale(1.1) !important;
     z-index: var(--z-index-card);
     margin: 0 var(--spacing-md);
@@ -1216,7 +1275,7 @@
   }
 
   .playerPosition.bottom .card.selected,
-  .playerPosition.bottom .card:hover {
+  .playerPosition.bottom :where(.handContainer:not(.holdingCard)) .card:hover {
     z-index: calc(var(--card-index, 0) + 1) !important;
     transform: translateY(calc((var(--card-translate-y, 0px) - 26px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
     margin: 0 calc(-0.72rem * var(--mt-card-scale));
@@ -1263,4 +1322,17 @@
       transform: none;
     }
   }
+}
+
+.proDropHints {
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  color: var(--mt-text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
 }

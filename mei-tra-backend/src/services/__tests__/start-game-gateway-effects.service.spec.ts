@@ -98,7 +98,9 @@ describe('StartGameGatewayEffectsService', () => {
       firstTurnRevealEnabled: true,
     });
 
-    expect(events).toEqual([
+    // toMatchObject so additive contract fields do not break this test; the
+    // fields asserted below are the ones start-game actually promises.
+    expect(events).toMatchObject([
       {
         scope: 'room',
         roomId: 'room-1',
@@ -131,6 +133,7 @@ describe('StartGameGatewayEffectsService', () => {
           ],
           pointsToWin: 10,
           teamNames: undefined,
+          gameMode: 'normal',
           currentTurnSeatId: 'player-1',
         },
       },

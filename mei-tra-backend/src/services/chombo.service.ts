@@ -1,14 +1,33 @@
+import { findActiveChomboCandidate } from '../domain/chombo-candidates';
 import { Injectable } from '@nestjs/common';
-import { ChomboViolation, DomainPlayer, Field } from '../types/game.types';
+import {
+  ChomboViolation,
+  DomainPlayer,
+  Field,
+  TrumpType,
+} from '../types/game.types';
 import { PlayService } from './play.service';
 import { IChomboService } from './interfaces/chombo-service.interface';
 import type { SeatId } from '../types/identity.types';
 
 @Injectable()
 export class ChomboService implements IChomboService {
-  private violations: ChomboViolation[] = [];
-
   constructor(private readonly playService: PlayService) {}
+
+  resolveReport(
+    violations: ChomboViolation[],
+    reporterSeatId: SeatId,
+    violatorSeatId: SeatId,
+    violationType: ChomboViolation['type'],
+  ): ChomboViolation | null {
+    const violation = findActiveChomboCandidate(
+      violations,
+      violatorSeatId,
+      violationType,
+    );
+    if (violation) violation.reportedBySeatId = reporterSeatId;
+    return violation ?? null;
+  }
 
   checkViolations(
     seatId: SeatId,
@@ -19,12 +38,32 @@ export class ChomboService implements IChomboService {
       card?: string;
       neguri?: { [key: string]: string };
       hasBroken?: boolean;
-      canDeclareOpen?: boolean;
+      trump?: TrumpType | null;
     },
   ): ChomboViolation | null {
     let violationType: ChomboViolation['type'] | null = null;
 
     switch (action) {
+      case 'play-card': {
+        if (context.field && context.card) {
+          const legalPlayError = this.playService.getCardPlayError(
+            context.player.hand,
+            context.field,
+            context.trump ?? null,
+            context.card,
+          );
+          // Holding back the Joker at two cards is judged as a last-tanzen once
+          // it is the only card left, not as a wrong suit.
+          const holdsBackTanzen =
+            context.player.hand.length === 2 &&
+            context.player.hand.includes('JOKER') &&
+            context.card !== 'JOKER';
+          if (legalPlayError && !holdsBackTanzen) {
+            violationType = 'wrong-suit';
+          }
+        }
+        break;
+      }
       case 'select-negri': {
         if (!context.neguri?.[seatId]) {
           violationType = 'negri-forget';
@@ -34,7 +73,7 @@ export class ChomboService implements IChomboService {
 
       case 'check-four-jack': {
         const jackCount = context.player.hand.filter((c) =>
-          c.includes('J'),
+          /^J[♠♣♥♦]$/.test(c),
         ).length;
         if (jackCount === 4 && !context.hasBroken) {
           violationType = 'four-jack';
@@ -48,20 +87,6 @@ export class ChomboService implements IChomboService {
           context.player.hand[0].includes('JOKER')
         ) {
           violationType = 'last-tanzen';
-        }
-        break;
-      }
-
-      case 'declare-broken': {
-        if (!context.hasBroken) {
-          violationType = 'wrong-broken';
-        }
-        break;
-      }
-
-      case 'declare-open': {
-        if (!context.canDeclareOpen) {
-          violationType = 'wrong-open';
         }
         break;
       }
@@ -86,53 +111,7 @@ export class ChomboService implements IChomboService {
       isExpired: false,
     };
 
-    this.violations.push(violation);
     return violation;
-  }
-
-  reportViolation(
-    reporterSeatId: SeatId,
-    violatorSeatId: SeatId,
-    violationType: ChomboViolation['type'],
-    reporterTeam: number,
-    violatorTeam: number,
-  ): ChomboViolation | null {
-    // Can't report your own team
-    if (reporterTeam === violatorTeam) {
-      return null;
-    }
-
-    // Find the violation
-    const violation = this.violations.find(
-      (v) =>
-        v.violatorSeatId === violatorSeatId &&
-        v.type === violationType &&
-        !v.isExpired &&
-        !v.reportedBySeatId,
-    );
-
-    if (!violation) {
-      return null;
-    }
-
-    // Mark violation as reported
-    violation.reportedBySeatId = reporterSeatId;
-    return violation;
-  }
-
-  expireViolations(): void {
-    this.violations = this.violations.map((v) => ({
-      ...v,
-      isExpired: true,
-    }));
-  }
-
-  getActiveViolations(): ChomboViolation[] {
-    return this.violations.filter((v) => !v.isExpired && !v.reportedBySeatId);
-  }
-
-  clearViolations(): void {
-    this.violations = [];
   }
 
   checkForBrokenHand(player: DomainPlayer): void {

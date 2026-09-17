@@ -5,8 +5,11 @@ import type {
   BlowActionContract,
   BlowDeclarationContract,
   BlowUpdatedPayload,
+  BrokenHandRevealedPayload,
   BrokenPayload,
   CardPlayedPayload,
+  ChomboResolvedPayload,
+  OpenDeclaredPayload,
   CompletedFieldContract,
   FieldCompletePayload,
   FieldContract,
@@ -23,6 +26,8 @@ import type {
   PlayerLeftPayload,
   ReconnectionFailureCode,
   RequestAgariPayload,
+  ChomboViolationType,
+  DevChomboScenarioType,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -65,6 +70,7 @@ import {
   type GameServerEvent,
 } from '@meitra/game-client/game-event-reducer';
 import { completedFieldKey } from '@meitra/game-client/completed-field';
+import { serverErrorTranslation } from '@meitra/game-client/server-errors';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import {
   DEFAULT_USER_PREFERENCES,
@@ -220,6 +226,7 @@ const mergePlayersPreservingIdentity = (
 export const useGame = () => {
   const tStatus = useTranslations('playerStatus');
   const t = useTranslations('game');
+  const tServerErrors = useTranslations('serverErrors');
   const { socket, isConnected, isConnecting } = useSocket();
   const { user } = useAuth();
   const preferences = normalizeUserPreferences(user?.profile?.preferences);
@@ -329,6 +336,7 @@ export const useGame = () => {
   const [currentTrump, setCurrentTrump] = useState<TrumpType | null>(null);
   const [negriCard, setNegriCard] = useState<string | null>(null);
   const [negriSeatId, setNegriSeatId] = useState<string | null>(null);
+  const [revealedHands, setRevealedHands] = useState<Partial<Record<string, string[]>>>({});
 
   // Add state for completed fields
   const [completedFields, setCompletedFields] = useState<CompletedField[]>([]);
@@ -367,6 +375,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idleSeatIds, setIdleSeatIds] = useState<string[]>([]);
   const [disconnectedSeatIds, setDisconnectedSeatIds] = useState<string[]>([]);
@@ -388,6 +397,7 @@ export const useGame = () => {
     setGamePhase(null);
     setCurrentRoomId(null);
     setCurrentHostSeatId(null);
+    setGameMode('normal');
     setCurrentSeatId(null);
     setIsHost(false);
     setIsSpectator(false);
@@ -421,6 +431,20 @@ export const useGame = () => {
         t(fallbackTeam === 0 ? 'teamRed' : 'teamBlack'),
       ),
     [teamNames, t],
+  );
+
+  // The server sends its errors as English text; show the translation when the
+  // message is one this app knows.
+  const translateServerError = useCallback(
+    (message: string) => {
+      const translation = serverErrorTranslation(message);
+      if (!translation) return message;
+      return tServerErrors(
+        translation.key as 'internalServerError',
+        translation.params,
+      );
+    },
+    [tServerErrors],
   );
 
   const syncDisconnectedSeatIdsFromPlayers = useCallback(
@@ -612,7 +636,11 @@ export const useGame = () => {
       if (next.players !== previous.players) {
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
-          fromPlayerContracts(next.players),
+          fromPlayerContracts(next.players).map((player) =>
+            next.revealedHands[player.seatId]
+              ? { ...player, hand: next.revealedHands[player.seatId] ?? player.hand }
+              : player,
+          ),
         );
         commitPlayers(nextPlayers);
         syncDisconnectedSeatIdsFromPlayers(nextPlayers);
@@ -645,6 +673,7 @@ export const useGame = () => {
       setNegriCard(next.negriCard);
       setNegriSeatId(next.negriSeatId);
       setRevealedAgari(next.revealedAgari);
+      setRevealedHands(next.revealedHands);
       setCompletedFields(toUiCompletedFields(next.fields));
     };
 
@@ -727,30 +756,13 @@ export const useGame = () => {
 
         setCurrentHostSeatId(nextRoom.hostSeatId);
         setTeamNames(nextRoom.settings.teamNames);
+        setGameMode(nextRoom.settings.gameMode ?? 'normal');
         if (selfSeatId) {
           setCurrentSeatId(selfSeatId);
         }
       },
-      'game-state': ({
-        players: playerContracts,
-        gamePhase,
-        currentField,
-        currentTurnSeatId,
-        blowState,
-        teamScores,
-        youSeatId,
-        negriCard,
-        negriSeatId,
-        revealedAgari: syncedRevealedAgari,
-        fields,
-        roomId,
-        hostSeatId,
-        pointsToWin,
-        teamNames,
-        isSpectator,
-      }: GameStatePayload) => {
-        pendingNegriCardRef.current = null;
-        gameEventStateRef.current = createGameEventStateFromSnapshot({
+      'game-state': (payload: GameStatePayload) => {
+        const {
           players: playerContracts,
           gamePhase,
           currentField,
@@ -766,8 +778,13 @@ export const useGame = () => {
           hostSeatId,
           pointsToWin,
           teamNames,
+          gameMode: nextGameMode,
           isSpectator,
-        });
+          gameOver,
+        } = payload;
+        setGameMode(nextGameMode ?? 'normal');
+        pendingNegriCardRef.current = null;
+        gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
         const nextPlayers = mergePlayersPreservingIdentity(
           playersRef.current,
           fromPlayerContracts(playerContracts),
@@ -779,6 +796,7 @@ export const useGame = () => {
         }
         setGamePhase(toUiGamePhase(gamePhase));
         setRevealedAgari(syncedRevealedAgari ?? null);
+        setRevealedHands(payload.revealedHands ?? {});
         commitTurn(currentTurnSeatId);
         setCurrentField(toUiField(currentField));
         setCurrentTrump(blowState.currentTrump);
@@ -804,6 +822,19 @@ export const useGame = () => {
         setGameStarted(true);
         setPointsToWin(pointsToWin);
         setTeamNames(teamNames);
+        if (gameOver) {
+          gameResultTokenRef.current += 1;
+          setGameResult(buildGameResultSnapshot({
+            payload: gameOver,
+            players: nextPlayers,
+            viewerSeatId: youSeatId,
+            isSpectator: Boolean(isSpectator),
+            teamNames,
+            token: gameResultTokenRef.current,
+          }));
+          setGameStarted(false);
+          setGamePhase(null);
+        }
         setIdleSeatIds((prev) =>
           prev.filter((seatId) =>
             nextPlayers.some((player) => player.seatId === seatId),
@@ -968,7 +999,28 @@ export const useGame = () => {
       },
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
-        setNotification({ message, type: 'error' });
+        setNotification({
+          message: translateServerError(message),
+          type: 'error',
+        });
+      },
+      'open-declared': (payload: OpenDeclaredPayload) => {
+        applyGameServerEvent({ type: 'open-declared', payload });
+        setNotification({
+          message: payload.valid
+            ? t('openDeclared')
+            : t('openInvalid', { teamName: getTeamLabel(payload.awardedTeam) }),
+          type: payload.valid ? 'success' : 'error',
+        });
+      },
+      'chombo-resolved': (payload: ChomboResolvedPayload) => {
+        applyGameServerEvent({ type: 'chombo-resolved', payload });
+        setNotification({
+          message: t(payload.isCorrect ? 'chomboCorrect' : 'chomboIncorrect', {
+            teamName: getTeamLabel(payload.awardedTeam),
+          }),
+          type: payload.isCorrect ? 'success' : 'error',
+        });
       },
       'update-turn': (seatId: UpdateTurnPayload) => {
         if (shouldAbortRevealOnTurn(firstTurnRevealRef.current, seatId)) {
@@ -1017,11 +1069,14 @@ export const useGame = () => {
         }
         applyGameServerEvent({ type: 'blow-updated', payload });
       },
+      'broken-hand-revealed': (payload: BrokenHandRevealedPayload) => {
+        applyGameServerEvent({ type: 'broken-hand-revealed', payload });
+      },
       'broken': (payload: BrokenPayload) => {
         pendingNegriCardRef.current = null;
         startDealAnimation('broken', payload.players);
         setNotification({
-          message: 'Broken happened, reset the game',
+          message: t('redealBroken'),
           type: 'warning'
         });
         applyGameServerEvent({ type: 'broken', payload });
@@ -1063,8 +1118,10 @@ export const useGame = () => {
       },
       'reveal-agari': (payload: RevealAgariPayload) => {
         applyGameServerEvent({ type: 'reveal-agari', payload });
+        // payload.message is fixed English and knows nothing of pro mode, where
+        // the Negri is dragged down rather than picked.
         setNotification({
-          message: payload.message,
+          message: t(gameMode === 'pro' ? 'negriPromptPro' : 'negriPrompt'),
           type: 'success'
         });
       },
@@ -1274,6 +1331,7 @@ export const useGame = () => {
     currentRoomId,
     isSpectator,
     teamNames,
+    gameMode,
     negriSeatId,
     commitPlayers,
     resolveCurrentUserSeatId,
@@ -1286,6 +1344,7 @@ export const useGame = () => {
     getTeamLabel,
     t,
     tStatus,
+    translateServerError,
     updateFirstTurnReveal,
     startDealAnimation,
     playSoundEffect,
@@ -1396,6 +1455,31 @@ export const useGame = () => {
       };
       socket?.emit('play-card', payload);
     },
+    reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => {
+      if (!currentRoomId) return;
+      socket?.emit('report-chombo', {
+        roomId: currentRoomId,
+        violatorSeatId,
+        violationType,
+      });
+    },
+    declareOpen: () => {
+      if (!socket || !currentRoomId) return;
+      socket.emit('declare-open', { roomId: currentRoomId });
+    },
+    // Dev only, like the panel that calls it. The bundler folds this branch
+    // away in production, so the emit path never ships.
+    ...(process.env.NODE_ENV !== 'production'
+      ? {
+          setupChomboScenario: (violationType: DevChomboScenarioType) => {
+            if (!socket || !currentRoomId) return;
+            socket.emit('dev-chombo-scenario', {
+              roomId: currentRoomId,
+              violationType,
+            });
+          },
+        }
+      : {}),
     selectBaseSuit: (suit: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnBaseSuit'), type: 'error' });
@@ -1463,6 +1547,9 @@ export const useGame = () => {
     negriSeatId,
     completedFields,
     revealedAgari,
+    revealedHands,
+    openDeclared: gameEventStateRef.current.openDeclared,
+    openResolved: gameEventStateRef.current.openResolved,
     gameActions,
     blowDeclarations,
     blowActionHistory,
@@ -1489,6 +1576,7 @@ export const useGame = () => {
     idleSeatIds,
     disconnectedSeatIds,
     pointsToWin,
+    gameMode,
     users,
     paused,
     socket,

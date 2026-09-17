@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   SelectNegriRequest,
   SelectNegriResponse,
@@ -13,6 +13,8 @@ import {
 } from './helpers/player-resolution.helper';
 import { asSeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
+import { appendChomboCandidate } from '../domain/chombo-candidates';
+import { IChomboService } from '../services/interfaces/chombo-service.interface';
 
 @Injectable()
 export class SelectNegriUseCase implements ISelectNegriUseCase {
@@ -21,6 +23,9 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
     @Inject('IBlowService') private readonly blowService: IBlowService,
+    @Optional()
+    @Inject('IChomboService')
+    private readonly chomboService?: IChomboService,
   ) {}
 
   async execute(request: SelectNegriRequest): Promise<SelectNegriResponse> {
@@ -28,6 +33,8 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      const room = await this.roomService.getRoom(roomId);
+      const isProMode = room?.settings.gameMode === 'pro';
       const player = resolvePlayerByActorId(roomGameState, actorId);
 
       if (!player) {
@@ -37,34 +44,13 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
       if (state.gamePhase !== 'play') {
         return { success: false, error: 'Cannot select Negri card now' };
       }
+      if (!state.playState) {
+        return { success: false, error: 'Play state is unavailable' };
+      }
 
-      if (!roomGameState.isPlayerTurn(player.seatId)) {
+      if (!isProMode && !roomGameState.isPlayerTurn(player.seatId)) {
         return { success: false, error: "It's not your turn to select Negri" };
       }
-
-      if (!player.hand.includes(card)) {
-        return { success: false, error: 'Selected card is not in hand' };
-      }
-
-      state.playState = {
-        currentField: {
-          cards: [],
-          playedBySeatIds: [],
-          baseCard: '',
-          dealerSeatId: asSeatId(player.seatId),
-          isComplete: false,
-        },
-        negriCard: card,
-        negriSeatId: asSeatId(player.seatId),
-        neguri: {},
-        fields: [],
-        lastWinnerSeatId: null,
-        openDeclared: false,
-        openDeclarerSeatId: null,
-        fieldCheckpoint: null,
-      };
-
-      player.hand = player.hand.filter((c) => c !== card);
 
       const winner = this.blowService.findHighestDeclaration(
         state.blowState.declarations,
@@ -74,6 +60,62 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           success: false,
           error: 'Failed to determine declaration winner',
         };
+      }
+      if (winner.seatId !== player.seatId) {
+        return {
+          success: false,
+          error: 'Only the declaration winner may select Negri',
+        };
+      }
+      if (isProMode && (state.playState?.fields.length ?? 0) >= 10) {
+        return { success: false, error: 'Negri selection window has ended' };
+      }
+      if (!player.hand.includes(card)) {
+        return { success: false, error: 'Selected card is not in hand' };
+      }
+
+      const currentField = state.playState.currentField;
+      const playHasStarted = Boolean(
+        currentField?.cards.length || state.playState.fields.length,
+      );
+
+      if (!state.playState.currentField) {
+        state.playState.currentField = {
+          cards: [],
+          playedBySeatIds: [],
+          baseCard: '',
+          dealerSeatId: asSeatId(player.seatId),
+          isComplete: false,
+        };
+      }
+      if (isProMode) {
+        state.playState.chomboRoundNumber ??= state.roundNumber;
+      }
+      state.playState.negriCard = card;
+      state.playState.negriSeatId = asSeatId(player.seatId);
+      state.playState.chomboViolations = (
+        state.playState.chomboViolations ?? []
+      ).filter(
+        (violation) =>
+          !(
+            violation.violatorSeatId === player.seatId &&
+            violation.type === 'negri-forget' &&
+            !violation.reportedBySeatId
+          ),
+      );
+
+      player.hand = player.hand.filter((c) => c !== card);
+      // Setting the other card aside can leave only the Joker, which misses the
+      // tanzen just as playing that card would.
+      if (isProMode && !player.isCOM) {
+        state.playState.chomboViolations = appendChomboCandidate(
+          state.playState.chomboViolations ?? [],
+          this.chomboService?.checkViolations(
+            asSeatId(player.seatId),
+            'check-last-card',
+            { player },
+          ),
+        );
       }
 
       const winnerIndex = state.players.findIndex(
@@ -86,9 +128,13 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
         };
       }
 
-      setCurrentSeat(state, winner.seatId);
-      const room = await this.roomService.getRoom(roomId);
-
+      // A pro-mode Negri can be placed outside the owner's turn. Preserve the
+      // active player in that case; only initial Negri selection starts play
+      // at the declaration winner as in normal mode.
+      if (!isProMode || !playHasStarted) {
+        setCurrentSeat(state, winner.seatId);
+      }
+      const startingSeatId = state.currentSeatId ?? winner.seatId;
       const events: GatewayEvent[] = [
         ...buildPlayerSyncEvents(roomGameState, roomId, state.players, {
           room,
@@ -99,14 +145,15 @@ export class SelectNegriUseCase implements ISelectNegriUseCase {
           event: 'play-setup-complete',
           payload: {
             negriCard: card,
-            startingSeatId: asSeatId(state.players[winnerIndex].seatId),
+            negriSeatId: asSeatId(player.seatId),
+            startingSeatId: asSeatId(startingSeatId),
           },
         },
         {
           scope: 'room',
           roomId,
           event: 'update-turn',
-          payload: state.players[winnerIndex].seatId,
+          payload: startingSeatId,
         },
       ];
 

@@ -564,6 +564,7 @@ export class GameStateService implements IGameStateService {
   startGame(): void {
     this.transitionPhase('blow');
     let state = this.getState();
+    state.gameOver = null;
 
     // Initialize game state
     state.deck = this.cardService.generateDeck();

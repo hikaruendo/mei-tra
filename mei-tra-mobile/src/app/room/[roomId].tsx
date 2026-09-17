@@ -41,10 +41,14 @@ export default function RoomScreen() {
     declareBlow,
     passBlow,
     selectNegri,
+    declareOpen,
+    revealBrokenHand,
     playCardSelectionSound,
     playCancelSound,
     playHandReorderSound,
     playCard,
+    reportChombo,
+    setupChomboScenario,
     selectBaseSuit,
     removePlayer,
     replaceWithCOM,
@@ -148,9 +152,13 @@ export default function RoomScreen() {
           onLeave={() => void doLeave()}
           onPass={passBlow}
           onPlayCard={playCard}
+          onReportChombo={reportChombo}
+          onSetupChomboScenario={setupChomboScenario}
           onReplaceWithCOM={replaceWithCOM}
           onSelectBaseSuit={selectBaseSuit}
           onSelectNegri={selectNegri}
+          onDeclareOpen={declareOpen}
+          onRevealBrokenHand={revealBrokenHand}
           onCardSelection={playCardSelectionSound}
           onCancel={playCancelSound}
           onHandReorder={playHandReorderSound}

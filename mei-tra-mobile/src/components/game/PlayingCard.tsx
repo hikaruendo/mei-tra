@@ -23,6 +23,9 @@ interface PlayingCardProps {
   /** Explicit width; the hand fan uses this to fit the screen. */
   width?: number;
   onPress?: () => void;
+  /** Screen reader actions, for a hand card that is played by dragging rather than tapping. */
+  accessibilityActions?: readonly { name: string; label: string }[];
+  onAccessibilityAction?: (actionName: string) => void;
 }
 
 function accessibilityLabelFor(card: string | undefined, faceDown: boolean) {
@@ -39,21 +42,33 @@ function PlayingCardComponent({
   size = 'hand',
   width,
   onPress,
+  accessibilityActions,
+  onAccessibilityAction,
 }: PlayingCardProps) {
   const w = width ?? CARD_BASE_WIDTHS[size];
   const h = cardHeight(w);
   const radius = cardRadius(w);
   const art = resolveCardArt(card ?? '', faceDown);
 
+  // Pressable reports itself disabled to screen readers, which would announce a
+  // card with actions as dimmed.
+  const actionable = Boolean(onPress) || Boolean(accessibilityActions?.length);
+
   return (
     <Pressable
+      accessibilityActions={accessibilityActions}
       accessibilityHint={
         onPress && !disabled ? t('a11y.tapToSelectCard') : undefined
       }
       accessibilityLabel={accessibilityLabelFor(card, faceDown)}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ disabled, selected }}
-      disabled={disabled || !onPress}
+      disabled={disabled || !actionable}
+      onAccessibilityAction={
+        onAccessibilityAction
+          ? (event) => onAccessibilityAction(event.nativeEvent.actionName)
+          : undefined
+      }
       onPress={onPress}
       // The ring and shadow live outside the clipping view so that selecting a
       // card does not crop the artwork.

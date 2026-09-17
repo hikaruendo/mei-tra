@@ -19,6 +19,13 @@ export interface CompleteFieldResponse {
   events?: GatewayEvent[];
   delayedEvents?: GatewayEvent[];
   gameOver?: GameOverInstruction;
+  /**
+   * Set when a player action ended the round before the work scheduled for it
+   * ran: a chombo report or a valid open. That work belongs to a round that no
+   * longer exists and is dropped. A round that played itself out does not set
+   * this, because the scheduled work is what ended it.
+   */
+  roundStoppedEarly?: boolean;
 }
 
 export interface ICompleteFieldUseCase {

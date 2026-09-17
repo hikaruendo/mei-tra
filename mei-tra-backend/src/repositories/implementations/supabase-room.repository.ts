@@ -72,6 +72,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
           teamAssignmentMethod: room.settings.teamAssignmentMethod,
           pointsToWin: room.settings.pointsToWin,
           allowSpectators: room.settings.allowSpectators,
+          gameMode: room.settings.gameMode ?? 'normal',
           teamNames: room.settings.teamNames,
         }),
         p_points_to_win: room.settings.pointsToWin,
@@ -407,6 +408,9 @@ export class SupabaseRoomRepository implements IRoomRepository {
         value.teamAssignmentMethod === 'host-choice') &&
       typeof value.pointsToWin === 'number' &&
       typeof value.allowSpectators === 'boolean' &&
+      (value.gameMode === undefined ||
+        value.gameMode === 'normal' ||
+        value.gameMode === 'pro') &&
       (value.teamNames === undefined || this.isRecord(value.teamNames))
     );
   }
@@ -434,7 +438,10 @@ export class SupabaseRoomRepository implements IRoomRepository {
       hostSeatId: asSeatId(hostSeatId),
       status: dbRoom.status as RoomStatus,
       players: canonicalPlayers,
-      settings: dbRoom.settings,
+      settings: {
+        ...dbRoom.settings,
+        gameMode: dbRoom.settings.gameMode ?? 'normal',
+      },
       createdAt: new Date(dbRoom.created_at),
       updatedAt: new Date(dbRoom.updated_at),
       lastActivityAt: new Date(dbRoom.last_activity_at),

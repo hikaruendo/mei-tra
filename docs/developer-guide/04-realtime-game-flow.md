@@ -324,7 +324,15 @@ current field の最初が `JOKER` で `baseSuit` 未設定の場合、通常の
 
 ### 8.5 broken / chombo
 
-broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフローと結び付いており、frontend には `broken` や `reveal-agari` といった event が通知されます。表示上は警告や hand reveal のタイミングに使われます。
+broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフローと結び付いており、frontend には `broken-hand-revealed`、`broken`、`reveal-agari` といった event が通知されます。
+
+`reveal-broken-hand` を受けた server は、公開した手札を `broken-hand-revealed` で全員に送り、5 秒後に配り直して `broken` を送ります。COM の4ジャックも同じ間隔で配り直します。公開中の手札は `revealedHands` に入り、web と mobile はその席の手札を表向きに表示します。`broken` で配り直すと `revealedHands` は空に戻ります。オープンで公開した手札も同じ `revealedHands` で表示し、カードが出されるたびにその札を取り除きます。
+
+`report-chombo` を受けた server は、指摘された違反の候補があれば指摘したチームに、なければ指摘されたチームに 5 点を加えて `chombo-resolved` を送ります。どちらの場合もそこでラウンドを終えます。場の得点は計算せず、`completeRoundAfterChombo` が通常のラウンド終了と同じく `round-results` を送り、目標点に届けば `game-over`、届かなければ 3 秒後に次のラウンドを配ります。gateway は、そのラウンドに残っている field completion と COM の timer を止めてから送ります。
+
+`declare-open` で通らないオープンをすると、server はオープンした席の相手チームに 5 点を加え、`open-declared`（`valid: false` と、点が入った `awardedTeam`）を送ります。これはチョンボではないので、違反の候補は残しません。game history には `open_failed` として記録し、そのあとは chombo の指摘と同じく `completeRoundAfterChombo` でラウンドを終えます。通ったオープンは記録せず、10 章の `completeRound()` で終えます。
+
+開発環境では、web の「チョンボ」メニューにある「チョンボのテスト」から `dev-chombo-scenario` を送ると、プロモードの対局を各チョンボの直前の場面に組み直せます。オープンが通らない手札の場面（`failed-open`）も同じ一覧にあります。`DevChomboScenarioUseCase` が手札・場・吹き・ネグリを組み直し、`new-round-started` と `update-turn` で全員に送ります。`NODE_ENV=production` では受け付けません。
 
 ## 9. field completion
 
@@ -358,14 +366,14 @@ checkpoint 復旧は `field_recovered` として game history に記録し、破
 
 ## 10. round 終了と次ラウンド
 
-全員の hand が空になると round end です。
+全員の hand が空になると round end です。プロモードでオープンを宣言した場合も、通っても通らなくても、その時点で round end になります（通らなかった場合は 8.5 のとおり相手チームに 5 点）。
 
 ### 10.1 round end で行うこと
 
-`CompleteFieldUseCase` は:
+round end の処理は `use-cases/helpers/round-completion.helper.ts` の `completeRound()` にまとまっていて、`CompleteFieldUseCase`（最後の field の完了時）と `DeclareOpenUseCase`（有効なオープン時）が共通で使います。`completeRound()` は:
 
 - highest declaration から declaring team を特定
-- wonFields を数える
+- wonFields を数える（オープン時は、まだ出していない field をオープンしたチームがすべて取ったものとして数える）
 - `ScoreService.calculatePlayPoints()` を使って play points を加算
 - `round-results` を返す
 

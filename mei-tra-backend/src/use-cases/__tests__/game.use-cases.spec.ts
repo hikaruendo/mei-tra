@@ -29,7 +29,9 @@ import {
   Field,
   CompletedField,
   FieldCheckpoint,
+  PlayState,
   Team,
+  ChomboViolation,
 } from '../../types/game.types';
 import { ICardService } from '../../services/interfaces/card-service.interface';
 import { IPlayService } from '../../services/interfaces/play-service.interface';
@@ -37,6 +39,7 @@ import { IScoreService } from '../../services/interfaces/score-service.interface
 import { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
 import { CardService } from '../../services/card.service';
 import { PlayService } from '../../services/play.service';
+import { ChomboService } from '../../services/chombo.service';
 import {
   BROKEN_HAND_REVEAL_PENDING_TTL_MS,
   REQUIRED_BROKEN_HAND_REVEAL_ERROR,
@@ -1620,6 +1623,75 @@ describe('Game Use Cases', () => {
       expect(roomGameState.saveState).not.toHaveBeenCalled();
     });
 
+    it('lets a pro-mode player declare while holding a required broken hand', async () => {
+      const roomService = createRoomServiceMock();
+      roomService.getRoom.mockResolvedValue({
+        settings: { gameMode: 'pro' },
+      } as Room);
+      const blowService = {
+        isValidDeclaration: jest.fn(() => false),
+        createDeclaration: jest.fn(),
+      };
+      const useCase = new DeclareBlowUseCase(
+        roomService,
+        blowService as never,
+        createCardServiceMock(),
+      );
+      const state = buildRequiredBrokenState();
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+        declaration: { trumpType: 'club', numberOfPairs: 6 },
+      });
+
+      // The guard lets the declaration through to the ordinary validity check.
+      expect(result).toEqual({ success: false, error: 'Invalid declaration' });
+      expect(blowService.isValidDeclaration).toHaveBeenCalled();
+    });
+
+    it('lets a pro-mode player pass while holding a required broken hand', async () => {
+      const roomService = createRoomServiceMock();
+      roomService.getRoom.mockResolvedValue({
+        settings: { gameMode: 'pro' },
+      } as Room);
+      const useCase = new PassBlowUseCase(
+        roomService,
+        {} as never,
+        createCardServiceMock(),
+      );
+      const state = buildRequiredBrokenState();
+      state.players[0].isPasser = true;
+      state.blowState.actionHistory = [
+        { type: 'pass', seatId: asSeatId('player-1'), timestamp: 1 },
+      ] as never;
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+        saveState: jest.fn(),
+      } as unknown as GameStateService;
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'player-1',
+      });
+
+      // The guard lets the pass through to the ordinary duplicate-pass check.
+      expect(result).toEqual({
+        success: false,
+        error: 'You have already passed in this blow phase',
+      });
+    });
+
     it('rejects pass outside blow phase', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PassBlowUseCase(
@@ -1840,6 +1912,127 @@ describe('Game Use Cases', () => {
   });
 
   describe('PlayCardUseCase', () => {
+    const createOffSuitPlayFixture = () => {
+      const currentField: Field = {
+        cards: ['K♠'],
+        playedBySeatIds: asSeatIds('player-2'),
+        baseCard: 'K♠',
+        dealerSeatId: asSeatId('player-2'),
+        isComplete: false,
+      };
+      const state = {
+        roundNumber: 1,
+        players: [
+          {
+            seatId: asSeatId('player-1'),
+            name: 'Player 1',
+            hand: ['5♠', 'A♥'],
+            team: 0 as Team,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-2'),
+            name: 'Player 2',
+            hand: ['3♣'],
+            team: 1 as Team,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-3'),
+            name: 'Player 3',
+            hand: ['4♦'],
+            team: 0 as Team,
+            isPasser: false,
+          },
+          {
+            seatId: asSeatId('player-4'),
+            name: 'Player 4',
+            hand: ['6♥'],
+            team: 1 as Team,
+            isPasser: false,
+          },
+        ],
+        blowState: { currentTrump: 'club' as const },
+        playState: {
+          currentField,
+          fields: [] as CompletedField[],
+          chomboViolations: [] as ChomboViolation[],
+        },
+        currentSeatId: asSeatId('player-1'),
+      };
+      const roomGameState = {
+        getState: jest.fn(() => state),
+        saveState: jest.fn(),
+        nextTurn: jest.fn(),
+        findPlayerByActorId: jest.fn(() => state.players[0]),
+        isPlayerTurn: jest.fn(() => true),
+      } as unknown as GameStateService;
+
+      return { currentField, state, roomGameState };
+    };
+
+    it('allows an off-suit card in pro mode', async () => {
+      const roomService = createRoomServiceMock();
+      const { currentField, state, roomGameState } = createOffSuitPlayFixture();
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+        undefined,
+        new ChomboService(createPlayRulesService()),
+      );
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.getRoom.mockResolvedValue({
+        settings: { gameMode: 'pro' },
+      } as Room);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'user-1',
+        card: 'A♥',
+      });
+
+      // Pro mode lets the illegal play through and only records it as a
+      // reportable chombo candidate.
+      expect(result.success).toBe(true);
+      expect(state.players[0].hand).toEqual(['5♠']);
+      expect(currentField.cards).toEqual(['K♠', 'A♥']);
+      expect(state.playState.chomboViolations).toEqual([
+        expect.objectContaining({
+          type: 'wrong-suit',
+          violatorSeatId: asSeatId('player-1'),
+          reportedBySeatId: null,
+        }),
+      ]);
+    });
+
+    it('rejects an off-suit card in normal mode', async () => {
+      const roomService = createRoomServiceMock();
+      const { currentField, state, roomGameState } = createOffSuitPlayFixture();
+      const useCase = new PlayCardUseCase(
+        roomService,
+        createPlayRulesService(),
+        undefined,
+        new ChomboService(createPlayRulesService()),
+      );
+      roomService.getRoomGameState.mockResolvedValue(roomGameState);
+      roomService.getRoom.mockResolvedValue({
+        settings: { gameMode: 'normal' },
+      } as Room);
+
+      const result = await useCase.execute({
+        roomId: 'room-1',
+        actorId: 'user-1',
+        card: 'A♥',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('You must play a card of suit ♠');
+      expect(state.players[0].hand).toEqual(['5♠', 'A♥']);
+      expect(currentField.cards).toEqual(['K♠']);
+      expect(state.playState.chomboViolations).toEqual([]);
+      expect(roomGameState.saveState).not.toHaveBeenCalled();
+    });
+
     it('plays a card and advances turn when field not complete', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new PlayCardUseCase(
@@ -2510,6 +2703,7 @@ describe('Game Use Cases', () => {
             event: 'play-setup-complete',
             payload: {
               negriCard: '6♥',
+              negriSeatId: 'com-timeout-1',
               startingSeatId: 'com-timeout-1',
             },
           },
@@ -2536,6 +2730,7 @@ describe('Game Use Cases', () => {
           event: 'play-setup-complete',
           payload: {
             negriCard: '6♥',
+            negriSeatId: 'com-timeout-1',
             startingSeatId: 'com-timeout-1',
           },
         },
@@ -2656,9 +2851,20 @@ describe('Game Use Cases', () => {
       const declareBlowUseCase = { execute: jest.fn() };
       const passBlowUseCase = { execute: jest.fn() };
       const selectNegriUseCase = { execute: jest.fn() };
+      const revealEvent = {
+        scope: 'room',
+        roomId: 'room-1',
+        event: 'broken-hand-revealed',
+        payload: {
+          seatId: 'com-0',
+          hand: ['J♠', 'J♣', 'J♥', 'J♦'],
+        },
+      };
       const revealBrokenHandUseCase = {
         prepare: jest.fn().mockResolvedValue({
           success: true,
+          delayMs: 5000,
+          events: [revealEvent],
           followUp: {
             roomId: 'room-1',
             seatId: asSeatId('com-0'),
@@ -2721,22 +2927,22 @@ describe('Game Use Cases', () => {
         actorId: 'com-0',
         seatId: asSeatId('com-0'),
       });
-      expect(revealBrokenHandUseCase.finalize).toHaveBeenCalledWith({
-        roomId: 'room-1',
-        seatId: asSeatId('com-0'),
-        handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+      // The redeal itself waits out the reveal delay, as it does for a player,
+      // so the caller finalizes on its own timer.
+      expect(revealBrokenHandUseCase.finalize).not.toHaveBeenCalled();
+      expect(result.brokenHandRevealTrigger).toEqual({
+        followUp: {
+          roomId: 'room-1',
+          seatId: asSeatId('com-0'),
+          handSnapshot: ['J♠', 'J♣', 'J♥', 'J♦'],
+        },
+        delayMs: 5000,
       });
       expect(comStrategyService.chooseBlowAction).not.toHaveBeenCalled();
       expect(declareBlowUseCase.execute).not.toHaveBeenCalled();
       expect(passBlowUseCase.execute).not.toHaveBeenCalled();
-      expect(result.events).toEqual([
-        {
-          scope: 'room',
-          roomId: 'room-1',
-          event: 'broken',
-          payload: { nextSeatId: 'com-0' },
-        },
-      ]);
+      expect(result.events).toEqual([revealEvent]);
+      expect(result.delayedEvents).toBeUndefined();
     });
   });
 
@@ -2786,6 +2992,17 @@ describe('Game Use Cases', () => {
             },
           ],
         },
+        playState: {
+          currentField: null,
+          negriCard: null,
+          negriSeatId: null,
+          neguri: {},
+          fields: [],
+          lastWinnerSeatId: null,
+          openDeclared: false,
+          openDeclarerSeatId: null,
+          fieldCheckpoint: null,
+        } as PlayState,
       };
 
       const roomGameState = {
@@ -2990,7 +3207,7 @@ describe('Game Use Cases', () => {
       });
 
       expect(preparation.success).toBe(true);
-      expect(preparation.delayMs).toBe(3000);
+      expect(preparation.delayMs).toBe(5000);
       expect(preparation.followUp).toBeDefined();
       expect(state.pendingBrokenHandReveal).toEqual({
         seatId: asSeatId('player-1'),

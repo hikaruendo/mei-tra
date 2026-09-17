@@ -5,6 +5,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -43,6 +44,7 @@ export default function RoomsScreen() {
   } = useGame();
   const [roomName, setRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState('5');
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,8 +90,13 @@ export default function RoomsScreen() {
       const points = Math.max(1, Number(pointsToWin) || 5);
       const name =
         roomName.trim() || t('rooms.defaultRoomName', { name: displayName });
-      const success = await createRoom(name, points);
+      const success = await createRoom(name, points, gameMode);
       if (success) {
+        // Web clears the form here too; otherwise the next room silently
+        // inherits the pro toggle.
+        setRoomName('');
+        setPointsToWin('5');
+        setGameMode('normal');
         router.push('/room/current');
         void requestRegistration();
       }
@@ -180,6 +187,14 @@ export default function RoomsScreen() {
               value={pointsToWin}
             />
           </View>
+          <View style={styles.pointsRow}>
+            <Text style={styles.label}>{t('rooms.proMode')}</Text>
+            <Switch
+              accessibilityLabel={t('rooms.proMode')}
+              onValueChange={(enabled) => setGameMode(enabled ? 'pro' : 'normal')}
+              value={gameMode === 'pro'}
+            />
+          </View>
           <Button
             disabled={submitting || connectionStatus !== 'connected'}
             loading={submitting}
@@ -220,9 +235,14 @@ export default function RoomsScreen() {
               <View key={room.id} style={styles.roomCard}>
                 <View style={styles.roomHeading}>
                   <View style={styles.roomTitleWrap}>
-                    <Text numberOfLines={1} style={styles.roomTitle}>
-                      {room.name}
-                    </Text>
+                    <View style={styles.roomTitleRow}>
+                      <Text numberOfLines={1} style={styles.roomTitle}>
+                        {room.name}
+                      </Text>
+                      {room.settings.gameMode === 'pro' ? (
+                        <Text style={styles.proBadge}>{t('rooms.proBadge')}</Text>
+                      ) : null}
+                    </View>
                     <Text style={styles.roomMeta}>
                       {t('rooms.capacity', {
                         current: humans.length,
@@ -376,9 +396,24 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  roomTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   roomTitle: {
+    flexShrink: 1,
     color: colors.text,
     fontSize: 19,
+    fontWeight: '800',
+  },
+  proBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: colors.panelStrong,
+    color: colors.gold,
+    fontSize: 11,
     fontWeight: '800',
   },
   roomMeta: {

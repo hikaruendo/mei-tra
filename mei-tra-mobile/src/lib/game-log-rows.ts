@@ -32,7 +32,19 @@ export interface RoundRow {
   inProgress: boolean;
 }
 
+/** One pro-mode incident (chombo report, broken hand) in the replay log. */
+export interface ProEventRow {
+  id: string;
+  timestamp: string;
+  text: string;
+}
 
+const violationLabelKeys: Record<string, string> = {
+  'negri-forget': 'chomboReport.negriForget',
+  'wrong-suit': 'chomboReport.wrongSuit',
+  'four-jack': 'chomboReport.fourJack',
+  'last-tanzen': 'chomboReport.lastTanzen',
+};
 
 function getTextDetail(
   event: GameHistoryReplayEventContract | undefined,
@@ -192,4 +204,114 @@ export function buildRoundTableRows(
         })),
       };
     });
+}
+
+/**
+ * The replay log deliberately prefers the name stored with the event over the
+ * current seat holder, so a seat that changed hands still reads correctly
+ * (web: GameHistoryDock's resolvePlayerName).
+ */
+function resolvePlayerName(
+  storedName: string | null | undefined,
+  seatId: string | null | undefined,
+  players: MobilePlayer[],
+): string {
+  return (
+    storedName?.trim() ||
+    players.find((player) => player.seatId === seatId)?.name.trim() ||
+    t('common.player')
+  );
+}
+
+function getPlayerDetailName(
+  event: GameHistoryReplayEventContract,
+  labelKey: string,
+  players: MobilePlayer[],
+): string {
+  const item = event.detailItems.find((detail) => detail.labelKey === labelKey);
+  if (item?.value.kind !== 'player') return t('common.player');
+  return resolvePlayerName(item.value.playerName, item.value.seatId, players);
+}
+
+function getTeamDetailLabel(
+  event: GameHistoryReplayEventContract,
+  labelKey: string,
+  teamNames?: TeamNames,
+): string {
+  const item = event.detailItems.find((detail) => detail.labelKey === labelKey);
+  if (item?.value.kind !== 'team') return t('common.unknown');
+  const { team } = item.value;
+  if (team !== 0 && team !== 1) return t('common.unknown');
+  return getTeamDisplayName(team, teamNames);
+}
+
+function proEventText(
+  event: GameHistoryReplayEventContract,
+  players: MobilePlayer[],
+  teamNames?: TeamNames,
+): string | null {
+  const actor = resolvePlayerName(
+    event.actorSeatId ? playerNamesOf(event)[event.actorSeatId] : null,
+    event.actorSeatId,
+    players,
+  );
+
+  if (event.actionType === 'chombo_reported') {
+    const violation = getTextDetail(event, 'violation');
+    const violationKey = violation ? violationLabelKeys[violation] : undefined;
+    return t('gameLog.chomboReported', {
+      player: actor,
+      violator: getPlayerDetailName(event, 'violator', players),
+      violation: violationKey
+        ? t(violationKey)
+        : (violation ?? t('common.unknown')),
+      team: getTeamDetailLabel(event, 'awardedTeam', teamNames),
+    });
+  }
+
+  if (event.actionType === 'open_failed') {
+    return t('gameLog.openFailed', {
+      player: actor,
+      team: getTeamDetailLabel(event, 'awardedTeam', teamNames),
+    });
+  }
+
+  if (event.actionType === 'broken_hand_revealed') {
+    return t('gameLog.brokenHandRevealed', {
+      player: actor,
+      nextPlayer: getPlayerDetailName(event, 'nextPlayer', players),
+    });
+  }
+
+  return null;
+}
+
+/**
+ * Chombo reports, failed opens and broken-hand reveals, oldest first. Web
+ * renders them in the replay timeline; without these a mobile player reviewing
+ * a pro game never sees that they happened.
+ */
+export function buildProEventRows(
+  replay: GameHistoryReplayViewContract | null,
+  players: MobilePlayer[] = [],
+  teamNames?: TeamNames,
+): ProEventRow[] {
+  if (!replay) return [];
+
+  return replay.rounds
+    .flatMap((round) => round.events)
+    .filter(
+      (event) =>
+        event.actionType === 'chombo_reported' ||
+        event.actionType === 'open_failed' ||
+        event.actionType === 'broken_hand_revealed',
+    )
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+    .map((event) => {
+      const text = proEventText(event, players, teamNames);
+      return text
+        ? { id: event.id, timestamp: event.timestamp, text }
+        : null;
+    })
+    .filter((row): row is ProEventRow => row !== null);
 }

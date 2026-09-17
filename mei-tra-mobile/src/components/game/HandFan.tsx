@@ -11,12 +11,18 @@ import {
 
 import { DealtCard } from '@/components/game/DealtCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
+import { draggableCardStyle } from '@/lib/draggable-card-style';
 import {
   handDropPlacement,
   handFanPitch,
   type HandDropPlacement,
 } from '@/lib/hand-drag';
+import { t } from '@/i18n';
 import { colors } from '@/theme/colors';
+import {
+  classifyCardDrop,
+  type CardDropAction,
+} from '@meitra/game-client/drag-action';
 
 /** How far the finger must travel sideways before the card is picked up. */
 const DRAG_ACTIVATE_PX = 6;
@@ -25,6 +31,11 @@ const DRAG_LIFT = 34;
 const SELECTED_LIFT = 28;
 const FAN_ROTATION_DEG = 15;
 const FAN_SPREAD_LIFT = 18;
+
+const dropActionLabelKeys: Record<CardDropAction, string> = {
+  play: 'board.play',
+  negri: 'board.setNegri',
+};
 
 const samePlacement = (
   a: HandDropPlacement | null,
@@ -43,9 +54,18 @@ interface HandFanProps {
   /** Omitted when cards cannot be picked to play, such as during the blow phase. */
   onSelectCard?: (card: string) => void;
   isCardDisabled?: (card: string) => boolean;
+  /** Lets the player pick cards up, to reorder them or, in pro mode, to drop them. */
   canReorder: boolean;
   /** Fires once per committed move, for the sound. */
   onReorder?: () => void;
+  onDropAction?: (card: string, action: CardDropAction) => void;
+  /**
+   * The drops that act right now. They are also offered as screen reader
+   * actions, because a screen reader cannot perform the drag.
+   */
+  dropActions?: readonly CardDropAction[];
+  /** Lets the parent stop its scroll view from panning while a card is held. */
+  onDragActiveChange?: (active: boolean) => void;
 }
 
 export function HandFan({
@@ -60,11 +80,15 @@ export function HandFan({
   isCardDisabled,
   canReorder,
   onReorder,
+  onDropAction,
+  dropActions = [],
+  onDragActiveChange,
 }: HandFanProps) {
   const [order, setOrder] = useState(cards);
   const orderRef = useRef(order);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [drop, setDrop] = useState<HandDropPlacement | null>(null);
+  const dropActionRef = useRef<'play' | 'negri' | null>(null);
   // The release event can arrive before React has re-rendered the last move, so
   // the drop the reorder commits is read from here rather than from state.
   const dropRef = useRef<HandDropPlacement | null>(null);
@@ -96,16 +120,33 @@ export function HandFan({
     }
   }, [cards]);
 
+  const dragActive = draggingCard !== null;
+  useEffect(() => {
+    if (!dragActive) return;
+    onDragActiveChange?.(true);
+    // Also runs when the fan unmounts mid-drag, which sends no release.
+    return () => onDragActiveChange?.(false);
+  }, [dragActive, onDragActiveChange]);
+
   const pitch = handFanPitch(cardWidth, cardMargin);
   const total = order.length;
 
   const endDrag = (card: string, committed: boolean) => {
     const placement = dropRef.current;
+    const action = dropActionRef.current;
+    dropActionRef.current = null;
     dropRef.current = null;
     setDraggingCard(null);
     setDrop(null);
 
-    if (!committed || !placement) return;
+    if (!committed) return;
+
+    // The parent takes a drop action only in pro mode, and only when the drop
+    // is legal, so the sideways half of the drag is still honoured below: a
+    // reorder must not be swallowed because the finger strayed vertically.
+    if (action) onDropAction?.(card, action);
+
+    if (!placement) return;
 
     const nextOrder = reorderHand(
       orderRef.current,
@@ -130,12 +171,15 @@ export function HandFan({
         return (
           <HandFanCard
             key={card}
-            canReorder={canReorder && total > 1}
+            // A lone card is still picked up: in pro mode dragging is how it
+            // is played, and a reorder of one card simply does nothing.
+            canReorder={canReorder}
             card={card}
             cardMargin={total > 1 ? cardMargin : 0}
             cardWidth={cardWidth}
             dealAnimationCue={dealAnimationCue}
             disabled={isCardDisabled?.(card) ?? false}
+            dropActions={dropActions}
             dropSide={drop?.card === card ? drop.side : null}
             index={index}
             isDragging={draggingCard === card}
@@ -143,8 +187,10 @@ export function HandFan({
               Math.pow(Math.abs(norm), 2) * FAN_SPREAD_LIFT +
               (isSelected ? -SELECTED_LIFT : 0)
             }
+            onAccessibilityDrop={(action) => onDropAction?.(card, action)}
             onDragEnd={(committed) => endDrag(card, committed)}
-            onDragMove={(dx) => {
+            onDragMove={(dx, dy) => {
+              dropActionRef.current = classifyCardDrop(dy);
               const next = handDropPlacement(
                 orderRef.current,
                 card,
@@ -179,12 +225,14 @@ interface HandFanCardProps {
   cardWidth: number;
   dealAnimationCue: DealAnimationCue | null;
   disabled: boolean;
+  dropActions: readonly CardDropAction[];
   dropSide: HandDropPlacement['side'] | null;
   index: number;
   isDragging: boolean;
   lift: number;
+  onAccessibilityDrop: (action: CardDropAction) => void;
   onDragEnd: (committed: boolean) => void;
-  onDragMove: (dx: number) => void;
+  onDragMove: (dx: number, dy: number) => void;
   onDragStart: () => void;
   onPress?: () => void;
   reducedMotion: boolean | null;
@@ -200,10 +248,12 @@ function HandFanCard({
   cardWidth,
   dealAnimationCue,
   disabled,
+  dropActions,
   dropSide,
   index,
   isDragging,
   lift,
+  onAccessibilityDrop,
   onDragEnd,
   onDragMove,
   onDragStart,
@@ -239,19 +289,20 @@ function HandFanCard({
 
     panResponder.current = PanResponder.create({
       // A tap has to keep reaching the card underneath, so the drag only claims
-      // the touch once the finger moves sideways. Capturing is what lets it take
+      // the touch after a meaningful horizontal or vertical movement. Capturing is what lets it take
       // the touch off the Pressable that is already holding it.
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
         live.current.canReorder &&
-        Math.abs(gesture.dx) > DRAG_ACTIVATE_PX &&
-        Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) > DRAG_ACTIVATE_PX,
       onPanResponderGrant: () => live.current.onDragStart(),
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
-        live.current.onDragMove(gesture.dx);
+        live.current.onDragMove(gesture.dx, gesture.dy);
       },
       // Once the card is held, the surrounding scroll view must not take it away.
+      // Refusing only covers JS responders; the parent also disables scrolling
+      // through onDragActiveChange, or the platform scroll pans anyway.
       onPanResponderTerminationRequest: () => false,
       onPanResponderRelease: () => release(true),
       onPanResponderTerminate: () => release(false),
@@ -263,6 +314,7 @@ function HandFanCard({
       {...panResponder.current.panHandlers}
       style={[
         styles.fanCard,
+        canReorder && draggableCardStyle,
         { marginHorizontal: cardMargin },
         isDragging && styles.fanCardDragging,
         {
@@ -299,8 +351,20 @@ function HandFanCard({
         seatId={seatId}
       >
         <PlayingCard
+          accessibilityActions={
+            dropActions.length > 0
+              ? dropActions.map((name) => ({
+                  name,
+                  label: t(dropActionLabelKeys[name]),
+                }))
+              : undefined
+          }
           card={card}
           disabled={disabled}
+          onAccessibilityAction={(name) => {
+            const action = dropActions.find((candidate) => candidate === name);
+            if (action) onAccessibilityDrop(action);
+          }}
           onPress={onPress}
           selected={selected}
           width={cardWidth}

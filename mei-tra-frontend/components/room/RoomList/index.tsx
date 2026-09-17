@@ -64,6 +64,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
+  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
   const { backendStatus, isLoading } = useBackendStatus();
   const effectiveIsConnected = isConnected ?? roomSocketConnected;
   const effectiveIsConnecting = isConnecting ?? roomSocketConnecting;
@@ -98,10 +99,11 @@ export const RoomList: React.FC<RoomListProps> = ({
       user?.email?.split('@')[0]?.trim() ||
       'Host';
     const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
-    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random');
+    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
 
     setNewRoomName('');
     setPointsToWin(5);
+    setGameMode('normal');
   };
 
   return (
@@ -126,6 +128,15 @@ export const RoomList: React.FC<RoomListProps> = ({
               className={styles.pointsToWinInput}
             />
           </div>
+          <label className={styles.proModeLabel}>
+            <input
+              className={styles.proModeCheckbox}
+              type="checkbox"
+              checked={gameMode === 'pro'}
+              onChange={(e) => setGameMode(e.target.checked ? 'pro' : 'normal')}
+            />
+            <span>{t('room.proMode')}</span>
+          </label>
           <button
             type="submit"
             className={styles.createButton}
@@ -179,7 +190,12 @@ export const RoomList: React.FC<RoomListProps> = ({
             return (
               <div key={room.id} className={styles.roomItem}>
                 <div className={styles.roomInfo}>
-                  <h3 title={room.name}>{room.name}</h3>
+                  <div className={styles.roomTitleRow}>
+                    <h3 title={room.name}>{room.name}</h3>
+                    {room.settings.gameMode === 'pro' && (
+                      <span className={styles.proBadge}>{t('room.proBadge')}</span>
+                    )}
+                  </div>
                   <p>{t('room.players')}: {actualPlayerCount}/{room.settings.maxPlayers}</p>
                   <p className={`${styles.status} ${getStatusClass(room.status)}`}>
                     {t('room.status')}: {getStatusText(room.status, t)}

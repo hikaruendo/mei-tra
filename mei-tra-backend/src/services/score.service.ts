@@ -1,9 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { TeamScore, TeamScoreRecord } from '../types/game.types';
+import {
+  ScoreRecord,
+  Team,
+  TeamScore,
+  TeamScoreRecord,
+} from '../types/game.types';
 import { IScoreService } from './interfaces/score-service.interface';
 
 @Injectable()
 export class ScoreService implements IScoreService {
+  addPoints(
+    team: Team,
+    points: number,
+    scores: { [key: number]: TeamScore },
+    records: Record<Team, ScoreRecord[]>,
+    reason: string,
+  ): void {
+    scores[team].play += points;
+    scores[team].total += points;
+    records[team] = [
+      ...records[team],
+      { points, timestamp: new Date(), reason },
+    ];
+  }
   calculatePlayPoints(declaredPairs: number, wonFields: number): number {
     const X = declaredPairs;
     const Y = wonFields;

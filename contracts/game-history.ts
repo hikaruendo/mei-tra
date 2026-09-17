@@ -13,6 +13,8 @@ export type GameHistoryActionType =
   | 'card_played'
   | 'field_recovered'
   | 'field_completed'
+  | 'chombo_reported'
+  | 'open_failed'
   | 'round_completed'
   | 'round_cancelled'
   | 'round_reset'
@@ -22,6 +24,7 @@ export type GameHistoryActionType =
 
 export type GameHistoryReplayMembershipActionType =
   | 'player_joined'
+  | 'player_reconnected'
   | 'player_left';
 
 export type GameHistoryReplayActionType =
@@ -127,6 +130,18 @@ export interface FieldRecoveredReplayDetailsContract {
   reason: string | null;
   fieldIndex: number | null;
   abandonedCards: string[];
+}
+
+export interface ChomboReportedReplayDetailsContract {
+  violatorSeatId: SeatId | null;
+  violationType: string | null;
+  isCorrect: boolean;
+  awardedTeam: number | null;
+}
+
+export interface OpenFailedReplayDetailsContract {
+  hand: string[];
+  awardedTeam: number | null;
 }
 
 export interface RoundCompletedReplayDetailsContract {
@@ -257,6 +272,16 @@ export type GameHistoryReplayEventContract =
       FieldCompletedReplayDetailsContract
     >
   | GameHistoryReplayEventBaseContract<
+      'chombo_reported',
+      'play',
+      ChomboReportedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'open_failed',
+      'play',
+      OpenFailedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
       'round_completed',
       'round',
       RoundCompletedReplayDetailsContract
@@ -288,6 +313,11 @@ export type GameHistoryReplayEventContract =
     >
   | GameHistoryReplayEventBaseContract<
       'player_joined',
+      'membership',
+      PlayerMembershipReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'player_reconnected',
       'membership',
       PlayerMembershipReplayDetailsContract
     >

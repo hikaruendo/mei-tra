@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
+import { asSeatId } from '@contracts/ids';
 import { PlayerHand } from '@/components/game/PlayerHand';
-import type { GameActions, Player } from '@/types/game.types';
+import type { Field, GameActions, Player } from '@/types/game.types';
 
 jest.mock('next-intl', () => ({
   useTranslations: (namespace: string) => {
@@ -142,6 +143,30 @@ const buildPlayerHand = (
 const renderPlayerHand = (
   overrides: Partial<React.ComponentProps<typeof PlayerHand>> = {},
 ) => render(buildPlayerHand(overrides));
+
+const ledField = (baseCard: string): Field => ({
+  cards: [baseCard],
+  playedBySeatIds: [asSeatId('player-1')],
+  baseCard,
+  dealerSeatId: asSeatId('player-1'),
+  isComplete: false,
+});
+
+// '5♠' follows the led suit; 'A♥' does not while a spade is in hand.
+const followSuitTurn = {
+  position: 'bottom',
+  gamePhase: 'play',
+  whoseTurn: 'player-2',
+  currentSeatId: 'player-2',
+  currentField: ledField('9♠'),
+  currentTrump: 'tra',
+  player: { ...otherPlayer, hand: ['5♠', 'A♥'] },
+} as const;
+
+const handCards = () =>
+  screen
+    .getAllByTestId('card-front')
+    .map((card) => card.parentElement as HTMLElement);
 
 describe('PlayerHand', () => {
   afterEach(() => {
@@ -601,5 +626,328 @@ describe('PlayerHand', () => {
     );
 
     expect(onSpectatorPerspectiveChange).toHaveBeenCalledWith('player-2');
+  });
+
+  it('reveals a four-jack hand automatically on its blow turn in normal mode', () => {
+    const revealBrokenHand = gameActions.revealBrokenHand as jest.Mock;
+    revealBrokenHand.mockClear();
+
+    renderPlayerHand({
+      player: { ...otherPlayer, seatId: 'player-1', hasRequiredBroken: true },
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'normal',
+    });
+
+    expect(revealBrokenHand).toHaveBeenCalledWith('player-1');
+  });
+
+  it('leaves a four-jack hand to the player in pro mode', () => {
+    const revealBrokenHand = gameActions.revealBrokenHand as jest.Mock;
+    revealBrokenHand.mockClear();
+
+    renderPlayerHand({
+      player: { ...otherPlayer, seatId: 'player-1', hasRequiredBroken: true },
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'pro',
+    });
+
+    expect(revealBrokenHand).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'revealBroken' }));
+
+    expect(revealBrokenHand).toHaveBeenCalledWith('player-1');
+  });
+
+  it.each(['normal', 'pro'] as const)(
+    'shows the broken hand button only for a broken hand in %s mode',
+    (gameMode) => {
+      const blowTurn = {
+        position: 'bottom',
+        gamePhase: 'blow',
+        whoseTurn: 'player-1',
+        isCurrentTurn: true,
+        currentSeatId: 'player-1',
+        gameMode,
+      } as const;
+      const { rerender } = renderPlayerHand({
+        ...blowTurn,
+        player: { ...otherPlayer, seatId: 'player-1' },
+      });
+
+      expect(
+        screen.queryByRole('button', { name: 'revealBroken' }),
+      ).not.toBeInTheDocument();
+
+      rerender(
+        buildPlayerHand({
+          ...blowTurn,
+          player: { ...otherPlayer, seatId: 'player-1', hasBroken: true },
+        }),
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'revealBroken' }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it('hides the broken hand button once the player has acted or the blow is over', () => {
+    const brokenPlayer: Player = {
+      ...otherPlayer,
+      seatId: 'player-1',
+      hasBroken: true,
+    };
+    const blowTurn = {
+      player: brokenPlayer,
+      position: 'bottom',
+      gamePhase: 'blow',
+      whoseTurn: 'player-1',
+      isCurrentTurn: true,
+      currentSeatId: 'player-1',
+      gameMode: 'pro',
+    } as const;
+    const { rerender } = renderPlayerHand({
+      ...blowTurn,
+      hasActedInBlow: true,
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'revealBroken' }),
+    ).not.toBeInTheDocument();
+
+    rerender(buildPlayerHand({ ...blowTurn, gamePhase: 'play' }));
+
+    expect(
+      screen.queryByRole('button', { name: 'revealBroken' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('greys out an illegal card in normal mode and refuses to select it', () => {
+    const onCardSelection = jest.fn();
+    renderPlayerHand({ ...followSuitTurn, gameMode: 'normal', onCardSelection });
+
+    const [legalCard, illegalCard] = handCards();
+    expect(illegalCard).toHaveClass('unplayable');
+    expect(illegalCard).not.toHaveClass('playable');
+    expect(legalCard).toHaveClass('playable');
+
+    fireEvent.click(illegalCard);
+    expect(screen.queryByRole('button', { name: 'play' })).not.toBeInTheDocument();
+    expect(onCardSelection).not.toHaveBeenCalled();
+
+    fireEvent.click(legalCard);
+    expect(screen.getByRole('button', { name: 'play' })).toBeInTheDocument();
+    expect(onCardSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves an illegal card selectable in pro mode', () => {
+    renderPlayerHand({ ...followSuitTurn, gameMode: 'pro' });
+
+    const [, illegalCard] = handCards();
+    expect(illegalCard).toHaveClass('playable');
+    expect(illegalCard).not.toHaveClass('unplayable');
+    expect(illegalCard.parentElement).toHaveAttribute(
+      'aria-roledescription',
+      'draggable',
+    );
+  });
+
+  it('closes the pro Negri window once the round fields are all played', () => {
+    const proNegriTurn = {
+      ...followSuitTurn,
+      whoseTurn: 'player-1',
+      gameMode: 'pro',
+      currentHighestDeclaration: { seatId: 'player-2' },
+      completedFieldCount: 9,
+    } as const;
+    const { rerender } = renderPlayerHand(proNegriTurn);
+
+    expect(screen.getByText('Negri ↓')).toBeInTheDocument();
+
+    rerender(buildPlayerHand({ ...proNegriTurn, completedFieldCount: 10 }));
+
+    expect(screen.queryByText('Negri ↓')).not.toBeInTheDocument();
+  });
+
+  it('shows a revealed hand as rank and suit marks', () => {
+    const player: Player = { ...otherPlayer, hand: ['H-A', 'S-2'] };
+    const { rerender } = renderPlayerHand({ player });
+
+    expect(screen.getAllByTestId('card-back')).toHaveLength(2);
+
+    rerender(buildPlayerHand({ player, revealedHand: ['H-A', 'S-2'] }));
+
+    expect(screen.queryAllByTestId('card-back')).toHaveLength(0);
+    expect(screen.queryAllByTestId('card-front')).toHaveLength(0);
+    expect(screen.getByText('H-A')).toBeInTheDocument();
+    expect(screen.getByText('S-2')).toBeInTheDocument();
+  });
+});
+
+describe('PlayerHand pro mode drag', () => {
+  // jsdom has no PointerEvent, and dnd-kit reads the pointer position from it.
+  class TestPointerEvent extends MouseEvent {
+    readonly isPrimary = true;
+    readonly pointerId = 1;
+  }
+  const originalPointerEvent = window.PointerEvent;
+
+  beforeAll(() => {
+    window.PointerEvent = TestPointerEvent as typeof PointerEvent;
+  });
+
+  afterAll(() => {
+    window.PointerEvent = originalPointerEvent;
+  });
+
+  afterEach(() => {
+    // jsdom has no hit testing either; each test points at a card itself.
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+    jest.mocked(gameActions.playCard).mockClear();
+  });
+
+  const pointAt = (element: HTMLElement) => {
+    Object.defineProperty(element, 'getBoundingClientRect', {
+      value: () => ({ left: 100, width: 80 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => element,
+    });
+  };
+
+  const handOrder = () =>
+    screen.getAllByTestId('card-front').map((card) => card.textContent);
+
+  const handContainer = () => handCards()[0].closest('.handContainer');
+
+  const markedCards = () =>
+    handCards().filter((card) => /insertBefore|insertAfter/.test(card.className));
+
+  const drag = async (
+    card: HTMLElement,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    onMoved: () => void = () => {},
+  ) => {
+    await act(async () => {
+      fireEvent.pointerDown(card, { clientX: from.x, clientY: from.y, button: 0 });
+      // Clears dnd-kit's activation distance before the real move.
+      fireEvent.pointerMove(document, { clientX: from.x + 10, clientY: from.y });
+    });
+    await act(async () => {
+      fireEvent.pointerMove(document, { clientX: to.x, clientY: to.y });
+    });
+    try {
+      onMoved();
+    } finally {
+      // Always release: a drag left open would carry into the next test.
+      await act(async () => {
+        fireEvent.pointerUp(document, { clientX: to.x, clientY: to.y });
+      });
+    }
+  };
+
+  it('reorders the hand when a card is dropped sideways on another card', async () => {
+    const onHandReorder = jest.fn();
+    renderPlayerHand({
+      gameMode: 'pro',
+      currentSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+      onHandReorder,
+    });
+    const [first, , third] = handCards();
+    pointAt(third);
+
+    await drag(first, { x: 20, y: 50 }, { x: 170, y: 50 }, () => {
+      expect(third.className).toMatch(/insertAfter/);
+      // Turns off :hover lift on the cards the held one passes over.
+      expect(handContainer()).toHaveClass('holdingCard');
+    });
+
+    expect(handContainer()).not.toHaveClass('holdingCard');
+    expect(handOrder()).toEqual(['S-2', 'D-3', 'H-A']);
+    expect(onHandReorder).toHaveBeenCalledTimes(1);
+    // Moved cards remount, so the marker is checked on a fresh query.
+    expect(markedCards()).toHaveLength(0);
+  });
+
+  it('plays a card dropped upward on its turn without also reordering', async () => {
+    const onHandReorder = jest.fn();
+    renderPlayerHand({
+      gameMode: 'pro',
+      whoseTurn: 'player-2',
+      currentSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['H-A', 'S-2'] },
+      onHandReorder,
+    });
+    const [first, second] = handCards();
+    // Released over another card, so only the play keeps it from reordering.
+    pointAt(second);
+
+    await drag(first, { x: 20, y: 200 }, { x: 170, y: 100 }, () => {
+      // The release will play, so no marker may promise a reorder.
+      expect(markedCards()).toHaveLength(0);
+    });
+
+    expect(gameActions.playCard).toHaveBeenCalledWith('H-A');
+    expect(onHandReorder).not.toHaveBeenCalled();
+    expect(handOrder()).toEqual(['H-A', 'S-2']);
+  });
+
+  it('marks a sideways reorder at the same height when the release cannot play', async () => {
+    renderPlayerHand({
+      gameMode: 'pro',
+      whoseTurn: 'player-1',
+      currentSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['H-A', 'S-2'] },
+    });
+    const [first, second] = handCards();
+    pointAt(second);
+
+    // Not this player's turn, so the upward release reorders instead.
+    await drag(first, { x: 20, y: 200 }, { x: 170, y: 100 }, () => {
+      expect(markedCards()).toHaveLength(1);
+    });
+
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    expect(handOrder()).toEqual(['S-2', 'H-A']);
+  });
+
+  it('drops the held card when the hand is dealt again mid-drag', async () => {
+    const onHandReorder = jest.fn();
+    const props = {
+      gameMode: 'pro',
+      currentSeatId: 'player-2',
+      onHandReorder,
+    } as const;
+    const { rerender } = renderPlayerHand({
+      ...props,
+      player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+    });
+    const [first, , third] = handCards();
+    pointAt(third);
+
+    await drag(first, { x: 20, y: 50 }, { x: 170, y: 50 }, () => {
+      // An all-pass round deals H-A back, so the drag's card is still mounted.
+      rerender(buildPlayerHand({
+        ...props,
+        player: { ...otherPlayer, hand: ['H-A', 'C-4', 'D-5'] },
+      }));
+      pointAt(handCards()[2]);
+      expect(handContainer()).not.toHaveClass('holdingCard');
+    });
+
+    expect(onHandReorder).not.toHaveBeenCalled();
+    expect(handOrder()).toEqual(['H-A', 'C-4', 'D-5']);
+    expect(markedCards()).toHaveLength(0);
   });
 });

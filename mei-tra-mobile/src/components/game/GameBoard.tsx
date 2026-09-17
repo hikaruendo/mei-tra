@@ -1,5 +1,13 @@
-import type { TrumpType } from '@meitra/contracts/game';
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
+import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
+import {
+  OPEN_MAX_HAND_SIZE,
+  type ChomboViolationType,
+  type DevChomboScenarioType,
+  type TrumpType,
+} from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
+import type { CardDropAction } from '@meitra/game-client/drag-action';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
   GameHistoryReplayViewContract,
@@ -35,6 +43,7 @@ import { Button } from '@/components/ui/Button';
 import { LiquidGlassSurface } from '@/components/ui/LiquidGlassSurface';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { isCardPlayable } from '@/lib/cards';
+import { confirmAction } from '@/lib/confirm-action';
 import {
   getCardSeatPosition,
   getSeatOrderWithSelfBottom,
@@ -61,10 +70,15 @@ interface GameBoardProps {
   onDeclare: (trump: TrumpType, pairs: number) => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
+  onDeclareOpen?: () => void;
+  onRevealBrokenHand?: () => void;
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
   onPlayCard: (card: string) => void;
+  onReportChombo?: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  /** Development builds only. */
+  onSetupChomboScenario?: (violationType: DevChomboScenarioType) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
@@ -82,10 +96,14 @@ export function GameBoard({
   onDeclare,
   onPass,
   onSelectNegri,
+  onDeclareOpen = () => undefined,
+  onRevealBrokenHand = () => undefined,
   onCardSelection = () => undefined,
   onCancel = () => undefined,
   onHandReorder = () => undefined,
   onPlayCard,
+  onReportChombo = () => undefined,
+  onSetupChomboScenario,
   onSelectBaseSuit,
   onReplaceWithCOM,
   onLeave,
@@ -104,7 +122,9 @@ export function GameBoard({
   const [showStrength, setShowStrength] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showChombo, setShowChombo] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [handDragActive, setHandDragActive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
   const [spectatorPerspectiveId, setSpectatorPerspectiveId] = useState<
     string | null
@@ -182,6 +202,14 @@ export function GameBoard({
       ),
     [leftPlayer, topPlayer, rightPlayer],
   );
+  // COM seats cannot be reported (web: ChomboReportPanel).
+  const chomboReportTargets = useMemo(
+    () =>
+      opponentSlots
+        .map(({ player }) => player)
+        .filter((player) => !player.isCOM),
+    [opponentSlots],
+  );
   const teamFieldCounts = useMemo(() => {
     const counts: Record<number, number> = { 0: 0, 1: 0 };
     for (const field of game.fields) {
@@ -190,20 +218,73 @@ export function GameBoard({
     return counts;
   }, [game.fields]);
   const highest = game.blowState.currentHighestDeclaration;
+  const isProMode = game.gameMode === 'pro';
   const mustSelectNegri =
+    !isProMode &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
     highest?.seatId === game.youSeatId &&
     !game.negriCard;
   const isMyTurn =
     !game.isSpectator && game.currentTurnSeatId === game.youSeatId;
+  const canPlaceProNegri =
+    isProMode &&
+    !game.isSpectator &&
+    game.gamePhase === 'play' &&
+    highest?.seatId === game.youSeatId &&
+    !game.negriCard &&
+    game.fields.length < 10;
   const isHandPlayPhase = game.gamePhase === 'play' && !game.isSpectator;
+  // The hand renders during the blow phase too, so the drop affordance needs
+  // its own phase gate or it offers plays the server refuses. The drag and the
+  // screen reader actions both read this list, so they offer the same moves.
+  const proDropActions: CardDropAction[] =
+    isProMode && isHandPlayPhase
+      ? [
+          ...(isMyTurn ? (['play'] as const) : []),
+          ...(canPlaceProNegri ? (['negri'] as const) : []),
+        ]
+      : [];
+  const canProDrop = proDropActions.length > 0;
+  const canReportChombo =
+    isProMode && isHandPlayPhase && chomboReportTargets.length > 0;
+  const setupChomboScenario =
+    isProMode &&
+    !game.isSpectator &&
+    (game.gamePhase === 'blow' || game.gamePhase === 'play')
+      ? onSetupChomboScenario
+      : undefined;
+  const hasChomboSheet = canReportChombo || Boolean(setupChomboScenario);
   const phaseLabel =
     game.gamePhase === 'blow'
       ? t('board.phaseBlow')
       : game.gamePhase === 'play'
         ? t('board.phasePlay')
         : t('board.phaseWaiting');
+  const canDeclareOpen =
+    isProMode &&
+    !actionsDisabled &&
+    !game.isSpectator &&
+    game.gamePhase === 'play' &&
+    !game.openDeclared &&
+    !game.openResolved &&
+    Boolean(highest) &&
+    Boolean(self) &&
+    selfHandCount > 0 &&
+    selfHandCount <= OPEN_MAX_HAND_SIZE;
+  const hasActedInBlow =
+    Boolean(self?.isPasser) ||
+    game.blowState.declarations.some(
+      (declaration) => declaration.seatId === self?.seatId,
+    ) ||
+    game.blowState.actionHistory.some(
+      (action) => action.seatId === self?.seatId,
+    );
+  const canRevealBrokenHand =
+    game.gamePhase === 'blow' &&
+    isMyTurn &&
+    !hasActedInBlow &&
+    Boolean(self?.hasBroken || (isProMode && self?.hasRequiredBroken));
   const currentTrump = game.blowState.currentTrump;
   const needsBaseSuit =
     !game.isSpectator &&
@@ -215,12 +296,7 @@ export function GameBoard({
       Boolean(
         selectedCard &&
           self &&
-          isCardPlayable(
-            self.hand,
-            selectedCard,
-            game.currentField,
-            currentTrump,
-          ),
+          isCardPlayable(self.hand, selectedCard, game.currentField, currentTrump),
       ),
     [currentTrump, game.currentField, selectedCard, self],
   );
@@ -243,6 +319,12 @@ export function GameBoard({
     game.blowState.currentHighestDeclaration?.timestamp,
     game.negriCard,
   ]);
+
+  // A round can end while the sheet is open; without this it would pop back
+  // open the next time a report becomes possible.
+  useEffect(() => {
+    if (!hasChomboSheet) setShowChombo(false);
+  }, [hasChomboSheet]);
 
   const fieldsCount = game.fields.length;
   const prevFieldsCount = useRef(fieldsCount);
@@ -323,10 +405,15 @@ export function GameBoard({
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        scrollEnabled={!handDragActive}
         showsVerticalScrollIndicator={false}
+        testID="game-board-scroll"
       >
         <View style={styles.topBar}>
           <Text style={styles.phase}>{phaseLabel}</Text>
+          {canRevealBrokenHand ? (
+            <Button onPress={onRevealBrokenHand}>{t('board.revealBroken')}</Button>
+          ) : null}
           {highest ? (
             <Text style={styles.trumpBadge}>
               {trumpLabel(highest.trumpType)} {highest.numberOfPairs}
@@ -334,8 +421,7 @@ export function GameBoard({
           ) : null}
         </View>
 
-
-        {showStrength && currentTrump ? (
+        {!isProMode && showStrength && currentTrump ? (
           <View style={styles.strengthPanel}>
             <Text style={styles.strengthOrder}>
               {getStrengthOrderLabel(currentTrump)}
@@ -375,6 +461,7 @@ export function GameBoard({
                     : undefined
                 }
                 player={player}
+                revealedHand={game.revealedHands?.[player.seatId]}
                 dealAnimationCue={dealAnimationCue}
                 reducedMotion={reducedMotion}
                 teamFieldCounts={teamFieldCounts}
@@ -570,6 +657,15 @@ export function GameBoard({
                   )
                 ) : null}
 
+            {canProDrop ? (
+              <View style={styles.proDropZones} testID="pro-drop-zones">
+                <Text style={styles.proDropZonePlay}>{t('board.dropToPlay')} ↑</Text>
+                {highest?.seatId === self.seatId && !game.negriCard ? (
+                  <Text style={styles.proDropZoneNegri}>{t('seat.negri')} ↓</Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <HandFan
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
@@ -578,18 +674,24 @@ export function GameBoard({
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
-                (actionsDisabled ||
+                  (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
+                  actionsDisabled ||
                   Boolean(pendingAction) ||
-                  !isMyTurn ||
-                  !isCardPlayable(
-                    self.hand,
-                    card,
-                    game.currentField,
-                    currentTrump,
-                  ))
+                  (!isMyTurn && !canPlaceProNegri))
               }
               onReorder={onHandReorder}
-              onSelectCard={isHandPlayPhase ? toggleSelectedCard : undefined}
+              onDragActiveChange={setHandDragActive}
+              dropActions={proDropActions}
+              onDropAction={(card, action) => {
+                if (!proDropActions.includes(action)) return;
+                if (action === 'negri') onSelectNegri(card);
+                else onPlayCard(card);
+              }}
+              // Pro mode plays by dragging only, as the web hand does
+              // (PlayerHand handleCardClick), so a tap selects nothing.
+              onSelectCard={
+                isHandPlayPhase && !isProMode ? toggleSelectedCard : undefined
+              }
               reducedMotion={reducedMotion}
               seatId={self.seatId}
               selectedCard={selectedCard}
@@ -633,6 +735,24 @@ export function GameBoard({
                 )}
                 reducedMotion={reducedMotion}
               />
+            ) : null}
+            {/* Below the hand and the taken fields, where the web table puts it.
+                An open reveals the hand and cannot be taken back, so it asks first. */}
+            {canDeclareOpen ? (
+              <Button
+                onPress={() =>
+                  confirmAction({
+                    title: t('game.openConfirmTitle'),
+                    message: t('game.openConfirmMessage'),
+                    confirmLabel: t('game.openConfirm'),
+                    onConfirm: onDeclareOpen,
+                  })
+                }
+                style={styles.openButton}
+                testID="declare-open"
+              >
+                {t('game.openAction')}
+              </Button>
             ) : null}
           </View>
         ) : null}
@@ -689,7 +809,7 @@ export function GameBoard({
             >
               <Text style={styles.optionsCloseText}>×</Text>
             </Pressable>
-            {currentTrump ? (
+            {!isProMode && currentTrump ? (
               <Button
                 onPress={() => {
                   setShowStrength((v) => !v);
@@ -721,6 +841,18 @@ export function GameBoard({
                 variant="secondary"
               >
                 {t('board.gameLog')}
+              </Button>
+            ) : null}
+            {hasChomboSheet ? (
+              <Button
+                onPress={() => {
+                  setShowChombo(true);
+                  setShowOptions(false);
+                }}
+                testID="game-options-chombo"
+                variant="secondary"
+              >
+                {t('chomboReport.menuLabel')}
               </Button>
             ) : null}
             <Button
@@ -769,6 +901,34 @@ export function GameBoard({
             summary={history.summary}
             teamNames={game.teamNames}
           />
+        </ModalSheet>
+      ) : null}
+
+      {hasChomboSheet ? (
+        <ModalSheet
+          closeLabel={t('board.close')}
+          onClose={() => setShowChombo(false)}
+          testID="game-chombo-sheet"
+          title={t('chomboReport.menuLabel')}
+          visible={showChombo}
+        >
+          <ScrollView contentContainerStyle={styles.chomboSheetContent}>
+            {canReportChombo ? (
+              <ChomboReportPanel
+                onReport={onReportChombo}
+                onReported={() => setShowChombo(false)}
+                players={chomboReportTargets}
+              />
+            ) : null}
+            {setupChomboScenario ? (
+              <ChomboScenarioPanel
+                onSelect={(violationType) => {
+                  setShowChombo(false);
+                  setupChomboScenario(violationType);
+                }}
+              />
+            ) : null}
+          </ScrollView>
         </ModalSheet>
       ) : null}
 
@@ -983,6 +1143,10 @@ const styles = StyleSheet.create({
   handSection: {
     gap: 8,
   },
+  openButton: {
+    alignSelf: 'center',
+    minWidth: 128,
+  },
   selfRow: {
     flexDirection: 'row',
     gap: 8,
@@ -1046,6 +1210,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
   },
+  proDropZones: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+    marginBottom: 6,
+  },
+  proDropZonePlay: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  proDropZoneNegri: {
+    color: colors.gold,
+    fontSize: 12,
+  },
   selectedActions: {
     flexDirection: 'row',
     gap: 10,
@@ -1093,5 +1271,10 @@ const styles = StyleSheet.create({
   historySheetContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  chomboSheetContent: {
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
 });

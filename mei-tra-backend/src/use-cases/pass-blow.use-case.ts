@@ -71,7 +71,11 @@ export class PassBlowUseCase implements IPassBlowUseCase {
         return { success: false, error: "It's not your turn to pass" };
       }
 
-      const requiredBrokenError = getRequiredBrokenHandRevealError(player);
+      const room = await this.roomService.getRoom(roomId);
+      const requiredBrokenError = getRequiredBrokenHandRevealError(
+        player,
+        room?.settings.gameMode,
+      );
       if (requiredBrokenError) {
         return { success: false, error: requiredBrokenError };
       }
@@ -112,7 +116,6 @@ export class PassBlowUseCase implements IPassBlowUseCase {
           actedCount: countPlayersActedInBlow(state.players, state.blowState),
         },
       });
-      const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
         {
@@ -225,7 +228,7 @@ export class PassBlowUseCase implements IPassBlowUseCase {
     state.blowState.currentHighestDeclaration = null;
 
     // 全員パスの再配りでは吹き始めは移らず、同じ席がもう一度最初に吹く。
-    // 吹き始めが進むのはラウンド成立時 (CompleteFieldUseCase.prepareNextRound) と
+    // 吹き始めが進むのはラウンド成立時 (round-completion.helper の prepareNextRound) と
     // ブロークン / 4ジャックの再配り (RevealBrokenHandUseCase) だけ。
     const firstBlowIndex =
       state.blowState.currentBlowIndex % state.players.length;

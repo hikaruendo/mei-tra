@@ -1,8 +1,12 @@
 import type {
   PlayerContract,
+  ChomboResolvedPayload,
+  OpenDeclaredPayload,
   ReconnectionFailureCode,
   TeamNames,
   TrumpType,
+  ChomboViolationType,
+  DevChomboScenarioType,
 } from '@meitra/contracts/game';
 import type {
   AckableClientEvent,
@@ -73,6 +77,8 @@ import {
   type MobileSocket,
 } from '@/lib/realtime';
 import { roomStorage } from '@/lib/room-storage';
+import { serverErrorTranslation } from '@meitra/game-client/server-errors';
+import { getTeamDisplayName } from '@/lib/team-labels';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import type {
   ConnectionStatus,
@@ -81,6 +87,23 @@ import type {
 } from '@/types/game';
 import type { FeedbackMessage } from '@/types/feedback';
 
+/**
+ * How a notice should read. The web app routes a failed open and an incorrect
+ * chombo report to its error style and the successful ones to success; mobile
+ * carries the same distinction on the notice itself rather than through the
+ * error slot, which is sticky and would mask later messages.
+ */
+export type NoticeSeverity = 'success' | 'error';
+
+/** A {@link FeedbackMessage} that may also carry a severity. */
+export type NoticeMessage =
+  | string
+  | {
+      key: string;
+      params?: Record<string, string | number>;
+      severity?: NoticeSeverity;
+    };
+
 interface MobileState {
   rooms: MobileRoom[];
   currentRoom: MobileRoom | null;
@@ -88,7 +111,7 @@ interface MobileState {
   pendingGamePatches: Partial<MobileGameSnapshot> | null;
   connectionStatus: ConnectionStatus;
   error: FeedbackMessage | null;
-  notice: FeedbackMessage | null;
+  notice: NoticeMessage | null;
   recoveryNotice: FeedbackMessage | null;
   gameResult: GameResultSnapshot | null;
   /**
@@ -113,7 +136,7 @@ type Action =
   | { type: 'playerIdleCleared'; seatId: string }
   | { type: 'playerConvertedToCom'; seatId: string }
   | { type: 'error'; message: FeedbackMessage | null }
-  | { type: 'notice'; message: FeedbackMessage | null }
+  | { type: 'notice'; message: NoticeMessage | null }
   | { type: 'recoveryNotice'; message: FeedbackMessage | null }
   | { type: 'gameResult'; result: GameResultSnapshot | null }
   | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
@@ -295,7 +318,12 @@ function reducer(state: MobileState, action: Action): MobileState {
     case 'error':
       return { ...state, error: action.message };
     case 'notice':
-      return { ...state, notice: action.message };
+      // The banner shows `error ?? notice` and an ordinary error only clears on
+      // dismiss, so a newer notice takes the slot instead of being masked by a
+      // stale one. The persistent recovery notice lives in its own slot.
+      return action.message
+        ? { ...state, notice: action.message, error: null }
+        : { ...state, notice: null };
     case 'recoveryNotice':
       return { ...state, recoveryNotice: action.message };
     case 'gameResult':
@@ -339,7 +367,7 @@ interface GameContextValue extends MobileState {
   isHost: boolean;
   refreshRooms: () => void;
   resumeRoom: (roomId: string) => Promise<void>;
-  createRoom: (name: string, pointsToWin: number) => Promise<boolean>;
+  createRoom: (name: string, pointsToWin: number, gameMode?: 'normal' | 'pro') => Promise<boolean>;
   joinRoom: (roomId: string) => Promise<boolean>;
   watchRoom: (roomId: string) => Promise<boolean>;
   leaveRoom: () => Promise<boolean>;
@@ -353,6 +381,10 @@ interface GameContextValue extends MobileState {
   playCancelSound: () => void;
   playHandReorderSound: () => void;
   playCard: (card: string) => void;
+  reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
+  /** Present in development builds only, like the web hook. */
+  setupChomboScenario?: (violationType: DevChomboScenarioType) => void;
+  declareOpen: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
   removePlayer: (targetSeatId: string) => void;
@@ -386,6 +418,10 @@ const toMobileGamePatch = (
   negriCard: game.negriCard,
   negriSeatId: game.negriSeatId,
   revealedAgari: game.revealedAgari,
+  revealedHands: game.revealedHands,
+  openDeclared: game.openDeclared,
+  openResolved: game.openResolved,
+  gameOver: game.gameOver,
   fields: game.fields,
 });
 
@@ -761,6 +797,20 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       const snapshot = normalizeGameStatePayload(payload);
+      if (payload.gameOver) {
+        gameResultTokenRef.current += 1;
+        dispatch({
+          type: 'gameResult',
+          result: buildGameResultSnapshot({
+            payload: payload.gameOver,
+            players: snapshot.players,
+            viewerSeatId: snapshot.youSeatId,
+            isSpectator: snapshot.isSpectator,
+            teamNames: snapshot.teamNames,
+            token: gameResultTokenRef.current,
+          }),
+        });
+      }
       dispatch({
         type: 'game',
         // The bootstrap snapshot right after game start already carries the
@@ -852,6 +902,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
       applyGameServerEvent({ type: 'blow-updated', payload });
     });
+    socket.on('broken-hand-revealed', (payload) => {
+      applyGameServerEvent({ type: 'broken-hand-revealed', payload });
+    });
     socket.on('broken', (payload) => {
       pendingNegriCardRef.current = null;
       startDealAnimation('broken', payload.players);
@@ -873,7 +926,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });
-      dispatch({ type: 'notice', message: payload.message });
+      // payload.message is fixed English and knows nothing of pro mode, where
+      // the Negri is dragged down rather than picked.
+      dispatch({
+        type: 'notice',
+        message: {
+          key:
+            stateRef.current.game?.gameMode === 'pro'
+              ? 'game.negriPromptPro'
+              : 'game.negriPrompt',
+        },
+      });
     });
     socket.on('play-setup-complete', (payload) => {
       const pendingNegriCard = pendingNegriCardRef.current;
@@ -936,7 +999,50 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
-      dispatch({ type: 'error', message });
+      const translation = serverErrorTranslation(message);
+      dispatch({
+        type: 'error',
+        message: translation
+          ? {
+              key: `serverErrors.${translation.key}`,
+              params: translation.params,
+            }
+          : message,
+      });
+    });
+    socket.on('open-declared', (payload: OpenDeclaredPayload) => {
+      applyGameServerEvent({ type: 'open-declared', payload });
+      dispatch({
+        type: 'notice',
+        message: payload.valid
+          ? { key: 'game.openDeclared', severity: 'success' }
+          : {
+              key: 'game.openInvalid',
+              severity: 'error',
+              params: {
+                teamName: getTeamDisplayName(
+                  payload.awardedTeam,
+                  stateRef.current.game?.teamNames,
+                ),
+              },
+            },
+      });
+    });
+    socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
+      dispatch({ type: 'patchGame', patch: { teamScores: payload.scores } });
+      dispatch({
+        type: 'notice',
+        message: {
+          key: payload.isCorrect ? 'game.chomboCorrect' : 'game.chomboIncorrect',
+          severity: payload.isCorrect ? 'success' : 'error',
+          params: {
+            teamName: getTeamDisplayName(
+              payload.awardedTeam,
+              stateRef.current.game?.teamNames,
+            ),
+          },
+        },
+      });
     });
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
@@ -1082,7 +1188,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     const currentPlayer = game.players.find(
       (player) => player.seatId === game.youSeatId,
     );
-    if (!currentPlayer?.hasRequiredBroken) {
+    // Pro mode lets the player keep four jacks, so it only reveals on request.
+    if (game.gameMode === 'pro' || !currentPlayer?.hasRequiredBroken) {
       brokenRequestRef.current = null;
       return;
     }
@@ -1122,12 +1229,13 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, [resyncActiveRoom]);
 
   const createRoom = useCallback(
-    async (name: string, pointsToWin: number) => {
+    async (name: string, pointsToWin: number, gameMode: 'normal' | 'pro' = 'normal') => {
       if (!canSendServerAction()) return false;
       const response = await emitAck('create-room', {
         name: name.trim(),
         pointsToWin,
         teamAssignmentMethod: 'random',
+        gameMode,
       });
       if (!response.success || !response.room) {
         dispatch({
@@ -1331,6 +1439,37 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
+  const declareOpen = useCallback(() => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('declare-open', game.roomId, () => {
+      socketRef.current?.emit('declare-open', { roomId: game.roomId });
+    });
+  }, [emitOneWayAction]);
+
+  const reportChombo = useCallback((violatorSeatId: string, violationType: ChomboViolationType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('report-chombo', game.roomId, () => {
+      socketRef.current?.emit('report-chombo', {
+        roomId: game.roomId,
+        violatorSeatId: asSeatId(violatorSeatId),
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
+  const setupChomboScenario = useCallback((violationType: DevChomboScenarioType) => {
+    const game = stateRef.current.game;
+    if (!game) return;
+    emitOneWayAction('dev-chombo-scenario', game.roomId, () => {
+      socketRef.current?.emit('dev-chombo-scenario', {
+        roomId: game.roomId,
+        violationType,
+      });
+    });
+  }, [emitOneWayAction]);
+
   const selectBaseSuit = useCallback((suit: string) => {
     const game = stateRef.current.game;
     if (!game) return;
@@ -1440,6 +1579,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       playCancelSound,
       playHandReorderSound,
       playCard,
+      reportChombo,
+      // The server refuses it in production too; this keeps the entry point
+      // out of release builds.
+      ...(__DEV__ ? { setupChomboScenario } : {}),
+      declareOpen,
       selectBaseSuit,
       revealBrokenHand,
       removePlayer,
@@ -1473,6 +1617,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       leaveRoom,
       passBlow,
       playCard,
+      reportChombo,
+      setupChomboScenario,
+      declareOpen,
       playCardSelectionSound,
       playCancelSound,
       playHandReorderSound,

@@ -51,6 +51,7 @@
       "types": "./game-result.ts",
       "default": "./game-result.ts"
     },
+    "./drag-action": {"types": "./drag-action.ts", "default": "./drag-action.ts"},
     "./sound-effects": {
       "types": "./sound-effects.ts",
       "default": "./sound-effects.ts"

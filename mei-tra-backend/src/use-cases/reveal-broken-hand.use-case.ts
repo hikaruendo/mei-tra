@@ -1,11 +1,12 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import type { BrokenPayload } from '@contracts/game';
+import type { BrokenHandRevealedPayload, BrokenPayload } from '@contracts/game';
 import {
   IRevealBrokenHandUseCase,
   RevealBrokenHandRequest,
   RevealBrokenHandPreparation,
   RevealBrokenHandCompletion,
 } from './interfaces/reveal-broken-hand.use-case.interface';
+import type { GameStateService } from '../services/game-state.service';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { ICardService } from '../services/interfaces/card-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
@@ -14,7 +15,11 @@ import {
   resolvePlayerByActorId,
   resolveTransportPlayers,
 } from './helpers/player-resolution.helper';
-import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
+import {
+  BROKEN_HAND_REVEAL_DELAY_MS,
+  clearRevealedHand,
+  getBrokenHandRevealPendingError,
+} from './helpers/broken-hand.helper';
 import { asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import { setCurrentSeat } from '../domain/current-turn';
@@ -74,12 +79,31 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
         handSnapshot,
         startedAt: Date.now(),
       };
+      // The table sees the hand until the redeal replaces the play state.
+      if (state.playState) {
+        state.playState.revealedHands = {
+          ...(state.playState.revealedHands ?? {}),
+          [seatId]: [...handSnapshot],
+        };
+      }
       await roomGameState.saveState();
 
+      const revealedPayload: BrokenHandRevealedPayload = {
+        seatId,
+        hand: [...handSnapshot],
+      };
       return {
         success: true,
-        delayMs: 3000,
+        delayMs: BROKEN_HAND_REVEAL_DELAY_MS,
         followUp: { roomId, seatId, handSnapshot },
+        events: [
+          {
+            scope: 'room',
+            roomId,
+            event: 'broken-hand-revealed',
+            payload: revealedPayload,
+          },
+        ],
       };
     } catch (error) {
       this.logger.error(
@@ -103,15 +127,18 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       const player = state.players.find((p) => p.seatId === seatId);
 
       if (!player) {
+        await this.abandonReveal(roomGameState, seatId);
         return { success: false, error: 'Player not found in game state' };
       }
 
       if (!this.hasRevealableBrokenHand(player)) {
+        await this.abandonReveal(roomGameState, seatId);
         return { success: false, error: 'Player does not have broken hand' };
       }
 
       const pendingReveal = state.pendingBrokenHandReveal;
       if (!pendingReveal || pendingReveal.seatId !== seatId) {
+        await this.abandonReveal(roomGameState, seatId);
         return { success: false, error: 'Broken hand reveal is not pending' };
       }
 
@@ -124,6 +151,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
 
       if (!this.isSameHand(player.hand, pendingReveal.handSnapshot)) {
         state.pendingBrokenHandReveal = null;
+        clearRevealedHand(state, seatId);
         await roomGameState.saveState();
         return { success: false, error: 'Broken hand request is stale' };
       }
@@ -159,7 +187,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           : 0;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
-      // 次のラウンドの吹き始め (CompleteFieldUseCase.prepareNextRound) は
+      // 次のラウンドの吹き始め (round-completion.helper の prepareNextRound) は
       // currentBlowIndex から導かれるので、進めた値を書き戻す必要がある。
       nextState.blowState.currentBlowIndex = firstBlowIndex;
       nextState.blowState.redealCount =
@@ -234,6 +262,29 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       );
       return { success: false, error: 'Internal server error' };
     }
+  }
+
+  /**
+   * The redeal this reveal was waiting for is not happening. prepare() put the
+   * hand face-up on the table and only the redeal replaces the play state that
+   * holds it, so it has to come down here or it stays visible all round.
+   */
+  private async abandonReveal(
+    roomGameState: GameStateService,
+    seatId: SeatId,
+  ): Promise<void> {
+    const state = roomGameState.getState();
+    const droppedPending = state.pendingBrokenHandReveal?.seatId === seatId;
+    if (droppedPending) {
+      state.pendingBrokenHandReveal = null;
+    }
+
+    const droppedReveal = clearRevealedHand(state, seatId);
+    if (!droppedPending && !droppedReveal) {
+      return;
+    }
+
+    await roomGameState.saveState();
   }
 
   private isSameHand(currentHand: string[], snapshot: string[]): boolean {

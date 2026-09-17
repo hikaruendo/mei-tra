@@ -1,9 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { IRoomService } from './interfaces/room-service.interface';
 import {
+  BrokenHandRevealTrigger,
   ComAutoPlayResponse,
   IComAutoPlayUseCase,
 } from '../use-cases/interfaces/com-autoplay-use-case.interface';
+import { IRevealBrokenHandUseCase } from '../use-cases/interfaces/reveal-broken-hand.use-case.interface';
 import {
   CompleteFieldResponse,
   ICompleteFieldUseCase,
@@ -48,6 +50,7 @@ export class ComAutoPlayRecoveryService {
   private readonly pendingReruns = new Map<string, boolean>();
   private readonly retryTimeouts = new Map<string, PendingTrigger>();
   private readonly fieldCompletionTimeouts = new Map<string, NodeJS.Timeout>();
+  private readonly brokenHandRevealTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly retryAttempts = new Map<string, number>();
   private readonly roomGenerations = new Map<string, number>();
 
@@ -58,6 +61,8 @@ export class ComAutoPlayRecoveryService {
     private readonly comAutoPlayUseCase: IComAutoPlayUseCase,
     @Inject('ICompleteFieldUseCase')
     private readonly completeFieldUseCase: ICompleteFieldUseCase,
+    @Inject('IRevealBrokenHandUseCase')
+    private readonly revealBrokenHandUseCase: IRevealBrokenHandUseCase,
     private readonly roomGameActionQueueService: RoomGameActionQueueService,
   ) {}
 
@@ -196,6 +201,59 @@ export class ComAutoPlayRecoveryService {
     this.fieldCompletionTimeouts.set(trigger.roomId, timeout);
   }
 
+  /**
+   * Holds the redeal for the reveal delay a COM's broken hand owes the table,
+   * then dispatches it and hands the turn back to auto-play.
+   */
+  private scheduleBrokenHandReveal(
+    trigger: BrokenHandRevealTrigger,
+    handlers: ComAutoPlayRecoveryHandlers,
+  ): void {
+    const { roomId } = trigger.followUp;
+    if (this.brokenHandRevealTimeouts.has(roomId)) {
+      return;
+    }
+
+    const generation = this.getRoomGeneration(roomId);
+    const timeout = setTimeout(() => {
+      this.brokenHandRevealTimeouts.delete(roomId);
+      if (!this.isCurrentGeneration(roomId, generation)) {
+        return;
+      }
+      void this.roomGameActionQueueService
+        .run(roomId, () =>
+          this.revealBrokenHandUseCase.finalize(trigger.followUp),
+        )
+        .then((completion) => {
+          if (!this.isCurrentGeneration(roomId, generation)) {
+            return;
+          }
+          if (!completion.success) {
+            this.logger.error(
+              `Failed to finalize COM broken hand reveal in room ${roomId}: ${completion.error}`,
+            );
+            this.scheduleRetry(roomId, handlers);
+            return;
+          }
+
+          this.retryAttempts.delete(roomId);
+          handlers.dispatchEvents(completion.events);
+          this.trigger(roomId, handlers);
+        })
+        .catch((error) =>
+          this.handleRecoveryError(
+            roomId,
+            generation,
+            handlers,
+            `Error finalizing COM broken hand reveal in room ${roomId}`,
+            error,
+          ),
+        );
+    }, trigger.delayMs);
+
+    this.brokenHandRevealTimeouts.set(roomId, timeout);
+  }
+
   clearRoom(roomId: string): void {
     this.roomGenerations.set(roomId, this.getRoomGeneration(roomId) + 1);
     this.clearRetry(roomId);
@@ -203,6 +261,11 @@ export class ComAutoPlayRecoveryService {
     if (fieldCompletionTimeout) {
       clearTimeout(fieldCompletionTimeout);
       this.fieldCompletionTimeouts.delete(roomId);
+    }
+    const brokenHandRevealTimeout = this.brokenHandRevealTimeouts.get(roomId);
+    if (brokenHandRevealTimeout) {
+      clearTimeout(brokenHandRevealTimeout);
+      this.brokenHandRevealTimeouts.delete(roomId);
     }
     this.pendingReruns.delete(roomId);
     this.retryAttempts.delete(roomId);
@@ -298,6 +361,11 @@ export class ComAutoPlayRecoveryService {
 
     if (result.completeFieldTrigger) {
       this.scheduleFieldCompletion(result.completeFieldTrigger, handlers);
+      return;
+    }
+
+    if (result.brokenHandRevealTrigger) {
+      this.scheduleBrokenHandReveal(result.brokenHandRevealTrigger, handlers);
       return;
     }
 

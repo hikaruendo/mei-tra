@@ -10,6 +10,8 @@ export enum RoomStatus {
   ABANDONED = 'abandoned',
 }
 
+export type GameMode = 'normal' | 'pro';
+
 export interface RoomPlayer extends SessionUser, PlayerGameplayState {
   seatId: SeatId;
   participantKey?: string;
@@ -38,5 +40,6 @@ export interface RoomSettings {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
+  gameMode?: GameMode;
   teamNames?: TeamNames;
 }
