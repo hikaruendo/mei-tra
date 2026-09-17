@@ -9,7 +9,7 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
-import { ChomboReportPanel, getChomboReportTargets } from '@/components/game/ChomboReportPanel';
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
@@ -135,11 +135,14 @@ export const GameTable: React.FC<GameTableProps> = ({
     viewerHandSize !== undefined &&
     viewerHandSize > 0 &&
     viewerHandSize <= OPEN_MAX_HAND_SIZE;
+  // Shown for every seated player during pro play, even when nobody can be
+  // reported (the panel then says why), so the entry does not come and go
+  // with who is sitting at the table.
   const chomboReport =
     gameMode === 'pro' &&
     gamePhase === 'play' &&
-    currentSeatId &&
-    getChomboReportTargets(players, currentSeatId).length > 0 ? (
+    !isSpectator &&
+    currentSeatId ? (
       <ChomboReportPanel
         players={players}
         currentSeatId={currentSeatId}

@@ -55,7 +55,15 @@ export function ChomboReportPanel({ players, onReport, onReported }: Props) {
   const target =
     players.find((player) => player.seatId === chosenSeatId) ?? players[0];
 
-  if (!target) return null;
+  if (!target) {
+    return (
+      <View accessibilityLabel={t('chomboReport.title')} style={styles.panel}>
+        <Text style={styles.empty} testID="chombo-report-no-targets">
+          {t('chomboReport.noTargets')}
+        </Text>
+      </View>
+    );
+  }
 
   const toggleMenu = (menu: Exclude<OpenMenu, null>) =>
     setOpenMenu((open) => (open === menu ? null : menu));
@@ -194,6 +202,11 @@ function Dropdown<T extends string>({
 const styles = StyleSheet.create({
   panel: {
     gap: 8,
+  },
+  empty: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 21,
   },
   label: {
     color: colors.textMuted,

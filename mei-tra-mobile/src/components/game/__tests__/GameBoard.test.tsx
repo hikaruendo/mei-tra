@@ -879,6 +879,43 @@ describe('GameBoard chombo sheet', () => {
     act(() => renderer.unmount());
   });
 
+  it('offers chombo during pro play with only COM to report, and says why nobody is listed', () => {
+    const renderer = renderChomboBoard({
+      players: players.map((player) =>
+        player.team === 1 ? { ...player, isCOM: true } : player,
+      ),
+    });
+
+    press(renderer, 'game-options-trigger');
+    press(renderer, 'game-options-chombo');
+
+    const panels = renderer.root.findAllByType(ChomboReportPanel);
+    expect(panels).toHaveLength(1);
+    expect(panels[0].props.players).toEqual([]);
+    expect(
+      renderer.root.findAllByProps({ testID: 'chombo-report-no-targets' }),
+    ).not.toHaveLength(0);
+
+    act(() => renderer.unmount());
+  });
+
+  it('leaves a human teammate out of the report targets', () => {
+    const renderer = renderChomboBoard({
+      players: players.map((player) => ({ ...player, isCOM: false })),
+    });
+
+    press(renderer, 'game-options-trigger');
+    press(renderer, 'game-options-chombo');
+
+    const targets = renderer.root
+      .findAllByType(ChomboReportPanel)[0]
+      .props.players?.map((player) => player.seatId);
+    // player-3 sits on player-1's team.
+    expect([...(targets ?? [])].sort()).toEqual(['player-2', 'player-4']);
+
+    act(() => renderer.unmount());
+  });
+
   it('offers no chombo entry outside pro mode', () => {
     const renderer = renderChomboBoard({ gameMode: 'normal' }, jest.fn());
 

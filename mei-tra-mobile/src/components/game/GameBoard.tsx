@@ -217,13 +217,14 @@ export function GameBoard({
       ),
     [leftPlayer, topPlayer, rightPlayer],
   );
-  // COM seats cannot be reported (web: ChomboReportPanel).
+  // The server takes reports only against the other team, and COM seats record
+  // no violations (web: getChomboReportTargets).
   const chomboReportTargets = useMemo(
     () =>
       opponentSlots
         .map(({ player }) => player)
-        .filter((player) => !player.isCOM),
-    [opponentSlots],
+        .filter((player) => player.team !== self?.team && !player.isCOM),
+    [opponentSlots, self?.team],
   );
   const teamFieldCounts = useMemo(() => {
     const counts: Record<number, number> = { 0: 0, 1: 0 };
@@ -261,8 +262,9 @@ export function GameBoard({
         ]
       : [];
   const canProDrop = proDropActions.length > 0;
-  const canReportChombo =
-    isProMode && isHandPlayPhase && chomboReportTargets.length > 0;
+  // Offered during every pro play phase, even with nobody to report (the panel
+  // then says why), so the menu entry does not come and go with the seating.
+  const canReportChombo = isProMode && isHandPlayPhase;
   const setupChomboScenario =
     isProMode &&
     !game.isSpectator &&

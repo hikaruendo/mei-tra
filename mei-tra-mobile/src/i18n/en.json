@@ -113,7 +113,8 @@
     "lastTanzen": "Last tanzen",
     "confirmTitle": "Report a chombo?",
     "confirmMessage": "Report {name} for {violation}? This ends the round and cannot be undone.",
-    "confirm": "Report"
+    "confirm": "Report",
+    "noTargets": "No player on the other team can be reported. COM players have no violations to report."
   },
   "chomboScenario": {
     "title": "Chombo test (development only)",

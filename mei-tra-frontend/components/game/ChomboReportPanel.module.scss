@@ -12,6 +12,13 @@
   backdrop-filter: blur(10px);
 }
 
+.empty {
+  margin: 0;
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.875rem);
+  line-height: 1.6;
+}
+
 .field {
   display: flex;
   min-width: 0;
