@@ -566,15 +566,35 @@ describe('GameBoard open action', () => {
     return renderer;
   };
 
-  it('offers open only once the player is down to the open hand size', () => {
+  const pressByTestId = (
+    board: ReturnType<typeof renderProBoard>,
+    testID: string,
+  ) =>
+    act(() => {
+      const button = board.root
+        .findAllByProps({ testID })
+        .find((node) => typeof node.props.onPress === 'function');
+      if (!button) throw new Error(`no pressable ${testID}`);
+      (button.props.onPress as () => void)();
+    });
+
+  // Open sits in the options menu, next to chombo.
+  const openMenuItems = (board: ReturnType<typeof renderProBoard>) => {
+    pressByTestId(board, 'game-options-trigger');
+    return board.root.findAllByProps({ testID: 'game-options-open' });
+  };
+
+  it('offers open in the options menu only once the player is down to the open hand size', () => {
     const onDeclareOpen = jest.fn();
 
     const overLimit = renderProBoard(OPEN_MAX_HAND_SIZE + 1, onDeclareOpen);
-    expect(overLimit.root.findAllByProps({ testID: 'declare-open' })).toHaveLength(0);
+    expect(openMenuItems(overLimit)).toHaveLength(0);
     act(() => overLimit.unmount());
 
     const atLimit = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
-    expect(atLimit.root.findAllByProps({ testID: 'declare-open' }).length).toBeGreaterThan(0);
+    expect(openMenuItems(atLimit).length).toBeGreaterThan(0);
+    // The hand area no longer carries its own open button.
+    expect(atLimit.root.findAllByProps({ testID: 'declare-open' })).toHaveLength(0);
     act(() => atLimit.unmount());
   });
 
@@ -582,9 +602,7 @@ describe('GameBoard open action', () => {
     const onDeclareOpen = jest.fn();
 
     const disconnected = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen, true);
-    expect(
-      disconnected.root.findAllByProps({ testID: 'declare-open' }),
-    ).toHaveLength(0);
+    expect(openMenuItems(disconnected)).toHaveLength(0);
     act(() => disconnected.unmount());
   });
 
@@ -595,17 +613,16 @@ describe('GameBoard open action', () => {
       .mockImplementation(() => undefined);
     const onDeclareOpen = jest.fn();
     const board = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
-    const pressOpen = () =>
-      act(() => {
-        const button = board.root
-          .findAllByProps({ testID: 'declare-open' })
-          .find((node) => typeof node.props.onPress === 'function');
-        (button?.props.onPress as () => void)();
-      });
+    const pressOpen = () => {
+      pressByTestId(board, 'game-options-trigger');
+      pressByTestId(board, 'game-options-open');
+    };
     const buttonsOf = (call: number) =>
       alertSpy.mock.calls[call][2] as AlertButton[];
 
     pressOpen();
+    // The menu is closed before the confirmation asks.
+    expect(board.root.findAllByProps({ testID: 'game-options-open' })).toHaveLength(0);
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(alertSpy.mock.calls[0][0]).toBe('オープンしますか？');
     expect(onDeclareOpen).not.toHaveBeenCalled();

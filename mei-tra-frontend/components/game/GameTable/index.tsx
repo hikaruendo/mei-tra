@@ -232,6 +232,9 @@ export const GameTable: React.FC<GameTableProps> = ({
                     ? gameActions.setupChomboScenario
                     : undefined
                 }
+                onOpenRequest={
+                  canDeclareOpen ? () => setOpenConfirmOpen(true) : undefined
+                }
                 onLeaveRequest={onLeaveRequest}
               />
             ) : undefined
@@ -388,16 +391,8 @@ export const GameTable: React.FC<GameTableProps> = ({
         )}
       </div>
 
-      {canDeclareOpen && (
-        <button
-          className={styles.openButton}
-          type="button"
-          onClick={() => setOpenConfirmOpen(true)}
-        >
-          {tRoot('game.openAction')}
-        </button>
-      )}
-      {/* An open reveals the hand and cannot be taken back, so it is confirmed first. */}
+      {/* Opened from the game dock. An open reveals the hand and cannot be
+          taken back, so it is confirmed first. */}
       <ConfirmModal
         isOpen={openConfirmOpen}
         title={tRoot('game.openConfirmTitle')}

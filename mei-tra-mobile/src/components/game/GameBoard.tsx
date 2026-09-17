@@ -134,6 +134,9 @@ export function GameBoard({
     string | null
   >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set by the open entry of the options menu; the confirmation waits for the
+  // menu to close (see the effect after canDeclareOpen).
+  const openConfirmPendingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -289,6 +292,22 @@ export function GameBoard({
     Boolean(self) &&
     selfHandCount > 0 &&
     selfHandCount <= OPEN_MAX_HAND_SIZE;
+
+  // On iOS an Alert raised while a Modal is being dismissed may never show, so
+  // the open confirmation waits until the options menu has closed. An open
+  // reveals the hand and cannot be taken back, so it asks first.
+  useEffect(() => {
+    if (showOptions || !openConfirmPendingRef.current) return;
+    openConfirmPendingRef.current = false;
+    if (!canDeclareOpen) return;
+    confirmAction({
+      title: t('game.openConfirmTitle'),
+      message: t('game.openConfirmMessage'),
+      confirmLabel: t('game.openConfirm'),
+      onConfirm: onDeclareOpen,
+    });
+  }, [showOptions, canDeclareOpen, onDeclareOpen]);
+
   const hasActedInBlow =
     Boolean(self?.isPasser) ||
     game.blowState.declarations.some(
@@ -753,24 +772,6 @@ export function GameBoard({
                 reducedMotion={reducedMotion}
               />
             ) : null}
-            {/* Below the hand and the taken fields, where the web table puts it.
-                An open reveals the hand and cannot be taken back, so it asks first. */}
-            {canDeclareOpen ? (
-              <Button
-                onPress={() =>
-                  confirmAction({
-                    title: t('game.openConfirmTitle'),
-                    message: t('game.openConfirmMessage'),
-                    confirmLabel: t('game.openConfirm'),
-                    onConfirm: onDeclareOpen,
-                  })
-                }
-                style={styles.openButton}
-                testID="declare-open"
-              >
-                {t('game.openAction')}
-              </Button>
-            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -870,6 +871,18 @@ export function GameBoard({
                 variant="secondary"
               >
                 {t('chomboReport.menuLabel')}
+              </Button>
+            ) : null}
+            {canDeclareOpen ? (
+              <Button
+                onPress={() => {
+                  openConfirmPendingRef.current = true;
+                  setShowOptions(false);
+                }}
+                testID="game-options-open"
+                variant="secondary"
+              >
+                {t('game.openAction')}
               </Button>
             ) : null}
             <Button
@@ -1159,10 +1172,6 @@ const styles = StyleSheet.create({
   },
   handSection: {
     gap: 8,
-  },
-  openButton: {
-    alignSelf: 'center',
-    minWidth: 128,
   },
   selfRow: {
     flexDirection: 'row',
