@@ -118,6 +118,10 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     try {
       // 1. ゲーム状態取得
       const gameState = await this.roomService.getRoomGameState(roomId);
+      // The turn can still point at a COM after a chombo report ends the game.
+      if (gameState.getState().gameOver) {
+        return { success: true, events: [], shouldContinue: false };
+      }
       if (await getBrokenHandRevealPendingError(gameState)) {
         return { success: true, events: [], shouldContinue: false };
       }

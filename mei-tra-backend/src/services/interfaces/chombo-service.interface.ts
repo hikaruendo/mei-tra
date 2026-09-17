@@ -22,7 +22,6 @@ export interface IChomboService {
       card?: string;
       neguri?: { [key: string]: string };
       hasBroken?: boolean;
-      canDeclareOpen?: boolean;
       trump?: TrumpType | null;
     },
   ): ChomboViolation | null;

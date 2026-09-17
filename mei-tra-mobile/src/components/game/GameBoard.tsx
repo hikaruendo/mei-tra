@@ -3,6 +3,7 @@ import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import {
   OPEN_MAX_HAND_SIZE,
   type ChomboViolationType,
+  type DevChomboScenarioType,
   type TrumpType,
 } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
@@ -42,6 +43,7 @@ import { Button } from '@/components/ui/Button';
 import { LiquidGlassSurface } from '@/components/ui/LiquidGlassSurface';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { isCardPlayable } from '@/lib/cards';
+import { confirmAction } from '@/lib/confirm-action';
 import {
   getCardSeatPosition,
   getSeatOrderWithSelfBottom,
@@ -76,7 +78,7 @@ interface GameBoardProps {
   onPlayCard: (card: string) => void;
   onReportChombo?: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   /** Development builds only. */
-  onSetupChomboScenario?: (violationType: ChomboViolationType) => void;
+  onSetupChomboScenario?: (violationType: DevChomboScenarioType) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;
@@ -409,9 +411,6 @@ export function GameBoard({
       >
         <View style={styles.topBar}>
           <Text style={styles.phase}>{phaseLabel}</Text>
-          {canDeclareOpen ? (
-            <Button onPress={onDeclareOpen}>オープン</Button>
-          ) : null}
           {canRevealBrokenHand ? (
             <Button onPress={onRevealBrokenHand}>{t('board.revealBroken')}</Button>
           ) : null}
@@ -736,6 +735,24 @@ export function GameBoard({
                 )}
                 reducedMotion={reducedMotion}
               />
+            ) : null}
+            {/* Below the hand and the taken fields, where the web table puts it.
+                An open reveals the hand and cannot be taken back, so it asks first. */}
+            {canDeclareOpen ? (
+              <Button
+                onPress={() =>
+                  confirmAction({
+                    title: t('game.openConfirmTitle'),
+                    message: t('game.openConfirmMessage'),
+                    confirmLabel: t('game.openConfirm'),
+                    onConfirm: onDeclareOpen,
+                  })
+                }
+                style={styles.openButton}
+                testID="declare-open"
+              >
+                {t('game.openAction')}
+              </Button>
             ) : null}
           </View>
         ) : null}
@@ -1125,6 +1142,10 @@ const styles = StyleSheet.create({
   },
   handSection: {
     gap: 8,
+  },
+  openButton: {
+    alignSelf: 'center',
+    minWidth: 128,
   },
   selfRow: {
     flexDirection: 'row',

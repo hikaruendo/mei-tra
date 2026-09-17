@@ -1,4 +1,8 @@
-import type { ChomboViolationType, PlayerContract } from '@contracts/game';
+import type {
+  ChomboViolationType,
+  DevChomboScenarioType,
+  PlayerContract,
+} from '@contracts/game';
 import type { SeatId } from '@contracts/ids';
 
 export type Team = 0 | 1;
@@ -115,7 +119,7 @@ export interface GameActions {
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: (seatId: string) => void;
   /** Development only: jumps to a table where the viewer can commit the chombo. */
-  setupChomboScenario?: (violationType: ChomboViolationType) => void;
+  setupChomboScenario?: (violationType: DevChomboScenarioType) => void;
 }
 
 export function fromPlayerContract(player: PlayerContract): Player {

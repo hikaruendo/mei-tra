@@ -38,7 +38,6 @@ export class ChomboService implements IChomboService {
       card?: string;
       neguri?: { [key: string]: string };
       hasBroken?: boolean;
-      canDeclareOpen?: boolean;
       trump?: TrumpType | null;
     },
   ): ChomboViolation | null {
@@ -88,13 +87,6 @@ export class ChomboService implements IChomboService {
           context.player.hand[0].includes('JOKER')
         ) {
           violationType = 'last-tanzen';
-        }
-        break;
-      }
-
-      case 'declare-open': {
-        if (!context.canDeclareOpen) {
-          violationType = 'wrong-open';
         }
         break;
       }

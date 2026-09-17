@@ -3,7 +3,7 @@ import type { MobileGameSnapshot } from '@/types/game';
 import { OPEN_MAX_HAND_SIZE } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
-import { AccessibilityInfo, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Alert, StyleSheet } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
@@ -520,7 +520,11 @@ describe('GameBoard open action', () => {
     actionsDisabled = false,
   ) => {
     let renderer!: {
-      root: { findAllByProps: (props: Record<string, unknown>) => unknown[] };
+      root: {
+        findAllByProps: (props: Record<string, unknown>) => {
+          props: Record<string, unknown>;
+        }[];
+      };
       unmount: () => void;
     };
     act(() => {
@@ -566,11 +570,11 @@ describe('GameBoard open action', () => {
     const onDeclareOpen = jest.fn();
 
     const overLimit = renderProBoard(OPEN_MAX_HAND_SIZE + 1, onDeclareOpen);
-    expect(overLimit.root.findAllByProps({ onPress: onDeclareOpen })).toHaveLength(0);
+    expect(overLimit.root.findAllByProps({ testID: 'declare-open' })).toHaveLength(0);
     act(() => overLimit.unmount());
 
     const atLimit = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
-    expect(atLimit.root.findAllByProps({ onPress: onDeclareOpen }).length).toBeGreaterThan(0);
+    expect(atLimit.root.findAllByProps({ testID: 'declare-open' }).length).toBeGreaterThan(0);
     act(() => atLimit.unmount());
   });
 
@@ -579,9 +583,42 @@ describe('GameBoard open action', () => {
 
     const disconnected = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen, true);
     expect(
-      disconnected.root.findAllByProps({ onPress: onDeclareOpen }),
+      disconnected.root.findAllByProps({ testID: 'declare-open' }),
     ).toHaveLength(0);
     act(() => disconnected.unmount());
+  });
+
+  it('asks before opening, and opens only once confirmed', () => {
+    type AlertButton = { text?: string; onPress?: () => void };
+    const alertSpy = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation(() => undefined);
+    const onDeclareOpen = jest.fn();
+    const board = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
+    const pressOpen = () =>
+      act(() => {
+        const button = board.root
+          .findAllByProps({ testID: 'declare-open' })
+          .find((node) => typeof node.props.onPress === 'function');
+        (button?.props.onPress as () => void)();
+      });
+    const buttonsOf = (call: number) =>
+      alertSpy.mock.calls[call][2] as AlertButton[];
+
+    pressOpen();
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy.mock.calls[0][0]).toBe('オープンしますか？');
+    expect(onDeclareOpen).not.toHaveBeenCalled();
+
+    act(() => buttonsOf(0).find((b) => b.text === 'キャンセル')?.onPress?.());
+    expect(onDeclareOpen).not.toHaveBeenCalled();
+
+    pressOpen();
+    act(() => buttonsOf(1).find((b) => b.text === 'オープンする')?.onPress?.());
+    expect(onDeclareOpen).toHaveBeenCalledTimes(1);
+
+    act(() => board.unmount());
+    alertSpy.mockRestore();
   });
 });
 

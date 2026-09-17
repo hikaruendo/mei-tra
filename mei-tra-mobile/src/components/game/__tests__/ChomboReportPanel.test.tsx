@@ -123,7 +123,7 @@ describe('ChomboReportPanel', () => {
     const renderer = await renderPanel(jest.fn());
 
     await press(renderer, 'chombo-report-violation');
-    expect(optionIds(renderer, 'chombo-report-violation')).toHaveLength(5);
+    expect(optionIds(renderer, 'chombo-report-violation')).toHaveLength(4);
     expect(isSelected(renderer, 'chombo-report-violation-negri-forget')).toBe(
       true,
     );
@@ -142,7 +142,7 @@ describe('ChomboReportPanel', () => {
     await press(renderer, 'chombo-report-violation');
 
     expect(optionIds(renderer, 'chombo-report-player')).toHaveLength(0);
-    expect(optionIds(renderer, 'chombo-report-violation')).toHaveLength(5);
+    expect(optionIds(renderer, 'chombo-report-violation')).toHaveLength(4);
 
     await act(async () => renderer.unmount());
   });

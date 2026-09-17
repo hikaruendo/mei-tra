@@ -35,6 +35,7 @@ jest.mock('next-intl', () => ({
       roundTableBid: '宣言',
       roundTableScore: '得点',
       'actionTypes.card_played': 'カードプレイ',
+      'actionTypes.open_failed': 'オープン失敗',
       'actionTypes.player_joined': '入室',
       'actionTypes.player_reconnected': '再接続',
       teamRed: 'チーム赤',
@@ -66,6 +67,10 @@ jest.mock('next-intl', () => ({
 
       if (key === 'summaries.player_reconnected') {
         return `${values?.player}が再接続`;
+      }
+
+      if (key === 'summaries.open_failed') {
+        return `${values?.player}のオープン失敗。${values?.team}に5点`;
       }
 
       return labels[key] ?? key;
@@ -396,6 +401,73 @@ describe('GameHistoryDock', () => {
     expect(screen.getByAltText('A♠')).toBeInTheDocument();
     expect(screen.getByAltText('9♥')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('shows a failed open with the team that scored', () => {
+    mockUseGameHistory.mockReturnValue({
+      replay: {
+        roomId: 'room-123',
+        totalEntries: 1,
+        rounds: [
+          {
+            roundNumber: 1,
+            startedAt: new Date('2026-07-26T00:00:00.000Z'),
+            endedAt: new Date('2026-07-26T00:03:00.000Z'),
+            actionTypes: ['open_failed'],
+            actorSeatIds: ['player-1'],
+            entries: [],
+            events: [
+              {
+                id: 'open-failed-1',
+                timestamp: new Date('2026-07-26T00:02:00.000Z'),
+                actionType: 'open_failed',
+                actorSeatId: 'player-1',
+                roundNumber: 1,
+                gamePhase: 'play',
+                kind: 'play',
+                summary: '',
+                details: { hand: ['5♥'], awardedTeam: 1 },
+                actionData: {},
+                detailItems: [
+                  { labelKey: 'openHand', value: { kind: 'cards', cards: ['5♥'] } },
+                  { labelKey: 'awardedTeam', value: { kind: 'team', team: 1 } },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      summary: {
+        roomId: 'room-123',
+        totalEntries: 1,
+        byActionType: { open_failed: 1 },
+        actorSeatIds: ['player-1'],
+        playerNames: { 'player-1': 'Hikaru' },
+        roundNumbers: [1],
+        status: 'completed',
+        winningTeam: 1,
+        lastActionType: 'open_failed',
+        firstTimestamp: new Date('2026-07-26T00:00:00.000Z'),
+        lastTimestamp: new Date('2026-07-26T00:03:00.000Z'),
+      },
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+
+    render(
+      <GameHistoryDock
+        {...baseProps}
+        gameStarted={false}
+        variant="page"
+        showOverview={false}
+      />,
+    );
+
+    expect(screen.getByText('オープン失敗')).toBeInTheDocument();
+    expect(
+      screen.getByText('Hikaruのオープン失敗。チーム黒に5点'),
+    ).toBeInTheDocument();
   });
 
   it('names a reconnect apart from a join', () => {

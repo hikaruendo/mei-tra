@@ -45,6 +45,12 @@ export class PlayCardUseCase implements IPlayCardUseCase {
       const { roomId, actorId, card } = request;
       const roomGameState = await this.roomService.getRoomGameState(roomId);
       const state = roomGameState.getState();
+      // A chombo report can end the game in the middle of a trick, leaving the
+      // turn with whoever was about to play.
+      if (state.gameOver) {
+        return { success: false, error: 'The game is already over' };
+      }
+
       const room = await this.roomService.getRoom(roomId);
       const player = resolvePlayerByActorId(roomGameState, actorId);
 

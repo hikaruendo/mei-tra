@@ -339,7 +339,11 @@
     "negriPromptPro": "ネグリにするカードを手札から下へドラッグしてください",
     "redealBroken": "ブロークンのため配り直しました",
     "openDeclared": "オープンが通りました",
-    "openInvalid": "オープンは通りませんでした。手札を公開したままプレイが続きます",
+    "openInvalid": "オープンは通りませんでした。{teamName} に5点入り、このラウンドは終わります",
+    "openAction": "オープン",
+    "openConfirmTitle": "オープンしますか？",
+    "openConfirmMessage": "手札を全員に公開し、残りの場を自分のチームですべて取ると宣言します。通れば残りの場はすべて自分のチームのものとして数え、ラウンドが終わります。通らなければ相手チームに5点が入り、ラウンドが終わります。この宣言は取り消せません。",
+    "openConfirm": "オープンする",
     "chomboCorrect": "正しい指摘です。{teamName} に5点入り、このラウンドは終わります",
     "chomboIncorrect": "違反はありませんでした。{teamName} に5点入り、このラウンドは終わります",
     "fieldRecoveryRedeal": "場の不整合を検出したため、安全に配り直しました",
@@ -467,8 +471,7 @@
     "negriForget": "ネグリ忘れ",
     "wrongSuit": "出し方の違反",
     "fourJack": "4ジャック",
-    "lastTanzen": "最後タンツェン",
-    "wrongOpen": "オープンの誤り"
+    "lastTanzen": "最後タンツェン"
   },
   "chomboScenario": {
     "title": "チョンボのテスト（開発環境のみ）",
@@ -481,8 +484,8 @@
     "fourJackHint": "J を4枚持っています。そのままカードを出してください",
     "lastTanzen": "最後タンツェン",
     "lastTanzenHint": "残り2枚で JOKER を持っています。JOKER ではない方を出すと、その時点で指摘できます",
-    "wrongOpen": "オープンの誤り",
-    "wrongOpenHint": "残りの場を取り切れない4枚の手札です。オープンを押してください"
+    "failedOpen": "オープン失敗",
+    "failedOpenHint": "残りの場を取り切れない4枚の手札です。オープンを押すと、相手チームに5点が入ります"
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "アカウントの削除中です。削除を終えてから操作してください",
@@ -666,6 +669,7 @@
       "field_recovered": "場の復旧",
       "field_completed": "フィールド完了",
       "chombo_reported": "チョンボ指摘",
+      "open_failed": "オープン失敗",
       "round_completed": "ラウンド終了",
       "round_cancelled": "ラウンド中断",
       "round_reset": "ラウンド再開",
@@ -685,6 +689,7 @@
       "field_recovered": "不整合を検出したため、この場を開始前へ戻しました",
       "field_completed": "{winner}が場を獲得（{team}）",
       "chombo_reported": "{player}が{violator}の{violation}を指摘。{team}に5点",
+      "open_failed": "{player}のオープンは通らず。{team}に5点",
       "round_completed": "ラウンド終了。宣言チーム: {team}",
       "round_cancelled": "ラウンド中断",
       "round_reset": "ラウンド再開",
@@ -720,6 +725,7 @@
       "violator": "指摘された人",
       "violation": "違反",
       "awardedTeam": "得点したチーム",
+      "openHand": "オープンした手札",
       "scores": "得点",
       "nextDealer": "次の配り手",
       "nextPlayer": "次の手番",
@@ -827,7 +833,10 @@
       "baseSuitExample": "♠5が最初 → ♠がベーススート → ♠のカードに+50ボーナス",
       "strength": "カード強度計算",
       "strengthDesc": "基本強度 + トランプボーナス(+100) + ベーススートボーナス(+50)",
-      "strengthExample": "ハートトランプ時：♥K = 13 + 100 = 113, ♠K = 13 + 50 = 63（♠がベース時）"
+      "strengthExample": "ハートトランプ時：♥K = 13 + 100 = 113, ♠K = 13 + 50 = 63（♠がベース時）",
+      "open": "オープン［プロモード］",
+      "openDesc": "手札が4枚以下のとき、残りの場を自分のチームですべて取れると宣言できます。宣言すると手札を全員に公開します",
+      "openExample": "通った → 残りの場はすべて宣言したチームのものとして数え、ラウンドが終わる / 通らなかった → 相手チームに5点が入り、ラウンドが終わる"
     },
     "broken": {
       "title": "ブロークン・ネグリシステム",
@@ -894,9 +903,6 @@
       "lastTanzen": "最後タンツェン",
       "lastTanzenDesc": "最後から2枚目までに JOKER（タンツェン）を出さなかった場合の違反。手札が JOKER 1枚になった時点で指摘できます",
       "lastTanzenExample": "手札2枚のときに JOKER 以外を出す → 残りが JOKER 1枚になった時点で指摘できる",
-      "wrongOpen": "オープンの誤り",
-      "wrongOpenDesc": "残りの場をすべて取り切れないのにオープンした場合の違反。オープンは手札4枚以下のときだけ宣言できます",
-      "wrongOpenExample": "取り切れないのにオープン → 手札を公開したままプレイが続き、指摘できる",
       "reportSystem": "違反の指摘",
       "reportSystemDesc": "指摘できるのは相手チームのプレイヤーだけで、違反と同じラウンドのプレイ中に限ります。指摘するとどちらかのチームに5点が入り、そのラウンドは終わって次のラウンドに進みます",
       "reportSystemExample": "正しい指摘 → 指摘したチームに5点 / 違反がない指摘 → 指摘されたチームに5点"
@@ -927,7 +933,7 @@
       "bonus": "強度ボーナス\nトランプスート: +100 / ベーススート: +50",
       "jackSystem": "ジャックシステム\n正J（トランプスートのJ） / 副J（トランプにより異なる）",
       "scoreCalc": "スコア計算\nY≥X: 0.5×(Y-X)+X-5点 / Y'<'X: Y-X点\n(X=宣言組数, Y=獲得フィールド数)",
-      "violations": "チョンボ（プロモード）\nネグリ忘れ / 出し方の違反 / 4ジャック / 最後タンツェン / オープンの誤り\n正しい指摘: 指摘したチームに5点 / 違反がない指摘: 指摘されたチームに5点\nどちらの場合も、そのラウンドは終わって次のラウンドに進む",
+      "violations": "チョンボ（プロモード）\nネグリ忘れ / 出し方の違反 / 4ジャック / 最後タンツェン\n正しい指摘: 指摘したチームに5点 / 違反がない指摘: 指摘されたチームに5点\nどちらの場合も、そのラウンドは終わって次のラウンドに進む",
       "flow": "ゲームフロー\nDeal → Bit → Trick（10フィールド完了まで）",
       "settings": "基本設定\n4人2チーム / 対面がパートナー / 勝利点数はルーム設定で変更可能 / 最低6組のビット"
     }

@@ -330,7 +330,9 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 
 `report-chombo` を受けた server は、指摘された違反の候補があれば指摘したチームに、なければ指摘されたチームに 5 点を加えて `chombo-resolved` を送ります。どちらの場合もそこでラウンドを終えます。場の得点は計算せず、`completeRoundAfterChombo` が通常のラウンド終了と同じく `round-results` を送り、目標点に届けば `game-over`、届かなければ 3 秒後に次のラウンドを配ります。gateway は、そのラウンドに残っている field completion と COM の timer を止めてから送ります。
 
-開発環境では、web の「チョンボ」メニューにある「チョンボのテスト」から `dev-chombo-scenario` を送ると、プロモードの対局を各チョンボの直前の場面に組み直せます。`DevChomboScenarioUseCase` が手札・場・吹き・ネグリを組み直し、`new-round-started` と `update-turn` で全員に送ります。`NODE_ENV=production` では受け付けません。
+`declare-open` で通らないオープンをすると、server はオープンした席の相手チームに 5 点を加え、`open-declared`（`valid: false` と、点が入った `awardedTeam`）を送ります。これはチョンボではないので、違反の候補は残しません。game history には `open_failed` として記録し、そのあとは chombo の指摘と同じく `completeRoundAfterChombo` でラウンドを終えます。通ったオープンは記録せず、10 章の `completeRound()` で終えます。
+
+開発環境では、web の「チョンボ」メニューにある「チョンボのテスト」から `dev-chombo-scenario` を送ると、プロモードの対局を各チョンボの直前の場面に組み直せます。オープンが通らない手札の場面（`failed-open`）も同じ一覧にあります。`DevChomboScenarioUseCase` が手札・場・吹き・ネグリを組み直し、`new-round-started` と `update-turn` で全員に送ります。`NODE_ENV=production` では受け付けません。
 
 ## 9. field completion
 
@@ -364,7 +366,7 @@ checkpoint 復旧は `field_recovered` として game history に記録し、破
 
 ## 10. round 終了と次ラウンド
 
-全員の hand が空になると round end です。プロモードで有効なオープンが通った場合も、その時点で round end になります。
+全員の hand が空になると round end です。プロモードでオープンを宣言した場合も、通っても通らなくても、その時点で round end になります（通らなかった場合は 8.5 のとおり相手チームに 5 点）。
 
 ### 10.1 round end で行うこと
 

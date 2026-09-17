@@ -80,7 +80,11 @@
     "negriPrompt": "Select a card from your hand as Negri",
     "negriPromptPro": "Drag a card from your hand down to set it as Negri",
     "openDeclared": "The open holds",
-    "openInvalid": "The open does not hold. Play continues with the hand revealed",
+    "openInvalid": "The open does not hold. {teamName} gets 5 points and the round ends",
+    "openAction": "Open",
+    "openConfirmTitle": "Declare open?",
+    "openConfirmMessage": "Your hand is shown to everyone, and you claim that your team takes every remaining field. If it holds, every remaining field counts for your team and the round ends. If it does not, the other team gets 5 points and the round ends. You cannot take this back.",
+    "openConfirm": "Declare open",
     "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",
     "chomboIncorrect": "No violation. {teamName} gets 5 points and the round ends",
     "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
@@ -107,7 +111,6 @@
     "wrongSuit": "Wrong suit",
     "fourJack": "Four jacks",
     "lastTanzen": "Last tanzen",
-    "wrongOpen": "Wrong open",
     "confirmTitle": "Report a chombo?",
     "confirmMessage": "Report {name} for {violation}? This ends the round and cannot be undone.",
     "confirm": "Report"
@@ -123,8 +126,8 @@
     "fourJackHint": "You hold all four jacks. Play any card.",
     "lastTanzen": "Last tanzen",
     "lastTanzenHint": "You have two cards, one of them the Joker. Play the other one and it is reportable right away.",
-    "wrongOpen": "Wrong open",
-    "wrongOpenHint": "Your four cards cannot take every remaining field. Press Open."
+    "failedOpen": "Failed open",
+    "failedOpenHint": "Your four cards cannot take every remaining field. Press Open and the other team gets 5 points."
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "Account deletion is in progress. Please finish deleting this account before continuing.",
@@ -456,8 +459,9 @@
     "startingHands": "Starting hands",
     "preGame": "Before start",
     "roundN": "Round {n}",
-    "proEvents": "Chombos and broken hands",
+    "proEvents": "Chombos, broken hands and failed opens",
     "chomboReported": "{player} reported {violator} for {violation}. 5 points to {team}",
+    "openFailed": "{player}'s open did not hold. 5 points to {team}",
     "brokenHandRevealed": "{player} revealed a broken hand. Next: {nextPlayer}",
     "title": "Game log",
     "subtitle": "Review past games",

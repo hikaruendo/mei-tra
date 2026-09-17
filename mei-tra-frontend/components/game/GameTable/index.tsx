@@ -10,6 +10,7 @@ import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
 import { ChomboReportPanel, getChomboReportTargets } from '@/components/game/ChomboReportPanel';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
@@ -111,6 +112,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   usePreloadCards();
   const [spectatorPerspectiveSeatId, setSpectatorPerspectiveSeatId] =
     useState<string | null>(null);
+  const [openConfirmOpen, setOpenConfirmOpen] = useState(false);
 
   const hostSeatId = players.find((player) => player.isHost)?.seatId ?? players[0]?.seatId ?? null;
   const tablePerspectiveSeatId = isSpectator
@@ -142,6 +144,13 @@ export const GameTable: React.FC<GameTableProps> = ({
         onReport={gameActions.reportChombo}
       />
     ) : undefined;
+
+  // Another seat's open or the last card leaving the hand takes the action
+  // away; a confirmation left on screen would then send an open the server
+  // refuses.
+  useEffect(() => {
+    if (!canDeclareOpen) setOpenConfirmOpen(false);
+  }, [canDeclareOpen]);
 
   useEffect(() => {
     if (!isSpectator) {
@@ -375,11 +384,23 @@ export const GameTable: React.FC<GameTableProps> = ({
         <button
           className={styles.openButton}
           type="button"
-          onClick={gameActions.declareOpen}
+          onClick={() => setOpenConfirmOpen(true)}
         >
-          オープン
+          {tRoot('game.openAction')}
         </button>
       )}
+      {/* An open reveals the hand and cannot be taken back, so it is confirmed first. */}
+      <ConfirmModal
+        isOpen={openConfirmOpen}
+        title={tRoot('game.openConfirmTitle')}
+        message={tRoot('game.openConfirmMessage')}
+        confirmText={tRoot('game.openConfirm')}
+        onConfirm={() => {
+          setOpenConfirmOpen(false);
+          gameActions.declareOpen();
+        }}
+        onCancel={() => setOpenConfirmOpen(false)}
+      />
     </div>
   );
 };

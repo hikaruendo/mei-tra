@@ -44,7 +44,6 @@ const violationLabelKeys: Record<string, string> = {
   'wrong-suit': 'chomboReport.wrongSuit',
   'four-jack': 'chomboReport.fourJack',
   'last-tanzen': 'chomboReport.lastTanzen',
-  'wrong-open': 'chomboReport.wrongOpen',
 };
 
 function getTextDetail(
@@ -270,6 +269,13 @@ function proEventText(
     });
   }
 
+  if (event.actionType === 'open_failed') {
+    return t('gameLog.openFailed', {
+      player: actor,
+      team: getTeamDetailLabel(event, 'awardedTeam', teamNames),
+    });
+  }
+
   if (event.actionType === 'broken_hand_revealed') {
     return t('gameLog.brokenHandRevealed', {
       player: actor,
@@ -281,9 +287,9 @@ function proEventText(
 }
 
 /**
- * Chombo reports and broken-hand reveals, oldest first. Web renders both in the
- * replay timeline; without these a mobile player reviewing a pro game never
- * sees that either happened.
+ * Chombo reports, failed opens and broken-hand reveals, oldest first. Web
+ * renders them in the replay timeline; without these a mobile player reviewing
+ * a pro game never sees that they happened.
  */
 export function buildProEventRows(
   replay: GameHistoryReplayViewContract | null,
@@ -297,6 +303,7 @@ export function buildProEventRows(
     .filter(
       (event) =>
         event.actionType === 'chombo_reported' ||
+        event.actionType === 'open_failed' ||
         event.actionType === 'broken_hand_revealed',
     )
     .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))

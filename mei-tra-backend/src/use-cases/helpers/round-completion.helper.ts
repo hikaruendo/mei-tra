@@ -63,9 +63,9 @@ export async function completeRound(
 }
 
 /**
- * Ends a round that a chombo report stopped, the same way as a finished
- * round. The report's points are already added, and the fields played so far
- * are not scored.
+ * Ends a round that a chombo report or a failed open stopped, the same way as
+ * a finished round. Their 5 points are already added, and the fields played so
+ * far are not scored.
  */
 export function completeRoundAfterChombo(
   params: RoundEndParams,

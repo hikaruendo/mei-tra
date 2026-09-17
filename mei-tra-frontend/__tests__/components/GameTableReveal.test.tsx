@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { GameTable } from '@/components/game/GameTable';
 import { JANKEN_STEP_DURATION_MS as D } from '@meitra/game-client/first-turn-reveal';
@@ -85,8 +85,8 @@ const gameActions = {
   declareOpen: jest.fn(),
 } as unknown as GameActions;
 
-function renderTable(overrides: Partial<React.ComponentProps<typeof GameTable>>) {
-  return render(
+function tableElement(overrides: Partial<React.ComponentProps<typeof GameTable>>) {
+  return (
     <GameTable
       blowActionHistory={[]}
       blowDeclarations={[]}
@@ -110,8 +110,12 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof GameTable>>)
       teamScores={teamScores}
       whoseTurn={null}
       {...overrides}
-    />,
+    />
   );
+}
+
+function renderTable(overrides: Partial<React.ComponentProps<typeof GameTable>>) {
+  return render(tableElement(overrides));
 }
 
 describe('GameTable first-turn reveal', () => {
@@ -198,7 +202,7 @@ describe('GameTable pro open control', () => {
       },
       players: withViewerHand(1),
     });
-    expect(screen.getByRole('button', { name: 'オープン' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'game.openAction' })).toBeInTheDocument();
 
     renderTable({
       gameMode: 'pro',
@@ -212,7 +216,7 @@ describe('GameTable pro open control', () => {
       },
       players: withViewerHand(1),
     });
-    expect(screen.getAllByRole('button', { name: 'オープン' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'game.openAction' })).toHaveLength(2);
   });
 
   it('takes the open action away once the viewer has played their last card', () => {
@@ -230,7 +234,7 @@ describe('GameTable pro open control', () => {
       },
       players: withViewerHand(0),
     });
-    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'game.openAction' })).not.toBeInTheDocument();
   });
 
   it('does not show the open action in normal mode', () => {
@@ -245,12 +249,58 @@ describe('GameTable pro open control', () => {
         timestamp: 1,
       },
     });
-    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'game.openAction' })).not.toBeInTheDocument();
   });
 
   it('hides the open action after the server marks the open as declared or resolved', () => {
     renderTable({ gameMode: 'pro', gamePhase: 'play', openDeclared: true });
-    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'game.openAction' })).not.toBeInTheDocument();
+  });
+
+  const openTurn: Partial<React.ComponentProps<typeof GameTable>> = {
+    gameMode: 'pro',
+    gamePhase: 'play',
+    currentHighestDeclaration: {
+      seatId: 'seat-0',
+      team: 0,
+      trumpType: 'tra',
+      numberOfPairs: 1,
+      timestamp: 1,
+    },
+    players: withViewerHand(OPEN_MAX_HAND_SIZE),
+  };
+
+  it('asks before opening, and opens only once confirmed', () => {
+    const declareOpen = jest.mocked(gameActions.declareOpen);
+    declareOpen.mockClear();
+    renderTable(openTurn);
+
+    fireEvent.click(screen.getByRole('button', { name: 'game.openAction' }));
+    expect(screen.getByText('game.openConfirmMessage')).toBeInTheDocument();
+    expect(declareOpen).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
+    expect(screen.queryByText('game.openConfirmMessage')).not.toBeInTheDocument();
+    expect(declareOpen).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'game.openAction' }));
+    fireEvent.click(screen.getByRole('button', { name: 'game.openConfirm' }));
+    expect(declareOpen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('game.openConfirmMessage')).not.toBeInTheDocument();
+  });
+
+  it('closes the confirmation when the open is no longer available', () => {
+    const { rerender } = renderTable(openTurn);
+
+    fireEvent.click(screen.getByRole('button', { name: 'game.openAction' }));
+    expect(screen.getByText('game.openConfirmMessage')).toBeInTheDocument();
+
+    // Another seat opened first.
+    rerender(tableElement({ ...openTurn, openDeclared: true }));
+    expect(screen.queryByText('game.openConfirmMessage')).not.toBeInTheDocument();
+
+    rerender(tableElement(openTurn));
+    expect(screen.queryByText('game.openConfirmMessage')).not.toBeInTheDocument();
   });
 
   it('offers the open action only once the viewer is down to the open hand size', () => {
@@ -267,10 +317,10 @@ describe('GameTable pro open control', () => {
     };
 
     const { unmount } = renderTable({ ...proPlay, players: withViewerHand(OPEN_MAX_HAND_SIZE + 1) });
-    expect(screen.queryByRole('button', { name: 'オープン' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'game.openAction' })).not.toBeInTheDocument();
     unmount();
 
     renderTable({ ...proPlay, players: withViewerHand(OPEN_MAX_HAND_SIZE) });
-    expect(screen.getByRole('button', { name: 'オープン' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'game.openAction' })).toBeInTheDocument();
   });
 });

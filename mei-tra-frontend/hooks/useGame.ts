@@ -27,6 +27,7 @@ import type {
   ReconnectionFailureCode,
   RequestAgariPayload,
   ChomboViolationType,
+  DevChomboScenarioType,
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
@@ -1006,7 +1007,9 @@ export const useGame = () => {
       'open-declared': (payload: OpenDeclaredPayload) => {
         applyGameServerEvent({ type: 'open-declared', payload });
         setNotification({
-          message: payload.valid ? t('openDeclared') : t('openInvalid'),
+          message: payload.valid
+            ? t('openDeclared')
+            : t('openInvalid', { teamName: getTeamLabel(payload.awardedTeam) }),
           type: payload.valid ? 'success' : 'error',
         });
       },
@@ -1468,7 +1471,7 @@ export const useGame = () => {
     // away in production, so the emit path never ships.
     ...(process.env.NODE_ENV !== 'production'
       ? {
-          setupChomboScenario: (violationType: ChomboViolationType) => {
+          setupChomboScenario: (violationType: DevChomboScenarioType) => {
             if (!socket || !currentRoomId) return;
             socket.emit('dev-chombo-scenario', {
               roomId: currentRoomId,

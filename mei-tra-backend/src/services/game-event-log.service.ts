@@ -21,6 +21,7 @@ import {
   GameHistoryReplayView,
   GameOverReplayDetails,
   GameStartedReplayDetails,
+  OpenFailedReplayDetails,
   PlayPhaseStartedReplayDetails,
   PlayerStatsUpdatedReplayDetails,
   RoundCancelledReplayDetails,
@@ -396,6 +397,13 @@ export class GameEventLogService implements IGameEventLogService {
           kind: 'play',
           details: details as ChomboReportedReplayDetails,
         };
+      case 'open_failed':
+        return {
+          ...base,
+          actionType: entry.actionType,
+          kind: 'play',
+          details: details as OpenFailedReplayDetails,
+        };
       case 'round_completed':
         return {
           ...base,
@@ -472,6 +480,8 @@ export class GameEventLogService implements IGameEventLogService {
         return this.formatFieldCompletedSummary(actionData);
       case 'chombo_reported':
         return this.formatChomboReportedSummary(playerLabel, actionData);
+      case 'open_failed':
+        return this.formatOpenFailedSummary(playerLabel, actionData);
       case 'round_completed':
         return this.formatRoundCompletedSummary(actionData);
       case 'round_cancelled':
@@ -500,6 +510,7 @@ export class GameEventLogService implements IGameEventLogService {
     | FieldRecoveredReplayDetails
     | FieldCompletedReplayDetails
     | ChomboReportedReplayDetails
+    | OpenFailedReplayDetails
     | RoundCompletedReplayDetails
     | RoundCancelledReplayDetails
     | RoundResetReplayDetails
@@ -610,6 +621,18 @@ export class GameEventLogService implements IGameEventLogService {
               ? actionData.awardedTeam
               : null,
         };
+      case 'open_failed':
+        return {
+          hand: Array.isArray(actionData.hand)
+            ? actionData.hand.filter(
+                (value): value is string => typeof value === 'string',
+              )
+            : [],
+          awardedTeam:
+            typeof actionData.awardedTeam === 'number'
+              ? actionData.awardedTeam
+              : null,
+        };
       case 'round_completed':
         return {
           declaringTeam:
@@ -692,6 +715,7 @@ export class GameEventLogService implements IGameEventLogService {
       | FieldRecoveredReplayDetails
       | FieldCompletedReplayDetails
       | ChomboReportedReplayDetails
+      | OpenFailedReplayDetails
       | RoundCompletedReplayDetails
       | RoundCancelledReplayDetails
       | RoundResetReplayDetails
@@ -770,6 +794,13 @@ export class GameEventLogService implements IGameEventLogService {
         return [
           this.playerDetail('violator', entry, typedDetails.violatorSeatId),
           this.textDetail('violation', typedDetails.violationType),
+          this.teamDetail('awardedTeam', typedDetails.awardedTeam),
+        ].filter((item): item is GameHistoryReplayDetailItem => Boolean(item));
+      }
+      case 'open_failed': {
+        const typedDetails = details as OpenFailedReplayDetails;
+        return [
+          this.cardsDetail('openHand', typedDetails.hand),
           this.teamDetail('awardedTeam', typedDetails.awardedTeam),
         ].filter((item): item is GameHistoryReplayDetailItem => Boolean(item));
       }
@@ -971,6 +1002,21 @@ export class GameEventLogService implements IGameEventLogService {
     return actionData.isCorrect === true
       ? `${playerLabel} reported ${violatorLabel} for ${violationType}`
       : `${playerLabel} reported ${violatorLabel} for ${violationType}, but there was none`;
+  }
+
+  private formatOpenFailedSummary(
+    playerLabel: string,
+    actionData: Record<string, unknown>,
+  ): string {
+    const awardedTeamLabel = this.formatTeamLabel(
+      typeof actionData.awardedTeam === 'number'
+        ? actionData.awardedTeam
+        : null,
+    );
+
+    return awardedTeamLabel
+      ? `${playerLabel}'s open did not hold. 5 points to ${awardedTeamLabel}`
+      : `${playerLabel}'s open did not hold`;
   }
 
   private readSeatId(actionData: Record<string, unknown>, key: string) {

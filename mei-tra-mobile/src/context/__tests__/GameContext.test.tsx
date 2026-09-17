@@ -215,11 +215,15 @@ const createGameState = (): GameStatePayload => ({
   pointsToWin: 5,
 });
 
-const openDeclared = (valid: boolean): OpenDeclaredPayload => ({
-  declarerSeatId: asSeatId('player-1'),
-  hand: ['S-3'],
-  valid,
-});
+const openDeclared = (valid: boolean): OpenDeclaredPayload =>
+  valid
+    ? { declarerSeatId: asSeatId('player-1'), hand: ['S-3'], valid: true }
+    : {
+        declarerSeatId: asSeatId('player-1'),
+        hand: ['S-3'],
+        valid: false,
+        awardedTeam: 1,
+      };
 
 const chomboResolved = (
   overrides: Partial<ChomboResolvedPayload> = {},
@@ -526,7 +530,12 @@ describe('GameProvider realtime resync safety', () => {
     expect(invalidOpen.notice).toMatchObject({
       key: 'game.openInvalid',
       severity: 'error',
+      params: { teamName: '黒' },
     });
+    // The failed open scores for the other team, which the banner names.
+    expect(invalidOpen.banner?.text).toBe(
+      'オープンは通りませんでした。黒 に5点入り、このラウンドは終わります',
+    );
     expect(invalidOpen.banner?.message.color).toBe(colors.dangerText);
     expect(invalidOpen.banner?.container.borderColor).toBe(colors.danger);
 

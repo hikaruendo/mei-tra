@@ -10,6 +10,7 @@ export const GAME_HISTORY_ACTION_TYPES = [
   'field_recovered',
   'field_completed',
   'chombo_reported',
+  'open_failed',
   'round_completed',
   'round_cancelled',
   'round_reset',
@@ -150,6 +151,11 @@ export interface ChomboReportedReplayDetails {
   awardedTeam: number | null;
 }
 
+export interface OpenFailedReplayDetails {
+  hand: string[];
+  awardedTeam: number | null;
+}
+
 export interface RoundCompletedReplayDetails {
   declaringTeam: number | null;
   teamScores: Record<string, unknown> | null;
@@ -280,6 +286,7 @@ export type GameHistoryReplayEvent =
       'play',
       ChomboReportedReplayDetails
     >
+  | GameHistoryReplayEventBase<'open_failed', 'play', OpenFailedReplayDetails>
   | GameHistoryReplayEventBase<
       'round_completed',
       'round',
