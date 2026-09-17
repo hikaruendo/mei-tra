@@ -216,6 +216,27 @@ describe('buildProEventRows', () => {
     expect(rows[0].text).toContain('B班に5点');
   });
 
+  it('names the opener and the team that scored on a failed open', () => {
+    const openFailed = event({
+      id: 'open-failed-1',
+      actionType: 'open_failed',
+      timestamp: '2026-01-01T00:03:00.000Z',
+      actorSeatId: 'seat-1' as SeatId,
+      actionData: { playerNames: { 'seat-1': 'あかり' } },
+      detailItems: [
+        { labelKey: 'openHand', value: { kind: 'cards', cards: ['5♥'] } },
+        { labelKey: 'awardedTeam', value: { kind: 'team', team: 1 } },
+      ],
+    } as Partial<AnyEvent> as never);
+
+    const rows = buildProEventRows(
+      replay([round(1, [chomboEvent(), openFailed])]),
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(['chombo-1', 'open-failed-1']);
+    expect(rows[1].text).toBe('あかりのオープンは通らず。黒に5点');
+  });
+
   it('names the revealer and who bids next on a broken hand', () => {
     const rows = buildProEventRows(replay([round(1, [brokenEvent()])]));
 

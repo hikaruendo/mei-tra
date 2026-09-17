@@ -39,7 +39,7 @@ describe('pro-mode start-to-reconnect scenario', () => {
       state.playState!.chomboRoundNumber = state.roundNumber;
       state.playState!.chomboViolations = [
         {
-          type: 'wrong-open',
+          type: 'last-tanzen',
           violatorSeatId: asSeatId('winner'),
           timestamp: 1,
           reportedBySeatId: null,
@@ -51,7 +51,7 @@ describe('pro-mode start-to-reconnect scenario', () => {
         roomId: 'room-1',
         actorId: 'opponent',
         violatorSeatId: asSeatId('winner'),
-        violationType: 'wrong-open',
+        violationType: 'last-tanzen',
       });
       // The report event is the public scoring boundary for the scenario.
       expect(state.pointsToWin).toBe(5);

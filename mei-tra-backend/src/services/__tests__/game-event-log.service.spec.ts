@@ -448,6 +448,49 @@ describe('GameEventLogService', () => {
     );
   });
 
+  it('projects a failed open as a play event with its hand and the team that scored', async () => {
+    const history = [
+      {
+        id: 'history-open-failed',
+        roomId: 'room-1',
+        gameStateId: 'state-1',
+        actionType: 'open_failed' as const,
+        actorSeatId: 'seat-1',
+        actorKeySnapshot: null,
+        actionData: {
+          hand: ['5♥', '6♥'],
+          awardedTeam: 1,
+          playerNames: { 'seat-1': 'Akari' },
+          context: { roundNumber: 1, gamePhase: 'play' },
+        },
+        timestamp: new Date('2026-04-16T00:05:00.000Z'),
+      },
+    ];
+    const repository = {
+      create: jest.fn(),
+      findByRoomId: jest.fn().mockResolvedValue(history),
+    } as unknown as IGameHistoryRepository;
+    const service = new GameEventLogService(repository);
+
+    const replay = await service.replayByRoomId('room-1');
+
+    expect(replay.rounds[0]?.events[0]).toEqual(
+      expect.objectContaining({
+        actionType: 'open_failed',
+        kind: 'play',
+        summary: "Akari's open did not hold. 5 points to Team 2",
+        details: { hand: ['5♥', '6♥'], awardedTeam: 1 },
+        detailItems: [
+          {
+            labelKey: 'openHand',
+            value: { kind: 'cards', cards: ['5♥', '6♥'] },
+          },
+          { labelKey: 'awardedTeam', value: { kind: 'team', team: 1 } },
+        ],
+      }),
+    );
+  });
+
   it('builds action-aware summaries for replay events', async () => {
     const repository = {
       create: jest.fn(),

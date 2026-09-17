@@ -154,12 +154,7 @@ export interface GameOverState {
 }
 
 export interface ChomboViolation {
-  type:
-    | 'negri-forget'
-    | 'wrong-suit'
-    | 'four-jack'
-    | 'last-tanzen'
-    | 'wrong-open';
+  type: 'negri-forget' | 'wrong-suit' | 'four-jack' | 'last-tanzen';
   violatorSeatId: SeatId;
   timestamp: number;
   reportedBySeatId: SeatId | null;

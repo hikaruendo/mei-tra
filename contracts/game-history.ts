@@ -14,6 +14,7 @@ export type GameHistoryActionType =
   | 'field_recovered'
   | 'field_completed'
   | 'chombo_reported'
+  | 'open_failed'
   | 'round_completed'
   | 'round_cancelled'
   | 'round_reset'
@@ -134,6 +135,11 @@ export interface ChomboReportedReplayDetailsContract {
   violatorSeatId: SeatId | null;
   violationType: string | null;
   isCorrect: boolean;
+  awardedTeam: number | null;
+}
+
+export interface OpenFailedReplayDetailsContract {
+  hand: string[];
   awardedTeam: number | null;
 }
 
@@ -268,6 +274,11 @@ export type GameHistoryReplayEventContract =
       'chombo_reported',
       'play',
       ChomboReportedReplayDetailsContract
+    >
+  | GameHistoryReplayEventBaseContract<
+      'open_failed',
+      'play',
+      OpenFailedReplayDetailsContract
     >
   | GameHistoryReplayEventBaseContract<
       'round_completed',

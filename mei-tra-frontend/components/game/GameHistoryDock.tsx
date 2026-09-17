@@ -40,6 +40,7 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   field_recovered: 'actionTypes.field_recovered',
   field_completed: 'actionTypes.field_completed',
   chombo_reported: 'actionTypes.chombo_reported',
+  open_failed: 'actionTypes.open_failed',
   round_completed: 'actionTypes.round_completed',
   round_cancelled: 'actionTypes.round_cancelled',
   round_reset: 'actionTypes.round_reset',
@@ -57,7 +58,6 @@ const CHOMBO_VIOLATION_MESSAGE_KEYS: Record<string, string> = {
   'wrong-suit': 'wrongSuit',
   'four-jack': 'fourJack',
   'last-tanzen': 'lastTanzen',
-  'wrong-open': 'wrongOpen',
 };
 
 const extractScoreTotals = (
@@ -595,6 +595,11 @@ export function GameHistoryDock({
           team: getDetailValue(event, 'awardedTeam') ?? t('unknownValue'),
         } as never);
       }
+      case 'open_failed':
+        return t('summaries.open_failed' as never, {
+          player,
+          team: getDetailValue(event, 'awardedTeam') ?? t('unknownValue'),
+        } as never);
       case 'round_completed':
         return t('summaries.round_completed' as never, {
           team: getDetailValue(event, 'declaringTeam') ?? t('unknownValue'),

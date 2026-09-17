@@ -1,19 +1,19 @@
 import { useTranslations } from 'next-intl';
-import type { ChomboViolationType } from '@contracts/game';
+import type { DevChomboScenarioType } from '@contracts/game';
 import styles from './ChomboScenarioPanel.module.scss';
 
 interface ChomboScenarioPanelProps {
-  onSelect: (violationType: ChomboViolationType) => void;
+  onSelect: (violationType: DevChomboScenarioType) => void;
 }
 
 export function ChomboScenarioPanel({ onSelect }: ChomboScenarioPanelProps) {
   const t = useTranslations('chomboScenario');
-  const scenarios: { type: ChomboViolationType; label: string; hint: string }[] = [
+  const scenarios: { type: DevChomboScenarioType; label: string; hint: string }[] = [
     { type: 'negri-forget', label: t('negriForget'), hint: t('negriForgetHint') },
     { type: 'wrong-suit', label: t('wrongSuit'), hint: t('wrongSuitHint') },
     { type: 'four-jack', label: t('fourJack'), hint: t('fourJackHint') },
     { type: 'last-tanzen', label: t('lastTanzen'), hint: t('lastTanzenHint') },
-    { type: 'wrong-open', label: t('wrongOpen'), hint: t('wrongOpenHint') },
+    { type: 'failed-open', label: t('failedOpen'), hint: t('failedOpenHint') },
   ];
 
   return (

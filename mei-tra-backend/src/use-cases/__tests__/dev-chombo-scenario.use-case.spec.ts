@@ -1,4 +1,8 @@
-import type { ChomboResolvedPayload } from '@contracts/game';
+import type {
+  ChomboResolvedPayload,
+  DevChomboScenarioType,
+  OpenDeclaredPayload,
+} from '@contracts/game';
 import type { IRoomService } from '../../services/interfaces/room-service.interface';
 import type { ChomboViolation, DomainPlayer } from '../../types/game.types';
 import { asSeatId } from '../../types/identity.types';
@@ -13,7 +17,7 @@ const seat = (seatId: string, team: 0 | 1): DomainPlayer => ({
   isPasser: false,
 });
 
-async function setUpScenario(violationType: ChomboViolation['type']) {
+async function setUpScenario(violationType: DevChomboScenarioType) {
   const fixture = await createGame(
     [],
     [seat('opponent', 1), seat('partner', 0), seat('rival', 1)],
@@ -47,12 +51,12 @@ async function isReportedCorrectly(
   return (resolved?.payload as ChomboResolvedPayload | undefined)?.isCorrect;
 }
 
-const scenarioTypes: ChomboViolation['type'][] = [
+const scenarioTypes: DevChomboScenarioType[] = [
   'negri-forget',
   'wrong-suit',
   'four-jack',
   'last-tanzen',
-  'wrong-open',
+  'failed-open',
 ];
 
 describe('DevChomboScenarioUseCase', () => {
@@ -154,14 +158,18 @@ describe('DevChomboScenarioUseCase', () => {
   });
 
   it('lets the requester open a hand that cannot take every field', async () => {
-    const { fixture } = await setUpScenario('wrong-open');
+    const { fixture } = await setUpScenario('failed-open');
     try {
       const opened = await fixture.open.execute({
         roomId: 'room-1',
         actorId: 'winner',
       });
       expect(opened.success).toBe(true);
-      expect(await isReportedCorrectly(fixture, 'wrong-open')).toBe(true);
+      const declared = opened.events?.find(
+        (event) => event.event === 'open-declared',
+      )?.payload as OpenDeclaredPayload | undefined;
+      expect(declared).toMatchObject({ valid: false, awardedTeam: 1 });
+      expect(fixture.game.getState().teamScores[1].total).toBe(5);
     } finally {
       await fixture.module.close();
     }

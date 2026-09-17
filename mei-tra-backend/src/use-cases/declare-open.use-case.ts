@@ -1,18 +1,17 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import type { OpenDeclaredPayload } from '@contracts/game';
+import type { DomainPlayer, Team } from '../types/game.types';
 import { asSeatId } from '../types/identity.types';
-import {
-  appendChomboCandidate,
-  findActiveChomboCandidate,
-} from '../domain/chombo-candidates';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { OpenDeclarationService } from '../services/open-declaration.service';
-import { IChomboService } from '../services/interfaces/chombo-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { IScoreService } from '../services/interfaces/score-service.interface';
 import { resolvePlayerByActorId } from './helpers/player-resolution.helper';
-import { completeRound } from './helpers/round-completion.helper';
+import {
+  completeRound,
+  completeRoundAfterChombo,
+} from './helpers/round-completion.helper';
 import {
   DeclareOpenRequest,
   DeclareOpenResponse,
@@ -20,12 +19,14 @@ import {
 } from './interfaces/declare-open.use-case.interface';
 import type { GatewayEvent } from './interfaces/gateway-event.interface';
 
+/** What a failed open gives the other team, the same as a chombo. */
+const FAILED_OPEN_POINTS = 5;
+
 @Injectable()
 export class DeclareOpenUseCase implements IDeclareOpenUseCase {
   constructor(
     @Inject('IRoomService') private readonly roomService: IRoomService,
     private readonly openDeclarationService: OpenDeclarationService,
-    @Inject('IChomboService') private readonly chomboService: IChomboService,
     @Inject('IScoreService') private readonly scoreService: IScoreService,
     @Optional()
     @Inject('IGameEventLogService')
@@ -52,16 +53,6 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       return { success: false, error: 'Open requires a completed declaration' };
     }
     if (state.playState.openResolved) {
-      return { success: false, error: 'Open has already been declared' };
-    }
-    // A wrong open only locks out the seat that made it, not the whole round.
-    if (
-      findActiveChomboCandidate(
-        state.playState.chomboViolations ?? [],
-        asSeatId(player.seatId),
-        'wrong-open',
-      )
-    ) {
       return { success: false, error: 'Open has already been declared' };
     }
     if (player.hand.length > OPEN_MAX_HAND_SIZE) {
@@ -92,10 +83,18 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       [player.seatId]: [...player.hand],
     };
 
+    if (!valid) {
+      state.playState.openResolved = true;
+      return this.settleFailedOpen(
+        { roomId: request.roomId, roomGameState, state, room },
+        player,
+      );
+    }
+
     const payload: OpenDeclaredPayload = {
       declarerSeatId: asSeatId(player.seatId),
       hand: [...player.hand],
-      valid,
+      valid: true,
     };
     const events: GatewayEvent[] = [
       {
@@ -105,19 +104,6 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
         payload,
       },
     ];
-
-    if (!valid) {
-      const violation = this.chomboService.recordViolation(
-        asSeatId(player.seatId),
-        'wrong-open',
-      );
-      state.playState.chomboViolations = appendChomboCandidate(
-        state.playState.chomboViolations ?? [],
-        violation,
-      );
-      await roomGameState.saveState();
-      return { success: true, events };
-    }
 
     state.playState.openResolved = true;
     const completion = await completeRound({
@@ -140,6 +126,62 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     return {
       success: true,
       events: [...events, ...completion.events],
+      delayedEvents: completion.delayedEvents,
+      gameOver: completion.gameOver,
+      roundStoppedEarly: true,
+    };
+  }
+
+  /**
+   * A failed open gives the other team 5 points and ends the round the way a
+   * chombo report does. It is written to the play log; a valid open is not,
+   * since the round it completes is.
+   */
+  private async settleFailedOpen(
+    params: Omit<
+      Parameters<typeof completeRoundAfterChombo>[0],
+      'roomService' | 'gameEventLogService'
+    >,
+    player: DomainPlayer,
+  ): Promise<DeclareOpenResponse> {
+    const { roomId, state } = params;
+    const awardedTeam = (1 - player.team) as Team;
+    const hand = [...player.hand];
+    this.scoreService.addPoints(
+      awardedTeam,
+      FAILED_OPEN_POINTS,
+      state.teamScores,
+      state.teamScoreRecords,
+      'Failed open points',
+    );
+
+    // Logged before the round completes, so the log reads in play order.
+    await this.gameEventLogService?.log({
+      roomId,
+      actionType: 'open_failed',
+      actorSeatId: asSeatId(player.seatId),
+      state,
+      actionData: { hand, awardedTeam },
+    });
+
+    const payload: OpenDeclaredPayload = {
+      declarerSeatId: asSeatId(player.seatId),
+      hand,
+      valid: false,
+      awardedTeam,
+    };
+    const completion = await completeRoundAfterChombo({
+      ...params,
+      roomService: this.roomService,
+      gameEventLogService: this.gameEventLogService,
+    });
+
+    return {
+      success: true,
+      events: [
+        { scope: 'room', roomId, event: 'open-declared', payload },
+        ...completion.events,
+      ],
       delayedEvents: completion.delayedEvents,
       gameOver: completion.gameOver,
       roundStoppedEarly: true,

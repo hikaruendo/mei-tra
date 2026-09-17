@@ -14,7 +14,8 @@ const mockSocket = {
   emit: jest.fn(),
 };
 const mockSound = jest.fn();
-const mockTranslate = (key: string) => key;
+const mockTranslate = (key: string, values?: Record<string, unknown>) =>
+  values ? `${key}:${Object.values(values).join(',')}` : key;
 jest.mock('@/hooks/useSocket', () => ({
   useSocket: () => ({ socket: mockSocket, isConnected: true, isConnecting: false }),
 }));
@@ -96,5 +97,25 @@ describe('useGame Negri prompt', () => {
     }));
 
     expect(result.current.notification?.message).toBe(key);
+  });
+});
+
+describe('useGame open result', () => {
+  beforeEach(() => { mockHandlers.clear(); sessionStorage.clear(); });
+
+  it('names the team that scored when an open fails', () => {
+    const { result } = renderHook(() => useGame());
+    act(() => mockHandlers.get('game-state')?.(snapshot(false)));
+    act(() => mockHandlers.get('open-declared')?.({
+      declarerSeatId: asSeatId('viewer'),
+      hand: ['5♣'],
+      valid: false,
+      awardedTeam: 1,
+    }));
+
+    expect(result.current.notification).toMatchObject({
+      message: 'openInvalid:teamBlack',
+      type: 'error',
+    });
   });
 });

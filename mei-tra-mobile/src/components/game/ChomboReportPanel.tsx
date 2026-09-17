@@ -1,13 +1,14 @@
 import type { ChomboViolationType } from '@meitra/contracts/game';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { confirmAction } from '@/lib/confirm-action';
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 
 const violationTypes: ChomboViolationType[] = [
-  'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen', 'wrong-open',
+  'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen',
 ];
 
 const violationLabelKeys: Record<ChomboViolationType, string> = {
@@ -15,39 +16,23 @@ const violationLabelKeys: Record<ChomboViolationType, string> = {
   'wrong-suit': 'chomboReport.wrongSuit',
   'four-jack': 'chomboReport.fourJack',
   'last-tanzen': 'chomboReport.lastTanzen',
-  'wrong-open': 'chomboReport.wrongOpen',
 };
 
-/**
- * A report is irreversible and moves the score, so submitting only proposes it.
- * Mirrors confirmGuestSignOut: react-native-web ships Alert as a no-op stub,
- * so the web build falls back to the browser's confirm dialog.
- */
+/** A report is irreversible and moves the score, so submitting only proposes it. */
 function confirmReport(
   playerName: string,
   violationLabel: string,
   onConfirm: () => void,
 ): void {
-  const title = t('chomboReport.confirmTitle');
-  const message = t('chomboReport.confirmMessage', {
-    name: playerName,
-    violation: violationLabel,
+  confirmAction({
+    title: t('chomboReport.confirmTitle'),
+    message: t('chomboReport.confirmMessage', {
+      name: playerName,
+      violation: violationLabel,
+    }),
+    confirmLabel: t('chomboReport.confirm'),
+    onConfirm,
   });
-
-  if (Platform.OS === 'web') {
-    const confirm = (
-      globalThis as { confirm?: (message: string) => boolean }
-    ).confirm;
-    if (confirm?.(`${title}\n\n${message}`)) {
-      onConfirm();
-    }
-    return;
-  }
-
-  Alert.alert(title, message, [
-    { text: t('common.cancel'), style: 'cancel' },
-    { text: t('chomboReport.confirm'), style: 'destructive', onPress: onConfirm },
-  ]);
 }
 
 interface Props {

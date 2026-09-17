@@ -28,7 +28,6 @@ describe('ChomboReportPanel', () => {
       'wrongSuit',
       'fourJack',
       'lastTanzen',
-      'wrongOpen',
     ]);
 
     fireEvent.change(screen.getByLabelText('violation'), {

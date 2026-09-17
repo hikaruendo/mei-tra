@@ -15,7 +15,7 @@ describe('ChomboScenarioPanel', () => {
       ['wrongSuit', 'wrong-suit'],
       ['fourJack', 'four-jack'],
       ['lastTanzen', 'last-tanzen'],
-      ['wrongOpen', 'wrong-open'],
+      ['failedOpen', 'failed-open'],
     ];
 
     expect(screen.getAllByRole('button')).toHaveLength(scenarios.length);
