@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ChomboViolationType } from '@contracts/game';
+import type { DevChomboScenarioType } from '@contracts/game';
 import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
@@ -19,7 +19,7 @@ interface GameDockProps {
   players?: Player[];
   teamNames?: TeamNames;
   chomboReport?: ReactNode;
-  onSetupChomboScenario?: (violationType: ChomboViolationType) => void;
+  onSetupChomboScenario?: (violationType: DevChomboScenarioType) => void;
   onLeaveRequest?: () => void;
 }
 

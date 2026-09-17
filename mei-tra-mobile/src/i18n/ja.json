@@ -80,10 +80,10 @@
     "negriPrompt": "手札からネグリにするカードを選んでください",
     "negriPromptPro": "ネグリにするカードを手札から下へドラッグしてください",
     "openDeclared": "オープンが通りました",
-    "openInvalid": "オープンは通りませんでした。手札を公開したままプレイが続きます",
+    "openInvalid": "オープンは通りませんでした。{teamName} に5点入り、このラウンドは終わります",
     "openAction": "オープン",
     "openConfirmTitle": "オープンしますか？",
-    "openConfirmMessage": "手札を全員に公開し、残りの場を自分のチームですべて取ると宣言します。取り切れないときは、手札を公開したままプレイが続き、相手チームに「オープンの誤り」を指摘されることがあります。この宣言は取り消せません。",
+    "openConfirmMessage": "手札を全員に公開し、残りの場を自分のチームですべて取ると宣言します。通れば残りの場はすべて自分のチームのものとして数え、ラウンドが終わります。通らなければ相手チームに5点が入り、ラウンドが終わります。この宣言は取り消せません。",
     "openConfirm": "オープンする",
     "chomboCorrect": "正しい指摘です。{teamName} に5点入り、このラウンドは終わります",
     "chomboIncorrect": "違反はありませんでした。{teamName} に5点入り、このラウンドは終わります",
@@ -111,7 +111,6 @@
     "wrongSuit": "出し方の違反",
     "fourJack": "4ジャック",
     "lastTanzen": "最後タンツェン",
-    "wrongOpen": "オープンの誤り",
     "confirmTitle": "チョンボを指摘しますか？",
     "confirmMessage": "{name}の「{violation}」を指摘します。この操作は取り消せず、ラウンドが終了します。",
     "confirm": "指摘する"
@@ -127,8 +126,8 @@
     "fourJackHint": "J を4枚持っています。そのままカードを出してください",
     "lastTanzen": "最後タンツェン",
     "lastTanzenHint": "残り2枚で JOKER を持っています。JOKER ではない方を出すと、その時点で指摘できます",
-    "wrongOpen": "オープンの誤り",
-    "wrongOpenHint": "残りの場を取り切れない4枚の手札です。オープンを押してください"
+    "failedOpen": "オープン失敗",
+    "failedOpenHint": "残りの場を取り切れない4枚の手札です。オープンを押すと、相手チームに5点が入ります"
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "アカウントの削除中です。削除を終えてから操作してください",
@@ -459,8 +458,9 @@
     "startingHands": "開始時の手札",
     "preGame": "開始前",
     "roundN": "{n}ラウンド",
-    "proEvents": "チョンボ・ブロークン",
+    "proEvents": "チョンボ・ブロークン・オープン失敗",
     "chomboReported": "{player}が{violator}の{violation}を指摘。{team}に5点",
+    "openFailed": "{player}のオープンは通らず。{team}に5点",
     "brokenHandRevealed": "{player}がブロークンを公開。次: {nextPlayer}",
     "title": "対局ログ",
     "subtitle": "過去の対局を確認",

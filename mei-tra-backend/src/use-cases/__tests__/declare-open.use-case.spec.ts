@@ -78,21 +78,12 @@ function createMockedUseCase(actor: DomainPlayer, valid: boolean) {
     getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
   };
   const openRules = { canDeclareOpen: jest.fn(() => valid) };
-  const violation = {
-    type: 'wrong-open',
-    violatorSeatId: actor.seatId,
-    timestamp: 1,
-    reportedBySeatId: null,
-    isExpired: false,
-  };
-  const chombo = { recordViolation: jest.fn(() => violation) };
   const useCase = new DeclareOpenUseCase(
     roomService as never,
     openRules as never,
-    chombo as never,
     new ScoreService(),
   );
-  return { useCase, openRules, violation };
+  return { useCase, openRules };
 }
 
 const scoreService = new ScoreService();
@@ -140,58 +131,6 @@ describe('DeclareOpenUseCase', () => {
     state.playState!.openDeclared = false;
     state.playState!.openResolved = false;
     state.playState!.chomboViolations = [];
-  });
-
-  it('records an invalid open for the later chombo report flow without settling the round', async () => {
-    const { useCase, violation } = createMockedUseCase(players[0], false);
-
-    const result = await useCase.execute({
-      roomId: 'room-1',
-      actorId: 'user-1',
-    });
-
-    expect(result.success).toBe(true);
-    expect(state.playState?.openResolved).toBe(false);
-    expect(state.playState?.chomboViolations).toEqual([violation]);
-    expect(eventNames(result.events)).toEqual(['open-declared']);
-    expect(result.events?.[0].payload).toMatchObject({ valid: false });
-    expect(result.delayedEvents).toBeUndefined();
-  });
-
-  it('still lets an opposing seat open after another seat opened wrongly', async () => {
-    const wrongOpener = createMockedUseCase(players[0], false);
-    await wrongOpener.useCase.execute({ roomId: 'room-1', actorId: 'user-1' });
-
-    const defender = createMockedUseCase(players[2], false);
-    const result = await defender.useCase.execute({
-      roomId: 'room-1',
-      actorId: 'user-3',
-    });
-
-    expect(result.success).toBe(true);
-    expect(defender.openRules.canDeclareOpen).toHaveBeenCalled();
-    expect(state.playState?.chomboViolations).toEqual([
-      wrongOpener.violation,
-      defender.violation,
-    ]);
-  });
-
-  it('rejects a second open from the seat that already opened wrongly', async () => {
-    const { useCase, openRules } = createMockedUseCase(players[0], false);
-    await useCase.execute({ roomId: 'room-1', actorId: 'user-1' });
-    openRules.canDeclareOpen.mockClear();
-
-    const result = await useCase.execute({
-      roomId: 'room-1',
-      actorId: 'user-1',
-    });
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Open has already been declared',
-    });
-    expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
-    expect(state.playState?.chomboViolations).toHaveLength(1);
   });
 
   it('rejects an open once a valid open has settled the round', async () => {
@@ -251,6 +190,105 @@ describe('DeclareOpenUseCase', () => {
     expect(state.playState?.openDeclared).toBe(false);
   });
 
+  describe('failed open', () => {
+    // The winner's hearts cannot beat the opponent's club trumps.
+    const failingHands = {
+      winner: ['5♥', '6♥', '7♥'],
+      opponent: ['A♣', 'K♣', 'Q♣'],
+    };
+
+    it('gives the other team 5 points and deals the next round', async () => {
+      const fixture = await createOpenGame(failingHands, completedFields(4, 3));
+      try {
+        const roundNumber = fixture.game.getState().roundNumber;
+
+        const result = await fixture.open.execute({
+          roomId: 'room-1',
+          actorId: 'winner',
+        });
+
+        expect(result.success).toBe(true);
+        // Only the 5 points: the fields played so far are not scored.
+        const { teamScores, playState } = fixture.game.getState();
+        expect(teamScores[0].total).toBe(0);
+        expect(teamScores[1].total).toBe(5);
+        expect(eventNames(result.events)).toEqual([
+          'open-declared',
+          'round-results',
+        ]);
+        expect(result.events?.[0].payload).toEqual({
+          declarerSeatId: asSeatId('winner'),
+          hand: failingHands.winner,
+          valid: false,
+          awardedTeam: 1,
+        });
+        expect(result.roundStoppedEarly).toBe(true);
+        expect(eventNames(result.delayedEvents)).toEqual([
+          'round-reset',
+          'new-round-started',
+          'update-turn',
+          'update-phase',
+        ]);
+        // A failed open is not a chombo, so nothing is left to report.
+        expect(playState?.chomboViolations ?? []).toEqual([]);
+        expect(fixture.game.getState()).toMatchObject({
+          gamePhase: 'blow',
+          roundNumber: roundNumber + 1,
+        });
+      } finally {
+        await fixture.module.close();
+      }
+    });
+
+    it('writes the failed open to the play log before the round completes', async () => {
+      const fixture = await createOpenGame(failingHands, completedFields(4, 3));
+      try {
+        await fixture.open.execute({ roomId: 'room-1', actorId: 'winner' });
+
+        const actionTypes = fixture.loggedEvents.map(
+          (event) => event.actionType,
+        );
+        expect(
+          actionTypes.filter((type) => type === 'open_failed'),
+        ).toHaveLength(1);
+        expect(actionTypes.indexOf('open_failed')).toBeLessThan(
+          actionTypes.indexOf('round_completed'),
+        );
+        expect(
+          fixture.loggedEvents.find(
+            (event) => event.actionType === 'open_failed',
+          ),
+        ).toMatchObject({
+          actorSeatId: asSeatId('winner'),
+          actionData: { hand: failingHands.winner, awardedTeam: 1 },
+        });
+      } finally {
+        await fixture.module.close();
+      }
+    });
+
+    it('ends the game when the 5 points reach the target', async () => {
+      const fixture = await createOpenGame(failingHands, completedFields(4, 3));
+      try {
+        fixture.game.getState().pointsToWin = 5;
+
+        const result = await fixture.open.execute({
+          roomId: 'room-1',
+          actorId: 'winner',
+        });
+
+        expect(eventNames(result.events)).toEqual([
+          'open-declared',
+          'round-results',
+          'game-over',
+        ]);
+        expect(result.gameOver).toMatchObject({ winningTeam: 1 });
+      } finally {
+        await fixture.module.close();
+      }
+    });
+  });
+
   describe('valid open', () => {
     it('scores the unplayed fields for the opener like a played-out round and deals the next round', async () => {
       const fixture = await createOpenGame(
@@ -266,6 +304,10 @@ describe('DeclareOpenUseCase', () => {
         });
 
         expect(result.success).toBe(true);
+        // A valid open is recorded only through the round it completes.
+        expect(
+          fixture.loggedEvents.map((event) => event.actionType),
+        ).not.toContain('open_failed');
         // 4 won + 3 unplayed fields against the 7 declared pairs.
         const { teamScores } = fixture.game.getState();
         expect(teamScores[0].total).toBe(

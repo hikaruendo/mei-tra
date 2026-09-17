@@ -6,6 +6,7 @@ import type {
   TeamNames,
   TrumpType,
   ChomboViolationType,
+  DevChomboScenarioType,
 } from '@meitra/contracts/game';
 import type {
   AckableClientEvent,
@@ -382,7 +383,7 @@ interface GameContextValue extends MobileState {
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   /** Present in development builds only, like the web hook. */
-  setupChomboScenario?: (violationType: ChomboViolationType) => void;
+  setupChomboScenario?: (violationType: DevChomboScenarioType) => void;
   declareOpen: () => void;
   selectBaseSuit: (suit: string) => void;
   revealBrokenHand: () => void;
@@ -1013,10 +1014,18 @@ export function GameProvider({ children }: PropsWithChildren) {
       applyGameServerEvent({ type: 'open-declared', payload });
       dispatch({
         type: 'notice',
-        message: {
-          key: payload.valid ? 'game.openDeclared' : 'game.openInvalid',
-          severity: payload.valid ? 'success' : 'error',
-        },
+        message: payload.valid
+          ? { key: 'game.openDeclared', severity: 'success' }
+          : {
+              key: 'game.openInvalid',
+              severity: 'error',
+              params: {
+                teamName: getTeamDisplayName(
+                  payload.awardedTeam,
+                  stateRef.current.game?.teamNames,
+                ),
+              },
+            },
       });
     });
     socket.on('chombo-resolved', (payload: ChomboResolvedPayload) => {
@@ -1450,7 +1459,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
   }, [emitOneWayAction]);
 
-  const setupChomboScenario = useCallback((violationType: ChomboViolationType) => {
+  const setupChomboScenario = useCallback((violationType: DevChomboScenarioType) => {
     const game = stateRef.current.game;
     if (!game) return;
     emitOneWayAction('dev-chombo-scenario', game.roomId, () => {

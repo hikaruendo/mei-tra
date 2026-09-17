@@ -8,7 +8,7 @@ import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 
 const violationTypes: ChomboViolationType[] = [
-  'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen', 'wrong-open',
+  'negri-forget', 'wrong-suit', 'four-jack', 'last-tanzen',
 ];
 
 const violationLabelKeys: Record<ChomboViolationType, string> = {
@@ -16,7 +16,6 @@ const violationLabelKeys: Record<ChomboViolationType, string> = {
   'wrong-suit': 'chomboReport.wrongSuit',
   'four-jack': 'chomboReport.fourJack',
   'last-tanzen': 'chomboReport.lastTanzen',
-  'wrong-open': 'chomboReport.wrongOpen',
 };
 
 /** A report is irreversible and moves the score, so submitting only proposes it. */

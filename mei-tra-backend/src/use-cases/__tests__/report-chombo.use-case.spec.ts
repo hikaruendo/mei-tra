@@ -9,7 +9,6 @@ const types: ChomboViolation['type'][] = [
   'wrong-suit',
   'four-jack',
   'last-tanzen',
-  'wrong-open',
 ];
 
 describe('Chombo report adjudication from room state', () => {
@@ -107,11 +106,11 @@ describe('Chombo report adjudication from room state', () => {
   });
 
   it('does not resurrect expired room candidates from the shared service', async () => {
-    const stale = fixture.chombo.recordViolation(winner, 'wrong-open');
+    const stale = fixture.chombo.recordViolation(winner, 'four-jack');
     fixture.game.getState().playState!.chomboViolations = [
       { ...stale, isExpired: true },
     ];
-    const result = await report('wrong-open');
+    const result = await report('four-jack');
     expect(result.events).toContainEqual(
       expect.objectContaining<Partial<GatewayEvent>>({
         event: 'chombo-resolved',
@@ -153,7 +152,7 @@ describe('Chombo report adjudication from room state', () => {
 
   it('rejects a report after the room changes round', async () => {
     fixture.game.getState().roundNumber = 2;
-    const result = await report('wrong-open');
+    const result = await report('four-jack');
     expect(result.success).toBe(false);
     expect(fixture.game.getState().teamScores[0].total).toBe(0);
     expect(fixture.game.getState().teamScores[1].total).toBe(0);
@@ -161,7 +160,7 @@ describe('Chombo report adjudication from room state', () => {
 
   it('rejects reports from normal-mode rooms', async () => {
     fixture.room.settings.gameMode = 'normal';
-    const result = await report('wrong-open');
+    const result = await report('four-jack');
     expect(result).toEqual({
       success: false,
       error: 'Chombo reports are only available in pro mode',
@@ -189,7 +188,7 @@ describe('Chombo report adjudication from room state', () => {
       .getState()
       .players.find((player) => player.seatId === asSeatId('opponent'))!.isCOM =
       true;
-    const result = await report('wrong-open');
+    const result = await report('four-jack');
     expect(result).toEqual({
       success: false,
       error: 'COM cannot report chombos',

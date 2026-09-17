@@ -1,10 +1,10 @@
-import type { ChomboViolation } from '../../types/game.types';
+import type { DevChomboScenarioType } from '@contracts/game';
 import type { GatewayEvent } from './gateway-event.interface';
 
 export interface DevChomboScenarioRequest {
   roomId: string;
   actorId: string;
-  violationType: ChomboViolation['type'];
+  violationType: DevChomboScenarioType;
 }
 
 export interface DevChomboScenarioResponse {

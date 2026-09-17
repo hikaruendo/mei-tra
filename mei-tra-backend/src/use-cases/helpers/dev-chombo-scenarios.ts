@@ -1,12 +1,8 @@
-import type {
-  ChomboViolation,
-  CompletedField,
-  Field,
-  TrumpType,
-} from '../../types/game.types';
+import type { DevChomboScenarioType } from '@contracts/game';
+import type { CompletedField, Field, TrumpType } from '../../types/game.types';
 import type { SeatId } from '../../types/identity.types';
 
-export type DevChomboScenarioType = ChomboViolation['type'];
+export type { DevChomboScenarioType };
 
 export interface DevChomboScenarioSeat {
   seatId: SeatId;
@@ -205,7 +201,7 @@ export function buildDevChomboScenario({
       };
       break;
     }
-    case 'wrong-open': {
+    case 'failed-open': {
       // The other team holds every jack, the Joker and the top trumps, so the
       // requester's team cannot take all of the remaining fields.
       const partner = seats.find(
@@ -215,7 +211,7 @@ export function buildDevChomboScenario({
         (seat) => seat.team !== requester.team,
       );
       if (!partner || !rival || !secondRival) {
-        throw new Error('A wrong open needs two players on each team');
+        throw new Error('A failed open needs two players on each team');
       }
       const hands: Record<string, string[]> = {
         [requester.seatId]: pool.take('5♣', '6♣', '5♦', '6♦'),

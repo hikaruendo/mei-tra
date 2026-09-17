@@ -253,12 +253,17 @@ export type ChomboViolationType =
   | 'negri-forget'
   | 'wrong-suit'
   | 'four-jack'
-  | 'last-tanzen'
-  | 'wrong-open';
+  | 'last-tanzen';
+
+/**
+ * Development scenarios: one per chombo, plus a hand whose open fails. A failed
+ * open is not a chombo; it scores for the other team on the spot.
+ */
+export type DevChomboScenarioType = ChomboViolationType | 'failed-open';
 
 export interface DevChomboScenarioPayload {
   roomId: string;
-  violationType: ChomboViolationType;
+  violationType: DevChomboScenarioType;
 }
 
 export interface ReportChomboPayload {
@@ -278,11 +283,13 @@ export interface DeclareOpenPayload {
   roomId: string;
 }
 
-export interface OpenDeclaredPayload {
-  declarerSeatId: SeatId;
-  hand: string[];
-  valid: boolean;
-}
+/**
+ * A valid open settles the remaining fields for the declaring team. A failed
+ * open gives `awardedTeam` 5 points. Either way the round ends.
+ */
+export type OpenDeclaredPayload =
+  | { declarerSeatId: SeatId; hand: string[]; valid: true }
+  | { declarerSeatId: SeatId; hand: string[]; valid: false; awardedTeam: Team };
 
 export interface ChomboResolvedPayload {
   violatorSeatId: SeatId;

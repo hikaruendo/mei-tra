@@ -262,7 +262,7 @@ describe('open declaration events', () => {
       payload: {
         violatorSeatId: asSeatId('seat-2'),
         reporterSeatId: asSeatId('seat-1'),
-        violationType: 'wrong-open',
+        violationType: 'last-tanzen',
         isCorrect: true,
         awardedTeam: 0,
         scores: { 0: { play: 5, total: 5 }, 1: { play: 0, total: 0 } },

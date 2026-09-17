@@ -3,6 +3,7 @@ import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import {
   OPEN_MAX_HAND_SIZE,
   type ChomboViolationType,
+  type DevChomboScenarioType,
   type TrumpType,
 } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
@@ -77,7 +78,7 @@ interface GameBoardProps {
   onPlayCard: (card: string) => void;
   onReportChombo?: (violatorSeatId: string, violationType: ChomboViolationType) => void;
   /** Development builds only. */
-  onSetupChomboScenario?: (violationType: ChomboViolationType) => void;
+  onSetupChomboScenario?: (violationType: DevChomboScenarioType) => void;
   onSelectBaseSuit: (suit: string) => void;
   onReplaceWithCOM: (seatId: string) => void;
   onLeave: () => void;

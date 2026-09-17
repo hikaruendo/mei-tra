@@ -1,19 +1,19 @@
-import type { ChomboViolationType } from '@meitra/contracts/game';
+import type { DevChomboScenarioType } from '@meitra/contracts/game';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
 import { t } from '@/i18n';
 
-const scenarios: { type: ChomboViolationType; key: string }[] = [
+const scenarios: { type: DevChomboScenarioType; key: string }[] = [
   { type: 'negri-forget', key: 'negriForget' },
   { type: 'wrong-suit', key: 'wrongSuit' },
   { type: 'four-jack', key: 'fourJack' },
   { type: 'last-tanzen', key: 'lastTanzen' },
-  { type: 'wrong-open', key: 'wrongOpen' },
+  { type: 'failed-open', key: 'failedOpen' },
 ];
 
 interface Props {
-  onSelect: (violationType: ChomboViolationType) => void;
+  onSelect: (violationType: DevChomboScenarioType) => void;
 }
 
 /** Development-only shortcuts, same as the web dock (ChomboScenarioPanel.tsx). */

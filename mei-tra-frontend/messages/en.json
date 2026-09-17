@@ -339,10 +339,10 @@
     "negriPromptPro": "Drag a card from your hand down to set it as Negri",
     "redealBroken": "Redealt because of a broken hand",
     "openDeclared": "The open holds",
-    "openInvalid": "The open does not hold. Play continues with the hand revealed",
+    "openInvalid": "The open does not hold. {teamName} gets 5 points and the round ends",
     "openAction": "Open",
     "openConfirmTitle": "Declare open?",
-    "openConfirmMessage": "Your hand is shown to everyone, and you claim that your team takes every remaining field. If it cannot, play continues with your hand still shown, and the other team may report it as a wrong open. You cannot take this back.",
+    "openConfirmMessage": "Your hand is shown to everyone, and you claim that your team takes every remaining field. If it holds, every remaining field counts for your team and the round ends. If it does not, the other team gets 5 points and the round ends. You cannot take this back.",
     "openConfirm": "Declare open",
     "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",
     "chomboIncorrect": "No violation. {teamName} gets 5 points and the round ends",
@@ -471,8 +471,7 @@
     "negriForget": "Negri forget",
     "wrongSuit": "Wrong suit",
     "fourJack": "Four jacks",
-    "lastTanzen": "Last tanzen",
-    "wrongOpen": "Wrong open"
+    "lastTanzen": "Last tanzen"
   },
   "chomboScenario": {
     "title": "Chombo test (development only)",
@@ -485,8 +484,8 @@
     "fourJackHint": "You hold all four jacks. Play any card.",
     "lastTanzen": "Last tanzen",
     "lastTanzenHint": "You have two cards, one of them the Joker. Play the other one and it is reportable right away.",
-    "wrongOpen": "Wrong open",
-    "wrongOpenHint": "Your four cards cannot take every remaining field. Press Open."
+    "failedOpen": "Failed open",
+    "failedOpenHint": "Your four cards cannot take every remaining field. Press Open and the other team gets 5 points."
   },
   "serverErrors": {
     "accountDeletionIsInProgressPleaseFinishDeleting": "Account deletion is in progress. Please finish deleting this account before continuing.",
@@ -670,6 +669,7 @@
       "field_recovered": "Field recovered",
       "field_completed": "Field completed",
       "chombo_reported": "Chombo reported",
+      "open_failed": "Failed open",
       "round_completed": "Round completed",
       "round_cancelled": "Round cancelled",
       "round_reset": "Round reset",
@@ -688,6 +688,7 @@
       "field_recovered": "Invalid state detected. This field was restored to its starting state",
       "field_completed": "{winner} won the field ({team})",
       "chombo_reported": "{player} reported {violator} for {violation}. 5 points to {team}",
+      "open_failed": "{player}'s open did not hold. 5 points to {team}",
       "round_completed": "Round completed. Declaring team: {team}",
       "round_cancelled": "Round cancelled",
       "round_reset": "Round reset",
@@ -722,6 +723,7 @@
       "violator": "Reported player",
       "violation": "Violation",
       "awardedTeam": "Scoring team",
+      "openHand": "Opened hand",
       "scores": "Scores",
       "nextDealer": "Next dealer",
       "nextPlayer": "Next player",
@@ -829,7 +831,10 @@
       "baseSuitExample": "♠5 played first → ♠ is base suit → ♠ cards get +50 bonus",
       "strength": "Card Strength Calculation",
       "strengthDesc": "Base strength + Trump bonus (+100) + Base suit bonus (+50)",
-      "strengthExample": "With Heart trump: ♥K = 13 + 100 = 113, ♠K = 13 + 50 = 63 (when ♠ is base)"
+      "strengthExample": "With Heart trump: ♥K = 13 + 100 = 113, ♠K = 13 + 50 = 63 (when ♠ is base)",
+      "open": "Open [Pro mode]",
+      "openDesc": "With four or fewer cards in hand, you can declare that your team takes every remaining field. Declaring shows your hand to everyone",
+      "openExample": "It holds → every remaining field counts for the declaring team and the round ends / It does not hold → the other team gets 5 points and the round ends"
     },
     "broken": {
       "title": "Broken & Negri System",
@@ -896,9 +901,6 @@
       "lastTanzen": "Last Tanzen",
       "lastTanzenDesc": "Not playing the Joker (tanzen) by your second-to-last card. It is reportable as soon as the Joker is your only card.",
       "lastTanzenExample": "Playing another card with two cards left → Reportable once the Joker is your only card",
-      "wrongOpen": "Wrong Open",
-      "wrongOpenDesc": "Declaring Open when your team cannot take every remaining field. Open is only available with four or fewer cards in hand.",
-      "wrongOpenExample": "Opening without a sure win → Play continues with the hand revealed, and it is reportable",
       "reportSystem": "Reporting Violations",
       "reportSystemDesc": "Only players on the opposing team can report, and only during play in the same round. Every report gives 5 points to one of the teams, then the round ends and the next round begins.",
       "reportSystemExample": "Correct report → Reporting team gets 5 points / Report with no violation → Reported team gets 5 points"
@@ -929,7 +931,7 @@
       "bonus": "Strength Bonus\nTrump Suit: +100 / Base Suit: +50",
       "jackSystem": "Jack System\nMain J (Jack of the trump suit) / Sub J (varies by trump)",
       "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y'<'X: Y-X points\n(X=declared sets, Y=fields won)",
-      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen / Wrong open\nCorrect report: reporting team +5 / Report with no violation: reported team +5\nEither way, the round ends and the next round begins",
+      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen\nCorrect report: reporting team +5 / Report with no violation: reported team +5\nEither way, the round ends and the next round begins",
       "flow": "Game Flow\nDeal -> Bid -> Trick (until 10 fields are complete)",
       "settings": "Basic Settings\n4 players, 2 teams / Opposite seat = partner / Target score is configurable per room / Minimum bid is 6 sets"
     }

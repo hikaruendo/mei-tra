@@ -243,26 +243,6 @@ describe('Pro card play and chombo reporting', () => {
     }
   });
 
-  it('records a wrong-open candidate through its action', async () => {
-    const fixture = await createGame(['2♠']);
-    try {
-      fixture.game.getState().players[1].hand = ['A♠'];
-      fixture.game.getState().playState!.openDeclared = false;
-      const open = await fixture.open.execute({
-        roomId: 'room-1',
-        actorId: 'winner',
-      });
-      expect(open.success).toBe(true);
-      expect(fixture.game.getState().playState?.chomboViolations).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ type: 'wrong-open' }),
-        ]),
-      );
-    } finally {
-      await fixture.module.close();
-    }
-  });
-
   it('drops a played card from a revealed hand', async () => {
     const fixture = await createGame(['A♠', 'K♠']);
     try {

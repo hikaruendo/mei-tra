@@ -25,6 +25,7 @@ const ACTION_TYPE_MESSAGE_KEYS: Record<GameHistoryActionType, string> = {
   field_recovered: 'actionTypes.field_recovered',
   field_completed: 'actionTypes.field_completed',
   chombo_reported: 'actionTypes.chombo_reported',
+  open_failed: 'actionTypes.open_failed',
   round_completed: 'actionTypes.round_completed',
   round_cancelled: 'actionTypes.round_cancelled',
   round_reset: 'actionTypes.round_reset',

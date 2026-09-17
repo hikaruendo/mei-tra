@@ -9,7 +9,6 @@ const violationTypes: ChomboViolationType[] = [
   'wrong-suit',
   'four-jack',
   'last-tanzen',
-  'wrong-open',
 ];
 
 const violationLabelKeys = {
@@ -17,7 +16,6 @@ const violationLabelKeys = {
   'wrong-suit': 'wrongSuit',
   'four-jack': 'fourJack',
   'last-tanzen': 'lastTanzen',
-  'wrong-open': 'wrongOpen',
 } as const satisfies Record<ChomboViolationType, string>;
 
 interface ChomboReportPanelProps {
