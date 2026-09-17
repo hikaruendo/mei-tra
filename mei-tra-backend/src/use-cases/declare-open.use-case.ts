@@ -41,7 +41,7 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       request.roomId,
     );
     const state = roomGameState.getState();
-    if (state.gamePhase !== 'play' || !state.playState) {
+    if (state.gamePhase !== 'play' || !state.playState || state.gameOver) {
       return { success: false, error: 'Open is only available during play' };
     }
     const player = resolvePlayerByActorId(roomGameState, request.actorId);
