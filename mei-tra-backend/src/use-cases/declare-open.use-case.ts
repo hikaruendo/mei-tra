@@ -72,10 +72,29 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       };
     }
 
+    if (state.currentSeatId !== player.seatId) {
+      return { success: false, error: "It's not your turn to play" };
+    }
+    if (
+      state.playState.currentField?.isComplete ||
+      state.playState.currentField?.playedBySeatIds.includes(player.seatId)
+    ) {
+      return {
+        success: false,
+        error: 'Current seat already played in this field',
+      };
+    }
+
     const valid = this.openDeclarationService.canDeclareOpen(
       state,
       asSeatId(player.seatId),
     );
+    if (valid === null) {
+      return {
+        success: false,
+        error: 'Open evaluation exceeded its search limit',
+      };
+    }
     state.playState.openDeclared = true;
     state.playState.openDeclarerSeatId = asSeatId(player.seatId);
     state.playState.revealedHands = {

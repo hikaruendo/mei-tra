@@ -209,6 +209,7 @@
     "onlyTheHostCanModeratePlayers": "プレイヤーを操作できるのはホストだけです",
     "onlyTheHostCanShuffleTeams": "チームをシャッフルできるのはホストだけです",
     "openHasAlreadyBeenDeclared": "すでにオープンが宣言されています",
+    "openEvaluationLimit": "オープンの判定が計算上限に達しました。手札は公開されず、得点も変わりません。プレイを続けてください。",
     "openIsOnlyAvailableDuringPlay": "オープンはプレイ中だけ宣言できます",
     "openIsOnlyAvailableInProMode": "オープンはプロモードだけで宣言できます",
     "openIsOnlyAvailableWhileYouHoldCards": "手札がなくなった後はオープンを宣言できません",

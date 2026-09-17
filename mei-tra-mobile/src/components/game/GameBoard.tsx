@@ -286,6 +286,11 @@ export function GameBoard({
     !actionsDisabled &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
+    isMyTurn &&
+    !pendingHandCard &&
+    !pendingAction &&
+    !game.currentField?.isComplete &&
+    !game.currentField?.playedBySeatIds.some((seatId) => seatId === game.youSeatId) &&
     !game.openDeclared &&
     !game.openResolved &&
     Boolean(highest) &&

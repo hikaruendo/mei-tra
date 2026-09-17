@@ -215,10 +215,11 @@ describe('GameTable first-turn reveal', () => {
 });
 
 describe('GameTable pro open control', () => {
-  it('shows the open action to a player from either team', () => {
-    renderTable({
+  it('shows the open action only to the player whose turn is active', () => {
+    const { unmount } = renderTable({
       gameMode: 'pro',
       gamePhase: 'play',
+      whoseTurn: 'seat-0',
       currentHighestDeclaration: {
         seatId: 'seat-0',
         team: 0,
@@ -230,9 +231,12 @@ describe('GameTable pro open control', () => {
     });
     expect(screen.getByRole('button', { name: 'game.openAction' })).toBeInTheDocument();
 
+    // A player on the other team cannot open outside their own turn.
+    unmount();
     renderTable({
       gameMode: 'pro',
       gamePhase: 'play',
+      whoseTurn: 'seat-1',
       currentHighestDeclaration: {
         seatId: 'seat-1',
         team: 1,
@@ -242,7 +246,7 @@ describe('GameTable pro open control', () => {
       },
       players: withViewerHand(1),
     });
-    expect(screen.getAllByRole('button', { name: 'game.openAction' })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'game.openAction' })).not.toBeInTheDocument();
   });
 
   it('takes the open action away once the viewer has played their last card', () => {
@@ -286,6 +290,7 @@ describe('GameTable pro open control', () => {
   const openTurn: Partial<React.ComponentProps<typeof GameTable>> = {
     gameMode: 'pro',
     gamePhase: 'play',
+    whoseTurn: 'seat-0',
     currentHighestDeclaration: {
       seatId: 'seat-0',
       team: 0,
@@ -333,6 +338,7 @@ describe('GameTable pro open control', () => {
     const proPlay: Partial<React.ComponentProps<typeof GameTable>> = {
       gameMode: 'pro',
       gamePhase: 'play',
+      whoseTurn: 'seat-0',
       currentHighestDeclaration: {
         seatId: 'seat-0',
         team: 0,

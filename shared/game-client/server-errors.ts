@@ -85,6 +85,7 @@ const SERVER_ERROR_KEYS = new Map<string, string>([
   ["Only the host can moderate players", 'onlyTheHostCanModeratePlayers'],
   ["Only the host can shuffle teams", 'onlyTheHostCanShuffleTeams'],
   ["Open has already been declared", 'openHasAlreadyBeenDeclared'],
+  ["Open evaluation exceeded its search limit", 'openEvaluationLimit'],
   ["Open is only available during play", 'openIsOnlyAvailableDuringPlay'],
   ["Open is only available in pro mode", 'openIsOnlyAvailableInProMode'],
   ["Open is only available while you hold cards", 'openIsOnlyAvailableWhileYouHoldCards'],

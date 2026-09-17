@@ -129,6 +129,11 @@ export const GameTable: React.FC<GameTableProps> = ({
   const canDeclareOpen =
     gameMode === 'pro' &&
     gamePhase === 'play' &&
+    !isSpectator &&
+    whoseTurn === currentSeatId &&
+    !pendingHandCard &&
+    !currentField?.isComplete &&
+    !currentField?.playedBySeatIds.some((seatId) => seatId === currentSeatId) &&
     !openDeclared &&
     !openResolved &&
     Boolean(currentSeatId && currentHighestDeclaration) &&
