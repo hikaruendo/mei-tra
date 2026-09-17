@@ -27,7 +27,6 @@ const createGateway = (): GameGateway => {
     },
     gameplayNotificationService: {
       notifyGameStarted: jest.fn(),
-      notifyTurnChanged: jest.fn(),
     },
     accountActionGateService: {
       ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
@@ -68,34 +67,6 @@ interface ActiveReconnectGatewayHarness {
 describe('GameGateway COM recovery integration', () => {
   afterEach(() => {
     jest.useRealTimers();
-  });
-
-  it('forwards the visible transition delay to the stalled-turn notifier', () => {
-    const gateway = createGateway();
-    const notifyTurnChanged = jest.fn();
-    const testGateway = gateway as unknown as {
-      dispatchEvents: jest.Mock;
-      dispatchGameplayEvents: (events: object[]) => void;
-      gameplayNotificationService: { notifyTurnChanged: jest.Mock };
-    };
-    testGateway.dispatchEvents = jest.fn();
-    testGateway.gameplayNotificationService = { notifyTurnChanged };
-
-    testGateway.dispatchGameplayEvents([
-      {
-        scope: 'room',
-        roomId: 'room-1',
-        event: 'update-turn',
-        payload: 'player-2',
-        delayMs: 3_000,
-      },
-    ]);
-
-    expect(notifyTurnChanged).toHaveBeenCalledWith({
-      roomId: 'room-1',
-      seatId: 'player-2',
-      transitionDelayMs: 3_000,
-    });
   });
 
   it('does not start COM progress from a human turn acknowledgement', async () => {
@@ -260,7 +231,7 @@ describe('GameGateway COM recovery integration', () => {
       const testGateway = gateway as unknown as {
         activityTracker: { recordActivity: jest.Mock };
         spectatorGatewayEffectsService: { rejectAction: jest.Mock };
-        dispatchGameplayEvents: jest.Mock;
+        dispatchEvents: jest.Mock;
         comAutoPlayRecoveryService: {
           trigger: jest.Mock;
           triggerAfterDelay: jest.Mock;
@@ -272,7 +243,7 @@ describe('GameGateway COM recovery integration', () => {
       testGateway.spectatorGatewayEffectsService = {
         rejectAction: jest.fn().mockReturnValue(false),
       };
-      testGateway.dispatchGameplayEvents = jest.fn();
+      testGateway.dispatchEvents = jest.fn();
       testGateway.comAutoPlayRecoveryService = {
         trigger,
         triggerAfterDelay,

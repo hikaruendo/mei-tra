@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   GameStartedPushPayload,
   PushNotificationResult,
-  TurnPushPayload,
 } from '@contracts/push';
 import type { IPushTokenRepository } from '../repositories/interfaces/push-token.repository.interface';
 import type {
@@ -41,23 +40,6 @@ export class PushNotificationService {
         eventId: payload.eventId,
         roomId: payload.roomId,
         roundNumber: payload.roundNumber,
-      },
-    });
-  }
-
-  async sendTurnNotification(
-    userIds: readonly string[],
-    payload: TurnPushPayload,
-  ): Promise<PushNotificationResult> {
-    return this.sendToUsers(userIds, {
-      title: "It's your turn",
-      body: 'Open Meitra to continue the game.',
-      data: {
-        type: 'turn',
-        eventId: payload.eventId,
-        roomId: payload.roomId,
-        roundNumber: payload.roundNumber,
-        phase: payload.phase,
       },
     });
   }

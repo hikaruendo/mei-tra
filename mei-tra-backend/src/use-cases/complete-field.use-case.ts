@@ -327,7 +327,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     const playerCount = state.players.length;
     const firstBlowIndex =
       playerCount > 0 ? state.blowState.currentBlowIndex % playerCount : 0;
-    const redealCount = (state.blowState.redealCount ?? 0) + 1;
 
     roomGameState.resetRoundState();
     const resetState = roomGameState.getState();
@@ -349,7 +348,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         lastPasserSeatId: null,
         isRoundCancelled: false,
         currentBlowIndex: firstBlowIndex,
-        redealCount,
       },
       playState: {
         currentField: {

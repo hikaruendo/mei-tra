@@ -190,8 +190,6 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
       // 次のラウンドの吹き始め (round-completion.helper の prepareNextRound) は
       // currentBlowIndex から導かれるので、進めた値を書き戻す必要がある。
       nextState.blowState.currentBlowIndex = firstBlowIndex;
-      nextState.blowState.redealCount =
-        (nextState.blowState.redealCount ?? 0) + 1;
       setCurrentSeat(nextState, firstBlowPlayer?.seatId ?? null);
       nextState.players.forEach((statePlayer) => {
         statePlayer.isPasser = false;

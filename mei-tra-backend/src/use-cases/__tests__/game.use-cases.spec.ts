@@ -1850,7 +1850,6 @@ describe('Game Use Cases', () => {
         isRoundCancelled: false,
         // 吹き始めは player-1。全員パスしてもここは動かないことを確かめる。
         currentBlowIndex: 0,
-        redealCount: 0,
       },
     });
 
@@ -1886,9 +1885,6 @@ describe('Game Use Cases', () => {
 
       expect(result.success).toBe(true);
       expect(state.blowState.currentBlowIndex).toBe(0);
-      // Nothing else about the blow phase moves across this re-deal, so this
-      // counter is what tells the new deal apart downstream.
-      expect(state.blowState.redealCount).toBe(1);
       expect(state.currentSeatId).toBe(asSeatId('player-1'));
       expect(state.blowState.declarations).toEqual([]);
       expect(state.blowState.actionHistory).toEqual([]);
@@ -3499,7 +3495,6 @@ describe('Game Use Cases', () => {
       expect(state.pendingBrokenHandReveal).toBeNull();
       // ブロークンの再配りで吹き始めが player-3 (index 2) から player-4 (index 3) へ進む
       expect(state.blowState.currentBlowIndex).toBe(3);
-      expect(state.blowState.redealCount).toBe(1);
       expect(state.currentSeatId).toBe(asSeatId('player-4'));
       expect(state.blowState.declarations).toEqual([]);
       expect(state.blowState.actionHistory).toEqual([]);

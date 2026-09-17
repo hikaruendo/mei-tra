@@ -12,7 +12,6 @@ const state = (overrides: Partial<GameState> = {}): GameState =>
   ({
     players: [],
     currentPlayerIndex: 0,
-    // Turn notifications verify the seat still holds the turn before sending.
     currentSeatId: asSeatId('player-2'),
     gamePhase: 'blow',
     deck: [],
@@ -143,7 +142,6 @@ describe('GameplayNotificationService', () => {
   let service: GameplayNotificationService;
 
   beforeEach(() => {
-    jest.useFakeTimers();
     gameState = state();
     currentRoom = room();
     connectionSocketIds = new Map([
@@ -168,18 +166,12 @@ describe('GameplayNotificationService', () => {
     } as unknown as jest.Mocked<IUserProfileRepository>;
     pushNotificationService = {
       sendGameStarted: jest.fn().mockResolvedValue({}),
-      sendTurnNotification: jest.fn().mockResolvedValue({}),
     } as unknown as jest.Mocked<PushNotificationService>;
     service = new GameplayNotificationService(
       roomService,
       userProfileRepository,
       pushNotificationService,
     );
-  });
-
-  afterEach(() => {
-    service.onModuleDestroy();
-    jest.useRealTimers();
   });
 
   it('sends game-started once to eligible human recipients only', async () => {
@@ -216,332 +208,6 @@ describe('GameplayNotificationService', () => {
     );
   });
 
-  it('drops a turn notification whose seat no longer holds the turn', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-1'),
-    });
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-  });
-
-  it('sends one turn notification per transition and suppresses replay duplicates', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      1,
-    );
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
-      ['user-2'],
-      expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:0:0:0:0:0:player-1',
-        roomId: 'room-1',
-        roundNumber: 1,
-        phase: 'blow',
-      }),
-    );
-  });
-
-  // A 全員パス re-deal keeps the round, the starting seat and the blow index,
-  // and empties the action history, so the new deal's first turn otherwise
-  // reuses the id of the old deal's first turn and is dropped as a replay.
-  it('notifies the same seat again after an all-pass re-deal', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      1,
-    );
-
-    // Everyone passed: same round, same starting seat, blow index unchanged,
-    // action history cleared. Only the deal is new.
-    gameState = state({
-      blowState: {
-        ...gameState.blowState,
-        redealCount: 1,
-      },
-    });
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      2,
-    );
-    expect(
-      pushNotificationService.sendTurnNotification,
-    ).toHaveBeenLastCalledWith(
-      ['user-2'],
-      expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:0:1:0:0:0:player-1',
-      }),
-    );
-  });
-
-  it('skips COM turns and players with notifications disabled', async () => {
-    userProfileRepository.findById.mockResolvedValue(profile('user-2', false));
-
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('com-3'),
-    });
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-  });
-
-  it('catches push failures so gameplay callers can continue', async () => {
-    pushNotificationService.sendTurnNotification.mockRejectedValue(
-      new Error('expo down'),
-    );
-
-    await expect(
-      service.notifyTurnChanged({
-        roomId: 'room-1',
-        seatId: asSeatId('player-2'),
-      }),
-    ).resolves.toBeUndefined();
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      1,
-    );
-  });
-
-  it('sends delayed turn notifications after the delayed transition', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-      transitionDelayMs: 1_000,
-    });
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-
-    await jest.advanceTimersByTimeAsync(60_999);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-
-    await jest.advanceTimersByTimeAsync(1);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      1,
-    );
-  });
-
-  it('clears delayed turn notification timers on module destroy', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-      transitionDelayMs: 1_000,
-    });
-    service.onModuleDestroy();
-
-    await jest.advanceTimersByTimeAsync(61_000);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-  });
-
-  it('does not send a turn push before a player has stalled for 60 seconds', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-
-    await jest.advanceTimersByTimeAsync(59_999);
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-
-    await jest.advanceTimersByTimeAsync(1);
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      1,
-    );
-  });
-
-  it('skips the turn push when the player reconnects before the deadline', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    connectionSocketIds.set('player-2', 'socket-reconnected');
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-  });
-
-  it('replaces the pending timer when the turn moves to another seat', async () => {
-    connectionSocketIds.set('player-1', '');
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-
-    gameState = state({
-      currentSeatId: asSeatId('player-1'),
-      blowState: {
-        ...gameState.blowState,
-        currentBlowIndex: 1,
-        actionHistory: [
-          {
-            type: 'pass',
-            seatId: asSeatId('player-2'),
-            timestamp: 1,
-          },
-        ],
-      },
-    });
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-1'),
-    });
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledTimes(
-      1,
-    );
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
-      ['user-1'],
-      expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-1:1:0:1:0:0:player-1',
-      }),
-    );
-  });
-
-  it('does not let an older scheduling request clear the latest turn timer', async () => {
-    let resolveFirstRoom!: (value: Room) => void;
-    const firstRoom = new Promise<Room>((resolve) => {
-      resolveFirstRoom = resolve;
-    });
-    roomService.getRoom
-      .mockImplementationOnce(() => firstRoom)
-      .mockImplementation(async () => currentRoom);
-
-    gameState = state({ currentSeatId: asSeatId('player-1') });
-    const olderRequest = service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-1'),
-    });
-
-    gameState = state({
-      currentSeatId: asSeatId('player-2'),
-      blowState: {
-        ...gameState.blowState,
-        currentBlowIndex: 1,
-        actionHistory: [
-          {
-            type: 'pass',
-            seatId: asSeatId('player-1'),
-            timestamp: 1,
-          },
-        ],
-      },
-    });
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-
-    resolveFirstRoom(currentRoom);
-    await olderRequest;
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
-      ['user-2'],
-      expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:1:0:1:0:0:player-1',
-      }),
-    );
-  });
-
-  it('drops the old timer when the phase changes', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    gameState = state({ gamePhase: 'play' });
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-  });
-
-  it('drops the old timer when the player is converted to COM', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    currentRoom = room({
-      players: currentRoom.players.map((player) =>
-        player.seatId === asSeatId('player-2')
-          ? { ...player, isCOM: true, userId: undefined }
-          : player,
-      ),
-    });
-
-    await jest.advanceTimersByTimeAsync(60_000);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-  });
-
-  it('drops an old timer when a later turn cycles back to the same seat', async () => {
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-    await jest.advanceTimersByTimeAsync(30_000);
-
-    gameState = state({
-      blowState: {
-        ...gameState.blowState,
-        currentBlowIndex: 4,
-        actionHistory: ['player-2', 'player-3', 'player-4', 'player-1'].map(
-          (seatId, index) => ({
-            type: 'pass' as const,
-            seatId: asSeatId(seatId),
-            timestamp: index + 1,
-          }),
-        ),
-      },
-    });
-    await service.notifyTurnChanged({
-      roomId: 'room-1',
-      seatId: asSeatId('player-2'),
-    });
-
-    await jest.advanceTimersByTimeAsync(30_000);
-
-    expect(pushNotificationService.sendTurnNotification).not.toHaveBeenCalled();
-
-    await jest.advanceTimersByTimeAsync(30_000);
-
-    expect(pushNotificationService.sendTurnNotification).toHaveBeenCalledWith(
-      ['user-2'],
-      expect.objectContaining({
-        eventId: 'turn:room-1:1:blow:player-2:4:0:4:0:0:player-1',
-      }),
-    );
-  });
-
   it('does not send game-start pushes to connected players', async () => {
     connectionSocketIds.set('player-2', 'socket-2-live');
 
@@ -565,6 +231,18 @@ describe('GameplayNotificationService', () => {
     await service.notifyGameStarted({ roomId: 'room-1' });
 
     expect(pushNotificationService.sendGameStarted).not.toHaveBeenCalled();
+  });
+
+  it('catches push failures so gameplay callers can continue', async () => {
+    pushNotificationService.sendGameStarted.mockRejectedValue(
+      new Error('expo down'),
+    );
+
+    await expect(
+      service.notifyGameStarted({ roomId: 'room-1' }),
+    ).resolves.toBeUndefined();
+
+    expect(pushNotificationService.sendGameStarted).toHaveBeenCalledTimes(1);
   });
 
   it('respects disabled notification preferences for game-start pushes', async () => {

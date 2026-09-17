@@ -13,10 +13,11 @@ The `push_tokens` table is protected by RLS and is not granted to `anon` or `aut
 
 ## Sending API
 
-`PushNotificationService` exposes two post-commit-safe methods:
+`PushNotificationService` exposes one post-commit-safe method:
 
 - `sendGameStarted(userIds, { eventId, roomId, roundNumber })`
-- `sendTurnNotification(userIds, { eventId, roomId, roundNumber, phase })`
+
+There is no push for a player's turn.
 
 The service resolves current tokens, batches requests to Expo, preserves each successful ticket's receipt ID, and reports ticket results. Immediate ticket-level `DeviceNotRegistered` errors remove the token without storing a receipt. Successful tickets create a `push_receipts` row containing only the Expo receipt ID and the token/device/user mapping; notification title, body, and data are never persisted. The optional `push_token_id` is only a historical row reference; the copied token/device/user fields keep receipt cleanup safe even if the token row is removed before polling.
 
@@ -28,10 +29,9 @@ Network or cleanup failures are logged and returned as failed delivery results r
 
 ## Gameplay trigger points
 
-Triggers are wired only after the authoritative state write and the corresponding broadcast path:
+The trigger is wired only after the authoritative state write and the corresponding broadcast path:
 
-1. **Game start:** send only for the initial `start-game` transition after `StartGameUseCase` has persisted the state and the room broadcast has succeeded. Target authenticated human participants whose canonical `GameStateService` connection has no live socket. The first-turn player is eligible when disconnected. Later rounds do not emit another game-start push.
-2. **Turn:** schedule after a persisted blow/play `update-turn` transition. Wait for the event's display delay and then another 60 seconds. Send one push only when the same room, seat, phase, and turn fingerprint still match and the canonical connection state still has no live socket. A newer turn replaces the room's pending timer; reconnect, phase changes, and COM replacement make the old snapshot ineligible.
+- **Game start:** send only for the initial `start-game` transition after `StartGameUseCase` has persisted the state and the room broadcast has succeeded. Target authenticated human participants whose canonical `GameStateService` connection has no live socket. The first-turn player is eligible when disconnected. Later rounds do not emit another game-start push.
 
 Do not send from a pre-persistence mutation, a reconnect handler, or a generic state-sync handler. Do not infer connectivity from the persisted room projection or its `socketId`; `GameStateService.getPlayerConnectionState(seatId)` is the canonical source. A trigger must be fire-and-forget after commit, and a push failure must never roll back or block the game transition.
 
