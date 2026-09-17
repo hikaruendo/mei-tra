@@ -12,15 +12,15 @@ import {
   completeRound,
   completeRoundAfterChombo,
 } from './helpers/round-completion.helper';
-
-/** What a failed open gives the other team, the same as a chombo. */
-const FAILED_OPEN_POINTS = 5;
 import {
   DeclareOpenRequest,
   DeclareOpenResponse,
   IDeclareOpenUseCase,
 } from './interfaces/declare-open.use-case.interface';
 import type { GatewayEvent } from './interfaces/gateway-event.interface';
+
+/** What a failed open gives the other team, the same as a chombo. */
+const FAILED_OPEN_POINTS = 5;
 
 @Injectable()
 export class DeclareOpenUseCase implements IDeclareOpenUseCase {
