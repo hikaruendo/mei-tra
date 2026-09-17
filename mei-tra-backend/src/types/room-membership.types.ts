@@ -2,7 +2,10 @@ import type { SeatId } from './identity.types';
 
 export type ActiveRoomMembershipStatus = 'moving' | 'active' | 'disconnected';
 
-export type RoomMembershipReplayEventType = 'player_joined' | 'player_left';
+export type RoomMembershipReplayEventType =
+  | 'player_joined'
+  | 'player_reconnected'
+  | 'player_left';
 
 export interface ActiveRoomMembership {
   userId: string;

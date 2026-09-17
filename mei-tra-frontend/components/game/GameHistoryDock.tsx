@@ -47,6 +47,7 @@ const ACTION_TYPE_MESSAGE_KEYS = {
   game_over: 'actionTypes.game_over',
   player_stats_updated: 'actionTypes.player_stats_updated',
   player_joined: 'actionTypes.player_joined',
+  player_reconnected: 'actionTypes.player_reconnected',
   player_left: 'actionTypes.player_left',
 } as const;
 
@@ -619,6 +620,8 @@ export function GameHistoryDock({
         } as never);
       case 'player_joined':
         return t('summaries.player_joined' as never, { player } as never);
+      case 'player_reconnected':
+        return t('summaries.player_reconnected' as never, { player } as never);
       case 'player_left':
         return t('summaries.player_left' as never, { player } as never);
       default:

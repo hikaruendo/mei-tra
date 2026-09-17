@@ -41,7 +41,7 @@ describe('SupabaseRoomMembershipRepository', () => {
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
   });
 
-  it('maps only joined and left replay events for the requested room', async () => {
+  it('maps joined, reconnected and left replay events for the requested room', async () => {
     const query = {
       in: jest.fn(),
       or: jest.fn(),
@@ -57,6 +57,15 @@ describe('SupabaseRoomMembershipRepository', () => {
           seat_id: seatId,
           event_type: 'room_claimed',
           created_at: '2026-08-03T00:00:00.000Z',
+        },
+        {
+          id: 3,
+          user_id: 'user-1',
+          from_room_id: null,
+          to_room_id: 'room-1',
+          seat_id: seatId,
+          event_type: 'room_reconnected',
+          created_at: '2026-08-03T00:00:30.000Z',
         },
         {
           id: 2,
@@ -84,6 +93,12 @@ describe('SupabaseRoomMembershipRepository', () => {
       expect.objectContaining({
         id: 'membership-1',
         eventType: 'player_joined',
+        roomId: 'room-1',
+      }),
+      // A reconnect is not a join, so the log can name it apart.
+      expect.objectContaining({
+        id: 'membership-3',
+        eventType: 'player_reconnected',
         roomId: 'room-1',
       }),
       expect.objectContaining({

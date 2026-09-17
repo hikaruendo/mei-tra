@@ -35,6 +35,8 @@ jest.mock('next-intl', () => ({
       roundTableBid: '宣言',
       roundTableScore: '得点',
       'actionTypes.card_played': 'カードプレイ',
+      'actionTypes.player_joined': '入室',
+      'actionTypes.player_reconnected': '再接続',
       teamRed: 'チーム赤',
       teamBlack: 'チーム黒',
       roundInProgress: '進行中',
@@ -56,6 +58,14 @@ jest.mock('next-intl', () => ({
 
       if (key === 'summaries.card_played') {
         return `${values?.player} played ${values?.card}`;
+      }
+
+      if (key === 'summaries.player_joined') {
+        return `${values?.player}が入室`;
+      }
+
+      if (key === 'summaries.player_reconnected') {
+        return `${values?.player}が再接続`;
       }
 
       return labels[key] ?? key;
@@ -386,6 +396,80 @@ describe('GameHistoryDock', () => {
     expect(screen.getByAltText('A♠')).toBeInTheDocument();
     expect(screen.getByAltText('9♥')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('names a reconnect apart from a join', () => {
+    const membership = (
+      id: string,
+      actionType: 'player_joined' | 'player_reconnected',
+      minute: number,
+    ) => ({
+      id,
+      timestamp: new Date(`2026-07-26T00:0${minute}:00.000Z`),
+      actionType,
+      actorSeatId: 'player-1',
+      roundNumber: 1,
+      gamePhase: null,
+      kind: 'membership',
+      summary: '',
+      details: { seatId: 'player-1', playerName: 'Hikaru' },
+      actionData: { playerNames: { 'player-1': 'Hikaru' } },
+      detailItems: [
+        {
+          labelKey: 'player',
+          value: { kind: 'player', seatId: 'player-1', playerName: 'Hikaru' },
+        },
+      ],
+    });
+    mockUseGameHistory.mockReturnValue({
+      replay: {
+        roomId: 'room-123',
+        totalEntries: 2,
+        rounds: [
+          {
+            roundNumber: 1,
+            startedAt: new Date('2026-07-26T00:00:00.000Z'),
+            endedAt: new Date('2026-07-26T00:03:00.000Z'),
+            actionTypes: ['player_joined', 'player_reconnected'],
+            actorSeatIds: ['player-1'],
+            entries: [],
+            events: [
+              membership('joined-1', 'player_joined', 1),
+              membership('reconnected-1', 'player_reconnected', 2),
+            ],
+          },
+        ],
+      },
+      summary: {
+        roomId: 'room-123',
+        totalEntries: 2,
+        byActionType: { player_joined: 1, player_reconnected: 1 },
+        actorSeatIds: ['player-1'],
+        playerNames: { 'player-1': 'Hikaru' },
+        roundNumbers: [1],
+        status: 'completed',
+        winningTeam: null,
+        lastActionType: 'player_reconnected',
+        firstTimestamp: new Date('2026-07-26T00:00:00.000Z'),
+        lastTimestamp: new Date('2026-07-26T00:03:00.000Z'),
+      },
+      isLoading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+
+    render(
+      <GameHistoryDock
+        {...baseProps}
+        gameStarted={false}
+        variant="page"
+        showOverview={false}
+      />,
+    );
+
+    expect(screen.getByText('Hikaruが入室')).toBeInTheDocument();
+    expect(screen.getByText('Hikaruが再接続')).toBeInTheDocument();
+    expect(screen.queryAllByText('Hikaruが入室')).toHaveLength(1);
   });
 
   it('shows a redealt hand after a broken hand event', () => {

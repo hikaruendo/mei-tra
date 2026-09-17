@@ -673,6 +673,7 @@
       "game_over": "Game over",
       "player_stats_updated": "Player stats updated",
       "player_joined": "Joined",
+      "player_reconnected": "Reconnected",
       "player_left": "Left"
     },
     "summaries": {
@@ -691,6 +692,7 @@
       "game_over": "Game over. {team} won",
       "player_stats_updated": "Stats updated: {updated} succeeded / {failed} failed",
       "player_joined": "{player} joined",
+      "player_reconnected": "{player} reconnected",
       "player_left": "{player} left"
     },
     "detailLabels": {

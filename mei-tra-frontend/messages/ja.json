@@ -673,6 +673,7 @@
       "game_over": "ゲーム終了",
       "player_stats_updated": "戦績更新",
       "player_joined": "入室",
+      "player_reconnected": "再接続",
       "player_left": "退出"
     },
     "summaries": {
@@ -691,6 +692,7 @@
       "game_over": "ゲーム終了。{team}の勝利",
       "player_stats_updated": "戦績更新: 成功 {updated}人 / 失敗 {failed}人",
       "player_joined": "{player}が入室",
+      "player_reconnected": "{player}が再接続",
       "player_left": "{player}が退出"
     },
     "detailLabels": {
