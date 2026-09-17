@@ -978,7 +978,6 @@
     "imageProcessingFailed": "Failed to process image",
     "basicInfo": "Basic Information",
     "settings": "Settings",
-    "notifications": "Enable notifications",
     "soundEffects": "Enable sound effects",
     "startPlayerAnimation": "Show the janken animation at game start",
     "theme": "Theme",

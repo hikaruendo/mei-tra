@@ -72,7 +72,6 @@ import {
   ComAutoPlayRecoveryService,
 } from './services/com-autoplay-recovery.service';
 import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
-import { GameplayNotificationService } from './services/gameplay-notification.service';
 import { AccountActionGateService } from './services/account-action-gate.service';
 import { RoomGameActionQueueService } from './services/room-game-action-queue.service';
 import { asSeatId } from './types/identity.types';
@@ -156,7 +155,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly startGameGatewayEffectsService: StartGameGatewayEffectsService,
     private readonly spectatorGatewayEffectsService: SpectatorGatewayEffectsService,
     private readonly connectionGatewayEffectsService: ConnectionGatewayEffectsService,
-    private readonly gameplayNotificationService: GameplayNotificationService,
     private readonly accountActionGateService: AccountActionGateService,
     private readonly roomGameActionQueueService: RoomGameActionQueueService,
     @Optional()
@@ -1654,9 +1652,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
       this.dispatchEvents(startGameEvents);
-      void this.gameplayNotificationService.notifyGameStarted({
-        roomId: data.roomId,
-      });
 
       this.triggerComAutoPlayAfterEvents(data.roomId, startGameEvents);
 

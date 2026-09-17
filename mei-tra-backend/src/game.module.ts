@@ -62,19 +62,11 @@ import { DatabaseModule } from './database/database.module';
 import { RoomMembershipReconcilerService } from './services/room-membership-reconciler.service';
 import { ConnectionGatewayEffectsService } from './services/connection-gateway-effects.service';
 import { DeleteAccountUseCase } from './use-cases/delete-account.use-case';
-import { PushNotificationModule } from './push/push-notification.module';
-import { GameplayNotificationService } from './services/gameplay-notification.service';
 import { AccountActionGateService } from './services/account-action-gate.service';
 import { RoomGameActionQueueService } from './services/room-game-action-queue.service';
 
 @Module({
-  imports: [
-    DatabaseModule,
-    RepositoriesModule,
-    AuthModule,
-    SocialModule,
-    PushNotificationModule,
-  ],
+  imports: [DatabaseModule, RepositoriesModule, AuthModule, SocialModule],
   controllers: [GameHistoryController],
   providers: [
     GameGateway,
@@ -89,7 +81,6 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
     RoomMembershipService,
     RoomMembershipReconcilerService,
     ConnectionGatewayEffectsService,
-    GameplayNotificationService,
     AccountActionGateService,
     RoomGameActionQueueService,
     JoinRoomGatewayEffectsService,

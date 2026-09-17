@@ -25,9 +25,6 @@ const createGateway = (): GameGateway => {
       sendSocketBackToLobby: jest.fn(),
       sendUserSocketsBackToLobby: jest.fn(),
     },
-    gameplayNotificationService: {
-      notifyGameStarted: jest.fn(),
-    },
     accountActionGateService: {
       ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
     },

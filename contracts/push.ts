@@ -23,12 +23,6 @@ export interface PushTokenRegistration {
   updatedAt: string;
 }
 
-export interface GameStartedPushPayload {
-  eventId: string;
-  roomId: string;
-  roundNumber: number;
-}
-
 export interface PushNotificationResult {
   targetedTokenCount: number;
   acceptedTokenCount: number;

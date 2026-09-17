@@ -308,20 +308,6 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
-              name="preferences.notifications"
-              checked={formData.preferences.notifications}
-              onChange={handleInputChange}
-              disabled={isSaving}
-              className={styles.checkbox}
-            />
-            <span className={styles.checkboxText}>{t('notifications')}</span>
-          </label>
-        </div>
-
-        <div className={styles.checkboxGroup}>
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
               name="preferences.sound"
               checked={formData.preferences.sound}
               onChange={handleInputChange}

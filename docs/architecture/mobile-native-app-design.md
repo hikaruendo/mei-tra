@@ -255,7 +255,7 @@ mobileの参加payloadは認証accountを`userId`として送り、参加後にs
 - token値はmobileへ返さず、service-role経由で`push_tokens`へupsert・削除する。RLSとgrantはservice roleだけを許可する設計である。
 - `PushNotificationService`はExpoへ最大100件単位で送信し、受理されたticketを`push_receipts`へ記録する。ticket response時点の`DeviceNotRegistered`は即時に無効tokenをcleanupする。
 - `PushReceiptService`はaccepted ticketだけを対象に、初回をおよそT+15分、その後をT+20 / 35 / 65 / 125 / 245 / 485 / 965分でqueryする。30秒worker起動によるjitterを許容し、最大8回、最終queryのおよそ16時間5分でExpo receipt retention内に`expired`とする。Gameplay処理自身はreceiptをpollしない。
-- `GameplayNotificationService`はゲーム開始だけを対象にし（手番の通知は送らない）、COM・spectator・通知拒否profileを除外し、process内bounded dedupeを使う。
+- 現在、ゲームからプッシュ通知は送っていない（手番とゲーム開始の通知は削除した）。token登録・送信・receipt追跡の仕組みは残しており、通知を足すときは`PushNotificationService.sendToUsers`を使う。mobileは通知の許可を求めず、許可済みの端末だけtokenを登録する。
 - `20260806090000_create_push_tokens.sql`、`20260806150938_harden_push_token_access.sql`、`20260806165611_push_receipt_tracking.sql`はlocal Supabaseへ適用済みである。本番Supabaseへの適用・schema確認は未完了である。
 
 push送信・receipt workerのunit/spec、SQL self-test、local push tokenのregister / delete smokeは検証済みである。ただし、本番migration、実機token登録、Expo受信、通知tap、無効token cleanup、delivery metricsは外部作業または実機検証の対象である。`push_receipts`はprovider delivery結果を追跡するが、Gameplay通知のin-memory dedupeは再起動・複数backend instanceをまたぐ重複event抑止ではない。

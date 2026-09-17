@@ -1,5 +1,7 @@
 # Push notifications
 
+**Status:** the game sends no push notifications at the moment. The turn and game-started pushes were removed, and the mobile app no longer asks for notification permission. Token registration, sending, and receipt tracking below are kept so a notification can be added again without rebuilding them.
+
 ## Backend API
 
 The authenticated HTTP API is exposed below the global `api` prefix:
@@ -13,11 +15,11 @@ The `push_tokens` table is protected by RLS and is not granted to `anon` or `aut
 
 ## Sending API
 
-`PushNotificationService` exposes one post-commit-safe method:
+`PushNotificationService` exposes one post-commit-safe method, and nothing calls it today:
 
-- `sendGameStarted(userIds, { eventId, roomId, roundNumber })`
+- `sendToUsers(userIds, { title, body, data })`
 
-There is no push for a player's turn.
+Put `roomId` in `data` when a tap should open that room; the mobile app routes every tapped notification by `data.roomId`.
 
 The service resolves current tokens, batches requests to Expo, preserves each successful ticket's receipt ID, and reports ticket results. Immediate ticket-level `DeviceNotRegistered` errors remove the token without storing a receipt. Successful tickets create a `push_receipts` row containing only the Expo receipt ID and the token/device/user mapping; notification title, body, and data are never persisted. The optional `push_token_id` is only a historical row reference; the copied token/device/user fields keep receipt cleanup safe even if the token row is removed before polling.
 
@@ -25,17 +27,16 @@ Expo recommends checking receipts approximately 15 minutes after sending and cle
 
 An omitted receipt means it is not ready. Missing receipts and transient lookup failures remain retryable with bounded delays of 5, 15, 30, 60, 120, 240, and 480 minutes after attempts 1 through 7. The eight lookup times are therefore approximately T+15m, T+20m, T+35m, T+65m, T+125m, T+245m, T+485m, and T+965m (16h05m), each with up to 30 seconds of scheduler jitter. A missing or transient result on attempt 8 becomes `expired`, keeping the entire lookup window inside Expo's 24-hour receipt retention. Provider errors become `failed`, and a `DeviceNotRegistered` receipt atomically removes the matching token in the completion RPC. Re-running completion is safe because only the current worker lease can complete a `processing` row.
 
-Network or cleanup failures are logged and returned as failed delivery results rather than thrown into gameplay. Receipt polling runs only from the scheduled background worker after ticket persistence, so a delayed Expo receipt response cannot block the game transition. Immediate ticket-level `DeviceNotRegistered` cleanup still happens synchronously after Expo returns the send tickets. The in-memory notification trigger dedupe and the durable receipt claim/unique constraints together cover duplicate trigger calls and multi-instance receipt processing.
+Network or cleanup failures are logged and returned as failed delivery results rather than thrown into gameplay. Receipt polling runs only from the scheduled background worker after ticket persistence, so a delayed Expo receipt response cannot block the game transition. Immediate ticket-level `DeviceNotRegistered` cleanup still happens synchronously after Expo returns the send tickets. The durable receipt claim/unique constraints cover multi-instance receipt processing. Receipt rows are removed automatically with the owning Auth user; operational cleanup should monitor `expired` rows and repeated lookup failures.
 
-## Gameplay trigger points
+## Adding a gameplay notification
 
-The trigger is wired only after the authoritative state write and the corresponding broadcast path:
+The removed game-started push (see the history of `mei-tra-backend/src/services/gameplay-notification.service.ts`) is a working example. When adding one:
 
-- **Game start:** send only for the initial `start-game` transition after `StartGameUseCase` has persisted the state and the room broadcast has succeeded. Target authenticated human participants whose canonical `GameStateService` connection has no live socket. The first-turn player is eligible when disconnected. Later rounds do not emit another game-start push.
-
-Do not send from a pre-persistence mutation, a reconnect handler, or a generic state-sync handler. Do not infer connectivity from the persisted room projection or its `socketId`; `GameStateService.getPlayerConnectionState(seatId)` is the canonical source. A trigger must be fire-and-forget after commit, and a push failure must never roll back or block the game transition.
-
-The trigger dedupe cache is in-memory and bounded. It suppresses duplicate trigger calls inside one backend process, while `push_receipts` is the durable receipt ledger across deployments or process restarts. Receipt rows are removed automatically with the owning Auth user; operational cleanup should monitor `expired` rows and repeated lookup failures.
+- Send only after the authoritative state write and the corresponding broadcast. Do not send from a pre-persistence mutation, a reconnect handler, or a generic state-sync handler.
+- Skip COM seats, guests, players who turned `preferences.notifications` off, and players with a live socket. Read connectivity from `GameStateService.getPlayerConnectionState(seatId)`, not from the persisted room projection or its `socketId`.
+- Fire and forget: a push failure must never roll back or block the game transition. Deduplicate trigger calls if the same transition can be dispatched twice.
+- Bring back the mobile permission prompt: `requestRegistration` in `mei-tra-mobile/src/context/NotificationContext.tsx` asks for permission, and nothing calls it at the moment. Without it, only devices that granted permission earlier have a registered token.
 
 ## Remaining release work
 

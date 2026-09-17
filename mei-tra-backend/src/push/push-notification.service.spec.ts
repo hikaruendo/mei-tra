@@ -16,6 +16,12 @@ const token = (overrides: Partial<PushTokenRecord> = {}): PushTokenRecord => ({
   ...overrides,
 });
 
+const message = {
+  title: 'Title',
+  body: 'Body',
+  data: { type: 'example', roomId: 'room-1' },
+};
+
 describe('PushNotificationService', () => {
   let repository: jest.Mocked<IPushTokenRepository>;
   let client: jest.Mocked<IExpoPushClient>;
@@ -36,7 +42,7 @@ describe('PushNotificationService', () => {
     service = new PushNotificationService(repository, client);
   });
 
-  it('deduplicates users and sends game-start payloads', async () => {
+  it('deduplicates users and sends the message to each token', async () => {
     repository.findByUserIds.mockResolvedValue([token()]);
     client.send.mockResolvedValue([
       {
@@ -46,22 +52,14 @@ describe('PushNotificationService', () => {
       },
     ]);
 
-    const result = await service.sendGameStarted(['user-id', 'user-id'], {
-      eventId: 'game-1',
-      roomId: 'room-1',
-      roundNumber: 1,
-    });
+    const result = await service.sendToUsers(['user-id', 'user-id'], message);
 
     expect(repository.findByUserIds).toHaveBeenCalledWith(['user-id']);
     expect(client.send).toHaveBeenCalledWith([
       expect.objectContaining({
         to: 'ExpoPushToken[abc123]',
-        data: {
-          type: 'game-started',
-          eventId: 'game-1',
-          roomId: 'room-1',
-          roundNumber: 1,
-        },
+        sound: 'default',
+        ...message,
       }),
     ] satisfies ExpoPushMessage[]);
     expect(repository.upsertReceipts).toHaveBeenCalledWith([
@@ -95,11 +93,7 @@ describe('PushNotificationService', () => {
     ]);
     repository.deleteByExpoPushToken.mockResolvedValue(1);
 
-    const result = await service.sendGameStarted(['user-id'], {
-      eventId: 'game-started-1',
-      roomId: 'room-1',
-      roundNumber: 2,
-    });
+    const result = await service.sendToUsers(['user-id'], message);
 
     expect(repository.deleteByExpoPushToken).toHaveBeenCalledWith(
       invalidToken.expoPushToken,
@@ -114,11 +108,7 @@ describe('PushNotificationService', () => {
     client.send.mockRejectedValue(new Error('network down'));
 
     await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-started-1',
-        roomId: 'room-1',
-        roundNumber: 1,
-      }),
+      service.sendToUsers(['user-id'], message),
     ).resolves.toMatchObject({
       targetedTokenCount: 1,
       acceptedTokenCount: 0,
@@ -137,11 +127,7 @@ describe('PushNotificationService', () => {
       },
     ]);
     await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-started-async',
-        roomId: 'room-1',
-        roundNumber: 1,
-      }),
+      service.sendToUsers(['user-id'], message),
     ).resolves.toMatchObject({ targetedTokenCount: 1 });
     expect(repository.upsertReceipts).toHaveBeenCalledTimes(1);
     expect(client.getReceipts).not.toHaveBeenCalled();
@@ -150,13 +136,7 @@ describe('PushNotificationService', () => {
   it('does not throw or send when token loading fails', async () => {
     repository.findByUserIds.mockRejectedValue(new Error('database down'));
 
-    await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-1',
-        roomId: 'room-1',
-        roundNumber: 1,
-      }),
-    ).resolves.toEqual({
+    await expect(service.sendToUsers(['user-id'], message)).resolves.toEqual({
       targetedTokenCount: 0,
       acceptedTokenCount: 0,
       rejectedTokenCount: 0,
@@ -181,11 +161,7 @@ describe('PushNotificationService', () => {
     );
 
     await expect(
-      service.sendGameStarted(['user-id'], {
-        eventId: 'game-started-1',
-        roomId: 'room-1',
-        roundNumber: 1,
-      }),
+      service.sendToUsers(['user-id'], message),
     ).resolves.toMatchObject({
       targetedTokenCount: 1,
       acceptedTokenCount: 0,
