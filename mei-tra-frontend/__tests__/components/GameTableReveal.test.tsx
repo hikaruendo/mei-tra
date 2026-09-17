@@ -26,11 +26,17 @@ jest.mock('@/components/game/PlayerHand', () => ({
   PlayerHand: ({
     player,
     isCurrentTurn,
+    pendingHandCard,
   }: {
     player: Player;
     isCurrentTurn: boolean;
+    pendingHandCard?: string | null;
   }) => (
-    <div data-testid={`seat-${player.seatId}`} data-current-turn={isCurrentTurn}>
+    <div
+      data-testid={`seat-${player.seatId}`}
+      data-current-turn={isCurrentTurn}
+      data-pending-hand-card={pendingHandCard ?? ''}
+    >
       {player.name}
     </div>
   ),

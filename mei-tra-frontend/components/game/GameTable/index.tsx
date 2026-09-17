@@ -61,6 +61,7 @@ interface GameTableProps {
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
+  pendingHandCard?: string | null;
 }
 
 
@@ -107,6 +108,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   onCardSelection = noop,
   onCancel = noop,
   onHandReorder = noop,
+  pendingHandCard = null,
 }) => {
   const tRoot = useTranslations();
   usePreloadCards();
@@ -341,6 +343,9 @@ export const GameTable: React.FC<GameTableProps> = ({
               onCardSelection={onCardSelection}
               onCancel={onCancel}
               onHandReorder={onHandReorder}
+              pendingHandCard={
+                player_.seatId === currentSeatId ? pendingHandCard : null
+              }
             />
           );
         })}

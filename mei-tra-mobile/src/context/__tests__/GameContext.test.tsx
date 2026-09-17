@@ -5,6 +5,7 @@ import type {
   PlayerContract,
 } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
+import { PENDING_HAND_CARD_TIMEOUT_MS } from '@meitra/game-client/pending-hand-card';
 import type { RoomContract, RoomPlayerContract } from '@meitra/contracts/room';
 import React, { useEffect } from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
@@ -659,6 +660,96 @@ describe('GameProvider realtime resync safety', () => {
     expect(mockPlaySoundEffect).toHaveBeenCalledTimes(1);
 
     await screen.unmount();
+  });
+
+  describe('pending hand card', () => {
+    const startAtOwnTurn = async () => {
+      const screen = await renderProvider();
+      await act(async () => {
+        mockSocket.trigger('connect');
+        mockSocket.trigger('game-state', createGameState());
+        await flushPromises();
+      });
+      return screen;
+    };
+
+    it('holds a played card until the server takes it out of the hand', async () => {
+      const screen = await startAtOwnTurn();
+
+      await act(async () => {
+        screen.latestGame.playCard('S-3');
+        await flushPromises();
+      });
+      expect(mockSocket.emit).toHaveBeenCalledWith('play-card', {
+        roomId: 'room-1',
+        card: 'S-3',
+      });
+      expect(screen.latestGame.pendingHandCard).toBe('S-3');
+
+      // A players update that still holds the card keeps it pending.
+      await act(async () => {
+        mockSocket.trigger('update-players', createGameState().players);
+        await flushPromises();
+      });
+      expect(screen.latestGame.pendingHandCard).toBe('S-3');
+
+      await act(async () => {
+        mockSocket.trigger('card-played', {
+          seatId: asSeatId('player-1'),
+          card: 'S-3',
+          field: createGameState().currentField,
+          players: [
+            player({ hand: ['H-4'] }),
+            player({ seatId: asSeatId('player-2'), userId: 'user-2', team: 1, hand: [] }),
+          ],
+          nextSeatId: asSeatId('player-2'),
+        });
+        await flushPromises();
+      });
+      expect(screen.latestGame.pendingHandCard).toBeNull();
+
+      await screen.unmount();
+    });
+
+    it('gives the card back when the server refuses the play', async () => {
+      const screen = await startAtOwnTurn();
+
+      await act(async () => {
+        screen.latestGame.selectNegri('H-4');
+        await flushPromises();
+      });
+      expect(screen.latestGame.pendingHandCard).toBe('H-4');
+
+      await act(async () => {
+        mockSocket.trigger('error-message', 'Card already played or invalid');
+        await flushPromises();
+      });
+      expect(screen.latestGame.pendingHandCard).toBeNull();
+
+      await screen.unmount();
+    });
+
+    it('gives the card back when the server answers neither way', async () => {
+      const screen = await startAtOwnTurn();
+      jest.useFakeTimers();
+      try {
+        await act(async () => {
+          screen.latestGame.playCard('H-4');
+          await flushPromises();
+        });
+        expect(screen.latestGame.pendingHandCard).toBe('H-4');
+
+        await act(async () => {
+          jest.advanceTimersByTime(PENDING_HAND_CARD_TIMEOUT_MS);
+          await flushPromises();
+        });
+        expect(screen.latestGame.pendingHandCard).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+
+      await screen.unmount();
+    });
   });
 
   it.each([

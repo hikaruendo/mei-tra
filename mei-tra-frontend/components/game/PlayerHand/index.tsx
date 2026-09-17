@@ -20,6 +20,7 @@ import {
 } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import { classifyCardDrop, type CardDropAction } from '@meitra/game-client/drag-action';
+import { withoutPendingHandCard } from '@meitra/game-client/pending-hand-card';
 import { useCardValidation } from './hooks/useCardValidation';
 import {
   reorderHand,
@@ -78,6 +79,8 @@ interface PlayerHandProps {
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
+  /** A card this player sent to the field or to Negri, not shown until the server answers. */
+  pendingHandCard?: string | null;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -112,6 +115,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   onCardSelection = () => {},
   onCancel = () => {},
   onHandReorder = () => {},
+  pendingHandCard = null,
 }) => {
   const t = useTranslations('playerHand');
   const tGameInfo = useTranslations('gameInfo');
@@ -458,6 +462,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     setActiveDragCard(null);
   };
 
+  // Hiding the sent card here, instead of waiting for the server's hand, keeps
+  // a dropped card from landing back in its slot for the round trip.
+  const shownHand = withoutPendingHandCard(displayHand, pendingHandCard);
+
   const renderPlayerHand = (isCurrentPlayer: boolean) => {
     if (isCurrentPlayer) {
       return (
@@ -512,10 +520,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               {isWinningPlayer && !negriCard ? <span>{t('negri')} ↓</span> : null}
             </div>
           ) : null}
-          {displayHand.map((card, index) => {
+          {shownHand.map((card, index) => {
             const isSelected = card === selectedCard || card === selectedNegriCard;
-            const distanceFromCenter = index - (displayHand.length - 1) / 2;
-            const maxDistance = Math.max((displayHand.length - 1) / 2, 1);
+            const distanceFromCenter = index - (shownHand.length - 1) / 2;
+            const maxDistance = Math.max((shownHand.length - 1) / 2, 1);
             const normalizedDistance = distanceFromCenter / maxDistance;
             const cardRotation = normalizedDistance * 15;
             const cardLift = Math.pow(Math.abs(normalizedDistance), 2) * handCardMetrics.spreadLift;
@@ -590,7 +598,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 }}
                 style={{
                   '--card-index': index,
-                  '--card-total': displayHand.length,
+                  '--card-total': shownHand.length,
                   '--card-rotation': `${cardRotation}deg`,
                   '--card-translate-y': `${cardLift}px`,
                   '--deal-card-delay': `${index * DEAL_CARD_STAGGER_MS}ms`,

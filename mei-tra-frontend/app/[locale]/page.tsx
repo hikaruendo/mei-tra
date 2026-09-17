@@ -92,6 +92,7 @@ export default function Home() {
     currentTrump = null,
     currentField = null,
     players = [],
+    pendingHandCard = null,
     negriCard = null,
     negriSeatId = null,
     completedFields = [],
@@ -274,6 +275,7 @@ export default function Home() {
                   onCardSelection={playCardSelectionSound}
                   onCancel={playCancelSound}
                   onHandReorder={playHandReorderSound}
+                  pendingHandCard={pendingHandCard}
                 />
                 )}
               </div>

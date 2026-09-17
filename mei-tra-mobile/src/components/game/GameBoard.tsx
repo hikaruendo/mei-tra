@@ -8,6 +8,7 @@ import {
 } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import type { CardDropAction } from '@meitra/game-client/drag-action';
+import { withoutPendingHandCard } from '@meitra/game-client/pending-hand-card';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
   GameHistoryReplayViewContract,
@@ -88,6 +89,8 @@ interface GameBoardProps {
   firstTurnReveal?: MobileFirstTurnReveal | null;
   onFirstTurnRevealDone?: () => void;
   dealAnimationCue?: DealAnimationCue | null;
+  /** A card this player sent to the field or to Negri, not shown until the server answers. */
+  pendingHandCard?: string | null;
 }
 
 export function GameBoard({
@@ -113,6 +116,7 @@ export function GameBoard({
   firstTurnReveal = null,
   onFirstTurnRevealDone,
   dealAnimationCue = null,
+  pendingHandCard = null,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -174,10 +178,21 @@ export function GameBoard({
   // `game.youSeatId`, so keying off that collapsed the count to 0 and the metrics
   // fell through to the single-card branch (max width, zero overlap).
   const selfHandCount = self?.hand.length ?? 0;
+  const selfHand = self?.hand;
+  // A card sent to the field or to Negri leaves the fan at once; memoized
+  // because HandFan rebuilds its arrangement whenever the array changes.
+  const shownHand = useMemo(
+    () =>
+      withoutPendingHandCard(
+        selfHand ?? [],
+        game.isSpectator ? null : pendingHandCard,
+      ),
+    [selfHand, game.isSpectator, pendingHandCard],
+  );
   // board padding (20) + self panel (~86) + fan padding (20)
   const fanAvailableWidth = windowWidth - 126;
   const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
-    useHandFanMetrics(fanAvailableWidth, selfHandCount);
+    useHandFanMetrics(fanAvailableWidth, shownHand.length);
   const orderedPlayers = useMemo(
     () => getSeatOrderWithSelfBottom(game.players, perspectiveSeatId),
     [game.players, perspectiveSeatId],
@@ -670,7 +685,7 @@ export function GameBoard({
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
               cardWidth={handCardWidth}
-              cards={self.hand}
+              cards={shownHand}
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&

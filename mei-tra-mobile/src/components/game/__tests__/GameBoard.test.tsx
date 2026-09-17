@@ -635,6 +635,7 @@ describe('GameBoard pro drag gating', () => {
       };
       findByType: (type: typeof HandFan) => {
         props: {
+          cards?: string[];
           onDropAction?: (card: string, action: 'play' | 'negri') => void;
           onDragActiveChange?: (active: boolean) => void;
         };
@@ -646,6 +647,7 @@ describe('GameBoard pro drag gating', () => {
   const renderProBoard = (
     gamePhase: 'blow' | 'play',
     handlers: { onPlayCard: jest.Mock; onSelectNegri: jest.Mock },
+    pendingHandCard: string | null = null,
   ) => {
     let renderer!: ProRenderer;
     act(() => {
@@ -674,11 +676,22 @@ describe('GameBoard pro drag gating', () => {
           onReplaceWithCOM={jest.fn()}
           onSelectBaseSuit={jest.fn()}
           onSelectNegri={handlers.onSelectNegri}
+          pendingHandCard={pendingHandCard}
         />,
       ) as unknown as ProRenderer;
     });
     return renderer;
   };
+
+  it('leaves a sent card out of the hand until the server answers', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const [sent, ...rest] = game.players[0].hand;
+    const renderer = renderProBoard('play', handlers, sent);
+
+    expect(renderer.root.findByType(HandFan).props.cards).toEqual(rest);
+
+    act(() => renderer.unmount());
+  });
 
   it('offers no drop target during the blow phase', () => {
     const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
