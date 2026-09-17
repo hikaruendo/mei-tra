@@ -78,6 +78,7 @@ import {
 } from '@/lib/realtime';
 import { roomStorage } from '@/lib/room-storage';
 import { serverErrorTranslation } from '@meitra/game-client/server-errors';
+import { PENDING_HAND_CARD_TIMEOUT_MS } from '@meitra/game-client/pending-hand-card';
 import { getTeamDisplayName } from '@/lib/team-labels';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import type {
@@ -120,6 +121,11 @@ interface MobileState {
    */
   firstTurnReveal: MobileFirstTurnReveal | null;
   dealAnimationCue: DealAnimationCue | null;
+  /**
+   * The card sent to the field or to Negri, hidden from the hand until the
+   * server answers (shared/game-client/pending-hand-card.ts).
+   */
+  pendingHandCard: string | null;
 }
 
 export type MobileFirstTurnReveal = FirstTurnReveal;
@@ -141,6 +147,7 @@ type Action =
   | { type: 'gameResult'; result: GameResultSnapshot | null }
   | { type: 'firstTurnReveal'; reveal: MobileFirstTurnReveal | null }
   | { type: 'dealAnimationCue'; cue: DealAnimationCue | null }
+  | { type: 'pendingHandCard'; card: string | null }
   | { type: 'resetRoom' }
   | { type: 'finishRoom' };
 
@@ -165,7 +172,20 @@ const initialState: MobileState = {
   gameResult: null,
   firstTurnReveal: null,
   dealAnimationCue: null,
+  pendingHandCard: null,
 };
+
+/** The server accepted the card once the player's hand no longer holds it. */
+function settlePendingHandCard(
+  pendingHandCard: string | null,
+  game: MobileGameSnapshot | null,
+): string | null {
+  if (!pendingHandCard) return null;
+  const hand = game?.players.find(
+    (player) => player.seatId === game.youSeatId,
+  )?.hand;
+  return hand?.includes(pendingHandCard) ? pendingHandCard : null;
+}
 
 function reducer(state: MobileState, action: Action): MobileState {
   switch (action.type) {
@@ -195,16 +215,19 @@ function reducer(state: MobileState, action: Action): MobileState {
           : state.rooms,
       };
     }
-    case 'game':
+    case 'game': {
+      const game = state.pendingGamePatches
+        ? { ...action.game, ...state.pendingGamePatches }
+        : action.game;
       return {
         ...state,
-        game: state.pendingGamePatches
-          ? { ...action.game, ...state.pendingGamePatches }
-          : action.game,
+        game,
         pendingGamePatches: null,
         error: null,
         gameResult: null,
+        pendingHandCard: settlePendingHandCard(state.pendingHandCard, game),
       };
+    }
     case 'patchGame':
       if (state.game) {
         return { ...state, game: { ...state.game, ...action.patch } };
@@ -230,19 +253,21 @@ function reducer(state: MobileState, action: Action): MobileState {
           })
         : null;
 
+      const game = state.game
+        ? {
+            ...state.game,
+            players: gamePlayers,
+            disconnectedSeatIds: extractDisconnectedSeatIds(gamePlayers),
+          }
+        : null;
       return {
         ...state,
-        game: state.game
-          ? {
-              ...state.game,
-              players: gamePlayers,
-              disconnectedSeatIds: extractDisconnectedSeatIds(gamePlayers),
-            }
-          : null,
+        game,
         currentRoom:
           state.currentRoom && roomPlayers
             ? { ...state.currentRoom, players: roomPlayers }
             : state.currentRoom,
+        pendingHandCard: settlePendingHandCard(state.pendingHandCard, game),
       };
     }
     case 'playerDisconnected': {
@@ -332,6 +357,8 @@ function reducer(state: MobileState, action: Action): MobileState {
       return { ...state, firstTurnReveal: action.reveal };
     case 'dealAnimationCue':
       return { ...state, dealAnimationCue: action.cue };
+    case 'pendingHandCard':
+      return { ...state, pendingHandCard: action.card };
     case 'resetRoom':
       return {
         ...state,
@@ -344,6 +371,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         gameResult: null,
         firstTurnReveal: null,
         dealAnimationCue: null,
+        pendingHandCard: null,
       };
     case 'finishRoom':
       return {
@@ -356,6 +384,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         recoveryNotice: null,
         firstTurnReveal: null,
         dealAnimationCue: null,
+        pendingHandCard: null,
       };
     default:
       return state;
@@ -468,6 +497,15 @@ export function GameProvider({ children }: PropsWithChildren) {
       gameEventStateRef.current = createEmptyGameEventState();
     }
   }, [state.currentRoom, state.game]);
+
+  useEffect(() => {
+    if (!state.pendingHandCard) return;
+    const timeout = setTimeout(
+      () => dispatch({ type: 'pendingHandCard', card: null }),
+      PENDING_HAND_CARD_TIMEOUT_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [state.pendingHandCard]);
 
   const resolveCurrentSeatId = useCallback(() => {
     const snapshot = stateRef.current;
@@ -999,6 +1037,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('error-message', (message: string) => {
       pendingNegriCardRef.current = null;
+      dispatch({ type: 'pendingHandCard', card: null });
       const translation = serverErrorTranslation(message);
       dispatch({
         type: 'error',
@@ -1413,6 +1452,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     emitOneWayAction('select-negri', game.roomId, () => {
       pendingNegriCardRef.current = card;
       socketRef.current?.emit('select-negri', { roomId: game.roomId, card });
+      dispatch({ type: 'pendingHandCard', card });
     });
   }, [emitOneWayAction]);
 
@@ -1436,6 +1476,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     }
     emitOneWayAction('play-card', game.roomId, () => {
       socketRef.current?.emit('play-card', { roomId: game.roomId, card });
+      dispatch({ type: 'pendingHandCard', card });
     });
   }, [emitOneWayAction]);
 

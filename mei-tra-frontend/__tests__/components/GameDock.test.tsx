@@ -202,6 +202,51 @@ describe('GameDock', () => {
     expect(screen.queryByText('chombo report form')).not.toBeInTheDocument();
   });
 
+  it('puts the open action next to chombo and closes the menu before asking', async () => {
+    mockMatchMedia(true);
+    const onOpenRequest = jest.fn();
+
+    const { rerender } = render(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gameMode="pro"
+        gamePhase="play"
+        chomboReport={<div>chombo report form</div>}
+        onOpenRequest={onOpenRequest}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'menu' })).toBeInTheDocument();
+    });
+    const menuButton = screen.getByRole('button', { name: 'menu' });
+    fireEvent.click(menuButton);
+
+    const labels = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    expect(labels.indexOf('openAction')).toBe(labels.indexOf('dockLabel') + 1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'openAction' }));
+    expect(onOpenRequest).toHaveBeenCalledTimes(1);
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+    rerender(
+      <GameDock
+        roomId="room-1"
+        gameStarted
+        currentTrump={null}
+        gameMode="pro"
+        gamePhase="play"
+        chomboReport={<div>chombo report form</div>}
+      />,
+    );
+    fireEvent.click(menuButton);
+    expect(screen.queryByRole('button', { name: 'openAction' })).not.toBeInTheDocument();
+  });
+
   it('offers no chombo button when there is no report to show', () => {
     mockMatchMedia(false);
 

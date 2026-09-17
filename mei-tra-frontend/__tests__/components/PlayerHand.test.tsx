@@ -903,6 +903,29 @@ describe('PlayerHand pro mode drag', () => {
     expect(handOrder()).toEqual(['H-A', 'S-2']);
   });
 
+  it('leaves a sent card out of the hand while the server has not answered', () => {
+    const props = {
+      gameMode: 'pro',
+      whoseTurn: 'player-2',
+      currentSeatId: 'player-2',
+    } as const;
+    const { rerender } = renderPlayerHand({
+      ...props,
+      player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+      pendingHandCard: 'S-2',
+    });
+
+    expect(handOrder()).toEqual(['H-A', 'D-3']);
+
+    // The server refused the play: the card is shown in its slot again.
+    rerender(buildPlayerHand({
+      ...props,
+      player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+      pendingHandCard: null,
+    }));
+    expect(handOrder()).toEqual(['H-A', 'S-2', 'D-3']);
+  });
+
   it('marks a sideways reorder at the same height when the release cannot play', async () => {
     renderPlayerHand({
       gameMode: 'pro',

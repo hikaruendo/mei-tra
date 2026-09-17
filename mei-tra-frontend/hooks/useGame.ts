@@ -71,6 +71,7 @@ import {
 } from '@meitra/game-client/game-event-reducer';
 import { completedFieldKey } from '@meitra/game-client/completed-field';
 import { serverErrorTranslation } from '@meitra/game-client/server-errors';
+import { PENDING_HAND_CARD_TIMEOUT_MS } from '@meitra/game-client/pending-hand-card';
 import { resolveSelfSeatId } from '../lib/utils/playerIdentity';
 import {
   DEFAULT_USER_PREFERENCES,
@@ -255,6 +256,9 @@ export const useGame = () => {
   // Player and Game State
   const [name, setName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
+  // The card sent to the field or to Negri, hidden from the hand until the
+  // server answers (shared/game-client/pending-hand-card.ts).
+  const [pendingHandCard, setPendingHandCard] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
@@ -315,6 +319,7 @@ export const useGame = () => {
   useEffect(() => {
     if (!isConnected) {
       pendingNegriCardRef.current = null;
+      setPendingHandCard(null);
     }
 
     return () => {
@@ -387,8 +392,25 @@ export const useGame = () => {
 
   const [paused, setPaused] = useState(false);
 
+  useEffect(() => {
+    if (!pendingHandCard) return;
+    const selfHand = players.find(
+      (player) => player.seatId === currentSeatId,
+    )?.hand;
+    if (!selfHand?.includes(pendingHandCard)) {
+      setPendingHandCard(null);
+      return;
+    }
+    const timeout = setTimeout(
+      () => setPendingHandCard(null),
+      PENDING_HAND_CARD_TIMEOUT_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [pendingHandCard, players, currentSeatId]);
+
   const resetRoomState = useCallback(() => {
     pendingNegriCardRef.current = null;
+    setPendingHandCard(null);
     gameEventStateRef.current = createEmptyGameEventState();
     gameOverShownRef.current = null;
     agariRequestKeyRef.current = null;
@@ -999,6 +1021,7 @@ export const useGame = () => {
       },
       'error-message': (message: string) => {
         pendingNegriCardRef.current = null;
+        setPendingHandCard(null);
         setNotification({
           message: translateServerError(message),
           type: 'error',
@@ -1440,20 +1463,22 @@ export const useGame = () => {
         roomId: currentRoomId,
         card,
       });
+      setPendingHandCard(card);
     },
     playCard: (card: string) => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnPlay'), type: 'error' });
         return;
       }
-      if (!currentRoomId) {
+      if (!socket || !currentRoomId) {
         return;
       }
       const payload: PlayCardPayload = {
         roomId: currentRoomId,
         card,
       };
-      socket?.emit('play-card', payload);
+      socket.emit('play-card', payload);
+      setPendingHandCard(card);
     },
     reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => {
       if (!currentRoomId) return;
@@ -1543,6 +1568,7 @@ export const useGame = () => {
     currentTrump,
     currentField,
     players,
+    pendingHandCard,
     negriCard,
     negriSeatId,
     completedFields,

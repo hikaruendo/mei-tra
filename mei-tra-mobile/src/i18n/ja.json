@@ -113,7 +113,8 @@
     "lastTanzen": "最後タンツェン",
     "confirmTitle": "チョンボを指摘しますか？",
     "confirmMessage": "{name}の「{violation}」を指摘します。この操作は取り消せず、ラウンドが終了します。",
-    "confirm": "指摘する"
+    "confirm": "指摘する",
+    "noTargets": "指摘できる相手チームのプレイヤーがいません。COM は違反を記録しないため、指摘できません。"
   },
   "chomboScenario": {
     "title": "チョンボのテスト（開発環境のみ）",

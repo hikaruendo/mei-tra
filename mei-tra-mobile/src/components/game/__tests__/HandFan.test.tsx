@@ -1,5 +1,10 @@
 import React from 'react';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Animated,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { HandFan } from '../HandFan';
@@ -499,6 +504,37 @@ describe('HandFan', () => {
 
     expect(onDropAction).toHaveBeenCalledWith('A', 'play');
     expect(cardScale(renderer, 'A')).toBe(1);
+  });
+
+  describe('the card offset when a drop is reported', () => {
+    // On a device the offset reset reaches the native view before the render
+    // that removes a played card, so the reset must not come first for a drop
+    // that takes the card out of the hand.
+    const offsetAtDrop = (dropActions: ('play' | 'negri')[]) => {
+      const setValue = jest.spyOn(Animated.ValueXY.prototype, 'setValue');
+      const offsets: unknown[] = [];
+      try {
+        const renderer = render({
+          dropActions,
+          onDropAction: () => offsets.push(setValue.mock.calls.at(-1)?.[0]),
+        });
+        startDrag(renderer, 'A', 0, -DROP_PX).release();
+        // Either way the card sits flat again if it is still in the hand.
+        expect(cardScale(renderer, 'A')).toBe(1);
+      } finally {
+        setValue.mockRestore();
+      }
+      expect(offsets).toHaveLength(1);
+      return offsets[0];
+    };
+
+    it('keeps the card where it was let go when the drop takes it', () => {
+      expect(offsetAtDrop(['play'])).not.toEqual({ x: 0, y: 0 });
+    });
+
+    it('puts the card back in its slot first when the drop does not act', () => {
+      expect(offsetAtDrop(['negri'])).toEqual({ x: 0, y: 0 });
+    });
   });
 
   it('puts the card back down, and still reorders, when nothing acts on the drop', () => {

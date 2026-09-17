@@ -471,7 +471,8 @@
     "negriForget": "ネグリ忘れ",
     "wrongSuit": "出し方の違反",
     "fourJack": "4ジャック",
-    "lastTanzen": "最後タンツェン"
+    "lastTanzen": "最後タンツェン",
+    "noTargets": "指摘できる相手チームのプレイヤーがいません。COM は違反を記録しないため、指摘できません。"
   },
   "chomboScenario": {
     "title": "チョンボのテスト（開発環境のみ）",

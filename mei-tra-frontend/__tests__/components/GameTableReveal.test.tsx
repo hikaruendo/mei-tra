@@ -15,22 +15,48 @@ jest.mock('@/hooks/usePreloadCards', () => ({
 }));
 
 jest.mock('@/components/game/GameInfo', () => ({
-  GameInfo: () => <div>game info</div>,
+  GameInfo: ({
+    actionSlot,
+  }: {
+    actionSlot?: (onLeaveRequest: () => void) => React.ReactNode;
+  }) => <div>{actionSlot?.(() => {})}</div>,
 }));
 
+// Stands in for the dock's buttons: the open entry and the chombo panel.
 jest.mock('@/components/game/GameDock', () => ({
-  GameDock: () => <div>game dock</div>,
+  GameDock: ({
+    onOpenRequest,
+    chomboReport,
+  }: {
+    onOpenRequest?: () => void;
+    chomboReport?: React.ReactNode;
+  }) => (
+    <div>
+      {onOpenRequest ? (
+        <button type="button" onClick={onOpenRequest}>
+          game.openAction
+        </button>
+      ) : null}
+      {chomboReport}
+    </div>
+  ),
 }));
 
 jest.mock('@/components/game/PlayerHand', () => ({
   PlayerHand: ({
     player,
     isCurrentTurn,
+    pendingHandCard,
   }: {
     player: Player;
     isCurrentTurn: boolean;
+    pendingHandCard?: string | null;
   }) => (
-    <div data-testid={`seat-${player.seatId}`} data-current-turn={isCurrentTurn}>
+    <div
+      data-testid={`seat-${player.seatId}`}
+      data-current-turn={isCurrentTurn}
+      data-pending-hand-card={pendingHandCard ?? ''}
+    >
       {player.name}
     </div>
   ),
@@ -322,5 +348,33 @@ describe('GameTable pro open control', () => {
 
     renderTable({ ...proPlay, players: withViewerHand(OPEN_MAX_HAND_SIZE) });
     expect(screen.getByRole('button', { name: 'game.openAction' })).toBeInTheDocument();
+  });
+});
+
+describe('GameTable pro chombo report', () => {
+  const comOpponents = players.map((player) =>
+    player.team === 1 ? { ...player, isCOM: true } : player,
+  );
+
+  it('gives the dock a report panel during pro play, even with only COM to report', () => {
+    renderTable({ gameMode: 'pro', gamePhase: 'play', players: comOpponents });
+    expect(screen.getByText('noTargets')).toBeInTheDocument();
+  });
+
+  it('gives no report panel outside pro play or to a spectator', () => {
+    const { unmount } = renderTable({ gameMode: 'pro', gamePhase: 'blow' });
+    expect(screen.queryByLabelText('title')).not.toBeInTheDocument();
+    unmount();
+
+    renderTable({ gameMode: 'pro', gamePhase: 'play', isSpectator: true });
+    expect(screen.queryByLabelText('title')).not.toBeInTheDocument();
+  });
+});
+
+describe('GameTable pending hand card', () => {
+  it('hides the sent card only from the viewer’s own hand', () => {
+    renderTable({ gameMode: 'pro', gamePhase: 'play', pendingHandCard: '5♠' });
+    expect(screen.getByTestId('seat-seat-0')).toHaveAttribute('data-pending-hand-card', '5♠');
+    expect(screen.getByTestId('seat-seat-1')).toHaveAttribute('data-pending-hand-card', '');
   });
 });

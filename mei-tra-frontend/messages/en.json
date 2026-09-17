@@ -471,7 +471,8 @@
     "negriForget": "Negri forget",
     "wrongSuit": "Wrong suit",
     "fourJack": "Four jacks",
-    "lastTanzen": "Last tanzen"
+    "lastTanzen": "Last tanzen",
+    "noTargets": "No player on the other team can be reported. COM players have no violations to report."
   },
   "chomboScenario": {
     "title": "Chombo test (development only)",

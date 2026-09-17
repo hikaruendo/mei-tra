@@ -24,17 +24,29 @@ interface ChomboReportPanelProps {
   onReport: (violatorSeatId: string, violationType: ChomboViolationType) => void;
 }
 
+/** The server takes reports only against the other team, and COM seats record no violations. */
 export function getChomboReportTargets(players: Player[], currentSeatId: string | null): Player[] {
-  return players.filter((player) => player.seatId !== currentSeatId && !player.isCOM);
+  const reporter = players.find((player) => player.seatId === currentSeatId);
+  if (!reporter) return [];
+  return players.filter((player) => player.team !== reporter.team && !player.isCOM);
 }
 
 export function ChomboReportPanel({ players, currentSeatId, onReport }: ChomboReportPanelProps) {
   const t = useTranslations('chomboReport');
   const opponents = getChomboReportTargets(players, currentSeatId);
-  const [violatorSeatId, setViolatorSeatId] = useState<string>(opponents[0]?.seatId ?? '');
+  const [chosenSeatId, setChosenSeatId] = useState<string | null>(null);
   const [violationType, setViolationType] = useState<ChomboViolationType>('negri-forget');
+  // The list can change while the panel is open (a seat turns COM, a player
+  // joins), so the form falls back to the first player on the list.
+  const violator = opponents.find((player) => player.seatId === chosenSeatId) ?? opponents[0];
 
-  if (opponents.length === 0) return null;
+  if (!violator) {
+    return (
+      <section className={styles.panel} aria-label={t('title')}>
+        <p className={styles.empty}>{t('noTargets')}</p>
+      </section>
+    );
+  }
 
   return (
     <form
@@ -42,12 +54,12 @@ export function ChomboReportPanel({ players, currentSeatId, onReport }: ChomboRe
       aria-label={t('title')}
       onSubmit={(event) => {
         event.preventDefault();
-        if (violatorSeatId) onReport(violatorSeatId, violationType);
+        onReport(violator.seatId, violationType);
       }}
     >
       <label className={styles.field}>
         <span className={styles.label}>{t('player')}</span>
-        <select className={styles.select} value={violatorSeatId} onChange={(event) => setViolatorSeatId(event.target.value)}>
+        <select className={styles.select} value={violator.seatId} onChange={(event) => setChosenSeatId(event.target.value)}>
           {opponents.map((player) => <option key={player.seatId} value={player.seatId}>{player.name}</option>)}
         </select>
       </label>

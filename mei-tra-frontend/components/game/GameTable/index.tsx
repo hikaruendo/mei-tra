@@ -9,7 +9,7 @@ import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
-import { ChomboReportPanel, getChomboReportTargets } from '@/components/game/ChomboReportPanel';
+import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/tableOrder';
 import { usePreloadCards } from '@/hooks/usePreloadCards';
@@ -61,6 +61,7 @@ interface GameTableProps {
   onCardSelection?: () => void;
   onCancel?: () => void;
   onHandReorder?: () => void;
+  pendingHandCard?: string | null;
 }
 
 
@@ -107,6 +108,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   onCardSelection = noop,
   onCancel = noop,
   onHandReorder = noop,
+  pendingHandCard = null,
 }) => {
   const tRoot = useTranslations();
   usePreloadCards();
@@ -133,11 +135,14 @@ export const GameTable: React.FC<GameTableProps> = ({
     viewerHandSize !== undefined &&
     viewerHandSize > 0 &&
     viewerHandSize <= OPEN_MAX_HAND_SIZE;
+  // Shown for every seated player during pro play, even when nobody can be
+  // reported (the panel then says why), so the entry does not come and go
+  // with who is sitting at the table.
   const chomboReport =
     gameMode === 'pro' &&
     gamePhase === 'play' &&
-    currentSeatId &&
-    getChomboReportTargets(players, currentSeatId).length > 0 ? (
+    !isSpectator &&
+    currentSeatId ? (
       <ChomboReportPanel
         players={players}
         currentSeatId={currentSeatId}
@@ -226,6 +231,9 @@ export const GameTable: React.FC<GameTableProps> = ({
                   (gamePhase === 'blow' || gamePhase === 'play')
                     ? gameActions.setupChomboScenario
                     : undefined
+                }
+                onOpenRequest={
+                  canDeclareOpen ? () => setOpenConfirmOpen(true) : undefined
                 }
                 onLeaveRequest={onLeaveRequest}
               />
@@ -341,6 +349,9 @@ export const GameTable: React.FC<GameTableProps> = ({
               onCardSelection={onCardSelection}
               onCancel={onCancel}
               onHandReorder={onHandReorder}
+              pendingHandCard={
+                player_.seatId === currentSeatId ? pendingHandCard : null
+              }
             />
           );
         })}
@@ -380,16 +391,8 @@ export const GameTable: React.FC<GameTableProps> = ({
         )}
       </div>
 
-      {canDeclareOpen && (
-        <button
-          className={styles.openButton}
-          type="button"
-          onClick={() => setOpenConfirmOpen(true)}
-        >
-          {tRoot('game.openAction')}
-        </button>
-      )}
-      {/* An open reveals the hand and cannot be taken back, so it is confirmed first. */}
+      {/* Opened from the game dock. An open reveals the hand and cannot be
+          taken back, so it is confirmed first. */}
       <ConfirmModal
         isOpen={openConfirmOpen}
         title={tRoot('game.openConfirmTitle')}

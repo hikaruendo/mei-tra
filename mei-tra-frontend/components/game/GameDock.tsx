@@ -20,6 +20,8 @@ interface GameDockProps {
   teamNames?: TeamNames;
   chomboReport?: ReactNode;
   onSetupChomboScenario?: (violationType: DevChomboScenarioType) => void;
+  /** Present only while the player can declare an open; the parent confirms it. */
+  onOpenRequest?: () => void;
   onLeaveRequest?: () => void;
 }
 
@@ -33,9 +35,11 @@ export function GameDock({
   teamNames,
   chomboReport,
   onSetupChomboScenario,
+  onOpenRequest,
   onLeaveRequest,
 }: GameDockProps) {
   const tCommon = useTranslations('common');
+  const tGame = useTranslations('game');
   const tHistory = useTranslations('gameHistoryDock');
   const tChombo = useTranslations('chomboReport');
   const [isMobile, setIsMobile] = useState(false);
@@ -143,6 +147,22 @@ export function GameDock({
             aria-expanded={isChomboOpen}
           >
             {tChombo('dockLabel')}
+          </button>
+        </div>
+      )}
+      {onOpenRequest && (
+        <div className={styles.dockItem}>
+          <button
+            type="button"
+            className={styles.historyButton}
+            onClick={() => {
+              setIsHistoryOpen(false);
+              setIsChomboOpen(false);
+              setIsMenuOpen(false);
+              onOpenRequest();
+            }}
+          >
+            {tGame('openAction')}
           </button>
         </div>
       )}

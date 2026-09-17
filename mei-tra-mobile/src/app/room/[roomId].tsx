@@ -58,6 +58,7 @@ export default function RoomScreen() {
     firstTurnReveal,
     clearFirstTurnReveal,
     dealAnimationCue,
+    pendingHandCard,
   } = useGame();
 
   useGameKeepAwake();
@@ -167,6 +168,7 @@ export default function RoomScreen() {
           firstTurnReveal={firstTurnReveal}
           onFirstTurnRevealDone={clearFirstTurnReveal}
           dealAnimationCue={dealAnimationCue}
+          pendingHandCard={pendingHandCard}
         />
       ) : (
         <View style={styles.center}>

@@ -8,6 +8,7 @@ import {
 } from '@meitra/contracts/game';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import type { CardDropAction } from '@meitra/game-client/drag-action';
+import { withoutPendingHandCard } from '@meitra/game-client/pending-hand-card';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
 import type {
   GameHistoryReplayViewContract,
@@ -88,6 +89,8 @@ interface GameBoardProps {
   firstTurnReveal?: MobileFirstTurnReveal | null;
   onFirstTurnRevealDone?: () => void;
   dealAnimationCue?: DealAnimationCue | null;
+  /** A card this player sent to the field or to Negri, not shown until the server answers. */
+  pendingHandCard?: string | null;
 }
 
 export function GameBoard({
@@ -113,6 +116,7 @@ export function GameBoard({
   firstTurnReveal = null,
   onFirstTurnRevealDone,
   dealAnimationCue = null,
+  pendingHandCard = null,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -130,6 +134,9 @@ export function GameBoard({
     string | null
   >(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set by the open entry of the options menu; the confirmation waits for the
+  // menu to close (see the effect after canDeclareOpen).
+  const openConfirmPendingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,10 +181,21 @@ export function GameBoard({
   // `game.youSeatId`, so keying off that collapsed the count to 0 and the metrics
   // fell through to the single-card branch (max width, zero overlap).
   const selfHandCount = self?.hand.length ?? 0;
+  const selfHand = self?.hand;
+  // A card sent to the field or to Negri leaves the fan at once; memoized
+  // because HandFan rebuilds its arrangement whenever the array changes.
+  const shownHand = useMemo(
+    () =>
+      withoutPendingHandCard(
+        selfHand ?? [],
+        game.isSpectator ? null : pendingHandCard,
+      ),
+    [selfHand, game.isSpectator, pendingHandCard],
+  );
   // board padding (20) + self panel (~86) + fan padding (20)
   const fanAvailableWidth = windowWidth - 126;
   const { cardWidth: handCardWidth, cardMargin: handCardMargin } =
-    useHandFanMetrics(fanAvailableWidth, selfHandCount);
+    useHandFanMetrics(fanAvailableWidth, shownHand.length);
   const orderedPlayers = useMemo(
     () => getSeatOrderWithSelfBottom(game.players, perspectiveSeatId),
     [game.players, perspectiveSeatId],
@@ -202,13 +220,14 @@ export function GameBoard({
       ),
     [leftPlayer, topPlayer, rightPlayer],
   );
-  // COM seats cannot be reported (web: ChomboReportPanel).
+  // The server takes reports only against the other team, and COM seats record
+  // no violations (web: getChomboReportTargets).
   const chomboReportTargets = useMemo(
     () =>
       opponentSlots
         .map(({ player }) => player)
-        .filter((player) => !player.isCOM),
-    [opponentSlots],
+        .filter((player) => player.team !== self?.team && !player.isCOM),
+    [opponentSlots, self?.team],
   );
   const teamFieldCounts = useMemo(() => {
     const counts: Record<number, number> = { 0: 0, 1: 0 };
@@ -246,8 +265,9 @@ export function GameBoard({
         ]
       : [];
   const canProDrop = proDropActions.length > 0;
-  const canReportChombo =
-    isProMode && isHandPlayPhase && chomboReportTargets.length > 0;
+  // Offered during every pro play phase, even with nobody to report (the panel
+  // then says why), so the menu entry does not come and go with the seating.
+  const canReportChombo = isProMode && isHandPlayPhase;
   const setupChomboScenario =
     isProMode &&
     !game.isSpectator &&
@@ -272,6 +292,22 @@ export function GameBoard({
     Boolean(self) &&
     selfHandCount > 0 &&
     selfHandCount <= OPEN_MAX_HAND_SIZE;
+
+  // On iOS an Alert raised while a Modal is being dismissed may never show, so
+  // the open confirmation waits until the options menu has closed. An open
+  // reveals the hand and cannot be taken back, so it asks first.
+  useEffect(() => {
+    if (showOptions || !openConfirmPendingRef.current) return;
+    openConfirmPendingRef.current = false;
+    if (!canDeclareOpen) return;
+    confirmAction({
+      title: t('game.openConfirmTitle'),
+      message: t('game.openConfirmMessage'),
+      confirmLabel: t('game.openConfirm'),
+      onConfirm: onDeclareOpen,
+    });
+  }, [showOptions, canDeclareOpen, onDeclareOpen]);
+
   const hasActedInBlow =
     Boolean(self?.isPasser) ||
     game.blowState.declarations.some(
@@ -670,7 +706,7 @@ export function GameBoard({
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
               cardWidth={handCardWidth}
-              cards={self.hand}
+              cards={shownHand}
               dealAnimationCue={dealAnimationCue}
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
@@ -735,24 +771,6 @@ export function GameBoard({
                 )}
                 reducedMotion={reducedMotion}
               />
-            ) : null}
-            {/* Below the hand and the taken fields, where the web table puts it.
-                An open reveals the hand and cannot be taken back, so it asks first. */}
-            {canDeclareOpen ? (
-              <Button
-                onPress={() =>
-                  confirmAction({
-                    title: t('game.openConfirmTitle'),
-                    message: t('game.openConfirmMessage'),
-                    confirmLabel: t('game.openConfirm'),
-                    onConfirm: onDeclareOpen,
-                  })
-                }
-                style={styles.openButton}
-                testID="declare-open"
-              >
-                {t('game.openAction')}
-              </Button>
             ) : null}
           </View>
         ) : null}
@@ -853,6 +871,18 @@ export function GameBoard({
                 variant="secondary"
               >
                 {t('chomboReport.menuLabel')}
+              </Button>
+            ) : null}
+            {canDeclareOpen ? (
+              <Button
+                onPress={() => {
+                  openConfirmPendingRef.current = true;
+                  setShowOptions(false);
+                }}
+                testID="game-options-open"
+                variant="secondary"
+              >
+                {t('game.openAction')}
               </Button>
             ) : null}
             <Button
@@ -1142,10 +1172,6 @@ const styles = StyleSheet.create({
   },
   handSection: {
     gap: 8,
-  },
-  openButton: {
-    alignSelf: 'center',
-    minWidth: 128,
   },
   selfRow: {
     flexDirection: 'row',

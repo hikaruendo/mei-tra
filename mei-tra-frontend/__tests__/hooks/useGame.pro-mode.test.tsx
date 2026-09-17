@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import type { GameStatePayload } from '@contracts/game';
 import { asSeatId } from '@contracts/ids';
+import { PENDING_HAND_CARD_TIMEOUT_MS } from '@meitra/game-client/pending-hand-card';
 import { useGame } from '@/hooks/useGame';
 
 const mockHandlers = new Map<string, (payload: unknown) => void>();
@@ -97,6 +98,78 @@ describe('useGame Negri prompt', () => {
     }));
 
     expect(result.current.notification?.message).toBe(key);
+  });
+});
+
+describe('useGame pending hand card', () => {
+  beforeEach(() => {
+    mockHandlers.clear();
+    sessionStorage.clear();
+    mockSocket.emit.mockClear();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const viewerTurn = (): GameStatePayload => ({
+    ...snapshot(false),
+    players: [
+      { seatId: asSeatId('viewer'), name: 'Viewer', team: 0, hand: ['5♣', 'A♠'] },
+      { seatId: asSeatId('opponent'), name: 'Opponent', team: 1, hand: ['K♥'] },
+    ] as GameStatePayload['players'],
+    currentTurnSeatId: asSeatId('viewer'),
+  });
+
+  const renderAtViewerTurn = () => {
+    const hook = renderHook(() => useGame());
+    act(() => mockHandlers.get('game-state')?.(viewerTurn()));
+    return hook;
+  };
+
+  it('holds a played card until the server takes it out of the hand', () => {
+    const { result } = renderAtViewerTurn();
+
+    act(() => result.current.gameActions?.playCard('5♣'));
+    expect(mockSocket.emit).toHaveBeenCalledWith('play-card', { roomId: 'pro-room', card: '5♣' });
+    expect(result.current.pendingHandCard).toBe('5♣');
+
+    act(() => mockHandlers.get('card-played')?.({
+      seatId: asSeatId('viewer'),
+      card: '5♣',
+      field: {
+        cards: ['5♣'],
+        playedBySeatIds: [asSeatId('viewer')],
+        baseCard: '5♣',
+        dealerSeatId: asSeatId('viewer'),
+        isComplete: false,
+      },
+      players: [
+        { seatId: asSeatId('viewer'), name: 'Viewer', team: 0, hand: ['A♠'] },
+        { seatId: asSeatId('opponent'), name: 'Opponent', team: 1, hand: ['K♥'] },
+      ],
+      nextSeatId: asSeatId('opponent'),
+    }));
+    expect(result.current.pendingHandCard).toBeNull();
+  });
+
+  it('gives the card back when the server refuses the play', () => {
+    const { result } = renderAtViewerTurn();
+
+    act(() => result.current.gameActions?.playCard('5♣'));
+    act(() => mockHandlers.get('error-message')?.('Card already played or invalid'));
+
+    expect(result.current.pendingHandCard).toBeNull();
+  });
+
+  it('gives the card back when the server answers neither way', () => {
+    jest.useFakeTimers();
+    const { result } = renderAtViewerTurn();
+
+    act(() => result.current.gameActions?.selectNegri('A♠'));
+    expect(result.current.pendingHandCard).toBe('A♠');
+
+    act(() => jest.advanceTimersByTime(PENDING_HAND_CARD_TIMEOUT_MS));
+    expect(result.current.pendingHandCard).toBeNull();
   });
 });
 

@@ -266,9 +266,15 @@ function HandFanCard({
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   // PanResponder is built once and keeps the callbacks it was given, so they
   // read the current props through this ref instead of the first render's.
-  const live = useRef({ canReorder, onDragStart, onDragMove, onDragEnd });
+  const live = useRef({
+    canReorder,
+    dropActions,
+    onDragStart,
+    onDragMove,
+    onDragEnd,
+  });
   useEffect(() => {
-    live.current = { canReorder, onDragStart, onDragMove, onDragEnd };
+    live.current = { canReorder, dropActions, onDragStart, onDragMove, onDragEnd };
   });
 
   // The parent also ends a drag on its own when the hand is dealt again, which
@@ -282,8 +288,17 @@ function HandFanCard({
 
   const panResponder = useRef<PanResponderInstance | null>(null);
   if (panResponder.current === null) {
-    const release = (committed: boolean) => {
-      pan.setValue({ x: 0, y: 0 });
+    const release = (committed: boolean, dy: number) => {
+      // A play or a Negri drop takes the card out of the fan. Resetting the
+      // offset here reaches the native view before the render that removes the
+      // card, so it would flash back into its slot for a frame. If the card
+      // stays in the hand after all, the isDragging effect above resets it.
+      const action = classifyCardDrop(dy);
+      const leavesHand =
+        committed && action !== null && live.current.dropActions.includes(action);
+      if (!leavesHand) {
+        pan.setValue({ x: 0, y: 0 });
+      }
       live.current.onDragEnd(committed);
     };
 
@@ -304,8 +319,8 @@ function HandFanCard({
       // Refusing only covers JS responders; the parent also disables scrolling
       // through onDragActiveChange, or the platform scroll pans anyway.
       onPanResponderTerminationRequest: () => false,
-      onPanResponderRelease: () => release(true),
-      onPanResponderTerminate: () => release(false),
+      onPanResponderRelease: (_event, gesture) => release(true, gesture.dy),
+      onPanResponderTerminate: (_event, gesture) => release(false, gesture.dy),
     });
   }
 

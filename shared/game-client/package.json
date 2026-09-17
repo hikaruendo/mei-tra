@@ -52,6 +52,10 @@
       "default": "./game-result.ts"
     },
     "./drag-action": {"types": "./drag-action.ts", "default": "./drag-action.ts"},
+    "./pending-hand-card": {
+      "types": "./pending-hand-card.ts",
+      "default": "./pending-hand-card.ts"
+    },
     "./sound-effects": {
       "types": "./sound-effects.ts",
       "default": "./sound-effects.ts"
