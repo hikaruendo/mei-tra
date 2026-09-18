@@ -213,7 +213,6 @@
     "openIsOnlyAvailableDuringPlay": "Open is only available during play",
     "openIsOnlyAvailableInProMode": "Open is only available in pro mode",
     "openIsOnlyAvailableWhileYouHoldCards": "Open is only available while you hold cards",
-    "openIsOnlyAvailableWithFourOrFewer": "Open is only available with four or fewer cards in hand",
     "openRequiresACompletedDeclaration": "Open requires a completed declaration",
     "playerDoesNotHaveBrokenHand": "Player does not have broken hand",
     "playerMismatchForBrokenHand": "Player mismatch for broken hand",

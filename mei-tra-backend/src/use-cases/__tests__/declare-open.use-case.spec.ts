@@ -1,4 +1,3 @@
-import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import { DeclareOpenUseCase } from '../declare-open.use-case';
 import { ScoreService } from '../../services/score.service';
 import { asSeatId } from '../../types/identity.types';
@@ -67,7 +66,7 @@ const state: GameState = {
   pointsToWin: 20,
 };
 
-function createMockedUseCase(actor: DomainPlayer, valid: boolean) {
+function createMockedUseCase(actor: DomainPlayer, valid: boolean | null) {
   const roomGameState = {
     getState: jest.fn(() => state),
     findPlayerByActorId: jest.fn(() => actor),
@@ -149,27 +148,27 @@ describe('DeclareOpenUseCase', () => {
     expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
   });
 
-  it(`rejects an open while the player holds more than ${OPEN_MAX_HAND_SIZE} cards`, async () => {
+  it('delegates open evaluation regardless of hand size', async () => {
     const declarer = seat(
       'declarer',
       0,
-      Array.from(
-        { length: OPEN_MAX_HAND_SIZE + 1 },
-        (_, index) => `${index + 5}♠`,
-      ),
+      Array.from({ length: 5 }, (_, index) => `${index + 5}♠`),
     );
-    const { useCase, openRules } = createMockedUseCase(declarer, true);
+    const { useCase, openRules } = createMockedUseCase(declarer, null);
 
     const result = await useCase.execute({
       roomId: 'room-1',
       actorId: 'user-1',
     });
 
+    expect(openRules.canDeclareOpen).toHaveBeenCalledWith(
+      state,
+      asSeatId('declarer'),
+    );
     expect(result).toEqual({
       success: false,
-      error: 'Open is only available with four or fewer cards in hand',
+      error: 'Open evaluation exceeded its search limit',
     });
-    expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
     expect(state.playState?.openDeclared).toBe(false);
   });
 

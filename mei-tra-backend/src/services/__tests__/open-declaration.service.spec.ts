@@ -109,6 +109,20 @@ describe('OpenDeclarationService', () => {
     expect(service.canDeclareOpen(gameState, asSeatId('declarer'))).toBe(true);
   });
 
+  it('accepts a forced open with five cards after the hand-size limit is removed', () => {
+    const gameState = state(
+      [
+        player('declarer', 0, ['A♠', 'K♠', 'Q♠', 'J♠', '10♠']),
+        player('partner', 0, ['5♥', '6♥', '7♥', '8♥', '9♥']),
+        player('opponent-a', 1, ['5♣', '6♣', '7♣', '8♣', '9♣']),
+        player('opponent-b', 1, ['5♦', '6♦', '7♦', '8♦', '9♦']),
+      ],
+      'declarer',
+    );
+
+    expect(service.canDeclareOpen(gameState, asSeatId('declarer'))).toBe(true);
+  });
+
   it('rejects an open when the opposing team can take a remaining trick', () => {
     const gameState = state(
       [

@@ -15,7 +15,6 @@ import { getSeatOrderWithSelfBottom, type SeatPosition } from '@/lib/utils/table
 import { usePreloadCards } from '@/hooks/usePreloadCards';
 import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlayerJanken';
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
-import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import { asSeatId } from '@contracts/ids';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 
@@ -139,7 +138,7 @@ export const GameTable: React.FC<GameTableProps> = ({
     Boolean(currentSeatId && currentHighestDeclaration) &&
     viewerHandSize !== undefined &&
     viewerHandSize > 0 &&
-    viewerHandSize <= OPEN_MAX_HAND_SIZE;
+    viewerHandSize > 0;
   // Shown for every seated player during pro play, even when nobody can be
   // reported (the panel then says why), so the entry does not come and go
   // with who is sitting at the table.

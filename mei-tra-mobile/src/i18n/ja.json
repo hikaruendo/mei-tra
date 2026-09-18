@@ -213,7 +213,6 @@
     "openIsOnlyAvailableDuringPlay": "オープンはプレイ中だけ宣言できます",
     "openIsOnlyAvailableInProMode": "オープンはプロモードだけで宣言できます",
     "openIsOnlyAvailableWhileYouHoldCards": "手札がなくなった後はオープンを宣言できません",
-    "openIsOnlyAvailableWithFourOrFewer": "オープンは手札が4枚以下のときだけ宣言できます",
     "openRequiresACompletedDeclaration": "オープンには宣言の確定が必要です",
     "playerDoesNotHaveBrokenHand": "ブロークンの手札ではありません",
     "playerMismatchForBrokenHand": "ブロークンを公開したプレイヤーと一致しません",

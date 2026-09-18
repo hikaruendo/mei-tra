@@ -571,7 +571,6 @@
     "openIsOnlyAvailableDuringPlay": "Open is only available during play",
     "openIsOnlyAvailableInProMode": "Open is only available in pro mode",
     "openIsOnlyAvailableWhileYouHoldCards": "Open is only available while you hold cards",
-    "openIsOnlyAvailableWithFourOrFewer": "Open is only available with four or fewer cards in hand",
     "openRequiresACompletedDeclaration": "Open requires a completed declaration",
     "playerDoesNotHaveBrokenHand": "Player does not have broken hand",
     "playerMismatchForBrokenHand": "Player mismatch for broken hand",
@@ -837,7 +836,7 @@
       "strengthDesc": "Base strength + Trump bonus (+100) + Base suit bonus (+50)",
       "strengthExample": "With Heart trump: ♥K = 13 + 100 = 113, ♠K = 13 + 50 = 63 (when ♠ is base)",
       "open": "Open [Pro mode]",
-      "openDesc": "With four or fewer cards in hand, you can declare that your team takes every remaining field. Declaring shows your hand to everyone",
+      "openDesc": "You can declare that your team takes every remaining field while you still hold cards. Declaring shows your hand to everyone",
       "openExample": "It holds → every remaining field counts for the declaring team and the round ends / It does not hold → the other team gets 5 points and the round ends"
     },
     "broken": {

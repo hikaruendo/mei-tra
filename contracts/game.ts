@@ -272,13 +272,6 @@ export interface ReportChomboPayload {
   violationType: ChomboViolationType;
 }
 
-/**
- * Open is offered only at this hand size or below. The server proves an open
- * by searching every remaining play, and larger hands can exhaust that search
- * and reject a winning open.
- */
-export const OPEN_MAX_HAND_SIZE = 4;
-
 export interface DeclareOpenPayload {
   roomId: string;
 }

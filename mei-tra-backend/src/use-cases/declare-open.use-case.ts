@@ -1,5 +1,4 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import type { OpenDeclaredPayload } from '@contracts/game';
 import type { DomainPlayer, Team } from '../types/game.types';
 import { asSeatId } from '../types/identity.types';
@@ -54,12 +53,6 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     }
     if (state.playState.openResolved) {
       return { success: false, error: 'Open has already been declared' };
-    }
-    if (player.hand.length > OPEN_MAX_HAND_SIZE) {
-      return {
-        success: false,
-        error: 'Open is only available with four or fewer cards in hand',
-      };
     }
     // The last field of a round is completed on a delay, so an empty hand
     // still reaches here. There is nothing left to win, and an empty hand
