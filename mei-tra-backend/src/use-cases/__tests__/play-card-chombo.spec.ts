@@ -1,6 +1,7 @@
 import { asSeatId } from '../../types/identity.types';
 import { createGame } from './chombo-game.fixture';
 import type { GatewayEvent } from '../interfaces/gateway-event.interface';
+import type { ChomboViolation } from '../../types/game.types';
 
 describe('Pro card play and chombo reporting', () => {
   it('does not create a chombo candidate for a COM player', async () => {
@@ -261,5 +262,128 @@ describe('Pro card play and chombo reporting', () => {
     } finally {
       await fixture.module.close();
     }
+  });
+});
+
+describe('How long a completed pro field stays on the table', () => {
+  const lastTanzenBy = (seatId: string): ChomboViolation => ({
+    type: 'last-tanzen',
+    violatorSeatId: asSeatId(seatId),
+    timestamp: 1,
+    reportedBySeatId: null,
+    isExpired: false,
+  });
+
+  // The other three seats have already played into the field, so the winner's
+  // card fills it.
+  const fillField = async ({
+    winnerHand,
+    card,
+    candidates = [],
+    opponentsAreCOM = false,
+    gameMode = 'pro',
+  }: {
+    winnerHand: string[];
+    card: string;
+    candidates?: ChomboViolation[];
+    opponentsAreCOM?: boolean;
+    gameMode?: 'pro' | 'normal';
+  }) => {
+    const fixture = await createGame(winnerHand, [
+      {
+        seatId: asSeatId('opponent'),
+        name: 'Opponent',
+        team: 1,
+        hand: [],
+        isPasser: false,
+        isCOM: opponentsAreCOM,
+      },
+      {
+        seatId: asSeatId('partner'),
+        name: 'Partner',
+        team: 0,
+        hand: [],
+        isPasser: false,
+      },
+      {
+        seatId: asSeatId('second-opponent'),
+        name: 'Second opponent',
+        team: 1,
+        hand: [],
+        isPasser: false,
+        isCOM: opponentsAreCOM,
+      },
+    ]);
+    fixture.room.settings.gameMode = gameMode;
+    const playState = fixture.game.getState().playState!;
+    playState.chomboViolations = candidates;
+    playState.currentField = {
+      cards: ['7♠', '8♠', '9♠'],
+      playedBySeatIds: [
+        asSeatId('opponent'),
+        asSeatId('partner'),
+        asSeatId('second-opponent'),
+      ],
+      baseCard: '7♠',
+      dealerSeatId: asSeatId('opponent'),
+      isComplete: false,
+    };
+    try {
+      const played = await fixture.play.execute({
+        roomId: 'room-1',
+        actorId: 'winner',
+        card,
+      });
+      expect(played.success).toBe(true);
+      return played.completeFieldTrigger?.delayMs;
+    } finally {
+      await fixture.module.close();
+    }
+  };
+
+  it('holds the last field for 10 seconds when its Joker is a last tanzen', async () => {
+    await expect(
+      fillField({
+        winnerHand: ['JOKER'],
+        card: 'JOKER',
+        candidates: [lastTanzenBy('winner')],
+      }),
+    ).resolves.toBe(10_000);
+  });
+
+  it('collects the last field after 3 seconds without a last tanzen', async () => {
+    await expect(fillField({ winnerHand: ['5♠'], card: '5♠' })).resolves.toBe(
+      3000,
+    );
+  });
+
+  it('does not hold the field while the violator still holds the Joker', async () => {
+    // The winner's second-to-last card fills this field, which is what records
+    // the last tanzen; the Joker is still in hand for the next field.
+    await expect(
+      fillField({ winnerHand: ['5♠', 'JOKER'], card: '5♠' }),
+    ).resolves.toBe(3000);
+  });
+
+  it('does not hold the field when only COM seats could report', async () => {
+    await expect(
+      fillField({
+        winnerHand: ['JOKER'],
+        card: 'JOKER',
+        candidates: [lastTanzenBy('winner')],
+        opponentsAreCOM: true,
+      }),
+    ).resolves.toBe(3000);
+  });
+
+  it('keeps the 3 second pause outside pro mode', async () => {
+    await expect(
+      fillField({
+        winnerHand: ['5♠'],
+        card: '5♠',
+        candidates: [lastTanzenBy('winner')],
+        gameMode: 'normal',
+      }),
+    ).resolves.toBe(3000);
   });
 });
