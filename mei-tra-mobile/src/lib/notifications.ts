@@ -48,8 +48,8 @@ export interface NotificationRegistrationResult {
 
 export type NotificationUnregistrationStatus = 'removed' | 'none' | 'failed';
 
-// The active game already shows turn state; surface pushes only while the app
-// is in the background instead of stacking them during live play.
+// A player with the app open already sees the game; surface pushes only while
+// the app is in the background.
 export const notificationForegroundBehavior = (): Notifications.NotificationBehavior => ({
   shouldShowBanner: false,
   shouldShowList: false,

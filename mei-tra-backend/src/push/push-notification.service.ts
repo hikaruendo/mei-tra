@@ -1,9 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type {
-  GameStartedPushPayload,
-  PushNotificationResult,
-  TurnPushPayload,
-} from '@contracts/push';
+import type { PushNotificationResult } from '@contracts/push';
 import type { IPushTokenRepository } from '../repositories/interfaces/push-token.repository.interface';
 import type {
   PushReceiptRegistration,
@@ -29,40 +25,11 @@ export class PushNotificationService {
     private readonly expoPushClient: IExpoPushClient,
   ) {}
 
-  async sendGameStarted(
-    userIds: readonly string[],
-    payload: GameStartedPushPayload,
-  ): Promise<PushNotificationResult> {
-    return this.sendToUsers(userIds, {
-      title: 'Game started',
-      body: 'Your Meitra game is ready.',
-      data: {
-        type: 'game-started',
-        eventId: payload.eventId,
-        roomId: payload.roomId,
-        roundNumber: payload.roundNumber,
-      },
-    });
-  }
-
-  async sendTurnNotification(
-    userIds: readonly string[],
-    payload: TurnPushPayload,
-  ): Promise<PushNotificationResult> {
-    return this.sendToUsers(userIds, {
-      title: "It's your turn",
-      body: 'Open Meitra to continue the game.',
-      data: {
-        type: 'turn',
-        eventId: payload.eventId,
-        roomId: payload.roomId,
-        roundNumber: payload.roundNumber,
-        phase: payload.phase,
-      },
-    });
-  }
-
-  private async sendToUsers(
+  /**
+   * Nothing in the game sends a push today; this stays as the entry point for
+   * the next notification. Put `roomId` in `data` to open that room on tap.
+   */
+  async sendToUsers(
     userIds: readonly string[],
     message: Omit<ExpoPushMessage, 'to' | 'sound'>,
   ): Promise<PushNotificationResult> {

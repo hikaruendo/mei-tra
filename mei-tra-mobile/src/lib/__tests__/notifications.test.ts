@@ -219,7 +219,7 @@ describe('notifications', () => {
       notification: {
         request: {
           identifier: 'notification-1',
-          content: { data: { type: 'turn', roomId: 'room-1' } },
+          content: { data: { type: 'game-started', roomId: 'room-1' } },
         },
       },
     } as unknown as Notifications.NotificationResponse;

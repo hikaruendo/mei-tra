@@ -23,19 +23,6 @@ export interface PushTokenRegistration {
   updatedAt: string;
 }
 
-export interface GameStartedPushPayload {
-  eventId: string;
-  roomId: string;
-  roundNumber: number;
-}
-
-export interface TurnPushPayload {
-  eventId: string;
-  roomId: string;
-  roundNumber: number;
-  phase: "blow" | "play";
-}
-
 export interface PushNotificationResult {
   targetedTokenCount: number;
   acceptedTokenCount: number;

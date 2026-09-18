@@ -10,7 +10,7 @@ type Harness = {
   spectatorGatewayEffectsService: { rejectAction: jest.Mock };
   accountActionGateService: { ensureActiveSocketActor: jest.Mock };
   roomGameActionQueueService: RoomGameActionQueueService;
-  dispatchGameplayEvents: jest.Mock;
+  dispatchEvents: jest.Mock;
   triggerComAutoPlayAfterEvents: jest.Mock;
   closeFinishedRoom: jest.Mock;
 };
@@ -33,7 +33,7 @@ function createGateway(): Harness {
     ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
   };
   gateway.roomGameActionQueueService = new RoomGameActionQueueService();
-  gateway.dispatchGameplayEvents = jest.fn();
+  gateway.dispatchEvents = jest.fn();
   gateway.triggerComAutoPlayAfterEvents = jest.fn();
   gateway.closeFinishedRoom = jest.fn().mockResolvedValue(undefined);
   return gateway;
@@ -86,14 +86,8 @@ describe('GameGateway open behavior', () => {
 
     await gateway.handleDeclareOpen(client(), { roomId: 'room-1' });
 
-    expect(gateway.dispatchGameplayEvents).toHaveBeenNthCalledWith(
-      1,
-      openEvents,
-    );
-    expect(gateway.dispatchGameplayEvents).toHaveBeenNthCalledWith(
-      2,
-      delayedEvents,
-    );
+    expect(gateway.dispatchEvents).toHaveBeenNthCalledWith(1, openEvents);
+    expect(gateway.dispatchEvents).toHaveBeenNthCalledWith(2, delayedEvents);
     expect(gateway.triggerComAutoPlayAfterEvents).toHaveBeenCalledWith(
       'room-1',
       delayedEvents,
@@ -119,7 +113,7 @@ describe('GameGateway open behavior', () => {
 
     await gateway.handleDeclareOpen(client(), { roomId: 'room-1' });
 
-    expect(gateway.dispatchGameplayEvents).toHaveBeenCalledWith(openEvents);
+    expect(gateway.dispatchEvents).toHaveBeenCalledWith(openEvents);
     expect(gateway.processGameOverUseCase.execute).toHaveBeenCalledWith({
       roomId: 'room-1',
       ...gameOver,
