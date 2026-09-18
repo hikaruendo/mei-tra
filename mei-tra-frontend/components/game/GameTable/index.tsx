@@ -137,7 +137,6 @@ export const GameTable: React.FC<GameTableProps> = ({
     !openResolved &&
     Boolean(currentSeatId && currentHighestDeclaration) &&
     viewerHandSize !== undefined &&
-    viewerHandSize > 0 &&
     viewerHandSize > 0;
   // Shown for every seated player during pro play, even when nobody can be
   // reported (the panel then says why), so the entry does not come and go
