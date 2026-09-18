@@ -256,6 +256,7 @@ App foreground / Socket reconnect / resumeRoom()
   │  'rooms-list' 受信    │
   │  'room-sync' 受信     │
   │  'game-state' 受信    │
+  │  'back-to-lobby' 受信 │
   └──────────────────────┘
          │
          ▼
@@ -266,6 +267,13 @@ App foreground / Socket reconnect / resumeRoom()
 ```
 
 同時に複数の flight が走らないよう、request-coalescing で制御。
+
+サーバーは `sync-game-state` に次のように答える。
+- その部屋を観戦中の socket: 観戦用の `game-state`。
+- 人の席がある: 対局中なら `game-state`、待機室なら `room-sync`。
+- 席がない（COM に代わった席を含む）: `back-to-lobby`。アプリは保存した部屋 ID を消す。
+
+10秒以内に答えが来ないときは、エラーを表示して `connected` に戻す。
 
 ---
 
@@ -471,7 +479,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 |--------|-----|------|
 | `app/_layout.tsx` | `app/layout.tsx` | |
 | `app/room/[roomId].tsx` | `app/[locale]/page.tsx` | Web はルーム別ページなし |
-| `app/rooms.tsx` | `app/[locale]/rooms/page.tsx` | |
+| `app/rooms.tsx` | `app/[locale]/rooms/page.tsx` | どちらも、入っている部屋（作成・参加・観戦した部屋、サーバーが戻した席）があれば自動でその部屋を開き、その部屋のカードには参加・観戦を出さない |
 | `app/settings/*` | `app/[locale]/profile/page.tsx` | Mobile は設定とアカウント管理を分割 |
 | `app/sign-in.tsx` | `components/auth/AuthModal.tsx` | Web はモーダル |
 

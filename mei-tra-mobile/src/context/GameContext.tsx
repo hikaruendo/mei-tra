@@ -564,6 +564,11 @@ export function GameProvider({ children }: PropsWithChildren) {
           type: 'error',
           message: { key: 'game.resyncIncomplete' },
         });
+        // Leaving the status at 'resyncing' would keep every room action
+        // disabled until a reply that is not coming.
+        if (socketRef.current?.connected) {
+          dispatch({ type: 'connection', status: 'connected' });
+        }
       }, RESYNC_TIMEOUT_MS),
     };
 
@@ -1632,7 +1637,13 @@ export function GameProvider({ children }: PropsWithChildren) {
       changePlayerTeam,
       updateTeamNames,
       clearFeedback,
-      closeGameResult: () => dispatch({ type: 'gameResult', result: null }),
+      // Closing the result also forgets the room, as on web, so the room list
+      // does not open it again while the leave request is still in flight.
+      closeGameResult: () => {
+        pendingNegriCardRef.current = null;
+        void roomStorage.clear();
+        dispatch({ type: 'resetRoom' });
+      },
       clearFirstTurnReveal: () => {
         firstTurnRevealRef.current = null;
         dispatch({ type: 'firstTurnReveal', reveal: null });
