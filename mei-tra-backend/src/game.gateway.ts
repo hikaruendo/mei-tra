@@ -1340,6 +1340,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    // A spectator gets its spectator view back and never takes a seat here.
+    if (this.spectatorGatewayEffectsService.isWatchingRoom(client.id, roomId)) {
+      const spectatorSnapshot =
+        await this.watchRoomUseCase.buildSnapshot(roomId);
+      if (spectatorSnapshot) {
+        client.emit('game-state', spectatorSnapshot);
+      }
+      return;
+    }
+
     let authenticatedUser = this.getAuthenticatedUser(client);
     if (!authenticatedUser) {
       const auth = client.handshake.auth as { token?: unknown };
@@ -1376,6 +1386,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         authenticatedUser,
       });
     if (!waitingRoomSnapshot) {
+      // No seat here any more: send the socket to the lobby so the client
+      // drops the stored room. No code, because a failed connect-time restore
+      // already sent one with its notice. A spectator, or a socket now in
+      // another room, stays where it is.
+      const boundRoomId = this.playerRooms.get(client.id);
+      if (
+        !this.spectatorGatewayEffectsService.isSpectatorSocket(client.id) &&
+        (!boundRoomId || boundRoomId === roomId)
+      ) {
+        await this.connectionGatewayEffectsService.sendSocketBackToLobby({
+          server: this.server,
+          playerRooms: this.playerRooms,
+          socketId: client.id,
+          roomId,
+        });
+      }
       return;
     }
 
