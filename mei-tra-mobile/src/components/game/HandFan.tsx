@@ -1,11 +1,13 @@
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import { reorderHand, syncHandOrder } from '@meitra/game-client/hand-order';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   Animated,
   PanResponder,
   StyleSheet,
+  Text,
   View,
+  type PanResponderGestureState,
   type PanResponderInstance,
 } from 'react-native';
 
@@ -21,7 +23,9 @@ import { t } from '@/i18n';
 import { colors } from '@/theme/colors';
 import {
   classifyCardDrop,
+  isPointInRect,
   type CardDropAction,
+  type DropTargetRect,
 } from '@meitra/game-client/drag-action';
 
 /** How far the finger must travel sideways before the card is picked up. */
@@ -41,6 +45,9 @@ const samePlacement = (
   a: HandDropPlacement | null,
   b: HandDropPlacement | null,
 ) => a?.card === b?.card && a?.side === b?.side;
+
+/** How far the finger has moved, and where it is on screen. */
+type DragPoint = Pick<PanResponderGestureState, 'dx' | 'dy' | 'moveX' | 'moveY'>;
 
 interface HandFanProps {
   /** The authoritative hand. The arranged order is kept separately. */
@@ -64,6 +71,13 @@ interface HandFanProps {
    * actions, because a screen reader cannot perform the drag.
    */
   dropActions?: readonly CardDropAction[];
+  /**
+   * The player's own seat info. Letting a card go over it places the Negri,
+   * so it is passed only while a Negri can be placed.
+   */
+  negriDropTarget?: RefObject<View | null>;
+  /** What letting go right now would do, among the drops that act. */
+  onDropPreview?: (action: CardDropAction | null) => void;
   /** Lets the parent stop its scroll view from panning while a card is held. */
   onDragActiveChange?: (active: boolean) => void;
 }
@@ -82,16 +96,21 @@ export function HandFan({
   onReorder,
   onDropAction,
   dropActions = [],
+  negriDropTarget,
+  onDropPreview,
   onDragActiveChange,
 }: HandFanProps) {
   const [order, setOrder] = useState(cards);
   const orderRef = useRef(order);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [drop, setDrop] = useState<HandDropPlacement | null>(null);
-  const dropActionRef = useRef<'play' | 'negri' | null>(null);
+  const [dropPreview, setDropPreview] = useState<CardDropAction | null>(null);
   // The release event can arrive before React has re-rendered the last move, so
   // the drop the reorder commits is read from here rather than from state.
   const dropRef = useRef<HandDropPlacement | null>(null);
+  // Where the Negri target sat on screen when the drag started. The parent
+  // stops its scroll view while a card is held, so it stays put until release.
+  const negriRectRef = useRef<DropTargetRect | null>(null);
   const syncedHandRef = useRef(cards);
 
   useEffect(() => {
@@ -117,6 +136,7 @@ export function HandFan({
       dropRef.current = null;
       setDraggingCard(null);
       setDrop(null);
+      setDropPreview(null);
     }
   }, [cards]);
 
@@ -128,16 +148,42 @@ export function HandFan({
     return () => onDragActiveChange?.(false);
   }, [dragActive, onDragActiveChange]);
 
+  useEffect(() => {
+    onDropPreview?.(dropPreview);
+  }, [dropPreview, onDropPreview]);
+
   const pitch = handFanPitch(cardWidth, cardMargin);
   const total = order.length;
 
-  const endDrag = (card: string, committed: boolean) => {
+  const measureNegriTarget = () => {
+    negriRectRef.current = null;
+    negriDropTarget?.current?.measure(
+      (_x, _y, width, height, pageX, pageY) => {
+        negriRectRef.current = { left: pageX, top: pageY, width, height };
+      },
+    );
+  };
+
+  // What letting go at this point would do. The finger's screen position
+  // (moveX, moveY) is compared with the target measured at the drag start.
+  const dropActionAt = ({ dy, moveX, moveY }: DragPoint) =>
+    classifyCardDrop({
+      deltaY: dy,
+      overNegriTarget:
+        negriDropTarget !== undefined &&
+        isPointInRect({ x: moveX, y: moveY }, negriRectRef.current),
+    });
+
+  const endDrag = (
+    card: string,
+    committed: boolean,
+    action: CardDropAction | null,
+  ) => {
     const placement = dropRef.current;
-    const action = dropActionRef.current;
-    dropActionRef.current = null;
     dropRef.current = null;
     setDraggingCard(null);
     setDrop(null);
+    setDropPreview(null);
 
     if (!committed) return;
 
@@ -179,6 +225,7 @@ export function HandFan({
             cardWidth={cardWidth}
             dealAnimationCue={dealAnimationCue}
             disabled={isCardDisabled?.(card) ?? false}
+            dropActionAt={dropActionAt}
             dropActions={dropActions}
             dropSide={drop?.card === card ? drop.side : null}
             index={index}
@@ -188,15 +235,18 @@ export function HandFan({
               (isSelected ? -SELECTED_LIFT : 0)
             }
             onAccessibilityDrop={(action) => onDropAction?.(card, action)}
-            onDragEnd={(committed) => endDrag(card, committed)}
-            onDragMove={(dx, dy) => {
-              dropActionRef.current = classifyCardDrop(dy);
-              const next = handDropPlacement(
-                orderRef.current,
-                card,
-                dx,
-                pitch,
-              );
+            onDragEnd={(committed, action) => endDrag(card, committed, action)}
+            onDragMove={(point) => {
+              const action = dropActionAt(point);
+              const preview =
+                action !== null && dropActions.includes(action) ? action : null;
+              setDropPreview(preview);
+              // Over the Negri target the finger has left the fan, so no slot
+              // is marked and letting go does not reorder.
+              const next =
+                preview === 'negri'
+                  ? null
+                  : handDropPlacement(orderRef.current, card, point.dx, pitch);
               if (samePlacement(next, dropRef.current)) return;
               dropRef.current = next;
               setDrop(next);
@@ -205,12 +255,14 @@ export function HandFan({
               dropRef.current = null;
               setDraggingCard(card);
               setDrop(null);
+              measureNegriTarget();
             }}
             onPress={onSelectCard ? () => onSelectCard(card) : undefined}
             reducedMotion={reducedMotion}
             rotation={norm * FAN_ROTATION_DEG}
             seatId={seatId}
             selected={isSelected}
+            showsNegriLabel={draggingCard === card && dropPreview === 'negri'}
           />
         );
       })}
@@ -225,20 +277,23 @@ interface HandFanCardProps {
   cardWidth: number;
   dealAnimationCue: DealAnimationCue | null;
   disabled: boolean;
+  dropActionAt: (point: DragPoint) => CardDropAction | null;
   dropActions: readonly CardDropAction[];
   dropSide: HandDropPlacement['side'] | null;
   index: number;
   isDragging: boolean;
   lift: number;
   onAccessibilityDrop: (action: CardDropAction) => void;
-  onDragEnd: (committed: boolean) => void;
-  onDragMove: (dx: number, dy: number) => void;
+  onDragEnd: (committed: boolean, action: CardDropAction | null) => void;
+  onDragMove: (point: DragPoint) => void;
   onDragStart: () => void;
   onPress?: () => void;
   reducedMotion: boolean | null;
   rotation: number;
   seatId: string;
   selected: boolean;
+  /** The held card is over the Negri target, so letting go sets it aside. */
+  showsNegriLabel: boolean;
 }
 
 function HandFanCard({
@@ -248,6 +303,7 @@ function HandFanCard({
   cardWidth,
   dealAnimationCue,
   disabled,
+  dropActionAt,
   dropActions,
   dropSide,
   index,
@@ -262,19 +318,28 @@ function HandFanCard({
   rotation,
   seatId,
   selected,
+  showsNegriLabel,
 }: HandFanCardProps) {
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   // PanResponder is built once and keeps the callbacks it was given, so they
   // read the current props through this ref instead of the first render's.
   const live = useRef({
     canReorder,
+    dropActionAt,
     dropActions,
     onDragStart,
     onDragMove,
     onDragEnd,
   });
   useEffect(() => {
-    live.current = { canReorder, dropActions, onDragStart, onDragMove, onDragEnd };
+    live.current = {
+      canReorder,
+      dropActionAt,
+      dropActions,
+      onDragStart,
+      onDragMove,
+      onDragEnd,
+    };
   });
 
   // The parent also ends a drag on its own when the hand is dealt again, which
@@ -288,18 +353,18 @@ function HandFanCard({
 
   const panResponder = useRef<PanResponderInstance | null>(null);
   if (panResponder.current === null) {
-    const release = (committed: boolean, dy: number) => {
+    const release = (committed: boolean, point: DragPoint) => {
       // A play or a Negri drop takes the card out of the fan. Resetting the
       // offset here reaches the native view before the render that removes the
       // card, so it would flash back into its slot for a frame. If the card
       // stays in the hand after all, the isDragging effect above resets it.
-      const action = classifyCardDrop(dy);
+      const action = live.current.dropActionAt(point);
       const leavesHand =
         committed && action !== null && live.current.dropActions.includes(action);
       if (!leavesHand) {
         pan.setValue({ x: 0, y: 0 });
       }
-      live.current.onDragEnd(committed);
+      live.current.onDragEnd(committed, action);
     };
 
     panResponder.current = PanResponder.create({
@@ -313,14 +378,16 @@ function HandFanCard({
       onPanResponderGrant: () => live.current.onDragStart(),
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
-        live.current.onDragMove(gesture.dx, gesture.dy);
+        live.current.onDragMove(gesture);
       },
       // Once the card is held, the surrounding scroll view must not take it away.
       // Refusing only covers JS responders; the parent also disables scrolling
       // through onDragActiveChange, or the platform scroll pans anyway.
       onPanResponderTerminationRequest: () => false,
-      onPanResponderRelease: (_event, gesture) => release(true, gesture.dy),
-      onPanResponderTerminate: (_event, gesture) => release(false, gesture.dy),
+      // The gesture state keeps the last move's values here, so the release
+      // is judged at the same point the last move showed.
+      onPanResponderRelease: (_event, gesture) => release(true, gesture),
+      onPanResponderTerminate: (_event, gesture) => release(false, gesture),
     });
   }
 
@@ -385,6 +452,19 @@ function HandFanCard({
           width={cardWidth}
         />
       </DealtCard>
+      {/* The finger and the lifted card cover much of the seat info, so the
+          card itself says that letting go sets it aside as the Negri. */}
+      {showsNegriLabel ? (
+        <View
+          pointerEvents="none"
+          style={styles.negriLabel}
+          testID="hand-negri-label"
+        >
+          <Text numberOfLines={1} style={styles.negriLabelText}>
+            {t('board.setNegri')}
+          </Text>
+        </View>
+      ) : null}
     </Animated.View>
   );
 }
@@ -424,5 +504,24 @@ const styles = StyleSheet.create({
   },
   dropCaretAfter: {
     right: -6,
+  },
+  negriLabel: {
+    position: 'absolute',
+    top: 6,
+    // Wider than a narrow hand card, so the label stays on one line.
+    left: -30,
+    right: -30,
+    zIndex: 80,
+    alignItems: 'center',
+  },
+  negriLabelText: {
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.gold,
+    color: colors.onAccent,
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

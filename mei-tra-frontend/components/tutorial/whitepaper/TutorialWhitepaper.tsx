@@ -100,6 +100,7 @@ ${t('overview.gameFlowExample')}` }
       title: t('chombo.title'),
       content: [
         { type: 'text', content: t('chombo.description') },
+        { type: 'rule', content: { title: t('chombo.proControls'), description: t('chombo.proControlsDesc'), example: t('chombo.proControlsExample') } },
         { type: 'rule', content: { title: t('chombo.negriForget'), description: t('chombo.negriForgetDesc'), example: t('chombo.negriForgetExample') } },
         { type: 'rule', content: { title: t('chombo.wrongSuit'), description: t('chombo.wrongSuitDesc'), example: t('chombo.wrongSuitExample') } },
         { type: 'rule', content: { title: t('chombo.fourJack'), description: t('chombo.fourJackDesc'), example: t('chombo.fourJackExample') } },

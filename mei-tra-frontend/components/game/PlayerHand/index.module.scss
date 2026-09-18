@@ -163,6 +163,7 @@
 }
 
 .dragOverlayCard {
+  position: relative;
   width: var(--player-hand-card-scaled-width, 80px);
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
@@ -170,6 +171,24 @@
   box-shadow: var(--shadow-selected);
   transform: rotate(2deg) scale(1.05);
   pointer-events: none;
+}
+
+.dragOverlayNegri {
+  box-shadow: 0 0 0 3px var(--mt-accent), var(--shadow-selected);
+}
+
+.dragOverlayLabel {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
+  font-size: typography.scale(0.72rem);
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .insertBefore::before,
@@ -311,6 +330,20 @@
 
 .playerInfoContainer > * {
   max-width: 100%;
+}
+
+/* Laid over the viewer's own seat info while a held pro-mode card would
+   become the Negri on release. Resizing the seat info instead would move the
+   rect the drop is measured against. */
+.negriDropTarget {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 2px solid var(--mt-accent);
+  border-radius: inherit;
+  background: var(--mt-accent-subtle);
+  box-shadow: 0 0 10px var(--mt-accent);
+  pointer-events: none;
 }
 
 .playerInfoBadges {
@@ -1322,17 +1355,4 @@
       transform: none;
     }
   }
-}
-
-.proDropHints {
-  position: absolute;
-  top: -2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 1rem;
-  color: var(--mt-text-secondary);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
 }

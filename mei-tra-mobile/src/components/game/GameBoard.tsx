@@ -128,6 +128,12 @@ export function GameBoard({
   const [showChombo, setShowChombo] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [handDragActive, setHandDragActive] = useState(false);
+  // What letting go of the held hand card would do right now.
+  const [handDropPreview, setHandDropPreview] = useState<CardDropAction | null>(
+    null,
+  );
+  // The player's own seat info, where a card is let go to become the Negri.
+  const selfInfoRef = useRef<View>(null);
   const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
   const [spectatorPerspectiveId, setSpectatorPerspectiveId] = useState<
     string | null
@@ -263,7 +269,6 @@ export function GameBoard({
           ...(canPlaceProNegri ? (['negri'] as const) : []),
         ]
       : [];
-  const canProDrop = proDropActions.length > 0;
   // Offered during every pro play phase, even with nobody to report (the panel
   // then says why), so the menu entry does not come and go with the seating.
   const canReportChombo = isProMode && isHandPlayPhase;
@@ -642,6 +647,10 @@ export function GameBoard({
           <View style={styles.handSection}>
             <View style={styles.selfRow}>
               <View
+                // Measured while a card is held; Android may drop a view that
+                // only lays out its children, which cannot be measured.
+                collapsable={false}
+                ref={selfInfoRef}
                 testID="self-player-info"
                 style={[
                   styles.selfCard,
@@ -676,6 +685,17 @@ export function GameBoard({
                     <Text style={styles.selfSpecialLabel}>{t('seat.agariShort')}</Text>
                   </View>
                 ) : null}
+                {/* Shown only while the held card is over the seat info, so
+                    picking a card up does not tell the declarer that the
+                    Negri is still missing. Laid over the seat info so the
+                    rect measured at the drag start stays the same. */}
+                {handDragActive && handDropPreview === 'negri' ? (
+                  <View
+                    pointerEvents="none"
+                    style={styles.negriDropTarget}
+                    testID="self-negri-drop-target"
+                  />
+                ) : null}
               </View>
               <View style={styles.handArea}>
                 {game.gamePhase === 'play' ? (
@@ -696,31 +716,28 @@ export function GameBoard({
                   )
                 ) : null}
 
-            {canProDrop ? (
-              <View style={styles.proDropZones} testID="pro-drop-zones">
-                <Text style={styles.proDropZonePlay}>{t('board.dropToPlay')} ↑</Text>
-                {highest?.seatId === self.seatId && !game.negriCard ? (
-                  <Text style={styles.proDropZoneNegri}>{t('seat.negri')} ↓</Text>
-                ) : null}
-              </View>
-            ) : null}
-
             <HandFan
               canReorder={!game.isSpectator}
               cardMargin={handCardMargin}
               cardWidth={handCardWidth}
               cards={shownHand}
               dealAnimationCue={dealAnimationCue}
+              // Pro mode keeps every card bright, as the web hand does. Dimming
+              // them off turn except while a Negri can be placed would tell the
+              // declarer that the Negri is still missing.
               isCardDisabled={(card) =>
                 isHandPlayPhase &&
-                  (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump) ||
-                  actionsDisabled ||
+                  (actionsDisabled ||
                   Boolean(pendingAction) ||
-                  (!isMyTurn && !canPlaceProNegri))
+                  (!isProMode &&
+                    (!isMyTurn ||
+                      !isCardPlayable(self.hand, card, game.currentField, currentTrump))))
               }
               onReorder={onHandReorder}
               onDragActiveChange={setHandDragActive}
               dropActions={proDropActions}
+              negriDropTarget={canPlaceProNegri ? selfInfoRef : undefined}
+              onDropPreview={setHandDropPreview}
               onDropAction={(card, action) => {
                 if (!proDropActions.includes(action)) return;
                 if (action === 'negri') onSelectNegri(card);
@@ -1239,19 +1256,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
   },
-  proDropZones: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 8,
-    marginBottom: 6,
-  },
-  proDropZonePlay: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  proDropZoneNegri: {
-    color: colors.gold,
-    fontSize: 12,
+  negriDropTarget: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.gold,
+    backgroundColor: colors.goldSubtle,
   },
   selectedActions: {
     flexDirection: 'row',

@@ -2,7 +2,7 @@
 import type { MobileGameSnapshot } from '@/types/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
-import { AccessibilityInfo, Alert, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Alert, StyleSheet, Text } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
@@ -638,11 +638,13 @@ describe('GameBoard pro drag gating', () => {
   type ProRenderer = {
     root: {
       findAllByProps: (props: Record<string, unknown>) => unknown[];
+      findAllByType: (type: typeof Text) => { props: { children?: unknown } }[];
       findByProps: (props: Record<string, unknown>) => {
         props: {
           scrollEnabled?: boolean;
           onPress?: () => void;
           accessibilityActions?: { name: string }[];
+          disabled?: boolean;
         };
       };
       findByType: (type: typeof HandFan) => {
@@ -650,6 +652,8 @@ describe('GameBoard pro drag gating', () => {
           cards?: string[];
           onDropAction?: (card: string, action: 'play' | 'negri') => void;
           onDragActiveChange?: (active: boolean) => void;
+          negriDropTarget?: unknown;
+          onDropPreview?: (action: 'play' | 'negri' | null) => void;
         };
       };
     };
@@ -660,6 +664,7 @@ describe('GameBoard pro drag gating', () => {
     gamePhase: 'blow' | 'play',
     handlers: { onPlayCard: jest.Mock; onSelectNegri: jest.Mock },
     pendingHandCard: string | null = null,
+    overrides: Partial<MobileGameSnapshot> = {},
   ) => {
     let renderer!: ProRenderer;
     act(() => {
@@ -679,6 +684,7 @@ describe('GameBoard pro drag gating', () => {
                 timestamp: 1,
               },
             },
+            ...overrides,
           }}
           isHost
           onDeclare={jest.fn()}
@@ -709,11 +715,8 @@ describe('GameBoard pro drag gating', () => {
     const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
     const renderer = renderProBoard('blow', handlers);
 
-    expect(
-      renderer.root.findAllByProps({ testID: 'pro-drop-zones' }),
-    ).toHaveLength(0);
-
     const handFan = renderer.root.findByType(HandFan);
+    expect(handFan.props.negriDropTarget).toBeUndefined();
     act(() => {
       handFan.props.onDropAction?.('S-3', 'play');
       handFan.props.onDropAction?.('S-3', 'negri');
@@ -728,10 +731,6 @@ describe('GameBoard pro drag gating', () => {
     const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
     const renderer = renderProBoard('play', handlers);
 
-    expect(
-      renderer.root.findAllByProps({ testID: 'pro-drop-zones' }).length,
-    ).toBeGreaterThan(0);
-
     const handFan = renderer.root.findByType(HandFan);
     act(() => {
       handFan.props.onDropAction?.('S-3', 'play');
@@ -741,6 +740,78 @@ describe('GameBoard pro drag gating', () => {
     expect(handlers.onSelectNegri).toHaveBeenCalledWith('H-4');
 
     act(() => renderer.unmount());
+  });
+
+  it('shows no hint about where to drag', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+
+    const texts = renderer.root
+      .findAllByType(Text)
+      .map((node) => [node.props.children].flat().join(''));
+    expect(texts.filter((text) => /[↑↓]/.test(text))).toEqual([]);
+
+    act(() => renderer.unmount());
+  });
+
+  it('makes the seat info the Negri target only while a Negri can be placed', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const open = renderProBoard('play', handlers);
+    expect(open.root.findByType(HandFan).props.negriDropTarget).toBeDefined();
+    act(() => open.unmount());
+
+    const placed = renderProBoard('play', handlers, null, {
+      negriCard: 'H-4',
+      negriSeatId: asSeatId('player-1'),
+    });
+    expect(placed.root.findByType(HandFan).props.negriDropTarget).toBeUndefined();
+    act(() => placed.unmount());
+  });
+
+  it('lays the Negri label over the seat info only while a held card is over it', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers);
+    const handFan = () => renderer.root.findByType(HandFan);
+    const labelCount = () =>
+      renderer.root.findAllByProps({ testID: 'self-negri-drop-target' }).length;
+
+    // Picking a card up alone must not show it, or it would tell the declarer
+    // that the Negri is still missing.
+    act(() => handFan().props.onDragActiveChange?.(true));
+    expect(labelCount()).toBe(0);
+
+    act(() => handFan().props.onDropPreview?.('negri'));
+    expect(labelCount()).toBeGreaterThan(0);
+
+    act(() => handFan().props.onDropPreview?.('play'));
+    expect(labelCount()).toBe(0);
+
+    act(() => handFan().props.onDropPreview?.('negri'));
+    act(() => handFan().props.onDragActiveChange?.(false));
+    expect(labelCount()).toBe(0);
+
+    act(() => renderer.unmount());
+  });
+
+  it('keeps the hand bright off turn, whether or not the Negri is placed', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const cardDisabled = (renderer: ProRenderer) =>
+      renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props
+        .disabled;
+
+    const negriOpen = renderProBoard('play', handlers, null, {
+      currentTurnSeatId: asSeatId('player-2'),
+    });
+    expect(cardDisabled(negriOpen)).toBe(false);
+    act(() => negriOpen.unmount());
+
+    const negriPlaced = renderProBoard('play', handlers, null, {
+      currentTurnSeatId: asSeatId('player-2'),
+      negriCard: 'H-4',
+      negriSeatId: asSeatId('player-1'),
+    });
+    expect(cardDisabled(negriPlaced)).toBe(false);
+    act(() => negriPlaced.unmount());
   });
 
   it('offers the same pro moves to a screen reader as to the drag', () => {

@@ -1141,12 +1141,12 @@ export const useGame = () => {
       },
       'reveal-agari': (payload: RevealAgariPayload) => {
         applyGameServerEvent({ type: 'reveal-agari', payload });
-        // payload.message is fixed English and knows nothing of pro mode, where
-        // the Negri is dragged down rather than picked.
-        setNotification({
-          message: t(gameMode === 'pro' ? 'negriPromptPro' : 'negriPrompt'),
-          type: 'success'
-        });
+        // Pro mode shows no prompt: a declarer who forgets the Negri can be
+        // reported for it. payload.message is fixed English, so the prompt
+        // comes from the translations.
+        if (gameMode !== 'pro') {
+          setNotification({ message: t('negriPrompt'), type: 'success' });
+        }
       },
       'play-setup-complete': (payload: PlaySetupCompletePayload) => {
         const pendingNegriCard = pendingNegriCardRef.current;
