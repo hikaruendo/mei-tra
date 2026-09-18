@@ -1,5 +1,4 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import type { OpenDeclaredPayload } from '@contracts/game';
 import type { DomainPlayer, Team } from '../types/game.types';
 import { asSeatId } from '../types/identity.types';
@@ -55,12 +54,6 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
     if (state.playState.openResolved) {
       return { success: false, error: 'Open has already been declared' };
     }
-    if (player.hand.length > OPEN_MAX_HAND_SIZE) {
-      return {
-        success: false,
-        error: 'Open is only available with four or fewer cards in hand',
-      };
-    }
     // The last field of a round is completed on a delay, so an empty hand
     // still reaches here. There is nothing left to win, and an empty hand
     // reads as "every trick taken", which would end the round and score the
@@ -72,10 +65,29 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       };
     }
 
+    if (state.currentSeatId !== player.seatId) {
+      return { success: false, error: "It's not your turn to play" };
+    }
+    if (
+      state.playState.currentField?.isComplete ||
+      state.playState.currentField?.playedBySeatIds.includes(player.seatId)
+    ) {
+      return {
+        success: false,
+        error: 'Current seat already played in this field',
+      };
+    }
+
     const valid = this.openDeclarationService.canDeclareOpen(
       state,
       asSeatId(player.seatId),
     );
+    if (valid === null) {
+      return {
+        success: false,
+        error: 'Open evaluation exceeded its search limit',
+      };
+    }
     state.playState.openDeclared = true;
     state.playState.openDeclarerSeatId = asSeatId(player.seatId);
     state.playState.revealedHands = {

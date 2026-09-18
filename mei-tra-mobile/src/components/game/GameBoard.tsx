@@ -1,7 +1,6 @@
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import {
-  OPEN_MAX_HAND_SIZE,
   type ChomboViolationType,
   type DevChomboScenarioType,
   type TrumpType,
@@ -286,12 +285,16 @@ export function GameBoard({
     !actionsDisabled &&
     !game.isSpectator &&
     game.gamePhase === 'play' &&
+    isMyTurn &&
+    !pendingHandCard &&
+    !pendingAction &&
+    !game.currentField?.isComplete &&
+    !game.currentField?.playedBySeatIds.some((seatId) => seatId === game.youSeatId) &&
     !game.openDeclared &&
     !game.openResolved &&
     Boolean(highest) &&
     Boolean(self) &&
-    selfHandCount > 0 &&
-    selfHandCount <= OPEN_MAX_HAND_SIZE;
+    selfHandCount > 0;
 
   // On iOS an Alert raised while a Modal is being dismissed may never show, so
   // the open confirmation waits until the options menu has closed. An open

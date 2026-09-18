@@ -567,10 +567,10 @@
     "onlyTheHostCanModeratePlayers": "プレイヤーを操作できるのはホストだけです",
     "onlyTheHostCanShuffleTeams": "チームをシャッフルできるのはホストだけです",
     "openHasAlreadyBeenDeclared": "すでにオープンが宣言されています",
+    "openEvaluationLimit": "オープンの判定が計算上限に達しました。手札は公開されず、得点も変わりません。プレイを続けてください。",
     "openIsOnlyAvailableDuringPlay": "オープンはプレイ中だけ宣言できます",
     "openIsOnlyAvailableInProMode": "オープンはプロモードだけで宣言できます",
     "openIsOnlyAvailableWhileYouHoldCards": "手札がなくなった後はオープンを宣言できません",
-    "openIsOnlyAvailableWithFourOrFewer": "オープンは手札が4枚以下のときだけ宣言できます",
     "openRequiresACompletedDeclaration": "オープンには宣言の確定が必要です",
     "playerDoesNotHaveBrokenHand": "ブロークンの手札ではありません",
     "playerMismatchForBrokenHand": "ブロークンを公開したプレイヤーと一致しません",
@@ -836,7 +836,7 @@
       "strengthDesc": "基本強度 + トランプボーナス(+100) + ベーススートボーナス(+50)",
       "strengthExample": "ハートトランプ時：♥K = 13 + 100 = 113, ♠K = 13 + 50 = 63（♠がベース時）",
       "open": "オープン［プロモード］",
-      "openDesc": "手札が4枚以下のとき、残りの場を自分のチームですべて取れると宣言できます。宣言すると手札を全員に公開します",
+      "openDesc": "手札が残っている間、残りの場を自分のチームですべて取れると宣言できます。宣言すると手札を全員に公開します",
       "openExample": "通った → 残りの場はすべて宣言したチームのものとして数え、ラウンドが終わる / 通らなかった → 相手チームに5点が入り、ラウンドが終わる"
     },
     "broken": {

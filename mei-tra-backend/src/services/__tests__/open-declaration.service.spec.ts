@@ -60,6 +60,41 @@ describe('OpenDeclarationService', () => {
     new PlayService(new CardService()),
   );
 
+  it('only evaluates an open for the player whose turn is active', () => {
+    const gameState = state(
+      [
+        player('declarer', 0, ['A♠']),
+        player('partner', 0, ['K♠']),
+        player('opponent-a', 1, ['Q♥']),
+        player('opponent-b', 1, ['J♥']),
+      ],
+      'partner',
+    );
+
+    expect(service.canDeclareOpen(gameState, asSeatId('declarer'))).toBe(false);
+  });
+
+  it('rejects an open after the player has already played in the field', () => {
+    const gameState = state(
+      [
+        player('declarer', 0, ['A♠']),
+        player('partner', 0, ['K♠']),
+        player('opponent-a', 1, ['Q♥']),
+        player('opponent-b', 1, ['J♥']),
+      ],
+      'declarer',
+    );
+    gameState.playState!.currentField = {
+      cards: ['5♠'],
+      playedBySeatIds: [asSeatId('declarer')],
+      baseCard: '5♠',
+      dealerSeatId: asSeatId('declarer'),
+      isComplete: false,
+    };
+
+    expect(service.canDeclareOpen(gameState, asSeatId('declarer'))).toBe(false);
+  });
+
   it('accepts an open when the declarer team can force every remaining trick', () => {
     const gameState = state(
       [
@@ -67,6 +102,20 @@ describe('OpenDeclarationService', () => {
         player('partner', 0, ['K♠']),
         player('opponent-a', 1, ['Q♥']),
         player('opponent-b', 1, ['J♥']),
+      ],
+      'declarer',
+    );
+
+    expect(service.canDeclareOpen(gameState, asSeatId('declarer'))).toBe(true);
+  });
+
+  it('accepts a forced open with five cards after the hand-size limit is removed', () => {
+    const gameState = state(
+      [
+        player('declarer', 0, ['A♠', 'K♠', 'Q♠', 'J♠', '10♠']),
+        player('partner', 0, ['5♥', '6♥', '7♥', '8♥', '9♥']),
+        player('opponent-a', 1, ['5♣', '6♣', '7♣', '8♣', '9♣']),
+        player('opponent-b', 1, ['5♦', '6♦', '7♦', '8♦', '9♦']),
       ],
       'declarer',
     );

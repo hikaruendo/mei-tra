@@ -66,9 +66,6 @@ describe('server error translations', () => {
       serverErrorKey('In Tanzen round, you must play the Joker if you have it.'),
     ).toBe('inTanzenRoundYouMustPlayTheJoker');
 
-    expect(
-      serverErrorKey('Open is only available with four or fewer cards in hand'),
-    ).toBe('openIsOnlyAvailableWithFourOrFewer');
   });
 
   it('fills every placeholder a pattern produces', () => {

@@ -1,4 +1,3 @@
-import { OPEN_MAX_HAND_SIZE } from '@contracts/game';
 import { DeclareOpenUseCase } from '../declare-open.use-case';
 import { ScoreService } from '../../services/score.service';
 import { asSeatId } from '../../types/identity.types';
@@ -67,7 +66,7 @@ const state: GameState = {
   pointsToWin: 20,
 };
 
-function createMockedUseCase(actor: DomainPlayer, valid: boolean) {
+function createMockedUseCase(actor: DomainPlayer, valid: boolean | null) {
   const roomGameState = {
     getState: jest.fn(() => state),
     findPlayerByActorId: jest.fn(() => actor),
@@ -149,27 +148,27 @@ describe('DeclareOpenUseCase', () => {
     expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
   });
 
-  it(`rejects an open while the player holds more than ${OPEN_MAX_HAND_SIZE} cards`, async () => {
+  it('delegates open evaluation regardless of hand size', async () => {
     const declarer = seat(
       'declarer',
       0,
-      Array.from(
-        { length: OPEN_MAX_HAND_SIZE + 1 },
-        (_, index) => `${index + 5}♠`,
-      ),
+      Array.from({ length: 5 }, (_, index) => `${index + 5}♠`),
     );
-    const { useCase, openRules } = createMockedUseCase(declarer, true);
+    const { useCase, openRules } = createMockedUseCase(declarer, null);
 
     const result = await useCase.execute({
       roomId: 'room-1',
       actorId: 'user-1',
     });
 
+    expect(openRules.canDeclareOpen).toHaveBeenCalledWith(
+      state,
+      asSeatId('declarer'),
+    );
     expect(result).toEqual({
       success: false,
-      error: 'Open is only available with four or fewer cards in hand',
+      error: 'Open evaluation exceeded its search limit',
     });
-    expect(openRules.canDeclareOpen).not.toHaveBeenCalled();
     expect(state.playState?.openDeclared).toBe(false);
   });
 
@@ -337,7 +336,7 @@ describe('DeclareOpenUseCase', () => {
       }
     });
 
-    it('lets the declaring team keep only the fields it won when a defender opens', async () => {
+    it('rejects an open from a player whose turn has not started', async () => {
       const fixture = await createOpenGame(
         { winner: ['5♥', '6♥', '7♥'], opponent: ['A♣', 'K♣', 'Q♣'] },
         completedFields(6, 1),
@@ -348,14 +347,10 @@ describe('DeclareOpenUseCase', () => {
           actorId: 'opponent',
         });
 
-        expect(result.success).toBe(true);
-        // The declaring team stops at 6 of its 7 pairs, so the defenders
-        // score the shortfall.
-        const { teamScores } = fixture.game.getState();
-        expect(teamScores[0].total).toBe(0);
-        expect(teamScores[1].total).toBe(
-          Math.abs(scoreService.calculatePlayPoints(7, 6)),
-        );
+        expect(result).toEqual({
+          success: false,
+          error: "It's not your turn to play",
+        });
       } finally {
         await fixture.module.close();
       }
@@ -389,7 +384,7 @@ describe('DeclareOpenUseCase', () => {
       }
     });
 
-    it('counts the field in progress once', async () => {
+    it('rejects an open after the declarer already played in the current field', async () => {
       const fixture = await createOpenGame(
         { winner: ['K♣', 'Q♣'], opponent: ['5♥', '6♥', '7♥'] },
         completedFields(4, 3),
@@ -403,17 +398,17 @@ describe('DeclareOpenUseCase', () => {
           dealerSeatId: asSeatId('winner'),
           isComplete: false,
         };
-        gameState.currentSeatId = asSeatId('opponent');
+        gameState.currentSeatId = asSeatId('winner');
 
         const result = await fixture.open.execute({
           roomId: 'room-1',
           actorId: 'winner',
         });
 
-        expect(result.success).toBe(true);
-        expect(fixture.game.getState().teamScores[0].total).toBe(
-          scoreService.calculatePlayPoints(7, 7),
-        );
+        expect(result).toEqual({
+          success: false,
+          error: 'Current seat already played in this field',
+        });
       } finally {
         await fixture.module.close();
       }

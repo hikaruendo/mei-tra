@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import type { MobileGameSnapshot } from '@/types/game';
-import { OPEN_MAX_HAND_SIZE } from '@meitra/contracts/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
 import { AccessibilityInfo, Alert, StyleSheet } from 'react-native';
@@ -584,24 +583,20 @@ describe('GameBoard open action', () => {
     return board.root.findAllByProps({ testID: 'game-options-open' });
   };
 
-  it('offers open in the options menu only once the player is down to the open hand size', () => {
+  it('offers open in the options menu while the player still holds cards', () => {
     const onDeclareOpen = jest.fn();
 
-    const overLimit = renderProBoard(OPEN_MAX_HAND_SIZE + 1, onDeclareOpen);
-    expect(openMenuItems(overLimit)).toHaveLength(0);
-    act(() => overLimit.unmount());
-
-    const atLimit = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
-    expect(openMenuItems(atLimit).length).toBeGreaterThan(0);
+    const atFive = renderProBoard(5, onDeclareOpen);
+    expect(openMenuItems(atFive).length).toBeGreaterThan(0);
     // The hand area no longer carries its own open button.
-    expect(atLimit.root.findAllByProps({ testID: 'declare-open' })).toHaveLength(0);
-    act(() => atLimit.unmount());
+    expect(atFive.root.findAllByProps({ testID: 'declare-open' })).toHaveLength(0);
+    act(() => atFive.unmount());
   });
 
   it('withholds open while the socket is down', () => {
     const onDeclareOpen = jest.fn();
 
-    const disconnected = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen, true);
+    const disconnected = renderProBoard(5, onDeclareOpen, true);
     expect(openMenuItems(disconnected)).toHaveLength(0);
     act(() => disconnected.unmount());
   });
@@ -612,7 +607,7 @@ describe('GameBoard open action', () => {
       .spyOn(Alert, 'alert')
       .mockImplementation(() => undefined);
     const onDeclareOpen = jest.fn();
-    const board = renderProBoard(OPEN_MAX_HAND_SIZE, onDeclareOpen);
+    const board = renderProBoard(5, onDeclareOpen);
     const pressOpen = () => {
       pressByTestId(board, 'game-options-trigger');
       pressByTestId(board, 'game-options-open');
