@@ -13,6 +13,10 @@ export class SpectatorGatewayEffectsService {
     return this.spectatorRooms.has(socketId);
   }
 
+  isWatchingRoom(socketId: string, roomId: string): boolean {
+    return this.spectatorRooms.get(socketId) === roomId;
+  }
+
   rejectAction(client: Socket, actionName: string): boolean {
     if (!this.isSpectatorSocket(client.id)) {
       return false;

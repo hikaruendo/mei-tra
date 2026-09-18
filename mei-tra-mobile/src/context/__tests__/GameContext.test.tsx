@@ -927,6 +927,63 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('unblocks room actions when a resync gets no reply', async () => {
+    jest.useFakeTimers();
+    try {
+      const screen = await renderProvider();
+
+      mockStoredRoomId = 'room-1';
+      await act(async () => {
+        mockSocket.trigger('connect');
+        await flushPromises();
+      });
+      expect(screen.latestGame.connectionStatus).toBe('resyncing');
+
+      await act(async () => {
+        jest.advanceTimersByTime(10000);
+        await flushPromises();
+      });
+
+      expect(screen.latestGame.connectionStatus).toBe('connected');
+      expect(screen.latestGame.error).toEqual({
+        key: 'game.resyncIncomplete',
+      });
+
+      await screen.unmount();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('forgets the room when the game result is closed', async () => {
+    const screen = await renderProvider();
+
+    mockStoredRoomId = 'room-1';
+    await act(async () => {
+      mockSocket.trigger('connect');
+      await flushPromises();
+      mockSocket.trigger('room-sync', {
+        room: createRoom(),
+        players: createGameState().players,
+      });
+      mockSocket.trigger('game-state', createGameState());
+      await flushPromises();
+    });
+    expect(screen.latestGame.currentRoom?.id).toBe('room-1');
+
+    await act(async () => {
+      screen.latestGame.closeGameResult();
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.currentRoom).toBeNull();
+    expect(screen.latestGame.game).toBeNull();
+    expect(screen.latestGame.gameResult).toBeNull();
+    expect(mockRoomStorage.clear).toHaveBeenCalled();
+
+    await screen.unmount();
+  });
+
   it('keeps local room recovery when leave acknowledgement fails', async () => {
     const screen = await renderProvider();
 

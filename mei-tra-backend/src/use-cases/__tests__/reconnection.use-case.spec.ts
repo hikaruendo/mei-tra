@@ -556,6 +556,67 @@ describe('ReconnectionUseCase', () => {
     expect(gameState.upsertSessionUser).not.toHaveBeenCalled();
   });
 
+  it('returns no active-game snapshot for a seat COM has taken over', async () => {
+    const comSeat = {
+      seatId: asSeatId('seat-1'),
+      name: 'COM',
+      team: 0,
+      hand: ['A♠'],
+      isPasser: false,
+      hasBroken: false,
+      hasRequiredBroken: false,
+      isCOM: true,
+    };
+    const roomGameState = {
+      // The user's old session link still points at the seat COM now plays.
+      findPlayerByActorId: jest.fn().mockReturnValue(comSeat),
+      getState: () => ({ players: [comSeat], gamePhase: 'play' }),
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest.fn().mockResolvedValue({
+        id: 'room-1',
+        status: RoomStatus.PLAYING,
+        players: [
+          {
+            seatId: asSeatId('seat-1'),
+            socketId: '',
+            name: 'COM',
+            isCOM: true,
+            hand: [],
+            team: 0,
+            isReady: true,
+            isHost: false,
+            isPasser: false,
+            joinedAt: new Date(),
+          },
+        ],
+      }),
+      handlePlayerReconnection: jest.fn(),
+    } as Partial<IRoomService> as IRoomService;
+    const useCase = new ReconnectionUseCase(
+      roomService,
+      {
+        upsertSessionUser: jest.fn(),
+      } as Partial<IGameStateService> as IGameStateService,
+      createRoomMembershipService(),
+    );
+
+    const snapshot = await useCase.getActiveGameSnapshot({
+      roomId: 'room-1',
+      authenticatedUser: {
+        id: 'user-1',
+        email: 'user@example.com',
+        isAnonymous: false,
+        profile: {} as UserProfile,
+      },
+    });
+
+    expect(roomGameState.findPlayerByActorId).toHaveBeenCalledWith('user-1');
+    expect(snapshot).toBeNull();
+    expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
+  });
+
   it('uses currentSeatId and ignores stale legacy turn fields', async () => {
     const roomGameState = {
       findPlayerByActorId: jest.fn().mockReturnValue(null),

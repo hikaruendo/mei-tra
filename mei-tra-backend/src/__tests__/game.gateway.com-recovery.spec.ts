@@ -25,6 +25,10 @@ const createGateway = (): GameGateway => {
       sendSocketBackToLobby: jest.fn(),
       sendUserSocketsBackToLobby: jest.fn(),
     },
+    spectatorGatewayEffectsService: {
+      isSpectatorSocket: jest.fn().mockReturnValue(false),
+      isWatchingRoom: jest.fn().mockReturnValue(false),
+    },
     accountActionGateService: {
       ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
     },
@@ -591,6 +595,102 @@ describe('GameGateway COM recovery integration', () => {
       'game-state',
       expect.anything(),
     );
+  });
+
+  describe('sync-game-state without a seat', () => {
+    type SyncHarness = ActiveReconnectGatewayHarness & {
+      spectatorGatewayEffectsService: {
+        isSpectatorSocket: jest.Mock;
+        isWatchingRoom: jest.Mock;
+      };
+      watchRoomUseCase: { buildSnapshot: jest.Mock };
+    };
+
+    const setUp = () => {
+      const gateway = createGateway();
+      const testGateway = gateway as unknown as SyncHarness;
+      testGateway.reconnectionUseCase = {
+        execute: jest.fn(),
+        getActiveGameSnapshot: jest.fn().mockResolvedValue(null),
+        getWaitingRoomSnapshot: jest.fn().mockResolvedValue(null),
+      };
+      testGateway.watchRoomUseCase = { buildSnapshot: jest.fn() };
+      testGateway.playerRooms = new Map();
+      const client = {
+        id: 'socket-1',
+        data: { user: { id: 'user-1' } },
+        join: jest.fn().mockResolvedValue(undefined),
+        emit: jest.fn(),
+      } as unknown as Socket;
+      return { gateway, testGateway, client };
+    };
+
+    it('sends the socket back to the lobby and drops its binding to that room', async () => {
+      const { gateway, testGateway, client } = setUp();
+      testGateway.playerRooms.set('socket-1', 'room-1');
+
+      await gateway.handleSyncGameState(client, { roomId: 'room-1' });
+
+      expect(
+        testGateway.connectionGatewayEffectsService.sendSocketBackToLobby,
+      ).toHaveBeenCalledWith({
+        server: testGateway.server,
+        playerRooms: testGateway.playerRooms,
+        socketId: 'socket-1',
+        roomId: 'room-1',
+      });
+      expect(client.join).not.toHaveBeenCalled();
+    });
+
+    it('leaves a socket that has since entered another room alone', async () => {
+      const { gateway, testGateway, client } = setUp();
+      testGateway.playerRooms.set('socket-1', 'room-2');
+
+      await gateway.handleSyncGameState(client, { roomId: 'room-1' });
+
+      expect(
+        testGateway.connectionGatewayEffectsService.sendSocketBackToLobby,
+      ).not.toHaveBeenCalled();
+      expect(testGateway.playerRooms.get('socket-1')).toBe('room-2');
+    });
+
+    it('leaves a spectator of another room alone', async () => {
+      const { gateway, testGateway, client } = setUp();
+      testGateway.spectatorGatewayEffectsService.isSpectatorSocket.mockReturnValue(
+        true,
+      );
+
+      await gateway.handleSyncGameState(client, { roomId: 'room-1' });
+
+      expect(
+        testGateway.connectionGatewayEffectsService.sendSocketBackToLobby,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('answers a spectator of the room with the spectator view, not a seat', async () => {
+      const { gateway, testGateway, client } = setUp();
+      const spectatorSnapshot = { players: [], isSpectator: true };
+      testGateway.spectatorGatewayEffectsService.isWatchingRoom.mockReturnValue(
+        true,
+      );
+      testGateway.watchRoomUseCase.buildSnapshot.mockResolvedValue(
+        spectatorSnapshot,
+      );
+
+      await gateway.handleSyncGameState(client, { roomId: 'room-1' });
+
+      expect(
+        testGateway.spectatorGatewayEffectsService.isWatchingRoom,
+      ).toHaveBeenCalledWith('socket-1', 'room-1');
+      expect(client.emit).toHaveBeenCalledWith('game-state', spectatorSnapshot);
+      expect(
+        testGateway.reconnectionUseCase.getActiveGameSnapshot,
+      ).not.toHaveBeenCalled();
+      expect(testGateway.playerRooms.has('socket-1')).toBe(false);
+      expect(
+        testGateway.connectionGatewayEffectsService.sendSocketBackToLobby,
+      ).not.toHaveBeenCalled();
+    });
   });
 
   it('returns every player tab to the lobby when the room is deleted', async () => {

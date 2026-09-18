@@ -343,7 +343,10 @@ export class ReconnectionUseCase {
         room,
         authenticatedUser.id,
       );
-      if (!existingPlayer) {
+      // A seat COM has taken over still resolves through the user's old
+      // session link, but it is no longer theirs to play. `execute` decides
+      // whether a disconnected player may take it back.
+      if (!existingPlayer || existingPlayer.isCOM) {
         return null;
       }
 

@@ -180,15 +180,16 @@ export default function RoomScreen() {
           result={gameResult}
           showTableBackdrop={Boolean(game)}
           onClose={() => {
+            // leaveRoom reads the room before closeGameResult clears it.
+            void leaveRoom();
             closeGameResult();
-            void doLeave();
             router.replace("/rooms");
           }}
           onRegister={
             user.isAnonymous
               ? () => {
+                  void leaveRoom();
                   closeGameResult();
-                  void doLeave();
                   router.push("/upgrade-account");
                 }
               : undefined

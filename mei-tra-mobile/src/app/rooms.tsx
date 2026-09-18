@@ -1,5 +1,5 @@
-import { Redirect, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -30,6 +30,8 @@ export default function RoomsScreen() {
   const { user, loading } = useAuth();
   const {
     rooms,
+    currentRoom,
+    game,
     connectionStatus,
     error,
     notice,
@@ -59,6 +61,16 @@ export default function RoomsScreen() {
     if (!query) return rooms;
     return rooms.filter((room) => room.name.toLowerCase().includes(query));
   }, [rooms, search]);
+
+  // Open the room this player is in (created, joined, watched, or a seat the
+  // server restored), as the web room list does. Only while focused, so the
+  // copy of this screen left under the room in the stack does not push again.
+  const activeRoomId = currentRoom?.id ?? game?.roomId ?? null;
+  useFocusEffect(
+    useCallback(() => {
+      if (activeRoomId) router.push('/room/current');
+    }, [activeRoomId, router]),
+  );
 
   if (!loading && !user) {
     return <Redirect href="/sign-in" />;
@@ -95,7 +107,6 @@ export default function RoomsScreen() {
         setRoomName('');
         setPointsToWin('5');
         setGameMode('normal');
-        router.push('/room/current');
       }
     } finally {
       setSubmitting(false);
@@ -109,10 +120,7 @@ export default function RoomsScreen() {
     if (submitting || connectionStatus !== 'connected') return;
     setSubmitting(true);
     try {
-      const success = await action(roomId);
-      if (success) {
-        router.push(`/room/${roomId}`);
-      }
+      await action(roomId);
     } finally {
       setSubmitting(false);
     }
@@ -219,12 +227,16 @@ export default function RoomsScreen() {
             );
             const humans = players.filter((player) => !player.isCOM);
             const hasCOM = players.some((player) => player.isCOM);
+            const isActiveRoom = room.id === activeRoomId;
             const canJoin =
-              (room.status !== 'playing' &&
+              !isActiveRoom &&
+              ((room.status !== 'playing' &&
                 humans.length < room.settings.maxPlayers) ||
-              (room.status === 'playing' && hasCOM);
+                (room.status === 'playing' && hasCOM));
             const canWatch =
-              room.status === 'playing' && room.settings.allowSpectators;
+              !isActiveRoom &&
+              room.status === 'playing' &&
+              room.settings.allowSpectators;
 
             return (
               <View key={room.id} style={styles.roomCard}>
