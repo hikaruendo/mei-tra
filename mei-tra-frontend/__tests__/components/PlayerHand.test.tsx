@@ -267,6 +267,35 @@ describe('PlayerHand', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the bottom seat its own Negri where the Agari was', () => {
+    // A narrow table puts the seat info against the left edge, so the place
+    // beside it would be off screen.
+    const { container } = renderPlayerHand({
+      position: 'bottom',
+      currentSeatId: 'player-2',
+      currentHighestDeclaration: { seatId: 'player-2', trumpType: 'daiya', numberOfPairs: 6 },
+      negriCard: 'H-A',
+      negriSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['S-2'] },
+    });
+
+    expect(screen.getByText('Negri').closest('.declarationContext')).toBeInTheDocument();
+    expect(screen.getByText('Negri').closest('.playerInfo')).toHaveClass('hasBottomStatus');
+    expect(screen.getByRole('button', { name: 'Reveal Negri card' })).toBeInTheDocument();
+    expect(container.querySelector('.negriSlot')).toBeNull();
+  });
+
+  it('keeps the Negri beside the seat info for the other seats', () => {
+    const { container } = renderPlayerHand({
+      position: 'left',
+      negriCard: 'H-A',
+      negriSeatId: 'player-2',
+    });
+
+    expect(container.querySelector('.negriSlot')).not.toBeNull();
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+  });
+
   it('shows taken sets and the red team badge in the player info', () => {
     renderPlayerHand({
       position: 'bottom',

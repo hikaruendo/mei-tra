@@ -178,6 +178,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
+  const ownNegriCard = negriCard && negriSeatId === player.seatId ? negriCard : null;
+  // The bottom seat sits against the table's left edge on a narrow screen, so
+  // its Negri takes the place the Agari had until the Negri was set.
+  const showDeclarationNegri = position === 'bottom' && ownNegriCard !== null;
   const replaceWithComStatusLabel = isDisconnected
     ? tStatus('disconnected')
     : tStatus('idle');
@@ -743,16 +747,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     </div>
   ) : null;
   const hasBottomStatus = position === 'bottom' && Boolean(
-    declarationBadge || showDeclarationAgari || showHandStatusPanels,
+    declarationBadge || showDeclarationAgari || showDeclarationNegri || showHandStatusPanels,
   );
   const bottomStatusZone = hasBottomStatus ? (
     <div className={styles.bottomStatusZone}>
-      {(declarationBadge || showDeclarationAgari) && (
+      {(declarationBadge || showDeclarationAgari || showDeclarationNegri) && (
         <div className={styles.declarationContext}>
           {showDeclarationAgari && (
             <div className={`${styles.agariTakenCard} ${styles.declarationAgariCard}`}>
               <span className={styles.agariTakenLabel}>{t('agari')}</span>
               <TakenCardPreview card={agariCard!} />
+            </div>
+          )}
+          {showDeclarationNegri && ownNegriCard && (
+            <div className={`${styles.agariTakenCard} ${styles.declarationAgariCard} ${styles.declarationNegriCard}`}>
+              <span className={styles.agariTakenLabel}>{t('negri')}</span>
+              <NegriCard
+                negriCard={ownNegriCard}
+                negriSeatId={player.seatId}
+                currentSeatId={currentSeatId}
+              />
             </div>
           )}
           {declarationBadge && <div className={styles.declarationRow}>{declarationBadge}</div>}
@@ -825,11 +839,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               <TakenCardPreview card={agariCard!} />
             </div>
           )}
-          {negriCard && negriSeatId === player.seatId && (
+          {ownNegriCard && position !== 'bottom' && (
             <div className={styles.negriSlot}>
               <NegriCard
-                negriCard={negriCard}
-                negriSeatId={negriSeatId}
+                negriCard={ownNegriCard}
+                negriSeatId={player.seatId}
                 currentSeatId={currentSeatId}
               />
             </div>
