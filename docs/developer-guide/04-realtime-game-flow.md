@@ -349,6 +349,7 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 - winner を決定
 - hands からカード除去
 - completed field 保存
+- プロモードで、落札者の手札に置いていないネグリの 1 枚だけが残ったら、それをネグリにする
 - current field を次 dealer 用に初期化
 - `field-complete`
 - `update-players`
@@ -366,7 +367,11 @@ checkpoint 復旧は `field_recovered` として game history に記録し、破
 
 ## 10. round 終了と次ラウンド
 
-全員の hand が空になると round end です。プロモードでオープンを宣言した場合も、通っても通らなくても、その時点で round end になります（通らなかった場合は 8.5 のとおり相手チームに 5 点）。
+全員の hand が空になると round end です。
+
+プロモードでは、落札者がネグリを置かないままプレイを続けられます。そのまま最後の field が終わると、落札者の手札にだけ 1 枚残ります。`CompleteFieldUseCase` はこの 1 枚をネグリにして、ほかの round と同じように場の得点を数えて終えます。落札者が `select-negri` で置いたときはネグリ忘れの記録を消しますが、ここでは消しません。最後の field の 4 枚目が出てから field が片付くまでの 3 秒間はまだ指摘でき、round が終わると指摘できなくなります。
+
+プロモードでオープンを宣言した場合も、通っても通らなくても、その時点で round end になります（通らなかった場合は 8.5 のとおり相手チームに 5 点）。
 
 ### 10.1 round end で行うこと
 

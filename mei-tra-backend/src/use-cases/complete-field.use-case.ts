@@ -144,6 +144,11 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         },
       });
 
+      const room = await this.roomService.getRoom(roomId);
+      if (room?.settings.gameMode === 'pro') {
+        this.setAsideUnplacedNegri(state);
+      }
+
       const allHandsEmpty = state.players.every(
         (player) => player.hand.length === 0,
       );
@@ -166,7 +171,6 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
         field: toCompletedFieldContract(completedField),
         nextSeatId: asSeatId(winner.seatId),
       };
-      const room = await this.roomService.getRoom(roomId);
 
       const events: GatewayEvent[] = [
         {
@@ -231,6 +235,33 @@ export class CompleteFieldUseCase implements ICompleteFieldUseCase {
     state.players.forEach((player) => {
       player.hand = player.hand.filter((card) => !cards.includes(card));
     });
+  }
+
+  // Pro mode lets the declaration winner play on without placing the Negri.
+  // When the last field empties every other hand, the one card they still
+  // hold is that Negri, so it is set aside here and the round can end.
+  private setAsideUnplacedNegri(state: GameState) {
+    const playState = state.playState;
+    const declarerSeatId = state.blowState.currentHighestDeclaration?.seatId;
+    if (!playState || playState.negriCard || !declarerSeatId) {
+      return;
+    }
+
+    const declarer = state.players.find(
+      (player) => player.seatId === declarerSeatId,
+    );
+    const onlyTheNegriIsLeft =
+      declarer?.hand.length === 1 &&
+      state.players.every(
+        (player) => player === declarer || player.hand.length === 0,
+      );
+    if (!declarer || !onlyTheNegriIsLeft) {
+      return;
+    }
+
+    playState.negriCard = declarer.hand[0];
+    playState.negriSeatId = asSeatId(declarer.seatId);
+    declarer.hand = [];
   }
 
   private isSameField(left: Field, right: Field): boolean {
