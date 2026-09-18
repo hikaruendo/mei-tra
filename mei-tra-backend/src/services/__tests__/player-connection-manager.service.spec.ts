@@ -108,4 +108,49 @@ describe('PlayerConnectionManager', () => {
     expect(manager.seatIdsByToken.has('user-1')).toBe(false);
     expect(manager.seatIdsByToken.get('user-2')).toBe('seat-2');
   });
+
+  it('detaches a seat occupant so only the seat id still resolves to the seat', () => {
+    const manager = new PlayerConnectionManager({
+      log: jest.fn(),
+    } as unknown as Logger);
+    const seatId = asSeatId('seat-1');
+    const players = [
+      {
+        seatId,
+        name: 'COM',
+        team: 0 as const,
+        hand: [],
+        isCOM: true,
+        isPasser: false,
+        hasBroken: false,
+        hasRequiredBroken: false,
+      },
+    ];
+    manager.registerSeatToken(seatId, seatId);
+    manager.upsertSessionUser({
+      socketId: 'socket-1',
+      seatId,
+      name: 'User 1',
+      userId: 'user-1',
+      isAuthenticated: true,
+    });
+    manager.upsertSessionUser({
+      socketId: 'socket-2',
+      seatId: asSeatId('seat-2'),
+      name: 'User 2',
+      userId: 'user-2',
+      isAuthenticated: true,
+    });
+
+    manager.detachSeatOccupant(seatId);
+
+    expect(manager.getPlayerConnectionState(seatId)).toBeNull();
+    expect(manager.findSessionUserByUserId('user-1')).toBeNull();
+    expect(manager.findPlayerByReconnectToken(players, 'user-1')).toBeNull();
+    expect(manager.findPlayerByReconnectToken(players, seatId)?.seatId).toBe(
+      seatId,
+    );
+    expect(manager.seatIdsByToken.get('user-2')).toBe('seat-2');
+    expect(manager.findSessionUserByUserId('user-2')?.seatId).toBe('seat-2');
+  });
 });

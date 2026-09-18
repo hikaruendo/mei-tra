@@ -42,6 +42,7 @@ const createGameStateStub = () => {
   const gameState = {
     getState: () => liveState,
     registerSeatToken: jest.fn(),
+    detachSeatOccupant: jest.fn(),
     persistRoster: jest.fn().mockImplementation(() => {
       const persistedPlayers = liveState.players;
       liveState = makeState();
@@ -106,6 +107,7 @@ describe('ComSessionService.convertPlayerToCOM', () => {
     expect(vacantSeats['room-1'][asSeatId(HUMAN_ID)].roomPlayer.seatId).toBe(
       asSeatId(HUMAN_ID),
     );
+    expect(gameState.detachSeatOccupant).toHaveBeenCalledWith(HUMAN_ID);
   });
 
   it('keeps the seat owner only for a disconnect-timeout COM replacement', async () => {
@@ -142,5 +144,6 @@ describe('ComSessionService.convertPlayerToCOM', () => {
         isCOM: true,
       }),
     );
+    expect(gameState.detachSeatOccupant).not.toHaveBeenCalled();
   });
 });

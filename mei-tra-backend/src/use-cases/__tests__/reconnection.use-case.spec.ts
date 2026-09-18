@@ -924,6 +924,93 @@ describe('ReconnectionUseCase', () => {
     );
     expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
   });
+
+  describe('when an old session link points at a seat COM has taken over', () => {
+    const comRoomPlayer = {
+      seatId: asSeatId('seat-1'),
+      socketId: '',
+      name: 'COM',
+      hand: [],
+      team: 0 as const,
+      isCOM: true,
+      isReady: true,
+      isHost: false,
+      isPasser: false,
+      joinedAt: new Date(),
+    };
+    const authenticatedUser = {
+      id: 'user-1',
+      email: 'user@example.com',
+      isAnonymous: false,
+      profile: {} as UserProfile,
+    };
+
+    const setUp = (status: RoomStatus, gamePhase: 'play' | 'waiting') => {
+      const roomGameState = {
+        findSessionUserByUserId: jest
+          .fn()
+          .mockReturnValue({ seatId: 'seat-1', userId: 'user-1' }),
+        findPlayerByActorId: jest.fn().mockReturnValue({
+          seatId: asSeatId('seat-1'),
+          name: 'COM',
+          team: 0,
+          hand: ['A♠'],
+          isCOM: true,
+          isPasser: false,
+          hasBroken: false,
+          hasRequiredBroken: false,
+        }),
+        reconcileWaitingRoomPlayers: jest.fn().mockResolvedValue(undefined),
+        getState: () => ({ players: [], gamePhase }),
+      };
+      const roomService = {
+        getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+        getRoom: jest.fn().mockResolvedValue({
+          id: 'room-1',
+          hostSeatId: asSeatId('seat-2'),
+          status,
+          players: [comRoomPlayer],
+        }),
+        initCOMPlaceholders: jest.fn().mockResolvedValue(undefined),
+        handlePlayerReconnection: jest.fn(),
+      } as Partial<IRoomService> as IRoomService;
+      const membershipService = {
+        claim: jest.fn().mockResolvedValue({ result: 'claimed' }),
+      } as unknown as RoomMembershipService;
+      const useCase = new ReconnectionUseCase(
+        roomService,
+        { upsertSessionUser: jest.fn() } as unknown as IGameStateService,
+        membershipService,
+      );
+      return { useCase, roomService, membershipService };
+    };
+
+    it.each([
+      ['an active game', RoomStatus.PLAYING, 'play'] as const,
+      ['a waiting room', RoomStatus.WAITING, 'waiting'] as const,
+    ])(
+      'rejects the reconnect in %s without claiming a membership',
+      async (_label, status, gamePhase) => {
+        const { useCase, roomService, membershipService } = setUp(
+          status,
+          gamePhase,
+        );
+
+        const result = await useCase.execute({
+          roomId: 'room-1',
+          socketId: 'socket-new',
+          authenticatedUser,
+        });
+
+        expect(result).toEqual(
+          expect.objectContaining({ success: false, code: 'sessionInvalid' }),
+        );
+        expect(membershipService.claim).not.toHaveBeenCalled();
+        expect(roomService.handlePlayerReconnection).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it('restores a finished pro-mode game snapshot before room cleanup', async () => {
     const room = {
       id: 'room-finished',

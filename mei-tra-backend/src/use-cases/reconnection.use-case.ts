@@ -415,13 +415,23 @@ export class ReconnectionUseCase {
       authenticatedUserId,
     );
 
-    return persistedRoomPlayer
-      ? (roomGameState
+    if (persistedRoomPlayer) {
+      return (
+        roomGameState
           .getState()
           .players.find(
             (player) => player.seatId === persistedRoomPlayer.seatId,
-          ) ?? null)
-      : resolvePlayerByActorId(roomGameState, authenticatedUserId);
+          ) ?? null
+      );
+    }
+
+    // A COM seat the user may take back keeps their userId and is found above.
+    // A COM seat reached only through an old session link is no longer theirs.
+    const linkedPlayer = resolvePlayerByActorId(
+      roomGameState,
+      authenticatedUserId,
+    );
+    return linkedPlayer?.isCOM ? null : linkedPlayer;
   }
 
   private isActiveGame(room: ActiveRoom, gamePhase: GamePhase): boolean {
@@ -563,7 +573,8 @@ export class ReconnectionUseCase {
       const sessionMatchedPlayer =
         roomPlayers.find((player) => player.seatId === sessionUser.seatId) ??
         null;
-      if (sessionMatchedPlayer) {
+      // As in resolveActiveGamePlayer, a COM seat found this way is not theirs.
+      if (sessionMatchedPlayer && !sessionMatchedPlayer.isCOM) {
         return sessionMatchedPlayer;
       }
     }
