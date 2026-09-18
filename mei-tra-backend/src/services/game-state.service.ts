@@ -367,6 +367,10 @@ export class GameStateService implements IGameStateService {
     this.connectionManager.removeSeatToken(seatId);
   }
 
+  detachSeatOccupant(seatId: SeatId): void {
+    this.connectionManager.detachSeatOccupant(seatId);
+  }
+
   findPlayerByUserId(userId: string): DomainPlayer | null {
     return this.connectionManager.findPlayerByUserId(
       this.state.players,

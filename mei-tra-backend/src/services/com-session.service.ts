@@ -199,7 +199,9 @@ export class ComSessionService {
       uniqueIdx,
       room.players[playerIndex],
     );
-    if (membershipMutation?.type === 'complete-disconnect-timeout') {
+    const keepsSeatOwner =
+      membershipMutation?.type === 'complete-disconnect-timeout';
+    if (keepsSeatOwner) {
       comPlayer.userId = room.players[playerIndex].userId;
       comPlayer.isAuthenticated = room.players[playerIndex].isAuthenticated;
       comPlayer.participantKey = room.players[playerIndex].participantKey;
@@ -224,6 +226,10 @@ export class ComSessionService {
       room.hostSeatId,
       membershipMutation,
     );
+    if (!keepsSeatOwner) {
+      // The old occupant can no longer act for or reconnect to this seat.
+      gameState.detachSeatOccupant(seatId);
+    }
     return true;
   }
 }

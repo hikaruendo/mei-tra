@@ -11,6 +11,9 @@ import { ChomboService } from '../chombo.service';
 import { PlayService } from '../play.service';
 import { IComPlayerService } from '../interfaces/com-player-service.interface';
 import { RoomMembershipService } from '../room-membership.service';
+import { IGameStateService } from '../interfaces/game-state-service.interface';
+import { ReconnectionUseCase } from '../../use-cases/reconnection.use-case';
+import { UserProfile } from '../../types/user.types';
 import { asSeatId } from '../../types/identity.types';
 
 const makeGamePlayer = (
@@ -714,6 +717,69 @@ describe('Reconnection Token Management', () => {
         expect(gameState.findPlayerByReconnectToken(seatId)?.seatId).toBe(
           seatId,
         );
+      });
+
+      it('stops the replaced player from acting for or reconnecting to the COM seat', async () => {
+        const roomId = 'room-idle';
+        const seatId = asSeatId('player-1');
+        bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostSeatId: seatId,
+          players: [
+            makeRoomPlayer(seatId, 'Idle Player', 0, {
+              socketId: 'socket-1',
+              userId: 'user-1',
+              isAuthenticated: true,
+              isHost: true,
+            }),
+          ],
+        });
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().players = [
+          makeGamePlayer(seatId, 'Idle Player', 0, { hand: ['H2'] }),
+        ];
+        gameState.getState().gamePhase = 'play';
+        gameState.registerSeatToken(seatId, seatId);
+        gameState.registerSeatToken('user-1', seatId);
+        gameState.applyPlayerConnectionState(seatId, {
+          socketId: 'socket-1',
+          userId: 'user-1',
+          isAuthenticated: true,
+        });
+
+        await expect(
+          roomService.convertPlayerToCOM(roomId, seatId),
+        ).resolves.toBe(true);
+
+        expect(gameState.findPlayerByActorId('user-1')).toBeNull();
+        expect(gameState.getPlayerConnectionState(seatId)).toBeNull();
+        // COM autoplay acts through the seat id.
+        expect(gameState.findPlayerByActorId(seatId)?.isCOM).toBe(true);
+
+        const reconnectMembershipService = {
+          claim: jest.fn().mockResolvedValue({ result: 'claimed' }),
+        } as unknown as RoomMembershipService;
+        const reconnection = new ReconnectionUseCase(
+          roomService,
+          { upsertSessionUser: jest.fn() } as unknown as IGameStateService,
+          reconnectMembershipService,
+        );
+        const result = await reconnection.execute({
+          roomId,
+          socketId: 'socket-2',
+          authenticatedUser: {
+            id: 'user-1',
+            email: 'user@example.com',
+            isAnonymous: false,
+            profile: {} as UserProfile,
+          },
+        });
+
+        expect(result).toEqual(
+          expect.objectContaining({ success: false, code: 'sessionInvalid' }),
+        );
+        expect(reconnectMembershipService.claim).not.toHaveBeenCalled();
       });
 
       it('should keep current play references on the stable seat', async () => {

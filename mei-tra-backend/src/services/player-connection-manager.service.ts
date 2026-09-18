@@ -155,6 +155,20 @@ export class PlayerConnectionManager {
     }
   }
 
+  // Afterwards only the seat's own id resolves to the seat, which is how COM acts.
+  detachSeatOccupant(seatId: SeatId): void {
+    for (let index = this.users.length - 1; index >= 0; index -= 1) {
+      if (this.users[index].seatId === seatId) {
+        this.users.splice(index, 1);
+      }
+    }
+    for (const [token, registeredSeatId] of this.seatIdsByToken.entries()) {
+      if (registeredSeatId === seatId && token !== seatId) {
+        this.seatIdsByToken.delete(token);
+      }
+    }
+  }
+
   findPlayerByUserId(
     players: DomainPlayer[],
     userId: string,
