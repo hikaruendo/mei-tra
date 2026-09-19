@@ -9,6 +9,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import { HandFan } from '@/components/game/HandFan';
+import { NegriCard } from '@/components/game/NegriCard';
 
 import { GameBoard } from '../GameBoard';
 
@@ -856,6 +857,25 @@ describe('GameBoard pro drag gating', () => {
       renderer.root.findByProps({ testID: 'mock-playing-card-S-3' }).props
         .onPress,
     ).toBeUndefined();
+
+    act(() => renderer.unmount());
+  });
+
+  it('shows the own Negri face down, for its owner to turn over', () => {
+    const handlers = { onPlayCard: jest.fn(), onSelectNegri: jest.fn() };
+    const renderer = renderProBoard('play', handlers, null, {
+      negriCard: 'H-4',
+      negriSeatId: asSeatId('player-1'),
+    });
+    const root = renderer.root as unknown as {
+      findAllByType: (
+        type: typeof NegriCard,
+      ) => { props: React.ComponentProps<typeof NegriCard> }[];
+    };
+
+    expect(root.findAllByType(NegriCard).map((negri) => negri.props)).toEqual([
+      { canReveal: true, card: 'H-4' },
+    ]);
 
     act(() => renderer.unmount());
   });

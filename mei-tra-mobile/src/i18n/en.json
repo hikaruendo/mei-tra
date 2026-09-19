@@ -374,7 +374,9 @@
     "currentTurn": "Current turn",
     "joker": "Joker",
     "faceDownCard": "Face-down card",
-    "tapToSelectCard": "Tap to select this card"
+    "tapToSelectCard": "Tap to select this card",
+    "revealNegri": "Show the Negri face up",
+    "hideNegri": "Turn the Negri face down"
   },
   "janken": {
     "chant": "Jan-ken…",
