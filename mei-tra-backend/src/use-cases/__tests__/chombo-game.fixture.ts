@@ -9,6 +9,7 @@ import { SelectNegriUseCase } from '../select-negri.use-case';
 import type { DomainPlayer } from '../../types/game.types';
 import { Test } from '@nestjs/testing';
 import { PlayCardUseCase } from '../play-card.use-case';
+import { CompleteFieldUseCase } from '../complete-field.use-case';
 import { ReportChomboUseCase } from '../report-chombo.use-case';
 import { CardService } from '../../services/card.service';
 import { PlayService } from '../../services/play.service';
@@ -103,6 +104,7 @@ export async function createGame(
   const module = await Test.createTestingModule({
     providers: [
       PlayCardUseCase,
+      CompleteFieldUseCase,
       ReportChomboUseCase,
       DeclareOpenUseCase,
       RevealBrokenHandUseCase,
@@ -142,6 +144,7 @@ export async function createGame(
     roomService,
     module,
     play: module.get(PlayCardUseCase),
+    completeField: module.get(CompleteFieldUseCase),
     report: module.get(ReportChomboUseCase),
   };
 }
