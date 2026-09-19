@@ -374,7 +374,9 @@
     "currentTurn": "現在の手番",
     "joker": "ジョーカー",
     "faceDownCard": "裏向きのカード",
-    "tapToSelectCard": "タップしてカードを選択します"
+    "tapToSelectCard": "タップしてカードを選択します",
+    "revealNegri": "ネグリを表にする",
+    "hideNegri": "ネグリを裏にする"
   },
   "janken": {
     "chant": "ジャンケン…",

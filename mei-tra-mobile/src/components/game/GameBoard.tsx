@@ -35,6 +35,7 @@ import { CompletedTrickPiles } from '@/components/game/CompletedTrickPiles';
 import { FieldMat } from '@/components/game/FieldMat';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { HandFan } from '@/components/game/HandFan';
+import { NegriCard } from '@/components/game/NegriCard';
 import { useFieldMatSize } from '@/hooks/useFieldMatSize';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
@@ -675,7 +676,7 @@ export function GameBoard({
                 </Text>
                 {game.gamePhase === 'play' && game.negriCard && highest?.seatId === self.seatId ? (
                   <View style={styles.selfSpecialRow}>
-                    <PlayingCard card={game.negriCard} size="seat" />
+                    <NegriCard canReveal card={game.negriCard} />
                     <Text style={styles.selfSpecialLabel}>{t('seat.negri')}</Text>
                   </View>
                 ) : null}

@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
+import { NegriCard } from '../NegriCard';
 import { PlayerSeat } from '../PlayerSeat';
 
 jest.mock('@/components/game/PlayerAvatar', () => ({
@@ -93,6 +94,42 @@ describe('PlayerSeat layout', () => {
     expect(seatStyle.opacity).toBeUndefined();
     expect(seatStyle.borderWidth).toBe(2);
     expect(renderer.root.findAllByProps({ children: '切断中' })).not.toHaveLength(0);
+
+    await act(async () => renderer.unmount());
+  });
+
+  it('shows an opponent Negri face down with nothing to turn it over', async () => {
+    let renderer!: {
+      root: {
+        findAllByType: (
+          type: typeof NegriCard,
+        ) => { props: React.ComponentProps<typeof NegriCard> }[];
+      };
+      unmount: () => void;
+    };
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <PlayerSeat
+          isTurn={false}
+          negriCard="hidden"
+          player={{
+            socketId: 'socket-2',
+            seatId: asSeatId('seat-2'),
+            name: 'Player 2',
+            team: 1,
+            hand: ['S-3'],
+            isHost: false,
+            isCOM: false,
+            hasRequiredBroken: false,
+          }}
+        />,
+      ) as unknown as typeof renderer;
+    });
+
+    expect(renderer.root.findAllByType(NegriCard).map((negri) => negri.props)).toEqual([
+      { canReveal: false, card: 'hidden' },
+    ]);
 
     await act(async () => renderer.unmount());
   });

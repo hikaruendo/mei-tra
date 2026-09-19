@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { MiniCard } from '@/components/game/MiniCard';
+import { NegriCard } from '@/components/game/NegriCard';
 import { DealtCard } from '@/components/game/DealtCard';
 import { TurnClock } from '@/components/game/TurnClock';
 import { PlayerAvatar } from '@/components/game/PlayerAvatar';
@@ -123,7 +124,7 @@ export function PlayerSeat({
       ) : null}
       {negriCard ? (
         <View style={styles.specialCardRow}>
-          <PlayingCard faceDown size="seat" />
+          <NegriCard canReveal={false} card={negriCard} />
           <Text style={styles.specialCardLabel}>{t('seat.negri')}</Text>
         </View>
       ) : null}
