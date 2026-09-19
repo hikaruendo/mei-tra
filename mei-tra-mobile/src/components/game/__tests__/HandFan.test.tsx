@@ -3,6 +3,7 @@ import {
   Animated,
   StyleSheet,
   type StyleProp,
+  type View,
   type ViewStyle,
 } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -132,6 +133,29 @@ const drag = (renderer: Renderer, card: string, dx: number) => {
   return gesture;
 };
 
+/**
+ * Stands in for the seat info view the parent passes as the Negri target.
+ * The default rect sits left of where the drags start and spans their height.
+ */
+const negriTarget = (rect = { left: 0, top: 400, width: 80, height: 200 }) =>
+  ({
+    current: {
+      measure: (
+        callback: (
+          x: number,
+          y: number,
+          width: number,
+          height: number,
+          pageX: number,
+          pageY: number,
+        ) => void,
+      ) => callback(0, 0, rect.width, rect.height, rect.left, rect.top),
+    },
+  }) as unknown as React.RefObject<View | null>;
+
+/** A leftward drag that ends with the finger at x = 40, inside the default target. */
+const OVER_NEGRI_TARGET_DX = 40 - (START_X - ACTIVATE_PX);
+
 const render = (props: Partial<React.ComponentProps<typeof HandFan>> = {}) => {
   let renderer!: Renderer;
   act(() => {
@@ -171,6 +195,12 @@ const caretCount = (renderer: Renderer): number =>
       typeof node.type === 'string' &&
       typeof node.props.testID === 'string' &&
       node.props.testID.startsWith('hand-drop-caret-'),
+  ).length;
+
+const negriLabelCount = (renderer: Renderer): number =>
+  renderer.root.findAll(
+    (node) =>
+      typeof node.type === 'string' && node.props.testID === 'hand-negri-label',
   ).length;
 
 const cardOrder = (renderer: Renderer): string[] =>
@@ -420,7 +450,7 @@ describe('HandFan', () => {
     expect(cardOrder(renderer)).toEqual(['A', 'B', 'C', 'D']);
   });
 
-  it('claims a vertical drag for the play or negri drop target', () => {
+  it('claims a vertical drag, which is how a card is played', () => {
     const renderer = render();
     const handlers = handlersFor(renderer, 'A');
 
@@ -434,15 +464,78 @@ describe('HandFan', () => {
     expect(claimed).toBe(true);
   });
 
-  it('reports an upward drop as a play and a downward one as a negri', () => {
+  it('reports an upward drop as a play and a drop on the Negri target as a Negri', () => {
     const onDropAction = jest.fn();
-    const renderer = render({ onDropAction });
+    const renderer = render({ onDropAction, negriDropTarget: negriTarget() });
 
     startDrag(renderer, 'A', 0, -DROP_PX).release();
     expect(onDropAction).toHaveBeenNthCalledWith(1, 'A', 'play');
 
-    startDrag(renderer, 'B', 0, DROP_PX).release();
+    startDrag(renderer, 'B', OVER_NEGRI_TARGET_DX).release();
     expect(onDropAction).toHaveBeenNthCalledWith(2, 'B', 'negri');
+  });
+
+  it('places no Negri for a card only dragged down', () => {
+    // The hand sits near the bottom of the screen, and a reorder that drifts
+    // down must not set a Negri aside for good.
+    const onDropAction = jest.fn();
+    const renderer = render({ onDropAction, negriDropTarget: negriTarget() });
+
+    startDrag(renderer, 'A', 0, DROP_PX).release();
+
+    expect(onDropAction).not.toHaveBeenCalled();
+  });
+
+  it('places no Negri over the seat info when no target is passed', () => {
+    // The parent passes the target only while a Negri can be placed, and a
+    // drag that far left then reorders as before.
+    const onDropAction = jest.fn();
+    const renderer = render({ onDropAction });
+
+    startDrag(renderer, 'D', OVER_NEGRI_TARGET_DX).release();
+
+    expect(onDropAction).not.toHaveBeenCalled();
+    expect(cardOrder(renderer)).toEqual(['D', 'A', 'B', 'C']);
+  });
+
+  it('marks no slot over the Negri target and keeps the order on release', () => {
+    const onDropPreview = jest.fn();
+    const onReorder = jest.fn();
+    const renderer = render({
+      dropActions: ['negri'],
+      negriDropTarget: negriTarget(),
+      onDropPreview,
+      onReorder,
+    });
+
+    const gesture = startDrag(renderer, 'D', OVER_NEGRI_TARGET_DX);
+    expect(caretCount(renderer)).toBe(0);
+    expect(onDropPreview).toHaveBeenLastCalledWith('negri');
+    expect(negriLabelCount(renderer)).toBe(1);
+
+    gesture.release();
+
+    expect(onDropPreview).toHaveBeenLastCalledWith(null);
+    expect(negriLabelCount(renderer)).toBe(0);
+    expect(cardOrder(renderer)).toEqual(['A', 'B', 'C', 'D']);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it('previews only a drop that acts', () => {
+    const onDropPreview = jest.fn();
+    const renderer = render({
+      dropActions: ['negri'],
+      negriDropTarget: negriTarget(),
+      onDropPreview,
+    });
+
+    // Not this player's turn: an upward drag would play nothing.
+    const gesture = startDrag(renderer, 'A', 0, -DROP_PX);
+    expect(onDropPreview).not.toHaveBeenCalledWith('play');
+    // Holding a card away from the target says nothing about the Negri.
+    expect(onDropPreview).not.toHaveBeenCalledWith('negri');
+    expect(negriLabelCount(renderer)).toBe(0);
+    gesture.release();
   });
 
   it('picks up a lone card so a pro drop can still play it', () => {

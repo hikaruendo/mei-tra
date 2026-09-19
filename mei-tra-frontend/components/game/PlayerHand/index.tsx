@@ -19,7 +19,11 @@ import {
   type DealAnimationCue,
 } from '@meitra/game-client/deal-animation';
 import { shouldPlayCardSelectionSound } from '@meitra/game-client/sound-effects';
-import { classifyCardDrop, type CardDropAction } from '@meitra/game-client/drag-action';
+import {
+  classifyCardDrop,
+  isPointInRect,
+  type CardDropAction,
+} from '@meitra/game-client/drag-action';
 import { withoutPendingHandCard } from '@meitra/game-client/pending-hand-card';
 import { useCardValidation } from './hooks/useCardValidation';
 import {
@@ -140,9 +144,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const nativeDragRef = useRef(false);
   const dragStartYRef = useRef<number | null>(null);
   const dragStartXRef = useRef<number | null>(null);
-  const dropActionRef = useRef<CardDropAction | null>(null);
   const pointerDragFinishedRef = useRef(false);
+  // What releasing the held pro-mode card would do right now.
   const [dropAction, setDropAction] = useState<CardDropAction | null>(null);
+  // The viewer's own seat info, where a card is let go to become the Negri.
+  const negriTargetRef = useRef<HTMLDivElement>(null);
   const [dealAnimationElapsedMs, setDealAnimationElapsedMs] = useState<
     number | null
   >(null);
@@ -172,6 +178,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const showAgariPanel = Boolean(isCurrentPlayer && agariCard && isWinningPlayer);
   const showDeclarationAgari = position === 'bottom' && showAgariPanel;
   const showHandStatusPanels = position === 'bottom' && shouldSelectNegri;
+  const ownNegriCard = negriCard && negriSeatId === player.seatId ? negriCard : null;
+  // The bottom seat sits against the table's left edge on a narrow screen, so
+  // its Negri takes the place the Agari had until the Negri was set.
+  const showDeclarationNegri = position === 'bottom' && ownNegriCard !== null;
   const replaceWithComStatusLabel = isDisconnected
     ? tStatus('disconnected')
     : tStatus('idle');
@@ -348,31 +358,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    const completedDropAction = dropActionRef.current ?? dropAction;
-    if (
-      draggingCard &&
-      completedDropAction &&
-      gameMode === 'pro' &&
-      canActAsCurrentPlayer &&
-      gamePhase === 'play' &&
-      whoseTurn === currentSeatId
-    ) {
-      if (completedDropAction === 'negri' && isWinningPlayer && !negriCard) {
-        gameActions.selectNegri(draggingCard);
-      }
-      if (completedDropAction === 'play') {
-        gameActions.playCard(draggingCard);
-      }
-    } else if (draggingCard && dropPlacement) {
+    if (draggingCard && dropPlacement) {
       reorderDisplayHand(draggingCard, dropPlacement.card, dropPlacement.side);
     }
 
     dragStartYRef.current = null;
     dragStartXRef.current = null;
-    dropActionRef.current = null;
     setDraggingCard(null);
     setDragOffset({ x: 0, y: 0 });
-    setDropAction(null);
     setDropPlacement(null);
   };
 
@@ -411,16 +404,24 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     return card && card === activeDragCard ? card : null;
   };
 
-  // What releasing at this height does in pro mode: play the card, place the
-  // Negri, or nothing (then it reorders). The marker while dragging and the
-  // release both read this, so the marker never shows a reorder that the
-  // release turns into a play.
-  const proDropAction = (deltaY: number): CardDropAction | null => {
+  // What releasing here does in pro mode: place the Negri over the viewer's own
+  // seat info, play the card when lifted high enough, or nothing (then it
+  // reorders). The seat info only takes the Negri while one can be placed.
+  // The marker while dragging and the release both read this, so the marker
+  // never shows a reorder that the release turns into a play or a Negri.
+  const proDropAction = (event: DragMoveEvent | DragEndEvent): CardDropAction | null => {
     if (gameMode !== 'pro' || !canActAsCurrentPlayer || gamePhase !== 'play') {
       return null;
     }
-    const action = classifyCardDrop(deltaY);
-    if (action === 'negri' && canPlaceProNegri) return 'negri';
+    const pointer = dndPointer(event);
+    const action = classifyCardDrop({
+      deltaY: event.delta.y,
+      overNegriTarget:
+        canPlaceProNegri &&
+        pointer !== null &&
+        isPointInRect(pointer, negriTargetRef.current?.getBoundingClientRect()),
+    });
+    if (action === 'negri') return 'negri';
     if (action === 'play' && whoseTurn === currentSeatId) return 'play';
     return null;
   };
@@ -432,18 +433,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   const handleDndMove = (event: DragMoveEvent) => {
     if (gameMode !== 'pro') return;
-    const action = classifyCardDrop(event.delta.y);
-    dropActionRef.current = action;
-    setDropAction(action);
     const card = heldDndCard(event);
-    setDropPlacement(
-      card && !proDropAction(event.delta.y) ? dndDropPlacement(card, event) : null,
-    );
+    const action = card ? proDropAction(event) : null;
+    setDropAction(action);
+    setDropPlacement(card && !action ? dndDropPlacement(card, event) : null);
   };
 
   const handleDndEnd = (event: DragEndEvent) => {
     const card = heldDndCard(event);
-    const action = card ? proDropAction(event.delta.y) : null;
+    const action = card ? proDropAction(event) : null;
     if (card && action === 'negri') {
       gameActions.selectNegri(card);
     } else if (card && action === 'play') {
@@ -456,7 +454,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         reorderDisplayHand(card, placement.card, placement.side);
       }
     }
-    dropActionRef.current = null;
     setDropAction(null);
     setDropPlacement(null);
     setActiveDragCard(null);
@@ -474,7 +471,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           onDragStart={({ active }) => setActiveDragCard(String(active.data.current?.card ?? ''))}
           onDragMove={handleDndMove}
           onDragCancel={() => {
-            dropActionRef.current = null;
             setDropAction(null);
             setDropPlacement(null);
             setActiveDragCard(null);
@@ -488,8 +484,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               const deltaY = dragStartYRef.current === null ? 0 : event.clientY - dragStartYRef.current;
               const deltaX = dragStartXRef.current === null ? 0 : event.clientX - dragStartXRef.current;
               setDragOffset({ x: deltaX, y: deltaY });
-              dropActionRef.current = null;
-              setDropAction(null);
               updatePointerDropPlacement(event);
             }
           }}
@@ -500,10 +494,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             }
             dragStartYRef.current = null;
             dragStartXRef.current = null;
-            dropActionRef.current = null;
             setDraggingCard(null);
             setDragOffset({ x: 0, y: 0 });
-            setDropAction(null);
             setDropPlacement(null);
           }}
           style={{
@@ -514,12 +506,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             '--player-hand-card-container-min-height': `${handCardMetrics.minHeight}px`,
           } as React.CSSProperties}
         >
-          {gameMode === 'pro' && canActAsCurrentPlayer && (whoseTurn === currentSeatId || canPlaceProNegri) ? (
-            <div className={styles.proDropHints} aria-live="polite">
-              <span>{t('play')} ↑</span>
-              {isWinningPlayer && !negriCard ? <span>{t('negri')} ↓</span> : null}
-            </div>
-          ) : null}
           {shownHand.map((card, index) => {
             const isSelected = card === selectedCard || card === selectedNegriCard;
             const distanceFromCenter = index - (shownHand.length - 1) / 2;
@@ -553,8 +539,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     setDragOffset({ x: 0, y: 0 });
                     dragStartYRef.current = event.clientY;
                     dragStartXRef.current = event.clientX;
-                    dropActionRef.current = null;
-                    setDropAction(null);
                     setDropPlacement(null);
                   }
                 }}
@@ -640,7 +624,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         </div>
         <DragOverlay className={styles.dragOverlay} dropAnimation={null}>
           {gameMode === 'pro' && activeDragCard ? (
-            <div className={styles.dragOverlayCard}><CardFace card={activeDragCard} /></div>
+            <div className={`${styles.dragOverlayCard} ${dropAction === 'negri' ? styles.dragOverlayNegri : ''}`}>
+              <CardFace card={activeDragCard} />
+              {/* On a narrow table the hand covers most of the seat info, so
+                  the held card itself says that letting go sets the Negri. */}
+              {dropAction === 'negri' && (
+                <span className={styles.dragOverlayLabel}>{t('negri')}</span>
+              )}
+            </div>
           ) : null}
         </DragOverlay>
         </DndContext>
@@ -756,16 +747,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     </div>
   ) : null;
   const hasBottomStatus = position === 'bottom' && Boolean(
-    declarationBadge || showDeclarationAgari || showHandStatusPanels,
+    declarationBadge || showDeclarationAgari || showDeclarationNegri || showHandStatusPanels,
   );
   const bottomStatusZone = hasBottomStatus ? (
     <div className={styles.bottomStatusZone}>
-      {(declarationBadge || showDeclarationAgari) && (
+      {(declarationBadge || showDeclarationAgari || showDeclarationNegri) && (
         <div className={styles.declarationContext}>
           {showDeclarationAgari && (
             <div className={`${styles.agariTakenCard} ${styles.declarationAgariCard}`}>
               <span className={styles.agariTakenLabel}>{t('agari')}</span>
               <TakenCardPreview card={agariCard!} />
+            </div>
+          )}
+          {showDeclarationNegri && ownNegriCard && (
+            <div className={`${styles.agariTakenCard} ${styles.declarationAgariCard} ${styles.declarationNegriCard}`}>
+              <span className={styles.agariTakenLabel}>{t('negri')}</span>
+              <NegriCard
+                negriCard={ownNegriCard}
+                negriSeatId={player.seatId}
+                currentSeatId={currentSeatId}
+              />
             </div>
           )}
           {declarationBadge && <div className={styles.declarationRow}>{declarationBadge}</div>}
@@ -797,8 +798,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               {playerInfoContent}
             </button>
           ) : (
-            <div className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}>
+            <div
+              ref={negriTargetRef}
+              className={`${styles.playerInfoContainer} ${isCurrentTurn ? styles.currentTurn : ''}`}
+            >
               {playerInfoContent}
+              {/* Shown only while the held card is over the seat info, so
+                  picking a card up does not tell the declarer that the Negri
+                  is still missing. */}
+              {dropAction === 'negri' && (
+                <div className={styles.negriDropTarget} data-testid="negri-drop-target" />
+              )}
             </div>
           )}
           {shouldSelectNegri && !showHandStatusPanels && (
@@ -829,11 +839,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               <TakenCardPreview card={agariCard!} />
             </div>
           )}
-          {negriCard && negriSeatId === player.seatId && (
+          {ownNegriCard && position !== 'bottom' && (
             <div className={styles.negriSlot}>
               <NegriCard
-                negriCard={negriCard}
-                negriSeatId={negriSeatId}
+                negriCard={ownNegriCard}
+                negriSeatId={player.seatId}
                 currentSeatId={currentSeatId}
               />
             </div>

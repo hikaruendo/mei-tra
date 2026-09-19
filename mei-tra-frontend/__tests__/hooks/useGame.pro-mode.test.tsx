@@ -86,9 +86,10 @@ describe('useGame Negri prompt', () => {
   beforeEach(() => { mockHandlers.clear(); sessionStorage.clear(); });
 
   it.each([
-    ['pro', 'negriPromptPro'],
+    // A pro declarer who forgets the Negri can be reported, so nothing reminds them.
+    ['pro', undefined],
     ['normal', 'negriPrompt'],
-  ] as const)('shows the %s-mode prompt instead of the server text when the Agari is revealed', (gameMode, key) => {
+  ] as const)('shows the Negri prompt for a %s-mode Agari reveal only outside pro mode', (gameMode, message) => {
     const { result } = renderHook(() => useGame());
     act(() => mockHandlers.get('game-state')?.({ ...snapshot(false), gameMode }));
     act(() => mockHandlers.get('reveal-agari')?.({
@@ -97,7 +98,7 @@ describe('useGame Negri prompt', () => {
       seatId: asSeatId('viewer'),
     }));
 
-    expect(result.current.notification?.message).toBe(key);
+    expect(result.current.notification?.message).toBe(message);
   });
 });
 

@@ -163,6 +163,7 @@
 }
 
 .dragOverlayCard {
+  position: relative;
   width: var(--player-hand-card-scaled-width, 80px);
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
@@ -170,6 +171,24 @@
   box-shadow: var(--shadow-selected);
   transform: rotate(2deg) scale(1.05);
   pointer-events: none;
+}
+
+.dragOverlayNegri {
+  box-shadow: 0 0 0 3px var(--mt-accent), var(--shadow-selected);
+}
+
+.dragOverlayLabel {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
+  font-size: typography.scale(0.72rem);
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .insertBefore::before,
@@ -311,6 +330,20 @@
 
 .playerInfoContainer > * {
   max-width: 100%;
+}
+
+/* Laid over the viewer's own seat info while a held pro-mode card would
+   become the Negri on release. Resizing the seat info instead would move the
+   rect the drop is measured against. */
+.negriDropTarget {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 2px solid var(--mt-accent);
+  border-radius: inherit;
+  background: var(--mt-accent-subtle);
+  box-shadow: 0 0 10px var(--mt-accent);
+  pointer-events: none;
 }
 
 .playerInfoBadges {
@@ -727,7 +760,8 @@
 }
 
 /* The Negri place belongs to the declaring seat, so every mode and every
-   viewer gets the same seat-relative location. */
+   viewer gets the same seat-relative location. The bottom seat shows its
+   Negri in the status zone instead (declarationNegriCard). */
 .negriSlot {
   position: absolute;
   z-index: 45;
@@ -735,22 +769,11 @@
   left: calc(100% + 1rem);
 }
 
-.playerPosition.bottom .negriSlot {
-  right: calc(100% + 1rem);
-  left: auto;
-}
-
 @media (max-width: 768px) {
   .negriSlot {
     top: 0.35rem;
     left: calc(100% + 0.25rem);
   }
-
-  .playerPosition.bottom .negriSlot {
-    right: calc(100% + 0.25rem);
-    left: auto;
-  }
-
 }
 
 .playerPosition.bottom .statusPanel,
@@ -906,6 +929,12 @@
 
 .playerPosition.bottom .declarationAgariCard {
   padding: 0.14rem 0.22rem;
+}
+
+/* NegriCard pulls its face-down card in with negative side margins, which
+   would push it over the label in this row. */
+.declarationNegriCard button {
+  margin: 0;
 }
 
 .playerPosition.bottom .handContainer {
@@ -1231,6 +1260,8 @@
     overflow-x: visible;
     overflow-y: visible;
     min-height: calc(9.6rem * var(--mt-card-scale));
+    /* The cards read this column's width as 100cqi to fit the hand into it. */
+    container-type: inline-size;
   }
 
   .playerPosition.bottom .handStatusPanels {
@@ -1264,10 +1295,26 @@
     z-index: 3;
   }
 
+  /* A full hand is wider than the column beside the seat info, so it spilled
+     over the seat info and past the screen's right edge. The cards overlap
+     more as the hand grows so that it fits the column, the way the mobile fan
+     does (mei-tra-mobile useHandFanMetrics): each card shows at least 26% of
+     its width, and below that the cards get smaller. A ±15° edge card sticks
+     out by 0.371 of its width on its side, which is kept free on both sides. */
   .playerPosition.bottom .card {
-    width: calc(63px * var(--mt-card-scale));
+    --hand-card-width: min(
+      calc(63px * var(--mt-card-scale)),
+      calc(100cqi / (0.742 + 1 + (var(--card-total, 1) - 1) * 0.26))
+    );
+    --hand-fit-margin: calc(
+      (
+        (100cqi - 1.742 * var(--hand-card-width)) / max(var(--card-total, 1) - 1, 1)
+        - var(--hand-card-width)
+      ) / 2
+    );
+    width: var(--hand-card-width);
     aspect-ratio: 2 / 3;
-    margin: 0 calc(-1.02rem * var(--mt-card-scale));
+    margin: 0 min(calc(-1.02rem * var(--mt-card-scale)), var(--hand-fit-margin));
     z-index: calc(var(--card-index, 0) + 1);
     transform-origin: bottom center;
     transform: translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) !important;
@@ -1278,7 +1325,9 @@
   .playerPosition.bottom :where(.handContainer:not(.holdingCard)) .card:hover {
     z-index: calc(var(--card-index, 0) + 1) !important;
     transform: translateY(calc((var(--card-translate-y, 0px) - 26px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
-    margin: 0 calc(-0.72rem * var(--mt-card-scale));
+    /* Opens up a little around the raised card, but only a little past the
+       fit, so a full hand still stays in its column. */
+    margin: 0 min(calc(-0.72rem * var(--mt-card-scale)), calc(var(--hand-fit-margin) + 0.25rem));
     box-shadow: 0 18px 28px rgba(0, 0, 0, 0.34);
   }
 
@@ -1322,17 +1371,4 @@
       transform: none;
     }
   }
-}
-
-.proDropHints {
-  position: absolute;
-  top: -2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 1rem;
-  color: var(--mt-text-secondary);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
 }

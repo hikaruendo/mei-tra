@@ -753,11 +753,12 @@ describe('GameProvider realtime resync safety', () => {
   });
 
   it.each([
-    ['pro', 'game.negriPromptPro'],
-    ['normal', 'game.negriPrompt'],
+    // A pro declarer who forgets the Negri can be reported, so nothing reminds them.
+    ['pro', null],
+    ['normal', { key: 'game.negriPrompt' }],
   ] as const)(
-    'shows the %s-mode Negri prompt instead of the server text',
-    async (gameMode, key) => {
+    'shows the Negri prompt for a %s-mode Agari reveal only outside pro mode',
+    async (gameMode, notice) => {
       const screen = await renderProvider();
 
       await act(async () => {
@@ -776,7 +777,7 @@ describe('GameProvider realtime resync safety', () => {
         await flushPromises();
       });
 
-      expect(screen.latestGame.notice).toEqual({ key });
+      expect(screen.latestGame.notice).toEqual(notice);
 
       await screen.unmount();
     },

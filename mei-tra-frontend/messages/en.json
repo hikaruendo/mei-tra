@@ -336,7 +336,6 @@
     "waiting": "Waiting...",
     "redealAllPass": "Redealt because everyone passed",
     "negriPrompt": "Select a card from your hand as Negri",
-    "negriPromptPro": "Drag a card from your hand down to set it as Negri",
     "redealBroken": "Redealt because of a broken hand",
     "openDeclared": "The open holds",
     "openInvalid": "The open does not hold. {teamName} gets 5 points and the round ends",
@@ -892,6 +891,9 @@
     "chombo": {
       "title": "Chombo (Violation) System [Pro Mode]",
       "description": "In pro mode a violation is not blocked when it happens. The server records it without showing it, and it is judged only when the opposing team reports it.",
+      "proControls": "Pro Mode Controls",
+      "proControlsDesc": "Cards are moved by dragging. Drag a card up and let go to play it; let go over your own player info to set it as Negri. No hints, such as a Negri reminder, are shown.",
+      "proControlsExample": "After winning the bid, drag a card from your hand onto your player info → it becomes your Negri",
       "negriForget": "Negri Forget",
       "negriForgetDesc": "The declaration winner lets the first card of the round be played before placing the Negri.",
       "negriForgetExample": "First card played without a Negri → Reportable (placing the Negri before a report clears it)",

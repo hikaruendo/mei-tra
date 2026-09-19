@@ -267,6 +267,35 @@ describe('PlayerHand', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the bottom seat its own Negri where the Agari was', () => {
+    // A narrow table puts the seat info against the left edge, so the place
+    // beside it would be off screen.
+    const { container } = renderPlayerHand({
+      position: 'bottom',
+      currentSeatId: 'player-2',
+      currentHighestDeclaration: { seatId: 'player-2', trumpType: 'daiya', numberOfPairs: 6 },
+      negriCard: 'H-A',
+      negriSeatId: 'player-2',
+      player: { ...otherPlayer, hand: ['S-2'] },
+    });
+
+    expect(screen.getByText('Negri').closest('.declarationContext')).toBeInTheDocument();
+    expect(screen.getByText('Negri').closest('.playerInfo')).toHaveClass('hasBottomStatus');
+    expect(screen.getByRole('button', { name: 'Reveal Negri card' })).toBeInTheDocument();
+    expect(container.querySelector('.negriSlot')).toBeNull();
+  });
+
+  it('keeps the Negri beside the seat info for the other seats', () => {
+    const { container } = renderPlayerHand({
+      position: 'left',
+      negriCard: 'H-A',
+      negriSeatId: 'player-2',
+    });
+
+    expect(container.querySelector('.negriSlot')).not.toBeNull();
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+  });
+
   it('shows taken sets and the red team badge in the player info', () => {
     renderPlayerHand({
       position: 'bottom',
@@ -760,21 +789,16 @@ describe('PlayerHand', () => {
     );
   });
 
-  it('closes the pro Negri window once the round fields are all played', () => {
-    const proNegriTurn = {
+  it('shows no hint about where to drag in pro mode', () => {
+    // On its turn, as the bid winner who still owes the Negri.
+    renderPlayerHand({
       ...followSuitTurn,
-      whoseTurn: 'player-1',
       gameMode: 'pro',
       currentHighestDeclaration: { seatId: 'player-2' },
-      completedFieldCount: 9,
-    } as const;
-    const { rerender } = renderPlayerHand(proNegriTurn);
+    });
 
-    expect(screen.getByText('Negri ↓')).toBeInTheDocument();
-
-    rerender(buildPlayerHand({ ...proNegriTurn, completedFieldCount: 10 }));
-
-    expect(screen.queryByText('Negri ↓')).not.toBeInTheDocument();
+    expect(screen.queryByText(/[↑↓]/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('negri-drop-target')).not.toBeInTheDocument();
   });
 
   it('shows a revealed hand as rank and suit marks', () => {
@@ -812,7 +836,29 @@ describe('PlayerHand pro mode drag', () => {
     // jsdom has no hit testing either; each test points at a card itself.
     delete (document as { elementFromPoint?: unknown }).elementFromPoint;
     jest.mocked(gameActions.playCard).mockClear();
+    jest.mocked(gameActions.selectNegri).mockClear();
   });
+
+  // jsdom lays nothing out, so the seat info is given a rect by hand. The
+  // drags below start at x = 300 and end over it at x = 50.
+  const placeSeatInfo = () => {
+    const seatInfo = document.querySelector('.playerInfoContainer');
+    if (!seatInfo) throw new Error('no seat info');
+    Object.defineProperty(seatInfo, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 0, top: 0, width: 100, height: 200 }),
+    });
+  };
+
+  // The bid winner, off turn, before placing the Negri: a pro Negri does not
+  // wait for the turn.
+  const negriOpen = {
+    gameMode: 'pro',
+    whoseTurn: 'player-1',
+    currentSeatId: 'player-2',
+    currentHighestDeclaration: { seatId: 'player-2' },
+    player: { ...otherPlayer, hand: ['H-A', 'S-2', 'D-3'] },
+  } as const;
 
   const pointAt = (element: HTMLElement) => {
     Object.defineProperty(element, 'getBoundingClientRect', {
@@ -972,5 +1018,65 @@ describe('PlayerHand pro mode drag', () => {
     expect(onHandReorder).not.toHaveBeenCalled();
     expect(handOrder()).toEqual(['H-A', 'C-4', 'D-5']);
     expect(markedCards()).toHaveLength(0);
+  });
+
+  it('places the Negri when a card is let go over the seat info', async () => {
+    const onHandReorder = jest.fn();
+    renderPlayerHand({ ...negriOpen, onHandReorder });
+    placeSeatInfo();
+    const [first, second] = handCards();
+    // A card under the pointer would otherwise mark a reorder.
+    pointAt(first);
+
+    await drag(second, { x: 300, y: 100 }, { x: 50, y: 100 }, () => {
+      expect(screen.getByTestId('negri-drop-target')).toBeInTheDocument();
+      // The held card is labelled too, as the hand can cover the seat info.
+      expect(screen.getByText('Negri')).toBeInTheDocument();
+      expect(markedCards()).toHaveLength(0);
+    });
+
+    expect(gameActions.selectNegri).toHaveBeenCalledWith('S-2');
+    expect(screen.queryByTestId('negri-drop-target')).not.toBeInTheDocument();
+    expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+    expect(onHandReorder).not.toHaveBeenCalled();
+  });
+
+  it('marks nothing while the held card is away from the seat info', async () => {
+    renderPlayerHand(negriOpen);
+    placeSeatInfo();
+    const [first] = handCards();
+
+    await drag(first, { x: 300, y: 100 }, { x: 300, y: 40 }, () => {
+      expect(screen.queryByTestId('negri-drop-target')).not.toBeInTheDocument();
+      expect(screen.queryByText('Negri')).not.toBeInTheDocument();
+    });
+
+    expect(gameActions.selectNegri).not.toHaveBeenCalled();
+  });
+
+  it('places no Negri for a card only dragged down', async () => {
+    renderPlayerHand(negriOpen);
+    placeSeatInfo();
+    const [first] = handCards();
+
+    await drag(first, { x: 300, y: 100 }, { x: 300, y: 300 });
+
+    expect(gameActions.selectNegri).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['once the round fields are all played', { completedFieldCount: 10 }],
+    ['once the Negri is placed', { negriCard: 'C-9', negriSeatId: 'player-2' }],
+    ['for a seat that lost the bid', { currentHighestDeclaration: { seatId: 'player-1' } }],
+  ] as const)('takes no Negri over the seat info %s', async (_when, overrides) => {
+    renderPlayerHand({ ...negriOpen, ...overrides });
+    placeSeatInfo();
+    const [first] = handCards();
+
+    await drag(first, { x: 300, y: 100 }, { x: 50, y: 100 }, () => {
+      expect(screen.queryByTestId('negri-drop-target')).not.toBeInTheDocument();
+    });
+
+    expect(gameActions.selectNegri).not.toHaveBeenCalled();
   });
 });

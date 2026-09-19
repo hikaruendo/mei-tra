@@ -1,4 +1,7 @@
-import { appendChomboCandidate } from '../domain/chombo-candidates';
+import {
+  appendChomboCandidate,
+  isLastTanzenAwaitingReport,
+} from '../domain/chombo-candidates';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { CardPlayedPayload } from '@contracts/game';
 import {
@@ -24,6 +27,15 @@ import {
   getFieldIntegrityError,
 } from '../domain/field-recovery';
 import { IChomboService } from '../services/interfaces/chombo-service.interface';
+
+/** How long a full field stays on the table before it is collected. */
+const FIELD_COMPLETE_DELAY_MS = 3000;
+/**
+ * A last tanzen shows only when its Joker lands in the round's last field, and
+ * collecting that field ends the round and its reports. Holding the field
+ * longer gives the other team time to report it.
+ */
+const LAST_TANZEN_REPORT_HOLD_MS = 10_000;
 
 @Injectable()
 export class PlayCardUseCase implements IPlayCardUseCase {
@@ -302,7 +314,11 @@ export class PlayCardUseCase implements IPlayCardUseCase {
         }
         const trigger: CompleteFieldTrigger = {
           roomId,
-          delayMs: 3000,
+          delayMs:
+            room?.settings.gameMode === 'pro' &&
+            isLastTanzenAwaitingReport(state)
+              ? LAST_TANZEN_REPORT_HOLD_MS
+              : FIELD_COMPLETE_DELAY_MS,
           fieldIdentity: activeFieldIdentity,
           field: {
             ...currentField,

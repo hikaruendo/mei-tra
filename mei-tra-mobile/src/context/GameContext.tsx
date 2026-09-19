@@ -969,17 +969,12 @@ export function GameProvider({ children }: PropsWithChildren) {
     });
     socket.on('reveal-agari', (payload) => {
       applyGameServerEvent({ type: 'reveal-agari', payload });
-      // payload.message is fixed English and knows nothing of pro mode, where
-      // the Negri is dragged down rather than picked.
-      dispatch({
-        type: 'notice',
-        message: {
-          key:
-            stateRef.current.game?.gameMode === 'pro'
-              ? 'game.negriPromptPro'
-              : 'game.negriPrompt',
-        },
-      });
+      // Pro mode shows no prompt: a declarer who forgets the Negri can be
+      // reported for it. payload.message is fixed English, so the prompt comes
+      // from the translations.
+      if (stateRef.current.game?.gameMode !== 'pro') {
+        dispatch({ type: 'notice', message: { key: 'game.negriPrompt' } });
+      }
     });
     socket.on('play-setup-complete', (payload) => {
       const pendingNegriCard = pendingNegriCardRef.current;

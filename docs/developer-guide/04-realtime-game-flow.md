@@ -342,6 +342,8 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 
 ユーザーに最後の 1 枚が場に出たことを視覚的に見せるためです。即座に場をクリアすると、プレイ感が悪くなります。現行実装では 3000ms の delay が入ります。
 
+プロモードで、最後タンツェンの JOKER が出たラウンド最後の場だけは 10000ms 残します。その場を片付けるとラウンドが終わり、チョンボの指摘も受け付けなくなるので、相手チームが指摘する時間を取るためです。相手チームに人間がいないときは延ばしません。判定は `isLastTanzenAwaitingReport`（`src/domain/chombo-candidates.ts`）です。
+
 ### 9.2 `CompleteFieldUseCase`
 
 ここで:
