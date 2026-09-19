@@ -1064,6 +1064,25 @@ describe('PlayerHand pro mode drag', () => {
     expect(gameActions.selectNegri).not.toHaveBeenCalled();
   });
 
+  it('stops marking the seat info when the hand is dealt again mid-drag', async () => {
+    const { rerender } = renderPlayerHand(negriOpen);
+    placeSeatInfo();
+    const [first] = handCards();
+
+    await drag(first, { x: 300, y: 100 }, { x: 50, y: 100 }, () => {
+      expect(screen.getByTestId('negri-drop-target')).toBeInTheDocument();
+      // A report can end the round while the card is held over the seat info.
+      // The next round then deals a new hand before the pointer moves again.
+      rerender(buildPlayerHand({
+        ...negriOpen,
+        player: { ...otherPlayer, hand: ['C-4', 'D-5', 'H-6'] },
+      }));
+      expect(screen.queryByTestId('negri-drop-target')).not.toBeInTheDocument();
+    });
+
+    expect(gameActions.selectNegri).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['once the round fields are all played', { completedFieldCount: 10 }],
     ['once the Negri is placed', { negriCard: 'C-9', negriSeatId: 'player-2' }],

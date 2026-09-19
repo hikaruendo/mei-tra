@@ -242,6 +242,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       setDraggingCard(null);
       setDragOffset({ x: 0, y: 0 });
       setDropPlacement(null);
+      setDropAction(null);
       // dnd-kit keeps its pro-mode drag alive; handleDndEnd ignores a drag
       // whose card is no longer the one recorded here.
       setActiveDragCard(null);
