@@ -183,11 +183,9 @@ export function BlowControls({
       {actionHistory.length > 0 ? (
         <View style={styles.historySection}>
           <Text style={styles.historyLabel}>{t('blow.history')}</Text>
-          <ScrollView
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-            style={styles.historyScroll}
-          >
+          {/* The list takes the height it needs so every action stays in
+              view. The board scrolls when the panel grows past the screen. */}
+          <View testID="blow-history">
             {actionHistory.map((action, index) => {
               const name =
                 players.find((p) => p.seatId === action.seatId)?.name ??
@@ -203,6 +201,7 @@ export function BlowControls({
               return (
                 <View
                   key={index}
+                  testID="blow-history-entry"
                   style={[
                     styles.historyEntry,
                     isHighest && styles.historyEntryHighest,
@@ -225,7 +224,7 @@ export function BlowControls({
                 </View>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
       ) : null}
     </LiquidGlassSurface>
@@ -292,9 +291,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: '700',
-  },
-  historyScroll: {
-    maxHeight: 72,
   },
   historyEntry: {
     flexDirection: 'row',
