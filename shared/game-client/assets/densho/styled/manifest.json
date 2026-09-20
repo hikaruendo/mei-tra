@@ -1,5 +1,5 @@
 {
-  "recipe": "cb5abb2a3c6f8381cccba93522d62704e30aaa45663acb7b59dedbc489bb51ea",
+  "recipe": "32f9b646b47773710849733ea0d35b57ce92d9ecaa03e1930f274c855c20384b",
   "cards": {
     "10_C": {
       "source": "244ea95196fee4b41ee807f0bc7d370a135ec728f1696d0e8c841097379946ff",
@@ -420,9 +420,9 @@
     "card_back": {
       "source": "13dfe9cc899a6065b0257800e0665d76f09ca9ab5ad13c1caf62f016525945cd",
       "assets": {
-        "small": "cd97ec4054ead17ddc6b37ce35854626f8b27e3821d04d195bff25c5aaa6ec4e",
-        "medium": "6ad8eddec79818116214b17e19dcdc0e107e45627f097ad0ef05864273b08e9f",
-        "large": "c3abe2d03d9c8561ef137259f2ee248cb2fd21973a5b4ac2362e2e4058dc6bee"
+        "small": "8a335134c9716c1f5581c4bf9a8ebdf499a6cfb16e4b420f381d152db720d7e7",
+        "medium": "836c0134a29c4ef77402b373a3c84e77c1f7f156a7d125dc62ae259b603ae300",
+        "large": "2225a667c426757f754502d65003ed12811349972234e7c2374742b7a2a5b3a0"
       }
     },
     "joker_red": {
