@@ -37,7 +37,13 @@ export default function RootLayout() {
                       headerShown: false,
                       contentStyle: { backgroundColor: colors.background },
                     }}
-                  />
+                  >
+                    {/* Keep iOS back swipes from taking over horizontal hand drags. */}
+                    <Stack.Screen
+                      name="room/[roomId]"
+                      options={{ gestureEnabled: false }}
+                    />
+                  </Stack>
                 </NotificationProvider>
               </SocialProvider>
             </GameProvider>
