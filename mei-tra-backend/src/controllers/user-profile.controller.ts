@@ -97,6 +97,13 @@ export class UserProfileController {
   ) {
     try {
       this.assertProfileOwnership(id, currentUser);
+      if (
+        updateData.preferences?.cardDesign !== undefined &&
+        updateData.preferences.cardDesign !== 'standard' &&
+        updateData.preferences.cardDesign !== 'densho'
+      ) {
+        throw new HttpException('Invalid card design', HttpStatus.BAD_REQUEST);
+      }
       const updatedProfile = await this.userProfileRepository.update(
         id,
         updateData as UpdateUserProfileDto,
@@ -323,6 +330,7 @@ export class UserProfileController {
         theme: profile.preferences.theme,
         fontSize: profile.preferences.fontSize,
         startPlayerAnimation: profile.preferences.startPlayerAnimation ?? true,
+        cardDesign: profile.preferences.cardDesign,
       },
     };
   }

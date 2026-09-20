@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { resolveCardArt } from '@/lib/card-art-assets';
+import type { CardDesign } from '@meitra/contracts/profile';
+import { CardArtwork } from './CardArtwork';
 import { colors } from '@/theme/colors';
 import {
   CARD_BASE_WIDTHS,
@@ -15,6 +15,7 @@ import { t } from '@/i18n';
 
 interface PlayingCardProps {
   card?: string;
+  design?: CardDesign;
   faceDown?: boolean;
   selected?: boolean;
   disabled?: boolean;
@@ -36,6 +37,7 @@ function accessibilityLabelFor(card: string | undefined, faceDown: boolean) {
 
 function PlayingCardComponent({
   card,
+  design,
   faceDown = false,
   selected = false,
   disabled = false,
@@ -48,7 +50,6 @@ function PlayingCardComponent({
   const w = width ?? CARD_BASE_WIDTHS[size];
   const h = cardHeight(w);
   const radius = cardRadius(w);
-  const art = resolveCardArt(card ?? '', faceDown);
 
   // Pressable reports itself disabled to screen readers, which would announce a
   // card with actions as dimmed.
@@ -79,15 +80,7 @@ function PlayingCardComponent({
       ]}
     >
       <View style={[styles.clip, { borderRadius: radius }]}>
-        {art.kind === 'vector' ? (
-          <art.Svg height="100%" width="100%" />
-        ) : (
-          <Image
-            contentFit="cover"
-            source={art.source}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
+        <CardArtwork card={card} faceDown={faceDown} design={design} width={w} />
         {disabled ? (
           // Web dims with `filter: brightness(.45) saturate(.3)`, which React
           // Native has no dependable cross-platform equivalent for. A scrim

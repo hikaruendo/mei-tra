@@ -1,4 +1,4 @@
-import type { FontSizePreset as ContractFontSizePreset } from '@contracts/profile';
+import type { CardDesign, FontSizePreset as ContractFontSizePreset } from '@contracts/profile';
 
 export type FontSizePreset = ContractFontSizePreset;
 
@@ -21,6 +21,7 @@ export interface UserPreferences {
   sound: boolean;
   theme: 'system' | 'light' | 'dark';
   fontSize: FontSizePreset;
+  cardDesign?: CardDesign;
   startPlayerAnimation: boolean;
 }
 

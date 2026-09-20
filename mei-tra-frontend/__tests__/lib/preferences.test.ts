@@ -27,6 +27,7 @@ describe('preferences helpers', () => {
       theme: 'light',
       fontSize: 'standard',
       startPlayerAnimation: true,
+      cardDesign: 'standard',
     });
   });
 
@@ -36,6 +37,12 @@ describe('preferences helpers', () => {
       normalizeUserPreferences({ startPlayerAnimation: false })
         .startPlayerAnimation,
     ).toBe(false);
+  });
+
+  it('preserves card design and defaults legacy or unknown preferences', () => {
+    expect(normalizeUserPreferences({ cardDesign: 'densho' }).cardDesign).toBe('densho');
+    expect(normalizeUserPreferences(null).cardDesign).toBe('standard');
+    expect(normalizeUserPreferences(JSON.parse('{"cardDesign":"unknown"}')).cardDesign).toBe('standard');
   });
 
   it('reads stored theme and font size when values are valid', () => {

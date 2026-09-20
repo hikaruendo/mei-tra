@@ -1,3 +1,4 @@
+import { normalizeCardDesign } from '@meitra/game-client/card-art';
 import { FontSizePreset, UserPreferences } from '@/types/user.types';
 
 export const THEME_STORAGE_KEY = 'theme';
@@ -44,6 +45,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   theme: DEFAULT_THEME_PREFERENCE,
   fontSize: DEFAULT_FONT_SIZE_PRESET,
   startPlayerAnimation: true,
+  cardDesign: 'standard',
 };
 
 export function isThemePreference(value: unknown): value is UserPreferences['theme'] {
@@ -78,6 +80,7 @@ export function normalizeUserPreferences(
       ? preferences.theme
       : DEFAULT_USER_PREFERENCES.theme,
     fontSize: normalizeFontSizePreset(preferences?.fontSize),
+    cardDesign: normalizeCardDesign(preferences?.cardDesign),
     startPlayerAnimation:
       typeof preferences?.startPlayerAnimation === 'boolean'
         ? preferences.startPlayerAnimation

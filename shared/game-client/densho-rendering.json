@@ -1,0 +1,27 @@
+{
+  "widths": {
+    "small": 90,
+    "medium": 180,
+    "large": 630
+  },
+  "originals": {
+    "card_back": {
+      "left": 222,
+      "top": 217,
+      "width": 710,
+      "height": 1143
+    },
+    "joker_red": {
+      "left": 0,
+      "top": 0,
+      "width": 799,
+      "height": 1228
+    },
+    "A_S": {
+      "left": 184,
+      "top": 184,
+      "width": 785,
+      "height": 1211
+    }
+  }
+}

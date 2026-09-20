@@ -16,7 +16,7 @@
     "validate:eas-monorepo": "node scripts/validate-eas-monorepo.mjs",
     "test": "jest --runInBand",
     "assets:cards": "node scripts/build-card-assets.mjs",
-    "assets:cards:check": "node scripts/build-card-assets.mjs --check",
+    "assets:cards:check": "node scripts/build-card-assets.mjs --check && node ../shared/game-client/scripts/build-densho-cards.mjs --check",
     "assets:sounds": "node scripts/sync-sound-assets.mjs",
     "assets:sounds:check": "node scripts/sync-sound-assets.mjs --check",
     "assets:table": "node scripts/sync-table-assets.mjs",

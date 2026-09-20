@@ -1,5 +1,7 @@
 export type FontSizePreset = 'standard' | 'large' | 'xlarge' | 'xxlarge';
 
+export type CardDesign = 'standard' | 'densho';
+
 export type TransportTheme = 'light' | 'dark';
 
 export interface TransportUserPreferences {
@@ -9,6 +11,8 @@ export interface TransportUserPreferences {
   fontSize: FontSizePreset;
   /** Optional: profiles created before the setting existed omit it. */
   startPlayerAnimation?: boolean;
+  /** Omitted by older profiles; clients render the standard design. */
+  cardDesign?: CardDesign;
 }
 
 export interface UserProfileDto {

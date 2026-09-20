@@ -547,7 +547,7 @@
     "gameStateErrorNoCurrentField": "ゲームの状態が不正です。場がありません",
     "gameStateNotFound": "ゲームの状態が見つかりません",
     "hostCannotModerateThemselves": "ホストは自分を操作できません",
-    "inTanzenRoundYouMustPlayTheJoker": "タンゼンの場ではジョーカーを必ず出してください",
+    "inTanzenRoundYouMustPlayTheJoker": "タンツェンの場ではジョーカーを必ず出してください",
     "internalServerError": "サーバーでエラーが発生しました",
     "invalidDeclaration": "宣言の内容が正しくありません",
     "itsNotYourTurnToDeclare": "宣言するターンではありません",
@@ -951,6 +951,10 @@
     "convertedToComNotice": "{playerName} が長時間切断のため、COMプレイヤーに変換されました。"
   },
   "profile": {
+    "cardDesign": "カードデザイン",
+    "cardDesignHint": "自分の画面に表示するカードを選べます。明トラ伝承プロジェクトは専用の裏面・タンツェン・スペードAに合わせ、ほかの札も白地と落ち着いた色合いで揃えています。",
+    "cardDesign_standard": "標準",
+    "cardDesign_densho": "明トラ伝承プロジェクト",
     "title": "プロフィール",
     "loading": "プロフィールを読み込み中...",
     "loginRequired": "プロフィールを表示するにはログインが必要です",
