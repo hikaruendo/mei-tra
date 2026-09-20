@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Animated,
+  Platform,
   StyleSheet,
   type StyleProp,
   type View,
@@ -215,6 +216,22 @@ const cardOrder = (renderer: Renderer): string[] =>
     .map((node) => (node.props.testID as string).replace('hand-card-', ''));
 
 describe('HandFan', () => {
+  it('suppresses a press following a drag, then accepts a new touch', () => {
+    const onSelectCard = jest.fn();
+    const renderer = render({ onSelectCard });
+    const press = () => (renderer.root.find(
+      (node) => node.props.width === CARD_WIDTH && node.props.card === 'A' && typeof node.props.onPress === 'function',
+    ).props.onPress as () => void)();
+    drag(renderer, 'A', 2 * PITCH);
+    act(() => press());
+    expect(onSelectCard).not.toHaveBeenCalled();
+    const point = { x: START_X, y: START_Y, at: 0 };
+    act(() => { handlersFor(renderer, 'A').onStartShouldSetResponderCapture(touchEvent(point, point)); });
+    act(() => press());
+    expect(onSelectCard).toHaveBeenCalledWith('A');
+    act(() => renderer.unmount());
+  });
+
   it('moves a dragged card to the slot the finger reached', () => {
     const renderer = render();
     expect(cardOrder(renderer)).toEqual(['A', 'B', 'C', 'D']);
@@ -672,4 +689,28 @@ describe('HandFan', () => {
       ),
     ).toBe(false);
   });
+});
+
+
+it('captures the original web pointer target without requiring a selection first', () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  const onSelectCard = jest.fn();
+  const setPointerCapture = jest.fn();
+  let renderer!: Renderer;
+  try {
+    act(() => {
+      renderer = TestRenderer.create(
+        <HandFan cards={['7♠', '9♠']} cardWidth={CARD_WIDTH} cardMargin={CARD_MARGIN}
+          seatId="self" selectedCard={null} reducedMotion canReorder onSelectCard={onSelectCard} />,
+      ) as unknown as Renderer;
+    });
+    const card = renderer.root.find((node) => typeof node.type === 'string' && node.props.testID === 'hand-card-7♠');
+    const pointerDown = card.props.onPointerDown as (event: unknown) => void;
+    pointerDown({ target: { setPointerCapture }, nativeEvent: { pointerId: 12 } });
+    expect(setPointerCapture).toHaveBeenCalledWith(12);
+    expect(onSelectCard).not.toHaveBeenCalled();
+    act(() => renderer.unmount());
+  } finally {
+    jest.restoreAllMocks();
+  }
 });

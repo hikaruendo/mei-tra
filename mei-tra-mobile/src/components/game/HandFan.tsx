@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   Animated,
   PanResponder,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -11,6 +12,7 @@ import {
   type PanResponderInstance,
 } from 'react-native';
 
+import { useScreenTapProtection } from '@/components/ui/ScreenTapBoundary';
 import { DealtCard } from '@/components/game/DealtCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { draggableCardStyle } from '@/lib/draggable-card-style';
@@ -320,6 +322,8 @@ function HandFanCard({
   selected,
   showsNegriLabel,
 }: HandFanCardProps) {
+  const protectSelectedCard = useScreenTapProtection();
+  const suppressPressRef = useRef(false);
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   // PanResponder is built once and keeps the callbacks it was given, so they
   // read the current props through this ref instead of the first render's.
@@ -371,11 +375,17 @@ function HandFanCard({
       // A tap has to keep reaching the card underneath, so the drag only claims
       // the touch after a meaningful horizontal or vertical movement. Capturing is what lets it take
       // the touch off the Pressable that is already holding it.
-      onStartShouldSetPanResponderCapture: () => false,
+      onStartShouldSetPanResponderCapture: () => {
+        suppressPressRef.current = false;
+        return false;
+      },
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
         live.current.canReorder &&
         Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) > DRAG_ACTIVATE_PX,
-      onPanResponderGrant: () => live.current.onDragStart(),
+      onPanResponderGrant: () => {
+        suppressPressRef.current = true;
+        live.current.onDragStart();
+      },
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
         live.current.onDragMove(gesture);
@@ -394,6 +404,13 @@ function HandFanCard({
   return (
     <Animated.View
       {...panResponder.current.panHandlers}
+      onPointerDown={Platform.OS === 'web' ? (event) => {
+        // Keep moves on the card initially pressed, even when the first move
+        // crosses an overlapping neighbour before PanResponder activates.
+        const target = event.target as unknown as Element;
+        target.setPointerCapture?.(event.nativeEvent.pointerId);
+      } : undefined}
+      {...(selected ? protectSelectedCard : {})}
       style={[
         styles.fanCard,
         canReorder && draggableCardStyle,
@@ -447,7 +464,9 @@ function HandFanCard({
             const action = dropActions.find((candidate) => candidate === name);
             if (action) onAccessibilityDrop(action);
           }}
-          onPress={onPress}
+          onPress={onPress ? () => {
+            if (!suppressPressRef.current) onPress();
+          } : undefined}
           selected={selected}
           width={cardWidth}
         />

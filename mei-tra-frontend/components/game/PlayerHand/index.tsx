@@ -127,6 +127,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const tBlow = useTranslations('blowControls');
   const locale = useLocale();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const selectedCardElementRef = useRef<HTMLDivElement>(null);
+  const selectedActionsRef = useRef<HTMLDivElement>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const [displayHand, setDisplayHand] = useState(player.hand);
   const displayHandRef = useRef(player.hand);
@@ -142,6 +144,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   // drag takes over. That cancel must not wipe the drag state the native drag
   // is still using, or the drop marker dies a few frames into every drag.
   const nativeDragRef = useRef(false);
+  const suppressClickRef = useRef(false);
   const dragStartYRef = useRef<number | null>(null);
   const dragStartXRef = useRef<number | null>(null);
   const pointerDragFinishedRef = useRef(false);
@@ -193,6 +196,58 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const teamLabel = getTeamDisplayName(player.team, teamNames, (team) =>
     tGameInfo(team === 0 ? 'teamRed' : 'teamBlack'),
   );
+
+  const fieldCardsKey = currentField?.cards.join(',') ?? '';
+
+  useEffect(() => {
+    setSelectedCard(null);
+    setSelectedNegriCard(null);
+  }, [gamePhase, gameMode, whoseTurn, currentSeatId, player.seatId, isSpectator, negriCard, fieldCardsKey]);
+
+  useEffect(() => {
+    setSelectedCard((card) => card && player.hand.includes(card) && !pendingHandCard ? card : null);
+    setSelectedNegriCard((card) => card && player.hand.includes(card) && !pendingHandCard ? card : null);
+  }, [player.hand, pendingHandCard]);
+
+  useEffect(() => {
+    if (!selectedCard) return;
+    let active = true;
+    const dismissOutsideSelection = (event: MouseEvent) => {
+      if (!(event.target instanceof Node) ||
+          selectedCardElementRef.current?.contains(event.target) ||
+          selectedActionsRef.current?.contains(event.target)) return;
+      // Capture catches controls that stop bubbling. Defer until their own
+      // action runs, so cancelling never steals a button click or selects a
+      // different card in the same interaction.
+      setTimeout(() => { if (active) setSelectedCard(null); }, 0);
+    };
+    document.addEventListener('click', dismissOutsideSelection, true);
+    return () => {
+      active = false;
+      document.removeEventListener('click', dismissOutsideSelection, true);
+    };
+  }, [selectedCard]);
+
+  const beginHandDrag = () => {
+    suppressClickRef.current = true;
+    setSelectedCard(null);
+    setSelectedNegriCard(null);
+  };
+
+  // Buttons, taps and drops share the same phase/turn checks and send path.
+  const submitHandCard = (card: string, action: CardDropAction) => {
+    if (!canActAsCurrentPlayer || gamePhase !== 'play' || pendingHandCard ||
+        !player.hand.includes(card)) return;
+    if (action === 'play') {
+      if (whoseTurn !== currentSeatId || shouldSelectNegri || !isCardPlayable(card)) return;
+      gameActions.playCard(card);
+    } else {
+      if (!shouldSelectNegri && !canPlaceProNegri) return;
+      gameActions.selectNegri(card);
+    }
+    setSelectedCard(null);
+    setSelectedNegriCard(null);
+  };
 
   useEffect(() => {
     // Pro mode lets the player keep four jacks, so it only reveals on request.
@@ -371,17 +426,24 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const handleCardClick = (card: string) => {
-    if (gameMode === 'pro') return;
-    if (!canActAsCurrentPlayer) {
+    if (suppressClickRef.current) return;
+    if (!canActAsCurrentPlayer || pendingHandCard) {
+      return;
+    }
+
+    if (selectedCard && selectedCard !== card) {
+      setSelectedCard(null);
       return;
     }
 
     if (gamePhase === 'play' && whoseTurn === currentSeatId && isCardPlayable(card)) {
-      if (!negriCard && currentHighestDeclaration?.seatId === player.seatId) {
+      if (shouldSelectNegri) {
         if (shouldPlayCardSelectionSound(selectedNegriCard, card)) {
           onCardSelection();
         }
         setSelectedNegriCard(card);
+      } else if (selectedCard === card) {
+        submitHandCard(card, 'play');
       } else {
         if (shouldPlayCardSelectionSound(selectedCard, card)) {
           onCardSelection();
@@ -444,9 +506,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     const card = heldDndCard(event);
     const action = card ? proDropAction(event) : null;
     if (card && action === 'negri') {
-      gameActions.selectNegri(card);
+      submitHandCard(card, 'negri');
     } else if (card && action === 'play') {
-      gameActions.playCard(card);
+      submitHandCard(card, 'play');
     } else if (card) {
       // The placement is read from the release point because the release can
       // arrive before the last move has re-rendered.
@@ -469,7 +531,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return (
         <DndContext
           sensors={sensors}
-          onDragStart={({ active }) => setActiveDragCard(String(active.data.current?.card ?? ''))}
+          onDragStart={({ active }) => {
+            beginHandDrag();
+            setActiveDragCard(String(active.data.current?.card ?? ''));
+          }}
           onDragMove={handleDndMove}
           onDragCancel={() => {
             setDropAction(null);
@@ -484,6 +549,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             if (canActAsCurrentPlayer && gameMode !== 'pro') {
               const deltaY = dragStartYRef.current === null ? 0 : event.clientY - dragStartYRef.current;
               const deltaX = dragStartXRef.current === null ? 0 : event.clientX - dragStartXRef.current;
+              if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 6) beginHandDrag();
               setDragOffset({ x: deltaX, y: deltaY });
               updatePointerDropPlacement(event);
             }
@@ -531,6 +597,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   }
                 }}
                 onPointerDown={(event) => {
+                  suppressClickRef.current = false;
                   if (canActAsCurrentPlayer && gameMode !== 'pro') {
                     pointerDragFinishedRef.current = false;
                     // Normal mode still uses the local pointer path for hand
@@ -544,6 +611,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   }
                 }}
                 onPointerUp={gameMode === 'pro' ? undefined : finishPointerDrag}
+                ref={card === selectedCard ? selectedCardElementRef : undefined}
                 data-hand-card={card}
                 onDragStart={(event) => {
                   if (!canActAsCurrentPlayer) {
@@ -553,6 +621,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
                   event.dataTransfer.setData('text/plain', card);
                   event.dataTransfer.effectAllowed = 'move';
+                  beginHandDrag();
                   nativeDragRef.current = true;
                   setDraggingCard(card);
                   setDropPlacement(null);
@@ -601,23 +670,23 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             );
           })}
           {gameMode !== 'pro' && !isSpectator && selectedCard && (
-            <PlayAndCancelBtn
-              setSelectedCard={setSelectedCard}
-              onCancel={onCancel}
-              onClick={() => {
-                gameActions.playCard(selectedCard);
-                setSelectedCard(null);
-              }}
-              buttonText={t('play')}
-            />
+            <div ref={selectedActionsRef}>
+              <PlayAndCancelBtn
+                setSelectedCard={setSelectedCard}
+                onCancel={onCancel}
+                onClick={() => {
+                  submitHandCard(selectedCard, 'play');
+                }}
+                buttonText={t('play')}
+              />
+            </div>
           )}
           {gameMode !== 'pro' && !isSpectator && selectedNegriCard && (
             <PlayAndCancelBtn
               setSelectedCard={setSelectedNegriCard}
               onCancel={onCancel}
               onClick={() => {
-                gameActions.selectNegri(selectedNegriCard);
-                setSelectedNegriCard(null);
+                submitHandCard(selectedNegriCard, 'negri');
               }}
               buttonText={t('negri')}
             />
