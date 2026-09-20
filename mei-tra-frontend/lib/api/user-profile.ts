@@ -53,6 +53,7 @@ function mapPreferencesForTransport(
     sound: preferences.sound,
     fontSize: preferences.fontSize,
     startPlayerAnimation: preferences.startPlayerAnimation,
+    cardDesign: preferences.cardDesign,
   };
 
   const theme = resolveTransportTheme(preferences.theme);

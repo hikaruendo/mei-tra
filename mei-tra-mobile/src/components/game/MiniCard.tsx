@@ -1,7 +1,6 @@
-import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { resolveCardArt } from '@/lib/card-art-assets';
+import { CardArtwork } from './CardArtwork';
 import { parseCard } from '@/lib/cards';
 import { palette } from '@/theme/palette';
 import { radius } from '@/theme/radius';
@@ -27,22 +26,13 @@ export function MiniCard({
   const ink = isRed ? palette.card.red : palette.card.ink;
 
   if (faceDown) {
-    const back = resolveCardArt(card, true);
     return (
       <View
         accessibilityLabel={t('a11y.faceDownCard')}
         style={[styles.chip, styles.backChip]}
       >
         <View style={styles.artClip}>
-          {back.kind === 'vector' ? (
-            <back.Svg height="100%" preserveAspectRatio="none" width="100%" />
-          ) : (
-            <Image
-              contentFit="fill"
-              source={back.source}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
+          <CardArtwork card={card} faceDown fill />
         </View>
       </View>
     );
@@ -53,22 +43,13 @@ export function MiniCard({
   // .jokerCardFace, an <img> at 100%/100%, i.e. object-fit: fill).
   // preserveAspectRatio="none" is what reproduces that fill on the SVG side.
   if (card === 'JOKER') {
-    const art = resolveCardArt(card);
     return (
       <View accessibilityLabel={t('a11y.joker')} style={styles.chip}>
         {/* The clip lives on an inner view, as in PlayingCard: `overflow:
             hidden` on the chip itself would set masksToBounds and swallow the
             iOS layer shadow, which is painted outside the layer bounds. */}
         <View style={styles.artClip}>
-          {art.kind === 'vector' ? (
-            <art.Svg height="100%" preserveAspectRatio="none" width="100%" />
-          ) : (
-            <Image
-              contentFit="fill"
-              source={art.source}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
+          <CardArtwork card={card} fill />
         </View>
       </View>
     );

@@ -46,6 +46,36 @@ describe('UserProfileController', () => {
       overrides.deleteAccountUseCase ?? { execute: jest.fn() },
     );
 
+  it('persists and returns the requested card design', async () => {
+    const update = jest.fn().mockResolvedValue({
+      ...currentUser.profile,
+      preferences: { ...currentUser.profile.preferences, cardDesign: 'densho' },
+    });
+    const controller = new UserProfileController(
+      { update } as unknown as IUserProfileRepository,
+      {} as IAvatarStorage,
+      { execute: jest.fn() },
+      { execute: jest.fn() },
+    );
+    await expect(
+      controller.updateProfile('user-1', currentUser, {
+        preferences: { cardDesign: 'densho' },
+      }),
+    ).resolves.toMatchObject({ preferences: { cardDesign: 'densho' } });
+    expect(update).toHaveBeenCalledWith('user-1', {
+      preferences: { cardDesign: 'densho' },
+    });
+  });
+
+  it('rejects unknown card designs before writing', async () => {
+    const controller = createController();
+    await expect(
+      controller.updateProfile('user-1', currentUser, {
+        preferences: { cardDesign: 'unknown' as 'standard' },
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
   it('returns the current user recent game history as DTOs', async () => {
     const getUserRecentGameHistoryUseCase: IGetUserRecentGameHistoryUseCase = {
       execute: jest.fn().mockResolvedValue([

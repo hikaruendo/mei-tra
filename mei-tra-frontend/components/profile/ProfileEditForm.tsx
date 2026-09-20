@@ -17,6 +17,7 @@ import {
 } from '@/lib/utils/imageOptimizer';
 import { clearPlayerProfileCache } from '@/lib/utils/profileUtils';
 import { normalizeUserPreferences } from '@/lib/preferences';
+import { CardDesignPicker } from './CardDesignPicker';
 import styles from './ProfileEditForm.module.scss';
 
 interface ProfileEditFormProps {
@@ -331,6 +332,17 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
             <span className={styles.checkboxText}>{t('startPlayerAnimation')}</span>
           </label>
         </div>
+      </div>
+
+      <div className={styles.formSection}>
+        <CardDesignPicker
+          value={formData.preferences.cardDesign ?? 'standard'}
+          disabled={isSaving}
+          onChange={(cardDesign) => setFormData(prev => ({
+            ...prev,
+            preferences: { ...prev.preferences, cardDesign },
+          }))}
+        />
       </div>
 
       {error && (

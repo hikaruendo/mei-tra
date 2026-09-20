@@ -1,3 +1,5 @@
+import type { CardDesign } from '@meitra/contracts/profile';
+
 /**
  * Maps a wire card string to the id of its artwork.
  *
@@ -56,4 +58,32 @@ export function cardToSvgId(card: string): string {
 
 export function isCourtArtId(id: string): boolean {
   return (COURT_RANKS as readonly string[]).includes(id.split('_')[0]);
+}
+
+export const CARD_DESIGNS = ['standard', 'densho'] as const satisfies readonly CardDesign[];
+
+export function normalizeCardDesign(value: unknown): CardDesign {
+  return value === 'densho' ? 'densho' : 'standard';
+}
+
+/** Original scans remain intact; these viewports exclude print marks/bleed. */
+export const DENSHO_ART = {
+  card_back: { width: 1149, height: 1576, viewBox: '175 175 799 1227' },
+  joker_red: { width: 799, height: 1228, viewBox: '0 0 799 1228' },
+  A_S: { width: 1149, height: 1576, viewBox: '184 184 785 1211' },
+} as const;
+
+export type DenshoArtId = keyof typeof DENSHO_ART;
+
+/** Only supplied faces are replaced. All other ranks retain their own art. */
+export function resolveDenshoArtId(
+  card: string,
+  faceDown: boolean,
+  design: CardDesign,
+): DenshoArtId | null {
+  if (design !== 'densho') return null;
+  const id = faceDown ? CARD_BACK_ID : cardToSvgId(card);
+  return Object.prototype.hasOwnProperty.call(DENSHO_ART, id)
+    ? id as DenshoArtId
+    : null;
 }

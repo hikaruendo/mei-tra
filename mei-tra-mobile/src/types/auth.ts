@@ -1,3 +1,5 @@
+import type { CardDesign } from '@meitra/contracts/profile';
+
 export interface MobileUserProfile {
   displayName: string;
   username: string;
@@ -6,6 +8,7 @@ export interface MobileUserProfile {
   sound: boolean;
   /** Defaults to true for profiles saved before the setting existed. */
   startPlayerAnimation: boolean;
+  cardDesign?: CardDesign;
 }
 
 export interface MobileAuthUser {

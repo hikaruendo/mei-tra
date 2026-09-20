@@ -287,6 +287,11 @@
     "retryConnect": "Try reconnecting"
   },
   "settings": {
+    "saving": "Saving…",
+    "cardDesign": "Card design",
+    "cardDesignHint": "Choose how cards look on your screen. The Meitra Heritage Project replaces the back, Tanzen and ace of spades.",
+    "cardDesign_standard": "Standard",
+    "cardDesign_densho": "Meitra Heritage Project",
     "back": "Back",
     "backToRooms": "Back to room list",
     "subtitle": "Profile and settings",

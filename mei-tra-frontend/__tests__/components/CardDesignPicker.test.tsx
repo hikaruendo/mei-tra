@@ -1,0 +1,37 @@
+import { useState } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { CardDesignPicker } from '@/components/profile/CardDesignPicker';
+import { CardFace } from '@/components/game/CardFace';
+import { CardDesignContext } from '@/contexts/CardDesignContext';
+import type { CardDesign } from '@meitra/contracts/profile';
+
+jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+
+it('changes the selected preview without changing the saved game design', () => {
+  function Preview() {
+    const [design, setDesign] = useState<CardDesign>('standard');
+    return <><CardDesignPicker value={design} onChange={setDesign} /><CardFace card="A♠" /></>;
+  }
+  render(<Preview />);
+  fireEvent.click(screen.getByRole('radio', { name: 'cardDesign_densho' }));
+  expect(screen.getByRole('radio', { name: 'cardDesign_densho' })).toBeChecked();
+  expect(screen.getByRole('img', { name: 'A♠' })).toHaveAttribute('src', '/cards/A_S.svg');
+});
+
+it('updates all supplied artwork when the signed-in profile changes, retaining other faces', () => {
+  const cards = <><CardFace card="A♠" /><CardFace card="JOKER" /><CardFace faceDown /><CardFace card="K♥" /></>;
+  const { rerender, container } = render(<CardDesignContext.Provider value="standard">{cards}</CardDesignContext.Provider>);
+  expect(container.querySelectorAll('svg image')).toHaveLength(0);
+  rerender(<CardDesignContext.Provider value="densho">{cards}</CardDesignContext.Provider>);
+  expect([...container.querySelectorAll('svg image')].map(image => image.getAttribute('href'))).toEqual([
+    '/cards/densho/A_S.jpg', '/cards/densho/joker_red.jpg', '/cards/densho/card_back.jpg',
+  ]);
+  expect(screen.getByRole('img', { name: 'K♥' })).toHaveAttribute('src', '/cards/K_H.svg');
+  rerender(<CardDesignContext.Provider value="standard">{cards}</CardDesignContext.Provider>);
+  expect(screen.getByRole('img', { name: 'A♠' })).toHaveAttribute('src', '/cards/A_S.svg');
+});
+
+it('disables both designs during save', () => {
+  render(<CardDesignPicker value="densho" onChange={jest.fn()} disabled />);
+  screen.getAllByRole('radio').forEach(radio => expect(radio).toBeDisabled());
+});

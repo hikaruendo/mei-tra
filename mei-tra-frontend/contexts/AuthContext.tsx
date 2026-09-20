@@ -1,5 +1,8 @@
 'use client';
 
+import { CardDesignContext } from '@/contexts/CardDesignContext';
+import { normalizeCardDesign } from '@meitra/game-client/card-art';
+
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -560,7 +563,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setFontSizePreference,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <CardDesignContext.Provider value={normalizeCardDesign(user?.profile?.preferences.cardDesign)}>
+        {children}
+      </CardDesignContext.Provider>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

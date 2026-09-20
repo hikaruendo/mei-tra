@@ -1,3 +1,5 @@
+import { CardDesignContext } from '@/context/CardDesignContext';
+import { normalizeCardDesign } from '@meitra/game-client/card-art';
 import type { Session, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -75,6 +77,7 @@ const mapProfile = (
   record: Awaited<ReturnType<typeof fetchPlayerProfile>>,
 ): MobileUserProfile => {
   return {
+    cardDesign: normalizeCardDesign(record.preferences.cardDesign),
     displayName: record.displayName,
     username: record.username,
     avatarUrl: record.avatarUrl,
@@ -400,7 +403,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     ],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <CardDesignContext.Provider value={normalizeCardDesign(user?.profile?.cardDesign)}>
+        {children}
+      </CardDesignContext.Provider>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

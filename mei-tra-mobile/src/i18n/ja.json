@@ -287,6 +287,11 @@
     "retryConnect": "再接続を試す"
   },
   "settings": {
+    "saving": "保存中…",
+    "cardDesign": "カードデザイン",
+    "cardDesignHint": "自分の画面に表示するカードを選べます。明トラ伝承プロジェクトは裏面・タンゼン・スペードAが専用画像になります。",
+    "cardDesign_standard": "標準",
+    "cardDesign_densho": "明トラ伝承プロジェクト",
     "back": "戻る",
     "backToRooms": "部屋一覧へ戻る",
     "subtitle": "プロフィールと設定",

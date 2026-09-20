@@ -1,4 +1,4 @@
-import type { FontSizePreset } from '@contracts/profile';
+import type { CardDesign, FontSizePreset } from '@contracts/profile';
 
 export interface UserProfile {
   id: string; // Supabase auth user ID
@@ -24,8 +24,9 @@ export interface UserPreferences {
   sound: boolean;
   theme: 'light' | 'dark';
   fontSize: FontSizePreset;
-  /** Optional: profiles created before the setting existed omit it. */
+  /** Optional: profiles created before these settings existed omit them. */
   startPlayerAnimation?: boolean;
+  cardDesign?: CardDesign;
 }
 
 export interface CreateUserProfileDto {

@@ -15,6 +15,7 @@ import {
   SettingsCard,
   SettingsScaffold,
 } from '@/components/settings/SettingsScaffold';
+import { CardDesignSettings } from '@/components/settings/CardDesignSettings';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
@@ -194,6 +195,7 @@ export default function ProfileSettingsScreen() {
           </Text>
         ) : null}
       </SettingsCard>
+      <CardDesignSettings />
     </SettingsScaffold>
   );
 }

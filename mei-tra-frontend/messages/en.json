@@ -951,6 +951,10 @@
     "convertedToComNotice": "{playerName} was replaced with COM after being disconnected too long."
   },
   "profile": {
+    "cardDesign": "Card design",
+    "cardDesignHint": "Choose how cards look on your screen. The Meitra Heritage Project replaces the back, Tanzen and ace of spades.",
+    "cardDesign_standard": "Standard",
+    "cardDesign_densho": "Meitra Heritage Project",
     "title": "Profile",
     "loading": "Loading profile...",
     "loginRequired": "Login required to view profile",
