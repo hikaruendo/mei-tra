@@ -34,11 +34,11 @@ it.each<CardDesign>(['standard', 'densho'])('preloads every displayed face and b
   expect(requests).toEqual(expect.arrayContaining(displayed));
 });
 
-it('preloads all 51 styled faces when the saved design changes', () => {
+it('preloads all 54 images when the saved design changes', () => {
   const { rerender } = render(<CardDesignContext.Provider value="standard"><Deck /></CardDesignContext.Provider>);
   expect(requests.some(src => src.includes('/densho/'))).toBe(false);
   requests = [];
   rerender(<CardDesignContext.Provider value="densho"><Deck /></CardDesignContext.Provider>);
-  expect(requests.filter(src => src.endsWith('.webp'))).toHaveLength(51);
+  expect(requests.filter(src => src.includes('.webp?v='))).toHaveLength(54);
   expect(new Set(requests).size).toBe(54);
 });

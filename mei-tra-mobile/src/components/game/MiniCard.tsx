@@ -32,7 +32,7 @@ export function MiniCard({
         style={[styles.chip, styles.backChip]}
       >
         <View style={styles.artClip}>
-          <CardArtwork card={card} faceDown fill />
+          <CardArtwork card={card} faceDown fill width={22} />
         </View>
       </View>
     );
@@ -49,7 +49,7 @@ export function MiniCard({
             hidden` on the chip itself would set masksToBounds and swallow the
             iOS layer shadow, which is painted outside the layer bounds. */}
         <View style={styles.artClip}>
-          <CardArtwork card={card} fill />
+          <CardArtwork card={card} fill width={22} />
         </View>
       </View>
     );

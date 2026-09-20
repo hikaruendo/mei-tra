@@ -1,3 +1,5 @@
+import rendering from './densho-rendering.json';
+export { DENSHO_ASSET_REVISION } from './densho-revision';
 import type { CardDesign } from '@meitra/contracts/profile';
 
 /**
@@ -66,12 +68,8 @@ export function normalizeCardDesign(value: unknown): CardDesign {
   return value === 'densho' ? 'densho' : 'standard';
 }
 
-/** Original scans remain intact; these viewports exclude print marks/bleed. */
-export const DENSHO_ART = {
-  card_back: { width: 1149, height: 1576, viewBox: '175 175 799 1227' },
-  joker_red: { width: 799, height: 1228, viewBox: '0 0 799 1228' },
-  A_S: { width: 1149, height: 1576, viewBox: '184 184 785 1211' },
-} as const;
+/** Original scans remain intact; the builder trims their print marks. */
+export const DENSHO_ART = rendering.originals;
 
 export type DenshoArtId = keyof typeof DENSHO_ART;
 
@@ -99,4 +97,15 @@ export function resolveDenshoStyledArtId(
   return CARD_ART_IDS.includes(id) && !Object.prototype.hasOwnProperty.call(DENSHO_ART, id)
     ? id
     : null;
+}
+
+/** Choose a prefiltered image at or above the rendered physical pixel width. */
+export function denshoImageSize(pixelWidth: number): 'small' | 'medium' | 'large' {
+  if (pixelWidth <= rendering.widths.small) return 'small';
+  if (pixelWidth <= rendering.widths.medium) return 'medium';
+  return 'large';
+}
+
+export function denshoImagePath(id: string, size: 'small' | 'medium' | 'large' = 'large'): string {
+  return `/cards/densho/styled/${size === 'large' ? '' : `${size}/`}${id}.webp`;
 }

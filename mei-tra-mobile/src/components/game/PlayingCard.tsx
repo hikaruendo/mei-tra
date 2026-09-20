@@ -80,7 +80,7 @@ function PlayingCardComponent({
       ]}
     >
       <View style={[styles.clip, { borderRadius: radius }]}>
-        <CardArtwork card={card} faceDown={faceDown} design={design} />
+        <CardArtwork card={card} faceDown={faceDown} design={design} width={w} />
         {disabled ? (
           // Web dims with `filter: brightness(.45) saturate(.3)`, which React
           // Native has no dependable cross-platform equivalent for. A scrim

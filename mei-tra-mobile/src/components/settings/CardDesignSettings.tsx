@@ -47,7 +47,7 @@ export function CardDesignSettings() {
           <View style={styles.preview} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             {[undefined, 'A♠', 'JOKER'].map((card) => (
               <View key={card ?? 'back'} style={styles.card}>
-                <CardArtwork card={card} faceDown={!card} design={design} />
+                <CardArtwork card={card} faceDown={!card} design={design} width={64} />
               </View>
             ))}
           </View>

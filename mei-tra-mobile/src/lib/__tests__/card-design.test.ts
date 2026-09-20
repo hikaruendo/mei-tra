@@ -1,5 +1,5 @@
 import { DENSHO_STYLED_SOURCES } from '../densho-card-assets';
-import { CARD_ART_IDS, normalizeCardDesign, resolveDenshoArtId, resolveDenshoStyledArtId } from '@meitra/game-client/card-art';
+import { CARD_ART_IDS, denshoImageSize, normalizeCardDesign, resolveDenshoArtId, resolveDenshoStyledArtId } from '@meitra/game-client/card-art';
 
 it('defaults old and unknown profile values to standard', () => {
   for (const value of [undefined, null, 'unknown', 'standard']) {
@@ -18,7 +18,7 @@ it('overrides only supplied card art and always conceals face-down cards', () =>
 });
 
 it('ships a matching face for every non-original card without exposing face-down art', () => {
-  const expected = CARD_ART_IDS.filter(id => !['A_S', 'card_back', 'joker_red'].includes(id));
+  const expected = [...CARD_ART_IDS];
   expect(Object.keys(DENSHO_STYLED_SOURCES).sort()).toEqual(expected.sort());
   expect(resolveDenshoStyledArtId('Q♥', false, 'densho')).toBe('Q_H');
   expect(resolveDenshoStyledArtId('Q♥', true, 'densho')).toBeNull();
@@ -26,4 +26,13 @@ it('ships a matching face for every non-original card without exposing face-down
   expect(resolveDenshoStyledArtId('A♠', false, 'densho')).toBeNull();
   expect(resolveDenshoStyledArtId('JOKER', false, 'densho')).toBeNull();
   expect(resolveDenshoStyledArtId('unknown', false, 'densho')).toBeNull();
+});
+
+it('selects thumbnails using physical pixels, preserving resolution on dense screens', () => {
+  expect(denshoImageSize(30 * 3)).toBe('small');
+  expect(denshoImageSize(60 * 3)).toBe('medium');
+  expect(denshoImageSize(80 * 3)).toBe('large');
+  for (const sources of Object.values(DENSHO_STYLED_SOURCES)) {
+    expect(Object.keys(sources).sort()).toEqual(['large', 'medium', 'small']);
+  }
 });

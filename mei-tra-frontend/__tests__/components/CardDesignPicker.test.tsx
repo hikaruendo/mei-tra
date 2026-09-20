@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { CardDesignPicker } from '@/components/profile/CardDesignPicker';
 import { CardFace } from '@/components/game/CardFace';
 import { CardDesignContext } from '@/contexts/CardDesignContext';
+import { DENSHO_ASSET_REVISION, denshoImagePath } from '@meitra/game-client/card-art';
 import type { CardDesign } from '@meitra/contracts/profile';
 
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
@@ -23,10 +24,9 @@ it('updates all supplied artwork when the signed-in profile changes, retuning ot
   const { rerender, container } = render(<CardDesignContext.Provider value="standard">{cards}</CardDesignContext.Provider>);
   expect(container.querySelectorAll('svg image')).toHaveLength(0);
   rerender(<CardDesignContext.Provider value="densho">{cards}</CardDesignContext.Provider>);
-  expect([...container.querySelectorAll('svg image')].map(image => image.getAttribute('href'))).toEqual([
-    '/cards/densho/A_S.jpg', '/cards/densho/joker_red.jpg', '/cards/densho/card_back.jpg',
-  ]);
-  expect(screen.getByRole('img', { name: 'K♥' })).toHaveAttribute('src', '/cards/densho/styled/K_H.webp');
+  for (const [label, id] of [['A♠', 'A_S'], ['JOKER', 'joker_red'], ['Card back', 'card_back'], ['K♥', 'K_H']]) {
+    expect(screen.getByRole('img', { name: label })).toHaveAttribute('src', `${denshoImagePath(id)}?v=${DENSHO_ASSET_REVISION}`);
+  }
   rerender(<CardDesignContext.Provider value="standard">{cards}</CardDesignContext.Provider>);
   expect(screen.getByRole('img', { name: 'A♠' })).toHaveAttribute('src', '/cards/A_S.svg');
 });
