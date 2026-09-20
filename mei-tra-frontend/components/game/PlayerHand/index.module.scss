@@ -124,11 +124,16 @@
 }
 
 /* Card states */
-/* dnd-kit does not capture the pointer, so while a pro-mode card is held the
-   cards it passes over would take :hover and lift one after another. The
-   :where() keeps these selectors at their old specificity. */
-.card.selected,
-:where(.handContainer:not(.holdingCard)) .card:hover {
+/* Hover must not move its own hit area or its neighbours: at a card edge,
+   lifting/resizing it repeatedly toggles :hover under a stationary cursor.
+   Keep the lift for an explicit selection and use paint-only hover feedback. */
+@media (hover: hover) and (pointer: fine) {
+  :where(.handContainer:not(.holdingCard)) .card:not(.spectatorCard):hover {
+    box-shadow: var(--shadow-selected);
+  }
+}
+
+.card.selected {
   transform: translateY(calc((var(--card-translate-y, 0px) - var(--player-hand-card-hover-lift, 28px)) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
   z-index: calc(var(--card-index, 0) + 1) !important;
   margin: 0 var(--player-hand-card-scaled-hover-overlap, calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale)));
@@ -222,11 +227,6 @@
 .spectatorCard {
   cursor: default;
   filter: none;
-}
-
-.spectatorCard:hover {
-  transform: translateY(calc(var(--card-translate-y, 0px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) !important;
-  margin: 0 var(--player-hand-card-scaled-overlap, calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale)));
 }
 
 
@@ -1023,8 +1023,7 @@
     aspect-ratio: 2 / 3;
   }
 
-  .card.selected,
-  :where(.handContainer:not(.holdingCard)) .card:hover {
+  .card.selected {
     transform: translateY(calc(-20px * var(--mt-card-scale))) rotate(0deg) scale(1.1) !important;
     z-index: var(--z-index-card);
     margin: 0 var(--spacing-md);
@@ -1317,8 +1316,7 @@
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
   }
 
-  .playerPosition.bottom .card.selected,
-  .playerPosition.bottom :where(.handContainer:not(.holdingCard)) .card:hover {
+  .playerPosition.bottom .card.selected {
     z-index: calc(var(--card-index, 0) + 1) !important;
     transform: translateY(calc((var(--card-translate-y, 0px) - 26px) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
     /* Opens up a little around the raised card, but only a little past the
