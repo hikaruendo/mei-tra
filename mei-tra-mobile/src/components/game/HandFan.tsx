@@ -320,6 +320,7 @@ function HandFanCard({
   selected,
   showsNegriLabel,
 }: HandFanCardProps) {
+  const suppressPressRef = useRef(false);
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   // PanResponder is built once and keeps the callbacks it was given, so they
   // read the current props through this ref instead of the first render's.
@@ -371,11 +372,17 @@ function HandFanCard({
       // A tap has to keep reaching the card underneath, so the drag only claims
       // the touch after a meaningful horizontal or vertical movement. Capturing is what lets it take
       // the touch off the Pressable that is already holding it.
-      onStartShouldSetPanResponderCapture: () => false,
+      onStartShouldSetPanResponderCapture: () => {
+        suppressPressRef.current = false;
+        return false;
+      },
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
         live.current.canReorder &&
         Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) > DRAG_ACTIVATE_PX,
-      onPanResponderGrant: () => live.current.onDragStart(),
+      onPanResponderGrant: () => {
+        suppressPressRef.current = true;
+        live.current.onDragStart();
+      },
       onPanResponderMove: (_event, gesture) => {
         pan.setValue({ x: gesture.dx, y: gesture.dy });
         live.current.onDragMove(gesture);
@@ -447,7 +454,9 @@ function HandFanCard({
             const action = dropActions.find((candidate) => candidate === name);
             if (action) onAccessibilityDrop(action);
           }}
-          onPress={onPress}
+          onPress={onPress ? () => {
+            if (!suppressPressRef.current) onPress();
+          } : undefined}
           selected={selected}
           width={cardWidth}
         />

@@ -258,7 +258,13 @@ export const useGame = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   // The card sent to the field or to Negri, hidden from the hand until the
   // server answers (shared/game-client/pending-hand-card.ts).
-  const [pendingHandCard, setPendingHandCard] = useState<string | null>(null);
+  const [pendingHandCard, setPendingHandCardState] = useState<string | null>(null);
+  // One writer keeps the render state and the synchronous send guard in sync.
+  const pendingHandCardRef = useRef<string | null>(null);
+  const setPendingHandCard = useCallback((card: string | null) => {
+    pendingHandCardRef.current = card;
+    setPendingHandCardState(card);
+  }, []);
   const [gameStarted, setGameStarted] = useState(false);
   const [gamePhase, setGamePhase] = useState<GamePhase>(null);
   const [whoseTurn, setWhoseTurn] = useState<string | null>(null);
@@ -325,7 +331,7 @@ export const useGame = () => {
     return () => {
       pendingNegriCardRef.current = null;
     };
-  }, [isConnected]);
+  }, [isConnected, setPendingHandCard]);
 
   // Loading state details
   const [loadingState, setLoadingState] = useState<{
@@ -406,7 +412,7 @@ export const useGame = () => {
       PENDING_HAND_CARD_TIMEOUT_MS,
     );
     return () => clearTimeout(timeout);
-  }, [pendingHandCard, players, currentSeatId]);
+  }, [pendingHandCard, players, currentSeatId, setPendingHandCard]);
 
   const resetRoomState = useCallback(() => {
     pendingNegriCardRef.current = null;
@@ -445,7 +451,7 @@ export const useGame = () => {
     setPointsToWin(0);
     setPaused(false);
     sessionStorage.removeItem('roomId');
-  }, []);
+  }, [setPendingHandCard]);
 
   const getTeamLabel = useCallback(
     (team: Team) =>
@@ -1362,6 +1368,7 @@ export const useGame = () => {
     updatePlayersLocally,
     syncCurrentPlayerIdentity,
     resetRoomState,
+    setPendingHandCard,
     resetBlowState,
     syncDisconnectedSeatIdsFromPlayers,
     getTeamLabel,
@@ -1454,18 +1461,20 @@ export const useGame = () => {
       });
     },
     selectNegri: (card: string) => {
+      if (pendingHandCardRef.current || !isConnected || paused || isSpectator || gamePhase !== 'play') return;
       if (!socket || !currentRoomId) {
         pendingNegriCardRef.current = null;
         return;
       }
       pendingNegriCardRef.current = card;
+      setPendingHandCard(card);
       socket.emit('select-negri', {
         roomId: currentRoomId,
         card,
       });
-      setPendingHandCard(card);
     },
     playCard: (card: string) => {
+      if (pendingHandCardRef.current || !isConnected || paused || isSpectator || gamePhase !== 'play') return;
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnPlay'), type: 'error' });
         return;
@@ -1477,8 +1486,8 @@ export const useGame = () => {
         roomId: currentRoomId,
         card,
       };
-      socket.emit('play-card', payload);
       setPendingHandCard(card);
+      socket.emit('play-card', payload);
     },
     reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => {
       if (!currentRoomId) return;

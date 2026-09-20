@@ -14,7 +14,7 @@ import type {
   GameHistorySummaryContract,
 } from '@meitra/contracts/game-history';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Modal,
@@ -119,9 +119,14 @@ export function GameBoard({
   pendingHandCard = null,
 }: GameBoardProps) {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<
+  const [pendingAction, setPendingActionState] = useState<
     'card' | 'negri' | 'suit' | null
   >(null);
+  const pendingActionRef = useRef<typeof pendingAction>(null);
+  const setPendingAction = useCallback((action: typeof pendingAction) => {
+    pendingActionRef.current = action;
+    setPendingActionState(action);
+  }, []);
   const [leaving, setLeaving] = useState(false);
   const [showStrength, setShowStrength] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -350,20 +355,25 @@ export function GameBoard({
   useEffect(() => {
     setSelectedCard(null);
     setPendingAction(null);
-  }, [game.gamePhase, game.youSeatId]);
+  }, [game.gamePhase, game.youSeatId, setPendingAction]);
 
   useEffect(() => {
     setPendingAction(null);
-    if (actionsDisabled) {
-      setSelectedCard(null);
-    }
+    setSelectedCard(null);
   }, [
     actionsDisabled,
     game.currentTurnSeatId,
     fieldCardsKey,
     game.blowState.currentHighestDeclaration?.timestamp,
     game.negriCard,
+    game.gameMode,
+    game.isSpectator,
+    setPendingAction,
   ]);
+
+  useEffect(() => {
+    setSelectedCard((card) => card && self?.hand.includes(card) && !pendingHandCard ? card : null);
+  }, [self?.hand, pendingHandCard]);
 
   // A round can end while the sheet is open; without this it would pop back
   // open the next time a report becomes possible.
@@ -388,6 +398,7 @@ export function GameBoard({
   );
 
   const markPending = (action: 'card' | 'negri' | 'suit') => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setPendingAction(action);
     timeoutRef.current = setTimeout(() => setPendingAction(null), 1800);
   };
@@ -399,30 +410,44 @@ export function GameBoard({
     timeoutRef.current = setTimeout(() => setLeaving(false), 1800);
   };
 
-  const confirmSelected = () => {
-    if (actionsDisabled || !selectedCard || pendingAction) return;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (mustSelectNegri) {
-      markPending('negri');
-      onSelectNegri(selectedCard);
-    } else {
-      markPending('card');
-      onPlayCard(selectedCard);
+  const submitHandCard = (card: string, action: CardDropAction) => {
+    if (actionsDisabled || pendingActionRef.current || pendingHandCard ||
+        !isHandPlayPhase || !self?.hand.includes(card)) return;
+    if (action === 'play') {
+      if (!isMyTurn || mustSelectNegri ||
+          (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump))) return;
+    } else if (!mustSelectNegri && !canPlaceProNegri) {
+      return;
     }
+    markPending(action === 'negri' ? 'negri' : 'card');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (action === 'negri') onSelectNegri(card);
+    else onPlayCard(card);
     setSelectedCard(null);
   };
 
-  const toggleSelectedCard = (card: string) => {
+  const confirmSelected = () => {
+    if (selectedCard) submitHandCard(selectedCard, mustSelectNegri ? 'negri' : 'play');
+  };
+
+  const selectOrPlayCard = (card: string) => {
+    if (actionsDisabled || pendingActionRef.current || pendingHandCard ||
+        !isHandPlayPhase || !isMyTurn || !self?.hand.includes(card) ||
+        (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump))) return;
     if (selectedCard === card) {
-      setSelectedCard(null);
+      // Negri keeps its explicit confirmation; a repeated tap only deselects it.
+      if (mustSelectNegri) setSelectedCard(null);
+      else submitHandCard(card, 'play');
       return;
     }
-
-    if (shouldPlayCardSelectionSound(selectedCard, card)) {
-      onCardSelection();
-    }
+    if (shouldPlayCardSelectionSound(selectedCard, card)) onCardSelection();
     setSelectedCard(card);
   };
+
+  const handleHandDragActiveChange = useCallback((active: boolean) => {
+    setHandDragActive(active);
+    if (active) setSelectedCard(null);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -730,31 +755,29 @@ export function GameBoard({
                 isHandPlayPhase &&
                   (actionsDisabled ||
                   Boolean(pendingAction) ||
+                  Boolean(pendingHandCard) ||
                   (!isProMode &&
                     (!isMyTurn ||
                       !isCardPlayable(self.hand, card, game.currentField, currentTrump))))
               }
               onReorder={onHandReorder}
-              onDragActiveChange={setHandDragActive}
+              onDragActiveChange={handleHandDragActiveChange}
               dropActions={proDropActions}
               negriDropTarget={canPlaceProNegri ? selfInfoRef : undefined}
               onDropPreview={setHandDropPreview}
               onDropAction={(card, action) => {
                 if (!proDropActions.includes(action)) return;
-                if (action === 'negri') onSelectNegri(card);
-                else onPlayCard(card);
+                submitHandCard(card, action);
               }}
-              // Pro mode plays by dragging only, as the web hand does
-              // (PlayerHand handleCardClick), so a tap selects nothing.
               onSelectCard={
-                isHandPlayPhase && !isProMode ? toggleSelectedCard : undefined
+                isHandPlayPhase ? selectOrPlayCard : undefined
               }
               reducedMotion={reducedMotion}
               seatId={self.seatId}
               selectedCard={selectedCard}
             />
 
-            {game.gamePhase === 'play' && selectedCard ? (
+            {!isProMode && game.gamePhase === 'play' && selectedCard ? (
               <View style={styles.selectedActions}>
                 {/* Cancel sits left, confirm right — the destructive/back action
                     on the outside, the primary action under the thumb. */}

@@ -215,6 +215,22 @@ const cardOrder = (renderer: Renderer): string[] =>
     .map((node) => (node.props.testID as string).replace('hand-card-', ''));
 
 describe('HandFan', () => {
+  it('suppresses a press following a drag, then accepts a new touch', () => {
+    const onSelectCard = jest.fn();
+    const renderer = render({ onSelectCard });
+    const press = () => (renderer.root.find(
+      (node) => node.props.width === CARD_WIDTH && node.props.card === 'A' && typeof node.props.onPress === 'function',
+    ).props.onPress as () => void)();
+    drag(renderer, 'A', 2 * PITCH);
+    act(() => press());
+    expect(onSelectCard).not.toHaveBeenCalled();
+    const point = { x: START_X, y: START_Y, at: 0 };
+    act(() => { handlersFor(renderer, 'A').onStartShouldSetResponderCapture(touchEvent(point, point)); });
+    act(() => press());
+    expect(onSelectCard).toHaveBeenCalledWith('A');
+    act(() => renderer.unmount());
+  });
+
   it('moves a dragged card to the slot the finger reached', () => {
     const renderer = render();
     expect(cardOrder(renderer)).toEqual(['A', 'B', 'C', 'D']);

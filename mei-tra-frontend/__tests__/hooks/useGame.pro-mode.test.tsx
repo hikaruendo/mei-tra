@@ -127,6 +127,20 @@ describe('useGame pending hand card', () => {
     return hook;
   };
 
+  it('sends only once before a render or while waiting, and allows retry after rejection', () => {
+    const { result } = renderAtViewerTurn();
+    mockSocket.emit.mockClear();
+    act(() => {
+      result.current.gameActions?.playCard('5♣');
+      result.current.gameActions?.playCard('A♠');
+    });
+    act(() => result.current.gameActions?.playCard('A♠'));
+    expect(mockSocket.emit.mock.calls.filter(([event]) => event === 'play-card')).toHaveLength(1);
+    act(() => mockHandlers.get('error-message')?.('Rejected'));
+    act(() => result.current.gameActions?.playCard('A♠'));
+    expect(mockSocket.emit.mock.calls.filter(([event]) => event === 'play-card')).toHaveLength(2);
+  });
+
   it('holds a played card until the server takes it out of the hand', () => {
     const { result } = renderAtViewerTurn();
 

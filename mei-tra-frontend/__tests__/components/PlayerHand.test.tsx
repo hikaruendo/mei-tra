@@ -816,6 +816,100 @@ describe('PlayerHand', () => {
   });
 });
 
+describe('PlayerHand repeated tap play', () => {
+  afterEach(() => jest.useRealTimers());
+  beforeEach(() => jest.clearAllMocks());
+  const ownTurn = { ...followSuitTurn, currentField: null };
+
+  it.each(['normal', 'pro'] as const)('%s selects, switches, then plays the same card without a time limit', (gameMode) => {
+    jest.useFakeTimers();
+    renderPlayerHand({ ...ownTurn, gameMode });
+    const [first, second] = handCards();
+    fireEvent.click(first);
+    expect(first).toHaveClass('selected');
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'play' }) !== null).toBe(gameMode === 'normal');
+    fireEvent.click(second);
+    expect(first).not.toHaveClass('selected');
+    expect(second).toHaveClass('selected');
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(5000));
+    fireEvent.click(second);
+    expect(gameActions.playCard).toHaveBeenCalledTimes(1);
+    expect(gameActions.playCard).toHaveBeenCalledWith('A♥');
+    expect(second).not.toHaveClass('selected');
+    jest.useRealTimers();
+  });
+
+  it('plays rather than setting Negri in pro, including an illegal follow-suit card', () => {
+    renderPlayerHand({ ...followSuitTurn, gameMode: 'pro', currentHighestDeclaration: { seatId: 'player-2' } });
+    const [, card] = handCards();
+    fireEvent.click(card);
+    fireEvent.click(card);
+    expect(gameActions.playCard).toHaveBeenCalledWith('A♥');
+    expect(gameActions.selectNegri).not.toHaveBeenCalled();
+  });
+
+  it('keeps explicit Negri confirmation in normal mode', () => {
+    renderPlayerHand({ ...ownTurn, gameMode: 'normal', currentHighestDeclaration: { seatId: 'player-2' } });
+    fireEvent.click(handCards()[0]);
+    fireEvent.click(handCards()[0]);
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    expect(gameActions.selectNegri).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Negri' }));
+    expect(gameActions.selectNegri).toHaveBeenCalledWith('5♠');
+  });
+
+  it.each(['normal', 'pro'] as const)('%s clears a selection across turn changes and rejects pending actions', (gameMode) => {
+    const { rerender } = renderPlayerHand({ ...ownTurn, gameMode });
+    fireEvent.click(handCards()[0]);
+    rerender(buildPlayerHand({ ...ownTurn, gameMode, whoseTurn: 'other' }));
+    expect(handCards()[0]).not.toHaveClass('selected');
+    fireEvent.click(handCards()[0]);
+    fireEvent.click(handCards()[0]);
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    rerender(buildPlayerHand({ ...ownTurn, gameMode }));
+    fireEvent.click(handCards()[0]);
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    rerender(buildPlayerHand({ ...ownTurn, gameMode, pendingHandCard: '5♠' }));
+    fireEvent.click(handCards()[0]);
+    fireEvent.click(handCards()[0]);
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+  });
+
+  it.each(['normal', 'pro'] as const)('%s clears stale selections across phase, seat, spectator and hand changes', (gameMode) => {
+    const { rerender } = renderPlayerHand({ ...ownTurn, gameMode });
+    const changes: Partial<React.ComponentProps<typeof PlayerHand>>[] = [
+      { gamePhase: 'blow' }, { currentSeatId: 'other' }, { isSpectator: true },
+      { player: { ...otherPlayer, hand: ['A♥'] } },
+    ];
+    for (const change of changes) {
+      fireEvent.click(handCards()[0]);
+      rerender(buildPlayerHand({ ...ownTurn, gameMode, ...change }));
+      expect(document.querySelector('[data-hand-card].selected')).toBeNull();
+      rerender(buildPlayerHand({ ...ownTurn, gameMode }));
+    }
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+  });
+
+  it('does not turn the click after a native reorder into a play', () => {
+    renderPlayerHand({ ...ownTurn, gameMode: 'normal' });
+    const [card, target] = handCards();
+    fireEvent.click(card);
+    const dataTransfer = { setData: jest.fn(), getData: () => '5♠', effectAllowed: '', dropEffect: '' };
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+    const movedCard = document.querySelector('[data-hand-card="5♠"]')!;
+    fireEvent.click(movedCard);
+    expect(movedCard).not.toHaveClass('selected');
+    expect(gameActions.playCard).not.toHaveBeenCalled();
+    fireEvent.pointerDown(movedCard);
+    fireEvent.pointerUp(movedCard);
+    fireEvent.click(movedCard);
+    expect(movedCard).toHaveClass('selected');
+  });
+});
+
 describe('PlayerHand pro mode drag', () => {
   // jsdom has no PointerEvent, and dnd-kit reads the pointer position from it.
   class TestPointerEvent extends MouseEvent {
