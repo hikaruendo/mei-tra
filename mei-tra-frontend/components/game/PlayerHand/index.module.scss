@@ -47,7 +47,8 @@
 .card {
   flex-shrink: 0;
   margin: 0 var(--player-hand-card-scaled-overlap, calc(var(--player-hand-card-overlap, var(--card-overlap)) * var(--mt-card-scale)));
-  transition: var(--transition-card);
+  /* Match mobile: selecting and cancelling move the card immediately. */
+  transition: none;
   transform-origin: bottom center;
   position: relative;
   cursor: pointer;
@@ -137,15 +138,17 @@
   transform: translateY(calc((var(--card-translate-y, 0px) - var(--player-hand-card-hover-lift, 28px)) * var(--mt-card-scale))) rotate(var(--card-rotation, 0deg)) scale(1.06) !important;
   z-index: calc(var(--card-index, 0) + 1) !important;
   margin: 0 var(--player-hand-card-scaled-hover-overlap, calc(var(--player-hand-card-hover-overlap, -0.6rem) * var(--mt-card-scale)));
-  transition: all 0.3s ease-in-out;
+  transition: none;
 }
 
 .card.selected {
   box-shadow: var(--shadow-selected);
-  transition: all 0.3s ease-in-out;
+  transition: none;
 }
 
 .dragging {
+  /* Keep the existing drag response independent of tap-selection timing. */
+  transition: var(--transition-card);
   cursor: grabbing;
   opacity: 0.9;
   filter: brightness(1.1);
@@ -1027,7 +1030,7 @@
     transform: translateY(calc(-20px * var(--mt-card-scale))) rotate(0deg) scale(1.1) !important;
     z-index: var(--z-index-card);
     margin: 0 var(--spacing-md);
-    transition: all 0.3s ease-in-out;
+    transition: none;
   }
 
   .playerInfoGroup{
