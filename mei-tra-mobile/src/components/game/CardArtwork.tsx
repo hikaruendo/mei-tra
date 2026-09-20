@@ -8,9 +8,9 @@ import { useCardDesign } from '@/context/CardDesignContext';
 import { resolveCardArt } from '@/lib/card-art-assets';
 
 const DENSHO_SOURCES = {
-  card_back: require('../../../../shared/game-client/assets/densho/card_back.jpg'),
-  joker_red: require('../../../../shared/game-client/assets/densho/joker_red.jpg'),
-  A_S: require('../../../../shared/game-client/assets/densho/A_S.jpg'),
+  card_back: require('@meitra/game-client/assets/densho/card_back.jpg'),
+  joker_red: require('@meitra/game-client/assets/densho/joker_red.jpg'),
+  A_S: require('@meitra/game-client/assets/densho/A_S.jpg'),
 };
 
 export function CardArtwork({ card = '', faceDown = false, design, fill = false }: {
