@@ -17,14 +17,16 @@ export function CardArtwork({ card = '', faceDown = false, design, fill = false,
   const savedDesign = useCardDesign();
   const artId = resolveDenshoArtId(card, faceDown, design ?? savedDesign)
     ?? resolveDenshoStyledArtId(card, faceDown, design ?? savedDesign);
+  // Browser image dragging cancels the hand's PanResponder. Only the hand
+  // should own the gesture; selecting the card must never be required first.
   if (artId) {
     const size = width === undefined ? 'large' : denshoImageSize(width * PixelRatio.get());
-    return <Image contentFit="fill" source={DENSHO_STYLED_SOURCES[artId][size]()} style={StyleSheet.absoluteFill} />;
+    return <Image draggable={false} contentFit="fill" source={DENSHO_STYLED_SOURCES[artId][size]()} style={StyleSheet.absoluteFill} />;
   }
   const art = resolveCardArt(card, faceDown);
   return art.kind === 'vector' ? (
     <art.Svg height="100%" width="100%" preserveAspectRatio={fill ? 'none' : 'xMidYMid meet'} />
   ) : (
-    <Image contentFit={fill ? 'fill' : 'cover'} source={art.source} style={StyleSheet.absoluteFill} />
+    <Image draggable={false} contentFit={fill ? 'fill' : 'cover'} source={art.source} style={StyleSheet.absoluteFill} />
   );
 }
