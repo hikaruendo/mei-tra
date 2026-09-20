@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   Animated,
   PanResponder,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -11,6 +12,7 @@ import {
   type PanResponderInstance,
 } from 'react-native';
 
+import { useScreenTapProtection } from '@/components/ui/ScreenTapBoundary';
 import { DealtCard } from '@/components/game/DealtCard';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { draggableCardStyle } from '@/lib/draggable-card-style';
@@ -320,6 +322,7 @@ function HandFanCard({
   selected,
   showsNegriLabel,
 }: HandFanCardProps) {
+  const protectSelectedCard = useScreenTapProtection();
   const suppressPressRef = useRef(false);
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   // PanResponder is built once and keeps the callbacks it was given, so they
@@ -401,6 +404,13 @@ function HandFanCard({
   return (
     <Animated.View
       {...panResponder.current.panHandlers}
+      onPointerDown={Platform.OS === 'web' ? (event) => {
+        // Keep moves on the card initially pressed, even when the first move
+        // crosses an overlapping neighbour before PanResponder activates.
+        const target = event.target as unknown as Element;
+        target.setPointerCapture?.(event.nativeEvent.pointerId);
+      } : undefined}
+      {...(selected ? protectSelectedCard : {})}
       style={[
         styles.fanCard,
         canReorder && draggableCardStyle,

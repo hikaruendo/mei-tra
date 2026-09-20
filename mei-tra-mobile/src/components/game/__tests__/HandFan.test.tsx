@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Animated,
+  Platform,
   StyleSheet,
   type StyleProp,
   type View,
@@ -688,4 +689,28 @@ describe('HandFan', () => {
       ),
     ).toBe(false);
   });
+});
+
+
+it('captures the original web pointer target without requiring a selection first', () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  const onSelectCard = jest.fn();
+  const setPointerCapture = jest.fn();
+  let renderer!: Renderer;
+  try {
+    act(() => {
+      renderer = TestRenderer.create(
+        <HandFan cards={['7♠', '9♠']} cardWidth={CARD_WIDTH} cardMargin={CARD_MARGIN}
+          seatId="self" selectedCard={null} reducedMotion canReorder onSelectCard={onSelectCard} />,
+      ) as unknown as Renderer;
+    });
+    const card = renderer.root.find((node) => typeof node.type === 'string' && node.props.testID === 'hand-card-7♠');
+    const pointerDown = card.props.onPointerDown as (event: unknown) => void;
+    pointerDown({ target: { setPointerCapture }, nativeEvent: { pointerId: 12 } });
+    expect(setPointerCapture).toHaveBeenCalledWith(12);
+    expect(onSelectCard).not.toHaveBeenCalled();
+    act(() => renderer.unmount());
+  } finally {
+    jest.restoreAllMocks();
+  }
 });

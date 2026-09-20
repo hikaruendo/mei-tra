@@ -8,6 +8,7 @@ import { WaitingRoom } from "@/components/game/WaitingRoom";
 import { Button } from "@/components/ui/Button";
 import { ConnectionBanner } from "@/components/ui/ConnectionBanner";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { ScreenTapBoundary } from "@/components/ui/ScreenTapBoundary";
 import { Screen } from "@/components/ui/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useGame } from "@/context/GameContext";
@@ -118,85 +119,87 @@ export default function RoomScreen() {
   const actionsDisabled = connectionStatus !== "connected";
 
   return (
-    <Screen>
-      {connectionStatus !== "connected" ? (
-        <ConnectionBanner
-          onRetry={refreshRooms}
-          retryLabel={t("room.retryConnect")}
-          status={connectionStatus}
+    <ScreenTapBoundary>
+      <Screen>
+        {connectionStatus !== "connected" ? (
+          <ConnectionBanner
+            onRetry={refreshRooms}
+            retryLabel={t("room.retryConnect")}
+            status={connectionStatus}
+          />
+        ) : null}
+        <FeedbackBanner
+          error={recoveryNotice ? null : error}
+          notice={recoveryNotice ?? notice}
+          onDismiss={clearFeedback}
         />
-      ) : null}
-      <FeedbackBanner
-        error={recoveryNotice ? null : error}
-        notice={recoveryNotice ?? notice}
-        onDismiss={clearFeedback}
-      />
-      {isWaiting && currentRoom ? (
-        <WaitingRoom
-          actionsDisabled={actionsDisabled}
-          currentSeatId={currentSeatId}
-          isHost={isHost}
-          onLeave={doLeave}
-          onRemovePlayer={removePlayer}
-          onReplaceWithCOM={replaceWithCOM}
-          onShuffle={shuffleTeams}
-          onStart={startGame}
-          onUpdateTeamNames={updateTeamNames}
-          room={currentRoom}
-        />
-      ) : game ? (
-        <GameBoard
-          actionsDisabled={actionsDisabled}
-          game={game}
-          isHost={isHost}
-          onDeclare={declareBlow}
-          onLeave={() => void doLeave()}
-          onPass={passBlow}
-          onPlayCard={playCard}
-          onReportChombo={reportChombo}
-          onSetupChomboScenario={setupChomboScenario}
-          onReplaceWithCOM={replaceWithCOM}
-          onSelectBaseSuit={selectBaseSuit}
-          onSelectNegri={selectNegri}
-          onDeclareOpen={declareOpen}
-          onRevealBrokenHand={revealBrokenHand}
-          onCardSelection={playCardSelectionSound}
-          onCancel={playCancelSound}
-          onHandReorder={playHandReorderSound}
-          history={history}
-          roomId={resolvedRoomId}
-          firstTurnReveal={firstTurnReveal}
-          onFirstTurnRevealDone={clearFirstTurnReveal}
-          dealAnimationCue={dealAnimationCue}
-          pendingHandCard={pendingHandCard}
-        />
-      ) : (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.gold} size="large" />
-        </View>
-      )}
-      {gameResult ? (
-        <GameResultExperience
-          result={gameResult}
-          showTableBackdrop={Boolean(game)}
-          onClose={() => {
-            // leaveRoom reads the room before closeGameResult clears it.
-            void leaveRoom();
-            closeGameResult();
-            router.replace("/rooms");
-          }}
-          onRegister={
-            user.isAnonymous
-              ? () => {
-                  void leaveRoom();
-                  closeGameResult();
-                  router.push("/upgrade-account");
-                }
-              : undefined
-          }
-        />
-      ) : null}
-    </Screen>
+        {isWaiting && currentRoom ? (
+          <WaitingRoom
+            actionsDisabled={actionsDisabled}
+            currentSeatId={currentSeatId}
+            isHost={isHost}
+            onLeave={doLeave}
+            onRemovePlayer={removePlayer}
+            onReplaceWithCOM={replaceWithCOM}
+            onShuffle={shuffleTeams}
+            onStart={startGame}
+            onUpdateTeamNames={updateTeamNames}
+            room={currentRoom}
+          />
+        ) : game ? (
+          <GameBoard
+            actionsDisabled={actionsDisabled}
+            game={game}
+            isHost={isHost}
+            onDeclare={declareBlow}
+            onLeave={() => void doLeave()}
+            onPass={passBlow}
+            onPlayCard={playCard}
+            onReportChombo={reportChombo}
+            onSetupChomboScenario={setupChomboScenario}
+            onReplaceWithCOM={replaceWithCOM}
+            onSelectBaseSuit={selectBaseSuit}
+            onSelectNegri={selectNegri}
+            onDeclareOpen={declareOpen}
+            onRevealBrokenHand={revealBrokenHand}
+            onCardSelection={playCardSelectionSound}
+            onCancel={playCancelSound}
+            onHandReorder={playHandReorderSound}
+            history={history}
+            roomId={resolvedRoomId}
+            firstTurnReveal={firstTurnReveal}
+            onFirstTurnRevealDone={clearFirstTurnReveal}
+            dealAnimationCue={dealAnimationCue}
+            pendingHandCard={pendingHandCard}
+          />
+        ) : (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.gold} size="large" />
+          </View>
+        )}
+        {gameResult ? (
+          <GameResultExperience
+            result={gameResult}
+            showTableBackdrop={Boolean(game)}
+            onClose={() => {
+              // leaveRoom reads the room before closeGameResult clears it.
+              void leaveRoom();
+              closeGameResult();
+              router.replace("/rooms");
+            }}
+            onRegister={
+              user.isAnonymous
+                ? () => {
+                    void leaveRoom();
+                    closeGameResult();
+                    router.push("/upgrade-account");
+                  }
+                : undefined
+            }
+          />
+        ) : null}
+      </Screen>
+    </ScreenTapBoundary>
   );
 }
 

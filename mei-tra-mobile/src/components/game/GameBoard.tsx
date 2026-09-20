@@ -40,6 +40,7 @@ import { useFieldMatSize } from '@/hooks/useFieldMatSize';
 import { useHandFanMetrics } from '@/hooks/useHandFanMetrics';
 import { ScoreBoard } from '@/components/game/ScoreBoard';
 import { ChatPanel } from '@/components/social/ChatPanel';
+import { useScreenTapDismiss, useScreenTapProtection } from '@/components/ui/ScreenTapBoundary';
 import { Button } from '@/components/ui/Button';
 import { LiquidGlassSurface } from '@/components/ui/LiquidGlassSurface';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -430,7 +431,15 @@ export function GameBoard({
     if (selectedCard) submitHandCard(selectedCard, mustSelectNegri ? 'negri' : 'play');
   };
 
+  const dismissSelection = useCallback(() => setSelectedCard(null), []);
+  useScreenTapDismiss(selectedCard && !mustSelectNegri ? dismissSelection : null);
+  const protectSelectionActions = useScreenTapProtection();
+
   const selectOrPlayCard = (card: string) => {
+    if (selectedCard && selectedCard !== card && !mustSelectNegri) {
+      setSelectedCard(null);
+      return;
+    }
     if (actionsDisabled || pendingActionRef.current || pendingHandCard ||
         !isHandPlayPhase || !isMyTurn || !self?.hand.includes(card) ||
         (!isProMode && !isCardPlayable(self.hand, card, game.currentField, currentTrump))) return;
@@ -778,7 +787,7 @@ export function GameBoard({
             />
 
             {!isProMode && game.gamePhase === 'play' && selectedCard ? (
-              <View style={styles.selectedActions}>
+              <View {...protectSelectionActions} style={styles.selectedActions} testID="selected-card-actions">
                 {/* Cancel sits left, confirm right — the destructive/back action
                     on the outside, the primary action under the thumb. */}
                 <Button

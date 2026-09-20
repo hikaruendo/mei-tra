@@ -8,6 +8,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
+import { ScreenTapBoundary } from '@/components/ui/ScreenTapBoundary';
 import { HandFan } from '@/components/game/HandFan';
 import { NegriCard } from '@/components/game/NegriCard';
 
@@ -184,6 +185,8 @@ describe('GameBoard interactions', () => {
       renderer.root.findByProps({ testID: `mock-playing-card-${card}` });
 
     await act(async () => { findCard('S-3').props.onPress?.(); });
+    expect(onCardSelection).toHaveBeenCalledTimes(1);
+    await act(async () => { findCard('H-4').props.onPress?.(); });
     expect(onCardSelection).toHaveBeenCalledTimes(1);
     await act(async () => { findCard('H-4').props.onPress?.(); });
     expect(onCardSelection).toHaveBeenCalledTimes(2);
@@ -1159,6 +1162,7 @@ describe('GameBoard broken hand action', () => {
 describe('GameBoard repeated tap play', () => {
   type Renderer = {
     root: {
+      findByProps: (props: Record<string, unknown>) => { props: { onTouchEndCapture?: () => void; onPress?: () => void } };
       findByType: (type: typeof HandFan) => { props: React.ComponentProps<typeof HandFan> };
       findAllByProps: (props: Record<string, unknown>) => { props: { onPress?: () => void } }[];
     };
@@ -1172,12 +1176,12 @@ describe('GameBoard repeated tap play', () => {
       onReplaceWithCOM: jest.fn(), onSelectBaseSuit: jest.fn(), ...handlers, ...overrides,
     };
     let renderer!: Renderer;
-    await act(async () => { renderer = TestRenderer.create(<GameBoard {...props} />) as unknown as Renderer; });
+    await act(async () => { renderer = TestRenderer.create(<ScreenTapBoundary><GameBoard {...props} /></ScreenTapBoundary>) as unknown as Renderer; });
     const fan = () => renderer.root.findByType(HandFan).props;
     const tap = async (card: string) => { await act(async () => { fan().onSelectCard?.(card); }); };
     const update = async (changes: Partial<typeof props>) => {
       props = { ...props, ...changes };
-      await act(async () => renderer.update(<GameBoard {...props} />));
+      await act(async () => renderer.update(<ScreenTapBoundary><GameBoard {...props} /></ScreenTapBoundary>));
     };
     return { ...handlers, renderer, fan, tap, update };
   };
@@ -1189,6 +1193,8 @@ describe('GameBoard repeated tap play', () => {
     expect(board.onPlayCard).not.toHaveBeenCalled();
     expect(board.renderer.root.findAllByProps({ variant: 'secondary' }).length > 0).toBe(gameMode === 'normal');
     await board.tap('H-4');
+    expect(board.fan().selectedCard).toBeNull();
+    await board.tap('H-4');
     expect(board.fan().selectedCard).toBe('H-4');
     expect(board.onPlayCard).not.toHaveBeenCalled();
     // A state refresh with identical contents must not require selecting again.
@@ -1199,6 +1205,54 @@ describe('GameBoard repeated tap play', () => {
     expect(board.onPlayCard).toHaveBeenCalledTimes(1);
     expect(board.onPlayCard).toHaveBeenCalledWith('H-4');
     expect(board.fan().selectedCard).toBeNull();
+    await act(async () => board.renderer.unmount());
+  });
+
+  it.each(['normal', 'pro'] as const)('%s dismisses from the whole screen but protects the selected card', async (gameMode) => {
+    const board = await mount({ game: { ...game, gameMode } });
+    const screenTap = () => board.renderer.root.findByProps({ testID: 'screen-tap-boundary' }).props.onTouchEndCapture?.();
+    await board.tap('S-3');
+    await act(async () => { screenTap(); });
+    expect(board.fan().selectedCard).toBeNull();
+    expect(board.onPlayCard).not.toHaveBeenCalled();
+    await board.tap('S-3');
+    await act(async () => {
+      screenTap();
+      board.renderer.root.findByProps({ testID: 'hand-card-S-3' }).props.onTouchEndCapture?.();
+    });
+    expect(board.fan().selectedCard).toBe('S-3');
+    await board.tap('S-3');
+    expect(board.onPlayCard).toHaveBeenCalledTimes(1);
+    await act(async () => board.renderer.unmount());
+  });
+
+  it('keeps the normal play button usable when screen taps dismiss selection', async () => {
+    const board = await mount();
+    await board.tap('S-3');
+    await act(async () => {
+      board.renderer.root.findByProps({ testID: 'screen-tap-boundary' }).props.onTouchEndCapture?.();
+      board.renderer.root.findByProps({ testID: 'selected-card-actions' }).props.onTouchEndCapture?.();
+    });
+    expect(board.fan().selectedCard).toBe('S-3');
+    await act(async () => {
+      board.renderer.root.findAllByProps({ children: 'プレイ' }).find((node) => node.props.onPress)?.props.onPress?.();
+    });
+    expect(board.onPlayCard).toHaveBeenCalledWith('S-3');
+    await act(async () => board.renderer.unmount());
+  });
+
+  it('dismisses a selected card when an unplayable card is touched', async () => {
+    const board = await mount({ game: { ...game, players: [{ ...game.players[0], hand: ['5♠', 'A♥'] }], currentField: {
+      ...game.currentField!, baseCard: '9♠', cards: ['9♠'],
+    } } });
+    await board.tap('5♠');
+    expect(board.fan().isCardDisabled?.('A♥')).toBe(true);
+    await act(async () => {
+      board.renderer.root.findByProps({ testID: 'screen-tap-boundary' }).props.onTouchEndCapture?.();
+      board.renderer.root.findByProps({ testID: 'hand-card-A♥' }).props.onTouchEndCapture?.();
+    });
+    expect(board.fan().selectedCard).toBeNull();
+    expect(board.onPlayCard).not.toHaveBeenCalled();
     await act(async () => board.renderer.unmount());
   });
 

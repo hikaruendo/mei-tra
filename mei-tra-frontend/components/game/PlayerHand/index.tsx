@@ -127,6 +127,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const tBlow = useTranslations('blowControls');
   const locale = useLocale();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const selectedCardElementRef = useRef<HTMLDivElement>(null);
+  const selectedActionsRef = useRef<HTMLDivElement>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
   const [displayHand, setDisplayHand] = useState(player.hand);
   const displayHandRef = useRef(player.hand);
@@ -206,6 +208,25 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     setSelectedCard((card) => card && player.hand.includes(card) && !pendingHandCard ? card : null);
     setSelectedNegriCard((card) => card && player.hand.includes(card) && !pendingHandCard ? card : null);
   }, [player.hand, pendingHandCard]);
+
+  useEffect(() => {
+    if (!selectedCard) return;
+    let active = true;
+    const dismissOutsideSelection = (event: MouseEvent) => {
+      if (!(event.target instanceof Node) ||
+          selectedCardElementRef.current?.contains(event.target) ||
+          selectedActionsRef.current?.contains(event.target)) return;
+      // Capture catches controls that stop bubbling. Defer until their own
+      // action runs, so cancelling never steals a button click or selects a
+      // different card in the same interaction.
+      setTimeout(() => { if (active) setSelectedCard(null); }, 0);
+    };
+    document.addEventListener('click', dismissOutsideSelection, true);
+    return () => {
+      active = false;
+      document.removeEventListener('click', dismissOutsideSelection, true);
+    };
+  }, [selectedCard]);
 
   const beginHandDrag = () => {
     suppressClickRef.current = true;
@@ -410,6 +431,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       return;
     }
 
+    if (selectedCard && selectedCard !== card) {
+      setSelectedCard(null);
+      return;
+    }
+
     if (gamePhase === 'play' && whoseTurn === currentSeatId && isCardPlayable(card)) {
       if (shouldSelectNegri) {
         if (shouldPlayCardSelectionSound(selectedNegriCard, card)) {
@@ -585,6 +611,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   }
                 }}
                 onPointerUp={gameMode === 'pro' ? undefined : finishPointerDrag}
+                ref={card === selectedCard ? selectedCardElementRef : undefined}
                 data-hand-card={card}
                 onDragStart={(event) => {
                   if (!canActAsCurrentPlayer) {
@@ -643,14 +670,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             );
           })}
           {gameMode !== 'pro' && !isSpectator && selectedCard && (
-            <PlayAndCancelBtn
-              setSelectedCard={setSelectedCard}
-              onCancel={onCancel}
-              onClick={() => {
-                submitHandCard(selectedCard, 'play');
-              }}
-              buttonText={t('play')}
-            />
+            <div ref={selectedActionsRef}>
+              <PlayAndCancelBtn
+                setSelectedCard={setSelectedCard}
+                onCancel={onCancel}
+                onClick={() => {
+                  submitHandCard(selectedCard, 'play');
+                }}
+                buttonText={t('play')}
+              />
+            </div>
           )}
           {gameMode !== 'pro' && !isSpectator && selectedNegriCard && (
             <PlayAndCancelBtn
