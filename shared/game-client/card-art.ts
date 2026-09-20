@@ -87,3 +87,16 @@ export function resolveDenshoArtId(
     ? id as DenshoArtId
     : null;
 }
+
+/** Retuned standard artwork for the rest of the heritage deck. */
+export function resolveDenshoStyledArtId(
+  card: string,
+  faceDown: boolean,
+  design: CardDesign,
+): string | null {
+  if (design !== 'densho' || faceDown) return null;
+  const id = cardToSvgId(card);
+  return CARD_ART_IDS.includes(id) && !Object.prototype.hasOwnProperty.call(DENSHO_ART, id)
+    ? id
+    : null;
+}

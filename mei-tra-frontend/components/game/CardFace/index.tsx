@@ -1,7 +1,7 @@
 'use client';
 
 import type { CardDesign } from '@meitra/contracts/profile';
-import { DENSHO_ART, resolveDenshoArtId } from '@meitra/game-client/card-art';
+import { DENSHO_ART, resolveDenshoArtId, resolveDenshoStyledArtId } from '@meitra/game-client/card-art';
 import { useCardDesign } from '@/contexts/CardDesignContext';
 import { cardToSvgPath, CARD_BACK_PATH } from '@/lib/utils/cardMapping';
 import styles from './index.module.scss';
@@ -17,6 +17,7 @@ interface CardFaceProps {
 export function CardFace({ card, faceDown = false, className, design }: CardFaceProps) {
   const savedDesign = useCardDesign();
   const artId = resolveDenshoArtId(card ?? '', faceDown, design ?? savedDesign);
+  const styledId = resolveDenshoStyledArtId(card ?? '', faceDown, design ?? savedDesign);
   const label = faceDown ? 'Card back' : card;
   const classes = `${styles.cardSvg} ${className ?? ''}`;
 
@@ -33,7 +34,7 @@ export function CardFace({ card, faceDown = false, className, design }: CardFace
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={classes}
-      src={faceDown ? CARD_BACK_PATH : cardToSvgPath(card ?? '')}
+      src={styledId ? `/cards/densho/styled/${styledId}.webp` : faceDown ? CARD_BACK_PATH : cardToSvgPath(card ?? '')}
       alt={label}
       draggable={false}
     />

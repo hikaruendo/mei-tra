@@ -18,7 +18,7 @@ it('changes the selected preview without changing the saved game design', () => 
   expect(screen.getByRole('img', { name: 'A♠' })).toHaveAttribute('src', '/cards/A_S.svg');
 });
 
-it('updates all supplied artwork when the signed-in profile changes, retaining other faces', () => {
+it('updates all supplied artwork when the signed-in profile changes, retuning other faces', () => {
   const cards = <><CardFace card="A♠" /><CardFace card="JOKER" /><CardFace faceDown /><CardFace card="K♥" /></>;
   const { rerender, container } = render(<CardDesignContext.Provider value="standard">{cards}</CardDesignContext.Provider>);
   expect(container.querySelectorAll('svg image')).toHaveLength(0);
@@ -26,7 +26,7 @@ it('updates all supplied artwork when the signed-in profile changes, retaining o
   expect([...container.querySelectorAll('svg image')].map(image => image.getAttribute('href'))).toEqual([
     '/cards/densho/A_S.jpg', '/cards/densho/joker_red.jpg', '/cards/densho/card_back.jpg',
   ]);
-  expect(screen.getByRole('img', { name: 'K♥' })).toHaveAttribute('src', '/cards/K_H.svg');
+  expect(screen.getByRole('img', { name: 'K♥' })).toHaveAttribute('src', '/cards/densho/styled/K_H.webp');
   rerender(<CardDesignContext.Provider value="standard">{cards}</CardDesignContext.Provider>);
   expect(screen.getByRole('img', { name: 'A♠' })).toHaveAttribute('src', '/cards/A_S.svg');
 });
