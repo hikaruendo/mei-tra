@@ -2,6 +2,8 @@
   width: 100%;
   height: 100%;
   display: block;
+  // Both SVG scans and image assets follow the surrounding card's corners.
+  border-radius: inherit;
   overflow: hidden;
   object-fit: cover;
   user-select: none;

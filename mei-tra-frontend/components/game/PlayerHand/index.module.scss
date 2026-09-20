@@ -65,11 +65,7 @@
   touch-action: pan-y;
 }
 
-/* The card used to clip this to its rounded corners. It no longer clips, so
-   that the drop marker can sit outside the card, so the artwork rounds itself. */
-.card img {
-  border-radius: inherit;
-}
+/* CardFace clips its own artwork so drop markers can extend beyond the card. */
 
 .cardFaceDown{
   width: calc(1.55rem * var(--mt-card-scale));
