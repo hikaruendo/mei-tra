@@ -104,6 +104,16 @@ export class UserProfileController {
       ) {
         throw new HttpException('Invalid card design', HttpStatus.BAD_REQUEST);
       }
+      if (
+        updateData.preferences?.handSortDirection !== undefined &&
+        updateData.preferences.handSortDirection !== 'strong-right' &&
+        updateData.preferences.handSortDirection !== 'strong-left'
+      ) {
+        throw new HttpException(
+          'Invalid hand sort direction',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
       const updatedProfile = await this.userProfileRepository.update(
         id,
         updateData as UpdateUserProfileDto,
@@ -331,6 +341,7 @@ export class UserProfileController {
         fontSize: profile.preferences.fontSize,
         startPlayerAnimation: profile.preferences.startPlayerAnimation ?? true,
         cardDesign: profile.preferences.cardDesign,
+        handSortDirection: profile.preferences.handSortDirection,
       },
     };
   }

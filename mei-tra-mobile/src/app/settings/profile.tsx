@@ -15,6 +15,7 @@ import {
   SettingsCard,
   SettingsScaffold,
 } from '@/components/settings/SettingsScaffold';
+import { HandSortSettings } from '@/components/settings/HandSortSettings';
 import { CardDesignSettings } from '@/components/settings/CardDesignSettings';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
@@ -196,6 +197,7 @@ export default function ProfileSettingsScreen() {
         ) : null}
       </SettingsCard>
       <CardDesignSettings />
+      <HandSortSettings />
     </SettingsScaffold>
   );
 }

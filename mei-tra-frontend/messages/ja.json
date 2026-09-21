@@ -951,6 +951,10 @@
     "convertedToComNotice": "{playerName} が長時間切断のため、COMプレイヤーに変換されました。"
   },
   "profile": {
+    "handSortDirection": "手札の自動並び替え",
+    "handSortDirectionHint": "各スート内で強い札を置く側を選べます。スート順とジョーカーの位置は変わりません。手動での並び替えもできます。",
+    "handSortDirection_strong-right": "強い札を右に",
+    "handSortDirection_strong-left": "強い札を左に",
     "cardDesign": "カードデザイン",
     "cardDesignHint": "自分の画面に表示するカードを選べます。明トラ伝承プロジェクトは専用の裏面・タンツェン・スペードAに合わせ、ほかの札も白地と落ち着いた色合いで揃えています。",
     "cardDesign_standard": "標準",

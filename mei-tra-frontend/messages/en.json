@@ -951,6 +951,10 @@
     "convertedToComNotice": "{playerName} was replaced with COM after being disconnected too long."
   },
   "profile": {
+    "handSortDirection": "Automatic hand order",
+    "handSortDirectionHint": "Choose which side holds higher ranks within each suit. Suit order and the Joker position stay the same. You can still rearrange cards by hand.",
+    "handSortDirection_strong-right": "Higher ranks on the right",
+    "handSortDirection_strong-left": "Higher ranks on the left",
     "cardDesign": "Card design",
     "cardDesignHint": "Choose how cards look on your screen. The Meitra Heritage Project pairs its original back, Tanzen and ace of spades with matching white faces and muted colours across the deck.",
     "cardDesign_standard": "Standard",

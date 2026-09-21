@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeHandSortDirection } from '@meitra/game-client/hand-order';
+import { HandSortContext } from './HandSortContext';
 import { CardDesignContext } from '@/contexts/CardDesignContext';
 import { normalizeCardDesign } from '@meitra/game-client/card-art';
 
@@ -566,7 +568,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       <CardDesignContext.Provider value={normalizeCardDesign(user?.profile?.preferences.cardDesign)}>
-        {children}
+        <HandSortContext.Provider value={normalizeHandSortDirection(user?.profile?.preferences.handSortDirection)}>
+          {children}
+        </HandSortContext.Provider>
       </CardDesignContext.Provider>
     </AuthContext.Provider>
   );

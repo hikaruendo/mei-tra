@@ -28,6 +28,7 @@ describe('preferences helpers', () => {
       fontSize: 'standard',
       startPlayerAnimation: true,
       cardDesign: 'standard',
+      handSortDirection: 'strong-right',
     });
   });
 

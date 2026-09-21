@@ -1,3 +1,30 @@
+import type { HandSortDirection } from '@meitra/contracts/profile';
+
+export const HAND_SORT_DIRECTIONS = ['strong-right', 'strong-left'] as const;
+
+export const normalizeHandSortDirection = (value: unknown): HandSortDirection =>
+  value === 'strong-left' ? 'strong-left' : 'strong-right';
+
+/** Project the server's ascending, suit-grouped hand without duplicating its comparator.
+ * Only reverse ranks inside each suit; suit order and the Joker's slot stay unchanged.
+ */
+export const orientDealtHand = (
+  hand: readonly string[],
+  direction: HandSortDirection,
+): string[] => {
+  const result = [...hand];
+  if (direction === 'strong-right') return result;
+
+  for (let start = 0; start < result.length;) {
+    const suit = result[start].slice(-1);
+    let end = start + 1;
+    while (end < result.length && result[end].slice(-1) === suit) end++;
+    result.splice(start, end - start, ...result.slice(start, end).reverse());
+    start = end;
+  }
+  return result;
+};
+
 export type HandDropSide = "before" | "after";
 
 /**
@@ -6,7 +33,8 @@ export type HandDropSide = "before" | "after";
  * Cards only ever leave a hand while the player is using it — they play one,
  * or set one aside as ネグリ — so a hand that lost cards keeps the arrangement.
  * A card *arriving* means the server dealt a new hand or handed over the アガリ,
- * and the server sorts by suit whenever it does that. Adopt its order then,
+ * and the server sorts by suit whenever it does that. Orient its order using
+ * the profile preference then,
  * rather than pinning the old cards to where they used to sit and stranding the
  * new ones at the end, which is what left a hand ungrouped by suit.
  *
@@ -18,10 +46,11 @@ export type HandDropSide = "before" | "after";
 export const syncHandOrder = (
   previousOrder: readonly string[],
   hand: readonly string[],
+  direction: HandSortDirection = 'strong-right',
 ): string[] => {
   const arranged = new Set(previousOrder);
   if (hand.some((card) => !arranged.has(card))) {
-    return [...hand];
+    return orientDealtHand(hand, direction);
   }
 
   const held = new Set(hand);

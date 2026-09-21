@@ -1,3 +1,4 @@
+import { normalizeHandSortDirection } from '@meitra/game-client/hand-order';
 import { normalizeCardDesign } from '@meitra/game-client/card-art';
 import { FontSizePreset, UserPreferences } from '@/types/user.types';
 
@@ -46,6 +47,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   fontSize: DEFAULT_FONT_SIZE_PRESET,
   startPlayerAnimation: true,
   cardDesign: 'standard',
+  handSortDirection: 'strong-right',
 };
 
 export function isThemePreference(value: unknown): value is UserPreferences['theme'] {
@@ -81,6 +83,7 @@ export function normalizeUserPreferences(
       : DEFAULT_USER_PREFERENCES.theme,
     fontSize: normalizeFontSizePreset(preferences?.fontSize),
     cardDesign: normalizeCardDesign(preferences?.cardDesign),
+    handSortDirection: normalizeHandSortDirection(preferences?.handSortDirection),
     startPlayerAnimation:
       typeof preferences?.startPlayerAnimation === 'boolean'
         ? preferences.startPlayerAnimation

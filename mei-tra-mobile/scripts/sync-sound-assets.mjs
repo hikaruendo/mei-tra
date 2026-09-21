@@ -12,6 +12,7 @@ const FILES = [
   'card-select.mp3',
   'cancel.mp3',
   'negri.mp3',
+  'hand-reorder.mp3',
   'shuffle.mp3',
   'victory.mp3',
   'defeat.mp3',
