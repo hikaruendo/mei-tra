@@ -206,7 +206,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
           <div className={styles.brand}>
             {renderGameSafeLink('/', styles.brandLink, <>
               <Image
-                src="/meitra2.webp"
+                src="/brand/meitra-spade.png"
                 alt="Meitra"
                 width={48}
                 height={48}
