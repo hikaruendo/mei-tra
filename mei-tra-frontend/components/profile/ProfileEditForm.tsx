@@ -17,6 +17,7 @@ import {
 } from '@/lib/utils/imageOptimizer';
 import { clearPlayerProfileCache } from '@/lib/utils/profileUtils';
 import { normalizeUserPreferences } from '@/lib/preferences';
+import { HandSortPicker } from './HandSortPicker';
 import { CardDesignPicker } from './CardDesignPicker';
 import styles from './ProfileEditForm.module.scss';
 
@@ -341,6 +342,17 @@ export function ProfileEditForm({ profile, onSave, onCancel }: ProfileEditFormPr
           onChange={(cardDesign) => setFormData(prev => ({
             ...prev,
             preferences: { ...prev.preferences, cardDesign },
+          }))}
+        />
+      </div>
+
+      <div className={styles.formSection}>
+        <HandSortPicker
+          value={formData.preferences.handSortDirection ?? 'strong-right'}
+          disabled={isSaving}
+          onChange={(handSortDirection) => setFormData(prev => ({
+            ...prev,
+            preferences: { ...prev.preferences, handSortDirection },
           }))}
         />
       </div>

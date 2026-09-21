@@ -1,3 +1,4 @@
+import { HandSortContext } from '@/context/HandSortContext';
 import React from 'react';
 import {
   Animated,
@@ -713,4 +714,27 @@ it('captures the original web pointer target without requiring a selection first
   } finally {
     jest.restoreAllMocks();
   }
+});
+
+it('uses the profile order on mount and after changing direction', () => {
+  let renderer!: Renderer;
+  const cards = ['7♠', 'A♠', '8♦', 'K♦'];
+  const fan = (direction: 'strong-left' | 'strong-right') => (
+    <HandSortContext.Provider value={direction}>
+      <HandFan cards={cards} cardWidth={CARD_WIDTH} cardMargin={CARD_MARGIN}
+        seatId="seat-1" selectedCard={null} reducedMotion canReorder />
+    </HandSortContext.Provider>
+  );
+  const visible = () => renderer.root.findAll(node => typeof node.type === 'string' &&
+    typeof node.props.testID === 'string' && node.props.testID.startsWith('hand-card-'))
+    .map(node => (node.props.testID as string).replace('hand-card-', ''));
+  act(() => { renderer = TestRenderer.create(fan('strong-left')) as unknown as Renderer; });
+  expect(visible()).toEqual(['A♠', '7♠', 'K♦', '8♦']);
+  drag(renderer, 'A♠', PITCH * 3);
+  const manual = visible();
+  act(() => renderer.update(fan('strong-left')));
+  expect(visible()).toEqual(manual);
+  act(() => renderer.update(fan('strong-right')));
+  expect(visible()).toEqual(cards);
+  act(() => renderer.unmount());
 });

@@ -1,5 +1,6 @@
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
-import { reorderHand, syncHandOrder } from '@meitra/game-client/hand-order';
+import { useHandSortDirection } from '@/context/HandSortContext';
+import { orientDealtHand, reorderHand, syncHandOrder } from '@meitra/game-client/hand-order';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   Animated,
@@ -102,7 +103,9 @@ export function HandFan({
   onDropPreview,
   onDragActiveChange,
 }: HandFanProps) {
-  const [order, setOrder] = useState(cards);
+  const handSortDirection = useHandSortDirection();
+  const [order, setOrder] = useState(() => orientDealtHand(cards, handSortDirection));
+  const handViewRef = useRef({ direction: handSortDirection, seatId });
   const orderRef = useRef(order);
   const [draggingCard, setDraggingCard] = useState<string | null>(null);
   const [drop, setDrop] = useState<HandDropPlacement | null>(null);
@@ -119,8 +122,11 @@ export function HandFan({
     const previousHand = syncedHandRef.current;
     syncedHandRef.current = cards;
 
+    const viewChanged = handViewRef.current.direction !== handSortDirection ||
+      handViewRef.current.seatId !== seatId;
+    handViewRef.current = { direction: handSortDirection, seatId };
     setOrder((previousOrder) => {
-      const nextOrder = syncHandOrder(previousOrder, cards);
+      const nextOrder = syncHandOrder(viewChanged ? [] : previousOrder, cards, handSortDirection);
       orderRef.current = nextOrder;
       return nextOrder;
     });
@@ -134,13 +140,13 @@ export function HandFan({
     const handChanged =
       cards.length !== previousHand.length ||
       cards.some((card) => !previousHand.includes(card));
-    if (handChanged) {
+    if (handChanged || viewChanged) {
       dropRef.current = null;
       setDraggingCard(null);
       setDrop(null);
       setDropPreview(null);
     }
-  }, [cards]);
+  }, [cards, seatId, handSortDirection]);
 
   const dragActive = draggingCard !== null;
   useEffect(() => {

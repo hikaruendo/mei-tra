@@ -1,4 +1,4 @@
-import type { CardDesign } from '@meitra/contracts/profile';
+import type { HandSortDirection, CardDesign } from '@meitra/contracts/profile';
 
 export interface MobileUserProfile {
   displayName: string;
@@ -9,6 +9,7 @@ export interface MobileUserProfile {
   /** Defaults to true for profiles saved before the setting existed. */
   startPlayerAnimation: boolean;
   cardDesign?: CardDesign;
+  handSortDirection?: HandSortDirection;
 }
 
 export interface MobileAuthUser {

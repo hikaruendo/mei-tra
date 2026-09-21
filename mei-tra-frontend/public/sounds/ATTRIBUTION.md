@@ -92,3 +92,15 @@ the Creative Commons 0 public-domain dedication.
   normalized it to -22 LUFS / -3 dBTP, added a short ending fade, and encoded
   it as a 44.1 kHz / 128 kbps mono MP3
 - SHA-256: `68653ec389eeca112a5e1e2789350adced4e1ad66c1da7e4340c26ce58a00d8b`
+
+## `hand-reorder.mp3`
+
+- Source: Derived from `card-play.mp3` ("Playing Card Deal Variation 2" by el_boss)
+- URL: https://freesound.org/people/el_boss/sounds/571576/
+- License: Creative Commons 0
+- Derived: 2026-09-21
+- Processing: raised pitch/rate to 125%, high-pass filtered at 850 Hz, boosted
+  treble by 3 dB at 4.2 kHz, low-pass filtered at 10 kHz, gain 0.8, shortened
+  to 270 ms with a 15 ms fade-in and 110 ms fade-out, encoded as
+  44.1 kHz / 128 kbps mono MP3. Dedicated to hand reordering; Negri keeps its sound.
+- SHA-256: `d7f5a650b44923730cc14d45762f6e2f80ca41714551c8bca0d337891e261eef`

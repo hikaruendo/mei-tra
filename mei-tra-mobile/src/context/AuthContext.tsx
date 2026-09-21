@@ -1,3 +1,5 @@
+import { normalizeHandSortDirection } from '@meitra/game-client/hand-order';
+import { HandSortContext } from './HandSortContext';
 import { CardDesignContext } from '@/context/CardDesignContext';
 import { normalizeCardDesign } from '@meitra/game-client/card-art';
 import type { Session, User } from '@supabase/supabase-js';
@@ -78,6 +80,7 @@ const mapProfile = (
 ): MobileUserProfile => {
   return {
     cardDesign: normalizeCardDesign(record.preferences.cardDesign),
+    handSortDirection: normalizeHandSortDirection(record.preferences.handSortDirection),
     displayName: record.displayName,
     username: record.username,
     avatarUrl: record.avatarUrl,
@@ -406,7 +409,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   return (
     <AuthContext.Provider value={value}>
       <CardDesignContext.Provider value={normalizeCardDesign(user?.profile?.cardDesign)}>
-        {children}
+        <HandSortContext.Provider value={normalizeHandSortDirection(user?.profile?.handSortDirection)}>
+          {children}
+        </HandSortContext.Provider>
       </CardDesignContext.Provider>
     </AuthContext.Provider>
   );

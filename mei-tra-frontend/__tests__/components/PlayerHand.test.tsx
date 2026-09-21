@@ -1,3 +1,4 @@
+import { HandSortContext } from '@/contexts/HandSortContext';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { asSeatId } from '@contracts/ids';
@@ -1229,4 +1230,20 @@ describe('PlayerHand pro mode drag', () => {
 
     expect(gameActions.selectNegri).not.toHaveBeenCalled();
   });
+});
+
+it('projects the profile order on mount, preference changes and hand updates', () => {
+  const makeHand = (direction: 'strong-left' | 'strong-right', cards: string[]) => (
+    <HandSortContext.Provider value={direction}>
+      {buildPlayerHand({ ...followSuitTurn, player: { ...otherPlayer, hand: cards } })}
+    </HandSortContext.Provider>
+  );
+  const cards = ['5♠', 'K♠', 'A♠', '7♥', 'A♥'];
+  const { rerender } = render(makeHand('strong-left', cards));
+  const visible = () => handCards().map(card => card.textContent);
+  expect(visible()).toEqual(['A♠', 'K♠', '5♠', 'A♥', '7♥']);
+  rerender(makeHand('strong-left', cards.filter(card => card !== 'K♠')));
+  expect(visible()).toEqual(['A♠', '5♠', 'A♥', '7♥']);
+  rerender(makeHand('strong-right', cards));
+  expect(visible()).toEqual(cards);
 });

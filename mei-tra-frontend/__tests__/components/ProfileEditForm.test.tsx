@@ -20,7 +20,7 @@ const profile: UserProfile = {
   id: 'viewer', username: 'viewer', displayName: 'Viewer',
   createdAt: new Date(), updatedAt: new Date(), lastSeenAt: new Date(),
   gamesPlayed: 0, gamesWon: 0, totalScore: 0,
-  preferences: { notifications: true, sound: false, theme: 'dark', fontSize: 'large', startPlayerAnimation: false },
+  preferences: { notifications: true, sound: false, theme: 'dark', fontSize: 'large', startPlayerAnimation: false, handSortDirection: 'strong-right' },
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -55,4 +55,18 @@ it('keeps failed and cancelled edits out of the saved profile', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
   expect(onCancel).toHaveBeenCalledTimes(1);
   expect(profile.preferences.cardDesign).toBeUndefined();
+});
+
+it('saves and restores hand order without losing the other profile settings', async () => {
+  const updated = { ...profile, preferences: { ...profile.preferences, cardDesign: 'standard' as const, handSortDirection: 'strong-left' as const } };
+  updateMock.mockResolvedValue(updated);
+  const onSave = jest.fn();
+  const { rerender } = render(<ProfileEditForm profile={profile} onSave={onSave} onCancel={jest.fn()} />);
+  expect(screen.getByRole('radio', { name: 'handSortDirection_strong-right' })).toBeChecked();
+  fireEvent.click(screen.getByRole('radio', { name: 'handSortDirection_strong-left' }));
+  fireEvent.click(screen.getByRole('button', { name: 'save' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith(updated));
+  expect(updateMock).toHaveBeenCalledWith('viewer', 'test-token', expect.objectContaining({ preferences: updated.preferences }));
+  rerender(<ProfileEditForm key="reopen-sort" profile={updated} onSave={onSave} onCancel={jest.fn()} />);
+  expect(screen.getByRole('radio', { name: 'handSortDirection_strong-left' })).toBeChecked();
 });

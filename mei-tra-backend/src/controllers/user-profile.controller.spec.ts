@@ -67,6 +67,43 @@ describe('UserProfileController', () => {
     });
   });
 
+  it.each(['strong-left', 'strong-right'] as const)(
+    'persists and returns hand direction %s',
+    async (handSortDirection) => {
+      const update = jest.fn().mockResolvedValue({
+        ...currentUser.profile,
+        preferences: { ...currentUser.profile.preferences, handSortDirection },
+      });
+      const controller = new UserProfileController(
+        { update } as unknown as IUserProfileRepository,
+        {} as IAvatarStorage,
+        { execute: jest.fn() },
+        { execute: jest.fn() },
+      );
+      await expect(
+        controller.updateProfile('user-1', currentUser, {
+          preferences: { handSortDirection },
+        }),
+      ).resolves.toMatchObject({ preferences: { handSortDirection } });
+      expect(update).toHaveBeenCalledWith('user-1', {
+        preferences: { handSortDirection },
+      });
+    },
+  );
+
+  it.each(['unknown', null, 0])(
+    'rejects invalid hand direction %s before writing',
+    async (handSortDirection) => {
+      await expect(
+        createController().updateProfile('user-1', currentUser, {
+          preferences: {
+            handSortDirection: handSortDirection as 'strong-left',
+          },
+        }),
+      ).rejects.toMatchObject({ status: 400 });
+    },
+  );
+
   it('rejects unknown card designs before writing', async () => {
     const controller = createController();
     await expect(

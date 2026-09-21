@@ -54,6 +54,7 @@ function mapPreferencesForTransport(
     fontSize: preferences.fontSize,
     startPlayerAnimation: preferences.startPlayerAnimation,
     cardDesign: preferences.cardDesign,
+    handSortDirection: preferences.handSortDirection,
   };
 
   const theme = resolveTransportTheme(preferences.theme);

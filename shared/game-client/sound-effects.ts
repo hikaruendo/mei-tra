@@ -3,6 +3,7 @@ export type SoundEffect =
   | "cardSelect"
   | "cancel"
   | "negri"
+  | "handReorder"
   | "shuffle"
   | "victory"
   | "defeat"

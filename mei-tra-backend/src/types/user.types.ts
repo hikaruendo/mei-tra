@@ -1,4 +1,8 @@
-import type { CardDesign, FontSizePreset } from '@contracts/profile';
+import type {
+  HandSortDirection,
+  CardDesign,
+  FontSizePreset,
+} from '@contracts/profile';
 
 export interface UserProfile {
   id: string; // Supabase auth user ID
@@ -27,6 +31,7 @@ export interface UserPreferences {
   /** Optional: profiles created before these settings existed omit them. */
   startPlayerAnimation?: boolean;
   cardDesign?: CardDesign;
+  handSortDirection?: HandSortDirection;
 }
 
 export interface CreateUserProfileDto {

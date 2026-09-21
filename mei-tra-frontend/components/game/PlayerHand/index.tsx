@@ -1,3 +1,4 @@
+import { useHandSortDirection } from '@/contexts/HandSortContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent } from '@dnd-kit/core';
 import { useLocale, useTranslations } from 'next-intl';
@@ -27,6 +28,7 @@ import {
 import { withoutPendingHandCard } from '@meitra/game-client/pending-hand-card';
 import { useCardValidation } from './hooks/useCardValidation';
 import {
+  orientDealtHand,
   reorderHand,
   syncHandOrder,
   type HandDropSide,
@@ -130,8 +132,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const selectedCardElementRef = useRef<HTMLDivElement>(null);
   const selectedActionsRef = useRef<HTMLDivElement>(null);
   const [selectedNegriCard, setSelectedNegriCard] = useState<string | null>(null);
-  const [displayHand, setDisplayHand] = useState(player.hand);
-  const displayHandRef = useRef(player.hand);
+  const handSortDirection = useHandSortDirection();
+  const [displayHand, setDisplayHand] = useState(() => orientDealtHand(player.hand, handSortDirection));
+  const displayHandRef = useRef(displayHand);
+  const handViewRef = useRef({ direction: handSortDirection, seatId: player.seatId });
   // The hand as the server last sent it, so the sync effect can tell an
   // arrangement change from the hand itself changing.
   const syncedHandRef = useRef(player.hand);
@@ -280,7 +284,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     const previousHand = syncedHandRef.current;
     syncedHandRef.current = player.hand;
 
-    const nextHand = syncHandOrder(displayHandRef.current, player.hand);
+    const viewChanged = handViewRef.current.direction !== handSortDirection ||
+      handViewRef.current.seatId !== player.seatId;
+    handViewRef.current = { direction: handSortDirection, seatId: player.seatId };
+    const nextHand = syncHandOrder(viewChanged ? [] : displayHandRef.current, player.hand, handSortDirection);
     displayHandRef.current = nextHand;
     setDisplayHand(nextHand);
 
@@ -292,7 +299,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     const handChanged =
       player.hand.length !== previousHand.length ||
       player.hand.some((card) => !previousHand.includes(card));
-    if (handChanged) {
+    if (handChanged || viewChanged) {
       nativeDragRef.current = false;
       setDraggingCard(null);
       setDragOffset({ x: 0, y: 0 });
@@ -302,7 +309,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       // whose card is no longer the one recorded here.
       setActiveDragCard(null);
     }
-  }, [player.hand]);
+  }, [player.hand, player.seatId, handSortDirection]);
 
   useEffect(() => {
     if (

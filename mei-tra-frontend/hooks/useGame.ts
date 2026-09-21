@@ -239,7 +239,7 @@ export const useGame = () => {
     playSoundEffect(soundEffectForCancellation());
   }, [playSoundEffect]);
   const playHandReorderSound = useCallback(() => {
-    playSoundEffect('negri');
+    playSoundEffect('handReorder');
   }, [playSoundEffect]);
   const gameOverShownRef = useRef<string | null>(null);
   const gameResultTokenRef = useRef(0);

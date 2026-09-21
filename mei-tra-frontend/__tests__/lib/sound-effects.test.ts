@@ -112,6 +112,19 @@ describe('WebSoundEffectsPlayer', () => {
     expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 
+  it('plays hand reordering and Negri as distinct effects', async () => {
+    const soundPlayer = createPlayer();
+    document.dispatchEvent(new Event('pointerdown'));
+    await flushAudioSetup();
+    soundPlayer.play('handReorder');
+    soundPlayer.play('negri');
+    expect(sourceStart).toHaveBeenCalledTimes(2);
+    const gains = (context.createGain as jest.Mock).mock.results.map(result => result.value.gain.value);
+    expect(gains).toEqual([0.42, 0.5]);
+    const sources = createBufferSource.mock.results.map(result => result.value.buffer);
+    expect(sources[0]).not.toBe(sources[1]);
+  });
+
   it('uses matching reduced playback gains for result sounds', async () => {
     const soundPlayer = createPlayer();
     document.dispatchEvent(new Event('pointerdown'));
@@ -146,7 +159,7 @@ describe('WebSoundEffectsPlayer', () => {
         createAudioContext: () => context,
       });
       expect(() => player?.start()).not.toThrow();
-      expect(browserFetch).toHaveBeenCalledTimes(8);
+      expect(browserFetch).toHaveBeenCalledTimes(9);
     } finally {
       Object.defineProperty(window, 'fetch', {
         configurable: true,
@@ -201,7 +214,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.start();
     await flushAudioSetup();
 
-    expect(fetchImpl).toHaveBeenCalledTimes(8);
+    expect(fetchImpl).toHaveBeenCalledTimes(9);
     expect(context.decodeAudioData).not.toHaveBeenCalled();
   });
 
@@ -230,7 +243,7 @@ describe('WebSoundEffectsPlayer', () => {
     player.play('shuffle');
     player.play('victory');
 
-    expect(context.decodeAudioData).toHaveBeenCalledTimes(7);
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(8);
     expect(sourceStart).toHaveBeenCalledTimes(4);
   });
 });

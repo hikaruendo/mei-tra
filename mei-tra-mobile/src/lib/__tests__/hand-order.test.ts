@@ -63,3 +63,11 @@ describe('reorderHand', () => {
     expect(reorderHand(order, 'A', 'Z', 'after')).toBeNull();
   });
 });
+
+it('applies the profile direction on a deal and keeps manual order after play', () => {
+  const hand = ['JOKER', '7♠', 'A♠', '8♥', 'K♥'];
+  const arranged = syncHandOrder([], hand, 'strong-left');
+  expect(arranged).toEqual(['JOKER', 'A♠', '7♠', 'K♥', '8♥']);
+  const manual = reorderHand(arranged, '8♥', 'JOKER', 'before')!;
+  expect(syncHandOrder(manual, hand.slice(1), 'strong-left')).toEqual(['8♥', 'A♠', '7♠', 'K♥']);
+});

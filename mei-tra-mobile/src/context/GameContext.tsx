@@ -1465,7 +1465,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, [playSoundEffect]);
 
   const playHandReorderSound = useCallback(() => {
-    playSoundEffect('negri');
+    playSoundEffect('handReorder');
   }, [playSoundEffect]);
 
   const playCard = useCallback((card: string) => {

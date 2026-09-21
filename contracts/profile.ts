@@ -1,5 +1,7 @@
 export type FontSizePreset = 'standard' | 'large' | 'xlarge' | 'xxlarge';
 
+export type HandSortDirection = 'strong-right' | 'strong-left';
+
 export type CardDesign = 'standard' | 'densho';
 
 export type TransportTheme = 'light' | 'dark';
@@ -13,6 +15,8 @@ export interface TransportUserPreferences {
   startPlayerAnimation?: boolean;
   /** Omitted by older profiles; clients render the standard design. */
   cardDesign?: CardDesign;
+  /** Rank order within each suit; omitted profiles keep stronger ranks on the right. */
+  handSortDirection?: HandSortDirection;
 }
 
 export interface UserProfileDto {

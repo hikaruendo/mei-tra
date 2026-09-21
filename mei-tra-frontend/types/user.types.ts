@@ -1,4 +1,4 @@
-import type { CardDesign, FontSizePreset as ContractFontSizePreset } from '@contracts/profile';
+import type { HandSortDirection, CardDesign, FontSizePreset as ContractFontSizePreset } from '@contracts/profile';
 
 export type FontSizePreset = ContractFontSizePreset;
 
@@ -22,6 +22,7 @@ export interface UserPreferences {
   theme: 'system' | 'light' | 'dark';
   fontSize: FontSizePreset;
   cardDesign?: CardDesign;
+  handSortDirection?: HandSortDirection;
   startPlayerAnimation: boolean;
 }
 

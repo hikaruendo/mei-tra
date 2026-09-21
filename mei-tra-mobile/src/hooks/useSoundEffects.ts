@@ -10,6 +10,7 @@ import type { SoundEffect } from '@meitra/game-client/sound-effects';
 const CARD_PLAY_SOURCE = require('../../assets/sounds/card-play.mp3');
 const CARD_SELECT_SOURCE = require('../../assets/sounds/card-select.mp3');
 const CANCEL_SOURCE = require('../../assets/sounds/cancel.mp3');
+const HAND_REORDER_SOURCE = require('../../assets/sounds/hand-reorder.mp3');
 const NEGRI_SOURCE = require('../../assets/sounds/negri.mp3');
 const SHUFFLE_SOURCE = require('../../assets/sounds/shuffle.mp3');
 const VICTORY_SOURCE = require('../../assets/sounds/victory.mp3');
@@ -37,11 +38,13 @@ export const useSoundEffects = (enabled: boolean) => {
   const victoryPlayer = useAudioPlayer(VICTORY_SOURCE);
   const defeatPlayer = useAudioPlayer(DEFEAT_SOURCE);
   const resultNeutralPlayer = useAudioPlayer(RESULT_NEUTRAL_SOURCE);
+  const handReorderPlayer = useAudioPlayer(HAND_REORDER_SOURCE);
   const playersRef = useRef({
     cards: [cardPlayerA, cardPlayerB, cardPlayerC],
     cardSelect: cardSelectPlayer,
     cancel: cancelPlayer,
     negri: negriPlayer,
+    handReorder: handReorderPlayer,
     shuffle: shufflePlayer,
     victory: victoryPlayer,
     defeat: defeatPlayer,
@@ -56,6 +59,7 @@ export const useSoundEffects = (enabled: boolean) => {
     cardSelect: cardSelectPlayer,
     cancel: cancelPlayer,
     negri: negriPlayer,
+    handReorder: handReorderPlayer,
     shuffle: shufflePlayer,
     victory: victoryPlayer,
     defeat: defeatPlayer,
@@ -98,6 +102,11 @@ export const useSoundEffects = (enabled: boolean) => {
 
     if (effect === 'resultNeutral') {
       void replay(playersRef.current.resultNeutral, 0.4);
+      return;
+    }
+
+    if (effect === 'handReorder') {
+      void replay(playersRef.current.handReorder, 0.42);
       return;
     }
 

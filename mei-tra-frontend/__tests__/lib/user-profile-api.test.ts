@@ -115,7 +115,7 @@ describe('fetchUserProfileViaApi', () => {
 
     await updateUserProfileViaApi('user/1', 'access-token', {
       displayName: 'Updated User',
-      preferences: { sound: true, cardDesign: 'densho' },
+      preferences: { sound: true, cardDesign: 'densho', handSortDirection: 'strong-left' },
     });
 
     expect(fetchMock).toHaveBeenCalledWith('/api/user-profile/user%2F1', {
@@ -132,6 +132,7 @@ describe('fetchUserProfileViaApi', () => {
           fontSize: undefined,
           startPlayerAnimation: undefined,
           cardDesign: 'densho',
+          handSortDirection: 'strong-left',
         },
       }),
       signal: undefined,
