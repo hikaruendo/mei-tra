@@ -78,6 +78,7 @@ function getJsonLd(locale: string) {
         ? '4人2チーム制の戦略的オンライントランプゲーム。ビットやジャックシステムなど独自ルールを持つトリックテイキングゲームをオンラインで無料プレイ。'
         : 'A strategic 4-player, 2-team online card game. Play this unique trick-taking game with bidding and the Jack system for free.',
     applicationCategory: 'GameApplication',
+    image: `${SITE_URL}/brand/meitra-spade.png`,
     operatingSystem: 'Web',
     offers: {
       '@type': 'Offer',
@@ -92,7 +93,6 @@ function getJsonLd(locale: string) {
     '@type': 'Organization',
     name: 'Kando',
     url: 'https://kando1.com',
-    logo: `${SITE_URL}/meitra2.webp`,
   };
 
   return [webApplication, organization];

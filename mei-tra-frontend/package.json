@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "check:architecture": "node --test scripts/check-no-direct-db-access.test.mjs && node scripts/check-no-direct-db-access.mjs",
-    "lint": "npm run check:architecture && npm run assets:densho:check && eslint .",
+    "lint": "npm run check:architecture && npm run assets:brand:check && npm run assets:densho:check && eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -15,7 +15,9 @@
     "assets:table:build": "node scripts/build-table-art.mjs",
     "assets:table:build:check": "node scripts/build-table-art.mjs --check",
     "assets:densho": "node ../shared/game-client/scripts/sync-densho-assets.mjs && node ../shared/game-client/scripts/build-densho-cards.mjs",
-    "assets:densho:check": "node ../shared/game-client/scripts/sync-densho-assets.mjs --check && node ../shared/game-client/scripts/build-densho-cards.mjs --check"
+    "assets:densho:check": "node ../shared/game-client/scripts/sync-densho-assets.mjs --check && node ../shared/game-client/scripts/build-densho-cards.mjs --check",
+    "assets:brand": "node ../shared/brand/build-assets.mjs",
+    "assets:brand:check": "node ../shared/brand/build-assets.mjs --check && node --test ../shared/brand/build-assets.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,0 +1,15 @@
+{
+  "source": "d52470cba860bd6c0b56925fe320cb7d3dab93b3ee1efea3e2f80ead68fa3d75",
+  "recipe": "cfdaa2cb9aa3fbd043c105bd285cce43926eecb9cc4c6aa5d45e6f57de84faa4",
+  "outputs": {
+    "shared/brand/meitra-spade.png": "ff0f223c01531e2aaa12a3e2d0e06933cc0d5bd78cc540746713347d57d73071",
+    "mei-tra-mobile/assets/images/meitra-icon.png": "548fbbb224d9dcba971d9f410f1a2b2880f95dac4ef18097a8abdcc2eb88424c",
+    "mei-tra-mobile/assets/images/meitra-adaptive-foreground.png": "4a0e346121f0bf4e934d0fd6a4c02bff736a9f4f76d06b75c600ec3a98db7311",
+    "mei-tra-mobile/assets/images/meitra-splash.png": "b0246855697a96b67e64a6838c324900503b40cf6ea8ee7461746023f7ea280b",
+    "mei-tra-mobile/assets/images/meitra-brand.png": "a15cb58bd71762321ff2f1996e2b178e426f0a217087967095759da842e0f490",
+    "mei-tra-frontend/public/brand/meitra-spade.png": "a15cb58bd71762321ff2f1996e2b178e426f0a217087967095759da842e0f490",
+    "mei-tra-frontend/app/icon.png": "a74dee3952da9c008064023c0fb79e16eaa14f7ed4cf5aeefa4710a54d42dd25",
+    "mei-tra-frontend/app/apple-icon.png": "0a71a5f3a9f8c5fefc3b8281ac187e4d7e2af9f37bb24975aa4719ceb8b4c05b",
+    "mei-tra-frontend/app/favicon.ico": "5e81d5275d7c0f6d958c3eb75aef6b1339b780a3922034319b306681507c21e3"
+  }
+}

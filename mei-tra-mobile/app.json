@@ -19,7 +19,7 @@
     "android": {
       "package": "com.kando1.meitra",
       "adaptiveIcon": {
-        "backgroundColor": "#0e2a21",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/meitra-adaptive-foreground.png"
       },
       "permissions": [
@@ -36,7 +36,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0e2a21",
+          "backgroundColor": "#ffffff",
           "image": "./assets/images/meitra-splash.png",
           "imageWidth": 240
         }

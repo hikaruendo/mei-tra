@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "check:architecture": "node --test scripts/check-no-direct-db-access.test.mjs && node scripts/check-no-direct-db-access.mjs",
-    "lint": "npm run check:architecture && expo lint",
+    "lint": "npm run check:architecture && npm run assets:brand:check && expo lint",
     "typecheck": "tsc --noEmit",
     "doctor": "npx --yes expo-doctor",
     "export:ios": "expo export --platform ios",
@@ -20,7 +20,9 @@
     "assets:sounds": "node scripts/sync-sound-assets.mjs",
     "assets:sounds:check": "node scripts/sync-sound-assets.mjs --check",
     "assets:table": "node scripts/sync-table-assets.mjs",
-    "assets:table:check": "node scripts/sync-table-assets.mjs --check"
+    "assets:table:check": "node scripts/sync-table-assets.mjs --check",
+    "assets:brand": "node ../shared/brand/build-assets.mjs",
+    "assets:brand:check": "node ../shared/brand/build-assets.mjs --check && node --test ../shared/brand/build-assets.test.mjs"
   },
   "dependencies": {
     "@meitra/api-client": "file:../shared/api-client",

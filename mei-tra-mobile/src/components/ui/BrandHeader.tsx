@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
 
@@ -9,7 +9,16 @@ interface BrandHeaderProps {
 export function BrandHeader({ subtitle }: BrandHeaderProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>Meitra</Text>
+      <View style={styles.brandRow}>
+        <Image
+          source={require('../../../assets/images/meitra-brand.png')}
+          style={styles.mark}
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+        <Text style={styles.logo}>Meitra</Text>
+      </View>
       {subtitle ? (
         <Text numberOfLines={2} style={styles.subtitle}>
           {subtitle}
@@ -23,6 +32,8 @@ const styles = StyleSheet.create({
   container: {
     gap: 4,
   },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mark: { width: 44, height: 44, borderRadius: 8 },
   logo: {
     color: colors.gold,
     fontSize: 34,
