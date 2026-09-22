@@ -5,6 +5,7 @@ import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import {
   SettingsCard,
   SettingsScaffold,
+  SettingsLinkRow,
 } from '@/components/settings/SettingsScaffold';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +15,7 @@ import { config } from '@/lib/config';
 import { colors } from '@/theme/colors';
 
 export default function HelpSettingsScreen() {
-  const { locale } = useLocale();
+  useLocale();
   const router = useRouter();
   const { user, loading } = useAuth();
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -33,10 +34,6 @@ export default function HelpSettingsScreen() {
   }
 
   const links = [
-    {
-      label: t('settings.rules'),
-      url: `${config.publicWebBaseUrl}/${locale}/docs`,
-    },
     {
       label: t('settings.privacyPolicy'),
       url: `${config.publicWebBaseUrl}/ja/privacy`,
@@ -70,6 +67,11 @@ export default function HelpSettingsScreen() {
         description={t('settings.legalHint')}
         title={t('settings.legal')}
       >
+        <SettingsLinkRow
+          description={t('settings.rulesHint')}
+          label={t('settings.rules')}
+          onPress={() => router.push('/settings/docs')}
+        />
         {links.map(({ label, url }) => (
           <Pressable
             accessibilityHint={t('settings.openInBrowser')}

@@ -312,6 +312,7 @@
     "terms": "Terms of service",
     "support": "Contact (operating company)",
     "rules": "Rules",
+    "rulesHint": "Read how to play and the rules in the app",
     "recentGamesHint": "Completed games, newest first.",
     "refresh": "Refresh",
     "historyLoading": "Loading game logs",
