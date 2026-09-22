@@ -33,17 +33,7 @@ export default function HelpSettingsScreen() {
     );
   }
 
-  const links = [
-    {
-      label: t('settings.privacyPolicy'),
-      url: `${config.publicWebBaseUrl}/ja/privacy`,
-    },
-    {
-      label: t('settings.terms'),
-      url: `${config.publicWebBaseUrl}/ja/terms`,
-    },
-    { label: t('settings.support'), url: config.supportUrl },
-  ];
+  const links = [{ label: t('settings.support'), url: config.supportUrl }];
 
   const handleOpenLink = async (url: string, label: string) => {
     if (openingLink) return;
@@ -71,6 +61,14 @@ export default function HelpSettingsScreen() {
           description={t('settings.rulesHint')}
           label={t('settings.rules')}
           onPress={() => router.push('/settings/docs')}
+        />
+        <SettingsLinkRow
+          label={t('settings.privacyPolicy')}
+          onPress={() => router.push('/settings/privacy')}
+        />
+        <SettingsLinkRow
+          label={t('settings.terms')}
+          onPress={() => router.push('/settings/terms')}
         />
         {links.map(({ label, url }) => (
           <Pressable
