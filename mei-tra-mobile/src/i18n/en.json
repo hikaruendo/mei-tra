@@ -298,7 +298,7 @@
     "jackTitle": "JOKER and jacks",
     "jackBody": "The JOKER is always the strongest card. The Primary Jack is the jack of the trump suit, and the Secondary Jack is the jack of the other suit of the same colour. Tra changes the usual jack treatment.",
     "playTitle": "Playing cards",
-    "playBody": "There are 10 tricks. The dealer’s left-hand player leads first, then the winner of each trick leads the next one. Follow the led suit when you can. A trick won with trump earns bonus points.",
+    "playBody": "There are 10 tricks. The highest declarer leads first, then the winner of each trick leads the next one. Follow the led suit when you can. A trick won with trump earns bonus points.",
     "brokenTitle": "Broken Negri",
     "brokenBody": "You can declare Broken Negri when your hand has no face cards and only one Queen. If you hold all four jacks, you must play every jack before the hand can be broken. Release the selected card over your own player information panel to set Negri.",
     "scoringTitle": "Scoring",
