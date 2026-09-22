@@ -890,7 +890,7 @@
     },
     "chombo": {
       "title": "Chombo (Violation) System [Pro Mode]",
-      "description": "In pro mode a violation is not blocked when it happens. The server records it without showing it, and it is judged only when the opposing team reports it.",
+      "description": "Chombo means making a card play that breaks the rules. Examples include forgetting Negri, playing an illegal suit, playing while holding all four jacks, or failing to play Tanzen by your second-to-last card. The play is not blocked or shown immediately; the opposing team can report it during the round for adjudication.",
       "proControls": "Pro Mode Controls",
       "proControlsDesc": "Cards are moved by dragging. Drag a card up and let go to play it; let go over your own player info to set it as Negri. No hints, such as a Negri reminder, are shown.",
       "proControlsExample": "After winning the bid, drag a card from your hand onto your player info → it becomes your Negri",
