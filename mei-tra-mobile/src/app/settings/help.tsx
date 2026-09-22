@@ -14,7 +14,7 @@ import { config } from '@/lib/config';
 import { colors } from '@/theme/colors';
 
 export default function HelpSettingsScreen() {
-  useLocale();
+  const { locale } = useLocale();
   const router = useRouter();
   const { user, loading } = useAuth();
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -33,6 +33,10 @@ export default function HelpSettingsScreen() {
   }
 
   const links = [
+    {
+      label: t('settings.rules'),
+      url: `${config.publicWebBaseUrl}/${locale}/docs`,
+    },
     {
       label: t('settings.privacyPolicy'),
       url: `${config.publicWebBaseUrl}/ja/privacy`,
