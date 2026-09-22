@@ -296,7 +296,7 @@
     "bidTitle": "Bid",
     "bidBody": "After the deal, each team bids the number of tricks it expects to take. The minimum bid is 6. Trump strength is Tra (5), Hearts (4), Diamonds (3), Clubs (2), then Spades (1).",
     "jackTitle": "JOKER and jacks",
-    "jackBody": "The JOKER is always the strongest card. The Main J is the jack of the trump suit, and the Sub J is the jack of the other suit of the same colour. Tra changes the usual jack treatment.",
+    "jackBody": "The JOKER is always the strongest card. The Primary Jack is the jack of the trump suit, and the Secondary Jack is the jack of the other suit of the same colour. Tra changes the usual jack treatment.",
     "playTitle": "Playing cards",
     "playBody": "There are 10 tricks. The dealer’s left-hand player leads first, then the winner of each trick leads the next one. Follow the led suit when you can. A trick won with trump earns bonus points.",
     "brokenTitle": "Broken Negri",
