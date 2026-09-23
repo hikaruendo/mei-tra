@@ -452,7 +452,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 | `pass-blow` | No | パス |
 | `select-negri` | No | ネグリ選択 |
 | `play-card` | No | カードプレイ |
-| `select-base-suit` | No | 台札スート選択 |
+| `select-base-suit` | No | 台札スーツ選択 |
 | `moderate-player` | Yes | プレイヤー管理 |
 | `update-team-names` | No | チーム名更新 |
 

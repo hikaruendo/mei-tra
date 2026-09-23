@@ -295,7 +295,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 │                  🧠 Domain Layer / Application Services                     │
 │  ┌──────────────────────────────────────────────────────────────────┐    │
 │  │  Domain Layer                                                     │    │
-│  │  ├─ CardService          (カード強度・スート・デッキ)             │    │
+│  │  ├─ CardService          (カード強度・スーツ・デッキ)             │    │
 │  │  ├─ BlowService          (Blow 宣言の合法性)                      │    │
 │  │  ├─ PlayService          (場の勝者判定)                           │    │
 │  │  ├─ ScoreService         (得点計算)                               │    │
