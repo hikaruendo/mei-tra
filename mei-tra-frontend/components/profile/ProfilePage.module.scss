@@ -309,27 +309,47 @@ $transition-button: all 0.3s ease;
   flex-direction: column;
   gap: $spacing-sm;
   align-items: flex-start;
+
+  @media (max-width: 480px) {
+    align-items: stretch;
+  }
 }
 
 .accountActionButton {
-  background-color: var(--mt-surface-raised-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  min-width: 13rem;
+  background: var(--mt-accent-subtle);
   color: var(--mt-text-primary);
-  border: 1px solid var(--mt-border-hairline);
+  border: 1px solid var(--mt-accent);
   border-radius: $radius-md;
   padding: $spacing-sm $spacing-md;
   font-size: $font-size-sm;
   font-weight: 600;
   cursor: pointer;
   transition: $transition-button;
+  box-shadow: 0 2px 8px var(--mt-accent-subtle);
 
   &:hover:not(:disabled) {
-    background-color: var(--mt-surface-raised);
-    border-color: var(--mt-accent);
+    background: var(--mt-surface-raised);
+    box-shadow: var(--mt-shadow-btn);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mt-accent-strong);
+    outline-offset: 3px;
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
   }
 }
 
@@ -365,24 +385,39 @@ $transition-button: all 0.3s ease;
 }
 
 .editButton {
-  background-color: var(--mt-surface-raised-2);
-  color: var(--mt-text-primary);
-  border: 1px solid var(--mt-border-hairline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  min-width: 9rem;
+  background: var(--mt-btn-primary-bg);
+  color: var(--mt-btn-primary-text);
+  border: 1px solid var(--mt-accent);
   border-radius: $radius-md;
   padding: $spacing-sm $spacing-lg;
   font-size: $font-size-sm;
   font-weight: 600;
   cursor: pointer;
   transition: $transition-button;
+  box-shadow: var(--mt-shadow-btn);
 
   &:hover {
-    background-color: var(--mt-surface-raised);
+    background: var(--mt-btn-primary-bg-hover);
     border-color: var(--mt-accent);
     transform: translateY(-1px);
   }
 
+  &:focus-visible {
+    outline: 2px solid var(--mt-accent-strong);
+    outline-offset: 3px;
+  }
+
   &:active {
     transform: translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    min-width: 12rem;
   }
 }
 
