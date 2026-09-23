@@ -32,6 +32,7 @@ jest.mock('next-intl', () => ({
     const labels: Record<string, string> = {
       title: 'プロフィール',
       edit: 'プロフィールを編集',
+      profileLink: 'プロフィール',
       loading: 'プロフィールを読み込み中...',
       loginButton: 'ログイン',
       guestUser: 'ゲストユーザー',
@@ -62,20 +63,20 @@ describe('UserProfile', () => {
 
     expect(screen.getByRole('menu', { name: /アカウント情報/ })).toBeInTheDocument();
     expect(screen.getByText('hika.blue91@gmail.com')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /プロフィールを編集/ })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('menuitem', { name: 'プロフィール' })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('menuitem', { name: /ログアウト/ })).toBeInTheDocument();
   });
 
-  it('shows a dedicated profile edit link in the default layout', () => {
+  it('shows a profile link in the default layout', () => {
     render(<UserProfile />);
 
-    expect(screen.getByRole('link', { name: /プロフィールを編集/ })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('link', { name: /プロフィール/ })).toHaveAttribute('href', '/profile');
   });
 
-  it('uses disabled buttons for profile editing and logout during a game', () => {
+  it('uses disabled buttons for profile and logout during a game', () => {
     render(<UserProfile isGameInProgress />);
 
-    const profileButton = screen.getByRole('button', { name: /プロフィールを編集/ });
+    const profileButton = screen.getByRole('button', { name: /プロフィール/ });
     expect(profileButton).toBeDisabled();
     expect(profileButton).toHaveAttribute('title', '対局中はこの操作を行えません');
 
@@ -84,12 +85,12 @@ describe('UserProfile', () => {
     expect(logoutButton).toHaveAttribute('title', '対局中はこの操作を行えません');
   });
 
-  it('uses a disabled button for profile editing in the compact menu during a game', () => {
+  it('uses a disabled button for profile in the compact menu during a game', () => {
     render(<UserProfile variant="compact" isGameInProgress />);
 
     fireEvent.click(screen.getByRole('button', { name: /プロフィール/ }));
 
-    const profileButton = screen.getByRole('menuitem', { name: 'プロフィールを編集' });
+    const profileButton = screen.getByRole('menuitem', { name: 'プロフィール' });
     expect(profileButton).toBeDisabled();
     expect(profileButton).toHaveAttribute('title', '対局中はこの操作を行えません');
   });
