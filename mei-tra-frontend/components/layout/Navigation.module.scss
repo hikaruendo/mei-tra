@@ -604,9 +604,3 @@ $desktop-breakpoint: 960px;
     gap: 0.35rem;
   }
 }
-
-:global(html[data-theme='light']) {
-  .brandLogo {
-    filter: brightness(0) saturate(100%);
-  }
-}
