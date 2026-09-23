@@ -28,7 +28,7 @@ test.describe('Tutorial Whitepaper', () => {
     await expect(
       page.getByRole('heading', { level: 2, name: 'ビットシステム' }),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { level: 3, name: 'スートの強さ順' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: 'スーツの強さ順' })).toBeVisible();
   });
 
   test('shows special systems and strategy tips', async ({ page }) => {
