@@ -964,6 +964,7 @@
     "loginRequired": "プロフィールを表示するにはログインが必要です",
     "loginButton": "ログイン",
     "edit": "プロフィール編集",
+    "profileLink": "プロフィール",
     "editButton": "プロフィールを編集",
     "guestUser": "ゲストユーザー",
     "save": "保存",

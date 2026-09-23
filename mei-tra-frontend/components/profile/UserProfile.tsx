@@ -137,7 +137,7 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
           {isGuest && <span className={styles.guestBadge}>{t('guestBadge')}</span>}
         </span>
         <span className={styles.profileEditHint}>
-          {t('edit')}
+          {t('profileLink')}
         </span>
       </div>
     </>
@@ -230,11 +230,11 @@ export function UserProfile({ variant = 'default', isGameInProgress = false }: U
                   disabled
                   title={unavailableDuringGameMessage}
                 >
-                  {t('edit')}
+                  {t('profileLink')}
                 </button>
               ) : (
                 <Link href="/profile" className={styles.compactActionLink} onClick={closeCompactMenu} role="menuitem">
-                  {t('edit')}
+                  {t('profileLink')}
                 </Link>
               )}
               <button
