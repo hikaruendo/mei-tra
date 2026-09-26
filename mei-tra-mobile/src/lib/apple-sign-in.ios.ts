@@ -1,6 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 
+import { fetchPlayerProfileWithRetry, updateProfile } from '@/lib/profile-api';
 import { supabase } from '@/lib/supabase';
 
 export async function signInWithAppleIdToken(): Promise<{
@@ -27,7 +28,7 @@ export async function signInWithAppleIdToken(): Promise<{
       return { error: 'Apple identity token was not returned' };
     }
 
-    const { error } = await supabase.auth.signInWithIdToken({
+    const { data, error } = await supabase.auth.signInWithIdToken({
       provider: 'apple',
       token: credential.identityToken,
       nonce,
@@ -43,7 +44,26 @@ export async function signInWithAppleIdToken(): Promise<{
       .filter(Boolean)
       .join(' ');
     if (fullName) {
-      await supabase.auth.updateUser({ data: { full_name: fullName } });
+      // The profile trigger has already run when sign-in returns. Apple only
+      // supplies a name once, so populate a default profile without replacing
+      // a name the player chose earlier.
+      if (data.user && data.session) {
+        try {
+          const profile = await fetchPlayerProfileWithRetry(data.user.id);
+          if (profile.displayName === 'Player') {
+            await updateProfile(data.user.id, data.session.access_token, {
+              displayName: fullName.slice(0, 100),
+            });
+          }
+        } catch (profileError) {
+          console.warn('[AppleSignIn] Failed to save initial profile name:', profileError);
+        }
+      }
+      try {
+        await supabase.auth.updateUser({ data: { full_name: fullName } });
+      } catch (metadataError) {
+        console.warn('[AppleSignIn] Failed to save auth name:', metadataError);
+      }
     }
 
     return { error: null };

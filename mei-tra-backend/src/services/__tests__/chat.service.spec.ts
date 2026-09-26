@@ -220,14 +220,6 @@ describe('ChatService', () => {
   it('omits messages from blocked users when listing chat history', async () => {
     chatMessageRepository.findByRoomId.mockResolvedValue([
       ChatMessage.create({
-        id: 'hidden-message',
-        roomId: ChatRoomId.create('room-1'),
-        senderId: UserId.create('blocked-user'),
-        content: 'hidden',
-        contentType: 'text',
-        createdAt: new Date(),
-      }),
-      ChatMessage.create({
         id: 'visible-message',
         roomId: ChatRoomId.create('room-1'),
         senderId: UserId.create('friend'),
@@ -243,6 +235,12 @@ describe('ChatService', () => {
       viewerId: 'me',
     });
     expect(result.map((message) => message.id)).toEqual(['visible-message']);
+    expect(chatMessageRepository.findByRoomId).toHaveBeenCalledWith(
+      expect.any(ChatRoomId),
+      50,
+      undefined,
+      ['blocked-user'],
+    );
     expect(profileRepository.findByUserIds).toHaveBeenCalledWith(['friend']);
   });
 

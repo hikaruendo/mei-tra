@@ -1,4 +1,6 @@
 import type {
+  ChatBlockedUser,
+  ChatBlockedUsersPayload,
   ChatMessage,
   ChatMessageEvent,
   ChatMessagesPayload,
@@ -22,7 +24,7 @@ interface SocialContextValue {
   connected: boolean;
   messages: ChatMessage[];
   blockedUserIds: string[];
-  blockedUsers: { userId: string; displayName: string }[];
+  blockedUsers: ChatBlockedUser[];
   notice: 'reported' | 'blocked' | 'unblocked' | 'filtered' | 'error' | null;
   typingUserIds: string[];
   joinRoom: (roomId: string) => void;
@@ -64,7 +66,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
-  const [blockedUsers, setBlockedUsers] = useState<{ userId: string; displayName: string }[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<ChatBlockedUser[]>([]);
   const blockedRef = useRef(new Set<string>());
   const [notice, setNotice] = useState<SocialContextValue['notice']>(null);
   const [typingMap, setTypingMap] = useState<Map<string, ReturnType<typeof setTimeout>>>(
@@ -135,30 +137,21 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    socket.on('chat:blocked-users', (payload: { users: { userId: string; displayName: string }[] }) => {
-      blockedRef.current = new Set(payload.users.map((item) => item.userId));
+    socket.on('chat:blocked-users', (payload: ChatBlockedUsersPayload) => {
+      const nextBlocked = new Set(payload.users.map((item) => item.userId));
+      const wasUnblocked = [...blockedRef.current].some((id) => !nextBlocked.has(id));
+      blockedRef.current = nextBlocked;
       setBlockedUsers(payload.users);
-      setBlockedUserIds([...blockedRef.current]);
+      setBlockedUserIds([...nextBlocked]);
       setMessages((current) => current.filter((message) =>
-        !blockedRef.current.has(message.sender.userId),
+        !nextBlocked.has(message.sender.userId),
       ));
-    });
-    socket.on('chat:blocked', ({ userId }: { userId: string }) => {
-      blockedRef.current.add(userId);
-      setBlockedUserIds([...blockedRef.current]);
-      setMessages((current) => current.filter((message) =>
-        message.sender.userId !== userId,
-      ));
-      setNotice('blocked');
-    });
-    socket.on('chat:unblocked', ({ userId }: { userId: string }) => {
-      blockedRef.current.delete(userId);
-      setBlockedUserIds([...blockedRef.current]);
-      setNotice('unblocked');
-      if (joinedRoomRef.current) {
+      if (wasUnblocked && joinedRoomRef.current) {
         socket.emit('chat:list-messages', { roomId: joinedRoomRef.current, limit: 50 });
       }
     });
+    socket.on('chat:blocked', () => setNotice('blocked'));
+    socket.on('chat:unblocked', () => setNotice('unblocked'));
     socket.on('chat:reported', () => setNotice('reported'));
     socket.on('chat:error', (payload: { code?: string }) =>
       setNotice(payload?.code === 'CONTENT_REJECTED' ? 'filtered' : 'error'));

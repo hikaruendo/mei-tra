@@ -1,4 +1,8 @@
-import type { ChatMessagesPayload, ChatTypingEvent } from '@contracts/social';
+import type {
+  ChatBlockedUsersPayload,
+  ChatMessagesPayload,
+  ChatTypingEvent,
+} from '@contracts/social';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -310,10 +314,10 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       if (!user) return;
       await this.chatModerationService.blockUser(user.id, data.userId);
-      client.emit('chat:blocked', { userId: data.userId });
-      client.emit('chat:blocked-users', {
+      this.emitBlockedUsersToUser(user.id, {
         users: await this.chatModerationService.listBlockedUsers(user.id),
       });
+      client.emit('chat:blocked', { userId: data.userId });
     } catch (error) {
       this.logGatewayError('Failed to block user', error);
       client.emit('chat:error', { message: 'Failed to block user' });
@@ -332,13 +336,24 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       if (!user) return;
       await this.chatModerationService.unblockUser(user.id, data.userId);
-      client.emit('chat:unblocked', { userId: data.userId });
-      client.emit('chat:blocked-users', {
+      this.emitBlockedUsersToUser(user.id, {
         users: await this.chatModerationService.listBlockedUsers(user.id),
       });
+      client.emit('chat:unblocked', { userId: data.userId });
     } catch (error) {
       this.logGatewayError('Failed to unblock user', error);
       client.emit('chat:error', { message: 'Failed to unblock user' });
+    }
+  }
+
+  private emitBlockedUsersToUser(
+    userId: string,
+    payload: ChatBlockedUsersPayload,
+  ): void {
+    for (const [socketId, state] of this.socketRooms) {
+      if (state.userId === userId) {
+        this.server.to(socketId).emit('chat:blocked-users', payload);
+      }
     }
   }
 

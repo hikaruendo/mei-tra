@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import type {
+  ChatBlockedUsersPayload,
   ChatMessageEvent,
   ChatMessagesPayload,
   ChatTypingEvent,
@@ -85,6 +86,7 @@ export function useChatMessages(roomId: string) {
   const { socket, isConnected, loadMessages } = useSocialSocket();
   const [messages, setMessages] = useState<ChatMessageEvent[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const blockedUserIds = useRef(new Set<string>());
 
   useEffect(() => {
     if (!socket || !isConnected) {
@@ -95,7 +97,10 @@ export function useChatMessages(roomId: string) {
     loadMessages(roomId, 50);
 
     const handleMessage = (event: ChatMessageEvent) => {
-      if (event.roomId === roomId) {
+      if (
+        event.roomId === roomId &&
+        !blockedUserIds.current.has(event.message.sender.userId)
+      ) {
         setMessages((prev) => [...prev, event]);
       }
     };
@@ -116,23 +121,39 @@ export function useChatMessages(roomId: string) {
     const handleMessages = (data: ChatMessagesPayload) => {
       if (data.roomId === roomId) {
         console.log('[useChatMessages] Loaded messages:', data.messages);
-        const events: ChatMessageEvent[] = data.messages.map((msg) => ({
-          type: 'chat.message',
-          roomId: data.roomId,
-          message: msg,
-        }));
+        const events: ChatMessageEvent[] = data.messages
+          .filter((msg) => !blockedUserIds.current.has(msg.sender.userId))
+          .map((msg) => ({
+            type: 'chat.message',
+            roomId: data.roomId,
+            message: msg,
+          }));
         setMessages(events);
       }
+    };
+
+    const handleBlockedUsers = (payload: ChatBlockedUsersPayload) => {
+      const nextBlocked = new Set(payload.users.map((user) => user.userId));
+      const wasUnblocked = [...blockedUserIds.current].some(
+        (userId) => !nextBlocked.has(userId),
+      );
+      blockedUserIds.current = nextBlocked;
+      setMessages((current) =>
+        current.filter((event) => !nextBlocked.has(event.message.sender.userId)),
+      );
+      if (wasUnblocked) loadMessages(roomId, 50);
     };
 
     socket.on('chat:message', handleMessage);
     socket.on('chat:typing', handleTyping);
     socket.on('chat:messages', handleMessages);
+    socket.on('chat:blocked-users', handleBlockedUsers);
 
     return () => {
       socket.off('chat:message', handleMessage);
       socket.off('chat:typing', handleTyping);
       socket.off('chat:messages', handleMessages);
+      socket.off('chat:blocked-users', handleBlockedUsers);
     };
   }, [socket, isConnected, roomId, loadMessages]);
 

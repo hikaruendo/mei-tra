@@ -275,7 +275,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: callback.error };
   }, []);
 
-  const signInWithApple = useCallback(() => signInWithAppleIdToken(), []);
+  const signInWithApple = useCallback(async () => {
+    const result = await signInWithAppleIdToken();
+    if (!result.error && !result.cancelled) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data.user) await loadProfile(data.user);
+      } catch (profileError) {
+        console.warn('[Auth] Failed to refresh Apple profile:', profileError);
+      }
+    }
+    return result;
+  }, [loadProfile]);
 
   const signInAnonymously = useCallback(async (displayName?: string) => {
     // display_name lands in raw_user_meta_data, which the handle_new_user

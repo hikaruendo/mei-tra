@@ -111,16 +111,14 @@ export class ChatService {
 
   async listMessages(dto: ListMessagesDto): Promise<ChatMessageDto[]> {
     const roomId = ChatRoomId.create(dto.roomId);
+    const blockedUserIds = dto.viewerId
+      ? await this.moderation.listBlockedUserIds(dto.viewerId)
+      : [];
     const messages = await this.chatMessageRepository.findByRoomId(
       roomId,
       dto.limit || 50,
       dto.cursor,
-    );
-    const blocked = dto.viewerId
-      ? new Set(await this.moderation.listBlockedUserIds(dto.viewerId))
-      : new Set<string>();
-    const visibleMessages = messages.filter(
-      (message) => !blocked.has(message.getSenderId()?.getValue() ?? ''),
+      blockedUserIds,
     );
 
     // Batch fetch all unique sender profiles in one query (N+1 optimization)
@@ -128,7 +126,7 @@ export class ChatService {
     // Filter out null/undefined (system messages have no sender)
     const uniqueSenderIds = Array.from(
       new Set(
-        visibleMessages
+        messages
           .map((msg) => msg.getSenderId()?.getValue())
           .filter((id): id is string => id != null),
       ),
@@ -150,7 +148,7 @@ export class ChatService {
     });
 
     // Convert messages using cached profiles
-    const messagesWithProfiles = visibleMessages.map((msg) => {
+    const messagesWithProfiles = messages.map((msg) => {
       const senderId = msg.getSenderId();
       let basicProfile: BasicProfile;
 

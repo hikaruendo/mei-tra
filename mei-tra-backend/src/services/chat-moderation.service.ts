@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ChatBlockedUser } from '@contracts/social';
 import { IChatMessageRepository } from '../repositories/interfaces/chat-message.repository.interface';
 import { IChatModerationRepository } from '../repositories/interfaces/chat-moderation.repository.interface';
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
@@ -18,9 +19,7 @@ export class ChatModerationService {
     return this.moderation.findBlockedUserIds(userId);
   }
 
-  async listBlockedUsers(
-    userId: string,
-  ): Promise<{ userId: string; displayName: string }[]> {
+  async listBlockedUsers(userId: string): Promise<ChatBlockedUser[]> {
     const ids = await this.listBlockedUserIds(userId);
     const profiles = await this.profiles.findByUserIds(ids);
     const names = new Map(

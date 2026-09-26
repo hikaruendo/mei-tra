@@ -235,6 +235,52 @@ describe('SocialGateway', () => {
     expect(serverTo).not.toHaveBeenCalled();
   });
 
+  it('synchronizes block changes to every socket of the same user', async () => {
+    const first = createSocket('first');
+    const second = createSocket('second');
+    second.id = 'socket-2';
+    const otherUser = createSocket('other-user');
+    otherUser.id = 'socket-3';
+    authService.getUserFromSocketToken.mockImplementation(async (token) => ({
+      ...authenticatedUser,
+      id: token === 'other-user' ? 'user-3' : 'user-1',
+    }));
+    await gateway.handleConnection(asSocket(first));
+    await gateway.handleConnection(asSocket(second));
+    await gateway.handleConnection(asSocket(otherUser));
+    chatModerationService.listBlockedUsers.mockResolvedValue([
+      { userId: 'blocked-user', displayName: 'Blocked' },
+    ]);
+
+    await gateway.handleBlockUser(asSocket(first), { userId: 'blocked-user' });
+
+    expect(serverTo).toHaveBeenCalledWith('socket-1');
+    expect(serverTo).toHaveBeenCalledWith('socket-2');
+    expect(serverTo).not.toHaveBeenCalledWith('socket-3');
+    expect(serverEmit).toHaveBeenCalledWith('chat:blocked-users', {
+      users: [{ userId: 'blocked-user', displayName: 'Blocked' }],
+    });
+    expect(first.emit).toHaveBeenCalledWith('chat:blocked', {
+      userId: 'blocked-user',
+    });
+
+    serverTo.mockClear();
+    serverEmit.mockClear();
+    chatModerationService.listBlockedUsers.mockResolvedValue([]);
+    await gateway.handleUnblockUser(asSocket(second), {
+      userId: 'blocked-user',
+    });
+    expect(serverTo).toHaveBeenCalledWith('socket-1');
+    expect(serverTo).toHaveBeenCalledWith('socket-2');
+    expect(serverTo).not.toHaveBeenCalledWith('socket-3');
+    expect(serverEmit).toHaveBeenCalledWith('chat:blocked-users', {
+      users: [],
+    });
+    expect(second.emit).toHaveBeenCalledWith('chat:unblocked', {
+      userId: 'blocked-user',
+    });
+  });
+
   it('records a report under the authenticated user, not a supplied sender', async () => {
     const socket = createSocket('valid-token');
     authService.getUserFromSocketToken.mockResolvedValue(authenticatedUser);
