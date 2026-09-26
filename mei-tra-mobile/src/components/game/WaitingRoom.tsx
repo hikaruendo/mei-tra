@@ -304,13 +304,13 @@ export function WaitingRoom({
       )}
 
       <View style={styles.bottomActions}>
-          <Button
-            onPress={() => setShowChat(true)}
-            style={styles.chatButton}
-            variant="secondary"
-          >
-            {t('waiting.chat')}
-          </Button>
+        <Button
+          onPress={() => setShowChat(true)}
+          style={styles.chatButton}
+          variant="secondary"
+        >
+          {t('waiting.chat')}
+        </Button>
         <Button
           disabled={actionsDisabled || Boolean(pendingAction)}
           loading={pendingAction === 'leave'}
@@ -322,15 +322,15 @@ export function WaitingRoom({
         </Button>
       </View>
 
-        <ModalSheet
-          closeLabel={t('waiting.close')}
-          onClose={() => setShowChat(false)}
-          testID="waiting-chat-sheet"
-          title={t('waiting.chat')}
-          visible={showChat}
-        >
-          <ChatPanel roomId={room.id} />
-        </ModalSheet>
+      <ModalSheet
+        closeLabel={t('waiting.close')}
+        onClose={() => setShowChat(false)}
+        testID="waiting-chat-sheet"
+        title={t('waiting.chat')}
+        visible={showChat}
+      >
+        <ChatPanel roomId={room.id} />
+      </ModalSheet>
     </View>
   );
 }
