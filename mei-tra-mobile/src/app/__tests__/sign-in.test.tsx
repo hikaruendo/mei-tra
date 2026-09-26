@@ -6,6 +6,7 @@ import SignInScreen from '../sign-in';
 
 const mockReplace = jest.fn();
 const mockSignInWithGoogle = jest.fn();
+const mockSignInWithApple = jest.fn();
 const mockButtonPressHandlers: (() => void)[] = [];
 const mockButtonLabels: React.ReactNode[] = [];
 const originalPlatform = Platform.OS;
@@ -22,6 +23,7 @@ jest.mock('@/context/AuthContext', () => ({
     signIn: jest.fn(),
     signUp: jest.fn(),
     signInWithGoogle: mockSignInWithGoogle,
+    signInWithApple: mockSignInWithApple,
     signInAnonymously: jest.fn(),
   }),
 }));
@@ -32,6 +34,14 @@ jest.mock('@/context/LocaleContext', () => ({
 
 jest.mock('@/components/ui/BrandHeader', () => ({
   BrandHeader: () => null,
+}));
+
+jest.mock('@/components/auth/AppleSignInButton', () => ({
+  AppleSignInButton: ({ onPress }: { onPress: () => void }) => {
+    mockButtonPressHandlers.push(onPress);
+    mockButtonLabels.push('Appleで続ける');
+    return null;
+  },
 }));
 
 jest.mock('@/components/ui/Screen', () => ({
@@ -59,14 +69,15 @@ describe('SignInScreen Google OAuth', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
   });
 
-  it('does not offer Google sign-in on iOS', async () => {
+  it('offers both Google and Apple sign-in on iOS', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
 
     await act(async () => {
       TestRenderer.create(<SignInScreen />);
     });
 
-    expect(mockButtonLabels).not.toContain('Googleで続ける');
+    expect(mockButtonLabels).toContain('Googleで続ける');
+    expect(mockButtonLabels).toContain('Appleで続ける');
     expect(mockButtonLabels).toContain('ゲストとして遊ぶ');
   });
 

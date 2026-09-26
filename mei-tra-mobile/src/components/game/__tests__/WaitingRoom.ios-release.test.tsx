@@ -52,12 +52,12 @@ describe('WaitingRoom iOS launch', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
   });
 
-  it('hides the chat entry and sheet on iOS while keeping them on Android', async () => {
+  it('keeps the chat entry and sheet on both iOS and Android', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
     let ios!: Renderer;
     await act(async () => { ios = TestRenderer.create(<WaitingRoom {...props} />) as unknown as Renderer; });
-    expect(JSON.stringify(ios.toJSON())).not.toContain('チャット');
-    expect(ios.root.findAllByProps({ testID: 'waiting-chat-sheet' })).toHaveLength(0);
+    expect(JSON.stringify(ios.toJSON())).toContain('チャット');
+    expect(ios.root.findAllByProps({ testID: 'waiting-chat-sheet' })).toHaveLength(1);
     await act(async () => ios.unmount());
 
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });

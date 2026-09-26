@@ -9,7 +9,7 @@ EAS / Expo の依存解決はnpm workspacesを使い、`@meitra/contracts` と
 ## 対応機能
 
 - メール / パスワード登録・ログイン
-- Google OAuth（Android / Web。iOS初回公開版では非表示）
+- Google OAuth、iOSのAppleサインイン
 - ルーム一覧、作成、参加、対局中の観戦
 - 待機室、準備、COM追加、チームシャッフル、ゲーム開始
 - 吹き、アゲ表示、ネグリ選択、カードプレイ、台札スーツ選択
@@ -95,4 +95,5 @@ WebのReact componentやhookは共有せず、transport contractと副作用の
 - プロフィール画面は現在読み取り専用です。プロフィール編集・退会APIが整備されるまで、モバイル側に編集ボタンを表示しません。
 - ルーム復帰の可否、手番、合法手、得点、勝敗は常にバックエンドの状態で確定します。
 - アプリアイコン・起動画面・共通見出しは明トラ伝承プロジェクトのスペードAを使用します。生成と検証は [共有ブランド素材](../shared/brand/README.md) を参照してください。ネイティブのアイコン・起動画面の更新には新しいアプリビルドが必要です。
-- iOS初回公開版では、非公開メールに対応する同等のログイン手段が整うまでGoogleログインを、投稿のフィルタ・通報・ブロックが整うまでルームチャットを表示しません。Android / Webの既存操作は維持します。
+- iOSではAppleサインインとGoogleログインを提供します。Appleのネイティブ認証を使うため、Supabase AuthのApple providerに`com.kando1.meitra`を登録し、Apple Developerで同じApp IDのSign in with Apple capabilityを有効化してください。新しいネイティブビルドが必要です。
+- チャットはサーバーで明らかな暴言の投稿を拒否し、通報・ブロックを保存します。通報はSupabaseの`chat_message_reports`テーブルで運営者が確認し、問題のある投稿・アカウントに対応してください。ブロックした相手の投稿は履歴と新着から除外されます。

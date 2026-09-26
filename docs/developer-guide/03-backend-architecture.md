@@ -258,6 +258,9 @@ domain層はゲームルールの正しさを持ちます。application / sessio
 - `chat:post-message`
 - `chat:typing`
 - `chat:list-messages`
+- `chat:report-message`
+- `chat:block-user`
+- `chat:unblock-user`
 
 を `ChatService` に委譲します。
 
@@ -648,6 +651,10 @@ backend には二種類の socket interface があります。
 - `chat:typing`
 - `chat:messages`
 - `chat:error`
+- `chat:reported`
+- `chat:blocked-users`
+- `chat:blocked`
+- `chat:unblocked`
 
 これらのイベント名と payload shape は、frontend と backend 間の通信契約です。一部は `contracts/` に明示されていますが、すべての socket event が schema 化されているわけではありません。未 schema 化の event は暗黙契約なので、変更時は frontend/backend の両方を同時に確認・更新する必要があります。
 
@@ -662,6 +669,8 @@ backend はゲームロジックだけでなく、運用のための仕掛けも
 ### 12.2 chat cleanup
 
 `ChatCleanupService` が毎時 cleanup を行い、24 時間を超えた chat message を削除します。message TTL は `chat_rooms.message_ttl_hours` も持っていますが、現行 service は 24 時間 cutoff の cleanup を行っています。
+
+投稿時にサーバーが明らかな暴言を拒否します。ブロック関係は `chat_user_blocks` に保存し、ブロックした側の履歴・新着・入力中表示から相手の投稿を除外します。通報は `chat_message_reports` に投稿本文のスナップショットとともに保存するため、元の投稿が期限切れで消えても調査できます。運営者は Supabase で `status = 'pending'` の通報を定期確認し、必要な対応後に `reviewed` または `actioned` に更新します。これらのテーブルは service role のみアクセスできます。
 
 ### 12.3 room cleanup
 

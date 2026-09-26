@@ -39,6 +39,7 @@ import {
   cleanupBeforeLocalSignOut,
 } from '@/lib/session-cleanup';
 import { clearLocalAuthSession, supabase } from '@/lib/supabase';
+import { signInWithAppleIdToken } from '@/lib/apple-sign-in';
 import {
   normalizeGuestName,
   randomGuestNumber,
@@ -65,6 +66,7 @@ interface AuthContextValue {
     displayName: string,
   ) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
+  signInWithApple: () => Promise<AuthResult>;
   signInAnonymously: (displayName?: string) => Promise<AuthResult>;
   upgradeAccount: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
@@ -273,6 +275,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: callback.error };
   }, []);
 
+  const signInWithApple = useCallback(() => signInWithAppleIdToken(), []);
+
   const signInAnonymously = useCallback(async (displayName?: string) => {
     // display_name lands in raw_user_meta_data, which the handle_new_user
     // trigger uses when creating the user_profiles row. Normalized rather than
@@ -383,6 +387,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signUp,
       signInWithGoogle,
+      signInWithApple,
       signInAnonymously,
       upgradeAccount,
       signOut,
@@ -398,6 +403,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signInAnonymously,
       signInWithGoogle,
+      signInWithApple,
       signOut,
       signUp,
       upgradeAccount,

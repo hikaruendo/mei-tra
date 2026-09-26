@@ -15,6 +15,7 @@ import { AuthService } from './auth/auth.service';
 import { AuthenticatedUser } from './types/user.types';
 import { createSocketCorsOriginHandler } from './config/frontend-origins';
 import { AccountActionGateService } from './services/account-action-gate.service';
+import { ChatModerationService } from './services/chat-moderation.service';
 
 @WebSocketGateway({
   namespace: '/social',
@@ -36,6 +37,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatService: ChatService,
     private readonly authService: AuthService,
     private readonly accountActionGateService: AccountActionGateService,
+    private readonly chatModerationService: ChatModerationService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -108,6 +110,11 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `User ${authenticatedUser.id} joined chat room ${data.roomId} via socket ${client.id}`,
       );
       client.emit('chat:joined', { roomId: data.roomId, success: true });
+      client.emit('chat:blocked-users', {
+        users: await this.chatModerationService.listBlockedUsers(
+          authenticatedUser.id,
+        ),
+      });
     } catch (error) {
       this.logger.error(`Failed to join room: ${error}`);
       client.emit('chat:error', { message: 'Failed to join room' });
@@ -160,22 +167,42 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       if (!authenticatedUser) return;
 
+      const blockers = new Set(
+        await this.chatModerationService.listUsersBlockingSender(
+          authenticatedUser.id,
+        ),
+      );
+
       const event = await this.chatService.postMessage({
         roomId: data.roomId,
         userId: authenticatedUser.id,
         content: data.content,
-        contentType: data.contentType,
+        contentType: 'text',
         replyTo: data.replyTo,
       });
 
       client.emit('chat:message', event);
-      this.server.to(data.roomId).except(client.id).emit('chat:message', event);
+      for (const [socketId, state] of this.socketRooms) {
+        if (
+          socketId !== client.id &&
+          state.rooms.has(data.roomId) &&
+          !blockers.has(state.userId)
+        ) {
+          this.server.to(socketId).emit('chat:message', event);
+        }
+      }
       this.logger.log(
         `Message posted to room ${data.roomId} by user ${authenticatedUser.id}`,
       );
     } catch (error) {
       this.logGatewayError('Failed to post message', error);
-      client.emit('chat:error', { message: 'Failed to post message' });
+      const filtered =
+        error instanceof Error &&
+        error.message === 'Chat message rejected by content filter';
+      client.emit('chat:error', {
+        message: 'Failed to post message',
+        ...(filtered ? { code: 'CONTENT_REJECTED' } : {}),
+      });
     }
   }
 
@@ -197,7 +224,20 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       startedAt: new Date().toISOString(),
     };
 
-    client.to(data.roomId).emit('chat:typing', typingEvent);
+    const blockers = new Set(
+      await this.chatModerationService.listUsersBlockingSender(
+        authenticatedUser.id,
+      ),
+    );
+    for (const [socketId, state] of this.socketRooms) {
+      if (
+        socketId !== client.id &&
+        state.rooms.has(data.roomId) &&
+        !blockers.has(state.userId)
+      ) {
+        this.server.to(socketId).emit('chat:typing', typingEvent);
+      }
+    }
   }
 
   @SubscribeMessage('chat:list-messages')
@@ -211,6 +251,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const messages = await this.chatService.listMessages({
         roomId: data.roomId,
+        viewerId: authenticatedUser.id,
         limit: data.limit,
         cursor: data.cursor,
       });
@@ -224,6 +265,80 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       this.logGatewayError('Failed to list messages', error);
       client.emit('chat:error', { message: 'Failed to list messages' });
+    }
+  }
+
+  @SubscribeMessage('chat:report-message')
+  async handleReportMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: {
+      roomId: string;
+      messageId: string;
+      reason: 'offensive' | 'harassment' | 'other';
+    },
+  ): Promise<void> {
+    try {
+      const user = await this.getActiveAuthenticatedUser(
+        client,
+        'report a chat message',
+      );
+      if (!user || !this.socketRooms.get(client.id)?.rooms.has(data.roomId))
+        return;
+      await this.chatModerationService.reportMessage({
+        reporterId: user.id,
+        roomId: data.roomId,
+        messageId: data.messageId,
+        reason: data.reason,
+      });
+      client.emit('chat:reported', { messageId: data.messageId });
+    } catch (error) {
+      this.logGatewayError('Failed to report message', error);
+      client.emit('chat:error', { message: 'Failed to report message' });
+    }
+  }
+
+  @SubscribeMessage('chat:block-user')
+  async handleBlockUser(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { userId: string },
+  ): Promise<void> {
+    try {
+      const user = await this.getActiveAuthenticatedUser(
+        client,
+        'block a chat user',
+      );
+      if (!user) return;
+      await this.chatModerationService.blockUser(user.id, data.userId);
+      client.emit('chat:blocked', { userId: data.userId });
+      client.emit('chat:blocked-users', {
+        users: await this.chatModerationService.listBlockedUsers(user.id),
+      });
+    } catch (error) {
+      this.logGatewayError('Failed to block user', error);
+      client.emit('chat:error', { message: 'Failed to block user' });
+    }
+  }
+
+  @SubscribeMessage('chat:unblock-user')
+  async handleUnblockUser(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { userId: string },
+  ): Promise<void> {
+    try {
+      const user = await this.getActiveAuthenticatedUser(
+        client,
+        'unblock a chat user',
+      );
+      if (!user) return;
+      await this.chatModerationService.unblockUser(user.id, data.userId);
+      client.emit('chat:unblocked', { userId: data.userId });
+      client.emit('chat:blocked-users', {
+        users: await this.chatModerationService.listBlockedUsers(user.id),
+      });
+    } catch (error) {
+      this.logGatewayError('Failed to unblock user', error);
+      client.emit('chat:error', { message: 'Failed to unblock user' });
     }
   }
 

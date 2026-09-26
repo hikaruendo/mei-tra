@@ -1187,7 +1187,7 @@ describe('GameBoard repeated tap play', () => {
     return { ...handlers, renderer, fan, tap, update };
   };
 
-  it('keeps free-form chat out of the iOS game menu', async () => {
+  it('keeps chat available in the iOS and Android game menus', async () => {
     const originalPlatform = Platform.OS;
     try {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
@@ -1195,8 +1195,7 @@ describe('GameBoard repeated tap play', () => {
       await act(async () => {
         board.renderer.root.findByProps({ testID: 'game-options-trigger' }).props.onPress?.();
       });
-      expect(board.renderer.root.findAllByProps({ testID: 'game-chat-sheet' })).toHaveLength(0);
-      expect(board.renderer.root.findAllByType(Text).map((node) => node.props.children)).not.toContain('チャット');
+      expect(board.renderer.root.findAllByProps({ testID: 'game-chat-sheet' })).toHaveLength(1);
       await act(async () => board.renderer.unmount());
 
       Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });

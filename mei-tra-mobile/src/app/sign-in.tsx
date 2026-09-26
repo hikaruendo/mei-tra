@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { BrandHeader } from '@/components/ui/BrandHeader';
+import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +31,7 @@ export default function SignInScreen() {
     signIn,
     signUp,
     signInWithGoogle,
+    signInWithApple,
     signInAnonymously,
   } = useAuth();
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
@@ -126,6 +128,23 @@ export default function SignInScreen() {
     }
   };
 
+  const handleApple = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await signInWithApple();
+      if (result.cancelled) return;
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.replace('/rooms');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const isInvalid =
     !email.trim() ||
     password.length < 6 ||
@@ -145,15 +164,11 @@ export default function SignInScreen() {
             {mode === 'signIn' ? t('auth.signIn') : t('auth.signUpTitle')}
           </Text>
 
-          {/* iOS needs an equivalent private-email login before offering Google sign-in. */}
-          {Platform.OS !== 'ios' ? (
-            <Button
-              variant="secondary"
-              onPress={handleGoogle}
-              disabled={submitting}
-            >
-              {t('auth.continueWithGoogle')}
-            </Button>
+          <Button variant="secondary" onPress={handleGoogle} disabled={submitting}>
+            {t('auth.continueWithGoogle')}
+          </Button>
+          {Platform.OS === 'ios' ? (
+            <AppleSignInButton onPress={handleApple} disabled={submitting} />
           ) : null}
 
           <TextInput

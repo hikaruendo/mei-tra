@@ -10,6 +10,7 @@
     "backgroundColor": "#0e2a21",
     "ios": {
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "icon": "./assets/images/meitra-icon.png",
       "bundleIdentifier": "com.kando1.meitra",
       "infoPlist": {
@@ -44,6 +45,7 @@
       "expo-secure-store",
       "expo-notifications",
       "expo-web-browser",
+      "expo-apple-authentication",
       "expo-localization"
     ],
     "experiments": {

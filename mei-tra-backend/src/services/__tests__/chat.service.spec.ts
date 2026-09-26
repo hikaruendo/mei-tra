@@ -2,6 +2,7 @@ import { ChatService } from '../chat.service';
 import { IChatRoomRepository } from '../../repositories/interfaces/chat-room.repository.interface';
 import { IChatMessageRepository } from '../../repositories/interfaces/chat-message.repository.interface';
 import { IUserProfileRepository } from '../../repositories/interfaces/user-profile.repository.interface';
+import { ChatModerationService } from '../chat-moderation.service';
 import {
   ChatRoom,
   ChatMessage,
@@ -14,6 +15,9 @@ describe('ChatService', () => {
   let profileRepository: jest.Mocked<IUserProfileRepository>;
   let chatRoomRepository: jest.Mocked<IChatRoomRepository>;
   let chatMessageRepository: jest.Mocked<IChatMessageRepository>;
+  let moderation: jest.Mocked<
+    Pick<ChatModerationService, 'listBlockedUserIds'>
+  >;
 
   beforeEach(() => {
     profileRepository = {
@@ -46,14 +50,27 @@ describe('ChatService', () => {
       deleteByRoomId: jest.fn(),
     } as jest.Mocked<IChatMessageRepository>;
 
+    moderation = { listBlockedUserIds: jest.fn().mockResolvedValue([]) };
+
     chatService = new ChatService(
       profileRepository,
       chatRoomRepository,
       chatMessageRepository,
+      moderation as unknown as ChatModerationService,
     );
   });
 
   describe('postMessage', () => {
+    it('rejects abusive content before writing to the repository', async () => {
+      await expect(
+        chatService.postMessage({
+          roomId: 'room-1',
+          userId: 'user-1',
+          content: 'Ｋ Ｉ Ｌ Ｌ yourself',
+        }),
+      ).rejects.toThrow('Chat message rejected by content filter');
+      expect(chatMessageRepository.create).not.toHaveBeenCalled();
+    });
     it('should successfully post a message', async () => {
       const roomId = 'test-room-id';
       const userId = 'test-user-id';
@@ -198,6 +215,35 @@ describe('ChatService', () => {
 
       expect(result.message.contentType).toBe('emoji');
     });
+  });
+
+  it('omits messages from blocked users when listing chat history', async () => {
+    chatMessageRepository.findByRoomId.mockResolvedValue([
+      ChatMessage.create({
+        id: 'hidden-message',
+        roomId: ChatRoomId.create('room-1'),
+        senderId: UserId.create('blocked-user'),
+        content: 'hidden',
+        contentType: 'text',
+        createdAt: new Date(),
+      }),
+      ChatMessage.create({
+        id: 'visible-message',
+        roomId: ChatRoomId.create('room-1'),
+        senderId: UserId.create('friend'),
+        content: 'visible',
+        contentType: 'text',
+        createdAt: new Date(),
+      }),
+    ]);
+    moderation.listBlockedUserIds.mockResolvedValue(['blocked-user']);
+    profileRepository.findByUserIds.mockResolvedValue([]);
+    const result = await chatService.listMessages({
+      roomId: 'room-1',
+      viewerId: 'me',
+    });
+    expect(result.map((message) => message.id)).toEqual(['visible-message']);
+    expect(profileRepository.findByUserIds).toHaveBeenCalledWith(['friend']);
   });
 
   describe('listMessages', () => {

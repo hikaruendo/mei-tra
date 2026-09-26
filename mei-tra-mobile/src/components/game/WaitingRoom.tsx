@@ -2,7 +2,6 @@ import type { TeamNames } from '@meitra/contracts/game';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -305,8 +304,6 @@ export function WaitingRoom({
       )}
 
       <View style={styles.bottomActions}>
-        {/* Restore iOS chat when filtering, reporting, and blocking are available. */}
-        {Platform.OS !== 'ios' ? (
           <Button
             onPress={() => setShowChat(true)}
             style={styles.chatButton}
@@ -314,7 +311,6 @@ export function WaitingRoom({
           >
             {t('waiting.chat')}
           </Button>
-        ) : null}
         <Button
           disabled={actionsDisabled || Boolean(pendingAction)}
           loading={pendingAction === 'leave'}
@@ -326,7 +322,6 @@ export function WaitingRoom({
         </Button>
       </View>
 
-      {Platform.OS !== 'ios' ? (
         <ModalSheet
           closeLabel={t('waiting.close')}
           onClose={() => setShowChat(false)}
@@ -336,7 +331,6 @@ export function WaitingRoom({
         >
           <ChatPanel roomId={room.id} />
         </ModalSheet>
-      ) : null}
     </View>
   );
 }

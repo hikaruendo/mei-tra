@@ -99,6 +99,42 @@ export type Database = {
           },
         ];
       };
+      chat_message_reports: {
+        Row: {
+          content_snapshot: string;
+          created_at: string;
+          id: string;
+          message_id: string;
+          reason: string;
+          reported_sender_id: string | null;
+          reporter_id: string | null;
+          room_id: string;
+          status: string;
+        };
+        Insert: {
+          content_snapshot: string;
+          created_at?: string;
+          id?: string;
+          message_id: string;
+          reason: string;
+          reported_sender_id?: string | null;
+          reporter_id?: string | null;
+          room_id: string;
+          status?: string;
+        };
+        Update: {
+          content_snapshot?: string;
+          created_at?: string;
+          id?: string;
+          message_id?: string;
+          reason?: string;
+          reported_sender_id?: string | null;
+          reporter_id?: string | null;
+          room_id?: string;
+          status?: string;
+        };
+        Relationships: [];
+      };
       chat_messages: {
         Row: {
           content: string;
@@ -174,6 +210,24 @@ export type Database = {
           scope?: Database['public']['Enums']['chat_room_scope'];
           updated_at?: string | null;
           visibility?: Database['public']['Enums']['chat_room_visibility'];
+        };
+        Relationships: [];
+      };
+      chat_user_blocks: {
+        Row: {
+          blocked_id: string;
+          blocker_id: string;
+          created_at: string;
+        };
+        Insert: {
+          blocked_id: string;
+          blocker_id: string;
+          created_at?: string;
+        };
+        Update: {
+          blocked_id?: string;
+          blocker_id?: string;
+          created_at?: string;
         };
         Relationships: [];
       };
