@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import SignInScreen from '../sign-in';
@@ -6,6 +7,8 @@ import SignInScreen from '../sign-in';
 const mockReplace = jest.fn();
 const mockSignInWithGoogle = jest.fn();
 const mockButtonPressHandlers: (() => void)[] = [];
+const mockButtonLabels: React.ReactNode[] = [];
+const originalPlatform = Platform.OS;
 
 jest.mock('expo-router', () => ({
   Redirect: () => null,
@@ -37,8 +40,9 @@ jest.mock('@/components/ui/Screen', () => ({
 
 jest.mock('@/components/ui/Button', () => {
   return {
-    Button: ({ onPress }: { onPress: () => void }) => {
+    Button: ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => {
       mockButtonPressHandlers.push(onPress);
+      mockButtonLabels.push(children);
       return null;
     },
   };
@@ -48,9 +52,26 @@ describe('SignInScreen Google OAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockButtonPressHandlers.length = 0;
+    mockButtonLabels.length = 0;
   });
 
-  it('stays on sign-in when the authentication browser is closed', async () => {
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+  });
+
+  it('does not offer Google sign-in on iOS', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+
+    await act(async () => {
+      TestRenderer.create(<SignInScreen />);
+    });
+
+    expect(mockButtonLabels).not.toContain('Googleで続ける');
+    expect(mockButtonLabels).toContain('ゲストとして遊ぶ');
+  });
+
+  it('keeps Google sign-in on Android and stays put when OAuth is cancelled', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
     mockSignInWithGoogle.mockResolvedValue({ error: null, cancelled: true });
 
     await act(async () => {
@@ -59,6 +80,7 @@ describe('SignInScreen Google OAuth', () => {
 
     const [pressGoogle] = mockButtonPressHandlers;
     expect(pressGoogle).toBeDefined();
+    expect(mockButtonLabels).toContain('Googleで続ける');
 
     await act(async () => {
       await pressGoogle!();

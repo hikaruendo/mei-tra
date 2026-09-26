@@ -2,7 +2,7 @@
 import type { MobileGameSnapshot } from '@/types/game';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
-import { AccessibilityInfo, Alert, StyleSheet, Text } from 'react-native';
+import { AccessibilityInfo, Alert, Platform, StyleSheet, Text } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
@@ -1165,6 +1165,7 @@ describe('GameBoard repeated tap play', () => {
       findByProps: (props: Record<string, unknown>) => { props: { onTouchEndCapture?: () => void; onPress?: () => void } };
       findByType: (type: typeof HandFan) => { props: React.ComponentProps<typeof HandFan> };
       findAllByProps: (props: Record<string, unknown>) => { props: { onPress?: () => void } }[];
+      findAllByType: (type: typeof Text) => { props: { children?: React.ReactNode } }[];
     };
     update: (element: React.ReactElement) => void;
     unmount: () => void;
@@ -1185,6 +1186,27 @@ describe('GameBoard repeated tap play', () => {
     };
     return { ...handlers, renderer, fan, tap, update };
   };
+
+  it('keeps free-form chat out of the iOS game menu', async () => {
+    const originalPlatform = Platform.OS;
+    try {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+      const board = await mount({ roomId: 'room-1' });
+      await act(async () => {
+        board.renderer.root.findByProps({ testID: 'game-options-trigger' }).props.onPress?.();
+      });
+      expect(board.renderer.root.findAllByProps({ testID: 'game-chat-sheet' })).toHaveLength(0);
+      expect(board.renderer.root.findAllByType(Text).map((node) => node.props.children)).not.toContain('チャット');
+      await act(async () => board.renderer.unmount());
+
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+      const androidBoard = await mount({ roomId: 'room-1' });
+      expect(androidBoard.renderer.root.findAllByProps({ testID: 'game-chat-sheet' })).toHaveLength(1);
+      await act(async () => androidBoard.renderer.unmount());
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+    }
+  });
 
   it.each(['normal', 'pro'] as const)('%s selects then plays without showing pro buttons or sending twice', async (gameMode) => {
     const board = await mount({ game: { ...game, gameMode } });

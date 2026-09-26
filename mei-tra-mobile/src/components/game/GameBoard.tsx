@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -891,7 +892,8 @@ export function GameBoard({
                 {t('board.strengthOrder')}
               </Button>
             ) : null}
-            {roomId ? (
+            {/* iOS chat returns after message filtering, reporting, and blocking. */}
+            {Platform.OS !== 'ios' && roomId ? (
               <Button
                 onPress={() => {
                   setShowChat(true);
@@ -954,7 +956,7 @@ export function GameBoard({
         </View>
       </Modal>
 
-      {roomId ? (
+      {Platform.OS !== 'ios' && roomId ? (
         <ModalSheet
           closeLabel={t('board.close')}
           onClose={() => setShowChat(false)}

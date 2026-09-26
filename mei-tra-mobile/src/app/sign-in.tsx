@@ -2,6 +2,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -144,13 +145,16 @@ export default function SignInScreen() {
             {mode === 'signIn' ? t('auth.signIn') : t('auth.signUpTitle')}
           </Text>
 
-          <Button
-            variant="secondary"
-            onPress={handleGoogle}
-            disabled={submitting}
-          >
-            {t('auth.continueWithGoogle')}
-          </Button>
+          {/* iOS needs an equivalent private-email login before offering Google sign-in. */}
+          {Platform.OS !== 'ios' ? (
+            <Button
+              variant="secondary"
+              onPress={handleGoogle}
+              disabled={submitting}
+            >
+              {t('auth.continueWithGoogle')}
+            </Button>
+          ) : null}
 
           <TextInput
             accessibilityLabel={t('auth.guestNameLabel')}
