@@ -1,6 +1,7 @@
 import type { ChatMessage } from '@meitra/contracts/social';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 
 import { useSocial } from '@/context/SocialContext';
+import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 import { getLocaleTag, t } from '@/i18n';
 
@@ -21,7 +23,12 @@ interface ChatPanelProps {
 
 const MAX_LENGTH = 500;
 
-function MessageItem({ item }: { item: ChatMessage }) {
+function MessageItem({ item, ownUserId, onReport, onBlock }: {
+  item: ChatMessage;
+  ownUserId?: string;
+  onReport: (message: ChatMessage) => void;
+  onBlock: (message: ChatMessage) => void;
+}) {
   const time = new Date(item.createdAt).toLocaleTimeString(getLocaleTag(), {
     hour: '2-digit',
     minute: '2-digit',
@@ -50,20 +57,36 @@ function MessageItem({ item }: { item: ChatMessage }) {
           <Text style={styles.messageTime}>{time}</Text>
         </View>
         <Text style={styles.messageContent}>{item.content}</Text>
+        {item.sender.userId !== ownUserId ? (
+          <View style={styles.messageActions}>
+            <Pressable accessibilityRole="button" onPress={() => onReport(item)}>
+              <Text style={styles.actionText}>{t('chat.report')}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => onBlock(item)}>
+              <Text style={styles.actionText}>{t('chat.block')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
     </View>
   );
 }
 
 export function ChatPanel({ roomId }: ChatPanelProps) {
+  const { user } = useAuth();
   const {
     connected,
     messages,
     typingUserIds,
+    blockedUsers,
+    notice,
     joinRoom,
     leaveRoom,
     sendMessage,
     sendTyping,
+    reportMessage,
+    blockUser,
+    unblockUser,
   } = useSocial();
   const [text, setText] = useState('');
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -102,9 +125,30 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
     setText('');
   }, [text, connected, roomId, sendMessage]);
 
+  const handleReport = useCallback((item: ChatMessage) => {
+    Alert.alert(t('chat.report'), t('chat.reportConfirm', { name: item.sender.displayName }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('chat.report'), onPress: () => reportMessage(roomId, item.id) },
+    ]);
+  }, [reportMessage, roomId]);
+
+  const handleBlock = useCallback((item: ChatMessage) => {
+    Alert.alert(t('chat.block'), t('chat.blockConfirm', { name: item.sender.displayName }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('chat.block'), style: 'destructive', onPress: () => blockUser(item.sender.userId) },
+    ]);
+  }, [blockUser]);
+
   const renderItem = useCallback(
-    ({ item }: { item: ChatMessage }) => <MessageItem item={item} />,
-    [],
+    ({ item }: { item: ChatMessage }) => (
+      <MessageItem
+        item={item}
+        ownUserId={user?.id}
+        onReport={handleReport}
+        onBlock={handleBlock}
+      />
+    ),
+    [user?.id, handleReport, handleBlock],
   );
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
@@ -115,6 +159,21 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
       keyboardVerticalOffset={100}
       style={styles.container}
     >
+      {notice ? (
+        <Text accessibilityLiveRegion="polite" style={styles.notice}>
+          {t(`chat.${notice}`)}
+        </Text>
+      ) : null}
+      {blockedUsers.length > 0 ? (
+        <View style={styles.blockedBar}>
+          <Text style={styles.blockedLabel}>{t('chat.blockedCount', { count: blockedUsers.length })}</Text>
+          {blockedUsers.map((blocked) => (
+            <Pressable key={blocked.userId} onPress={() => unblockUser(blocked.userId)}>
+              <Text style={styles.actionText}>{t('chat.unblockUser', { name: blocked.displayName })}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <FlatList
         ref={listRef}
         contentContainerStyle={styles.messageList}
@@ -240,6 +299,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  messageActions: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingTop: 3,
+  },
+  actionText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  notice: {
+    color: colors.text,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  blockedBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  blockedLabel: { color: colors.textMuted, fontSize: 12 },
   typingIndicator: {
     color: colors.textMuted,
     paddingHorizontal: 14,

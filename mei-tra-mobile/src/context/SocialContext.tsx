@@ -1,4 +1,6 @@
 import type {
+  ChatBlockedUser,
+  ChatBlockedUsersPayload,
   ChatMessage,
   ChatMessageEvent,
   ChatMessagesPayload,
@@ -21,23 +23,35 @@ import { config } from '@/lib/config';
 interface SocialContextValue {
   connected: boolean;
   messages: ChatMessage[];
+  blockedUserIds: string[];
+  blockedUsers: ChatBlockedUser[];
+  notice: 'reported' | 'blocked' | 'unblocked' | 'filtered' | 'error' | null;
   typingUserIds: string[];
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;
   sendMessage: (roomId: string, content: string) => void;
   sendTyping: (roomId: string) => void;
   loadMessages: (roomId: string, limit?: number) => void;
+  reportMessage: (roomId: string, messageId: string) => void;
+  blockUser: (userId: string) => void;
+  unblockUser: (userId: string) => void;
 }
 
 const SocialContext = createContext<SocialContextValue>({
   connected: false,
   messages: [],
+  blockedUserIds: [],
+  blockedUsers: [],
+  notice: null,
   typingUserIds: [],
   joinRoom: () => {},
   leaveRoom: () => {},
   sendMessage: () => {},
   sendTyping: () => {},
   loadMessages: () => {},
+  reportMessage: () => {},
+  blockUser: () => {},
+  unblockUser: () => {},
 });
 
 export function useSocial() {
@@ -51,6 +65,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<ChatBlockedUser[]>([]);
+  const blockedRef = useRef(new Set<string>());
+  const [notice, setNotice] = useState<SocialContextValue['notice']>(null);
   const [typingMap, setTypingMap] = useState<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
@@ -70,6 +88,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       }
       setConnected(false);
       setMessages([]);
+      setBlockedUserIds([]);
+      setBlockedUsers([]);
+      blockedRef.current = new Set();
       return;
     }
 
@@ -102,16 +123,38 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     });
 
     socket.on('chat:message', (event: ChatMessageEvent) => {
-      if (event.roomId === joinedRoomRef.current) {
+      if (event.roomId === joinedRoomRef.current &&
+          !blockedRef.current.has(event.message.sender.userId)) {
         setMessages((prev) => [...prev, event.message]);
       }
     });
 
     socket.on('chat:messages', (payload: ChatMessagesPayload) => {
       if (payload.roomId === joinedRoomRef.current) {
-        setMessages(payload.messages);
+        setMessages(payload.messages.filter((message) =>
+          !blockedRef.current.has(message.sender.userId),
+        ));
       }
     });
+
+    socket.on('chat:blocked-users', (payload: ChatBlockedUsersPayload) => {
+      const nextBlocked = new Set(payload.users.map((item) => item.userId));
+      const wasUnblocked = [...blockedRef.current].some((id) => !nextBlocked.has(id));
+      blockedRef.current = nextBlocked;
+      setBlockedUsers(payload.users);
+      setBlockedUserIds([...nextBlocked]);
+      setMessages((current) => current.filter((message) =>
+        !nextBlocked.has(message.sender.userId),
+      ));
+      if (wasUnblocked && joinedRoomRef.current) {
+        socket.emit('chat:list-messages', { roomId: joinedRoomRef.current, limit: 50 });
+      }
+    });
+    socket.on('chat:blocked', () => setNotice('blocked'));
+    socket.on('chat:unblocked', () => setNotice('unblocked'));
+    socket.on('chat:reported', () => setNotice('reported'));
+    socket.on('chat:error', (payload: { code?: string }) =>
+      setNotice(payload?.code === 'CONTENT_REJECTED' ? 'filtered' : 'error'));
 
     socket.on('chat:typing', (event: ChatTypingEvent) => {
       if (event.roomId !== joinedRoomRef.current) return;
@@ -146,6 +189,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const joinRoom = useCallback((roomId: string) => {
     joinedRoomRef.current = roomId;
     setMessages([]);
+    setNotice(null);
     setTypingMap(new Map());
     socketRef.current?.emit('chat:join-room', { roomId });
     socketRef.current?.emit('chat:list-messages', { roomId, limit: 50 });
@@ -176,26 +220,57 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     socketRef.current?.emit('chat:list-messages', { roomId, limit });
   }, []);
 
+  const reportMessage = useCallback((roomId: string, messageId: string) => {
+    setNotice(null);
+    socketRef.current?.emit('chat:report-message', {
+      roomId,
+      messageId,
+      reason: 'offensive',
+    });
+  }, []);
+
+  const blockUser = useCallback((userId: string) => {
+    setNotice(null);
+    socketRef.current?.emit('chat:block-user', { userId });
+  }, []);
+
+  const unblockUser = useCallback((userId: string) => {
+    setNotice(null);
+    socketRef.current?.emit('chat:unblock-user', { userId });
+  }, []);
+
   const value = useMemo<SocialContextValue>(
     () => ({
       connected,
       messages,
+      blockedUserIds,
+      blockedUsers,
+      notice,
       typingUserIds,
       joinRoom,
       leaveRoom,
       sendMessage,
       sendTyping,
       loadMessages,
+      reportMessage,
+      blockUser,
+      unblockUser,
     }),
     [
       connected,
       messages,
+      blockedUserIds,
+      blockedUsers,
+      notice,
       typingUserIds,
       joinRoom,
       leaveRoom,
       sendMessage,
       sendTyping,
       loadMessages,
+      reportMessage,
+      blockUser,
+      unblockUser,
     ],
   );
 
