@@ -9,5 +9,8 @@ describe('chat content filter', () => {
   it('allows ordinary game conversation', () => {
     expect(isObjectionableChatContent('次はスペードを出します')).toBe(false);
     expect(isObjectionableChatContent('Nice play!')).toBe(false);
+    expect(
+      isObjectionableChatContent('The cards are draped on the table'),
+    ).toBe(false);
   });
 });
