@@ -359,7 +359,7 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "updated": "Last updated: February 2025",
+    "updated": "Last updated: September 2026",
     "backToTop": "Back to top",
     "section1": {
       "title": "1. Introduction",
@@ -369,19 +369,19 @@
     "section2": {
       "title": "2. Information We Collect",
       "p1": "The Service collects and uses the following information.",
-      "item1": "Account information: Email address, password (stored encrypted), username, display name",
-      "item2": "Game usage data: Room participation history, match results, chat messages",
-      "item3": "Technical data: IP address, browser type, device information, connection logs",
+      "item1": "Account information: Email address, password for email sign-in, username, and display name. If you sign in with Apple or Google, we receive information needed for authentication.",
+      "item2": "Game usage data: Room participation history, match results, chat messages, message reports, and information about users you block",
+      "item3": "Technical data: IP address, browser type, device information, and connection logs. If you enable notifications, we also collect an app-generated device identifier and push notification token.",
       "item4": "Profile images: Uploaded avatar images"
     },
     "section3": {
       "title": "3. Purpose of Use",
-      "p1": "Collected information is used for providing and operating the Service, user authentication, preventing misuse, service improvement, and responding to inquiries.",
+      "p1": "We use collected information to provide and operate the Service, authenticate users, deliver push notifications, handle chat reports and blocks, prevent misuse, improve the Service, and respond to inquiries.",
       "p2": "In-game chat and display names are visible to other players in the same room."
     },
     "section4": {
       "title": "4. Third-Party Sharing",
-      "p1": "The Service uses Supabase (Supabase Inc.) for authentication, database, and hosting. These service providers process information only for the purpose of providing the Service.",
+      "p1": "The Service uses Supabase for authentication, database, and hosting. If you sign in with Apple or Google, we use their authentication services. If you enable push notifications, we use Expo and Apple or Google's push delivery services. These providers process information as needed to provide those features.",
       "p2": "We do not share personal information with third parties without user consent, except when required by law."
     },
     "section5": {
