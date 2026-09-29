@@ -38,6 +38,10 @@ jobs:
         with:
           version: ${{ steps.supabase-cli.outputs.version }}
 
+      - name: Cache postgres-meta image from GHCR
+        working-directory: mei-tra-backend
+        run: bash scripts/cache-pgmeta-image.sh
+
       - name: Apply migrations and verify generated database types
         working-directory: mei-tra-backend
         run: npm run db:types:check

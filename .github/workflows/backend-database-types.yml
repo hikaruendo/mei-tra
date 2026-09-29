@@ -7,6 +7,7 @@ on:
       - 'mei-tra-backend/package-lock.json'
       - 'mei-tra-backend/package.json'
       - 'mei-tra-backend/.supabase-cli-version'
+      - 'mei-tra-backend/scripts/cache-pgmeta-image.sh'
       - 'mei-tra-backend/scripts/generate-db-types.sh'
       - 'mei-tra-backend/src/types/database.generated.types.ts'
       - 'mei-tra-backend/supabase/config.toml'
@@ -40,6 +41,10 @@ jobs:
         uses: supabase/setup-cli@v2
         with:
           version: ${{ steps.supabase-cli.outputs.version }}
+
+      - name: Cache postgres-meta image from GHCR
+        working-directory: mei-tra-backend
+        run: bash scripts/cache-pgmeta-image.sh
 
       - name: Verify generated database types
         working-directory: mei-tra-backend
