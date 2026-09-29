@@ -459,7 +459,18 @@
     "typingOne": "Someone is typing...",
     "typingMany": "{count} people are typing...",
     "connectingPlaceholder": "Connecting...",
-    "inputPlaceholder": "Type a message..."
+    "inputPlaceholder": "Type a message...",
+    "report": "Report",
+    "block": "Block",
+    "reportConfirm": "Report the message from {name}?",
+    "blockConfirm": "Hide chat from {name}?",
+    "reported": "Report submitted",
+    "blocked": "User blocked",
+    "unblocked": "User unblocked",
+    "error": "Action failed. Please try again",
+    "filtered": "This message cannot be posted. Please rephrase it",
+    "blockedCount": "Blocked users: {count}",
+    "unblockUser": "Unblock {name}"
   },
   "chomboReport": {
     "dockLabel": "Chombo",

@@ -1,13 +1,25 @@
 'use client';
 
 import type { ChatMessage as ChatMessageType } from '@contracts/social';
+import { useTranslations } from 'next-intl';
 import styles from './ChatMessage.module.scss';
 
 interface ChatMessageProps {
   message: ChatMessageType;
+  ownUserId?: string;
+  disabled?: boolean;
+  onReport?: (message: ChatMessageType) => void;
+  onBlock?: (message: ChatMessageType) => void;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  ownUserId,
+  disabled = false,
+  onReport,
+  onBlock,
+}: ChatMessageProps) {
+  const t = useTranslations('chatDock');
   const isSystem = message.contentType === 'system';
 
   if (isSystem) {
@@ -52,6 +64,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <p className={styles.text}>
           {message.content}
         </p>
+        {ownUserId && message.sender.userId !== ownUserId && onReport && onBlock ? (
+          <div className={styles.actions}>
+            <button type="button" disabled={disabled} onClick={() => onReport(message)}>
+              {t('report')}
+            </button>
+            <button type="button" disabled={disabled} onClick={() => onBlock(message)}>
+              {t('block')}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

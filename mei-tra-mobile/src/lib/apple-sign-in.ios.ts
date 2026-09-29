@@ -35,34 +35,36 @@ export async function signInWithAppleIdToken(): Promise<{
     });
     if (error) return { error: error.message };
 
-    // Apple sends the name only on first authorization. The auth event has
-    // already established the session; metadata update must not fail login.
-    const fullName = [
+    // Apple sends the name only on first authorization. Keep it in auth
+    // metadata so a failed profile write can be retried on the next sign-in.
+    const appleName = [
       credential.fullName?.givenName,
       credential.fullName?.familyName,
     ]
       .filter(Boolean)
       .join(' ');
-    if (fullName) {
-      // The profile trigger has already run when sign-in returns. Apple only
-      // supplies a name once, so populate a default profile without replacing
-      // a name the player chose earlier.
-      if (data.user && data.session) {
-        try {
-          const profile = await fetchPlayerProfileWithRetry(data.user.id);
-          if (profile.displayName === 'Player') {
-            await updateProfile(data.user.id, data.session.access_token, {
-              displayName: fullName.slice(0, 100),
-            });
-          }
-        } catch (profileError) {
-          console.warn('[AppleSignIn] Failed to save initial profile name:', profileError);
-        }
-      }
+    const storedName = data.user?.user_metadata?.full_name;
+    const fullName = appleName || (typeof storedName === 'string' ? storedName.trim() : '');
+    if (appleName) {
       try {
-        await supabase.auth.updateUser({ data: { full_name: fullName } });
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { full_name: appleName },
+        });
+        if (metadataError) throw metadataError;
       } catch (metadataError) {
         console.warn('[AppleSignIn] Failed to save auth name:', metadataError);
+      }
+    }
+    if (fullName && data.user && data.session) {
+      try {
+        const profile = await fetchPlayerProfileWithRetry(data.user.id);
+        if (profile.displayName === 'Player') {
+          await updateProfile(data.user.id, data.session.access_token, {
+            displayName: fullName.slice(0, 100),
+          });
+        }
+      } catch (profileError) {
+        console.warn('[AppleSignIn] Failed to save initial profile name:', profileError);
       }
     }
 

@@ -459,7 +459,18 @@
     "typingOne": "誰かが入力中...",
     "typingMany": "{count}人が入力中...",
     "connectingPlaceholder": "接続中...",
-    "inputPlaceholder": "メッセージを入力..."
+    "inputPlaceholder": "メッセージを入力...",
+    "report": "通報",
+    "block": "ブロック",
+    "reportConfirm": "{name}のメッセージを通報しますか？",
+    "blockConfirm": "{name}のチャットを非表示にしますか？",
+    "reported": "通報を受け付けました",
+    "blocked": "ユーザーをブロックしました",
+    "unblocked": "ブロックを解除しました",
+    "error": "操作に失敗しました。もう一度お試しください",
+    "filtered": "このメッセージは投稿できません。表現を変えてください",
+    "blockedCount": "ブロック中: {count}人",
+    "unblockUser": "{name}を解除"
   },
   "chomboReport": {
     "dockLabel": "チョンボ",
