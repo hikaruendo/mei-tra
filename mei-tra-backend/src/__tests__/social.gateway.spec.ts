@@ -4,6 +4,7 @@ import { ChatService } from '../services/chat.service';
 import { AuthService } from '../auth/auth.service';
 import { AuthenticatedUser } from '../types/user.types';
 import { AccountActionGateService } from '../services/account-action-gate.service';
+import { ChatModerationService } from '../services/chat-moderation.service';
 
 type MockSocket = {
   id: string;
@@ -24,6 +25,17 @@ describe('SocialGateway', () => {
   let authService: jest.Mocked<Pick<AuthService, 'getUserFromSocketToken'>>;
   let accountActionGateService: jest.Mocked<
     Pick<AccountActionGateService, 'ensureActiveSocketActor'>
+  >;
+  let chatModerationService: jest.Mocked<
+    Pick<
+      ChatModerationService,
+      | 'listBlockedUserIds'
+      | 'listBlockedUsers'
+      | 'listUsersBlockingSender'
+      | 'reportMessage'
+      | 'blockUser'
+      | 'unblockUser'
+    >
   >;
   let serverEmit: jest.Mock;
   let serverTo: jest.Mock;
@@ -85,6 +97,14 @@ describe('SocialGateway', () => {
         authenticatedUser,
       }),
     };
+    chatModerationService = {
+      listBlockedUserIds: jest.fn().mockResolvedValue([]),
+      listBlockedUsers: jest.fn().mockResolvedValue([]),
+      listUsersBlockingSender: jest.fn().mockResolvedValue([]),
+      reportMessage: jest.fn(),
+      blockUser: jest.fn(),
+      unblockUser: jest.fn(),
+    };
     serverEmit = jest.fn();
     serverExcept = jest.fn().mockReturnValue({ emit: serverEmit });
     serverTo = jest.fn().mockReturnValue({
@@ -96,6 +116,7 @@ describe('SocialGateway', () => {
       chatService as unknown as ChatService,
       authService as unknown as AuthService,
       accountActionGateService as unknown as AccountActionGateService,
+      chatModerationService as unknown as ChatModerationService,
     );
     gateway.server = {
       to: serverTo,
@@ -179,9 +200,106 @@ describe('SocialGateway', () => {
       accountActionGateService.ensureActiveSocketActor,
     ).toHaveBeenCalledWith(socket, 'post a chat message');
     expect(socket.emit).toHaveBeenCalledWith('chat:message', event);
-    expect(serverTo).toHaveBeenCalledWith('room-1');
-    expect(serverExcept).toHaveBeenCalledWith('socket-1');
-    expect(serverEmit).toHaveBeenCalledWith('chat:message', event);
+    expect(serverTo).not.toHaveBeenCalled();
+  });
+
+  it('does not deliver new messages to a user who blocked the sender', async () => {
+    const sender = createSocket('sender');
+    const recipient = createSocket('recipient');
+    recipient.id = 'socket-2';
+    authService.getUserFromSocketToken.mockImplementation(async (token) => ({
+      ...authenticatedUser,
+      id: token === 'recipient' ? 'user-2' : 'user-1',
+    }));
+    await gateway.handleConnection(asSocket(sender));
+    await gateway.handleConnection(asSocket(recipient));
+    await gateway.handleJoinRoom(asSocket(sender), { roomId: 'room-1' });
+    await gateway.handleJoinRoom(asSocket(recipient), { roomId: 'room-1' });
+    chatService.postMessage.mockResolvedValue({
+      type: 'chat.message',
+      roomId: 'room-1',
+      message: {
+        id: 'message-1',
+        sender: { userId: 'user-1', displayName: 'A', rankTier: 'bronze' },
+        content: 'hello',
+        contentType: 'text',
+        createdAt: new Date().toISOString(),
+      },
+    });
+    chatModerationService.listUsersBlockingSender.mockResolvedValue(['user-2']);
+    await gateway.handlePostMessage(asSocket(sender), {
+      roomId: 'room-1',
+      content: 'hello',
+    });
+    expect(sender.emit).toHaveBeenCalledWith('chat:message', expect.anything());
+    expect(serverTo).not.toHaveBeenCalled();
+  });
+
+  it('synchronizes block changes to every socket of the same user', async () => {
+    const first = createSocket('first');
+    const second = createSocket('second');
+    second.id = 'socket-2';
+    const otherUser = createSocket('other-user');
+    otherUser.id = 'socket-3';
+    authService.getUserFromSocketToken.mockImplementation(async (token) => ({
+      ...authenticatedUser,
+      id: token === 'other-user' ? 'user-3' : 'user-1',
+    }));
+    await gateway.handleConnection(asSocket(first));
+    await gateway.handleConnection(asSocket(second));
+    await gateway.handleConnection(asSocket(otherUser));
+    chatModerationService.listBlockedUsers.mockResolvedValue([
+      { userId: 'blocked-user', displayName: 'Blocked' },
+    ]);
+
+    await gateway.handleBlockUser(asSocket(first), { userId: 'blocked-user' });
+
+    expect(serverTo).toHaveBeenCalledWith('socket-1');
+    expect(serverTo).toHaveBeenCalledWith('socket-2');
+    expect(serverTo).not.toHaveBeenCalledWith('socket-3');
+    expect(serverEmit).toHaveBeenCalledWith('chat:blocked-users', {
+      users: [{ userId: 'blocked-user', displayName: 'Blocked' }],
+    });
+    expect(first.emit).toHaveBeenCalledWith('chat:blocked', {
+      userId: 'blocked-user',
+    });
+
+    serverTo.mockClear();
+    serverEmit.mockClear();
+    chatModerationService.listBlockedUsers.mockResolvedValue([]);
+    await gateway.handleUnblockUser(asSocket(second), {
+      userId: 'blocked-user',
+    });
+    expect(serverTo).toHaveBeenCalledWith('socket-1');
+    expect(serverTo).toHaveBeenCalledWith('socket-2');
+    expect(serverTo).not.toHaveBeenCalledWith('socket-3');
+    expect(serverEmit).toHaveBeenCalledWith('chat:blocked-users', {
+      users: [],
+    });
+    expect(second.emit).toHaveBeenCalledWith('chat:unblocked', {
+      userId: 'blocked-user',
+    });
+  });
+
+  it('records a report under the authenticated user, not a supplied sender', async () => {
+    const socket = createSocket('valid-token');
+    authService.getUserFromSocketToken.mockResolvedValue(authenticatedUser);
+    await gateway.handleConnection(asSocket(socket));
+    await gateway.handleJoinRoom(asSocket(socket), { roomId: 'room-1' });
+    await gateway.handleReportMessage(asSocket(socket), {
+      roomId: 'room-1',
+      messageId: 'message-1',
+      reason: 'offensive',
+    });
+    expect(chatModerationService.reportMessage).toHaveBeenCalledWith({
+      reporterId: 'user-1',
+      roomId: 'room-1',
+      messageId: 'message-1',
+      reason: 'offensive',
+    });
+    expect(socket.emit).toHaveBeenCalledWith('chat:reported', {
+      messageId: 'message-1',
+    });
   });
 
   it('sends typing events as the authenticated user and ignores spoofed userId', async () => {
@@ -196,18 +314,7 @@ describe('SocialGateway', () => {
     expect(
       accountActionGateService.ensureActiveSocketActor,
     ).toHaveBeenCalledWith(socket, 'send a typing event');
-    expect(socket.to).toHaveBeenCalledWith('room-1');
-    const socketToTarget = socket.to.mock.results[0].value as {
-      emit: jest.Mock;
-    };
-    expect(socketToTarget.emit).toHaveBeenCalledWith(
-      'chat:typing',
-      expect.objectContaining({
-        type: 'chat.typing',
-        roomId: 'room-1',
-        userId: 'user-1',
-      }),
-    );
+    expect(serverTo).not.toHaveBeenCalled();
   });
 
   it('rejects a cached socket when account deletion is in progress', async () => {

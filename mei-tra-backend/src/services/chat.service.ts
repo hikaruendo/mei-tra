@@ -14,6 +14,8 @@ import {
 import { IUserProfileRepository } from '../repositories/interfaces/user-profile.repository.interface';
 import { IChatRoomRepository } from '../repositories/interfaces/chat-room.repository.interface';
 import { IChatMessageRepository } from '../repositories/interfaces/chat-message.repository.interface';
+import { ChatModerationService } from './chat-moderation.service';
+import { isObjectionableChatContent } from '../domain/chat-content-filter';
 
 export interface PostMessageDto {
   roomId: string;
@@ -25,6 +27,7 @@ export interface PostMessageDto {
 
 export interface ListMessagesDto {
   roomId: string;
+  viewerId?: string;
   limit?: number;
   cursor?: string;
 }
@@ -47,9 +50,18 @@ export class ChatService {
     private readonly chatRoomRepository: IChatRoomRepository,
     @Inject('IChatMessageRepository')
     private readonly chatMessageRepository: IChatMessageRepository,
+    private readonly moderation: ChatModerationService,
   ) {}
 
   async postMessage(dto: PostMessageDto): Promise<ChatMessageEvent> {
+    if (
+      typeof dto.content !== 'string' ||
+      !dto.content.trim() ||
+      dto.content.length > 500 ||
+      isObjectionableChatContent(dto.content)
+    ) {
+      throw new Error('Chat message rejected by content filter');
+    }
     const roomId = ChatRoomId.create(dto.roomId);
     const userId = UserId.create(dto.userId);
 
@@ -99,10 +111,14 @@ export class ChatService {
 
   async listMessages(dto: ListMessagesDto): Promise<ChatMessageDto[]> {
     const roomId = ChatRoomId.create(dto.roomId);
+    const blockedUserIds = dto.viewerId
+      ? await this.moderation.listBlockedUserIds(dto.viewerId)
+      : [];
     const messages = await this.chatMessageRepository.findByRoomId(
       roomId,
       dto.limit || 50,
       dto.cursor,
+      blockedUserIds,
     );
 
     // Batch fetch all unique sender profiles in one query (N+1 optimization)

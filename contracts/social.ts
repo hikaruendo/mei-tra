@@ -33,6 +33,15 @@ export interface ChatMessagesPayload {
   messages: ChatMessage[];
 }
 
+export interface ChatBlockedUser {
+  userId: string;
+  displayName: string;
+}
+
+export interface ChatBlockedUsersPayload {
+  users: ChatBlockedUser[];
+}
+
 export interface PresenceEvent {
   type: 'presence.update';
   userId: string;

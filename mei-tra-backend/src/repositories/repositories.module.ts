@@ -5,6 +5,7 @@ import { SupabaseGameStateRepository } from './implementations/supabase-game-sta
 import { SupabaseUserProfileRepository } from './implementations/supabase-user-profile.repository';
 import { SupabaseChatRoomRepository } from './implementations/supabase-chat-room.repository';
 import { SupabaseChatMessageRepository } from './implementations/supabase-chat-message.repository';
+import { SupabaseChatModerationRepository } from './implementations/supabase-chat-moderation.repository';
 import { SupabaseGameHistoryRepository } from './implementations/supabase-game-history.repository';
 import { SupabaseRoomMembershipRepository } from './implementations/supabase-room-membership.repository';
 import { SupabaseService } from '../database/supabase.service';
@@ -38,6 +39,10 @@ import { SupabaseService } from '../database/supabase.service';
       useClass: SupabaseChatMessageRepository,
     },
     {
+      provide: 'IChatModerationRepository',
+      useClass: SupabaseChatModerationRepository,
+    },
+    {
       provide: 'IGameHistoryRepository',
       useClass: SupabaseGameHistoryRepository,
     },
@@ -53,6 +58,7 @@ import { SupabaseService } from '../database/supabase.service';
     'IUserProfileRepository',
     'IChatRoomRepository',
     'IChatMessageRepository',
+    'IChatModerationRepository',
     'IGameHistoryRepository',
     'IRoomMembershipRepository',
   ],

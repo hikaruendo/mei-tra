@@ -25,19 +25,25 @@ export class SupabaseChatMessageRepository implements IChatMessageRepository {
     roomId: ChatRoomId,
     limit = 50,
     cursor?: string,
+    excludedSenderIds: string[] = [],
   ): Promise<ChatMessage[]> {
     let query = this.supabase.client
       .from('chat_messages')
       .select('*')
       .eq('room_id', roomId.getValue())
-      .order('created_at', { ascending: true })
-      .limit(limit);
+      .order('created_at', { ascending: true });
+
+    if (excludedSenderIds.length > 0) {
+      query = query.or(
+        `sender_id.is.null,sender_id.not.in.(${excludedSenderIds.join(',')})`,
+      );
+    }
 
     if (cursor) {
       query = query.lt('created_at', cursor);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.limit(limit);
 
     if (error || !data) {
       return [];

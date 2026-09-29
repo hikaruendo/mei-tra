@@ -168,6 +168,49 @@
   gap: 0.75rem;
 }
 
+.notice {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--mt-border-hairline);
+  color: var(--mt-text-primary);
+  font-size: typography.scale(0.75rem);
+}
+
+.blockedUsers {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--mt-border-hairline);
+  color: var(--mt-text-secondary);
+  font-size: typography.scale(0.75rem);
+
+  summary {
+    cursor: pointer;
+  }
+}
+
+.blockedUserList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding-top: 0.5rem;
+
+  button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--mt-accent);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      text-decoration: underline;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+  }
+}
+
 .emptyState {
   text-align: center;
   color: var(--mt-text-secondary);

@@ -6,6 +6,7 @@ export interface IChatMessageRepository {
     roomId: ChatRoomId,
     limit?: number,
     cursor?: string,
+    excludedSenderIds?: string[],
   ): Promise<ChatMessage[]>;
   create(message: ChatMessage): Promise<ChatMessage>;
   deleteMessagesBefore(date: Date): Promise<number>;
