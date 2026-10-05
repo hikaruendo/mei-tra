@@ -26,6 +26,10 @@ on:
         required: true
         type: boolean
         default: false
+      build-id:
+        description: Submit an existing EAS build instead of creating a new build (iOS only)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -53,6 +57,7 @@ jobs:
       RELEASE_PROFILE: ${{ inputs.profile }}
       RELEASE_PLATFORM: ${{ inputs.platform }}
       RELEASE_SUBMIT: ${{ inputs.submit }}
+      EXISTING_BUILD_ID: ${{ inputs.build-id }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -89,7 +94,14 @@ jobs:
             exit 1
           fi
 
-          if [ "$RELEASE_SUBMIT" = true ] && [ "$RELEASE_PLATFORM" != android ]; then
+          if [ -n "$EXISTING_BUILD_ID" ]; then
+            if [ "$RELEASE_SUBMIT" != true ] || [ "$RELEASE_PROFILE" != production ] || [ "$RELEASE_PLATFORM" != ios ]; then
+              echo 'An existing build ID requires submit=true, profile=production, and platform=ios.' >&2
+              exit 1
+            fi
+          fi
+
+          if [ "$RELEASE_SUBMIT" = true ] && [ -z "$EXISTING_BUILD_ID" ] && [ "$RELEASE_PLATFORM" != android ]; then
             for name in EXPO_APPLE_ID EXPO_ASC_APP_ID EXPO_APPLE_TEAM_ID; do
               if [ -z "${!name:-}" ]; then
                 echo "$name is required for an iOS submission." >&2
@@ -115,7 +127,7 @@ jobs:
           NODE
 
       - name: Prepare iOS submit profile
-        if: inputs.submit && inputs.platform != 'android'
+        if: inputs.submit && inputs.platform != 'android' && inputs.build-id == ''
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
@@ -146,6 +158,7 @@ jobs:
           done
 
       - name: Build with EAS
+        if: inputs.build-id == ''
         run: |
           set -euo pipefail
           submit_args=()
@@ -160,3 +173,13 @@ jobs:
             --wait \
             --freeze-credentials \
             "${submit_args[@]}"
+
+      - name: Submit existing build to TestFlight
+        if: inputs.build-id != ''
+        run: |
+          npx --yes eas-cli@${EAS_CLI_VERSION} submit \
+            --platform ios \
+            --profile production \
+            --id "$EXISTING_BUILD_ID" \
+            --non-interactive \
+            --wait
