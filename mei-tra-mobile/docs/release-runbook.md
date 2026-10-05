@@ -66,6 +66,17 @@ gh workflow run mobile-release.yml \
 
 productionは `main` からのみ起動できる。`submit=true` の場合はproduction profileだけが許可され、build完了後に同じsubmit profileで提出する。
 
+`submit=false` で作成した既存のiOS production buildを再ビルドせずTestFlightへ送る場合は、EAS build IDを指定する。`build-id` を指定したときは `profile=production`、`platform=ios`、`submit=true` の組み合わせだけを許可する。
+
+```bash
+gh workflow run mobile-release.yml \
+  --ref main \
+  -f profile=production \
+  -f platform=ios \
+  -f submit=true \
+  -f build-id=<EAS_BUILD_ID>
+```
+
 ## 3. 初回EASセットアップ
 
 以下はプロジェクトオーナーが一度だけ行う。値はGitへコミットしない。
