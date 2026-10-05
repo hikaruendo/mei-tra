@@ -413,7 +413,7 @@
     "settingUpdateFailed": "Could not update the setting",
     "avatarNeedsAccount": "Setting an avatar requires a registered account.",
     "photoPermissionTitle": "Photo access",
-    "photoPermissionMessage": "Allow access to your photo library to change your avatar.",
+    "photoPermissionMessage": "Choose a photo from your library to set or update your profile avatar. The selected photo will be uploaded to your profile so other players can recognize you.",
     "avatarUploadFailed": "Could not upload your avatar",
     "privacyPolicy": "Privacy policy",
     "terms": "Terms of service",
