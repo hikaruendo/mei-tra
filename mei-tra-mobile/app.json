@@ -2,7 +2,7 @@
   "expo": {
     "name": "Meitra",
     "slug": "meitra",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "icon": "./assets/images/meitra-icon.png",
     "orientation": "portrait",
     "scheme": "meitra",

@@ -131,9 +131,19 @@ jobs:
 
       - name: Validate resolved EAS profile
         run: |
-          npx --yes eas-cli@${EAS_CLI_VERSION} config \
-            --profile "$RELEASE_PROFILE" \
-            --json > "$RUNNER_TEMP/meitra-eas-config.json"
+          set -euo pipefail
+          case "$RELEASE_PLATFORM" in
+            all) platforms=(ios android) ;;
+            ios|android) platforms=("$RELEASE_PLATFORM") ;;
+            *) echo "Unsupported release platform: $RELEASE_PLATFORM" >&2; exit 1 ;;
+          esac
+
+          for platform in "${platforms[@]}"; do
+            npx --yes eas-cli@${EAS_CLI_VERSION} config \
+              --profile "$RELEASE_PROFILE" \
+              --platform "$platform" \
+              --json > "$RUNNER_TEMP/meitra-eas-config-$platform.json"
+          done
 
       - name: Build with EAS
         run: |
