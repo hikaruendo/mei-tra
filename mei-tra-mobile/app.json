@@ -41,6 +41,12 @@
           "imageWidth": 240
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Meitra uploads the photo you select to your profile and displays it as your avatar to other players, so they can recognize you during a game."
+        }
+      ],
       "expo-secure-store",
       "expo-notifications",
       "expo-web-browser",

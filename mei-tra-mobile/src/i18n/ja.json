@@ -145,7 +145,7 @@
     "settingUpdateFailed": "設定の更新に失敗しました",
     "avatarNeedsAccount": "アバターの設定にはアカウント登録が必要です。",
     "photoPermissionTitle": "写真のアクセス許可",
-    "photoPermissionMessage": "アバターを変更するには、写真ライブラリへのアクセスを許可してください。",
+    "photoPermissionMessage": "写真ライブラリから写真を選んで、プロフィールのアバターに設定または変更できます。選んだ写真はプロフィールにアップロードされ、ほかのプレイヤーにも表示されます。",
     "avatarUploadFailed": "アバターのアップロードに失敗しました",
     "privacyPolicy": "プライバシーポリシー",
     "terms": "利用規約",
